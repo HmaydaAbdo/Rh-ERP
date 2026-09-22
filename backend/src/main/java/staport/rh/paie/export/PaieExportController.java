@@ -8,6 +8,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,6 +37,7 @@ public class PaieExportController {
 
     @GetMapping
     @Operation(summary = "Exporter la paie d'une période (GLB + par chantier + par équipe)")
+    @PreAuthorize("hasAuthority('PAIE_EXPORT')")
     public ResponseEntity<Resource> exporter(
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
             @RequestParam("periode") String periode,

@@ -6,27 +6,41 @@
 
 ---
 
-## Sécurité (JWT / RBAC)
+## Sécurité (JWT / RBAC) — v2 livrée (backend)
 
-**État actuel** : aucune infrastructure de sécurité n'existe dans le projet (pas de Spring Security,
-pas de JWT, pas de rôles). Tous les endpoints des domaines Function, Chantier et Employee sont donc
-ouverts, comme l'était déjà `PaieController` avant eux.
+**Décision (HMAYDA, 2026-09-22)** : authentification JWT auto-émise (Access Token 15 min + Refresh
+Token opaque 30 jours, rotation à usage unique, cookie httpOnly) + RBAC dynamique (rôles et
+permissions administrables via `/roles`/`/users`, deny overrides individuels — deny > permissions
+des rôles). Détail complet de la conception : `conventions/security.md`.
 
-**À faire, avant mise en production** :
+**Livré et vérifié end-to-end (login, refresh, rotation/reuse detection, logout, mot de passe
+oublié par email via Mailpit, création de rôle + utilisateur + deny override, 401/403 corrects)** :
 
-- Ajouter Spring Security + JWT (Access Token courte durée + Refresh Token), conformément à
-  `conventions/security.md`.
-- Protéger tous les endpoints avec `@PreAuthorize`.
-- Réserver les endpoints `DELETE` au rôle `SYSTEM_ADMIN` — chaque contrôleur concerné porte déjà un
-  commentaire `TODO(security)` à l'endroit exact où ajouter l'annotation :
-  - `FunctionController.supprimer`, `FunctionImportController.importer`
-  - `ChantierController.supprimer`, `ChantierSyncController.synchroniser`
-  - `EmployeeController.supprimer`, `EmployeeImportController.importer`
-  - `PaieController.supprimer`, `PaieImportController.importer`
-- Une fois la sécurité en place, mettre à jour `docs/rbac/<module>.md` pour chaque domaine
-  (conventions/security.md).
-- Compléter `OpenApiConfig` : le schéma `bearerAuth` est déjà déclaré, il ne reste qu'à l'appliquer
-  aux endpoints via `@SecurityRequirement(name = "bearerAuth")` sur chaque contrôleur.
+- Module `staport.rh.auth` complet : entités (`Utilisateur`/`Role`/`Permission`/`RefreshToken`/
+  `ResetPasswordToken`), migrations Flyway `V3`/`V4` (schéma + seed permissions/rôles), JWT
+  (`JwtService`, `SecurityConfig`), services (`AuthService`/`UserService`/`RoleService`),
+  contrôleurs (`AuthController`/`UserController`/`RoleController`), email de reset
+  (`EmailService` + Mailpit en dev, `docker-compose.yml`).
+- `@PreAuthorize` appliqué sur tous les endpoints des 4 domaines (Chantier/Employee/Function/Paie) —
+  tous les `TODO(security)` précédents sont résolus.
+- Compte `SYSTEM_ADMIN` de bootstrap créé automatiquement au démarrage (`AdminBootstrapRunner`,
+  variables `ADMIN_USERNAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD`).
+- Bug corrigé au passage : `GlobalExceptionHandler` catchait `AccessDeniedException` dans son
+  handler générique `Exception.class` et renvoyait 500 au lieu de 403 — un handler dédié a été
+  ajouté (doit toujours précéder le handler générique dans le même `@RestControllerAdvice`).
+
+**Reste à faire** :
+
+- **Frontend** : page de login, intercepteur HTTP (Authorization + refresh silencieux), guards de
+  route par permission, écran de gestion des utilisateurs/rôles (assignation permissions, deny
+  overrides), remplacement de tout bouton conditionné à un rôle codé en dur par une vérification de
+  permission effective (`conventions/security.md`, section Suppression).
+- `docs/rbac/<module>.md` pour chaque domaine (référencé par `conventions/security.md`) — pas
+  encore créés.
+- Détection de compromission en cascade du Refresh Token (voir `conventions/security.md`, Points
+  d'attention) — non traité, risque accepté pour l'instant.
+- Revoir `SameSite=Lax` si le frontend est un jour déployé séparément du backend (voir
+  `conventions/security.md`).
 
 ---
 

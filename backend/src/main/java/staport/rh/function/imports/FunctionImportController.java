@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,7 +34,7 @@ public class FunctionImportController {
     @Operation(summary = "Importer des fonctions depuis un fichier Excel (une colonne, une ligne d'en-tête). " +
             "Import atomique : une seule ligne invalide rejette tout le fichier.")
     @ApiResponse(responseCode = "400", description = "Fichier illisible, ou au moins une ligne invalide (voir lignesIgnorees) — rien n'a été créé")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('FUNCTION_IMPORT')")
     public ResponseEntity<FunctionImportResultDto> importer(@RequestParam("file") MultipartFile file) {
         FunctionImportResultDto resultat = importService.importer(file);
         HttpStatus statut = resultat.ignores() > 0 ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
@@ -42,6 +43,7 @@ public class FunctionImportController {
 
     @GetMapping("/modele")
     @Operation(summary = "Télécharger le modèle Excel vierge attendu par l'import (une colonne, en-tête \"Fonction\")")
+    @PreAuthorize("hasAuthority('FUNCTION_IMPORT')")
     public ResponseEntity<Resource> telechargerModele() {
         ByteArrayInputStream flux = importService.genererModele();
         InputStreamResource ressource = new InputStreamResource(flux);

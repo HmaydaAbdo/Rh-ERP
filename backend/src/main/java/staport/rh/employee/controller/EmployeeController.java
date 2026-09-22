@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class EmployeeController {
     @ApiResponse(responseCode = "201")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<EmployeeResponseDto> creer(@Valid @RequestBody EmployeeCreateRequestDto dto) {
         EmployeeResponseDto created = employeeService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -48,6 +50,7 @@ public class EmployeeController {
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<EmployeeResponseDto> modifier(
             @PathVariable Long id,
             @Valid @RequestBody EmployeeUpdateRequestDto dto) {
@@ -57,12 +60,14 @@ public class EmployeeController {
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un employé")
     @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     public ResponseEntity<EmployeeResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.findById(id));
     }
 
     @PostMapping("/search")
     @Operation(summary = "Rechercher des employés")
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     public ResponseEntity<Page<EmployeeResponseDto>> rechercher(
             @RequestBody(required = false) EmployeeSearchCriteria criteria,
             Pageable pageable) {
@@ -73,7 +78,7 @@ public class EmployeeController {
     @Operation(summary = "Supprimer un employé")
     @ApiResponse(responseCode = "204")
     @ApiResponse(responseCode = "404")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('EMPLOYEE_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         employeeService.delete(id);
         return ResponseEntity.noContent().build();
