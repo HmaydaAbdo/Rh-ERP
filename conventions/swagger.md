@@ -27,8 +27,8 @@ Exemple :
 
 ```java
 @Tag(
-    name = "Banques",
-    description = "Gestion des banques"
+    name = "Xxx",
+    description = "Gestion des Xxx"
 )
 ```
 

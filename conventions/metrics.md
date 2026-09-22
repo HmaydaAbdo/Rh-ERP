@@ -33,17 +33,18 @@ module/
 Toutes les métriques suivent la convention :
 
 ```text
-gbanque.<module>.<objet>.<mesure>
+<application>.<module>.<objet>.<mesure>
 ```
 
-Exemples :
+`<application>` est un préfixe court et stable identifiant l'application (défini une fois par
+projet). Exemples (à adapter au domaine réel du projet) :
 
 ```text
-gbanque.caution.active.count
-gbanque.leasing.echeances.j7.count
-gbanque.batch.funpaiement.operations.success
-gbanque.batch.funpaiement.operations.failure
-gbanque.batch.funpaiement.duration
+<app>.<module>.actifs.count
+<app>.<module>.echeances.j7.count
+<app>.batch.<nom-du-batch>.operations.success
+<app>.batch.<nom-du-batch>.operations.failure
+<app>.batch.<nom-du-batch>.duration
 ```
 
 Conventions :
@@ -61,8 +62,8 @@ Utiliser un `Gauge` pour mesurer une valeur instantanée.
 
 Exemples :
 
-* nombre de cautions actives ;
-* nombre de rapprochements en cours ;
+* nombre d'enregistrements actifs d'un type donné ;
+* nombre d'éléments dans un état intermédiaire (en cours, en attente...) ;
 * nombre d'échéances à venir.
 
 Règles :
@@ -132,54 +133,25 @@ Mesurer la durée directement autour de l'opération métier.
 
 # Modules concernés
 
-Ajouter des métriques métier pour les modules ayant un état métier significatif.
+Ajouter des métriques métier pour les modules ayant un état métier significatif — c'est-à-dire un
+cycle de vie, un volume qui varie dans le temps, ou un besoin de supervision opérationnelle.
 
-Exemples :
+Exemples de mesures pertinentes selon le type de module :
 
-## Rapprochement
-
-* rapprochements par statut ;
-* rapprochements par banque.
-
-## Caution
-
-* cautions actives ;
-* cautions expirées.
-
-## Leasing
-
-* échéances J-7 ;
-* échéances J-30.
-
-## CMT
-
-* échéances J-7 ;
-* échéances J-30.
-
-## Batch FunPaiement
-
-* synchronisations réussies ;
-* synchronisations échouées ;
-* durée d'exécution.
-
-## Moyens de paiement
-
-* créations par type ;
-* passages à l'état échu.
+* **Module avec statuts métier** (ex. un cycle de vie brouillon → validé → clôturé) : répartition
+  par statut, nombre dans chaque état.
+* **Module avec échéances/délais** : nombre d'éléments approchant une échéance (J-7, J-30...).
+* **Batch/synchronisation périodique** : nombre de succès, nombre d'échecs, durée d'exécution.
+* **Module avec sous-catégories métier** (ex. plusieurs types d'un même objet) : créations par
+  type, transitions d'état par type.
 
 ---
 
 # Modules exclus
 
-Les modules CRUD sans état métier particulier n'ajoutent pas de métriques métier.
-
-Exemples :
-
-* Auth
-* User
-* Department
-
-Les métriques HTTP automatiques de Micrometer sont suffisantes.
+Les modules CRUD sans état métier particulier n'ajoutent pas de métriques métier — un référentiel
+simple (créer/lire/modifier/supprimer, sans cycle de vie ni volumétrie à surveiller) n'a pas besoin
+de métriques dédiées. Les métriques HTTP automatiques de Micrometer sont suffisantes.
 
 ---
 
@@ -189,9 +161,9 @@ Utiliser uniquement des tags ayant une cardinalité faible.
 
 Exemples :
 
-* banque ;
 * statut ;
 * type ;
+* module/source ;
 * environnement.
 
 Ne jamais utiliser comme tag :

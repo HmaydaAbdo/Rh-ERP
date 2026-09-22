@@ -1,33 +1,30 @@
 # Déploiement — Docker Compose, PostgreSQL, migrations
 
-> La stack de référence pour développer et faire tourner ce projet est Docker Compose. Toute
-> évolution de l'infrastructure (services, variables d'environnement, migrations) doit rester
-> cohérente avec ce document.
+> Pattern de référence pour développer et faire tourner un projet Spring Boot + Angular avec
+> PostgreSQL, réutilisable d'un projet à l'autre. La liste réelle des services, ports et variables
+> d'un projet donné vit dans son propre `docker-compose.yml` et son README, pas ici.
 
 ---
 
-## Stack
+## Stack de référence
 
 | Service | Rôle | Image / build |
 |---|---|---|
-| `postgres` | Base de données | `pgvector/pgvector:pg17` (PostgreSQL 17 + extension `vector`) |
+| `postgres` | Base de données | `postgres:<version>` (ou `pgvector/pgvector:pg<version>` si des embeddings/recherche vectorielle sont nécessaires) |
 | `backend` | API Spring Boot | build multi-stage depuis `backend/Dockerfile` |
 | `frontend` | UI Angular (serveur de dev) | build depuis `frontend/Dockerfile`, code monté en volume |
+| `mailpit` (dev uniquement) | Attrape-mail local pour tester les flows email sans SMTP réel | `axllent/mailpit` |
 
 Fichier d'orchestration : `docker-compose.yml` à la racine du dépôt. Variables lues depuis `.env` à
-la racine (voir `.env.example`) — jamais de secret commité (`conventions/configuration.md`).
+la racine — jamais de secret commité (`conventions/configuration.md`).
 
 ---
 
-## Pourquoi PostgreSQL plutôt que MySQL/MariaDB
+## Choix technologiques — PostgreSQL, pgvector
 
-Décision produit (2026-09-22) : le projet est passé de MySQL à PostgreSQL 17. `conventions/database.md`
-décrit les conventions de migration qui en découlent — ce document-ci ne couvre que l'aspect
-infrastructure (comment la base tourne, comment elle est démarrée).
-
-`pgvector` est activé (`CREATE EXTENSION IF NOT EXISTS vector`, voir la première migration Flyway)
-en anticipation d'un usage futur (recherche sémantique/embeddings). Aucune colonne vectorielle
-n'existe à ce jour — ne pas en introduire sans besoin métier clairement identifié
+PostgreSQL est le choix par défaut pour un nouveau projet (large écosystème, JSON natif, extensions
+matures). L'extension `pgvector` n'est activée que si un besoin réel de recherche
+vectorielle/embeddings est identifié — ne jamais l'activer par anticipation
 (`conventions/architecture.md`).
 
 ---
@@ -39,23 +36,22 @@ cp .env.example .env   # une seule fois, puis renseigner de vraies valeurs
 docker compose up -d --build
 ```
 
-- `postgres` expose son port sur l'hôte (`POSTGRES_PORT`, défaut `5432`) — utile pour se connecter
-  avec un client SQL ou lancer le backend en local (voir ci-dessous).
-- `backend` expose `BACKEND_PORT` (défaut `8080`), applique les migrations Flyway puis démarre.
-- `frontend` expose `FRONTEND_PORT` (défaut `4200`), sert l'application via `ng serve` avec
-  rechargement à chaud (le code source est monté en volume, `node_modules` reste dans un volume
-  nommé séparé pour ne pas être écrasé par celui de l'hôte).
+- `postgres` expose son port sur l'hôte — utile pour se connecter avec un client SQL ou lancer le
+  backend en local (voir ci-dessous).
+- `backend` expose son port HTTP, applique les migrations Flyway puis démarre.
+- `frontend` expose son port, sert l'application via `ng serve` avec rechargement à chaud (le code
+  source est monté en volume, `node_modules` reste dans un volume nommé séparé pour ne pas être
+  écrasé par celui de l'hôte).
 
 Arrêter : `docker compose down` (ajouter `-v` pour supprimer aussi les données PostgreSQL
 persistées).
 
 ### Développement backend actif
 
-Le conteneur `backend` reconstruit l'image à chaque changement de code (`docker compose up --build
-backend`) — correct pour "faire tourner le projet", mais plus lent qu'un cycle de développement
-actif. Pour itérer rapidement sur le backend, lancer `./mvnw spring-boot:run` en local (le fichier
-`backend/.env` local pointe alors `DB_HOST=localhost`, `DB_PORT` sur le port publié par le service
-`postgres`) pendant que `postgres` (et éventuellement `frontend`) restent gérés par Docker Compose :
+Le conteneur `backend` reconstruit l'image à chaque changement de code — correct pour "faire
+tourner le projet", mais plus lent qu'un cycle de développement actif. Pour itérer rapidement sur
+le backend, lancer le serveur en local (`./mvnw spring-boot:run` ou équivalent) pendant que
+`postgres` (et éventuellement `frontend`) restent gérés par Docker Compose :
 
 ```bash
 docker compose up -d postgres
@@ -64,9 +60,9 @@ cd backend && ./mvnw spring-boot:run
 
 ### Tests
 
-Les tests qui chargent le contexte Spring (`PaieApplicationTests`) ont besoin d'une base PostgreSQL
-réelle et accessible (les autres tests sont des tests unitaires avec repositories mockés, sans base
-réelle) — démarrer `docker compose up -d postgres` avant `./mvnw test` si ce n'est pas déjà fait.
+Les tests qui chargent le contexte Spring ont besoin d'une base PostgreSQL réelle et accessible
+(les tests unitaires avec repositories mockés n'en ont pas besoin) — démarrer `docker compose up -d
+postgres` avant de lancer les tests si ce n'est pas déjà fait.
 
 ---
 
@@ -87,22 +83,33 @@ partagé (voir `conventions/database.md`, section « Ajouter une migration »).
 
 | Variable | Portée | Description |
 |---|---|---|
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `.env` racine, service `postgres` | Identifiants de la base — repris tels quels par le service `backend` |
-| `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | `.env` racine | Ports publiés sur l'hôte |
-| `CHANTIER_SYNC_BASE_URL` | `.env` racine (Docker) ou `backend/.env` (local) | Endpoint ERP, obligatoire (`conventions/security.md`) |
+| Identifiants base de données | `.env` racine, service `postgres` | Repris tels quels par le service `backend` |
+| Ports exposés sur l'hôte | `.env` racine | Un par service publié |
+| Endpoints externes obligatoires du projet | `.env` racine (Docker) ou `backend/.env` (local) | Toute intégration externe requise par le projet — voir sa propre documentation |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `backend/.env` (développement local hors Docker uniquement) | Connexion à la base — en Docker, ces valeurs sont injectées directement par `docker-compose.yml` |
-| `BACKEND_URL` | Service `frontend` (Docker uniquement) | Cible du proxy de développement Angular (`frontend/proxy.conf.js`) — `http://backend:8080` en Docker, `http://localhost:8080` par défaut en local |
+| `BACKEND_URL` | Service `frontend` (Docker uniquement) | Cible du proxy de développement Angular — service Docker en Docker, `localhost` par défaut en local |
 
-Aucune de ces variables n'a de valeur par défaut dans `application.yml` (`conventions/configuration.md`)
-— l'application refuse de démarrer si l'une d'elles manque.
+Aucune de ces variables n'a de valeur par défaut dans `application.yml`
+(`conventions/configuration.md`) — l'application refuse de démarrer si l'une d'elles manque.
 
 ---
 
-## Ce qui n'existe pas encore
+## Frontend/backend same-origin via le proxy de développement
 
-- Pas d'image "production" pour le frontend (pas de build Angular optimisé servi par nginx) —
-  seul un mode développement existe, aucun besoin de déploiement en production identifié à ce jour.
-- Pas de CI/CD.
-- Pas de secrets manager — `.env` reste la seule source de configuration sensible, adaptée au stade
-  actuel du projet (développement), à revoir avant toute mise en production
-  (`conventions/security.md`).
+Faire proxifier les appels API du serveur de développement Angular vers le backend (plutôt que de
+laisser le navigateur appeler directement un autre port) a un effet de bord utile au-delà du
+confort de développement : le navigateur ne voit qu'une seule origine, ce qui simplifie la gestion
+des cookies d'authentification (voir `conventions/security.md`, section Cookie Refresh Token) et
+évite toute configuration CORS en développement. Un `bypass` distinguant navigation de page (HTML)
+et appels API (JSON) est nécessaire dès qu'un chemin proxifié coïncide avec une route Angular
+existante.
+
+---
+
+## Ce qui n'existe pas forcément
+
+- Une image "production" pour le frontend (build Angular optimisé servi par nginx) n'est pas
+  systématique — ne l'ajouter que lorsqu'un déploiement en production est réellement planifié.
+- CI/CD — à mettre en place selon le besoin du projet.
+- Un secrets manager — `.env` convient au stade développement ; à revoir avant toute mise en
+  production réelle (`conventions/security.md`).

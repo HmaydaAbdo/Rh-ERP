@@ -1,6 +1,7 @@
 # Frontend
 
-> Conventions Angular applicables à tout le frontend.
+> Conventions Angular applicables à tout le frontend. Document générique et réutilisable d'un
+> projet à l'autre — aucun nom de domaine métier propre à un projet particulier n'y figure.
 
 ## Technologies
 
@@ -23,11 +24,9 @@ Exemple :
 
 ```text
 portail/
-├── banque/
-├── caution/
-├── cmt/
-├── leasing/
-├── rapprochement/
+├── <domaine-a>/
+├── <domaine-b>/
+├── <domaine-c>/
 └── ...
 ```
 
@@ -59,7 +58,7 @@ Ne jamais utiliser l'injection par constructeur.
 Exemple :
 
 ```ts
-private readonly banqueService = inject(BanqueService);
+private readonly xxxService = inject(XxxService);
 ```
 
 ---
@@ -82,8 +81,11 @@ Utiliser exclusivement Reactive Forms.
 
 Interdictions :
 
-* ngModel
-* Template Driven Forms
+* ngModel sur un formulaire (Template Driven Forms)
+
+`ngModel` reste acceptable ponctuellement pour un contrôle isolé hors d'un `FormGroup` (ex. une
+case à cocher pilotant un état local simple, sans validation ni soumission) — mais dès qu'un champ
+fait partie d'un formulaire soumis, il passe par Reactive Forms.
 
 ---
 
@@ -115,13 +117,14 @@ Interdit :
 
 # Gestion de l'état
 
-Utiliser :
-
-* propriétés de classe ;
-* RxJS ;
-* BehaviorSubject lorsque nécessaire.
-
-Ne pas utiliser Angular Signals.
+* RxJS/Observables pour les flux asynchrones (HTTP, événements répétés dans le temps) — un
+  intercepteur ou un Service qui expose un flux continu reste en RxJS.
+* Angular Signals (`signal`, `computed`) pour un état synchrone simple porté par un Service ou un
+  composant (ex. utilisateur courant, état d'authentification, dérivés calculés d'un état local) —
+  préférer un Signal à une propriété de classe mutable brute dès que des composants doivent réagir
+  à ce changement d'état.
+* Ne pas mélanger les deux paradigmes pour la même donnée dans le même Service — un état est soit
+  un flux RxJS, soit un Signal, jamais dupliqué sous les deux formes en parallèle.
 
 ---
 
@@ -163,17 +166,28 @@ Les messages d'erreur sont gérés uniquement par l'intercepteur HTTP.
 
 # RBAC
 
-Les autorisations proviennent du JWT.
+Les autorisations proviennent des permissions effectives de l'utilisateur courant (voir
+`conventions/security.md`) — jamais d'un rôle codé en dur.
 
-Les guards utilisent :
-
-* systemAdminGuard
-* departmentGuard()
-
-Les éléments de navigation utilisent :
+Un Service d'authentification centralise l'état de connexion et expose au minimum :
 
 ```ts
-requiredAuthority
+hasPermission(code: string): boolean
+hasAnyPermission(codes: string[]): boolean
+```
+
+Les guards de route utilisent ce Service — un guard d'authentification simple (utilisateur connecté
+ou non) et un guard de permission générique paramétré par les données de route :
+
+```ts
+{ path: 'xxx', canActivate: [permissionGuard], data: { permission: 'XXX_MANAGE' } }
+```
+
+Les éléments de navigation et boutons sensibles (ex. suppression) se conditionnent de la même façon
+au niveau du template :
+
+```html
+@if (authService.hasPermission('XXX_DELETE')) { ... }
 ```
 
 Toute nouvelle fonctionnalité définit explicitement ses autorisations.
@@ -233,13 +247,8 @@ Toute évolution d'un contrat API doit être répercutée sur le frontend.
 
 # Documentation
 
-Après toute évolution d'un module frontend, mettre à jour la documentation concernée.
-
-Voir :
-
-* docs/modules/
-* docs/direction/
-* docs/guide-utilisateur/
+Après toute évolution d'un module frontend, mettre à jour la documentation concernée dans `docs/`
+(structure propre à chaque projet — voir son propre `README.md`).
 
 ---
 
@@ -248,14 +257,15 @@ Voir :
 * Architecture par domaine métier.
 * Composants Standalone.
 * inject() uniquement.
-* Reactive Forms uniquement.
+* Reactive Forms pour tout formulaire soumis.
 * Nouveau Control Flow Angular uniquement.
-* Pas de Signals.
+* RxJS pour les flux asynchrones, Signals pour l'état synchrone simple — jamais les deux pour la
+  même donnée.
 * Les Services centralisent les appels HTTP.
 * Les composants restent centrés sur la présentation.
 * Les erreurs HTTP sont gérées de manière centralisée.
 * Toute nouvelle route est chargée en Lazy Loading.
-* Les autorisations sont explicites.
+* Les autorisations sont explicites et reposent sur les permissions effectives, jamais un rôle codé en dur.
 * Les Design Tokens sont la source de vérité du style.
 * Le frontend reste synchronisé avec les contrats du backend.
 * Toute fonctionnalité est documentée.

@@ -30,8 +30,8 @@ Voir `conventions/deployment.md` pour la façon dont Flyway s'exécute (Docker C
    suivant, strictement supérieur au dernier existant (voir les fichiers déjà présents pour
    connaître le dernier numéro utilisé).
 2. Écrire du SQL PostgreSQL explicite — pas de génération automatique. Utiliser des noms de
-   contrainte/index explicites et lisibles (`fk_employe_chantier`, `uk_paie_employee_periode`,
-   `idx_employe_statut`…), jamais les noms générés par défaut par Hibernate.
+   contrainte/index explicites et lisibles (`fk_<table>_<cible>`, `uk_<table>_<colonnes>`,
+   `idx_<table>_<colonne>`…), jamais les noms générés par défaut par Hibernate.
 3. Modifier l'entité JPA en cohérence exacte avec la migration (mêmes colonnes, mêmes types,
    mêmes contraintes `nullable`/`unique`).
 4. Vérifier localement que `ddl-auto=validate` passe : démarrer l'application (ou lancer les
@@ -77,9 +77,9 @@ s'exécute dans la même transaction que le reste de la migration).
 ### Nouvelle colonne NOT NULL sur table non vide
 
 ```sql
-ALTER TABLE employe ADD COLUMN matricule VARCHAR(20);
-UPDATE employe SET matricule = 'TEMP-' || id WHERE matricule IS NULL;
-ALTER TABLE employe ALTER COLUMN matricule SET NOT NULL;
+ALTER TABLE xxx ADD COLUMN nouvelle_colonne VARCHAR(20);
+UPDATE xxx SET nouvelle_colonne = 'TEMP-' || id WHERE nouvelle_colonne IS NULL;
+ALTER TABLE xxx ALTER COLUMN nouvelle_colonne SET NOT NULL;
 ```
 
 Le backfill (`UPDATE`) doit produire une valeur réellement correcte métier si elle existe, ou être
@@ -89,7 +89,7 @@ signalé comme un point à clarifier avec l'utilisateur si aucune valeur par dé
 ### Colonne renommée
 
 ```sql
-ALTER TABLE paie RENAME COLUMN observation TO commentaire;
+ALTER TABLE xxx RENAME COLUMN ancien_nom TO nouveau_nom;
 ```
 
 `RENAME COLUMN` préserve les données — pas besoin de script de copie séparé.
@@ -97,13 +97,13 @@ ALTER TABLE paie RENAME COLUMN observation TO commentaire;
 ### Enum (`VARCHAR` + `CHECK`) — valeur supprimée
 
 ```sql
-UPDATE employe SET statut = 'INACTIF' WHERE statut = 'VALEUR_SUPPRIMEE';
-ALTER TABLE employe DROP CONSTRAINT chk_employe_statut;
-ALTER TABLE employe ADD CONSTRAINT chk_employe_statut CHECK (statut IN ('ACTIF', 'INACTIF'));
+UPDATE xxx SET statut = 'VALEUR_DE_REPLI' WHERE statut = 'VALEUR_SUPPRIMEE';
+ALTER TABLE xxx DROP CONSTRAINT chk_xxx_statut;
+ALTER TABLE xxx ADD CONSTRAINT chk_xxx_statut CHECK (statut IN ('VALEUR_A', 'VALEUR_DE_REPLI'));
 ```
 
-La valeur de repli (`'INACTIF'` ci-dessus) est un exemple — la vraie valeur de repli est une
-règle métier à confirmer, jamais à deviner.
+La valeur de repli (`'VALEUR_DE_REPLI'` ci-dessus) est un exemple — la vraie valeur de repli est
+une règle métier à confirmer, jamais à deviner.
 
 ### Contrainte UNIQUE ajoutée sur données existantes
 
