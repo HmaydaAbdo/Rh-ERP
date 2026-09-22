@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -24,9 +25,12 @@ class PaieSheetWriter {
 
     private static final DateTimeFormatter FORMAT_PERIODE = DateTimeFormatter.ofPattern("MM-yyyy");
     private static final int DERNIERE_COLONNE = 12;
+    // Tableau "effectif par fonction" sur les colonnes 0-2, puis 3 colonnes vides (3-5) avant le
+    // squelette matériel (colonnes 6-7), conformément au positionnement demandé.
+    private static final int COLONNE_SQUELETTE = 6;
 
     void ecrire(Sheet sheet, PaieExcelStyles styles, String titreZone, YearMonth periode,
-                List<Paie> lignes, BigDecimal totalPeriodePrecedente) {
+                List<Paie> lignes, BigDecimal totalPeriodePrecedente, SqueletteMateriel materiel) {
         ecrireTitre(sheet, styles, titreZone, periode);
         ecrireEntetes(sheet, styles);
 
@@ -41,7 +45,11 @@ class PaieSheetWriter {
                 formuleSousTotal(premiereLigneDonnees, derniereLigneDonnees), null);
         ecrireLigneTotal(sheet, styles, ligneCourante, "TOTAL GENERAL MOIS PRECEDENT", null, totalPeriodePrecedente);
 
-        ecrireEffectifParFonction(sheet, styles, ligneCourante + 2, lignes);
+        int ligneDepartTableauxBas = ligneCourante + 2;
+        ecrireEffectifParFonction(sheet, styles, ligneDepartTableauxBas, lignes);
+        if (materiel != null) {
+            ecrireSqueletteMateriel(sheet, styles, ligneDepartTableauxBas, materiel);
+        }
         ajusterLargeurColonnes(sheet);
     }
 
@@ -113,8 +121,10 @@ class PaieSheetWriter {
         Cell celluleValeur = ligne.getCell(9);
         if (formule != null) {
             celluleValeur.setCellFormula(formule);
+        } else if (valeurFixe != null) {
+            celluleValeur.setCellValue(valeurFixe.doubleValue());
         } else {
-            celluleValeur.setCellValue(valeurFixe != null ? valeurFixe.doubleValue() : 0.0);
+            celluleValeur.setCellValue("INTROUVABLE");
         }
         celluleValeur.setCellStyle(styles.totalMontant);
 
@@ -125,19 +135,57 @@ class PaieSheetWriter {
         Row entete = sheet.createRow(ligneDepart);
         ecrireTexte(entete, 0, "FONCTION", styles.entete);
         ecrireTexte(entete, 1, "EFFECTIF", styles.entete);
+        ecrireTexte(entete, 2, "STC", styles.entete);
 
-        Map<String, Long> effectifParFonction = lignes.stream()
+        Map<String, List<Paie>> lignesParFonction = lignes.stream()
                 .collect(Collectors.groupingBy(
                         p -> p.getFonction().getLibelle(),
                         TreeMap::new,
-                        Collectors.counting()));
+                        Collectors.toList()));
 
         int indexLigne = ligneDepart + 1;
-        for (Map.Entry<String, Long> entry : effectifParFonction.entrySet()) {
+        for (Map.Entry<String, List<Paie>> entry : lignesParFonction.entrySet()) {
             Row ligne = sheet.createRow(indexLigne++);
+            List<Paie> lignesFonction = entry.getValue();
+            long stc = lignesFonction.stream().filter(PaieSheetWriter::estStcOuSortie).count();
             ecrireTexte(ligne, 0, entry.getKey(), styles.donneeGauche);
-            ecrireEntier(ligne, 1, entry.getValue().intValue(), styles.donneeCentre);
+            ecrireEntier(ligne, 1, lignesFonction.size(), styles.donneeCentre);
+            ecrireEntier(ligne, 2, (int) stc, styles.donneeCentre);
         }
+    }
+
+    /**
+     * Écrit le squelette matériel (CAMION/ENGINS) sur les mêmes lignes que le tableau "effectif par
+     * fonction" — seules les étiquettes de la première colonne sont renseignées, la colonne "Nbre"
+     * reste vide (à remplir à la main). Les lignes étant partagées avec le tableau effectif, on
+     * récupère la ligne existante plutôt que d'en recréer une (`Sheet.createRow` sur un index déjà
+     * utilisé effacerait le contenu déjà écrit par `ecrireEffectifParFonction`).
+     */
+    private void ecrireSqueletteMateriel(Sheet sheet, PaieExcelStyles styles, int ligneDepart, SqueletteMateriel materiel) {
+        Row entete = obtenirOuCreerLigne(sheet, ligneDepart);
+        ecrireTexte(entete, COLONNE_SQUELETTE, materiel.titreColonne(), styles.entete);
+        ecrireTexte(entete, COLONNE_SQUELETTE + 1, "Nbre", styles.entete);
+
+        int indexLigne = ligneDepart + 1;
+        for (String libelle : materiel.libelles()) {
+            Row ligne = obtenirOuCreerLigne(sheet, indexLigne++);
+            ecrireTexte(ligne, COLONNE_SQUELETTE, libelle, styles.donneeGauche);
+            ligne.createCell(COLONNE_SQUELETTE + 1).setCellStyle(styles.donneeCentre);
+        }
+    }
+
+    private Row obtenirOuCreerLigne(Sheet sheet, int indexLigne) {
+        Row ligne = sheet.getRow(indexLigne);
+        return ligne != null ? ligne : sheet.createRow(indexLigne);
+    }
+
+    private static boolean estStcOuSortie(Paie paie) {
+        String observation = paie.getObservation();
+        if (observation == null) {
+            return false;
+        }
+        String normalisee = observation.trim().toLowerCase(Locale.ROOT);
+        return normalisee.equals("stc") || normalisee.equals("sortie");
     }
 
     private String formuleSousTotal(int premiereLigneDonnees, int derniereLigneDonnees) {

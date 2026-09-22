@@ -233,7 +233,7 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
   P/J.R.O/J.R.D, SALAIRE → SALAIRE/RO/RD), une ligne par employé, un total général (formule Excel
   `SUBTOTAL(9, ...)` recalculée dynamiquement — pas une valeur figée), un total du mois précédent
   (valeur figée, calculée côté serveur), un récapitulatif effectif par fonction (tri alphabétique du
-  libellé, via `TreeMap`).
+  libellé, via `TreeMap`, avec une colonne STC).
 
 ### Regroupement par équipe : correspondance texte exact, pas de normalisation
 
@@ -258,7 +258,41 @@ qu'une plage de cellules invalide (ex. `J4:J3`) qui aurait affiché une erreur E
 
 La ligne **"TOTAL GENERAL MOIS PRECEDENT"** n'est pas figée à 0 : elle est **réellement calculée**,
 somme de `salaireTotal` sur la période précédente, sur le même périmètre (global / chantier /
-équipe).
+équipe). Si **aucune** paie n'existe pour ce périmètre sur la période précédente (mois précédent non
+saisi, ou périmètre inexistant à l'époque), la cellule affiche le texte **"INTROUVABLE"** plutôt que
+la valeur `0` — pour distinguer "aucune donnée" de "total réellement nul" (`PaieExportService.totalSalairesOuNull`).
+
+### Effectif par fonction — colonne STC
+
+Le récapitulatif "effectif par fonction" (FONCTION / EFFECTIF) porte une troisième colonne **STC** :
+pour chaque fonction, le nombre de lignes de la feuille dont `observation` vaut exactement `"STC"`
+ou `"sortie"` (comparaison insensible à la casse et aux espaces superflus, `trim` +
+`toLowerCase`) — voir `PaieSheetWriter.estStcOuSortie`. Une observation qui ne vaut pas exactement
+l'une de ces deux valeurs (ex. absente, ou un commentaire libre contenant le mot "sortie") n'est pas
+comptée.
+
+### Squelette matériel (CAMION / ENGINS) — chantier C168 uniquement
+
+**Décision (HMAYDA, 2026-09-22)** : sur une feuille **équipe** (donc uniquement pour un chantier
+listé dans `chantiersCiblesPourEquipes`, voir plus haut), si le chantier vaut **"C168"**, un
+second tableau — un « squelette » sans données, juste des étiquettes à remplir à la main — est
+ajouté à droite du tableau "effectif par fonction", sur les **mêmes lignes**, avec un saut de 3
+colonnes vides (effectif = colonnes 0-2, squelette = colonnes 6-7) :
+
+- Équipe **"CH"** → tableau **CAMION** : CAMION CITERNE, CAMION 8\*4, CAMION SR, PORT CHAR, PICK UP.
+- Équipe **"OP"** → tableau **ENGINS** : PELLE PNEU, PELLE CHENILLE, NIVELEUSE, COMPACTEURS,
+  CHARGEUR, BULL, TRACTOPELLE.
+- Toute autre équipe (ou tout autre chantier) : aucun squelette ajouté.
+
+Seule la colonne d'étiquettes est renseignée ; la colonne "Nbre" reste **vide** (aucune valeur,
+pas même 0) — à remplir manuellement après export, l'application n'ayant aucune source de données
+pour ce décompte. Comparaison chantier/équipe insensible à la casse et aux espaces superflus, mêmes
+précautions que pour `chantiersCiblesPourEquipes`. Voir `PaieExportService.squeletteMateriel` et
+`PaieSheetWriter.ecrireSqueletteMateriel`.
+
+Règle propre à ce chantier précis, sans généralisation identifiée à ce jour pour d'autres
+chantiers/équipes — voir `conventions/architecture.md` (ne jamais généraliser une règle métier sans
+besoin confirmé).
 
 ---
 
