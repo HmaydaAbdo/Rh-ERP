@@ -122,10 +122,18 @@ Copier chacun en `.env` (jamais commité, voir `.gitignore`) et renseigner de vr
 
 ---
 
+## Authentification et rôles
+
+Authentification par JWT (Access Token + Refresh Token, voir `conventions/security.md`) avec RBAC
+dynamique : rôles et permissions administrables via l'UI (`/admin/roles`, `/admin/users`), deny
+overrides individuels. Catalogue permission ↔ endpoint par domaine : `docs/rbac/`.
+
+Au premier démarrage, un compte `SYSTEM_ADMIN` est créé automatiquement depuis
+`ADMIN_USERNAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (voir `.env.example`) — à utiliser pour se connecter
+la première fois, puis changer le mot de passe via l'UI.
+
 ## État du projet
 
-- Aucune authentification (JWT/RBAC) n'est encore en place — tous les endpoints sont ouverts. Voir
-  [TODO.md](TODO.md), section « Sécurité ».
 - Aucun audit (Hibernate Envers) n'est encore en place. Voir [TODO.md](TODO.md), section « Audit ».
 - Domaine Pointage non construit ; calcul automatique de la paie depuis le pointage prévu en
   roadmap. Voir [TODO.md](TODO.md).

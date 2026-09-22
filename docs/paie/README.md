@@ -124,8 +124,9 @@ rétroactive ou automatique des bulletins déjà existants.
 `nombreJoursTravailles`, `joursRecuperationOuvrable`, `joursRecuperationDimanche`,
 `salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche`, `salaireTotal`, `observation`.
 
-Aucune authentification n'est en place actuellement (voir [TODO.md](../../TODO.md)) — `DELETE` et
-`import` portent chacun un commentaire `TODO(security)`.
+Authentification JWT + permissions requises sur chaque endpoint (`PAIE_READ`/`PAIE_WRITE`/
+`PAIE_DELETE`/`PAIE_IMPORT`/`PAIE_EXPORT`) — voir `docs/rbac/paie.md` pour le détail endpoint ↔
+permission et `conventions/security.md` pour la conception du RBAC.
 
 ---
 
@@ -335,7 +336,8 @@ implémentées (le domaine Pointage, dont elles dépendent, n'existe pas encore)
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune authentification (JWT/RBAC) — tous les endpoints sont ouverts.
+- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
+  permission adéquate (voir `docs/rbac/paie.md`).
 - Aucun audit (Hibernate Envers).
 - `salaireMensuel` et les primes restent saisis/importés, jamais calculés — seul `salaireTotal` en
   est dérivé pour l'instant. Le calcul complet depuis le Pointage (voir « Évolutions prévues »
