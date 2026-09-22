@@ -29,7 +29,41 @@ spring:
       pageable:
         max-page-size: 200
 
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH}
+          starttls:
+            enable: ${SMTP_STARTTLS}
+
 chantier:
   sync:
     base-url: ${CHANTIER_SYNC_BASE_URL}
     cron: "0 0 23 * * *"
+
+security:
+  jwt:
+    # Secret HMAC (HS256) pour signer/valider les Access Tokens, base64, 256 bits minimum. Jamais de
+    # valeur par défaut (conventions/security.md) — générer avec, par ex., `openssl rand -base64 32`.
+    secret: ${JWT_SECRET}
+  cors:
+    frontend-url: ${FRONTEND_URL}
+  cookie:
+    # true en toute configuration servie en HTTPS ; peut être mis à false uniquement pour un accès
+    # direct au backend en HTTP pur (hors du proxy de dev Angular, qui rend déjà tout same-origin).
+    secure: ${COOKIE_SECURE}
+  admin:
+    # Compte SYSTEM_ADMIN de bootstrap, créé au démarrage s'il n'existe pas encore (voir
+    # AdminBootstrapRunner / conventions/security.md).
+    username: ${ADMIN_USERNAME}
+    email: ${ADMIN_EMAIL}
+    password: ${ADMIN_PASSWORD}
+  mail:
+    # Adresse "From" des emails envoyés (mot de passe oublié) — distincte de spring.mail.username
+    # (identifiant SMTP, vide quand le serveur ne requiert pas d'authentification, ex. Mailpit).
+    from: ${MAIL_FROM}

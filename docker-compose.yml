@@ -37,8 +37,31 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_AUTH: ${SMTP_AUTH}
+      SMTP_STARTTLS: ${SMTP_STARTTLS}
+      MAIL_FROM: ${MAIL_FROM}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+
+  mailpit:
+    # Attrape-mail local pour tester le flow "mot de passe oublié" sans SMTP réel — UI web sur
+    # MAILPIT_UI_PORT. En production, remplacer SMTP_HOST/PORT/USERNAME/PASSWORD par un vrai
+    # fournisseur (voir .env.example) ; ce service reste inutile mais inoffensif si non utilisé.
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
 
   frontend:
     build:

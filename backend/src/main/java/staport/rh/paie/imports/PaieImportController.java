@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,7 +40,7 @@ public class PaieImportController {
             "référentiel est créée automatiquement (jamais l'employé ni le chantier).")
     @ApiResponse(responseCode = "400", description = "Période invalide, fichier illisible, ou au moins une ligne "
             + "invalide (voir lignesIgnorees) — rien n'a été créé ou mis à jour")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<PaieImportResultDto> importer(
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
@@ -51,6 +52,7 @@ public class PaieImportController {
 
     @GetMapping("/modele")
     @Operation(summary = "Télécharger le modèle Excel vierge attendu par l'import (13 colonnes, 3 lignes d'en-tête)")
+    @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<Resource> telechargerModele() {
         ByteArrayInputStream flux = importService.genererModele();
         InputStreamResource ressource = new InputStreamResource(flux);

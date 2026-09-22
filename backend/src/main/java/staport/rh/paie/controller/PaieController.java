@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class PaieController {
     @ApiResponse(responseCode = "201")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('PAIE_WRITE')")
     public ResponseEntity<PaieResponseDto> creer(@Valid @RequestBody PaieCreateRequestDto dto) {
         PaieResponseDto created = paieService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -47,6 +49,7 @@ public class PaieController {
     @Operation(summary = "Modifier un bulletin de paie")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAuthority('PAIE_WRITE')")
     public ResponseEntity<PaieResponseDto> modifier(
             @PathVariable Long id,
             @Valid @RequestBody PaieUpdateRequestDto dto) {
@@ -56,12 +59,14 @@ public class PaieController {
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un bulletin de paie")
     @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<PaieResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(paieService.findById(id));
     }
 
     @PostMapping("/search")
     @Operation(summary = "Rechercher des bulletins de paie")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<Page<PaieResponseDto>> rechercher(
             @RequestBody(required = false) PaieSearchCriteria criteria,
             Pageable pageable) {
@@ -72,7 +77,7 @@ public class PaieController {
     @Operation(summary = "Supprimer un bulletin de paie")
     @ApiResponse(responseCode = "204")
     @ApiResponse(responseCode = "404")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('PAIE_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         paieService.delete(id);
         return ResponseEntity.noContent().build();

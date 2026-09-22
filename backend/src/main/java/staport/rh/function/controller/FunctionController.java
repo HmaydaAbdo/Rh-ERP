@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class FunctionController {
     @ApiResponse(responseCode = "201")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('FUNCTION_WRITE')")
     public ResponseEntity<FunctionResponseDto> creer(@Valid @RequestBody FunctionCreateRequestDto dto) {
         FunctionResponseDto created = functionService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -48,6 +50,7 @@ public class FunctionController {
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('FUNCTION_WRITE')")
     public ResponseEntity<FunctionResponseDto> modifier(
             @PathVariable Long id,
             @Valid @RequestBody FunctionUpdateRequestDto dto) {
@@ -57,12 +60,14 @@ public class FunctionController {
     @GetMapping("/{id}")
     @Operation(summary = "Consulter une fonction")
     @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAuthority('FUNCTION_READ')")
     public ResponseEntity<FunctionResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(functionService.findById(id));
     }
 
     @PostMapping("/search")
     @Operation(summary = "Rechercher des fonctions")
+    @PreAuthorize("hasAuthority('FUNCTION_READ')")
     public ResponseEntity<Page<FunctionResponseDto>> rechercher(
             @RequestBody(required = false) FunctionSearchCriteria criteria,
             Pageable pageable) {
@@ -74,7 +79,7 @@ public class FunctionController {
     @ApiResponse(responseCode = "204")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('FUNCTION_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         functionService.delete(id);
         return ResponseEntity.noContent().build();

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class ChantierController {
     @ApiResponse(responseCode = "201")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('CHANTIER_WRITE')")
     public ResponseEntity<ChantierResponseDto> creer(@Valid @RequestBody ChantierCreateRequestDto dto) {
         ChantierResponseDto created = chantierService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -48,6 +50,7 @@ public class ChantierController {
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")
+    @PreAuthorize("hasAuthority('CHANTIER_WRITE')")
     public ResponseEntity<ChantierResponseDto> modifier(
             @PathVariable Long id,
             @Valid @RequestBody ChantierUpdateRequestDto dto) {
@@ -57,12 +60,14 @@ public class ChantierController {
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un chantier")
     @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAuthority('CHANTIER_READ')")
     public ResponseEntity<ChantierResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(chantierService.findById(id));
     }
 
     @PostMapping("/search")
     @Operation(summary = "Rechercher des chantiers")
+    @PreAuthorize("hasAuthority('CHANTIER_READ')")
     public ResponseEntity<Page<ChantierResponseDto>> rechercher(
             @RequestBody(required = false) ChantierSearchCriteria criteria,
             Pageable pageable) {
@@ -74,7 +79,7 @@ public class ChantierController {
     @ApiResponse(responseCode = "204")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")
-    // TODO(security) : réserver au SYSTEM_ADMIN une fois l'infrastructure JWT/RBAC en place (voir TODO.md)
+    @PreAuthorize("hasAuthority('CHANTIER_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         chantierService.delete(id);
         return ResponseEntity.noContent().build();
