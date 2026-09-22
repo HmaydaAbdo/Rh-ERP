@@ -1,0 +1,43 @@
+@if (employee) {
+  <div class="employee-detail">
+    <div class="employee-detail__header">
+      <h1>{{ employee.nomPrenom }}</h1>
+      <div class="employee-detail__header-actions">
+        <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
+        <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
+      </div>
+    </div>
+
+    <dl class="employee-detail__grid">
+      <div>
+        <dt>CIN</dt>
+        <dd>{{ employee.cin }}</dd>
+      </div>
+      <div>
+        <dt>Statut</dt>
+        <dd>
+          <p-tag
+            [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'"
+            [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"
+          ></p-tag>
+        </dd>
+      </div>
+      <div>
+        <dt>Date de naissance</dt>
+        <dd>{{ employee.dateNaissance | date: 'dd/MM/yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Date d'embauche</dt>
+        <dd>{{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Fonction</dt>
+        <dd>{{ employee.fonction.libelle }}</dd>
+      </div>
+      <div>
+        <dt>Chantier</dt>
+        <dd>{{ employee.chantier.code }}</dd>
+      </div>
+    </dl>
+  </div>
+}

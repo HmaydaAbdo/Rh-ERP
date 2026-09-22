@@ -1,0 +1,43 @@
+.employee-detail {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  max-width: 720px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+
+    h1 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    &-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin: 0;
+
+    dt {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    dd {
+      margin: var(--space-xs) 0 0;
+      font-weight: 500;
+    }
+  }
+}

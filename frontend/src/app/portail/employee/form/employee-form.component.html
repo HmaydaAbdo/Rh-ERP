@@ -1,0 +1,97 @@
+<div class="employee-form">
+  <div class="employee-form__header">
+    <h1>{{ isEditMode ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
+    <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="employee-form__grid">
+    <div class="field">
+      <label for="nomPrenom">Nom &amp; prénom *</label>
+      <input pInputText id="nomPrenom" type="text" formControlName="nomPrenom" />
+      @if (form.controls.nomPrenom.invalid && form.controls.nomPrenom.touched) {
+        <small class="field-error">Le nom et prénom sont obligatoires.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="cin">CIN *</label>
+      <input pInputText id="cin" type="text" formControlName="cin" />
+      @if (form.controls.cin.invalid && form.controls.cin.touched) {
+        <small class="field-error">Le CIN est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="dateNaissance">Date de naissance *</label>
+      <p-calendar
+        inputId="dateNaissance"
+        formControlName="dateNaissance"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+      ></p-calendar>
+      @if (form.controls.dateNaissance.invalid && form.controls.dateNaissance.touched) {
+        <small class="field-error">La date de naissance est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="dateEmbauche">Date d'embauche *</label>
+      <p-calendar
+        inputId="dateEmbauche"
+        formControlName="dateEmbauche"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+      ></p-calendar>
+      @if (form.controls.dateEmbauche.invalid && form.controls.dateEmbauche.touched) {
+        <small class="field-error">La date d'embauche est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="fonctionId">Fonction *</label>
+      <p-dropdown
+        inputId="fonctionId"
+        formControlName="fonctionId"
+        [options]="functions"
+        optionLabel="libelle"
+        optionValue="id"
+        placeholder="Sélectionner une fonction"
+      ></p-dropdown>
+      @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
+        <small class="field-error">La fonction est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="chantierId">Chantier *</label>
+      <p-dropdown
+        inputId="chantierId"
+        formControlName="chantierId"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="id"
+        placeholder="Sélectionner un chantier"
+      ></p-dropdown>
+      @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
+        <small class="field-error">Le chantier est obligatoire.</small>
+      }
+    </div>
+
+    @if (isEditMode) {
+      <div class="field">
+        <label for="statut">Statut *</label>
+        <p-dropdown
+          inputId="statut"
+          formControlName="statut"
+          [options]="statutOptions"
+          optionLabel="label"
+          optionValue="value"
+        ></p-dropdown>
+      </div>
+    }
+
+    <div class="employee-form__actions">
+      <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+    </div>
+  </form>
+</div>

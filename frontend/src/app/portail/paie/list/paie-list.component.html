@@ -1,0 +1,208 @@
+<p-confirmDialog></p-confirmDialog>
+
+<p-dialog header="Importer des bulletins de paie" [(visible)]="showImportDialog" [modal]="true" [style]="{ width: '480px' }">
+  <form [formGroup]="importForm">
+    <div class="paie-list__dialog-field">
+      <label for="importPeriode">Période *</label>
+      <p-calendar
+        inputId="importPeriode"
+        formControlName="periode"
+        view="month"
+        dateFormat="mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        placeholder="Sélectionner un mois"
+      ></p-calendar>
+    </div>
+    <p class="paie-list__dialog-hint">Le fichier s'applique à tout le mois sélectionné — la période n'est pas une colonne du fichier.</p>
+    <input
+      type="file"
+      accept=".xlsx"
+      [disabled]="!importForm.controls.periode.value || importing"
+      (change)="onImportFileSelected($event)"
+    />
+  </form>
+</p-dialog>
+
+<p-dialog header="Exporter la paie" [(visible)]="showExportDialog" [modal]="true" [style]="{ width: '480px' }">
+  <form [formGroup]="exportForm">
+    <div class="paie-list__dialog-field">
+      <label for="exportPeriode">Période *</label>
+      <p-calendar
+        inputId="exportPeriode"
+        formControlName="periode"
+        view="month"
+        dateFormat="mm/yy"
+        appendTo="body"
+        [showIcon]="true"
+        placeholder="Sélectionner un mois"
+      ></p-calendar>
+    </div>
+    <div class="paie-list__dialog-field">
+      <label for="exportChantiers">Feuilles par équipe pour (optionnel)</label>
+      <p-multiSelect
+        inputId="exportChantiers"
+        formControlName="chantiers"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="code"
+        placeholder="Aucun chantier sélectionné"
+        display="chip"
+        appendTo="body"
+      ></p-multiSelect>
+    </div>
+    <button
+      pButton
+      type="button"
+      label="Télécharger"
+      icon="pi pi-download"
+      [loading]="exporting"
+      [disabled]="!exportForm.controls.periode.value"
+      (click)="onExporter()"
+    ></button>
+  </form>
+</p-dialog>
+
+<p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '640px' }">
+  @if (importResult) {
+    <p>
+      Période <strong>{{ importResult.periode }}</strong> —
+      <strong>{{ importResult.totalLignes }}</strong> ligne(s) traitée(s) —
+      <strong>{{ importResult.crees }}</strong> créé(s),
+      <strong>{{ importResult.misAJour }}</strong> mis à jour,
+      <strong>{{ importResult.ignores }}</strong> ignoré(s).
+    </p>
+
+    @if (importResult.fonctionsCreees.length > 0) {
+      <p class="paie-list__dialog-hint">
+        Fonction(s) créée(s) automatiquement : <strong>{{ importResult.fonctionsCreees.join(', ') }}</strong>
+      </p>
+    }
+
+    @if (importResult.lignesIgnorees.length > 0) {
+      <div class="paie-list__import-table-scroll">
+        <table class="paie-list__import-table">
+          <thead>
+            <tr>
+              <th>Ligne</th>
+              <th>CIN</th>
+              <th>Nom &amp; prénom</th>
+              <th>Raison</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ligne of importResult.lignesIgnorees; track ligne.numeroLigne) {
+              <tr>
+                <td>{{ ligne.numeroLigne }}</td>
+                <td>{{ ligne.cin }}</td>
+                <td>{{ ligne.nomPrenom }}</td>
+                <td>{{ ligne.raison }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</p-dialog>
+
+<div class="paie-list">
+  <div class="paie-list__header">
+    <h1>Paie</h1>
+    <div class="paie-list__header-actions">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-file-excel"
+        label="Modèle Excel"
+        class="p-button-outlined"
+        [loading]="downloadingTemplate"
+        (click)="onDownloadTemplate()"
+      ></button>
+      <button pButton type="button" icon="pi pi-download" label="Exporter" class="p-button-outlined" (click)="onOpenExportDialog()"></button>
+      <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
+      <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
+    </div>
+  </div>
+
+  <form [formGroup]="filterForm" class="paie-list__filters" (ngSubmit)="onSearch()">
+    <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" />
+    <input pInputText type="text" formControlName="cin" placeholder="CIN" />
+
+    <p-calendar formControlName="periode" view="month" dateFormat="mm/yy" placeholder="Période" [showIcon]="true"></p-calendar>
+
+    <p-dropdown
+      formControlName="fonctionId"
+      [options]="functions"
+      optionLabel="libelle"
+      optionValue="id"
+      placeholder="Fonction"
+      [showClear]="true"
+    ></p-dropdown>
+
+    <p-dropdown
+      formControlName="chantierId"
+      [options]="chantiers"
+      optionLabel="code"
+      optionValue="id"
+      placeholder="Chantier"
+      [showClear]="true"
+    ></p-dropdown>
+
+    <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+  </form>
+
+  <p-table
+    [value]="paies"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="10"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    dataKey="id"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Nom &amp; prénom</th>
+        <th>CIN</th>
+        <th pSortableColumn="periode">Période <p-sortIcon field="periode"></p-sortIcon></th>
+        <th>Chantier</th>
+        <th>Équipe</th>
+        <th>Salaire total</th>
+        <th></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-paie>
+      <tr>
+        <td>{{ paie.employee.nomPrenom }}</td>
+        <td>{{ paie.employee.cin }}</td>
+        <td>{{ paie.periode }}</td>
+        <td>{{ paie.chantier.code }}</td>
+        <td>{{ paie.equipe }}</td>
+        <td>{{ paie.salaireTotal | number: '1.2-2' }}</td>
+        <td class="paie-list__actions">
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(paie)"></button>
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(paie)"></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-text p-button-danger"
+            [loading]="deletingId === paie.id"
+            (click)="onDelete(paie)"
+          ></button>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="7">Aucun bulletin ne correspond à ces critères.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
