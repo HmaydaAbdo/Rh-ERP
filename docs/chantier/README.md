@@ -84,9 +84,10 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 
 ## API
 
-Toutes les routes sont sous `/chantiers`. Aucune authentification n'est en place actuellement
-(voir [TODO.md](../../TODO.md), section Sécurité) — chaque endpoint sensible porte un commentaire
-`TODO(security)` à l'emplacement exact où ajouter la restriction `SYSTEM_ADMIN`.
+Toutes les routes sont sous `/chantiers`. Authentification JWT + permissions requises sur chaque
+endpoint (`CHANTIER_READ`/`CHANTIER_WRITE`/`CHANTIER_DELETE`/`CHANTIER_SYNC`) — voir
+`docs/rbac/chantier.md` pour le détail endpoint ↔ permission et `conventions/security.md` pour la
+conception du RBAC.
 
 | Méthode | Route | Description | Codes |
 |---|---|---|---|
@@ -184,7 +185,8 @@ Le référentiel chantier est également consommé par le formulaire Employee
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune authentification (JWT/RBAC) — tous les endpoints sont ouverts, y compris `DELETE` et `sync`.
+- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
+  permission adéquate (voir `docs/rbac/chantier.md`).
 - Aucun audit (Hibernate Envers) — les créations/modifications de chantiers ne sont pas tracées
   au-delà des logs applicatifs.
 - Aucune limite liée à la persistance : le schéma est géré par Flyway et les données survivent aux

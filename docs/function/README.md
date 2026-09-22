@@ -82,9 +82,9 @@ Chantier, où un chantier peut être désactivé sans être supprimé). Ce champ
 
 `FunctionResponseDto` : `id`, `libelle`.
 
-Aucune authentification n'est en place actuellement (voir [TODO.md](../../TODO.md), section
-Sécurité) — `DELETE` et `import` portent chacun un commentaire `TODO(security)` à l'emplacement
-exact où ajouter la restriction `SYSTEM_ADMIN`.
+Authentification JWT + permissions requises sur chaque endpoint (`FUNCTION_READ`/
+`FUNCTION_WRITE`/`FUNCTION_DELETE`/`FUNCTION_IMPORT`) — voir `docs/rbac/function.md` pour le
+détail endpoint ↔ permission et `conventions/security.md` pour la conception du RBAC.
 
 ---
 
@@ -159,7 +159,8 @@ Le référentiel fonction est également consommé par le formulaire Employee
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune authentification (JWT/RBAC) — tous les endpoints sont ouverts, y compris `DELETE` et `import`.
+- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
+  permission adéquate (voir `docs/rbac/function.md`).
 - Aucun audit (Hibernate Envers) — les créations/modifications/imports ne sont pas tracés au-delà
   des logs applicatifs.
 - Aucune limite liée à la persistance : le schéma est géré par Flyway et les données survivent aux

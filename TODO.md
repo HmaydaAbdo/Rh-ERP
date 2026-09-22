@@ -246,7 +246,7 @@ est désormais le mode de démarrage de référence.
   — l'application refuse de démarrer si elle est absente.
 - Planification quotidienne à 23h (`chantier.sync.cron` dans `application.yml`) + déclenchement
   manuel via `POST /chantiers/sync` (bouton "Synchroniser maintenant" dans l'UI).
-- `POST /chantiers/sync` porte un `TODO(security)` comme les endpoints `DELETE`.
+- `POST /chantiers/sync` requiert la permission `CHANTIER_SYNC` (voir `docs/rbac/chantier.md`).
 
 **Décision (HMAYDA, 2026-09-22)** : `upsert` ne force plus `actif = true` sur un chantier déjà
 existant — seule la création applique ce défaut. Correction d'un comportement non voulu détecté lors
