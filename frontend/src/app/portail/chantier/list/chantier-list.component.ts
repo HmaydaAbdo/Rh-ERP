@@ -11,6 +11,7 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { finalize } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { Chantier } from '../models/chantier.model';
 import { ChantierService } from '../services/chantier.service';
 
@@ -43,6 +44,11 @@ export class ChantierListComponent {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
+
+  canDelete(): boolean {
+    return this.authService.hasPermission('CHANTIER_DELETE');
+  }
 
   chantiers: Chantier[] = [];
   totalRecords = 0;

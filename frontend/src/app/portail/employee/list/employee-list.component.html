@@ -138,14 +138,16 @@
         <td class="employee-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(employee)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(employee)"></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            class="p-button-text p-button-danger"
-            [loading]="deletingId === employee.id"
-            (click)="onDelete(employee)"
-          ></button>
+          @if (canDelete()) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              class="p-button-text p-button-danger"
+              [loading]="deletingId === employee.id"
+              (click)="onDelete(employee)"
+            ></button>
+          }
         </td>
       </tr>
     </ng-template>

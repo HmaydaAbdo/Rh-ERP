@@ -1,0 +1,79 @@
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--color-surface-alt);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-primary);
+    font-weight: 600;
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  &__error {
+    padding: var(--space-sm) var(--space-md);
+    background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+    color: var(--color-danger);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+  }
+
+  &__password {
+    width: 100%;
+
+    ::ng-deep input {
+      width: 100%;
+    }
+  }
+
+  &__submit {
+    width: 100%;
+    justify-content: center;
+  }
+
+  &__forgot {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  label {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+  }
+}
+
+.field-error {
+  color: var(--color-danger);
+}

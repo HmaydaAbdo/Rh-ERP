@@ -1,0 +1,46 @@
+<p-confirmDialog></p-confirmDialog>
+
+<div class="role-list">
+  <div class="role-list__header">
+    <h1>Rôles</h1>
+    <button pButton type="button" icon="pi pi-plus" label="Nouveau rôle" routerLink="/admin/roles/new"></button>
+  </div>
+
+  <p-table [value]="roles" [loading]="loading" dataKey="id">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Nom</th>
+        <th>Description</th>
+        <th>Permissions</th>
+        <th></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-role>
+      <tr>
+        <td>{{ role.nom }}</td>
+        <td>{{ role.description || '—' }}</td>
+        <td>
+          <p-tag [value]="role.permissions.length + ' permission(s)'" severity="info"></p-tag>
+        </td>
+        <td class="role-list__actions">
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(role)"></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-text p-button-danger"
+            [loading]="deletingId === role.id"
+            (click)="onDelete(role)"
+          ></button>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="4">Aucun rôle.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

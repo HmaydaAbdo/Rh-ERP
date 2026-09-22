@@ -75,14 +75,16 @@
         <td class="chantier-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(chantier)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(chantier)"></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            class="p-button-text p-button-danger"
-            [loading]="deletingId === chantier.id"
-            (click)="onDelete(chantier)"
-          ></button>
+          @if (canDelete()) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              class="p-button-text p-button-danger"
+              [loading]="deletingId === chantier.id"
+              (click)="onDelete(chantier)"
+            ></button>
+          }
         </td>
       </tr>
     </ng-template>

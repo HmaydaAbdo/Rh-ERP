@@ -11,6 +11,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { finalize } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { Function, FunctionImportResult } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
 
@@ -37,8 +38,13 @@ export class FunctionListComponent {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
+  canDelete(): boolean {
+    return this.authService.hasPermission('FUNCTION_DELETE');
+  }
 
   functions: Function[] = [];
   totalRecords = 0;
