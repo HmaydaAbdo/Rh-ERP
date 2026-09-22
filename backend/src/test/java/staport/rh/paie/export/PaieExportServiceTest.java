@@ -1,5 +1,7 @@
 package staport.rh.paie.export;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -52,6 +54,124 @@ class PaieExportServiceTest {
             // Ligne "TOTAL GENERAL MOIS PRECEDENT" doit refléter le total de juillet (5000), pas 0.
             double totalMoisPrecedent = feuilleChantier.getRow(6).getCell(9).getNumericCellValue();
             assertThat(totalMoisPrecedent).isEqualTo(5000.0);
+        }
+    }
+
+    @Test
+    void exporter_devraitAfficherIntrouvableSiAucunePaieMoisPrecedentPourLeChantier() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paieAout = construirePaie("BOULJIHEL SALH", "PB85747", "OPERATEUR", "C059", "EQUIPE A");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paieAout));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, List.of());
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleChantier = workbook.getSheet("C059");
+            String totalMoisPrecedent = feuilleChantier.getRow(6).getCell(9).getStringCellValue();
+            assertThat(totalMoisPrecedent).isEqualTo("INTROUVABLE");
+        }
+    }
+
+    @Test
+    void exporter_devraitCompterLesSortiesStcParFonction() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie sortieStc = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
+        sortieStc.setObservation("STC");
+        Paie sortieMinuscule = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE A");
+        sortieMinuscule.setObservation("sortie");
+        Paie actif = construirePaie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C059", "EQUIPE A");
+        actif.setObservation("RAS");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(sortieStc, sortieMinuscule, actif));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, List.of());
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleGlobale = workbook.getSheet("GLB");
+            // Table "effectif par fonction" : en-tête à la ligne 10, donnée OPERATEUR à la ligne 11
+            // (4 lignes d'en-tête + 3 lignes employé + 2 lignes de total + 1 ligne vide, voir PaieSheetWriter).
+            assertThat(feuilleGlobale.getRow(10).getCell(0).getStringCellValue()).isEqualTo("FONCTION");
+            assertThat(feuilleGlobale.getRow(10).getCell(1).getStringCellValue()).isEqualTo("EFFECTIF");
+            assertThat(feuilleGlobale.getRow(10).getCell(2).getStringCellValue()).isEqualTo("STC");
+
+            assertThat(feuilleGlobale.getRow(11).getCell(0).getStringCellValue()).isEqualTo("OPERATEUR");
+            assertThat(feuilleGlobale.getRow(11).getCell(1).getNumericCellValue()).isEqualTo(3.0);
+            assertThat(feuilleGlobale.getRow(11).getCell(2).getNumericCellValue()).isEqualTo(2.0);
+        }
+    }
+
+    @Test
+    void exporter_devraitAjouterLeSqueletteCamionPourChantierC168EquipeCh() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paie = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C168", "CH");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paie));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C168"));
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleEquipe = workbook.getSheet("C168_CH");
+            assertThat(feuilleEquipe).isNotNull();
+
+            // Squelette placé sur les mêmes lignes que le tableau effectif (en-tête ligne 8 pour 1
+            // employé), colonnes 6/7 (3 colonnes vides après effectif qui occupe les colonnes 0-2).
+            assertThat(feuilleEquipe.getRow(8).getCell(6).getStringCellValue()).isEqualTo("CAMION");
+            assertThat(feuilleEquipe.getRow(8).getCell(7).getStringCellValue()).isEqualTo("Nbre");
+
+            String[] libellesAttendus = {"CAMION CITERNE", "CAMION 8*4", "CAMION SR", "PORT CHAR", "PICK UP"};
+            for (int i = 0; i < libellesAttendus.length; i++) {
+                int ligne = 9 + i;
+                assertThat(feuilleEquipe.getRow(ligne).getCell(6).getStringCellValue()).isEqualTo(libellesAttendus[i]);
+                Cell celluleNbre = feuilleEquipe.getRow(ligne).getCell(7);
+                assertThat(celluleNbre.getCellType()).isEqualTo(CellType.BLANK);
+            }
+        }
+    }
+
+    @Test
+    void exporter_devraitAjouterLeSqueletteEnginsPourChantierC168EquipeOp() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paie = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C168", "OP");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paie));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C168"));
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleEquipe = workbook.getSheet("C168_OP");
+            assertThat(feuilleEquipe).isNotNull();
+            assertThat(feuilleEquipe.getRow(8).getCell(6).getStringCellValue()).isEqualTo("ENGINS");
+
+            String[] libellesAttendus = {"PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS",
+                    "CHARGEUR", "BULL", "TRACTOPELLE"};
+            for (int i = 0; i < libellesAttendus.length; i++) {
+                assertThat(feuilleEquipe.getRow(9 + i).getCell(6).getStringCellValue()).isEqualTo(libellesAttendus[i]);
+            }
+        }
+    }
+
+    @Test
+    void exporter_neDevraitPasAjouterDeSquelettePourUnAutreChantierOuUneAutreEquipe() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paieAutreChantier = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "CH");
+        Paie paieAutreEquipe = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C168", "EQUIPE A");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paieAutreChantier, paieAutreEquipe));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C059", "C168"));
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleAutreChantier = workbook.getSheet("C059_CH");
+            assertThat(feuilleAutreChantier.getRow(8).getCell(6)).isNull();
+
+            Sheet feuilleAutreEquipe = workbook.getSheet("C168_EQUIPE A");
+            assertThat(feuilleAutreEquipe.getRow(8).getCell(6)).isNull();
         }
     }
 

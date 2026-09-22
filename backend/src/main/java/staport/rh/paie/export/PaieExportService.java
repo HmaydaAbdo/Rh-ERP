@@ -27,14 +27,28 @@ import java.util.stream.Collectors;
  * globale (GLB), une feuille par chantier (tri alphabétique), et une sous-feuille par équipe pour
  * les chantiers explicitement demandés. Contrairement à l'ancien export, "TOTAL GENERAL MOIS
  * PRECEDENT" est désormais réellement calculé (somme de la période précédente sur le même
- * périmètre) plutôt que figé à 0 — l'ancien code ne pouvait pas le calculer faute de notion de
- * période.
+ * périmètre) — affiché "INTROUVABLE" si aucune paie n'existe pour ce périmètre sur la période
+ * précédente, plutôt que figé à 0 comme dans l'ancien export.
  */
 @Service
 public class PaieExportService {
 
     private static final Logger log = LoggerFactory.getLogger(PaieExportService.class);
     private static final int NOM_FEUILLE_MAX = 31;
+
+    /**
+     * Décision (HMAYDA, 2026-09-22) : sur les feuilles équipe du chantier "C168", un squelette de
+     * tableau matériel (labels uniquement, colonne "Nbre" à remplir à la main) est ajouté à côté du
+     * tableau "effectif par fonction" — CAMION pour l'équipe "CH", ENGINS pour l'équipe "OP".
+     * Propre à ce chantier uniquement, aucune règle générale identifiée pour les autres.
+     */
+    private static final String CHANTIER_MATERIEL = "C168";
+    private static final String EQUIPE_CAMION = "CH";
+    private static final String EQUIPE_ENGINS = "OP";
+    private static final List<String> LIBELLES_CAMION = List.of(
+            "CAMION CITERNE", "CAMION 8*4", "CAMION SR", "PORT CHAR", "PICK UP");
+    private static final List<String> LIBELLES_ENGINS = List.of(
+            "PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS", "CHARGEUR", "BULL", "TRACTOPELLE");
 
     private final PaieRepository repository;
     private final PaieSheetWriter sheetWriter = new PaieSheetWriter();
@@ -60,7 +74,7 @@ public class PaieExportService {
 
             Sheet feuilleGlobale = workbook.createSheet("GLB");
             sheetWriter.ecrire(feuilleGlobale, styles, "GLOBAL", periode, lignesPeriode,
-                    totalSalaires(lignesPeriodePrecedente));
+                    totalSalairesOuNull(lignesPeriodePrecedente), null);
 
             Map<String, List<Paie>> lignesParChantier = groupBy(lignesPeriode, p -> p.getChantier().getCode());
             Map<String, List<Paie>> lignesPrecedentesParChantier = groupBy(lignesPeriodePrecedente, p -> p.getChantier().getCode());
@@ -71,7 +85,7 @@ public class PaieExportService {
 
                 Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantierCode));
                 sheetWriter.ecrire(feuilleChantier, styles, chantierCode, periode, lignesChantier,
-                        totalSalaires(lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of())));
+                        totalSalairesOuNull(lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of())), null);
 
                 if (chantiersEquipes.contains(chantierCode.toUpperCase())) {
                     ecrireFeuillesEquipes(workbook, styles, periode, chantierCode, lignesChantier,
@@ -100,15 +114,43 @@ public class PaieExportService {
             String equipe = entree.getKey();
             Sheet feuilleEquipe = workbook.createSheet(nomFeuilleValide(chantierCode + "_" + equipe));
             sheetWriter.ecrire(feuilleEquipe, styles, chantierCode + " - Equipe: " + equipe, periode, entree.getValue(),
-                    totalSalaires(lignesPrecedentesParEquipe.getOrDefault(equipe, List.of())));
+                    totalSalairesOuNull(lignesPrecedentesParEquipe.getOrDefault(equipe, List.of())),
+                    squeletteMateriel(chantierCode, equipe));
         }
+    }
+
+    /**
+     * Squelette de tableau matériel à ajouter sur cette feuille équipe, ou {@code null} si le
+     * chantier/l'équipe ne correspond à aucun cas prévu. Comparaison insensible à la casse et aux
+     * espaces superflus (mêmes précautions que pour {@code chantiersCiblesPourEquipes}).
+     */
+    private SqueletteMateriel squeletteMateriel(String chantierCode, String equipe) {
+        if (chantierCode == null || equipe == null || !chantierCode.trim().equalsIgnoreCase(CHANTIER_MATERIEL)) {
+            return null;
+        }
+        String equipeNormalisee = equipe.trim();
+        if (equipeNormalisee.equalsIgnoreCase(EQUIPE_CAMION)) {
+            return new SqueletteMateriel("CAMION", LIBELLES_CAMION);
+        }
+        if (equipeNormalisee.equalsIgnoreCase(EQUIPE_ENGINS)) {
+            return new SqueletteMateriel("ENGINS", LIBELLES_ENGINS);
+        }
+        return null;
     }
 
     private Map<String, List<Paie>> groupBy(List<Paie> lignes, java.util.function.Function<Paie, String> classificateur) {
         return lignes.stream().collect(Collectors.groupingBy(classificateur, TreeMap::new, Collectors.toList()));
     }
 
-    private BigDecimal totalSalaires(List<Paie> lignes) {
+    /**
+     * Total de la période précédente pour le périmètre donné (chantier/équipe/global), ou
+     * {@code null} si aucune paie n'existe pour ce périmètre sur cette période — distingue "aucune
+     * donnée" (à afficher comme "INTROUVABLE") de "total réellement nul".
+     */
+    private BigDecimal totalSalairesOuNull(List<Paie> lignes) {
+        if (lignes.isEmpty()) {
+            return null;
+        }
         return lignes.stream()
                 .map(Paie::getSalaireTotal)
                 .filter(Objects::nonNull)
