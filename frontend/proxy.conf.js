@@ -7,7 +7,7 @@
 // docker-compose (résolution par nom de service, voir docker-compose.yml à la racine).
 const target = process.env.BACKEND_URL || 'http://localhost:8080';
 
-const apiPaths = ['/employees', '/functions', '/chantiers', '/paie'];
+const apiPaths = ['/employees', '/functions', '/chantiers', '/paie', '/auth', '/users', '/roles', '/permissions'];
 
 module.exports = apiPaths.map((path) => ({
   context: [path],

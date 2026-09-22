@@ -1,0 +1,68 @@
+<p-dialog header="Réinitialiser le mot de passe" [(visible)]="showResetDialog" [modal]="true" [style]="{ width: '420px' }" (onHide)="onCloseReset()">
+  @if (resetDialogUser) {
+    <form [formGroup]="resetForm" (ngSubmit)="onConfirmReset()" class="user-list__reset-form">
+      <p>Nouveau mot de passe pour <strong>{{ resetDialogUser.username }}</strong> :</p>
+      <p-password
+        formControlName="nouveauMotDePasse"
+        [toggleMask]="true"
+        [feedback]="false"
+        styleClass="user-list__reset-password"
+      ></p-password>
+      @if (resetForm.controls.nouveauMotDePasse.invalid && resetForm.controls.nouveauMotDePasse.touched) {
+        <small class="field-error">8 caractères minimum.</small>
+      }
+      <button pButton type="submit" label="Réinitialiser" [loading]="resetting" [disabled]="resetting"></button>
+    </form>
+  }
+</p-dialog>
+
+<div class="user-list">
+  <div class="user-list__header">
+    <h1>Utilisateurs</h1>
+    <button pButton type="button" icon="pi pi-plus" label="Nouvel utilisateur" routerLink="/admin/users/new"></button>
+  </div>
+
+  <p-table [value]="users" [loading]="loading" dataKey="id">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Rôles</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-user>
+      <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td>
+          @for (role of user.roles; track role.id) {
+            <p-tag [value]="role.nom" severity="info" class="user-list__role-tag"></p-tag>
+          }
+        </td>
+        <td>
+          <p-tag [value]="user.actif ? 'Actif' : 'Inactif'" [severity]="user.actif ? 'success' : 'danger'"></p-tag>
+        </td>
+        <td class="user-list__actions">
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" pTooltip="Modifier" (click)="onEdit(user)"></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-key"
+            class="p-button-text"
+            pTooltip="Réinitialiser le mot de passe"
+            (click)="onOpenReset(user)"
+          ></button>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5">Aucun utilisateur.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

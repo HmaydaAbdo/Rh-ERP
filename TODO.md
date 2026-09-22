@@ -6,20 +6,21 @@
 
 ---
 
-## Sécurité (JWT / RBAC) — v2 livrée (backend)
+## Sécurité (JWT / RBAC) — v2 livrée (backend + frontend)
 
 **Décision (HMAYDA, 2026-09-22)** : authentification JWT auto-émise (Access Token 15 min + Refresh
 Token opaque 30 jours, rotation à usage unique, cookie httpOnly) + RBAC dynamique (rôles et
 permissions administrables via `/roles`/`/users`, deny overrides individuels — deny > permissions
 des rôles). Détail complet de la conception : `conventions/security.md`.
 
-**Livré et vérifié end-to-end (login, refresh, rotation/reuse detection, logout, mot de passe
-oublié par email via Mailpit, création de rôle + utilisateur + deny override, 401/403 corrects)** :
+**Livré et vérifié end-to-end** (login, refresh, rotation/reuse detection, logout, mot de passe
+oublié par email via Mailpit, création de rôle + utilisateur + deny override via l'UI réelle,
+401/403 corrects, gating des boutons Supprimer et de la sidebar par permission effective) :
 
-- Module `staport.rh.auth` complet : entités (`Utilisateur`/`Role`/`Permission`/`RefreshToken`/
-  `ResetPasswordToken`), migrations Flyway `V3`/`V4` (schéma + seed permissions/rôles), JWT
-  (`JwtService`, `SecurityConfig`), services (`AuthService`/`UserService`/`RoleService`),
-  contrôleurs (`AuthController`/`UserController`/`RoleController`), email de reset
+- Module backend `staport.rh.auth` complet : entités (`Utilisateur`/`Role`/`Permission`/
+  `RefreshToken`/`ResetPasswordToken`), migrations Flyway `V3`/`V4` (schéma + seed permissions/
+  rôles), JWT (`JwtService`, `SecurityConfig`), services (`AuthService`/`UserService`/
+  `RoleService`), contrôleurs (`AuthController`/`UserController`/`RoleController`), email de reset
   (`EmailService` + Mailpit en dev, `docker-compose.yml`).
 - `@PreAuthorize` appliqué sur tous les endpoints des 4 domaines (Chantier/Employee/Function/Paie) —
   tous les `TODO(security)` précédents sont résolus.
@@ -28,19 +29,27 @@ oublié par email via Mailpit, création de rôle + utilisateur + deny override,
 - Bug corrigé au passage : `GlobalExceptionHandler` catchait `AccessDeniedException` dans son
   handler générique `Exception.class` et renvoyait 500 au lieu de 403 — un handler dédié a été
   ajouté (doit toujours précéder le handler générique dans le même `@RestControllerAdvice`).
+- Frontend `core/auth` (login/forgot-password/reset-password, `AuthService` avec Access Token en
+  mémoire uniquement, intercepteur avec refresh silencieux partagé en cas de 401 concurrents,
+  `authGuard`/`permissionGuard`) + `portail/admin` (gestion utilisateurs/rôles, assignation
+  permissions par domaine, deny overrides recalculés selon les rôles sélectionnés). Boutons
+  "Supprimer" des 4 domaines et liens sidebar "Utilisateurs"/"Rôles" conditionnés à la permission
+  effective (`authService.hasPermission(...)`), plus un bug de proxy corrigé au passage
+  (`/auth`, `/users`, `/roles`, `/permissions` manquaient de `proxy.conf.js`, 404 systématique).
+- `docs/rbac/{auth,chantier,employee,function,paie}.md` créés (endpoint ↔ permission, éléments
+  frontend gatés).
 
 **Reste à faire** :
 
-- **Frontend** : page de login, intercepteur HTTP (Authorization + refresh silencieux), guards de
-  route par permission, écran de gestion des utilisateurs/rôles (assignation permissions, deny
-  overrides), remplacement de tout bouton conditionné à un rôle codé en dur par une vérification de
-  permission effective (`conventions/security.md`, section Suppression).
-- `docs/rbac/<module>.md` pour chaque domaine (référencé par `conventions/security.md`) — pas
-  encore créés.
 - Détection de compromission en cascade du Refresh Token (voir `conventions/security.md`, Points
   d'attention) — non traité, risque accepté pour l'instant.
 - Revoir `SameSite=Lax` si le frontend est un jour déployé séparément du backend (voir
   `conventions/security.md`).
+- Pas de sélecteur/recherche d'employé dans le formulaire utilisateur (lien `employeeId` optionnel
+  saisi en brut par identifiant numérique) — acceptable pour l'instant, aucun utilisateur réel n'a
+  encore ce besoin.
+- Boutons "Importer"/"Synchroniser"/"Exporter" ne sont pas gatés côté frontend (seul le 403 backend
+  protège) — voir `docs/rbac/*.md`, à faire si le besoin se confirme.
 
 ---
 

@@ -1,29 +1,48 @@
 <p-toast></p-toast>
 
-<div class="app-shell">
-  <aside class="app-sidebar">
-    <div class="app-sidebar__brand">
-      <i class="pi pi-building-columns app-sidebar__brand-icon"></i>
-      <span class="app-sidebar__label">{{ title }}</span>
-    </div>
-    <nav class="app-sidebar__nav">
-      @for (item of navItems; track item.route) {
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="active"
-          class="app-sidebar__link"
-          pTooltip="{{ item.label }}"
-          tooltipPosition="right"
-          [showDelay]="300"
-        >
-          <i [class]="item.icon"></i>
-          <span class="app-sidebar__label">{{ item.label }}</span>
-        </a>
-      }
-    </nav>
-  </aside>
+@if (isAuthenticated()) {
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <div class="app-sidebar__brand">
+        <i class="pi pi-building-columns app-sidebar__brand-icon"></i>
+        <span class="app-sidebar__label">{{ title }}</span>
+      </div>
+      <nav class="app-sidebar__nav">
+        @for (item of navItems(); track item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="app-sidebar__link"
+            pTooltip="{{ item.label }}"
+            tooltipPosition="right"
+            [showDelay]="300"
+          >
+            <i [class]="item.icon"></i>
+            <span class="app-sidebar__label">{{ item.label }}</span>
+          </a>
+        }
+      </nav>
 
-  <main class="app-content">
-    <router-outlet></router-outlet>
-  </main>
-</div>
+      <div class="app-sidebar__footer">
+        @if (user(); as u) {
+          <span class="app-sidebar__label app-sidebar__username">{{ u.username }}</span>
+        }
+        <button
+          pButton
+          type="button"
+          icon="pi pi-sign-out"
+          class="p-button-text p-button-sm app-sidebar__logout"
+          pTooltip="Se déconnecter"
+          tooltipPosition="right"
+          (click)="onLogout()"
+        ></button>
+      </div>
+    </aside>
+
+    <main class="app-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+} @else {
+  <router-outlet></router-outlet>
+}

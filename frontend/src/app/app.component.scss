@@ -88,6 +88,28 @@
   &:focus-within &__label {
     opacity: 1;
   }
+
+  &__footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+    white-space: nowrap;
+  }
+
+  &__username {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+
+  &__logout {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
 }
 
 .app-content {

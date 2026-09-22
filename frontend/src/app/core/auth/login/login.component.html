@@ -1,0 +1,40 @@
+<div class="auth-page">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-card">
+    <div class="auth-card__brand">
+      <i class="pi pi-building-columns"></i>
+      <span>Staport RH</span>
+    </div>
+    <h1>Connexion</h1>
+
+    @if (errorMessage) {
+      <div class="auth-card__error">{{ errorMessage }}</div>
+    }
+
+    <div class="field">
+      <label for="username">Nom d'utilisateur</label>
+      <input pInputText id="username" type="text" formControlName="username" autocomplete="username" />
+      @if (form.controls.username.invalid && form.controls.username.touched) {
+        <small class="field-error">Champ obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">Mot de passe</label>
+      <p-password
+        inputId="password"
+        formControlName="password"
+        [feedback]="false"
+        [toggleMask]="true"
+        autocomplete="current-password"
+        styleClass="auth-card__password"
+      ></p-password>
+      @if (form.controls.password.invalid && form.controls.password.touched) {
+        <small class="field-error">Champ obligatoire.</small>
+      }
+    </div>
+
+    <button pButton type="submit" label="Se connecter" [loading]="submitting" [disabled]="submitting" class="auth-card__submit"></button>
+
+    <a routerLink="/forgot-password" class="auth-card__forgot">Mot de passe oublié ?</a>
+  </form>
+</div>

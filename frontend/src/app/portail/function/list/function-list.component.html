@@ -90,14 +90,16 @@
         <td class="function-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(fonction)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(fonction)"></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            class="p-button-text p-button-danger"
-            [loading]="deletingId === fonction.id"
-            (click)="onDelete(fonction)"
-          ></button>
+          @if (canDelete()) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              class="p-button-text p-button-danger"
+              [loading]="deletingId === fonction.id"
+              (click)="onDelete(fonction)"
+            ></button>
+          }
         </td>
       </tr>
     </ng-template>

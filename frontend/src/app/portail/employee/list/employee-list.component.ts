@@ -13,6 +13,7 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { finalize } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
@@ -52,8 +53,13 @@ export class EmployeeListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
+  canDelete(): boolean {
+    return this.authService.hasPermission('EMPLOYEE_DELETE');
+  }
 
   employees: Employee[] = [];
   totalRecords = 0;
