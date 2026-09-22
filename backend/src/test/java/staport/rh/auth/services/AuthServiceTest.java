@@ -1,0 +1,268 @@
+package staport.rh.auth.services;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import staport.rh.auth.dtos.response.UserResponseDto;
+import staport.rh.auth.entities.RefreshToken;
+import staport.rh.auth.entities.ResetPasswordToken;
+import staport.rh.auth.entities.Utilisateur;
+import staport.rh.auth.exceptions.InvalidCredentialsException;
+import staport.rh.auth.exceptions.InvalidRefreshTokenException;
+import staport.rh.auth.exceptions.InvalidResetTokenException;
+import staport.rh.auth.mail.EmailService;
+import staport.rh.auth.mappers.UserMapper;
+import staport.rh.auth.repositories.RefreshTokenRepository;
+import staport.rh.auth.repositories.ResetPasswordTokenRepository;
+import staport.rh.auth.repositories.UtilisateurRepository;
+import staport.rh.auth.security.EffectivePermissionResolver;
+import staport.rh.auth.security.JwtService;
+import staport.rh.auth.security.TokenHasher;
+import staport.rh.auth.services.interfaces.IAuthService;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    private UtilisateurRepository utilisateurRepository;
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private ResetPasswordTokenRepository resetPasswordTokenRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtService jwtService;
+    @Mock
+    private TokenHasher tokenHasher;
+    @Mock
+    private EffectivePermissionResolver permissionResolver;
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private EmailService emailService;
+
+    private AuthService authService;
+    private Utilisateur utilisateur;
+
+    @BeforeEach
+    void setUp() {
+        authService = new AuthService(utilisateurRepository, refreshTokenRepository, resetPasswordTokenRepository,
+                passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService);
+
+        utilisateur = new Utilisateur();
+        utilisateur.setId(1L);
+        utilisateur.setUsername("hmayda");
+        utilisateur.setEmail("hmayda@staport.ma");
+        utilisateur.setMotDePasseHash("hash");
+        utilisateur.setActif(true);
+    }
+
+    private void stubEmission() {
+        when(permissionResolver.resolve(utilisateur)).thenReturn(Set.of("EMPLOYEE_READ"));
+        when(permissionResolver.roleNames(utilisateur)).thenReturn(Set.of("SYSTEM_ADMIN"));
+        when(jwtService.genererAccessToken(eq(utilisateur), any(), any())).thenReturn("access-token");
+        when(tokenHasher.genererTokenBrut()).thenReturn("refresh-brut");
+        when(tokenHasher.hasher("refresh-brut")).thenReturn("refresh-hash");
+        when(userMapper.toDto(eq(utilisateur), any())).thenReturn(
+                new UserResponseDto(1L, "hmayda", "hmayda@staport.ma", true, null, Set.of(), Set.of(), Set.of("EMPLOYEE_READ")));
+    }
+
+    @Test
+    void login_devraitReussirAvecIdentifiantsValides() {
+        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("bonMotDePasse", "hash")).thenReturn(true);
+        stubEmission();
+
+        IAuthService.Connexion connexion = authService.login("hmayda", "bonMotDePasse");
+
+        assertThat(connexion.refreshTokenBrut()).isEqualTo("refresh-brut");
+        assertThat(connexion.reponse().accessToken()).isEqualTo("access-token");
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
+
+    @Test
+    void login_devraitEchouerAvecMotDePasseInvalide() {
+        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("mauvais", "hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login("hmayda", "mauvais"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void login_devraitEchouerSiUtilisateurInactif() {
+        utilisateur.setActif(false);
+        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+
+        assertThatThrownBy(() -> authService.login("hmayda", "peuImporte"))
+                .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    void login_devraitEchouerSiUtilisateurInconnu() {
+        when(utilisateurRepository.findByUsername("inconnu")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login("inconnu", "peuImporte"))
+                .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    void refresh_devraitPivoterLeTokenEtRevoquerLAncien() {
+        RefreshToken existant = new RefreshToken();
+        existant.setUtilisateur(utilisateur);
+        existant.setTokenHash("ancien-hash");
+        existant.setExpireLe(Instant.now().plusSeconds(3600));
+        existant.setRevoque(false);
+
+        when(tokenHasher.hasher("ancien-brut")).thenReturn("ancien-hash");
+        when(refreshTokenRepository.findByTokenHash("ancien-hash")).thenReturn(Optional.of(existant));
+        stubEmission();
+
+        authService.refresh("ancien-brut");
+
+        assertThat(existant.isRevoque()).isTrue();
+        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0)).isSameAs(existant);
+    }
+
+    @Test
+    void refresh_devraitEchouerSiTokenDejaRevoque() {
+        RefreshToken existant = new RefreshToken();
+        existant.setUtilisateur(utilisateur);
+        existant.setExpireLe(Instant.now().plusSeconds(3600));
+        existant.setRevoque(true);
+
+        when(tokenHasher.hasher("vole")).thenReturn("hash-vole");
+        when(refreshTokenRepository.findByTokenHash("hash-vole")).thenReturn(Optional.of(existant));
+
+        assertThatThrownBy(() -> authService.refresh("vole"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void refresh_devraitEchouerSiTokenExpire() {
+        RefreshToken existant = new RefreshToken();
+        existant.setUtilisateur(utilisateur);
+        existant.setExpireLe(Instant.now().minusSeconds(1));
+        existant.setRevoque(false);
+
+        when(tokenHasher.hasher("expire")).thenReturn("hash-expire");
+        when(refreshTokenRepository.findByTokenHash("hash-expire")).thenReturn(Optional.of(existant));
+
+        assertThatThrownBy(() -> authService.refresh("expire"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void refresh_devraitEchouerSiTokenInconnu() {
+        when(tokenHasher.hasher("inconnu")).thenReturn("hash-inconnu");
+        when(refreshTokenRepository.findByTokenHash("hash-inconnu")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("inconnu"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void logout_devraitRevoquerLeTokenSiTrouve() {
+        RefreshToken existant = new RefreshToken();
+        existant.setRevoque(false);
+        when(tokenHasher.hasher("brut")).thenReturn("hash");
+        when(refreshTokenRepository.findByTokenHash("hash")).thenReturn(Optional.of(existant));
+
+        authService.logout("brut");
+
+        assertThat(existant.isRevoque()).isTrue();
+        verify(refreshTokenRepository).save(existant);
+    }
+
+    @Test
+    void logout_neDevraitRienFaireSiTokenInconnu() {
+        when(tokenHasher.hasher("brut")).thenReturn("hash");
+        when(refreshTokenRepository.findByTokenHash("hash")).thenReturn(Optional.empty());
+
+        authService.logout("brut");
+
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void demanderReinitialisationMotDePasse_neDevraitPasReveleQuUnCompteExiste() {
+        when(utilisateurRepository.findByEmail("inconnu@x.com")).thenReturn(Optional.empty());
+
+        authService.demanderReinitialisationMotDePasse("inconnu@x.com");
+
+        verify(emailService, never()).envoyerLienReinitialisation(any(), any());
+        verify(resetPasswordTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void demanderReinitialisationMotDePasse_devraitEnvoyerUnEmailSiLeCompteExiste() {
+        when(utilisateurRepository.findByEmail("hmayda@staport.ma")).thenReturn(Optional.of(utilisateur));
+        when(tokenHasher.genererTokenBrut()).thenReturn("reset-brut");
+        when(tokenHasher.hasher("reset-brut")).thenReturn("reset-hash");
+
+        authService.demanderReinitialisationMotDePasse("hmayda@staport.ma");
+
+        verify(emailService).envoyerLienReinitialisation("hmayda@staport.ma", "reset-brut");
+        verify(resetPasswordTokenRepository).save(any(ResetPasswordToken.class));
+    }
+
+    @Test
+    void reinitialiserMotDePasse_devraitChangerLeMotDePasseEtRevoquerLesTokensActifs() {
+        ResetPasswordToken token = new ResetPasswordToken();
+        token.setUtilisateur(utilisateur);
+        token.setExpireLe(Instant.now().plusSeconds(3600));
+        token.setUtilise(false);
+
+        RefreshToken actif = new RefreshToken();
+        actif.setRevoque(false);
+
+        when(tokenHasher.hasher("reset-brut")).thenReturn("reset-hash");
+        when(resetPasswordTokenRepository.findByTokenHash("reset-hash")).thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("NouveauMdp123!")).thenReturn("nouveau-hash");
+        when(refreshTokenRepository.findAllByUtilisateur_IdAndRevoqueFalse(1L)).thenReturn(List.of(actif));
+
+        authService.reinitialiserMotDePasse("reset-brut", "NouveauMdp123!");
+
+        assertThat(utilisateur.getMotDePasseHash()).isEqualTo("nouveau-hash");
+        assertThat(token.isUtilise()).isTrue();
+        assertThat(actif.isRevoque()).isTrue();
+        verify(refreshTokenRepository).saveAll(List.of(actif));
+    }
+
+    @Test
+    void reinitialiserMotDePasse_devraitEchouerSiTokenDejaUtilise() {
+        ResetPasswordToken token = new ResetPasswordToken();
+        token.setExpireLe(Instant.now().plusSeconds(3600));
+        token.setUtilise(true);
+
+        when(tokenHasher.hasher("reset-brut")).thenReturn("reset-hash");
+        when(resetPasswordTokenRepository.findByTokenHash("reset-hash")).thenReturn(Optional.of(token));
+
+        assertThatThrownBy(() -> authService.reinitialiserMotDePasse("reset-brut", "NouveauMdp123!"))
+                .isInstanceOf(InvalidResetTokenException.class);
+
+        verify(utilisateurRepository, never()).save(any());
+    }
+}
