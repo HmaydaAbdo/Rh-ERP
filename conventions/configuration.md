@@ -56,7 +56,7 @@ Exemples :
 
 ## Configuration métier
 
-Toute valeur métier susceptible d'évoluer doit être configurable par un administrateur via l interrface utilisateur .
+Toute valeur métier susceptible d'évoluer doit être configurable par un administrateur via l'interface utilisateur.
 
 Exemples :
 
@@ -124,35 +124,23 @@ Ne pas introduire de nouvelles valeurs hardcodées et ne pas perpétuer les anci
 
 ---
 
----
+## Exemple de mise en œuvre — paramètre métier administrable
 
-## Commissions — règle spécifique
+Ce pattern s'applique à tout paramètre métier récurrent (taux, plafond, barème, condition
+d'application...) qui doit rester modifiable sans redéploiement :
 
-Les montants, taux et conditions de commission constituent des **paramètres métier** soumis aux règles générales de cette convention.
-
-### Sources autorisées
-
-| Valeur | Source |
+| Rôle | Source |
 |---|---|
-| Montant d'une commission | `commission_config` (base de données) |
-| Condition d'application | `CommissionCondition` (`SI_MATCH`, `SI_NON_MATCH`, `DEFAULT`) |
-| Résolution du montant | `ICommissionConfigService.resolveCommission()` |
+| Valeur du paramètre | Table de configuration dédiée en base de données |
+| Condition d'application, si plusieurs cas possibles | Modélisée en base (jamais un `if`/`switch` figé dans le code) |
+| Résolution de la valeur applicable | Un service dédié (`IXxxConfigService.resolve(...)`), jamais un accès direct au repository depuis le code appelant |
+| Administration des valeurs | Interface utilisateur réservée aux rôles/permissions appropriés |
 
-### Sources interdites
+Sources interdites pour ce type de valeur : `application.yml`, `@Value("${xxx.*}")`,
+`@ConfigurationProperties`, constantes Java (`static final`).
 
-* `application.yml` (`commission.*`)
-* `@Value("${commission.*}")`
-* `@ConfigurationProperties(prefix = "commission.*")`
-* Constantes Java (`static final BigDecimal`, `static final int`)
-
-### Responsabilités
-
-* La **décision de générer** une commission appartient au module source (leasing, cautions, etc.).
-* La **résolution du montant** est déléguée à `ICommissionConfigService`.
-* La **persistance** est déléguée à `ICommissionService`.
-* L'**administration** des règles est assurée par `/portail/admin/commission-config` (SYSTEM_ADMIN uniquement).
-
-Voir `architecture.md` — Règles 3 et 4 pour les conventions d'organisation du code.
+Voir `architecture.md` pour les conventions d'organisation du code correspondantes (le module
+propriétaire décide *si* un paramètre s'applique, un service dédié résout *sa valeur*).
 
 ---
 
@@ -163,4 +151,3 @@ Voir `architecture.md` — Règles 3 et 4 pour les conventions d'organisation du
 * `application.yml` contient uniquement la configuration technique immuable.
 * Les paramètres métier sont configurables et administrables.
 * Une règle métier ne doit jamais être codée en dur.
-* Les montants de commission sont toujours résolus via `ICommissionConfigService`, jamais codés en dur.

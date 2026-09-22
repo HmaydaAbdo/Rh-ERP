@@ -1,7 +1,10 @@
 # Security
 
-> Conventions de sécurité applicables à tout le projet. Authentification JWT auto-émise + RBAC
-> dynamique (rôles et permissions administrables, deny overrides individuels).
+> Conventions de sécurité applicables à tout le projet. Ce document décrit un pattern
+> d'authentification JWT auto-émise + RBAC dynamique (rôles et permissions administrables, deny
+> overrides individuels) — générique et réutilisable d'un projet à l'autre. Le catalogue réel de
+> permissions/rôles d'un projet donné, ainsi que toute décision spécifique à ce projet, vivent dans
+> sa propre documentation (`docs/rbac/`), jamais ici.
 
 ---
 
@@ -12,43 +15,46 @@
 * Le backend est son propre émetteur de JWT (pas d'IdP externe) — signature HMAC (HS256), secret
   `${JWT_SECRET}` (voir `conventions/configuration.md`). Validation via
   `spring-boot-starter-oauth2-resource-server` (`SecurityConfig.jwtDecoder`).
-* **Access Token** : 15 minutes, contient les claims `permissions` (codes effectifs, voir plus bas)
-  et `roles` (noms des rôles) — jamais recalculé en base à chaque requête, c'est tout l'intérêt du
-  JWT. Conséquence directe : un changement de permission (rôle modifié, deny override ajouté) ne
-  prend effet qu'au prochain refresh (au plus 15 minutes de latence), jamais immédiatement.
-* **Refresh Token** : 30 jours, **opaque** (jamais un JWT — une chaîne aléatoire), stocké **hashé**
-  en base (`refresh_token.token_hash`, jamais en clair). Posé en cookie `httpOnly` (`AuthController`)
-  — jamais lisible par JavaScript, jamais transmis dans un corps JSON.
+* **Access Token** : courte durée (ex. 15 minutes), contient les claims `permissions` (codes
+  effectifs, voir plus bas) et `roles` (noms des rôles) — jamais recalculé en base à chaque requête,
+  c'est tout l'intérêt du JWT. Conséquence directe : un changement de permission (rôle modifié, deny
+  override ajouté) ne prend effet qu'au prochain refresh de l'utilisateur concerné, jamais
+  immédiatement.
+* **Refresh Token** : longue durée (ex. 30 jours), **opaque** (jamais un JWT — une chaîne
+  aléatoire), stocké **hashé** en base (jamais en clair). Posé en cookie `httpOnly` — jamais lisible
+  par JavaScript, jamais transmis dans un corps JSON.
 * **Rotation à usage unique** : chaque appel à `/auth/refresh` révoque le Refresh Token utilisé et
   en émet un nouveau. Un Refresh Token déjà consommé qui est réutilisé (vol détecté) est simplement
-  rejeté (`InvalidRefreshTokenException`, 401) — pas de détection de compromission en cascade
-  (révocation de toute la famille de tokens) pour l'instant, voir « Points d'attention ».
+  rejeté (401) — la détection de compromission en cascade (révocation de toute la famille de
+  tokens) est une amélioration possible, pas un prérequis (voir « Points d'attention »).
 
 ## Révocation — ce qui est réellement révocable
 
 | Token | Révocable avant expiration ? |
 |---|---|
-| Access Token (JWT) | **Non** — un JWT signé reste valide jusqu'à son expiration naturelle (15 min), même si le compte est désactivé ou le mot de passe changé entre-temps. Risque accepté et borné par la durée courte. |
-| Refresh Token (opaque, en base) | **Oui** — `logout`, réinitialisation de mot de passe (révoque tous les Refresh Tokens actifs de l'utilisateur), et une révocation admin future peuvent l'invalider immédiatement. |
+| Access Token (JWT) | **Non** — un JWT signé reste valide jusqu'à son expiration naturelle, même si le compte est désactivé ou le mot de passe changé entre-temps. Risque accepté et borné par la durée courte du token. |
+| Refresh Token (opaque, en base) | **Oui** — logout, réinitialisation de mot de passe (doit révoquer tous les Refresh Tokens actifs de l'utilisateur), et une révocation admin explicite peuvent l'invalider immédiatement. |
 
 ## Cookie Refresh Token
 
-* `httpOnly`, `SameSite=Lax`, `path=/auth`, `secure=${COOKIE_SECURE}`.
-* `SameSite=Lax` (au lieu de `None`) suffit **grâce au proxy de développement Angular**
-  (`frontend/proxy.conf.js`) : le frontend et le backend sont toujours same-origin du point de vue
-  du navigateur (celui-ci ne voit qu'une requête vers `localhost:4200`, le proxy relaie vers le
-  backend en coulisses). Si un jour le frontend est servi séparément du backend (domaines
-  distincts), cette stratégie de cookie doit être révisée (`SameSite=None; Secure`, HTTPS
-  obligatoire).
+* `httpOnly`, `SameSite=Lax` (ou `Strict`), `path` limité à la portée des endpoints d'auth,
+  `secure=${COOKIE_SECURE}` (variable d'environnement, jamais figé en dur — voir
+  `conventions/configuration.md`).
+* `SameSite=Lax` suffit **si le frontend et le backend restent same-origin du point de vue du
+  navigateur** — typiquement via un proxy de développement (ex. proxy Angular CLI) qui relaie les
+  appels API vers le backend en coulisses, ou un reverse-proxy en production qui sert les deux sous
+  le même domaine. Si le frontend est un jour servi depuis un domaine réellement distinct du
+  backend, cette stratégie de cookie doit être révisée (`SameSite=None; Secure`, HTTPS obligatoire).
 
-## CSRF — désactivé, risque résiduel documenté
+## CSRF
 
-Tous les endpoints métier s'authentifient par l'en-tête `Authorization: Bearer ...` (immunisé au
-CSRF — un site tiers ne peut pas positionner cet en-tête sur une requête cross-site). Seuls
-`/auth/refresh` et `/auth/logout` lisent le cookie. CSRF est désactivé globalement
-(`SecurityConfig`) : le pire cas d'un CSRF sur ces deux endpoints est une rotation/révocation
-prématurée du Refresh Token de la victime (déconnexion forcée), jamais une fuite de données —
-risque jugé acceptable et volontairement non traité pour l'instant (voir « Points d'attention »).
+Si tous les endpoints métier s'authentifient par l'en-tête `Authorization: Bearer ...` (immunisé au
+CSRF — un site tiers ne peut pas positionner cet en-tête sur une requête cross-site) et que seuls
+les endpoints d'authentification (refresh/logout) lisent le cookie, désactiver CSRF globalement est
+un choix défendable : le pire cas d'un CSRF sur ces deux endpoints est une rotation/révocation
+prématurée du Refresh Token de la victime (déconnexion forcée), jamais une fuite de données. Ce
+choix doit rester documenté explicitement comme un risque résiduel assumé (voir « Points
+d'attention »), jamais silencieux.
 
 ---
 
@@ -62,11 +68,13 @@ Utilisateur ──< utilisateur_role >── Role ──< role_permission >─�
      └──< utilisateur_permission_refusee >── Permission   (deny override)
 ```
 
-* **Permission** : catalogue **fixe**, une ligne par domaine × action (`CHANTIER_READ`,
-  `EMPLOYEE_DELETE`, `PAIE_EXPORT`, `USER_MANAGE`, `ROLE_MANAGE`, etc. — voir
-  `V4__seed_permissions_et_roles.sql` pour la liste complète). Jamais créé/modifié depuis l'UI.
-* **Role** : **administrable librement via l'UI** (`/roles`, réservé `ROLE_MANAGE`) — un admin crée
-  un rôle et lui assigne les permissions de son choix parmi le catalogue fixe.
+* **Permission** : catalogue **fixe**, une ligne par domaine × action (ex. `<DOMAINE>_READ`,
+  `<DOMAINE>_WRITE`, `<DOMAINE>_DELETE`, plus les permissions d'administration du RBAC lui-même,
+  ex. `USER_MANAGE`, `ROLE_MANAGE`). Jamais créé/modifié depuis l'UI — seul un administrateur du
+  code (migration de base de données) fait évoluer ce catalogue.
+* **Role** : **administrable librement via l'UI**, réservé à une permission d'administration dédiée
+  — un administrateur crée un rôle et lui assigne les permissions de son choix parmi le catalogue
+  fixe.
 * **Utilisateur** : reçoit un ou plusieurs rôles (hérite de l'union de leurs permissions) et peut
   avoir des **deny overrides individuels** — une permission explicitement refusée même si un de ses
   rôles l'accorde.
@@ -77,114 +85,118 @@ Utilisateur ──< utilisateur_role >── Role ──< role_permission >─�
 permissions effectives = (∪ permissions des rôles de l'utilisateur) − (deny overrides de l'utilisateur)
 ```
 
-Implémentée dans `EffectivePermissionResolver.resolve()`, appelée au moment de l'émission du JWT
-(login/refresh) — voir la limite de latence ci-dessus. Il n'existe **pas** d'override individuel
-« ALLOW » (accorder une permission hors de tout rôle) — seul le DENY a été demandé ; ne pas
-l'introduire sans besoin confirmé (`conventions/architecture.md`).
+Calculée au moment de l'émission du JWT (login/refresh) — voir la limite de latence ci-dessus. Ne
+pas introduire d'override individuel « ALLOW » (accorder une permission hors de tout rôle) sans
+besoin confirmé — un deny-only reste plus simple à raisonner (`conventions/architecture.md`).
 
 ## DELETE est une permission comme les autres — pas un rôle codé en dur
 
-**Décision (HMAYDA, 2026-09-22)**, qui remplace l'ancienne règle absolue « suppression réservée
-SYSTEM_ADMIN codée en dur » : chaque domaine a sa propre permission `<DOMAINE>_DELETE`
-(`CHANTIER_DELETE`, `EMPLOYEE_DELETE`, `FUNCTION_DELETE`, `PAIE_DELETE`), vérifiée exactement comme
-n'importe quelle autre via `@PreAuthorize`. Les données de seed (`V4__...sql`) n'attribuent ces
-permissions qu'au rôle `SYSTEM_ADMIN` — le comportement observé aujourd'hui (« seul admin peut
-supprimer ») est donc une **conséquence de la donnée**, pas une règle figée dans le code : un admin
-peut, via l'UI de gestion des rôles, décider d'accorder `EMPLOYEE_DELETE` à un autre rôle. C'est un
-choix assumé pour rester cohérent avec le principe « toute action a une permission » — si ce n'est
-pas le comportement voulu, revenir à un `hasAuthority('SYSTEM_ADMIN')` codé en dur sur les
-endpoints `DELETE` est trivial.
+Par défaut, une action de suppression est soumise à une permission `<DOMAINE>_DELETE` comme
+n'importe quelle autre action, vérifiée via `@PreAuthorize` — pas à un rôle codé en dur dans le
+code. Quel(s) rôle(s) reçoivent cette permission est une décision de **données** (seed initial,
+puis administrable via l'UI de gestion des rôles), pas une règle figée dans le code : cela permet à
+un administrateur d'ajuster qui peut supprimer sans changement de code. Si un projet a besoin d'une
+garantie plus stricte (suppression **jamais** déléguable, même par erreur de configuration via
+l'UI), documenter explicitement ce choix et revenir à une vérification de rôle codée en dur
+(`hasAuthority('...')`) sur les endpoints concernés — les deux approches sont valables, mais le
+choix doit être explicite et documenté, jamais implicite.
 
 ## `@PreAuthorize` obligatoire
 
-* Tout endpoint protégé utilise `@PreAuthorize("hasAuthority('CODE_PERMISSION')")` (méthode) ou
-  `@PreAuthorize("hasAuthority('...')")` (classe, pour un contrôleur mono-permission comme
-  `UserController`/`RoleController`).
-* `@EnableMethodSecurity` (`SecurityConfig`) active ces annotations — sans elle, `@PreAuthorize`
-  est silencieusement ignoré.
-* Refuser par défaut : `SecurityConfig.securityFilterChain` termine par
-  `.anyRequest().authenticated()` — tout nouvel endpoint est protégé par défaut, un oubli
+* Tout endpoint protégé utilise `@PreAuthorize("hasAuthority('CODE_PERMISSION')")` (méthode) ou au
+  niveau de la classe pour un contrôleur mono-permission.
+* `@EnableMethodSecurity` doit être actif — sans elle, `@PreAuthorize` est silencieusement ignoré.
+* Refuser par défaut : la chaîne de filtres de sécurité doit toujours terminer par
+  `.anyRequest().authenticated()` — tout nouvel endpoint est protégé par défaut ; un oubli
   d'annotation `@PreAuthorize` spécifique laisse l'endpoint accessible à **tout utilisateur
-  authentifié** (pas ouvert à tous), jamais totalement ouvert par erreur.
-* Catalogue permission ↔ endpoint : voir `docs/rbac/<module>.md` pour chaque domaine.
+  authentifié** (jamais totalement ouvert par erreur, mais jamais correctement restreint non plus).
+* Catalogue permission ↔ endpoint : documenté dans `docs/rbac/<module>.md` pour chaque domaine —
+  voir « Documentation RBAC » ci-dessous.
 
 ---
 
-# Utilisateurs, rôles, permissions — endpoints d'administration
+# Comptes utilisateurs — indépendants du référentiel métier
 
-| Ressource | Endpoint | Permission |
-|---|---|---|
-| Utilisateurs (CRUD, assignation rôles, deny overrides, reset mot de passe admin) | `/users/**` | `USER_MANAGE` |
-| Rôles (CRUD, assignation permissions) | `/roles/**` | `ROLE_MANAGE` |
-| Catalogue des permissions (lecture) | `GET /permissions` | `ROLE_MANAGE` |
-
-`Utilisateur` est **indépendant de `Employee`** (référentiel des ouvriers de chantier synchronisé
-depuis l'ERP — un concept différent d'un compte applicatif), avec un lien optionnel
-(`utilisateur.employee_id`, nullable) pour le cas où un même employé a aussi besoin de se connecter.
+Le compte de connexion applicatif (identifiants, rôles) doit rester un concept **indépendant** de
+toute entité métier du domaine (ex. un référentiel de personnes synchronisé depuis un système
+externe) — ce sont deux concepts différents même s'il peut exister un lien entre les deux. Prévoir
+un lien optionnel (clé étrangère nullable) plutôt que de fusionner les deux concepts, sauf besoin
+métier explicite de les confondre.
 
 ---
 
-## Bootstrap admin
+## Bootstrap du premier compte administrateur
 
-Au démarrage, `AdminBootstrapRunner` crée un compte `SYSTEM_ADMIN` depuis
-`ADMIN_USERNAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (obligatoires, sans défaut) **si et seulement si
-aucun utilisateur ne porte déjà le rôle `SYSTEM_ADMIN`** — idempotent, ne recrée jamais un doublon.
-Ce compte doit être utilisé pour créer les comptes suivants puis, idéalement, voir son mot de passe
-changé via l'UI.
+Problème classique : aucun compte n'existe encore pour en créer un premier. Pattern recommandé : au
+démarrage de l'application, si aucun utilisateur ne porte encore le rôle administrateur, en créer un
+depuis des variables d'environnement dédiées (obligatoires, sans valeur par défaut — voir
+`conventions/configuration.md`). Ce mécanisme doit être **idempotent** : ne jamais recréer de
+doublon si un administrateur existe déjà. Le mot de passe fourni par variable d'environnement doit
+être changé via l'UI dès la première connexion.
 
 ---
 
 ## Mot de passe oublié
 
-* `POST /auth/forgot-password` : si l'email correspond à un compte, génère un
-  `ResetPasswordToken` opaque (1h, usage unique, hashé en base comme le Refresh Token) et envoie un
-  email avec le lien. **Répond toujours `202` que l'email existe ou non** — ne jamais révéler
-  l'existence d'un compte (`AuthService.demanderReinitialisationMotDePasse`).
-* `POST /auth/reset-password` : consomme le token, change le mot de passe, **révoque tous les
-  Refresh Tokens actifs** de l'utilisateur (force une reconnexion partout — bonne pratique après un
-  changement de mot de passe).
-* Envoi via `spring-boot-starter-mail` — `SMTP_HOST`/`PORT`/`USERNAME`/`PASSWORD`/`AUTH`/`STARTTLS`
-  (obligatoires, sans défaut). En développement, `docker-compose.yml` fournit un service **Mailpit**
-  (attrape-mail local, UI sur `http://localhost:8025`, aucune authentification requise) — remplacer
-  par un vrai fournisseur SMTP en production.
-* Alternative admin : `POST /users/{id}/reset-password` (`USER_MANAGE`) — un `SYSTEM_ADMIN`
-  réinitialise directement le mot de passe d'un utilisateur, sans email.
+* La demande de réinitialisation ne doit **jamais révéler si un email correspond à un compte
+  existant** — répondre de façon identique (même code HTTP, même délai perceptible) que le compte
+  existe ou non.
+* Le lien de réinitialisation repose sur un token opaque à usage unique, courte durée de vie (ex.
+  1h), hashé en base comme un Refresh Token — jamais stocké ou transmis en clair après génération.
+  Envoyé exclusivement au propriétaire du compte, jamais retourné dans une réponse API.
+  Utiliser un token opaque plutôt qu'un JWT signé pour ce cas : la vérification a besoin d'un état
+  "déjà utilisé" que le JWT seul ne peut pas porter.
+* Une réinitialisation de mot de passe réussie doit **révoquer tous les Refresh Tokens actifs** de
+  l'utilisateur (force une reconnexion partout — bonne pratique après un changement de mot de
+  passe).
+* Envoi par email via le mécanisme mail standard du framework, configuré exclusivement par variables
+  d'environnement (hôte, port, identifiants, TLS). En développement, utiliser un attrape-mail local
+  (ex. Mailpit, MailHog) plutôt qu'un vrai fournisseur SMTP — aucun envoi réel, inspection via une UI
+  locale.
+* Prévoir également une réinitialisation par un administrateur (permission d'administration dédiée)
+  pour les cas où l'utilisateur n'a pas accès à sa boîte mail.
 
 ---
 
-## Suppression (héritage — voir ci-dessus)
+## Frontend — gating par permission effective, jamais par rôle codé en dur
 
-L'ancienne règle absolue « DELETE = SYSTEM_ADMIN codé en dur » a été remplacée par une permission
-`<DOMAINE>_DELETE` comme les autres (voir section RBAC ci-dessus). Le frontend continue de
-conditionner l'affichage du bouton de suppression à la permission effective de l'utilisateur, pas
-à un rôle codé en dur :
+Tout élément d'UI conditionné par les droits de l'utilisateur (bouton, lien de navigation, route)
+doit vérifier la **permission effective** de l'utilisateur courant, jamais un rôle codé en dur :
 
 ```html
-@if (authService.hasPermission('EMPLOYEE_DELETE')) {
-  <button pButton icon="pi pi-trash" (click)="deleteEmployee(item)"></button>
+@if (authService.hasPermission('<DOMAINE>_DELETE')) {
+  <button pButton icon="pi pi-trash" (click)="deleteItem(item)"></button>
 }
 ```
 
 ---
 
-# Points d'attention (limites connues, assumées)
+# Points d'attention (limites connues à assumer explicitement)
 
-* **Latence de propagation des permissions (jusqu'à 15 min)** : un rôle modifié ou un deny override
-  ajouté ne s'applique qu'au prochain refresh de l'utilisateur concerné — pas de révocation
-  immédiate d'une permission en cours de session. Acceptable pour la taille de l'équipe actuelle ;
-  à revoir (vérification en base à chaque requête, ou notification de refresh forcé) si un besoin
-  de révocation instantanée apparaît.
-* **Pas de détection de compromission en cascade sur le Refresh Token** : la réutilisation d'un
-  Refresh Token déjà consommé est rejetée, mais ne révoque pas automatiquement les autres tokens de
-  la famille/de l'utilisateur — un attaquant qui vole un Refresh Token et l'utilise une fois avant
-  l'utilisateur légitime peut passer inaperçu au-delà du rejet de la requête suivante de la
-  victime. Amélioration possible : marquer toute la « famille » de tokens compromise et forcer une
+* **Latence de propagation des permissions** (jusqu'à la durée de vie de l'Access Token) : un rôle
+  modifié ou un deny override ajouté ne s'applique qu'au prochain refresh de l'utilisateur concerné
+  — pas de révocation immédiate d'une permission en cours de session. Acceptable pour la plupart des
+  projets ; à revoir (vérification en base à chaque requête, ou notification de refresh forcé) si un
+  besoin de révocation instantanée apparaît.
+* **Pas de détection de compromission en cascade sur le Refresh Token** par défaut : la réutilisation
+  d'un Refresh Token déjà consommé est rejetée, mais ne révoque pas automatiquement les autres
+  tokens de l'utilisateur — un attaquant qui vole un Refresh Token et l'utilise une fois avant
+  l'utilisateur légitime peut passer inaperçu au-delà du rejet de la requête suivante de la victime.
+  Amélioration possible : marquer toute la « famille » de tokens compromise et forcer une
   reconnexion complète.
-* **CSRF désactivé globalement** — voir justification ci-dessus (Bearer token sur tout endpoint
-  métier, risque résiduel borné au refresh/logout).
-* **Access Token non révocable avant expiration** — accepté, borné à 15 minutes.
-* **`SameSite=Lax` dépend du proxy de développement Angular** pour rester same-origin — à revoir
-  si le frontend est un jour déployé séparément du backend.
+* **CSRF désactivé globalement**, si ce choix est fait — documenter la justification (Bearer token
+  sur tout endpoint métier) à chaque fois qu'il est repris dans un nouveau projet.
+* **Access Token non révocable avant expiration** — accepté, borné par sa courte durée de vie.
+* **`SameSite=Lax` dépend d'un mécanisme rendant frontend/backend same-origin** (proxy de dev,
+  reverse-proxy) — à revoir si ce n'est plus le cas.
+
+---
+
+# Documentation RBAC
+
+Chaque module possède un fichier `docs/rbac/<module>.md` qui trace, de façon exhaustive, les accès
+du module (endpoints + permission requise, guards frontend, éléments d'UI conditionnés). Toute
+évolution des autorisations d'un module met à jour ce fichier dans le même changement.
 
 ---
 
@@ -192,10 +204,10 @@ conditionner l'affichage du bouton de suppression à la permission effective de 
 
 ## Variables d'environnement
 
-* Les paramètres dépendant de l'environnement utilisent exclusivement des variables
-  d'environnement, jamais de valeur par défaut (`conventions/configuration.md`) :
-  `JWT_SECRET`, `FRONTEND_URL`, `COOKIE_SECURE`, `ADMIN_USERNAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD`,
-  `SMTP_HOST`/`PORT`/`USERNAME`/`PASSWORD`/`AUTH`/`STARTTLS`, `MAIL_FROM`.
+Les paramètres dépendant de l'environnement utilisent exclusivement des variables d'environnement,
+jamais de valeur par défaut (`conventions/configuration.md`) — typiquement : secret JWT, URL du
+frontend (pour CORS), politique de cookie sécurisé, identifiants du compte administrateur de
+bootstrap, configuration SMTP.
 
 ## Secrets
 
@@ -207,17 +219,19 @@ Secrets dans `.env` (développement, jamais versionné) ou variables d'environne
 
 # Pagination
 
-Toute pagination doit être bornée. `PageableUtils.clampSize(size)` si `PageRequest` est construit
-manuellement, `spring.data.web.pageable.max-page-size` sinon.
+Toute pagination doit être bornée — une taille de page non bornée côté client est un vecteur de
+déni de service trivial.
 
 ---
 
-# Actuator
+# Actuator / endpoints de supervision
 
-* `/actuator/health` et `/actuator/prometheus` sont publics (scraping, pas de données sensibles).
-* Tous les autres endpoints `/actuator/**` sont réservés à `hasAuthority('SYSTEM_ADMIN')` (rôle,
-  pas permission — restriction au niveau `SecurityConfig`, pas au niveau du catalogue de
-  permissions : l'observabilité technique n'est pas une permission métier assignable).
+* Les endpoints de simple healthcheck (ex. `/actuator/health`) et de métriques destinées au
+  scraping (ex. `/actuator/prometheus`) peuvent rester publics — pas de données sensibles, accès
+  requis par des outils qui ne peuvent pas s'authentifier.
+* Tous les autres endpoints de supervision/administration technique sont réservés à un rôle
+  administrateur (vérification de **rôle**, pas de **permission métier** — l'observabilité
+  technique n'est pas une permission assignable finement).
 
 ---
 
@@ -232,10 +246,10 @@ manuellement, `spring.data.web.pageable.max-page-size` sinon.
 # Principes
 
 * Aucun secret dans le code source.
-* Aucune information sensible dans les messages d'erreur (`InvalidCredentialsException` ne révèle
-  jamais si c'est le username ou le mot de passe qui est incorrect ;
-  `demanderReinitialisationMotDePasse` ne révèle jamais si un email existe).
+* Aucune information sensible dans les messages d'erreur (une erreur d'identifiants ne révèle
+  jamais si c'est l'identifiant ou le mot de passe qui est incorrect ; une demande de
+  réinitialisation de mot de passe ne révèle jamais si un email existe).
 * Aucun contournement des mécanismes de sécurité pour simplifier un développement.
 * Toute nouvelle fonctionnalité respecte les conventions de sécurité existantes — tout nouvel
-  endpoint définit explicitement sa permission requise (`@PreAuthorize`).
+  endpoint définit explicitement sa permission requise.
 * La sécurité est une responsabilité de chaque développement.

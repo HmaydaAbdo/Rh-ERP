@@ -20,14 +20,14 @@ private static final Logger log = LoggerFactory.getLogger(Xxx.class);
 * Toujours utiliser les messages paramétrés.
 
 ```java
-log.info("Banque créée : id={}", id);
+log.info("Entité créée : id={}", id);
 ```
 
 Ne jamais concaténer les chaînes.
 
 ```java
 // ❌
-log.info("Banque créée : " + id);
+log.info("Entité créée : " + id);
 ```
 
 ---
@@ -89,7 +89,7 @@ Utiliser uniquement pour le diagnostic technique.
 Logger les exceptions avec leur stacktrace.
 
 ```java
-log.error("Erreur lors de la création de la banque", e);
+log.error("Erreur lors de la création de l'entité", e);
 ```
 
 Ne jamais écrire :
