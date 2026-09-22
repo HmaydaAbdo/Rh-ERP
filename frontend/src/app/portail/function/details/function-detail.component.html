@@ -1,0 +1,12 @@
+@if (fonction) {
+  <div class="function-detail">
+    <div class="function-detail__header">
+      <h1>{{ fonction.libelle }}</h1>
+      <div class="function-detail__header-actions">
+        <a [routerLink]="['/functions', fonction.id, 'edit']" class="p-button">Modifier</a>
+        <a routerLink="/functions" class="p-button p-button-outlined">Retour à la liste</a>
+      </div>
+    </div>
+
+  </div>
+}

@@ -1,0 +1,34 @@
+@if (chantier) {
+  <div class="chantier-detail">
+    <div class="chantier-detail__header">
+      <h1>{{ chantier.code }}</h1>
+      <div class="chantier-detail__header-actions">
+        <a [routerLink]="['/chantiers', chantier.id, 'edit']" class="p-button">Modifier</a>
+        <a routerLink="/chantiers" class="p-button p-button-outlined">Retour à la liste</a>
+      </div>
+    </div>
+
+    <dl class="chantier-detail__grid">
+      <div>
+        <dt>Désignation</dt>
+        <dd>{{ chantier.designation }}</dd>
+      </div>
+      <div>
+        <dt>Statut</dt>
+        <dd>
+          <p-tag [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></p-tag>
+        </dd>
+      </div>
+      <div>
+        <dt>Source</dt>
+        <dd>
+          @if (chantier.sourceErp) {
+            <p-tag value="ERP" severity="info"></p-tag>
+          } @else {
+            <p-tag value="Manuel" severity="secondary"></p-tag>
+          }
+        </dd>
+      </div>
+    </dl>
+  </div>
+}

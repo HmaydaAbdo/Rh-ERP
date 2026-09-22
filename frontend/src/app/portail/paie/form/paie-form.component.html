@@ -1,0 +1,130 @@
+<div class="paie-form">
+  <div class="paie-form__header">
+    <h1>{{ isEditMode ? 'Modifier le bulletin' : 'Nouveau bulletin de paie' }}</h1>
+    <a routerLink="/paie" class="p-button p-button-outlined">Retour à la liste</a>
+  </div>
+
+  @if (isEditMode) {
+    <p-message
+      severity="info"
+      text="L'employé et la période ne sont pas modifiables après création — un bulletin est un document historique."
+      styleClass="paie-form__notice"
+    ></p-message>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="paie-form__grid">
+    <div class="field">
+      <label for="employee">Employé *</label>
+      <p-autoComplete
+        inputId="employee"
+        formControlName="employee"
+        [suggestions]="employeeSuggestions"
+        (completeMethod)="rechercherEmployes($event)"
+        field="nomPrenom"
+        placeholder="Rechercher par nom"
+        [dropdown]="false"
+      >
+        <ng-template let-employee pTemplate="item">
+          {{ employee.nomPrenom }} — {{ employee.cin }}
+        </ng-template>
+      </p-autoComplete>
+      @if (form.controls.employee.invalid && form.controls.employee.touched) {
+        <small class="field-error">L'employé est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="periode">Période *</label>
+      <p-calendar inputId="periode" formControlName="periode" view="month" dateFormat="mm/yy" [showIcon]="true"></p-calendar>
+      @if (form.controls.periode.invalid && form.controls.periode.touched) {
+        <small class="field-error">La période est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="fonctionId">Fonction *</label>
+      <p-dropdown
+        inputId="fonctionId"
+        formControlName="fonctionId"
+        [options]="functions"
+        optionLabel="libelle"
+        optionValue="id"
+        placeholder="Sélectionner une fonction"
+      ></p-dropdown>
+      @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
+        <small class="field-error">La fonction est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="chantierId">Chantier *</label>
+      <p-dropdown
+        inputId="chantierId"
+        formControlName="chantierId"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="id"
+        placeholder="Sélectionner un chantier"
+      ></p-dropdown>
+      @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
+        <small class="field-error">Le chantier est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="equipe">Équipe</label>
+      <input pInputText id="equipe" type="text" formControlName="equipe" />
+    </div>
+
+    <div class="field">
+      <label for="nombreJoursTravailles">Jours travaillés *</label>
+      <p-inputNumber inputId="nombreJoursTravailles" formControlName="nombreJoursTravailles" [min]="0"></p-inputNumber>
+      @if (form.controls.nombreJoursTravailles.invalid && form.controls.nombreJoursTravailles.touched) {
+        <small class="field-error">Le nombre de jours travaillés est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="joursRecuperationOuvrable">Jours récup. ouvrable</label>
+      <p-inputNumber inputId="joursRecuperationOuvrable" formControlName="joursRecuperationOuvrable" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
+    </div>
+
+    <div class="field">
+      <label for="joursRecuperationDimanche">Jours récup. dimanche</label>
+      <p-inputNumber inputId="joursRecuperationDimanche" formControlName="joursRecuperationDimanche" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
+    </div>
+
+    <div class="field">
+      <label for="salaireMensuel">Salaire mensuel *</label>
+      <p-inputNumber inputId="salaireMensuel" formControlName="salaireMensuel" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      @if (form.controls.salaireMensuel.invalid && form.controls.salaireMensuel.touched) {
+        <small class="field-error">Le salaire mensuel est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="primeRoulageOrdinaire">Prime roulage ordinaire</label>
+      <p-inputNumber inputId="primeRoulageOrdinaire" formControlName="primeRoulageOrdinaire" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+    </div>
+
+    <div class="field">
+      <label for="primeRoulageDimanche">Prime roulage dimanche</label>
+      <p-inputNumber inputId="primeRoulageDimanche" formControlName="primeRoulageDimanche" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+    </div>
+
+    <div class="field">
+      <label for="salaireTotal">Salaire total</label>
+      <input pInputText id="salaireTotal" type="text" [value]="salaireTotalCalcule | number: '1.2-2'" disabled />
+      <small class="paie-form__hint">Calculé automatiquement — salaire mensuel + primes de roulage.</small>
+    </div>
+
+    <div class="field paie-form__field-wide">
+      <label for="observation">Observation</label>
+      <input pInputText id="observation" type="text" formControlName="observation" />
+    </div>
+
+    <div class="paie-form__actions">
+      <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+    </div>
+  </form>
+</div>

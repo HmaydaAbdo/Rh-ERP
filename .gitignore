@@ -1,0 +1,89 @@
+# =========================================================================
+# rh-erp — .gitignore racine
+# Couvre le dépôt entier (backend, frontend, Docker, fichiers locaux).
+# backend/.gitignore et frontend/.gitignore restent en place (spécifiques
+# à chaque sous-projet) ; ce fichier couvre ce qu'ils ne voient pas :
+# racine du dépôt, IDE ouverts sur le repo entier, secrets, données réelles.
+# =========================================================================
+
+# --- Secrets et configuration d'environnement --------------------------
+# Jamais de secret commité : URL, mots de passe, clés (conventions/configuration.md).
+# Seuls les *.env.example (valeurs factices, documentées) sont versionnés.
+.env
+.env.*
+!.env.example
+!*.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# --- Données réelles (RH/paie) — jamais dans le dépôt -------------------
+# Fichiers Excel réels utilisés pour valider les imports pendant le
+# développement : contiennent des données personnelles/salariales réelles
+# (CIN, salaires, dates de naissance) — ne doivent jamais être poussés.
+/*.xlsx
+/*.xls
+~$*.xlsx
+~$*.xls
+
+# --- Backend (Java / Maven) ---------------------------------------------
+backend/target/
+backend/**/target/
+!backend/**/src/main/**/target/
+!backend/**/src/test/**/target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# --- Frontend (Angular / Node) -------------------------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+npm-debug.log*
+yarn-error.log*
+
+# --- Docker / conteneurs --------------------------------------------------
+# Données persistantes des volumes Docker montés localement (Postgres).
+docker/data/
+docker/**/data/
+pgdata/
+*.pid
+
+# --- IDE / éditeurs ---------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+*.sublime-workspace
+.history/
+
+# --- Claude Code — config locale/personnelle uniquement -----------------
+.claude/settings.local.json
+
+# --- Système d'exploitation ----------------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Logs et fichiers temporaires ----------------------------------------
+*.log
+logs/
+*.tmp
+*.bak

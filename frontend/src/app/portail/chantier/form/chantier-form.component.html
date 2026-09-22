@@ -1,0 +1,49 @@
+<div class="chantier-form">
+  <div class="chantier-form__header">
+    <h1>{{ isEditMode ? 'Modifier le chantier' : 'Nouveau chantier' }}</h1>
+    <a routerLink="/chantiers" class="p-button p-button-outlined">Retour à la liste</a>
+  </div>
+
+  @if (issuDeLErp) {
+    <p-message
+      severity="info"
+      text="Ce chantier provient de l'ERP source. Le code et la désignation seront écrasés par la prochaine synchronisation quotidienne."
+      styleClass="chantier-form__erp-notice"
+    ></p-message>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="chantier-form__grid">
+    <div class="field">
+      <label for="code">Code *</label>
+      <input pInputText id="code" type="text" formControlName="code" />
+      @if (form.controls.code.invalid && form.controls.code.touched) {
+        <small class="field-error">Le code est obligatoire.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="designation">Désignation *</label>
+      <input pInputText id="designation" type="text" formControlName="designation" />
+      @if (form.controls.designation.invalid && form.controls.designation.touched) {
+        <small class="field-error">La désignation est obligatoire.</small>
+      }
+    </div>
+
+    @if (isEditMode) {
+      <div class="field">
+        <label for="actif">Statut *</label>
+        <p-dropdown
+          inputId="actif"
+          formControlName="actif"
+          [options]="actifOptions"
+          optionLabel="label"
+          optionValue="value"
+        ></p-dropdown>
+      </div>
+    }
+
+    <div class="chantier-form__actions">
+      <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+    </div>
+  </form>
+</div>

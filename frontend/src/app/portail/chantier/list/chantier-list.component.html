@@ -1,0 +1,96 @@
+<p-confirmDialog></p-confirmDialog>
+
+<div class="chantier-list">
+  <div class="chantier-list__header">
+    <h1>Chantiers</h1>
+    <div class="chantier-list__header-actions">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-refresh"
+        label="Synchroniser maintenant"
+        class="p-button-outlined"
+        [loading]="syncing"
+        (click)="onSynchroniser()"
+      ></button>
+      <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+    </div>
+  </div>
+
+  <form [formGroup]="filterForm" class="chantier-list__filters" (ngSubmit)="onSearch()">
+    <input pInputText type="text" formControlName="code" placeholder="Code" />
+    <input pInputText type="text" formControlName="designation" placeholder="Désignation" />
+
+    <p-dropdown
+      formControlName="actif"
+      [options]="actifOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Statut"
+      [showClear]="true"
+    ></p-dropdown>
+
+    <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+  </form>
+
+  <p-table
+    [value]="chantiers"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="10"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    dataKey="id"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="code">Code <p-sortIcon field="code"></p-sortIcon></th>
+        <th>Désignation</th>
+        <th>Source</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-chantier>
+      <tr>
+        <td>{{ chantier.code }}</td>
+        <td class="chantier-list__designation">{{ chantier.designation }}</td>
+        <td>
+          @if (chantier.sourceErp) {
+            <p-tag value="ERP" severity="info"></p-tag>
+          } @else {
+            <p-tag value="Manuel" severity="secondary"></p-tag>
+          }
+        </td>
+        <td>
+          <p-tag
+            [value]="chantier.actif ? 'Actif' : 'Inactif'"
+            [severity]="chantier.actif ? 'success' : 'danger'"
+          ></p-tag>
+        </td>
+        <td class="chantier-list__actions">
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(chantier)"></button>
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(chantier)"></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-text p-button-danger"
+            [loading]="deletingId === chantier.id"
+            (click)="onDelete(chantier)"
+          ></button>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5">Aucun chantier ne correspond à ces critères.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

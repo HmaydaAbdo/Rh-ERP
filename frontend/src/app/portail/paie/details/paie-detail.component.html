@@ -1,0 +1,54 @@
+@if (paie) {
+  <div class="paie-detail">
+    <div class="paie-detail__header">
+      <h1>{{ paie.employee.nomPrenom }} — {{ paie.periode }}</h1>
+      <div class="paie-detail__header-actions">
+        <a [routerLink]="['/paie', paie.id, 'edit']" class="p-button">Modifier</a>
+        <a routerLink="/paie" class="p-button p-button-outlined">Retour à la liste</a>
+      </div>
+    </div>
+
+    <dl class="paie-detail__grid">
+      <div>
+        <dt>CIN</dt>
+        <dd>{{ paie.employee.cin }}</dd>
+      </div>
+      <div>
+        <dt>Fonction</dt>
+        <dd>{{ paie.fonction.libelle }}</dd>
+      </div>
+      <div>
+        <dt>Chantier</dt>
+        <dd>{{ paie.chantier.code }}</dd>
+      </div>
+      <div>
+        <dt>Équipe</dt>
+        <dd>{{ paie.equipe || '—' }}</dd>
+      </div>
+      <div>
+        <dt>Jours travaillés</dt>
+        <dd>{{ paie.nombreJoursTravailles }}</dd>
+      </div>
+      <div>
+        <dt>Jours récup. ouvrable / dimanche</dt>
+        <dd>{{ paie.joursRecuperationOuvrable ?? 0 }} / {{ paie.joursRecuperationDimanche ?? 0 }}</dd>
+      </div>
+      <div>
+        <dt>Salaire mensuel</dt>
+        <dd>{{ paie.salaireMensuel | number: '1.2-2' }}</dd>
+      </div>
+      <div>
+        <dt>Prime roulage ordinaire / dimanche</dt>
+        <dd>{{ paie.primeRoulageOrdinaire ?? 0 | number: '1.2-2' }} / {{ paie.primeRoulageDimanche ?? 0 | number: '1.2-2' }}</dd>
+      </div>
+      <div>
+        <dt>Salaire total</dt>
+        <dd>{{ paie.salaireTotal | number: '1.2-2' }}</dd>
+      </div>
+      <div>
+        <dt>Observation</dt>
+        <dd>{{ paie.observation || '—' }}</dd>
+      </div>
+    </dl>
+  </div>
+}
