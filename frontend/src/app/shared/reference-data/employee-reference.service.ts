@@ -8,7 +8,7 @@ import { EmployeeReference } from './employee-reference.model';
 @Injectable({ providedIn: 'root' })
 export class EmployeeReferenceService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/employees';
+  private readonly baseUrl = 'employees';
 
   /**
    * Recherche par nom pour un champ de saisie assistée — les employés étant trop nombreux pour

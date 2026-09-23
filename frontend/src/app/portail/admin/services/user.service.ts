@@ -7,7 +7,7 @@ import { AdminResetPasswordRequest, AdminUser, DenyPermissionsRequest, UserCreat
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/users';
+  private readonly baseUrl = 'users';
 
   findAll(): Observable<AdminUser[]> {
     return this.http.get<AdminUser[]>(this.baseUrl);

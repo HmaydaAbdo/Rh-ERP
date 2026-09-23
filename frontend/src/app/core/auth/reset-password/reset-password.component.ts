@@ -44,7 +44,7 @@ export class ResetPasswordComponent implements OnInit {
     this.errorMessage = null;
     this.submitting = true;
     this.http
-      .post('/auth/reset-password', { token: this.token, nouveauMotDePasse: this.form.getRawValue().nouveauMotDePasse })
+      .post('auth/reset-password', { token: this.token, nouveauMotDePasse: this.form.getRawValue().nouveauMotDePasse })
       .pipe(finalize(() => (this.submitting = false)))
       .subscribe({
         next: () => this.router.navigate(['/login']),

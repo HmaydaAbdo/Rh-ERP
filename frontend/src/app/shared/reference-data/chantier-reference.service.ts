@@ -8,7 +8,7 @@ import { ChantierReference } from './chantier-reference.model';
 @Injectable({ providedIn: 'root' })
 export class ChantierReferenceService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/chantiers';
+  private readonly baseUrl = 'chantiers';
 
   listActive(): Observable<ChantierReference[]> {
     const params = new HttpParams().set('size', 200).set('sort', 'code,asc');

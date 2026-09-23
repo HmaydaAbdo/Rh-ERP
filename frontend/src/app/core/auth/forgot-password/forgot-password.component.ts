@@ -33,7 +33,7 @@ export class ForgotPasswordComponent {
 
     this.submitting = true;
     this.http
-      .post('/auth/forgot-password', { email: this.form.getRawValue().email })
+      .post('auth/forgot-password', { email: this.form.getRawValue().email })
       .pipe(finalize(() => (this.submitting = false)))
       .subscribe(() => (this.submitted = true));
   }

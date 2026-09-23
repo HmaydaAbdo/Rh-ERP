@@ -7,7 +7,7 @@ import { PermissionSummary, Role, RoleCreateRequest, RoleUpdateRequest } from '.
 @Injectable({ providedIn: 'root' })
 export class RoleService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/roles';
+  private readonly baseUrl = 'roles';
 
   findAll(): Observable<Role[]> {
     return this.http.get<Role[]>(this.baseUrl);
@@ -30,6 +30,6 @@ export class RoleService {
   }
 
   findAllPermissions(): Observable<PermissionSummary[]> {
-    return this.http.get<PermissionSummary[]>('/permissions');
+    return this.http.get<PermissionSummary[]>('permissions');
   }
 }

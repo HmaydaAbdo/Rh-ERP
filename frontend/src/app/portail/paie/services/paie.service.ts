@@ -20,7 +20,7 @@ export interface PaiePageRequest {
 @Injectable({ providedIn: 'root' })
 export class PaieService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/paie';
+  private readonly baseUrl = 'paie';
 
   search(criteria: PaieSearchCriteria, pageRequest: PaiePageRequest): Observable<Page<Paie>> {
     let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);
