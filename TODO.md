@@ -6,6 +6,31 @@
 
 ---
 
+## Questions ouvertes — en attente d'une réponse (2026-09-23)
+
+Sujets soulevés en cours de route, jamais explicitement tranchés par HMAYDA — un choix par défaut a
+été appliqué dans chaque cas pour ne pas bloquer l'avancement, mais aucun n'a été confirmé :
+
+- **Comparaison chantier/équipe pour le squelette matériel (C168)** : `PaieExportService` compare
+  le chantier et l'équipe de façon insensible à la casse et aux espaces superflus (même logique que
+  `chantiersCiblesPourEquipes`), alors que le regroupement en sous-feuilles équipe ailleurs dans le
+  même export est volontairement une correspondance **exacte** (`"Equipe A"` ≠ `"EQUIPE A"`, voir
+  `docs/paie/README.md`, section « Regroupement par équipe »). Si une correspondance stricte est
+  préférée pour cette règle aussi, le changement est mineur — voir
+  `PaieExportService.squeletteMateriel`.
+- **`conventions/frontend.md` — Angular Signals autorisés pour l'état local** : la version d'origine
+  du fichier interdisait les Signals (probablement un reliquat d'un autre projet, jamais confirmé
+  comme un choix délibéré pour rh-erp). Lors du nettoyage des conventions, la règle a été changée
+  pour autoriser les Signals (état synchrone simple) aux côtés de RxJS (flux asynchrones) — cohérent
+  avec le code déjà livré (`AuthService`, `AppComponent`), mais ce changement de convention n'a
+  jamais été explicitement validé.
+- **JWT signé en HS256 (secret partagé) plutôt qu'en RS256 (paire de clés)** : choix fait pour
+  rester simple — un seul service (le backend) émet et valide les tokens, un secret symétrique
+  suffit et évite de gérer une paire de clés. Pertinent à revoir uniquement si un jour un autre
+  service doit valider les tokens sans connaître le secret d'émission.
+
+---
+
 ## Sécurité (JWT / RBAC) — v2 livrée (backend + frontend)
 
 **Décision (HMAYDA, 2026-09-22)** : authentification JWT auto-émise (Access Token 15 min + Refresh
@@ -43,13 +68,22 @@ oublié par email via Mailpit, création de rôle + utilisateur + deny override 
 
 - Détection de compromission en cascade du Refresh Token (voir `conventions/security.md`, Points
   d'attention) — non traité, risque accepté pour l'instant.
-- Revoir `SameSite=Lax` si le frontend est un jour déployé séparément du backend (voir
-  `conventions/security.md`).
+- ~~Revoir `SameSite=Lax` si le frontend est un jour déployé séparément du backend~~ — **confirmé
+  correct** par l'architecture de production livrée le 2026-09-23 (voir section « Déploiement
+  production » ci-dessous) : nginx inner relaie lui-même les appels API vers le backend sur le
+  réseau Docker interne, le navigateur ne voit jamais qu'une seule origine (celle de nginx inner/
+  outer), en production comme en développement. Rester vigilant si l'architecture change un jour
+  (ex. frontend et backend derrière deux domaines distincts sans proxy interne).
 - Pas de sélecteur/recherche d'employé dans le formulaire utilisateur (lien `employeeId` optionnel
   saisi en brut par identifiant numérique) — acceptable pour l'instant, aucun utilisateur réel n'a
   encore ce besoin.
 - Boutons "Importer"/"Synchroniser"/"Exporter" ne sont pas gatés côté frontend (seul le 403 backend
   protège) — voir `docs/rbac/*.md`, à faire si le besoin se confirme.
+- Pas de test d'intégration validant réellement l'application des `@PreAuthorize` (ex. MockMvc +
+  `spring-security-test`, ou `@SpringBootTest` avec un vrai token) — les tests unitaires actuels
+  (`*ServiceTest`) mockent la couche Service et ne passent jamais par la chaîne de sécurité ; seule
+  une vérification manuelle (curl, navigateur) a confirmé l'enforcement réel des permissions par
+  endpoint lors de la livraison du 2026-09-22.
 
 ---
 
