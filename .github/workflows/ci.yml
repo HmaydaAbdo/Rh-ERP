@@ -41,6 +41,9 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
+      - name: Install fonts for the PDF report
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core
+
       - name: Run backend tests
         working-directory: backend
         # mvnw doit être exécutable — le bit d'exécution a été perdu une première fois lors d'un

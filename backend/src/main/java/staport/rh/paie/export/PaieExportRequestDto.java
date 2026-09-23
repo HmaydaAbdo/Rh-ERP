@@ -1,5 +1,7 @@
 package staport.rh.paie.export;
 
+import staport.rh.paie.reporting.FeuillesEquipeMode;
+
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +11,8 @@ import java.util.Map;
  * ({@code equipesParChantier}, ignoré hors mode {@code PERSONNALISE}). Indépendamment, pour
  * chaque chantier, les équipes listées dans {@code equipesExcluesFeuilleChantier} n'apparaissent
  * pas sur la feuille globale de CE chantier (la feuille GLB tous chantiers n'est jamais filtrée).
+ * Même structure que {@code staport.rh.paie.report.PaieReportPdfRequestDto} (rapport PDF), toutes
+ * deux alimentant {@code PaiePerimetreService}.
  */
 public record PaieExportRequestDto(
         String periode,
@@ -16,10 +20,4 @@ public record PaieExportRequestDto(
         Map<String, List<String>> equipesParChantier,
         Map<String, List<String>> equipesExcluesFeuilleChantier
 ) {
-
-    public enum FeuillesEquipeMode {
-        AUCUNE,
-        TOUTES,
-        PERSONNALISE
-    }
 }

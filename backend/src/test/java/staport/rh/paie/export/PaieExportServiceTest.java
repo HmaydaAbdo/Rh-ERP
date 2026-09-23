@@ -5,9 +5,9 @@ import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import staport.rh.chantier.entities.Chantier;
@@ -15,6 +15,8 @@ import staport.rh.employee.entities.Employee;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.reporting.FeuillesEquipeMode;
+import staport.rh.paie.reporting.PaiePerimetreService;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -32,15 +34,19 @@ class PaieExportServiceTest {
     @Mock
     private PaieRepository repository;
 
-    @InjectMocks
     private PaieExportService exportService;
 
+    @BeforeEach
+    void setUp() {
+        exportService = new PaieExportService(new PaiePerimetreService(repository));
+    }
+
     private static PaieExportRequestDto requeteToutesEquipes(String periode) {
-        return new PaieExportRequestDto(periode, PaieExportRequestDto.FeuillesEquipeMode.TOUTES, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.TOUTES, null, null);
     }
 
     private static PaieExportRequestDto requeteAucuneEquipe(String periode) {
-        return new PaieExportRequestDto(periode, PaieExportRequestDto.FeuillesEquipeMode.AUCUNE, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.AUCUNE, null, null);
     }
 
     @Test
@@ -194,7 +200,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
-                PaieExportRequestDto.FeuillesEquipeMode.PERSONNALISE,
+                FeuillesEquipeMode.PERSONNALISE,
                 Map.of("C059", List.of("EQUIPE A")),
                 null);
 
@@ -220,7 +226,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
-                PaieExportRequestDto.FeuillesEquipeMode.AUCUNE,
+                FeuillesEquipeMode.AUCUNE,
                 null,
                 Map.of("C059", List.of("EQUIPE B")));
 

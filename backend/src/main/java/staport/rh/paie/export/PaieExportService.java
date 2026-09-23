@@ -6,30 +6,26 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import staport.rh.paie.entities.Paie;
-import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.reporting.PaiePerimetreService;
+import staport.rh.paie.reporting.PerimetreChantier;
+import staport.rh.paie.reporting.PerimetrePaie;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /**
  * Reconstruit l'export multi-feuilles historique (paie_old) pour une période donnée : une feuille
  * globale (GLB), une feuille par chantier (tri alphabétique), et une sous-feuille par équipe pour
- * les chantiers explicitement demandés. Contrairement à l'ancien export, "TOTAL GENERAL MOIS
- * PRECEDENT" est désormais réellement calculé (somme de la période précédente sur le même
- * périmètre) — affiché "INTROUVABLE" si aucune paie n'existe pour ce périmètre sur la période
- * précédente, plutôt que figé à 0 comme dans l'ancien export.
+ * les chantiers/équipes sélectionnés (voir {@link PaiePerimetreService}, logique partagée avec le
+ * rapport PDF). Contrairement à l'ancien export, "TOTAL GENERAL MOIS PRECEDENT" est désormais
+ * réellement calculé (somme de la période précédente sur le même périmètre) — affiché
+ * "INTROUVABLE" si aucune paie n'existe pour ce périmètre sur la période précédente, plutôt que
+ * figé à 0 comme dans l'ancien export.
  */
 @Service
 public class PaieExportService {
@@ -41,7 +37,8 @@ public class PaieExportService {
      * Décision (HMAYDA, 2026-09-22) : sur les feuilles équipe du chantier "C168", un squelette de
      * tableau matériel (labels uniquement, colonne "Nbre" à remplir à la main) est ajouté à côté du
      * tableau "effectif par fonction" — CAMION pour l'équipe "CH", ENGINS pour l'équipe "OP".
-     * Propre à ce chantier uniquement, aucune règle générale identifiée pour les autres.
+     * Propre à ce chantier uniquement, aucune règle générale identifiée pour les autres. Spécifique
+     * à Excel (un tableau "à remplir à la main" n'a pas de sens dans un PDF de reporting imprimé).
      */
     private static final String CHANTIER_MATERIEL = "C168";
     private static final String EQUIPE_CAMION = "CH";
@@ -51,110 +48,47 @@ public class PaieExportService {
     private static final List<String> LIBELLES_ENGINS = List.of(
             "PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS", "CHARGEUR", "BULL", "TRACTOPELLE");
 
-    private final PaieRepository repository;
+    private final PaiePerimetreService perimetreService;
     private final PaieSheetWriter sheetWriter = new PaieSheetWriter();
 
-    public PaieExportService(PaieRepository repository) {
-        this.repository = repository;
+    public PaieExportService(PaiePerimetreService perimetreService) {
+        this.perimetreService = perimetreService;
     }
 
-    @Transactional(readOnly = true)
     public ByteArrayInputStream exporter(YearMonth periode, PaieExportRequestDto requete) {
-        List<Paie> lignesPeriode = repository.findByPeriode(periode);
-        List<Paie> lignesPeriodePrecedente = repository.findByPeriode(periode.minusMonths(1));
+        PerimetrePaie perimetre = perimetreService.calculer(periode, requete.feuillesEquipeMode(),
+                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier());
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             PaieExcelStyles styles = new PaieExcelStyles(workbook);
 
             Sheet feuilleGlobale = workbook.createSheet("GLB");
-            sheetWriter.ecrire(feuilleGlobale, styles, "GLOBAL", periode, lignesPeriode,
-                    totalSalairesOuNull(lignesPeriodePrecedente), null);
+            sheetWriter.ecrire(feuilleGlobale, styles, "GLOBAL", periode, perimetre.lignesGlobales(),
+                    perimetre.totalMoisPrecedentGlobal(), null);
 
-            Map<String, List<Paie>> lignesParChantier = groupBy(lignesPeriode, p -> p.getChantier().getCode());
-            Map<String, List<Paie>> lignesPrecedentesParChantier = groupBy(lignesPeriodePrecedente, p -> p.getChantier().getCode());
+            for (PerimetreChantier chantier : perimetre.parChantier().values()) {
+                Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantier.code()));
+                sheetWriter.ecrire(feuilleChantier, styles, chantier.code(), periode, chantier.lignes(),
+                        chantier.totalMoisPrecedent(), null);
 
-            for (Map.Entry<String, List<Paie>> entree : lignesParChantier.entrySet()) {
-                String chantierCode = entree.getKey();
-                List<Paie> lignesChantier = entree.getValue();
-
-                List<Paie> lignesChantierRetenues = exclureEquipes(lignesChantier, chantierCode, requete.equipesExcluesFeuilleChantier());
-                List<Paie> lignesPrecedentesRetenues = exclureEquipes(
-                        lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()), chantierCode, requete.equipesExcluesFeuilleChantier());
-
-                Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantierCode));
-                sheetWriter.ecrire(feuilleChantier, styles, chantierCode, periode, lignesChantierRetenues,
-                        totalSalairesOuNull(lignesPrecedentesRetenues), null);
-
-                List<String> equipesAGenerer = equipesAGenererPour(chantierCode, lignesChantier, requete);
-                if (!equipesAGenerer.isEmpty()) {
-                    ecrireFeuillesEquipes(workbook, styles, periode, chantierCode, lignesChantier,
-                            lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()), equipesAGenerer);
-                }
+                ecrireFeuillesEquipes(workbook, styles, periode, chantier);
             }
 
             workbook.write(sortie);
-            log.info("Export paie généré : periode={}, chantiers={}", periode, lignesParChantier.size());
+            log.info("Export paie généré : periode={}, chantiers={}", periode, perimetre.parChantier().size());
             return new ByteArrayInputStream(sortie.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException("Erreur lors de la génération de l'export paie : " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Équipes pour lesquelles générer une sous-feuille sur ce chantier, selon le mode choisi.
-     * {@code PERSONNALISE} : uniquement les équipes explicitement listées pour ce chantier (aucune
-     * si le chantier n'apparaît pas dans la sélection).
-     */
-    private List<String> equipesAGenererPour(String chantierCode, List<Paie> lignesChantier, PaieExportRequestDto requete) {
-        PaieExportRequestDto.FeuillesEquipeMode mode = requete.feuillesEquipeMode() == null
-                ? PaieExportRequestDto.FeuillesEquipeMode.AUCUNE
-                : requete.feuillesEquipeMode();
-
-        return switch (mode) {
-            case AUCUNE -> List.of();
-            case TOUTES -> lignesChantier.stream()
-                    .map(Paie::getEquipe)
-                    .filter(equipe -> equipe != null && !equipe.isBlank())
-                    .distinct()
-                    .toList();
-            case PERSONNALISE -> requete.equipesParChantier() == null
-                    ? List.of()
-                    : requete.equipesParChantier().getOrDefault(chantierCode, List.of());
-        };
-    }
-
-    /** Retire, pour ce chantier, les lignes dont l'équipe figure dans la liste d'exclusion de la feuille chantier. */
-    private List<Paie> exclureEquipes(List<Paie> lignes, String chantierCode, Map<String, List<String>> equipesExcluesParChantier) {
-        if (equipesExcluesParChantier == null) {
-            return lignes;
-        }
-        List<String> exclues = equipesExcluesParChantier.get(chantierCode);
-        if (exclues == null || exclues.isEmpty()) {
-            return lignes;
-        }
-        Set<String> exclusionSet = new HashSet<>(exclues);
-        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(p.getEquipe())).toList();
-    }
-
-    private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode,
-                                        String chantierCode, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedentes,
-                                        List<String> equipesAGenerer) {
-        Set<String> equipesRetenues = new HashSet<>(equipesAGenerer);
-        Map<String, List<Paie>> lignesParEquipe = groupBy(
-                lignesChantier.stream()
-                        .filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank() && equipesRetenues.contains(p.getEquipe()))
-                        .toList(),
-                Paie::getEquipe);
-        Map<String, List<Paie>> lignesPrecedentesParEquipe = groupBy(
-                lignesChantierPrecedentes.stream().filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank()).toList(),
-                Paie::getEquipe);
-
-        for (Map.Entry<String, List<Paie>> entree : lignesParEquipe.entrySet()) {
+    private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode, PerimetreChantier chantier) {
+        for (Map.Entry<String, List<Paie>> entree : chantier.lignesParEquipeAGenerer().entrySet()) {
             String equipe = entree.getKey();
-            Sheet feuilleEquipe = workbook.createSheet(nomFeuilleValide(chantierCode + "_" + equipe));
-            sheetWriter.ecrire(feuilleEquipe, styles, chantierCode + " - Equipe: " + equipe, periode, entree.getValue(),
-                    totalSalairesOuNull(lignesPrecedentesParEquipe.getOrDefault(equipe, List.of())),
-                    squeletteMateriel(chantierCode, equipe));
+            Sheet feuilleEquipe = workbook.createSheet(nomFeuilleValide(chantier.code() + "_" + equipe));
+            sheetWriter.ecrire(feuilleEquipe, styles, chantier.code() + " - Equipe: " + equipe, periode, entree.getValue(),
+                    chantier.totalMoisPrecedentParEquipe().get(equipe),
+                    squeletteMateriel(chantier.code(), equipe));
         }
     }
 
@@ -175,25 +109,6 @@ public class PaieExportService {
             return new SqueletteMateriel("ENGINS", LIBELLES_ENGINS);
         }
         return null;
-    }
-
-    private Map<String, List<Paie>> groupBy(List<Paie> lignes, java.util.function.Function<Paie, String> classificateur) {
-        return lignes.stream().collect(Collectors.groupingBy(classificateur, TreeMap::new, Collectors.toList()));
-    }
-
-    /**
-     * Total de la période précédente pour le périmètre donné (chantier/équipe/global), ou
-     * {@code null} si aucune paie n'existe pour ce périmètre sur cette période — distingue "aucune
-     * donnée" (à afficher comme "INTROUVABLE") de "total réellement nul".
-     */
-    private BigDecimal totalSalairesOuNull(List<Paie> lignes) {
-        if (lignes.isEmpty()) {
-            return null;
-        }
-        return lignes.stream()
-                .map(Paie::getSalaireTotal)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private String nomFeuilleValide(String nom) {
