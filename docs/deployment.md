@@ -54,6 +54,14 @@ repris de celui déjà utilisé pour les autres applications du serveur (sous-ch
 lui-même la distinction page Angular / appel API :
 
 ```nginx
+# Redirige /rh-erp (sans slash final) vers /rh-erp/ — nécessaire pour que le location ci-dessous
+# matche, et construit l'URL absolue explicitement via $http_host (jamais $host, qui tronque le
+# port) pour rester correct derrière un NAT/port-forward où le port externe diffère du port sur
+# lequel nginx outer écoute réellement (ex. box/routeur qui redirige :650 vers :80 en interne).
+location = /rh-erp {
+    return 301 $scheme://$http_host/rh-erp/;
+}
+
 location /rh-erp/ {
     proxy_pass http://127.0.0.1:${FRONTEND_PORT}/;
     proxy_http_version 1.1;
@@ -62,6 +70,9 @@ location /rh-erp/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    # Sans ça, sub_filter ne peut pas réécrire un corps que nginx inner a compressé (gzip) —
+    # sub_filter n'opère que sur du texte brut.
+    proxy_set_header Accept-Encoding "";
 
     sub_filter '<base href="/">' '<base href="/rh-erp/">';
     sub_filter_once on;
@@ -69,9 +80,22 @@ location /rh-erp/ {
 ```
 
 Remplacer `${FRONTEND_PORT}` par la valeur réelle configurée dans `.env` sur le serveur, et
-`/rh-erp/` par le sous-chemin réellement choisi. `FRONTEND_URL` (dans `.env`, utilisé par le
-backend pour CORS) doit correspondre à l'URL publique complète résultante (ex.
-`https://<domaine>/rh-erp`).
+`/rh-erp/` par le sous-chemin réellement choisi.
+
+`FRONTEND_URL` (dans `.env`) n'est **plus** utilisé pour CORS (voir plus bas) — uniquement pour
+construire le lien de réinitialisation de mot de passe envoyé par email (`EmailService`). Il doit
+donc correspondre à l'URL publique complète résultante (ex. `https://<domaine>/rh-erp`) pour que ce
+lien soit valide, même si ça n'a plus d'incidence sur les appels API.
+
+### CORS
+
+**Décision (HMAYDA, 2026-09-23)** : CORS ouvert à toute origine
+(`SecurityConfig.corsConfigurationSource`, `allowedOriginPatterns("*")`), plutôt que restreint à
+`FRONTEND_URL` comme auparavant. Risque accepté en connaissance de cause : `/auth/refresh` et
+`/auth/logout` restent les seuls endpoints lus depuis un cookie (Refresh Token), mais ce cookie est
+`SameSite=Lax` (voir `AuthController`), ce qui empêche déjà son envoi sur une requête cross-origin
+déclenchée par du JavaScript tiers — le risque résiduel d'ouvrir le CORS en plus de ça est donc
+limité en pratique.
 
 ---
 
