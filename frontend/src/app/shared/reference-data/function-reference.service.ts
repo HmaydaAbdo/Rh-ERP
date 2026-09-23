@@ -8,7 +8,7 @@ import { FunctionReference } from './function-reference.model';
 @Injectable({ providedIn: 'root' })
 export class FunctionReferenceService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/functions';
+  private readonly baseUrl = 'functions';
 
   list(): Observable<FunctionReference[]> {
     const params = new HttpParams().set('size', 200).set('sort', 'libelle,asc');

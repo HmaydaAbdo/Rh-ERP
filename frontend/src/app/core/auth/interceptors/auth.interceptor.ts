@@ -5,7 +5,7 @@ import { catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
-const PUBLIC_AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'];
+const PUBLIC_AUTH_ENDPOINTS = ['auth/login', 'auth/refresh', 'auth/forgot-password', 'auth/reset-password'];
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -33,7 +33,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 };
 
 function withAuthHeader<T>(req: HttpRequest<T>, token: string | null, isPublicAuthEndpoint: boolean) {
-  const withCredentials = req.url.startsWith('/auth/') ? true : req.withCredentials;
+  const withCredentials = req.url.startsWith('auth/') ? true : req.withCredentials;
   if (isPublicAuthEndpoint || !token) {
     return req.clone({ withCredentials });
   }

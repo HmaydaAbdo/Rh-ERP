@@ -26,7 +26,7 @@ export class AuthService {
 
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>('/auth/login', { username, password }, { withCredentials: true })
+      .post<LoginResponse>('auth/login', { username, password }, { withCredentials: true })
       .pipe(tap((res) => this.setSession(res)));
   }
 
@@ -43,7 +43,7 @@ export class AuthService {
    * Refresh Token étant à usage unique, deux refresh simultanés invalideraient l'un l'autre. */
   refreshOnce(): Observable<LoginResponse> {
     if (!this.refreshInFlight$) {
-      this.refreshInFlight$ = this.http.post<LoginResponse>('/auth/refresh', {}, { withCredentials: true }).pipe(
+      this.refreshInFlight$ = this.http.post<LoginResponse>('auth/refresh', {}, { withCredentials: true }).pipe(
         tap((res) => this.setSession(res)),
         finalize(() => (this.refreshInFlight$ = null)),
         shareReplay(1)
@@ -53,7 +53,7 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
-    return this.http.post<void>('/auth/logout', {}, { withCredentials: true }).pipe(tap(() => this.clearSession()));
+    return this.http.post<void>('auth/logout', {}, { withCredentials: true }).pipe(tap(() => this.clearSession()));
   }
 
   /** Purge locale sans appel serveur — utilisée quand le refresh échoue (session déjà invalide côté serveur). */

@@ -20,7 +20,7 @@ export interface EmployeePageRequest {
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/employees';
+  private readonly baseUrl = 'employees';
 
   search(criteria: EmployeeSearchCriteria, pageRequest: EmployeePageRequest): Observable<Page<Employee>> {
     let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);

@@ -20,7 +20,7 @@ export interface FunctionPageRequest {
 @Injectable({ providedIn: 'root' })
 export class FunctionService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/functions';
+  private readonly baseUrl = 'functions';
 
   search(criteria: FunctionSearchCriteria, pageRequest: FunctionPageRequest): Observable<Page<Function>> {
     let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);

@@ -20,7 +20,7 @@ export interface ChantierPageRequest {
 @Injectable({ providedIn: 'root' })
 export class ChantierService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/chantiers';
+  private readonly baseUrl = 'chantiers';
 
   search(criteria: ChantierSearchCriteria, pageRequest: ChantierPageRequest): Observable<Page<Chantier>> {
     let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);
