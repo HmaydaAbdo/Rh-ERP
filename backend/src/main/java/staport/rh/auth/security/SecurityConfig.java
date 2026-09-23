@@ -45,12 +45,9 @@ import java.util.stream.Stream;
 public class SecurityConfig {
 
     private final String jwtSecret;
-    private final String frontendUrl;
 
-    public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret,
-                           @Value("${security.cors.frontend-url}") String frontendUrl) {
+    public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret) {
         this.jwtSecret = jwtSecret;
-        this.frontendUrl = frontendUrl;
     }
 
     @Bean
@@ -86,10 +83,20 @@ public class SecurityConfig {
         return converter;
     }
 
+    /**
+     * Décision (HMAYDA, 2026-09-23) : CORS ouvert à toute origine. Spring refuse la valeur littérale
+     * {@code "*"} pour {@code allowedOrigins} dès lors que {@code allowCredentials} est actif
+     * (interdit par la spec CORS) — {@code allowedOriginPatterns("*")} est la façon dont Spring
+     * satisfait cette contrainte : il réfléchit l'{@code Origin} de la requête au lieu d'émettre un
+     * {@code *} littéral. Risque accepté en connaissance de cause pour {@code /auth/refresh} et
+     * {@code /auth/logout} (seuls endpoints lus depuis le cookie Refresh Token) : très atténué en
+     * pratique par {@code SameSite=Lax} sur ce cookie (voir {@code AuthController}), qui empêche déjà
+     * son envoi sur une requête cross-origin déclenchée par du JS tiers.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(frontendUrl));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
