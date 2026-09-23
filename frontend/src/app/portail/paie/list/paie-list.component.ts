@@ -21,7 +21,14 @@ import { ChantierReference } from '../../../shared/reference-data/chantier-refer
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { FeuillesEquipeMode, Paie, PaieExportRequest, PaieImportResult } from '../models/paie.model';
+import {
+  FeuillesEquipeMode,
+  FormatExport,
+  Paie,
+  PaieExportRequest,
+  PaieImportResult,
+  PaieRapportPdfRequest
+} from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
@@ -99,6 +106,7 @@ export class PaieListComponent implements OnInit {
   exporting = false;
 
   readonly exportForm = this.fb.group({
+    format: ['EXCEL' as FormatExport],
     periode: [null as Date | null],
     feuillesEquipeMode: ['AUCUNE' as FeuillesEquipeMode],
     chantiersPersonnalises: [[] as string[]],
@@ -109,6 +117,12 @@ export class PaieListComponent implements OnInit {
     { label: 'Aucune', value: 'AUCUNE' },
     { label: 'Toutes', value: 'TOUTES' },
     { label: 'Personnalisé', value: 'PERSONNALISE' }
+  ];
+
+  readonly formatExportOptions: { label: string; value: FormatExport }[] = [
+    { label: 'Excel', value: 'EXCEL' },
+    { label: 'PDF Synthèse', value: 'PDF_SYNTHESE' },
+    { label: 'PDF Détaillé', value: 'PDF_DETAILLE' }
   ];
 
   /** Équipes sélectionnées par chantier (mode PERSONNALISE) et équipes exclues par chantier
@@ -240,6 +254,7 @@ export class PaieListComponent implements OnInit {
 
   onOpenExportDialog(): void {
     this.exportForm.reset({
+      format: 'EXCEL',
       periode: null,
       feuillesEquipeMode: 'AUCUNE',
       chantiersPersonnalises: [],
@@ -289,10 +304,29 @@ export class PaieListComponent implements OnInit {
     if (!periode) {
       return;
     }
+    const format = this.exportForm.controls.format.value ?? 'EXCEL';
+
+    if (format === 'PDF_SYNTHESE') {
+      // Synthèse agrégée : pas de découpage ni d'exclusion par équipe (ignorés côté backend).
+      this.telechargerRapportPdf({ periode, typeRapport: 'SYNTHESE' });
+      return;
+    }
+
     const feuillesEquipeMode = this.exportForm.controls.feuillesEquipeMode.value ?? 'AUCUNE';
 
     const equipesParChantier = this.equipesNonVides(this.equipesParChantierPersonnalise);
     const equipesExclues = this.equipesNonVides(this.equipesExcluesParChantier);
+
+    if (format === 'PDF_DETAILLE') {
+      this.telechargerRapportPdf({
+        periode,
+        typeRapport: 'DETAILLE',
+        feuillesEquipeMode,
+        equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
+        equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null
+      });
+      return;
+    }
 
     const requete: PaieExportRequest = {
       periode,
@@ -316,6 +350,42 @@ export class PaieListComponent implements OnInit {
       });
   }
 
+  private telechargerRapportPdf(requete: PaieRapportPdfRequest): void {
+    this.exporting = true;
+    this.paieService
+      .telechargerRapportPdf(requete)
+      .pipe(finalize(() => (this.exporting = false)))
+      .subscribe({
+        next: (blob) => {
+          const suffixe = requete.typeRapport === 'DETAILLE' ? 'Detaille' : 'Synthese';
+          const url = window.URL.createObjectURL(blob);
+          const lien = document.createElement('a');
+          lien.href = url;
+          lien.download = `Paie_Rapport_${suffixe}_${requete.periode}.pdf`;
+          lien.click();
+          window.URL.revokeObjectURL(url);
+          this.showExportDialog = false;
+        },
+        error: (err: HttpErrorResponse) => void this.afficherErreurRapportPdf(err)
+      });
+  }
+
+  /** Avec responseType 'blob', le corps d'erreur JSON du backend arrive lui aussi en Blob : on le relit
+   * pour afficher son message (ex. « Aucun bulletin de paie pour la période 2026-08 … »). */
+  private async afficherErreurRapportPdf(err: HttpErrorResponse): Promise<void> {
+    let detail = "Le rapport PDF n'a pas pu être généré.";
+    if (err.error instanceof Blob) {
+      try {
+        const corps = JSON.parse(await err.error.text()) as { message?: string };
+        if (corps.message) {
+          detail = corps.message;
+        }
+      } catch {
+        // corps non JSON : on garde le message générique
+      }
+    }
+    this.messageService.add({ severity: 'error', summary: 'Rapport PDF', detail, life: 8000 });
+  }
   private chargerEquipesSiNecessaire(chantierCode: string): void {
     const periode = toPeriodeString(this.exportForm.controls.periode.value);
     const cle = this.cleEquipesCache(chantierCode);

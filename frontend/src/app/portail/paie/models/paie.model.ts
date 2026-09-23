@@ -100,3 +100,16 @@ export interface PaieImportResult {
   lignesIgnorees: PaieImportLigneIgnoree[];
   fonctionsCreees: string[];
 }
+
+export type FormatExport = 'EXCEL' | 'PDF_SYNTHESE' | 'PDF_DETAILLE';
+
+export type TypeRapportPdf = 'SYNTHESE' | 'DETAILLE';
+
+/** Corps de POST /paie/report/pdf. Les trois champs équipe ne servent qu'en DETAILLE (ignorés en SYNTHESE). */
+export interface PaieRapportPdfRequest {
+  periode: string;
+  typeRapport: TypeRapportPdf;
+  feuillesEquipeMode?: FeuillesEquipeMode;
+  equipesParChantier?: Record<string, string[]> | null;
+  equipesExcluesFeuilleChantier?: Record<string, string[]> | null;
+}
