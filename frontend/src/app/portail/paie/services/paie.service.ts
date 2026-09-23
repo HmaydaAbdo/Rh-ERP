@@ -9,7 +9,8 @@ import {
   PaieExportRequest,
   PaieImportResult,
   PaieSearchCriteria,
-  PaieUpdateRequest
+  PaieUpdateRequest,
+  PaieRapportPdfRequest
 } from '../models/paie.model';
 
 export interface PaiePageRequest {
@@ -61,6 +62,10 @@ export class PaieService {
 
   exporter(requete: PaieExportRequest): Observable<Blob> {
     return this.http.post(`${this.baseUrl}/export`, requete, { responseType: 'blob' });
+  }
+
+  telechargerRapportPdf(requete: PaieRapportPdfRequest): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/report/pdf`, requete, { responseType: 'blob' });
   }
 
   listerEquipes(chantierCode: string, periode: string): Observable<string[]> {
