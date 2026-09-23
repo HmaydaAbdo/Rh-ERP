@@ -92,7 +92,7 @@ table.donnees td.centre { text-align: center; }
 table.donnees td.num { text-align: right; white-space: nowrap; }
 table.recap { width: 55%; }
 
-/* ---------- Pagination & divers ---------- */
+/* ---------- Pagination et divers ---------- */
 .section + .section { page-break-before: always; }
 .bloc-final { page-break-inside: avoid; }
 .note { font-size: 7pt; color: #64748B; margin-top: 12px; }
