@@ -6,12 +6,12 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.reporting.ObservationStc;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -147,7 +147,7 @@ class PaieSheetWriter {
         for (Map.Entry<String, List<Paie>> entry : lignesParFonction.entrySet()) {
             Row ligne = sheet.createRow(indexLigne++);
             List<Paie> lignesFonction = entry.getValue();
-            long stc = lignesFonction.stream().filter(PaieSheetWriter::estStcOuSortie).count();
+            long stc = lignesFonction.stream().filter(ObservationStc::estStcOuSortie).count();
             ecrireTexte(ligne, 0, entry.getKey(), styles.donneeGauche);
             ecrireEntier(ligne, 1, lignesFonction.size(), styles.donneeCentre);
             ecrireEntier(ligne, 2, (int) stc, styles.donneeCentre);
@@ -177,15 +177,6 @@ class PaieSheetWriter {
     private Row obtenirOuCreerLigne(Sheet sheet, int indexLigne) {
         Row ligne = sheet.getRow(indexLigne);
         return ligne != null ? ligne : sheet.createRow(indexLigne);
-    }
-
-    private static boolean estStcOuSortie(Paie paie) {
-        String observation = paie.getObservation();
-        if (observation == null) {
-            return false;
-        }
-        String normalisee = observation.trim().toLowerCase(Locale.ROOT);
-        return normalisee.equals("stc") || normalisee.equals("sortie");
     }
 
     private String formuleSousTotal(int premiereLigneDonnees, int derniereLigneDonnees) {

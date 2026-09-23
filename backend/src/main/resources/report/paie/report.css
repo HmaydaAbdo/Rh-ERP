@@ -1,0 +1,98 @@
+/* Feuille de style du rapport PDF paie — moteur openhtmltopdf : CSS 2.1 + @page. Pas de flexbox, pas de
+   grid : toute mise en colonnes passe par des tableaux. Injectée en ligne par PaieReportPdfService. */
+
+@page {
+  margin: 16mm 12mm 18mm 12mm;
+  @bottom-left {
+    content: "STAPORT — Rapport de paie";
+    font-family: 'RapportPaie', sans-serif;
+    font-size: 7.5pt;
+    color: #64748B;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " / " counter(pages);
+    font-family: 'RapportPaie', sans-serif;
+    font-size: 7.5pt;
+    color: #64748B;
+  }
+}
+
+body {
+  font-family: 'RapportPaie', sans-serif;
+  font-size: 9pt;
+  color: #0F172A;
+  margin: 0;
+}
+
+/* ---------- Bandeau de titre ---------- */
+table.hero { width: 100%; border-collapse: collapse; background-color: #0F172A; color: #FFFFFF; }
+table.hero td { padding: 14px 18px; vertical-align: middle; }
+.hero-titre { font-size: 20pt; font-weight: bold; }
+.hero-soustitre { font-size: 10pt; color: #CBD5E1; margin-top: 3px; }
+td.hero-droite { text-align: right; }
+.hero-periode { font-size: 16pt; font-weight: bold; }
+.hero-date { font-size: 7.5pt; color: #CBD5E1; margin-top: 3px; }
+
+/* ---------- Cartes d'indicateurs ---------- */
+table.kpis { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 6px 0; margin-top: 12px; }
+table.kpis td.kpi {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-top: 3px solid #2563EB;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+.kpi-label { font-size: 7pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+.kpi-valeur { font-size: 14pt; font-weight: bold; margin-top: 3px; }
+.kpi-note { font-size: 7.5pt; color: #64748B; margin-top: 2px; }
+
+/* ---------- Titres ---------- */
+.h2 {
+  font-size: 11pt;
+  font-weight: bold;
+  color: #1E3A8A;
+  border-bottom: 2px solid #2563EB;
+  padding-bottom: 3px;
+  margin: 16px 0 8px 0;
+}
+.section-titre {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  font-size: 11pt;
+  font-weight: bold;
+  padding: 6px 10px;
+  margin-top: 12px;
+}
+
+/* ---------- Graphiques ---------- */
+table.graphiques { width: 100%; border-collapse: collapse; }
+table.graphiques td { width: 50%; vertical-align: top; padding: 0 6px 0 0; }
+table.graphiques td + td { padding: 0 0 0 6px; }
+.graphique-titre { font-size: 8.5pt; font-weight: bold; color: #1E3A8A; margin-bottom: 3px; }
+table.graphiques img { width: 100%; }
+
+/* ---------- Tableaux de données ---------- */
+table.donnees { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+table.detail { table-layout: fixed; font-size: 7.5pt; margin-top: 6px; }
+table.donnees thead { display: table-header-group; }
+table.donnees th {
+  background-color: #1E3A8A;
+  color: #FFFFFF;
+  font-weight: bold;
+  padding: 5px 4px;
+  text-align: center;
+  border: 1px solid #1E3A8A;
+}
+table.donnees td { padding: 4px; border-bottom: 1px solid #E2E8F0; vertical-align: middle; }
+table.donnees tr { page-break-inside: avoid; }
+table.donnees tr.alt td { background-color: #F8FAFC; }
+table.donnees tr.total td { background-color: #E2E8F0; font-weight: bold; border-top: 2px solid #1E3A8A; }
+table.donnees td.gauche, table.donnees th.gauche { text-align: left; }
+table.donnees td.centre { text-align: center; }
+table.donnees td.num { text-align: right; white-space: nowrap; }
+table.recap { width: 55%; }
+
+/* ---------- Pagination & divers ---------- */
+.section + .section { page-break-before: always; }
+.bloc-final { page-break-inside: avoid; }
+.note { font-size: 7pt; color: #64748B; margin-top: 12px; }

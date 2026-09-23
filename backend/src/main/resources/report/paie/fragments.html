@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Fragments du rapport de paie</title>
+</head>
+<body>
+
+<!-- Bandeau de titre. Variables de contexte lues : periodeLibelle, dateGeneration. -->
+<table th:fragment="hero(sousTitre)" class="hero">
+    <tr>
+        <td>
+            <div class="hero-titre">Rapport de paie</div>
+            <div class="hero-soustitre" th:text="${sousTitre}">Synthèse exécutive</div>
+        </td>
+        <td class="hero-droite">
+            <div class="hero-periode" th:text="${periodeLibelle}">Août 2026</div>
+            <div class="hero-date" th:text="'Généré le ' + ${dateGeneration}">Généré le 01/01/2026</div>
+        </td>
+    </tr>
+</table>
+
+<!-- Une section du rapport détaillé (GLB, chantier ou équipe) : tableau des lignes, totaux, effectif par
+     fonction. avecChantierEquipe = true uniquement pour la vue globale (colonnes Chantier / Équipe). -->
+<div th:fragment="section(section, avecChantierEquipe)" class="section">
+    <div class="section-titre" th:text="${section.titre}">Titre de section</div>
+
+    <table class="donnees detail">
+        <colgroup th:if="${avecChantierEquipe}">
+            <col style="width: 16%" /><col style="width: 7%" /><col style="width: 12%" /><col style="width: 7%" />
+            <col style="width: 8%" /><col style="width: 4%" /><col style="width: 10%" /><col style="width: 9%" />
+            <col style="width: 9%" /><col style="width: 10%" /><col style="width: 8%" />
+        </colgroup>
+        <colgroup th:unless="${avecChantierEquipe}">
+            <col style="width: 18%" /><col style="width: 8%" /><col style="width: 14%" /><col style="width: 5%" />
+            <col style="width: 12%" /><col style="width: 11%" /><col style="width: 11%" /><col style="width: 12%" />
+            <col style="width: 9%" />
+        </colgroup>
+        <thead>
+        <tr>
+            <th class="gauche">Nom et prénom</th>
+            <th>CIN</th>
+            <th class="gauche">Fonction</th>
+            <th th:if="${avecChantierEquipe}">Chantier</th>
+            <th th:if="${avecChantierEquipe}">Équipe</th>
+            <th>Jours</th>
+            <th>Salaire mensuel</th>
+            <th>Prime ordinaire</th>
+            <th>Prime dimanche</th>
+            <th>Salaire total</th>
+            <th>Observation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="ligne, iter : ${section.lignes}" th:classappend="${iter.odd} ? 'alt'">
+            <td class="gauche" th:text="${ligne.nomPrenom}">Nom Prénom</td>
+            <td class="centre" th:text="${ligne.cin}">AB123456</td>
+            <td class="gauche" th:text="${ligne.fonction}">Fonction</td>
+            <td class="centre" th:if="${avecChantierEquipe}" th:text="${ligne.chantier}">C000</td>
+            <td class="centre" th:if="${avecChantierEquipe}" th:text="${ligne.equipe}">Équipe</td>
+            <td class="centre" th:text="${ligne.joursTravailles}">26</td>
+            <td class="num" th:text="${ligne.salaireMensuel}">0,00</td>
+            <td class="num" th:text="${ligne.primeOrdinaire}">0,00</td>
+            <td class="num" th:text="${ligne.primeDimanche}">0,00</td>
+            <td class="num" th:text="${ligne.salaireTotal}">0,00</td>
+            <td class="centre" th:text="${ligne.observation}">—</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="bloc-final">
+        <table class="kpis">
+            <tr>
+                <td class="kpi">
+                    <div class="kpi-label">Effectif</div>
+                    <div class="kpi-valeur" th:text="${section.effectif}">0</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Total général</div>
+                    <div class="kpi-valeur" th:text="${section.totalGeneral}">0,00</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Total général mois précédent</div>
+                    <div class="kpi-valeur" th:text="${section.totalMoisPrecedent}">0,00</div>
+                    <div class="kpi-note" th:text="${section.variation != null} ? ('Variation : ' + ${section.variation}) : 'Variation non disponible'">Variation</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="donnees recap" th:if="${!section.effectifParFonction.isEmpty()}" style="margin-top: 10px">
+            <thead>
+            <tr>
+                <th class="gauche">Fonction</th>
+                <th>Effectif</th>
+                <th>STC / sortie</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="f, iter : ${section.effectifParFonction}" th:classappend="${iter.odd} ? 'alt'">
+                <td class="gauche" th:text="${f.fonction}">Fonction</td>
+                <td class="centre" th:text="${f.effectif}">0</td>
+                <td class="centre" th:text="${f.stc}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
+</html>
