@@ -34,7 +34,8 @@ paie/
     ├── PaieExportService.java       ← orchestration (regroupement, totaux, période précédente)
     ├── PaieSheetWriter.java         ← mise en page d'une feuille (partagée GLB/chantier/équipe)
     ├── PaieExcelStyles.java         ← styles de cellule créés une fois par classeur
-    └── PaieExportController.java    ← GET /paie/export?periode=aaaa-MM&chantiersEquipes=...
+    ├── PaieExportRequestDto.java    ← périmètre équipe de l'export (voir section Export Excel)
+    └── PaieExportController.java    ← POST /paie/export (corps : PaieExportRequestDto)
 ```
 
 ---
@@ -117,7 +118,8 @@ rétroactive ou automatique des bulletins déjà existants.
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
-| `GET` | `/paie/export?periode=aaaa-MM&chantiersEquipes=C1,C2` | Exporter (GLB + par chantier + par équipe pour les chantiers listés) | 200 |
+| `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes distinctes trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
+| `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter (GLB + par chantier + par équipe selon la configuration) | 200 |
 
 `PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
 `fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe`,
@@ -222,19 +224,31 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 
 ## Export Excel
 
-`GET /paie/export?periode=2026-08&chantiersEquipes=C208,C209` génère un export multi-feuilles
+`POST /paie/export` (corps `PaieExportRequestDto`) génère un export multi-feuilles
 (`PaieExcelStyles` + `PaieSheetWriter` + `PaieExportService`) :
 
-- Une feuille **GLB** avec tous les bulletins de la période.
+- Une feuille **GLB** avec tous les bulletins de la période — jamais filtrée, quelle que soit la
+  configuration ci-dessous.
 - Une feuille par **chantier** (tri alphabétique — regroupement par `Paie.chantier.code` dans une
-  `TreeMap`), avec tous les bulletins de ce chantier.
-- Une sous-feuille par **équipe**, uniquement pour les chantiers listés dans `chantiersEquipes`
-  (paramètre de requête, comparaison insensible à la casse sur le **code chantier**).
+  `TreeMap`), avec tous les bulletins de ce chantier, sauf les équipes listées dans
+  `equipesExcluesFeuilleChantier` pour ce chantier (indépendant du choix des sous-feuilles équipe
+  ci-dessous ; le total du mois précédent affiché sur cette feuille applique la même exclusion,
+  pour rester comparable).
+- Des sous-feuilles par **équipe**, selon `feuillesEquipeMode` :
+  - `AUCUNE` : aucune sous-feuille équipe.
+  - `TOUTES` : une sous-feuille par équipe distincte trouvée, pour chaque chantier de la période.
+  - `PERSONNALISE` : uniquement les équipes listées dans `equipesParChantier` pour chaque chantier
+    (chantier absent de la map ⇒ aucune sous-feuille équipe pour lui).
 - Chaque feuille : titre `"CHANTIER : X - PAIE MOIS MM-aaaa"`, en-têtes à deux niveaux (Nbre Jrs →
   P/J.R.O/J.R.D, SALAIRE → SALAIRE/RO/RD), une ligne par employé, un total général (formule Excel
   `SUBTOTAL(9, ...)` recalculée dynamiquement — pas une valeur figée), un total du mois précédent
   (valeur figée, calculée côté serveur), un récapitulatif effectif par fonction (tri alphabétique du
   libellé, via `TreeMap`, avec une colonne STC).
+
+`GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
+bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
+— c'est la seule source possible pour peupler ces sélecteurs côté UI, `équipe` n'ayant aucun
+référentiel dédié (voir section suivante).
 
 ### Regroupement par équipe : correspondance texte exact, pas de normalisation
 
@@ -274,11 +288,12 @@ comptée.
 
 ### Squelette matériel (CAMION / ENGINS) — chantier C168 uniquement
 
-**Décision (HMAYDA, 2026-09-22)** : sur une feuille **équipe** (donc uniquement pour un chantier
-listé dans `chantiersCiblesPourEquipes`, voir plus haut), si le chantier vaut **"C168"**, un
-second tableau — un « squelette » sans données, juste des étiquettes à remplir à la main — est
-ajouté à droite du tableau "effectif par fonction", sur les **mêmes lignes**, avec un saut de 3
-colonnes vides (effectif = colonnes 0-2, squelette = colonnes 6-7) :
+**Décision (HMAYDA, 2026-09-22)** : sur une feuille **équipe** (donc uniquement si une sous-feuille
+équipe a été générée pour ce chantier, voir plus haut — peu importe que ce soit via le mode
+`TOUTES` ou une sélection `PERSONNALISE`), si le chantier vaut **"C168"**, un second tableau — un
+« squelette » sans données, juste des étiquettes à remplir à la main — est ajouté à droite du
+tableau "effectif par fonction", sur les **mêmes lignes**, avec un saut de 3 colonnes vides
+(effectif = colonnes 0-2, squelette = colonnes 6-7) :
 
 - Équipe **"CH"** → tableau **CAMION** : CAMION CITERNE, CAMION 8\*4, CAMION SR, PORT CHAR, PICK UP.
 - Équipe **"OP"** → tableau **ENGINS** : PELLE PNEU, PELLE CHENILLE, NIVELEUSE, COMPACTEURS,
@@ -287,9 +302,8 @@ colonnes vides (effectif = colonnes 0-2, squelette = colonnes 6-7) :
 
 Seule la colonne d'étiquettes est renseignée ; la colonne "Nbre" reste **vide** (aucune valeur,
 pas même 0) — à remplir manuellement après export, l'application n'ayant aucune source de données
-pour ce décompte. Comparaison chantier/équipe insensible à la casse et aux espaces superflus, mêmes
-précautions que pour `chantiersCiblesPourEquipes`. Voir `PaieExportService.squeletteMateriel` et
-`PaieSheetWriter.ecrireSqueletteMateriel`.
+pour ce décompte. Comparaison chantier/équipe insensible à la casse et aux espaces superflus. Voir
+`PaieExportService.squeletteMateriel` et `PaieSheetWriter.ecrireSqueletteMateriel`.
 
 Règle propre à ce chantier précis, sans généralisation identifiée à ce jour pour d'autres
 chantiers/équipes — voir `conventions/architecture.md` (ne jamais généraliser une règle métier sans
@@ -303,7 +317,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période), export (période + chantiers pour feuilles équipe) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période), export (période + configuration des feuilles équipe par chantier : aucune/toutes/personnalisée, + exclusion d'équipes de la feuille d'un chantier) |
 | `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |

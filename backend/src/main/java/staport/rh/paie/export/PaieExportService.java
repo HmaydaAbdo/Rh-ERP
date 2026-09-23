@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,16 +59,9 @@ public class PaieExportService {
     }
 
     @Transactional(readOnly = true)
-    public ByteArrayInputStream exporter(YearMonth periode, List<String> chantiersCiblesPourEquipes) {
+    public ByteArrayInputStream exporter(YearMonth periode, PaieExportRequestDto requete) {
         List<Paie> lignesPeriode = repository.findByPeriode(periode);
         List<Paie> lignesPeriodePrecedente = repository.findByPeriode(periode.minusMonths(1));
-
-        Set<String> chantiersEquipes = chantiersCiblesPourEquipes == null
-                ? Set.of()
-                : chantiersCiblesPourEquipes.stream()
-                        .filter(Objects::nonNull)
-                        .map(c -> c.trim().toUpperCase())
-                        .collect(Collectors.toSet());
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             PaieExcelStyles styles = new PaieExcelStyles(workbook);
@@ -83,13 +77,18 @@ public class PaieExportService {
                 String chantierCode = entree.getKey();
                 List<Paie> lignesChantier = entree.getValue();
 
-                Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantierCode));
-                sheetWriter.ecrire(feuilleChantier, styles, chantierCode, periode, lignesChantier,
-                        totalSalairesOuNull(lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of())), null);
+                List<Paie> lignesChantierRetenues = exclureEquipes(lignesChantier, chantierCode, requete.equipesExcluesFeuilleChantier());
+                List<Paie> lignesPrecedentesRetenues = exclureEquipes(
+                        lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()), chantierCode, requete.equipesExcluesFeuilleChantier());
 
-                if (chantiersEquipes.contains(chantierCode.toUpperCase())) {
+                Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantierCode));
+                sheetWriter.ecrire(feuilleChantier, styles, chantierCode, periode, lignesChantierRetenues,
+                        totalSalairesOuNull(lignesPrecedentesRetenues), null);
+
+                List<String> equipesAGenerer = equipesAGenererPour(chantierCode, lignesChantier, requete);
+                if (!equipesAGenerer.isEmpty()) {
                     ecrireFeuillesEquipes(workbook, styles, periode, chantierCode, lignesChantier,
-                            lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()));
+                            lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()), equipesAGenerer);
                 }
             }
 
@@ -101,10 +100,50 @@ public class PaieExportService {
         }
     }
 
+    /**
+     * Équipes pour lesquelles générer une sous-feuille sur ce chantier, selon le mode choisi.
+     * {@code PERSONNALISE} : uniquement les équipes explicitement listées pour ce chantier (aucune
+     * si le chantier n'apparaît pas dans la sélection).
+     */
+    private List<String> equipesAGenererPour(String chantierCode, List<Paie> lignesChantier, PaieExportRequestDto requete) {
+        PaieExportRequestDto.FeuillesEquipeMode mode = requete.feuillesEquipeMode() == null
+                ? PaieExportRequestDto.FeuillesEquipeMode.AUCUNE
+                : requete.feuillesEquipeMode();
+
+        return switch (mode) {
+            case AUCUNE -> List.of();
+            case TOUTES -> lignesChantier.stream()
+                    .map(Paie::getEquipe)
+                    .filter(equipe -> equipe != null && !equipe.isBlank())
+                    .distinct()
+                    .toList();
+            case PERSONNALISE -> requete.equipesParChantier() == null
+                    ? List.of()
+                    : requete.equipesParChantier().getOrDefault(chantierCode, List.of());
+        };
+    }
+
+    /** Retire, pour ce chantier, les lignes dont l'équipe figure dans la liste d'exclusion de la feuille chantier. */
+    private List<Paie> exclureEquipes(List<Paie> lignes, String chantierCode, Map<String, List<String>> equipesExcluesParChantier) {
+        if (equipesExcluesParChantier == null) {
+            return lignes;
+        }
+        List<String> exclues = equipesExcluesParChantier.get(chantierCode);
+        if (exclues == null || exclues.isEmpty()) {
+            return lignes;
+        }
+        Set<String> exclusionSet = new HashSet<>(exclues);
+        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(p.getEquipe())).toList();
+    }
+
     private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode,
-                                        String chantierCode, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedentes) {
+                                        String chantierCode, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedentes,
+                                        List<String> equipesAGenerer) {
+        Set<String> equipesRetenues = new HashSet<>(equipesAGenerer);
         Map<String, List<Paie>> lignesParEquipe = groupBy(
-                lignesChantier.stream().filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank()).toList(),
+                lignesChantier.stream()
+                        .filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank() && equipesRetenues.contains(p.getEquipe()))
+                        .toList(),
                 Paie::getEquipe);
         Map<String, List<Paie>> lignesPrecedentesParEquipe = groupBy(
                 lignesChantierPrecedentes.stream().filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank()).toList(),
@@ -122,7 +161,7 @@ public class PaieExportService {
     /**
      * Squelette de tableau matériel à ajouter sur cette feuille équipe, ou {@code null} si le
      * chantier/l'équipe ne correspond à aucun cas prévu. Comparaison insensible à la casse et aux
-     * espaces superflus (mêmes précautions que pour {@code chantiersCiblesPourEquipes}).
+     * espaces superflus.
      */
     private SqueletteMateriel squeletteMateriel(String chantierCode, String equipe) {
         if (chantierCode == null || equipe == null || !chantierCode.trim().equalsIgnoreCase(CHANTIER_MATERIEL)) {

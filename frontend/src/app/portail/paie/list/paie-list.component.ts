@@ -9,18 +9,22 @@ import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
+import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { Paie, PaieImportResult } from '../models/paie.model';
+import { FeuillesEquipeMode, Paie, PaieExportRequest, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
+
+const DEBOUNCE_RECHERCHE_MS = 300;
 
 function toPeriodeString(date: Date | null): string | undefined {
   if (!date) {
@@ -35,6 +39,7 @@ function toPeriodeString(date: Date | null): string | undefined {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     RouterLink,
     TableModule,
     ButtonModule,
@@ -42,6 +47,7 @@ function toPeriodeString(date: Date | null): string | undefined {
     DropdownModule,
     CalendarModule,
     MultiSelectModule,
+    SelectButtonModule,
     ConfirmDialogModule,
     DialogModule
   ],
@@ -94,8 +100,25 @@ export class PaieListComponent implements OnInit {
 
   readonly exportForm = this.fb.group({
     periode: [null as Date | null],
-    chantiers: [[] as string[]]
+    feuillesEquipeMode: ['AUCUNE' as FeuillesEquipeMode],
+    chantiersPersonnalises: [[] as string[]],
+    chantiersExclusion: [[] as string[]]
   });
+
+  readonly feuillesEquipeModeOptions: { label: string; value: FeuillesEquipeMode }[] = [
+    { label: 'Aucune', value: 'AUCUNE' },
+    { label: 'Toutes', value: 'TOUTES' },
+    { label: 'Personnalisé', value: 'PERSONNALISE' }
+  ];
+
+  /** Équipes sélectionnées par chantier (mode PERSONNALISE) et équipes exclues par chantier
+   * (feuille globale de ce chantier) — objets simples, pas des FormControl (nombre de chantiers
+   * variable), liés au template en dehors du formGroup. */
+  equipesParChantierPersonnalise: Record<string, string[] | undefined> = {};
+  equipesExcluesParChantier: Record<string, string[] | undefined> = {};
+
+  private readonly equipesCache = new Map<string, string[]>();
+  private readonly equipesLoading = new Set<string>();
 
   private lastPage = 0;
   private lastSize = 10;
@@ -104,6 +127,13 @@ export class PaieListComponent implements OnInit {
   ngOnInit(): void {
     this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
     this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
+
+    this.filterForm.valueChanges
+      .pipe(
+        debounceTime(DEBOUNCE_RECHERCHE_MS),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+      )
+      .subscribe(() => this.onSearch());
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
@@ -125,7 +155,7 @@ export class PaieListComponent implements OnInit {
   }
 
   onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
@@ -209,8 +239,49 @@ export class PaieListComponent implements OnInit {
   }
 
   onOpenExportDialog(): void {
-    this.exportForm.reset({ periode: null, chantiers: [] });
+    this.exportForm.reset({
+      periode: null,
+      feuillesEquipeMode: 'AUCUNE',
+      chantiersPersonnalises: [],
+      chantiersExclusion: []
+    });
+    this.equipesParChantierPersonnalise = {};
+    this.equipesExcluesParChantier = {};
+    this.equipesCache.clear();
+    this.equipesLoading.clear();
     this.showExportDialog = true;
+  }
+
+  /** La période change : les équipes déjà chargées/sélectionnées sont propres au couple
+   * (chantier, période) précédent, donc on réinitialise toute la configuration équipe. */
+  onExportPeriodeChange(): void {
+    this.equipesCache.clear();
+    this.equipesLoading.clear();
+    this.equipesParChantierPersonnalise = {};
+    this.equipesExcluesParChantier = {};
+    this.exportForm.patchValue({ chantiersPersonnalises: [], chantiersExclusion: [] });
+  }
+
+  onChantiersPersonnalisesChange(): void {
+    const codes = this.exportForm.controls.chantiersPersonnalises.value ?? [];
+    codes.forEach((code) => this.chargerEquipesSiNecessaire(code));
+    this.equipesParChantierPersonnalise = this.conserverClesPresentes(this.equipesParChantierPersonnalise, codes);
+  }
+
+  onChantiersExclusionChange(): void {
+    const codes = this.exportForm.controls.chantiersExclusion.value ?? [];
+    codes.forEach((code) => this.chargerEquipesSiNecessaire(code));
+    this.equipesExcluesParChantier = this.conserverClesPresentes(this.equipesExcluesParChantier, codes);
+  }
+
+  equipesDisponiblesPour(chantierCode: string): string[] {
+    const cle = this.cleEquipesCache(chantierCode);
+    return cle ? (this.equipesCache.get(cle) ?? []) : [];
+  }
+
+  chargementEquipesEnCours(chantierCode: string): boolean {
+    const cle = this.cleEquipesCache(chantierCode);
+    return cle ? this.equipesLoading.has(cle) : false;
   }
 
   onExporter(): void {
@@ -218,11 +289,21 @@ export class PaieListComponent implements OnInit {
     if (!periode) {
       return;
     }
-    const chantiers = this.exportForm.controls.chantiers.value ?? [];
+    const feuillesEquipeMode = this.exportForm.controls.feuillesEquipeMode.value ?? 'AUCUNE';
+
+    const equipesParChantier = this.equipesNonVides(this.equipesParChantierPersonnalise);
+    const equipesExclues = this.equipesNonVides(this.equipesExcluesParChantier);
+
+    const requete: PaieExportRequest = {
+      periode,
+      feuillesEquipeMode,
+      equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
+      equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null
+    };
 
     this.exporting = true;
     this.paieService
-      .exporter(periode, chantiers)
+      .exporter(requete)
       .pipe(finalize(() => (this.exporting = false)))
       .subscribe((blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -233,6 +314,41 @@ export class PaieListComponent implements OnInit {
         window.URL.revokeObjectURL(url);
         this.showExportDialog = false;
       });
+  }
+
+  private chargerEquipesSiNecessaire(chantierCode: string): void {
+    const periode = toPeriodeString(this.exportForm.controls.periode.value);
+    const cle = this.cleEquipesCache(chantierCode);
+    if (!periode || !cle || this.equipesCache.has(cle) || this.equipesLoading.has(cle)) {
+      return;
+    }
+    this.equipesLoading.add(cle);
+    this.paieService
+      .listerEquipes(chantierCode, periode)
+      .pipe(finalize(() => this.equipesLoading.delete(cle)))
+      .subscribe((equipes) => this.equipesCache.set(cle, equipes));
+  }
+
+  private cleEquipesCache(chantierCode: string): string | null {
+    const periode = toPeriodeString(this.exportForm.controls.periode.value);
+    return periode ? `${chantierCode}|${periode}` : null;
+  }
+
+  private conserverClesPresentes(
+    source: Record<string, string[] | undefined>,
+    clesAConserver: string[]
+  ): Record<string, string[] | undefined> {
+    return Object.fromEntries(Object.entries(source).filter(([cle]) => clesAConserver.includes(cle)));
+  }
+
+  private equipesNonVides(source: Record<string, string[] | undefined>): Record<string, string[]> {
+    const resultat: Record<string, string[]> = {};
+    for (const [code, equipes] of Object.entries(source)) {
+      if (equipes && equipes.length > 0) {
+        resultat[code] = equipes;
+      }
+    }
+    return resultat;
   }
 
   private deletePaie(paie: Paie): void {

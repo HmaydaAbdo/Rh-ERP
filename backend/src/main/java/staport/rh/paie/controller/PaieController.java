@@ -1,6 +1,7 @@
 package staport.rh.paie.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,12 +17,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.services.interfaces.IPaieService;
+
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/paie")
@@ -81,5 +88,23 @@ public class PaieController {
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         paieService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/equipes")
+    @Operation(summary = "Lister les équipes distinctes d'un chantier pour une période (alimente la configuration de l'export)")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<List<String>> listerEquipes(
+            @RequestParam String chantierCode,
+            @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
+            @RequestParam String periode) {
+        return ResponseEntity.ok(paieService.findDistinctEquipes(chantierCode, parsePeriode(periode)));
+    }
+
+    private YearMonth parsePeriode(String periode) {
+        try {
+            return YearMonth.parse(periode);
+        } catch (DateTimeParseException e) {
+            throw new InvalidPeriodeException("Période invalide, format attendu aaaa-MM (ex. 2026-08) : " + periode);
+        }
     }
 }

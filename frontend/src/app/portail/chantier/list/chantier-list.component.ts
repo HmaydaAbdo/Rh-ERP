@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +9,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Chantier } from '../models/chantier.model';
@@ -19,6 +19,8 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Actif', value: true },
   { label: 'Inactif', value: false }
 ];
+
+const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-chantier-list',
@@ -38,7 +40,7 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   templateUrl: './chantier-list.component.html',
   styleUrl: './chantier-list.component.scss'
 })
-export class ChantierListComponent {
+export class ChantierListComponent implements OnInit {
   private readonly chantierService = inject(ChantierService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -68,6 +70,15 @@ export class ChantierListComponent {
   private lastSize = 10;
   private lastSort = 'code,asc';
 
+  ngOnInit(): void {
+    this.filterForm.valueChanges
+      .pipe(
+        debounceTime(DEBOUNCE_RECHERCHE_MS),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+      )
+      .subscribe(() => this.onSearch());
+  }
+
   onLazyLoad(event: TableLazyLoadEvent): void {
     const size = event.rows ?? this.lastSize;
     const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
@@ -87,7 +98,7 @@ export class ChantierListComponent {
   }
 
   onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 

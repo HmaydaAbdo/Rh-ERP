@@ -20,6 +20,7 @@
         formControlName="employee"
         [suggestions]="employeeSuggestions"
         (completeMethod)="rechercherEmployes($event)"
+        [delay]="300"
         field="nomPrenom"
         placeholder="Rechercher par nom"
         [dropdown]="false"

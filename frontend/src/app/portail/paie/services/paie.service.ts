@@ -6,6 +6,7 @@ import { Page } from '../../../shared/models/page.model';
 import {
   Paie,
   PaieCreateRequest,
+  PaieExportRequest,
   PaieImportResult,
   PaieSearchCriteria,
   PaieUpdateRequest
@@ -58,11 +59,12 @@ export class PaieService {
     return this.http.get(`${this.baseUrl}/import/modele`, { responseType: 'blob' });
   }
 
-  exporter(periode: string, chantiersEquipes: string[]): Observable<Blob> {
-    let params = new HttpParams().set('periode', periode);
-    for (const code of chantiersEquipes) {
-      params = params.append('chantiersEquipes', code);
-    }
-    return this.http.get(`${this.baseUrl}/export`, { params, responseType: 'blob' });
+  exporter(requete: PaieExportRequest): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/export`, requete, { responseType: 'blob' });
+  }
+
+  listerEquipes(chantierCode: string, periode: string): Observable<string[]> {
+    const params = new HttpParams().set('chantierCode', chantierCode).set('periode', periode);
+    return this.http.get<string[]>(`${this.baseUrl}/equipes`, { params });
   }
 }

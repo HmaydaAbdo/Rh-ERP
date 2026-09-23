@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,14 @@ class PaieExportServiceTest {
     @InjectMocks
     private PaieExportService exportService;
 
+    private static PaieExportRequestDto requeteToutesEquipes(String periode) {
+        return new PaieExportRequestDto(periode, PaieExportRequestDto.FeuillesEquipeMode.TOUTES, null, null);
+    }
+
+    private static PaieExportRequestDto requeteAucuneEquipe(String periode) {
+        return new PaieExportRequestDto(periode, PaieExportRequestDto.FeuillesEquipeMode.AUCUNE, null, null);
+    }
+
     @Test
     void exporter_devraitGenererUneFeuilleGlobaleEtUneFeuilleParChantier() throws IOException {
         YearMonth periode = YearMonth.of(2026, 8);
@@ -43,7 +52,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(paieAout));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of(paieJuillet));
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C059"));
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteToutesEquipes(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             assertThat(workbook.getSheet("GLB")).isNotNull();
@@ -65,7 +74,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(paieAout));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of());
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteAucuneEquipe(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             Sheet feuilleChantier = workbook.getSheet("C059");
@@ -87,7 +96,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(sortieStc, sortieMinuscule, actif));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of());
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteAucuneEquipe(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             Sheet feuilleGlobale = workbook.getSheet("GLB");
@@ -111,7 +120,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(paie));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C168"));
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteToutesEquipes(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             Sheet feuilleEquipe = workbook.getSheet("C168_CH");
@@ -140,7 +149,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(paie));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C168"));
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteToutesEquipes(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             Sheet feuilleEquipe = workbook.getSheet("C168_OP");
@@ -164,7 +173,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode)).thenReturn(List.of(paieAutreChantier, paieAutreEquipe));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
-        ByteArrayInputStream resultat = exportService.exporter(periode, List.of("C059", "C168"));
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteToutesEquipes(periode.toString()));
 
         try (Workbook workbook = new XSSFWorkbook(resultat)) {
             Sheet feuilleAutreChantier = workbook.getSheet("C059_CH");
@@ -172,6 +181,61 @@ class PaieExportServiceTest {
 
             Sheet feuilleAutreEquipe = workbook.getSheet("C168_EQUIPE A");
             assertThat(feuilleAutreEquipe.getRow(8).getCell(6)).isNull();
+        }
+    }
+
+    @Test
+    void exporter_modePersonnalise_neDevraitGenererQueLesEquipesSelectionneesPourLeChantier() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paieEquipeA = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
+        Paie paieEquipeB = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE B");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paieEquipeA, paieEquipeB));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
+                PaieExportRequestDto.FeuillesEquipeMode.PERSONNALISE,
+                Map.of("C059", List.of("EQUIPE A")),
+                null);
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, requete);
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            assertThat(workbook.getSheet("C059_EQUIPE A")).isNotNull();
+            assertThat(workbook.getSheet("C059_EQUIPE B")).isNull();
+            // La feuille chantier elle-même n'est jamais filtrée par la sélection des sous-feuilles équipe.
+            Sheet feuilleChantier = workbook.getSheet("C059");
+            assertThat(feuilleChantier.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
+            assertThat(feuilleChantier.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+        }
+    }
+
+    @Test
+    void exporter_devraitExclureLesEquipesListeesDeLaFeuilleChantierSansToucherLaFeuilleGlb() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paieEquipeA = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
+        Paie paieEquipeB = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE B");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paieEquipeA, paieEquipeB));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
+                PaieExportRequestDto.FeuillesEquipeMode.AUCUNE,
+                null,
+                Map.of("C059", List.of("EQUIPE B")));
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, requete);
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleChantier = workbook.getSheet("C059");
+            // Seule EQUIPE A reste (EQUIPE B exclue) : une ligne employé, puis "TOTAL GENERAL" juste après.
+            assertThat(feuilleChantier.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
+            assertThat(feuilleChantier.getRow(5).getCell(3).getStringCellValue()).isEqualTo("TOTAL GENERAL");
+
+            // La feuille GLB (tous chantiers) n'est jamais filtrée par cette exclusion : les deux lignes restent.
+            Sheet feuilleGlobale = workbook.getSheet("GLB");
+            assertThat(feuilleGlobale.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
+            assertThat(feuilleGlobale.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
         }
     }
 

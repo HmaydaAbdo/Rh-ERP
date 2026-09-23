@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -9,11 +9,13 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Function, FunctionImportResult } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
+
+const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-function-list',
@@ -32,7 +34,7 @@ import { FunctionService } from '../services/function.service';
   templateUrl: './function-list.component.html',
   styleUrl: './function-list.component.scss'
 })
-export class FunctionListComponent {
+export class FunctionListComponent implements OnInit {
   private readonly functionService = inject(FunctionService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -63,6 +65,15 @@ export class FunctionListComponent {
   private lastSize = 10;
   private lastSort = 'libelle,asc';
 
+  ngOnInit(): void {
+    this.filterForm.valueChanges
+      .pipe(
+        debounceTime(DEBOUNCE_RECHERCHE_MS),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+      )
+      .subscribe(() => this.onSearch());
+  }
+
   onLazyLoad(event: TableLazyLoadEvent): void {
     const size = event.rows ?? this.lastSize;
     const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
@@ -82,7 +93,7 @@ export class FunctionListComponent {
   }
 
   onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
