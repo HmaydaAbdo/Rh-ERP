@@ -237,6 +237,57 @@ est désormais le mode de démarrage de référence.
 
 ---
 
+## Déploiement production — Docker Compose, nginx inner/outer, CI (2026-09-23)
+
+**Décision (HMAYDA, 2026-09-23)** : `docker-compose.yml` est devenu un Compose de **production
+uniquement** — plus de `build:`, plus de bind mount du code frontend, plus de service Mailpit ;
+uniquement des `image:` publiées sur Docker Hub (buildées par la CI). Le développement actif se
+fait désormais toujours en local (`./mvnw spring-boot:run` / `ng serve`), jamais via ce Compose —
+voir README.md et `docs/deployment.md` (architecture complète : nginx inner/outer, réseaux, ports
+liés à `127.0.0.1`, catalogue de variables) et `conventions/deployment.md` (pattern générique).
+
+**Livré et vérifié end-to-end** (build des deux images, stack complète démarrée, login à travers
+nginx inner → backend → Postgres, SPA fallback et cache statique testés) :
+
+- `frontend/Dockerfile` : multi-stage Node (build Angular) → `nginx:1.27-alpine` (sert
+  `dist/frontend/browser`). `frontend/nginx.conf` : nginx inner complet (pas un simple bloc
+  `server`) — reverse-proxy interne vers le backend pour `/auth`, `/users`, `/roles`,
+  `/permissions`, `/actuator/health`, `/swagger-ui`, `/v3/api-docs`, et pour `/employees`,
+  `/chantiers`, `/functions`, `/paie` avec désambiguïsation par en-tête `Accept` (ces quatre
+  préfixes existent à la fois comme route Angular et comme préfixe d'API — voir
+  `frontend/proxy.conf.js` pour l'équivalent en développement).
+- `docker-compose.yml` : réseaux explicites (`db-net` : postgres+backend, `web-net` :
+  backend+frontend — le frontend ne peut pas atteindre postgres), tous les ports publiés liés à
+  `127.0.0.1:${VAR}` (jamais exposés à Internet), healthchecks sur les trois services,
+  `depends_on: condition: service_healthy` en cascade.
+- `.github/workflows/ci.yml` : tests + build + push des images sur push vers `main` (tags
+  `<git-sha>` et `latest`, plus un tag de version sur un push de tag `v*`) ; tests uniquement sur
+  pull request (pas de secrets Docker Hub exposés à une PR).
+- Bug corrigé au passage : Spring Boot Actuator active automatiquement un indicateur de santé mail
+  dès que `spring-boot-starter-mail` est sur le classpath — `/actuator/health` passait à `DOWN`
+  (donc le conteneur `unhealthy`, donc le frontend jamais démarré via `depends_on`) dès que le
+  serveur SMTP était injoignable, alors que l'application elle-même fonctionnait normalement. Fixé
+  via `management.health.mail.enabled: false` (voir `backend/src/main/resources/application.yml`).
+- `frontend/src/app/app.component.spec.ts` corrigé au passage : cassé depuis l'ajout d'`AuthService`
+  à `AppComponent` (JWT/RBAC, voir plus haut) — `HttpClient` n'était pas fourni dans le
+  `TestBed`. Utilise désormais un stub d'`AuthService` pour tester les deux états (authentifié/non).
+
+**Reste à faire** :
+
+- **Backup PostgreSQL** — préparé (voir `docs/deployment.md`, section dédiée) mais pas implémenté :
+  fréquence, rétention et destination de stockage externe restent à décider avant implémentation.
+- **CD** — le déploiement (`docker compose pull && up -d` sur le serveur) reste manuel ; à
+  automatiser séparément une fois le besoin confirmé (voir `docs/deployment.md`).
+- **Nginx outer** — l'ajout du bloc `location /rh-erp/` (ou le sous-chemin réellement choisi) à la
+  configuration nginx outer partagée du serveur reste une action manuelle côté serveur, hors de ce
+  dépôt (snippet prêt dans `docs/deployment.md`).
+- Les boutons "Importer"/"Synchroniser"/"Exporter" ne passent pas par nginx inner avec une
+  distinction particulière (pas de collision de route Angular pour eux) — RAS, aucune action
+  requise, juste noté pour référence si un nouveau domaine introduit un préfixe ambigu similaire à
+  l'avenir.
+
+---
+
 ## Synchronisation Chantier (ERP)
 
 - Le rapprochement se fait par `code` (l'`id_chantier` renvoyé par l'ERP n'est pas fiable comme

@@ -1,9 +1,16 @@
-# Stack de développement complète : PostgreSQL 17 (+ pgvector), backend Spring Boot, frontend
-# Angular. Voir README.md (racine) pour le mode d'emploi et conventions/deployment.md pour le
-# détail des conventions Docker/Flyway.
+# Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers le
+# backend), Spring Boot (backend), PostgreSQL 17 + pgvector. Nginx outer (TLS, point d'entrée
+# public) est géré séparément sur le serveur de déploiement, hors de ce fichier — voir
+# docs/deployment.md pour l'architecture complète et conventions/deployment.md pour le pattern
+# générique.
 #
-# Variables lues depuis le fichier .env à la racine (voir .env.example) — aucune valeur de
-# credentials par défaut n'est fournie ici (conventions/configuration.md).
+# Production uniquement : aucun `build:`, uniquement des `image:` déjà publiées sur Docker Hub
+# (buildées par la CI, voir .github/workflows/ci.yml). Pour le développement actif, lancer le
+# backend et/ou le frontend en local contre `docker compose up -d postgres` — voir README.md.
+#
+# Toutes les variables viennent de `.env` à la racine (voir .env.example) — aucune valeur de
+# credentials, secret ou port n'est en dur dans ce fichier (conventions/configuration.md,
+# conventions/security.md).
 
 services:
   postgres:
@@ -13,10 +20,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
+      # Persistance des données — voir docs/deployment.md pour la stratégie de backup (distincte
+      # de ce volume, qui ne protège que contre l'arrêt/la recréation du conteneur, pas contre la
+      # perte du volume lui-même).
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - db-net
+    ports:
+      # Lié à 127.0.0.1 uniquement : accessible pour l'administration/le backup depuis le serveur
+      # lui-même, jamais depuis l'extérieur (conventions/security.md — Postgres n'est jamais
+      # exposé à Internet).
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -24,8 +39,7 @@ services:
       retries: 10
 
   backend:
-    build:
-      context: ./backend
+    image: ${DOCKERHUB_USERNAME}/erp-rh-backend:${BACKEND_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -50,33 +64,47 @@ services:
       SMTP_AUTH: ${SMTP_AUTH}
       SMTP_STARTTLS: ${SMTP_STARTTLS}
       MAIL_FROM: ${MAIL_FROM}
+    networks:
+      - db-net
+      - web-net
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
-
-  mailpit:
-    # Attrape-mail local pour tester le flow "mot de passe oublié" sans SMTP réel — UI web sur
-    # MAILPIT_UI_PORT. En production, remplacer SMTP_HOST/PORT/USERNAME/PASSWORD par un vrai
-    # fournisseur (voir .env.example) ; ce service reste inutile mais inoffensif si non utilisé.
-    image: axllent/mailpit:latest
-    restart: unless-stopped
-    ports:
-      - "${MAILPIT_UI_PORT:-8025}:8025"
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif réel n'y passe pas — nginx
+      # inner atteint le backend via le réseau Docker interne (web-net, nom de service "backend"),
+      # voir frontend/nginx.conf. Cette publication loopback ne sert qu'au diagnostic/à l'admin
+      # depuis le serveur lui-même.
+      - "127.0.0.1:${BACKEND_PORT}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 5
 
   frontend:
-    build:
-      context: ./frontend
+    image: ${DOCKERHUB_USERNAME}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
-      - backend
-    environment:
-      BACKEND_URL: http://backend:8080
+      backend:
+        condition: service_healthy
+    networks:
+      - web-net
     ports:
-      - "${FRONTEND_PORT:-4200}:4200"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      # Lié à 127.0.0.1 : seul nginx outer (sur ce même serveur, géré séparément) s'y connecte ;
+      # jamais exposé directement à Internet (conventions/security.md).
+      - "127.0.0.1:${FRONTEND_PORT}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
 
 volumes:
   postgres_data:
-  frontend_node_modules:
+
+networks:
+  # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
+  # l'atteindre directement, même en cas de compromission du conteneur frontend.
+  db-net:
+  # backend <-> frontend (proxy_pass de nginx inner vers le backend, voir frontend/nginx.conf).
+  web-net:

@@ -41,6 +41,15 @@ spring:
           starttls:
             enable: ${SMTP_STARTTLS}
 
+management:
+  health:
+    # Sans ceci, /actuator/health (utilisé par le HEALTHCHECK Docker et depends_on:
+    # condition: service_healthy — voir docker-compose.yml) passe à DOWN dès que le serveur SMTP
+    # est injoignable, alors que l'application elle-même reste parfaitement fonctionnelle : une
+    # panne SMTP temporaire n'a aucune raison de sortir tout le backend de la rotation.
+    mail:
+      enabled: false
+
 chantier:
   sync:
     base-url: ${CHANTIER_SYNC_BASE_URL}

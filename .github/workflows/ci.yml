@@ -1,0 +1,147 @@
+name: CI
+
+# CI uniquement pour l'instant (pas de CD — voir docs/deployment.md) : tests + build + push des
+# images Docker Hub à chaque push sur main. Sur une pull request, seuls les tests tournent (pas de
+# build/push d'image — évite d'exposer les secrets Docker Hub à une PR non fiable).
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: ci_test
+          POSTGRES_USER: ci_test
+          POSTGRES_PASSWORD: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_test -d ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_NAME: ci_test
+          DB_USER: ci_test
+          DB_PASSWORD: ci_test
+          CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
+          JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
+          FRONTEND_URL: http://localhost:4200
+          COOKIE_SECURE: "false"
+          ADMIN_USERNAME: ci-admin
+          ADMIN_EMAIL: ci-admin@example.invalid
+          ADMIN_PASSWORD: ci-admin-password
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+          SMTP_USERNAME: ""
+          SMTP_PASSWORD: ""
+          SMTP_AUTH: "false"
+          SMTP_STARTTLS: "false"
+          MAIL_FROM: noreply@example.invalid
+        run: ./mvnw -B test
+
+      - name: Determine image tags
+        if: github.event_name == 'push'
+        id: tags
+        run: |
+          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:${{ github.sha }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:latest"
+          fi
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:${{ github.ref_name }}"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+
+      - name: Build (verifies the production bundle compiles)
+        working-directory: frontend
+        run: npx ng build --configuration production
+
+      - name: Determine image tags
+        if: github.event_name == 'push'
+        id: tags
+        run: |
+          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:${{ github.sha }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:latest"
+          fi
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:${{ github.ref_name }}"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
