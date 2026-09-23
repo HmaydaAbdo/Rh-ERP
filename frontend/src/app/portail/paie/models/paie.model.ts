@@ -71,6 +71,19 @@ export interface PaieSearchCriteria {
   equipe?: string;
 }
 
+export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
+
+/** Aucun référentiel Équipe dédié (texte libre sur chaque bulletin, voir docs/paie/README.md) —
+ * les valeurs possibles par chantier viennent de PaieService.listerEquipes(). */
+export interface PaieExportRequest {
+  periode: string;
+  feuillesEquipeMode: FeuillesEquipeMode;
+  /** Utilisé uniquement en mode PERSONNALISE : chantier -> équipes pour lesquelles générer une sous-feuille. */
+  equipesParChantier: Record<string, string[]> | null;
+  /** Indépendant du mode ci-dessus : chantier -> équipes à exclure de la feuille globale de CE chantier. */
+  equipesExcluesFeuilleChantier: Record<string, string[]> | null;
+}
+
 export interface PaieImportLigneIgnoree {
   numeroLigne: number;
   cin: string | null;

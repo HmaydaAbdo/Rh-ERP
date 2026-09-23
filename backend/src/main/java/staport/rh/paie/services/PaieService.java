@@ -27,6 +27,9 @@ import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.services.interfaces.IPaieService;
 import staport.rh.paie.specifications.PaieSpecification;
 
+import java.time.YearMonth;
+import java.util.List;
+
 @Service
 public class PaieService implements IPaieService {
 
@@ -110,6 +113,12 @@ public class PaieService implements IPaieService {
         Paie entity = getEntityById(id);
         repository.delete(entity);
         log.info("Bulletin de paie supprimé : id={}", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> findDistinctEquipes(String chantierCode, YearMonth periode) {
+        return repository.findDistinctEquipesByChantierCodeAndPeriode(chantierCode, periode);
     }
 
     private Paie getEntityById(Long id) {

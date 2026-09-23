@@ -1,7 +1,6 @@
 package staport.rh.paie.export;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -9,20 +8,22 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 
 import java.io.ByteArrayInputStream;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
-import java.util.List;
 
 /**
- * Export multi-feuilles (GLB + par chantier + par équipe) pour une période donnée.
- * Exemple : GET /paie/export?periode=2026-08&amp;chantiersEquipes=C208,C209
+ * Export multi-feuilles (GLB + par chantier + par équipe) pour une période donnée. La
+ * configuration des feuilles par équipe (aucune / toutes / sélection par chantier) et des
+ * exclusions de la feuille chantier est portée par le corps de la requête (voir
+ * {@link PaieExportRequestDto}) — un {@code GET} avec query params ne suffisait plus à exprimer
+ * une sélection par chantier.
  */
 @RestController
 @RequestMapping("/paie/export")
@@ -35,17 +36,12 @@ public class PaieExportController {
         this.exportService = exportService;
     }
 
-    @GetMapping
+    @PostMapping
     @Operation(summary = "Exporter la paie d'une période (GLB + par chantier + par équipe)")
     @PreAuthorize("hasAuthority('PAIE_EXPORT')")
-    public ResponseEntity<Resource> exporter(
-            @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
-            @RequestParam("periode") String periode,
-            @Parameter(description = "Codes chantier pour lesquels générer aussi une feuille par équipe")
-            @RequestParam(required = false) List<String> chantiersEquipes) {
-
-        YearMonth periodeAnalysee = parsePeriode(periode);
-        ByteArrayInputStream flux = exportService.exporter(periodeAnalysee, chantiersEquipes);
+    public ResponseEntity<Resource> exporter(@RequestBody PaieExportRequestDto requete) {
+        YearMonth periodeAnalysee = parsePeriode(requete.periode());
+        ByteArrayInputStream flux = exportService.exporter(periodeAnalysee, requete);
         InputStreamResource ressource = new InputStreamResource(flux);
 
         String nomFichier = "Paie_Export_" + periodeAnalysee + ".xlsx";

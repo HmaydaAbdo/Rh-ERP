@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import staport.rh.paie.entities.Paie;
 
@@ -30,4 +31,11 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
 
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier"})
     List<Paie> findByPeriode(YearMonth periode);
+
+    @Query("SELECT DISTINCT p.equipe FROM Paie p " +
+            "WHERE p.chantier.code = :chantierCode AND p.periode = :periode " +
+            "AND p.equipe IS NOT NULL AND p.equipe <> '' " +
+            "ORDER BY p.equipe")
+    List<String> findDistinctEquipesByChantierCodeAndPeriode(@Param("chantierCode") String chantierCode,
+                                                               @Param("periode") YearMonth periode);
 }

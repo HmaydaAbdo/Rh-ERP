@@ -11,7 +11,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
@@ -25,6 +25,8 @@ const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
   { label: 'Actif', value: 'ACTIF' },
   { label: 'Inactif', value: 'INACTIF' }
 ];
+
+const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-employee-list',
@@ -89,6 +91,13 @@ export class EmployeeListComponent implements OnInit {
   ngOnInit(): void {
     this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
     this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
+
+    this.filterForm.valueChanges
+      .pipe(
+        debounceTime(DEBOUNCE_RECHERCHE_MS),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+      )
+      .subscribe(() => this.onSearch());
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
@@ -110,7 +119,7 @@ export class EmployeeListComponent implements OnInit {
   }
 
   onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 

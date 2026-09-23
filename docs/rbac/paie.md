@@ -14,7 +14,8 @@
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
-| `GET /paie/export` | `PAIE_EXPORT` |
+| `GET /paie/equipes` | `PAIE_READ` |
+| `POST /paie/export` | `PAIE_EXPORT` |
 
 ## Frontend
 
