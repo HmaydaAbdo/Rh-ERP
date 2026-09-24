@@ -247,33 +247,65 @@
     [value]="paies"
     [lazy]="true"
     (onLazyLoad)="onLazyLoad($event)"
+    [loading]="loading"
     [paginator]="true"
     [rows]="10"
     [totalRecords]="totalRecords"
-    [loading]="loading"
     [rowsPerPageOptions]="[10, 20, 50]"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Page {currentPage} sur {totalPages} — {totalRecords} lignes"
     dataKey="id"
   >
     <ng-template pTemplate="header">
+      <!-- Ligne 1 : En-têtes principaux avec fusion de colonnes (colspan/rowspan) -->
       <tr>
-        <th>Nom &amp; prénom</th>
-        <th>CIN</th>
-        <th pSortableColumn="periode">Période <p-sortIcon field="periode"></p-sortIcon></th>
-        <th>Chantier</th>
-        <th>Équipe</th>
-        <th>Salaire total</th>
-        <th></th>
+        <th rowspan="2">NOM & PRENOM</th>
+        <th rowspan="2">FONCTION</th>
+        <th rowspan="2">CIN</th>
+        <th colspan="3" class="text-center">Nbre Jrs</th>
+        <th colspan="3" class="text-center">SALAIRE</th>
+        <th rowspan="2">TOTAL</th>
+        <th rowspan="2">OBS</th>
+        <th rowspan="2">CHANTIER</th>
+        <th rowspan="2">EQ</th>
+        <th rowspan="2"></th>
+      </tr>
+      <!-- Ligne 2 : Sous-colonnes pour Nbre Jrs et SALAIRE -->
+      <tr>
+        <th pSortableColumn="periode">P <p-sortIcon field="periode"></p-sortIcon></th>
+        <th>J.R.O</th>
+        <th>J.R.D</th>
+        <th>SALAIRE</th>
+        <th>RO</th>
+        <th>RD</th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-paie>
       <tr>
-        <td>{{ paie.employee.nomPrenom }}</td>
-        <td>{{ paie.employee.cin }}</td>
-        <td>{{ paie.periode }}</td>
-        <td>{{ paie.chantier.code }}</td>
-        <td>{{ paie.equipe }}</td>
-        <td>{{ paie.salaireTotal | number: '1.2-2' }}</td>
+        <td>{{ paie.employee?.nomPrenom || '-' }}</td>
+        <td>{{ paie.fonction?.libelle || '-' }}</td>
+        <td>{{ paie.employee?.cin || '-' }}</td>
+
+        <!-- Nbre Jrs -->
+        <td>{{ paie.nombreJoursTravailles ?? '-' }}</td>
+        <td>{{ paie.joursRecuperationOuvrable ?? '-' }}</td>
+        <td>{{ paie.joursRecuperationDimanche ?? '-' }}</td>
+
+        <!-- SALAIRE -->
+        <td>{{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}</td>
+        <td>{{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}</td>
+        <td>{{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}</td>
+
+        <!-- TOTAL -->
+        <td>{{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}</td>
+
+        <!-- OBS, CHANTIER, EQ -->
+        <td>{{ paie.observation || '-' }}</td>
+        <td>{{ paie.chantier?.code || '-' }}</td>
+        <td>{{ paie.equipe || '-' }}</td>
+
+        <!-- Actions -->
         <td class="paie-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(paie)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(paie)"></button>
@@ -293,7 +325,8 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="7">Aucun bulletin ne correspond à ces critères.</td>
+        <!-- Colspan mis à jour à 14 pour couvrir toutes les colonnes -->
+        <td colspan="14">Aucun bulletin ne correspond à ces critères.</td>
       </tr>
     </ng-template>
   </p-table>
