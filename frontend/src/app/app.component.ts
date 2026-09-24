@@ -31,10 +31,10 @@ export class AppComponent {
   readonly isAuthenticated = this.authService.isAuthenticated;
 
   private readonly allNavItems: NavItem[] = [
+    { label: 'Paie', icon: 'pi pi-wallet', route: '/paie' },
     { label: 'Employés', icon: 'pi pi-users', route: '/employees' },
     { label: 'Chantiers', icon: 'pi pi-building', route: '/chantiers' },
     { label: 'Fonctions', icon: 'pi pi-briefcase', route: '/functions' },
-    { label: 'Paie', icon: 'pi pi-wallet', route: '/paie' },
     { label: 'Utilisateurs', icon: 'pi pi-user-edit', route: '/admin/users', permission: 'USER_MANAGE' },
     { label: 'Rôles', icon: 'pi pi-shield', route: '/admin/roles', permission: 'ROLE_MANAGE' }
   ];

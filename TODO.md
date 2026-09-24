@@ -4,6 +4,9 @@
 > volontairement différés pour ne pas bloquer l'avancement domaine par domaine
 > (conventions/architecture.md — « ne jamais introduire une abstraction sans nécessité clairement identifiée »).
 
+
+- tri par function et on ordre alphabetique  ( ui et export )
+
 ---
 
 ## Questions ouvertes — en attente d'une réponse (2026-09-23)

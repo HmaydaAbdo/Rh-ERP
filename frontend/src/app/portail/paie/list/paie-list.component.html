@@ -269,6 +269,7 @@
         <th rowspan="2">OBS</th>
         <th rowspan="2" class="text-center">CHANTIER</th>
         <th rowspan="2" class="text-center">EQ</th>
+        <th rowspan="2">Période</th>
         <th rowspan="2" class="text-center"></th>
       </tr>
       <!-- Ligne 2 : Sous-colonnes -->
@@ -305,6 +306,9 @@
         <td>{{ paie.observation || '-' }}</td>
         <td class="text-center">{{ paie.chantier?.code || '-' }}</td>
         <td class="text-center">{{ paie.equipe || '-' }}</td>
+
+        <td class="text-center">{{ paie.periode}}</td>
+
 
         <!-- Actions -->
         <td class="paie-list__actions text-center">
