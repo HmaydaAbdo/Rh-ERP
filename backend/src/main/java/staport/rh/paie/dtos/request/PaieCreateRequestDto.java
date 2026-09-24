@@ -9,10 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 
-/**
- * Ne porte pas {@code salaireTotal} : ce champ n'est jamais saisi, il est calculé côté serveur
- * (salaireMensuel + primeRoulageOrdinaire + primeRoulageDimanche) — voir {@link staport.rh.paie.entities.Paie#calculerSalaireTotal()}.
- */
+
 public record PaieCreateRequestDto(
         @NotNull
         Long employeeId,
@@ -48,6 +45,10 @@ public record PaieCreateRequestDto(
 
         @PositiveOrZero
         BigDecimal primeRoulageDimanche,
+
+        @NotNull
+        @PositiveOrZero
+        BigDecimal salaireTotal,
 
         @Size(max = 255)
         String observation

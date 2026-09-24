@@ -11,10 +11,6 @@ import java.math.BigDecimal;
 /**
  * L'employé et la période d'un bulletin ne sont jamais modifiables après création — un bulletin
  * est un document historique identifié par (employé, période) ; les corriger reviendrait à créer
- * un autre bulletin. Seuls le contenu (jours, montants, affectation du mois) sont éditables. Ne
- * porte pas {@code salaireTotal} : ce champ n'est jamais saisi, il est calculé côté serveur
- * (salaireMensuel + primeRoulageOrdinaire + primeRoulageDimanche) — voir
- * {@link staport.rh.paie.entities.Paie#calculerSalaireTotal()}.
  */
 public record PaieUpdateRequestDto(
         @NotNull
@@ -45,6 +41,10 @@ public record PaieUpdateRequestDto(
 
         @PositiveOrZero
         BigDecimal primeRoulageDimanche,
+
+        @NotNull
+        @PositiveOrZero
+        BigDecimal salaireTotal,
 
         @Size(max = 255)
         String observation

@@ -205,7 +205,7 @@ class PaieReportPdfServiceTest {
         paie.setNombreJoursTravailles(26);
         paie.setSalaireMensuel(new BigDecimal(salaire));
         paie.setObservation(observation);
-        paie.calculerSalaireTotal();
+        paie.setSalaireTotal(new BigDecimal(salaire));
         return paie;
     }
 }

@@ -70,7 +70,6 @@ public class PaieService implements IPaieService {
         entity.setEmployee(entityManager.getReference(Employee.class, dto.employeeId()));
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
-        entity.calculerSalaireTotal();
 
         Paie saved = repository.save(entity);
         log.info("Bulletin de paie créé : id={}, employeeId={}, periode={}", saved.getId(), dto.employeeId(), dto.periode());
@@ -85,7 +84,6 @@ public class PaieService implements IPaieService {
         mapper.updateEntityFromDto(dto, entity);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
-        entity.calculerSalaireTotal();
 
         Paie updated = repository.save(entity);
         log.info("Bulletin de paie mis à jour : id={}", updated.getId());

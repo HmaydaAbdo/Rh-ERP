@@ -187,15 +187,8 @@ public class Paie {
         return salaireTotal;
     }
 
-    /**
-     * salaireTotal n'est jamais saisi directement (pas de setter public) — il est toujours dérivé
-     * de salaireMensuel + primeRoulageOrdinaire + primeRoulageDimanche (primes nulles comptées pour
-     * zéro). À appeler après avoir positionné ces trois champs, avant chaque persistance.
-     */
-    public void calculerSalaireTotal() {
-        BigDecimal ro = primeRoulageOrdinaire != null ? primeRoulageOrdinaire : BigDecimal.ZERO;
-        BigDecimal rd = primeRoulageDimanche != null ? primeRoulageDimanche : BigDecimal.ZERO;
-        this.salaireTotal = salaireMensuel.add(ro).add(rd);
+    public void setSalaireTotal(BigDecimal salaireTotal) {
+        this.salaireTotal = salaireTotal;
     }
 
     public String getObservation() {

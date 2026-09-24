@@ -79,6 +79,7 @@ export class PaieFormComponent implements OnInit {
     salaireMensuel: [null as number | null, [Validators.required, Validators.min(0)]],
     primeRoulageOrdinaire: [null as number | null],
     primeRoulageDimanche: [null as number | null],
+    salaireTotal: [null as number | null, [Validators.required, Validators.min(0)]],
     observation: ['']
   });
 
@@ -86,11 +87,7 @@ export class PaieFormComponent implements OnInit {
     return this.paieId !== null;
   }
 
-  /** Aperçu local, non soumis : le serveur recalcule et fait foi (salaireTotal n'est jamais saisi). */
-  get salaireTotalCalcule(): number {
-    const raw = this.form.getRawValue();
-    return (raw.salaireMensuel ?? 0) + (raw.primeRoulageOrdinaire ?? 0) + (raw.primeRoulageDimanche ?? 0);
-  }
+
 
   ngOnInit(): void {
     this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
@@ -115,6 +112,7 @@ export class PaieFormComponent implements OnInit {
           salaireMensuel: paie.salaireMensuel,
           primeRoulageOrdinaire: paie.primeRoulageOrdinaire,
           primeRoulageDimanche: paie.primeRoulageDimanche,
+          salaireTotal: paie.salaireTotal,
           observation: paie.observation ?? ''
         });
       });
@@ -144,6 +142,7 @@ export class PaieFormComponent implements OnInit {
       salaireMensuel: raw.salaireMensuel!,
       primeRoulageOrdinaire: raw.primeRoulageOrdinaire,
       primeRoulageDimanche: raw.primeRoulageDimanche,
+      salaireTotal: raw.salaireTotal!,
       observation: raw.observation || null
     };
 
