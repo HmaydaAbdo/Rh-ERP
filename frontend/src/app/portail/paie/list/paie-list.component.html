@@ -255,66 +255,67 @@
     [showCurrentPageReport]="true"
     currentPageReportTemplate="Page {currentPage} sur {totalPages} — {totalRecords} lignes"
     dataKey="id"
+    styleClass="p-datatable-gridlines p-datatable-sm paie-excel-table"
   >
     <ng-template pTemplate="header">
-      <!-- Ligne 1 : En-têtes principaux avec fusion de colonnes (colspan/rowspan) -->
+      <!-- Ligne 1 : En-têtes principaux -->
       <tr>
         <th rowspan="2">NOM & PRENOM</th>
         <th rowspan="2">FONCTION</th>
         <th rowspan="2">CIN</th>
         <th colspan="3" class="text-center">Nbre Jrs</th>
         <th colspan="3" class="text-center">SALAIRE</th>
-        <th rowspan="2">TOTAL</th>
+        <th rowspan="2" class="text-right">TOTAL</th>
         <th rowspan="2">OBS</th>
-        <th rowspan="2">CHANTIER</th>
-        <th rowspan="2">EQ</th>
-        <th rowspan="2"></th>
+        <th rowspan="2" class="text-center">CHANTIER</th>
+        <th rowspan="2" class="text-center">EQ</th>
+        <th rowspan="2" class="text-center"></th>
       </tr>
-      <!-- Ligne 2 : Sous-colonnes pour Nbre Jrs et SALAIRE -->
+      <!-- Ligne 2 : Sous-colonnes -->
       <tr>
-        <th pSortableColumn="periode">P <p-sortIcon field="periode"></p-sortIcon></th>
-        <th>J.R.O</th>
-        <th>J.R.D</th>
-        <th>SALAIRE</th>
-        <th>RO</th>
-        <th>RD</th>
+        <th pSortableColumn="periode" class="text-center">P <p-sortIcon field="periode"></p-sortIcon></th>
+        <th class="text-center">J.R.O</th>
+        <th class="text-center">J.R.D</th>
+        <th class="text-right">SALAIRE</th>
+        <th class="text-right">RO</th>
+        <th class="text-right">RD</th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-paie>
       <tr>
-        <td>{{ paie.employee?.nomPrenom || '-' }}</td>
+        <td class="font-semibold">{{ paie.employee?.nomPrenom || '-' }}</td>
         <td>{{ paie.fonction?.libelle || '-' }}</td>
         <td>{{ paie.employee?.cin || '-' }}</td>
 
         <!-- Nbre Jrs -->
-        <td>{{ paie.nombreJoursTravailles ?? '-' }}</td>
-        <td>{{ paie.joursRecuperationOuvrable ?? '-' }}</td>
-        <td>{{ paie.joursRecuperationDimanche ?? '-' }}</td>
+        <td class="text-center">{{ paie.nombreJoursTravailles ?? '-' }}</td>
+        <td class="text-center">{{ paie.joursRecuperationOuvrable ?? '-' }}</td>
+        <td class="text-center">{{ paie.joursRecuperationDimanche ?? '-' }}</td>
 
         <!-- SALAIRE -->
-        <td>{{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}</td>
-        <td>{{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}</td>
-        <td>{{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}</td>
+        <td class="text-right">{{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}</td>
+        <td class="text-right">{{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}</td>
+        <td class="text-right">{{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}</td>
 
         <!-- TOTAL -->
-        <td>{{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}</td>
+        <td class="text-right font-bold">{{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}</td>
 
         <!-- OBS, CHANTIER, EQ -->
         <td>{{ paie.observation || '-' }}</td>
-        <td>{{ paie.chantier?.code || '-' }}</td>
-        <td>{{ paie.equipe || '-' }}</td>
+        <td class="text-center">{{ paie.chantier?.code || '-' }}</td>
+        <td class="text-center">{{ paie.equipe || '-' }}</td>
 
         <!-- Actions -->
-        <td class="paie-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(paie)"></button>
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(paie)"></button>
+        <td class="paie-list__actions text-center">
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" (click)="onView(paie)"></button>
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="onEdit(paie)"></button>
           @if (canDelete()) {
             <button
               pButton
               type="button"
               icon="pi pi-trash"
-              class="p-button-text p-button-danger"
+              class="p-button-text p-button-danger p-button-sm"
               [loading]="deletingId === paie.id"
               (click)="onDelete(paie)"
             ></button>
@@ -325,8 +326,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <!-- Colspan mis à jour à 14 pour couvrir toutes les colonnes -->
-        <td colspan="14">Aucun bulletin ne correspond à ces critères.</td>
+        <td colspan="14" class="text-center">Aucun bulletin ne correspond à ces critères.</td>
       </tr>
     </ng-template>
   </p-table>
