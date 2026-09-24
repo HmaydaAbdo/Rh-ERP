@@ -182,7 +182,7 @@ class PaieImportServiceTest {
     }
 
     @Test
-    void importer_devraitCalculerLeSalaireTotalEtIgnorerLaColonneFichier() throws IOException {
+    void importer_devraitReprendreLaColonneTotalTelleQuelle() throws IOException {
         stubReferentiels();
         when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
 
@@ -190,8 +190,8 @@ class PaieImportServiceTest {
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
                 new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
-                // Colonne J (Total) volontairement absurde (999999) : doit être ignorée, jamais lue.
-                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, 999999.0, "", "C059", "EQUIPE A"}
+                // Main-d'œuvre : SALAIRE = tarif journalier (120), TOTAL = 120 x 31 jours = 3720, repris tel quel.
+                new Object[]{"BAHTAT YOUSSEF", "OPERATEUR", "PB85747", 31.0, 0.0, 0.0, 120.0, 0.0, 0.0, 3720.0, "", "C059", "EQUIPE A"}
         );
 
         PaieImportResultDto result = importService.importer(fichier, periode);
@@ -199,7 +199,26 @@ class PaieImportServiceTest {
         assertThat(result.crees()).isEqualTo(1);
         ArgumentCaptor<Paie> captor = ArgumentCaptor.forClass(Paie.class);
         verify(repository).save(captor.capture());
-        assertThat(captor.getValue().getSalaireTotal()).isEqualByComparingTo("5300");
+        assertThat(captor.getValue().getSalaireMensuel()).isEqualByComparingTo("120");
+        assertThat(captor.getValue().getSalaireTotal()).isEqualByComparingTo("3720");
+    }
+
+    @Test
+    void importer_devraitIgnorerUneLigneSansTotal() throws IOException {
+        stubReferentiels();
+
+        MockMultipartFile fichier = buildExcelFile(
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, "", "", "C059", "EQUIPE A"}
+        );
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.ignores()).isEqualTo(1);
+        assertThat(result.lignesIgnorees().get(0).raison()).contains("Total");
+        verify(repository, never()).save(any(Paie.class));
     }
 
     @Test

@@ -117,13 +117,13 @@ public class PaieImportService {
                 BigDecimal salaireMensuel = getCellAsBigDecimal(row.getCell(6));
                 BigDecimal primeRoulageOrdinaire = getCellAsBigDecimal(row.getCell(7));
                 BigDecimal primeRoulageDimanche = getCellAsBigDecimal(row.getCell(8));
-                // Colonne J (index 9, "Total") volontairement ignorée : salaireTotal est toujours calculé.
+                BigDecimal salaireTotal = getCellAsBigDecimal(row.getCell(9));
                 String observation = getCellAsString(row.getCell(10));
                 String chantierCode = getCellAsString(row.getCell(11));
                 String equipe = getCellAsString(row.getCell(12));
 
                 String raison = validerLigne(cin, fonctionLibelle, chantierCode, nombreJoursTravailles,
-                        salaireMensuel, employesParCin, chantiersParCode);
+                        salaireMensuel,salaireTotal, employesParCin, chantiersParCode);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
@@ -134,7 +134,7 @@ public class PaieImportService {
                 aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.trim(),
                         chantiersParCode.get(chantierCode.trim().toUpperCase()),
                         equipe, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
-                        salaireMensuel, primeRoulageOrdinaire, primeRoulageDimanche, observation));
+                        salaireMensuel, primeRoulageOrdinaire, primeRoulageDimanche,salaireTotal,observation));
             }
         } catch (IOException | RuntimeException e) {
             if (e instanceof PaieImportException importException) {
@@ -177,7 +177,7 @@ public class PaieImportService {
             paie.setSalaireMensuel(ligne.salaireMensuel());
             paie.setPrimeRoulageOrdinaire(ligne.primeRoulageOrdinaire());
             paie.setPrimeRoulageDimanche(ligne.primeRoulageDimanche());
-            paie.calculerSalaireTotal();
+            paie.setSalaireTotal(ligne.salaireTotal());
             paie.setObservation(ligne.observation());
 
             repository.save(paie);
@@ -222,12 +222,12 @@ public class PaieImportService {
     private record LigneAAppliquer(Long employeeId, String fonctionLibelle, Long chantierId, String equipe,
                                     Integer nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
                                     BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
-                                    BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,
+                                    BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,BigDecimal salaireTotal,
                                     String observation) {
     }
 
     private String validerLigne(String cin, String fonctionLibelle, String chantierCode,
-                                 Integer nombreJoursTravailles, BigDecimal salaireMensuel,
+                                 Integer nombreJoursTravailles, BigDecimal salaireMensuel,BigDecimal salaireTotal,
                                  Map<String, Long> employesParCin, Map<String, Long> chantiersParCode) {
         List<String> champsManquants = new ArrayList<>();
         if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
@@ -238,6 +238,9 @@ public class PaieImportService {
         }
         if (salaireMensuel == null) {
             champsManquants.add("Salaire mensuel");
+        }
+        if (salaireTotal == null) {
+            champsManquants.add("Total");
         }
         if (chantierCode == null || chantierCode.isBlank()) {
             champsManquants.add("Chantier");
@@ -252,6 +255,8 @@ public class PaieImportService {
         if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
             return "Chantier introuvable ou inactif : " + chantierCode.trim();
         }
+
+
 
         return null;
     }
@@ -324,10 +329,12 @@ public class PaieImportService {
             return null;
         }
         try {
-            if (cell.getCellType() == CellType.NUMERIC) {
+            // Cellule de formule (ex. =G5*D5) : on lit le résultat mis en cache par Excel, pas le texte formaté.
+            CellType type = cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
+            if (type == CellType.NUMERIC) {
                 return BigDecimal.valueOf(cell.getNumericCellValue());
             }
-            String value = DATA_FORMATTER.formatCellValue(cell).trim();
+            String value = DATA_FORMATTER.formatCellValue(cell).replaceAll("[\\s\\u00A0\\u202F]", "");
             return value.isEmpty() ? null : new BigDecimal(value);
         } catch (RuntimeException e) {
             return null;
@@ -337,8 +344,7 @@ public class PaieImportService {
     /**
      * Génère un fichier Excel vierge respectant le format attendu par {@link #importer} — trois
      * lignes d'en-tête (héritées de l'ancien format), colonnes dans l'ordre attendu — pour que
-     * l'utilisateur parte d'un fichier valide plutôt que de deviner le format. La colonne "Total"
-     * est marquée comme calculée automatiquement (ignorée si renseignée) plutôt que retirée, pour ne
+     * l'utilisateur parte d'un fichier valide plutôt que de deviner le format., pour ne
      * pas décaler les colonnes suivantes (Observation, Chantier, Équipe) par rapport aux fichiers
      * mensuels déjà utilisés.
      */
@@ -349,7 +355,7 @@ public class PaieImportService {
             sheet.createRow(1);
             String[] entetes = {
                     "Nom & prénom", "Fonction", "CIN", "Nbre Jrs", "J.R.O", "J.R.D", "Salaire",
-                    "Prime RO", "Prime RD", "Total (calculé automatiquement)", "Observation", "Chantier", "Équipe"
+                    "Prime RO", "Prime RD", "Total", "Observation", "Chantier", "Équipe"
             };
             Row ligneEntete = sheet.createRow(2);
             for (int c = 0; c < entetes.length; c++) {

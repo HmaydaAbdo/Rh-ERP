@@ -114,9 +114,11 @@
     </div>
 
     <div class="field">
-      <label for="salaireTotal">Salaire total</label>
-      <input pInputText id="salaireTotal" type="text" [value]="salaireTotalCalcule | number: '1.2-2'" disabled />
-      <small class="paie-form__hint">Calculé automatiquement — salaire mensuel + primes de roulage.</small>
+      <label for="salaireTotal">Salaire total *</label>
+      <p-inputNumber inputId="salaireTotal" formControlName="salaireTotal" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      @if (form.controls.salaireTotal.invalid && form.controls.salaireTotal.touched) {
+        <small class="field-error">Le salaire total est obligatoire.</small>
+      }
     </div>
 
     <div class="field paie-form__field-wide">

@@ -32,7 +32,6 @@ export interface Paie {
   observation: string | null;
 }
 
-/** Ne porte pas salaireTotal : calculé côté serveur (salaireMensuel + primes), jamais saisi. */
 export interface PaieCreateRequest {
   employeeId: number;
   periode: string;
@@ -45,10 +44,10 @@ export interface PaieCreateRequest {
   salaireMensuel: number;
   primeRoulageOrdinaire?: number | null;
   primeRoulageDimanche?: number | null;
+  salaireTotal: number;
   observation?: string | null;
 }
 
-/** Ne porte pas salaireTotal : calculé côté serveur (salaireMensuel + primes), jamais saisi. */
 export interface PaieUpdateRequest {
   fonctionId: number;
   chantierId: number;
@@ -59,6 +58,7 @@ export interface PaieUpdateRequest {
   salaireMensuel: number;
   primeRoulageOrdinaire?: number | null;
   primeRoulageDimanche?: number | null;
+  salaireTotal: number;
   observation?: string | null;
 }
 

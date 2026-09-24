@@ -66,14 +66,13 @@ class PaieServiceTest {
         createDto = new PaieCreateRequestDto(
                 1L, YearMonth.of(2026, 8), 10L, 20L, "EQUIPE A",
                 26, BigDecimal.ZERO, BigDecimal.ZERO,
-                new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"),
+                new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null
         );
 
         entity = new Paie();
         entity.setId(1L);
         // Le mapper réel copierait ces champs depuis le DTO ; ici mocké, on les reproduit à la main
-        // pour que calculerSalaireTotal() (appelé par le service) ne rencontre pas un salaireMensuel nul.
         entity.setSalaireMensuel(new BigDecimal("5000"));
         entity.setPrimeRoulageOrdinaire(new BigDecimal("200"));
         entity.setPrimeRoulageDimanche(new BigDecimal("100"));

@@ -264,7 +264,7 @@ class PaieExportServiceTest {
         paie.setEquipe(equipe);
         paie.setNombreJoursTravailles(26);
         paie.setSalaireMensuel(new BigDecimal("5000"));
-        paie.calculerSalaireTotal();
+        paie.setSalaireTotal(new BigDecimal("5000"));
         return paie;
     }
 }
