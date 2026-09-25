@@ -47,24 +47,31 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.5.1</version>
         </dependency>
-        <!-- Rapport PDF (staport.rh.paie.report) : templates HTML (Thymeleaf) rendus en PDF via
-             openhtmltopdf, licence LGPL (contrairement à iText 7+ qui est AGPL/commercial) — voir
-             docs/paie/README.md, section "Rapport PDF". TemplateEngine utilisé programmatiquement
-             (jamais comme ViewResolver MVC — cette application est une API REST pure). -->
+        <!-- Rapport PDF (staport.rh.paie.report) : gabarits JRXML rendus en PDF via JasperReports
+             Library, licence LGPL (contrairement à iText 7+ qui est AGPL/commercial) — voir
+             docs/report/README.md, section "Rapport PDF". Les 4 visualisations de la synthèse
+             globale sont des <barChart> JRXML natifs (moteur JFreeChart interne à JasperReports,
+             jamais de PNG pré-généré séparément).
+             Épinglé sur la ligne 6.21.x (dernière LTS, pas la 7.x) : JasperReports 7 a remplacé le
+             chargeur JRXML historique (Digester/XSD) par un chargeur Jackson dont le schéma diffère
+             structurellement (constaté à la compilation : "Unrecognized field staticText" sur un
+             <band> pourtant conforme au schéma JRXML documenté partout, y compris par Jaspersoft
+             Studio) — non documenté à ce jour, aucun outillage/communauté encore fiable dessus. La 6.21.x
+             reste le format JRXML standard, stable et sur lequel tout l'écosystème (Jaspersoft
+             Studio inclus) est aligné ; l'export PDF et les classes chart (JRChart/JRChartCustomizer)
+             sont directement dans ce jar, pas de sous-module séparé. -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports</artifactId>
+            <version>6.21.5</version>
         </dependency>
+        <!-- Police DejaVu Sans embarquée (accents FR, PDF) — extension officielle JasperReports,
+             licence LGPL, remplace la résolution de police système fragile de l'ancien pipeline
+             HTML/openhtmltopdf. -->
         <dependency>
-            <groupId>com.openhtmltopdf</groupId>
-            <artifactId>openhtmltopdf-pdfbox</artifactId>
-            <version>1.0.10</version>
-        </dependency>
-        <!-- Génération des graphiques du rapport PDF (images PNG embarquées), licence LGPL. -->
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jfreechart</artifactId>
-            <version>1.5.5</version>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports-fonts</artifactId>
+            <version>6.21.5</version>
         </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
