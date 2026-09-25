@@ -8,6 +8,9 @@
 
 <table th:fragment="hero" class="hero">
     <tr>
+        <td class="hero-logo-cellule">
+            <img th:src="'data:image/png;base64,' + ${logoBase64}" class="hero-logo" alt="Staport" />
+        </td>
         <td>
             <div class="hero-titre">Rapport Paie — Synthèse BI</div>
             <div class="hero-soustitre" th:text="${periodeLibelle}">Septembre 2026</div>

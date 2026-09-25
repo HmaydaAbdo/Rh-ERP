@@ -227,12 +227,12 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 
 La génération de documents à partir des bulletins de paie est documentée dans
 **`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, dialog dédié
-`PaieExportExcelDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction, dialog
-dédié `PaieExportPdfDialogComponent`) — architecture, modèle analytique et catalogue de KPI du
-rapport PDF, structure des feuilles/sections, paramétrage chantier/équipe, règle Include/Exclude, et
-points d'extension. Ne pas dupliquer cette documentation ici — seules les règles ci-dessous, propres
-au champ `Paie.equipe` en tant que donnée métier (indépendantes du format de sortie), restent dans
-ce document.
+`PaieExportExcelDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
+téléchargement direct sans dialog sur la période sélectionnée dans la liste) — architecture, modèle
+analytique et catalogue de KPI du rapport PDF, structure des feuilles/sections, paramétrage
+chantier/équipe, règle Include/Exclude, et points d'extension. Ne pas dupliquer cette documentation
+ici — seules les règles ci-dessous, propres au champ `Paie.equipe` en tant que donnée métier
+(indépendantes du format de sortie), restent dans ce document.
 
 `GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
 bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
@@ -263,7 +263,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export : deux boutons/dialogs dédiés, voir `docs/report/README.md` — « Exporter Excel » (`PaieExportExcelDialogComponent`, configuration chantier/équipe) et « Exporter PDF » (`PaieExportPdfDialogComponent`, rapport BI sur le périmètre des filtres actifs) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export, voir `docs/report/README.md` — « Exporter Excel » ouvre un dialog dédié (`PaieExportExcelDialogComponent`, configuration chantier/équipe) ; « Exporter PDF » télécharge directement le rapport BI, sans dialog, sur la période sélectionnée dans le filtre de la liste (les autres filtres ne s'appliquent pas au rapport) |
 | `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |

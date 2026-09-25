@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -37,17 +38,20 @@ public class PaieReportPdfService {
 
     private static final String FAMILLE_POLICE = "RapportPaie";
     private static final String CHEMIN_CSS = "report/paie/report.css";
+    private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
 
     private final PaieBiReportBuilder biReportBuilder;
     private final PaieReportFontProvider fontProvider;
     private final SpringTemplateEngine templateEngine;
     private final String css;
+    private final String logoBase64;
 
     PaieReportPdfService(PaieBiReportBuilder biReportBuilder, PaieReportFontProvider fontProvider) {
         this.biReportBuilder = biReportBuilder;
         this.fontProvider = fontProvider;
         this.templateEngine = creerMoteurDeTemplates();
         this.css = chargerCss();
+        this.logoBase64 = chargerLogoBase64();
     }
 
     /** @throws staport.rh.paie.exceptions.AucunePaiePeriodeException si aucun bulletin n'existe pour
@@ -74,6 +78,7 @@ public class PaieReportPdfService {
         Context contexte = new Context(Locale.FRANCE);
         contexte.setVariables(variables);
         contexte.setVariable("css", css);
+        contexte.setVariable("logoBase64", logoBase64);
 
         return templateEngine.process("rapport", contexte);
     }
@@ -112,6 +117,17 @@ public class PaieReportPdfService {
             return new ClassPathResource(CHEMIN_CSS).getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException("Feuille de style du rapport PDF introuvable : " + CHEMIN_CSS, e);
+        }
+    }
+
+    /** Logo embarqué en base64 dans le bandeau d'en-tête — le rendu PDF (openhtmltopdf) n'a pas
+     * d'URI de base pour résoudre un chemin de fichier relatif. */
+    private static String chargerLogoBase64() {
+        try {
+            byte[] octets = new ClassPathResource(CHEMIN_LOGO).getContentAsByteArray();
+            return Base64.getEncoder().encodeToString(octets);
+        } catch (IOException e) {
+            throw new IllegalStateException("Logo du rapport PDF introuvable : " + CHEMIN_LOGO, e);
         }
     }
 }
