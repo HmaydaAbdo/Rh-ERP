@@ -6,7 +6,6 @@
 </head>
 <body>
 
-<!-- Bandeau de titre. Variables de contexte lues : periodeLibelle, dateGeneration. -->
 <table th:fragment="hero(sousTitre)" class="hero">
     <tr>
         <td>
@@ -20,8 +19,6 @@
     </tr>
 </table>
 
-<!-- Une section (chantier ou équipe) : titre, tableau détaillé, totaux, effectif/STC.
-     niveau vaut 'chantier' ou 'equipe' (contrôle uniquement le style). -->
 <div th:fragment="section(titre, niveau, lignes, totaux, effectifParFonction)"
      th:class="'section ' + ${niveau}">
     <div th:class="'section-titre ' + ${niveau}" th:text="${titre}">Titre de section</div>
@@ -92,6 +89,11 @@
                 <td class="kpi">
                     <div class="kpi-label">Total général</div>
                     <div class="kpi-valeur" th:text="${totaux.totalGeneral}">0,00</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Total mois précédent</div>
+                    <div class="kpi-valeur" th:text="${totaux.totalMoisPrecedent}">0,00</div>
+                    <div class="kpi-note" th:text="${totaux.variation != null} ? ('Variation : ' + ${totaux.variation}) : 'Variation non disponible'">Variation</div>
                 </td>
             </tr>
         </table>

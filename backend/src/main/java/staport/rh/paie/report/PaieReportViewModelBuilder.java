@@ -17,8 +17,6 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Convertit {@link PerimetrePaie} (entités) en vue-modèle hiérarchique Chantier → Équipe déjà
- * formatée — le template Thymeleaf ne fait aucun calcul ni formatage. */
 @Component
 class PaieReportViewModelBuilder {
 
@@ -31,24 +29,25 @@ class PaieReportViewModelBuilder {
 
     private ChantierRapportVue chantierVue(PerimetreChantier chantier) {
         List<EquipeRapportVue> equipes = chantier.lignesParEquipeAGenerer().entrySet().stream()
-                .map(entree -> equipeVue(entree.getKey(), entree.getValue()))
+                .map(entree -> equipeVue(entree.getKey(), entree.getValue(),
+                        chantier.totalMoisPrecedentParEquipe().get(entree.getKey())))
                 .toList();
 
         return new ChantierRapportVue(
                 chantier.code(),
                 "CHANTIER : " + chantier.code(),
                 chantier.lignes().stream().map(this::ligneVue).toList(),
-                totaux(chantier.lignes()),
+                totaux(chantier.lignes(), chantier.totalMoisPrecedent()),
                 effectifParFonctionVue(chantier.lignes()),
                 equipes);
     }
 
-    private EquipeRapportVue equipeVue(String nom, List<Paie> lignes) {
+    private EquipeRapportVue equipeVue(String nom, List<Paie> lignes, BigDecimal totalMoisPrecedent) {
         return new EquipeRapportVue(
                 nom,
                 "ÉQUIPE : " + nom.toUpperCase(Locale.FRANCE),
                 lignes.stream().map(this::ligneVue).toList(),
-                totaux(lignes),
+                totaux(lignes, totalMoisPrecedent),
                 effectifParFonctionVue(lignes));
     }
 
@@ -69,14 +68,19 @@ class PaieReportViewModelBuilder {
                 paie.getEquipe());
     }
 
-    private TotauxVue totaux(List<Paie> lignes) {
+    private TotauxVue totaux(List<Paie> lignes, BigDecimal totalMoisPrecedent) {
         int sommeJours = lignes.stream()
                 .mapToInt(p -> p.getNombreJoursTravailles() != null ? p.getNombreJoursTravailles() : 0)
                 .sum();
         BigDecimal sommeSalaires = sommer(lignes, Paie::getSalaireMensuel);
         BigDecimal totalGeneral = sommer(lignes, Paie::getSalaireTotal);
-        return new TotauxVue(lignes.size(), PaieReportNumberFormat.entier(sommeJours),
-                PaieReportNumberFormat.montant(sommeSalaires), PaieReportNumberFormat.montant(totalGeneral));
+        return new TotauxVue(
+                lignes.size(),
+                PaieReportNumberFormat.entier(sommeJours),
+                PaieReportNumberFormat.montant(sommeSalaires),
+                PaieReportNumberFormat.montant(totalGeneral),
+                PaieReportNumberFormat.montantOuIntrouvable(totalMoisPrecedent),
+                PaieReportNumberFormat.variationPourcent(totalGeneral, totalMoisPrecedent));
     }
 
     private List<EffectifFonctionVue> effectifParFonctionVue(List<Paie> lignes) {
@@ -94,7 +98,6 @@ class PaieReportViewModelBuilder {
         return lignes.stream().map(champ).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /** "Août 2026" — libellé français, première lettre en majuscule. */
     private static String libellePeriode(YearMonth periode) {
         String mois = periode.getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH);
         return Character.toUpperCase(mois.charAt(0)) + mois.substring(1) + " " + periode.getYear();
