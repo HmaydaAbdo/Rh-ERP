@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -40,7 +39,7 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
-    private static final int MAX_BARRES_GRAPHIQUE = 12;
+    private static final int MAX_BARRES_GRAPHIQUE = 20;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
 
@@ -81,8 +80,6 @@ class PaieBiReportBuilder {
                 versRepartition(agregatFonction)
         );
 
-        List<LigneStcBean> stc = lignesStc(courant);
-
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
                 .sorted()
@@ -94,7 +91,6 @@ class PaieBiReportBuilder {
                 LocalDateTime.now().format(FORMAT_DATE_GENERATION),
                 filtresActifs(requete, courant),
                 synthese,
-                stc,
                 chantiers);
     }
 
@@ -102,6 +98,7 @@ class PaieBiReportBuilder {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
+        int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
 
         List<EquipeBiVue> equipes = agregatEquipe.stream()
                 .map(Agregat::cle)
@@ -115,8 +112,8 @@ class PaieBiReportBuilder {
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
                 PaieReportNumberFormat.part(masseChantier, masseGlobale),
+                stc,
                 versDistribution(agregatEquipe, masseChantier),
-                effectifParFonction(lignesChantier),
                 equipes);
     }
 
@@ -151,27 +148,6 @@ class PaieBiReportBuilder {
                 paie.getObservation());
     }
 
-    /** Liste condensée des départs STC / sortie du mois (voir {@code ObservationStc}), triée par
-     * nom & prénom — section isolée de la synthèse globale, jamais mélangée aux autres tableaux. */
-    private List<LigneStcBean> lignesStc(List<Paie> lignes) {
-        return lignes.stream()
-                .filter(ObservationStc::estStcOuSortie)
-                .sorted(Comparator.comparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
-                .map(p -> new LigneStcBean(p.getEmployee().getNomPrenom(), codeChantier(p), p.getFonction().getLibelle()))
-                .toList();
-    }
-
-    private List<EffectifFonctionSimpleVue> effectifParFonction(List<Paie> lignes) {
-        Map<String, List<Paie>> parFonction = lignes.stream()
-                .collect(Collectors.groupingBy(p -> p.getFonction().getLibelle(), TreeMap::new, Collectors.toList()));
-        return parFonction.entrySet().stream()
-                .map(entree -> new EffectifFonctionSimpleVue(
-                        entree.getKey(),
-                        entree.getValue().size(),
-                        (int) entree.getValue().stream().filter(ObservationStc::estStcOuSortie).count()))
-                .toList();
-    }
-
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
      * équipe") et calcule l'agrégat brut de chaque groupe, trié par montant décroissant — un
      * classement, la lecture BI la plus directe d'une distribution. */
@@ -195,9 +171,11 @@ class PaieBiReportBuilder {
 
     /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
      * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — un graphique de
-     * direction reste lisible, pas un mur de barres. La même liste alimente à la fois le graphique
-     * de masse et celui d'effectif de la dimension (chantier ou fonction), voir
-     * {@code docs/report/README.md}. */
+     * direction reste lisible, pas un mur de barres. Le résultat est retrié par montant décroissant
+     * (y compris "Autres" à sa vraie place) : un graphique BI doit rester visuellement monotone,
+     * jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. La même liste
+     * alimente à la fois le graphique de masse et celui d'effectif de la dimension (chantier ou
+     * fonction), voir {@code docs/report/README.md}. */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
         List<RepartitionBean> valeurs = new ArrayList<>();
         int effectifAutres = 0;
@@ -214,6 +192,7 @@ class PaieBiReportBuilder {
         if (effectifAutres > 0) {
             valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
         }
+        valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
     }
 
