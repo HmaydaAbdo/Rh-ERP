@@ -105,10 +105,7 @@ public class PaieReportPdfService {
     private JasperPrint imprimerChantier(ChantierBiVue chantier) {
         Map<String, Object> parametres = new HashMap<>();
         parametres.put("P_CHANTIER_TITRE", chantier.titre());
-        parametres.put("P_CHANTIER_MASSE_VALEUR", chantier.masse().valeurCourante());
-        parametres.put("P_CHANTIER_MASSE_VARIATION", variationLibelle(chantier.masse()));
-        parametres.put("P_CHANTIER_MASSE_TENDANCE", chantier.masse().tendance().name());
-        parametres.put("P_CHANTIER_MASSE_NOTE", masseNote(chantier.masse()));
+        parametres.put("P_CHANTIER_MASSE_LIGNE", masseLigne(chantier.masse()));
         parametres.put("P_CHANTIER_EFFECTIF_VALEUR", PaieReportNumberFormat.entier(chantier.effectif().effectifCourant()));
         parametres.put("P_CHANTIER_EFFECTIF_NOTE", "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")");
         parametres.put("P_CHANTIER_PART_MASSE_GLOBALE", chantier.partMasseGlobalePourcent());
@@ -162,6 +159,16 @@ public class PaieReportPdfService {
         return masse.tendance() == PaieReportNumberFormat.Tendance.NON_DISPONIBLE
                 ? "Aucune donnée le mois précédent pour ce périmètre"
                 : "Mois précédent : " + masse.valeurPrecedente() + " DH";
+    }
+
+    /** Ligne compacte masse + comparaison pour le bandeau KPI d'un chantier (une seule ligne de
+     * texte, pas de badge coloré comme la synthèse globale) — jamais de "(null)" affiché quand
+     * aucune donnée n'existe le mois précédent pour ce chantier. */
+    private String masseLigne(KpiMontantVue masse) {
+        String variation = variationLibelle(masse);
+        return variation == null
+                ? masse.valeurCourante() + " DH  (" + masseNote(masse) + ")"
+                : masse.valeurCourante() + " DH  (" + variation + ")";
     }
 
     private String filtresLibelle(List<String> filtresActifs) {
