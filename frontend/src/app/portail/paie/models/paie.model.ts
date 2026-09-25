@@ -103,12 +103,13 @@ export interface PaieImportResult {
   fonctionsCreees: string[];
 }
 
-/** Corps de POST /paie/report/pdf. Même structure que PaieExportRequest (voir PaiePerimetreService). */
+/** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir docs/report/README.md), pas un export
+ * tabulaire (voir PaieExportRequest pour celui-ci). Le périmètre reprend exactement les filtres de
+ * la page Paie (PaieSearchCriteria, sans pagination) : periode obligatoire, le reste optionnel. */
 export interface PaieRapportPdfRequest {
   periode: string;
-  feuillesEquipeMode?: FeuillesEquipeMode;
-  equipesParChantier?: Record<string, string[]> | null;
-  equipesExcluesFeuilleChantier?: Record<string, string[]> | null;
-  /** Restreint tout le rapport (y compris la section GLB) à ces chantiers ; null/vide = tous les chantiers. */
-  chantiers?: string[] | null;
+  nomPrenom?: string | null;
+  cin?: string | null;
+  fonctionId?: number | null;
+  chantierId?: number | null;
 }
