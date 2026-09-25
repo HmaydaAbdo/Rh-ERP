@@ -84,3 +84,13 @@ table.donnees td.num { text-align: right; white-space: nowrap; }
 table.recap { width: 55%; }
 
 .bloc-final { page-break-inside: avoid; }
+
+/* Un tableau ne doit jamais être coupé entre deux pages : il bascule entièrement à la page
+   suivante s'il ne tient pas, plutôt que d'afficher une partie des lignes sur chaque page. */
+table.donnees.detail,
+table.donnees.recap,
+table.kpis {
+  page-break-inside: avoid;
+}
+
+.kpi-note { font-size: 7.5pt; color: #64748B; margin-top: 2px; }

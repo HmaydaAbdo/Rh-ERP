@@ -10,14 +10,14 @@
 
 <table th:replace="~{fragments :: hero('Détail par chantier et équipe')}"></table>
 
-<!-- Un chantier commence toujours en haut d'une nouvelle page (sauf le premier, déjà en haut de page). -->
 <div th:each="chantier, iterChantier : ${chantiers}"
      th:style="${iterChantier.first} ? '' : 'page-break-before: always;'">
 
     <div th:replace="~{fragments :: section(${chantier.titre}, 'chantier', ${chantier.lignes}, ${chantier.totaux}, ${chantier.effectifParFonction})}"></div>
 
-    <div th:each="equipe : ${chantier.equipes}"
-         th:replace="~{fragments :: section(${equipe.titre}, 'equipe', ${equipe.lignes}, ${equipe.totaux}, ${equipe.effectifParFonction})}"></div>
+    <th:block th:each="equipe : ${chantier.equipes}">
+        <div th:replace="~{fragments :: section(${equipe.titre}, 'equipe', ${equipe.lignes}, ${equipe.totaux}, ${equipe.effectifParFonction})}"></div>
+    </th:block>
 
 </div>
 
