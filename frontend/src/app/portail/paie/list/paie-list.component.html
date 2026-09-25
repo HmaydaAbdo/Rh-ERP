@@ -34,16 +34,9 @@
         optionLabel="label"
         optionValue="value"
       ></p-selectButton>
-      @if (exportForm.controls.format.value === 'PDF_SYNTHESE') {
-        <p class="paie-list__dialog-hint">
-          Rapport de direction : indicateurs clés, graphiques et répartition par chantier. Le détail ligne par ligne reste dans l'export Excel.
-        </p>
-      }
-      @if (exportForm.controls.format.value === 'PDF_DETAILLE') {
-        <p class="paie-list__dialog-hint">
-          Rapport mis en forme : une section globale, puis une section par chantier et par équipe, avec totaux et effectif par fonction.
-        </p>
-      }
+      <p class="paie-list__dialog-hint">
+        Rapport mis en forme (PDF) ou classeur multi-feuilles (Excel) : une section/feuille globale, puis une par chantier et par équipe, avec totaux et effectif par fonction.
+      </p>
     </div>
 
     <div class="paie-list__dialog-field">
@@ -60,60 +53,43 @@
       ></p-calendar>
     </div>
 
-    @if (exportForm.controls.format.value !== 'PDF_SYNTHESE') {
+    <div class="paie-list__dialog-field">
+      <label for="exportChantiers">Chantiers (optionnel)</label>
+      <p-multiSelect
+        inputId="exportChantiers"
+        formControlName="chantiers"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="code"
+        placeholder="Tous les chantiers"
+        display="chip"
+        appendTo="body"
+      ></p-multiSelect>
+      <p class="paie-list__dialog-hint">
+        Laisser vide pour inclure tous les chantiers de la période, ou en sélectionner un ou plusieurs pour restreindre l'export (Excel et PDF) à ceux-ci.
+      </p>
+    </div>
+
+    <div class="paie-list__dialog-field">
+      <label>{{ exportForm.controls.format.value === 'EXCEL' ? 'Feuilles par équipe' : 'Sections par équipe' }}</label>
+      <p-selectButton
+        formControlName="feuillesEquipeMode"
+        [options]="feuillesEquipeModeOptions"
+        optionLabel="label"
+        optionValue="value"
+      ></p-selectButton>
+      <p class="paie-list__dialog-hint">
+        Aucune : pas de sous-feuille équipe. Toutes : une sous-feuille par équipe trouvée, pour chaque chantier.
+        Personnalisé : choisir les équipes par chantier ci-dessous.
+      </p>
+    </div>
+
+    @if (exportForm.controls.feuillesEquipeMode.value === 'PERSONNALISE') {
       <div class="paie-list__dialog-field">
-        <label>{{ exportForm.controls.format.value === 'EXCEL' ? 'Feuilles par équipe' : 'Sections par équipe' }}</label>
-        <p-selectButton
-          formControlName="feuillesEquipeMode"
-          [options]="feuillesEquipeModeOptions"
-          optionLabel="label"
-          optionValue="value"
-        ></p-selectButton>
-        <p class="paie-list__dialog-hint">
-          Aucune : pas de sous-feuille équipe. Toutes : une sous-feuille par équipe trouvée, pour chaque chantier.
-          Personnalisé : choisir les équipes par chantier ci-dessous.
-        </p>
-      </div>
-
-      @if (exportForm.controls.feuillesEquipeMode.value === 'PERSONNALISE') {
-        <div class="paie-list__dialog-field">
-          <label for="exportChantiersPersonnalises">Chantiers à personnaliser</label>
-          <p-multiSelect
-            inputId="exportChantiersPersonnalises"
-            formControlName="chantiersPersonnalises"
-            [options]="chantiers"
-            optionLabel="code"
-            optionValue="code"
-            placeholder="Aucun chantier sélectionné"
-            display="chip"
-            appendTo="body"
-            [disabled]="!exportForm.controls.periode.value"
-            (onChange)="onChantiersPersonnalisesChange()"
-          ></p-multiSelect>
-
-          @for (code of exportForm.controls.chantiersPersonnalises.value ?? []; track code) {
-            <div class="paie-list__equipe-chantier-row">
-              <span class="paie-list__equipe-chantier-code">{{ code }}</span>
-              <p-multiSelect
-                [options]="equipesDisponiblesPour(code)"
-                [ngModel]="equipesParChantierPersonnalise[code] ?? []"
-                (ngModelChange)="equipesParChantierPersonnalise[code] = $event"
-                [ngModelOptions]="{ standalone: true }"
-                [loading]="chargementEquipesEnCours(code)"
-                placeholder="Équipes à générer"
-                display="chip"
-                appendTo="body"
-              ></p-multiSelect>
-            </div>
-          }
-        </div>
-      }
-
-      <div class="paie-list__dialog-field">
-        <label for="exportChantiersExclusion">Exclure des équipes de la feuille globale d'un chantier (optionnel)</label>
+        <label for="exportChantiersPersonnalises">Chantiers à personnaliser</label>
         <p-multiSelect
-          inputId="exportChantiersExclusion"
-          formControlName="chantiersExclusion"
+          inputId="exportChantiersPersonnalises"
+          formControlName="chantiersPersonnalises"
           [options]="chantiers"
           optionLabel="code"
           optionValue="code"
@@ -121,19 +97,19 @@
           display="chip"
           appendTo="body"
           [disabled]="!exportForm.controls.periode.value"
-          (onChange)="onChantiersExclusionChange()"
+          (onChange)="onChantiersPersonnalisesChange()"
         ></p-multiSelect>
 
-        @for (code of exportForm.controls.chantiersExclusion.value ?? []; track code) {
+        @for (code of exportForm.controls.chantiersPersonnalises.value ?? []; track code) {
           <div class="paie-list__equipe-chantier-row">
             <span class="paie-list__equipe-chantier-code">{{ code }}</span>
             <p-multiSelect
               [options]="equipesDisponiblesPour(code)"
-              [ngModel]="equipesExcluesParChantier[code] ?? []"
-              (ngModelChange)="equipesExcluesParChantier[code] = $event"
+              [ngModel]="equipesParChantierPersonnalise[code] ?? []"
+              (ngModelChange)="equipesParChantierPersonnalise[code] = $event"
               [ngModelOptions]="{ standalone: true }"
               [loading]="chargementEquipesEnCours(code)"
-              placeholder="Équipes à exclure"
+              placeholder="Équipes à générer"
               display="chip"
               appendTo="body"
             ></p-multiSelect>
@@ -141,6 +117,38 @@
         }
       </div>
     }
+
+    <div class="paie-list__dialog-field">
+      <label for="exportChantiersExclusion">Exclure des équipes de la feuille globale d'un chantier (optionnel)</label>
+      <p-multiSelect
+        inputId="exportChantiersExclusion"
+        formControlName="chantiersExclusion"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="code"
+        placeholder="Aucun chantier sélectionné"
+        display="chip"
+        appendTo="body"
+        [disabled]="!exportForm.controls.periode.value"
+        (onChange)="onChantiersExclusionChange()"
+      ></p-multiSelect>
+
+      @for (code of exportForm.controls.chantiersExclusion.value ?? []; track code) {
+        <div class="paie-list__equipe-chantier-row">
+          <span class="paie-list__equipe-chantier-code">{{ code }}</span>
+          <p-multiSelect
+            [options]="equipesDisponiblesPour(code)"
+            [ngModel]="equipesExcluesParChantier[code] ?? []"
+            (ngModelChange)="equipesExcluesParChantier[code] = $event"
+            [ngModelOptions]="{ standalone: true }"
+            [loading]="chargementEquipesEnCours(code)"
+            placeholder="Équipes à exclure"
+            display="chip"
+            appendTo="body"
+          ></p-multiSelect>
+        </div>
+      }
+    </div>
 
     <button
       pButton

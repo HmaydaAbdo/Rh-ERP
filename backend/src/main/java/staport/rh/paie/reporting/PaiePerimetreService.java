@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
  * équipes à générer) — logique partagée entre l'export Excel ({@code PaieExportService}) et le
  * rapport PDF ({@code PaieReportPdfService}), pour ne jamais dupliquer la lecture de
  * {@code feuillesEquipeMode}/{@code equipesParChantier}/{@code equipesExcluesFeuilleChantier}.
+ *
+ * <p>Le paramètre {@code chantiers} restreint tout le périmètre (y compris la feuille/section GLB)
+ * aux chantiers listés (comparaison sur {@code Chantier.code}) — {@code null} ou vide signifie
+ * aucune restriction, tous les chantiers de la période sont retenus.
  */
 @Service
 public class PaiePerimetreService {
@@ -33,9 +37,10 @@ public class PaiePerimetreService {
     @Transactional(readOnly = true)
     public PerimetrePaie calculer(YearMonth periode, FeuillesEquipeMode mode,
                                    Map<String, List<String>> equipesParChantier,
-                                   Map<String, List<String>> equipesExcluesFeuilleChantier) {
-        List<Paie> lignesPeriode = repository.findByPeriode(periode);
-        List<Paie> lignesPeriodePrecedente = repository.findByPeriode(periode.minusMonths(1));
+                                   Map<String, List<String>> equipesExcluesFeuilleChantier,
+                                   List<String> chantiers) {
+        List<Paie> lignesPeriode = filtrerParChantiers(repository.findByPeriode(periode), chantiers);
+        List<Paie> lignesPeriodePrecedente = filtrerParChantiers(repository.findByPeriode(periode.minusMonths(1)), chantiers);
 
         Map<String, List<Paie>> lignesParChantier = groupBy(lignesPeriode, p -> p.getChantier().getCode());
         Map<String, List<Paie>> lignesPrecedentesParChantier = groupBy(lignesPeriodePrecedente, p -> p.getChantier().getCode());
@@ -103,6 +108,14 @@ public class PaiePerimetreService {
         }
         Set<String> exclusionSet = new HashSet<>(exclues);
         return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(p.getEquipe())).toList();
+    }
+
+    private List<Paie> filtrerParChantiers(List<Paie> lignes, List<String> chantiers) {
+        if (chantiers == null || chantiers.isEmpty()) {
+            return lignes;
+        }
+        Set<String> codesRetenus = new HashSet<>(chantiers);
+        return lignes.stream().filter(p -> codesRetenus.contains(p.getChantier().getCode())).toList();
     }
 
     private Map<String, List<Paie>> groupBy(List<Paie> lignes, java.util.function.Function<Paie, String> classificateur) {

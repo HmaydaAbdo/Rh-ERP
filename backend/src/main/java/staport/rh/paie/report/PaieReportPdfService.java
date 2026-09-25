@@ -71,7 +71,7 @@ public class PaieReportPdfService {
     /** Étape HTML seule, séparée pour pouvoir être testée sans rendu PDF. */
     String genererHtml(YearMonth periode, PaieReportPdfRequestDto requete) {
         PerimetrePaie perimetre = perimetreService.calculer(periode, requete.feuillesEquipeMode(),
-                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier());
+                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier(), requete.chantiers());
 
         if (perimetre.lignesGlobales().isEmpty()) {
             throw new AucunePaiePeriodeException(periode);
