@@ -145,7 +145,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageOrdinaire()),
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireTotal()),
-                paie.getObservation());
+                paie.getObservation() != null ? paie.getObservation() : "");
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
