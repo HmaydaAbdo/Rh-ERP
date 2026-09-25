@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PaieBiReportBuilderTest {
 
-    private final PaieBiReportBuilder builder = new PaieBiReportBuilder(null, new PaieReportChartService());
+    private final PaieBiReportBuilder builder = new PaieBiReportBuilder(null);
 
     private static final PaieReportPdfRequestDto REQUETE_SANS_FILTRE =
             new PaieReportPdfRequestDto("2026-09", null, null, null, null);
@@ -52,17 +52,35 @@ class PaieBiReportBuilderTest {
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
                 List.of(sansEquipeNull, sansEquipeBlank, avecEquipe), List.of());
 
-        DistributionVue sansEquipe = vue.synthese().distributionEquipe().stream()
-                .filter(d -> d.libelle().equals("Sans équipe"))
-                .findFirst().orElseThrow();
-        assertThat(sansEquipe.effectif()).isEqualTo(2);
-        assertThat(sansEquipe.montant()).isEqualTo("5 000,00");
-
-        // La distribution équipe interne au chantier doit refléter la même règle.
         ChantierBiVue chantier = vue.chantiers().get(0);
+        DistributionVue sansEquipe = chantier.distributionEquipe().stream()
+                .filter(d -> d.getLibelle().equals("Sans équipe"))
+                .findFirst().orElseThrow();
+        assertThat(sansEquipe.getEffectif()).isEqualTo(2);
+        assertThat(sansEquipe.getMontant()).isEqualTo("5 000,00");
+
         assertThat(chantier.equipes()).extracting(EquipeBiVue::nom).contains("Sans équipe", "EQUIPE A");
         EquipeBiVue equipeSansEquipe = chantier.equipes().stream().filter(e -> e.nom().equals("Sans équipe")).findFirst().orElseThrow();
         assertThat(equipeSansEquipe.effectif()).isEqualTo(2);
+    }
+
+    @Test
+    void construireDepuis_devraitRepartirMasseEtEffectifParChantierEtParFonction() {
+        Paie macon = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000");
+        Paie operateur = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE B", "3000");
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(macon, operateur), List.of());
+
+        assertThat(vue.synthese().repartitionChantier())
+                .extracting(RepartitionBean::getLibelle, RepartitionBean::getEffectif, r -> r.getMontant().intValue())
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("C059", 1, 5000),
+                        org.assertj.core.groups.Tuple.tuple("C068", 1, 3000));
+        assertThat(vue.synthese().repartitionFonction())
+                .extracting(RepartitionBean::getLibelle, RepartitionBean::getEffectif, r -> r.getMontant().intValue())
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("MACON", 1, 5000),
+                        org.assertj.core.groups.Tuple.tuple("OPERATEUR", 1, 3000));
     }
 
     @Test
@@ -95,18 +113,18 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void construireDepuis_devraitCompterLeStcParChantierEtParFonction() {
+    void construireDepuis_devraitIsolerLesLignesStcDansUneListeCondensee() {
         Paie stc = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "3000");
         stc.setObservation("STC");
         Paie actif = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE A", "3000");
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(stc, actif), List.of());
 
-        LigneMatriceFonctionChantierVue ligne = vue.matriceFonctionChantier().get(0);
-        assertThat(ligne.chantier()).isEqualTo("C059");
-        assertThat(ligne.fonction()).isEqualTo("OPERATEUR");
-        assertThat(ligne.effectif()).isEqualTo(2);
-        assertThat(ligne.stc()).isEqualTo(1);
+        assertThat(vue.stc()).hasSize(1);
+        LigneStcBean ligne = vue.stc().get(0);
+        assertThat(ligne.getNomPrenom()).isEqualTo("EMPLOYE UN");
+        assertThat(ligne.getChantier()).isEqualTo("C059");
+        assertThat(ligne.getFonction()).isEqualTo("OPERATEUR");
     }
 
     @Test

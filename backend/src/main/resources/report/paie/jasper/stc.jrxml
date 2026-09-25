@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Liste condensée des départs STC / sortie du mois (voir ObservationStc) — sous-rapport de
+     rapport.jrxml, isolé de la synthèse graphique. -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="stc" pageWidth="802" pageHeight="800"
+              columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0"
+              whenNoDataType="AllSectionsNoDetail">
+
+    <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
+
+    <field name="nomPrenom" class="java.lang.String"/>
+    <field name="chantier" class="java.lang.String"/>
+    <field name="fonction" class="java.lang.String"/>
+
+    <title>
+        <band height="16">
+            <staticText>
+                <reportElement x="0" y="0" width="802" height="16" mode="Opaque" backcolor="#14335C"/>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="10" isBold="true"/><paragraph leftIndent="8"/></textElement>
+                <text><![CDATA[STC / SORTIES DU MOIS]]></text>
+            </staticText>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="16">
+            <staticText>
+                <reportElement x="0" y="0" width="360" height="16" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7" isBold="true"/><paragraph leftIndent="6"/></textElement>
+                <text><![CDATA[Nom & prénom]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="360" y="0" width="221" height="16" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7" isBold="true"/><paragraph leftIndent="6"/></textElement>
+                <text><![CDATA[Chantier]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="581" y="0" width="221" height="16" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7" isBold="true"/><paragraph leftIndent="6"/></textElement>
+                <text><![CDATA[Fonction]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="14" splitType="Prevent">
+            <rectangle>
+                <reportElement x="0" y="0" width="802" height="14" mode="Opaque" backcolor="#F8FAFC">
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0.0"/></graphicElement>
+            </rectangle>
+            <textField>
+                <reportElement x="0" y="0" width="360" height="14"/>
+                <box leftPadding="6" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA[$F{nomPrenom}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="360" y="0" width="221" height="14"/>
+                <box leftPadding="6" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA[$F{chantier}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="581" y="0" width="221" height="14"/>
+                <box leftPadding="6" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA[$F{fonction}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

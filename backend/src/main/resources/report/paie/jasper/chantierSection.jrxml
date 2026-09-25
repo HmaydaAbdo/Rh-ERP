@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Détail d'un chantier — rempli séparément, un JasperPrint par chantier (voir PaieReportPdfService),
+     ce qui fait naturellement démarrer chaque chantier sur une nouvelle page à la concaténation PDF.
+     La bande title porte la synthèse BI du chantier (KPI + 2 sous-rapports statistiques, jamais de
+     détail employé — anti-redondance, voir docs/report/README.md). Le détail employé est porté par
+     la source de données principale (à plat, une ligne par employé, dénormalisée avec le contexte
+     de son équipe) et regroupé par équipe via un <group> keepTogether — jamais un saut de page
+     forcé par équipe, seulement si l'équipe est, à elle seule, plus grande qu'une page. -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="chantierSection" pageWidth="842" pageHeight="595" orientation="Landscape"
+              columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+
+    <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
+
+    <parameter name="P_CHANTIER_TITRE" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_MASSE_VALEUR" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_MASSE_VARIATION" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_MASSE_TENDANCE" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_MASSE_NOTE" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_EFFECTIF_VALEUR" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_EFFECTIF_NOTE" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_PART_MASSE_GLOBALE" class="java.lang.String"/>
+    <parameter name="P_DISTRIBUTION_EQUIPE" class="java.util.List"/>
+    <parameter name="P_EFFECTIF_FONCTION" class="java.util.List"/>
+    <parameter name="SUBREPORT_DISTRIBUTION" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="SUBREPORT_EFFECTIF_FONCTION" class="net.sf.jasperreports.engine.JasperReport"/>
+
+    <field name="equipeNom" class="java.lang.String"/>
+    <field name="equipeTitre" class="java.lang.String"/>
+    <field name="equipeEffectif" class="java.lang.Integer"/>
+    <field name="equipeMasse" class="java.lang.String"/>
+    <field name="equipePartChantierPourcent" class="java.lang.String"/>
+    <field name="nomPrenom" class="java.lang.String"/>
+    <field name="fonction" class="java.lang.String"/>
+    <field name="cin" class="java.lang.String"/>
+    <field name="joursTravailles" class="java.lang.Integer"/>
+    <field name="joursRecuperationOuvrable" class="java.lang.String"/>
+    <field name="joursRecuperationDimanche" class="java.lang.String"/>
+    <field name="salaireMensuel" class="java.lang.String"/>
+    <field name="primeRoulageOrdinaire" class="java.lang.String"/>
+    <field name="primeRoulageDimanche" class="java.lang.String"/>
+    <field name="salaireTotal" class="java.lang.String"/>
+    <field name="observation" class="java.lang.String"/>
+
+    <group name="GroupEquipe" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="true" keepTogether="true">
+        <groupExpression><![CDATA[$F{equipeNom}]]></groupExpression>
+        <groupHeader>
+            <band height="40" splitType="Prevent">
+                <textField>
+                    <reportElement x="0" y="0" width="802" height="14" mode="Opaque" backcolor="#DBEAFE" forecolor="#1E3A8A"/>
+                    <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="8" isBold="true"/><paragraph leftIndent="8"/></textElement>
+                    <textFieldExpression><![CDATA[$F{equipeTitre}]]></textFieldExpression>
+                </textField>
+                <textField>
+                    <reportElement x="600" y="0" width="90" height="14" mode="Opaque" backcolor="#DBEAFE" forecolor="#1E3A8A"/>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                    <textFieldExpression><![CDATA["Effectif : " + $F{equipeEffectif}]]></textFieldExpression>
+                </textField>
+                <textField>
+                    <reportElement x="692" y="0" width="110" height="14" mode="Opaque" backcolor="#DBEAFE" forecolor="#1E3A8A"/>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                    <textFieldExpression><![CDATA[$F{equipeMasse} + " DH (" + $F{equipePartChantierPourcent} + ")"]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="0" y="16" width="130" height="24" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
+                    <text><![CDATA[Nom et prénom]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="130" y="16" width="90" height="24" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
+                    <text><![CDATA[Fonction]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="220" y="16" width="65" height="24" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                    <text><![CDATA[CIN]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="285" y="16" width="115" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                    <text><![CDATA[Nbre jrs]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="285" y="28" width="35" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[P]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="320" y="28" width="40" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[J.R.O]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="360" y="28" width="40" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[J.R.D]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="400" y="16" width="175" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                    <text><![CDATA[Salaire]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="400" y="28" width="65" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[Salaire]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="465" y="28" width="55" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[RO]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="520" y="28" width="55" height="12" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6"/></textElement>
+                    <text><![CDATA[RD]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="575" y="16" width="65" height="24" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                    <text><![CDATA[Total]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="640" y="16" width="162" height="24" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                    <text><![CDATA[Obs]]></text>
+                </staticText>
+            </band>
+        </groupHeader>
+    </group>
+
+    <title>
+        <band height="150" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="16" mode="Opaque" backcolor="#2563EB"/>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="9.5" isBold="true"/><paragraph leftIndent="8"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_CHANTIER_TITRE}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="20" width="260" height="14"/>
+                <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA["MASSE DE PAIE  " + $P{P_CHANTIER_MASSE_VALEUR} + " DH   (" + $P{P_CHANTIER_MASSE_VARIATION} + ")"]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="270" y="20" width="220" height="14"/>
+                <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA["EFFECTIF  " + $P{P_CHANTIER_EFFECTIF_VALEUR} + "   (" + $P{P_CHANTIER_EFFECTIF_NOTE} + ")"]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="500" y="20" width="300" height="14"/>
+                <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA["PART DE LA MASSE GLOBALE  " + $P{P_CHANTIER_PART_MASSE_GLOBALE}]]></textFieldExpression>
+            </textField>
+
+            <subreport>
+                <reportElement x="0" y="38" width="390" height="110"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_DISTRIBUTION_EQUIPE})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DISTRIBUTION}]]></subreportExpression>
+            </subreport>
+            <subreport>
+                <reportElement x="412" y="38" width="390" height="110"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_EFFECTIF_FONCTION})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_EFFECTIF_FONCTION}]]></subreportExpression>
+            </subreport>
+        </band>
+    </title>
+
+    <detail>
+        <band height="11" splitType="Prevent">
+            <rectangle>
+                <reportElement x="0" y="0" width="802" height="11" mode="Opaque" backcolor="#F8FAFC">
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0.0"/></graphicElement>
+            </rectangle>
+            <textField>
+                <reportElement x="0" y="0" width="130" height="11"/>
+                <box leftPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{nomPrenom}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="130" y="0" width="90" height="11"/>
+                <box leftPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{fonction}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="220" y="0" width="65" height="11"/>
+                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{cin}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="285" y="0" width="35" height="11"/>
+                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{joursTravailles}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="320" y="0" width="40" height="11"/>
+                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{joursRecuperationOuvrable}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="360" y="0" width="40" height="11"/>
+                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{joursRecuperationDimanche}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="400" y="0" width="65" height="11"/>
+                <box rightPadding="3" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{salaireMensuel}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="465" y="0" width="55" height="11"/>
+                <box rightPadding="3" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{primeRoulageOrdinaire}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="520" y="0" width="55" height="11"/>
+                <box rightPadding="3" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{primeRoulageDimanche}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="575" y="0" width="65" height="11"/>
+                <box rightPadding="3" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$F{salaireTotal}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="640" y="0" width="162" height="11"/>
+                <box leftPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <textFieldExpression><![CDATA[$F{observation}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

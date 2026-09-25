@@ -17,11 +17,6 @@ RUN ./mvnw -q package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# fonts-dejavu-core : police embarquée par le rapport PDF paie (staport.rh.paie.report), nécessaire
-# pour rendre les accents français — voir PaieReportFontProvider.
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
