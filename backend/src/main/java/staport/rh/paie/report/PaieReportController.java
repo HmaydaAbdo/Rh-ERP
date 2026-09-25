@@ -16,12 +16,16 @@ import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 
 /**
- * Rapport PDF de paie — hiérarchie Chantier → Équipe — pour une période donnée. Endpoint frère de
- * {@code PaieExportController} : mêmes données, même permission — l'export Excel reste inchangé.
+ * Rapport PDF BI RH/Paie de synthèse pour la direction — masse de paie, effectif, distributions
+ * chantier/équipe/fonction, comparaison au mois précédent, puis détail chantier par chantier (voir
+ * {@code docs/report/README.md}). Périmètre = mêmes filtres que {@code POST /paie/search}
+ * ({@link PaieReportPdfRequestDto}), pas une sélection manuelle de feuilles comme l'export Excel
+ * ({@code PaieExportController}, même permission {@code PAIE_EXPORT}, même source {@code Paie} mais
+ * calcul de périmètre distinct — voir README, section « Pourquoi deux périmètres ? »).
  */
 @RestController
 @RequestMapping("/paie/report")
-@Tag(name = "Paie", description = "Rapport PDF (reporting direction) des bulletins de paie, par chantier et par équipe")
+@Tag(name = "Paie", description = "Rapport PDF BI de synthèse RH/Paie pour la direction")
 public class PaieReportController {
 
     private final PaieReportPdfService pdfService;
@@ -31,7 +35,7 @@ public class PaieReportController {
     }
 
     @PostMapping("/pdf")
-    @Operation(summary = "Télécharger le rapport PDF de paie d'une période (par chantier et équipe)")
+    @Operation(summary = "Télécharger le rapport PDF BI de la paie sur le périmètre filtré (période obligatoire)")
     @PreAuthorize("hasAuthority('PAIE_EXPORT')")
     public ResponseEntity<byte[]> telecharger(@RequestBody PaieReportPdfRequestDto requete) {
         YearMonth periode = parsePeriode(requete.periode());

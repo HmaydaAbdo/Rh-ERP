@@ -120,7 +120,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes distinctes trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
-| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF (même périmètre et même configuration que l'export Excel, voir « Export Excel » et « Rapport PDF » ci-dessous) | 200 |
+| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search`, voir `docs/report/README.md` | 200, 404 |
 
 `PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
 `fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe`,
@@ -225,13 +225,14 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 
 ## Export Excel et Rapport PDF
 
-La génération de documents à partir des bulletins de paie (export Excel multi-feuilles, rapport
-PDF) est documentée dans **`docs/report/README.md`** — architecture partagée
-(`PaiePerimetreService`), structure des feuilles/sections, paramétrage chantier/équipe (dialog
-dédié `PaieExportExcelDialogComponent`), règle Include/Exclude, et points d'extension pour le PDF.
-Ne pas dupliquer cette documentation ici — seules les règles ci-dessous, propres au champ
-`Paie.equipe` en tant que donnée métier (indépendantes du format de sortie), restent dans ce
-document.
+La génération de documents à partir des bulletins de paie est documentée dans
+**`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, dialog dédié
+`PaieExportExcelDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction, dialog
+dédié `PaieExportPdfDialogComponent`) — architecture, modèle analytique et catalogue de KPI du
+rapport PDF, structure des feuilles/sections, paramétrage chantier/équipe, règle Include/Exclude, et
+points d'extension. Ne pas dupliquer cette documentation ici — seules les règles ci-dessous, propres
+au champ `Paie.equipe` en tant que donnée métier (indépendantes du format de sortie), restent dans
+ce document.
 
 `GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
 bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
@@ -262,7 +263,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export : deux boutons/dialogs distincts — « Exporter Excel » (`PaieExportExcelDialogComponent`, dédié, voir `docs/report/README.md`) et « Exporter PDF » (dialog encore intégré à ce composant, UX à redessiner) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export : deux boutons/dialogs dédiés, voir `docs/report/README.md` — « Exporter Excel » (`PaieExportExcelDialogComponent`, configuration chantier/équipe) et « Exporter PDF » (`PaieExportPdfDialogComponent`, rapport BI sur le périmètre des filtres actifs) |
 | `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
