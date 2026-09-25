@@ -57,7 +57,7 @@ public class PaieExportService {
 
     public ByteArrayInputStream exporter(YearMonth periode, PaieExportRequestDto requete) {
         PerimetrePaie perimetre = perimetreService.calculer(periode, requete.feuillesEquipeMode(),
-                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier());
+                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier(), requete.chantiers());
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             PaieExcelStyles styles = new PaieExcelStyles(workbook);

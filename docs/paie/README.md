@@ -119,7 +119,8 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes distinctes trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
-| `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter (GLB + par chantier + par équipe selon la configuration) | 200 |
+| `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
+| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF (même périmètre et même configuration que l'export Excel, voir « Export Excel » et « Rapport PDF » ci-dessous) | 200 |
 
 `PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
 `fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe`,
@@ -227,8 +228,9 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 `POST /paie/export` (corps `PaieExportRequestDto`) génère un export multi-feuilles
 (`PaieExcelStyles` + `PaieSheetWriter` + `PaieExportService`) :
 
-- Une feuille **GLB** avec tous les bulletins de la période — jamais filtrée, quelle que soit la
-  configuration ci-dessous.
+- Une feuille **GLB** avec tous les bulletins de la période retenus après application du filtre
+  `chantiers` (voir ci-dessous) — jamais filtrée par `equipesExcluesFeuilleChantier`/
+  `feuillesEquipeMode`, quelle que soit la configuration correspondante.
 - Une feuille par **chantier** (tri alphabétique — regroupement par `Paie.chantier.code` dans une
   `TreeMap`), avec tous les bulletins de ce chantier, sauf les équipes listées dans
   `equipesExcluesFeuilleChantier` pour ce chantier (indépendant du choix des sous-feuilles équipe
@@ -244,6 +246,17 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
   `SUBTOTAL(9, ...)` recalculée dynamiquement — pas une valeur figée), un total du mois précédent
   (valeur figée, calculée côté serveur), un récapitulatif effectif par fonction (tri alphabétique du
   libellé, via `TreeMap`, avec une colonne STC).
+
+### Filtre par chantier (`chantiers`)
+
+`chantiers` (liste de codes chantier, ex. `["C068"]`) restreint **tout** l'export, y compris la
+feuille GLB, aux chantiers listés — `null` ou une liste vide n'applique aucune restriction (tous
+les chantiers de la période). Contrairement à `equipesExcluesFeuilleChantier` (qui ne filtre que la
+feuille d'UN chantier, jamais la GLB), `chantiers` filtre en amont dans
+`PaiePerimetreService.calculer` : seules les lignes des chantiers sélectionnés sont chargées pour
+la période et la période précédente, avant tout autre traitement. Ce même paramètre est partagé
+avec le rapport PDF (`PaieReportPdfRequestDto.chantiers`), pour garantir que le filtre chantier
+produit le même périmètre dans les deux formats.
 
 `GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
 bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
@@ -311,13 +324,39 @@ besoin confirmé).
 
 ---
 
+## Rapport PDF
+
+`POST /paie/report/pdf` (corps `PaieReportPdfRequestDto`) génère un rapport PDF mis en forme —
+hiérarchie **Chantier → Équipe** — à partir du **même périmètre** que l'export Excel
+(`PaiePerimetreService`, voir « Export Excel » ci-dessus, y compris le filtre `chantiers`) :
+aucune écriture, en lecture seule, jamais de modification de `PaieExportService`.
+
+Chaîne de génération (`PaieReportPdfService`) : `PerimetrePaie` → vue-modèle formatée
+(`PaieReportViewModelBuilder`) → template Thymeleaf (`resources/report/paie/rapport.html` +
+`fragments.html`, moteur Thymeleaf privé au service, jamais un `ViewResolver` MVC) → PDF via
+**openhtmltopdf** (choisi plutôt qu'iText pour des raisons de licence, voir `backend/pom.xml`).
+
+Contenu : un bandeau d'en-tête (titre, période, date de génération), puis une section globale (tous
+les bulletins retenus après filtre `chantiers`), puis une section par chantier et, si
+`feuillesEquipeMode` le prévoit, une sous-section par équipe — mêmes totaux et récapitulatif
+effectif par fonction que l'export Excel. Si aucun bulletin n'existe pour la période (après filtre),
+l'endpoint répond en erreur (`AucunePaiePeriodeException`) plutôt que de générer un PDF vide.
+
+Le bandeau d'en-tête ne porte pas encore le logo Staport : aucun fichier logo n'existe à ce jour dans
+le dépôt (uniquement `frontend/src/favicon.ico`) ; l'ajouter nécessite de fournir l'image, de la
+charger en classpath (`ClassPathResource`, comme `PaieReportPdfService.chargerCss`), de l'encoder en
+base64 (le rendu PDF n'a pas d'URI de base pour résoudre un chemin relatif) et de l'injecter dans le
+fragment `hero` de `fragments.html`.
+
+---
+
 ## Frontend
 
 Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période), export (période + configuration des feuilles équipe par chantier : aucune/toutes/personnalisée, + exclusion d'équipes de la feuille d'un chantier) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période), export (une seule boîte de dialogue, format PDF ou Excel + période + filtre optionnel par chantiers (appliqué aux deux formats, y compris la feuille/section GLB) + configuration des feuilles/sections équipe par chantier : aucune/toutes/personnalisée, + exclusion d'équipes de la feuille d'un chantier) |
 | `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |

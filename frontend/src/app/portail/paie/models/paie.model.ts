@@ -82,6 +82,8 @@ export interface PaieExportRequest {
   equipesParChantier: Record<string, string[]> | null;
   /** Indépendant du mode ci-dessus : chantier -> équipes à exclure de la feuille globale de CE chantier. */
   equipesExcluesFeuilleChantier: Record<string, string[]> | null;
+  /** Restreint tout l'export (y compris la feuille GLB) à ces chantiers ; null/vide = tous les chantiers. */
+  chantiers: string[] | null;
 }
 
 export interface PaieImportLigneIgnoree {
@@ -101,15 +103,14 @@ export interface PaieImportResult {
   fonctionsCreees: string[];
 }
 
-export type FormatExport = 'EXCEL' | 'PDF_SYNTHESE' | 'PDF_DETAILLE';
+export type FormatExport = 'EXCEL' | 'PDF';
 
-export type TypeRapportPdf = 'SYNTHESE' | 'DETAILLE';
-
-/** Corps de POST /paie/report/pdf. Les trois champs équipe ne servent qu'en DETAILLE (ignorés en SYNTHESE). */
+/** Corps de POST /paie/report/pdf. Même structure que PaieExportRequest (voir PaiePerimetreService). */
 export interface PaieRapportPdfRequest {
   periode: string;
-  typeRapport: TypeRapportPdf;
   feuillesEquipeMode?: FeuillesEquipeMode;
   equipesParChantier?: Record<string, string[]> | null;
   equipesExcluesFeuilleChantier?: Record<string, string[]> | null;
+  /** Restreint tout le rapport (y compris la section GLB) à ces chantiers ; null/vide = tous les chantiers. */
+  chantiers?: string[] | null;
 }

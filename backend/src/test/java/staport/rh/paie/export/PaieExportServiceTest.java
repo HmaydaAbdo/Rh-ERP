@@ -42,11 +42,11 @@ class PaieExportServiceTest {
     }
 
     private static PaieExportRequestDto requeteToutesEquipes(String periode) {
-        return new PaieExportRequestDto(periode, FeuillesEquipeMode.TOUTES, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.TOUTES, null, null, null);
     }
 
     private static PaieExportRequestDto requeteAucuneEquipe(String periode) {
-        return new PaieExportRequestDto(periode, FeuillesEquipeMode.AUCUNE, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.AUCUNE, null, null, null);
     }
 
     @Test
@@ -202,6 +202,7 @@ class PaieExportServiceTest {
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
                 FeuillesEquipeMode.PERSONNALISE,
                 Map.of("C059", List.of("EQUIPE A")),
+                null,
                 null);
 
         ByteArrayInputStream resultat = exportService.exporter(periode, requete);
@@ -228,7 +229,8 @@ class PaieExportServiceTest {
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
                 FeuillesEquipeMode.AUCUNE,
                 null,
-                Map.of("C059", List.of("EQUIPE B")));
+                Map.of("C059", List.of("EQUIPE B")),
+                null);
 
         ByteArrayInputStream resultat = exportService.exporter(periode, requete);
 
@@ -242,6 +244,32 @@ class PaieExportServiceTest {
             Sheet feuilleGlobale = workbook.getSheet("GLB");
             assertThat(feuilleGlobale.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
             assertThat(feuilleGlobale.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+        }
+    }
+
+    @Test
+    void exporter_devraitRestreindreLaFeuilleGlbAuxChantiersSelectionnes() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paieC059 = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
+        Paie paieC068 = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paieC059, paieC068));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
+                FeuillesEquipeMode.AUCUNE, null, null, List.of("C068"));
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, requete);
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            assertThat(workbook.getSheet("C068")).isNotNull();
+            assertThat(workbook.getSheet("C059")).isNull();
+
+            // La feuille GLB, elle aussi, est restreinte au chantier sélectionné : un seul employé
+            // (celui de C068), donc la ligne "TOTAL GENERAL" suit immédiatement.
+            Sheet feuilleGlobale = workbook.getSheet("GLB");
+            assertThat(feuilleGlobale.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+            assertThat(feuilleGlobale.getRow(5).getCell(3).getStringCellValue()).isEqualTo("TOTAL GENERAL");
         }
     }
 
