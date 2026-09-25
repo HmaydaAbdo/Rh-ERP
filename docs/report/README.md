@@ -42,20 +42,40 @@ staport.rh.paie.export/      ← sortie Excel (Apache POI)
 ├── SqueletteMateriel.java        Cas particulier chantier C168 (tableau matériel à main levée)
 └── PaieExportRequestDto.java     Corps de la requête
 
-staport.rh.paie.report/      ← sortie PDF BI (Thymeleaf + openhtmltopdf + JFreeChart)
+staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML compilés au démarrage,
+│                                 resources/report/paie/jasper/)
 ├── PaieReportController.java     POST /paie/report/pdf
-├── PaieReportPdfService.java     Orchestration : appelle PaieBiReportBuilder, rend le HTML, produit le PDF
+├── PaieReportPdfService.java     Orchestration : appelle PaieBiReportBuilder, compile/remplit les
+│                                 gabarits JRXML, concatène les JasperPrint (bandeau+synthèse+STC,
+│                                 puis un par chantier) et exporte en PDF (JRPdfExporter)
 ├── PaieBiReportBuilder.java      Périmètre + agrégations BI (fait/dimensions/mesures — voir plus bas).
 │                                 N'utilise PAS PaiePerimetreService : besoin différent (agrégation
 │                                 systématique de tout le périmètre filtré, jamais une sélection
 │                                 manuelle de sous-feuilles) — voir « Pourquoi deux périmètres ? ».
-├── PaieReportChartService.java   Graphiques en barres horizontales (JFreeChart → PNG → base64)
-├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / DistributionVue /
-│   KpiMontantVue / KpiEffectifVue / EffectifFonctionSimpleVue / LigneMatriceFonctionChantierVue /
-│   LigneEmployeVue                Vue-modèle (records), aucune logique métier
-├── PaieReportFontProvider.java   Police embarquée pour le rendu PDF (accents FR)
+├── PaieReportChartCustomizer.java Personnalise les 4 <barChart> JRXML natifs (barres horizontales,
+│                                 couleurs, étiquettes de valeur) — seule logique Java des graphiques,
+│                                 le moteur JFreeChart est interne à JasperReports (aucun PNG généré
+│                                 à part).
+├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
+│   LigneEmployeVue                Vue-modèle (records), aucune logique métier — utilisée uniquement
+│                                 côté Java (paramètres JRXML), jamais liée par réflexion
+├── DistributionVue / EffectifFonctionSimpleVue / RepartitionBean / LigneStcBean /
+│   LigneEmployeDetailBean         Classes à getters (pas des records) : lignes de table/graphique
+│                                 liées par introspection JavaBean (JRBeanCollectionDataSource) —
+│                                 un getter public sur une classe non publique n'est pas accessible
+│                                 par réflexion depuis un autre package, ces classes sont publiques
 ├── PaieReportNumberFormat.java   Formatage des nombres, variations et tendances (HAUSSE/BAISSE/STABLE)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page Paie)
+
+resources/report/paie/jasper/  ← gabarits JRXML
+├── rapport.jrxml                 Bandeau (pageHeader, répété sur toutes les pages), synthèse globale
+│                                 100% graphique (4 barCharts), appel du sous-rapport STC
+├── stc.jrxml                     Sous-rapport : liste condensée des départs STC / sortie du mois
+├── chantierSection.jrxml         Rempli séparément par chantier (voir PaieReportPdfService) : titre
+│                                 + KPI + 2 sous-rapports statistiques (title band), puis détail
+│                                 employé à plat groupé par équipe (<group keepTogether>)
+├── tableDistribution.jrxml       Sous-rapport : répartition par équipe d'un chantier
+└── tableEffectifFonction.jrxml   Sous-rapport : effectif (+ STC) par fonction d'un chantier
 ```
 
 Frontend (`frontend/src/app/portail/paie/`) :
@@ -216,14 +236,20 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier | Oui — Δ absolu + Δ % (voir « Null-handling ») |
 | Effectif | `COUNT(*)` | Global / chantier | Oui — Δ absolu (jamais ambigu, 0 est une valeur légitime) |
 | Masse moyenne par employé | masse ÷ effectif | Global | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
-| Nombre de chantiers / fonctions | `COUNT DISTINCT` | Global | Non |
-| Distribution par chantier | `SUM(salaireTotal)` groupé par chantier, + part du total | Global | Non (déjà 1 comparaison par KPI ci-dessus ; comparer chaque barre alourdirait le rapport sans plus-value décisionnelle claire) |
-| Distribution par équipe (avec Sans équipe) | idem, groupé par équipe | Global / chantier | Non |
-| Effectif par fonction (+ STC) | `COUNT(*)`, `COUNT` STC, groupés par fonction | Global / chantier | Non |
-| Matrice Fonction × Chantier (+ STC) | `COUNT(*)`, `COUNT` STC, groupés par (chantier, fonction) | Global | Non |
+| Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur/filtre global conservé sur la déclinaison Chantier/Fonction (voir ci-dessous) |
+| Masse par chantier (chart 1) | `SUM(salaireTotal)` groupé par chantier | Global | Non |
+| Masse par fonction (chart 2) | `SUM(salaireTotal)` groupé par fonction | Global | Non |
+| Effectif par fonction (chart 3) | `COUNT(*)` groupé par fonction | Global | Non |
+| Effectif par chantier (chart 4) | `COUNT(*)` groupé par chantier | Global | Non |
+| STC / sortie du mois | Liste condensée (nom & prénom, chantier, fonction) des lignes où `ObservationStc.estStcOuSortie` | Global | Non — section isolée, jamais mélangée aux graphiques |
+| Distribution par équipe (avec Sans équipe) | `SUM(salaireTotal)` groupé par équipe, + part du total | Chantier | Non |
+| Effectif par fonction (+ STC) | `COUNT(*)`, `COUNT` STC, groupés par fonction | Chantier | Non |
 
-Pas de KPI dupliqué : chaque carte/tableau répond à une question différente (voir §16 du prompt de
-conception — jamais cinq façons de montrer le même montant).
+Pas de KPI dupliqué : chaque carte/tableau/graphique répond à une question différente (voir §16 du
+prompt de conception — jamais cinq façons de montrer le même montant). La synthèse globale (page
+100% graphique) ne conserve que l'indicateur Chantier — la déclinaison combinée Chantier/Fonction
+(ex. l'ancienne carte "Chantiers / Fonctions") a été retirée ; la dimension Fonction reste couverte,
+mais uniquement par les charts 2 et 3 ci-dessus, jamais par un second indicateur/filtre global.
 
 ### Null-handling (comparaison mois précédent)
 
@@ -264,34 +290,44 @@ résume, seul le dernier détaille.
 
 ### Structure du rapport
 
-1. **Synthèse globale** (page 1) : bandeau (période + filtres actifs + date de génération), KPI
-   (masse réelle, effectif, masse moyenne/employé, nombre de chantiers/fonctions), graphiques +
-   tableaux de distribution (chantier, équipe), effectif par fonction.
-2. **Effectif et STC par chantier et par fonction** : la matrice Fonction × Chantier, en table
-   plate (voir « Visualisations » — pas de heatmap à cette cardinalité).
-3. **Une section par chantier**, dans l'ordre alphabétique des codes : synthèse BI du chantier
+1. **Bandeau** (`pageHeader` JRXML) : logo, titre, période analysée, filtres actifs, date de
+   génération — répété à l'identique sur **toutes** les pages du rapport (fond opaque uniforme,
+   englobant le logo, pour éliminer toute différence de couleur d'arrière-plan).
+2. **Synthèse globale — page 100% graphique** : KPI (masse réelle, effectif, masse moyenne/employé,
+   **nombre de chantiers** — seul indicateur/filtre global conservé sur la déclinaison
+   Chantier/Fonction, voir « Catalogue de KPI ») puis **4 visualisations uniquement**, aucun tableau
+   statistique récapitulatif : masse par chantier, masse par fonction, effectif par fonction,
+   effectif par chantier (voir « Visualisations »).
+3. **STC / Sorties du mois** : section isolée, liste condensée (nom & prénom, chantier, fonction)
+   des lignes où `ObservationStc.estStcOuSortie` — jamais mélangée à la synthèse graphique ni aux
+   tableaux BI par chantier.
+4. **Une section par chantier**, dans l'ordre alphabétique des codes : synthèse BI du chantier
    (masse + comparaison, effectif + comparaison, part de la masse globale, distribution par
    équipe, effectif par fonction), puis une sous-section par équipe (BI compacte : effectif, masse,
    part du chantier — puis le tableau détaillé des employés), et enfin **Sans équipe** dans les
    mêmes conditions.
 
-Chaque chantier commence sur une nouvelle page (`page-break-before: always`), et **chaque équipe
-(Sans équipe comprise) démarre aussi sur sa propre page** — un rapport de direction ne doit jamais
-laisser deux sections s'enchaîner sans repère visuel clair. Le tableau employé reprend les colonnes
-de la liste Paie à l'écran, moins Chantier et Équipe (déjà portées par les titres de section) : Nom
-& prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
+Chaque chantier commence sur une nouvelle page (un `JasperPrint` par chantier, concaténé à l'export
+— voir « Composants et services principaux »). Une équipe (Sans équipe comprise), en revanche, ne
+démarre pas systématiquement sur sa propre page — elle garde son détail employé sur la même page
+que son en-tête tant qu'elle y tient (`<group keepTogether="true">` dans `chantierSection.jrxml`) et
+n'est coupée entre deux pages que si elle est, à elle seule, plus grande qu'une page : avec un
+chantier réel comportant de nombreuses petites équipes, forcer une page par équipe produirait des
+dizaines de pages quasi vides. Le tableau employé reprend les colonnes de la liste Paie à l'écran,
+moins Chantier et Équipe (déjà portées par les titres de section) : Nom & prénom, Fonction, CIN,
+Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
 
 ### Visualisations
 
-- **Distribution par chantier / par équipe** (page 1) : barres horizontales générées côté serveur
-  (`PaieReportChartService`, JFreeChart → PNG embarqué en base64 — le rendu PDF openhtmltopdf n'a
-  pas d'URI de base pour référencer un fichier image). Jamais de camembert/donut : une barre
-  horizontale compare mieux plus de 3-4 valeurs et affiche le montant directement sur la barre. Le
-  graphique est plafonné aux 12 plus grosses valeurs (le reste regroupé sous « Autres ») pour rester
-  lisible imprimé — le tableau de distribution associé, lui, n'est jamais tronqué.
-- **Matrice Fonction × Chantier** : table plate plutôt qu'une heatmap, la cardinalité chantier ×
-  fonction d'une PME BTP restant largement lisible en tableau — une heatmap y ajouterait du chrome
-  sans gain de lecture.
+- **Les 4 charts de la synthèse globale** : `<barChart>` JRXML natifs (moteur JFreeChart interne à
+  JasperReports, personnalisés par `PaieReportChartCustomizer` — barres horizontales, jamais de PNG
+  pré-généré à part). Jamais de camembert/donut : une barre horizontale compare mieux plus de 3-4
+  valeurs et affiche le montant/effectif directement sur la barre. Chaque graphique est plafonné aux
+  12 plus grosses valeurs (le reste regroupé sous « Autres », masse et effectif cumulés) pour rester
+  lisible imprimé — voir `PaieBiReportBuilder.versRepartition`.
+- **Distribution par équipe (niveau chantier)** : reste une table (`tableDistribution.jrxml`), la
+  synthèse globale seule est 100% graphique — au niveau chantier, la cardinalité (quelques équipes)
+  se lit mieux en table qu'en graphique.
 
 ### Composants et services principaux
 
@@ -300,16 +336,15 @@ de la liste Paie à l'écran, moins Chantier et Équipe (déjà portées par les
 | `PaiePerimetreService` | Périmètre Excel (sélection manuelle de sous-feuilles équipe) |
 | `PaieExportService` / `PaieSheetWriter` / `PaieExcelStyles` | Génération du classeur Excel |
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
-| `PaieReportPdfService` | Orchestration HTML → PDF du rapport PDF |
-| `PaieReportChartService` | Graphiques du rapport PDF (JFreeChart) |
+| `PaieReportPdfService` | Orchestration JRXML → PDF du rapport PDF (compilation, remplissage, concaténation, export) — testée de bout en bout par `PaieReportPdfServiceTest` |
+| `PaieReportChartCustomizer` | Personnalisation Java des 4 `<barChart>` JRXML (orientation horizontale, couleurs, étiquettes) |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
 
-Le logo Staport (`resources/report/paie/logo-staport.png`, chargé en classpath et encodé en base64
-dans `PaieReportPdfService`, injecté dans le fragment `hero` de `fragments.html`) apparaît dans un
-badge blanc à gauche du bandeau d'en-tête — le rendu PDF (openhtmltopdf) n'ayant pas d'URI de base
-pour résoudre un chemin de fichier relatif, l'image est toujours embarquée en base64, jamais
-référencée par chemin.
+Le logo Staport (`resources/report/paie/logo-staport.png`, chargé en classpath par
+`PaieReportPdfService` et transmis au gabarit JRXML en paramètre `java.io.InputStream`) apparaît à
+gauche du bandeau d'en-tête, sur le même fond opaque uniforme que le reste de la bande (voir
+« Structure du rapport »).
 
 ---
 
@@ -326,7 +361,8 @@ référencée par chemin.
   rapport filtré se confirme (probablement pas un simple dialog de confirmation, plutôt un besoin à
   redéfinir explicitement).
 - **Nouveaux indicateurs BI** : ajouter une mesure suit toujours le même chemin —
-  `PaieBiReportBuilder` (calcul), un nouveau record de vue-modèle si la forme ne rentre dans aucun
-  existant, un fragment Thymeleaf dans `fragments.html`, une entrée dans le catalogue de KPI
+  `PaieBiReportBuilder` (calcul), un nouveau record de vue-modèle (paramètre scalaire) ou une classe
+  à getters (ligne de table/graphique liée par réflexion) si la forme ne rentre dans aucun existant,
+  les éléments correspondants dans le gabarit JRXML concerné, une entrée dans le catalogue de KPI
   ci-dessus. Avant d'ajouter un KPI, vérifier qu'il répond à une question non déjà couverte (voir
   « Catalogue de KPI ») pour éviter la duplication.

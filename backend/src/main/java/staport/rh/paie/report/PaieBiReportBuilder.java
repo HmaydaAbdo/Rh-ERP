@@ -50,11 +50,9 @@ class PaieBiReportBuilder {
     }
 
     private final PaieRepository repository;
-    private final PaieReportChartService chartService;
 
-    PaieBiReportBuilder(PaieRepository repository, PaieReportChartService chartService) {
+    PaieBiReportBuilder(PaieRepository repository) {
         this.repository = repository;
-        this.chartService = chartService;
     }
 
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
@@ -72,22 +70,19 @@ class PaieBiReportBuilder {
         BigDecimal massePrecedente = precedent.isEmpty() ? null : sommer(precedent);
 
         List<Agregat> agregatChantier = agreger(courant, this::codeChantier);
-        List<Agregat> agregatEquipe = agreger(courant, this::libelleEquipe);
+        List<Agregat> agregatFonction = agreger(courant, this::libelleFonction);
 
         SyntheseGlobaleVue synthese = new SyntheseGlobaleVue(
                 kpiMontant(masseCourante, massePrecedente),
                 kpiEffectif(courant.size(), precedent.size()),
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
-                distinct(courant, p -> p.getFonction().getLibelle()).size(),
-                versDistribution(agregatChantier, masseCourante),
-                versDistribution(agregatEquipe, masseCourante),
-                effectifParFonction(courant),
-                grapheDistribution(agregatChantier),
-                grapheDistribution(agregatEquipe)
+                versRepartition(agregatChantier),
+                versRepartition(agregatFonction)
         );
 
-        List<LigneMatriceFonctionChantierVue> matrice = matriceFonctionChantier(courant);
+        List<LigneStcBean> stc = lignesStc(courant);
+
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
                 .sorted()
@@ -99,7 +94,7 @@ class PaieBiReportBuilder {
                 LocalDateTime.now().format(FORMAT_DATE_GENERATION),
                 filtresActifs(requete, courant),
                 synthese,
-                matrice,
+                stc,
                 chantiers);
     }
 
@@ -156,17 +151,14 @@ class PaieBiReportBuilder {
                 paie.getObservation());
     }
 
-    private List<LigneMatriceFonctionChantierVue> matriceFonctionChantier(List<Paie> lignes) {
-        Map<String, Map<String, List<Paie>>> parChantierPuisFonction = lignes.stream()
-                .collect(Collectors.groupingBy(this::codeChantier, TreeMap::new,
-                        Collectors.groupingBy(p -> p.getFonction().getLibelle(), TreeMap::new, Collectors.toList())));
-
-        List<LigneMatriceFonctionChantierVue> resultat = new ArrayList<>();
-        parChantierPuisFonction.forEach((chantier, parFonction) -> parFonction.forEach((fonction, lignesFonction) ->
-                resultat.add(new LigneMatriceFonctionChantierVue(
-                        chantier, fonction, lignesFonction.size(),
-                        (int) lignesFonction.stream().filter(ObservationStc::estStcOuSortie).count()))));
-        return resultat;
+    /** Liste condensée des départs STC / sortie du mois (voir {@code ObservationStc}), triée par
+     * nom & prénom — section isolée de la synthèse globale, jamais mélangée aux autres tableaux. */
+    private List<LigneStcBean> lignesStc(List<Paie> lignes) {
+        return lignes.stream()
+                .filter(ObservationStc::estStcOuSortie)
+                .sorted(Comparator.comparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
+                .map(p -> new LigneStcBean(p.getEmployee().getNomPrenom(), codeChantier(p), p.getFonction().getLibelle()))
+                .toList();
     }
 
     private List<EffectifFonctionSimpleVue> effectifParFonction(List<Paie> lignes) {
@@ -180,9 +172,9 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Regroupe par {@code cle} (code chantier, ou libellé équipe avec "Sans équipe") et calcule
-     * l'agrégat brut de chaque groupe, trié par montant décroissant — un classement, la lecture BI
-     * la plus directe d'une distribution. */
+    /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
+     * équipe") et calcule l'agrégat brut de chaque groupe, trié par montant décroissant — un
+     * classement, la lecture BI la plus directe d'une distribution. */
     private List<Agregat> agreger(List<Paie> lignes, Function<Paie, String> cle) {
         Map<String, List<Paie>> groupes = lignes.stream().collect(Collectors.groupingBy(cle, LinkedHashMap::new, Collectors.toList()));
         return groupes.entrySet().stream()
@@ -201,24 +193,28 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Plafonne le graphique aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses valeurs (le reste
-     * regroupé sous "Autres") — un graphique à direction reste lisible, pas un mur de barres ; le
-     * tableau de distribution associé, lui, n'est jamais tronqué. */
-    private String grapheDistribution(List<Agregat> agregats) {
-        List<Map.Entry<String, BigDecimal>> valeurs = new ArrayList<>();
-        BigDecimal resteAutres = BigDecimal.ZERO;
+    /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
+     * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — un graphique de
+     * direction reste lisible, pas un mur de barres. La même liste alimente à la fois le graphique
+     * de masse et celui d'effectif de la dimension (chantier ou fonction), voir
+     * {@code docs/report/README.md}. */
+    private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
+        List<RepartitionBean> valeurs = new ArrayList<>();
+        int effectifAutres = 0;
+        BigDecimal montantAutres = BigDecimal.ZERO;
         for (int i = 0; i < agregats.size(); i++) {
             Agregat agregat = agregats.get(i);
             if (i < MAX_BARRES_GRAPHIQUE) {
-                valeurs.add(Map.entry(agregat.cle(), agregat.montant()));
+                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant()));
             } else {
-                resteAutres = resteAutres.add(agregat.montant());
+                effectifAutres += agregat.effectif();
+                montantAutres = montantAutres.add(agregat.montant());
             }
         }
-        if (resteAutres.compareTo(BigDecimal.ZERO) > 0) {
-            valeurs.add(Map.entry("Autres", resteAutres));
+        if (effectifAutres > 0) {
+            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
         }
-        return chartService.genererBarresHorizontales(valeurs);
+        return valeurs;
     }
 
     private List<String> filtresActifs(PaieReportPdfRequestDto requete, List<Paie> courant) {
@@ -259,6 +255,10 @@ class PaieBiReportBuilder {
         return paie.getChantier().getCode();
     }
 
+    private String libelleFonction(Paie paie) {
+        return paie.getFonction().getLibelle();
+    }
+
     /** "Sans équipe" pour un bulletin sans équipe renseignée — jamais exclu des distributions. */
     private String libelleEquipe(Paie paie) {
         String equipe = paie.getEquipe();
@@ -271,10 +271,6 @@ class PaieBiReportBuilder {
 
     private List<Paie> filtrerParEquipe(List<Paie> lignes, String nomEquipe) {
         return lignes.stream().filter(p -> libelleEquipe(p).equals(nomEquipe)).toList();
-    }
-
-    private List<String> distinct(List<Paie> lignes, Function<Paie, String> cle) {
-        return lignes.stream().map(cle).distinct().toList();
     }
 
     private BigDecimal sommer(List<Paie> lignes) {
