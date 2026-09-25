@@ -21,14 +21,8 @@ import { ChantierReference } from '../../../shared/reference-data/chantier-refer
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import {
-  FeuillesEquipeMode,
-  FormatExport,
-  Paie,
-  PaieExportRequest,
-  PaieImportResult,
-  PaieRapportPdfRequest
-} from '../models/paie.model';
+import { PaieExportExcelDialogComponent } from '../export-excel/paie-export-excel-dialog.component';
+import { FeuillesEquipeMode, Paie, PaieImportResult, PaieRapportPdfRequest } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
@@ -56,7 +50,8 @@ function toPeriodeString(date: Date | null): string | undefined {
     MultiSelectModule,
     SelectButtonModule,
     ConfirmDialogModule,
-    DialogModule
+    DialogModule,
+    PaieExportExcelDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
@@ -103,10 +98,10 @@ export class PaieListComponent implements OnInit {
   });
 
   showExportDialog = false;
+  showExcelExportDialog = false;
   exporting = false;
 
   readonly exportForm = this.fb.group({
-    format: ['PDF' as FormatExport],
     periode: [null as Date | null],
     chantiers: [[] as string[]],
     feuillesEquipeMode: ['AUCUNE' as FeuillesEquipeMode],
@@ -118,11 +113,6 @@ export class PaieListComponent implements OnInit {
     { label: 'Aucune', value: 'AUCUNE' },
     { label: 'Toutes', value: 'TOUTES' },
     { label: 'Personnalisé', value: 'PERSONNALISE' }
-  ];
-
-  readonly formatExportOptions: { label: string; value: FormatExport }[] = [
-    { label: 'PDF', value: 'PDF' },
-    { label: 'Excel', value: 'EXCEL' }
   ];
 
   /** Équipes sélectionnées par chantier (mode PERSONNALISE) et équipes exclues par chantier
@@ -254,7 +244,6 @@ export class PaieListComponent implements OnInit {
 
   onOpenExportDialog(): void {
     this.exportForm.reset({
-      format: 'PDF',
       periode: null,
       chantiers: [],
       feuillesEquipeMode: 'AUCUNE',
@@ -305,7 +294,6 @@ export class PaieListComponent implements OnInit {
     if (!periode) {
       return;
     }
-    const format = this.exportForm.controls.format.value ?? 'PDF';
     const feuillesEquipeMode = this.exportForm.controls.feuillesEquipeMode.value ?? 'AUCUNE';
     const chantiersSelectionnes = this.exportForm.controls.chantiers.value ?? [];
     const chantiers = chantiersSelectionnes.length > 0 ? chantiersSelectionnes : null;
@@ -313,38 +301,13 @@ export class PaieListComponent implements OnInit {
     const equipesParChantier = this.equipesNonVides(this.equipesParChantierPersonnalise);
     const equipesExclues = this.equipesNonVides(this.equipesExcluesParChantier);
 
-    if (format === 'PDF') {
-      this.telechargerRapportPdf({
-        periode,
-        feuillesEquipeMode,
-        equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
-        equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null,
-        chantiers
-      });
-      return;
-    }
-
-    const requete: PaieExportRequest = {
+    this.telechargerRapportPdf({
       periode,
       feuillesEquipeMode,
       equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
       equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null,
       chantiers
-    };
-
-    this.exporting = true;
-    this.paieService
-      .exporter(requete)
-      .pipe(finalize(() => (this.exporting = false)))
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = `Paie_Export_${periode}.xlsx`;
-        lien.click();
-        window.URL.revokeObjectURL(url);
-        this.showExportDialog = false;
-      });
+    });
   }
 
   private telechargerRapportPdf(requete: PaieRapportPdfRequest): void {
