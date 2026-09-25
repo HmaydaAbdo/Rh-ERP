@@ -11,14 +11,20 @@ import staport.rh.paie.controller.PaieController;
 import staport.rh.paie.export.PaieExportController;
 import staport.rh.paie.imports.PaieImportController;
 import staport.rh.paie.imports.PaieImportException;
+import staport.rh.paie.report.PaieReportController;
 import java.time.Instant;
 
-@RestControllerAdvice(assignableTypes = {PaieController.class, PaieImportController.class, PaieExportController.class})
+@RestControllerAdvice(assignableTypes = {PaieController.class, PaieImportController.class, PaieExportController.class, PaieReportController.class})
 @Order(0)
 public class PaieExceptionHandler {
 
     @ExceptionHandler(PaieNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleNotFound(PaieNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AucunePaiePeriodeException.class)
+    public ResponseEntity<ErrorResponseDto> handleAucunePaiePeriode(AucunePaiePeriodeException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 

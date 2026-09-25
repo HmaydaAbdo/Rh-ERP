@@ -2,21 +2,57 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8" />
-    <title>Rapport de paie — Par chantier et équipe</title>
+    <title>Rapport de paie — Synthèse BI</title>
     <style th:utext="${css}"></style>
     <style>@page { size: A4 landscape; }</style>
 </head>
 <body>
 
-<table th:replace="~{fragments :: hero('Détail par chantier et équipe')}"></table>
+<table th:replace="~{fragments :: hero}"></table>
 
-<div th:each="chantier, iterChantier : ${chantiers}"
-     th:style="${iterChantier.first} ? '' : 'page-break-before: always;'">
+<!-- ============================== SYNTHÈSE GLOBALE ============================== -->
+<div class="section global">
+    <div class="section-titre global">Synthèse globale</div>
 
-    <div th:replace="~{fragments :: section(${chantier.titre}, 'chantier', ${chantier.lignes}, ${chantier.totaux}, ${chantier.effectifParFonction})}"></div>
+    <table class="kpis">
+        <tr>
+            <td class="kpi-cellule" th:replace="~{fragments :: kpiMontant('Masse réelle de paie', ${synthese.masse}, 'large')}"></td>
+            <td class="kpi-cellule" th:replace="~{fragments :: kpiEffectif('Effectif', ${synthese.effectif}, 'large')}"></td>
+            <td class="kpi-cellule" th:replace="~{fragments :: kpiSimple('Masse moyenne / employé', ${synthese.masseMoyenneParEmploye} + ' DH', 'large')}"></td>
+            <td class="kpi-cellule" th:replace="~{fragments :: kpiSimple('Chantiers / Fonctions', ${synthese.nombreChantiers} + ' / ' + ${synthese.nombreFonctions}, 'large')}"></td>
+        </tr>
+    </table>
+
+    <div class="deux-colonnes">
+        <div class="colonne">
+            <div class="sous-titre">Répartition de la masse par chantier</div>
+            <img th:replace="~{fragments :: graphique(${synthese.graphiqueMasseParChantierBase64})}" />
+            <table th:replace="~{fragments :: distribution(${synthese.distributionChantier})}"></table>
+        </div>
+        <div class="colonne">
+            <div class="sous-titre">Répartition de la masse par équipe</div>
+            <img th:replace="~{fragments :: graphique(${synthese.graphiqueMasseParEquipeBase64})}" />
+            <table th:replace="~{fragments :: distribution(${synthese.distributionEquipe})}"></table>
+        </div>
+    </div>
+
+    <div class="sous-titre">Effectif par fonction</div>
+    <table th:replace="~{fragments :: effectifFonction(${synthese.effectifParFonction})}"></table>
+</div>
+
+<!-- ============================== FONCTION × CHANTIER ============================== -->
+<div class="section global" style="page-break-before: always;">
+    <div class="section-titre global">Effectif et STC par chantier et par fonction</div>
+    <table th:replace="~{fragments :: matriceFonctionChantier(${matriceFonctionChantier})}"></table>
+</div>
+
+<!-- ============================== CHANTIER PAR CHANTIER ============================== -->
+<div th:each="chantier : ${chantiers}" style="page-break-before: always;">
+
+    <div th:replace="~{fragments :: chantierSynthese(${chantier})}"></div>
 
     <th:block th:each="equipe : ${chantier.equipes}">
-        <div th:replace="~{fragments :: section(${equipe.titre}, 'equipe', ${equipe.lignes}, ${equipe.totaux}, ${equipe.effectifParFonction})}"></div>
+        <div th:replace="~{fragments :: equipeSection(${equipe})}"></div>
     </th:block>
 
 </div>

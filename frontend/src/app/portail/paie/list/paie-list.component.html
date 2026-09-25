@@ -24,137 +24,14 @@
   </form>
 </p-dialog>
 
-<p-dialog header="Exporter le rapport PDF" [(visible)]="showExportDialog" [modal]="true" [style]="{ width: '620px' }">
-  <form [formGroup]="exportForm">
-    <p class="paie-list__dialog-hint">
-      Rapport PDF mis en forme : une section globale, puis une par chantier et par équipe, avec totaux et effectif par fonction.
-      Pour l'export Excel, voir le bouton « Exporter Excel ».
-    </p>
-
-    <div class="paie-list__dialog-field">
-      <label for="exportPeriode">Période *</label>
-      <p-calendar
-        inputId="exportPeriode"
-        formControlName="periode"
-        view="month"
-        dateFormat="mm/yy"
-        appendTo="body"
-        [showIcon]="true"
-        placeholder="Sélectionner un mois"
-        (onSelect)="onExportPeriodeChange()"
-      ></p-calendar>
-    </div>
-
-    <div class="paie-list__dialog-field">
-      <label for="exportChantiers">Chantiers (optionnel)</label>
-      <p-multiSelect
-        inputId="exportChantiers"
-        formControlName="chantiers"
-        [options]="chantiers"
-        optionLabel="code"
-        optionValue="code"
-        placeholder="Tous les chantiers"
-        display="chip"
-        appendTo="body"
-      ></p-multiSelect>
-      <p class="paie-list__dialog-hint">
-        Laisser vide pour inclure tous les chantiers de la période, ou en sélectionner un ou plusieurs pour restreindre l'export (Excel et PDF) à ceux-ci.
-      </p>
-    </div>
-
-    <div class="paie-list__dialog-field">
-      <label>Sections par équipe</label>
-      <p-selectButton
-        formControlName="feuillesEquipeMode"
-        [options]="feuillesEquipeModeOptions"
-        optionLabel="label"
-        optionValue="value"
-      ></p-selectButton>
-      <p class="paie-list__dialog-hint">
-        Aucune : pas de sous-feuille équipe. Toutes : une sous-feuille par équipe trouvée, pour chaque chantier.
-        Personnalisé : choisir les équipes par chantier ci-dessous.
-      </p>
-    </div>
-
-    @if (exportForm.controls.feuillesEquipeMode.value === 'PERSONNALISE') {
-      <div class="paie-list__dialog-field">
-        <label for="exportChantiersPersonnalises">Chantiers à personnaliser</label>
-        <p-multiSelect
-          inputId="exportChantiersPersonnalises"
-          formControlName="chantiersPersonnalises"
-          [options]="chantiers"
-          optionLabel="code"
-          optionValue="code"
-          placeholder="Aucun chantier sélectionné"
-          display="chip"
-          appendTo="body"
-          [disabled]="!exportForm.controls.periode.value"
-          (onChange)="onChantiersPersonnalisesChange()"
-        ></p-multiSelect>
-
-        @for (code of exportForm.controls.chantiersPersonnalises.value ?? []; track code) {
-          <div class="paie-list__equipe-chantier-row">
-            <span class="paie-list__equipe-chantier-code">{{ code }}</span>
-            <p-multiSelect
-              [options]="equipesDisponiblesPour(code)"
-              [ngModel]="equipesParChantierPersonnalise[code] ?? []"
-              (ngModelChange)="equipesParChantierPersonnalise[code] = $event"
-              [ngModelOptions]="{ standalone: true }"
-              [loading]="chargementEquipesEnCours(code)"
-              placeholder="Équipes à générer"
-              display="chip"
-              appendTo="body"
-            ></p-multiSelect>
-          </div>
-        }
-      </div>
-    }
-
-    <div class="paie-list__dialog-field">
-      <label for="exportChantiersExclusion">Exclure des équipes de la feuille globale d'un chantier (optionnel)</label>
-      <p-multiSelect
-        inputId="exportChantiersExclusion"
-        formControlName="chantiersExclusion"
-        [options]="chantiers"
-        optionLabel="code"
-        optionValue="code"
-        placeholder="Aucun chantier sélectionné"
-        display="chip"
-        appendTo="body"
-        [disabled]="!exportForm.controls.periode.value"
-        (onChange)="onChantiersExclusionChange()"
-      ></p-multiSelect>
-
-      @for (code of exportForm.controls.chantiersExclusion.value ?? []; track code) {
-        <div class="paie-list__equipe-chantier-row">
-          <span class="paie-list__equipe-chantier-code">{{ code }}</span>
-          <p-multiSelect
-            [options]="equipesDisponiblesPour(code)"
-            [ngModel]="equipesExcluesParChantier[code] ?? []"
-            (ngModelChange)="equipesExcluesParChantier[code] = $event"
-            [ngModelOptions]="{ standalone: true }"
-            [loading]="chargementEquipesEnCours(code)"
-            placeholder="Équipes à exclure"
-            display="chip"
-            appendTo="body"
-          ></p-multiSelect>
-        </div>
-      }
-    </div>
-
-    <button
-      pButton
-      type="button"
-      label="Télécharger"
-      icon="pi pi-file-pdf"
-      [loading]="exporting"
-      [disabled]="!exportForm.controls.periode.value"
-      (click)="onExporter()"
-    ></button>
-  </form>
-</p-dialog>
-
 <app-paie-export-excel-dialog [(visible)]="showExcelExportDialog"></app-paie-export-excel-dialog>
+
+<app-paie-export-pdf-dialog
+  [(visible)]="showPdfExportDialog"
+  [filtreCourant]="filtresActifsPourRapport"
+  [functions]="functions"
+  [chantiers]="chantiers"
+></app-paie-export-pdf-dialog>
 
 <p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '640px' }">
   @if (importResult) {
@@ -220,7 +97,7 @@
         class="p-button-outlined"
         (click)="showExcelExportDialog = true"
       ></button>
-      <button pButton type="button" icon="pi pi-file-pdf" label="Exporter PDF" class="p-button-outlined" (click)="onOpenExportDialog()"></button>
+      <button pButton type="button" icon="pi pi-file-pdf" label="Exporter PDF" class="p-button-outlined" (click)="showPdfExportDialog = true"></button>
       <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
       <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
     </div>

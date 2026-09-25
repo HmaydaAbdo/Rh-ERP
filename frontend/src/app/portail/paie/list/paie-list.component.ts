@@ -9,10 +9,7 @@ import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
-import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
@@ -22,7 +19,8 @@ import { ChantierReferenceService } from '../../../shared/reference-data/chantie
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieExportExcelDialogComponent } from '../export-excel/paie-export-excel-dialog.component';
-import { FeuillesEquipeMode, Paie, PaieImportResult, PaieRapportPdfRequest } from '../models/paie.model';
+import { PaieExportPdfDialogComponent, PaieFiltresActifs } from '../export-pdf/paie-export-pdf-dialog.component';
+import { Paie, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
@@ -40,18 +38,16 @@ function toPeriodeString(date: Date | null): string | undefined {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    FormsModule,
     RouterLink,
     TableModule,
     ButtonModule,
     InputTextModule,
     DropdownModule,
     CalendarModule,
-    MultiSelectModule,
-    SelectButtonModule,
     ConfirmDialogModule,
     DialogModule,
-    PaieExportExcelDialogComponent
+    PaieExportExcelDialogComponent,
+    PaieExportPdfDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
@@ -97,32 +93,8 @@ export class PaieListComponent implements OnInit {
     periode: [null as Date | null]
   });
 
-  showExportDialog = false;
   showExcelExportDialog = false;
-  exporting = false;
-
-  readonly exportForm = this.fb.group({
-    periode: [null as Date | null],
-    chantiers: [[] as string[]],
-    feuillesEquipeMode: ['AUCUNE' as FeuillesEquipeMode],
-    chantiersPersonnalises: [[] as string[]],
-    chantiersExclusion: [[] as string[]]
-  });
-
-  readonly feuillesEquipeModeOptions: { label: string; value: FeuillesEquipeMode }[] = [
-    { label: 'Aucune', value: 'AUCUNE' },
-    { label: 'Toutes', value: 'TOUTES' },
-    { label: 'Personnalisé', value: 'PERSONNALISE' }
-  ];
-
-  /** Équipes sélectionnées par chantier (mode PERSONNALISE) et équipes exclues par chantier
-   * (feuille globale de ce chantier) — objets simples, pas des FormControl (nombre de chantiers
-   * variable), liés au template en dehors du formGroup. */
-  equipesParChantierPersonnalise: Record<string, string[] | undefined> = {};
-  equipesExcluesParChantier: Record<string, string[] | undefined> = {};
-
-  private readonly equipesCache = new Map<string, string[]>();
-  private readonly equipesLoading = new Set<string>();
+  showPdfExportDialog = false;
 
   private lastPage = 0;
   private lastSize = 10;
@@ -138,6 +110,19 @@ export class PaieListComponent implements OnInit {
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
       )
       .subscribe(() => this.onSearch());
+  }
+
+  /** Périmètre du rapport PDF : exactement les filtres actuellement actifs sur la liste (voir
+   * docs/report/README.md — le rapport BI ne doit jamais ignorer silencieusement un filtre actif). */
+  get filtresActifsPourRapport(): PaieFiltresActifs {
+    const criteria = this.filterForm.getRawValue();
+    return {
+      nomPrenom: criteria.nomPrenom || null,
+      cin: criteria.cin || null,
+      periode: criteria.periode,
+      fonctionId: criteria.fonctionId,
+      chantierId: criteria.chantierId
+    };
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
@@ -240,144 +225,6 @@ export class PaieListComponent implements OnInit {
           }
         }
       });
-  }
-
-  onOpenExportDialog(): void {
-    this.exportForm.reset({
-      periode: null,
-      chantiers: [],
-      feuillesEquipeMode: 'AUCUNE',
-      chantiersPersonnalises: [],
-      chantiersExclusion: []
-    });
-    this.equipesParChantierPersonnalise = {};
-    this.equipesExcluesParChantier = {};
-    this.equipesCache.clear();
-    this.equipesLoading.clear();
-    this.showExportDialog = true;
-  }
-
-  /** La période change : les équipes déjà chargées/sélectionnées sont propres au couple
-   * (chantier, période) précédent, donc on réinitialise toute la configuration équipe. */
-  onExportPeriodeChange(): void {
-    this.equipesCache.clear();
-    this.equipesLoading.clear();
-    this.equipesParChantierPersonnalise = {};
-    this.equipesExcluesParChantier = {};
-    this.exportForm.patchValue({ chantiersPersonnalises: [], chantiersExclusion: [] });
-  }
-
-  onChantiersPersonnalisesChange(): void {
-    const codes = this.exportForm.controls.chantiersPersonnalises.value ?? [];
-    codes.forEach((code) => this.chargerEquipesSiNecessaire(code));
-    this.equipesParChantierPersonnalise = this.conserverClesPresentes(this.equipesParChantierPersonnalise, codes);
-  }
-
-  onChantiersExclusionChange(): void {
-    const codes = this.exportForm.controls.chantiersExclusion.value ?? [];
-    codes.forEach((code) => this.chargerEquipesSiNecessaire(code));
-    this.equipesExcluesParChantier = this.conserverClesPresentes(this.equipesExcluesParChantier, codes);
-  }
-
-  equipesDisponiblesPour(chantierCode: string): string[] {
-    const cle = this.cleEquipesCache(chantierCode);
-    return cle ? (this.equipesCache.get(cle) ?? []) : [];
-  }
-
-  chargementEquipesEnCours(chantierCode: string): boolean {
-    const cle = this.cleEquipesCache(chantierCode);
-    return cle ? this.equipesLoading.has(cle) : false;
-  }
-
-  onExporter(): void {
-    const periode = toPeriodeString(this.exportForm.controls.periode.value);
-    if (!periode) {
-      return;
-    }
-    const feuillesEquipeMode = this.exportForm.controls.feuillesEquipeMode.value ?? 'AUCUNE';
-    const chantiersSelectionnes = this.exportForm.controls.chantiers.value ?? [];
-    const chantiers = chantiersSelectionnes.length > 0 ? chantiersSelectionnes : null;
-
-    const equipesParChantier = this.equipesNonVides(this.equipesParChantierPersonnalise);
-    const equipesExclues = this.equipesNonVides(this.equipesExcluesParChantier);
-
-    this.telechargerRapportPdf({
-      periode,
-      feuillesEquipeMode,
-      equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
-      equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null,
-      chantiers
-    });
-  }
-
-  private telechargerRapportPdf(requete: PaieRapportPdfRequest): void {
-    this.exporting = true;
-    this.paieService
-      .telechargerRapportPdf(requete)
-      .pipe(finalize(() => (this.exporting = false)))
-      .subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const lien = document.createElement('a');
-          lien.href = url;
-          lien.download = `Paie_Rapport_${requete.periode}.pdf`;
-          lien.click();
-          window.URL.revokeObjectURL(url);
-          this.showExportDialog = false;
-        },
-        error: (err: HttpErrorResponse) => void this.afficherErreurRapportPdf(err)
-      });
-  }
-
-  /** Avec responseType 'blob', le corps d'erreur JSON du backend arrive lui aussi en Blob : on le relit
-   * pour afficher son message (ex. « Aucun bulletin de paie pour la période 2026-08 … »). */
-  private async afficherErreurRapportPdf(err: HttpErrorResponse): Promise<void> {
-    let detail = "Le rapport PDF n'a pas pu être généré.";
-    if (err.error instanceof Blob) {
-      try {
-        const corps = JSON.parse(await err.error.text()) as { message?: string };
-        if (corps.message) {
-          detail = corps.message;
-        }
-      } catch {
-        // corps non JSON : on garde le message générique
-      }
-    }
-    this.messageService.add({ severity: 'error', summary: 'Rapport PDF', detail, life: 8000 });
-  }
-  private chargerEquipesSiNecessaire(chantierCode: string): void {
-    const periode = toPeriodeString(this.exportForm.controls.periode.value);
-    const cle = this.cleEquipesCache(chantierCode);
-    if (!periode || !cle || this.equipesCache.has(cle) || this.equipesLoading.has(cle)) {
-      return;
-    }
-    this.equipesLoading.add(cle);
-    this.paieService
-      .listerEquipes(chantierCode, periode)
-      .pipe(finalize(() => this.equipesLoading.delete(cle)))
-      .subscribe((equipes) => this.equipesCache.set(cle, equipes));
-  }
-
-  private cleEquipesCache(chantierCode: string): string | null {
-    const periode = toPeriodeString(this.exportForm.controls.periode.value);
-    return periode ? `${chantierCode}|${periode}` : null;
-  }
-
-  private conserverClesPresentes(
-    source: Record<string, string[] | undefined>,
-    clesAConserver: string[]
-  ): Record<string, string[] | undefined> {
-    return Object.fromEntries(Object.entries(source).filter(([cle]) => clesAConserver.includes(cle)));
-  }
-
-  private equipesNonVides(source: Record<string, string[] | undefined>): Record<string, string[]> {
-    const resultat: Record<string, string[]> = {};
-    for (const [code, equipes] of Object.entries(source)) {
-      if (equipes && equipes.length > 0) {
-        resultat[code] = equipes;
-      }
-    }
-    return resultat;
   }
 
   private deletePaie(paie: Paie): void {

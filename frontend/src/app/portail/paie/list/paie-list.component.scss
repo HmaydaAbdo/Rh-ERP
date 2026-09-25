@@ -160,23 +160,6 @@
     margin: 0 0 var(--space-md);
   }
 
-  &__equipe-chantier-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-xs);
-
-    p-multiselect {
-      flex: 1;
-    }
-  }
-
-  &__equipe-chantier-code {
-    font-weight: 500;
-    font-size: 0.8125rem;
-    min-width: 4rem;
-  }
-
   &__import-table-scroll {
     max-height: 400px;
     overflow-y: auto;
