@@ -51,9 +51,9 @@
 
     <div th:replace="~{fragments :: chantierSynthese(${chantier})}"></div>
 
-    <th:block th:each="equipe : ${chantier.equipes}">
+    <div th:each="equipe : ${chantier.equipes}" style="page-break-before: always;">
         <div th:replace="~{fragments :: equipeSection(${equipe})}"></div>
-    </th:block>
+    </div>
 
 </div>
 
