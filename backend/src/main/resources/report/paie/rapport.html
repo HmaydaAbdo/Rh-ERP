@@ -16,10 +16,10 @@
 
     <table class="kpis">
         <tr>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiMontant('Masse réelle de paie', ${synthese.masse}, 'large')}"></td>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiEffectif('Effectif', ${synthese.effectif}, 'large')}"></td>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiSimple('Masse moyenne / employé', ${synthese.masseMoyenneParEmploye} + ' DH', 'large')}"></td>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiSimple('Chantiers / Fonctions', ${synthese.nombreChantiers} + ' / ' + ${synthese.nombreFonctions}, 'large')}"></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiMontant('Masse réelle de paie', ${synthese.masse}, 'large')}"></div></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiEffectif('Effectif', ${synthese.effectif}, 'large')}"></div></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiSimple('Masse moyenne / employé', ${synthese.masseMoyenneParEmploye} + ' DH', 'large')}"></div></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiSimple('Chantiers / Fonctions', ${synthese.nombreChantiers} + ' / ' + ${synthese.nombreFonctions}, 'large')}"></div></td>
         </tr>
     </table>
 
@@ -47,11 +47,16 @@
 </div>
 
 <!-- ============================== CHANTIER PAR CHANTIER ============================== -->
+<!-- Chaque chantier démarre sur une nouvelle page. Les équipes qu'il contient, en revanche,
+     s'enchaînent sans saut de page forcé (page-break-inside: avoid en CSS) : avec un chantier
+     réel comportant de nombreuses petites équipes, forcer une page par équipe produisait des
+     dizaines de pages quasi vides. « avoid » garde une équipe entière sur une même page quand
+     elle y tient, et ne la coupe que si elle est plus grande qu'une page à elle seule. -->
 <div th:each="chantier : ${chantiers}" style="page-break-before: always;">
 
     <div th:replace="~{fragments :: chantierSynthese(${chantier})}"></div>
 
-    <div th:each="equipe : ${chantier.equipes}" style="page-break-before: always;">
+    <div th:each="equipe : ${chantier.equipes}">
         <div th:replace="~{fragments :: equipeSection(${equipe})}"></div>
     </div>
 
