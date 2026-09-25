@@ -11,10 +11,9 @@ import staport.rh.paie.controller.PaieController;
 import staport.rh.paie.export.PaieExportController;
 import staport.rh.paie.imports.PaieImportController;
 import staport.rh.paie.imports.PaieImportException;
-import staport.rh.paie.report.PaieReportController;
 import java.time.Instant;
 
-@RestControllerAdvice(assignableTypes = {PaieController.class, PaieImportController.class, PaieExportController.class, PaieReportController.class})
+@RestControllerAdvice(assignableTypes = {PaieController.class, PaieImportController.class, PaieExportController.class})
 @Order(0)
 public class PaieExceptionHandler {
 
