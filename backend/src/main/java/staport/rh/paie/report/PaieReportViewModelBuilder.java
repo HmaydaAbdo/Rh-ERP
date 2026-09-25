@@ -55,14 +55,18 @@ class PaieReportViewModelBuilder {
     private LigneVue ligneVue(Paie paie) {
         return new LigneVue(
                 paie.getEmployee().getNomPrenom(),
-                paie.getEmployee().getCin(),
                 paie.getFonction().getLibelle(),
+                paie.getEmployee().getCin(),
                 paie.getNombreJoursTravailles() != null ? paie.getNombreJoursTravailles() : 0,
+                PaieReportNumberFormat.quantite(paie.getJoursRecuperationOuvrable()),
+                PaieReportNumberFormat.quantite(paie.getJoursRecuperationDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireMensuel()),
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageOrdinaire()),
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireTotal()),
-                paie.getObservation());
+                paie.getObservation(),
+                paie.getChantier().getCode(),
+                paie.getEquipe());
     }
 
     private TotauxVue totaux(List<Paie> lignes) {
