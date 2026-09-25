@@ -107,9 +107,9 @@
 
     <table class="kpis kpis--chantier">
         <tr>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiMontant('Masse de paie', ${chantier.masse}, 'compact')}"></td>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiEffectif('Effectif', ${chantier.effectif}, 'compact')}"></td>
-            <td class="kpi-cellule" th:replace="~{fragments :: kpiSimple('Part de la masse globale', ${chantier.partMasseGlobalePourcent}, 'compact')}"></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiMontant('Masse de paie', ${chantier.masse}, 'compact')}"></div></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiEffectif('Effectif', ${chantier.effectif}, 'compact')}"></div></td>
+            <td class="kpi-cellule"><div th:replace="~{fragments :: kpiSimple('Part de la masse globale', ${chantier.partMasseGlobalePourcent}, 'compact')}"></div></td>
         </tr>
     </table>
 

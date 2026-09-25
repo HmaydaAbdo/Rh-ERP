@@ -35,8 +35,11 @@ class PaieReportChartService {
     private static final String SERIE_MASSE = "Masse de paie (DH)";
     private static final Color COULEUR_BARRE = new Color(0x25, 0x63, 0xEB);
     private static final int LARGEUR_PX = 900;
-    private static final int HAUTEUR_PAR_BARRE_PX = 28;
-    private static final int HAUTEUR_MIN_PX = 140;
+    // Assez de hauteur par barre pour que l'étiquette de catégorie et l'étiquette de valeur
+    // (polices réduites ci-dessous) ne se chevauchent jamais avec la ligne voisine, même avec
+    // le nombre de catégories réel observé en production (25 chantiers, ~19 équipes).
+    private static final int HAUTEUR_PAR_BARRE_PX = 20;
+    private static final int HAUTEUR_MIN_PX = 100;
 
     /**
      * @param valeurs montant par libellé, déjà classé dans l'ordre d'affichage voulu (le graphique
@@ -63,9 +66,12 @@ class PaieReportChartService {
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(new Color(0xE2, 0xE8, 0xF0));
         plot.setInsets(new RectangleInsets(4, 4, 4, 12));
-        plot.getDomainAxis().setTickLabelFont(new Font("SansSerif", Font.PLAIN, 13));
+        plot.getDomainAxis().setTickLabelFont(new Font("SansSerif", Font.PLAIN, 9));
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
-        plot.getRangeAxis().setTickLabelFont(new Font("SansSerif", Font.PLAIN, 12));
+        // Marge entre catégories agrandie : à hauteur de ligne réduite, elle sépare visuellement
+        // chaque barre de sa voisine et évite toute impression de chevauchement.
+        ((org.jfree.chart.axis.CategoryAxis) plot.getDomainAxis()).setCategoryMargin(0.35);
+        plot.getRangeAxis().setTickLabelFont(new Font("SansSerif", Font.PLAIN, 9));
         plot.getRangeAxis().setVisible(false);
 
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
@@ -74,9 +80,9 @@ class PaieReportChartService {
         renderer.setDrawBarOutline(true);
         renderer.setSeriesOutlinePaint(0, COULEUR_BARRE.darker());
         renderer.setSeriesOutlineStroke(0, new BasicStroke(1f));
-        renderer.setMaximumBarWidth(0.12);
+        renderer.setMaximumBarWidth(0.55);
         renderer.setDefaultItemLabelsVisible(true);
-        renderer.setDefaultItemLabelFont(new Font("SansSerif", Font.BOLD, 12));
+        renderer.setDefaultItemLabelFont(new Font("SansSerif", Font.PLAIN, 9));
         renderer.setDefaultPositiveItemLabelPosition(new org.jfree.chart.labels.ItemLabelPosition(
                 org.jfree.chart.labels.ItemLabelAnchor.OUTSIDE12, org.jfree.chart.ui.TextAnchor.CENTER_LEFT));
         renderer.setDefaultItemLabelGenerator(new org.jfree.chart.labels.StandardCategoryItemLabelGenerator(
