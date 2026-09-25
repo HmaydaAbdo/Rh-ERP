@@ -28,34 +28,48 @@
 
     <table class="donnees detail">
         <colgroup>
-            <col style="width: 20%" /><col style="width: 10%" /><col style="width: 16%" />
-            <col style="width: 6%" /><col style="width: 12%" /><col style="width: 11%" />
-            <col style="width: 11%" /><col style="width: 12%" /><col style="width: 12%" />
+            <col style="width: 18%" /><col style="width: 10%" /><col style="width: 8%" />
+            <col style="width: 4%" /><col style="width: 5%" /><col style="width: 5%" />
+            <col style="width: 9%" /><col style="width: 6%" /><col style="width: 6%" />
+            <col style="width: 9%" /><col style="width: 10%" /><col style="width: 6%" />
+            <col style="width: 4%" />
         </colgroup>
         <thead>
         <tr>
-            <th class="gauche">Nom et prénom</th>
-            <th>CIN</th>
-            <th class="gauche">Fonction</th>
-            <th>Jours</th>
-            <th>Salaire mensuel</th>
-            <th>Prime ordinaire</th>
-            <th>Prime dimanche</th>
-            <th>Salaire total</th>
-            <th>Observation</th>
+            <th class="gauche" rowspan="2">Nom et prénom</th>
+            <th class="gauche" rowspan="2">Fonction</th>
+            <th rowspan="2">CIN</th>
+            <th colspan="3">Nbre jrs</th>
+            <th colspan="3">Salaire</th>
+            <th rowspan="2">Total</th>
+            <th rowspan="2">Obs</th>
+            <th rowspan="2">Chantier</th>
+            <th rowspan="2">Éq.</th>
+        </tr>
+        <tr>
+            <th>P</th>
+            <th>J.R.O</th>
+            <th>J.R.D</th>
+            <th>Salaire</th>
+            <th>RO</th>
+            <th>RD</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="ligne, iter : ${lignes}" th:classappend="${iter.odd} ? 'alt'">
             <td class="gauche" th:text="${ligne.nomPrenom}">Nom Prénom</td>
-            <td class="centre" th:text="${ligne.cin}">AB123456</td>
             <td class="gauche" th:text="${ligne.fonction}">Fonction</td>
-            <td class="centre" th:text="${ligne.joursTravailles}">26</td>
+            <td class="centre" th:text="${ligne.cin}">AB123456</td>
+            <td class="centre" th:text="${ligne.joursTravailles}">20</td>
+            <td class="centre" th:text="${ligne.joursRecuperationOuvrable}">-</td>
+            <td class="centre" th:text="${ligne.joursRecuperationDimanche}">-</td>
             <td class="num" th:text="${ligne.salaireMensuel}">0,00</td>
-            <td class="num" th:text="${ligne.primeOrdinaire}">0,00</td>
-            <td class="num" th:text="${ligne.primeDimanche}">0,00</td>
+            <td class="num" th:text="${ligne.primeRoulageOrdinaire}">-</td>
+            <td class="num" th:text="${ligne.primeRoulageDimanche}">-</td>
             <td class="num" th:text="${ligne.salaireTotal}">0,00</td>
-            <td class="centre" th:text="${ligne.observation}">—</td>
+            <td class="centre" th:text="${ligne.observation}">-</td>
+            <td class="centre" th:text="${ligne.chantier}">C196</td>
+            <td class="centre" th:text="${ligne.equipe}">OP</td>
         </tr>
         </tbody>
     </table>
