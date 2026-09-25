@@ -1,0 +1,86 @@
+<p-dialog header="Exporter en Excel" [visible]="visible" (visibleChange)="setVisible($event)" [modal]="true" [style]="{ width: '720px' }">
+  <form [formGroup]="form" class="paie-export-excel">
+    <div class="paie-export-excel__periode">
+      <div class="paie-export-excel__dialog-field">
+        <label for="excelAnnee">Année *</label>
+        <p-dropdown inputId="excelAnnee" formControlName="annee" [options]="anneeOptions" (onChange)="onPeriodeChange()"></p-dropdown>
+      </div>
+      <div class="paie-export-excel__dialog-field">
+        <label for="excelMois">Mois *</label>
+        <p-dropdown
+          inputId="excelMois"
+          formControlName="mois"
+          [options]="moisOptions"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onPeriodeChange()"
+        ></p-dropdown>
+      </div>
+    </div>
+
+    <p class="paie-export-excel__dialog-hint">
+      Une feuille <strong>Global</strong> (tous les employés de la période) et une feuille par chantier sont toujours générées.
+    </p>
+
+    <div class="paie-export-excel__dialog-field">
+      <label for="excelChantiersConcernes">Chantiers avec des équipes en feuilles séparées (optionnel)</label>
+      <p-multiSelect
+        inputId="excelChantiersConcernes"
+        formControlName="chantiersConcernes"
+        [options]="chantiers"
+        optionLabel="code"
+        optionValue="code"
+        placeholder="Aucun chantier sélectionné"
+        display="chip"
+        appendTo="body"
+        (onChange)="onChantiersConcernesChange()"
+      ></p-multiSelect>
+      <p class="paie-export-excel__dialog-hint">
+        Sélectionner un chantier ici ne sépare aucune équipe automatiquement : choisissez ensuite, pour chaque chantier, les équipes à séparer.
+      </p>
+    </div>
+
+    @for (code of form.controls.chantiersConcernes.value ?? []; track code) {
+      <div class="paie-export-excel__chantier">
+        <div class="paie-export-excel__chantier-header">Chantier {{ code }}</div>
+
+        <p-multiSelect
+          [options]="equipesDisponiblesPour(code)"
+          [ngModel]="equipesSepareesParChantier[code] ?? []"
+          (ngModelChange)="onEquipesSepareesChange(code, $event)"
+          [ngModelOptions]="{ standalone: true }"
+          [loading]="chargementEquipesEnCours(code)"
+          placeholder="Équipes à séparer"
+          display="chip"
+          appendTo="body"
+        ></p-multiSelect>
+
+        @for (equipe of equipesSepareesParChantier[code] ?? []; track equipe) {
+          <div class="paie-export-excel__equipe-row">
+            <span class="paie-export-excel__equipe-nom">{{ equipe }}</span>
+            <p-selectButton
+              [options]="inclusionOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="inclusionDe(code, equipe)"
+              (ngModelChange)="onInclusionChange(code, equipe, $event)"
+              [ngModelOptions]="{ standalone: true }"
+            ></p-selectButton>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="paie-export-excel__actions">
+      <button
+        pButton
+        type="button"
+        label="Télécharger"
+        icon="pi pi-file-excel"
+        [loading]="exporting"
+        [disabled]="!form.controls.annee.value || !form.controls.mois.value"
+        (click)="onExporter()"
+      ></button>
+    </div>
+  </form>
+</p-dialog>

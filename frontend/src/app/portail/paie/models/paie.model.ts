@@ -103,8 +103,6 @@ export interface PaieImportResult {
   fonctionsCreees: string[];
 }
 
-export type FormatExport = 'EXCEL' | 'PDF';
-
 /** Corps de POST /paie/report/pdf. Même structure que PaieExportRequest (voir PaiePerimetreService). */
 export interface PaieRapportPdfRequest {
   periode: string;
