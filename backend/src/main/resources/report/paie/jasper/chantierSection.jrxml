@@ -15,10 +15,7 @@
     <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
 
     <parameter name="P_CHANTIER_TITRE" class="java.lang.String"/>
-    <parameter name="P_CHANTIER_MASSE_VALEUR" class="java.lang.String"/>
-    <parameter name="P_CHANTIER_MASSE_VARIATION" class="java.lang.String"/>
-    <parameter name="P_CHANTIER_MASSE_TENDANCE" class="java.lang.String"/>
-    <parameter name="P_CHANTIER_MASSE_NOTE" class="java.lang.String"/>
+    <parameter name="P_CHANTIER_MASSE_LIGNE" class="java.lang.String"/>
     <parameter name="P_CHANTIER_EFFECTIF_VALEUR" class="java.lang.String"/>
     <parameter name="P_CHANTIER_EFFECTIF_NOTE" class="java.lang.String"/>
     <parameter name="P_CHANTIER_PART_MASSE_GLOBALE" class="java.lang.String"/>
@@ -144,7 +141,7 @@
             <textField>
                 <reportElement x="0" y="20" width="260" height="14"/>
                 <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
-                <textFieldExpression><![CDATA["MASSE DE PAIE  " + $P{P_CHANTIER_MASSE_VALEUR} + " DH   (" + $P{P_CHANTIER_MASSE_VARIATION} + ")"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["MASSE DE PAIE  " + $P{P_CHANTIER_MASSE_LIGNE}]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="270" y="20" width="220" height="14"/>
