@@ -79,8 +79,11 @@ table.deux-colonnes, .deux-colonnes { width: 100%; border-collapse: collapse; ta
 .deux-colonnes .colonne + .colonne { padding-right: 0; padding-left: 10px; }
 
 /* ---------- Cartes KPI ---------- */
-/* table-layout: fixed + une <td> par KPI dans une seule <tr> : les cartes s'affichent toujours
-   côte à côte en une seule ligne, quel que soit leur nombre (jamais empilées verticalement). */
+/* table-layout: fixed + une cellule par KPI dans une seule ligne de tableau : les cartes
+   s'affichent toujours côte à côte, quel que soit leur nombre (jamais empilées verticalement).
+   Attention : ce fichier est injecté tel quel dans la balise de style via th:utext (non échappé)
+   — ne jamais écrire de chevron ouvrant dans un commentaire CSS ici, ça casserait le parsing
+   XML du document généré (voir l'incident qui a motivé cette note). */
 table.kpis, table.kpis--chantier { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 6px 0; margin-top: 6px; }
 td.kpi-cellule { vertical-align: top; padding: 0; }
 
