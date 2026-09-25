@@ -223,40 +223,15 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 
 ---
 
-## Export Excel
+## Export Excel et Rapport PDF
 
-`POST /paie/export` (corps `PaieExportRequestDto`) génère un export multi-feuilles
-(`PaieExcelStyles` + `PaieSheetWriter` + `PaieExportService`) :
-
-- Une feuille **GLB** avec tous les bulletins de la période retenus après application du filtre
-  `chantiers` (voir ci-dessous) — jamais filtrée par `equipesExcluesFeuilleChantier`/
-  `feuillesEquipeMode`, quelle que soit la configuration correspondante.
-- Une feuille par **chantier** (tri alphabétique — regroupement par `Paie.chantier.code` dans une
-  `TreeMap`), avec tous les bulletins de ce chantier, sauf les équipes listées dans
-  `equipesExcluesFeuilleChantier` pour ce chantier (indépendant du choix des sous-feuilles équipe
-  ci-dessous ; le total du mois précédent affiché sur cette feuille applique la même exclusion,
-  pour rester comparable).
-- Des sous-feuilles par **équipe**, selon `feuillesEquipeMode` :
-  - `AUCUNE` : aucune sous-feuille équipe.
-  - `TOUTES` : une sous-feuille par équipe distincte trouvée, pour chaque chantier de la période.
-  - `PERSONNALISE` : uniquement les équipes listées dans `equipesParChantier` pour chaque chantier
-    (chantier absent de la map ⇒ aucune sous-feuille équipe pour lui).
-- Chaque feuille : titre `"CHANTIER : X - PAIE MOIS MM-aaaa"`, en-têtes à deux niveaux (Nbre Jrs →
-  P/J.R.O/J.R.D, SALAIRE → SALAIRE/RO/RD), une ligne par employé, un total général (formule Excel
-  `SUBTOTAL(9, ...)` recalculée dynamiquement — pas une valeur figée), un total du mois précédent
-  (valeur figée, calculée côté serveur), un récapitulatif effectif par fonction (tri alphabétique du
-  libellé, via `TreeMap`, avec une colonne STC).
-
-### Filtre par chantier (`chantiers`)
-
-`chantiers` (liste de codes chantier, ex. `["C068"]`) restreint **tout** l'export, y compris la
-feuille GLB, aux chantiers listés — `null` ou une liste vide n'applique aucune restriction (tous
-les chantiers de la période). Contrairement à `equipesExcluesFeuilleChantier` (qui ne filtre que la
-feuille d'UN chantier, jamais la GLB), `chantiers` filtre en amont dans
-`PaiePerimetreService.calculer` : seules les lignes des chantiers sélectionnés sont chargées pour
-la période et la période précédente, avant tout autre traitement. Ce même paramètre est partagé
-avec le rapport PDF (`PaieReportPdfRequestDto.chantiers`), pour garantir que le filtre chantier
-produit le même périmètre dans les deux formats.
+La génération de documents à partir des bulletins de paie (export Excel multi-feuilles, rapport
+PDF) est documentée dans **`docs/report/README.md`** — architecture partagée
+(`PaiePerimetreService`), structure des feuilles/sections, paramétrage chantier/équipe (dialog
+dédié `PaieExportExcelDialogComponent`), règle Include/Exclude, et points d'extension pour le PDF.
+Ne pas dupliquer cette documentation ici — seules les règles ci-dessous, propres au champ
+`Paie.equipe` en tant que donnée métier (indépendantes du format de sortie), restent dans ce
+document.
 
 `GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
 bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
@@ -276,77 +251,8 @@ se rapprochent jamais d'un mois sur l'autre pour le total précédent, même s'i
 rigoureusement homogène d'un mois à l'autre — candidat naturel à une normalisation (`trim` +
 `toUpperCase`, ou promotion en domaine dédié) si ce cas se présente en pratique.
 
-### Cas particulier : aucune ligne sur la période
-
-Si une feuille (GLB, chantier ou équipe) n'a aucune ligne pour la période, `formuleSousTotal` génère
-une formule dégénérée mais valide (`SUBTOTAL(9,J1:J1)-SUBTOTAL(9,J1:J1)`, qui s'évalue à 0) plutôt
-qu'une plage de cellules invalide (ex. `J4:J3`) qui aurait affiché une erreur Excel.
-
-### Total du mois précédent réellement calculé
-
-La ligne **"TOTAL GENERAL MOIS PRECEDENT"** n'est pas figée à 0 : elle est **réellement calculée**,
-somme de `salaireTotal` sur la période précédente, sur le même périmètre (global / chantier /
-équipe). Si **aucune** paie n'existe pour ce périmètre sur la période précédente (mois précédent non
-saisi, ou périmètre inexistant à l'époque), la cellule affiche le texte **"INTROUVABLE"** plutôt que
-la valeur `0` — pour distinguer "aucune donnée" de "total réellement nul" (`PaieExportService.totalSalairesOuNull`).
-
-### Effectif par fonction — colonne STC
-
-Le récapitulatif "effectif par fonction" (FONCTION / EFFECTIF) porte une troisième colonne **STC** :
-pour chaque fonction, le nombre de lignes de la feuille dont `observation` vaut exactement `"STC"`
-ou `"sortie"` (comparaison insensible à la casse et aux espaces superflus, `trim` +
-`toLowerCase`) — voir `PaieSheetWriter.estStcOuSortie`. Une observation qui ne vaut pas exactement
-l'une de ces deux valeurs (ex. absente, ou un commentaire libre contenant le mot "sortie") n'est pas
-comptée.
-
-### Squelette matériel (CAMION / ENGINS) — chantier C168 uniquement
-
-**Décision (HMAYDA, 2026-09-22)** : sur une feuille **équipe** (donc uniquement si une sous-feuille
-équipe a été générée pour ce chantier, voir plus haut — peu importe que ce soit via le mode
-`TOUTES` ou une sélection `PERSONNALISE`), si le chantier vaut **"C168"**, un second tableau — un
-« squelette » sans données, juste des étiquettes à remplir à la main — est ajouté à droite du
-tableau "effectif par fonction", sur les **mêmes lignes**, avec un saut de 3 colonnes vides
-(effectif = colonnes 0-2, squelette = colonnes 6-7) :
-
-- Équipe **"CH"** → tableau **CAMION** : CAMION CITERNE, CAMION 8\*4, CAMION SR, PORT CHAR, PICK UP.
-- Équipe **"OP"** → tableau **ENGINS** : PELLE PNEU, PELLE CHENILLE, NIVELEUSE, COMPACTEURS,
-  CHARGEUR, BULL, TRACTOPELLE.
-- Toute autre équipe (ou tout autre chantier) : aucun squelette ajouté.
-
-Seule la colonne d'étiquettes est renseignée ; la colonne "Nbre" reste **vide** (aucune valeur,
-pas même 0) — à remplir manuellement après export, l'application n'ayant aucune source de données
-pour ce décompte. Comparaison chantier/équipe insensible à la casse et aux espaces superflus. Voir
-`PaieExportService.squeletteMateriel` et `PaieSheetWriter.ecrireSqueletteMateriel`.
-
-Règle propre à ce chantier précis, sans généralisation identifiée à ce jour pour d'autres
-chantiers/équipes — voir `conventions/architecture.md` (ne jamais généraliser une règle métier sans
-besoin confirmé).
-
----
-
-## Rapport PDF
-
-`POST /paie/report/pdf` (corps `PaieReportPdfRequestDto`) génère un rapport PDF mis en forme —
-hiérarchie **Chantier → Équipe** — à partir du **même périmètre** que l'export Excel
-(`PaiePerimetreService`, voir « Export Excel » ci-dessus, y compris le filtre `chantiers`) :
-aucune écriture, en lecture seule, jamais de modification de `PaieExportService`.
-
-Chaîne de génération (`PaieReportPdfService`) : `PerimetrePaie` → vue-modèle formatée
-(`PaieReportViewModelBuilder`) → template Thymeleaf (`resources/report/paie/rapport.html` +
-`fragments.html`, moteur Thymeleaf privé au service, jamais un `ViewResolver` MVC) → PDF via
-**openhtmltopdf** (choisi plutôt qu'iText pour des raisons de licence, voir `backend/pom.xml`).
-
-Contenu : un bandeau d'en-tête (titre, période, date de génération), puis une section globale (tous
-les bulletins retenus après filtre `chantiers`), puis une section par chantier et, si
-`feuillesEquipeMode` le prévoit, une sous-section par équipe — mêmes totaux et récapitulatif
-effectif par fonction que l'export Excel. Si aucun bulletin n'existe pour la période (après filtre),
-l'endpoint répond en erreur (`AucunePaiePeriodeException`) plutôt que de générer un PDF vide.
-
-Le bandeau d'en-tête ne porte pas encore le logo Staport : aucun fichier logo n'existe à ce jour dans
-le dépôt (uniquement `frontend/src/favicon.ico`) ; l'ajouter nécessite de fournir l'image, de la
-charger en classpath (`ClassPathResource`, comme `PaieReportPdfService.chargerCss`), de l'encoder en
-base64 (le rendu PDF n'a pas d'URI de base pour résoudre un chemin relatif) et de l'injecter dans le
-fragment `hero` de `fragments.html`.
+Le détail des règles de mise en page (total du mois précédent, colonne STC, squelette matériel
+C168, cas des feuilles sans ligne) et du rapport PDF est dans `docs/report/README.md`.
 
 ---
 
@@ -356,7 +262,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période), export (une seule boîte de dialogue, format PDF ou Excel + période + filtre optionnel par chantiers (appliqué aux deux formats, y compris la feuille/section GLB) + configuration des feuilles/sections équipe par chantier : aucune/toutes/personnalisée, + exclusion d'équipes de la feuille d'un chantier) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export : deux boutons/dialogs distincts — « Exporter Excel » (`PaieExportExcelDialogComponent`, dédié, voir `docs/report/README.md`) et « Exporter PDF » (dialog encore intégré à ce composant, UX à redessiner) |
 | `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
