@@ -106,8 +106,9 @@ export class PaieListComponent implements OnInit {
   exporting = false;
 
   readonly exportForm = this.fb.group({
-    format: ['EXCEL' as FormatExport],
+    format: ['PDF' as FormatExport],
     periode: [null as Date | null],
+    chantiers: [[] as string[]],
     feuillesEquipeMode: ['AUCUNE' as FeuillesEquipeMode],
     chantiersPersonnalises: [[] as string[]],
     chantiersExclusion: [[] as string[]]
@@ -120,9 +121,8 @@ export class PaieListComponent implements OnInit {
   ];
 
   readonly formatExportOptions: { label: string; value: FormatExport }[] = [
-    { label: 'Excel', value: 'EXCEL' },
-    { label: 'PDF Synthèse', value: 'PDF_SYNTHESE' },
-    { label: 'PDF Détaillé', value: 'PDF_DETAILLE' }
+    { label: 'PDF', value: 'PDF' },
+    { label: 'Excel', value: 'EXCEL' }
   ];
 
   /** Équipes sélectionnées par chantier (mode PERSONNALISE) et équipes exclues par chantier
@@ -254,8 +254,9 @@ export class PaieListComponent implements OnInit {
 
   onOpenExportDialog(): void {
     this.exportForm.reset({
-      format: 'EXCEL',
+      format: 'PDF',
       periode: null,
+      chantiers: [],
       feuillesEquipeMode: 'AUCUNE',
       chantiersPersonnalises: [],
       chantiersExclusion: []
@@ -304,26 +305,21 @@ export class PaieListComponent implements OnInit {
     if (!periode) {
       return;
     }
-    const format = this.exportForm.controls.format.value ?? 'EXCEL';
-
-    if (format === 'PDF_SYNTHESE') {
-      // Synthèse agrégée : pas de découpage ni d'exclusion par équipe (ignorés côté backend).
-      this.telechargerRapportPdf({ periode, typeRapport: 'SYNTHESE' });
-      return;
-    }
-
+    const format = this.exportForm.controls.format.value ?? 'PDF';
     const feuillesEquipeMode = this.exportForm.controls.feuillesEquipeMode.value ?? 'AUCUNE';
+    const chantiersSelectionnes = this.exportForm.controls.chantiers.value ?? [];
+    const chantiers = chantiersSelectionnes.length > 0 ? chantiersSelectionnes : null;
 
     const equipesParChantier = this.equipesNonVides(this.equipesParChantierPersonnalise);
     const equipesExclues = this.equipesNonVides(this.equipesExcluesParChantier);
 
-    if (format === 'PDF_DETAILLE') {
+    if (format === 'PDF') {
       this.telechargerRapportPdf({
         periode,
-        typeRapport: 'DETAILLE',
         feuillesEquipeMode,
         equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
-        equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null
+        equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null,
+        chantiers
       });
       return;
     }
@@ -332,7 +328,8 @@ export class PaieListComponent implements OnInit {
       periode,
       feuillesEquipeMode,
       equipesParChantier: feuillesEquipeMode === 'PERSONNALISE' && Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
-      equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null
+      equipesExcluesFeuilleChantier: Object.keys(equipesExclues).length > 0 ? equipesExclues : null,
+      chantiers
     };
 
     this.exporting = true;
@@ -357,11 +354,10 @@ export class PaieListComponent implements OnInit {
       .pipe(finalize(() => (this.exporting = false)))
       .subscribe({
         next: (blob) => {
-          const suffixe = requete.typeRapport === 'DETAILLE' ? 'Detaille' : 'Synthese';
           const url = window.URL.createObjectURL(blob);
           const lien = document.createElement('a');
           lien.href = url;
-          lien.download = `Paie_Rapport_${suffixe}_${requete.periode}.pdf`;
+          lien.download = `Paie_Rapport_${requete.periode}.pdf`;
           lien.click();
           window.URL.revokeObjectURL(url);
           this.showExportDialog = false;
