@@ -113,18 +113,17 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void construireDepuis_devraitIsolerLesLignesStcDansUneListeCondensee() {
+    void construireDepuis_devraitCompterLesStcEtSortiesParChantier() {
         Paie stc = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "3000");
         stc.setObservation("STC");
-        Paie actif = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE A", "3000");
+        Paie sortie = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE A", "3000");
+        sortie.setObservation("Sortie");
+        Paie actif = paie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C059", "EQUIPE A", "3000");
 
-        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(stc, actif), List.of());
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(stc, sortie, actif), List.of());
 
-        assertThat(vue.stc()).hasSize(1);
-        LigneStcBean ligne = vue.stc().get(0);
-        assertThat(ligne.getNomPrenom()).isEqualTo("EMPLOYE UN");
-        assertThat(ligne.getChantier()).isEqualTo("C059");
-        assertThat(ligne.getFonction()).isEqualTo("OPERATEUR");
+        ChantierBiVue chantier = vue.chantiers().get(0);
+        assertThat(chantier.stc()).isEqualTo(2);
     }
 
     @Test

@@ -5,7 +5,6 @@ import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
-import net.sf.jasperreports.engine.JREmptyDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRPdfExporter;
 import net.sf.jasperreports.export.SimpleExporterInput;
@@ -15,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,13 +29,15 @@ import java.util.Map;
  * Génère le rapport PDF de paie — un rapport BI RH/Paie de synthèse pour la direction (voir
  * {@code docs/report/README.md}), pas un export tabulaire (celui-ci reste l'export Excel,
  * {@code PaieExportService}, jamais modifié par ce service). Chaîne : filtres + périmètre
- * ({@link PaieBiReportBuilder}) → gabarits JRXML (JasperReports Library, licence LGPL, {@code
- * resources/report/paie/jasper/}) → un {@code JasperPrint} pour le bandeau + la synthèse globale +
- * la liste STC ({@code rapport.jrxml}), puis un {@code JasperPrint} par chantier ({@code
- * chantierSection.jrxml}, rempli séparément — voir {@link #imprimerChantier}) : chaque chantier
- * démarre ainsi naturellement sur une nouvelle page à la concaténation PDF, sans saut de page forcé
- * à l'intérieur (géré par le groupe équipe du gabarit). Tous les gabarits sont compilés une seule
- * fois (constructeur) et réutilisés à chaque génération.
+ * ({@link PaieBiReportBuilder}) → gabarit JRXML unique (JasperReports Library, licence LGPL, {@code
+ * resources/report/paie/jasper/rapport.jrxml}) → un seul remplissage, source de données à plat
+ * ({@link LigneRapportDetailBean}, un employé par ligne, dénormalisée chantier + équipe) groupée en
+ * JRXML (voir {@code rapport.jrxml} : groupe Chantier {@code isStartNewPage}, groupe Équipe
+ * {@code keepTogether}) → export PDF. Un seul {@code JasperPrint} pour tout le document : le
+ * {@code pageHeader}/{@code pageFooter}, définis une seule fois dans le gabarit, se répètent donc
+ * nativement sur toutes les pages, sans jamais dupliquer leur définition ni concaténer plusieurs
+ * impressions. Les gabarits sont compilés une seule fois (constructeur) et réutilisés à chaque
+ * génération.
  */
 @Service
 public class PaieReportPdfService {
@@ -47,19 +49,13 @@ public class PaieReportPdfService {
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
-    private final JasperReport stcReport;
-    private final JasperReport chantierSectionReport;
     private final JasperReport tableDistributionReport;
-    private final JasperReport tableEffectifFonctionReport;
     private final byte[] logo;
 
     PaieReportPdfService(PaieBiReportBuilder biReportBuilder) {
         this.biReportBuilder = biReportBuilder;
         this.rapportReport = compiler("rapport.jrxml");
-        this.stcReport = compiler("stc.jrxml");
-        this.chantierSectionReport = compiler("chantierSection.jrxml");
         this.tableDistributionReport = compiler("tableDistribution.jrxml");
-        this.tableEffectifFonctionReport = compiler("tableEffectifFonction.jrxml");
         this.logo = chargerLogo();
     }
 
@@ -68,18 +64,16 @@ public class PaieReportPdfService {
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         RapportBiVue vue = biReportBuilder.construire(periode, requete);
 
-        List<JasperPrint> impressions = new ArrayList<>();
-        impressions.add(imprimerFrontMatter(vue));
-        for (ChantierBiVue chantier : vue.chantiers()) {
-            impressions.add(imprimerChantier(chantier));
-        }
+        Map<String, Object> parametres = parametres(vue);
+        List<LigneRapportDetailBean> lignes = lignesDetail(vue);
+        JasperPrint impression = remplir(rapportReport, parametres, new JRBeanCollectionDataSource(lignes));
 
-        byte[] pdf = exporterPdf(impressions);
+        byte[] pdf = exporterPdf(impression);
         log.info("Rapport PDF BI paie généré : periode={}, chantiers={}, taille={} octets", periode, vue.chantiers().size(), pdf.length);
         return pdf;
     }
 
-    private JasperPrint imprimerFrontMatter(RapportBiVue vue) {
+    private Map<String, Object> parametres(RapportBiVue vue) {
         SyntheseGlobaleVue synthese = vue.synthese();
         Map<String, Object> parametres = new HashMap<>();
         parametres.put("P_LOGO", nouveauFluxLogo());
@@ -96,33 +90,30 @@ public class PaieReportPdfService {
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
-        parametres.put("P_STC", vue.stc());
-        parametres.put("SUBREPORT_STC", stcReport);
-
-        return remplir(rapportReport, parametres, new JREmptyDataSource(1));
+        parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
+        return parametres;
     }
 
-    private JasperPrint imprimerChantier(ChantierBiVue chantier) {
-        Map<String, Object> parametres = new HashMap<>();
-        parametres.put("P_CHANTIER_TITRE", chantier.titre());
-        parametres.put("P_CHANTIER_MASSE_LIGNE", masseLigne(chantier.masse()));
-        parametres.put("P_CHANTIER_EFFECTIF_VALEUR", PaieReportNumberFormat.entier(chantier.effectif().effectifCourant()));
-        parametres.put("P_CHANTIER_EFFECTIF_NOTE", "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")");
-        parametres.put("P_CHANTIER_PART_MASSE_GLOBALE", chantier.partMasseGlobalePourcent());
-        parametres.put("P_DISTRIBUTION_EQUIPE", chantier.distributionEquipe());
-        parametres.put("P_EFFECTIF_FONCTION", chantier.effectifParFonction());
-        parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
-        parametres.put("SUBREPORT_EFFECTIF_FONCTION", tableEffectifFonctionReport);
-
-        List<LigneEmployeDetailBean> lignes = new ArrayList<>();
-        for (EquipeBiVue equipe : chantier.equipes()) {
-            for (LigneEmployeVue employe : equipe.employes()) {
-                lignes.add(new LigneEmployeDetailBean(equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(),
-                        equipe.partChantierPourcent(), employe));
+    /** Aplatit chantiers → équipes → employés en une seule liste à plat, dénormalisée avec le
+     * contexte chantier/équipe — source de données unique de {@code rapport.jrxml} (voir
+     * {@link LigneRapportDetailBean}). */
+    private List<LigneRapportDetailBean> lignesDetail(RapportBiVue vue) {
+        List<LigneRapportDetailBean> lignes = new ArrayList<>();
+        for (ChantierBiVue chantier : vue.chantiers()) {
+            String chantierMasseLigne = masseLigne(chantier.masse());
+            String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
+            String chantierEffectifNote = "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")";
+            for (EquipeBiVue equipe : chantier.equipes()) {
+                for (LigneEmployeVue employe : equipe.employes()) {
+                    lignes.add(new LigneRapportDetailBean(
+                            chantier.code(), chantier.titre(), chantierMasseLigne, chantierEffectifValeur, chantierEffectifNote,
+                            chantier.partMasseGlobalePourcent(), chantier.stc(), chantier.distributionEquipe(),
+                            equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
+                            employe));
+                }
             }
         }
-
-        return remplir(chantierSectionReport, parametres, new JRBeanCollectionDataSource(lignes));
+        return lignes;
     }
 
     private JasperPrint remplir(JasperReport report, Map<String, Object> parametres, net.sf.jasperreports.engine.JRDataSource datasource) {
@@ -133,10 +124,10 @@ public class PaieReportPdfService {
         }
     }
 
-    private byte[] exporterPdf(List<JasperPrint> impressions) {
+    private byte[] exporterPdf(JasperPrint impression) {
         try (ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             JRPdfExporter exporter = new JRPdfExporter();
-            exporter.setExporterInput(SimpleExporterInput.getInstance(impressions));
+            exporter.setExporterInput(new SimpleExporterInput(impression));
             exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(sortie));
             exporter.exportReport();
             return sortie.toByteArray();
@@ -162,12 +153,12 @@ public class PaieReportPdfService {
     }
 
     /** Ligne compacte masse + comparaison pour le bandeau KPI d'un chantier (une seule ligne de
-     * texte, pas de badge coloré comme la synthèse globale) — jamais de "(null)" affiché quand
-     * aucune donnée n'existe le mois précédent pour ce chantier. */
+     * texte, pas de badge coloré comme la synthèse globale) — formule de repli volontairement plus
+     * courte que {@link #masseNote} pour tenir sur une ligne quel que soit le montant du chantier. */
     private String masseLigne(KpiMontantVue masse) {
         String variation = variationLibelle(masse);
         return variation == null
-                ? masse.valeurCourante() + " DH  (" + masseNote(masse) + ")"
+                ? masse.valeurCourante() + " DH  (aucune donnée mois précédent)"
                 : masse.valeurCourante() + " DH  (" + variation + ")";
     }
 
@@ -192,6 +183,6 @@ public class PaieReportPdfService {
     }
 
     private InputStream nouveauFluxLogo() {
-        return new java.io.ByteArrayInputStream(logo);
+        return new ByteArrayInputStream(logo);
     }
 }
