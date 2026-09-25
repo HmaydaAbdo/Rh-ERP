@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Fragments du rapport de paie</title>
+</head>
+<body>
+
+<!-- Bandeau de titre. Variables de contexte lues : periodeLibelle, dateGeneration. -->
+<table th:fragment="hero(sousTitre)" class="hero">
+    <tr>
+        <td>
+            <div class="hero-titre">Rapport de paie</div>
+            <div class="hero-soustitre" th:text="${sousTitre}">Détail par chantier et équipe</div>
+        </td>
+        <td class="hero-droite">
+            <div class="hero-periode" th:text="${periodeLibelle}">Août 2026</div>
+            <div class="hero-date" th:text="'Généré le ' + ${dateGeneration}">Généré le 01/01/2026</div>
+        </td>
+    </tr>
+</table>
+
+<!-- Une section (chantier ou équipe) : titre, tableau détaillé, totaux, effectif/STC.
+     niveau vaut 'chantier' ou 'equipe' (contrôle uniquement le style). -->
+<div th:fragment="section(titre, niveau, lignes, totaux, effectifParFonction)"
+     th:class="'section ' + ${niveau}">
+    <div th:class="'section-titre ' + ${niveau}" th:text="${titre}">Titre de section</div>
+
+    <table class="donnees detail">
+        <colgroup>
+            <col style="width: 20%" /><col style="width: 10%" /><col style="width: 16%" />
+            <col style="width: 6%" /><col style="width: 12%" /><col style="width: 11%" />
+            <col style="width: 11%" /><col style="width: 12%" /><col style="width: 12%" />
+        </colgroup>
+        <thead>
+        <tr>
+            <th class="gauche">Nom et prénom</th>
+            <th>CIN</th>
+            <th class="gauche">Fonction</th>
+            <th>Jours</th>
+            <th>Salaire mensuel</th>
+            <th>Prime ordinaire</th>
+            <th>Prime dimanche</th>
+            <th>Salaire total</th>
+            <th>Observation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="ligne, iter : ${lignes}" th:classappend="${iter.odd} ? 'alt'">
+            <td class="gauche" th:text="${ligne.nomPrenom}">Nom Prénom</td>
+            <td class="centre" th:text="${ligne.cin}">AB123456</td>
+            <td class="gauche" th:text="${ligne.fonction}">Fonction</td>
+            <td class="centre" th:text="${ligne.joursTravailles}">26</td>
+            <td class="num" th:text="${ligne.salaireMensuel}">0,00</td>
+            <td class="num" th:text="${ligne.primeOrdinaire}">0,00</td>
+            <td class="num" th:text="${ligne.primeDimanche}">0,00</td>
+            <td class="num" th:text="${ligne.salaireTotal}">0,00</td>
+            <td class="centre" th:text="${ligne.observation}">—</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="bloc-final">
+        <table class="kpis">
+            <tr>
+                <td class="kpi">
+                    <div class="kpi-label">Effectif</div>
+                    <div class="kpi-valeur" th:text="${totaux.effectif}">0</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Somme des jours</div>
+                    <div class="kpi-valeur" th:text="${totaux.sommeJours}">0</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Somme des salaires</div>
+                    <div class="kpi-valeur" th:text="${totaux.sommeSalaires}">0,00</div>
+                </td>
+                <td class="kpi">
+                    <div class="kpi-label">Total général</div>
+                    <div class="kpi-valeur" th:text="${totaux.totalGeneral}">0,00</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="donnees recap" th:if="${!effectifParFonction.isEmpty()}" style="margin-top: 10px">
+            <thead>
+            <tr>
+                <th class="gauche">Fonction</th>
+                <th>Effectif</th>
+                <th>STC / sortie</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="f, iter : ${effectifParFonction}" th:classappend="${iter.odd} ? 'alt'">
+                <td class="gauche" th:text="${f.fonction}">Fonction</td>
+                <td class="centre" th:text="${f.effectif}">0</td>
+                <td class="centre" th:text="${f.stc}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
