@@ -190,6 +190,27 @@ automatisation ensuite si nécessaire).
 
 ---
 
+## Git — une seule branche vit sur le remote
+
+`main` est la seule branche destinée à rester sur le remote. Une branche de travail (feature,
+correctif) est créée pour une pull request, puis **supprimée dès qu'elle est mergée** — jamais
+laissée trainer une fois son contenu absorbé par `main`. Ce n'est pas une question d'ordre : la
+production tourne sur des images Docker construites par la CI à chaque push sur `main` (voir
+« CI » ci-dessus), donc toute branche encore vivante après son merge n'est plus qu'une ambiguïté
+sans utilité (elle ne représente rien qui ne soit pas déjà dans `main`) et un risque de confusion
+lors d'un futur travail (relancer un travail dessus reviendrait à empiler du nouveau code sur de
+l'historique déjà mergé — voir la procédure de redémarrage depuis `main` documentée pour ce cas).
+
+En pratique :
+- Une branche fusionnée est supprimée dans la foulée (sur GitHub, l'option « Delete branch »
+  proposée juste après le merge, ou `git push origin --delete <branche>`).
+- Si une pull request est fermée sans être mergée, sa branche est supprimée de la même façon —
+  rien ne justifie de la garder.
+- Reprendre un travail après le merge de sa pull request repart toujours de `main` à jour (jamais
+  d'empilement sur une branche dont le contenu est déjà mergé).
+
+---
+
 ## Variables d'environnement
 
 | Variable | Portée | Description |
