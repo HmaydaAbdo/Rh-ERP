@@ -10,29 +10,25 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
-import staport.rh.paie.exceptions.AucunePaiePeriodeException;
-import staport.rh.paie.reporting.PaiePerimetreService;
-import staport.rh.paie.reporting.PerimetrePaie;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * Génère le rapport PDF de paie — hiérarchie Chantier → Équipe — couche de présentation
- * supplémentaire, strictement en lecture : mêmes données que l'export Excel
- * ({@link PaiePerimetreService}), aucune écriture, aucune modification de {@code PaieExportService}.
- *
- * <p>Chaîne : {@code PerimetrePaie} → vue-modèle formatée ({@link PaieReportViewModelBuilder}) →
- * template Thymeleaf ({@code resources/report/paie/rapport.html}) → PDF via openhtmltopdf. Le
- * moteur Thymeleaf est privé à ce service (jamais un ViewResolver MVC : l'application est une API REST).
+ * Génère le rapport PDF de paie — un rapport BI RH/Paie de synthèse pour la direction (voir
+ * {@code docs/report/README.md}), pas un export tabulaire (celui-ci reste l'export Excel,
+ * {@code PaieExportService}, jamais modifié par ce service). Chaîne : filtres + périmètre
+ * ({@link PaieBiReportBuilder}, qui interroge {@code PaieRepository} directement — ce rapport
+ * n'utilise pas {@code PaiePerimetreService}, conçu pour une sélection manuelle de sous-feuilles,
+ * un besoin différent) → template Thymeleaf (`resources/report/paie/rapport.html`) → PDF via
+ * openhtmltopdf. Le moteur Thymeleaf est privé à ce service (jamais un ViewResolver MVC : l'application
+ * est une API REST).
  */
 @Service
 public class PaieReportPdfService {
@@ -41,52 +37,43 @@ public class PaieReportPdfService {
 
     private static final String FAMILLE_POLICE = "RapportPaie";
     private static final String CHEMIN_CSS = "report/paie/report.css";
-    private static final DateTimeFormatter FORMAT_DATE_GENERATION =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
 
-    private final PaiePerimetreService perimetreService;
-    private final PaieReportViewModelBuilder viewModelBuilder;
+    private final PaieBiReportBuilder biReportBuilder;
     private final PaieReportFontProvider fontProvider;
     private final SpringTemplateEngine templateEngine;
     private final String css;
 
-    PaieReportPdfService(PaiePerimetreService perimetreService,
-                         PaieReportViewModelBuilder viewModelBuilder,
-                         PaieReportFontProvider fontProvider) {
-        this.perimetreService = perimetreService;
-        this.viewModelBuilder = viewModelBuilder;
+    PaieReportPdfService(PaieBiReportBuilder biReportBuilder, PaieReportFontProvider fontProvider) {
+        this.biReportBuilder = biReportBuilder;
         this.fontProvider = fontProvider;
         this.templateEngine = creerMoteurDeTemplates();
         this.css = chargerCss();
     }
 
-    /** @throws AucunePaiePeriodeException si aucun bulletin n'existe pour la période */
+    /** @throws staport.rh.paie.exceptions.AucunePaiePeriodeException si aucun bulletin n'existe pour
+     *          la période et les filtres donnés */
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         String html = genererHtml(periode, requete);
         byte[] pdf = versPdf(html);
-        log.info("Rapport PDF paie généré : periode={}, taille={} octets", periode, pdf.length);
+        log.info("Rapport PDF BI paie généré : periode={}, taille={} octets", periode, pdf.length);
         return pdf;
     }
 
     /** Étape HTML seule, séparée pour pouvoir être testée sans rendu PDF. */
     String genererHtml(YearMonth periode, PaieReportPdfRequestDto requete) {
-        PerimetrePaie perimetre = perimetreService.calculer(periode, requete.feuillesEquipeMode(),
-                requete.equipesParChantier(), requete.equipesExcluesFeuilleChantier(), requete.chantiers());
-
-        if (perimetre.lignesGlobales().isEmpty()) {
-            throw new AucunePaiePeriodeException(periode);
-        }
-
-        RapportPaieVue vue = viewModelBuilder.construire(perimetre);
+        RapportBiVue vue = biReportBuilder.construire(periode, requete);
 
         Map<String, Object> variables = new HashMap<>();
         variables.put("periodeLibelle", vue.periodeLibelle());
+        variables.put("dateGeneration", vue.dateGeneration());
+        variables.put("filtresActifs", vue.filtresActifs());
+        variables.put("synthese", vue.synthese());
+        variables.put("matriceFonctionChantier", vue.matriceFonctionChantier());
         variables.put("chantiers", vue.chantiers());
 
         Context contexte = new Context(Locale.FRANCE);
         contexte.setVariables(variables);
         contexte.setVariable("css", css);
-        contexte.setVariable("dateGeneration", LocalDateTime.now().format(FORMAT_DATE_GENERATION));
 
         return templateEngine.process("rapport", contexte);
     }

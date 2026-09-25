@@ -1,0 +1,49 @@
+<p-dialog header="Exporter le rapport PDF" [visible]="visible" (visibleChange)="setVisible($event)" [modal]="true" [style]="{ width: '520px' }">
+  <div class="paie-export-pdf">
+    <p class="paie-export-pdf__hint">
+      Rapport BI de synthèse RH/Paie pour la direction : masse de paie, effectif, distributions par chantier/équipe,
+      comparaison au mois précédent, puis détail chantier par chantier. Pour l'export tabulaire, voir « Exporter Excel ».
+    </p>
+
+    <div class="paie-export-pdf__field">
+      <label>Périmètre du rapport</label>
+      <div class="paie-export-pdf__filtres">
+        @if (filtresLibelles.length === 0) {
+          <span>Tous chantiers · Toutes fonctions · Tous employés</span>
+        } @else {
+          @for (f of filtresLibelles; track f) {
+            <span class="paie-export-pdf__filtre-badge">{{ f }}</span>
+          }
+        }
+      </div>
+      <p class="paie-export-pdf__hint">
+        Repris des filtres actuellement appliqués sur la liste — ajustez-les sur la page avant d'exporter si besoin.
+      </p>
+    </div>
+
+    <form [formGroup]="form">
+      <div class="paie-export-pdf__periode">
+        <div class="paie-export-pdf__field">
+          <label for="pdfAnnee">Année *</label>
+          <p-dropdown inputId="pdfAnnee" formControlName="annee" [options]="anneeOptions"></p-dropdown>
+        </div>
+        <div class="paie-export-pdf__field">
+          <label for="pdfMois">Mois *</label>
+          <p-dropdown inputId="pdfMois" formControlName="mois" [options]="moisOptions" optionLabel="label" optionValue="value"></p-dropdown>
+        </div>
+      </div>
+
+      <div class="paie-export-pdf__actions">
+        <button
+          pButton
+          type="button"
+          label="Télécharger"
+          icon="pi pi-file-pdf"
+          [loading]="exporting"
+          [disabled]="!form.controls.annee.value || !form.controls.mois.value"
+          (click)="onExporter()"
+        ></button>
+      </div>
+    </form>
+  </div>
+</p-dialog>

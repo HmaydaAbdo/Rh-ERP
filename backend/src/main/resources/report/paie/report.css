@@ -4,7 +4,7 @@
 @page {
   margin: 16mm 12mm 18mm 12mm;
   @bottom-left {
-    content: "STAPORT — Rapport de paie";
+    content: "STAPORT — Rapport de paie (BI)";
     font-family: 'RapportPaie', sans-serif;
     font-size: 7.5pt;
     color: #64748B;
@@ -30,42 +30,87 @@ table.hero td { padding: 14px 18px; vertical-align: middle; }
 .hero-titre { font-size: 20pt; font-weight: bold; }
 .hero-soustitre { font-size: 10pt; color: #CBD5E1; margin-top: 3px; }
 td.hero-droite { text-align: right; }
-.hero-periode { font-size: 16pt; font-weight: bold; }
-.hero-date { font-size: 7.5pt; color: #CBD5E1; margin-top: 3px; }
+.hero-filtres { font-size: 8.5pt; color: #E2E8F0; max-width: 420px; }
+.hero-date { font-size: 7.5pt; color: #CBD5E1; margin-top: 4px; }
 
-/* ---------- Cartes d'indicateurs ---------- */
-table.kpis { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 6px 0; margin-top: 12px; }
-table.kpis td.kpi {
-  background-color: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-top: 3px solid #2563EB;
-  padding: 8px 10px;
-  vertical-align: top;
-}
-.kpi-label { font-size: 7pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
-.kpi-valeur { font-size: 14pt; font-weight: bold; margin-top: 3px; }
-
-/* ---------- Titres de section ---------- */
+/* ---------- Sections ---------- */
+.section { margin-top: 14px; }
 .section-titre {
   background-color: #2563EB;
   color: #FFFFFF;
-  font-size: 11pt;
+  font-size: 12pt;
   font-weight: bold;
-  padding: 6px 10px;
-  margin-top: 12px;
+  padding: 7px 10px;
+  margin-top: 4px;
 }
+.section-titre.global { background-color: #0F172A; }
+.section-titre.chantier { background-color: #2563EB; }
 /* Sous-section équipe : même style, en retrait, un ton plus clair pour la distinguer du chantier. */
 .section-titre.equipe {
   background-color: #93C5FD;
   color: #1E3A8A;
-  font-size: 9.5pt;
+  font-size: 10pt;
   margin-left: 14px;
+  margin-top: 10px;
 }
 .section.equipe { margin-left: 14px; }
 
+.sous-titre {
+  font-size: 9pt;
+  font-weight: bold;
+  color: #1E3A8A;
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Deux colonnes côte à côte (chantier / équipe) — via table, pas de flexbox/grid en CSS 2.1. */
+table.deux-colonnes, .deux-colonnes { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.deux-colonnes { display: table; }
+.deux-colonnes .colonne { display: table-cell; width: 50%; vertical-align: top; padding-right: 10px; }
+.deux-colonnes .colonne + .colonne { padding-right: 0; padding-left: 10px; }
+
+/* ---------- Cartes KPI ---------- */
+table.kpis, table.kpis--chantier { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 6px 0; margin-top: 10px; }
+td.kpi-cellule { vertical-align: top; padding: 0; }
+
+.kpi-card {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-top: 3px solid #2563EB;
+  padding: 8px 10px;
+}
+.kpi-card--large .kpi-valeur { font-size: 15pt; }
+.kpi-card--compact { border-top-width: 2px; padding: 6px 8px; }
+.kpi-card--compact .kpi-valeur { font-size: 12pt; }
+
+.kpi-label { font-size: 7pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; }
+.kpi-valeur { font-weight: bold; margin-top: 3px; color: #0F172A; }
+.kpi-note { font-size: 7.5pt; color: #64748B; margin-top: 3px; }
+
+.kpi-badge {
+  display: inline-block;
+  font-size: 8pt;
+  font-weight: bold;
+  margin-top: 5px;
+  padding: 2px 6px;
+}
+.kpi-badge--hausse { background-color: #DCFCE7; color: #15803D; }
+.kpi-badge--baisse { background-color: #FEE2E2; color: #B91C1C; }
+.kpi-badge--stable { background-color: #E2E8F0; color: #334155; }
+
+/* Ligne de KPI compacte (niveau équipe) — pas de carte, juste des paires label/valeur en ligne. */
+table.kpis-ligne { width: 100%; border-collapse: collapse; margin: 4px 0 6px; }
+table.kpis-ligne td { padding: 3px 14px 3px 0; font-size: 8.5pt; }
+.kpi-ligne-label { color: #64748B; text-transform: uppercase; font-size: 7pt; letter-spacing: 0.3px; margin-right: 4px; }
+.kpi-ligne-valeur { font-weight: bold; color: #0F172A; }
+
+/* ---------- Graphiques (PNG générés côté serveur, embarqués en base64) ---------- */
+img.graphique-barres { width: 100%; max-width: 100%; margin-top: 4px; }
+
 /* ---------- Tableaux de données ---------- */
-table.donnees { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-table.detail { table-layout: fixed; font-size: 7.5pt; margin-top: 6px; }
+table.donnees { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 4px; }
+table.detail { table-layout: fixed; font-size: 7.5pt; }
 table.donnees thead { display: table-header-group; }
 table.donnees th {
   background-color: #1E3A8A;
@@ -81,16 +126,13 @@ table.donnees tr.alt td { background-color: #F8FAFC; }
 table.donnees td.gauche, table.donnees th.gauche { text-align: left; }
 table.donnees td.centre { text-align: center; }
 table.donnees td.num { text-align: right; white-space: nowrap; }
-table.recap { width: 55%; }
-
-.bloc-final { page-break-inside: avoid; }
+table.recap { width: 100%; }
+table.distribution { width: 100%; }
 
 /* Un tableau ne doit jamais être coupé entre deux pages : il bascule entièrement à la page
    suivante s'il ne tient pas, plutôt que d'afficher une partie des lignes sur chaque page. */
-table.donnees.detail,
-table.donnees.recap,
-table.kpis {
+table.donnees,
+table.kpis,
+table.kpis--chantier {
   page-break-inside: avoid;
 }
-
-.kpi-note { font-size: 7.5pt; color: #64748B; margin-top: 2px; }
