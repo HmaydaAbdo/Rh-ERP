@@ -6,6 +6,8 @@
 
 
 - tri par function et on ordre alphabetique  ( ui et export )
+- lors de  l 'import de la paie lorsque un cin est doublant on bloque l import avec un msg explicite déja la combin periode cin doit faire le cas ? 
+- rapport BI
 
 ---
 
