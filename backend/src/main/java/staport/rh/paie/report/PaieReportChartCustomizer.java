@@ -7,6 +7,7 @@ import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.labels.ItemLabelAnchor;
 import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
@@ -44,10 +45,18 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(new Color(0xE2, 0xE8, 0xF0));
-        plot.setInsets(new RectangleInsets(2, 2, 2, 16));
-        plot.getDomainAxis().setTickLabelFont(new Font("DejaVu Sans", Font.PLAIN, 8));
+        plot.setInsets(new RectangleInsets(1, 2, 1, 6));
+        plot.getDomainAxis().setTickLabelFont(new Font("DejaVu Sans", Font.PLAIN, 6));
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
         plot.getRangeAxis().setVisible(false);
+
+        // Barres épaisses et peu espacées : jusqu'à MAX_BARRES_GRAPHIQUE catégories doivent tenir
+        // sur une hauteur de chart fixe tout en laissant assez d'épaisseur pour une étiquette à
+        // l'intérieur de chaque barre (voir demande : montant affiché dans la barre, jamais à côté).
+        CategoryAxis categoryAxis = (CategoryAxis) plot.getDomainAxis();
+        categoryAxis.setCategoryMargin(0.12);
+        categoryAxis.setLowerMargin(0.01);
+        categoryAxis.setUpperMargin(0.01);
 
         boolean masse = estSerieMasse(plot.getDataset());
 
@@ -57,10 +66,13 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         renderer.setDrawBarOutline(true);
         renderer.setSeriesOutlinePaint(0, COULEUR_BARRE.darker());
         renderer.setSeriesOutlineStroke(0, new BasicStroke(1f));
-        renderer.setMaximumBarWidth(0.6);
+        renderer.setMaximumBarWidth(0.95);
         renderer.setItemLabelsVisible(true);
-        renderer.setItemLabelFont(new Font("DejaVu Sans", Font.PLAIN, 8));
-        renderer.setPositiveItemLabelPosition(new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.CENTER_LEFT));
+        renderer.setItemLabelFont(new Font("DejaVu Sans", Font.BOLD, 6));
+        // Étiquette de valeur centrée à l'intérieur de la barre (blanc, contraste sur le bleu) —
+        // jamais à l'extérieur, demande explicite pour une lecture directe sans repère externe.
+        renderer.setSeriesItemLabelPaint(0, Color.WHITE);
+        renderer.setPositiveItemLabelPosition(new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER));
         renderer.setItemLabelGenerator(new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#,##0")) {
             @Override
             public String generateLabel(CategoryDataset dataset, int row, int column) {

@@ -9,7 +9,6 @@ record RapportBiVue(
         String dateGeneration,
         List<String> filtresActifs,
         SyntheseGlobaleVue synthese,
-        List<LigneStcBean> stc,
         List<ChantierBiVue> chantiers
 ) {
 }
