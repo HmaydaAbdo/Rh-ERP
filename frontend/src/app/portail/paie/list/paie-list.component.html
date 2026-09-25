@@ -26,13 +26,6 @@
 
 <app-paie-export-excel-dialog [(visible)]="showExcelExportDialog"></app-paie-export-excel-dialog>
 
-<app-paie-export-pdf-dialog
-  [(visible)]="showPdfExportDialog"
-  [filtreCourant]="filtresActifsPourRapport"
-  [functions]="functions"
-  [chantiers]="chantiers"
-></app-paie-export-pdf-dialog>
-
 <p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '640px' }">
   @if (importResult) {
     <p>
@@ -97,7 +90,18 @@
         class="p-button-outlined"
         (click)="showExcelExportDialog = true"
       ></button>
-      <button pButton type="button" icon="pi pi-file-pdf" label="Exporter PDF" class="p-button-outlined" (click)="showPdfExportDialog = true"></button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-file-pdf"
+        label="Exporter PDF"
+        class="p-button-outlined"
+        pTooltip="Utilise la période sélectionnée ci-dessous (les autres filtres ne s'appliquent pas au rapport PDF)"
+        tooltipPosition="bottom"
+        [loading]="exportingPdf"
+        [disabled]="!filterForm.controls.periode.value"
+        (click)="onExporterPdf()"
+      ></button>
       <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
       <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
     </div>

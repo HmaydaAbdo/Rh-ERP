@@ -27,6 +27,10 @@ body {
 /* ---------- Bandeau de titre ---------- */
 table.hero { width: 100%; border-collapse: collapse; background-color: #0F172A; color: #FFFFFF; }
 table.hero td { padding: 14px 18px; vertical-align: middle; }
+/* Logo sur fond blanc : le logo Staport est en bleu marine, illisible directement sur le bandeau
+   sombre — width:1%+white-space:nowrap force la cellule à se réduire à la largeur du logo. */
+td.hero-logo-cellule { background-color: #FFFFFF; width: 1%; white-space: nowrap; padding: 10px 16px; }
+.hero-logo { height: 34px; display: block; }
 .hero-titre { font-size: 20pt; font-weight: bold; }
 .hero-soustitre { font-size: 10pt; color: #CBD5E1; margin-top: 3px; }
 td.hero-droite { text-align: right; }
