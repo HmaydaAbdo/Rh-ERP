@@ -64,14 +64,11 @@ Frontend (`frontend/src/app/portail/paie/`) :
 export-excel/
 └── PaieExportExcelDialogComponent   Dialog dédié à l'export Excel (bouton "Exporter Excel")
 
-export-pdf/
-└── PaieExportPdfDialogComponent     Dialog dédié au rapport PDF (bouton "Exporter PDF") : affiche en
-                                      lecture seule les filtres actifs de la liste (périmètre du
-                                      rapport) + un sélecteur Année/Mois obligatoire.
-
 list/
-└── PaieListComponent                Porte les deux boutons, le filterForm (périmètre partagé), et
-                                      transmet ses valeurs courantes au dialog PDF.
+└── PaieListComponent                Porte les deux boutons. « Exporter PDF » télécharge directement
+                                      (aucun dialog) en utilisant uniquement la période sélectionnée
+                                      dans le filtre de la liste (year/month picker) — voir
+                                      « Périmètre et filtres » ci-dessous.
 ```
 
 ### Pourquoi deux périmètres (`PaiePerimetreService` vs `PaieBiReportBuilder`) ?
@@ -190,13 +187,13 @@ détail ?
 
 ### Périmètre et filtres
 
-Le rapport reprend **exactement** les filtres déjà disponibles sur la page Paie
-(`PaieSearchCriteria`, sans pagination) : `nomPrenom`, `cin`, `fonctionId`, `chantierId` — plus
-`periode`, obligatoire (pas de filtre dans la liste). Un filtre actif restreint le périmètre entier
-du rapport (KPI globaux compris) — **jamais ignoré silencieusement**. Le dialog PDF
-(`PaieExportPdfDialogComponent`) affiche les filtres actifs en lecture seule et laisse choisir la
-période ; il ne propose aucune configuration supplémentaire (pas de sélection manuelle de
-chantiers/équipes — voir « Pourquoi deux périmètres ? »).
+Aucun dialog pour le rapport PDF : le bouton « Exporter PDF » télécharge directement, en utilisant
+**uniquement** la période sélectionnée dans le filtre de la liste (year/month picker de
+`PaieListComponent.filterForm`) — désactivé tant qu'aucune période n'est choisie. Les autres filtres
+de la liste (nom & prénom, CIN, fonction, chantier) **ne s'appliquent pas** au rapport PDF : le
+rapport porte toujours sur l'ensemble des chantiers/employés de la période. Le backend
+(`PaieReportPdfRequestDto`) garde ces champs optionnels (même forme que `PaieSearchCriteria`, sans
+pagination) pour un appel API direct, mais le frontend n'envoie jamais que `periode`.
 
 ### Modèle analytique
 
@@ -278,9 +275,11 @@ résume, seul le dernier détaille.
    part du chantier — puis le tableau détaillé des employés), et enfin **Sans équipe** dans les
    mêmes conditions.
 
-Le tableau employé reprend les colonnes de la liste Paie à l'écran, moins Chantier et Équipe (déjà
-portées par les titres de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire
-(Salaire/RO/RD), Total, Obs.
+Chaque chantier commence sur une nouvelle page (`page-break-before: always`), et **chaque équipe
+(Sans équipe comprise) démarre aussi sur sa propre page** — un rapport de direction ne doit jamais
+laisser deux sections s'enchaîner sans repère visuel clair. Le tableau employé reprend les colonnes
+de la liste Paie à l'écran, moins Chantier et Équipe (déjà portées par les titres de section) : Nom
+& prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
 
 ### Visualisations
 
@@ -304,26 +303,28 @@ portées par les titres de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/
 | `PaieReportPdfService` | Orchestration HTML → PDF du rapport PDF |
 | `PaieReportChartService` | Graphiques du rapport PDF (JFreeChart) |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
-| `PaieExportPdfDialogComponent` (frontend) | UX dédiée au rapport PDF : filtres actifs + période |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
+
+Le logo Staport (`resources/report/paie/logo-staport.png`, chargé en classpath et encodé en base64
+dans `PaieReportPdfService`, injecté dans le fragment `hero` de `fragments.html`) apparaît dans un
+badge blanc à gauche du bandeau d'en-tête — le rendu PDF (openhtmltopdf) n'ayant pas d'URI de base
+pour résoudre un chemin de fichier relatif, l'image est toujours embarquée en base64, jamais
+référencée par chemin.
 
 ---
 
 ## Points d'extension
 
-- **Logo Staport dans l'en-tête PDF** : aucun fichier logo n'existe encore dans le dépôt (le seul
-  actif disponible est `frontend/src/favicon.ico`) ; à ajouter dans le fragment `hero` de
-  `resources/report/paie/fragments.html` en le chargeant en classpath (`ClassPathResource`, comme
-  `PaieReportPdfService.chargerCss`) et en l'encodant en base64 — le rendu PDF n'a pas d'URI de base
-  pour résoudre un chemin relatif.
 - **Comparaison mois précédent au niveau équipe** : volontairement omise pour l'instant (une
   variation par équipe, en plus du global et du chantier, ajoute une 3ᵉ couche de deltas pour un
   gain de lecture marginal) — à ajouter dans `PaieBiReportBuilder.equipeVue` si un besoin réel se
   confirme.
-- **Filtre `equipe`** : `PaieSearchCriteria` le supporte déjà, mais aucun filtre équipe n'existe sur
-  la page Paie à ce jour — le rapport ne l'expose donc pas non plus (le périmètre du rapport est
-  strictement celui des filtres réellement disponibles à l'écran). À réévaluer si un filtre équipe
-  est ajouté à la liste.
+- **Autres filtres de la liste (nom, CIN, fonction, chantier)** : volontairement non appliqués au
+  rapport PDF (voir « Périmètre et filtres ») — un rapport de direction porte sur l'ensemble des
+  chantiers/employés de la période, pas sur une recherche ponctuelle. `PaieReportPdfRequestDto` les
+  garde optionnels pour un appel API direct ; à réexposer côté UI seulement si un besoin réel de
+  rapport filtré se confirme (probablement pas un simple dialog de confirmation, plutôt un besoin à
+  redéfinir explicitement).
 - **Nouveaux indicateurs BI** : ajouter une mesure suit toujours le même chemin —
   `PaieBiReportBuilder` (calcul), un nouveau record de vue-modèle si la forme ne rentre dans aucun
   existant, un fragment Thymeleaf dans `fragments.html`, une entrée dans le catalogue de KPI
