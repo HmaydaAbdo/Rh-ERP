@@ -16,6 +16,7 @@
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/equipes` | `PAIE_READ` |
 | `POST /paie/export` | `PAIE_EXPORT` |
+| `POST /paie/report/pdf` | `PAIE_EXPORT` |
 
 ## Frontend
 
@@ -24,7 +25,7 @@
 | Lien sidebar "Paie" | Aucune (visible dès qu'authentifié) |
 | Route `/paie/**` | `authGuard` (authentification seule) |
 | Bouton "Supprimer" (liste) | `authService.hasPermission('PAIE_DELETE')` — voir `PaieListComponent.canDelete()` |
-| Boutons "Importer" / "Modèle Excel" / "Exporter" | Aucune vérification frontend dédiée — repose sur le 403 backend si la permission manque |
+| Boutons "Importer" / "Modèle Excel" / "Exporter Excel" / "Exporter PDF" | Aucune vérification frontend dédiée — repose sur le 403 backend si la permission manque |
 
 ## Rôles disposant de ces permissions (seed initial)
 
