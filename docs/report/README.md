@@ -350,7 +350,10 @@ résume, seul le dernier détaille.
    de la masse salariale (1 lineChart), puis masse + effectif par chantier (2 barChart empilés pleine
    largeur), puis masse + effectif par fonction (2 barChart empilés pleine largeur) — voir
    « Visualisations » pour le détail et la justification de ce découpage.
-6. **Une section par chantier**, dans l'ordre alphabétique des codes : synthèse BI du chantier
+6. **Une section par chantier**, triée par masse réelle de paie décroissante (`salaireTotal`, la
+   colonne « Total », jamais `salaireMensuel` — voir « Modèle analytique » —, le plus gros chantier en
+   premier ; `agregatChantier` porte déjà ce tri, voir `PaieBiReportBuilder.agreger`, jamais un ré-tri
+   alphabétique par code qui l'annulerait) : synthèse BI du chantier
    (masse + comparaison, effectif + comparaison, part de la masse globale, **indicateur STC /
    sortie** — voir « Catalogue de KPI », une **phrase courte de synthèse** du chantier, distribution
    par équipe), puis une sous-section par équipe (BI compacte : effectif, masse, part du chantier —
