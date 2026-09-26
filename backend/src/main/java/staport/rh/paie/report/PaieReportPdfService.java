@@ -16,6 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.awt.Font;
+import java.awt.FontFormatException;
+import java.awt.GraphicsEnvironment;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,6 +60,30 @@ public class PaieReportPdfService {
     private static final String LIBELLE_GRAPH_CHANTIER = "II — Répartition par chantier";
     private static final String ANCRE_GRAPH_FONCTION = "graph-fonction";
     private static final String LIBELLE_GRAPH_FONCTION = "III — Répartition par fonction";
+
+    /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
+     * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
+     * installé au niveau du système d'exploitation qui exécute le backend. L'extension de police
+     * JasperReports ({@code jasperreports_extension.properties} + {@code
+     * report/paie/fonts/liberation-serif-fonts.xml}) couvre déjà les éléments texte des gabarits
+     * JRXML, mais {@link PaieReportChartCustomizer} construit des {@code java.awt.Font} directement
+     * (JFreeChart, pas JasperReports) — ce chemin ne passe pas par cette extension et doit donc
+     * pouvoir résoudre le nom de famille via le {@code GraphicsEnvironment} standard. Sans cet
+     * enregistrement explicite, un environnement de déploiement sans cette police installée au
+     * niveau OS lève {@code JRFontNotFoundException} au premier remplissage (constaté en production,
+     * alors que le même rapport se générait sans erreur dans un environnement de développement où la
+     * police était, elle, installée système — voir docs/report/README.md, section « Style visuel »). */
+    static {
+        for (String fichier : new String[]{"LiberationSerif-Regular.ttf", "LiberationSerif-Bold.ttf",
+                "LiberationSerif-Italic.ttf", "LiberationSerif-BoldItalic.ttf"}) {
+            try (InputStream flux = new ClassPathResource("report/paie/fonts/" + fichier).getInputStream()) {
+                Font police = Font.createFont(Font.TRUETYPE_FONT, flux);
+                GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(police);
+            } catch (IOException | FontFormatException e) {
+                throw new IllegalStateException("Police embarquée du rapport PDF de paie introuvable ou invalide : " + fichier, e);
+            }
+        }
+    }
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
