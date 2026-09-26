@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Table "Répartition par équipe" d'un chantier — sous-rapport intégré dans le groupe GroupChantier
-     de rapport.jrxml. -->
+<!-- Table "Répartition par équipe" OU "par fonction" d'un chantier — sous-rapport partagé intégré
+     dans le groupe GroupChantier de rapport.jrxml, invoqué une fois par dimension (P_TITRE/
+     P_LIBELLE_COLONNE paramétrent le seul texte qui diffère entre les deux usages). -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
@@ -10,6 +11,9 @@
 
     <property name="net.sf.jasperreports.default.font.name" value="Liberation Serif"/>
 
+    <parameter name="P_TITRE" class="java.lang.String"/>
+    <parameter name="P_LIBELLE_COLONNE" class="java.lang.String"/>
+
     <field name="libelle" class="java.lang.String"/>
     <field name="effectif" class="java.lang.Integer"/>
     <field name="montant" class="java.lang.String"/>
@@ -17,21 +21,21 @@
 
     <title>
         <band height="16">
-            <staticText>
+            <textField>
                 <reportElement x="0" y="0" width="390" height="16" forecolor="#000000"/>
                 <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                <text><![CDATA[RÉPARTITION PAR ÉQUIPE]]></text>
-            </staticText>
+                <textFieldExpression><![CDATA[$P{P_TITRE}]]></textFieldExpression>
+            </textField>
         </band>
     </title>
 
     <columnHeader>
         <band height="18">
-            <staticText>
+            <textField>
                 <reportElement x="0" y="0" width="180" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
                 <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
-                <text><![CDATA[Équipe]]></text>
-            </staticText>
+                <textFieldExpression><![CDATA[$P{P_LIBELLE_COLONNE}]]></textFieldExpression>
+            </textField>
             <staticText>
                 <reportElement x="180" y="0" width="60" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>

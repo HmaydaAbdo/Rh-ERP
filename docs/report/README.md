@@ -71,21 +71,28 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 ├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
 │   LigneEmployeVue                Vue-modèle (records), aucune logique métier — utilisée uniquement
 │                                 côté Java (paramètres JRXML), jamais liée par réflexion
-├── DistributionVue / RepartitionBean / LigneRapportDetailBean / SommaireEntreeBean
+├── PaieReportCroisementChartCustomizer.java Personnalise le <stackedBarChart> Équipe × Fonction d'un
+│                                 chantier (voir « Vue détaillée par chantier ») — dégradé de bleus,
+│                                 une teinte par fonction, jamais une palette arc-en-ciel
+├── DistributionVue / RepartitionBean / CroisementBean / LigneRapportDetailBean / SommaireEntreeBean
 │                                 Classes à getters (pas des records) : lignes de table/graphique
 │                                 liées par introspection JavaBean (JRBeanCollectionDataSource) —
 │                                 un getter public sur une classe non publique n'est pas accessible
 │                                 par réflexion depuis un autre package, ces classes sont publiques.
 │                                 LigneRapportDetailBean est la source de données unique et à plat de
 │                                 rapport.jrxml : un employé par ligne, dénormalisée avec le contexte
-│                                 chantier + équipe (voir « Structure du rapport »). SommaireEntreeBean
-│                                 (libellé de section + numéro de page) alimente le sous-rapport
-│                                 Sommaire (voir « Sommaire »)
-├── PaieReportNumberFormat.java   Formatage des nombres, variations et tendances (HAUSSE/BAISSE/STABLE)
+│                                 chantier + équipe (voir « Structure du rapport »). CroisementBean
+│                                 (équipe + fonction + montant) alimente le stacked bar chart Équipe ×
+│                                 Fonction — une ligne à plat par paire, JasperReports construit les
+│                                 séries dynamiquement à partir des valeurs distinctes de fonction.
+│                                 SommaireEntreeBean (libellé de section + numéro de page) alimente le
+│                                 sous-rapport Sommaire (voir « Sommaire »)
+├── PaieReportNumberFormat.java   Formatage des nombres, variations, tendances (HAUSSE/BAISSE/STABLE)
+│                                 et chiffres romains (numérotation des chapitres)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page Paie)
 
 resources/report/paie/jasper/  ← gabarits JRXML — style noir/blanc/gris, police Liberation Serif,
-│                                 seuls les <barChart> restent en couleur (bleu) — voir « Style visuel »
+│                                 seuls les graphiques restent en couleur (bleu) — voir « Style visuel »
 ├── rapport.jrxml                 Gabarit unique pour tout le document : page de garde (bande title,
 │                                 isTitleNewPage — seule page sans pageHeader/pageFooter, voir
 │                                 « Structure du rapport »), puis des groupes à expression constante
@@ -274,6 +281,9 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Effectif par chantier (chart 2) | `COUNT(*)` groupé par chantier | Global | Non |
 | ~~Masse/Effectif par fonction~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension » et TODO.md) — toujours calculé (`PaieBiReportBuilder`), simplement plus affiché |
 | Distribution par équipe (avec Sans équipe) | `SUM(salaireTotal)` groupé par équipe, + part du total | Chantier | Non |
+| Distribution par fonction (intra-chantier) | `SUM(salaireTotal)` groupé par fonction, + part du total | Chantier | Non — plafonné aux 8 fonctions les plus lourdes + "Autres" dans le croisement graphique (voir « Vue détaillée par chantier ») |
+| Coût moyen / employé (chantier) | masse chantier ÷ effectif chantier | Chantier | Non (dérivé, même principe que la moyenne globale) |
+| Croisement Équipe × Fonction | `SUM(salaireTotal)` groupé par (équipe, fonction) | Chantier | Non — stacked bar chart, jamais une table (voir « Visualisations ») |
 | STC / sortie du chantier | `COUNT` des lignes où `ObservationStc.estStcOuSortie`, restreint à ce chantier | Chantier | Non — indicateur unique (pas de table), affiché dans le bandeau KPI du chantier |
 | Évolution masse/effectif (12 derniers mois) | `SUM(salaireTotal)`/`COUNT` groupés par `periode`, agrégés en base (`PaieRepository.sommerParPeriode`) | Global | Implicite (tendance visuelle sur 12 points, pas un delta chiffré) — voir « Évolution mensuelle » |
 
@@ -366,11 +376,14 @@ résume, seul le dernier détaille.
 6. **Une section par chantier**, triée par masse réelle de paie décroissante (`salaireTotal`, la
    colonne « Total », jamais `salaireMensuel` — voir « Modèle analytique » —, le plus gros chantier en
    premier ; `agregatChantier` porte déjà ce tri, voir `PaieBiReportBuilder.agreger`, jamais un ré-tri
-   alphabétique par code qui l'annulerait) : synthèse BI du chantier
-   (masse + comparaison, effectif + comparaison, part de la masse globale, **indicateur STC /
-   sortie** — voir « Catalogue de KPI », une **phrase courte de synthèse** du chantier, distribution
-   par équipe), puis une sous-section par équipe (BI compacte : effectif, masse, part du chantier —
-   puis le tableau détaillé des employés), et enfin **Sans équipe** dans les mêmes conditions.
+   alphabétique par code qui l'annulerait) : vue détaillée dense (voir « Vue détaillée par chantier »
+   ci-dessous) — **4 cartes KPI** (masse, effectif, coût moyen/employé, STC/sorties), une **phrase
+   courte de synthèse**, la distribution par équipe **et par fonction** côte à côte, puis un
+   **stacked bar chart Équipe × Fonction** — le tout dans la même bande d'en-tête que par le passé,
+   sans page dédiée supplémentaire (demande explicite de direction : enrichir l'analyse sans doubler
+   le volume du rapport). Puis une sous-section par équipe (BI compacte : effectif, masse, part du
+   chantier — puis le tableau détaillé des employés), et enfin **Sans équipe** dans les mêmes
+   conditions.
 
 **Tous les chapitres sont numérotés en chiffre romain, y compris chaque chantier** (« III — CHANTIER
 : C168 », « IV — CHANTIER : C059 », etc. — un chantier est un chapitre du rapport au même titre que
@@ -379,6 +392,38 @@ calcule ce numéro à partir de `CHAPITRES_FIXES` (2 : Synthèse + Répartition 
 position du chantier dans `vue.chantiers()` (déjà triée par masse décroissante) — jamais recalculé
 indépendamment entre le corps du rapport et le Sommaire, les deux appellent la même méthode pour
 rester synchronisés.
+
+### Vue détaillée par chantier
+
+La bande d'en-tête de chaque chantier (`GroupChantier`, `rapport.jrxml`) porte, dans l'ordre :
+
+1. **4 cartes KPI** (même style que la Synthèse globale — filet gris, label, valeur — sans identité
+   visuelle à part) : Masse salariale (+ comparaison mois précédent), Effectif (+ comparaison),
+   **Coût moyen / employé** (`ChantierBiVue.masseMoyenneParEmploye`, masse ÷ effectif de ce chantier
+   — nouveau, ce KPI n'existait qu'au niveau global auparavant), STC / sorties.
+2. La **phrase courte de synthèse** du chantier (voir « Narratif léger »).
+3. **Distribution par équipe ET par fonction**, côte à côte (`tableDistribution.jrxml`, sous-rapport
+   partagé — `P_TITRE`/`P_LIBELLE_COLONNE` paramètrent le seul texte qui diffère entre les deux
+   usages, jamais deux gabarits dupliqués). La distribution par fonction **intra-chantier** est
+   nouvelle : jusqu'ici la dimension Fonction n'existait qu'au niveau global (chapitre III, retiré
+   temporairement) ou pas du tout au niveau chantier.
+4. Un **stacked bar chart Équipe × Fonction** (`PaieReportCroisementChartCustomizer`) : une catégorie
+   par équipe, un segment par fonction — montre en un coup d'œil la masse totale de chaque équipe ET
+   sa composition par fonction. Seul graphique du document à plus d'une couleur (une teinte par
+   fonction) : une composition ne se lit pas avec une seule couleur, contrairement aux barChart de
+   répartition simple (voir « Visualisations »). Palette volontairement limitée à une gamme de bleus
+   (dégradé foncé → clair, jamais arc-en-ciel) pour rester dans l'esprit noir/blanc/bleu du document.
+   Plafonné aux **8 fonctions les plus lourdes** (masse cumulée sur tout le chantier) + « Autres »
+   (`PaieBiReportBuilder.croisementEquipeFonction`/`fonctionsLesPlusLourdes`) — même nécessité que le
+   plafond des barChart de répartition : le référentiel Fonction porte aujourd'hui des doublons non
+   nettoyés (voir TODO.md), un segment par doublon rendrait ce graphique illisible.
+
+Cette vue reste dans la **même bande d'en-tête** qu'auparavant (pas de page dédiée supplémentaire) —
+demande explicite de direction : enrichir l'analyse par chantier sans doubler le volume du rapport.
+En pratique, un chantier avec beaucoup d'employés peut désormais déborder plus souvent sur une 2ᵉ
+page dès le début de son détail employé (la bande d'en-tête, plus dense, laisse moins de place
+résiduelle sur la 1ʳᵉ page) — un effet secondaire attendu, pas une régression : le tableau employé
+lui-même n'a pas changé, la pagination s'adapte simplement au contenu disponible.
 
 Chaque chantier commence sur une nouvelle page (`<group name="GroupChantier" isStartNewPage="true">`
 dans `rapport.jrxml`, piloté par la même source de données à plat que le reste du document — jamais
@@ -509,8 +554,11 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
   (alternance de lignes des tableaux — **le Sommaire (`sommaire.jrxml`) en est explicitement exclu**,
   100% noir et blanc sans aucune alternance, demande explicite de direction), `#CCCCCC`
   (filets/bordures fines), `#808080`/`#999999` (mentions discrètes, séparateurs de blocs d'en-tête).
-  **Seuls les `<barChart>` restent en couleur** (bleu, `PaieReportChartCustomizer`) — la seule
-  exception délibérée à la règle noir/blanc.
+  **Seuls les graphiques restent en couleur** — les `<barChart>` en un seul bleu
+  (`PaieReportChartCustomizer`), le `<stackedBarChart>` Équipe × Fonction en dégradé de bleus, une
+  teinte par fonction (`PaieReportCroisementChartCustomizer` — une composition ne se lit pas avec une
+  seule couleur, voir « Vue détaillée par chantier ») — jamais une couleur hors de cette famille de
+  bleus : la seule exception délibérée à la règle noir/blanc reste circonscrite aux graphiques.
   Les anciens indicateurs de tendance HAUSSE/BAISSE/STABLE (auparavant des pastilles colorées
   vert/rouge/gris) sont désormais du texte noir gras préfixé du mot (« Hausse : … », « Baisse : … »,
   « Stable : … ») — la couleur ne porte plus l'information, le texte si.
@@ -573,6 +621,7 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
 | `PaieReportPdfService` | Orchestration JRXML → PDF du rapport PDF (compilation du gabarit unique, aplatissement des données, **double remplissage** — voir « Sommaire », export) — testée de bout en bout par `PaieReportPdfServiceTest` |
 | `PaieReportChartCustomizer` | Personnalisation Java des 2 `<barChart>` JRXML (orientation horizontale, seule touche de couleur du document, étiquettes à l'extérieur, plafond des 20 plus grosses valeurs + "Autres") |
+| `PaieReportCroisementChartCustomizer` | Personnalisation Java du `<stackedBarChart>` Équipe × Fonction par chantier (dégradé de bleus, une teinte par fonction — voir « Vue détaillée par chantier ») |
 | `PaieReportEvolutionChartCustomizer` | Personnalisation Java des 2 `<lineChart>` JRXML d'évolution mensuelle (même couleur bleue, axe des valeurs visible — voir « Évolution mensuelle ») |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
@@ -595,7 +644,12 @@ consommait le flux, les suivantes restaient blanches (bug corrigé, voir l'histo
   tâche de nettoyage côté données). `P_REPARTITION_FONCTION` reste calculé
   (`PaieBiReportBuilder`/`PaieReportPdfService`) pour ne pas tout redévelopper à la réintroduction :
   il suffira de rajouter le groupe JRXML (voir l'ancien `GroupGraphFonction`, retiré de
-  `rapport.jrxml`) une fois le référentiel fiable, et de décaler `CHAPITRES_FIXES` à 3.
+  `rapport.jrxml`) une fois le référentiel fiable, et de décaler `CHAPITRES_FIXES` à 3. À ne pas
+  confondre avec la distribution par fonction **intra-chantier** (« Vue détaillée par chantier ») :
+  celle-ci est au niveau chantier, pas globale, et reste affichée — plafonnée aux 8 fonctions les
+  plus lourdes de CE chantier, un plafond bien plus efficace contre les doublons qu'au niveau global
+  (25 chantiers × quelques doublons locaux, jamais la centaine de valeurs distinctes que le
+  référentiel peut porter globalement).
 - **Comparaison mois précédent au niveau équipe** : volontairement omise pour l'instant (une
   variation par équipe, en plus du global et du chantier, ajoute une 3ᵉ couche de deltas pour un
   gain de lecture marginal) — à ajouter dans `PaieBiReportBuilder.equipeVue` si un besoin réel se
