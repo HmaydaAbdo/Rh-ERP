@@ -455,11 +455,27 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
   « Stable : … ») — la couleur ne porte plus l'information, le texte si.
 - **Police Liberation Serif** dans tout le document (gabarits JRXML et `PaieReportChartCustomizer`,
   propriété `net.sf.jasperreports.default.font.name`) — substitut de « Times New Roman » demandé par
-  la direction : la police Microsoft n'est pas installée sur l'environnement de rendu PDF, mais
-  Liberation Serif l'est (`fc-list`), en est métriquement compatible, et est la police vers laquelle
-  fontconfig résout "Times New Roman" sur ce système (`fc-match "Times New Roman"`) — utiliser
-  directement son nom réel évite de dépendre d'une résolution d'alias que le moteur PDF de
-  JasperReports n'honore pas nécessairement.
+  la direction : la police Microsoft n'est pas installée sur l'environnement de rendu PDF, et
+  Liberation Serif en est métriquement compatible (nom de famille officiellement recommandé comme
+  substitut, glyphes alignés caractère pour caractère). **La police est embarquée dans l'application,
+  jamais supposée installée au niveau du système d'exploitation qui exécute le backend** — un premier
+  déploiement s'appuyait sur `fc-match`/`fc-list` constatant la police présente *dans l'environnement
+  de développement*, ce qui a levé `JRFontNotFoundException` dès le premier remplissage en production,
+  où elle n'était pas installée. Deux mécanismes, nécessaires ensemble :
+  1. `resources/report/paie/fonts/LiberationSerif-{Regular,Bold,Italic,BoldItalic}.ttf` (licence SIL
+     Open Font License, librement redistribuable) + `resources/report/paie/fonts/liberation-serif-fonts.xml`
+     (déclaration de famille JasperReports, encodage PDF `Identity-H`, police embarquée dans le PDF
+     exporté) + `resources/jasperreports_extension.properties` (nom de fichier conventionnel,
+     découvert automatiquement par JasperReports sur tout le classpath, aucun câblage Java) — couvre
+     tous les éléments texte des gabarits JRXML (remplissage et export PDF).
+  2. Un bloc statique de `PaieReportPdfService` charge les 4 mêmes `.ttf` et les enregistre auprès de
+     `GraphicsEnvironment` (`Font.createFont` + `registerFont`) — nécessaire car
+     `PaieReportChartCustomizer` construit des `java.awt.Font` directement pour JFreeChart (pas via
+     JasperReports), un chemin que l'extension de police JRXML ne couvre pas.
+
+  Validé en simulant l'absence totale de la police au niveau OS (fichiers système temporairement
+  déplacés, `fc-list` ne la trouvant plus) : le rapport continue de se générer sans erreur, la police
+  venant intégralement des ressources embarquées.
 - **Hiérarchie typographique**, taille de référence 16pt (Liberation Serif, comme demandé) :
   - **Titres de chapitre** (I — Synthèse globale, II — Répartition par chantier, III — Répartition
     par fonction) : 16pt gras, numérotés en chiffres romains — la seule numérotation du document, elle
