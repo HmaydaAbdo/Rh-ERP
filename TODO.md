@@ -8,6 +8,12 @@
 - tri par function et on ordre alphabetique  ( ui et export )
 - lors de  l 'import de la paie lorsque un cin est doublant on bloque l import avec un msg explicite déja la combin periode cin doit faire le cas ? 
 - rapport BI
+- **Nettoyer les doublons du référentiel Fonction** (constaté par la direction le 2026-09-26 sur le
+  rapport PDF BI paie : le graphique « Répartition par fonction » était illisible, trop de libellés
+  quasi identiques). Une fois le référentiel nettoyé côté données, réintroduire le chapitre
+  III — Répartition par fonction dans `rapport.jrxml` (retiré temporairement, voir
+  `docs/report/README.md` — « Points d'extension » — pour le détail de ce qui reste à faire côté
+  JRXML/`PaieReportPdfService`).
 
 ---
 

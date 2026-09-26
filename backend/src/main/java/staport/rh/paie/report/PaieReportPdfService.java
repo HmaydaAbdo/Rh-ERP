@@ -58,8 +58,13 @@ public class PaieReportPdfService {
     private static final String LIBELLE_SYNTHESE = "I — Synthèse globale";
     private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
     private static final String LIBELLE_GRAPH_CHANTIER = "II — Répartition par chantier";
-    private static final String ANCRE_GRAPH_FONCTION = "graph-fonction";
-    private static final String LIBELLE_GRAPH_FONCTION = "III — Répartition par fonction";
+
+    /** Nombre de chapitres romains fixes avant le premier chantier (I — Synthèse globale,
+     * II — Répartition par chantier) — détermine à partir de quel chiffre romain démarre la
+     * numérotation des chantiers (voir {@link #chapitreChantier}). Le chapitre « III — Répartition
+     * par fonction » a été retiré temporairement (doublons non nettoyés dans le référentiel Fonction,
+     * voir TODO.md) ; les chantiers reprennent donc la suite à III. */
+    private static final int CHAPITRES_FIXES = 2;
 
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
@@ -156,22 +161,33 @@ public class PaieReportPdfService {
         return parametres;
     }
 
-    /** Synthèse globale + les 3 pages graphiques + une ligne par chantier — {@code pagesParAncre}
-     * vaut {@code null} lors du premier passage (numéros encore inconnus, valeur de repli 0 sans
-     * incidence sur la mise en page du sous-rapport, un champ numérique de largeur fixe). */
+    /** Synthèse globale + la page graphique + une ligne par chantier, chacun numéroté en chiffre
+     * romain (voir {@link #chapitreChantier}) — {@code pagesParAncre} vaut {@code null} lors du
+     * premier passage (numéros encore inconnus, valeur de repli 0 sans incidence sur la mise en page
+     * du sous-rapport, un champ numérique de largeur fixe). */
     private List<SommaireEntreeBean> sommaireEntrees(RapportBiVue vue, Map<String, Integer> pagesParAncre) {
         List<SommaireEntreeBean> entrees = new ArrayList<>();
         entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
-        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_FONCTION, pageDe(pagesParAncre, ANCRE_GRAPH_FONCTION)));
-        for (ChantierBiVue chantier : vue.chantiers()) {
-            entrees.add(new SommaireEntreeBean(chantier.titre(), pageDe(pagesParAncre, "chantier-" + chantier.code())));
+        List<ChantierBiVue> chantiers = vue.chantiers();
+        for (int i = 0; i < chantiers.size(); i++) {
+            ChantierBiVue chantier = chantiers.get(i);
+            entrees.add(new SommaireEntreeBean(chapitreChantier(i, chantier), pageDe(pagesParAncre, "chantier-" + chantier.code())));
         }
         return entrees;
     }
 
     private int pageDe(Map<String, Integer> pagesParAncre, String ancre) {
         return pagesParAncre == null ? 0 : pagesParAncre.getOrDefault(ancre, 0);
+    }
+
+    /** Titre de chapitre numéroté d'un chantier ("III — CHANTIER : C168", puis IV, V, ...) — même
+     * style que les chapitres fixes ("I — Synthèse globale"), voir {@code rapport.jrxml} (un chantier
+     * est un chapitre du rapport au même titre que les 3 premiers). {@code index} est la position du
+     * chantier dans {@code vue.chantiers()} (déjà triée par masse décroissante), jamais recalculée
+     * indépendamment entre le Sommaire et le corps du rapport pour rester synchronisée. */
+    private String chapitreChantier(int index, ChantierBiVue chantier) {
+        return PaieReportNumberFormat.romain(CHAPITRES_FIXES + index + 1) + " — " + chantier.titre();
     }
 
     /** Relit un {@code JasperPrint} déjà rendu pour retrouver, pour chaque ancre posée dans le
@@ -196,7 +212,10 @@ public class PaieReportPdfService {
      * {@link LigneRapportDetailBean}). */
     private List<LigneRapportDetailBean> lignesDetail(RapportBiVue vue) {
         List<LigneRapportDetailBean> lignes = new ArrayList<>();
-        for (ChantierBiVue chantier : vue.chantiers()) {
+        List<ChantierBiVue> chantiers = vue.chantiers();
+        for (int i = 0; i < chantiers.size(); i++) {
+            ChantierBiVue chantier = chantiers.get(i);
+            String chantierTitreNumerote = chapitreChantier(i, chantier);
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
             String chantierEffectifNote = "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")";
@@ -204,7 +223,7 @@ public class PaieReportPdfService {
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
                     lignes.add(new LigneRapportDetailBean(
-                            chantier.code(), chantier.titre(), chantierMasseLigne, chantierEffectifValeur, chantierEffectifNote,
+                            chantier.code(), chantierTitreNumerote, chantierMasseLigne, chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif, chantier.distributionEquipe(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
                             employe));
