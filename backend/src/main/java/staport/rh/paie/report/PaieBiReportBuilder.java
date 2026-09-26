@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -40,6 +41,9 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
+    private static final String AUTRES = "Autres";
+    private static final int MAX_BARRES_GRAPHIQUE = 20;
+    private static final int MAX_FONCTIONS_CROISEMENT = 8;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -111,6 +115,7 @@ class PaieBiReportBuilder {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
+        List<Agregat> agregatFonction = agreger(lignesChantier, this::libelleFonction);
         int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
 
         List<EquipeBiVue> equipes = agregatEquipe.stream()
@@ -124,10 +129,53 @@ class PaieBiReportBuilder {
                 "CHANTIER : " + code,
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
+                PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
                 PaieReportNumberFormat.part(masseChantier, masseGlobale),
                 stc,
                 versDistribution(agregatEquipe, masseChantier),
+                versDistribution(agregatFonction, masseChantier),
+                croisementEquipeFonction(lignesChantier),
                 equipes);
+    }
+
+    /** Une ligne par paire (équipe, fonction) réellement présente sur ce chantier, masse cumulée —
+     * alimente le stacked bar chart Équipe × Fonction (une catégorie = une équipe, une série = une
+     * fonction) : JasperReports construit dynamiquement les séries à partir des valeurs distinctes de
+     * {@code fonction} dans cette liste à plat, jamais une série codée en dur par fonction (leur
+     * nombre varie d'un chantier à l'autre) — voir {@code rapport.jrxml}, CroisementBean. Plafonné
+     * aux {@value #MAX_FONCTIONS_CROISEMENT} fonctions les plus lourdes (masse cumulée sur tout le
+     * chantier), le reste regroupé sous "Autres" par équipe — même principe que
+     * {@link #versRepartition} : le référentiel Fonction porte aujourd'hui des doublons non nettoyés
+     * (voir TODO.md), un segment par doublon rendrait ce graphique illisible bien avant même que la
+     * direction n'ait demandé un plafond ici. */
+    private List<CroisementBean> croisementEquipeFonction(List<Paie> lignesChantier) {
+        List<Paie> lignesValides = lignesChantier.stream().filter(p -> p.getSalaireTotal() != null).toList();
+        Set<String> fonctionsRetenues = fonctionsLesPlusLourdes(lignesValides, MAX_FONCTIONS_CROISEMENT);
+
+        Map<String, Map<String, BigDecimal>> parEquipePuisFonction = lignesValides.stream()
+                .collect(Collectors.groupingBy(this::libelleEquipe, LinkedHashMap::new,
+                        Collectors.groupingBy(p -> fonctionRetenueOuAutres(p, fonctionsRetenues), LinkedHashMap::new,
+                                Collectors.reducing(BigDecimal.ZERO, Paie::getSalaireTotal, BigDecimal::add))));
+
+        List<CroisementBean> croisement = new ArrayList<>();
+        parEquipePuisFonction.forEach((equipe, parFonction) ->
+                parFonction.forEach((fonction, montant) -> croisement.add(new CroisementBean(equipe, fonction, montant))));
+        return croisement;
+    }
+
+    private String fonctionRetenueOuAutres(Paie paie, Set<String> fonctionsRetenues) {
+        String fonction = libelleFonction(paie);
+        return fonctionsRetenues.contains(fonction) ? fonction : AUTRES;
+    }
+
+    private Set<String> fonctionsLesPlusLourdes(List<Paie> lignesValides, int max) {
+        return lignesValides.stream()
+                .collect(Collectors.groupingBy(this::libelleFonction, Collectors.reducing(BigDecimal.ZERO, Paie::getSalaireTotal, BigDecimal::add)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(max)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
     }
 
     private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
@@ -182,15 +230,32 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Toutes les valeurs d'un graphique de la synthèse globale (chaque chantier, chaque fonction),
-     * jamais tronquées ni regroupées sous "Autres" — une demande explicite de direction, voir
-     * {@code docs/report/README.md} : chaque barre doit rester identifiable. Déjà trié par montant
-     * décroissant (voir {@link #agreger}). La même liste alimente à la fois le graphique de masse et
-     * celui d'effectif de la dimension (chantier ou fonction). */
+    /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
+     * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — demande explicite de
+     * direction (Top 20, un graphique complet à 25+ catégories devient trop dense pour rester
+     * lisible imprimé), voir {@code docs/report/README.md}. Le résultat est retrié par montant
+     * décroissant (y compris "Autres" à sa vraie place) : un graphique BI doit rester visuellement
+     * monotone, jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. Déjà trié
+     * par montant décroissant en entrée (voir {@link #agreger}). La même liste alimente à la fois le
+     * graphique de masse et celui d'effectif de la dimension (chantier ou fonction). */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
-        return agregats.stream()
-                .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant()))
-                .toList();
+        List<RepartitionBean> valeurs = new ArrayList<>();
+        int effectifAutres = 0;
+        BigDecimal montantAutres = BigDecimal.ZERO;
+        for (int i = 0; i < agregats.size(); i++) {
+            Agregat agregat = agregats.get(i);
+            if (i < MAX_BARRES_GRAPHIQUE) {
+                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant()));
+            } else {
+                effectifAutres += agregat.effectif();
+                montantAutres = montantAutres.add(agregat.montant());
+            }
+        }
+        if (effectifAutres > 0) {
+            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
+        }
+        valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
+        return valeurs;
     }
 
     /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
