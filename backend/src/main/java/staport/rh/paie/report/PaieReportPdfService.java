@@ -138,6 +138,7 @@ public class PaieReportPdfService {
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
+        parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
         parametres.put("SUBREPORT_SOMMAIRE", sommaireReport);

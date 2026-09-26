@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
+import staport.rh.paie.repositories.EvolutionMensuelleProjection;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
@@ -39,9 +40,10 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
-    private static final int MAX_BARRES_GRAPHIQUE = 20;
+    private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
+    private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
      * chaîne déjà formatée pour trier ou construire un graphique. */
@@ -57,10 +59,19 @@ class PaieBiReportBuilder {
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
         List<Paie> courant = rechercher(periode, requete);
         List<Paie> precedent = rechercher(periode.minusMonths(1), requete);
-        return construireDepuis(periode, requete, courant, precedent);
+        List<RepartitionBean> evolution = evolutionMensuelle(periode);
+        return construireDepuis(periode, requete, courant, precedent, evolution);
     }
 
+    /** Surcharge sans historique d'évolution (utilisée par les tests de {@link PaieBiReportBuilder},
+     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : le graphique
+     * d'évolution reste alors simplement vide, sans incidence sur le reste du calcul. */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
+        return construireDepuis(periode, requete, courant, precedent, List.of());
+    }
+
+    RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent,
+                                   List<RepartitionBean> evolutionMensuelle) {
         if (courant.isEmpty()) {
             throw new AucunePaiePeriodeException(periode);
         }
@@ -77,7 +88,8 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 versRepartition(agregatChantier),
-                versRepartition(agregatFonction)
+                versRepartition(agregatFonction),
+                evolutionMensuelle
         );
 
         // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
@@ -170,31 +182,35 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
-     * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — un graphique de
-     * direction reste lisible, pas un mur de barres. Le résultat est retrié par montant décroissant
-     * (y compris "Autres" à sa vraie place) : un graphique BI doit rester visuellement monotone,
-     * jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. La même liste
-     * alimente à la fois le graphique de masse et celui d'effectif de la dimension (chantier ou
-     * fonction), voir {@code docs/report/README.md}. */
+    /** Toutes les valeurs d'un graphique de la synthèse globale (chaque chantier, chaque fonction),
+     * jamais tronquées ni regroupées sous "Autres" — une demande explicite de direction, voir
+     * {@code docs/report/README.md} : chaque barre doit rester identifiable. Déjà trié par montant
+     * décroissant (voir {@link #agreger}). La même liste alimente à la fois le graphique de masse et
+     * celui d'effectif de la dimension (chantier ou fonction). */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
-        List<RepartitionBean> valeurs = new ArrayList<>();
-        int effectifAutres = 0;
-        BigDecimal montantAutres = BigDecimal.ZERO;
-        for (int i = 0; i < agregats.size(); i++) {
-            Agregat agregat = agregats.get(i);
-            if (i < MAX_BARRES_GRAPHIQUE) {
-                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant()));
-            } else {
-                effectifAutres += agregat.effectif();
-                montantAutres = montantAutres.add(agregat.montant());
-            }
+        return agregats.stream()
+                .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant()))
+                .toList();
+    }
+
+    /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
+     * alimentant les 2 graphiques d'évolution de la synthèse globale — un point par mois, y compris
+     * les mois sans aucun bulletin (masse et effectif à 0, une absence réelle de paie ce mois-là,
+     * jamais une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
+    private List<RepartitionBean> evolutionMensuelle(YearMonth periode) {
+        YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
+        Map<YearMonth, EvolutionMensuelleProjection> parPeriode = repository.sommerParPeriode(debut, periode).stream()
+                .collect(Collectors.toMap(EvolutionMensuelleProjection::getPeriode, Function.identity()));
+
+        List<RepartitionBean> points = new ArrayList<>();
+        for (YearMonth mois = debut; !mois.isAfter(periode); mois = mois.plusMonths(1)) {
+            EvolutionMensuelleProjection valeur = parPeriode.get(mois);
+            points.add(new RepartitionBean(
+                    mois.format(FORMAT_MOIS_COURT),
+                    valeur == null ? 0 : valeur.getEffectif().intValue(),
+                    valeur == null ? BigDecimal.ZERO : valeur.getMasse()));
         }
-        if (effectifAutres > 0) {
-            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
-        }
-        valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
-        return valeurs;
+        return points;
     }
 
     private List<String> filtresActifs(PaieReportPdfRequestDto requete, List<Paie> courant) {
