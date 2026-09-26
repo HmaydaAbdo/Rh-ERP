@@ -45,21 +45,21 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(new Color(0xE2, 0xE8, 0xF0));
-        plot.setInsets(new RectangleInsets(1, 2, 1, 8));
+        // Marge de droite généreuse : les étiquettes de valeur sont maintenant à l'extérieur de la
+        // barre (voir plus bas), il leur faut de la place même pour le plus gros montant du graphique
+        // — jamais un montant tronqué en bord de page.
+        plot.setInsets(new RectangleInsets(4, 4, 4, 90));
         plot.getDomainAxis().setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 9));
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
         plot.getRangeAxis().setVisible(false);
 
-        // Barres épaisses et peu espacées : jusqu'à MAX_BARRES_GRAPHIQUE catégories doivent tenir
-        // sur une hauteur de chart fixe tout en laissant assez d'épaisseur pour une étiquette à
-        // l'intérieur de chaque barre (voir demande : montant affiché dans la barre, jamais à côté).
-        // Chaque graphique occupant désormais une demi-page (2 graphiques côte à côte), la hauteur
-        // disponible est bien plus généreuse qu'auparavant (page pleine largeur empilée) : la marge
-        // entre catégories peut rester modeste sans jamais compresser les barres.
+        // Barres épaisses et peu espacées : chaque graphique occupe désormais sa propre page pleine
+        // largeur (un seul graphique par page, jamais deux côte à côte), la marge entre catégories
+        // peut donc rester très faible sans jamais compresser les barres visuellement.
         CategoryAxis categoryAxis = (CategoryAxis) plot.getDomainAxis();
-        categoryAxis.setCategoryMargin(0.15);
-        categoryAxis.setLowerMargin(0.02);
-        categoryAxis.setUpperMargin(0.02);
+        categoryAxis.setCategoryMargin(0.08);
+        categoryAxis.setLowerMargin(0.01);
+        categoryAxis.setUpperMargin(0.01);
 
         boolean masse = estSerieMasse(plot.getDataset());
 
@@ -69,16 +69,19 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         renderer.setDrawBarOutline(true);
         renderer.setSeriesOutlinePaint(0, COULEUR_BARRE.darker());
         renderer.setSeriesOutlineStroke(0, new BasicStroke(1f));
-        renderer.setMaximumBarWidth(0.95);
-        // Étiquette de valeur centrée à l'intérieur de la barre (blanc, contraste sur le bleu) —
-        // jamais à l'extérieur, demande explicite pour une lecture directe sans repère externe.
+        renderer.setMaximumBarWidth(1.0);
+        // Étiquette de valeur à l'extérieur de la barre (jamais à l'intérieur) — demande explicite :
+        // une barre courte (petit chantier) est parfois trop étroite pour contenir son étiquette, qui
+        // disparaîtrait silencieusement si elle restait centrée dedans. À l'extérieur, l'étiquette
+        // reste toujours entièrement visible quelle que soit la longueur de la barre. Texte noir
+        // (plus de contraste blanc-sur-bleu nécessaire, l'étiquette est maintenant sur fond blanc).
         // Réglages au niveau de la série (pas des setters "base" dépréciés) : le thème par défaut
         // de JasperReports positionne déjà une visibilité par série avant l'appel de ce customizer,
         // qui prime sinon silencieusement sur setItemLabelsVisible(true) et empêche tout affichage.
         renderer.setSeriesItemLabelsVisible(0, Boolean.TRUE);
         renderer.setSeriesItemLabelFont(0, new Font("Liberation Serif", Font.BOLD, 9));
-        renderer.setSeriesItemLabelPaint(0, Color.WHITE);
-        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER));
+        renderer.setSeriesItemLabelPaint(0, Color.BLACK);
+        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.CENTER_LEFT));
         renderer.setSeriesItemLabelGenerator(0, new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#,##0")) {
             @Override
             public String generateLabel(CategoryDataset dataset, int row, int column) {

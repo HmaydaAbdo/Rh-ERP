@@ -39,7 +39,10 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(COULEUR_GRILLE);
-        plot.setInsets(new RectangleInsets(4, 4, 2, 10));
+        // Marge du haut généreuse : l'étiquette du dernier point (le seul affiché, voir plus bas)
+        // est positionnée au-dessus du point — sans cette marge, un point proche du maximum de l'axe
+        // se retrouve tronqué en haut du graphique. Marge de droite pour la même raison côté largeur.
+        plot.setInsets(new RectangleInsets(16, 4, 2, 40));
 
         CategoryAxis categoryAxis = plot.getDomainAxis();
         categoryAxis.setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 8));
@@ -60,13 +63,21 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         renderer.setUseFillPaint(true);
         renderer.setSeriesFillPaint(0, Color.WHITE);
 
+        // Étiquette de valeur affichée UNIQUEMENT sur le dernier point (mois courant) — avec jusqu'à
+        // 12 points dont plusieurs mois à 0 (aucun historique encore disponible, voir
+        // PaieBiReportBuilder.evolutionMensuelle), étiqueter chaque point les fait toutes s'empiler
+        // sur la même ligne de base et devenir illisibles. Le point le plus récent est la seule valeur
+        // qu'un lecteur cherche vraiment sur ce type de courbe ; les autres se lisent sur l'axe.
         renderer.setSeriesItemLabelsVisible(0, Boolean.TRUE);
-        renderer.setSeriesItemLabelFont(0, new Font("Liberation Serif", Font.PLAIN, 8));
-        renderer.setSeriesItemLabelPaint(0, new Color(0x33, 0x33, 0x33));
+        renderer.setSeriesItemLabelFont(0, new Font("Liberation Serif", Font.BOLD, 9));
+        renderer.setSeriesItemLabelPaint(0, new Color(0x14, 0x33, 0x5C));
         renderer.setSeriesItemLabelGenerator(0, new org.jfree.chart.labels.StandardCategoryItemLabelGenerator(
                 "{2}", new DecimalFormat("#,##0")) {
             @Override
             public String generateLabel(CategoryDataset dataset, int row, int column) {
+                if (column != dataset.getColumnCount() - 1) {
+                    return null;
+                }
                 Number valeur = dataset.getValue(row, column);
                 return masse
                         ? PaieReportNumberFormat.montant(BigDecimal.valueOf(valeur.doubleValue())) + " DH"
