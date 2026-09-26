@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,8 +42,6 @@ class PaieBiReportBuilder {
     private static final int MAX_BARRES_GRAPHIQUE = 20;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
-    private static final DateTimeFormatter FORMAT_PERIODE_COURTE =
-            DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
      * chaîne déjà formatée pour trier ou construire un graphique. */
@@ -60,18 +57,10 @@ class PaieBiReportBuilder {
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
         List<Paie> courant = rechercher(periode, requete);
         List<Paie> precedent = rechercher(periode.minusMonths(1), requete);
-        List<Paie> historique = rechercher(null, requete);
-        return construireDepuis(periode, requete, courant, precedent, historique);
+        return construireDepuis(periode, requete, courant, precedent);
     }
 
-    /** Surcharge sans historique explicite (toutes les périodes trouvées en base pour le périmètre
-     * filtré, voir {@link #evolutionMasse}) — utilisée par les tests qui ne portent pas sur le
-     * graphique d'évolution ; l'historique retombe alors sur le seul mois courant. */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
-        return construireDepuis(periode, requete, courant, precedent, courant);
-    }
-
-    RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent, List<Paie> historique) {
         if (courant.isEmpty()) {
             throw new AucunePaiePeriodeException(periode);
         }
@@ -88,8 +77,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 versRepartition(agregatChantier),
-                versRepartition(agregatFonction),
-                evolutionMasse(historique)
+                versRepartition(agregatFonction)
         );
 
         // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
@@ -207,19 +195,6 @@ class PaieBiReportBuilder {
         }
         valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
-    }
-
-    /** Une masse par période réellement présente en base pour le périmètre filtré (jamais une
-     * fenêtre glissante à trous — pas de mois à 0 pour une période sans bulletin), triée
-     * chronologiquement. Alimente le {@code <lineChart>} JRXML « Évolution de la masse salariale »
-     * — voir {@code docs/report/README.md}. */
-    private List<EvolutionMasseBean> evolutionMasse(List<Paie> historique) {
-        Map<YearMonth, List<Paie>> parPeriode = historique.stream()
-                .filter(paie -> paie.getPeriode() != null)
-                .collect(Collectors.groupingBy(Paie::getPeriode, TreeMap::new, Collectors.toList()));
-        return parPeriode.entrySet().stream()
-                .map(entree -> new EvolutionMasseBean(entree.getKey().format(FORMAT_PERIODE_COURTE), sommer(entree.getValue())))
-                .toList();
     }
 
     private List<String> filtresActifs(PaieReportPdfRequestDto requete, List<Paie> courant) {

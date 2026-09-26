@@ -45,18 +45,21 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(new Color(0xE2, 0xE8, 0xF0));
-        plot.setInsets(new RectangleInsets(1, 2, 1, 6));
-        plot.getDomainAxis().setTickLabelFont(new Font("DejaVu Sans", Font.PLAIN, 6));
+        plot.setInsets(new RectangleInsets(1, 2, 1, 8));
+        plot.getDomainAxis().setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 9));
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
         plot.getRangeAxis().setVisible(false);
 
         // Barres épaisses et peu espacées : jusqu'à MAX_BARRES_GRAPHIQUE catégories doivent tenir
         // sur une hauteur de chart fixe tout en laissant assez d'épaisseur pour une étiquette à
         // l'intérieur de chaque barre (voir demande : montant affiché dans la barre, jamais à côté).
+        // Chaque graphique occupant désormais une demi-page (2 graphiques côte à côte), la hauteur
+        // disponible est bien plus généreuse qu'auparavant (page pleine largeur empilée) : la marge
+        // entre catégories peut rester modeste sans jamais compresser les barres.
         CategoryAxis categoryAxis = (CategoryAxis) plot.getDomainAxis();
-        categoryAxis.setCategoryMargin(0.12);
-        categoryAxis.setLowerMargin(0.01);
-        categoryAxis.setUpperMargin(0.01);
+        categoryAxis.setCategoryMargin(0.15);
+        categoryAxis.setLowerMargin(0.02);
+        categoryAxis.setUpperMargin(0.02);
 
         boolean masse = estSerieMasse(plot.getDataset());
 
@@ -73,7 +76,7 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         // de JasperReports positionne déjà une visibilité par série avant l'appel de ce customizer,
         // qui prime sinon silencieusement sur setItemLabelsVisible(true) et empêche tout affichage.
         renderer.setSeriesItemLabelsVisible(0, Boolean.TRUE);
-        renderer.setSeriesItemLabelFont(0, new Font("DejaVu Sans", Font.BOLD, 6));
+        renderer.setSeriesItemLabelFont(0, new Font("Liberation Serif", Font.BOLD, 9));
         renderer.setSeriesItemLabelPaint(0, Color.WHITE);
         renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER));
         renderer.setSeriesItemLabelGenerator(0, new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#,##0")) {

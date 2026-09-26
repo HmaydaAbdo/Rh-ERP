@@ -52,13 +52,11 @@ public class PaieReportPdfService {
     private static final String DOSSIER_JASPER = "report/paie/jasper/";
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
     private static final String ANCRE_SYNTHESE = "synthese-globale";
-    private static final String LIBELLE_SYNTHESE = "Synthèse globale";
-    private static final String ANCRE_EVOLUTION = "graph-evolution";
-    private static final String LIBELLE_EVOLUTION = "Évolution de la masse salariale";
+    private static final String LIBELLE_SYNTHESE = "I — Synthèse globale";
     private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
-    private static final String LIBELLE_GRAPH_CHANTIER = "Masse et effectif par chantier";
+    private static final String LIBELLE_GRAPH_CHANTIER = "II — Répartition par chantier";
     private static final String ANCRE_GRAPH_FONCTION = "graph-fonction";
-    private static final String LIBELLE_GRAPH_FONCTION = "Masse et effectif par fonction";
+    private static final String LIBELLE_GRAPH_FONCTION = "III — Répartition par fonction";
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
@@ -113,7 +111,6 @@ public class PaieReportPdfService {
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
-        parametres.put("P_EVOLUTION_MASSE", synthese.evolutionMasse());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
         parametres.put("SUBREPORT_SOMMAIRE", sommaireReport);
@@ -137,7 +134,6 @@ public class PaieReportPdfService {
     private List<SommaireEntreeBean> sommaireEntrees(RapportBiVue vue, Map<String, Integer> pagesParAncre) {
         List<SommaireEntreeBean> entrees = new ArrayList<>();
         entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
-        entrees.add(new SommaireEntreeBean(LIBELLE_EVOLUTION, pageDe(pagesParAncre, ANCRE_EVOLUTION)));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_FONCTION, pageDe(pagesParAncre, ANCRE_GRAPH_FONCTION)));
         for (ChantierBiVue chantier : vue.chantiers()) {
