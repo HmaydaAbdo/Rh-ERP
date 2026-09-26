@@ -16,15 +16,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -52,6 +53,12 @@ public class PaieReportPdfService {
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
     private static final String ANCRE_SYNTHESE = "synthese-globale";
     private static final String LIBELLE_SYNTHESE = "Synthèse globale";
+    private static final String ANCRE_EVOLUTION = "graph-evolution";
+    private static final String LIBELLE_EVOLUTION = "Évolution de la masse salariale";
+    private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
+    private static final String LIBELLE_GRAPH_CHANTIER = "Masse et effectif par chantier";
+    private static final String ANCRE_GRAPH_FONCTION = "graph-fonction";
+    private static final String LIBELLE_GRAPH_FONCTION = "Masse et effectif par fonction";
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
@@ -72,7 +79,7 @@ public class PaieReportPdfService {
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         RapportBiVue vue = biReportBuilder.construire(periode, requete);
 
-        Map<String, Object> parametresBase = parametres(vue);
+        Map<String, Object> parametresBase = parametres(vue, periode);
         List<LigneRapportDetailBean> lignes = lignesDetail(vue);
 
         JasperPrint passeDecouverte = remplir(rapportReport, avecSommaire(parametresBase, sommaireEntrees(vue, null)),
@@ -88,12 +95,14 @@ public class PaieReportPdfService {
         return pdf;
     }
 
-    private Map<String, Object> parametres(RapportBiVue vue) {
+    private Map<String, Object> parametres(RapportBiVue vue, YearMonth periode) {
         SyntheseGlobaleVue synthese = vue.synthese();
         Map<String, Object> parametres = new HashMap<>();
+        parametres.put("P_LOGO", logo);
         parametres.put("P_PERIODE_LIBELLE", vue.periodeLibelle());
+        parametres.put("P_PERIODE_MOIS", moisLibelle(periode));
+        parametres.put("P_PERIODE_ANNEE", String.valueOf(periode.getYear()));
         parametres.put("P_DATE_GENERATION", vue.dateGeneration());
-        parametres.put("P_FILTRES_LIBELLE", filtresLibelle(vue.filtresActifs()));
         parametres.put("P_MASSE_VALEUR", synthese.masse().valeurCourante());
         parametres.put("P_MASSE_VARIATION", variationLibelle(synthese.masse()));
         parametres.put("P_MASSE_TENDANCE", synthese.masse().tendance().name());
@@ -104,28 +113,33 @@ public class PaieReportPdfService {
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
+        parametres.put("P_EVOLUTION_MASSE", synthese.evolutionMasse());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
         parametres.put("SUBREPORT_SOMMAIRE", sommaireReport);
         return parametres;
     }
 
-    /** Copie les paramètres partagés pour un passage de remplissage — {@code P_LOGO} (un flux, donc
-     * à usage unique) doit être régénéré à chaque passage, jamais partagé entre les deux remplissages
-     * du document (voir {@link #generer}). */
+    private String moisLibelle(YearMonth periode) {
+        String mois = periode.getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH);
+        return Character.toUpperCase(mois.charAt(0)) + mois.substring(1);
+    }
+
     private Map<String, Object> avecSommaire(Map<String, Object> parametresBase, List<SommaireEntreeBean> entreesSommaire) {
         Map<String, Object> parametres = new HashMap<>(parametresBase);
-        parametres.put("P_LOGO", nouveauFluxLogo());
         parametres.put("P_SOMMAIRE_ENTREES", entreesSommaire);
         return parametres;
     }
 
-    /** Sommaire globale + une ligne par chantier — {@code pagesParAncre} vaut {@code null} lors du
-     * premier passage (numéros encore inconnus, valeur de repli 0 sans incidence sur la mise en page
-     * du sous-rapport, un champ numérique de largeur fixe). */
+    /** Synthèse globale + les 3 pages graphiques + une ligne par chantier — {@code pagesParAncre}
+     * vaut {@code null} lors du premier passage (numéros encore inconnus, valeur de repli 0 sans
+     * incidence sur la mise en page du sous-rapport, un champ numérique de largeur fixe). */
     private List<SommaireEntreeBean> sommaireEntrees(RapportBiVue vue, Map<String, Integer> pagesParAncre) {
         List<SommaireEntreeBean> entrees = new ArrayList<>();
         entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
+        entrees.add(new SommaireEntreeBean(LIBELLE_EVOLUTION, pageDe(pagesParAncre, ANCRE_EVOLUTION)));
+        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
+        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_FONCTION, pageDe(pagesParAncre, ANCRE_GRAPH_FONCTION)));
         for (ChantierBiVue chantier : vue.chantiers()) {
             entrees.add(new SommaireEntreeBean(chantier.titre(), pageDe(pagesParAncre, "chantier-" + chantier.code())));
         }
@@ -243,10 +257,6 @@ public class PaieReportPdfService {
                 : base + ".";
     }
 
-    private String filtresLibelle(List<String> filtresActifs) {
-        return filtresActifs.isEmpty() ? "Tous chantiers · Toutes fonctions · Tous employés" : String.join(" · ", filtresActifs);
-    }
-
     private JasperReport compiler(String nomFichier) {
         try (InputStream flux = new ClassPathResource(DOSSIER_JASPER + nomFichier).getInputStream()) {
             return JasperCompileManager.compileReport(flux);
@@ -261,9 +271,5 @@ public class PaieReportPdfService {
         } catch (IOException e) {
             throw new IllegalStateException("Logo du rapport PDF introuvable : " + CHEMIN_LOGO, e);
         }
-    }
-
-    private InputStream nouveauFluxLogo() {
-        return new ByteArrayInputStream(logo);
     }
 }

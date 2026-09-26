@@ -26,7 +26,7 @@
 
     <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
 
-    <!-- Source de données des 4 barChart (masse/effectif par chantier ou par fonction) — même forme
+    <!-- Source de données des barChart (masse/effectif par chantier ou par fonction) — même forme
          (libellé, effectif, montant), voir RepartitionBean. -->
     <subDataset name="dsRepartition">
         <field name="libelle" class="java.lang.String"/>
@@ -34,10 +34,20 @@
         <field name="montant" class="java.math.BigDecimal"/>
     </subDataset>
 
-    <parameter name="P_LOGO" class="java.io.InputStream"/>
+    <!-- Source de données du lineChart « Évolution de la masse salariale » — voir EvolutionMasseBean. -->
+    <subDataset name="dsEvolution">
+        <field name="libellePeriode" class="java.lang.String"/>
+        <field name="montant" class="java.math.BigDecimal"/>
+    </subDataset>
+
+    <!-- byte[] et non InputStream : le logo est référencé par PLUSIEURS <image> (page de garde +
+         pageHeader répété sur chaque page) — un InputStream ne se lit qu'une fois, la deuxième
+         référence obtiendrait un flux déjà épuisé (image blanche). byte[] est réévaluable à volonté. -->
+    <parameter name="P_LOGO" class="byte[]"/>
     <parameter name="P_PERIODE_LIBELLE" class="java.lang.String"/>
+    <parameter name="P_PERIODE_MOIS" class="java.lang.String"/>
+    <parameter name="P_PERIODE_ANNEE" class="java.lang.String"/>
     <parameter name="P_DATE_GENERATION" class="java.lang.String"/>
-    <parameter name="P_FILTRES_LIBELLE" class="java.lang.String"/>
     <parameter name="P_MASSE_VALEUR" class="java.lang.String"/>
     <parameter name="P_MASSE_VARIATION" class="java.lang.String"/>
     <parameter name="P_MASSE_TENDANCE" class="java.lang.String"/>
@@ -48,6 +58,7 @@
     <parameter name="P_NOMBRE_CHANTIERS" class="java.lang.String"/>
     <parameter name="P_REPARTITION_CHANTIER" class="java.util.List"/>
     <parameter name="P_REPARTITION_FONCTION" class="java.util.List"/>
+    <parameter name="P_EVOLUTION_MASSE" class="java.util.List"/>
     <parameter name="P_SYNTHESE_NARRATIF" class="java.lang.String"/>
     <parameter name="P_SOMMAIRE_ENTREES" class="java.util.List"/>
     <parameter name="SUBREPORT_DISTRIBUTION" class="net.sf.jasperreports.engine.JasperReport"/>
@@ -99,7 +110,7 @@
     <group name="GroupSynthese" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["SYNTHESE"]]></groupExpression>
         <groupHeader>
-            <band height="473" splitType="Stretch">
+            <band height="90" splitType="Stretch">
 
                 <!-- ============================== SYNTHÈSE GLOBALE ==============================
                      textField (pas staticText) : seul <textField> porte anchorNameExpression dans le
@@ -232,21 +243,61 @@
                     <textElement><font fontName="DejaVu Sans" size="7" isItalic="true"/></textElement>
                     <textFieldExpression><![CDATA[$P{P_SYNTHESE_NARRATIF}]]></textFieldExpression>
                 </textField>
+            </band>
+        </groupHeader>
+    </group>
 
-                <!-- ====================== 4 VISUALISATIONS (page 100% graphique) ====================== -->
-                <staticText>
-                    <reportElement x="0" y="86" width="390" height="11" forecolor="#14335C"/>
+    <!-- Page dédiée : évolution de la masse salariale sur toutes les périodes réellement présentes
+         en base pour le périmètre filtré (voir PaieBiReportBuilder.evolutionMasse) — une tendance
+         dans le temps, question différente des 4 barChart de comparaison catégorielle ci-dessous,
+         jamais mélangée au même graphique. -->
+    <group name="GroupGraphEvolution" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
+        <groupExpression><![CDATA["GRAPH_EVOLUTION"]]></groupExpression>
+        <groupHeader>
+            <band height="473" splitType="Stretch">
+                <textField>
+                    <reportElement x="0" y="0" width="802" height="16" mode="Opaque" backcolor="#14335C"/>
+                    <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="10" isBold="true"/><paragraph leftIndent="8"/></textElement>
+                    <textFieldExpression><![CDATA["ÉVOLUTION DE LA MASSE SALARIALE"]]></textFieldExpression>
+                    <anchorNameExpression><![CDATA["graph-evolution"]]></anchorNameExpression>
+                </textField>
+                <lineChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
+                        <reportElement x="0" y="24" width="802" height="440"/>
+                    </chart>
+                    <categoryDataset>
+                        <dataset>
+                            <datasetRun subDataset="dsEvolution">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_EVOLUTION_MASSE})]]></dataSourceExpression>
+                            </datasetRun>
+                        </dataset>
+                        <categorySeries>
+                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libellePeriode}]]></categoryExpression>
+                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
+                        </categorySeries>
+                    </categoryDataset>
+                    <linePlot><plot/></linePlot>
+                </lineChart>
+            </band>
+        </groupHeader>
+    </group>
+
+    <!-- Page dédiée : masse + effectif par chantier, empilés pleine largeur (au lieu de 2 des 4
+         graphiques compressés côte à côte) — barres plus larges, montants plus lisibles. -->
+    <group name="GroupGraphChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
+        <groupExpression><![CDATA["GRAPH_CHANTIER"]]></groupExpression>
+        <groupHeader>
+            <band height="473" splitType="Stretch">
+                <textField>
+                    <reportElement x="0" y="0" width="802" height="11" forecolor="#14335C"/>
                     <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
-                    <text><![CDATA[1 — MASSE SALARIALE PAR CHANTIER]]></text>
-                </staticText>
-                <staticText>
-                    <reportElement x="412" y="86" width="390" height="11" forecolor="#14335C"/>
-                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
-                    <text><![CDATA[2 — MASSE SALARIALE PAR FONCTION]]></text>
-                </staticText>
+                    <textFieldExpression><![CDATA["1 — MASSE SALARIALE PAR CHANTIER"]]></textFieldExpression>
+                    <anchorNameExpression><![CDATA["graph-chantier"]]></anchorNameExpression>
+                </textField>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="98" width="390" height="178"/>
+                        <reportElement x="0" y="13" width="802" height="220"/>
                         <chartLegend/>
                     </chart>
                     <categoryDataset>
@@ -263,45 +314,20 @@
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
                 </barChart>
+                <staticText>
+                    <reportElement x="0" y="236" width="802" height="11" forecolor="#14335C"/>
+                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[2 — EFFECTIF PAR CHANTIER]]></text>
+                </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="412" y="98" width="390" height="178"/>
+                        <reportElement x="0" y="249" width="802" height="220"/>
                         <chartLegend/>
                     </chart>
                     <categoryDataset>
                         <dataset>
                             <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_FONCTION})]]></dataSourceExpression>
-                            </datasetRun>
-                        </dataset>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
-                        </categorySeries>
-                    </categoryDataset>
-                    <barPlot><plot/></barPlot>
-                </barChart>
-
-                <staticText>
-                    <reportElement x="0" y="284" width="390" height="11" forecolor="#14335C"/>
-                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
-                    <text><![CDATA[3 — EFFECTIF PAR FONCTION]]></text>
-                </staticText>
-                <staticText>
-                    <reportElement x="412" y="284" width="390" height="11" forecolor="#14335C"/>
-                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
-                    <text><![CDATA[4 — EFFECTIF PAR CHANTIER]]></text>
-                </staticText>
-                <barChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="296" width="390" height="177"/>
-                        <chartLegend/>
-                    </chart>
-                    <categoryDataset>
-                        <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_FONCTION})]]></dataSourceExpression>
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER})]]></dataSourceExpression>
                             </datasetRun>
                         </dataset>
                         <categorySeries>
@@ -312,15 +338,54 @@
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
                 </barChart>
+            </band>
+        </groupHeader>
+    </group>
+
+    <!-- Page dédiée : masse + effectif par fonction, même principe empilé pleine largeur. -->
+    <group name="GroupGraphFonction" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
+        <groupExpression><![CDATA["GRAPH_FONCTION"]]></groupExpression>
+        <groupHeader>
+            <band height="473" splitType="Stretch">
+                <textField>
+                    <reportElement x="0" y="0" width="802" height="11" forecolor="#14335C"/>
+                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA["3 — MASSE SALARIALE PAR FONCTION"]]></textFieldExpression>
+                    <anchorNameExpression><![CDATA["graph-fonction"]]></anchorNameExpression>
+                </textField>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="412" y="296" width="390" height="177"/>
+                        <reportElement x="0" y="13" width="802" height="220"/>
                         <chartLegend/>
                     </chart>
                     <categoryDataset>
                         <dataset>
                             <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER})]]></dataSourceExpression>
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_FONCTION})]]></dataSourceExpression>
+                            </datasetRun>
+                        </dataset>
+                        <categorySeries>
+                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
+                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
+                        </categorySeries>
+                    </categoryDataset>
+                    <barPlot><plot/></barPlot>
+                </barChart>
+                <staticText>
+                    <reportElement x="0" y="236" width="802" height="11" forecolor="#14335C"/>
+                    <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[4 — EFFECTIF PAR FONCTION]]></text>
+                </staticText>
+                <barChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
+                        <reportElement x="0" y="249" width="802" height="220"/>
+                        <chartLegend/>
+                    </chart>
+                    <categoryDataset>
+                        <dataset>
+                            <datasetRun subDataset="dsRepartition">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_FONCTION})]]></dataSourceExpression>
                             </datasetRun>
                         </dataset>
                         <categorySeries>
@@ -489,25 +554,46 @@
                 <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="24" isBold="true"/></textElement>
                 <text><![CDATA[RAPPORT DE PAIE]]></text>
             </staticText>
-            <staticText>
-                <reportElement x="0" y="196" width="802" height="16" forecolor="#64748B"/>
-                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="11"/></textElement>
-                <text><![CDATA[Synthèse BI — Ressources Humaines & Paie]]></text>
-            </staticText>
             <line>
-                <reportElement x="331" y="230" width="140" height="0" forecolor="#2563EB"/>
+                <reportElement x="331" y="210" width="140" height="0" forecolor="#2563EB"/>
                 <graphicElement><pen lineWidth="1.5"/></graphicElement>
             </line>
+
+            <!-- 3 clés-valeurs (Département / Année / Mois) au lieu d'une seule ligne de période —
+                 jamais de "Synthèse BI" ni de ligne Périmètre sur la page de garde. -->
+            <staticText>
+                <reportElement x="81" y="232" width="200" height="10" forecolor="#64748B"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="7" isBold="true"/></textElement>
+                <text><![CDATA[DÉPARTEMENT]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="81" y="244" width="200" height="22" forecolor="#14335C"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="13" isBold="true"/></textElement>
+                <text><![CDATA[Ressources Humaines]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="301" y="232" width="200" height="10" forecolor="#64748B"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="7" isBold="true"/></textElement>
+                <text><![CDATA[ANNÉE]]></text>
+            </staticText>
             <textField>
-                <reportElement x="0" y="248" width="802" height="30" forecolor="#14335C"/>
-                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="18" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{P_PERIODE_LIBELLE}]]></textFieldExpression>
+                <reportElement x="301" y="244" width="200" height="22" forecolor="#14335C"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="13" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
             </textField>
+
+            <staticText>
+                <reportElement x="521" y="232" width="200" height="10" forecolor="#64748B"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="7" isBold="true"/></textElement>
+                <text><![CDATA[MOIS]]></text>
+            </staticText>
             <textField>
-                <reportElement x="0" y="282" width="802" height="14" forecolor="#64748B"/>
-                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="8"/></textElement>
-                <textFieldExpression><![CDATA["Périmètre : " + $P{P_FILTRES_LIBELLE}]]></textFieldExpression>
+                <reportElement x="521" y="244" width="200" height="22" forecolor="#14335C"/>
+                <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="13" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_MOIS}]]></textFieldExpression>
             </textField>
+
             <textField>
                 <reportElement x="0" y="380" width="802" height="12" forecolor="#94A3B8"/>
                 <textElement textAlignment="Center"><font fontName="DejaVu Sans" size="7"/></textElement>
@@ -532,63 +618,61 @@
                 <graphicElement><pen lineWidth="0.0"/></graphicElement>
             </rectangle>
 
-            <!-- Bloc 1 : logo + titre -->
+            <!-- Bloc 1 : logo seul -->
             <image scaleImage="RetainShape" hAlign="Left" vAlign="Middle" onErrorType="Blank">
                 <reportElement x="0" y="10" width="120" height="46"/>
                 <imageExpression><![CDATA[$P{P_LOGO}]]></imageExpression>
             </image>
             <line>
-                <reportElement x="132" y="8" width="0" height="50" forecolor="#CBD5E1"/>
+                <reportElement x="140" y="8" width="0" height="50" forecolor="#CBD5E1"/>
             </line>
-            <staticText>
-                <reportElement x="144" y="22" width="140" height="22" forecolor="#14335C"/>
-                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="13" isBold="true"/></textElement>
-                <text><![CDATA[Rapport de paie]]></text>
-            </staticText>
 
             <!-- Bloc 2 : Département + date de génération -->
-            <line>
-                <reportElement x="294" y="8" width="0" height="50" forecolor="#CBD5E1"/>
-            </line>
             <staticText>
-                <reportElement x="306" y="9" width="200" height="8" forecolor="#64748B"/>
+                <reportElement x="155" y="9" width="220" height="8" forecolor="#64748B"/>
                 <textElement><font fontName="DejaVu Sans" size="5.5" isBold="true"/></textElement>
                 <text><![CDATA[DÉPARTEMENT]]></text>
             </staticText>
             <staticText>
-                <reportElement x="306" y="18" width="200" height="12" forecolor="#14335C"/>
+                <reportElement x="155" y="18" width="220" height="12" forecolor="#14335C"/>
                 <textElement><font fontName="DejaVu Sans" size="8" isBold="true"/></textElement>
                 <text><![CDATA[Ressources Humaines & Paie]]></text>
             </staticText>
             <staticText>
-                <reportElement x="306" y="35" width="200" height="8" forecolor="#64748B"/>
+                <reportElement x="155" y="35" width="220" height="8" forecolor="#64748B"/>
                 <textElement><font fontName="DejaVu Sans" size="5.5" isBold="true"/></textElement>
                 <text><![CDATA[GÉNÉRÉ LE]]></text>
             </staticText>
             <textField>
-                <reportElement x="306" y="44" width="200" height="11" forecolor="#14335C"/>
+                <reportElement x="155" y="44" width="220" height="11" forecolor="#14335C"/>
                 <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
                 <textFieldExpression><![CDATA[$P{P_DATE_GENERATION}]]></textFieldExpression>
             </textField>
 
-            <!-- Bloc 3 : période + périmètre -->
+            <!-- Bloc 3 : période — Mois et Année en deux clés-valeurs distinctes, jamais concaténées,
+                 jamais de ligne Périmètre (retirée du bandeau récurrent comme de la page de garde). -->
             <line>
-                <reportElement x="524" y="8" width="0" height="50" forecolor="#CBD5E1"/>
+                <reportElement x="395" y="8" width="0" height="50" forecolor="#CBD5E1"/>
             </line>
             <staticText>
-                <reportElement x="536" y="9" width="266" height="8" forecolor="#64748B"/>
+                <reportElement x="410" y="9" width="220" height="8" forecolor="#64748B"/>
                 <textElement><font fontName="DejaVu Sans" size="5.5" isBold="true"/></textElement>
-                <text><![CDATA[PÉRIODE]]></text>
+                <text><![CDATA[MOIS]]></text>
             </staticText>
             <textField>
-                <reportElement x="536" y="17" width="266" height="18" forecolor="#14335C"/>
-                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="13" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{P_PERIODE_LIBELLE}]]></textFieldExpression>
+                <reportElement x="410" y="18" width="220" height="12" forecolor="#14335C"/>
+                <textElement><font fontName="DejaVu Sans" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_MOIS}]]></textFieldExpression>
             </textField>
+            <staticText>
+                <reportElement x="410" y="35" width="220" height="8" forecolor="#64748B"/>
+                <textElement><font fontName="DejaVu Sans" size="5.5" isBold="true"/></textElement>
+                <text><![CDATA[ANNÉE]]></text>
+            </staticText>
             <textField>
-                <reportElement x="536" y="37" width="266" height="22" forecolor="#64748B"/>
-                <textElement><font fontName="DejaVu Sans" size="6.5"/></textElement>
-                <textFieldExpression><![CDATA["Périmètre : " + $P{P_FILTRES_LIBELLE}]]></textFieldExpression>
+                <reportElement x="410" y="44" width="220" height="11" forecolor="#14335C"/>
+                <textElement><font fontName="DejaVu Sans" size="7"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
             </textField>
         </band>
     </pageHeader>
@@ -672,11 +756,6 @@
 
     <pageFooter>
         <band height="16">
-            <textField>
-                <reportElement x="0" y="2" width="400" height="12" forecolor="#64748B"/>
-                <textElement><font fontName="DejaVu Sans" size="6.5"/></textElement>
-                <textFieldExpression><![CDATA["STAPORT — Rapport de paie (BI)"]]></textFieldExpression>
-            </textField>
             <textField>
                 <reportElement x="602" y="2" width="150" height="12" forecolor="#64748B"/>
                 <textElement textAlignment="Right"><font fontName="DejaVu Sans" size="6.5"/></textElement>
