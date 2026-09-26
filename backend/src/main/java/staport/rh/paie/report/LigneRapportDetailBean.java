@@ -18,12 +18,15 @@ public final class LigneRapportDetailBean {
     private final String chantierCode;
     private final String chantierTitre;
     private final String chantierMasseLigne;
+    private final String chantierMasseMoyenneParEmploye;
     private final String chantierEffectifValeur;
     private final String chantierEffectifNote;
     private final String chantierPartMasseGlobale;
     private final int chantierStc;
     private final String chantierNarratif;
     private final List<DistributionVue> chantierDistributionEquipe;
+    private final List<DistributionVue> chantierDistributionFonction;
+    private final List<CroisementBean> chantierCroisementEquipeFonction;
     private final String equipeNom;
     private final String equipeTitre;
     private final int equipeEffectif;
@@ -42,19 +45,24 @@ public final class LigneRapportDetailBean {
     private final String observation;
 
     LigneRapportDetailBean(String chantierCode, String chantierTitre, String chantierMasseLigne,
-                            String chantierEffectifValeur, String chantierEffectifNote, String chantierPartMasseGlobale,
-                            int chantierStc, String chantierNarratif, List<DistributionVue> chantierDistributionEquipe,
+                            String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
+                            String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
+                            List<DistributionVue> chantierDistributionEquipe, List<DistributionVue> chantierDistributionFonction,
+                            List<CroisementBean> chantierCroisementEquipeFonction,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
         this.chantierTitre = chantierTitre;
         this.chantierMasseLigne = chantierMasseLigne;
+        this.chantierMasseMoyenneParEmploye = chantierMasseMoyenneParEmploye;
         this.chantierEffectifValeur = chantierEffectifValeur;
         this.chantierEffectifNote = chantierEffectifNote;
         this.chantierPartMasseGlobale = chantierPartMasseGlobale;
         this.chantierStc = chantierStc;
         this.chantierNarratif = chantierNarratif;
         this.chantierDistributionEquipe = chantierDistributionEquipe;
+        this.chantierDistributionFonction = chantierDistributionFonction;
+        this.chantierCroisementEquipeFonction = chantierCroisementEquipeFonction;
         this.equipeNom = equipeNom;
         this.equipeTitre = equipeTitre;
         this.equipeEffectif = equipeEffectif;
@@ -85,6 +93,10 @@ public final class LigneRapportDetailBean {
         return chantierMasseLigne;
     }
 
+    public String getChantierMasseMoyenneParEmploye() {
+        return chantierMasseMoyenneParEmploye;
+    }
+
     public String getChantierEffectifValeur() {
         return chantierEffectifValeur;
     }
@@ -107,6 +119,14 @@ public final class LigneRapportDetailBean {
 
     public List<DistributionVue> getChantierDistributionEquipe() {
         return chantierDistributionEquipe;
+    }
+
+    public List<DistributionVue> getChantierDistributionFonction() {
+        return chantierDistributionFonction;
+    }
+
+    public List<CroisementBean> getChantierCroisementEquipeFonction() {
+        return chantierCroisementEquipeFonction;
     }
 
     public String getEquipeNom() {
