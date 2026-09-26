@@ -49,14 +49,13 @@
 
     <div class="field">
       <label for="fonctionId">Fonction *</label>
-      <p-dropdown
+      <app-lazy-select
         inputId="fonctionId"
         formControlName="fonctionId"
-        [options]="functions"
+        [source]="functionReferenceService"
         optionLabel="libelle"
-        optionValue="id"
         placeholder="Sélectionner une fonction"
-      ></p-dropdown>
+      ></app-lazy-select>
       @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
         <small class="field-error">La fonction est obligatoire.</small>
       }
@@ -64,14 +63,13 @@
 
     <div class="field">
       <label for="chantierId">Chantier *</label>
-      <p-dropdown
+      <app-lazy-select
         inputId="chantierId"
         formControlName="chantierId"
-        [options]="chantiers"
+        [source]="chantierReferenceService"
         optionLabel="code"
-        optionValue="id"
         placeholder="Sélectionner un chantier"
-      ></p-dropdown>
+      ></app-lazy-select>
       @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
         <small class="field-error">Le chantier est obligatoire.</small>
       }

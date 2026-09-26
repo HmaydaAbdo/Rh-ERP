@@ -24,17 +24,15 @@
 
     <div class="paie-export-excel__dialog-field">
       <label for="excelChantiersConcernes">Chantiers avec des équipes en feuilles séparées (optionnel)</label>
-      <p-multiSelect
+      <app-lazy-select
         inputId="excelChantiersConcernes"
         formControlName="chantiersConcernes"
-        [options]="chantiers"
+        [multiple]="true"
+        [source]="chantierReferenceService"
         optionLabel="code"
-        optionValue="code"
+        dataKey="code"
         placeholder="Aucun chantier sélectionné"
-        display="chip"
-        appendTo="body"
-        (onChange)="onChantiersConcernesChange()"
-      ></p-multiSelect>
+      ></app-lazy-select>
       <p class="paie-export-excel__dialog-hint">
         Sélectionner un chantier ici ne sépare aucune équipe automatiquement : choisissez ensuite, pour chaque chantier, les équipes à séparer.
       </p>

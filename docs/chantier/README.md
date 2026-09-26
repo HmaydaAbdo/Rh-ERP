@@ -176,8 +176,10 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 
 Accès via la barre latérale de l'application (`app.component.ts`, entrée "Chantiers").
 
-Le référentiel chantier est également consommé par le formulaire Employee
-(`shared/reference-data/chantier-reference.service.ts`) pour la liste déroulante d'affectation.
+Le référentiel chantier est également consommé par les formulaires/filtres Employee et Paie
+(`shared/reference-data/chantier-reference.service.ts`, implémentation du contrat de pagination
+attendu par le sélecteur générique `shared/components/lazy-select` — voir `conventions/frontend.md`,
+section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de liste (multiple).
 
 ---
 

@@ -15,9 +15,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieExportExcelDialogComponent } from '../export-excel/paie-export-excel-dialog.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
@@ -47,7 +46,8 @@ function toPeriodeString(date: Date | null): string | undefined {
     ConfirmDialogModule,
     DialogModule,
     TooltipModule,
-    PaieExportExcelDialogComponent
+    PaieExportExcelDialogComponent,
+    LazySelectComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
@@ -55,8 +55,8 @@ function toPeriodeString(date: Date | null): string | undefined {
 })
 export class PaieListComponent implements OnInit {
   private readonly paieService = inject(PaieService);
-  private readonly functionReferenceService = inject(FunctionReferenceService);
-  private readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly functionReferenceService = inject(FunctionReferenceService);
+  readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -72,15 +72,12 @@ export class PaieListComponent implements OnInit {
   loading = false;
   deletingId: number | null = null;
 
-  functions: FunctionReference[] = [];
-  chantiers: ChantierReference[] = [];
-
   readonly filterForm = this.fb.group({
     nomPrenom: [''],
     cin: [''],
     periode: [null as Date | null],
-    fonctionId: [null as number | null],
-    chantierId: [null as number | null]
+    fonctionIds: [[] as number[]],
+    chantierIds: [[] as number[]]
   });
 
   showImportDialog = false;
@@ -101,9 +98,6 @@ export class PaieListComponent implements OnInit {
   private lastSort = 'periode,desc';
 
   ngOnInit(): void {
-    this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
-    this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
-
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
@@ -279,8 +273,8 @@ export class PaieListComponent implements OnInit {
           nomPrenom: criteria.nomPrenom || undefined,
           cin: criteria.cin || undefined,
           periode: toPeriodeString(criteria.periode),
-          fonctionId: criteria.fonctionId ?? undefined,
-          chantierId: criteria.chantierId ?? undefined
+          fonctionIds: criteria.fonctionIds?.length ? criteria.fonctionIds : undefined,
+          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
       )

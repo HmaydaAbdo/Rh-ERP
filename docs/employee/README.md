@@ -84,7 +84,7 @@ l'import comme l'API exigent déjà ces deux dates).
 | `POST` | `/employees` | Créer un employé | 201, 400, 409 |
 | `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
 | `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
-| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionId`, `chantierId`, `statut`) | 200 |
+| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `statut`) — `fonctionIds`/`chantierIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
 | `DELETE` | `/employees/{id}` | Supprimer | 204, 404 |
 | `POST` | `/employees/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
 | `GET` | `/employees/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
@@ -206,6 +206,12 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 | `/employees/new` | `EmployeeFormComponent` | Création |
 | `/employees/:id` | `EmployeeDetailComponent` | Consultation |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut) |
+
+Fonction et chantier utilisent le sélecteur générique (`shared/components/lazy-select`, recherche
+serveur + chargement différé — voir `conventions/frontend.md`, section Sélecteurs) : sélection
+multiple pour les filtres de liste (`fonctionIds`/`chantierIds`), sélection simple dans le formulaire
+(relation unique de l'employé). Le filtre Statut reste en sélection simple (2 valeurs seulement, le
+multiselect n'y apporterait rien).
 
 Le bouton "Modèle Excel" télécharge le fichier vierge (`GET /employees/import/modele`) via un lien
 `<a download>` généré dynamiquement à partir du `Blob` reçu. Le bouton "Importer" déclenche un

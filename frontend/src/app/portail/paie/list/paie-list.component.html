@@ -113,23 +113,21 @@
 
     <p-calendar formControlName="periode" view="month" dateFormat="mm/yy" placeholder="Période" [showIcon]="true"></p-calendar>
 
-    <p-dropdown
-      formControlName="fonctionId"
-      [options]="functions"
+    <app-lazy-select
+      formControlName="fonctionIds"
+      [multiple]="true"
+      [source]="functionReferenceService"
       optionLabel="libelle"
-      optionValue="id"
       placeholder="Fonction"
-      [showClear]="true"
-    ></p-dropdown>
+    ></app-lazy-select>
 
-    <p-dropdown
-      formControlName="chantierId"
-      [options]="chantiers"
+    <app-lazy-select
+      formControlName="chantierIds"
+      [multiple]="true"
+      [source]="chantierReferenceService"
       optionLabel="code"
-      optionValue="id"
       placeholder="Chantier"
-      [showClear]="true"
-    ></p-dropdown>
+    ></app-lazy-select>
 
     <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
     <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>

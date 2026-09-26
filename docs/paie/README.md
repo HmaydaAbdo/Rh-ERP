@@ -114,7 +114,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie` | Créer un bulletin | 201, 400, 409 |
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
-| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionId`, `chantierId`, `equipe`) | 200 |
+| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipe`) — `fonctionIds`/`chantierIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
@@ -264,14 +264,18 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export, voir `docs/report/README.md` — « Exporter Excel » ouvre un dialog dédié (`PaieExportExcelDialogComponent`, configuration chantier/équipe) ; « Exporter PDF » télécharge directement le rapport BI, sans dialog, sur la période sélectionnée dans le filtre de la liste (les autres filtres ne s'appliquent pas au rapport) |
-| `/paie/new` | `PaieFormComponent` | Création — recherche d'employé par saisie assistée (les employés sont trop nombreux pour une liste chargée entièrement, contrairement à Function/Chantier) |
+| `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction et du chantier via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
-La recherche d'employé (`shared/reference-data/employee-reference.service.ts`) interroge
-`/employees/search` par page réduite à chaque frappe, plutôt qu'un chargement complet — à la
-différence de `FunctionReferenceService`/`ChantierReferenceService`, qui chargent tout (jeux de
-données bien plus petits).
+Les filtres fonction/chantier de la liste (`fonctionIds`/`chantierIds`) et les champs employé/
+fonction/chantier du formulaire utilisent tous le même sélecteur générique — seule la cardinalité
+change (sélection multiple pour les filtres de liste, simple pour les relations uniques du
+formulaire, voir `conventions/frontend.md`, section Sélecteurs). `EmployeeReferenceService`,
+`FunctionReferenceService` et `ChantierReferenceService` (`shared/reference-data/`) fournissent
+chacun une implémentation du contrat de pagination/recherche attendu par ce composant — plus de
+distinction entre une recherche paginée (employés) et un chargement complet (fonction/chantier),
+les trois interrogent désormais leur endpoint `/search` page par page.
 
 Accès via la barre latérale de l'application (`app.component.ts`, entrée "Paie").
 
