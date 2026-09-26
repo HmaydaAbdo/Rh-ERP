@@ -67,13 +67,16 @@ public final class PaieReportChartCustomizer implements JRChartCustomizer {
         renderer.setSeriesOutlinePaint(0, COULEUR_BARRE.darker());
         renderer.setSeriesOutlineStroke(0, new BasicStroke(1f));
         renderer.setMaximumBarWidth(0.95);
-        renderer.setItemLabelsVisible(true);
-        renderer.setItemLabelFont(new Font("DejaVu Sans", Font.BOLD, 6));
         // Étiquette de valeur centrée à l'intérieur de la barre (blanc, contraste sur le bleu) —
         // jamais à l'extérieur, demande explicite pour une lecture directe sans repère externe.
+        // Réglages au niveau de la série (pas des setters "base" dépréciés) : le thème par défaut
+        // de JasperReports positionne déjà une visibilité par série avant l'appel de ce customizer,
+        // qui prime sinon silencieusement sur setItemLabelsVisible(true) et empêche tout affichage.
+        renderer.setSeriesItemLabelsVisible(0, Boolean.TRUE);
+        renderer.setSeriesItemLabelFont(0, new Font("DejaVu Sans", Font.BOLD, 6));
         renderer.setSeriesItemLabelPaint(0, Color.WHITE);
-        renderer.setPositiveItemLabelPosition(new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER));
-        renderer.setItemLabelGenerator(new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#,##0")) {
+        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER));
+        renderer.setSeriesItemLabelGenerator(0, new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#,##0")) {
             @Override
             public String generateLabel(CategoryDataset dataset, int row, int column) {
                 Number valeur = dataset.getValue(row, column);

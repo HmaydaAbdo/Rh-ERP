@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sommaire du rapport BI paie — sous-rapport de rapport.jrxml, une ligne par section (Synthèse
+     globale puis un chantier par ligne, dans l'ordre où elles apparaissent dans le document) avec le
+     numéro de page où elle démarre. Les numéros de page réels ne sont connus qu'après un premier
+     remplissage silencieux du document (voir PaieReportPdfService, double passage) — ce sous-rapport
+     est rempli deux fois avec le même gabarit, la seconde fois avec les vrais numéros. -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="sommaire" pageWidth="802" pageHeight="800"
+              columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+
+    <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
+
+    <field name="titre" class="java.lang.String"/>
+    <field name="numeroPage" class="java.lang.Integer"/>
+
+    <title>
+        <band height="34">
+            <staticText>
+                <reportElement x="0" y="0" width="802" height="24" forecolor="#14335C"/>
+                <textElement><font fontName="DejaVu Sans" size="16" isBold="true"/></textElement>
+                <text><![CDATA[Sommaire]]></text>
+            </staticText>
+        </band>
+    </title>
+
+    <detail>
+        <band height="18" splitType="Prevent">
+            <rectangle>
+                <reportElement x="0" y="0" width="802" height="18" mode="Opaque" backcolor="#F8FAFC">
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0.0"/></graphicElement>
+            </rectangle>
+            <textField>
+                <reportElement x="0" y="2" width="700" height="14"/>
+                <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="9"/></textElement>
+                <textFieldExpression><![CDATA[$F{titre}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="750" y="2" width="52" height="14"/>
+                <box rightPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA["p. " + $F{numeroPage}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>
