@@ -30,8 +30,8 @@ export interface EmployeeUpdateRequest extends EmployeeCreateRequest {
 export interface EmployeeSearchCriteria {
   nomPrenom?: string;
   cin?: string;
-  fonctionId?: number;
-  chantierId?: number;
+  fonctionIds?: number[];
+  chantierIds?: number[];
   statut?: EmployeeStatut;
 }
 

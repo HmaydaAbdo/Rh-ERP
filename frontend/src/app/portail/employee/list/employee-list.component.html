@@ -68,23 +68,21 @@
     <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" />
     <input pInputText type="text" formControlName="cin" placeholder="CIN" />
 
-    <p-dropdown
-      formControlName="fonctionId"
-      [options]="functions"
+    <app-lazy-select
+      formControlName="fonctionIds"
+      [multiple]="true"
+      [source]="functionReferenceService"
       optionLabel="libelle"
-      optionValue="id"
       placeholder="Fonction"
-      [showClear]="true"
-    ></p-dropdown>
+    ></app-lazy-select>
 
-    <p-dropdown
-      formControlName="chantierId"
-      [options]="chantiers"
+    <app-lazy-select
+      formControlName="chantierIds"
+      [multiple]="true"
+      [source]="chantierReferenceService"
       optionLabel="code"
-      optionValue="id"
       placeholder="Chantier"
-      [showClear]="true"
-    ></p-dropdown>
+    ></app-lazy-select>
 
     <p-dropdown
       formControlName="statut"

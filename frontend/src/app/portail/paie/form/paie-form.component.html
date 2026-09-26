@@ -14,22 +14,15 @@
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="paie-form__grid">
     <div class="field">
-      <label for="employee">Employé *</label>
-      <p-autoComplete
-        inputId="employee"
-        formControlName="employee"
-        [suggestions]="employeeSuggestions"
-        (completeMethod)="rechercherEmployes($event)"
-        [delay]="300"
-        field="nomPrenom"
+      <label for="employeeId">Employé *</label>
+      <app-lazy-select
+        inputId="employeeId"
+        formControlName="employeeId"
+        [source]="employeeReferenceService"
+        optionLabel="displayLabel"
         placeholder="Rechercher par nom"
-        [dropdown]="false"
-      >
-        <ng-template let-employee pTemplate="item">
-          {{ employee.nomPrenom }} — {{ employee.cin }}
-        </ng-template>
-      </p-autoComplete>
-      @if (form.controls.employee.invalid && form.controls.employee.touched) {
+      ></app-lazy-select>
+      @if (form.controls.employeeId.invalid && form.controls.employeeId.touched) {
         <small class="field-error">L'employé est obligatoire.</small>
       }
     </div>
@@ -44,14 +37,13 @@
 
     <div class="field">
       <label for="fonctionId">Fonction *</label>
-      <p-dropdown
+      <app-lazy-select
         inputId="fonctionId"
         formControlName="fonctionId"
-        [options]="functions"
+        [source]="functionReferenceService"
         optionLabel="libelle"
-        optionValue="id"
         placeholder="Sélectionner une fonction"
-      ></p-dropdown>
+      ></app-lazy-select>
       @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
         <small class="field-error">La fonction est obligatoire.</small>
       }
@@ -59,14 +51,13 @@
 
     <div class="field">
       <label for="chantierId">Chantier *</label>
-      <p-dropdown
+      <app-lazy-select
         inputId="chantierId"
         formControlName="chantierId"
-        [options]="chantiers"
+        [source]="chantierReferenceService"
         optionLabel="code"
-        optionValue="id"
         placeholder="Sélectionner un chantier"
-      ></p-dropdown>
+      ></app-lazy-select>
       @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
         <small class="field-error">Le chantier est obligatoire.</small>
       }
