@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
+    private static final int MAX_BARRES_GRAPHIQUE = 20;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -182,15 +183,32 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Toutes les valeurs d'un graphique de la synthèse globale (chaque chantier, chaque fonction),
-     * jamais tronquées ni regroupées sous "Autres" — une demande explicite de direction, voir
-     * {@code docs/report/README.md} : chaque barre doit rester identifiable. Déjà trié par montant
-     * décroissant (voir {@link #agreger}). La même liste alimente à la fois le graphique de masse et
-     * celui d'effectif de la dimension (chantier ou fonction). */
+    /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
+     * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — demande explicite de
+     * direction (Top 20, un graphique complet à 25+ catégories devient trop dense pour rester
+     * lisible imprimé), voir {@code docs/report/README.md}. Le résultat est retrié par montant
+     * décroissant (y compris "Autres" à sa vraie place) : un graphique BI doit rester visuellement
+     * monotone, jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. Déjà trié
+     * par montant décroissant en entrée (voir {@link #agreger}). La même liste alimente à la fois le
+     * graphique de masse et celui d'effectif de la dimension (chantier ou fonction). */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
-        return agregats.stream()
-                .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant()))
-                .toList();
+        List<RepartitionBean> valeurs = new ArrayList<>();
+        int effectifAutres = 0;
+        BigDecimal montantAutres = BigDecimal.ZERO;
+        for (int i = 0; i < agregats.size(); i++) {
+            Agregat agregat = agregats.get(i);
+            if (i < MAX_BARRES_GRAPHIQUE) {
+                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant()));
+            } else {
+                effectifAutres += agregat.effectif();
+                montantAutres = montantAutres.add(agregat.montant());
+            }
+        }
+        if (effectifAutres > 0) {
+            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
+        }
+        valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
+        return valeurs;
     }
 
     /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
