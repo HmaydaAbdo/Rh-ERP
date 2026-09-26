@@ -15,10 +15,11 @@
           côte) — chapitre I, voir PaieReportEvolutionChartCustomizer.
        4. Chapitre II — Répartition par chantier (GroupGraphChantierMasse puis
           GroupGraphChantierEffectif), sur 2 pages : un seul graphique par page, pleine largeur,
-          jamais deux côte à côte, jamais tronqué (chaque chantier réel est représenté, aucun
-          regroupement "Autres") — voir PaieReportChartCustomizer. Seule la 1ʳᵉ page porte le titre de
-          chapitre/l'ancre, la 2ᵉ est sa suite directe. Chapitre III — Répartition par fonction retiré
-          temporairement (doublons non nettoyés dans le référentiel Fonction, voir TODO.md).
+          jamais deux côte à côte, plafonné aux 20 plus gros chantiers + "Autres" (voir
+          PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE, PaieReportChartCustomizer). Seule la 1ʳᵉ page
+          porte le titre de chapitre/l'ancre, la 2ᵉ est sa suite directe. Chapitre III — Répartition
+          par fonction retiré temporairement (doublons non nettoyés dans le référentiel Fonction, voir
+          TODO.md).
        5. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
           suite des chapitres fixes (voir PaieReportPdfService.chapitreChantier — I/II fixes, III et
           suivants un par chantier, même numérotation reflétée dans le Sommaire), puis par équipe
@@ -142,7 +143,7 @@
                 <staticText>
                     <reportElement x="8" y="42" width="176" height="11" forecolor="#595959"/>
                     <textElement><font fontName="Liberation Serif" size="9" isBold="true"/></textElement>
-                    <text><![CDATA[MASSE RÉELLE DE PAIE]]></text>
+                    <text><![CDATA[MASSE]]></text>
                 </staticText>
                 <textField>
                     <reportElement x="8" y="56" width="176" height="24" forecolor="#000000"/>
@@ -316,7 +317,7 @@
                 <staticText>
                     <reportElement x="0" y="34" width="802" height="16" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <text><![CDATA[Masse salariale par chantier]]></text>
+                    <text><![CDATA[Masse salariale par chantier (DH)]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
@@ -537,9 +538,10 @@
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
          JasperReports pour une bande title en isTitleNewPage, ici exploité plutôt que subi). Les 4
          informations Département/Mois/Année/Direction sont empilées verticalement (une sous l'autre,
-         Mois avant Année), jamais disposées en colonnes côte à côte. Signatures DRH/PDG en bas de
-         page : deux blocs identiques (nom du signataire + filet + légende), jamais pré-remplis — une
-         signature reste manuscrite sur le document imprimé. -->
+         Mois avant Année), jamais disposées en colonnes côte à côte. Signatures en bas de page :
+         Directeur Général et Directeur des Ressources Humaines, chacun rôle + nom + filet à signer —
+         le filet reste vide (une signature est manuscrite sur le document imprimé), seuls le rôle et
+         le nom sont pré-remplis. -->
     <title>
         <band height="520" splitType="Stretch">
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
@@ -602,12 +604,18 @@
                 <text><![CDATA[Direction des Ressources Humaines]]></text>
             </staticText>
 
-            <!-- Signatures : DRH à gauche, PDG à droite — deux blocs identiques (rôle, filet,
-                 légende), jamais de nom pré-rempli. -->
+            <!-- Signatures : Directeur Général à gauche, DRH à droite — deux blocs identiques
+                 (rôle, nom, filet, légende). Noms des signataires en dur (voir docs/report/README.md
+                 — à ajuster ici si un signataire change, aucune donnée métier ne les porte). -->
             <staticText>
-                <reportElement x="100" y="365" width="280" height="16" forecolor="#000000"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                <text><![CDATA[DRH]]></text>
+                <reportElement x="100" y="360" width="280" height="14" forecolor="#595959"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
+                <text><![CDATA[DIRECTEUR GÉNÉRAL]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="100" y="376" width="280" height="18" forecolor="#000000"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                <text><![CDATA[M. Mouhamed BARHICH]]></text>
             </staticText>
             <line>
                 <reportElement x="100" y="425" width="280" height="0" forecolor="#000000"/>
@@ -616,13 +624,18 @@
             <staticText>
                 <reportElement x="100" y="429" width="280" height="12" forecolor="#808080"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="8"/></textElement>
-                <text><![CDATA[Nom et signature]]></text>
+                <text><![CDATA[Signature]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="422" y="365" width="280" height="16" forecolor="#000000"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                <text><![CDATA[PDG]]></text>
+                <reportElement x="422" y="360" width="280" height="14" forecolor="#595959"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
+                <text><![CDATA[DIRECTEUR DES RESSOURCES HUMAINES]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="422" y="376" width="280" height="18" forecolor="#000000"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                <text><![CDATA[M. Ismail MOUSTAJID]]></text>
             </staticText>
             <line>
                 <reportElement x="422" y="425" width="280" height="0" forecolor="#000000"/>
@@ -631,7 +644,7 @@
             <staticText>
                 <reportElement x="422" y="429" width="280" height="12" forecolor="#808080"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="8"/></textElement>
-                <text><![CDATA[Nom et signature]]></text>
+                <text><![CDATA[Signature]]></text>
             </staticText>
 
             <textField>
@@ -650,10 +663,12 @@
     <!-- ================================ EN-TÊTE RÉCURRENT (pageHeader) ================================
          5 blocs indépendants de même hauteur, alignés horizontalement : Logo / Département / Mois /
          Année / Généré le (Mois avant Année, même ordre que la page de garde) — séparés par de fins
-         filets verticaux, jamais de texte concaténé entre deux informations. Bandeau volontairement
-         compact (hauteur réduite) pour laisser le maximum de place au contenu de chaque page. -->
+         filets verticaux, jamais de texte concaténé entre deux informations. Bandeau compact, mais la
+         bande déborde volontairement de ~14pt sous le filet de séparation (y=48, bande haute de 62) :
+         un contenu qui démarre immédiatement sous le filet paraît dense/collé à l'en-tête — cette
+         marge se répète nativement sur toutes les pages de contenu, jamais recréée page par page. -->
     <pageHeader>
-        <band height="50" splitType="Prevent">
+        <band height="62" splitType="Prevent">
             <!-- Bloc 1 : logo -->
             <image scaleImage="RetainShape" hAlign="Left" vAlign="Middle" onErrorType="Blank">
                 <reportElement x="10" y="4" width="110" height="42"/>

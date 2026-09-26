@@ -30,13 +30,9 @@
     </title>
 
     <detail>
+        <!-- 100% noir et blanc, aucune alternance de fond (demande explicite de direction) — chaque
+             ligne reste séparée par le seul filet gris clair déjà porté par les <box> ci-dessous. -->
         <band height="24" splitType="Prevent">
-            <rectangle>
-                <reportElement x="0" y="0" width="802" height="24" mode="Opaque" backcolor="#F2F2F2">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
-                </reportElement>
-                <graphicElement><pen lineWidth="0.0"/></graphicElement>
-            </rectangle>
             <textField>
                 <reportElement x="0" y="2" width="700" height="20"/>
                 <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>

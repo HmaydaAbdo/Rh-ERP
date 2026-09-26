@@ -54,10 +54,10 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 N'utilise PAS PaiePerimetreService : besoin différent (agrégation
 │                                 systématique de tout le périmètre filtré, jamais une sélection
 │                                 manuelle de sous-feuilles) — voir « Pourquoi deux périmètres ? ».
-├── PaieReportChartCustomizer.java Personnalise les 4 <barChart> JRXML natifs (barres horizontales,
+├── PaieReportChartCustomizer.java Personnalise les 2 <barChart> JRXML natifs (barres horizontales,
 │                                 seule touche de couleur du document — bleu, voir « Style visuel »,
-│                                 étiquette de valeur centrée à l'intérieur de chaque barre, aucun
-│                                 plafond de catégories) — seule logique Java des graphiques
+│                                 étiquette de valeur à l'extérieur de chaque barre, plafond des 20
+│                                 plus grosses valeurs + "Autres") — seule logique Java des graphiques
 │                                 catégoriels, le moteur JFreeChart est interne à JasperReports (aucun
 │                                 PNG généré à part). Réglages systématiquement posés au niveau de la
 │                                 série (série 0), jamais via les setters "base" dépréciés de
@@ -333,10 +333,10 @@ résume, seul le dernier détaille.
    **Département** (`Ressources Humaines`) / **Mois** / **Année** (Mois avant Année — l'ordre de
    lecture naturel d'une période « Août 2026 ») / **Direction** (`Direction des Ressources Humaines`,
    valeur statique), empilées **verticalement** (l'une sous l'autre, jamais en colonnes côte à côte),
-   puis un bloc **signatures** (DRH à gauche, PDG à droite — un filet + légende « Nom et signature »
-   chacun, jamais de nom pré-rempli : une signature reste manuscrite sur le document imprimé), puis
-   date de génération. Jamais de sous-titre « Synthèse BI », jamais de ligne Périmètre — une
-   couverture reste minimale.
+   puis un bloc **signatures** (Directeur Général à gauche, DRH à droite — rôle + nom du signataire
+   en dur + filet à signer, jamais le filet pré-rempli : une signature reste manuscrite sur le
+   document imprimé), puis date de génération. Jamais de sous-titre « Synthèse BI », jamais de ligne
+   Périmètre — une couverture reste minimale.
 2. **Sommaire** (`<group name="GroupSommaire">` à expression constante — son en-tête ne s'imprime
    qu'une seule fois, en tout début de document, juste après la page de garde) : une ligne par
    section (les chapitres BI, puis un chantier par ligne, dans l'ordre d'apparition, chacun déjà
@@ -429,17 +429,24 @@ pour un rapport de direction généré à la demande, pas en masse.
   courte (petit chantier) est parfois trop étroite pour contenir son étiquette, qui disparaîtrait
   silencieusement si elle restait centrée dedans — à l'extérieur, l'étiquette reste toujours
   entièrement visible quelle que soit la longueur de la barre (marge de droite du plot dimensionnée
-  en conséquence). Ces réglages sont posés au niveau de la série JFreeChart
+  en conséquence). Ancrage `ItemLabelAnchor.OUTSIDE3` (« 3 heures », à droite en coordonnées écran) —
+  **jamais `OUTSIDE12`** : ces ancrages sont calculés en coordonnées écran sur le rectangle de la
+  barre, pas réorientés selon `PlotOrientation` ; `OUTSIDE12` place l'étiquette au-dessus du
+  rectangle, ce qui pour une barre `HORIZONTAL` fait déborder l'étiquette de la plus grosse valeur
+  hors du graphique (constaté en production). Suffixe « DH » retiré de chaque étiquette (répétitif
+  sur jusqu'à 20 lignes) : indiqué une seule fois dans le sous-titre du graphique de masse (« Masse
+  salariale par chantier (DH) ») — l'effectif n'a pas besoin d'unité, le nombre de personnes est
+  auto-explicite. Ces réglages sont posés au niveau de la série JFreeChart
   (`setSeriesItemLabelsVisible`/`setSeriesItemLabelFont`/etc.), jamais via les setters "base"
   dépréciés — le thème par défaut de JasperReports positionne une visibilité par série avant l'appel
   du customizer, qui l'emporte silencieusement sur un `setItemLabelsVisible(true)` global et
-  empêchait l'affichage des étiquettes. **Aucun plafond de catégories** : chaque chantier réellement
-  présent dans la période est représenté, sans regroupement « Autres » — une demande explicite de
-  direction (un chantier absent d'un graphique de répartition serait lu comme une anomalie, pas comme
-  une simplification) — voir `PaieBiReportBuilder.versRepartition`. La barre reste lisible malgré un
-  nombre de catégories variable car c'est la **hauteur** du graphique divisée par leur nombre qui
-  donne l'épaisseur de chaque barre (jamais une largeur fixe qui la compresserait différemment selon
-  le nombre de valeurs).
+  empêchait l'affichage des étiquettes. **Plafonné aux 20 plus gros chantiers** (le reste regroupé
+  sous « Autres », masse et effectif cumulés, toujours retrié à sa vraie place dans le classement
+  décroissant) — demande explicite de direction (un graphique complet à 25+ catégories devient trop
+  dense pour rester lisible imprimé) — voir `PaieBiReportBuilder.versRepartition`. La barre reste
+  lisible malgré le nombre de catégories car c'est la **hauteur** du graphique divisée par leur
+  nombre qui donne l'épaisseur de chaque barre (jamais une largeur fixe qui la compresserait
+  différemment selon le nombre de valeurs).
   Aucune `<chartLegend>` : le titre placé au-dessus de chaque graphique (« Masse salariale par
   chantier », etc.) indique déjà ce qui est représenté pour une série unique — une légende
   redondante serait un élément visuel inutile (voir « Style visuel »).
@@ -499,9 +506,11 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
 - **Noir / blanc / gris partout dans le document** — aucune couleur décorative dans le texte, les
   titres, les tableaux ou les blocs. Palette fixe : `#000000` (texte/emphase, fonds d'en-tête de
   table), `#FFFFFF` (texte sur fond noir), `#595959` (libellés/captions secondaires), `#F2F2F2`
-  (alternance de lignes des tableaux), `#CCCCCC` (filets/bordures fines), `#808080`/`#999999`
-  (mentions discrètes, séparateurs de blocs d'en-tête). **Seuls les `<barChart>` restent en
-  couleur** (bleu, `PaieReportChartCustomizer`) — la seule exception délibérée à la règle noir/blanc.
+  (alternance de lignes des tableaux — **le Sommaire (`sommaire.jrxml`) en est explicitement exclu**,
+  100% noir et blanc sans aucune alternance, demande explicite de direction), `#CCCCCC`
+  (filets/bordures fines), `#808080`/`#999999` (mentions discrètes, séparateurs de blocs d'en-tête).
+  **Seuls les `<barChart>` restent en couleur** (bleu, `PaieReportChartCustomizer`) — la seule
+  exception délibérée à la règle noir/blanc.
   Les anciens indicateurs de tendance HAUSSE/BAISSE/STABLE (auparavant des pastilles colorées
   vert/rouge/gris) sont désormais du texte noir gras préfixé du mot (« Hausse : … », « Baisse : … »,
   « Stable : … ») — la couleur ne porte plus l'information, le texte si.
@@ -563,7 +572,7 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
 | `PaieExportService` / `PaieSheetWriter` / `PaieExcelStyles` | Génération du classeur Excel |
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
 | `PaieReportPdfService` | Orchestration JRXML → PDF du rapport PDF (compilation du gabarit unique, aplatissement des données, **double remplissage** — voir « Sommaire », export) — testée de bout en bout par `PaieReportPdfServiceTest` |
-| `PaieReportChartCustomizer` | Personnalisation Java des 4 `<barChart>` JRXML (orientation horizontale, seule touche de couleur du document, étiquettes, aucun plafond de catégories) |
+| `PaieReportChartCustomizer` | Personnalisation Java des 2 `<barChart>` JRXML (orientation horizontale, seule touche de couleur du document, étiquettes à l'extérieur, plafond des 20 plus grosses valeurs + "Autres") |
 | `PaieReportEvolutionChartCustomizer` | Personnalisation Java des 2 `<lineChart>` JRXML d'évolution mensuelle (même couleur bleue, axe des valeurs visible — voir « Évolution mensuelle ») |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
