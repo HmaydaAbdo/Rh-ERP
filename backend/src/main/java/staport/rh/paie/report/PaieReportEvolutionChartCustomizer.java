@@ -84,8 +84,12 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
                         : PaieReportNumberFormat.entier(valeur.intValue());
             }
         });
+        // TextAnchor.BOTTOM_RIGHT (pas BOTTOM_CENTER) : le seul point étiqueté est le dernier, donc
+        // le plus à droite du graphique — un texte centré sur ce point déborde pour moitié hors du
+        // graphique (constaté en production, "3 377 370,00 DH" tronqué). BOTTOM_RIGHT fait grandir le
+        // texte vers la gauche depuis le point, jamais au-delà du bord droit quel que soit le libellé.
         renderer.setSeriesPositiveItemLabelPosition(0, new org.jfree.chart.labels.ItemLabelPosition(
-                org.jfree.chart.labels.ItemLabelAnchor.OUTSIDE12, org.jfree.ui.TextAnchor.BOTTOM_CENTER));
+                org.jfree.chart.labels.ItemLabelAnchor.OUTSIDE12, org.jfree.ui.TextAnchor.BOTTOM_RIGHT));
     }
 
     private boolean estSerieMasse(CategoryDataset dataset) {

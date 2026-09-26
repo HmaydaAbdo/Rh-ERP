@@ -26,7 +26,8 @@ public final class LigneRapportDetailBean {
     private final String chantierNarratif;
     private final List<DistributionVue> chantierDistributionEquipe;
     private final List<DistributionVue> chantierDistributionFonction;
-    private final List<CroisementBean> chantierCroisementEquipeFonction;
+    private final List<RepartitionBean> chantierRepartitionEquipe;
+    private final List<RepartitionBean> chantierRepartitionFonction;
     private final String equipeNom;
     private final String equipeTitre;
     private final int equipeEffectif;
@@ -48,7 +49,7 @@ public final class LigneRapportDetailBean {
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
                             String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
                             List<DistributionVue> chantierDistributionEquipe, List<DistributionVue> chantierDistributionFonction,
-                            List<CroisementBean> chantierCroisementEquipeFonction,
+                            List<RepartitionBean> chantierRepartitionEquipe, List<RepartitionBean> chantierRepartitionFonction,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
@@ -62,7 +63,8 @@ public final class LigneRapportDetailBean {
         this.chantierNarratif = chantierNarratif;
         this.chantierDistributionEquipe = chantierDistributionEquipe;
         this.chantierDistributionFonction = chantierDistributionFonction;
-        this.chantierCroisementEquipeFonction = chantierCroisementEquipeFonction;
+        this.chantierRepartitionEquipe = chantierRepartitionEquipe;
+        this.chantierRepartitionFonction = chantierRepartitionFonction;
         this.equipeNom = equipeNom;
         this.equipeTitre = equipeTitre;
         this.equipeEffectif = equipeEffectif;
@@ -125,8 +127,12 @@ public final class LigneRapportDetailBean {
         return chantierDistributionFonction;
     }
 
-    public List<CroisementBean> getChantierCroisementEquipeFonction() {
-        return chantierCroisementEquipeFonction;
+    public List<RepartitionBean> getChantierRepartitionEquipe() {
+        return chantierRepartitionEquipe;
+    }
+
+    public List<RepartitionBean> getChantierRepartitionFonction() {
+        return chantierRepartitionFonction;
     }
 
     public String getEquipeNom() {
