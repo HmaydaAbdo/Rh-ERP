@@ -1,6 +1,8 @@
 package staport.rh.paie.report;
 
 import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRPrintElement;
+import net.sf.jasperreports.engine.JRPrintPage;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
@@ -30,14 +32,16 @@ import java.util.Map;
  * {@code docs/report/README.md}), pas un export tabulaire (celui-ci reste l'export Excel,
  * {@code PaieExportService}, jamais modifié par ce service). Chaîne : filtres + périmètre
  * ({@link PaieBiReportBuilder}) → gabarit JRXML unique (JasperReports Library, licence LGPL, {@code
- * resources/report/paie/jasper/rapport.jrxml}) → un seul remplissage, source de données à plat
- * ({@link LigneRapportDetailBean}, un employé par ligne, dénormalisée chantier + équipe) groupée en
- * JRXML (voir {@code rapport.jrxml} : groupe Chantier {@code isStartNewPage}, groupe Équipe
- * {@code keepTogether}) → export PDF. Un seul {@code JasperPrint} pour tout le document : le
- * {@code pageHeader}/{@code pageFooter}, définis une seule fois dans le gabarit, se répètent donc
- * nativement sur toutes les pages, sans jamais dupliquer leur définition ni concaténer plusieurs
- * impressions. Les gabarits sont compilés une seule fois (constructeur) et réutilisés à chaque
- * génération.
+ * resources/report/paie/jasper/rapport.jrxml}) → deux remplissages successifs → export PDF. Le
+ * premier remplissage (silencieux, jamais exporté) sert uniquement à découvrir sur quelle page
+ * démarre chaque section (Synthèse globale, chaque chantier) via des ancres posées dans le gabarit
+ * ({@code anchorNameExpression}) ; le second remplissage, identique au premier sauf pour les numéros
+ * de page désormais connus injectés dans le sous-rapport Sommaire, produit le document final — un
+ * seul {@code JasperPrint} exporté, jamais de fusion de plusieurs impressions après coup (voir
+ * « Sommaire » dans le README : fusionner des JasperPrint déjà rendus désynchroniserait le compteur
+ * de pages du pied de page). Le {@code pageHeader}/{@code pageFooter}, définis une seule fois dans le
+ * gabarit, se répètent nativement sur toutes les pages de contenu. Les gabarits sont compilés une
+ * seule fois (constructeur) et réutilisés à chaque génération.
  */
 @Service
 public class PaieReportPdfService {
@@ -46,16 +50,20 @@ public class PaieReportPdfService {
 
     private static final String DOSSIER_JASPER = "report/paie/jasper/";
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
+    private static final String ANCRE_SYNTHESE = "synthese-globale";
+    private static final String LIBELLE_SYNTHESE = "Synthèse globale";
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
     private final JasperReport tableDistributionReport;
+    private final JasperReport sommaireReport;
     private final byte[] logo;
 
     PaieReportPdfService(PaieBiReportBuilder biReportBuilder) {
         this.biReportBuilder = biReportBuilder;
         this.rapportReport = compiler("rapport.jrxml");
         this.tableDistributionReport = compiler("tableDistribution.jrxml");
+        this.sommaireReport = compiler("sommaire.jrxml");
         this.logo = chargerLogo();
     }
 
@@ -64,19 +72,25 @@ public class PaieReportPdfService {
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         RapportBiVue vue = biReportBuilder.construire(periode, requete);
 
-        Map<String, Object> parametres = parametres(vue);
+        Map<String, Object> parametresBase = parametres(vue);
         List<LigneRapportDetailBean> lignes = lignesDetail(vue);
-        JasperPrint impression = remplir(rapportReport, parametres, new JRBeanCollectionDataSource(lignes));
+
+        JasperPrint passeDecouverte = remplir(rapportReport, avecSommaire(parametresBase, sommaireEntrees(vue, null)),
+                new JRBeanCollectionDataSource(lignes));
+        Map<String, Integer> pagesParAncre = pagesParAncre(passeDecouverte);
+
+        JasperPrint impression = remplir(rapportReport, avecSommaire(parametresBase, sommaireEntrees(vue, pagesParAncre)),
+                new JRBeanCollectionDataSource(lignes));
 
         byte[] pdf = exporterPdf(impression);
-        log.info("Rapport PDF BI paie généré : periode={}, chantiers={}, taille={} octets", periode, vue.chantiers().size(), pdf.length);
+        log.info("Rapport PDF BI paie généré : periode={}, chantiers={}, pages={}, taille={} octets",
+                periode, vue.chantiers().size(), impression.getPages().size(), pdf.length);
         return pdf;
     }
 
     private Map<String, Object> parametres(RapportBiVue vue) {
         SyntheseGlobaleVue synthese = vue.synthese();
         Map<String, Object> parametres = new HashMap<>();
-        parametres.put("P_LOGO", nouveauFluxLogo());
         parametres.put("P_PERIODE_LIBELLE", vue.periodeLibelle());
         parametres.put("P_DATE_GENERATION", vue.dateGeneration());
         parametres.put("P_FILTRES_LIBELLE", filtresLibelle(vue.filtresActifs()));
@@ -90,8 +104,53 @@ public class PaieReportPdfService {
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
+        parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
+        parametres.put("SUBREPORT_SOMMAIRE", sommaireReport);
         return parametres;
+    }
+
+    /** Copie les paramètres partagés pour un passage de remplissage — {@code P_LOGO} (un flux, donc
+     * à usage unique) doit être régénéré à chaque passage, jamais partagé entre les deux remplissages
+     * du document (voir {@link #generer}). */
+    private Map<String, Object> avecSommaire(Map<String, Object> parametresBase, List<SommaireEntreeBean> entreesSommaire) {
+        Map<String, Object> parametres = new HashMap<>(parametresBase);
+        parametres.put("P_LOGO", nouveauFluxLogo());
+        parametres.put("P_SOMMAIRE_ENTREES", entreesSommaire);
+        return parametres;
+    }
+
+    /** Sommaire globale + une ligne par chantier — {@code pagesParAncre} vaut {@code null} lors du
+     * premier passage (numéros encore inconnus, valeur de repli 0 sans incidence sur la mise en page
+     * du sous-rapport, un champ numérique de largeur fixe). */
+    private List<SommaireEntreeBean> sommaireEntrees(RapportBiVue vue, Map<String, Integer> pagesParAncre) {
+        List<SommaireEntreeBean> entrees = new ArrayList<>();
+        entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
+        for (ChantierBiVue chantier : vue.chantiers()) {
+            entrees.add(new SommaireEntreeBean(chantier.titre(), pageDe(pagesParAncre, "chantier-" + chantier.code())));
+        }
+        return entrees;
+    }
+
+    private int pageDe(Map<String, Integer> pagesParAncre, String ancre) {
+        return pagesParAncre == null ? 0 : pagesParAncre.getOrDefault(ancre, 0);
+    }
+
+    /** Relit un {@code JasperPrint} déjà rendu pour retrouver, pour chaque ancre posée dans le
+     * gabarit ({@code synthese-globale}, {@code chantier-<code>}), la première page (1-based) où elle
+     * apparaît — c'est le seul moyen d'obtenir des numéros de page réels avant le remplissage final,
+     * JasperReports ne les connaissant qu'après la mise en page complète du document. */
+    private Map<String, Integer> pagesParAncre(JasperPrint impression) {
+        Map<String, Integer> pages = new HashMap<>();
+        List<JRPrintPage> toutesPages = impression.getPages();
+        for (int i = 0; i < toutesPages.size(); i++) {
+            for (JRPrintElement element : toutesPages.get(i).getElements()) {
+                if (element instanceof net.sf.jasperreports.engine.JRPrintAnchor ancre && ancre.getAnchorName() != null) {
+                    pages.putIfAbsent(ancre.getAnchorName(), i + 1);
+                }
+            }
+        }
+        return pages;
     }
 
     /** Aplatit chantiers → équipes → employés en une seule liste à plat, dénormalisée avec le
@@ -103,11 +162,12 @@ public class PaieReportPdfService {
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
             String chantierEffectifNote = "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")";
+            String chantierNarratif = chantierNarratif(chantier);
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.titre(), chantierMasseLigne, chantierEffectifValeur, chantierEffectifNote,
-                            chantier.partMasseGlobalePourcent(), chantier.stc(), chantier.distributionEquipe(),
+                            chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif, chantier.distributionEquipe(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
                             employe));
                 }
@@ -160,6 +220,27 @@ public class PaieReportPdfService {
         return variation == null
                 ? masse.valeurCourante() + " DH  (aucune donnée mois précédent)"
                 : masse.valeurCourante() + " DH  (" + variation + ")";
+    }
+
+    /** Phrase courte de synthèse (style « narratif léger ») affichée sous les cartes KPI de la page
+     * Synthèse globale — un résumé factuel en une ligne, pas un tableau de plus. */
+    private String syntheseNarratif(SyntheseGlobaleVue synthese) {
+        String variation = variationLibelle(synthese.masse());
+        String masseSegment = "Masse : " + synthese.masse().valeurCourante() + " DH"
+                + (variation == null ? " (aucune donnée mois précédent)" : " (" + variation + ")");
+        return masseSegment
+                + "  ·  Effectif : " + PaieReportNumberFormat.entier(synthese.effectif().effectifCourant())
+                + "  ·  " + PaieReportNumberFormat.entier(synthese.nombreChantiers()) + " chantiers.";
+    }
+
+    /** Phrase courte de synthèse d'un chantier — même esprit que {@link #syntheseNarratif}, la
+     * clause STC/sortie est omise quand elle vaut 0 (rien à signaler). */
+    private String chantierNarratif(ChantierBiVue chantier) {
+        String base = chantier.partMasseGlobalePourcent() + " de la masse globale  ·  "
+                + PaieReportNumberFormat.entier(chantier.effectif().effectifCourant()) + " pers";
+        return chantier.stc() > 0
+                ? base + "  ·  " + chantier.stc() + " STC/sortie(s)."
+                : base + ".";
     }
 
     private String filtresLibelle(List<String> filtresActifs) {
