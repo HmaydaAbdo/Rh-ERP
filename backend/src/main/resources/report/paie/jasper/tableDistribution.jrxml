@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Table "Répartition par équipe" d'un chantier — sous-rapport de chantierSection.jrxml. -->
+<!-- Table "Répartition par équipe" d'un chantier — sous-rapport intégré dans le groupe GroupChantier
+     de rapport.jrxml. -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
@@ -7,7 +8,7 @@
               columnWidth="390" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0"
               whenNoDataType="AllSectionsNoDetail">
 
-    <property name="net.sf.jasperreports.default.font.name" value="DejaVu Sans"/>
+    <property name="net.sf.jasperreports.default.font.name" value="Liberation Serif"/>
 
     <field name="libelle" class="java.lang.String"/>
     <field name="effectif" class="java.lang.Integer"/>
@@ -15,70 +16,70 @@
     <field name="pourcentage" class="java.lang.String"/>
 
     <title>
-        <band height="12">
+        <band height="16">
             <staticText>
-                <reportElement x="0" y="0" width="390" height="12" forecolor="#1E3A8A"/>
-                <textElement><font fontName="DejaVu Sans" size="7.5" isBold="true"/></textElement>
+                <reportElement x="0" y="0" width="390" height="16" forecolor="#000000"/>
+                <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
                 <text><![CDATA[RÉPARTITION PAR ÉQUIPE]]></text>
             </staticText>
         </band>
     </title>
 
     <columnHeader>
-        <band height="14">
+        <band height="18">
             <staticText>
-                <reportElement x="0" y="0" width="180" height="14" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
-                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
+                <reportElement x="0" y="0" width="180" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
+                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
                 <text><![CDATA[Équipe]]></text>
             </staticText>
             <staticText>
-                <reportElement x="180" y="0" width="60" height="14" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/></textElement>
+                <reportElement x="180" y="0" width="60" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                 <text><![CDATA[Effectif]]></text>
             </staticText>
             <staticText>
-                <reportElement x="240" y="0" width="90" height="14" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/><paragraph rightIndent="4"/></textElement>
+                <reportElement x="240" y="0" width="90" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph rightIndent="4"/></textElement>
                 <text><![CDATA[Montant]]></text>
             </staticText>
             <staticText>
-                <reportElement x="330" y="0" width="60" height="14" mode="Opaque" backcolor="#1E3A8A" forecolor="#FFFFFF"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5" isBold="true"/><paragraph rightIndent="4"/></textElement>
+                <reportElement x="330" y="0" width="60" height="18" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph rightIndent="4"/></textElement>
                 <text><![CDATA[Part]]></text>
             </staticText>
         </band>
     </columnHeader>
 
     <detail>
-        <band height="12" splitType="Prevent">
+        <band height="16" splitType="Prevent">
             <rectangle>
-                <reportElement x="0" y="0" width="390" height="12" mode="Opaque" backcolor="#F8FAFC">
+                <reportElement x="0" y="0" width="390" height="16" mode="Opaque" backcolor="#F2F2F2">
                     <printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0.0"/></graphicElement>
             </rectangle>
             <textField>
-                <reportElement x="0" y="0" width="180" height="12"/>
-                <box leftPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
-                <textElement verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <reportElement x="0" y="0" width="180" height="16"/>
+                <box leftPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{libelle}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="180" y="0" width="60" height="12"/>
-                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
-                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <reportElement x="180" y="0" width="60" height="16"/>
+                <box bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{effectif}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="240" y="0" width="90" height="12"/>
-                <box rightPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
-                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <reportElement x="240" y="0" width="90" height="16"/>
+                <box rightPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{montant} + " DH"]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="330" y="0" width="60" height="12"/>
-                <box rightPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#E2E8F0"/></box>
-                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="DejaVu Sans" size="6.5"/></textElement>
+                <reportElement x="330" y="0" width="60" height="16"/>
+                <box rightPadding="4" bottomPadding="1"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{pourcentage}]]></textFieldExpression>
             </textField>
         </band>

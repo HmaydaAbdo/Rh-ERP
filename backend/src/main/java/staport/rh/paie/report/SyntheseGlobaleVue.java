@@ -16,7 +16,6 @@ record SyntheseGlobaleVue(
         String masseMoyenneParEmploye,
         int nombreChantiers,
         List<RepartitionBean> repartitionChantier,
-        List<RepartitionBean> repartitionFonction,
-        List<EvolutionMasseBean> evolutionMasse
+        List<RepartitionBean> repartitionFonction
 ) {
 }
