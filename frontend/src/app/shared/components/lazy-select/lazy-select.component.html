@@ -1,0 +1,41 @@
+@if (multiple) {
+  <p-multiSelect
+    [options]="options"
+    [ngModel]="internalMultipleValue"
+    (ngModelChange)="onMultipleChange($event)"
+    [optionLabel]="optionLabel"
+    [dataKey]="dataKey"
+    [placeholder]="placeholder"
+    [filter]="true"
+    [filterPlaceHolder]="filterPlaceholder"
+    (onFilter)="onFilterInput($event.filter)"
+    [lazy]="true"
+    [virtualScroll]="true"
+    [virtualScrollItemSize]="virtualScrollItemSize"
+    (onLazyLoad)="onLazyLoad($event)"
+    [loading]="loading"
+    [disabled]="disabled"
+    display="chip"
+    styleClass="lazy-select"
+  ></p-multiSelect>
+} @else {
+  <p-dropdown
+    [options]="options"
+    [ngModel]="internalSingleValue"
+    (ngModelChange)="onSingleChange($event)"
+    [optionLabel]="optionLabel"
+    [dataKey]="dataKey"
+    [placeholder]="placeholder"
+    [filter]="true"
+    [filterPlaceholder]="filterPlaceholder"
+    (onFilter)="onFilterInput($event.filter)"
+    [lazy]="true"
+    [virtualScroll]="true"
+    [virtualScrollItemSize]="virtualScrollItemSize"
+    (onLazyLoad)="onLazyLoad($event)"
+    [loading]="loading"
+    [disabled]="disabled"
+    [showClear]="showClear"
+    styleClass="lazy-select"
+  ></p-dropdown>
+}

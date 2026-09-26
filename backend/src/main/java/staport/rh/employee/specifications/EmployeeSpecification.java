@@ -35,12 +35,12 @@ public class EmployeeSpecification {
                 ));
             }
 
-            if (criteria.fonctionId() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("fonction").get("id"), criteria.fonctionId()));
+            if (criteria.fonctionIds() != null && !criteria.fonctionIds().isEmpty()) {
+                predicates.add(root.get("fonction").get("id").in(criteria.fonctionIds()));
             }
 
-            if (criteria.chantierId() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("chantier").get("id"), criteria.chantierId()));
+            if (criteria.chantierIds() != null && !criteria.chantierIds().isEmpty()) {
+                predicates.add(root.get("chantier").get("id").in(criteria.chantierIds()));
             }
 
             if (criteria.statut() != null) {

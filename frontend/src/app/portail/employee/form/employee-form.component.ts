@@ -9,9 +9,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
-import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -36,21 +35,19 @@ function fromIsoDate(isoDate: string): Date {
 @Component({
   selector: 'app-employee-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule, LazySelectComponent],
   templateUrl: './employee-form.component.html',
   styleUrl: './employee-form.component.scss'
 })
 export class EmployeeFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
-  private readonly functionReferenceService = inject(FunctionReferenceService);
-  private readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly functionReferenceService = inject(FunctionReferenceService);
+  readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
-  functions: FunctionReference[] = [];
-  chantiers: ChantierReference[] = [];
   readonly statutOptions = STATUT_OPTIONS;
 
   employeeId: number | null = null;
@@ -71,9 +68,6 @@ export class EmployeeFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
-    this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
-
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.employeeId = Number(idParam);

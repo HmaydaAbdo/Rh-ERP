@@ -89,6 +89,50 @@ fait partie d'un formulaire soumis, il passe par Reactive Forms.
 
 ---
 
+# Sélecteurs (listes déroulantes)
+
+Un composant générique unique sert de sélecteur pour toute liste adossée à une source de données
+back-end — jamais un composant de sélection piloté par une liste chargée intégralement en mémoire
+au montage du composant, même pour une liste de référence de petite taille (la pagination/recherche
+existe déjà côté backend pour la lister ailleurs ; un sélecteur la réutilise plutôt que de charger
+"tout d'un coup").
+
+## Cardinalité
+
+* Un filtre de liste (recherche/filtre d'une page de résultats) sur une dimension à cardinalité
+  réelle (plus de 2-3 valeurs typiques) est **toujours** en sélection multiple.
+* Un champ de formulaire qui pilote une relation unique de l'enregistrement édité (une clé
+  étrangère à cardinalité 1) reste en sélection simple — le multiselect n'a de sens que là où
+  sélectionner plusieurs valeurs à la fois est une opération métier valide ; l'appliquer à une
+  relation unique permettrait d'enregistrer un état métier impossible.
+* Une relation réellement multiple (many-to-many) reste en sélection multiple, dans les deux
+  contextes (formulaire et filtre).
+* Exception admise, jamais un oubli silencieux mais une exception explicite documentée à l'endroit
+  du code concerné : un filtre à cardinalité intrinsèquement binaire (ex. un statut actif/inactif)
+  peut rester en sélection simple si le multiselect n'apporterait rien.
+
+## Recherche et chargement différé
+
+* Tout sélecteur recherche côté serveur au fil de la frappe (jamais un filtre client sur une liste
+  déjà entièrement chargée) — débounce obligatoire.
+* Tout sélecteur charge ses options par page (chargement différé) plutôt qu'une liste complète —
+  y compris pour une liste de référence de petite taille, par cohérence : un seul comportement,
+  jamais une exception "parce que c'est petit aujourd'hui" qui redevient un problème demain.
+* Un domaine qui expose un sélecteur fournit une implémentation du contrat correspondant (une
+  méthode de pagination filtrée + une résolution par identifiant, pour afficher correctement une
+  valeur déjà sélectionnée avant même que sa page ne soit chargée, ex. en modification) — jamais
+  une duplication de la pagination/du debounce dans chaque composant consommateur.
+
+## Composant partagé
+
+Le composant partagé encapsule le composant de sélection simple et le composant de sélection
+multiple de la librairie UI derrière un seul point d'entrée (`ControlValueAccessor`) — la valeur
+exposée au formulaire hôte reste un identifiant (ou un tableau d'identifiants), jamais l'objet
+complet, pour ne rien changer aux DTO existants. Toute nouvelle liste déroulante du projet réutilise
+ce composant plutôt que d'implémenter sa propre pagination/recherche.
+
+---
+
 # Templates
 
 Utiliser exclusivement le nouveau Control Flow Angular.
@@ -265,6 +309,9 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 * Les composants restent centrés sur la présentation.
 * Les erreurs HTTP sont gérées de manière centralisée.
 * Toute nouvelle route est chargée en Lazy Loading.
+* Tout sélecteur recherche et charge ses options par page depuis le backend via le composant
+  partagé — sélection multiple pour un filtre de liste ou une relation many-to-many, sélection
+  simple pour une relation unique d'un enregistrement.
 * Les autorisations sont explicites et reposent sur les permissions effectives, jamais un rôle codé en dur.
 * Les Design Tokens sont la source de vérité du style.
 * Le frontend reste synchronisé avec les contrats du backend.

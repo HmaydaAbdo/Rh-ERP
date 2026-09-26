@@ -14,9 +14,8 @@ import { TagModule } from 'primeng/tag';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { Employee, EmployeeImportResult, EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -41,7 +40,8 @@ const DEBOUNCE_RECHERCHE_MS = 300;
     DropdownModule,
     TagModule,
     ConfirmDialogModule,
-    DialogModule
+    DialogModule,
+    LazySelectComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './employee-list.component.html',
@@ -49,8 +49,8 @@ const DEBOUNCE_RECHERCHE_MS = 300;
 })
 export class EmployeeListComponent implements OnInit {
   private readonly employeeService = inject(EmployeeService);
-  private readonly functionReferenceService = inject(FunctionReferenceService);
-  private readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly functionReferenceService = inject(FunctionReferenceService);
+  readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -72,15 +72,13 @@ export class EmployeeListComponent implements OnInit {
   showImportResultDialog = false;
   downloadingTemplate = false;
 
-  functions: FunctionReference[] = [];
-  chantiers: ChantierReference[] = [];
   readonly statutOptions = STATUT_OPTIONS;
 
   readonly filterForm = this.fb.group({
     nomPrenom: [''],
     cin: [''],
-    fonctionId: [null as number | null],
-    chantierId: [null as number | null],
+    fonctionIds: [[] as number[]],
+    chantierIds: [[] as number[]],
     statut: [null as EmployeeStatut | null]
   });
 
@@ -89,9 +87,6 @@ export class EmployeeListComponent implements OnInit {
   private lastSort = 'nomPrenom,asc';
 
   ngOnInit(): void {
-    this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
-    this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
-
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
@@ -215,8 +210,8 @@ export class EmployeeListComponent implements OnInit {
         {
           nomPrenom: criteria.nomPrenom || undefined,
           cin: criteria.cin || undefined,
-          fonctionId: criteria.fonctionId ?? undefined,
-          chantierId: criteria.chantierId ?? undefined,
+          fonctionIds: criteria.fonctionIds?.length ? criteria.fonctionIds : undefined,
+          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined,
           statut: criteria.statut ?? undefined
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }

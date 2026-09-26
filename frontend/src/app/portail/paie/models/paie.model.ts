@@ -66,8 +66,8 @@ export interface PaieSearchCriteria {
   cin?: string;
   nomPrenom?: string;
   periode?: string;
-  fonctionId?: number;
-  chantierId?: number;
+  fonctionIds?: number[];
+  chantierIds?: number[];
   equipe?: string;
 }
 
