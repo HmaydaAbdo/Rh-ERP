@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -41,9 +40,7 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
-    private static final String AUTRES = "Autres";
     private static final int MAX_BARRES_GRAPHIQUE = 20;
-    private static final int MAX_FONCTIONS_CROISEMENT = 8;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -134,48 +131,9 @@ class PaieBiReportBuilder {
                 stc,
                 versDistribution(agregatEquipe, masseChantier),
                 versDistribution(agregatFonction, masseChantier),
-                croisementEquipeFonction(lignesChantier),
+                versRepartition(agregatEquipe),
+                versRepartition(agregatFonction),
                 equipes);
-    }
-
-    /** Une ligne par paire (équipe, fonction) réellement présente sur ce chantier, masse cumulée —
-     * alimente le stacked bar chart Équipe × Fonction (une catégorie = une équipe, une série = une
-     * fonction) : JasperReports construit dynamiquement les séries à partir des valeurs distinctes de
-     * {@code fonction} dans cette liste à plat, jamais une série codée en dur par fonction (leur
-     * nombre varie d'un chantier à l'autre) — voir {@code rapport.jrxml}, CroisementBean. Plafonné
-     * aux {@value #MAX_FONCTIONS_CROISEMENT} fonctions les plus lourdes (masse cumulée sur tout le
-     * chantier), le reste regroupé sous "Autres" par équipe — même principe que
-     * {@link #versRepartition} : le référentiel Fonction porte aujourd'hui des doublons non nettoyés
-     * (voir TODO.md), un segment par doublon rendrait ce graphique illisible bien avant même que la
-     * direction n'ait demandé un plafond ici. */
-    private List<CroisementBean> croisementEquipeFonction(List<Paie> lignesChantier) {
-        List<Paie> lignesValides = lignesChantier.stream().filter(p -> p.getSalaireTotal() != null).toList();
-        Set<String> fonctionsRetenues = fonctionsLesPlusLourdes(lignesValides, MAX_FONCTIONS_CROISEMENT);
-
-        Map<String, Map<String, BigDecimal>> parEquipePuisFonction = lignesValides.stream()
-                .collect(Collectors.groupingBy(this::libelleEquipe, LinkedHashMap::new,
-                        Collectors.groupingBy(p -> fonctionRetenueOuAutres(p, fonctionsRetenues), LinkedHashMap::new,
-                                Collectors.reducing(BigDecimal.ZERO, Paie::getSalaireTotal, BigDecimal::add))));
-
-        List<CroisementBean> croisement = new ArrayList<>();
-        parEquipePuisFonction.forEach((equipe, parFonction) ->
-                parFonction.forEach((fonction, montant) -> croisement.add(new CroisementBean(equipe, fonction, montant))));
-        return croisement;
-    }
-
-    private String fonctionRetenueOuAutres(Paie paie, Set<String> fonctionsRetenues) {
-        String fonction = libelleFonction(paie);
-        return fonctionsRetenues.contains(fonction) ? fonction : AUTRES;
-    }
-
-    private Set<String> fonctionsLesPlusLourdes(List<Paie> lignesValides, int max) {
-        return lignesValides.stream()
-                .collect(Collectors.groupingBy(this::libelleFonction, Collectors.reducing(BigDecimal.ZERO, Paie::getSalaireTotal, BigDecimal::add)))
-                .entrySet().stream()
-                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
-                .limit(max)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
     }
 
     private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
