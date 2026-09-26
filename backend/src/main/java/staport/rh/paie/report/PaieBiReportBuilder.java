@@ -92,9 +92,10 @@ class PaieBiReportBuilder {
                 evolutionMasse(historique)
         );
 
+        // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
+        // plus gros chantier en premier, jamais un ré-tri alphabétique qui l'annulerait.
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
-                .sorted()
                 .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante))
                 .toList();
 
