@@ -38,4 +38,14 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             "ORDER BY p.equipe")
     List<String> findDistinctEquipesByChantierCodeAndPeriode(@Param("chantierCode") String chantierCode,
                                                                @Param("periode") YearMonth periode);
+
+    /** Masse et effectif agrégés par mois, sur l'intervalle {@code [debut, fin]} — alimente le
+     * graphique d'évolution de la synthèse globale du rapport PDF (voir
+     * {@code PaieBiReportBuilder.evolutionMensuelle}). Agrégation faite en base (pas un chargement
+     * des entités complètes suivi d'une somme en Java) : seule la tendance importe ici, jamais le
+     * détail employé d'un mois passé. */
+    @Query("SELECT p.periode AS periode, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +
+            "FROM Paie p WHERE p.periode BETWEEN :debut AND :fin " +
+            "GROUP BY p.periode ORDER BY p.periode")
+    List<EvolutionMensuelleProjection> sommerParPeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
 }

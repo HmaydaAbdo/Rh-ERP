@@ -11,10 +11,12 @@
           début de document) : une ligne par section avec son numéro de page réel — nécessite un
           double remplissage (voir PaieReportPdfService), jamais un JasperPrint fusionné après coup.
        3. Synthèse globale (groupe GroupSynthese, même mécanique d'impression unique) : KPI +
-          narratif — chapitre I.
+          narratif + évolution mensuelle (masse et effectif, 12 derniers mois, 2 <lineChart> côte à
+          côte) — chapitre I, voir PaieReportEvolutionChartCustomizer.
        4. Deux pages BI (GroupGraphChantier = chapitre II, GroupGraphFonction = chapitre III) :
           chacune porte 2 graphiques placés côte à côte (masse puis effectif de la même dimension),
-          jamais empilés verticalement — voir PaieReportChartCustomizer.
+          jamais empilés verticalement, et jamais tronqués (chaque chantier/fonction réel est
+          représenté, aucun regroupement "Autres") — voir PaieReportChartCustomizer.
        5. Une section par chantier (GroupChantier, isStartNewPage) puis par équipe (GroupEquipe,
           keepTogether) pilotées par la même source de données à plat (un employé par ligne).
      Style documentaire entièrement noir/blanc/gris (aucune couleur décorative) — seuls les
@@ -58,6 +60,7 @@
     <parameter name="P_NOMBRE_CHANTIERS" class="java.lang.String"/>
     <parameter name="P_REPARTITION_CHANTIER" class="java.util.List"/>
     <parameter name="P_REPARTITION_FONCTION" class="java.util.List"/>
+    <parameter name="P_EVOLUTION_MENSUELLE" class="java.util.List"/>
     <parameter name="P_SYNTHESE_NARRATIF" class="java.lang.String"/>
     <parameter name="P_SOMMAIRE_ENTREES" class="java.util.List"/>
     <parameter name="SUBREPORT_DISTRIBUTION" class="net.sf.jasperreports.engine.JasperReport"/>
@@ -109,7 +112,7 @@
     <group name="GroupSynthese" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["SYNTHESE"]]></groupExpression>
         <groupHeader>
-            <band height="140" splitType="Stretch">
+            <band height="455" splitType="Stretch">
 
                 <!-- ============================== I — SYNTHÈSE GLOBALE ==============================
                      textField (pas staticText) : seul <textField> porte anchorNameExpression dans le
@@ -229,6 +232,56 @@
                     <textElement><font fontName="Liberation Serif" size="10.5" isItalic="true"/></textElement>
                     <textFieldExpression><![CDATA[$P{P_SYNTHESE_NARRATIF}]]></textFieldExpression>
                 </textField>
+
+                <!-- Évolution mensuelle (masse et effectif, 12 derniers mois) — 2 <lineChart> côte à
+                     côte, même principe que les pages II/III (jamais empilés verticalement). -->
+                <staticText>
+                    <reportElement x="0" y="150" width="390" height="16" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                    <text><![CDATA[Évolution de la masse salariale (12 derniers mois)]]></text>
+                </staticText>
+                <lineChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
+                        <reportElement x="0" y="170" width="390" height="275"/>
+                    </chart>
+                    <categoryDataset>
+                        <dataset>
+                            <datasetRun subDataset="dsRepartition">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_EVOLUTION_MENSUELLE})]]></dataSourceExpression>
+                            </datasetRun>
+                        </dataset>
+                        <categorySeries>
+                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
+                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
+                        </categorySeries>
+                    </categoryDataset>
+                    <linePlot><plot/></linePlot>
+                </lineChart>
+
+                <staticText>
+                    <reportElement x="412" y="150" width="390" height="16" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                    <text><![CDATA[Évolution de l'effectif (12 derniers mois)]]></text>
+                </staticText>
+                <lineChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
+                        <reportElement x="412" y="170" width="390" height="275"/>
+                    </chart>
+                    <categoryDataset>
+                        <dataset>
+                            <datasetRun subDataset="dsRepartition">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_EVOLUTION_MENSUELLE})]]></dataSourceExpression>
+                            </datasetRun>
+                        </dataset>
+                        <categorySeries>
+                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
+                            <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
+                        </categorySeries>
+                    </categoryDataset>
+                    <linePlot><plot/></linePlot>
+                </lineChart>
             </band>
         </groupHeader>
     </group>
@@ -374,12 +427,19 @@
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
             <band height="168" splitType="Stretch">
+                <!-- Titre de chapitre chantier — même style que "I — Synthèse globale" / "II — ..."
+                     (texte noir, sans fond), un chantier étant un chapitre du rapport au même titre
+                     que les 3 premiers, jamais un bloc à identité visuelle propre. -->
                 <textField>
-                    <reportElement x="0" y="0" width="802" height="22" mode="Opaque" backcolor="#000000" forecolor="#FFFFFF"/>
-                    <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="13" isBold="true"/><paragraph leftIndent="8"/></textElement>
+                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
+                    <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA[$F{chantierTitre}]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode}]]></anchorNameExpression>
                 </textField>
+                <line>
+                    <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
+                    <graphicElement><pen lineWidth="1.0"/></graphicElement>
+                </line>
 
                 <textField>
                     <reportElement x="0" y="28" width="280" height="16"/>
@@ -511,8 +571,8 @@
          Contenu volontairement simple et statique (pas de graphique, pas de tableau) — une vraie
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
          JasperReports pour une bande title en isTitleNewPage, ici exploité plutôt que subi). Les 3
-         informations Département/Année/Mois sont empilées verticalement (une sous l'autre), jamais
-         disposées en colonnes côte à côte. -->
+         informations Département/Mois/Année sont empilées verticalement (une sous l'autre, Mois
+         avant Année), jamais disposées en colonnes côte à côte. -->
     <title>
         <band height="515" splitType="Stretch">
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
@@ -544,23 +604,23 @@
             <staticText>
                 <reportElement x="0" y="247" width="802" height="12" forecolor="#595959"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
-                <text><![CDATA[ANNÉE]]></text>
+                <text><![CDATA[MOIS]]></text>
             </staticText>
             <textField>
                 <reportElement x="0" y="260" width="802" height="24" forecolor="#000000"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="18" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_MOIS}]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="298" width="802" height="12" forecolor="#595959"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
-                <text><![CDATA[MOIS]]></text>
+                <text><![CDATA[ANNÉE]]></text>
             </staticText>
             <textField>
                 <reportElement x="0" y="311" width="802" height="24" forecolor="#000000"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="18" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{P_PERIODE_MOIS}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
             </textField>
 
             <textField>
@@ -577,79 +637,80 @@
     </title>
 
     <!-- ================================ EN-TÊTE RÉCURRENT (pageHeader) ================================
-         5 blocs indépendants de même hauteur, alignés horizontalement : Logo / Département / Année /
-         Mois / Généré le — séparés par de fins filets verticaux, jamais de texte concaténé entre
-         deux informations. -->
+         5 blocs indépendants de même hauteur, alignés horizontalement : Logo / Département / Mois /
+         Année / Généré le (Mois avant Année, même ordre que la page de garde) — séparés par de fins
+         filets verticaux, jamais de texte concaténé entre deux informations. Bandeau volontairement
+         compact (hauteur réduite) pour laisser le maximum de place au contenu de chaque page. -->
     <pageHeader>
-        <band height="70" splitType="Prevent">
+        <band height="50" splitType="Prevent">
             <!-- Bloc 1 : logo -->
             <image scaleImage="RetainShape" hAlign="Left" vAlign="Middle" onErrorType="Blank">
-                <reportElement x="10" y="8" width="140" height="54"/>
+                <reportElement x="10" y="4" width="110" height="42"/>
                 <imageExpression><![CDATA[$P{P_LOGO}]]></imageExpression>
             </image>
             <line>
-                <reportElement x="160" y="8" width="0" height="54" forecolor="#999999"/>
+                <reportElement x="130" y="4" width="0" height="42" forecolor="#999999"/>
             </line>
 
             <!-- Bloc 2 : Département -->
             <staticText>
-                <reportElement x="170" y="16" width="140" height="10" forecolor="#595959"/>
-                <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                <reportElement x="140" y="6" width="140" height="9" forecolor="#595959"/>
+                <textElement><font fontName="Liberation Serif" size="7" isBold="true"/></textElement>
                 <text><![CDATA[DÉPARTEMENT]]></text>
             </staticText>
             <staticText>
-                <reportElement x="170" y="30" width="140" height="16" forecolor="#000000"/>
-                <textElement><font fontName="Liberation Serif" size="9.5" isBold="true"/></textElement>
+                <reportElement x="140" y="17" width="140" height="14" forecolor="#000000"/>
+                <textElement><font fontName="Liberation Serif" size="8.5" isBold="true"/></textElement>
                 <text><![CDATA[Ressources Humaines]]></text>
             </staticText>
             <line>
-                <reportElement x="320" y="8" width="0" height="54" forecolor="#999999"/>
+                <reportElement x="280" y="4" width="0" height="42" forecolor="#999999"/>
             </line>
 
-            <!-- Bloc 3 : Année -->
+            <!-- Bloc 3 : Mois -->
             <staticText>
-                <reportElement x="330" y="16" width="140" height="10" forecolor="#595959"/>
-                <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
-                <text><![CDATA[ANNÉE]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="330" y="30" width="140" height="16" forecolor="#000000"/>
-                <textElement><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
-            </textField>
-            <line>
-                <reportElement x="480" y="8" width="0" height="54" forecolor="#999999"/>
-            </line>
-
-            <!-- Bloc 4 : Mois -->
-            <staticText>
-                <reportElement x="490" y="16" width="140" height="10" forecolor="#595959"/>
-                <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                <reportElement x="290" y="6" width="140" height="9" forecolor="#595959"/>
+                <textElement><font fontName="Liberation Serif" size="7" isBold="true"/></textElement>
                 <text><![CDATA[MOIS]]></text>
             </staticText>
             <textField>
-                <reportElement x="490" y="30" width="140" height="16" forecolor="#000000"/>
-                <textElement><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
+                <reportElement x="290" y="17" width="140" height="14" forecolor="#000000"/>
+                <textElement><font fontName="Liberation Serif" size="9.5" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA[$P{P_PERIODE_MOIS}]]></textFieldExpression>
             </textField>
             <line>
-                <reportElement x="640" y="8" width="0" height="54" forecolor="#999999"/>
+                <reportElement x="430" y="4" width="0" height="42" forecolor="#999999"/>
+            </line>
+
+            <!-- Bloc 4 : Année -->
+            <staticText>
+                <reportElement x="440" y="6" width="140" height="9" forecolor="#595959"/>
+                <textElement><font fontName="Liberation Serif" size="7" isBold="true"/></textElement>
+                <text><![CDATA[ANNÉE]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="440" y="17" width="140" height="14" forecolor="#000000"/>
+                <textElement><font fontName="Liberation Serif" size="9.5" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="580" y="4" width="0" height="42" forecolor="#999999"/>
             </line>
 
             <!-- Bloc 5 : Généré le -->
             <staticText>
-                <reportElement x="650" y="16" width="142" height="10" forecolor="#595959"/>
-                <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                <reportElement x="590" y="6" width="202" height="9" forecolor="#595959"/>
+                <textElement><font fontName="Liberation Serif" size="7" isBold="true"/></textElement>
                 <text><![CDATA[GÉNÉRÉ LE]]></text>
             </staticText>
             <textField>
-                <reportElement x="650" y="30" width="142" height="16" forecolor="#000000"/>
-                <textElement><font fontName="Liberation Serif" size="8.5"/></textElement>
+                <reportElement x="590" y="17" width="202" height="14" forecolor="#000000"/>
+                <textElement><font fontName="Liberation Serif" size="8"/></textElement>
                 <textFieldExpression><![CDATA[$P{P_DATE_GENERATION}]]></textFieldExpression>
             </textField>
 
             <line>
-                <reportElement x="0" y="68" width="802" height="0" forecolor="#000000"/>
+                <reportElement x="0" y="48" width="802" height="0" forecolor="#000000"/>
                 <graphicElement><pen lineWidth="1.2"/></graphicElement>
             </line>
         </band>
