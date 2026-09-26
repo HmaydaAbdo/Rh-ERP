@@ -15,10 +15,11 @@
           côte) — chapitre I, voir PaieReportEvolutionChartCustomizer.
        4. Chapitre II — Répartition par chantier (GroupGraphChantierMasse puis
           GroupGraphChantierEffectif), sur 2 pages : un seul graphique par page, pleine largeur,
-          jamais deux côte à côte, jamais tronqué (chaque chantier réel est représenté, aucun
-          regroupement "Autres") — voir PaieReportChartCustomizer. Seule la 1ʳᵉ page porte le titre de
-          chapitre/l'ancre, la 2ᵉ est sa suite directe. Chapitre III — Répartition par fonction retiré
-          temporairement (doublons non nettoyés dans le référentiel Fonction, voir TODO.md).
+          jamais deux côte à côte, plafonné aux 20 plus gros chantiers + "Autres" (voir
+          PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE, PaieReportChartCustomizer). Seule la 1ʳᵉ page
+          porte le titre de chapitre/l'ancre, la 2ᵉ est sa suite directe. Chapitre III — Répartition
+          par fonction retiré temporairement (doublons non nettoyés dans le référentiel Fonction, voir
+          TODO.md).
        5. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
           suite des chapitres fixes (voir PaieReportPdfService.chapitreChantier — I/II fixes, III et
           suivants un par chantier, même numérotation reflétée dans le Sommaire), puis par équipe
@@ -44,6 +45,17 @@
     <subDataset name="dsRepartition">
         <field name="libelle" class="java.lang.String"/>
         <field name="effectif" class="java.lang.Integer"/>
+        <field name="montant" class="java.math.BigDecimal"/>
+    </subDataset>
+
+    <!-- Source du stackedBarChart Équipe × Fonction d'un chantier (voir CroisementBean) — une ligne
+         à plat par paire, JasperReports construit dynamiquement une série par valeur distincte de
+         "fonction" trouvée dans les données (categorySeries ci-dessous a des expressions de champ,
+         pas des constantes comme dsRepartition — c'est ce qui permet un nombre de séries variable
+         d'un chantier à l'autre, jamais une série codée en dur par fonction). -->
+    <subDataset name="dsCroisement">
+        <field name="equipe" class="java.lang.String"/>
+        <field name="fonction" class="java.lang.String"/>
         <field name="montant" class="java.math.BigDecimal"/>
     </subDataset>
 
@@ -74,12 +86,15 @@
     <field name="chantierCode" class="java.lang.String"/>
     <field name="chantierTitre" class="java.lang.String"/>
     <field name="chantierMasseLigne" class="java.lang.String"/>
+    <field name="chantierMasseMoyenneParEmploye" class="java.lang.String"/>
     <field name="chantierEffectifValeur" class="java.lang.String"/>
     <field name="chantierEffectifNote" class="java.lang.String"/>
     <field name="chantierPartMasseGlobale" class="java.lang.String"/>
     <field name="chantierStc" class="java.lang.Integer"/>
     <field name="chantierNarratif" class="java.lang.String"/>
     <field name="chantierDistributionEquipe" class="java.util.List"/>
+    <field name="chantierDistributionFonction" class="java.util.List"/>
+    <field name="chantierCroisementEquipeFonction" class="java.util.List"/>
     <field name="equipeNom" class="java.lang.String"/>
     <field name="equipeTitre" class="java.lang.String"/>
     <field name="equipeEffectif" class="java.lang.Integer"/>
@@ -142,7 +157,7 @@
                 <staticText>
                     <reportElement x="8" y="42" width="176" height="11" forecolor="#595959"/>
                     <textElement><font fontName="Liberation Serif" size="9" isBold="true"/></textElement>
-                    <text><![CDATA[MASSE RÉELLE DE PAIE]]></text>
+                    <text><![CDATA[MASSE]]></text>
                 </staticText>
                 <textField>
                     <reportElement x="8" y="56" width="176" height="24" forecolor="#000000"/>
@@ -316,7 +331,7 @@
                 <staticText>
                     <reportElement x="0" y="34" width="802" height="16" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <text><![CDATA[Masse salariale par chantier]]></text>
+                    <text><![CDATA[Masse salariale par chantier (DH)]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
@@ -388,10 +403,15 @@
          (PaieBiReportBuilder/PaieReportPdfService) pour éviter de tout redévelopper à la
          réintroduction, simplement plus consommé ici tant que la donnée n'est pas fiable. -->
 
+    <!-- Vue détaillée par chantier — approche analytique dense mais sans page supplémentaire (voir
+         docs/report/README.md) : cartes KPI (même esprit que la Synthèse globale, chapitre I),
+         distribution par équipe ET par fonction côte à côte, puis un stacked bar chart Équipe ×
+         Fonction (composition de la masse de chaque équipe par fonction) — voir
+         PaieReportCroisementChartCustomizer. -->
     <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
-            <band height="168" splitType="Stretch">
+            <band height="430" splitType="Stretch">
                 <!-- Titre de chapitre chantier — même style que "I — Synthèse globale" / "II — ..."
                      (texte noir, sans fond), un chantier étant un chapitre du rapport au même titre
                      que les 3 premiers, jamais un bloc à identité visuelle propre. -->
@@ -406,39 +426,137 @@
                     <graphicElement><pen lineWidth="1.0"/></graphicElement>
                 </line>
 
+                <!-- Cartes KPI — même style que la Synthèse globale (filet gris, label + valeur),
+                     sans identité visuelle à part (voir « Style visuel »). -->
+                <rectangle>
+                    <reportElement x="0" y="30" width="192" height="64" mode="Transparent"/>
+                    <graphicElement><pen lineWidth="0.5" lineColor="#CCCCCC"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="8" y="35" width="176" height="9" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[MASSE SALARIALE]]></text>
+                </staticText>
                 <textField>
-                    <reportElement x="0" y="28" width="280" height="16"/>
-                    <textElement><font fontName="Liberation Serif" size="11"/></textElement>
-                    <textFieldExpression><![CDATA["MASSE DE PAIE  " + $F{chantierMasseLigne}]]></textFieldExpression>
-                </textField>
-                <textField>
-                    <reportElement x="285" y="28" width="170" height="16"/>
-                    <textElement><font fontName="Liberation Serif" size="11"/></textElement>
-                    <textFieldExpression><![CDATA["EFFECTIF  " + $F{chantierEffectifValeur} + "  (" + $F{chantierEffectifNote} + ")"]]></textFieldExpression>
-                </textField>
-                <textField>
-                    <reportElement x="460" y="28" width="160" height="16"/>
-                    <textElement><font fontName="Liberation Serif" size="11"/></textElement>
-                    <textFieldExpression><![CDATA["PART MASSE GLOBALE  " + $F{chantierPartMasseGlobale}]]></textFieldExpression>
-                </textField>
-                <textField>
-                    <reportElement x="625" y="28" width="175" height="16" forecolor="#000000"/>
+                    <reportElement x="8" y="45" width="176" height="34" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["STC / SORTIES  " + $F{chantierStc}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA[$F{chantierMasseLigne}]]></textFieldExpression>
+                </textField>
+
+                <rectangle>
+                    <reportElement x="200" y="30" width="192" height="64" mode="Transparent"/>
+                    <graphicElement><pen lineWidth="0.5" lineColor="#CCCCCC"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="208" y="35" width="176" height="9" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[EFFECTIF]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="208" y="45" width="176" height="20" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="14" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$F{chantierEffectifValeur}]]></textFieldExpression>
+                </textField>
+                <textField>
+                    <reportElement x="208" y="65" width="176" height="14" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7"/></textElement>
+                    <textFieldExpression><![CDATA[$F{chantierEffectifNote}]]></textFieldExpression>
+                </textField>
+
+                <rectangle>
+                    <reportElement x="400" y="30" width="192" height="64" mode="Transparent"/>
+                    <graphicElement><pen lineWidth="0.5" lineColor="#CCCCCC"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="408" y="35" width="176" height="9" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[COÛT MOYEN / EMPLOYÉ]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="408" y="45" width="176" height="20" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="14" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$F{chantierMasseMoyenneParEmploye} + " DH"]]></textFieldExpression>
+                </textField>
+                <textField>
+                    <reportElement x="408" y="65" width="176" height="14" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7"/></textElement>
+                    <textFieldExpression><![CDATA["Part masse globale : " + $F{chantierPartMasseGlobale}]]></textFieldExpression>
+                </textField>
+
+                <rectangle>
+                    <reportElement x="600" y="30" width="192" height="64" mode="Transparent"/>
+                    <graphicElement><pen lineWidth="0.5" lineColor="#CCCCCC"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="608" y="35" width="176" height="9" forecolor="#595959"/>
+                    <textElement><font fontName="Liberation Serif" size="7.5" isBold="true"/></textElement>
+                    <text><![CDATA[STC / SORTIES]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="608" y="45" width="176" height="20" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="14" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$F{chantierStc}]]></textFieldExpression>
                 </textField>
 
                 <!-- Narratif léger : phrase courte de synthèse du chantier -->
                 <textField>
-                    <reportElement x="0" y="46" width="802" height="14" forecolor="#595959"/>
+                    <reportElement x="0" y="100" width="802" height="14" forecolor="#595959"/>
                     <textElement><font fontName="Liberation Serif" size="10.5" isItalic="true"/></textElement>
                     <textFieldExpression><![CDATA[$F{chantierNarratif}]]></textFieldExpression>
                 </textField>
 
+                <!-- Distribution par équipe (gauche) et par fonction (droite) — même sous-rapport
+                     partagé, seul le titre/l'intitulé de colonne diffère (voir tableDistribution.jrxml). -->
                 <subreport>
-                    <reportElement x="0" y="64" width="500" height="100"/>
+                    <reportElement x="0" y="118" width="390" height="100"/>
+                    <subreportParameter name="P_TITRE">
+                        <subreportParameterExpression><![CDATA["RÉPARTITION PAR ÉQUIPE"]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <subreportParameter name="P_LIBELLE_COLONNE">
+                        <subreportParameterExpression><![CDATA["Équipe"]]></subreportParameterExpression>
+                    </subreportParameter>
                     <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierDistributionEquipe})]]></dataSourceExpression>
                     <subreportExpression><![CDATA[$P{SUBREPORT_DISTRIBUTION}]]></subreportExpression>
                 </subreport>
+                <subreport>
+                    <reportElement x="412" y="118" width="390" height="100"/>
+                    <subreportParameter name="P_TITRE">
+                        <subreportParameterExpression><![CDATA["RÉPARTITION PAR FONCTION"]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <subreportParameter name="P_LIBELLE_COLONNE">
+                        <subreportParameterExpression><![CDATA["Fonction"]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierDistributionFonction})]]></dataSourceExpression>
+                    <subreportExpression><![CDATA[$P{SUBREPORT_DISTRIBUTION}]]></subreportExpression>
+                </subreport>
+
+                <!-- Distribution budgétaire croisée Équipe × Fonction — stacked bar chart, une
+                     catégorie par équipe, un segment par fonction (plafonné aux 8 plus lourdes +
+                     "Autres", voir PaieBiReportBuilder.croisementEquipeFonction). -->
+                <staticText>
+                    <reportElement x="0" y="226" width="802" height="16" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
+                    <text><![CDATA[Distribution budgétaire — Équipe × Fonction (DH)]]></text>
+                </staticText>
+                <stackedBarChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportCroisementChartCustomizer">
+                        <reportElement x="0" y="244" width="802" height="172"/>
+                        <chartLegend/>
+                    </chart>
+                    <categoryDataset>
+                        <dataset>
+                            <datasetRun subDataset="dsCroisement">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierCroisementEquipeFonction})]]></dataSourceExpression>
+                            </datasetRun>
+                        </dataset>
+                        <categorySeries>
+                            <seriesExpression><![CDATA[$F{fonction}]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{equipe}]]></categoryExpression>
+                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
+                        </categorySeries>
+                    </categoryDataset>
+                    <barPlot><plot/></barPlot>
+                </stackedBarChart>
             </band>
         </groupHeader>
     </group>
@@ -537,9 +655,10 @@
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
          JasperReports pour une bande title en isTitleNewPage, ici exploité plutôt que subi). Les 4
          informations Département/Mois/Année/Direction sont empilées verticalement (une sous l'autre,
-         Mois avant Année), jamais disposées en colonnes côte à côte. Signatures DRH/PDG en bas de
-         page : deux blocs identiques (nom du signataire + filet + légende), jamais pré-remplis — une
-         signature reste manuscrite sur le document imprimé. -->
+         Mois avant Année), jamais disposées en colonnes côte à côte. Signatures en bas de page :
+         Directeur Général et Directeur des Ressources Humaines, chacun rôle + nom + filet à signer —
+         le filet reste vide (une signature est manuscrite sur le document imprimé), seuls le rôle et
+         le nom sont pré-remplis. -->
     <title>
         <band height="520" splitType="Stretch">
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
@@ -602,12 +721,18 @@
                 <text><![CDATA[Direction des Ressources Humaines]]></text>
             </staticText>
 
-            <!-- Signatures : DRH à gauche, PDG à droite — deux blocs identiques (rôle, filet,
-                 légende), jamais de nom pré-rempli. -->
+            <!-- Signatures : Directeur Général à gauche, DRH à droite — deux blocs identiques
+                 (rôle, nom, filet, légende). Noms des signataires en dur (voir docs/report/README.md
+                 — à ajuster ici si un signataire change, aucune donnée métier ne les porte). -->
             <staticText>
-                <reportElement x="100" y="365" width="280" height="16" forecolor="#000000"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                <text><![CDATA[DRH]]></text>
+                <reportElement x="100" y="360" width="280" height="14" forecolor="#595959"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
+                <text><![CDATA[DIRECTEUR GÉNÉRAL]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="100" y="376" width="280" height="18" forecolor="#000000"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                <text><![CDATA[M. Mouhamed BARHICH]]></text>
             </staticText>
             <line>
                 <reportElement x="100" y="425" width="280" height="0" forecolor="#000000"/>
@@ -616,13 +741,18 @@
             <staticText>
                 <reportElement x="100" y="429" width="280" height="12" forecolor="#808080"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="8"/></textElement>
-                <text><![CDATA[Nom et signature]]></text>
+                <text><![CDATA[Signature]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="422" y="365" width="280" height="16" forecolor="#000000"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                <text><![CDATA[PDG]]></text>
+                <reportElement x="422" y="360" width="280" height="14" forecolor="#595959"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
+                <text><![CDATA[DIRECTEUR DES RESSOURCES HUMAINES]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="422" y="376" width="280" height="18" forecolor="#000000"/>
+                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                <text><![CDATA[M. Ismail MOUSTAJID]]></text>
             </staticText>
             <line>
                 <reportElement x="422" y="425" width="280" height="0" forecolor="#000000"/>
@@ -631,7 +761,7 @@
             <staticText>
                 <reportElement x="422" y="429" width="280" height="12" forecolor="#808080"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="8"/></textElement>
-                <text><![CDATA[Nom et signature]]></text>
+                <text><![CDATA[Signature]]></text>
             </staticText>
 
             <textField>
@@ -650,10 +780,12 @@
     <!-- ================================ EN-TÊTE RÉCURRENT (pageHeader) ================================
          5 blocs indépendants de même hauteur, alignés horizontalement : Logo / Département / Mois /
          Année / Généré le (Mois avant Année, même ordre que la page de garde) — séparés par de fins
-         filets verticaux, jamais de texte concaténé entre deux informations. Bandeau volontairement
-         compact (hauteur réduite) pour laisser le maximum de place au contenu de chaque page. -->
+         filets verticaux, jamais de texte concaténé entre deux informations. Bandeau compact, mais la
+         bande déborde volontairement de ~14pt sous le filet de séparation (y=48, bande haute de 62) :
+         un contenu qui démarre immédiatement sous le filet paraît dense/collé à l'en-tête — cette
+         marge se répète nativement sur toutes les pages de contenu, jamais recréée page par page. -->
     <pageHeader>
-        <band height="50" splitType="Prevent">
+        <band height="62" splitType="Prevent">
             <!-- Bloc 1 : logo -->
             <image scaleImage="RetainShape" hAlign="Left" vAlign="Middle" onErrorType="Blank">
                 <reportElement x="10" y="4" width="110" height="42"/>
