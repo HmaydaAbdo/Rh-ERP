@@ -22,6 +22,18 @@ class PaieBiReportBuilderTest {
             new PaieReportPdfRequestDto("2026-09", null, null, null, null);
 
     @Test
+    void construireDepuis_devraitOrdonnerLesChantiersParMasseDecroissante() {
+        Paie petit = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000");
+        Paie grand = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A", "9000");
+        Paie moyen = paie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C120", "EQUIPE A", "5000");
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
+                List.of(petit, grand, moyen), List.of());
+
+        assertThat(vue.chantiers()).extracting(ChantierBiVue::code).containsExactly("C068", "C120", "C059");
+    }
+
+    @Test
     void construireDepuis_devraitLeverUneExceptionSiAucuneLignePourLaPeriode() {
         assertThatThrownBy(() -> builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(), List.of()))
                 .isInstanceOf(AucunePaiePeriodeException.class);
