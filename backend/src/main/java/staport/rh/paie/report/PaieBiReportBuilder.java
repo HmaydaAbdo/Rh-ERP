@@ -275,7 +275,10 @@ class PaieBiReportBuilder {
 
     private List<Paie> rechercher(YearMonth periode, PaieReportPdfRequestDto requete) {
         PaieSearchCriteria criteria = new PaieSearchCriteria(
-                requete.cin(), requete.nomPrenom(), periode, requete.fonctionId(), requete.chantierId(), null);
+                requete.cin(), requete.nomPrenom(), periode,
+                requete.fonctionId() != null ? List.of(requete.fonctionId()) : null,
+                requete.chantierId() != null ? List.of(requete.chantierId()) : null,
+                null);
         return repository.findAll(PaieSpecification.searchByCriteria(criteria));
     }
 

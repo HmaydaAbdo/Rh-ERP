@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
@@ -12,11 +11,9 @@ import { MessageModule } from 'primeng/message';
 import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
-import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { EmployeeReference } from '../../../shared/reference-data/employee-reference.model';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
-import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieService } from '../services/paie.service';
 
@@ -44,8 +41,8 @@ function fromPeriodeString(periode: string): Date {
     InputNumberModule,
     CalendarModule,
     DropdownModule,
-    AutoCompleteModule,
-    MessageModule
+    MessageModule,
+    LazySelectComponent
   ],
   templateUrl: './paie-form.component.html',
   styleUrl: './paie-form.component.scss'
@@ -53,22 +50,18 @@ function fromPeriodeString(periode: string): Date {
 export class PaieFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly paieService = inject(PaieService);
-  private readonly employeeReferenceService = inject(EmployeeReferenceService);
-  private readonly functionReferenceService = inject(FunctionReferenceService);
-  private readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly employeeReferenceService = inject(EmployeeReferenceService);
+  readonly functionReferenceService = inject(FunctionReferenceService);
+  readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
-
-  functions: FunctionReference[] = [];
-  chantiers: ChantierReference[] = [];
-  employeeSuggestions: EmployeeReference[] = [];
 
   paieId: number | null = null;
   saving = false;
 
   readonly form = this.fb.group({
-    employee: [null as EmployeeReference | null, Validators.required],
+    employeeId: [null as number | null, Validators.required],
     periode: [null as Date | null, Validators.required],
     fonctionId: [null as number | null, Validators.required],
     chantierId: [null as number | null, Validators.required],
@@ -90,18 +83,15 @@ export class PaieFormComponent implements OnInit {
 
 
   ngOnInit(): void {
-    this.functionReferenceService.list().subscribe((functions) => (this.functions = functions));
-    this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
-
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.paieId = Number(idParam);
-      this.form.controls.employee.disable();
+      this.form.controls.employeeId.disable();
       this.form.controls.periode.disable();
 
       this.paieService.getById(this.paieId).subscribe((paie) => {
         this.form.patchValue({
-          employee: paie.employee,
+          employeeId: paie.employee.id,
           periode: fromPeriodeString(paie.periode),
           fonctionId: paie.fonction.id,
           chantierId: paie.chantier.id,
@@ -117,12 +107,6 @@ export class PaieFormComponent implements OnInit {
         });
       });
     }
-  }
-
-  rechercherEmployes(event: AutoCompleteCompleteEvent): void {
-    this.employeeReferenceService
-      .rechercherParNom(event.query)
-      .subscribe((suggestions) => (this.employeeSuggestions = suggestions));
   }
 
   onSubmit(): void {
@@ -152,7 +136,7 @@ export class PaieFormComponent implements OnInit {
       ? this.paieService.update(this.paieId!, dto)
       : this.paieService.create({
           ...dto,
-          employeeId: raw.employee!.id,
+          employeeId: raw.employeeId!,
           periode: toPeriodeString(raw.periode)!
         });
 

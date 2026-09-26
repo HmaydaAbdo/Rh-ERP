@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -8,7 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { finalize } from 'rxjs';
 
-import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { PaieExportRequest } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -34,19 +34,28 @@ const NB_ANNEES_PASSEES = 5;
 @Component({
   selector: 'app-paie-export-excel-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, DialogModule, DropdownModule, MultiSelectModule, SelectButtonModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ButtonModule,
+    DialogModule,
+    DropdownModule,
+    MultiSelectModule,
+    SelectButtonModule,
+    LazySelectComponent
+  ],
   templateUrl: './paie-export-excel-dialog.component.html',
   styleUrl: './paie-export-excel-dialog.component.scss'
 })
-export class PaieExportExcelDialogComponent implements OnChanges {
+export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
   private readonly paieService = inject(PaieService);
-  private readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly fb = inject(FormBuilder);
 
   @Input() visible = false;
   @Output() readonly visibleChange = new EventEmitter<boolean>();
 
-  chantiers: ChantierReference[] = [];
   exporting = false;
 
   readonly anneeOptions: number[] = this.construireAnneeOptions();
@@ -71,6 +80,10 @@ export class PaieExportExcelDialogComponent implements OnChanges {
 
   private readonly equipesCache = new Map<string, string[]>();
   private readonly equipesLoading = new Set<string>();
+
+  ngOnInit(): void {
+    this.form.controls.chantiersConcernes.valueChanges.subscribe(() => this.onChantiersConcernesChange());
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible'] && this.visible) {
@@ -183,9 +196,6 @@ export class PaieExportExcelDialogComponent implements OnChanges {
   }
 
   private ouvrir(): void {
-    if (this.chantiers.length === 0) {
-      this.chantierReferenceService.listActive().subscribe((chantiers) => (this.chantiers = chantiers));
-    }
     const maintenant = new Date();
     this.form.reset({ annee: maintenant.getFullYear(), mois: maintenant.getMonth() + 1, chantiersConcernes: [] });
     this.equipesSepareesParChantier = {};
