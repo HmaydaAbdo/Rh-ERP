@@ -55,23 +55,19 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 systématique de tout le périmètre filtré, jamais une sélection
 │                                 manuelle de sous-feuilles) — voir « Pourquoi deux périmètres ? ».
 ├── PaieReportChartCustomizer.java Personnalise les 4 <barChart> JRXML natifs (barres horizontales,
-│                                 couleurs, étiquette de valeur centrée à l'intérieur de chaque barre)
-│                                 — seule logique Java des graphiques catégoriels, le moteur JFreeChart
-│                                 est interne à JasperReports (aucun PNG généré à part). Réglages
+│                                 seule touche de couleur du document — bleu, voir « Style visuel »,
+│                                 étiquette de valeur centrée à l'intérieur de chaque barre) — seule
+│                                 logique Java des graphiques catégoriels, le moteur JFreeChart est
+│                                 interne à JasperReports (aucun PNG généré à part). Réglages
 │                                 systématiquement posés au niveau de la série (série 0), jamais via
 │                                 les setters "base" dépréciés de JFreeChart : le thème par défaut de
 │                                 JasperReports positionne déjà une visibilité par série avant l'appel
 │                                 de ce customizer, qui prime sinon silencieusement sur un
 │                                 setItemLabelsVisible(true) et empêche l'affichage des étiquettes.
-├── PaieReportEvolutionChartCustomizer.java Personnalise le <lineChart> unique « Évolution de la
-│                                 masse salariale » (courbe + marqueurs) — jamais fusionné avec
-│                                 PaieReportChartCustomizer : une tendance dans le temps répond à une
-│                                 question différente d'une comparaison catégorielle (voir
-│                                 « Visualisations »).
 ├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
 │   LigneEmployeVue                Vue-modèle (records), aucune logique métier — utilisée uniquement
 │                                 côté Java (paramètres JRXML), jamais liée par réflexion
-├── DistributionVue / RepartitionBean / EvolutionMasseBean / LigneRapportDetailBean / SommaireEntreeBean
+├── DistributionVue / RepartitionBean / LigneRapportDetailBean / SommaireEntreeBean
 │                                 Classes à getters (pas des records) : lignes de table/graphique
 │                                 liées par introspection JavaBean (JRBeanCollectionDataSource) —
 │                                 un getter public sur une classe non publique n'est pas accessible
@@ -80,27 +76,27 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 rapport.jrxml : un employé par ligne, dénormalisée avec le contexte
 │                                 chantier + équipe (voir « Structure du rapport »). SommaireEntreeBean
 │                                 (libellé de section + numéro de page) alimente le sous-rapport
-│                                 Sommaire (voir « Sommaire »). EvolutionMasseBean (période + masse)
-│                                 alimente le lineChart d'évolution (voir « Visualisations »)
+│                                 Sommaire (voir « Sommaire »)
 ├── PaieReportNumberFormat.java   Formatage des nombres, variations et tendances (HAUSSE/BAISSE/STABLE)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page Paie)
 
-resources/report/paie/jasper/  ← gabarits JRXML
+resources/report/paie/jasper/  ← gabarits JRXML — style noir/blanc/gris, police Liberation Serif,
+│                                 seuls les <barChart> restent en couleur (bleu) — voir « Style visuel »
 ├── rapport.jrxml                 Gabarit unique pour tout le document : page de garde (bande title,
 │                                 isTitleNewPage — seule page sans pageHeader/pageFooter, voir
-│                                 « Structure du rapport »), puis 4 groupes à expression constante
+│                                 « Structure du rapport »), puis 3 groupes à expression constante
 │                                 (en-tête imprimé une seule fois chacun, en tout début de document) :
-│                                 GroupSommaire, GroupSynthese (KPI + narratif, plus aucun graphique),
-│                                 GroupGraphEvolution (lineChart), GroupGraphChantier et
-│                                 GroupGraphFonction (2 barChart empilés pleine largeur chacun) — puis
-│                                 groupe GroupChantier (isStartNewPage) et groupe GroupEquipe
-│                                 (keepTogether, isReprintHeaderOnEachPage) pilotant la même source de
-│                                 données à plat — zéro duplication de bande entre sections, le
-│                                 pageHeader à 3 blocs (une seule bande définie une fois) se répète
-│                                 nativement sur toutes ces pages
-├── sommaire.jrxml                Sous-rapport : une ligne par section (Synthèse globale, Évolution,
-│                                 les 2 pages graphiques, puis un chantier par ligne) avec son numéro
-│                                 de page réel — voir « Sommaire »
+│                                 GroupSommaire, GroupSynthese (chapitre I — KPI + narratif, aucun
+│                                 graphique), GroupGraphChantier (chapitre II) et GroupGraphFonction
+│                                 (chapitre III) — chacun 2 barChart placés côte à côte (jamais
+│                                 empilés, voir « Visualisations ») — puis groupe GroupChantier
+│                                 (isStartNewPage) et groupe GroupEquipe (keepTogether,
+│                                 isReprintHeaderOnEachPage) pilotant la même source de données à plat
+│                                 — zéro duplication de bande entre sections, le pageHeader à 5 blocs
+│                                 (une seule bande définie une fois) se répète nativement sur toutes
+│                                 ces pages
+├── sommaire.jrxml                Sous-rapport : une ligne par section (les 3 chapitres BI, puis un
+│                                 chantier par ligne) avec son numéro de page réel — voir « Sommaire »
 └── tableDistribution.jrxml       Sous-rapport : répartition par équipe d'un chantier
 ```
 
@@ -267,7 +263,6 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Effectif par chantier (chart 2) | `COUNT(*)` groupé par chantier | Global | Non |
 | Masse par fonction (chart 3) | `SUM(salaireTotal)` groupé par fonction | Global | Non |
 | Effectif par fonction (chart 4) | `COUNT(*)` groupé par fonction | Global | Non |
-| Évolution de la masse salariale | `SUM(salaireTotal)` groupé par période, pour **toutes** les périodes réellement présentes en base pour le périmètre filtré (jamais une fenêtre glissante à trous) | Global | N/A — c'est la comparaison, sur plus de deux points |
 | Distribution par équipe (avec Sans équipe) | `SUM(salaireTotal)` groupé par équipe, + part du total | Chantier | Non |
 | STC / sortie du chantier | `COUNT` des lignes où `ObservationStc.estStcOuSortie`, restreint à ce chantier | Chantier | Non — indicateur unique (pas de table), affiché dans le bandeau KPI du chantier |
 
@@ -324,32 +319,31 @@ résume, seul le dernier détaille.
    `pageHeader`/`pageFooter`, comportement JasperReports pour une bande title en isTitleNewPage,
    exploité ici plutôt que subi : une couverture porte sa propre mise en avant du logo et de la
    période, elle n'a pas besoin du bandeau récurrent) : logo, titre du rapport, puis 3 clés-valeurs
-   **Département** (`Ressources Humaines`) / **Année** / **Mois**, date de génération. Jamais de
-   sous-titre « Synthèse BI », jamais de ligne Périmètre — une couverture reste minimale.
+   **Département** (`Ressources Humaines`) / **Année** / **Mois**, empilées **verticalement** (l'une
+   sous l'autre, jamais en colonnes côte à côte), puis date de génération. Jamais de sous-titre
+   « Synthèse BI », jamais de ligne Périmètre — une couverture reste minimale.
 2. **Sommaire** (`<group name="GroupSommaire">` à expression constante — son en-tête ne s'imprime
    qu'une seule fois, en tout début de document, juste après la page de garde) : une ligne par
-   section (Synthèse globale, Évolution de la masse salariale, les 2 pages graphiques catégorielles,
-   puis un chantier par ligne, dans l'ordre d'apparition) avec son numéro de page réel — voir
-   « Sommaire » pour le mécanisme de double remplissage qui rend ces numéros exacts.
+   section (les 3 chapitres BI, puis un chantier par ligne, dans l'ordre d'apparition) avec son
+   numéro de page réel — voir « Sommaire » pour le mécanisme de double remplissage qui rend ces
+   numéros exacts.
 3. **Bandeau** (`pageHeader` JRXML, un seul défini dans `rapport.jrxml`) : répété à l'identique sur
    **toutes** les pages de contenu qui suivent (Sommaire compris), y compris les pages chantier — un
    seul `JasperPrint` réellement exporté, jamais de bande dupliquée dans un second gabarit (voir
-   « Composants et services principaux »). Trois blocs, chacun un logo ou une paire de clés-valeurs
-   empilées (jamais concaténées en une seule ligne) :
-   - logo seul (plus de texte "Rapport de paie" à côté) ;
-   - clé **Département** (valeur `Ressources Humaines & Paie`) + clé **Généré le** ;
-   - clé **Mois** + clé **Année**, séparées. Jamais de ligne Périmètre (retirée elle aussi).
-4. **Synthèse globale** (`<group name="GroupSynthese">`, même mécanique d'en-tête imprimé une seule
-   fois que GroupSommaire — c'est l'ancienne bande `title`, déplacée ici pour bénéficier du
+   « Composants et services principaux »). **5 blocs indépendants de même hauteur**, alignés
+   horizontalement et séparés par de fins filets verticaux (jamais de clés-valeurs concaténées en une
+   seule ligne) : Logo / Département / Année / Mois / Généré le.
+4. **I — Synthèse globale** (`<group name="GroupSynthese">`, même mécanique d'en-tête imprimé une
+   seule fois que GroupSommaire — c'est l'ancienne bande `title`, déplacée ici pour bénéficier du
    `pageHeader`/`pageFooter` comme toute page de contenu) : KPI (masse réelle, effectif, masse
    moyenne/employé, **nombre de chantiers** — seul indicateur/filtre global conservé sur la
    déclinaison Chantier/Fonction, voir « Catalogue de KPI ») puis une **phrase courte de synthèse**
    (voir « Narratif léger ») — plus aucun graphique sur cette page, voir point suivant.
-5. **3 pages dédiées aux visualisations** (`GroupGraphEvolution`, `GroupGraphChantier`,
-   `GroupGraphFonction`, même mécanique d'en-tête imprimé une seule fois), dans cet ordre : évolution
-   de la masse salariale (1 lineChart), puis masse + effectif par chantier (2 barChart empilés pleine
-   largeur), puis masse + effectif par fonction (2 barChart empilés pleine largeur) — voir
-   « Visualisations » pour le détail et la justification de ce découpage.
+5. **2 pages dédiées aux visualisations**, numérotées en chiffres romains comme les autres chapitres
+   de premier niveau (`GroupGraphChantier` = **II — Répartition par chantier**, `GroupGraphFonction`
+   = **III — Répartition par fonction**, même mécanique d'en-tête imprimé une seule fois) : chaque
+   page porte 2 `<barChart>` (masse, puis effectif de la même dimension) placés **côte à côte**,
+   jamais empilés — voir « Visualisations » pour le détail et la justification de cette disposition.
 6. **Une section par chantier**, triée par masse réelle de paie décroissante (`salaireTotal`, la
    colonne « Total », jamais `salaireMensuel` — voir « Modèle analytique » —, le plus gros chantier en
    premier ; `agregatChantier` porte déjà ce tri, voir `PaieBiReportBuilder.agreger`, jamais un ré-tri
@@ -358,6 +352,11 @@ résume, seul le dernier détaille.
    sortie** — voir « Catalogue de KPI », une **phrase courte de synthèse** du chantier, distribution
    par équipe), puis une sous-section par équipe (BI compacte : effectif, masse, part du chantier —
    puis le tableau détaillé des employés), et enfin **Sans équipe** dans les mêmes conditions.
+
+Les sections chantier/équipe ne portent volontairement pas de numérotation romaine : celle-ci
+marque uniquement les 3 chapitres de premier niveau (Synthèse, Répartition par chantier, Répartition
+par fonction), une numérotation répétée sur chaque chantier n'apporterait rien (voir « Style
+visuel »).
 
 Chaque chantier commence sur une nouvelle page (`<group name="GroupChantier" isStartNewPage="true">`
 dans `rapport.jrxml`, piloté par la même source de données à plat que le reste du document — jamais
@@ -396,31 +395,36 @@ pour un rapport de direction généré à la demande, pas en masse.
 
 ### Visualisations
 
-- **Évolution de la masse salariale** (page dédiée, seule avant les graphiques catégoriels) :
-  `<lineChart>` JRXML natif, personnalisé par `PaieReportEvolutionChartCustomizer` (courbe + marqueurs,
-  pas de barres) — une tendance dans le temps est une question différente d'une comparaison de
-  catégories, jamais mélangée au même graphique. Couvre **toutes** les périodes réellement présentes
-  en base pour le périmètre filtré, jamais une fenêtre glissante à trous (choix explicite, voir
-  `PaieBiReportBuilder.evolutionMasse`) : un mois sans bulletin n'existe simplement pas sur l'axe,
-  jamais affiché comme un creux à 0 DH trompeur.
 - **Les 4 barChart de masse/effectif par chantier et par fonction**, répartis sur **2 pages
-  distinctes** (masse + effectif par chantier ; masse + effectif par fonction), 2 graphiques empilés
-  pleine largeur par page plutôt que 4 compressés en grille sur une seule page : des barres deux fois
-  plus larges rendent les montants directement lisibles sans avoir à zoomer. `<barChart>` JRXML
-  natifs (moteur JFreeChart interne à JasperReports, personnalisés par `PaieReportChartCustomizer` —
-  barres horizontales, jamais de PNG pré-généré à part). Jamais de camembert/donut : une barre
-  horizontale compare mieux plus de 3-4 valeurs et affiche le montant/effectif directement sur la
-  barre — l'étiquette de valeur est centrée **à l'intérieur** de chaque barre (jamais à côté), les
-  barres étant dimensionnées en conséquence (marges de catégorie réduites, largeur de barre
-  maximisée). Ces réglages sont posés au niveau de la série JFreeChart
+  distinctes** (chapitre II : masse + effectif par chantier ; chapitre III : masse + effectif par
+  fonction), **2 graphiques placés côte à côte** sur chaque page (jamais empilés verticalement) :
+  chaque graphique occupe une demi-page en largeur (colonne ~390pt sur une largeur de page de
+  802pt), mais bénéficie en contrepartie d'une hauteur généreuse (~395pt) — l'orientation du plot
+  étant `HORIZONTAL` (barres horizontales), c'est la **hauteur** du graphique divisée par le nombre
+  de catégories qui détermine l'épaisseur de chaque barre, pas sa largeur ; l'objectif « barres plus
+  épaisses, montants lisibles sans compression » est donc atteint en maximisant la hauteur disponible
+  par graphique plutôt qu'en gardant une largeur pleine page. `<barChart>` JRXML natifs (moteur
+  JFreeChart interne à JasperReports, personnalisés par `PaieReportChartCustomizer` — barres
+  horizontales, jamais de PNG pré-généré à part). Jamais de camembert/donut : une barre horizontale
+  compare mieux plus de 3-4 valeurs et affiche le montant/effectif directement sur la barre —
+  l'étiquette de valeur est centrée **à l'intérieur** de chaque barre (jamais à côté). Ces réglages
+  sont posés au niveau de la série JFreeChart
   (`setSeriesItemLabelsVisible`/`setSeriesItemLabelFont`/etc.), jamais via les setters "base"
   dépréciés — le thème par défaut de JasperReports positionne une visibilité par série avant l'appel
   du customizer, qui l'emporte silencieusement sur un `setItemLabelsVisible(true)` global et
   empêchait l'affichage des étiquettes. Chaque graphique est plafonné aux 20 plus grosses valeurs (le
   reste regroupé sous « Autres », masse et effectif cumulés, toujours trié à sa vraie place dans le
   classement décroissant) pour rester lisible imprimé — voir `PaieBiReportBuilder.versRepartition`.
+  Aucune `<chartLegend>` : le titre placé au-dessus de chaque graphique (« Masse salariale par
+  chantier », etc.) indique déjà ce qui est représenté pour une série unique — une légende
+  redondante serait un élément visuel inutile (voir « Style visuel »).
 - **Distribution par équipe (niveau chantier)** : reste une table (`tableDistribution.jrxml`) — au
   niveau chantier, la cardinalité (quelques équipes) se lit mieux en table qu'en graphique.
+
+> Le graphique d'évolution de la masse salariale sur plusieurs mois, ajouté puis retiré durant
+> l'évolution de ce rapport, n'existe plus : la direction a jugé qu'un rapport mensuel de synthèse
+> n'a pas besoin d'une tendance multi-périodes sur la même page que les comparaisons catégorielles —
+> à réintroduire uniquement si un besoin réel et explicite s'exprime à nouveau.
 
 ### Narratif léger
 
@@ -436,6 +440,48 @@ valeurs déjà agrégées par `PaieBiReportBuilder` — aucune nouvelle donnée,
 notable » : ce niveau reste volontairement descriptif, jamais une détection d'anomalie/tendance
 (qui resterait à définir explicitement si un besoin réel se confirme).
 
+### Style visuel
+
+Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un export de données habillé.
+
+- **Noir / blanc / gris partout dans le document** — aucune couleur décorative dans le texte, les
+  titres, les tableaux ou les blocs. Palette fixe : `#000000` (texte/emphase, fonds d'en-tête de
+  table), `#FFFFFF` (texte sur fond noir), `#595959` (libellés/captions secondaires), `#F2F2F2`
+  (alternance de lignes des tableaux), `#CCCCCC` (filets/bordures fines), `#808080`/`#999999`
+  (mentions discrètes, séparateurs de blocs d'en-tête). **Seuls les `<barChart>` restent en
+  couleur** (bleu, `PaieReportChartCustomizer`) — la seule exception délibérée à la règle noir/blanc.
+  Les anciens indicateurs de tendance HAUSSE/BAISSE/STABLE (auparavant des pastilles colorées
+  vert/rouge/gris) sont désormais du texte noir gras préfixé du mot (« Hausse : … », « Baisse : … »,
+  « Stable : … ») — la couleur ne porte plus l'information, le texte si.
+- **Police Liberation Serif** dans tout le document (gabarits JRXML et `PaieReportChartCustomizer`,
+  propriété `net.sf.jasperreports.default.font.name`) — substitut de « Times New Roman » demandé par
+  la direction : la police Microsoft n'est pas installée sur l'environnement de rendu PDF, mais
+  Liberation Serif l'est (`fc-list`), en est métriquement compatible, et est la police vers laquelle
+  fontconfig résout "Times New Roman" sur ce système (`fc-match "Times New Roman"`) — utiliser
+  directement son nom réel évite de dépendre d'une résolution d'alias que le moteur PDF de
+  JasperReports n'honore pas nécessairement.
+- **Hiérarchie typographique**, taille de référence 16pt (Liberation Serif, comme demandé) :
+  - **Titres de chapitre** (I — Synthèse globale, II — Répartition par chantier, III — Répartition
+    par fonction) : 16pt gras, numérotés en chiffres romains — la seule numérotation du document, elle
+    ne s'applique qu'aux 3 chapitres de premier niveau, jamais aux sections chantier/équipe répétées
+    (voir « Structure du rapport »).
+  - **Sous-titres** (bandeau chantier, bandeau équipe, titre de chaque graphique) : 12-13pt gras.
+  - **Indicateurs KPI** : 18pt gras pour la valeur (le point le plus visible de la page), 9pt gras
+    pour son libellé.
+  - **Contenu courant** (lignes d'information chantier, tableau « Répartition par équipe ») :
+    10.5-11pt.
+  - **Tableau détaillé employé** (11 colonnes) : 10.5pt — une exception assumée à la règle des
+    16pt : à largeur de colonne inchangée (pas de retour à la ligne, pas d'explosion du nombre de
+    pages), 16pt casserait la mise en page dense de ce tableau. Toujours nettement plus lisible que
+    l'ancien 6.5pt.
+  - **Captions/notes** (libellés de blocs d'en-tête, pied de page) : 7.5-10pt.
+- **Page de garde et bandeau `pageHeader`** : voir « Structure du rapport » pour la disposition
+  verticale (page de garde) et les 5 blocs horizontaux de même hauteur (bandeau récurrent).
+- **Épuration** : suppression des fonds colorés décoratifs (cartes KPI : simple filet gris, plus de
+  bandeau bleu d'accent), suppression de la `<chartLegend>` (redondante avec le titre de chaque
+  graphique, voir « Visualisations »), suppression du sous-titre "Synthèse BI"/ligne Périmètre déjà
+  retirés avant cette itération.
+
 ### Composants et services principaux
 
 | Fichier | Rôle |
@@ -444,8 +490,7 @@ notable » : ce niveau reste volontairement descriptif, jamais une détection d'
 | `PaieExportService` / `PaieSheetWriter` / `PaieExcelStyles` | Génération du classeur Excel |
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
 | `PaieReportPdfService` | Orchestration JRXML → PDF du rapport PDF (compilation du gabarit unique, aplatissement des données, **double remplissage** — voir « Sommaire », export) — testée de bout en bout par `PaieReportPdfServiceTest` |
-| `PaieReportChartCustomizer` | Personnalisation Java des 4 `<barChart>` JRXML (orientation horizontale, couleurs, étiquettes) |
-| `PaieReportEvolutionChartCustomizer` | Personnalisation Java du `<lineChart>` unique d'évolution (courbe, marqueurs) |
+| `PaieReportChartCustomizer` | Personnalisation Java des 4 `<barChart>` JRXML (orientation horizontale, seule touche de couleur du document, étiquettes) |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
 
