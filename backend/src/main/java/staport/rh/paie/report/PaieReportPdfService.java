@@ -214,7 +214,7 @@ public class PaieReportPdfService {
                             chantier.distributionEquipe(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
-                            equipe.stc(), equipe.distributionFonction(), equipe.repartitionFonction(), equipe.evolutionMensuelle(),
+                            equipe.stc(), equipe.evolutionMensuelle(),
                             employe));
                 }
             }
