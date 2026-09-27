@@ -18,12 +18,10 @@ import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,21 +41,15 @@ class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 20;
-    /** Plafond du nombre d'équipes distinctes affichées comme séries empilées du chapitre II (voir
-     * {@link #versRepartitionCroiseeParEquipe}) — même valeur que le plafond déjà documenté pour la
-     * distribution par fonction intra-chantier (voir docs/report/README.md, « Points d'extension »),
-     * réutilisée ici pour la même raison : borner la légende à un nombre lisible d'entrées quel que
-     * soit le nombre réel d'équipes présentes sur l'ensemble des chantiers retenus. */
-    private static final int MAX_SERIES_EQUIPE_CHANTIER = 8;
-    private static final String AUTRES_EQUIPES = "Autres équipes";
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
-     * chaîne déjà formatée pour trier ou construire un graphique. */
-    private record Agregat(String cle, int effectif, BigDecimal montant) {
+     * chaîne déjà formatée pour trier ou construire un graphique. {@code stc} : nombre de STC/sorties
+     * dans ce groupe (même définition qu'aux autres niveaux, voir {@code ObservationStc}). */
+    private record Agregat(String cle, int effectif, BigDecimal montant, int stc) {
     }
 
     /** Historique mensuel aux 3 niveaux du rapport (global, chantier, équipe) — dérivés en Java d'un
@@ -82,11 +74,12 @@ class PaieBiReportBuilder {
         }
     }
 
-    /** Accumulateur mutable (masse, effectif) d'un mois — évite de porter deux Map parallèles
-     * (une pour la masse, une pour l'effectif) pour la même clé pendant l'agrégation. */
+    /** Accumulateur mutable (masse, effectif, STC) d'un mois — évite de porter trois Map parallèles
+     * pour la même clé pendant l'agrégation. */
     private static final class Cumul {
         private BigDecimal masse = BigDecimal.ZERO;
         private long effectif;
+        private long stc;
     }
 
     private final PaieRepository repository;
@@ -127,7 +120,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
-                versRepartitionCroiseeParEquipe(agregatChantier, courant),
+                versRepartition(agregatChantier),
                 versRepartition(agregatFonction),
                 evolutions.global()
         );
@@ -180,6 +173,7 @@ class PaieBiReportBuilder {
     private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier, String chantierCode,
                                    EvolutionParNiveau evolutions) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
+        List<Agregat> agregatFonctionEquipe = agreger(lignesEquipe, this::libelleFonction);
         List<LigneEmployeVue> employes = lignesEquipe.stream()
                 .sorted(Comparator.comparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
                 .map(this::ligneEmploye)
@@ -192,6 +186,8 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
+                versDistribution(agregatFonctionEquipe, masseEquipe),
+                versRepartition(agregatFonctionEquipe),
                 evolutions.pourEquipe(chantierCode, nom),
                 employes);
     }
@@ -217,7 +213,8 @@ class PaieBiReportBuilder {
     private List<Agregat> agreger(List<Paie> lignes, Function<Paie, String> cle) {
         Map<String, List<Paie>> groupes = lignes.stream().collect(Collectors.groupingBy(cle, LinkedHashMap::new, Collectors.toList()));
         return groupes.entrySet().stream()
-                .map(entree -> new Agregat(entree.getKey(), entree.getValue().size(), sommer(entree.getValue())))
+                .map(entree -> new Agregat(entree.getKey(), entree.getValue().size(), sommer(entree.getValue()),
+                        (int) entree.getValue().stream().filter(ObservationStc::estStcOuSortie).count()))
                 .sorted(Comparator.comparing(Agregat::montant).reversed())
                 .toList();
     }
@@ -233,100 +230,34 @@ class PaieBiReportBuilder {
     }
 
     /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
-     * valeurs (le reste regroupé sous "Autres", masse ET effectif cumulés) — demande explicite de
+     * valeurs (le reste regroupé sous "Autres", masse, effectif ET STC cumulés) — demande explicite de
      * direction (Top 20, un graphique complet à 25+ catégories devient trop dense pour rester
      * lisible imprimé), voir {@code docs/report/README.md}. Le résultat est retrié par montant
      * décroissant (y compris "Autres" à sa vraie place) : un graphique BI doit rester visuellement
      * monotone, jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. Déjà trié
-     * par montant décroissant en entrée (voir {@link #agreger}). La même liste alimente à la fois le
-     * graphique de masse et celui d'effectif de la dimension (chantier ou fonction). */
+     * par montant décroissant en entrée (voir {@link #agreger}). La même liste alimente le graphique
+     * à barres groupées (masse/effectif/STC, 3 séries) de la dimension (chantier, équipe ou fonction),
+     * voir {@code PaieReportGroupedChartCustomizer}. */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
         List<RepartitionBean> valeurs = new ArrayList<>();
         int effectifAutres = 0;
+        int stcAutres = 0;
         BigDecimal montantAutres = BigDecimal.ZERO;
         for (int i = 0; i < agregats.size(); i++) {
             Agregat agregat = agregats.get(i);
             if (i < MAX_BARRES_GRAPHIQUE) {
-                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant()));
+                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant(), agregat.stc()));
             } else {
                 effectifAutres += agregat.effectif();
+                stcAutres += agregat.stc();
                 montantAutres = montantAutres.add(agregat.montant());
             }
         }
         if (effectifAutres > 0) {
-            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres));
+            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres, stcAutres));
         }
         valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
-    }
-
-    /** Croisement chantier × équipe alimentant le {@code <stackedBarChart>} du chapitre II (colonnes
-     * verticales empilées par équipe, demande explicite de direction — voir
-     * docs/report/README.md, « Visualisations »). Reprend exactement le même ensemble de chantiers que
-     * {@link #versRepartition} (les {@value #MAX_BARRES_GRAPHIQUE} plus gros, "Autres" pour le reste) :
-     * les deux graphiques du chapitre II doivent montrer les mêmes colonnes. Le détail par équipe n'est
-     * calculé que pour ces chantiers retenus — les chantiers regroupés sous "Autres" restent un bloc
-     * unique, jamais décomposé (décomposer par équipe l'agrégat de dizaines de petits chantiers
-     * redeviendrait aussi illisible que le croisement Équipe × Fonction déjà retiré, voir « Vue
-     * détaillée par chantier »). Le nombre d'équipes distinctes affichées comme séries (donc dans la
-     * légende) est lui-même plafonné à {@value #MAX_SERIES_EQUIPE_CHANTIER} (classées par masse
-     * cumulée décroissante sur les chantiers retenus), le reste regroupé sous "Autres équipes" — sans
-     * ce plafond, jusqu'à 20 chantiers × plusieurs équipes chacun pourrait produire une légende aussi
-     * illisible que le croisement retiré. Aucune requête supplémentaire : dérivé de {@code courant},
-     * déjà chargé en mémoire pour tout le reste du calcul. */
-    private List<RepartitionCroiseeBean> versRepartitionCroiseeParEquipe(List<Agregat> agregatChantier, List<Paie> courant) {
-        Set<String> chantiersRetenus = agregatChantier.stream()
-                .limit(MAX_BARRES_GRAPHIQUE)
-                .map(Agregat::cle)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-
-        Map<String, Map<String, Cumul>> parChantierEquipe = new LinkedHashMap<>();
-        Cumul autresChantiers = new Cumul();
-        for (Paie paie : courant) {
-            String chantier = codeChantier(paie);
-            BigDecimal montant = paie.getSalaireTotal() == null ? BigDecimal.ZERO : paie.getSalaireTotal();
-            if (chantiersRetenus.contains(chantier)) {
-                Cumul cumul = parChantierEquipe.computeIfAbsent(chantier, c -> new LinkedHashMap<>())
-                        .computeIfAbsent(libelleEquipe(paie), e -> new Cumul());
-                cumul.masse = cumul.masse.add(montant);
-                cumul.effectif++;
-            } else {
-                autresChantiers.masse = autresChantiers.masse.add(montant);
-                autresChantiers.effectif++;
-            }
-        }
-
-        Map<String, BigDecimal> masseParEquipe = new LinkedHashMap<>();
-        parChantierEquipe.values().forEach(parEquipe -> parEquipe.forEach(
-                (equipe, cumul) -> masseParEquipe.merge(equipe, cumul.masse, BigDecimal::add)));
-        Set<String> equipesRetenues = masseParEquipe.entrySet().stream()
-                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
-                .limit(MAX_SERIES_EQUIPE_CHANTIER)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-
-        List<RepartitionCroiseeBean> resultat = new ArrayList<>();
-        for (String chantier : chantiersRetenus) {
-            Cumul autresEquipes = new Cumul();
-            for (Map.Entry<String, Cumul> entree : parChantierEquipe.getOrDefault(chantier, Map.of()).entrySet()) {
-                if (equipesRetenues.contains(entree.getKey())) {
-                    resultat.add(new RepartitionCroiseeBean(chantier, entree.getKey(),
-                            (int) entree.getValue().effectif, entree.getValue().masse));
-                } else {
-                    autresEquipes.masse = autresEquipes.masse.add(entree.getValue().masse);
-                    autresEquipes.effectif += entree.getValue().effectif;
-                }
-            }
-            if (autresEquipes.effectif > 0) {
-                resultat.add(new RepartitionCroiseeBean(chantier, AUTRES_EQUIPES,
-                        (int) autresEquipes.effectif, autresEquipes.masse));
-            }
-        }
-        if (autresChantiers.effectif > 0) {
-            resultat.add(new RepartitionCroiseeBean("Autres", AUTRES_EQUIPES,
-                    (int) autresChantiers.effectif, autresChantiers.masse));
-        }
-        return resultat;
     }
 
     /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
@@ -349,12 +280,13 @@ class PaieBiReportBuilder {
             YearMonth mois = ligne.getPeriode();
             BigDecimal masse = ligne.getMasse() == null ? BigDecimal.ZERO : ligne.getMasse();
             long effectif = ligne.getEffectif() == null ? 0 : ligne.getEffectif();
+            long stc = ligne.getStc() == null ? 0 : ligne.getStc();
             String chantier = ligne.getChantierCode();
             String equipe = libelleEquipe(ligne.getEquipe());
 
-            cumuler(global, mois, masse, effectif);
-            cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif);
-            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif);
+            cumuler(global, mois, masse, effectif, stc);
+            cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif, stc);
+            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif, stc);
         }
 
         return new EvolutionParNiveau(
@@ -363,10 +295,11 @@ class PaieBiReportBuilder {
                 versPointsParCle(periode, parEquipe));
     }
 
-    private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif) {
+    private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif, long stc) {
         Cumul cumul = parMois.computeIfAbsent(mois, m -> new Cumul());
         cumul.masse = cumul.masse.add(masse);
         cumul.effectif += effectif;
+        cumul.stc += stc;
     }
 
     private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
@@ -386,7 +319,8 @@ class PaieBiReportBuilder {
             points.add(new RepartitionBean(
                     mois.format(FORMAT_MOIS_COURT),
                     cumul == null ? 0 : (int) cumul.effectif,
-                    cumul == null ? BigDecimal.ZERO : cumul.masse));
+                    cumul == null ? BigDecimal.ZERO : cumul.masse,
+                    cumul == null ? 0 : (int) cumul.stc));
         }
         return points;
     }
