@@ -44,7 +44,12 @@ import java.util.Map;
  * écraserait toujours le STC en personnes (ex. 37) s'ils partageaient une échelle commune, même sur
  * un axe purement décoratif. La forme/tendance de chaque courbe reste donc pleinement lisible quelle
  * que soit son échelle réelle, et la vraie valeur (jamais la valeur normalisée) reste affichée en
- * étiquette sur le dernier point de chaque série, lue dans une table conservée avant normalisation.
+ * étiquette sur CHAQUE point (pas seulement le dernier — demande explicite de direction : un rapport
+ * imprimé n'a pas de survol souris pour révéler une valeur au clic, contrairement à un graphique web),
+ * lue dans une table conservée avant normalisation. Un point à exactement 0 n'affiche pas
+ * d'étiquette (même convention que {@link PaieReportGroupedChartCustomizer}) : avec la fenêtre
+ * glissante, un 0 signifie une absence réelle de donnée ce mois-là pour cette série (ex. un chantier
+ * pas encore démarré), pas une valeur à mettre en avant.
  *
  * <p><b>Étiquettes orientées vers leur axe</b> : familles DH (masse, STC en DH) étiquetées côté
  * GAUCHE du point, familles Personnes (effectif, STC en personnes) côté DROIT — demande explicite de
@@ -88,11 +93,11 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(COULEUR_GRILLE);
-        // Marge de droite généreuse : les étiquettes "Personnes" s'étendent vers la droite depuis un
-        // point déjà situé sur la dernière catégorie (mois courant, bord droit du graphique) — sans
-        // cette marge elles seraient tronquées. Marge de gauche plus fine : les étiquettes "DH"
-        // s'étendent vers l'intérieur du graphique, jamais vers son bord.
-        plot.setInsets(new RectangleInsets(20, 8, 20, 72));
+        // Marges gauche ET droite généreuses, désormais symétriques : chaque point (pas seulement le
+        // dernier) porte une étiquette, donc le premier mois peut avoir une étiquette "DH" qui
+        // s'étend vers la gauche (hors du tracé si la marge est trop fine) tout comme le dernier mois
+        // peut avoir une étiquette "Personnes" qui s'étend vers la droite.
+        plot.setInsets(new RectangleInsets(20, 60, 20, 72));
 
         CategoryAxis categoryAxis = plot.getDomainAxis();
         categoryAxis.setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 8));
@@ -165,7 +170,7 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
     }
 
     /** Style commun aux 2 renderers (1 par famille d'unité, 2 séries chacun au plus) — étiquette de
-     * valeur affichée uniquement sur le dernier point de chaque série (mois courant), orientée vers
+     * valeur affichée sur CHAQUE point (rapport imprimé, pas d'infobulle au survol), orientée vers
      * l'axe de sa famille, alternée haut/bas au sein de la famille. */
     private void styliser(LineAndShapeRenderer renderer, CategoryDataset dataset, Map<String, Map<String, Number>> vraiesValeurs) {
         for (int serie = 0; serie < dataset.getRowCount(); serie++) {
@@ -190,13 +195,10 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
                     "{2}", new DecimalFormat("#,##0")) {
                 @Override
                 public String generateLabel(CategoryDataset ds, int row, int column) {
-                    if (column != ds.getColumnCount() - 1) {
-                        return null;
-                    }
                     String serieCourante = String.valueOf(ds.getRowKey(row));
                     Number valeur = vraiesValeurs.getOrDefault(serieCourante, Map.of())
                             .get(String.valueOf(ds.getColumnKey(column)));
-                    if (valeur == null) {
+                    if (valeur == null || valeur.doubleValue() == 0) {
                         return null;
                     }
                     return montant
