@@ -51,7 +51,8 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         plot.getRangeAxis().setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 8));
         plot.getRangeAxis().setVisible(true);
 
-        boolean masse = estSerieMasse(plot.getDataset());
+        CategoryDataset dataset = plot.getDataset();
+        boolean masse = dataset != null && estSerieMasse(dataset);
 
         LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
         renderer.setSeriesPaint(0, COULEUR_LIGNE);

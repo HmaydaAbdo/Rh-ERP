@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
-import staport.rh.paie.repositories.EvolutionMensuelleProjection;
+import staport.rh.paie.repositories.EvolutionChantierEquipeProjection;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
@@ -51,6 +51,35 @@ class PaieBiReportBuilder {
     private record Agregat(String cle, int effectif, BigDecimal montant) {
     }
 
+    /** Historique mensuel aux 3 niveaux du rapport (global, chantier, équipe) — dérivés en Java d'un
+     * seul jeu de lignes déjà groupé en base au niveau le plus fin (voir
+     * {@code PaieRepository.sommerParChantierEquipePeriode}), jamais une requête par chantier/équipe.
+     * {@code parEquipe} est clé par {@code "<chantierCode>|<nomEquipe>"} : une équipe n'est unique
+     * qu'au sein de son chantier, jamais globalement (deux chantiers peuvent tous deux avoir une
+     * équipe "A"). */
+    private record EvolutionParNiveau(
+            List<RepartitionBean> global,
+            Map<String, List<RepartitionBean>> parChantier,
+            Map<String, List<RepartitionBean>> parEquipe) {
+
+        static final EvolutionParNiveau VIDE = new EvolutionParNiveau(List.of(), Map.of(), Map.of());
+
+        List<RepartitionBean> pourChantier(String code) {
+            return parChantier.getOrDefault(code, List.of());
+        }
+
+        List<RepartitionBean> pourEquipe(String chantierCode, String nomEquipe) {
+            return parEquipe.getOrDefault(chantierCode + "|" + nomEquipe, List.of());
+        }
+    }
+
+    /** Accumulateur mutable (masse, effectif) d'un mois — évite de porter deux Map parallèles
+     * (une pour la masse, une pour l'effectif) pour la même clé pendant l'agrégation. */
+    private static final class Cumul {
+        private BigDecimal masse = BigDecimal.ZERO;
+        private long effectif;
+    }
+
     private final PaieRepository repository;
 
     PaieBiReportBuilder(PaieRepository repository) {
@@ -60,19 +89,19 @@ class PaieBiReportBuilder {
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
         List<Paie> courant = rechercher(periode, requete);
         List<Paie> precedent = rechercher(periode.minusMonths(1), requete);
-        List<RepartitionBean> evolution = evolutionMensuelle(periode);
-        return construireDepuis(periode, requete, courant, precedent, evolution);
+        EvolutionParNiveau evolutions = evolutionParNiveau(periode);
+        return construireDepuis(periode, requete, courant, precedent, evolutions);
     }
 
     /** Surcharge sans historique d'évolution (utilisée par les tests de {@link PaieBiReportBuilder},
-     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : le graphique
-     * d'évolution reste alors simplement vide, sans incidence sur le reste du calcul. */
+     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : les graphiques
+     * d'évolution restent alors simplement vides, sans incidence sur le reste du calcul. */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
-        return construireDepuis(periode, requete, courant, precedent, List.of());
+        return construireDepuis(periode, requete, courant, precedent, EvolutionParNiveau.VIDE);
     }
 
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent,
-                                   List<RepartitionBean> evolutionMensuelle) {
+                                   EvolutionParNiveau evolutions) {
         if (courant.isEmpty()) {
             throw new AucunePaiePeriodeException(periode);
         }
@@ -88,16 +117,17 @@ class PaieBiReportBuilder {
                 kpiEffectif(courant.size(), precedent.size()),
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
+                (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
                 versRepartition(agregatChantier),
                 versRepartition(agregatFonction),
-                evolutionMensuelle
+                evolutions.global()
         );
 
         // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
         // plus gros chantier en premier, jamais un ré-tri alphabétique qui l'annulerait.
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
-                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante))
+                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante, evolutions))
                 .toList();
 
         return new RapportBiVue(
@@ -108,7 +138,8 @@ class PaieBiReportBuilder {
                 chantiers);
     }
 
-    private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent, BigDecimal masseGlobale) {
+    private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent, BigDecimal masseGlobale,
+                                       EvolutionParNiveau evolutions) {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
@@ -118,7 +149,7 @@ class PaieBiReportBuilder {
         List<EquipeBiVue> equipes = agregatEquipe.stream()
                 .map(Agregat::cle)
                 .sorted(Comparator.comparing((String nom) -> nom.equals(SANS_EQUIPE) ? 1 : 0).thenComparing(Comparator.naturalOrder()))
-                .map(nom -> equipeVue(nom, filtrerParEquipe(lignesChantier, nom), masseChantier))
+                .map(nom -> equipeVue(nom, filtrerParEquipe(lignesChantier, nom), masseChantier, code, evolutions))
                 .toList();
 
         return new ChantierBiVue(
@@ -133,10 +164,12 @@ class PaieBiReportBuilder {
                 versDistribution(agregatFonction, masseChantier),
                 versRepartition(agregatEquipe),
                 versRepartition(agregatFonction),
+                evolutions.pourChantier(code),
                 equipes);
     }
 
-    private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
+    private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier, String chantierCode,
+                                   EvolutionParNiveau evolutions) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         List<LigneEmployeVue> employes = lignesEquipe.stream()
                 .sorted(Comparator.comparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
@@ -149,6 +182,8 @@ class PaieBiReportBuilder {
                 lignesEquipe.size(),
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
+                (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
+                evolutions.pourEquipe(chantierCode, nom),
                 employes);
     }
 
@@ -220,18 +255,60 @@ class PaieBiReportBuilder {
      * alimentant les 2 graphiques d'évolution de la synthèse globale — un point par mois, y compris
      * les mois sans aucun bulletin (masse et effectif à 0, une absence réelle de paie ce mois-là,
      * jamais une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
-    private List<RepartitionBean> evolutionMensuelle(YearMonth periode) {
+    /** Historique mensuel aux 3 niveaux (global, chantier, équipe) — une seule requête groupée au
+     * niveau le plus fin (voir {@code PaieRepository.sommerParChantierEquipePeriode} pour la
+     * justification performance), le global et le chantier en sont dérivés par simple somme des
+     * lignes déjà en mémoire, jamais une requête supplémentaire par chantier/équipe. */
+    private EvolutionParNiveau evolutionParNiveau(YearMonth periode) {
         YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
-        Map<YearMonth, EvolutionMensuelleProjection> parPeriode = repository.sommerParPeriode(debut, periode).stream()
-                .collect(Collectors.toMap(EvolutionMensuelleProjection::getPeriode, Function.identity()));
+        List<EvolutionChantierEquipeProjection> lignes = repository.sommerParChantierEquipePeriode(debut, periode);
 
+        Map<YearMonth, Cumul> global = new LinkedHashMap<>();
+        Map<String, Map<YearMonth, Cumul>> parChantier = new LinkedHashMap<>();
+        Map<String, Map<YearMonth, Cumul>> parEquipe = new LinkedHashMap<>();
+
+        for (EvolutionChantierEquipeProjection ligne : lignes) {
+            YearMonth mois = ligne.getPeriode();
+            BigDecimal masse = ligne.getMasse() == null ? BigDecimal.ZERO : ligne.getMasse();
+            long effectif = ligne.getEffectif() == null ? 0 : ligne.getEffectif();
+            String chantier = ligne.getChantierCode();
+            String equipe = libelleEquipe(ligne.getEquipe());
+
+            cumuler(global, mois, masse, effectif);
+            cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif);
+            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif);
+        }
+
+        return new EvolutionParNiveau(
+                pointsMensuels(periode, global),
+                versPointsParCle(periode, parChantier),
+                versPointsParCle(periode, parEquipe));
+    }
+
+    private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif) {
+        Cumul cumul = parMois.computeIfAbsent(mois, m -> new Cumul());
+        cumul.masse = cumul.masse.add(masse);
+        cumul.effectif += effectif;
+    }
+
+    private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
+        Map<String, List<RepartitionBean>> resultat = new LinkedHashMap<>();
+        parCle.forEach((cle, parMois) -> resultat.put(cle, pointsMensuels(periode, parMois)));
+        return resultat;
+    }
+
+    /** Un point par mois sur {@value #MOIS_EVOLUTION} mois (mois courant compris), y compris les mois
+     * sans aucun bulletin pour ce périmètre (masse et effectif à 0 — une absence réelle de paie ce
+     * mois-là, pas une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
+    private List<RepartitionBean> pointsMensuels(YearMonth periode, Map<YearMonth, Cumul> parMois) {
         List<RepartitionBean> points = new ArrayList<>();
+        YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
         for (YearMonth mois = debut; !mois.isAfter(periode); mois = mois.plusMonths(1)) {
-            EvolutionMensuelleProjection valeur = parPeriode.get(mois);
+            Cumul cumul = parMois.get(mois);
             points.add(new RepartitionBean(
                     mois.format(FORMAT_MOIS_COURT),
-                    valeur == null ? 0 : valeur.getEffectif().intValue(),
-                    valeur == null ? BigDecimal.ZERO : valeur.getMasse()));
+                    cumul == null ? 0 : (int) cumul.effectif,
+                    cumul == null ? BigDecimal.ZERO : cumul.masse));
         }
         return points;
     }
@@ -280,8 +357,11 @@ class PaieBiReportBuilder {
 
     /** "Sans équipe" pour un bulletin sans équipe renseignée — jamais exclu des distributions. */
     private String libelleEquipe(Paie paie) {
-        String equipe = paie.getEquipe();
-        return equipe == null || equipe.isBlank() ? SANS_EQUIPE : equipe;
+        return libelleEquipe(paie.getEquipe());
+    }
+
+    private String libelleEquipe(String equipeBrut) {
+        return equipeBrut == null || equipeBrut.isBlank() ? SANS_EQUIPE : equipeBrut;
     }
 
     private List<Paie> filtrerParChantier(List<Paie> lignes, String code) {

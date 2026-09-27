@@ -147,6 +147,7 @@ public class PaieReportPdfService {
         parametres.put("P_EFFECTIF_NOTE", "Mois précédent : " + synthese.effectif().effectifPrecedent() + " (" + synthese.effectif().variation() + ")");
         parametres.put("P_MASSE_MOYENNE", synthese.masseMoyenneParEmploye());
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
+        parametres.put("P_STC_VALEUR", PaieReportNumberFormat.entier(synthese.stc()));
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
@@ -244,8 +245,9 @@ public class PaieReportPdfService {
                             chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
                             chantier.distributionEquipe(), chantier.distributionFonction(),
-                            chantier.repartitionEquipe(), chantier.repartitionFonction(),
+                            chantier.repartitionEquipe(), chantier.repartitionFonction(), chantier.evolutionMensuelle(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
+                            equipe.stc(), equipe.evolutionMensuelle(),
                             employe));
                 }
             }
