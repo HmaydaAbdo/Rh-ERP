@@ -11,10 +11,11 @@
           en tout début du corps du document), UN SEUL chapitre romain regroupant 2 sous-sections
           numérotées en chiffres arabes (demande explicite de direction — la 2ᵉ sous-section était
           auparavant un chapitre romain séparé, "II") :
-            2.1. "1 — Évolution mensuelle..." : KPI + narratif + UN SEUL <lineChart> à 4 séries
-                 (masse, effectif, STC en personnes ET en DH), chacune normalisée à sa propre valeur
-                 maximale, 2 axes Y visibles comme simples repères d'unité (DH à gauche, personnes à
-                 droite — jamais de graduation réelle dessus), voir
+            2.1. "1 — Évolution mensuelle..." : KPI + narratif + UN SEUL <lineChart> à 2 séries
+                 (masse, effectif — le STC a été retiré des graphiques d'évolution, demande explicite
+                 de direction ; il reste visible dans les graphiques à barres ci-dessous), chacune
+                 normalisée à sa propre valeur maximale, 2 axes Y visibles comme simples repères
+                 d'unité (DH à gauche, personnes à droite — jamais de graduation réelle dessus), voir
                  PaieReportEvolutionChartCustomizer. Fenêtre glissante d'AU PLUS 12 mois, mais jamais
                  avant le premier mois où une paie existe réellement en base (voir
                  PaieBiReportBuilder.evolutionParNiveau) — pas de mois "fantômes" à zéro.
@@ -29,8 +30,8 @@
        3. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
           suite du seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe, II et
           suivants un par chantier), reprenant le MÊME schéma de 2 sous-sections numérotées :
-            3.1. "1 — Vue d'ensemble du chantier X" : KPI + narratif + évolution mensuelle (4 séries
-                 normalisées, même fenêtre glissante qu'au niveau global).
+            3.1. "1 — Vue d'ensemble du chantier X" : KPI + narratif + évolution mensuelle (2 séries
+                 normalisées, masse et effectif — même fenêtre glissante qu'au niveau global).
             3.2. "2 — Équipes de chantier X" (GroupChantier, sa propre page) : graphique de
                  répartition par équipe (4 séries, SEUL, sans tableau), puis chaque équipe
                  individuelle (GroupEquipe, keepTogether) — NON numérotée séparément (demande
@@ -58,9 +59,10 @@
     <!-- Source de données des barChart/lineChart (masse/effectif/STC par chantier, équipe, fonction,
          ou point mensuel d'une évolution) — même forme (libellé, effectif, montant, stc, stcMontant),
          voir RepartitionBean. stcMontant (masse salariale des seules lignes STC/sortie) n'est
-         consommé que par les <lineChart> d'évolution (4ᵉ série "STC (DH)", demande explicite : le
-         STC doit être visible en personnes ET en montant) — présent ici pour tous les usages du
-         sous-dataset, simplement pas exploité par les <barChart> groupés. -->
+         consommé que par les <barChart> groupés (4ᵉ série "STC (DH)", demande explicite : le STC doit
+         être visible en personnes ET en montant) — les <lineChart> d'évolution n'affichent plus le
+         STC du tout (retiré, demande explicite de direction), seulement masse et effectif ; le champ
+         reste présent dans le sous-dataset pour tous les usages, simplement pas exploité par eux. -->
     <subDataset name="dsRepartition">
         <field name="libelle" class="java.lang.String"/>
         <field name="effectif" class="java.lang.Integer"/>
@@ -273,17 +275,16 @@
                     <textFieldExpression><![CDATA[$P{P_SYNTHESE_NARRATIF}]]></textFieldExpression>
                 </textField>
 
-                <!-- Évolution mensuelle (masse, effectif, STC en personnes ET en DH — 4 séries) — UN
-                     SEUL <lineChart>, demande explicite de direction. Chaque série est normalisée à
-                     sa propre valeur maximale avant d'être tracée (un double axe Y à échelle RÉELLE
-                     s'était révélé insuffisant sur données réelles, ex. STC à 37 personnes écrasé par
-                     un effectif à 969 sur le même axe) ; 2 axes Y restent néanmoins affichés (DH à
+                <!-- Évolution mensuelle (masse, effectif — 2 séries ; le STC a été retiré de ce
+                     graphique, demande explicite de direction, il reste visible dans le graphique à
+                     barres du chapitre suivant) — UN SEUL <lineChart>. Chaque série est normalisée à
+                     sa propre valeur maximale avant d'être tracée ; 2 axes Y restent affichés (DH à
                      gauche, personnes à droite) comme simples repères d'unité, sans graduation réelle
                      — voir PaieReportEvolutionChartCustomizer. -->
                 <staticText>
                     <reportElement x="0" y="106" width="802" height="14" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <text><![CDATA[1 — Évolution mensuelle — masse, effectif et STC]]></text>
+                    <text><![CDATA[1 — Évolution mensuelle — masse et effectif]]></text>
                 </staticText>
                 <lineChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
@@ -307,16 +308,6 @@
                             <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stc}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stcMontant}]]></valueExpression>
                         </categorySeries>
                     </categoryDataset>
                     <linePlot><plot/></linePlot>
@@ -512,9 +503,11 @@
                 <!-- Sous-section "1" du chapitre chantier (mirroir de "1 — Évolution mensuelle..." au
                      niveau global, voir GroupSynthese) — nommée "Vue d'ensemble du chantier X" plutôt
                      que répéter "Évolution mensuelle..." : ce bloc couvre déjà les cartes KPI et le
-                     narratif ci-dessus, pas seulement le graphique. UN SEUL <lineChart>, masse/
-                     effectif/STC (personnes et DH), chaque série normalisée à sa propre valeur
-                     maximale (voir PaieReportEvolutionChartCustomizer), alimenté par la requête unique
+                     narratif ci-dessus, pas seulement le graphique. UN SEUL <lineChart>, masse et
+                     effectif (le STC a été retiré de ce graphique, demande explicite de direction, il
+                     reste visible dans le graphique à barres de la sous-section "2" qui suit), chaque
+                     série normalisée à sa propre valeur maximale (voir
+                     PaieReportEvolutionChartCustomizer), alimenté par la requête unique
                      sommerParChantierEquipePeriode (voir PaieBiReportBuilder.evolutionParNiveau) —
                      aucune requête supplémentaire par chantier. Piège JasperReports constaté en
                      production lors de l'ajout de ce textField : une hauteur de reportElement trop
@@ -550,16 +543,6 @@
                             <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stc}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stcMontant}]]></valueExpression>
                         </categorySeries>
                     </categoryDataset>
                     <linePlot><plot/></linePlot>
@@ -641,8 +624,10 @@
     </group>
 
     <!-- Style tableau : plus aucun fond noir/gris (demande explicite de direction) — fond blanc, texte
-         en #011F5B (titre équipe, en-têtes de colonnes), grille du tableau employé en noir sur
-         TOUTES les cellules, pas seulement l'en-tête (demande explicite de direction). Aucune BI au
+         ET filets en noir partout (titre équipe, en-têtes de colonnes, grille du tableau employé sur
+         TOUTES les cellules, pas seulement l'en-tête) — le bleu marine #011F5B utilisé ailleurs dans
+         le document (titres de chapitre) a été essayé ici puis abandonné sur demande explicite de
+         direction : "tout en noir". Aucune BI au
          niveau équipe (ni graphique d'évolution, ni répartition par fonction — demande explicite de
          direction, jugé redondant avec le niveau chantier) : le tableau employé qui suit, trié par
          fonction (la fonction qui consomme le plus de masse en premier, voir
@@ -652,104 +637,104 @@
         <groupHeader>
             <band height="56" splitType="Prevent">
                 <textField>
-                    <reportElement x="0" y="0" width="430" height="18" forecolor="#011F5B"/>
-                    <box><bottomPen lineWidth="1.0" lineColor="#011F5B"/></box>
+                    <reportElement x="0" y="0" width="430" height="18" forecolor="#000000"/>
+                    <box><bottomPen lineWidth="1.0" lineColor="#000000"/></box>
                     <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="12" isBold="true"/><paragraph leftIndent="4"/></textElement>
                     <textFieldExpression><![CDATA[$F{equipeTitre}]]></textFieldExpression>
                 </textField>
                 <textField>
-                    <reportElement x="430" y="0" width="90" height="18" forecolor="#011F5B"/>
-                    <box><bottomPen lineWidth="1.0" lineColor="#011F5B"/></box>
+                    <reportElement x="430" y="0" width="90" height="18" forecolor="#000000"/>
+                    <box><bottomPen lineWidth="1.0" lineColor="#000000"/></box>
                     <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9.5"/></textElement>
                     <textFieldExpression><![CDATA["Effectif : " + $F{equipeEffectif}]]></textFieldExpression>
                 </textField>
                 <textField>
-                    <reportElement x="520" y="0" width="90" height="18" forecolor="#011F5B"/>
-                    <box><bottomPen lineWidth="1.0" lineColor="#011F5B"/></box>
+                    <reportElement x="520" y="0" width="90" height="18" forecolor="#000000"/>
+                    <box><bottomPen lineWidth="1.0" lineColor="#000000"/></box>
                     <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9.5" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA["STC : " + $F{equipeStc}]]></textFieldExpression>
                 </textField>
                 <textField>
-                    <reportElement x="610" y="0" width="192" height="18" forecolor="#011F5B"/>
-                    <box rightPadding="4"><bottomPen lineWidth="1.0" lineColor="#011F5B"/></box>
+                    <reportElement x="610" y="0" width="192" height="18" forecolor="#000000"/>
+                    <box rightPadding="4"><bottomPen lineWidth="1.0" lineColor="#000000"/></box>
                     <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9.5"/></textElement>
                     <textFieldExpression><![CDATA[$F{equipeMasse} + " DH (" + $F{equipePartChantierPourcent} + ")"]]></textFieldExpression>
                 </textField>
 
                 <staticText>
-                    <reportElement x="0" y="20" width="130" height="36" forecolor="#011F5B"/>
+                    <reportElement x="0" y="20" width="130" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
                     <text><![CDATA[Nom et prénom]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="130" y="20" width="90" height="36" forecolor="#011F5B"/>
+                    <reportElement x="130" y="20" width="90" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
                     <text><![CDATA[Fonction]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="220" y="20" width="65" height="36" forecolor="#011F5B"/>
+                    <reportElement x="220" y="20" width="65" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[CIN]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="285" y="20" width="115" height="18" forecolor="#011F5B"/>
+                    <reportElement x="285" y="20" width="115" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[Nbre jrs]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="285" y="38" width="35" height="18" forecolor="#011F5B"/>
+                    <reportElement x="285" y="38" width="35" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[P]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="320" y="38" width="40" height="18" forecolor="#011F5B"/>
+                    <reportElement x="320" y="38" width="40" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[J.R.O]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="360" y="38" width="40" height="18" forecolor="#011F5B"/>
+                    <reportElement x="360" y="38" width="40" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[J.R.D]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="400" y="20" width="175" height="18" forecolor="#011F5B"/>
+                    <reportElement x="400" y="20" width="175" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[Salaire]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="400" y="38" width="65" height="18" forecolor="#011F5B"/>
+                    <reportElement x="400" y="38" width="65" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[Salaire]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="465" y="38" width="55" height="18" forecolor="#011F5B"/>
+                    <reportElement x="465" y="38" width="55" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[RO]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="520" y="38" width="55" height="18" forecolor="#011F5B"/>
+                    <reportElement x="520" y="38" width="55" height="18" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
                     <text><![CDATA[RD]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="575" y="20" width="65" height="36" forecolor="#011F5B"/>
+                    <reportElement x="575" y="20" width="65" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[Total]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="640" y="20" width="162" height="36" forecolor="#011F5B"/>
+                    <reportElement x="640" y="20" width="162" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[Obs]]></text>
@@ -977,8 +962,9 @@
         </band>
     </pageHeader>
 
-    <!-- Plus d'alternance de fond gris (demande explicite de direction, voir aussi GroupEquipe et
-         tableDistribution.jrxml) : chaque ligne est simplement délimitée par un filet #011F5B. -->
+    <!-- Plus d'alternance de fond gris (demande explicite de direction, voir aussi GroupEquipe) :
+         chaque cellule est délimitée par un filet noir, texte noir également (voir commentaire
+         GroupEquipe ci-dessus — "tout en noir", demande explicite de direction). -->
     <detail>
         <band height="16" splitType="Prevent">
             <textField>

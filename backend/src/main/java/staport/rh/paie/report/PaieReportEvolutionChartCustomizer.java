@@ -26,60 +26,49 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Personnalise le {@code <lineChart>} JRXML d'évolution mensuelle (masse, effectif, STC en personnes
- * ET en montant — 4 séries) — un seul graphique par niveau (Global, Chantier, Équipe), demande
- * explicite de direction.
+ * Personnalise le {@code <lineChart>} JRXML d'évolution mensuelle (masse, effectif — 2 séries) — un
+ * seul graphique par niveau (Global, Chantier), demande explicite de direction. Le STC (en personnes
+ * et en DH) a été retiré de ces graphiques (demande explicite de direction) — il reste visible dans
+ * les graphiques à barres (voir {@link PaieReportGroupedChartCustomizer}), simplement plus dans
+ * l'historique mensuel.
  *
  * <p><b>2 axes Y visibles comme repères d'unité, PAS comme échelle réelle</b> : demande explicite de
  * direction (« laisser les axes, au moins comme mesure d'unité, un pour personnes et l'autre pour
- * DH »). Axe gauche libellé "DH" (masse, STC en DH), axe droit libellé "Personnes" (effectif, STC en
- * personnes) — mais leurs graduations numériques restent masquées ({@code setTickLabelsVisible}/
- * {@code setTickMarksVisible} à {@code false}) : un double axe Y à échelle RÉELLE avait déjà été
- * tenté et écarté (voir historique ci-dessous), les 2 axes ici ne servent qu'à indiquer visuellement
- * quel côté du graphique regrouper mentalement, jamais à lire une valeur dessus.
+ * DH »). Axe gauche libellé "DH" (masse), axe droit libellé "Personnes" (effectif) — mais leurs
+ * graduations numériques restent masquées ({@code setTickLabelsVisible}/{@code setTickMarksVisible} à
+ * {@code false}) : un double axe Y à échelle RÉELLE avait déjà été tenté et écarté (voir historique
+ * ci-dessous), les 2 axes ici ne servent qu'à indiquer visuellement quel côté du graphique regrouper
+ * mentalement, jamais à lire une valeur dessus.
  *
  * <p><b>Chaque série reste normalisée à sa PROPRE valeur maximale</b> (0 à 1, même technique que
- * {@link PaieReportGroupedChartCustomizer}), y compris entre les 2 séries d'une même famille
- * d'unité : regrouper masse/effectif par axe ne suffit pas à lui seul, l'effectif (ex. 969 personnes)
- * écraserait toujours le STC en personnes (ex. 37) s'ils partageaient une échelle commune, même sur
- * un axe purement décoratif. La forme/tendance de chaque courbe reste donc pleinement lisible quelle
- * que soit son échelle réelle, et la vraie valeur (jamais la valeur normalisée) reste affichée en
- * étiquette sur CHAQUE point (pas seulement le dernier — demande explicite de direction : un rapport
- * imprimé n'a pas de survol souris pour révéler une valeur au clic, contrairement à un graphique web),
- * lue dans une table conservée avant normalisation. Un point à exactement 0 n'affiche pas
- * d'étiquette (même convention que {@link PaieReportGroupedChartCustomizer}) : avec la fenêtre
- * glissante, un 0 signifie une absence réelle de donnée ce mois-là pour cette série (ex. un chantier
- * pas encore démarré), pas une valeur à mettre en avant.
+ * {@link PaieReportGroupedChartCustomizer}) : masse (DH) et effectif (personnes) n'ayant jamais le
+ * même ordre de grandeur, chacune est ramenée à sa propre échelle avant d'être tracée. La forme/
+ * tendance de chaque courbe reste donc pleinement lisible quelle que soit son échelle réelle, et la
+ * vraie valeur (jamais la valeur normalisée) reste affichée en étiquette sur CHAQUE point (pas
+ * seulement le dernier — demande explicite de direction : un rapport imprimé n'a pas de survol souris
+ * pour révéler une valeur, contrairement à un graphique web), lue dans une table conservée avant
+ * normalisation. Un point à exactement 0 n'affiche pas d'étiquette (même convention que
+ * {@link PaieReportGroupedChartCustomizer}) : avec la fenêtre glissante, un 0 signifie une absence
+ * réelle de donnée ce mois-là (ex. un chantier pas encore démarré), pas une valeur à mettre en avant.
  *
- * <p><b>Étiquettes orientées vers leur axe</b> : familles DH (masse, STC en DH) étiquetées côté
- * GAUCHE du point, familles Personnes (effectif, STC en personnes) côté DROIT — demande explicite de
- * direction, pour ne plus faire cohabiter au même endroit une étiquette en DH et une en personnes
- * (constaté en production : les 2 valeurs du dernier mois se chevauchaient near le coin supérieur
- * droit). Au sein d'une même famille (2 séries maximum), alternance haut/bas pour limiter le risque
- * résiduel si les 2 séries de cette famille culminent au même mois.
+ * <p><b>Étiquette de masse orientée vers la gauche (son axe), étiquette d'effectif vers la droite</b> —
+ * demande explicite de direction, pour ne jamais faire cohabiter au même endroit une étiquette en DH
+ * et une en personnes.
  *
  * <p><b>Historique</b> : une 1ʳᵉ version à double axe Y RÉEL (masse à gauche, effectif + STC en
  * personnes à droite, partageant la même échelle) fonctionnait sur données synthétiques modestes mais
  * s'est révélée insuffisante sur données réelles — un effectif à ~969 personnes écrasait
  * visuellement un STC à ~37 sur le même axe droit, sa courbe devenant quasi plate. Remplacée par une
- * normalisation par série à axe unique masqué, qui a résolu la lisibilité mais, avec un historique
- * mensuel encore clairsemé (un seul mois de données réelles, les 11 précédents à 0), faisait
- * parfois coïncider exactement plusieurs séries au même point (0 partout puis 1 au dernier mois),
- * chevauchant leurs étiquettes de valeur. La version actuelle combine les 2 leçons : normalisation
- * par série (résout l'écart d'échelle) + répartition des étiquettes par famille d'unité gauche/droite
- * (résout le chevauchement).
+ * normalisation par série à axe unique masqué. Le STC (en personnes et en DH) a ensuite été ajouté à
+ * ces graphiques (4 séries au total) puis retiré (demande explicite de direction) : il reste
+ * disponible dans les graphiques à barres, ce document-ci n'en garde que masse et effectif.
  */
 public final class PaieReportEvolutionChartCustomizer implements JRChartCustomizer {
 
     private static final Color COULEUR_MASSE = new Color(0x25, 0x63, 0xEB);
     private static final Color COULEUR_EFFECTIF = new Color(0xF5, 0x9E, 0x0B);
-    private static final Color COULEUR_STC_PERSONNES = new Color(0xEF, 0x44, 0x44);
-    private static final Color COULEUR_STC_MONTANT = new Color(0x7F, 0x1D, 0x1D);
     private static final Color COULEUR_GRILLE = new Color(0xDD, 0xDD, 0xDD);
     private static final String SERIE_MASSE = "Masse (DH)";
-    private static final String SERIE_EFFECTIF = "Effectif (personnes)";
-    private static final String SERIE_STC_PERSONNES = "STC (personnes)";
-    private static final String SERIE_STC_MONTANT = "STC (DH)";
 
     @Override
     public void customize(JFreeChart chart, JRChart jrChart) {
@@ -93,10 +82,10 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(COULEUR_GRILLE);
-        // Marges gauche ET droite généreuses, désormais symétriques : chaque point (pas seulement le
-        // dernier) porte une étiquette, donc le premier mois peut avoir une étiquette "DH" qui
-        // s'étend vers la gauche (hors du tracé si la marge est trop fine) tout comme le dernier mois
-        // peut avoir une étiquette "Personnes" qui s'étend vers la droite.
+        // Marges gauche ET droite généreuses : chaque point (pas seulement le dernier) porte une
+        // étiquette, donc le premier mois peut avoir une étiquette "DH" qui s'étend vers la gauche
+        // (hors du tracé si la marge est trop fine) tout comme le dernier mois peut avoir une
+        // étiquette "Personnes" qui s'étend vers la droite.
         plot.setInsets(new RectangleInsets(20, 60, 20, 72));
 
         CategoryAxis categoryAxis = plot.getDomainAxis();
@@ -126,14 +115,14 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
             maxParSerie.put(serie, max);
         }
 
-        // Scinde le dataset unique (4 séries) en 2 familles d'unité — chaque valeur reste normalisée
-        // à sa PROPRE série (pas à sa famille), voir la Javadoc de classe.
+        // Scinde le dataset unique (masse + effectif) en 2 datasets — un par axe — chaque valeur
+        // normalisée à sa PROPRE série, voir la Javadoc de classe.
         DefaultCategoryDataset dsDh = new DefaultCategoryDataset();
         DefaultCategoryDataset dsPersonnes = new DefaultCategoryDataset();
         for (int row = 0; row < original.getRowCount(); row++) {
             String serie = String.valueOf(original.getRowKey(row));
             double max = maxParSerie.getOrDefault(serie, 0.0);
-            DefaultCategoryDataset cible = estFamilleDh(serie) ? dsDh : dsPersonnes;
+            DefaultCategoryDataset cible = SERIE_MASSE.equals(serie) ? dsDh : dsPersonnes;
             for (int col = 0; col < original.getColumnCount(); col++) {
                 Number valeur = original.getValue(row, col);
                 double normalisee = (valeur == null || max <= 0) ? 0 : valeur.doubleValue() / max;
@@ -161,25 +150,18 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         LineAndShapeRenderer rendererPersonnes = new LineAndShapeRenderer();
         plot.setRenderer(1, rendererPersonnes);
 
-        styliser(rendererDh, dsDh, vraiesValeurs);
-        styliser(rendererPersonnes, dsPersonnes, vraiesValeurs);
+        styliser(rendererDh, dsDh, vraiesValeurs, COULEUR_MASSE, true,
+                ItemLabelAnchor.OUTSIDE9, TextAnchor.CENTER_RIGHT);
+        styliser(rendererPersonnes, dsPersonnes, vraiesValeurs, COULEUR_EFFECTIF, false,
+                ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_LEFT);
     }
 
-    private boolean estFamilleDh(String serie) {
-        return SERIE_MASSE.equals(serie) || SERIE_STC_MONTANT.equals(serie);
-    }
-
-    /** Style commun aux 2 renderers (1 par famille d'unité, 2 séries chacun au plus) — étiquette de
-     * valeur affichée sur CHAQUE point (rapport imprimé, pas d'infobulle au survol), orientée vers
-     * l'axe de sa famille, alternée haut/bas au sein de la famille. */
-    private void styliser(LineAndShapeRenderer renderer, CategoryDataset dataset, Map<String, Map<String, Number>> vraiesValeurs) {
+    /** Style d'un renderer (1 par axe, 1 seule série chacun) — étiquette de valeur affichée sur
+     * CHAQUE point (rapport imprimé, pas d'infobulle au survol), orientée vers l'axe de la série
+     * (masse à gauche, effectif à droite). */
+    private void styliser(LineAndShapeRenderer renderer, CategoryDataset dataset, Map<String, Map<String, Number>> vraiesValeurs,
+                           Color couleur, boolean montant, ItemLabelAnchor ancre, TextAnchor texte) {
         for (int serie = 0; serie < dataset.getRowCount(); serie++) {
-            String cle = String.valueOf(dataset.getRowKey(serie));
-            boolean montant = SERIE_MASSE.equals(cle) || SERIE_STC_MONTANT.equals(cle);
-            boolean gauche = estFamilleDh(cle);
-            boolean premiereDeSaFamille = SERIE_MASSE.equals(cle) || SERIE_EFFECTIF.equals(cle);
-            Color couleur = couleurDe(cle);
-
             renderer.setSeriesPaint(serie, couleur);
             renderer.setSeriesStroke(serie, new BasicStroke(2f));
             renderer.setSeriesShapesVisible(serie, true);
@@ -206,26 +188,7 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
                             : PaieReportNumberFormat.entier(valeur.intValue());
                 }
             });
-            ItemLabelAnchor ancre;
-            TextAnchor texte;
-            if (gauche) {
-                ancre = premiereDeSaFamille ? ItemLabelAnchor.OUTSIDE10 : ItemLabelAnchor.OUTSIDE8;
-                texte = premiereDeSaFamille ? TextAnchor.BOTTOM_RIGHT : TextAnchor.TOP_RIGHT;
-            } else {
-                ancre = premiereDeSaFamille ? ItemLabelAnchor.OUTSIDE2 : ItemLabelAnchor.OUTSIDE4;
-                texte = premiereDeSaFamille ? TextAnchor.BOTTOM_LEFT : TextAnchor.TOP_LEFT;
-            }
             renderer.setSeriesPositiveItemLabelPosition(serie, new ItemLabelPosition(ancre, texte));
         }
-    }
-
-    private Color couleurDe(String serie) {
-        if (SERIE_MASSE.equals(serie)) {
-            return COULEUR_MASSE;
-        }
-        if (SERIE_STC_MONTANT.equals(serie)) {
-            return COULEUR_STC_MONTANT;
-        }
-        return SERIE_STC_PERSONNES.equals(serie) ? COULEUR_STC_PERSONNES : COULEUR_EFFECTIF;
     }
 }
