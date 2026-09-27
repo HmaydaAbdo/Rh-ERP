@@ -148,7 +148,6 @@ class PaieBiReportBuilder {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
-        List<Agregat> agregatFonction = agreger(lignesChantier, this::libelleFonction);
         int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
 
         List<EquipeBiVue> equipes = agregatEquipe.stream()
@@ -166,9 +165,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.part(masseChantier, masseGlobale),
                 stc,
                 versDistribution(agregatEquipe, masseChantier),
-                versDistribution(agregatFonction, masseChantier),
                 versRepartition(agregatEquipe),
-                versRepartition(agregatFonction),
                 evolutions.pourChantier(code),
                 equipes);
     }
