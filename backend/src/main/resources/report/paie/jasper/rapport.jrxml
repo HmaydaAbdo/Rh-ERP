@@ -2,32 +2,33 @@
 <!-- Rapport de paie — Synthèse BI. Gabarit unique pour tout le document : le pageHeader/pageFooter
      ne sont définis qu'une seule fois ici et se répètent donc nativement sur toutes les pages de
      contenu (page de garde exceptée, voir plus bas), y compris pendant le déroulé des groupes
-     Sommaire/Synthèse/Chantier/Équipe — jamais de bande dupliquée dans un second gabarit (voir
+     Synthèse/Chantier/Équipe — jamais de bande dupliquée dans un second gabarit (voir
      docs/report/README.md). Structure en pages, dans l'ordre :
        1. Page de garde (bande title, isTitleNewPage) : logo, titre, période — JasperReports
           n'imprime jamais pageHeader/pageFooter sur cette page dédiée, ce qui convient à une
           couverture (elle porte déjà sa propre mise en avant de la période/logo).
-       2. Sommaire (groupe GroupSommaire, expression constante donc imprimé une seule fois en tout
-          début de document) : une ligne par section avec son numéro de page réel — nécessite un
-          double remplissage (voir PaieReportPdfService), jamais un JasperPrint fusionné après coup.
-       3. Vue d'ensemble (groupe GroupSynthese, même mécanique d'impression unique) : KPI + narratif +
-          évolution mensuelle (masse, effectif ET STC, 12 derniers mois) — chapitre I, UN SEUL
-          <lineChart> à double axe Y (masse en DH sur l'axe gauche, effectif+STC en personnes sur
-          l'axe droit — jamais 2 graphiques séparés), voir PaieReportEvolutionChartCustomizer.
-       4. Chapitre II — Répartition par chantier (GroupGraphChantier), UNE SEULE page : UN SEUL
-          <barChart> horizontal à barres groupées (masse/effectif/STC, 3 séries par chantier),
-          plafonné aux 20 plus gros chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE,
-          PaieReportGroupedChartCustomizer) — axe des valeurs masqué (DH et personnes n'ont pas la
-          même échelle), étiquette exacte affichée sur chaque barre. Chapitre III — Répartition par
-          fonction retiré temporairement (doublons non nettoyés dans le référentiel Fonction, voir
-          TODO.md).
-       5. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
+       2. Vue d'ensemble (groupe GroupSynthese, expression constante donc imprimé une seule fois en
+          tout début du corps du document) : KPI + narratif +
+          évolution mensuelle (masse, effectif, STC en personnes ET en DH, 12 derniers mois) —
+          chapitre I, UN SEUL <lineChart> à 4 séries, chacune normalisée à sa propre valeur maximale,
+          2 axes Y visibles comme simples repères d'unité (DH à gauche, personnes à droite — jamais de
+          graduation réelle dessus), voir PaieReportEvolutionChartCustomizer.
+       3. Chapitre II — Répartition par chantier (GroupGraphChantier), UNE SEULE page : UN SEUL
+          <barChart> horizontal à barres groupées (masse/effectif/STC, 3 séries par chantier, chacune
+          nommée avec son unité dans la légende), plafonné aux 20 plus gros chantiers + "Autres" (voir
+          PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE, PaieReportGroupedChartCustomizer) — axe des valeurs
+          masqué (DH et personnes n'ont pas la même échelle), étiquette exacte affichée sur chaque
+          barre. Chapitre III — Répartition par fonction retiré temporairement (doublons non nettoyés
+          dans le référentiel Fonction, voir TODO.md).
+       4. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
           suite des chapitres fixes (voir PaieReportPdfService.chapitreChantier — I/II fixes, III et
-          suivants un par chantier, même numérotation reflétée dans le Sommaire), puis par équipe
+          suivants un par chantier), puis par équipe
           (GroupEquipe, keepTogether) pilotées par la même source de données à plat (un employé par
           ligne). Chaque niveau (chantier, équipe) suit le même principe qu'au niveau global :
-          évolution mensuelle à double axe Y (masse/effectif/STC) en premier, puis répartition(s) en
-          barres groupées à 3 séries.
+          évolution mensuelle (4 séries normalisées) en premier, puis répartition par équipe (graphique
+          SEUL, sans tableau, au niveau chantier) et, au niveau équipe, répartition par fonction
+          (graphique + tableau) — la répartition par fonction au niveau chantier a été retirée
+          (demande explicite de direction, doublon avec celle, plus fine, au niveau équipe).
      Style documentaire entièrement noir/blanc/gris (aucune couleur décorative) — seuls les
      <barChart>/<lineChart> conservent des couleurs (bleu masse, orange effectif, rouge sourd STC —
      3 couleurs fixes, jamais une palette arbitraire, voir docs/report/README.md « Style visuel »).
@@ -81,13 +82,11 @@
     <parameter name="P_EVOLUTION_MENSUELLE" class="java.util.List"/>
     <!-- Numéro de la première page chantier — seuil utilisé par le pageHeader (bloc Niveau) pour
          savoir si la page courante est "globale" (avant ce seuil) ou "chantier/équipe" (à partir de
-         ce seuil) ; calculé comme les numéros de page du Sommaire, via le même passage de découverte
-         (voir PaieReportPdfService.generer). -->
+         ce seuil) ; le numéro de page réel n'est connu qu'après un premier remplissage silencieux du
+         document entier, jamais un JasperPrint fusionné après coup (voir PaieReportPdfService.generer). -->
     <parameter name="P_PAGE_PREMIER_CHANTIER" class="java.lang.Integer"/>
     <parameter name="P_SYNTHESE_NARRATIF" class="java.lang.String"/>
-    <parameter name="P_SOMMAIRE_ENTREES" class="java.util.List"/>
     <parameter name="SUBREPORT_DISTRIBUTION" class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="SUBREPORT_SOMMAIRE" class="net.sf.jasperreports.engine.JasperReport"/>
 
     <field name="chantierCode" class="java.lang.String"/>
     <field name="chantierTitre" class="java.lang.String"/>
@@ -99,9 +98,7 @@
     <field name="chantierStc" class="java.lang.Integer"/>
     <field name="chantierNarratif" class="java.lang.String"/>
     <field name="chantierDistributionEquipe" class="java.util.List"/>
-    <field name="chantierDistributionFonction" class="java.util.List"/>
     <field name="chantierRepartitionEquipe" class="java.util.List"/>
-    <field name="chantierRepartitionFonction" class="java.util.List"/>
     <field name="chantierEvolutionMensuelle" class="java.util.List"/>
     <field name="equipeNom" class="java.lang.String"/>
     <field name="equipeTitre" class="java.lang.String"/>
@@ -126,35 +123,18 @@
 
     <!-- Groupes à expression constante : leur en-tête s'imprime une seule fois, au tout début du
          document (le premier enregistrement fait toujours "changer" l'expression depuis null) —
-         c'est ce qui permet d'insérer Sommaire, Synthèse globale puis les 2 pages BI avant le
-         déroulé des chantiers sans les driver par un enregistrement dédié dans la source de données. -->
-    <group name="GroupSommaire" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
-        <groupExpression><![CDATA["SOMMAIRE"]]></groupExpression>
-        <groupHeader>
-            <band height="455" splitType="Stretch">
-                <subreport>
-                    <reportElement x="0" y="0" width="802" height="455"/>
-                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_SOMMAIRE_ENTREES})]]></dataSourceExpression>
-                    <subreportExpression><![CDATA[$P{SUBREPORT_SOMMAIRE}]]></subreportExpression>
-                </subreport>
-            </band>
-        </groupHeader>
-    </group>
-
+         c'est ce qui permet d'insérer Synthèse globale puis les 2 pages BI avant le déroulé des
+         chantiers sans les driver par un enregistrement dédié dans la source de données. -->
     <group name="GroupSynthese" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["SYNTHESE"]]></groupExpression>
         <groupHeader>
             <band height="455" splitType="Stretch">
 
-                <!-- ============================== I — SYNTHÈSE GLOBALE ==============================
-                     textField (pas staticText) : seul <textField> porte anchorNameExpression dans le
-                     schéma JRXML — l'ancre est ce qui permet à PaieReportPdfService de retrouver le
-                     numéro de page réel de cette section pour le Sommaire (voir docs/report/README.md). -->
+                <!-- ============================== I — SYNTHÈSE GLOBALE ============================== -->
                 <textField>
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA["I — Vue d'ensemble"]]></textFieldExpression>
-                    <anchorNameExpression><![CDATA["synthese-globale"]]></anchorNameExpression>
                 </textField>
                 <line>
                     <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
@@ -289,10 +269,11 @@
 
                 <!-- Évolution mensuelle (masse, effectif, STC en personnes ET en DH — 4 séries) — UN
                      SEUL <lineChart>, demande explicite de direction. Chaque série est normalisée à
-                     sa propre valeur maximale avant d'être tracée (voir
-                     PaieReportEvolutionChartCustomizer) : un double axe Y s'est révélé insuffisant sur
-                     données réelles pour garantir que les 4 séries restent simultanément lisibles
-                     (ex. STC à 37 personnes écrasé par un effectif à 969 sur le même axe). -->
+                     sa propre valeur maximale avant d'être tracée (un double axe Y à échelle RÉELLE
+                     s'était révélé insuffisant sur données réelles, ex. STC à 37 personnes écrasé par
+                     un effectif à 969 sur le même axe) ; 2 axes Y restent néanmoins affichés (DH à
+                     gauche, personnes à droite) comme simples repères d'unité, sans graduation réelle
+                     — voir PaieReportEvolutionChartCustomizer. -->
                 <staticText>
                     <reportElement x="0" y="106" width="802" height="14" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
@@ -317,7 +298,7 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
@@ -355,7 +336,6 @@
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA["II — Masse, effectif et STC par chantier"]]></textFieldExpression>
-                    <anchorNameExpression><![CDATA["graph-chantier"]]></anchorNameExpression>
                 </textField>
                 <line>
                     <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
@@ -381,12 +361,12 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["STC"]]></seriesExpression>
+                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{stc}]]></valueExpression>
                         </categorySeries>
@@ -404,14 +384,15 @@
          (PaieBiReportBuilder/PaieReportPdfService) pour éviter de tout redévelopper à la
          réintroduction, simplement plus consommé ici tant que la donnée n'est pas fiable. -->
 
-    <!-- Vue détaillée par chantier, sur 3 pages (même principe que le chapitre II — un seul
+    <!-- Vue détaillée par chantier, sur 2 pages (même principe que le chapitre II — un seul
          graphique groupé à 3 séries masse/effectif/STC, jamais 2 graphiques séparés) :
            - page 1 (GroupChantierEvolution) : titre + cartes KPI + narratif + historique mensuel
-             (masse/effectif/STC à double axe Y, premier graphique vu, voir la hiérarchie
-             KPI → graphes → tableaux) ;
-           - page 2 (GroupChantier) : RÉPARTITION PAR ÉQUIPE (1 graphique groupé masse/effectif/STC,
-             puis la table) ;
-           - page 3 (GroupChantierFonction) : RÉPARTITION PAR FONCTION, même structure. -->
+             (4 séries normalisées, premier graphique vu, voir la hiérarchie KPI → graphes → tableaux) ;
+           - page 2 (GroupChantier) : RÉPARTITION PAR ÉQUIPE, UN SEUL graphique groupé
+             masse/effectif/STC — SANS tableau (demande explicite de direction). La répartition par
+             fonction au niveau chantier (ex-GroupChantierFonction, 3ᵉ page) a été supprimée : doublon
+             avec la répartition par fonction, plus fine, déjà affichée au niveau équipe (voir
+             GroupEquipeEvolution ci-dessous). -->
     <group name="GroupChantierEvolution" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
@@ -541,7 +522,7 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
@@ -566,11 +547,13 @@
          page KPI/historique ci-dessus. Même expression de déclenchement ($F{chantierCode}) que
          GroupChantierEvolution : s'imprime donc exactement une fois par chantier. UN SEUL graphique
          à barres groupées horizontales (masse/effectif/STC, 3 séries par équipe — jamais 2 graphiques
-         séparés), puis le tableau combiné (Équipe/Effectif/Montant/Part). -->
+         séparés) — SEUL, sans tableau (demande explicite de direction : la section « répartition par
+         fonction » du chantier, qui avait le même tableau, a été supprimée, voir plus bas ; le
+         tableau équipe faisait double emploi avec le graphique et n'apportait rien de plus). -->
     <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
-            <band height="435" splitType="Stretch">
+            <band height="365" splitType="Stretch">
                 <textField>
                     <reportElement x="0" y="0" width="802" height="16" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
@@ -580,7 +563,7 @@
 
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="20" width="802" height="300"/>
+                        <reportElement x="0" y="20" width="802" height="330"/>
                         <chartLegend position="Bottom">
                             <font fontName="Liberation Serif" size="8.5"/>
                         </chartLegend>
@@ -597,103 +580,18 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["STC"]]></seriesExpression>
+                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{stc}]]></valueExpression>
                         </categorySeries>
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
                 </barChart>
-
-                <subreport>
-                    <reportElement x="0" y="328" width="802" height="100"/>
-                    <subreportParameter name="P_TITRE">
-                        <subreportParameterExpression><![CDATA["RÉPARTITION PAR ÉQUIPE"]]></subreportParameterExpression>
-                    </subreportParameter>
-                    <subreportParameter name="P_LIBELLE_COLONNE">
-                        <subreportParameterExpression><![CDATA["Équipe"]]></subreportParameterExpression>
-                    </subreportParameter>
-                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierDistributionEquipe})]]></dataSourceExpression>
-                    <subreportExpression><![CDATA[$P{SUBREPORT_DISTRIBUTION}]]></subreportExpression>
-                </subreport>
-            </band>
-        </groupHeader>
-    </group>
-
-    <!-- 3ᵉ page de la vue détaillée par chantier : Répartition par fonction, même structure que
-         GroupChantier ci-dessus (UN SEUL graphique groupé masse/effectif/STC, puis le tableau
-         combiné). Même expression de déclenchement ($F{chantierCode}) que GroupChantier : s'imprime
-         donc exactement une fois par chantier, immédiatement après la page équipe, jamais un
-         chapitre numéroté séparément (voir docs/report/README.md). -->
-    <group name="GroupChantierFonction" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
-        <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
-        <groupHeader>
-            <band height="448" splitType="Stretch">
-                <textField>
-                    <reportElement x="0" y="0" width="802" height="20" forecolor="#000000"/>
-                    <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA[$F{chantierTitre}]]></textFieldExpression>
-                </textField>
-                <line>
-                    <reportElement x="0" y="21" width="802" height="0" forecolor="#000000"/>
-                    <graphicElement><pen lineWidth="1.0"/></graphicElement>
-                </line>
-
-                <textField>
-                    <reportElement x="0" y="30" width="802" height="14" forecolor="#000000"/>
-                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["RÉPARTITION PAR FONCTION"]]></textFieldExpression>
-                    <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-fonction"]]></anchorNameExpression>
-                </textField>
-
-                <barChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="48" width="802" height="288"/>
-                        <chartLegend position="Bottom">
-                            <font fontName="Liberation Serif" size="8.5"/>
-                        </chartLegend>
-                    </chart>
-                    <categoryDataset>
-                        <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierRepartitionFonction})]]></dataSourceExpression>
-                            </datasetRun>
-                        </dataset>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stc}]]></valueExpression>
-                        </categorySeries>
-                    </categoryDataset>
-                    <barPlot><plot/></barPlot>
-                </barChart>
-
-                <subreport>
-                    <reportElement x="0" y="340" width="802" height="100"/>
-                    <subreportParameter name="P_TITRE">
-                        <subreportParameterExpression><![CDATA["RÉPARTITION PAR FONCTION"]]></subreportParameterExpression>
-                    </subreportParameter>
-                    <subreportParameter name="P_LIBELLE_COLONNE">
-                        <subreportParameterExpression><![CDATA["Fonction"]]></subreportParameterExpression>
-                    </subreportParameter>
-                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierDistributionFonction})]]></dataSourceExpression>
-                    <subreportExpression><![CDATA[$P{SUBREPORT_DISTRIBUTION}]]></subreportExpression>
-                </subreport>
             </band>
         </groupHeader>
     </group>
@@ -701,11 +599,13 @@
     <!-- Bloc "introduction" de l'équipe — premier graphique vu à ce niveau (demande explicite : KPI →
          graphes → tableaux à chaque niveau, y compris équipe), puis la répartition par fonction au
          sein de CETTE équipe (même pattern qu'aux autres niveaux : historique d'abord, puis
-         répartition(s)). Groupe séparé de GroupEquipe ci-dessous (même technique que GroupChantier/
-         GroupChantierFonction) : isReprintHeaderOnEachPage="false" pour n'imprimer ce bloc qu'une
-         seule fois par équipe, jamais répété sur les pages de continuation du tableau employé qui
-         suit — un chantier pouvant compter plusieurs dizaines d'équipes, répéter ce bloc à chaque
-         saut de page serait coûteux à générer et sans valeur de lecture. -->
+         répartition(s)) — SEULE répartition par fonction du document désormais, celle du niveau
+         chantier ayant été retirée (doublon, voir GroupChantier ci-dessus). Groupe séparé de
+         GroupEquipe ci-dessous (même technique que GroupChantier) : isReprintHeaderOnEachPage="false"
+         pour n'imprimer ce bloc qu'une seule fois par équipe, jamais répété sur les pages de
+         continuation du tableau employé qui suit — un chantier pouvant compter plusieurs dizaines
+         d'équipes, répéter ce bloc à chaque saut de page serait coûteux à générer et sans valeur de
+         lecture. -->
     <group name="GroupEquipeEvolution" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="true">
         <groupExpression><![CDATA[$F{equipeNom}]]></groupExpression>
         <groupHeader>
@@ -734,7 +634,7 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
@@ -780,12 +680,12 @@
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
+                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
                         <categorySeries>
-                            <seriesExpression><![CDATA["STC"]]></seriesExpression>
+                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
                             <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{stc}]]></valueExpression>
                         </categorySeries>
@@ -1055,8 +955,8 @@
          alors que le niveau de lecture courant, lui, change à chaque page et aide vraiment à se
          repérer). Deux valeurs possibles selon la position dans le document :
            - "GLOBAL" tant que $V{PAGE_NUMBER} précède la première page chantier (page de garde,
-             sommaire, synthèse globale, répartition par chantier — voir P_PAGE_PREMIER_CHANTIER,
-             calculé comme les numéros de page du Sommaire, via le même passage de découverte) ;
+             synthèse globale, répartition par chantier — voir P_PAGE_PREMIER_CHANTIER, calculé via
+             un premier passage de découverte, voir PaieReportPdfService.generer) ;
            - "CHANTIER : <code>  ·  ÉQUIPE : <nom>" une fois entré dans la boucle chantier/équipe —
              $F{chantierCode}/$F{equipeNom} y sont alors les vraies valeurs de la ligne en cours de
              traitement (contrairement aux pages globales, où ce sont algébriquement les valeurs de la
