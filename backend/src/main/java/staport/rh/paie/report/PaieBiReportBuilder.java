@@ -47,9 +47,11 @@ class PaieBiReportBuilder {
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
-     * chaîne déjà formatée pour trier ou construire un graphique. {@code stc} : nombre de STC/sorties
-     * dans ce groupe (même définition qu'aux autres niveaux, voir {@code ObservationStc}). */
-    private record Agregat(String cle, int effectif, BigDecimal montant, int stc) {
+     * chaîne déjà formatée pour trier ou construire un graphique. {@code stc}/{@code stcMontant} :
+     * nombre et masse salariale des STC/sorties dans ce groupe (même définition qu'aux autres
+     * niveaux, voir {@code ObservationStc}) — les 2 représentations sont portées côte à côte, jamais
+     * l'une déduite de l'autre. */
+    private record Agregat(String cle, int effectif, BigDecimal montant, int stc, BigDecimal stcMontant) {
     }
 
     /** Historique mensuel aux 3 niveaux du rapport (global, chantier, équipe) — dérivés en Java d'un
@@ -74,12 +76,13 @@ class PaieBiReportBuilder {
         }
     }
 
-    /** Accumulateur mutable (masse, effectif, STC) d'un mois — évite de porter trois Map parallèles
-     * pour la même clé pendant l'agrégation. */
+    /** Accumulateur mutable (masse, effectif, STC en personnes et en montant) d'un mois — évite de
+     * porter quatre Map parallèles pour la même clé pendant l'agrégation. */
     private static final class Cumul {
         private BigDecimal masse = BigDecimal.ZERO;
         private long effectif;
         private long stc;
+        private BigDecimal stcMontant = BigDecimal.ZERO;
     }
 
     private final PaieRepository repository;
@@ -213,8 +216,11 @@ class PaieBiReportBuilder {
     private List<Agregat> agreger(List<Paie> lignes, Function<Paie, String> cle) {
         Map<String, List<Paie>> groupes = lignes.stream().collect(Collectors.groupingBy(cle, LinkedHashMap::new, Collectors.toList()));
         return groupes.entrySet().stream()
-                .map(entree -> new Agregat(entree.getKey(), entree.getValue().size(), sommer(entree.getValue()),
-                        (int) entree.getValue().stream().filter(ObservationStc::estStcOuSortie).count()))
+                .map(entree -> {
+                    List<Paie> lignesStc = entree.getValue().stream().filter(ObservationStc::estStcOuSortie).toList();
+                    return new Agregat(entree.getKey(), entree.getValue().size(), sommer(entree.getValue()),
+                            lignesStc.size(), sommer(lignesStc));
+                })
                 .sorted(Comparator.comparing(Agregat::montant).reversed())
                 .toList();
     }
@@ -243,18 +249,21 @@ class PaieBiReportBuilder {
         int effectifAutres = 0;
         int stcAutres = 0;
         BigDecimal montantAutres = BigDecimal.ZERO;
+        BigDecimal stcMontantAutres = BigDecimal.ZERO;
         for (int i = 0; i < agregats.size(); i++) {
             Agregat agregat = agregats.get(i);
             if (i < MAX_BARRES_GRAPHIQUE) {
-                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant(), agregat.stc()));
+                valeurs.add(new RepartitionBean(agregat.cle(), agregat.effectif(), agregat.montant(), agregat.stc(),
+                        agregat.stcMontant()));
             } else {
                 effectifAutres += agregat.effectif();
                 stcAutres += agregat.stc();
                 montantAutres = montantAutres.add(agregat.montant());
+                stcMontantAutres = stcMontantAutres.add(agregat.stcMontant());
             }
         }
         if (effectifAutres > 0) {
-            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres, stcAutres));
+            valeurs.add(new RepartitionBean("Autres", effectifAutres, montantAutres, stcAutres, stcMontantAutres));
         }
         valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
@@ -281,12 +290,13 @@ class PaieBiReportBuilder {
             BigDecimal masse = ligne.getMasse() == null ? BigDecimal.ZERO : ligne.getMasse();
             long effectif = ligne.getEffectif() == null ? 0 : ligne.getEffectif();
             long stc = ligne.getStc() == null ? 0 : ligne.getStc();
+            BigDecimal stcMontant = ligne.getStcMontant() == null ? BigDecimal.ZERO : ligne.getStcMontant();
             String chantier = ligne.getChantierCode();
             String equipe = libelleEquipe(ligne.getEquipe());
 
-            cumuler(global, mois, masse, effectif, stc);
-            cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif, stc);
-            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif, stc);
+            cumuler(global, mois, masse, effectif, stc, stcMontant);
+            cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif, stc, stcMontant);
+            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif, stc, stcMontant);
         }
 
         return new EvolutionParNiveau(
@@ -295,11 +305,13 @@ class PaieBiReportBuilder {
                 versPointsParCle(periode, parEquipe));
     }
 
-    private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif, long stc) {
+    private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif, long stc,
+                          BigDecimal stcMontant) {
         Cumul cumul = parMois.computeIfAbsent(mois, m -> new Cumul());
         cumul.masse = cumul.masse.add(masse);
         cumul.effectif += effectif;
         cumul.stc += stc;
+        cumul.stcMontant = cumul.stcMontant.add(stcMontant);
     }
 
     private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
@@ -309,8 +321,8 @@ class PaieBiReportBuilder {
     }
 
     /** Un point par mois sur {@value #MOIS_EVOLUTION} mois (mois courant compris), y compris les mois
-     * sans aucun bulletin pour ce périmètre (masse et effectif à 0 — une absence réelle de paie ce
-     * mois-là, pas une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
+     * sans aucun bulletin pour ce périmètre (masse, effectif et STC à 0 — une absence réelle de paie
+     * ce mois-là, pas une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
     private List<RepartitionBean> pointsMensuels(YearMonth periode, Map<YearMonth, Cumul> parMois) {
         List<RepartitionBean> points = new ArrayList<>();
         YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
@@ -320,7 +332,8 @@ class PaieBiReportBuilder {
                     mois.format(FORMAT_MOIS_COURT),
                     cumul == null ? 0 : (int) cumul.effectif,
                     cumul == null ? BigDecimal.ZERO : cumul.masse,
-                    cumul == null ? 0 : (int) cumul.stc));
+                    cumul == null ? 0 : (int) cumul.stc,
+                    cumul == null ? BigDecimal.ZERO : cumul.stcMontant));
         }
         return points;
     }
