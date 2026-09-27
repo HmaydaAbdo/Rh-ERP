@@ -54,15 +54,6 @@ public class PaieReportPdfService {
 
     private static final String DOSSIER_JASPER = "report/paie/jasper/";
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
-    private static final String ANCRE_SYNTHESE = "synthese-globale";
-    // "Vue d'ensemble" (validé par la direction) plutôt que "Synthèse globale" — même style que les
-    // autres titres de chapitre (Title Case, pas de majuscules intégrales, voir rapport.jrxml).
-    private static final String LIBELLE_SYNTHESE = "I — Vue d'ensemble";
-    // Un seul graphique (masse + effectif + STC, barres groupées) sur une seule page — l'ancienne
-    // séparation en 2 pages/sous-titres "1./2." a disparu avec la fusion des 2 métriques dans un même
-    // graphique (demande explicite de direction, voir rapport.jrxml GroupGraphChantier).
-    private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
-    private static final String LIBELLE_GRAPH_CHANTIER = "II — Masse, effectif et STC par chantier";
 
     /** Nombre de chapitres romains fixes avant le premier chantier (I — Synthèse globale,
      * II — Répartition par chantier) — détermine à partir de quel chiffre romain démarre la
@@ -99,14 +90,12 @@ public class PaieReportPdfService {
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
     private final JasperReport tableDistributionReport;
-    private final JasperReport sommaireReport;
     private final byte[] logo;
 
     PaieReportPdfService(PaieBiReportBuilder biReportBuilder) {
         this.biReportBuilder = biReportBuilder;
         this.rapportReport = compiler("rapport.jrxml");
         this.tableDistributionReport = compiler("tableDistribution.jrxml");
-        this.sommaireReport = compiler("sommaire.jrxml");
         this.logo = chargerLogo();
     }
 
@@ -119,13 +108,13 @@ public class PaieReportPdfService {
         List<LigneRapportDetailBean> lignes = lignesDetail(vue);
 
         JasperPrint passeDecouverte = remplir(rapportReport,
-                avecSommaire(parametresBase, sommaireEntrees(vue, null), Integer.MAX_VALUE),
+                avecPagePremierChantier(parametresBase, Integer.MAX_VALUE),
                 new JRBeanCollectionDataSource(lignes));
         Map<String, Integer> pagesParAncre = pagesParAncre(passeDecouverte);
         int pagePremierChantier = pageDe(pagesParAncre, "chantier-" + vue.chantiers().get(0).code());
 
         JasperPrint impression = remplir(rapportReport,
-                avecSommaire(parametresBase, sommaireEntrees(vue, pagesParAncre), pagePremierChantier),
+                avecPagePremierChantier(parametresBase, pagePremierChantier),
                 new JRBeanCollectionDataSource(lignes));
 
         byte[] pdf = exporterPdf(impression);
@@ -156,7 +145,6 @@ public class PaieReportPdfService {
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
-        parametres.put("SUBREPORT_SOMMAIRE", sommaireReport);
         return parametres;
     }
 
@@ -168,32 +156,10 @@ public class PaieReportPdfService {
     /** @param pagePremierChantier seuil du bloc Niveau du pageHeader (voir rapport.jrxml) —
      *          {@code Integer.MAX_VALUE} lors du passage de découverte (page réelle encore inconnue,
      *          sans incidence : ce passage n'est jamais exporté). */
-    private Map<String, Object> avecSommaire(Map<String, Object> parametresBase, List<SommaireEntreeBean> entreesSommaire,
-                                              Integer pagePremierChantier) {
+    private Map<String, Object> avecPagePremierChantier(Map<String, Object> parametresBase, Integer pagePremierChantier) {
         Map<String, Object> parametres = new HashMap<>(parametresBase);
-        parametres.put("P_SOMMAIRE_ENTREES", entreesSommaire);
         parametres.put("P_PAGE_PREMIER_CHANTIER", pagePremierChantier);
         return parametres;
-    }
-
-    /** Synthèse globale + la page graphique + une ligne par chantier, chacun numéroté en chiffre
-     * romain (voir {@link #chapitreChantier}) — {@code pagesParAncre} vaut {@code null} lors du
-     * premier passage (numéros encore inconnus, valeur de repli 0 sans incidence sur la mise en page
-     * du sous-rapport, un champ numérique de largeur fixe). */
-    private List<SommaireEntreeBean> sommaireEntrees(RapportBiVue vue, Map<String, Integer> pagesParAncre) {
-        List<SommaireEntreeBean> entrees = new ArrayList<>();
-        entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
-        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
-        List<ChantierBiVue> chantiers = vue.chantiers();
-        for (int i = 0; i < chantiers.size(); i++) {
-            ChantierBiVue chantier = chantiers.get(i);
-            entrees.add(new SommaireEntreeBean(chapitreChantier(i, chantier), pageDe(pagesParAncre, "chantier-" + chantier.code())));
-            entrees.add(new SommaireEntreeBean("Répartition par équipe",
-                    pageDe(pagesParAncre, "chantier-" + chantier.code() + "-equipe"), true));
-            entrees.add(new SommaireEntreeBean("Répartition par fonction",
-                    pageDe(pagesParAncre, "chantier-" + chantier.code() + "-fonction"), true));
-        }
-        return entrees;
     }
 
     private int pageDe(Map<String, Integer> pagesParAncre, String ancre) {
@@ -245,8 +211,8 @@ public class PaieReportPdfService {
                             chantier.code(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
-                            chantier.distributionEquipe(), chantier.distributionFonction(),
-                            chantier.repartitionEquipe(), chantier.repartitionFonction(), chantier.evolutionMensuelle(),
+                            chantier.distributionEquipe(),
+                            chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
                             equipe.stc(), equipe.distributionFonction(), equipe.repartitionFonction(), equipe.evolutionMensuelle(),
                             employe));

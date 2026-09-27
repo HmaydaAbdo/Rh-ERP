@@ -26,8 +26,9 @@ import java.util.Map;
 
 /**
  * Personnalise les {@code <barChart>} JRXML à barres groupées HORIZONTALES (3 séries : Masse (DH),
- * Effectif, STC) — chapitre II (répartition par chantier) et vue détaillée par chantier/équipe
- * (répartition par équipe, par fonction, et désormais par fonction au niveau équipe). Convention
+ * Effectif (personnes), STC (personnes) — chaque série de la légende porte son unité, demande
+ * explicite de direction) — chapitre II (répartition par chantier), répartition par équipe au
+ * niveau chantier, et répartition par fonction au niveau équipe. Convention
  * retenue après retour direction : un double axe X numérique (DH vs personnes) a été jugé trop risqué
  * à fiabiliser côté JFreeChart pour des barres groupées — l'axe des valeurs reste donc **masqué**,
  * chaque barre affichant directement sa valeur exacte.
@@ -50,7 +51,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
     private static final Color COULEUR_EFFECTIF = new Color(0xF5, 0x9E, 0x0B);
     private static final Color COULEUR_STC = new Color(0xB9, 0x1C, 0x1C);
     private static final String SERIE_MASSE = "Masse (DH)";
-    private static final String SERIE_STC = "STC";
+    private static final String SERIE_STC = "STC (personnes)";
 
     @Override
     public void customize(JFreeChart chart, JRChart jrChart) {
@@ -69,13 +70,16 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
         plot.getRangeAxis().setVisible(false);
 
-        // 3 barres par catégorie (masse/effectif/STC) au lieu d'une seule : marge plus généreuse
-        // entre catégories, marge plus fine entre les 3 barres d'un même groupe (voir
-        // renderer.setItemMargin ci-dessous).
+        // 3 barres par catégorie (masse/effectif/STC) au lieu d'une seule : marge généreuse entre
+        // catégories (chantier/équipe/fonction) ET entre les 3 barres d'un même groupe (voir
+        // renderer.setItemMargin ci-dessous) — les valeurs par défaut précédentes (0.18/0.06)
+        // laissaient les catégories quasi collées les unes aux autres (constaté en production sur un
+        // graphique à 25 chantiers), rendant la lecture visuelle difficile malgré des étiquettes
+        // correctes.
         CategoryAxis categoryAxis = (CategoryAxis) plot.getDomainAxis();
-        categoryAxis.setCategoryMargin(0.18);
-        categoryAxis.setLowerMargin(0.01);
-        categoryAxis.setUpperMargin(0.01);
+        categoryAxis.setCategoryMargin(0.35);
+        categoryAxis.setLowerMargin(0.02);
+        categoryAxis.setUpperMargin(0.02);
 
         CategoryDataset original = plot.getDataset();
         if (original == null) {
@@ -116,7 +120,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setShadowVisible(false);
         renderer.setDrawBarOutline(true);
-        renderer.setItemMargin(0.06);
+        renderer.setItemMargin(0.15);
 
         // Étiquette de valeur à l'extérieur de chaque barre (jamais à l'intérieur, voir
         // PaieReportEvolutionChartCustomizer pour la même règle) — lit la VRAIE valeur dans la table

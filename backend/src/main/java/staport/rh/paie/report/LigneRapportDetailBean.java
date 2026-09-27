@@ -25,9 +25,7 @@ public final class LigneRapportDetailBean {
     private final int chantierStc;
     private final String chantierNarratif;
     private final List<DistributionVue> chantierDistributionEquipe;
-    private final List<DistributionVue> chantierDistributionFonction;
     private final List<RepartitionBean> chantierRepartitionEquipe;
-    private final List<RepartitionBean> chantierRepartitionFonction;
     private final List<RepartitionBean> chantierEvolutionMensuelle;
     private final String equipeNom;
     private final String equipeTitre;
@@ -53,8 +51,8 @@ public final class LigneRapportDetailBean {
     LigneRapportDetailBean(String chantierCode, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
                             String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
-                            List<DistributionVue> chantierDistributionEquipe, List<DistributionVue> chantierDistributionFonction,
-                            List<RepartitionBean> chantierRepartitionEquipe, List<RepartitionBean> chantierRepartitionFonction,
+                            List<DistributionVue> chantierDistributionEquipe,
+                            List<RepartitionBean> chantierRepartitionEquipe,
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, int equipeStc,
@@ -71,9 +69,7 @@ public final class LigneRapportDetailBean {
         this.chantierStc = chantierStc;
         this.chantierNarratif = chantierNarratif;
         this.chantierDistributionEquipe = chantierDistributionEquipe;
-        this.chantierDistributionFonction = chantierDistributionFonction;
         this.chantierRepartitionEquipe = chantierRepartitionEquipe;
-        this.chantierRepartitionFonction = chantierRepartitionFonction;
         this.chantierEvolutionMensuelle = chantierEvolutionMensuelle;
         this.equipeNom = equipeNom;
         this.equipeTitre = equipeTitre;
@@ -137,16 +133,8 @@ public final class LigneRapportDetailBean {
         return chantierDistributionEquipe;
     }
 
-    public List<DistributionVue> getChantierDistributionFonction() {
-        return chantierDistributionFonction;
-    }
-
     public List<RepartitionBean> getChantierRepartitionEquipe() {
         return chantierRepartitionEquipe;
-    }
-
-    public List<RepartitionBean> getChantierRepartitionFonction() {
-        return chantierRepartitionFonction;
     }
 
     public List<RepartitionBean> getChantierEvolutionMensuelle() {
