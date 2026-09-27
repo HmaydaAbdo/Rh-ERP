@@ -48,6 +48,16 @@
         <field name="montant" class="java.math.BigDecimal"/>
     </subDataset>
 
+    <!-- Source de données des stackedBarChart (chapitre II) : une ligne par couple (chantier, équipe)
+         — le chantier est la catégorie (colonne), l'équipe la série empilée dans cette colonne, voir
+         RepartitionCroiseeBean / PaieBiReportBuilder.versRepartitionCroiseeParEquipe. -->
+    <subDataset name="dsRepartitionCroisee">
+        <field name="libelleChantier" class="java.lang.String"/>
+        <field name="libelleEquipe" class="java.lang.String"/>
+        <field name="effectif" class="java.lang.Integer"/>
+        <field name="montant" class="java.math.BigDecimal"/>
+    </subDataset>
+
 
     <!-- byte[] et non InputStream : le logo est référencé par PLUSIEURS <image> (page de garde +
          pageHeader répété sur chaque page) — un InputStream ne se lit qu'une fois, la deuxième
@@ -66,7 +76,7 @@
     <parameter name="P_MASSE_MOYENNE" class="java.lang.String"/>
     <parameter name="P_NOMBRE_CHANTIERS" class="java.lang.String"/>
     <parameter name="P_STC_VALEUR" class="java.lang.String"/>
-    <parameter name="P_REPARTITION_CHANTIER" class="java.util.List"/>
+    <parameter name="P_REPARTITION_CHANTIER_EQUIPE" class="java.util.List"/>
     <parameter name="P_REPARTITION_FONCTION" class="java.util.List"/>
     <parameter name="P_EVOLUTION_MENSUELLE" class="java.util.List"/>
     <!-- Numéro de la première page chantier — seuil utilisé par le pageHeader (bloc Niveau) pour
@@ -326,12 +336,16 @@
     </group>
 
     <!-- Chapitre II — Répartition par chantier, sur 2 pages : un seul graphique par page (jamais 2
-         côte à côte), pleine largeur, pour des barres aussi épaisses et lisibles que possible.
-         Orientation HORIZONTAL : la hauteur du plot ÷ le nombre de catégories détermine l'épaisseur
-         de chaque barre (voir PaieReportChartCustomizer) — l'étiquette de valeur est à l'extérieur de
-         chaque barre, jamais tronquée même pour un petit chantier. Seule la 1ʳᵉ page (masse) porte le
-         titre de chapitre numéroté et l'ancre (voir Sommaire) ; la 2ᵉ page (effectif) en est la suite
-         directe, jamais un chapitre séparé. -->
+         côte à côte), pleine largeur. Colonnes VERTICALES EMPILÉES par équipe (convention retenue
+         pour ce graphique, voir docs/report/README.md « Visualisations ») : chaque colonne est un
+         chantier, sa hauteur totale est sa masse salariale réelle (colonne "Total"/salaireTotal,
+         jamais salaireMensuel), les segments empilés sont les équipes de ce chantier — montant affiché
+         à l'intérieur du segment quand il est assez grand pour le contenir, une légende identifie les
+         équipes (voir PaieReportChantierMasseStackedChartCustomizer). Seule la 1ʳᵉ page (masse) porte
+         un titre de chapitre pleine taille — celui-ci EST directement le titre du graphique, jamais un
+         intitulé générique "RÉPARTITION PAR CHANTIER" répété à l'identique sur les 2 pages (constaté
+         en production : pure redondance visuelle) ; la 2ᵉ page (effectif) n'a qu'un sous-titre "2.",
+         jamais un second chapitre. -->
     <group name="GroupGraphChantierMasse" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["GRAPH_CHANTIER_MASSE"]]></groupExpression>
         <groupHeader>
@@ -339,7 +353,7 @@
                 <textField>
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["II — RÉPARTITION PAR CHANTIER"]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["II — Masse salariale par chantier (DH)"]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["graph-chantier"]]></anchorNameExpression>
                 </textField>
                 <line>
@@ -347,29 +361,27 @@
                     <graphicElement><pen lineWidth="1.0"/></graphicElement>
                 </line>
 
-                <staticText>
-                    <reportElement x="0" y="34" width="802" height="16" forecolor="#000000"/>
-                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <text><![CDATA[1. Masse salariale par chantier (DH)]]></text>
-                </staticText>
-                <barChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="54" width="802" height="395"/>
+                <stackedBarChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportChantierMasseStackedChartCustomizer">
+                        <reportElement x="0" y="34" width="802" height="415"/>
+                        <chartLegend position="Bottom">
+                            <font fontName="Liberation Serif" size="8.5"/>
+                        </chartLegend>
                     </chart>
                     <categoryDataset>
                         <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER})]]></dataSourceExpression>
+                            <datasetRun subDataset="dsRepartitionCroisee">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER_EQUIPE})]]></dataSourceExpression>
                             </datasetRun>
                         </dataset>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
+                            <seriesExpression><![CDATA[$F{libelleEquipe}]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libelleChantier}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{montant}]]></valueExpression>
                         </categorySeries>
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
-                </barChart>
+                </stackedBarChart>
             </band>
         </groupHeader>
     </group>
@@ -379,39 +391,32 @@
         <groupHeader>
             <band height="455" splitType="Stretch">
                 <textField>
-                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
-                    <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["II — RÉPARTITION PAR CHANTIER"]]></textFieldExpression>
+                    <reportElement x="0" y="0" width="802" height="16" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA["2. Effectif par chantier"]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["graph-chantier-effectif"]]></anchorNameExpression>
                 </textField>
-                <line>
-                    <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
-                    <graphicElement><pen lineWidth="1.0"/></graphicElement>
-                </line>
-
-                <staticText>
-                    <reportElement x="0" y="34" width="802" height="16" forecolor="#000000"/>
-                    <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <text><![CDATA[2. Effectif par chantier]]></text>
-                </staticText>
-                <barChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="54" width="802" height="395"/>
+                <stackedBarChart>
+                    <chart customizerClass="staport.rh.paie.report.PaieReportChantierEffectifStackedChartCustomizer">
+                        <reportElement x="0" y="20" width="802" height="429"/>
+                        <chartLegend position="Bottom">
+                            <font fontName="Liberation Serif" size="8.5"/>
+                        </chartLegend>
                     </chart>
                     <categoryDataset>
                         <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER})]]></dataSourceExpression>
+                            <datasetRun subDataset="dsRepartitionCroisee">
+                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIER_EQUIPE})]]></dataSourceExpression>
                             </datasetRun>
                         </dataset>
                         <categorySeries>
-                            <seriesExpression><![CDATA["Effectif"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
+                            <seriesExpression><![CDATA[$F{libelleEquipe}]]></seriesExpression>
+                            <categoryExpression><![CDATA[$F{libelleChantier}]]></categoryExpression>
                             <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
                         </categorySeries>
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
-                </barChart>
+                </stackedBarChart>
             </band>
         </groupHeader>
     </group>
@@ -582,14 +587,17 @@
         </groupHeader>
     </group>
 
-    <!-- 2ᵉ page de la vue détaillée par chantier : Répartition par équipe (1. masse, 2. effectif,
-         puis la table), immédiatement après la page KPI/historique ci-dessus. Même expression de
-         déclenchement ($F{chantierCode}) que GroupChantierEvolution : s'imprime donc exactement une
-         fois par chantier. -->
+    <!-- 2ᵉ page de la vue détaillée par chantier : Répartition par équipe, immédiatement après la
+         page KPI/historique ci-dessus. Même expression de déclenchement ($F{chantierCode}) que
+         GroupChantierEvolution : s'imprime donc exactement une fois par chantier. Les 2 graphiques
+         (masse "1.", effectif "2.") sont empilés VERTICALEMENT pleine largeur (802pt), jamais côte à
+         côte — un graphique à 390pt était trop étroit pour rester lisible (constaté en production) ;
+         un seul tableau combiné (Équipe/Effectif/Montant/Part) suit les 2 graphiques, jamais dupliqué
+         par graphique (l'un et l'autre y figurent déjà ensemble). -->
     <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
-            <band height="300" splitType="Stretch">
+            <band height="435" splitType="Stretch">
                 <textField>
                     <reportElement x="0" y="0" width="802" height="16" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
@@ -598,13 +606,13 @@
                 </textField>
 
                 <staticText>
-                    <reportElement x="0" y="20" width="390" height="14" forecolor="#000000"/>
+                    <reportElement x="0" y="20" width="802" height="14" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
                     <text><![CDATA[1. Masse salariale par équipe (DH)]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="36" width="390" height="150"/>
+                        <reportElement x="0" y="36" width="802" height="130"/>
                     </chart>
                     <categoryDataset>
                         <dataset>
@@ -622,13 +630,13 @@
                 </barChart>
 
                 <staticText>
-                    <reportElement x="412" y="20" width="390" height="14" forecolor="#000000"/>
+                    <reportElement x="0" y="172" width="802" height="14" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
                     <text><![CDATA[2. Effectif par équipe]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="412" y="36" width="390" height="150"/>
+                        <reportElement x="0" y="190" width="802" height="130"/>
                     </chart>
                     <categoryDataset>
                         <dataset>
@@ -646,7 +654,7 @@
                 </barChart>
 
                 <subreport>
-                    <reportElement x="0" y="192" width="390" height="100"/>
+                    <reportElement x="0" y="328" width="802" height="100"/>
                     <subreportParameter name="P_TITRE">
                         <subreportParameterExpression><![CDATA["RÉPARTITION PAR ÉQUIPE"]]></subreportParameterExpression>
                     </subreportParameter>
@@ -660,40 +668,40 @@
         </groupHeader>
     </group>
 
-    <!-- 2ᵉ page de la vue détaillée par chantier : Répartition par fonction, même structure que
-         GroupChantier ci-dessus (couple Masse/Effectif "1."/"2." côte à côte, puis la table). Même
-         expression de déclenchement ($F{chantierCode}) que GroupChantier : s'imprime donc
-         exactement une fois par chantier, immédiatement après la page équipe, jamais un chapitre
-         numéroté séparément (voir docs/report/README.md). -->
+    <!-- 3ᵉ page de la vue détaillée par chantier : Répartition par fonction, même structure que
+         GroupChantier ci-dessus (graphiques Masse "1."/Effectif "2." empilés pleine largeur, puis un
+         seul tableau combiné). Même expression de déclenchement ($F{chantierCode}) que GroupChantier :
+         s'imprime donc exactement une fois par chantier, immédiatement après la page équipe, jamais
+         un chapitre numéroté séparément (voir docs/report/README.md). -->
     <group name="GroupChantierFonction" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
-            <band height="330" splitType="Stretch">
+            <band height="448" splitType="Stretch">
                 <textField>
-                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
+                    <reportElement x="0" y="0" width="802" height="20" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA[$F{chantierTitre}]]></textFieldExpression>
                 </textField>
                 <line>
-                    <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
+                    <reportElement x="0" y="21" width="802" height="0" forecolor="#000000"/>
                     <graphicElement><pen lineWidth="1.0"/></graphicElement>
                 </line>
 
                 <textField>
-                    <reportElement x="0" y="32" width="802" height="16" forecolor="#000000"/>
+                    <reportElement x="0" y="30" width="802" height="14" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA["RÉPARTITION PAR FONCTION"]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-fonction"]]></anchorNameExpression>
                 </textField>
 
                 <staticText>
-                    <reportElement x="0" y="52" width="390" height="14" forecolor="#000000"/>
+                    <reportElement x="0" y="46" width="802" height="12" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
                     <text><![CDATA[1. Masse salariale par fonction (DH)]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="0" y="68" width="390" height="150"/>
+                        <reportElement x="0" y="60" width="802" height="130"/>
                     </chart>
                     <categoryDataset>
                         <dataset>
@@ -711,13 +719,13 @@
                 </barChart>
 
                 <staticText>
-                    <reportElement x="412" y="52" width="390" height="14" forecolor="#000000"/>
+                    <reportElement x="0" y="192" width="802" height="12" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="10" isBold="true"/></textElement>
                     <text><![CDATA[2. Effectif par fonction]]></text>
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportChartCustomizer">
-                        <reportElement x="412" y="68" width="390" height="150"/>
+                        <reportElement x="0" y="206" width="802" height="130"/>
                     </chart>
                     <categoryDataset>
                         <dataset>
@@ -735,7 +743,7 @@
                 </barChart>
 
                 <subreport>
-                    <reportElement x="0" y="224" width="390" height="100"/>
+                    <reportElement x="0" y="340" width="802" height="100"/>
                     <subreportParameter name="P_TITRE">
                         <subreportParameterExpression><![CDATA["RÉPARTITION PAR FONCTION"]]></subreportParameterExpression>
                     </subreportParameter>
@@ -906,12 +914,16 @@
     <!-- ================================ PAGE DE GARDE (title) ================================
          Contenu volontairement simple et statique (pas de graphique, pas de tableau) — une vraie
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
-         JasperReports pour une bande title en isTitleNewPage, ici exploité plutôt que subi). Les 4
-         informations Département/Mois/Année/Direction sont empilées verticalement (une sous l'autre,
-         Mois avant Année), jamais disposées en colonnes côte à côte. Signatures en bas de page :
-         Directeur Général et Directeur des Ressources Humaines, chacun rôle + nom + filet à signer —
-         le filet reste vide (une signature est manuscrite sur le document imprimé), seuls le rôle et
-         le nom sont pré-remplis. -->
+         JasperReports pour une bande title en isTitleNewPage, ici exploité plutôt que subi). Les 3
+         informations Département/Mois/Année sont empilées verticalement (une sous l'autre, Mois avant
+         Année), jamais disposées en colonnes côte à côte — le bloc "DIRECTION : Direction des
+         Ressources Humaines" qui suivait a été retiré (constaté par la direction : "Ressources
+         Humaines" apparaissait deux fois sur la couverture, DÉPARTEMENT et DIRECTION portant la même
+         information ; le bloc Signatures ci-dessous la reprend déjà explicitement via le rôle
+         "DIRECTEUR DES RESSOURCES HUMAINES"). Signatures en bas de page : Directeur Général et
+         Directeur des Ressources Humaines, chacun rôle + nom + filet à signer — le filet reste vide
+         (une signature est manuscrite sur le document imprimé), seuls le rôle et le nom sont
+         pré-remplis. -->
     <title>
         <band height="520" splitType="Stretch">
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
@@ -962,17 +974,6 @@
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA[$P{P_PERIODE_ANNEE}]]></textFieldExpression>
             </textField>
-
-            <staticText>
-                <reportElement x="0" y="288" width="802" height="11" forecolor="#595959"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="11" isBold="true"/></textElement>
-                <text><![CDATA[DIRECTION]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="0" y="300" width="802" height="20" forecolor="#000000"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                <text><![CDATA[Direction des Ressources Humaines]]></text>
-            </staticText>
 
             <!-- Signatures : Directeur Général à gauche, DRH à droite — deux blocs identiques
                  (rôle, nom, filet, légende). Noms des signataires en dur (voir docs/report/README.md
