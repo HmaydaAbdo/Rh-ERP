@@ -65,15 +65,11 @@ class PaieBiReportBuilderTest {
                 List.of(sansEquipeNull, sansEquipeBlank, avecEquipe), List.of());
 
         ChantierBiVue chantier = vue.chantiers().get(0);
-        DistributionVue sansEquipe = chantier.distributionEquipe().stream()
-                .filter(d -> d.getLibelle().equals("Sans équipe"))
-                .findFirst().orElseThrow();
-        assertThat(sansEquipe.getEffectif()).isEqualTo(2);
-        assertThat(sansEquipe.getMontant()).isEqualTo("5 000,00");
 
         assertThat(chantier.equipes()).extracting(EquipeBiVue::nom).contains("Sans équipe", "EQUIPE A");
         EquipeBiVue equipeSansEquipe = chantier.equipes().stream().filter(e -> e.nom().equals("Sans équipe")).findFirst().orElseThrow();
         assertThat(equipeSansEquipe.effectif()).isEqualTo(2);
+        assertThat(equipeSansEquipe.masse()).isEqualTo("5 000,00");
     }
 
     @Test

@@ -177,7 +177,6 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
                 PaieReportNumberFormat.part(masseChantier, masseGlobale),
                 stc,
-                versDistribution(agregatEquipe, masseChantier),
                 versRepartition(agregatEquipe),
                 evolutions.pourChantier(code),
                 equipes,
@@ -238,16 +237,6 @@ class PaieBiReportBuilder {
                             lignesStc.size(), sommer(lignesStc));
                 })
                 .sorted(Comparator.comparing(Agregat::montant).reversed())
-                .toList();
-    }
-
-    /** @param total dénominateur du pourcentage — masse globale pour une distribution "globale",
-     * masse du chantier pour une distribution intra-chantier (jamais mélangé, voir README section
-     * « Cohérence global → local »). */
-    private List<DistributionVue> versDistribution(List<Agregat> agregats, BigDecimal total) {
-        return agregats.stream()
-                .map(a -> new DistributionVue(a.cle(), a.effectif(), PaieReportNumberFormat.montant(a.montant()),
-                        PaieReportNumberFormat.part(a.montant(), total)))
                 .toList();
     }
 

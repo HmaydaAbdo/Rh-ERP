@@ -124,7 +124,6 @@
     <field name="chantierPartMasseGlobale" class="java.lang.String"/>
     <field name="chantierStc" class="java.lang.Integer"/>
     <field name="chantierNarratif" class="java.lang.String"/>
-    <field name="chantierDistributionEquipe" class="java.util.List"/>
     <field name="chantierRepartitionEquipe" class="java.util.List"/>
     <field name="chantierEvolutionMensuelle" class="java.util.List"/>
     <!-- Voir le Javadoc de LigneRapportDetailBean pour le mécanisme complet de ces 4 champs (chantiers

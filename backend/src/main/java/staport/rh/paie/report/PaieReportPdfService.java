@@ -36,16 +36,22 @@ import java.util.Map;
  * {@code docs/report/README.md}), pas un export tabulaire (celui-ci reste l'export Excel,
  * {@code PaieExportService}, jamais modifié par ce service). Chaîne : filtres + périmètre
  * ({@link PaieBiReportBuilder}) → gabarit JRXML unique (JasperReports Library, licence LGPL, {@code
- * resources/report/paie/jasper/rapport.jrxml}) → deux remplissages successifs → export PDF. Le
- * premier remplissage (silencieux, jamais exporté) sert uniquement à découvrir sur quelle page
- * démarre chaque section (Synthèse globale, chaque chantier) via des ancres posées dans le gabarit
- * ({@code anchorNameExpression}) ; le second remplissage, identique au premier sauf pour les numéros
- * de page désormais connus injectés dans le sous-rapport Sommaire, produit le document final — un
- * seul {@code JasperPrint} exporté, jamais de fusion de plusieurs impressions après coup (voir
- * « Sommaire » dans le README : fusionner des JasperPrint déjà rendus désynchroniserait le compteur
- * de pages du pied de page). Le {@code pageHeader}/{@code pageFooter}, définis une seule fois dans le
- * gabarit, se répètent nativement sur toutes les pages de contenu. Les gabarits sont compilés une
- * seule fois (constructeur) et réutilisés à chaque génération.
+ * resources/report/paie/jasper/rapport.jrxml}) → deux remplissages successifs → export PDF.
+ *
+ * <p>Le document n'a pas de sommaire imprimé (retiré, demande explicite de direction — un rapport
+ * généré à la demande n'a pas besoin d'une table des matières) : le double remplissage sert
+ * uniquement à connaître, AVANT le remplissage final, sur quelle page démarre le premier chantier
+ * (ancre {@code anchorNameExpression="chantier-<code>"} posée dans le gabarit) — seul moyen d'obtenir
+ * ce numéro de page réel, JasperReports ne le connaissant qu'après la mise en page complète. Cette
+ * valeur ({@code P_PAGE_PREMIER_CHANTIER}) pilote uniquement le bloc « Niveau » du
+ * {@code pageHeader}/{@code pageFooter} : GLOBAL avant ce seuil, CHANTIER (+ ÉQUIPE) à partir de lui.
+ * Premier remplissage silencieux (jamais exporté, page provisoire {@code Integer.MAX_VALUE}) ; second
+ * remplissage identique sauf ce seuil désormais connu, qui produit le document final — un seul
+ * {@code JasperPrint} réellement exporté, jamais de fusion de plusieurs impressions après coup (qui
+ * désynchroniserait le compteur {@code $V{PAGE_NUMBER}} du pied de page). Le
+ * {@code pageHeader}/{@code pageFooter}, définis une seule fois dans le gabarit, se répètent
+ * nativement sur toutes les pages de contenu. Les gabarits sont compilés une seule fois (constructeur)
+ * et réutilisés à chaque génération.
  */
 @Service
 public class PaieReportPdfService {
@@ -263,7 +269,6 @@ public class PaieReportPdfService {
                             chantier.code(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
-                            chantier.distributionEquipe(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             chantier.compact(), chantierEvolutionCle, chantierEquipesCle, chantierChapitreTitreCompacts,
                             equipeNom, equipeTitre, equipeEffectif, equipeMasse, equipePartChantierPourcent,
