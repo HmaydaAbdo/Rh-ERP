@@ -55,7 +55,8 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
      * prédicat Java — même donnée, même définition, jamais dupliquée ni divergente. */
     @Query("SELECT p.chantier.code AS chantierCode, p.equipe AS equipe, p.periode AS periode, " +
             "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
-            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc " +
+            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p WHERE p.periode BETWEEN :debut AND :fin " +
             "GROUP BY p.chantier.code, p.equipe, p.periode")
     List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
