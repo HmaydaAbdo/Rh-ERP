@@ -12,6 +12,36 @@ import java.util.List;
  * définis une seule fois dans {@code rapport.jrxml}, de se répéter nativement sur toutes les pages
  * du rapport — aucun gabarit séparé, aucune duplication de bande. Classe simple à getters, pas un
  * record : champ de table lié par introspection JavaBean ({@code JRBeanCollectionDataSource}).
+ *
+ * <p><b>Chantiers "compacts" (effectif ≤ {@code PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT}) — pas de
+ * page dédiée</b> (voir {@link ChantierBiVue#compact()}) : {@code chantierCompact} pilote, via
+ * {@code printWhenExpression} dans {@code rapport.jrxml}, l'affichage d'un contenu différent pour ces
+ * chantiers. Deux champs supplémentaires contrôlent directement le déclenchement des {@code <group>}
+ * "lourds" (une page dédiée chacun) :
+ * <ul>
+ *   <li>{@code chantierEvolutionCle} — expression de {@code GroupChantierEvolution} (page "Vue
+ *       d'ensemble" + graphique d'évolution) : le vrai code chantier pour un chantier détaillé (le
+ *       groupe se déclenche normalement, une fois par chantier détaillé) ; pour un chantier compact,
+ *       la valeur est GELÉE à celle du dernier chantier détaillé rencontré (ou "" s'il n'y en a aucun)
+ *       — l'expression ne change alors JAMAIS d'une ligne compacte à l'autre, donc ce groupe ne se
+ *       déclenche plus du tout pour eux (page supprimée entièrement, demande explicite de direction :
+ *       inutile de tracer une évolution mensuelle pour 1-2 personnes).</li>
+ *   <li>{@code chantierEquipesCle} — expression de {@code GroupChantier} (page "Équipes de chantier" +
+ *       graphique de répartition) : le vrai code chantier pour un chantier détaillé (inchangé) ; pour
+ *       TOUS les chantiers compacts, la MÊME constante ("__CHANTIERS_COMPACTS__") — le groupe se
+ *       déclenche donc exactement UNE fois, à l'entrée dans le bloc compact, jamais une fois par
+ *       chantier compact : cette unique occurrence affiche (voir {@code chantierChapitreTitreCompacts})
+ *       le chapitre final "Chantiers à effectif réduit" avec un seul graphique consolidé (voir
+ *       {@code RapportBiVue.repartitionChantiersCompacts}), au lieu d'un graphique par chantier.</li>
+ * </ul>
+ * Le tableau employé d'un chantier compact réutilise directement le groupe {@code GroupEquipe}
+ * existant (pas de nouveau groupe JRXML) : pour ces lignes, {@code equipeNom}/{@code equipeTitre}/
+ * {@code equipeEffectif}/{@code equipeMasse}/{@code equipePartChantierPourcent}/{@code equipeStc}
+ * portent les valeurs du CHANTIER (pas d'une vraie équipe — demande explicite de direction : dans un
+ * chantier à 1-2 personnes, juste "chantier + employé", jamais de sous-distinction équipe) ; comme
+ * {@code equipeNom} vaut alors le code chantier (unique), {@code GroupEquipe} se déclenche exactement
+ * une fois par chantier compact, avec {@code isStartNewPage="false"} — plusieurs petits chantiers
+ * s'enchaînent donc sur la même page, sans le saut de page qui posait problème.
  */
 public final class LigneRapportDetailBean {
 
@@ -27,6 +57,10 @@ public final class LigneRapportDetailBean {
     private final List<DistributionVue> chantierDistributionEquipe;
     private final List<RepartitionBean> chantierRepartitionEquipe;
     private final List<RepartitionBean> chantierEvolutionMensuelle;
+    private final boolean chantierCompact;
+    private final String chantierEvolutionCle;
+    private final String chantierEquipesCle;
+    private final String chantierChapitreTitreCompacts;
     private final String equipeNom;
     private final String equipeTitre;
     private final int equipeEffectif;
@@ -51,6 +85,8 @@ public final class LigneRapportDetailBean {
                             List<DistributionVue> chantierDistributionEquipe,
                             List<RepartitionBean> chantierRepartitionEquipe,
                             List<RepartitionBean> chantierEvolutionMensuelle,
+                            boolean chantierCompact, String chantierEvolutionCle, String chantierEquipesCle,
+                            String chantierChapitreTitreCompacts,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, int equipeStc,
                             LigneEmployeVue employe) {
@@ -66,6 +102,10 @@ public final class LigneRapportDetailBean {
         this.chantierDistributionEquipe = chantierDistributionEquipe;
         this.chantierRepartitionEquipe = chantierRepartitionEquipe;
         this.chantierEvolutionMensuelle = chantierEvolutionMensuelle;
+        this.chantierCompact = chantierCompact;
+        this.chantierEvolutionCle = chantierEvolutionCle;
+        this.chantierEquipesCle = chantierEquipesCle;
+        this.chantierChapitreTitreCompacts = chantierChapitreTitreCompacts;
         this.equipeNom = equipeNom;
         this.equipeTitre = equipeTitre;
         this.equipeEffectif = equipeEffectif;
@@ -131,6 +171,22 @@ public final class LigneRapportDetailBean {
 
     public List<RepartitionBean> getChantierEvolutionMensuelle() {
         return chantierEvolutionMensuelle;
+    }
+
+    public boolean getChantierCompact() {
+        return chantierCompact;
+    }
+
+    public String getChantierEvolutionCle() {
+        return chantierEvolutionCle;
+    }
+
+    public String getChantierEquipesCle() {
+        return chantierEquipesCle;
+    }
+
+    public String getChantierChapitreTitreCompacts() {
+        return chantierChapitreTitreCompacts;
     }
 
     public String getEquipeNom() {
