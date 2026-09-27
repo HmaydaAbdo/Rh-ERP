@@ -173,9 +173,17 @@ class PaieBiReportBuilder {
     private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier, String chantierCode,
                                    EvolutionParNiveau evolutions) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
+        // Aucune BI par fonction à ce niveau (demande explicite de direction) : agregatFonctionEquipe
+        // sert UNIQUEMENT à ordonner le tableau employé ci-dessous, jamais affiché en graphique/table
+        // de répartition.
         List<Agregat> agregatFonctionEquipe = agreger(lignesEquipe, this::libelleFonction);
+        Map<String, Integer> rangFonction = new LinkedHashMap<>();
+        for (int i = 0; i < agregatFonctionEquipe.size(); i++) {
+            rangFonction.put(agregatFonctionEquipe.get(i).cle(), i);
+        }
         List<LigneEmployeVue> employes = lignesEquipe.stream()
-                .sorted(Comparator.comparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparing((Paie p) -> rangFonction.get(libelleFonction(p)))
+                        .thenComparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
                 .map(this::ligneEmploye)
                 .toList();
 
@@ -186,8 +194,6 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
-                versDistribution(agregatFonctionEquipe, masseEquipe),
-                versRepartition(agregatFonctionEquipe),
                 evolutions.pourEquipe(chantierCode, nom),
                 employes);
     }
