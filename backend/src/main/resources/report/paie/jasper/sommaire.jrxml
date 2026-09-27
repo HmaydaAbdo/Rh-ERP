@@ -32,14 +32,15 @@
 
     <detail>
         <!-- 100% noir et blanc, aucune alternance de fond (demande explicite de direction) — chaque
-             ligne reste séparée par le seul filet gris clair déjà porté par les <box> ci-dessous. -->
+             ligne reste séparée par le seul filet #011F5B déjà porté par les <box> ci-dessous (même
+             couleur que toutes les autres tables du document, voir rapport.jrxml/tableDistribution.jrxml). -->
         <band height="22" splitType="Prevent">
             <!-- Chapitre de premier niveau (I, II, III, un chantier...) : pleine indentation, gras. -->
             <textField>
                 <reportElement x="0" y="1" width="700" height="19">
                     <printWhenExpression><![CDATA[!Boolean.TRUE.equals($F{sousNiveau})]]></printWhenExpression>
                 </reportElement>
-                <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
                 <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA[$F{titre}]]></textFieldExpression>
             </textField>
@@ -49,13 +50,13 @@
                 <reportElement x="0" y="1" width="700" height="19">
                     <printWhenExpression><![CDATA[Boolean.TRUE.equals($F{sousNiveau})]]></printWhenExpression>
                 </reportElement>
-                <box leftPadding="28" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <box leftPadding="28" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
                 <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{titre}]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="750" y="1" width="52" height="19"/>
-                <box rightPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <box rightPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
                 <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA["p. " + $F{numeroPage}]]></textFieldExpression>
             </textField>

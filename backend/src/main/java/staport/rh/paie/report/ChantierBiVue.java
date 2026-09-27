@@ -9,7 +9,9 @@ import java.util.List;
  * interne par équipe et par fonction (incluant "Sans équipe" — {@code distributionEquipe}/
  * {@code distributionFonction} pour les tables, {@code repartitionEquipe}/{@code repartitionFonction}
  * pour les graphiques, mêmes agrégats sous les deux formes, voir {@code PaieBiReportBuilder}),
- * nombre de départs STC / sortie. Le détail employé est porté par {@link #equipes()}.
+ * nombre de départs STC / sortie, évolution mensuelle (masse et effectif de CE chantier, 12 derniers
+ * mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}). Le détail employé est porté par
+ * {@link #equipes()}.
  */
 record ChantierBiVue(
         String code,
@@ -23,6 +25,7 @@ record ChantierBiVue(
         List<DistributionVue> distributionFonction,
         List<RepartitionBean> repartitionEquipe,
         List<RepartitionBean> repartitionFonction,
+        List<RepartitionBean> evolutionMensuelle,
         List<EquipeBiVue> equipes
 ) {
 }
