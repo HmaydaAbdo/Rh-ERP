@@ -62,6 +62,13 @@ public class PaieReportPdfService {
      * numérotation des chantiers (voir {@link #chapitreChantier}), désormais II au lieu de III. */
     private static final int CHAPITRES_FIXES = 1;
 
+    /** Valeur figée (jamais un vrai code chantier) de {@code chantierEquipesCle} pour TOUTES les
+     * lignes des chantiers compacts (voir {@code ChantierBiVue.compact}) — voir le Javadoc de
+     * {@link LigneRapportDetailBean} pour le mécanisme complet (une seule valeur constante ⇒ le
+     * groupe JRXML {@code GroupChantier} ne se déclenche qu'UNE fois à l'entrée dans le bloc compact,
+     * jamais une fois par chantier compact). */
+    private static final String CLE_CHANTIERS_COMPACTS = "__CHANTIERS_COMPACTS__";
+
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
      * installé au niveau du système d'exploitation qui exécute le backend. L'extension de police
@@ -142,6 +149,7 @@ public class PaieReportPdfService {
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
+        parametres.put("P_REPARTITION_CHANTIERS_COMPACTS", vue.repartitionChantiersCompacts());
         return parametres;
     }
 
@@ -163,13 +171,24 @@ public class PaieReportPdfService {
         return pagesParAncre == null ? 0 : pagesParAncre.getOrDefault(ancre, 0);
     }
 
-    /** Titre de chapitre numéroté d'un chantier ("II — CHANTIER : C168", puis III, IV, ...) — même
-     * style que le chapitre fixe ("I — Vue d'ensemble"), voir {@code rapport.jrxml} (un chantier est
-     * un chapitre du rapport au même titre que le chapitre I). {@code index} est la position du
-     * chantier dans {@code vue.chantiers()} (déjà triée par masse décroissante), jamais recalculée
+    /** Titre de chapitre numéroté d'un chantier détaillé ("II — CHANTIER : C168", puis III, IV, ...) —
+     * même style que le chapitre fixe ("I — Vue d'ensemble"), voir {@code rapport.jrxml} (un chantier
+     * détaillé est un chapitre du rapport au même titre que le chapitre I). {@code index} est la
+     * position du chantier parmi les seuls chantiers DÉTAILLÉS (jamais parmi tous les chantiers : les
+     * chantiers compacts, à la fin de {@code vue.chantiers()} — voir {@code PaieBiReportBuilder} —
+     * n'ont pas de chapitre individuel, voir {@link #chapitreChantiersCompacts}), jamais recalculée
      * indépendamment entre les différents passages de remplissage pour rester synchronisée. */
     private String chapitreChantier(int index, ChantierBiVue chantier) {
         return PaieReportNumberFormat.romain(CHAPITRES_FIXES + index + 1) + " — " + chantier.titre();
+    }
+
+    /** Titre du chapitre final unique consolidant TOUS les chantiers compacts ("V — Chantiers à
+     * effectif réduit" par exemple) — son numéro suit directement le dernier chantier détaillé, jamais
+     * un numéro fixe : {@code nombreChantiersDetailles} chantiers détaillés occupent les chapitres
+     * {@code CHAPITRES_FIXES + 1} à {@code CHAPITRES_FIXES + nombreChantiersDetailles}, donc ce
+     * chapitre est le suivant. */
+    private String chapitreChantiersCompacts(int nombreChantiersDetailles) {
+        return PaieReportNumberFormat.romain(CHAPITRES_FIXES + nombreChantiersDetailles + 1) + " — Chantiers à effectif réduit";
     }
 
     /** Relit un {@code JasperPrint} déjà rendu pour retrouver, pour chaque ancre posée dans le
@@ -191,27 +210,64 @@ public class PaieReportPdfService {
 
     /** Aplatit chantiers → équipes → employés en une seule liste à plat, dénormalisée avec le
      * contexte chantier/équipe — source de données unique de {@code rapport.jrxml} (voir
-     * {@link LigneRapportDetailBean}). */
+     * {@link LigneRapportDetailBean}).
+     *
+     * <p>{@code vue.chantiers()} porte déjà les chantiers détaillés d'abord, puis les compacts (voir
+     * {@code PaieBiReportBuilder}) : {@code indexDetaille} ne compte donc que les premiers (numérotation
+     * de chapitre correcte, voir {@link #chapitreChantier}), tandis que {@code derniereCleEvolution}
+     * "gèle" la clé de déclenchement de {@code GroupChantierEvolution} dès qu'un chantier compact est
+     * rencontré (voir le Javadoc de {@link LigneRapportDetailBean} pour le mécanisme complet — ce
+     * groupe ne doit plus jamais se redéclencher une fois dans le bloc compact). */
     private List<LigneRapportDetailBean> lignesDetail(RapportBiVue vue) {
         List<LigneRapportDetailBean> lignes = new ArrayList<>();
         List<ChantierBiVue> chantiers = vue.chantiers();
-        for (int i = 0; i < chantiers.size(); i++) {
-            ChantierBiVue chantier = chantiers.get(i);
-            String chantierTitreNumerote = chapitreChantier(i, chantier);
+        long nombreChantiersDetailles = chantiers.stream().filter(c -> !c.compact()).count();
+        String titreChapitreCompacts = chapitreChantiersCompacts((int) nombreChantiersDetailles);
+
+        int indexDetaille = 0;
+        String derniereCleEvolution = "";
+        for (ChantierBiVue chantier : chantiers) {
+            String chantierTitreNumerote;
+            String chantierEvolutionCle;
+            String chantierEquipesCle;
+            String chantierChapitreTitreCompacts = null;
+            if (!chantier.compact()) {
+                chantierTitreNumerote = chapitreChantier(indexDetaille, chantier);
+                chantierEvolutionCle = chantier.code();
+                chantierEquipesCle = chantier.code();
+                derniereCleEvolution = chantierEvolutionCle;
+                indexDetaille++;
+            } else {
+                chantierTitreNumerote = chantier.titre();
+                chantierEvolutionCle = derniereCleEvolution;
+                chantierEquipesCle = CLE_CHANTIERS_COMPACTS;
+                chantierChapitreTitreCompacts = titreChapitreCompacts;
+            }
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
             String chantierEffectifNote = "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")";
             String chantierNarratif = chantierNarratif(chantier);
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
+                    // Chantier compact : pas de sous-distinction équipe (demande explicite de
+                    // direction) — le bloc "équipe" du tableau employé porte directement les valeurs du
+                    // chantier, voir le Javadoc de LigneRapportDetailBean.
+                    String equipeNom = chantier.compact() ? chantier.code() : equipe.nom();
+                    String equipeTitre = chantier.compact() ? chantier.titre() : equipe.titre();
+                    int equipeEffectif = chantier.compact() ? chantier.effectif().effectifCourant() : equipe.effectif();
+                    String equipeMasse = chantier.compact() ? chantier.masseFormatee() : equipe.masse();
+                    String equipePartChantierPourcent = chantier.compact() ? chantier.partMasseGlobalePourcent() : equipe.partChantierPourcent();
+                    int equipeStc = chantier.compact() ? chantier.stc() : equipe.stc();
+
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
                             chantier.distributionEquipe(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
-                            equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
-                            equipe.stc(),
+                            chantier.compact(), chantierEvolutionCle, chantierEquipesCle, chantierChapitreTitreCompacts,
+                            equipeNom, equipeTitre, equipeEffectif, equipeMasse, equipePartChantierPourcent,
+                            equipeStc,
                             employe));
                 }
             }

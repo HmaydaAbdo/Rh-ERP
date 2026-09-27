@@ -42,6 +42,12 @@ class PaieBiReportBuilder {
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 15;
     private static final int MOIS_EVOLUTION = 12;
+    /** Effectif maximum d'un chantier "compact" (voir {@link ChantierBiVue#compact()}) — seuil validé
+     * explicitement avec la direction après constat qu'un chantier à 1 ou 2 personnes générait 3 pages
+     * quasi vides (vue d'ensemble + évolution, répartition par équipe, tableau employé) pour un
+     * chantier négligeable dans le rapport. Ces chantiers sont regroupés dans une unique section finale
+     * (voir {@code PaieReportPdfService}), jamais donnés à chacun sa propre page/chapitre. */
+    private static final int SEUIL_CHANTIER_COMPACT = 3;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
@@ -128,12 +134,26 @@ class PaieBiReportBuilder {
                 .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante, evolutions))
                 .toList();
 
+        // Chantiers "détaillés" (leur propre chapitre) d'abord, chantiers "compacts" (regroupés dans un
+        // chapitre final unique, voir PaieReportPdfService) ensuite — masse décroissante conservée dans
+        // chaque partition (chantiers est déjà dans cet ordre, un simple filtrage stable suffit, jamais
+        // un ré-tri). C'est cet ordre de liste, lu tel quel par le gabarit JRXML, qui détermine
+        // entièrement la numérotation des chapitres, jamais un recalcul indépendant côté JRXML.
+        List<ChantierBiVue> chantiersOrdonnes = new ArrayList<>(chantiers.size());
+        chantiers.stream().filter(c -> !c.compact()).forEach(chantiersOrdonnes::add);
+        chantiers.stream().filter(ChantierBiVue::compact).forEach(chantiersOrdonnes::add);
+
+        List<Agregat> agregatChantiersCompacts = agregatChantier.stream()
+                .filter(a -> a.effectif() <= SEUIL_CHANTIER_COMPACT)
+                .toList();
+
         return new RapportBiVue(
                 libellePeriode(periode),
                 LocalDateTime.now().format(FORMAT_DATE_GENERATION),
                 filtresActifs(requete, courant),
                 synthese,
-                chantiers);
+                chantiersOrdonnes,
+                versRepartition(agregatChantiersCompacts));
     }
 
     private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent, BigDecimal masseGlobale,
@@ -160,7 +180,9 @@ class PaieBiReportBuilder {
                 versDistribution(agregatEquipe, masseChantier),
                 versRepartition(agregatEquipe),
                 evolutions.pourChantier(code),
-                equipes);
+                equipes,
+                lignesChantier.size() <= SEUIL_CHANTIER_COMPACT,
+                PaieReportNumberFormat.montant(masseChantier));
     }
 
     private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
