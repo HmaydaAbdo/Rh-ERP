@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
-    private static final int MAX_BARRES_GRAPHIQUE = 20;
+    private static final int MAX_BARRES_GRAPHIQUE = 15;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -54,25 +54,18 @@ class PaieBiReportBuilder {
     private record Agregat(String cle, int effectif, BigDecimal montant, int stc, BigDecimal stcMontant) {
     }
 
-    /** Historique mensuel aux 3 niveaux du rapport (global, chantier, équipe) — dérivés en Java d'un
-     * seul jeu de lignes déjà groupé en base au niveau le plus fin (voir
-     * {@code PaieRepository.sommerParChantierEquipePeriode}), jamais une requête par chantier/équipe.
-     * {@code parEquipe} est clé par {@code "<chantierCode>|<nomEquipe>"} : une équipe n'est unique
-     * qu'au sein de son chantier, jamais globalement (deux chantiers peuvent tous deux avoir une
-     * équipe "A"). */
+    /** Historique mensuel aux 2 niveaux du rapport (global, chantier) — dérivés en Java d'un seul jeu
+     * de lignes déjà groupé en base au niveau le plus fin (voir
+     * {@code PaieRepository.sommerParChantierEquipePeriode}), jamais une requête par chantier. Aucune
+     * BI (donc aucune évolution) au niveau équipe (demande explicite de direction). */
     private record EvolutionParNiveau(
             List<RepartitionBean> global,
-            Map<String, List<RepartitionBean>> parChantier,
-            Map<String, List<RepartitionBean>> parEquipe) {
+            Map<String, List<RepartitionBean>> parChantier) {
 
-        static final EvolutionParNiveau VIDE = new EvolutionParNiveau(List.of(), Map.of(), Map.of());
+        static final EvolutionParNiveau VIDE = new EvolutionParNiveau(List.of(), Map.of());
 
         List<RepartitionBean> pourChantier(String code) {
             return parChantier.getOrDefault(code, List.of());
-        }
-
-        List<RepartitionBean> pourEquipe(String chantierCode, String nomEquipe) {
-            return parEquipe.getOrDefault(chantierCode + "|" + nomEquipe, List.of());
         }
     }
 
@@ -153,7 +146,7 @@ class PaieBiReportBuilder {
         List<EquipeBiVue> equipes = agregatEquipe.stream()
                 .map(Agregat::cle)
                 .sorted(Comparator.comparing((String nom) -> nom.equals(SANS_EQUIPE) ? 1 : 0).thenComparing(Comparator.naturalOrder()))
-                .map(nom -> equipeVue(nom, filtrerParEquipe(lignesChantier, nom), masseChantier, code, evolutions))
+                .map(nom -> equipeVue(nom, filtrerParEquipe(lignesChantier, nom), masseChantier))
                 .toList();
 
         return new ChantierBiVue(
@@ -170,8 +163,7 @@ class PaieBiReportBuilder {
                 equipes);
     }
 
-    private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier, String chantierCode,
-                                   EvolutionParNiveau evolutions) {
+    private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         // Aucune BI par fonction à ce niveau (demande explicite de direction) : agregatFonctionEquipe
         // sert UNIQUEMENT à ordonner le tableau employé ci-dessous, jamais affiché en graphique/table
@@ -194,7 +186,6 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
-                evolutions.pourEquipe(chantierCode, nom),
                 employes);
     }
 
@@ -272,21 +263,24 @@ class PaieBiReportBuilder {
         return valeurs;
     }
 
-    /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
-     * alimentant les 2 graphiques d'évolution de la synthèse globale — un point par mois, y compris
-     * les mois sans aucun bulletin (masse et effectif à 0, une absence réelle de paie ce mois-là,
-     * jamais une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
-    /** Historique mensuel aux 3 niveaux (global, chantier, équipe) — une seule requête groupée au
-     * niveau le plus fin (voir {@code PaieRepository.sommerParChantierEquipePeriode} pour la
-     * justification performance), le global et le chantier en sont dérivés par simple somme des
-     * lignes déjà en mémoire, jamais une requête supplémentaire par chantier/équipe. */
+    /** Historique mensuel aux 2 niveaux (global, chantier) — une seule requête groupée au niveau le
+     * plus fin (voir {@code PaieRepository.sommerParChantierEquipePeriode} pour la justification
+     * performance), le global en est dérivé par simple somme des lignes déjà en mémoire, jamais une
+     * requête supplémentaire par chantier. Fenêtre glissante d'AU PLUS {@value #MOIS_EVOLUTION} mois,
+     * mais jamais avant le premier mois où une paie existe réellement en base (voir
+     * {@link PaieRepository#premierePeriode()}) — sans ce plancher, un système mis en place il y a 2
+     * mois afficherait 10 mois "fantômes" à zéro avant la donnée réelle (demande explicite de
+     * direction : le graphique doit grandir mois après mois, jamais partir d'un historique qui n'a
+     * jamais existé). */
     private EvolutionParNiveau evolutionParNiveau(YearMonth periode) {
-        YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
+        YearMonth premierePeriode = repository.premierePeriode().orElse(periode);
+        YearMonth debut = premierePeriode.isAfter(periode.minusMonths(MOIS_EVOLUTION - 1))
+                ? premierePeriode
+                : periode.minusMonths(MOIS_EVOLUTION - 1);
         List<EvolutionChantierEquipeProjection> lignes = repository.sommerParChantierEquipePeriode(debut, periode);
 
         Map<YearMonth, Cumul> global = new LinkedHashMap<>();
         Map<String, Map<YearMonth, Cumul>> parChantier = new LinkedHashMap<>();
-        Map<String, Map<YearMonth, Cumul>> parEquipe = new LinkedHashMap<>();
 
         for (EvolutionChantierEquipeProjection ligne : lignes) {
             YearMonth mois = ligne.getPeriode();
@@ -295,17 +289,14 @@ class PaieBiReportBuilder {
             long stc = ligne.getStc() == null ? 0 : ligne.getStc();
             BigDecimal stcMontant = ligne.getStcMontant() == null ? BigDecimal.ZERO : ligne.getStcMontant();
             String chantier = ligne.getChantierCode();
-            String equipe = libelleEquipe(ligne.getEquipe());
 
             cumuler(global, mois, masse, effectif, stc, stcMontant);
             cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif, stc, stcMontant);
-            cumuler(parEquipe.computeIfAbsent(chantier + "|" + equipe, c -> new LinkedHashMap<>()), mois, masse, effectif, stc, stcMontant);
         }
 
         return new EvolutionParNiveau(
-                pointsMensuels(periode, global),
-                versPointsParCle(periode, parChantier),
-                versPointsParCle(periode, parEquipe));
+                pointsMensuels(debut, periode, global),
+                versPointsParCle(debut, periode, parChantier));
     }
 
     private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif, long stc,
@@ -317,18 +308,19 @@ class PaieBiReportBuilder {
         cumul.stcMontant = cumul.stcMontant.add(stcMontant);
     }
 
-    private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
+    private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth debut, YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
         Map<String, List<RepartitionBean>> resultat = new LinkedHashMap<>();
-        parCle.forEach((cle, parMois) -> resultat.put(cle, pointsMensuels(periode, parMois)));
+        parCle.forEach((cle, parMois) -> resultat.put(cle, pointsMensuels(debut, periode, parMois)));
         return resultat;
     }
 
-    /** Un point par mois sur {@value #MOIS_EVOLUTION} mois (mois courant compris), y compris les mois
-     * sans aucun bulletin pour ce périmètre (masse, effectif et STC à 0 — une absence réelle de paie
-     * ce mois-là, pas une valeur inconnue à distinguer comme le fait la comparaison mois précédent). */
-    private List<RepartitionBean> pointsMensuels(YearMonth periode, Map<YearMonth, Cumul> parMois) {
+    /** Un point par mois entre {@code debut} et {@code periode} (bornes incluses — voir
+     * {@link #evolutionParNiveau} pour le calcul de {@code debut}, jamais fixé à
+     * {@value #MOIS_EVOLUTION} mois de façon rigide), y compris les mois sans aucun bulletin pour ce
+     * périmètre (masse, effectif et STC à 0 — une absence réelle de paie ce mois-là, pas une valeur
+     * inconnue à distinguer comme le fait la comparaison mois précédent). */
+    private List<RepartitionBean> pointsMensuels(YearMonth debut, YearMonth periode, Map<YearMonth, Cumul> parMois) {
         List<RepartitionBean> points = new ArrayList<>();
-        YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
         for (YearMonth mois = debut; !mois.isAfter(periode); mois = mois.plusMonths(1)) {
             Cumul cumul = parMois.get(mois);
             points.add(new RepartitionBean(

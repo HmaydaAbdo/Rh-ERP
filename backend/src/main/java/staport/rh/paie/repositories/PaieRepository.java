@@ -60,4 +60,13 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             "FROM Paie p WHERE p.periode BETWEEN :debut AND :fin " +
             "GROUP BY p.chantier.code, p.equipe, p.periode")
     List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
+
+    /** Mois le plus ancien pour lequel une paie existe, toutes périodes confondues — sert à ne pas
+     * afficher de mois "fantômes" antérieurs à la mise en place du système sur les graphiques
+     * d'évolution (voir {@code PaieBiReportBuilder.evolutionParNiveau}) : la fenêtre glissante de 12
+     * mois ne démarre jamais avant ce mois, même si la période demandée le permettrait. {@code
+     * Optional.empty()} seulement si la table est vide (jamais atteint en pratique : le rapport lève
+     * déjà {@code AucunePaiePeriodeException} avant d'en arriver là). */
+    @Query("SELECT MIN(p.periode) FROM Paie p")
+    Optional<YearMonth> premierePeriode();
 }
