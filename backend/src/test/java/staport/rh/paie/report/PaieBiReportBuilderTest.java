@@ -83,12 +83,11 @@ class PaieBiReportBuilderTest {
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(macon, operateur), List.of());
 
-        assertThat(vue.synthese().repartitionChantierEquipe())
-                .extracting(RepartitionCroiseeBean::getLibelleChantier, RepartitionCroiseeBean::getLibelleEquipe,
-                        RepartitionCroiseeBean::getEffectif, r -> r.getMontant().intValue())
+        assertThat(vue.synthese().repartitionChantier())
+                .extracting(RepartitionBean::getLibelle, RepartitionBean::getEffectif, r -> r.getMontant().intValue())
                 .containsExactlyInAnyOrder(
-                        org.assertj.core.groups.Tuple.tuple("C059", "EQUIPE A", 1, 5000),
-                        org.assertj.core.groups.Tuple.tuple("C068", "EQUIPE B", 1, 3000));
+                        org.assertj.core.groups.Tuple.tuple("C059", 1, 5000),
+                        org.assertj.core.groups.Tuple.tuple("C068", 1, 3000));
         assertThat(vue.synthese().repartitionFonction())
                 .extracting(RepartitionBean::getLibelle, RepartitionBean::getEffectif, r -> r.getMontant().intValue())
                 .containsExactlyInAnyOrder(
