@@ -33,8 +33,6 @@ public final class LigneRapportDetailBean {
     private final String equipeMasse;
     private final String equipePartChantierPourcent;
     private final int equipeStc;
-    private final List<DistributionVue> equipeDistributionFonction;
-    private final List<RepartitionBean> equipeRepartitionFonction;
     private final List<RepartitionBean> equipeEvolutionMensuelle;
     private final String nomPrenom;
     private final String fonction;
@@ -56,7 +54,6 @@ public final class LigneRapportDetailBean {
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, int equipeStc,
-                            List<DistributionVue> equipeDistributionFonction, List<RepartitionBean> equipeRepartitionFonction,
                             List<RepartitionBean> equipeEvolutionMensuelle,
                             LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
@@ -77,8 +74,6 @@ public final class LigneRapportDetailBean {
         this.equipeMasse = equipeMasse;
         this.equipePartChantierPourcent = equipePartChantierPourcent;
         this.equipeStc = equipeStc;
-        this.equipeDistributionFonction = equipeDistributionFonction;
-        this.equipeRepartitionFonction = equipeRepartitionFonction;
         this.equipeEvolutionMensuelle = equipeEvolutionMensuelle;
         this.nomPrenom = employe.nomPrenom();
         this.fonction = employe.fonction();
@@ -163,14 +158,6 @@ public final class LigneRapportDetailBean {
 
     public int getEquipeStc() {
         return equipeStc;
-    }
-
-    public List<DistributionVue> getEquipeDistributionFonction() {
-        return equipeDistributionFonction;
-    }
-
-    public List<RepartitionBean> getEquipeRepartitionFonction() {
-        return equipeRepartitionFonction;
     }
 
     public List<RepartitionBean> getEquipeEvolutionMensuelle() {
