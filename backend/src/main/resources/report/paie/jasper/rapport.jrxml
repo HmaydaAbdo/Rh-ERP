@@ -333,7 +333,7 @@
                 <textField>
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["II — Masse, effectif et STC par chantier"]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["II — Vue par chantier"]]></textFieldExpression>
                 </textField>
                 <line>
                     <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
@@ -388,14 +388,15 @@
          réintroduction, simplement plus consommé ici tant que la donnée n'est pas fiable. -->
 
     <!-- Vue détaillée par chantier, sur 2 pages (même principe que le chapitre II — un seul
-         graphique groupé à 3 séries masse/effectif/STC, jamais 2 graphiques séparés) :
+         graphique groupé à 4 séries masse/effectif/STC personnes/STC DH, jamais 2 graphiques
+         séparés) :
            - page 1 (GroupChantierEvolution) : titre + cartes KPI + narratif + historique mensuel
              (4 séries normalisées, premier graphique vu, voir la hiérarchie KPI → graphes → tableaux) ;
-           - page 2 (GroupChantier) : RÉPARTITION PAR ÉQUIPE, UN SEUL graphique groupé
-             masse/effectif/STC — SANS tableau (demande explicite de direction). La répartition par
-             fonction au niveau chantier (ex-GroupChantierFonction, 3ᵉ page) a été supprimée : doublon
-             avec la répartition par fonction, plus fine, déjà affichée au niveau équipe (voir
-             GroupEquipeEvolution ci-dessous). -->
+           - page 2 (GroupChantier) : "MASSE, EFFECTIF ET STC PAR ÉQUIPE", UN SEUL graphique groupé
+             à 4 séries — SANS tableau (demande explicite de direction). La répartition par fonction
+             au niveau chantier (ex-GroupChantierFonction, 3ᵉ page) a été supprimée : doublon avec la
+             répartition par fonction alors affichée au niveau équipe — cette dernière a depuis, elle
+             aussi, été retirée (aucune BI au niveau équipe, voir GroupEquipeEvolution ci-dessous). -->
     <group name="GroupChantierEvolution" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
@@ -563,7 +564,7 @@
                 <textField>
                     <reportElement x="0" y="0" width="802" height="16" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["RÉPARTITION PAR ÉQUIPE"]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["MASSE, EFFECTIF ET STC PAR ÉQUIPE"]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
                 </textField>
 
