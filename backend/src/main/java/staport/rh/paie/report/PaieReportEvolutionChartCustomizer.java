@@ -5,6 +5,7 @@ import net.sf.jasperreports.engine.JRChartCustomizer;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.labels.ItemLabelAnchor;
 import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
@@ -29,19 +30,39 @@ import java.util.Map;
  * ET en montant — 4 séries) — un seul graphique par niveau (Global, Chantier, Équipe), demande
  * explicite de direction.
  *
- * <p><b>Normalisation par série (même technique que {@link PaieReportGroupedChartCustomizer})</b> :
- * un double axe Y (masse à gauche, effectif+STC à droite) avait d'abord été tenté, mais s'est révélé
- * insuffisant sur données réelles — l'effectif (ex. 969 personnes) écrase visuellement le STC en
- * personnes (ex. 37) même partagé sur le même axe droit, sa courbe devenant quasi plate contre l'axe
- * (constaté en production). Avec 4 séries d'ordres de grandeur radicalement différents (masse en
- * millions de DH, STC en DH généralement bien plus petit, effectif et STC en personnes sur des
- * échelles elles-mêmes très différentes l'une de l'autre), aucun regroupement à 2 axes ne suffit à
- * garantir que les 4 restent simultanément lisibles. Ce customizer normalise donc chaque série à sa
- * PROPRE valeur maximale (0 à 1, indépendamment des 3 autres) avant de la tracer : la forme/tendance
- * de chaque courbe reste pleinement lisible quelle que soit son échelle réelle, l'axe des valeurs est
- * masqué (il ne représenterait plus rien de cohérent une fois les 4 échelles mélangées sur un même
- * repère), et la vraie valeur (jamais la valeur normalisée) reste affichée en étiquette sur le
- * dernier point de chaque série, lue dans une table conservée avant normalisation.
+ * <p><b>2 axes Y visibles comme repères d'unité, PAS comme échelle réelle</b> : demande explicite de
+ * direction (« laisser les axes, au moins comme mesure d'unité, un pour personnes et l'autre pour
+ * DH »). Axe gauche libellé "DH" (masse, STC en DH), axe droit libellé "Personnes" (effectif, STC en
+ * personnes) — mais leurs graduations numériques restent masquées ({@code setTickLabelsVisible}/
+ * {@code setTickMarksVisible} à {@code false}) : un double axe Y à échelle RÉELLE avait déjà été
+ * tenté et écarté (voir historique ci-dessous), les 2 axes ici ne servent qu'à indiquer visuellement
+ * quel côté du graphique regrouper mentalement, jamais à lire une valeur dessus.
+ *
+ * <p><b>Chaque série reste normalisée à sa PROPRE valeur maximale</b> (0 à 1, même technique que
+ * {@link PaieReportGroupedChartCustomizer}), y compris entre les 2 séries d'une même famille
+ * d'unité : regrouper masse/effectif par axe ne suffit pas à lui seul, l'effectif (ex. 969 personnes)
+ * écraserait toujours le STC en personnes (ex. 37) s'ils partageaient une échelle commune, même sur
+ * un axe purement décoratif. La forme/tendance de chaque courbe reste donc pleinement lisible quelle
+ * que soit son échelle réelle, et la vraie valeur (jamais la valeur normalisée) reste affichée en
+ * étiquette sur le dernier point de chaque série, lue dans une table conservée avant normalisation.
+ *
+ * <p><b>Étiquettes orientées vers leur axe</b> : familles DH (masse, STC en DH) étiquetées côté
+ * GAUCHE du point, familles Personnes (effectif, STC en personnes) côté DROIT — demande explicite de
+ * direction, pour ne plus faire cohabiter au même endroit une étiquette en DH et une en personnes
+ * (constaté en production : les 2 valeurs du dernier mois se chevauchaient near le coin supérieur
+ * droit). Au sein d'une même famille (2 séries maximum), alternance haut/bas pour limiter le risque
+ * résiduel si les 2 séries de cette famille culminent au même mois.
+ *
+ * <p><b>Historique</b> : une 1ʳᵉ version à double axe Y RÉEL (masse à gauche, effectif + STC en
+ * personnes à droite, partageant la même échelle) fonctionnait sur données synthétiques modestes mais
+ * s'est révélée insuffisante sur données réelles — un effectif à ~969 personnes écrasait
+ * visuellement un STC à ~37 sur le même axe droit, sa courbe devenant quasi plate. Remplacée par une
+ * normalisation par série à axe unique masqué, qui a résolu la lisibilité mais, avec un historique
+ * mensuel encore clairsemé (un seul mois de données réelles, les 11 précédents à 0), faisait
+ * parfois coïncider exactement plusieurs séries au même point (0 partout puis 1 au dernier mois),
+ * chevauchant leurs étiquettes de valeur. La version actuelle combine les 2 leçons : normalisation
+ * par série (résout l'écart d'échelle) + répartition des étiquettes par famille d'unité gauche/droite
+ * (résout le chevauchement).
  */
 public final class PaieReportEvolutionChartCustomizer implements JRChartCustomizer {
 
@@ -51,6 +72,8 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
     private static final Color COULEUR_STC_MONTANT = new Color(0x7F, 0x1D, 0x1D);
     private static final Color COULEUR_GRILLE = new Color(0xDD, 0xDD, 0xDD);
     private static final String SERIE_MASSE = "Masse (DH)";
+    private static final String SERIE_EFFECTIF = "Effectif (personnes)";
+    private static final String SERIE_STC_PERSONNES = "STC (personnes)";
     private static final String SERIE_STC_MONTANT = "STC (DH)";
 
     @Override
@@ -65,10 +88,11 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         plot.setBackgroundPaint(Color.WHITE);
         plot.setOutlineVisible(false);
         plot.setRangeGridlinePaint(COULEUR_GRILLE);
-        // Marge haute ET basse : les étiquettes alternent au-dessus/en dessous du dernier point selon
-        // la série (voir plus bas), il leur faut de la place des 2 côtés.
-        plot.setInsets(new RectangleInsets(20, 4, 20, 44));
-        plot.getRangeAxis().setVisible(false);
+        // Marge de droite généreuse : les étiquettes "Personnes" s'étendent vers la droite depuis un
+        // point déjà situé sur la dernière catégorie (mois courant, bord droit du graphique) — sans
+        // cette marge elles seraient tronquées. Marge de gauche plus fine : les étiquettes "DH"
+        // s'étendent vers l'intérieur du graphique, jamais vers son bord.
+        plot.setInsets(new RectangleInsets(20, 8, 20, 72));
 
         CategoryAxis categoryAxis = plot.getDomainAxis();
         categoryAxis.setTickLabelFont(new Font("Liberation Serif", Font.PLAIN, 8));
@@ -80,7 +104,6 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         }
 
         // Vraies valeurs (avant normalisation), conservées pour l'étiquette — clé (série, catégorie).
-        // Le dataset réellement tracé (ci-dessous) ne contient plus que des valeurs 0..1.
         Map<String, Map<String, Number>> vraiesValeurs = new LinkedHashMap<>();
         Map<String, Double> maxParSerie = new LinkedHashMap<>();
         for (int row = 0; row < original.getRowCount(); row++) {
@@ -98,24 +121,58 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
             maxParSerie.put(serie, max);
         }
 
-        DefaultCategoryDataset normalise = new DefaultCategoryDataset();
+        // Scinde le dataset unique (4 séries) en 2 familles d'unité — chaque valeur reste normalisée
+        // à sa PROPRE série (pas à sa famille), voir la Javadoc de classe.
+        DefaultCategoryDataset dsDh = new DefaultCategoryDataset();
+        DefaultCategoryDataset dsPersonnes = new DefaultCategoryDataset();
         for (int row = 0; row < original.getRowCount(); row++) {
             String serie = String.valueOf(original.getRowKey(row));
             double max = maxParSerie.getOrDefault(serie, 0.0);
+            DefaultCategoryDataset cible = estFamilleDh(serie) ? dsDh : dsPersonnes;
             for (int col = 0; col < original.getColumnCount(); col++) {
                 Number valeur = original.getValue(row, col);
                 double normalisee = (valeur == null || max <= 0) ? 0 : valeur.doubleValue() / max;
-                normalise.addValue(normalisee, serie, original.getColumnKey(col));
+                cible.addValue(normalisee, serie, original.getColumnKey(col));
             }
         }
-        plot.setDataset(normalise);
 
-        LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
+        NumberAxis axeGauche = (NumberAxis) plot.getRangeAxis();
+        axeGauche.setLabel("DH");
+        axeGauche.setLabelFont(new Font("Liberation Serif", Font.BOLD, 8));
+        axeGauche.setTickLabelsVisible(false);
+        axeGauche.setTickMarksVisible(false);
+        axeGauche.setVisible(true);
+        plot.setDataset(0, dsDh);
 
-        int nbSeries = normalise.getRowCount();
-        for (int serie = 0; serie < nbSeries; serie++) {
-            String cle = String.valueOf(normalise.getRowKey(serie));
+        NumberAxis axeDroite = new NumberAxis("Personnes");
+        axeDroite.setLabelFont(new Font("Liberation Serif", Font.BOLD, 8));
+        axeDroite.setTickLabelsVisible(false);
+        axeDroite.setTickMarksVisible(false);
+        plot.setRangeAxis(1, axeDroite);
+        plot.setDataset(1, dsPersonnes);
+        plot.mapDatasetToRangeAxis(1, 1);
+
+        LineAndShapeRenderer rendererDh = (LineAndShapeRenderer) plot.getRenderer(0);
+        LineAndShapeRenderer rendererPersonnes = new LineAndShapeRenderer();
+        plot.setRenderer(1, rendererPersonnes);
+
+        styliser(rendererDh, dsDh, vraiesValeurs);
+        styliser(rendererPersonnes, dsPersonnes, vraiesValeurs);
+    }
+
+    private boolean estFamilleDh(String serie) {
+        return SERIE_MASSE.equals(serie) || SERIE_STC_MONTANT.equals(serie);
+    }
+
+    /** Style commun aux 2 renderers (1 par famille d'unité, 2 séries chacun au plus) — étiquette de
+     * valeur affichée uniquement sur le dernier point de chaque série (mois courant), orientée vers
+     * l'axe de sa famille, alternée haut/bas au sein de la famille. */
+    private void styliser(LineAndShapeRenderer renderer, CategoryDataset dataset, Map<String, Map<String, Number>> vraiesValeurs) {
+        for (int serie = 0; serie < dataset.getRowCount(); serie++) {
+            String cle = String.valueOf(dataset.getRowKey(serie));
             boolean montant = SERIE_MASSE.equals(cle) || SERIE_STC_MONTANT.equals(cle);
+            boolean gauche = estFamilleDh(cle);
+            boolean premiereDeSaFamille = SERIE_MASSE.equals(cle) || SERIE_EFFECTIF.equals(cle);
             Color couleur = couleurDe(cle);
 
             renderer.setSeriesPaint(serie, couleur);
@@ -126,24 +183,19 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
             renderer.setUseFillPaint(true);
             renderer.setSeriesFillPaint(serie, Color.WHITE);
 
-            // Étiquette de valeur affichée UNIQUEMENT sur le dernier point (mois courant) de chaque
-            // série — avec jusqu'à 12 points dont plusieurs mois à 0 tant que l'historique n'est pas
-            // encore constitué, étiqueter chaque point les ferait toutes s'empiler et devenir
-            // illisibles. Lit la VRAIE valeur dans la table conservée avant normalisation, jamais la
-            // valeur normalisée réellement tracée.
             renderer.setSeriesItemLabelsVisible(serie, Boolean.TRUE);
             renderer.setSeriesItemLabelFont(serie, new Font("Liberation Serif", Font.BOLD, 8));
             renderer.setSeriesItemLabelPaint(serie, couleur.darker());
             renderer.setSeriesItemLabelGenerator(serie, new StandardCategoryItemLabelGenerator(
                     "{2}", new DecimalFormat("#,##0")) {
                 @Override
-                public String generateLabel(CategoryDataset dataset, int row, int column) {
-                    if (column != dataset.getColumnCount() - 1) {
+                public String generateLabel(CategoryDataset ds, int row, int column) {
+                    if (column != ds.getColumnCount() - 1) {
                         return null;
                     }
-                    String serieCourante = String.valueOf(dataset.getRowKey(row));
+                    String serieCourante = String.valueOf(ds.getRowKey(row));
                     Number valeur = vraiesValeurs.getOrDefault(serieCourante, Map.of())
-                            .get(String.valueOf(dataset.getColumnKey(column)));
+                            .get(String.valueOf(ds.getColumnKey(column)));
                     if (valeur == null) {
                         return null;
                     }
@@ -152,14 +204,16 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
                             : PaieReportNumberFormat.entier(valeur.intValue());
                 }
             });
-            // Alterne au-dessus / en dessous du point selon la parité de la série : les 4 courbes
-            // étant désormais toutes normalisées sur la même échelle 0-1, rien ne garantit que leurs
-            // derniers points respectifs ne se retrouvent pas à la même hauteur écran — alterner
-            // réduit fortement le risque de chevauchement des étiquettes (constaté en production avec
-            // un même ancrage pour toutes les séries).
-            renderer.setSeriesPositiveItemLabelPosition(serie, serie % 2 == 0
-                    ? new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.BOTTOM_RIGHT)
-                    : new ItemLabelPosition(ItemLabelAnchor.OUTSIDE6, TextAnchor.TOP_RIGHT));
+            ItemLabelAnchor ancre;
+            TextAnchor texte;
+            if (gauche) {
+                ancre = premiereDeSaFamille ? ItemLabelAnchor.OUTSIDE10 : ItemLabelAnchor.OUTSIDE8;
+                texte = premiereDeSaFamille ? TextAnchor.BOTTOM_RIGHT : TextAnchor.TOP_RIGHT;
+            } else {
+                ancre = premiereDeSaFamille ? ItemLabelAnchor.OUTSIDE2 : ItemLabelAnchor.OUTSIDE4;
+                texte = premiereDeSaFamille ? TextAnchor.BOTTOM_LEFT : TextAnchor.TOP_LEFT;
+            }
+            renderer.setSeriesPositiveItemLabelPosition(serie, new ItemLabelPosition(ancre, texte));
         }
     }
 
@@ -170,6 +224,6 @@ public final class PaieReportEvolutionChartCustomizer implements JRChartCustomiz
         if (SERIE_STC_MONTANT.equals(serie)) {
             return COULEUR_STC_MONTANT;
         }
-        return "STC (personnes)".equals(serie) ? COULEUR_STC_PERSONNES : COULEUR_EFFECTIF;
+        return SERIE_STC_PERSONNES.equals(serie) ? COULEUR_STC_PERSONNES : COULEUR_EFFECTIF;
     }
 }
