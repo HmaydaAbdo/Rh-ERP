@@ -33,7 +33,6 @@ public final class LigneRapportDetailBean {
     private final String equipeMasse;
     private final String equipePartChantierPourcent;
     private final int equipeStc;
-    private final List<RepartitionBean> equipeEvolutionMensuelle;
     private final String nomPrenom;
     private final String fonction;
     private final String cin;
@@ -54,7 +53,6 @@ public final class LigneRapportDetailBean {
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, int equipeStc,
-                            List<RepartitionBean> equipeEvolutionMensuelle,
                             LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
         this.chantierTitre = chantierTitre;
@@ -74,7 +72,6 @@ public final class LigneRapportDetailBean {
         this.equipeMasse = equipeMasse;
         this.equipePartChantierPourcent = equipePartChantierPourcent;
         this.equipeStc = equipeStc;
-        this.equipeEvolutionMensuelle = equipeEvolutionMensuelle;
         this.nomPrenom = employe.nomPrenom();
         this.fonction = employe.fonction();
         this.cin = employe.cin();
@@ -158,10 +155,6 @@ public final class LigneRapportDetailBean {
 
     public int getEquipeStc() {
         return equipeStc;
-    }
-
-    public List<RepartitionBean> getEquipeEvolutionMensuelle() {
-        return equipeEvolutionMensuelle;
     }
 
     public String getNomPrenom() {

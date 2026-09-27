@@ -55,12 +55,12 @@ public class PaieReportPdfService {
     private static final String DOSSIER_JASPER = "report/paie/jasper/";
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
 
-    /** Nombre de chapitres romains fixes avant le premier chantier (I — Synthèse globale,
-     * II — Répartition par chantier) — détermine à partir de quel chiffre romain démarre la
-     * numérotation des chantiers (voir {@link #chapitreChantier}). Le chapitre « III — Répartition
-     * par fonction » a été retiré temporairement (doublons non nettoyés dans le référentiel Fonction,
-     * voir TODO.md) ; les chantiers reprennent donc la suite à III. */
-    private static final int CHAPITRES_FIXES = 2;
+    /** Nombre de chapitres romains fixes avant le premier chantier — un seul désormais, « I — Vue
+     * d'ensemble » (demande explicite de direction : le graphique "Vue par chantier", auparavant
+     * chapitre romain « II », est devenu la sous-section arabe "2" de ce même chapitre I, voir
+     * rapport.jrxml GroupGraphChantier) — détermine à partir de quel chiffre romain démarre la
+     * numérotation des chantiers (voir {@link #chapitreChantier}), désormais II au lieu de III. */
+    private static final int CHAPITRES_FIXES = 1;
 
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
@@ -89,13 +89,11 @@ public class PaieReportPdfService {
 
     private final PaieBiReportBuilder biReportBuilder;
     private final JasperReport rapportReport;
-    private final JasperReport tableDistributionReport;
     private final byte[] logo;
 
     PaieReportPdfService(PaieBiReportBuilder biReportBuilder) {
         this.biReportBuilder = biReportBuilder;
         this.rapportReport = compiler("rapport.jrxml");
-        this.tableDistributionReport = compiler("tableDistribution.jrxml");
         this.logo = chargerLogo();
     }
 
@@ -144,7 +142,6 @@ public class PaieReportPdfService {
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
-        parametres.put("SUBREPORT_DISTRIBUTION", tableDistributionReport);
         return parametres;
     }
 
@@ -166,11 +163,11 @@ public class PaieReportPdfService {
         return pagesParAncre == null ? 0 : pagesParAncre.getOrDefault(ancre, 0);
     }
 
-    /** Titre de chapitre numéroté d'un chantier ("III — CHANTIER : C168", puis IV, V, ...) — même
-     * style que les chapitres fixes ("I — Synthèse globale"), voir {@code rapport.jrxml} (un chantier
-     * est un chapitre du rapport au même titre que les 3 premiers). {@code index} est la position du
+    /** Titre de chapitre numéroté d'un chantier ("II — CHANTIER : C168", puis III, IV, ...) — même
+     * style que le chapitre fixe ("I — Vue d'ensemble"), voir {@code rapport.jrxml} (un chantier est
+     * un chapitre du rapport au même titre que le chapitre I). {@code index} est la position du
      * chantier dans {@code vue.chantiers()} (déjà triée par masse décroissante), jamais recalculée
-     * indépendamment entre le Sommaire et le corps du rapport pour rester synchronisée. */
+     * indépendamment entre les différents passages de remplissage pour rester synchronisée. */
     private String chapitreChantier(int index, ChantierBiVue chantier) {
         return PaieReportNumberFormat.romain(CHAPITRES_FIXES + index + 1) + " — " + chantier.titre();
     }
@@ -214,7 +211,7 @@ public class PaieReportPdfService {
                             chantier.distributionEquipe(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
-                            equipe.stc(), equipe.evolutionMensuelle(),
+                            equipe.stc(),
                             employe));
                 }
             }
