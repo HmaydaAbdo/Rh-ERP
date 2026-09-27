@@ -26,12 +26,16 @@ public final class LigneRapportDetailBean {
     private final String chantierNarratif;
     private final List<DistributionVue> chantierDistributionEquipe;
     private final List<DistributionVue> chantierDistributionFonction;
-    private final List<CroisementBean> chantierCroisementEquipeFonction;
+    private final List<RepartitionBean> chantierRepartitionEquipe;
+    private final List<RepartitionBean> chantierRepartitionFonction;
+    private final List<RepartitionBean> chantierEvolutionMensuelle;
     private final String equipeNom;
     private final String equipeTitre;
     private final int equipeEffectif;
     private final String equipeMasse;
     private final String equipePartChantierPourcent;
+    private final int equipeStc;
+    private final List<RepartitionBean> equipeEvolutionMensuelle;
     private final String nomPrenom;
     private final String fonction;
     private final String cin;
@@ -48,9 +52,11 @@ public final class LigneRapportDetailBean {
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
                             String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
                             List<DistributionVue> chantierDistributionEquipe, List<DistributionVue> chantierDistributionFonction,
-                            List<CroisementBean> chantierCroisementEquipeFonction,
+                            List<RepartitionBean> chantierRepartitionEquipe, List<RepartitionBean> chantierRepartitionFonction,
+                            List<RepartitionBean> chantierEvolutionMensuelle,
                             String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
-                            String equipePartChantierPourcent, LigneEmployeVue employe) {
+                            String equipePartChantierPourcent, int equipeStc, List<RepartitionBean> equipeEvolutionMensuelle,
+                            LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
         this.chantierTitre = chantierTitre;
         this.chantierMasseLigne = chantierMasseLigne;
@@ -62,12 +68,16 @@ public final class LigneRapportDetailBean {
         this.chantierNarratif = chantierNarratif;
         this.chantierDistributionEquipe = chantierDistributionEquipe;
         this.chantierDistributionFonction = chantierDistributionFonction;
-        this.chantierCroisementEquipeFonction = chantierCroisementEquipeFonction;
+        this.chantierRepartitionEquipe = chantierRepartitionEquipe;
+        this.chantierRepartitionFonction = chantierRepartitionFonction;
+        this.chantierEvolutionMensuelle = chantierEvolutionMensuelle;
         this.equipeNom = equipeNom;
         this.equipeTitre = equipeTitre;
         this.equipeEffectif = equipeEffectif;
         this.equipeMasse = equipeMasse;
         this.equipePartChantierPourcent = equipePartChantierPourcent;
+        this.equipeStc = equipeStc;
+        this.equipeEvolutionMensuelle = equipeEvolutionMensuelle;
         this.nomPrenom = employe.nomPrenom();
         this.fonction = employe.fonction();
         this.cin = employe.cin();
@@ -125,8 +135,16 @@ public final class LigneRapportDetailBean {
         return chantierDistributionFonction;
     }
 
-    public List<CroisementBean> getChantierCroisementEquipeFonction() {
-        return chantierCroisementEquipeFonction;
+    public List<RepartitionBean> getChantierRepartitionEquipe() {
+        return chantierRepartitionEquipe;
+    }
+
+    public List<RepartitionBean> getChantierRepartitionFonction() {
+        return chantierRepartitionFonction;
+    }
+
+    public List<RepartitionBean> getChantierEvolutionMensuelle() {
+        return chantierEvolutionMensuelle;
     }
 
     public String getEquipeNom() {
@@ -147,6 +165,14 @@ public final class LigneRapportDetailBean {
 
     public String getEquipePartChantierPourcent() {
         return equipePartChantierPourcent;
+    }
+
+    public int getEquipeStc() {
+        return equipeStc;
+    }
+
+    public List<RepartitionBean> getEquipeEvolutionMensuelle() {
+        return equipeEvolutionMensuelle;
     }
 
     public String getNomPrenom() {

@@ -14,6 +14,7 @@
 
     <field name="titre" class="java.lang.String"/>
     <field name="numeroPage" class="java.lang.Integer"/>
+    <field name="sousNiveau" class="java.lang.Boolean"/>
 
     <title>
         <band height="40">
@@ -31,17 +32,31 @@
 
     <detail>
         <!-- 100% noir et blanc, aucune alternance de fond (demande explicite de direction) — chaque
-             ligne reste séparée par le seul filet gris clair déjà porté par les <box> ci-dessous. -->
-        <band height="24" splitType="Prevent">
+             ligne reste séparée par le seul filet #011F5B déjà porté par les <box> ci-dessous (même
+             couleur que toutes les autres tables du document, voir rapport.jrxml/tableDistribution.jrxml). -->
+        <band height="22" splitType="Prevent">
+            <!-- Chapitre de premier niveau (I, II, III, un chantier...) : pleine indentation, gras. -->
             <textField>
-                <reportElement x="0" y="2" width="700" height="20"/>
-                <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
-                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="13"/></textElement>
+                <reportElement x="0" y="1" width="700" height="19">
+                    <printWhenExpression><![CDATA[!Boolean.TRUE.equals($F{sousNiveau})]]></printWhenExpression>
+                </reportElement>
+                <box leftPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$F{titre}]]></textFieldExpression>
+            </textField>
+            <!-- Sous-section (1., 2., ...) : indentée sous le chapitre qui la précède, texte plus
+                 discret — sa numérotation arabe est déjà dans le libellé (voir PaieReportPdfService). -->
+            <textField>
+                <reportElement x="0" y="1" width="700" height="19">
+                    <printWhenExpression><![CDATA[Boolean.TRUE.equals($F{sousNiveau})]]></printWhenExpression>
+                </reportElement>
+                <box leftPadding="28" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="11"/></textElement>
                 <textFieldExpression><![CDATA[$F{titre}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="750" y="2" width="52" height="20"/>
-                <box rightPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <reportElement x="750" y="1" width="52" height="19"/>
+                <box rightPadding="4" bottomPadding="2"><bottomPen lineWidth="0.5" lineColor="#011F5B"/></box>
                 <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="13" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA["p. " + $F{numeroPage}]]></textFieldExpression>
             </textField>
