@@ -56,9 +56,13 @@ public class PaieReportPdfService {
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
     private static final String ANCRE_SYNTHESE = "synthese-globale";
     private static final String LIBELLE_SYNTHESE = "I — Synthèse globale";
+    // Le titre imprimé sur la page 1 (masse) EST le libellé du chapitre — jamais un intitulé
+    // générique "Répartition par chantier" répété à l'identique sur les 2 pages du chapitre
+    // (constaté en production : redondance visuelle pure, aucune information supplémentaire sur la
+    // 2ᵉ page). Seule la page 1 porte un titre de chapitre pleine taille ; la page 2 (effectif) n'a
+    // qu'un sous-titre "2." — voir rapport.jrxml (GroupGraphChantierMasse/Effectif).
     private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
-    private static final String LIBELLE_GRAPH_CHANTIER = "II — Répartition par chantier";
-    private static final String LIBELLE_GRAPH_CHANTIER_MASSE = "1. Masse salariale par chantier";
+    private static final String LIBELLE_GRAPH_CHANTIER = "II — Masse salariale par chantier (DH)";
     private static final String ANCRE_GRAPH_CHANTIER_EFFECTIF = "graph-chantier-effectif";
     private static final String LIBELLE_GRAPH_CHANTIER_EFFECTIF = "2. Effectif par chantier";
 
@@ -148,7 +152,7 @@ public class PaieReportPdfService {
         parametres.put("P_MASSE_MOYENNE", synthese.masseMoyenneParEmploye());
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_STC_VALEUR", PaieReportNumberFormat.entier(synthese.stc()));
-        parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
+        parametres.put("P_REPARTITION_CHANTIER_EQUIPE", synthese.repartitionChantierEquipe());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
@@ -181,7 +185,6 @@ public class PaieReportPdfService {
         List<SommaireEntreeBean> entrees = new ArrayList<>();
         entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
-        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER_MASSE, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER), true));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER_EFFECTIF, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER_EFFECTIF), true));
         List<ChantierBiVue> chantiers = vue.chantiers();
         for (int i = 0; i < chantiers.size(); i++) {

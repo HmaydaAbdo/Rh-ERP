@@ -18,10 +18,12 @@ import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,13 @@ class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 20;
+    /** Plafond du nombre d'équipes distinctes affichées comme séries empilées du chapitre II (voir
+     * {@link #versRepartitionCroiseeParEquipe}) — même valeur que le plafond déjà documenté pour la
+     * distribution par fonction intra-chantier (voir docs/report/README.md, « Points d'extension »),
+     * réutilisée ici pour la même raison : borner la légende à un nombre lisible d'entrées quel que
+     * soit le nombre réel d'équipes présentes sur l'ensemble des chantiers retenus. */
+    private static final int MAX_SERIES_EQUIPE_CHANTIER = 8;
+    private static final String AUTRES_EQUIPES = "Autres équipes";
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -118,7 +127,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
-                versRepartition(agregatChantier),
+                versRepartitionCroiseeParEquipe(agregatChantier, courant),
                 versRepartition(agregatFonction),
                 evolutions.global()
         );
@@ -249,6 +258,75 @@ class PaieBiReportBuilder {
         }
         valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
+    }
+
+    /** Croisement chantier × équipe alimentant le {@code <stackedBarChart>} du chapitre II (colonnes
+     * verticales empilées par équipe, demande explicite de direction — voir
+     * docs/report/README.md, « Visualisations »). Reprend exactement le même ensemble de chantiers que
+     * {@link #versRepartition} (les {@value #MAX_BARRES_GRAPHIQUE} plus gros, "Autres" pour le reste) :
+     * les deux graphiques du chapitre II doivent montrer les mêmes colonnes. Le détail par équipe n'est
+     * calculé que pour ces chantiers retenus — les chantiers regroupés sous "Autres" restent un bloc
+     * unique, jamais décomposé (décomposer par équipe l'agrégat de dizaines de petits chantiers
+     * redeviendrait aussi illisible que le croisement Équipe × Fonction déjà retiré, voir « Vue
+     * détaillée par chantier »). Le nombre d'équipes distinctes affichées comme séries (donc dans la
+     * légende) est lui-même plafonné à {@value #MAX_SERIES_EQUIPE_CHANTIER} (classées par masse
+     * cumulée décroissante sur les chantiers retenus), le reste regroupé sous "Autres équipes" — sans
+     * ce plafond, jusqu'à 20 chantiers × plusieurs équipes chacun pourrait produire une légende aussi
+     * illisible que le croisement retiré. Aucune requête supplémentaire : dérivé de {@code courant},
+     * déjà chargé en mémoire pour tout le reste du calcul. */
+    private List<RepartitionCroiseeBean> versRepartitionCroiseeParEquipe(List<Agregat> agregatChantier, List<Paie> courant) {
+        Set<String> chantiersRetenus = agregatChantier.stream()
+                .limit(MAX_BARRES_GRAPHIQUE)
+                .map(Agregat::cle)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        Map<String, Map<String, Cumul>> parChantierEquipe = new LinkedHashMap<>();
+        Cumul autresChantiers = new Cumul();
+        for (Paie paie : courant) {
+            String chantier = codeChantier(paie);
+            BigDecimal montant = paie.getSalaireTotal() == null ? BigDecimal.ZERO : paie.getSalaireTotal();
+            if (chantiersRetenus.contains(chantier)) {
+                Cumul cumul = parChantierEquipe.computeIfAbsent(chantier, c -> new LinkedHashMap<>())
+                        .computeIfAbsent(libelleEquipe(paie), e -> new Cumul());
+                cumul.masse = cumul.masse.add(montant);
+                cumul.effectif++;
+            } else {
+                autresChantiers.masse = autresChantiers.masse.add(montant);
+                autresChantiers.effectif++;
+            }
+        }
+
+        Map<String, BigDecimal> masseParEquipe = new LinkedHashMap<>();
+        parChantierEquipe.values().forEach(parEquipe -> parEquipe.forEach(
+                (equipe, cumul) -> masseParEquipe.merge(equipe, cumul.masse, BigDecimal::add)));
+        Set<String> equipesRetenues = masseParEquipe.entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(MAX_SERIES_EQUIPE_CHANTIER)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<RepartitionCroiseeBean> resultat = new ArrayList<>();
+        for (String chantier : chantiersRetenus) {
+            Cumul autresEquipes = new Cumul();
+            for (Map.Entry<String, Cumul> entree : parChantierEquipe.getOrDefault(chantier, Map.of()).entrySet()) {
+                if (equipesRetenues.contains(entree.getKey())) {
+                    resultat.add(new RepartitionCroiseeBean(chantier, entree.getKey(),
+                            (int) entree.getValue().effectif, entree.getValue().masse));
+                } else {
+                    autresEquipes.masse = autresEquipes.masse.add(entree.getValue().masse);
+                    autresEquipes.effectif += entree.getValue().effectif;
+                }
+            }
+            if (autresEquipes.effectif > 0) {
+                resultat.add(new RepartitionCroiseeBean(chantier, AUTRES_EQUIPES,
+                        (int) autresEquipes.effectif, autresEquipes.masse));
+            }
+        }
+        if (autresChantiers.effectif > 0) {
+            resultat.add(new RepartitionCroiseeBean("Autres", AUTRES_EQUIPES,
+                    (int) autresChantiers.effectif, autresChantiers.masse));
+        }
+        return resultat;
     }
 
     /** Masse et effectif des {@value #MOIS_EVOLUTION} derniers mois (mois courant compris),
