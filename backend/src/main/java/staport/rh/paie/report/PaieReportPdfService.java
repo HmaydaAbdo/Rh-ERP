@@ -55,16 +55,14 @@ public class PaieReportPdfService {
     private static final String DOSSIER_JASPER = "report/paie/jasper/";
     private static final String CHEMIN_LOGO = "report/paie/logo-staport.png";
     private static final String ANCRE_SYNTHESE = "synthese-globale";
-    private static final String LIBELLE_SYNTHESE = "I — Synthèse globale";
-    // Le titre imprimé sur la page 1 (masse) EST le libellé du chapitre — jamais un intitulé
-    // générique "Répartition par chantier" répété à l'identique sur les 2 pages du chapitre
-    // (constaté en production : redondance visuelle pure, aucune information supplémentaire sur la
-    // 2ᵉ page). Seule la page 1 porte un titre de chapitre pleine taille ; la page 2 (effectif) n'a
-    // qu'un sous-titre "2." — voir rapport.jrxml (GroupGraphChantierMasse/Effectif).
+    // "Vue d'ensemble" (validé par la direction) plutôt que "Synthèse globale" — même style que les
+    // autres titres de chapitre (Title Case, pas de majuscules intégrales, voir rapport.jrxml).
+    private static final String LIBELLE_SYNTHESE = "I — Vue d'ensemble";
+    // Un seul graphique (masse + effectif + STC, barres groupées) sur une seule page — l'ancienne
+    // séparation en 2 pages/sous-titres "1./2." a disparu avec la fusion des 2 métriques dans un même
+    // graphique (demande explicite de direction, voir rapport.jrxml GroupGraphChantier).
     private static final String ANCRE_GRAPH_CHANTIER = "graph-chantier";
-    private static final String LIBELLE_GRAPH_CHANTIER = "II — Masse salariale par chantier (DH)";
-    private static final String ANCRE_GRAPH_CHANTIER_EFFECTIF = "graph-chantier-effectif";
-    private static final String LIBELLE_GRAPH_CHANTIER_EFFECTIF = "2. Effectif par chantier";
+    private static final String LIBELLE_GRAPH_CHANTIER = "II — Masse, effectif et STC par chantier";
 
     /** Nombre de chapitres romains fixes avant le premier chantier (I — Synthèse globale,
      * II — Répartition par chantier) — détermine à partir de quel chiffre romain démarre la
@@ -78,8 +76,9 @@ public class PaieReportPdfService {
      * installé au niveau du système d'exploitation qui exécute le backend. L'extension de police
      * JasperReports ({@code jasperreports_extension.properties} + {@code
      * report/paie/fonts/liberation-serif-fonts.xml}) couvre déjà les éléments texte des gabarits
-     * JRXML, mais {@link PaieReportChartCustomizer} construit des {@code java.awt.Font} directement
-     * (JFreeChart, pas JasperReports) — ce chemin ne passe pas par cette extension et doit donc
+     * JRXML, mais {@link PaieReportGroupedChartCustomizer}/{@link PaieReportEvolutionChartCustomizer}
+     * construisent des {@code java.awt.Font} directement (JFreeChart, pas JasperReports) — ce chemin
+     * ne passe pas par cette extension et doit donc
      * pouvoir résoudre le nom de famille via le {@code GraphicsEnvironment} standard. Sans cet
      * enregistrement explicite, un environnement de déploiement sans cette police installée au
      * niveau OS lève {@code JRFontNotFoundException} au premier remplissage (constaté en production,
@@ -152,7 +151,7 @@ public class PaieReportPdfService {
         parametres.put("P_MASSE_MOYENNE", synthese.masseMoyenneParEmploye());
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_STC_VALEUR", PaieReportNumberFormat.entier(synthese.stc()));
-        parametres.put("P_REPARTITION_CHANTIER_EQUIPE", synthese.repartitionChantierEquipe());
+        parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
         parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
@@ -185,7 +184,6 @@ public class PaieReportPdfService {
         List<SommaireEntreeBean> entrees = new ArrayList<>();
         entrees.add(new SommaireEntreeBean(LIBELLE_SYNTHESE, pageDe(pagesParAncre, ANCRE_SYNTHESE)));
         entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER)));
-        entrees.add(new SommaireEntreeBean(LIBELLE_GRAPH_CHANTIER_EFFECTIF, pageDe(pagesParAncre, ANCRE_GRAPH_CHANTIER_EFFECTIF), true));
         List<ChantierBiVue> chantiers = vue.chantiers();
         for (int i = 0; i < chantiers.size(); i++) {
             ChantierBiVue chantier = chantiers.get(i);
@@ -250,7 +248,7 @@ public class PaieReportPdfService {
                             chantier.distributionEquipe(), chantier.distributionFonction(),
                             chantier.repartitionEquipe(), chantier.repartitionFonction(), chantier.evolutionMensuelle(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
-                            equipe.stc(), equipe.evolutionMensuelle(),
+                            equipe.stc(), equipe.distributionFonction(), equipe.repartitionFonction(), equipe.evolutionMensuelle(),
                             employe));
                 }
             }
