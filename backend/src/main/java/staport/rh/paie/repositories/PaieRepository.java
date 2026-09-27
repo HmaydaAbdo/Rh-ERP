@@ -39,20 +39,23 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     List<String> findDistinctEquipesByChantierCodeAndPeriode(@Param("chantierCode") String chantierCode,
                                                                @Param("periode") YearMonth periode);
 
-    /** Masse et effectif agrégés par (chantier, équipe, mois) sur l'intervalle {@code [debut, fin]} —
-     * alimente les 3 niveaux d'évolution du rapport PDF (global, par chantier, par équipe — voir
-     * {@code PaieBiReportBuilder.evolutionMensuelle}/{@code evolutionParChantier}/
-     * {@code evolutionParEquipe}). **Une seule requête pour les 3 niveaux** — pas une requête par
-     * chantier ni par équipe (25 chantiers × plusieurs équipes × 12 mois ferait des centaines
-     * d'allers-retours base pour la même fenêtre de données) : le global et le chantier sont
-     * simplement une somme en Java du même jeu de lignes déjà groupé au niveau le plus fin, jamais
-     * un second appel base. Agrégation faite en base (pas un chargement des entités `Paie` complètes
-     * suivi d'une somme en Java) : seule la tendance importe ici, jamais le détail employé d'un mois
-     * passé — l'index existant sur {@code periode} (voir l'entité `Paie`) suffit à borner la
-     * fenêtre ; un index composite dédié n'est pas justifié pour une requête de génération de
-     * rapport, pas un chemin d'accès chaud. */
+    /** Masse, effectif et STC/sorties agrégés par (chantier, équipe, mois) sur l'intervalle
+     * {@code [debut, fin]} — alimente les 3 niveaux d'évolution du rapport PDF (global, par chantier,
+     * par équipe — voir {@code PaieBiReportBuilder.evolutionParNiveau}). **Une seule requête pour les
+     * 3 niveaux** — pas une requête par chantier ni par équipe (25 chantiers × plusieurs équipes × 12
+     * mois ferait des centaines d'allers-retours base pour la même fenêtre de données) : le global et
+     * le chantier sont simplement une somme en Java du même jeu de lignes déjà groupé au niveau le
+     * plus fin, jamais un second appel base. Agrégation faite en base (pas un chargement des entités
+     * `Paie` complètes suivi d'une somme en Java) : seule la tendance importe ici, jamais le détail
+     * employé d'un mois passé — l'index existant sur {@code periode} (voir l'entité `Paie`) suffit à
+     * borner la fenêtre ; un index composite dédié n'est pas justifié pour une requête de génération
+     * de rapport, pas un chemin d'accès chaud. Le décompte STC reproduit exactement
+     * {@code ObservationStc.estStcOuSortie} (comparaison insensible à la casse/espaces à "stc" ou
+     * "sortie") directement en JPQL, plutôt que de recharger les `Paie` complètes pour appliquer le
+     * prédicat Java — même donnée, même définition, jamais dupliquée ni divergente. */
     @Query("SELECT p.chantier.code AS chantierCode, p.equipe AS equipe, p.periode AS periode, " +
-            "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +
+            "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
+            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc " +
             "FROM Paie p WHERE p.periode BETWEEN :debut AND :fin " +
             "GROUP BY p.chantier.code, p.equipe, p.periode")
     List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
