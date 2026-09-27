@@ -145,7 +145,10 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         // PaieReportEvolutionChartCustomizer pour la même règle) — lit la VRAIE valeur dans la table
         // conservée avant normalisation, jamais la valeur normalisée réellement tracée. Formatage
         // différent selon la série : montant en DH pour la masse et le STC en DH, entier brut pour
-        // l'effectif et le STC en personnes (nombre de personnes, jamais d'unité).
+        // l'effectif et le STC en personnes (nombre de personnes, jamais d'unité). Aucune étiquette
+        // pour une valeur exactement nulle (demande explicite de direction) : la barre est de toute
+        // façon invisible (longueur nulle), inutile d'empiler un "0"/"0,00" par-dessus celui de la
+        // série voisine — son absence dit déjà "zéro" sans ambiguïté.
         StandardCategoryItemLabelGenerator generateur = new StandardCategoryItemLabelGenerator(
                 "{2}", new DecimalFormat("#,##0")) {
             @Override
@@ -153,7 +156,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
                 String serie = String.valueOf(dataset.getRowKey(row));
                 String categorie = String.valueOf(dataset.getColumnKey(column));
                 Number valeur = vraiesValeurs.getOrDefault(serie, Map.of()).get(categorie);
-                if (valeur == null) {
+                if (valeur == null || valeur.doubleValue() == 0) {
                     return null;
                 }
                 boolean montant = SERIE_MASSE.equals(serie) || SERIE_STC_MONTANT.equals(serie);
