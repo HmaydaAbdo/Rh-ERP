@@ -53,7 +53,8 @@ Table `chantier` :
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
 | `code` | `VARCHAR(100)` | `NOT NULL`, **unique** | Clé métier du chantier (ex. `C079`) |
-| `designation` | `VARCHAR(500)` | nullable | Libellé descriptif |
+| `designation` | `VARCHAR(500)` | nullable | Libellé descriptif — synchronisé depuis l'ERP, écrasé à chaque synchronisation |
+| `nom` | `VARCHAR(255)` | nullable | Nom optionnel, distinct de `designation` — **jamais exposé ni modifié par la synchronisation ERP** (ajouté le 2026-09-29, migration `V5__add_chantier_nom.sql`), uniquement saisi/modifié manuellement via le formulaire. Affiché par le rapport PDF/l'export Excel de la paie sous la forme `"CHANTIER : <code> (<nom>)"` quand renseigné (voir `docs/report/README.md`) |
 | `source_erp` | `BIT` | `NOT NULL`, défaut `false` | Vrai si géré par la synchronisation ERP |
 | `actif` | `BIT` | `NOT NULL`, défaut `true` | Faux = désactivé — jamais modifié par la synchronisation (voir « Règles métier ») |
 
@@ -77,6 +78,9 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
   (seulement `id_chantier`, `code`, `designation`, `CodeErreur`), donc un chantier désactivé
   manuellement ne peut jamais être réactivé silencieusement par la synchronisation. La seule façon de
   changer `actif` est la modification manuelle (`PUT /chantiers/{id}`, formulaire `ChantierFormComponent`).
+- `nom` suit le même principe que `actif` : `upsert` ne le touche jamais, dans aucun cas (ni création
+  ni mise à jour) — l'ERP ne l'expose pas du tout, donc rien à réconcilier. Uniquement modifiable via
+  le formulaire (`PUT /chantiers/{id}`).
 - La suppression (`DELETE /chantiers/{id}`) est bloquée (409) si le chantier est référencé par au
   moins un employé (contrainte de clé étrangère `employe.chantier_id`).
 
@@ -98,7 +102,7 @@ conception du RBAC.
 | `DELETE` | `/chantiers/{id}` | Supprimer (bloqué si référencé par un employé) | 204, 404, 409 |
 | `POST` | `/chantiers/sync` | Déclencher une synchronisation ERP immédiate | 200 |
 
-`ChantierResponseDto` : `id`, `code`, `designation`, `sourceErp`, `actif`.
+`ChantierResponseDto` : `id`, `code`, `designation`, `nom`, `sourceErp`, `actif`.
 
 ---
 
@@ -171,8 +175,8 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 |---|---|---|
 | `/chantiers` | `ChantierListComponent` | Liste paginée, recherche (code, désignation, statut), tri, suppression, bouton de synchronisation manuelle |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
-| `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, statut, source) |
-| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification — un bandeau avertit si le chantier provient de l'ERP (le code/la désignation seront écrasés à la prochaine synchronisation) |
+| `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
+| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (y compris `nom`) — un bandeau avertit si le chantier provient de l'ERP (le code/la désignation seront écrasés à la prochaine synchronisation, `nom` jamais concerné) |
 
 Accès via la barre latérale de l'application (`app.component.ts`, entrée "Chantiers").
 
