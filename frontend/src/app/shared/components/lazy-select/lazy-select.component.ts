@@ -45,6 +45,15 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   @Input() pageSize = 30;
   @Input() virtualScrollItemSize = 36;
   @Input() showClear = true;
+  /** `null` (défaut) laisse le panneau s'afficher dans son conteneur naturel — suffisant pour un champ
+   * de formulaire de page. `"body"` fait sortir le panneau du flux (overlay ajouté à `<body>`) :
+   * NÉCESSAIRE dès que ce composant est utilisé dans un conteneur à défilement/overflow contraint
+   * (ex. `p-dialog`), sans quoi le panneau — surtout avec le scroll virtuel activé ici — peut se
+   * retrouver rogné ou mal positionné, ses lignes ne correspondant alors plus à la zone réellement
+   * cliquable (régression constatée le 2026-09-28 sur `PaieExportExcelDialogComponent` : ce champ
+   * avait `appendTo="body"` avant d'être migré vers ce composant partagé, qui ne l'exposait pas
+   * encore). */
+  @Input() appendTo: string | null = null;
 
   options: (T | undefined)[] = [];
   loading = false;
