@@ -7,13 +7,7 @@
       [ngModelOptions]="{ standalone: true }"
       optionLabel="label"
       optionValue="value"
-      (onChange)="onFormatChange()"
-    >
-      <ng-template let-option pTemplate="item">
-        <i [class]="option.icon"></i>
-        <span>{{ option.label }}</span>
-      </ng-template>
-    </p-selectButton>
+    ></p-selectButton>
 
     <p class="paie-export__hint-box">{{ hintTexte() }}</p>
 
@@ -83,17 +77,6 @@
             </div>
           }
         }
-      </div>
-    }
-
-    @if ((form.controls.chantiersConcernes.value ?? []).length > 0) {
-      <div class="paie-export__summary">
-        <strong>Ce qui sera généré</strong>
-        <ul>
-          @for (ligne of resumeParChantier(); track ligne) {
-            <li>{{ ligne }}</li>
-          }
-        </ul>
       </div>
     }
 
