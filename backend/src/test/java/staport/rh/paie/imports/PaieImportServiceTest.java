@@ -73,7 +73,7 @@ class PaieImportServiceTest {
         Page<FunctionResponseDto> functions = new PageImpl<>(List.of(
                 new FunctionResponseDto(10L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(List.of(
-                new ChantierResponseDto(20L, "C059", "Travaux de voirie", false, true)));
+                new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
         lenient().when(employeeService.search(isNull(), any(Pageable.class))).thenReturn(employees);
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);

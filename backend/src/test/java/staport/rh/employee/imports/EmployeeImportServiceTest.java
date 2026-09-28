@@ -63,7 +63,7 @@ class EmployeeImportServiceTest {
         Page<FunctionResponseDto> functions = new PageImpl<>(
                 List.of(new FunctionResponseDto(10L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(
-                List.of(new ChantierResponseDto(20L, "C059", "Travaux de voirie", false, true)));
+                List.of(new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);
         lenient().when(entityManager.getReference(eq(Function.class), any())).thenReturn(new Function());

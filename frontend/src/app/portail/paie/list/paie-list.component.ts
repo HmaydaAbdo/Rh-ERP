@@ -11,14 +11,13 @@ import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { TooltipModule } from 'primeng/tooltip';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { PaieExportExcelDialogComponent } from '../export-excel/paie-export-excel-dialog.component';
+import { PaieExportDialogComponent } from '../export/paie-export-dialog.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
@@ -45,8 +44,7 @@ function toPeriodeString(date: Date | null): string | undefined {
     CalendarModule,
     ConfirmDialogModule,
     DialogModule,
-    TooltipModule,
-    PaieExportExcelDialogComponent,
+    PaieExportDialogComponent,
     LazySelectComponent
   ],
   providers: [ConfirmationService],
@@ -90,8 +88,7 @@ export class PaieListComponent implements OnInit {
     periode: [null as Date | null]
   });
 
-  showExcelExportDialog = false;
-  exportingPdf = false;
+  showExportDialog = false;
 
   private lastPage = 0;
   private lastSize = 10;
@@ -104,50 +101,6 @@ export class PaieListComponent implements OnInit {
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
       )
       .subscribe(() => this.onSearch());
-  }
-
-  /** Périmètre du rapport PDF : uniquement la période sélectionnée dans le filtre de la liste
-   * (year/month picker) — les autres filtres de la liste (nom, CIN, fonction, chantier) ne sont
-   * pas pris en compte, voir docs/report/README.md. Téléchargement direct, sans dialog. */
-  onExporterPdf(): void {
-    const periode = toPeriodeString(this.filterForm.controls.periode.value);
-    if (!periode) {
-      return;
-    }
-
-    this.exportingPdf = true;
-    this.paieService
-      .telechargerRapportPdf({ periode })
-      .pipe(finalize(() => (this.exportingPdf = false)))
-      .subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const lien = document.createElement('a');
-          lien.href = url;
-          lien.download = `Paie_Rapport_BI_${periode}.pdf`;
-          lien.click();
-          window.URL.revokeObjectURL(url);
-        },
-        error: (err: HttpErrorResponse) => void this.afficherErreurRapportPdf(err)
-      });
-  }
-
-  /** Avec responseType 'blob', le corps d'erreur JSON du backend arrive lui aussi en Blob : on le
-   * relit pour afficher son message (ex. « Aucun bulletin de paie pour la période 2026-08 … ») —
-   * l'intercepteur global ne peut pas le faire, il ne voit qu'un Blob opaque sur cette requête. */
-  private async afficherErreurRapportPdf(err: HttpErrorResponse): Promise<void> {
-    let detail = "Le rapport PDF n'a pas pu être généré.";
-    if (err.error instanceof Blob) {
-      try {
-        const corps = JSON.parse(await err.error.text()) as { message?: string };
-        if (corps.message) {
-          detail = corps.message;
-        }
-      } catch {
-        // corps non JSON : on garde le message générique
-      }
-    }
-    this.messageService.add({ severity: 'error', summary: 'Rapport PDF', detail, life: 8000 });
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {

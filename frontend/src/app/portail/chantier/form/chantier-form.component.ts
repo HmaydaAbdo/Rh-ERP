@@ -39,6 +39,7 @@ export class ChantierFormComponent implements OnInit {
   readonly form = this.fb.group({
     code: ['', [Validators.required, Validators.maxLength(100)]],
     designation: ['', [Validators.required, Validators.maxLength(500)]],
+    nom: ['', Validators.maxLength(255)],
     actif: [true, Validators.required]
   });
 
@@ -55,6 +56,7 @@ export class ChantierFormComponent implements OnInit {
         this.form.patchValue({
           code: chantier.code,
           designation: chantier.designation,
+          nom: chantier.nom,
           actif: chantier.actif
         });
       });
@@ -68,7 +70,7 @@ export class ChantierFormComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
-    const dto = { code: raw.code!, designation: raw.designation! };
+    const dto = { code: raw.code!, designation: raw.designation!, nom: raw.nom || null };
 
     this.saving = true;
 

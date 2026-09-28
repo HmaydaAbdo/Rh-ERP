@@ -422,3 +422,51 @@ fusionnées avec la page de graphique qui les suivait (`isStartNewPage="false"` 
 `GroupGraphChantier`/`GroupChantier`, hauteur des `<barChart>` recalibrée, vérifié visuellement au
 cas le plus dense) — plus de zone blanche, voir `docs/report/README.md`, « Fusion des pages KPI +
 graphique », et `docs/report/rapport-v2.md`, section 1.
+
+---
+
+## Export PDF/Excel paie unifiés + champ Chantier.nom (2026-09-29)
+
+**Décision (HMAYDA, 2026-09-29)** : export PDF et Excel de la paie fusionnés derrière un seul
+bouton/dialog (`PaieExportDialogComponent`), une seule sélection manuelle d'équipes à détailler par
+chantier pour les deux formats. Le PDF n'a plus de seuil automatique "chantier compact" — chaque
+chantier a désormais sa propre section, avec ou sans détail par équipe selon cette sélection,
+jamais un employé répété dans deux sections (contrairement à l'Excel, qui duplique volontairement).
+Voir `docs/report/README.md`, section « Export unifié PDF/Excel ».
+
+Dans la foulée : lignes de résumé (TOTAL GENERAL / TOTAL GENERAL MOIS PRECEDENT) et tableau récap
+Fonction/Effectif/STC ajoutés à chaque section du PDF (déjà présents côté Excel — le bug "Total
+général" resté vide côté Excel est corrigé, `setForceFormulaRecalculation(true)` manquant) ; date
+de génération retirée de la page de garde ; saut de page systématique par section équipe ;
+squelette "parc matériel" (chantier C168, équipes CH/OP) désormais aussi affiché en PDF, règle
+centralisée dans `MaterielChantierCatalogue` (partagée avec l'Excel).
+
+**Nouveau champ `Chantier.nom`** (optionnel, migration `V5__add_chantier_nom.sql`) : distinct de
+`designation` (synchronisée depuis l'ERP et écrasée à chaque synchronisation quotidienne) — `nom`
+n'est **jamais** touché par la synchronisation, uniquement saisi/modifié manuellement via le
+formulaire chantier. Le rapport PDF et l'export Excel affichent désormais
+`"CHANTIER : <code> (<nom>)"` quand ce champ est renseigné, `"CHANTIER : <code>"` sinon.
+
+**Reste à faire** : les valeurs réelles des noms de chantiers existants doivent être saisies (une
+fois par chantier concerné) — la liste attendue de l'utilisateur n'est pas parvenue à l'assistant,
+à fournir puis saisir/seeder (voir « CI/CD » ci-dessous pour la mécanique de déploiement d'une
+migration de seed en production).
+
+---
+
+## CI/CD — pipeline de déploiement continu (CD) manquant
+
+**Constat (2026-09-29)** : la CI build et pousse déjà les images Docker Hub à chaque push sur
+`main`, mais rien ne les déploie automatiquement sur le serveur de production — le déploiement
+(`docker compose pull && docker compose up -d`) reste une étape manuelle en SSH (voir
+`docs/deployment.md`, section « CI/CD — état actuel »). Les migrations Flyway s'appliquent
+automatiquement au démarrage du conteneur backend — une fois le déploiement automatisé, un nouveau
+fichier de migration (ex. un seed de données) suit le même chemin que tout le reste : commit → CI
+build+push l'image → CD la déploie, sans étape manuelle distincte de "seed"/"migration".
+
+**À faire** : ajouter une étape de déploiement continu (CD) déclenchée en fin de pipeline CI (sur
+push `main` réussi), via SSH vers le serveur de production (ex. `appleboy/ssh-action`) exécutant
+`docker compose pull && docker compose up -d`. Nécessite une clé SSH dédiée au déploiement + l'hôte
+du serveur (secrets GitHub Actions, jamais dans le dépôt), et de décider si le déclenchement est
+automatique à chaque push `main` ou seulement sur un tag `v*` (déploiement versionné explicite) —
+à trancher avant implémentation.

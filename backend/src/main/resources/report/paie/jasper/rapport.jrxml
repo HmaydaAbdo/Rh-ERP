@@ -29,35 +29,35 @@
                  bande dans le gabarit pour le calcul précis du budget.
           Chapitre "Répartition par fonction" retiré temporairement (doublons non nettoyés dans le
           référentiel Fonction, voir TODO.md).
-       3. Une section par chantier DÉTAILLÉ (GroupChantier), numérotée en chiffre romain à la suite du
+       3. Une section par CHANTIER (GroupChantierEvolution), numérotée en chiffre romain à la suite du
           seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe, II et suivants un
-          par chantier détaillé) :
-            3.1. KPI (masse, effectif, coût moyen, STC) + narratif — même retrait du graphique
-                 d'évolution qu'au niveau global, voir point 2.1 ci-dessus (GroupChantierEvolution,
-                 isStartNewPage="true" INCHANGÉ : chaque chantier détaillé démarre bien sa propre
-                 nouvelle page ici, seule la page SUIVANTE ci-dessous lui est fusionnée).
-            3.2. "Équipes de chantier X" (GroupChantier) : graphique de répartition par équipe (4
-                 séries, SEUL, sans tableau), puis chaque équipe individuelle (GroupEquipe,
-                 keepTogether) — NON numérotée séparément (demande explicite de direction), juste son
-                 tableau employé, trié par fonction (la fonction consommant le plus de masse en
-                 premier, voir PaieBiReportBuilder.equipeVue). Aucune BI au niveau équipe (ni
-                 graphique d'évolution, ni répartition par fonction — retirées, jugées redondantes
-                 avec le niveau chantier). isStartNewPage="false" DEPUIS le retrait du graphique
-                 d'évolution : continue sur LA MÊME PAGE que le point 3.1 (chart réduit à 340, contre
-                 413) — même principe qu'au niveau global.
+          par chantier, TOUS désormais, demande explicite de direction 2026-09-29 : plus de chapitre
+          final séparé consolidant certains chantiers, voir docs/report/rapport-v2.md) :
+            3.1. KPI (masse, effectif, coût moyen, STC) + narratif — isStartNewPage="true" : chaque
+                 chantier démarre sa propre nouvelle page ici.
+            3.2. "Équipes de chantier X" (GroupChantier, sur LA MÊME page que 3.1) : UNIQUEMENT si
+                 l'utilisateur a sélectionné au moins une équipe de ce chantier pour un détail séparé
+                 (voir PaieReportPdfRequestDto.equipesParChantier, ChantierBiVue.avecDetailEquipe) — la
+                 bande entière est conditionnée par un printWhenExpression au niveau de la BANDE (pas
+                 d'un élément), donc totalement absente (hauteur nulle) sinon. Quand elle s'imprime :
+                 UN SEUL graphique de répartition par équipe (4 séries, TOUJOURS la distribution
+                 complète de toutes les équipes réelles du chantier, même si seule une partie a sa
+                 propre section ci-dessous).
+            3.3. Une section par équipe SÉLECTIONNÉE (GroupEquipe, isStartNewPage="true" depuis
+                 2026-09-29 : CHAQUE section démarre sur sa propre page), puis, si des employés
+                 restent (équipes non sélectionnées, "Sans équipe" compris), une dernière section
+                 "reste" les regroupant tous (jamais nommée "Sans équipe", toujours le nom du
+                 chantier — voir le Javadoc de EquipeBiVue) — un employé n'apparaît JAMAIS dans deux
+                 sections (contrairement à l'export Excel). Si aucune équipe n'a été sélectionnée pour
+                 ce chantier (3.2 absente), une seule section réunit tous ses employés. Chaque section :
+                 tableau employé trié par fonction (la fonction consommant le plus de masse en premier,
+                 voir PaieBiReportBuilder.equipeVue), puis, collés directement au bas de ce tableau
+                 (groupFooter) : lignes TOTAL GENERAL / TOTAL GENERAL MOIS PRECEDENT, tableau récap
+                 Fonction/Effectif/STC (sous-rapport, nombre de lignes variable — voir
+                 recap-fonction.jrxml), et, pour le chantier "C168" équipes "CH"/"OP" uniquement (voir
+                 MaterielChantierCatalogue), le squelette "parc matériel" à remplir au stylo
+                 (recap-materiel.jrxml).
           Toutes ces sections partagent la même source de données à plat (un employé par ligne).
-       4. UN SEUL chapitre final consolidant tous les chantiers "compacts" (effectif ≤
-          PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT, demande explicite de direction : un chantier à 1
-          ou 2 personnes ne justifiait pas 3 pages quasi vides — vue d'ensemble/évolution, répartition
-          par équipe, tableau employé — pour un effectif négligeable) : "N — Chantiers à effectif
-          réduit", UN SEUL barChart consolidé (masse/effectif/STC, un chantier compact par barre, voir
-          RapportBiVue.repartitionChantiersCompacts), puis, à sa suite, le tableau employé de CHAQUE
-          chantier compact (GroupEquipe réutilisé tel quel, keepTogether, mais SANS saut de page entre
-          eux — plusieurs petits chantiers s'enchaînent donc sur la même page). Aucune page "Vue
-          d'ensemble"/évolution pour ces chantiers (demande explicite de direction), aucune
-          sous-distinction équipe dans leur tableau (juste chantier + employé, demande explicite de
-          direction) — voir le Javadoc de LigneRapportDetailBean pour le mécanisme complet
-          (chantierEvolutionCle/chantierEquipesCle gèlent le déclenchement des groupes lourds).
      Style documentaire entièrement noir/blanc/gris (aucune couleur décorative) — seuls les
      <barChart>/<lineChart> conservent des couleurs (bleu masse, orange effectif, rouge sourd STC —
      3 couleurs fixes, jamais une palette arbitraire, voir docs/report/README.md « Style visuel »).
@@ -95,7 +95,6 @@
     <parameter name="P_PERIODE_LIBELLE" class="java.lang.String"/>
     <parameter name="P_PERIODE_MOIS" class="java.lang.String"/>
     <parameter name="P_PERIODE_ANNEE" class="java.lang.String"/>
-    <parameter name="P_DATE_GENERATION" class="java.lang.String"/>
     <parameter name="P_MASSE_VALEUR" class="java.lang.String"/>
     <parameter name="P_MASSE_VARIATION" class="java.lang.String"/>
     <parameter name="P_MASSE_TENDANCE" class="java.lang.String"/>
@@ -112,16 +111,16 @@
          (PaieBiReportBuilder.evolutionParNiveau) pour ne pas tout redévelopper en cas de
          réintroduction, même principe que P_REPARTITION_FONCTION ci-dessus. -->
     <parameter name="P_EVOLUTION_MENSUELLE" class="java.util.List"/>
-    <!-- Répartition (masse/effectif/STC) des seuls chantiers "compacts" (voir ChantierBiVue.compact) —
-         UN SEUL barChart consolidé pour tous, jamais un graphique par chantier compact (voir le
-         chapitre final "Chantiers à effectif réduit" dans GroupChantier ci-dessous). -->
-    <parameter name="P_REPARTITION_CHANTIERS_COMPACTS" class="java.util.List"/>
     <!-- Numéro de la première page chantier — seuil utilisé par le pageHeader (bloc Niveau) pour
          savoir si la page courante est "globale" (avant ce seuil) ou "chantier/équipe" (à partir de
          ce seuil) ; le numéro de page réel n'est connu qu'après un premier remplissage silencieux du
          document entier, jamais un JasperPrint fusionné après coup (voir PaieReportPdfService.generer). -->
     <parameter name="P_PAGE_PREMIER_CHANTIER" class="java.lang.Integer"/>
     <parameter name="P_SYNTHESE_NARRATIF" class="java.lang.String"/>
+    <!-- Sous-rapports à nombre de lignes variable (voir GroupEquipe plus bas) — compilés une seule
+         fois dans PaieReportPdfService, jamais recompilés à chaque génération. -->
+    <parameter name="P_SUBREPORT_RECAP_FONCTION" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="P_SUBREPORT_RECAP_MATERIEL" class="net.sf.jasperreports.engine.JasperReport"/>
 
     <field name="chantierCode" class="java.lang.String"/>
     <field name="chantierTitre" class="java.lang.String"/>
@@ -135,18 +134,18 @@
     <field name="chantierRepartitionEquipe" class="java.util.List"/>
     <!-- Plus consommé (voir P_EVOLUTION_MENSUELLE ci-dessus) — conservé pour la même raison. -->
     <field name="chantierEvolutionMensuelle" class="java.util.List"/>
-    <!-- Voir le Javadoc de LigneRapportDetailBean pour le mécanisme complet de ces 4 champs (chantiers
-         "compacts" consolidés dans un chapitre final unique, jamais leur propre page). -->
-    <field name="chantierCompact" class="java.lang.Boolean"/>
-    <field name="chantierEvolutionCle" class="java.lang.String"/>
-    <field name="chantierEquipesCle" class="java.lang.String"/>
-    <field name="chantierChapitreTitreCompacts" class="java.lang.String"/>
+    <!-- Voir le Javadoc de LigneRapportDetailBean pour le mécanisme complet de chantierAvecDetailEquipe
+         (pilote le printWhenExpression de la bande GroupChantier ci-dessous, chantier par chantier). -->
+    <field name="chantierAvecDetailEquipe" class="java.lang.Boolean"/>
     <field name="equipeNom" class="java.lang.String"/>
     <field name="equipeTitre" class="java.lang.String"/>
     <field name="equipeEffectif" class="java.lang.Integer"/>
     <field name="equipeMasse" class="java.lang.String"/>
     <field name="equipePartChantierPourcent" class="java.lang.String"/>
     <field name="equipeStc" class="java.lang.Integer"/>
+    <field name="equipeMontantMoisPrecedentOuIntrouvable" class="java.lang.String"/>
+    <field name="equipeRepartitionFonction" class="java.util.List"/>
+    <field name="equipeMateriel" class="java.util.List"/>
     <field name="nomPrenom" class="java.lang.String"/>
     <field name="fonction" class="java.lang.String"/>
     <field name="cin" class="java.lang.String"/>
@@ -387,27 +386,20 @@
          (PaieBiReportBuilder/PaieReportPdfService) pour éviter de tout redévelopper à la
          réintroduction, simplement plus consommé ici tant que la donnée n'est pas fiable. -->
 
-    <!-- Vue détaillée par chantier, sur 2 pages :
-           - page 1 (GroupChantierEvolution) : titre + cartes KPI + narratif (plus d'historique
-             mensuel ici — le graphique d'évolution a été retiré de tout le document, demande
-             explicite de direction, manque d'historique suffisant pour être significatif — voir
-             docs/report/rapport-v2.md) ;
-           - page 2 (GroupChantier) : "Équipes de chantier X", UN SEUL graphique groupé à 4 séries
-             (masse/effectif/STC personnes/STC DH) — SANS tableau (demande explicite de direction).
-         RÉSERVÉ AUX CHANTIERS DÉTAILLÉS (voir ChantierBiVue.compact) : groupExpression sur
-         $F{chantierEvolutionCle}, PAS $F{chantierCode} directement — cette clé vaut le vrai code
-         chantier pour un chantier détaillé (le groupe se déclenche normalement, une fois chacun), mais
-         reste GELÉE à la valeur du dernier chantier détaillé dès qu'on entre dans le bloc des
-         chantiers compacts (voir PaieReportPdfService.lignesDetail) : l'expression ne change plus
-         jamais d'une ligne compacte à l'autre, donc cette page ne se déclenche plus du tout pour eux —
-         demande explicite de direction, un chantier à 1-2 personnes ne justifie pas sa propre page
-         d'évolution mensuelle. Seule approximation acceptée : si le périmètre du rapport ne contient
-         AUCUN chantier détaillé (ex. rapport filtré sur un seul petit chantier), cette page s'affiche
-         quand même une fois, pour le premier chantier compact rencontré (tout groupe JasperReports se
-         déclenche nécessairement sur le tout premier enregistrement du document) — jamais un défaut
-         bloquant, juste une page en plus dans un cas de filtrage très marginal. -->
+    <!-- Vue détaillée par chantier — TOUS les chantiers désormais (demande explicite de direction,
+         2026-09-29 : plus de distinction "chantier détaillé" vs "compact" par effectif, voir
+         docs/report/rapport-v2.md), sur 1 ou 2 pages :
+           - page fixe (GroupChantierEvolution, ce groupe) : titre + cartes KPI + narratif, TOUJOURS
+             affichée, quel que soit le chantier ;
+           - page suivante, optionnelle (GroupChantier, voir plus bas) : "Équipes de chantier X", UN
+             SEUL graphique groupé à 4 séries — uniquement si l'utilisateur a sélectionné au moins une
+             équipe de ce chantier pour un détail séparé (voir ChantierBiVue.avecDetailEquipe), sinon
+             bande absente (hauteur nulle, pas de page en plus).
+         groupExpression sur $F{chantierCode} directement (plus de clé "gelée" nécessaire, contrairement
+         à GroupChantier ci-dessous dont c'est la BANDE, pas le déclenchement du groupe, qui est
+         conditionnelle). -->
     <group name="GroupChantierEvolution" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
-        <groupExpression><![CDATA[$F{chantierEvolutionCle}]]></groupExpression>
+        <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
             <band height="100" splitType="Stretch">
                 <!-- Titre de chapitre chantier — même style que "I — Vue d'ensemble" (texte noir, sans
@@ -509,56 +501,41 @@
     </group>
 
     <!-- "Équipes de chantier X" — titre de SECTION introduisant à la fois le graphique de répartition
-         par équipe ci-dessous ET, à sa suite (voir GroupEquipe plus bas), chaque équipe individuelle
-         (non numérotée séparément, demande explicite de direction). Plus de numérotation arabe "2 —"
-         ici (retiré en même temps que le graphique d'évolution mensuelle du chantier, qui était la
-         sous-section "1" — voir docs/report/rapport-v2.md). UN SEUL graphique à barres
+         par équipe ci-dessous ET, à sa suite (voir GroupEquipe plus bas), chaque section équipe
+         (non numérotée séparément, demande explicite de direction). UN SEUL graphique à barres
          groupées horizontales (masse, effectif, STC en personnes ET en DH — 4 séries par équipe —
-         jamais 2 graphiques séparés) — SEUL, sans tableau (demande explicite de direction : la section
-         « répartition par fonction » du chantier, qui avait le même tableau, a été supprimée, voir
-         plus bas ; le tableau équipe faisait double emploi avec le graphique et n'apportait rien de
-         plus). Chart nettement plus grand que du temps du tableau (plus de place disponible sur la
-         page une fois celui-ci retiré) — voir PaieReportGroupedChartCustomizer pour le calibrage des
-         marges à 4 barres.
+         jamais 2 graphiques séparés), TOUJOURS la distribution COMPLÈTE de toutes les équipes
+         réellement présentes dans ce chantier (demande explicite de direction, 2026-09-29 — une
+         lecture BI correcte de la répartition, même si seule une partie de ces équipes a sa propre
+         section détaillée ci-dessous, voir GroupEquipe) — SEUL, sans tableau (la section « répartition
+         par fonction » du chantier, qui avait le même tableau, a été supprimée, voir plus bas ; le
+         tableau équipe faisait double emploi avec le graphique).
 
-         groupExpression sur $F{chantierEquipesCle}, PAS $F{chantierCode} directement : pour un
-         chantier DÉTAILLÉ, cette clé vaut le vrai code chantier (le groupe se déclenche normalement,
-         une fois par chantier, contenu "détaillé" ci-dessous, printWhenExpression !$F{chantierCompact})
-         ; pour TOUS les chantiers "compacts" (voir ChantierBiVue.compact), la MÊME constante
-         "__CHANTIERS_COMPACTS__" (voir PaieReportPdfService.CLE_CHANTIERS_COMPACTS) — le groupe se
-         déclenche donc UNE SEULE fois pour l'ensemble du bloc compact (jamais une fois par chantier
-         compact), avec un contenu différent (printWhenExpression $F{chantierCompact}) : le chapitre
-         final "Chantiers à effectif réduit" et un unique graphique consolidé (voir
-         RapportBiVue.repartitionChantiersCompacts) au lieu d'un graphique par chantier — demande
-         explicite de direction, un chantier à 1-2 personnes ne justifie ni sa propre page ni son
-         propre graphique de répartition par équipe. -->
+         Bande entièrement conditionnée par $F{chantierAvecDetailEquipe} (printWhenExpression au
+         niveau de la BANDE elle-même, pas d'un simple élément à l'intérieur) : quand aucune équipe de
+         ce chantier n'a été sélectionnée pour un détail séparé (voir
+         PaieReportPdfRequestDto.equipesParChantier), cette bande ne s'imprime pas du tout — hauteur
+         nulle, aucun espace réservé, jamais une page à moitié vide. Le chantier garde malgré tout sa
+         propre page "Vue d'ensemble" (GroupChantierEvolution ci-dessus, toujours affichée) et sa
+         section employé (GroupEquipe ci-dessous, une seule table réunissant tous ses employés dans ce
+         cas). groupExpression sur $F{chantierCode} directement (comme GroupChantierEvolution) : ce
+         groupe se déclenche une fois par chantier, que sa bande s'imprime ou non. -->
     <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="false">
-        <groupExpression><![CDATA[$F{chantierEquipesCle}]]></groupExpression>
+        <groupExpression><![CDATA[$F{chantierCode}]]></groupExpression>
         <groupHeader>
             <band height="365" splitType="Stretch">
-                <!-- isStartNewPage="false" (depuis 2026-09-28, demande explicite de direction) : pour
-                     un chantier détaillé, continue sur LA MÊME PAGE que les cartes KPI de
-                     GroupChantierEvolution ci-dessus (plus de page quasiment vide entre les 2 depuis
-                     le retrait du graphique d'évolution, voir docs/report/rapport-v2.md) — budget
-                     vérifié : une page de contenu offre pageHeight(595) - marges(20+20) -
-                     pageHeader(62) - pageFooter(20) = 473 de hauteur utile ; GroupChantierEvolution
-                     n'en consomme plus que 100 (titre + 4 cartes KPI + narratif, plus de graphique),
-                     il reste donc 373 pour cette bande — d'où le chartHeight réduit à 340 (contre 413
-                     auparavant) pour tenir avec une marge de sécurité. Pour le chapitre final
-                     compact (voir plus bas), ce même isStartNewPage="false" fonctionne aussi : cette
-                     bande a besoin de plus de place que ce qui reste généralement sur la page du
-                     dernier tableau employé détaillé, JasperReports la reporte alors automatiquement
-                     sur une nouvelle page (comportement standard de dépassement de bande) — même
-                     résultat qu'avant, sans le saut de page forcé qui gâchait de l'espace dans le cas
-                     détaillé. -->
+                <printWhenExpression><![CDATA[$F{chantierAvecDetailEquipe}]]></printWhenExpression>
+                <!-- isStartNewPage="false" sur ce GROUPE (depuis 2026-09-28, demande explicite de
+                     direction) : continue sur LA MÊME PAGE que les cartes KPI de GroupChantierEvolution
+                     ci-dessus (plus de page quasiment vide entre les 2) — budget vérifié : une page de
+                     contenu offre pageHeight(595) - marges(20+20) - pageHeader(62) - pageFooter(20) =
+                     473 de hauteur utile ; GroupChantierEvolution n'en consomme que 100 (titre + 4
+                     cartes KPI + narratif), il reste donc 373 pour cette bande — d'où le chartHeight
+                     réduit à 340 (contre 413 auparavant) pour tenir avec une marge de sécurité. -->
                 <!-- Hauteur 18 pour taille 12 (marge ~6pt, voir le piège JasperReports documenté dans
-                     GroupChantierEvolution ci-dessus) — texte plus petit qu'avant (16pt/22) car cette
-                     page n'est plus un titre de chapitre à part entière, juste un sous-titre au fil de
-                     la page KPI qui précède (voir le commentaire de bande ci-dessus). -->
+                     GroupChantierEvolution ci-dessus). -->
                 <textField>
-                    <reportElement x="0" y="0" width="802" height="18" forecolor="#000000">
-                        <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
-                    </reportElement>
+                    <reportElement x="0" y="0" width="802" height="18" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
                     <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
@@ -566,9 +543,7 @@
 
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="20" width="802" height="340">
-                            <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
-                        </reportElement>
+                        <reportElement x="0" y="20" width="802" height="340"/>
                         <chartLegend position="Bottom">
                             <font fontName="Liberation Serif" size="8.5"/>
                         </chartLegend>
@@ -602,71 +577,6 @@
                     </categoryDataset>
                     <barPlot><plot/></barPlot>
                 </barChart>
-
-                <!-- Chapitre final consolidé "Chantiers à effectif réduit" — contenu affiché UNE SEULE
-                     fois (voir groupExpression ci-dessus), à la place du contenu "détaillé" ci-dessus,
-                     dans la MÊME bande partagée (jamais une bande séparée) : les deux contenus ne
-                     s'affichent jamais ensemble (printWhenExpression mutuellement exclusifs). Ce
-                     titre-ci GARDE sa hauteur/taille pleine (22/16pt, pas 18/12 comme la version
-                     "détaillée" ci-dessus) : cette page reste un VRAI chapitre romain à part entière
-                     (jamais précédée d'une page KPI à fusionner avec elle, voir le commentaire de
-                     bande ci-dessus), donc jamais raccourcie. Chart réduit à 300 (contre 413
-                     auparavant) uniquement pour que la hauteur de bande PARTAGÉE avec la version
-                     détaillée (dont le budget est plus contraint, voir le commentaire de bande) reste
-                     raisonnable — cette page seule aurait eu la place pour un chart plus grand. -->
-                <textField>
-                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000">
-                        <printWhenExpression><![CDATA[$F{chantierCompact}]]></printWhenExpression>
-                    </reportElement>
-                    <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA[$F{chantierChapitreTitreCompacts}]]></textFieldExpression>
-                    <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode}]]></anchorNameExpression>
-                </textField>
-                <staticText>
-                    <reportElement x="0" y="24" width="802" height="16" forecolor="#000000">
-                        <printWhenExpression><![CDATA[$F{chantierCompact}]]></printWhenExpression>
-                    </reportElement>
-                    <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <text><![CDATA[Masse, effectif et STC par chantier]]></text>
-                </staticText>
-                <barChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="42" width="802" height="300">
-                            <printWhenExpression><![CDATA[$F{chantierCompact}]]></printWhenExpression>
-                        </reportElement>
-                        <chartLegend position="Bottom">
-                            <font fontName="Liberation Serif" size="8.5"/>
-                        </chartLegend>
-                    </chart>
-                    <categoryDataset>
-                        <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_REPARTITION_CHANTIERS_COMPACTS})]]></dataSourceExpression>
-                            </datasetRun>
-                        </dataset>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stc}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["STC (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{stcMontant}]]></valueExpression>
-                        </categorySeries>
-                    </categoryDataset>
-                    <barPlot><plot/></barPlot>
-                </barChart>
             </band>
         </groupHeader>
     </group>
@@ -675,22 +585,25 @@
          ET filets en noir partout (titre équipe, en-têtes de colonnes, grille du tableau employé sur
          TOUTES les cellules, pas seulement l'en-tête) — le bleu marine #011F5B utilisé ailleurs dans
          le document (titres de chapitre) a été essayé ici puis abandonné sur demande explicite de
-         direction : "tout en noir". Aucune BI au
-         niveau équipe (ni graphique d'évolution, ni répartition par fonction — demande explicite de
-         direction, jugé redondant avec le niveau chantier) : le tableau employé qui suit, trié par
-         fonction (la fonction qui consomme le plus de masse en premier, voir
-         PaieBiReportBuilder.equipeVue), est directement le contenu de la section équipe.
+         direction : "tout en noir".
 
-         RÉUTILISÉ TEL QUEL pour les chantiers "compacts" (voir ChantierBiVue.compact) — jamais un
-         second groupe JRXML dédié : pour ces chantiers, PaieReportPdfService.lignesDetail fait porter
-         à $F{equipeNom}/$F{equipeTitre}/$F{equipeEffectif}/$F{equipeMasse}/
-         $F{equipePartChantierPourcent}/$F{equipeStc} les valeurs du CHANTIER (pas d'une vraie équipe —
-         demande explicite de direction : dans un chantier à 1-2 personnes, juste "chantier + employé",
-         aucune sous-distinction équipe). $F{equipeNom} valant alors le code chantier (unique), ce
-         groupe se déclenche exactement une fois par chantier compact — avec isStartNewPage="false",
-         plusieurs petits chantiers s'enchaînent donc sur la même page, sans le saut de page qui posait
-         problème (voir docs/report/README.md). -->
-    <group name="GroupEquipe" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="true" keepTogether="true">
+         Une section par équipe SÉLECTIONNÉE (voir ChantierBiVue.avecDetailEquipe et le Javadoc de
+         EquipeBiVue), plus, si des employés restent, une dernière section "reste" les regroupant tous
+         — $F{equipeNom} vaut alors le CODE CHANTIER (pas une vraie équipe), ce qui déclenche bien ce
+         groupe une fois de plus (valeur différente de la section équipe précédente). Pour un chantier
+         SANS équipe détaillée, une seule occurrence de ce groupe par chantier, $F{equipeNom} valant
+         également le code chantier. isStartNewPage="true" (demande explicite de direction,
+         2026-09-29) : CHAQUE section (équipe ou reste) démarre sur sa propre page, y compris quand
+         plusieurs chantiers sans détail équipe se suivent — plus jamais deux sections enchaînées sur
+         la même page (voir docs/report/rapport-v2.md).
+
+         Tableau employé trié par fonction (la fonction qui consomme le plus de masse de cette section
+         en premier, voir PaieBiReportBuilder.equipeVue). Le groupFooter ci-dessous ajoute, collées
+         directement au bas de ce tableau (demande explicite de direction, 2026-09-29) : les lignes
+         TOTAL GENERAL / TOTAL GENERAL MOIS PRECEDENT, le tableau récap Fonction/Effectif/STC, puis,
+         pour le chantier "C168" équipes "CH"/"OP" uniquement (voir MaterielChantierCatalogue), le
+         squelette "parc matériel" à remplir au stylo. -->
+    <group name="GroupEquipe" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="true" keepTogether="true">
         <groupExpression><![CDATA[$F{equipeNom}]]></groupExpression>
         <groupHeader>
             <band height="56" splitType="Prevent">
@@ -799,6 +712,70 @@
                 </staticText>
             </band>
         </groupHeader>
+        <!-- Collé directement au bas du tableau employé (demande explicite de direction, 2026-09-29,
+             voir docs/report/rapport-v2.md) : lignes de résumé, puis tableau récap Fonction/Effectif/STC
+             (sous-rapport, nombre de fonctions variable — voir recap-fonction.jrxml), puis, pour le
+             chantier "C168" équipes "CH"/"OP" uniquement (voir MaterielChantierCatalogue), le squelette
+             "parc matériel" à remplir au stylo (sous-rapport vide, donc invisible, pour toute autre
+             section — voir recap-materiel.jrxml et EquipeBiVue.materiel). Hauteur de bande généreuse
+             (220) : simple base, les 2 sous-rapports étirent automatiquement la bande au-delà si le
+             nombre de lignes l'exige (splitType="Stretch"). -->
+        <groupFooter>
+            <band height="220" splitType="Stretch">
+                <staticText>
+                    <reportElement x="0" y="0" width="510" height="16" forecolor="#000000"/>
+                    <box rightPadding="6"><pen lineWidth="0.5" lineColor="#000000"/></box>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
+                    <text><![CDATA[TOTAL GENERAL]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="510" y="0" width="130" height="16" forecolor="#000000"/>
+                    <box rightPadding="3"><pen lineWidth="0.5" lineColor="#000000"/></box>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$F{equipeMasse} + " DH"]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="0" y="16" width="510" height="16" forecolor="#000000"/>
+                    <box rightPadding="6"><pen lineWidth="0.5" lineColor="#000000"/></box>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
+                    <text><![CDATA[TOTAL GENERAL MOIS PRECEDENT]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="510" y="16" width="130" height="16" forecolor="#000000"/>
+                    <box rightPadding="3"><pen lineWidth="0.5" lineColor="#000000"/></box>
+                    <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA["INTROUVABLE".equals($F{equipeMontantMoisPrecedentOuIntrouvable}) ? "INTROUVABLE" : ($F{equipeMontantMoisPrecedentOuIntrouvable} + " DH")]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="0" y="44" width="300" height="14" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="9.5" isBold="true" isItalic="true"/></textElement>
+                    <text><![CDATA[Répartition par fonction]]></text>
+                </staticText>
+                <subreport>
+                    <reportElement x="0" y="60" width="300" height="18"/>
+                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{equipeRepartitionFonction})]]></dataSourceExpression>
+                    <subreportExpression><![CDATA[$P{P_SUBREPORT_RECAP_FONCTION}]]></subreportExpression>
+                </subreport>
+
+                <staticText>
+                    <reportElement x="420" y="44" width="250" height="14" forecolor="#000000">
+                        <printWhenExpression><![CDATA[$F{equipeMateriel} != null && !$F{equipeMateriel}.isEmpty()]]></printWhenExpression>
+                    </reportElement>
+                    <textElement><font fontName="Liberation Serif" size="9.5" isBold="true" isItalic="true"/></textElement>
+                    <text><![CDATA[Parc matériel (à remplir)]]></text>
+                </staticText>
+                <subreport>
+                    <reportElement x="420" y="60" width="250" height="18"/>
+                    <subreportParameter name="TITRE_COLONNE">
+                        <subreportParameterExpression><![CDATA[staport.rh.paie.reporting.MaterielChantierCatalogue.titre($F{chantierCode}, $F{equipeNom})]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{equipeMateriel})]]></dataSourceExpression>
+                    <subreportExpression><![CDATA[$P{P_SUBREPORT_RECAP_MATERIEL}]]></subreportExpression>
+                </subreport>
+            </band>
+        </groupFooter>
     </group>
 
     <!-- ================================ PAGE DE GARDE (title) ================================
@@ -908,13 +885,8 @@
                 <text><![CDATA[Signature]]></text>
             </staticText>
 
-            <textField>
-                <reportElement x="0" y="470" width="802" height="14" forecolor="#808080"/>
-                <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10"/></textElement>
-                <textFieldExpression><![CDATA["Généré le " + $P{P_DATE_GENERATION}]]></textFieldExpression>
-            </textField>
             <staticText>
-                <reportElement x="0" y="490" width="802" height="14" forecolor="#808080"/>
+                <reportElement x="0" y="480" width="802" height="14" forecolor="#808080"/>
                 <textElement textAlignment="Center"><font fontName="Liberation Serif" size="10"/></textElement>
                 <text><![CDATA[STAPORT S.A — Société de travaux d'assainissement, ponts et routes]]></text>
             </staticText>
@@ -929,10 +901,10 @@
          paraît dense/collé à l'en-tête — cette marge se répète nativement sur toutes les pages de
          contenu, jamais recréée page par page.
 
-         Bloc 5 (Niveau) est dynamique — jamais un texte statique — et remplace "Généré le" (déjà
-         affiché une fois sur la page de garde ; le répéter identique sur 80+ pages n'apportait rien,
-         alors que le niveau de lecture courant, lui, change à chaque page et aide vraiment à se
-         repérer). Deux valeurs possibles selon la position dans le document :
+         Bloc 5 (Niveau) est dynamique — jamais un texte statique : la date de génération a été retirée
+         du document (demande explicite de direction, 2026-09-28 — voir docs/report/rapport-v2.md), ce
+         bloc affiche donc le niveau de lecture courant, qui change à chaque page et aide vraiment à se
+         repérer. Deux valeurs possibles selon la position dans le document :
            - "GLOBAL" tant que $V{PAGE_NUMBER} précède la première page chantier (page de garde,
              synthèse globale, répartition par chantier — voir P_PAGE_PREMIER_CHANTIER, calculé via
              un premier passage de découverte, voir PaieReportPdfService.generer) ;
@@ -945,10 +917,10 @@
              affiche déjà le nom de la première équipe du chantier, pas encore réellement affichée à
              l'écran à ce moment précis — un détail mineur, jamais un niveau incorrect (le chantier,
              lui, est toujours exact) ;
-           - "CHANTIER : <code>" SEUL (sans "· ÉQUIPE"), pour un chantier "compact" ($F{chantierCompact},
-             voir ChantierBiVue.compact) : $F{equipeNom} y vaut alors le code chantier, pas une vraie
-             équipe (voir le Javadoc de LigneRapportDetailBean) — l'afficher tel quel aurait donné
-             "CHANTIER : C085 · ÉQUIPE : C085", redondant et trompeur. -->
+           - "CHANTIER : <code>" SEUL (sans "· ÉQUIPE"), quand $F{equipeNom} vaut le CODE CHANTIER
+             plutôt qu'une vraie équipe (voir le Javadoc de EquipeBiVue : le "reste" du chantier, ou sa
+             seule section quand aucune équipe n'a été sélectionnée pour un détail séparé) — l'afficher
+             tel quel aurait donné "CHANTIER : C085 · ÉQUIPE : C085", redondant et trompeur. -->
     <pageHeader>
         <band height="62" splitType="Prevent">
             <!-- Bloc 1 : logo -->
@@ -1014,7 +986,7 @@
             <textField>
                 <reportElement x="590" y="17" width="202" height="14" forecolor="#000000"/>
                 <textElement><font fontName="Liberation Serif" size="9" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{chantierCompact} ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
             </textField>
 
             <line>
@@ -1109,7 +1081,7 @@
             <textField>
                 <reportElement x="10" y="5" width="400" height="12" forecolor="#595959"/>
                 <textElement textAlignment="Left"><font fontName="Liberation Serif" size="8.5"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{chantierCompact} ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="602" y="5" width="150" height="12" forecolor="#595959"/>

@@ -29,6 +29,15 @@ public class Chantier {
     private String designation;
 
     /**
+     * Nom optionnel du chantier, distinct de {@code designation} — jamais exposé ni modifié par la
+     * synchronisation ERP (voir {@code ChantierSyncTransactionalOperations}), uniquement saisi/modifié
+     * manuellement. Affiché par le rapport PDF/l'export Excel de la paie sous la forme
+     * "CHANTIER : &lt;code&gt; (&lt;nom&gt;)" quand renseigné.
+     */
+    @Column(name = "nom", length = 255)
+    private String nom;
+
+    /**
      * Vrai si ce chantier est géré par la synchronisation ERP (webServiceBS/getChantiers).
      * La réconciliation se fait par {@code code} : id_chantier côté ERP n'est pas un identifiant
      * fiable par chantier (une même valeur peut être partagée par des dizaines de chantiers).
@@ -65,6 +74,14 @@ public class Chantier {
 
     public void setDesignation(String designation) {
         this.designation = designation;
+    }
+
+    public String getNom() {
+        return nom;
+    }
+
+    public void setNom(String nom) {
+        this.nom = nom;
     }
 
     public boolean isSourceErp() {

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.PaiePerimetreService;
 import staport.rh.paie.reporting.PerimetreChantier;
 import staport.rh.paie.reporting.PerimetrePaie;
@@ -33,21 +34,6 @@ public class PaieExportService {
     private static final Logger log = LoggerFactory.getLogger(PaieExportService.class);
     private static final int NOM_FEUILLE_MAX = 31;
 
-    /**
-     * Décision (HMAYDA, 2026-09-22) : sur les feuilles équipe du chantier "C168", un squelette de
-     * tableau matériel (labels uniquement, colonne "Nbre" à remplir à la main) est ajouté à côté du
-     * tableau "effectif par fonction" — CAMION pour l'équipe "CH", ENGINS pour l'équipe "OP".
-     * Propre à ce chantier uniquement, aucune règle générale identifiée pour les autres. Spécifique
-     * à Excel (un tableau "à remplir à la main" n'a pas de sens dans un PDF de reporting imprimé).
-     */
-    private static final String CHANTIER_MATERIEL = "C168";
-    private static final String EQUIPE_CAMION = "CH";
-    private static final String EQUIPE_ENGINS = "OP";
-    private static final List<String> LIBELLES_CAMION = List.of(
-            "CAMION CITERNE", "CAMION 8*4", "CAMION SR", "PORT CHAR", "PICK UP");
-    private static final List<String> LIBELLES_ENGINS = List.of(
-            "PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS", "CHARGEUR", "BULL", "TRACTOPELLE");
-
     private final PaiePerimetreService perimetreService;
     private final PaieSheetWriter sheetWriter = new PaieSheetWriter();
 
@@ -68,12 +54,16 @@ public class PaieExportService {
 
             for (PerimetreChantier chantier : perimetre.parChantier().values()) {
                 Sheet feuilleChantier = workbook.createSheet(nomFeuilleValide(chantier.code()));
-                sheetWriter.ecrire(feuilleChantier, styles, chantier.code(), periode, chantier.lignes(),
-                        chantier.totalMoisPrecedent(), null);
+                sheetWriter.ecrire(feuilleChantier, styles, titreZone(chantier.code(), chantier.lignes()), periode,
+                        chantier.lignes(), chantier.totalMoisPrecedent(), null);
 
                 ecrireFeuillesEquipes(workbook, styles, periode, chantier);
             }
 
+            // POI écrit la formule SUBTOTAL de "TOTAL GENERAL" sans valeur mise en cache : sans ce
+            // flag, Excel/LibreOffice affichent la cellule vide tant qu'aucun recalcul manuel (F9)
+            // n'a lieu, au lieu de calculer la somme à l'ouverture du fichier.
+            workbook.setForceFormulaRecalculation(true);
             workbook.write(sortie);
             log.info("Export paie généré : periode={}, chantiers={}", periode, perimetre.parChantier().size());
             return new ByteArrayInputStream(sortie.toByteArray());
@@ -86,29 +76,29 @@ public class PaieExportService {
         for (Map.Entry<String, List<Paie>> entree : chantier.lignesParEquipeAGenerer().entrySet()) {
             String equipe = entree.getKey();
             Sheet feuilleEquipe = workbook.createSheet(nomFeuilleValide(chantier.code() + "_" + equipe));
-            sheetWriter.ecrire(feuilleEquipe, styles, chantier.code() + " - Equipe: " + equipe, periode, entree.getValue(),
-                    chantier.totalMoisPrecedentParEquipe().get(equipe),
+            sheetWriter.ecrire(feuilleEquipe, styles, titreZone(chantier.code(), entree.getValue()) + " - Equipe: " + equipe,
+                    periode, entree.getValue(), chantier.totalMoisPrecedentParEquipe().get(equipe),
                     squeletteMateriel(chantier.code(), equipe));
         }
     }
 
+    /** "&lt;code&gt; (&lt;nom&gt;)" quand {@code Chantier.nom} est renseigné (champ optionnel, jamais
+     * exposé par la synchronisation ERP), "&lt;code&gt;" sinon — même règle que le rapport PDF, voir
+     * {@code PaieBiReportBuilder.titreChantier}. Le nom est lu sur la première ligne du chantier :
+     * toutes les lignes d'un même code partagent la même entité {@code Chantier}. */
+    private String titreZone(String code, List<Paie> lignes) {
+        String nom = lignes.isEmpty() ? null : lignes.get(0).getChantier().getNom();
+        return nom != null && !nom.isBlank() ? code + " (" + nom + ")" : code;
+    }
+
     /**
      * Squelette de tableau matériel à ajouter sur cette feuille équipe, ou {@code null} si le
-     * chantier/l'équipe ne correspond à aucun cas prévu. Comparaison insensible à la casse et aux
-     * espaces superflus.
+     * chantier/l'équipe ne correspond à aucun cas prévu (voir {@link MaterielChantierCatalogue},
+     * règle partagée avec le rapport PDF).
      */
     private SqueletteMateriel squeletteMateriel(String chantierCode, String equipe) {
-        if (chantierCode == null || equipe == null || !chantierCode.trim().equalsIgnoreCase(CHANTIER_MATERIEL)) {
-            return null;
-        }
-        String equipeNormalisee = equipe.trim();
-        if (equipeNormalisee.equalsIgnoreCase(EQUIPE_CAMION)) {
-            return new SqueletteMateriel("CAMION", LIBELLES_CAMION);
-        }
-        if (equipeNormalisee.equalsIgnoreCase(EQUIPE_ENGINS)) {
-            return new SqueletteMateriel("ENGINS", LIBELLES_ENGINS);
-        }
-        return null;
+        String titre = MaterielChantierCatalogue.titre(chantierCode, equipe);
+        return titre == null ? null : new SqueletteMateriel(titre, MaterielChantierCatalogue.libelles(chantierCode, equipe));
     }
 
     private String nomFeuilleValide(String nom) {

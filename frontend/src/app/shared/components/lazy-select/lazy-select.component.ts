@@ -50,9 +50,10 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
    * NÉCESSAIRE dès que ce composant est utilisé dans un conteneur à défilement/overflow contraint
    * (ex. `p-dialog`), sans quoi le panneau — surtout avec le scroll virtuel activé ici — peut se
    * retrouver rogné ou mal positionné, ses lignes ne correspondant alors plus à la zone réellement
-   * cliquable (régression constatée le 2026-09-28 sur `PaieExportExcelDialogComponent` : ce champ
-   * avait `appendTo="body"` avant d'être migré vers ce composant partagé, qui ne l'exposait pas
-   * encore). */
+   * cliquable (régression constatée le 2026-09-28 sur le dialog d'export Excel de la paie, alors
+   * `PaieExportExcelDialogComponent`, depuis fusionné avec le dialog PDF en `PaieExportDialogComponent`
+   * — ce champ avait `appendTo="body"` avant d'être migré vers ce composant partagé, qui ne l'exposait
+   * pas encore). */
   @Input() appendTo: string | null = null;
 
   options: (T | undefined)[] = [];

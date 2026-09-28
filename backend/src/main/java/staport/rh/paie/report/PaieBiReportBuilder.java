@@ -6,31 +6,36 @@ import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
 import staport.rh.paie.repositories.EvolutionChantierEquipeProjection;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Construit la vue-modèle du rapport PDF BI (voir {@code docs/report/README.md} pour le modèle
- * analytique complet). Contrairement à l'export Excel ({@code PaiePerimetreService}, qui projette
- * une sélection manuelle de sous-feuilles), ce rapport agrège systématiquement TOUT le périmètre
- * filtré : aucune configuration de "quelles équipes afficher", chaque chantier et chaque équipe
- * réellement présents dans les données sont représentés, "Sans équipe" compris.
+ * analytique complet). Le périmètre de données (quels chantiers/employés) reste toujours TOUT le
+ * périmètre filtré, mais depuis la fusion des exports PDF/Excel (demande explicite de direction,
+ * 2026-09-29 — voir {@code docs/report/rapport-v2.md}), {@code PaieReportPdfRequestDto.equipesParChantier}
+ * porte la MÊME sélection manuelle que l'export Excel ({@code PaieExportRequestDto.equipesParChantier})
+ * pour décider, chantier par chantier, quelles équipes obtiennent leur propre section détaillée (voir
+ * {@link ChantierBiVue#avecDetailEquipe()}) — contrairement à l'Excel, un employé n'apparaît jamais
+ * dans deux sections du PDF (voir {@link EquipeBiVue}).
  *
  * <p>{@link #construire(YearMonth, PaieReportPdfRequestDto)} fait l'accès base (courant + mois
  * précédent, même périmètre hors période) ; {@link #construireDepuis} est le calcul pur, séparé
@@ -42,14 +47,6 @@ class PaieBiReportBuilder {
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 15;
     private static final int MOIS_EVOLUTION = 12;
-    /** Effectif maximum d'un chantier "compact" (voir {@link ChantierBiVue#compact()}) — seuil validé
-     * explicitement avec la direction après constat qu'un chantier à 1 ou 2 personnes générait 3 pages
-     * quasi vides (vue d'ensemble, répartition par équipe, tableau employé) pour un chantier
-     * négligeable dans le rapport. Ces chantiers sont regroupés dans une unique section finale (voir
-     * {@code PaieReportPdfService}), jamais donnés à chacun sa propre page/chapitre. */
-    private static final int SEUIL_CHANTIER_COMPACT = 3;
-    private static final DateTimeFormatter FORMAT_DATE_GENERATION =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
@@ -129,50 +126,73 @@ class PaieBiReportBuilder {
         );
 
         // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
-        // plus gros chantier en premier, jamais un ré-tri alphabétique qui l'annulerait.
+        // plus gros chantier en premier, jamais un ré-tri alphabétique qui l'annulerait. Cet ordre de
+        // liste, lu tel quel par PaieReportPdfService/rapport.jrxml, détermine entièrement la
+        // numérotation des chapitres : chaque chantier a désormais sa propre section, qu'il ait ou non
+        // une équipe détaillée (voir ChantierBiVue.avecDetailEquipe, plus de chapitre final consolidé —
+        // voir docs/report/rapport-v2.md).
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
-                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante, evolutions))
-                .toList();
-
-        // Chantiers "détaillés" (leur propre chapitre) d'abord, chantiers "compacts" (regroupés dans un
-        // chapitre final unique, voir PaieReportPdfService) ensuite — masse décroissante conservée dans
-        // chaque partition (chantiers est déjà dans cet ordre, un simple filtrage stable suffit, jamais
-        // un ré-tri). C'est cet ordre de liste, lu tel quel par le gabarit JRXML, qui détermine
-        // entièrement la numérotation des chapitres, jamais un recalcul indépendant côté JRXML.
-        List<ChantierBiVue> chantiersOrdonnes = new ArrayList<>(chantiers.size());
-        chantiers.stream().filter(c -> !c.compact()).forEach(chantiersOrdonnes::add);
-        chantiers.stream().filter(ChantierBiVue::compact).forEach(chantiersOrdonnes::add);
-
-        List<Agregat> agregatChantiersCompacts = agregatChantier.stream()
-                .filter(a -> a.effectif() <= SEUIL_CHANTIER_COMPACT)
+                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante,
+                        evolutions, equipesSelectionneesPour(requete, code)))
                 .toList();
 
         return new RapportBiVue(
                 libellePeriode(periode),
-                LocalDateTime.now().format(FORMAT_DATE_GENERATION),
                 filtresActifs(requete, courant),
                 synthese,
-                chantiersOrdonnes,
-                versRepartition(agregatChantiersCompacts));
+                chantiers);
+    }
+
+    /** Sélection manuelle d'équipes à détailler pour ce chantier (voir
+     * {@code PaieReportPdfRequestDto.equipesParChantier}) — vide si le chantier est absent de la map
+     * ou si sa liste est vide, auquel cas {@code ChantierBiVue.avecDetailEquipe} vaudra {@code false}. */
+    private Set<String> equipesSelectionneesPour(PaieReportPdfRequestDto requete, String chantierCode) {
+        if (requete.equipesParChantier() == null) {
+            return Set.of();
+        }
+        List<String> equipes = requete.equipesParChantier().get(chantierCode);
+        return equipes == null ? Set.of() : new HashSet<>(equipes);
     }
 
     private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent, BigDecimal masseGlobale,
-                                       EvolutionParNiveau evolutions) {
+                                       EvolutionParNiveau evolutions, Set<String> equipesSelectionnees) {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
         int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
+        boolean avecDetailEquipe = !equipesSelectionnees.isEmpty();
+        String titreChantier = titreChantier(code, lignesChantier);
 
-        List<EquipeBiVue> equipes = agregatEquipe.stream()
-                .map(Agregat::cle)
-                .sorted(Comparator.comparing((String nom) -> nom.equals(SANS_EQUIPE) ? 1 : 0).thenComparing(Comparator.naturalOrder()))
-                .map(nom -> equipeVue(nom, filtrerParEquipe(lignesChantier, nom), masseChantier))
-                .toList();
+        List<EquipeBiVue> equipes = new ArrayList<>();
+        if (avecDetailEquipe) {
+            // Une section par équipe SÉLECTIONNÉE (pas forcément toutes les équipes réelles du
+            // chantier, voir agregatEquipe ci-dessus qui, lui, alimente le graphique avec la
+            // distribution COMPLÈTE) — puis, si des employés restent (équipes non sélectionnées, "Sans
+            // équipe" compris), une dernière section "reste" les regroupant tous, jamais nommée "Sans
+            // équipe" (elle peut très bien contenir des employés d'une vraie équipe non sélectionnée,
+            // voir le Javadoc de EquipeBiVue) mais portant le nom du chantier.
+            agregatEquipe.stream()
+                    .map(Agregat::cle)
+                    .filter(equipesSelectionnees::contains)
+                    .forEach(nom -> equipes.add(equipeVue(
+                            nom, titreEquipe(nom),
+                            filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
+                            masseChantier, MaterielChantierCatalogue.libelles(code, nom))));
+            List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
+            if (!reste.isEmpty()) {
+                List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
+                equipes.add(equipeVue(code, titreChantier, reste, restePrecedent, masseChantier, List.of()));
+            }
+        } else {
+            // Aucune équipe sélectionnée pour ce chantier : une seule section réunissant tous ses
+            // employés, sans graphique de répartition par équipe (voir rapport.jrxml, GroupChantier).
+            equipes.add(equipeVue(code, titreChantier, lignesChantier, lignesChantierPrecedent, masseChantier, List.of()));
+        }
 
         return new ChantierBiVue(
                 code,
-                "CHANTIER : " + code,
+                titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
                 PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
@@ -181,15 +201,34 @@ class PaieBiReportBuilder {
                 versRepartition(agregatEquipe),
                 evolutions.pourChantier(code),
                 equipes,
-                lignesChantier.size() <= SEUIL_CHANTIER_COMPACT,
-                PaieReportNumberFormat.montant(masseChantier));
+                avecDetailEquipe);
     }
 
-    private EquipeBiVue equipeVue(String nom, List<Paie> lignesEquipe, BigDecimal masseChantier) {
+    /** "CHANTIER : &lt;code&gt; (&lt;nom&gt;)" quand {@code Chantier.nom} est renseigné (champ
+     * optionnel, jamais exposé par la synchronisation ERP — voir {@code docs/chantier/README.md}),
+     * "CHANTIER : &lt;code&gt;" sinon. Le nom est lu sur la première ligne du chantier : toutes les
+     * lignes d'un même {@code code} partagent la même entité {@code Chantier}. */
+    private String titreChantier(String code, List<Paie> lignesChantier) {
+        String nom = lignesChantier.isEmpty() ? null : lignesChantier.get(0).getChantier().getNom();
+        return nom != null && !nom.isBlank() ? "CHANTIER : " + code + " (" + nom + ")" : "CHANTIER : " + code;
+    }
+
+    private String titreEquipe(String nom) {
+        return nom.equals(SANS_EQUIPE) ? SANS_EQUIPE.toUpperCase(Locale.FRANCE) : "ÉQUIPE : " + nom.toUpperCase(Locale.FRANCE);
+    }
+
+    private List<Paie> filtrerHorsEquipes(List<Paie> lignes, Set<String> equipesSelectionnees) {
+        return lignes.stream().filter(p -> !equipesSelectionnees.contains(libelleEquipe(p))).toList();
+    }
+
+    private EquipeBiVue equipeVue(String nom, String titre, List<Paie> lignesEquipe, List<Paie> lignesEquipePrecedent,
+                                   BigDecimal masseChantier, List<String> materielLibelles) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
-        // Aucune BI par fonction à ce niveau (demande explicite de direction) : agregatFonctionEquipe
-        // sert UNIQUEMENT à ordonner le tableau employé ci-dessous, jamais affiché en graphique/table
-        // de répartition.
+        BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
+        // agregatFonctionEquipe sert à la fois à ordonner le tableau employé (la fonction consommant
+        // le plus de masse de cette section en premier) ET à alimenter le nouveau tableau récap
+        // Fonction/Effectif/STC (demande explicite de direction, 2026-09-29) — jamais un graphique,
+        // voir le Javadoc de EquipeBiVue.
         List<Agregat> agregatFonctionEquipe = agreger(lignesEquipe, this::libelleFonction);
         Map<String, Integer> rangFonction = new LinkedHashMap<>();
         for (int i = 0; i < agregatFonctionEquipe.size(); i++) {
@@ -203,12 +242,25 @@ class PaieBiReportBuilder {
 
         return new EquipeBiVue(
                 nom,
-                nom.equals(SANS_EQUIPE) ? SANS_EQUIPE.toUpperCase(Locale.FRANCE) : "ÉQUIPE : " + nom.toUpperCase(Locale.FRANCE),
+                titre,
                 lignesEquipe.size(),
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
+                PaieReportNumberFormat.montantOuIntrouvable(masseEquipePrecedente),
+                repartitionFonctionSimple(agregatFonctionEquipe),
+                materielLibelles.stream().map(MaterielLigneVue::new).toList(),
                 employes);
+    }
+
+    /** Convertit un agrégat par fonction en tableau récap (voir {@link EquipeBiVue#repartitionFonction()})
+     * — jamais plafonné aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses valeurs comme
+     * {@link #versRepartition} : ce n'est pas un graphique, un tableau imprime toutes ses lignes (le
+     * nombre de fonctions distinctes d'une équipe reste de toute façon faible). */
+    private List<RepartitionBean> repartitionFonctionSimple(List<Agregat> agregats) {
+        return agregats.stream()
+                .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
+                .toList();
     }
 
     private LigneEmployeVue ligneEmploye(Paie paie) {

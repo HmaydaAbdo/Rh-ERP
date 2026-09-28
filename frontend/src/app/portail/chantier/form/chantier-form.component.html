@@ -29,6 +29,12 @@
       }
     </div>
 
+    <div class="field">
+      <label for="nom">Nom (optionnel)</label>
+      <input pInputText id="nom" type="text" formControlName="nom" />
+      <small>Jamais synchronisé depuis l'ERP — affiché entre parenthèses après le code dans le rapport PDF et l'export Excel de la paie.</small>
+    </div>
+
     @if (isEditMode) {
       <div class="field">
         <label for="actif">Statut *</label>

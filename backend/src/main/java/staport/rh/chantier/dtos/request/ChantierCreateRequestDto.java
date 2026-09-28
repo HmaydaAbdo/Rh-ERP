@@ -10,6 +10,9 @@ public record ChantierCreateRequestDto(
 
         @NotBlank
         @Size(max = 500)
-        String designation
+        String designation,
+
+        @Size(max = 255)
+        String nom
 ) {
 }
