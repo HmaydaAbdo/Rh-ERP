@@ -105,11 +105,17 @@ export interface PaieImportResult {
 
 /** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir docs/report/README.md), pas un export
  * tabulaire (voir PaieExportRequest pour celui-ci). Le périmètre reprend exactement les filtres de
- * la page Paie (PaieSearchCriteria, sans pagination) : periode obligatoire, le reste optionnel. */
+ * la page Paie (PaieSearchCriteria, sans pagination) : periode obligatoire, le reste optionnel.
+ *
+ * `equipesParChantier` : même forme et même sélection que PaieExportRequest.equipesParChantier
+ * (demande explicite de direction, 2026-09-29 : export PDF/Excel unifiés derrière un seul dialog,
+ * une seule sélection manuelle d'équipes à détailler) — un chantier absent de cette map n'a aucune
+ * équipe détaillée séparément dans le PDF, tous ses employés sont réunis dans une seule section. */
 export interface PaieRapportPdfRequest {
   periode: string;
   nomPrenom?: string | null;
   cin?: string | null;
   fonctionId?: number | null;
   chantierId?: number | null;
+  equipesParChantier?: Record<string, string[]> | null;
 }

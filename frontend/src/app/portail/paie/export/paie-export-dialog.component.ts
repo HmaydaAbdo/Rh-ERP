@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
@@ -10,10 +12,11 @@ import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { PaieExportRequest } from '../models/paie.model';
+import { PaieExportRequest, PaieRapportPdfRequest } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
 type Inclusion = 'INCLURE' | 'EXCLURE';
+type Format = 'PDF' | 'EXCEL';
 
 const LIBELLES_MOIS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -22,17 +25,16 @@ const LIBELLES_MOIS = [
 const NB_ANNEES_PASSEES = 5;
 
 /**
- * Dialog d'export Excel de la paie — expérience dédiée, indépendante du rapport PDF (voir
- * PaieListComponent pour le dialog PDF). Structure toujours générée par le backend (voir
- * docs/report/README.md) : feuille Global (tous les employés) + une feuille par chantier.
- *
- * Cette dialog ne pilote que la configuration optionnelle des sous-feuilles équipe : pour chaque
- * chantier concerné, l'utilisateur choisit explicitement les équipes à séparer (aucune sélection
- * automatique de "toutes les équipes"), puis pour chacune si elle reste aussi dans la feuille du
- * chantier ou en est exclue.
+ * Dialog d'export unique de la paie — PDF ou Excel, une seule sélection manuelle d'équipes à
+ * détailler pour les deux formats (demande explicite de direction, 2026-09-29, voir
+ * docs/report/rapport-v2.md). Pour un chantier sélectionné ici : le PDF affiche le graphique de
+ * répartition par équipe + une section détaillée par équipe cochée (les autres employés du chantier
+ * regroupés dans une dernière section), tandis que l'Excel génère en plus une feuille par équipe
+ * cochée (toujours en plus des feuilles Global/chantier, jamais à la place — l'Excel duplique
+ * volontairement, le PDF jamais, voir le Javadoc de EquipeBiVue côté backend).
  */
 @Component({
-  selector: 'app-paie-export-excel-dialog',
+  selector: 'app-paie-export-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -45,11 +47,12 @@ const NB_ANNEES_PASSEES = 5;
     SelectButtonModule,
     LazySelectComponent
   ],
-  templateUrl: './paie-export-excel-dialog.component.html',
-  styleUrl: './paie-export-excel-dialog.component.scss'
+  templateUrl: './paie-export-dialog.component.html',
+  styleUrl: './paie-export-dialog.component.scss'
 })
-export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
+export class PaieExportDialogComponent implements OnChanges, OnInit {
   private readonly paieService = inject(PaieService);
+  private readonly messageService = inject(MessageService);
   readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly fb = inject(FormBuilder);
 
@@ -57,7 +60,12 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
   @Output() readonly visibleChange = new EventEmitter<boolean>();
 
   exporting = false;
+  format: Format = 'PDF';
 
+  readonly formatOptions: { label: string; value: Format; icon: string }[] = [
+    { label: 'Rapport PDF', value: 'PDF', icon: 'pi pi-file-pdf' },
+    { label: 'Classeur Excel', value: 'EXCEL', icon: 'pi pi-file-excel' }
+  ];
   readonly anneeOptions: number[] = this.construireAnneeOptions();
   readonly moisOptions: { label: string; value: number }[] = LIBELLES_MOIS.map((label, index) => ({ label, value: index + 1 }));
   readonly inclusionOptions: { label: string; value: Inclusion }[] = [
@@ -71,11 +79,12 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
     chantiersConcernes: [[] as string[]]
   });
 
-  /** Pour chaque chantier concerné : équipes ayant leur propre feuille — sélection explicite,
-   * jamais déduite automatiquement des équipes trouvées pour ce chantier. */
+  /** Pour chaque chantier concerné : équipes ayant leur propre section (PDF) et feuille (Excel) —
+   * sélection explicite, jamais déduite automatiquement des équipes trouvées pour ce chantier. */
   equipesSepareesParChantier: Record<string, string[] | undefined> = {};
-  /** Sous-ensemble des équipes séparées ci-dessus, par chantier, exclues de la feuille du chantier
-   * (défaut : incluses). */
+  /** Spécifique à l'Excel : sous-ensemble des équipes séparées ci-dessus, par chantier, exclues de la
+   * feuille du chantier (défaut : incluses) — n'a pas de sens pour le PDF, où un employé n'apparaît
+   * jamais dans deux sections (voir le Javadoc de EquipeBiVue côté backend). */
   private equipesExcluesParChantier: Record<string, Set<string>> = {};
 
   private readonly equipesCache = new Map<string, string[]>();
@@ -94,6 +103,17 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
   setVisible(valeur: boolean): void {
     this.visible = valeur;
     this.visibleChange.emit(valeur);
+  }
+
+  onFormatChange(): void {
+    // Rien à recalculer : la sélection d'équipes est partagée par les deux formats, seule la
+    // présentation (inclure/exclure, texte d'aide) change avec le format.
+  }
+
+  hintTexte(): string {
+    return this.format === 'PDF'
+      ? "Rapport de synthèse : chaque chantier a sa propre page. Une équipe cochée ci-dessous obtient sa propre section (graphique et tableau) ; les autres employés du chantier sont réunis dans un seul tableau, jamais répétés ailleurs."
+      : 'Classeur complet : une feuille Global et une feuille par chantier, toujours entières. Une équipe cochée obtient en plus sa propre feuille — ses employés restent aussi visibles dans la feuille du chantier, sauf si vous les en excluez.';
   }
 
   onPeriodeChange(): void {
@@ -150,6 +170,30 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
     this.equipesExcluesParChantier = { ...this.equipesExcluesParChantier, [code]: exclues };
   }
 
+  /** Une phrase par chantier concerné, reformulant la structure réelle qui sera générée — guide
+   * l'utilisateur avant le téléchargement (voir la maquette validée avec la direction). */
+  resumeParChantier(): string[] {
+    const codes = this.form.controls.chantiersConcernes.value ?? [];
+    return codes.map((code) => {
+      const equipes = this.equipesSepareesParChantier[code] ?? [];
+      if (equipes.length === 0) {
+        return this.format === 'PDF'
+          ? `Chantier ${code} : un tableau "CHANTIER : ${code}" avec tous ses employés, sans graphique.`
+          : `Chantier ${code} : feuille ${code} avec tous ses employés (comme toujours).`;
+      }
+      if (this.format === 'PDF') {
+        return `Chantier ${code} : graphique répartition par équipe + section détaillée pour ${equipes.join(', ')}, et un tableau "CHANTIER : ${code}" pour le reste des employés.`;
+      }
+      const details = equipes
+        .map((equipe) => {
+          const inclu = !this.equipesExcluesParChantier[code]?.has(equipe);
+          return `feuille ${equipe} (${inclu ? 'aussi visible' : 'retirée'} de la feuille ${code})`;
+        })
+        .join(', ');
+      return `Chantier ${code} : feuille ${code} complète, plus ${details}.`;
+    });
+  }
+
   onExporter(): void {
     const annee = this.form.controls.annee.value;
     const mois = this.form.controls.mois.value;
@@ -157,15 +201,30 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
       return;
     }
     const periode = this.formaterPeriode(annee, mois);
+    const equipesParChantier = this.construireEquipesParChantier();
 
+    this.exporting = true;
+    if (this.format === 'EXCEL') {
+      this.exporterExcel(periode, equipesParChantier);
+    } else {
+      this.exporterPdf(periode, equipesParChantier);
+    }
+  }
+
+  private construireEquipesParChantier(): Record<string, string[]> {
     const equipesParChantier: Record<string, string[]> = {};
-    const equipesExcluesFeuilleChantier: Record<string, string[]> = {};
     for (const code of this.form.controls.chantiersConcernes.value ?? []) {
       const equipes = this.equipesSepareesParChantier[code] ?? [];
-      if (equipes.length === 0) {
-        continue;
+      if (equipes.length > 0) {
+        equipesParChantier[code] = equipes;
       }
-      equipesParChantier[code] = equipes;
+    }
+    return equipesParChantier;
+  }
+
+  private exporterExcel(periode: string, equipesParChantier: Record<string, string[]>): void {
+    const equipesExcluesFeuilleChantier: Record<string, string[]> = {};
+    for (const [code, equipes] of Object.entries(equipesParChantier)) {
       const exclues = this.equipesExcluesParChantier[code];
       if (exclues && exclues.size > 0) {
         equipesExcluesFeuilleChantier[code] = equipes.filter((equipe) => exclues.has(equipe));
@@ -180,19 +239,56 @@ export class PaieExportExcelDialogComponent implements OnChanges, OnInit {
       chantiers: null
     };
 
-    this.exporting = true;
     this.paieService
       .exporter(requete)
       .pipe(finalize(() => (this.exporting = false)))
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = `Paie_Export_${periode}.xlsx`;
-        lien.click();
-        window.URL.revokeObjectURL(url);
-        this.setVisible(false);
+      .subscribe({
+        next: (blob) => this.telecharger(blob, `Paie_Export_${periode}.xlsx`),
+        error: (err: HttpErrorResponse) => void this.afficherErreur('export Excel', err)
       });
+  }
+
+  private exporterPdf(periode: string, equipesParChantier: Record<string, string[]>): void {
+    const requete: PaieRapportPdfRequest = {
+      periode,
+      equipesParChantier: Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null
+    };
+
+    this.paieService
+      .telechargerRapportPdf(requete)
+      .pipe(finalize(() => (this.exporting = false)))
+      .subscribe({
+        next: (blob) => this.telecharger(blob, `Paie_Rapport_BI_${periode}.pdf`),
+        error: (err: HttpErrorResponse) => void this.afficherErreur('rapport PDF', err)
+      });
+  }
+
+  private telecharger(blob: Blob, nomFichier: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = nomFichier;
+    lien.click();
+    window.URL.revokeObjectURL(url);
+    this.setVisible(false);
+  }
+
+  /** Avec responseType 'blob', le corps d'erreur JSON du backend arrive lui aussi en Blob : on le
+   * relit pour afficher son message (ex. « Aucun bulletin de paie pour la période 2026-08 … ») —
+   * l'intercepteur global ne peut pas le faire, il ne voit qu'un Blob opaque sur cette requête. */
+  private async afficherErreur(libelle: string, err: HttpErrorResponse): Promise<void> {
+    let detail = `L'export n'a pas pu être généré (${libelle}).`;
+    if (err.error instanceof Blob) {
+      try {
+        const corps = JSON.parse(await err.error.text()) as { message?: string };
+        if (corps.message) {
+          detail = corps.message;
+        }
+      } catch {
+        // corps non JSON : on garde le message générique
+      }
+    }
+    this.messageService.add({ severity: 'error', summary: 'Export paie', detail, life: 8000 });
   }
 
   private ouvrir(): void {

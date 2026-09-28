@@ -4,6 +4,7 @@ public record ChantierResponseDto(
         Long id,
         String code,
         String designation,
+        String nom,
         boolean sourceErp,
         boolean actif
 ) {

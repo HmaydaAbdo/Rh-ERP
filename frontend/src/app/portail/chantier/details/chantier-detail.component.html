@@ -14,6 +14,10 @@
         <dd>{{ chantier.designation }}</dd>
       </div>
       <div>
+        <dt>Nom</dt>
+        <dd>{{ chantier.nom || '-' }}</dd>
+      </div>
+      <div>
         <dt>Statut</dt>
         <dd>
           <p-tag [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></p-tag>

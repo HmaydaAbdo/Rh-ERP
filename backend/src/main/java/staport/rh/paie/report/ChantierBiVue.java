@@ -15,14 +15,17 @@ import java.util.List;
  * de direction — voir {@code docs/report/rapport-v2.md}). Le détail employé est porté par
  * {@link #equipes()}.
  *
- * <p>{@code compact} : {@code true} quand l'effectif de CE chantier est ≤
- * {@code PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT} (demande explicite de direction : un chantier à 1
- * ou 2 personnes ne justifie pas son propre chapitre, ni sa propre page « Vue d'ensemble », ni sa
- * propre page « Équipes de chantier » — voir {@code PaieReportPdfService} pour la
- * consolidation de tous les chantiers compacts dans une unique section finale « Chantiers à effectif
- * réduit »). {@code masseFormatee} : masse de CE chantier, montant brut sans comparaison au mois
- * précédent (contrairement à {@code masse}) — sert d'en-tête compact quand ce chantier est affiché
- * sans sa propre page, réutilisant la mise en page du bloc « équipe » existant.
+ * <p>Chaque chantier a désormais sa propre section (demande explicite de direction, 2026-09-29 :
+ * fusion des exports PDF/Excel autour d'une seule sélection manuelle d'équipes — voir
+ * {@code docs/report/rapport-v2.md}). {@code avecDetailEquipe} : {@code true} quand l'utilisateur a
+ * sélectionné au moins une équipe de CE chantier pour un détail séparé (via
+ * {@code PaieReportPdfRequestDto.equipesParChantier}, même sélection que l'export Excel) — pilote
+ * l'affichage du graphique "répartition par équipe" (toujours la distribution COMPLÈTE, même si seule
+ * une partie des équipes a sa propre section, voir {@code PaieBiReportBuilder.chantierVue}) et le
+ * découpage de {@link #equipes()} en sections séparées. {@code false} : aucun graphique, {@code
+ * equipes()} contient alors une seule section fusionnant tous les employés du chantier. Dans tous les
+ * cas, un employé n'apparaît que dans UNE SEULE section (jamais de répétition, contrairement à
+ * l'Excel).
  */
 record ChantierBiVue(
         String code,
@@ -35,7 +38,6 @@ record ChantierBiVue(
         List<RepartitionBean> repartitionEquipe,
         List<RepartitionBean> evolutionMensuelle,
         List<EquipeBiVue> equipes,
-        boolean compact,
-        String masseFormatee
+        boolean avecDetailEquipe
 ) {
 }

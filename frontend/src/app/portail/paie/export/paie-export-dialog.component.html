@@ -1,0 +1,112 @@
+<p-dialog header="Exporter la paie" [visible]="visible" (visibleChange)="setVisible($event)" [modal]="true" [style]="{ width: '760px' }">
+  <form [formGroup]="form" class="paie-export">
+    <p-selectButton
+      class="paie-export__format"
+      [options]="formatOptions"
+      [(ngModel)]="format"
+      [ngModelOptions]="{ standalone: true }"
+      optionLabel="label"
+      optionValue="value"
+      (onChange)="onFormatChange()"
+    >
+      <ng-template let-option pTemplate="item">
+        <i [class]="option.icon"></i>
+        <span>{{ option.label }}</span>
+      </ng-template>
+    </p-selectButton>
+
+    <p class="paie-export__hint-box">{{ hintTexte() }}</p>
+
+    <div class="paie-export__periode">
+      <div class="paie-export__dialog-field">
+        <label for="exportAnnee">Année *</label>
+        <p-dropdown inputId="exportAnnee" formControlName="annee" [options]="anneeOptions" (onChange)="onPeriodeChange()"></p-dropdown>
+      </div>
+      <div class="paie-export__dialog-field">
+        <label for="exportMois">Mois *</label>
+        <p-dropdown
+          inputId="exportMois"
+          formControlName="mois"
+          [options]="moisOptions"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onPeriodeChange()"
+        ></p-dropdown>
+      </div>
+    </div>
+
+    <p class="paie-export__dialog-hint">
+      Par défaut, chaque chantier de la période est inclus avec tous ses employés. Sélectionnez ici les chantiers pour lesquels vous voulez détailler certaines équipes séparément.
+    </p>
+
+    <div class="paie-export__dialog-field">
+      <label for="exportChantiersConcernes">Chantiers à détailler par équipe (optionnel)</label>
+      <app-lazy-select
+        inputId="exportChantiersConcernes"
+        formControlName="chantiersConcernes"
+        [multiple]="true"
+        [source]="chantierReferenceService"
+        optionLabel="code"
+        dataKey="code"
+        placeholder="Aucun chantier sélectionné"
+        appendTo="body"
+      ></app-lazy-select>
+    </div>
+
+    @for (code of form.controls.chantiersConcernes.value ?? []; track code) {
+      <div class="paie-export__chantier">
+        <div class="paie-export__chantier-header">Chantier {{ code }}</div>
+
+        <p-multiSelect
+          [options]="equipesDisponiblesPour(code)"
+          [ngModel]="equipesSepareesParChantier[code] ?? []"
+          (ngModelChange)="onEquipesSepareesChange(code, $event)"
+          [ngModelOptions]="{ standalone: true }"
+          [loading]="chargementEquipesEnCours(code)"
+          placeholder="Équipes à détailler"
+          display="chip"
+          appendTo="body"
+        ></p-multiSelect>
+
+        @if (format === 'EXCEL') {
+          @for (equipe of equipesSepareesParChantier[code] ?? []; track equipe) {
+            <div class="paie-export__equipe-row">
+              <span class="paie-export__equipe-nom">{{ equipe }}</span>
+              <p-selectButton
+                [options]="inclusionOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="inclusionDe(code, equipe)"
+                (ngModelChange)="onInclusionChange(code, equipe, $event)"
+                [ngModelOptions]="{ standalone: true }"
+              ></p-selectButton>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if ((form.controls.chantiersConcernes.value ?? []).length > 0) {
+      <div class="paie-export__summary">
+        <strong>Ce qui sera généré</strong>
+        <ul>
+          @for (ligne of resumeParChantier(); track ligne) {
+            <li>{{ ligne }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="paie-export__actions">
+      <button
+        pButton
+        type="button"
+        [label]="format === 'PDF' ? 'Télécharger le PDF' : 'Télécharger l\'Excel'"
+        [icon]="format === 'PDF' ? 'pi pi-file-pdf' : 'pi pi-file-excel'"
+        [loading]="exporting"
+        [disabled]="!form.controls.annee.value || !form.controls.mois.value"
+        (click)="onExporter()"
+      ></button>
+    </div>
+  </form>
+</p-dialog>

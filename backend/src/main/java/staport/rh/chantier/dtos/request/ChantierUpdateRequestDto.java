@@ -13,6 +13,9 @@ public record ChantierUpdateRequestDto(
         @Size(max = 500)
         String designation,
 
+        @Size(max = 255)
+        String nom,
+
         @NotNull
         Boolean actif
 ) {

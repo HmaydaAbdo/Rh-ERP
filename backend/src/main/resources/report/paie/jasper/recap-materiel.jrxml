@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sous-rapport du squelette "parc matériel" (CAMION/ENGINS) — voir
+     staport.rh.paie.reporting.MaterielChantierCatalogue pour la règle métier (chantier "C168",
+     équipes "CH"/"OP" uniquement) et rapport.jrxml (GroupEquipe) pour l'invocation. La colonne "Nbre"
+     reste délibérément vide : remplie au stylo sur le document imprimé (demande explicite de
+     direction, 2026-09-29), jamais une valeur saisie via une interface. Invoqué avec une liste VIDE
+     pour toute section hors C168/CH/OP (voir EquipeBiVue.materiel) : aucune ligne, donc aucune bande
+     imprimée, invisible. Même mécanique de sous-rapport que recap-fonction.jrxml (nombre de lignes
+     variable, 5 pour CAMION, 7 pour ENGINS). -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="recap-materiel" pageWidth="250" pageHeight="1000" columnWidth="250"
+              leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenNoDataType="NoPages">
+
+    <property name="net.sf.jasperreports.default.font.name" value="Liberation Serif"/>
+
+    <parameter name="TITRE_COLONNE" class="java.lang.String"/>
+
+    <field name="libelle" class="java.lang.String"/>
+
+    <columnHeader>
+        <band height="18" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="180" height="18" forecolor="#000000"/>
+                <box><pen lineWidth="0.5" lineColor="#000000"/></box>
+                <textElement textAlignment="Left" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9.5" isBold="true"/><paragraph leftIndent="4"/></textElement>
+                <textFieldExpression><![CDATA[$P{TITRE_COLONNE}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="180" y="0" width="70" height="18" forecolor="#000000"/>
+                <box><pen lineWidth="0.5" lineColor="#000000"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9.5" isBold="true"/></textElement>
+                <text><![CDATA[Nbre]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="15" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="180" height="15" forecolor="#000000"/>
+                <box><pen lineWidth="0.5" lineColor="#000000"/></box>
+                <textElement textAlignment="Left" verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/><paragraph leftIndent="4"/></textElement>
+                <textFieldExpression><![CDATA[$F{libelle}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="180" y="0" width="70" height="15" forecolor="#000000"/>
+                <box><pen lineWidth="0.5" lineColor="#000000"/></box>
+                <text><![CDATA[]]></text>
+            </staticText>
+        </band>
+    </detail>
+</jasperReport>

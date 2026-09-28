@@ -2,14 +2,26 @@ package staport.rh.paie.report;
 
 import java.util.List;
 
-/** Section "équipe" (ou "Sans équipe") d'un chantier — le seul niveau qui descend jusqu'au détail
- * employé (voir stratégie anti-redondance dans le README : jamais de tableau employé au niveau
- * chantier). {@code stc} : STC/sorties de CETTE équipe (même indicateur qu'aux niveaux global et
- * chantier, présent à chaque niveau de la hiérarchie). Aucune BI à ce niveau (ni graphique
- * d'évolution, ni répartition par fonction — demande explicite de direction, jugé redondant avec le
- * niveau chantier) : {@code employes} EST directement le contenu de la section, trié par fonction
- * (la fonction qui consomme le plus de masse salariale de cette équipe en premier — voir
- * {@code PaieBiReportBuilder.equipeVue}). */
+/** Section employé d'un chantier — soit une vraie équipe explicitement sélectionnée par
+ * l'utilisateur pour être détaillée séparément, soit le "reste" du chantier (les employés des
+ * équipes NON sélectionnées, "Sans équipe" compris) : {@code nom} porte alors le code du chantier
+ * (pas une vraie équipe) et {@code titre} le titre du chantier ("CHANTIER : xxx"), jamais "Sans
+ * équipe" (demande explicite de direction, 2026-09-28 : ce nom prêterait à confusion pour un
+ * regroupement qui peut très bien contenir des employés d'une vraie équipe non sélectionnée). Voir
+ * {@code PaieBiReportBuilder.chantierVue} pour la construction de cette liste — un employé n'apparaît
+ * JAMAIS dans deux sections différentes (contrairement à l'export Excel, où Global/chantier/équipe se
+ * chevauchent volontairement, voir {@code docs/report/rapport-v2.md}).
+ *
+ * <p>{@code stc} : STC/sorties de CETTE section (même indicateur qu'aux niveaux global et chantier).
+ * {@code montantMoisPrecedentOuIntrouvable} : masse de CETTE section le mois précédent (même
+ * périmètre équipe/reste), "INTROUVABLE" si aucune donnée — alimente la ligne "TOTAL GENERAL MOIS
+ * PRECEDENT" collée au bas du tableau employé (voir rapport.jrxml, GroupEquipe). {@code
+ * repartitionFonction} : effectif et STC de CETTE section par fonction — nouveau tableau récap
+ * (demande explicite de direction, 2026-09-28), imprimé via un sous-rapport (nombre de fonctions
+ * variable, voir recap-fonction.jrxml), jamais un graphique (redondant avec celui du chantier).
+ * {@code materiel} : squelette "parc matériel" (CAMION/ENGINS), vide sauf chantier "C168" équipes
+ * "CH"/"OP" (voir {@code PaieBiReportBuilder.squeletteMateriel}) — imprimé via le même mécanisme de
+ * sous-rapport que {@code repartitionFonction} (recap-materiel.jrxml). */
 record EquipeBiVue(
         String nom,
         String titre,
@@ -17,6 +29,9 @@ record EquipeBiVue(
         String masse,
         String partChantierPourcent,
         int stc,
+        String montantMoisPrecedentOuIntrouvable,
+        List<RepartitionBean> repartitionFonction,
+        List<MaterielLigneVue> materiel,
         List<LigneEmployeVue> employes
 ) {
 }

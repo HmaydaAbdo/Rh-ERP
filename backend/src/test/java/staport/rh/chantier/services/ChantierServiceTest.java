@@ -47,11 +47,11 @@ class ChantierServiceTest {
 
     @Test
     void create_devraitEnregistrerQuandLeCodeEstUnique() {
-        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie");
+        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null);
         when(repository.existsByCodeIgnoreCase("C059")).thenReturn(false);
         when(mapper.toEntity(dto)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, "C059", "Travaux de voirie", false, true));
+        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, "C059", "Travaux de voirie", null, false, true));
 
         ChantierResponseDto result = chantierService.create(dto);
 
@@ -61,7 +61,7 @@ class ChantierServiceTest {
 
     @Test
     void create_devraitEchouerQuandLeCodeExisteDeja() {
-        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie");
+        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null);
         when(repository.existsByCodeIgnoreCase("C059")).thenReturn(true);
 
         assertThatThrownBy(() -> chantierService.create(dto))
