@@ -28,8 +28,6 @@ public final class LigneRapportDetailBean {
     private final String chantierMasseLigne;
     private final String chantierMasseMoyenneParEmploye;
     private final String chantierEffectifValeur;
-    private final String chantierEffectifNote;
-    private final String chantierPartMasseGlobale;
     private final int chantierStc;
     private final String chantierNarratif;
     private final List<RepartitionBean> chantierRepartitionEquipe;
@@ -58,8 +56,8 @@ public final class LigneRapportDetailBean {
     private final String employeEquipeReelle;
 
     LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
-                            String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
-                            String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
+                            String chantierMasseMoyenneParEmploye, String chantierEffectifValeur,
+                            int chantierStc, String chantierNarratif,
                             List<RepartitionBean> chantierRepartitionEquipe,
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             boolean chantierAvecDetailEquipe,
@@ -75,8 +73,6 @@ public final class LigneRapportDetailBean {
         this.chantierMasseLigne = chantierMasseLigne;
         this.chantierMasseMoyenneParEmploye = chantierMasseMoyenneParEmploye;
         this.chantierEffectifValeur = chantierEffectifValeur;
-        this.chantierEffectifNote = chantierEffectifNote;
-        this.chantierPartMasseGlobale = chantierPartMasseGlobale;
         this.chantierStc = chantierStc;
         this.chantierNarratif = chantierNarratif;
         this.chantierRepartitionEquipe = chantierRepartitionEquipe;
@@ -127,14 +123,6 @@ public final class LigneRapportDetailBean {
 
     public String getChantierEffectifValeur() {
         return chantierEffectifValeur;
-    }
-
-    public String getChantierEffectifNote() {
-        return chantierEffectifNote;
-    }
-
-    public String getChantierPartMasseGlobale() {
-        return chantierPartMasseGlobale;
     }
 
     public int getChantierStc() {

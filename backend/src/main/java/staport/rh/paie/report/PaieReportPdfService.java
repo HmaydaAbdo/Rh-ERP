@@ -148,11 +148,7 @@ public class PaieReportPdfService {
         parametres.put("P_PERIODE_MOIS", moisLibelle(periode));
         parametres.put("P_PERIODE_ANNEE", String.valueOf(periode.getYear()));
         parametres.put("P_MASSE_VALEUR", synthese.masse().valeurCourante());
-        parametres.put("P_MASSE_VARIATION", variationLibelle(synthese.masse()));
-        parametres.put("P_MASSE_TENDANCE", synthese.masse().tendance().name());
-        parametres.put("P_MASSE_NOTE", masseNote(synthese.masse()));
         parametres.put("P_EFFECTIF_VALEUR", PaieReportNumberFormat.entier(synthese.effectif().effectifCourant()));
-        parametres.put("P_EFFECTIF_NOTE", "Mois précédent : " + synthese.effectif().effectifPrecedent() + " (" + synthese.effectif().variation() + ")");
         parametres.put("P_MASSE_MOYENNE", synthese.masseMoyenneParEmploye());
         parametres.put("P_NOMBRE_CHANTIERS", PaieReportNumberFormat.entier(synthese.nombreChantiers()));
         parametres.put("P_STC_VALEUR", PaieReportNumberFormat.entier(synthese.stc()));
@@ -226,14 +222,13 @@ public class PaieReportPdfService {
             String chantierTitreNumerote = chapitreChantier(index, chantier);
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
-            String chantierEffectifNote = "mois préc. " + chantier.effectif().effectifPrecedent() + " (" + chantier.effectif().variation() + ")";
             String chantierNarratif = chantierNarratif(chantier);
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
-                            chantierEffectifValeur, chantierEffectifNote,
-                            chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
+                            chantierEffectifValeur,
+                            chantier.stc(), chantierNarratif,
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             chantier.avecDetailEquipe(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
@@ -274,12 +269,6 @@ public class PaieReportPdfService {
         }
         String pourcent = masse.variationPourcent() != null ? " (" + masse.variationPourcent() + ")" : " (% non calculable)";
         return masse.variationAbsolue() + " DH" + pourcent;
-    }
-
-    private String masseNote(KpiMontantVue masse) {
-        return masse.tendance() == PaieReportNumberFormat.Tendance.NON_DISPONIBLE
-                ? "Aucune donnée le mois précédent pour ce périmètre"
-                : "Mois précédent : " + masse.valeurPrecedente() + " DH";
     }
 
     /** Ligne compacte masse + comparaison pour le bandeau KPI d'un chantier (une seule ligne de
