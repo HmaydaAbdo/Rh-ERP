@@ -105,12 +105,6 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
     this.visibleChange.emit(valeur);
   }
 
-  hintTexte(): string {
-    return this.format === 'PDF'
-      ? "Rapport de synthèse : chaque chantier a sa propre page. Une équipe cochée ci-dessous obtient sa propre section (graphique et tableau) ; les autres employés du chantier sont réunis dans un seul tableau, jamais répétés ailleurs."
-      : 'Classeur complet : une feuille Global et une feuille par chantier, toujours entières. Une équipe cochée obtient en plus sa propre feuille — ses employés restent aussi visibles dans la feuille du chantier, sauf si vous les en excluez.';
-  }
-
   onPeriodeChange(): void {
     this.equipesCache.clear();
     this.equipesLoading.clear();
