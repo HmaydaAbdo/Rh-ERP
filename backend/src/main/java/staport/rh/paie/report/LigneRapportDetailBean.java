@@ -55,6 +55,7 @@ public final class LigneRapportDetailBean {
     private final String primeRoulageDimanche;
     private final String salaireTotal;
     private final String observation;
+    private final String employeEquipeReelle;
 
     LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
@@ -101,6 +102,7 @@ public final class LigneRapportDetailBean {
         this.primeRoulageDimanche = employe.primeRoulageDimanche();
         this.salaireTotal = employe.salaireTotal();
         this.observation = employe.observation();
+        this.employeEquipeReelle = employe.equipeReelle();
     }
 
     public String getChantierCode() {
@@ -233,5 +235,9 @@ public final class LigneRapportDetailBean {
 
     public String getObservation() {
         return observation;
+    }
+
+    public String getEmployeEquipeReelle() {
+        return employeEquipeReelle;
     }
 }
