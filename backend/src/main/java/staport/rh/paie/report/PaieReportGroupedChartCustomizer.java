@@ -46,12 +46,15 @@ import java.util.Map;
  *
  * <p><b>Marges resserrées pour 4 barres par catégorie</b> : la hauteur d'un {@code <barChart>} de ce
  * rapport est plafonnée par la contrainte "un seul graphique par page" (jusqu'à {@code
- * PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE} + "Autres" catégories sur une hauteur de page fixe,
- * environ 430px de tracé utile) — passer de 3 à 4 séries par catégorie sans réduire les marges
- * aurait rendu chaque barre encore plus fine (constaté en production avec les marges précédentes,
- * 0.35/0.15 : les 3 barres d'un même chantier se touchaient déjà et leurs étiquettes débordaient sur
- * la catégorie voisine). Les marges ci-dessous (voir {@code categoryMargin}/{@code itemMargin})
- * privilégient donc la taille des barres elles-mêmes sur l'espacement entre catégories.
+ * PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE} + "Autres" catégories) — passer de 3 à 4 séries par
+ * catégorie sans réduire les marges aurait rendu chaque barre encore plus fine. Les marges
+ * ci-dessous (voir {@code categoryMargin}/{@code itemMargin}) privilégient donc la taille des barres
+ * elles-mêmes sur l'espacement entre catégories/barres — resserrées une seconde fois le 2026-09-29
+ * (0.16/0.10 → 0.10/0.05, demande explicite de direction après constat sur données réelles : au
+ * plafond de 16 catégories × 4 barres, les étiquettes de valeur de barres adjacentes se
+ * chevauchaient encore visuellement) ; voir aussi {@code rapport.jrxml} où la hauteur de chaque
+ * {@code <barChart>} a été augmentée en parallèle (bandeau/cartes KPI réduits, plus de budget
+ * vertical disponible).
  */
 public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer {
 
@@ -96,7 +99,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         // production). itemMargin (espace entre les 4 barres d'un même groupe) reste suffisant pour
         // les distinguer visuellement sans sacrifier leur épaisseur.
         CategoryAxis categoryAxis = (CategoryAxis) plot.getDomainAxis();
-        categoryAxis.setCategoryMargin(0.16);
+        categoryAxis.setCategoryMargin(0.10);
         categoryAxis.setLowerMargin(0.01);
         categoryAxis.setUpperMargin(0.01);
 
@@ -139,7 +142,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setShadowVisible(false);
         renderer.setDrawBarOutline(true);
-        renderer.setItemMargin(0.10);
+        renderer.setItemMargin(0.05);
 
         // Étiquette de valeur à l'extérieur de chaque barre, jamais à l'intérieur — lit la VRAIE
         // valeur dans la table conservée avant normalisation, jamais la valeur normalisée réellement
@@ -174,7 +177,7 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
             renderer.setSeriesOutlinePaint(serie, couleur.darker());
             renderer.setSeriesOutlineStroke(serie, new BasicStroke(1f));
             renderer.setSeriesItemLabelsVisible(serie, Boolean.TRUE);
-            renderer.setSeriesItemLabelFont(serie, new Font("Liberation Serif", Font.BOLD, 7));
+            renderer.setSeriesItemLabelFont(serie, new Font("Liberation Serif", Font.BOLD, 6));
             renderer.setSeriesItemLabelPaint(serie, Color.BLACK);
             renderer.setSeriesPositiveItemLabelPosition(serie,
                     new ItemLabelPosition(ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_LEFT));

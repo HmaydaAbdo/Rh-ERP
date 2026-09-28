@@ -356,10 +356,10 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Effectif | `COUNT(*)` | Global / chantier / section | Oui — Δ absolu (jamais ambigu, 0 est une valeur légitime) |
 | Masse moyenne par employé | masse ÷ effectif | Global / chantier | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
-| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées ("Vue par chantier", chapitre I) — voir « Visualisations » |
+| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées (chapitre I, sans titre au-dessus) — voir « Visualisations » |
 | ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
-| Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Équipes de chantier X"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
+| Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Répartition par équipe"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
 | Coût moyen / employé (chantier) | masse chantier ÷ effectif chantier | Chantier | Non (dérivé, même principe que la moyenne globale) |
 | STC / sortie | `COUNT` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — indicateur numérique à chaque niveau, **et** 3ᵉ/4ᵉ série de chaque `<barChart>` |
 | ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
@@ -407,7 +407,7 @@ employés d'une vraie équipe non sélectionnée, l'appeler "Sans équipe" serai
 ### Identifiant chantier (nom + code)
 
 Partout où un chantier est identifié dans un texte affiché (titre de chapitre, section "reste",
-bandeau `pageHeader`/`pageFooter`, sous-titre "Équipes de chantier X", titres de feuille Excel) :
+bandeau `pageHeader`/`pageFooter`, titres de feuille Excel) :
 **`"<nom> (<code>)"`** quand `Chantier.nom` est renseigné (champ optionnel, jamais exposé par la
 synchronisation ERP — voir `docs/chantier/README.md`), **`"<code>"`** seul sinon (demande explicite
 de direction, 2026-09-29 : le nom prime partout où il existe, le code reste l'identifiant de
@@ -436,9 +436,11 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    filet à signer, jamais le filet pré-rempli). **Pas de date de génération** (retirée le
    2026-09-29, demande explicite de direction — voir `docs/report/rapport-v2.md`).
 2. **Bandeau** (`pageHeader` JRXML, un seul défini dans `rapport.jrxml`) : répété à l'identique sur
-   **toutes** les pages de contenu qui suivent. **5 blocs indépendants de même hauteur**, alignés
-   horizontalement et séparés par de fins filets verticaux : Logo / Département / Mois / Année /
-   **Niveau**. Le bloc **Niveau** est dynamique — `GLOBAL` tant que la page précède le premier
+   **toutes** les pages de contenu qui suivent. Réduit au minimum (2026-09-29, demande explicite de
+   direction — hauteur 30 contre 62 avant, logo réduit) : **3 blocs sur une seule ligne chacun**
+   (plus de libellé séparé au-dessus de la valeur), séparés par de fins filets verticaux —
+   Ressources Humaines / Mois-Année / **Niveau**. Le bloc **Niveau** est dynamique — `GLOBAL` tant
+   que la page précède le premier
    chantier (`$P{P_PAGE_PREMIER_CHANTIER}`, connu grâce à un premier remplissage silencieux de
    découverte, voir « Numérotation des chapitres et des pages »), `CHANTIER : <identifiant> ·
    ÉQUIPE : <nom>` pour une section équipe détaillée (voir « Identifiant chantier (nom + code) »
@@ -447,11 +449,13 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    `equipeNom` valant alors le code chantier). Le **`pageFooter`** porte la même information (texte
    discret, aligné à gauche à côté de la pagination).
 3. **I — Vue d'ensemble** (`<group name="GroupSynthese">`, expression constante — son en-tête ne
-   s'imprime qu'une seule fois, au tout début du corps du document) : 5 cartes KPI compactées
-   (masse réelle, effectif, masse moyenne/employé, nombre de chantiers, STC/sorties), une phrase
-   courte de synthèse (voir « Narratif léger »), puis, SUR LA MÊME PAGE (`GroupGraphChantier`),
-   **"Vue par chantier"** : UN SEUL `<barChart>` à 4 séries (masse/effectif/STC en personnes/STC en
-   DH), plafonné aux 15 plus gros chantiers + "Autres" — voir « Visualisations ».
+   s'imprime qu'une seule fois, au tout début du corps du document) : 5 cartes KPI compactées, label
+   + valeur uniquement, sans note de comparaison sous la valeur (retirée le 2026-09-29, demande
+   explicite de direction — masse réelle, effectif, masse moyenne/employé, nombre de chantiers,
+   STC/sorties), une phrase courte de synthèse (voir « Narratif léger »), puis, SUR LA MÊME PAGE
+   (`GroupGraphChantier`, sans titre au-dessus depuis le 2026-09-29) : UN SEUL `<barChart>` à 4
+   séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros chantiers +
+   "Autres" — voir « Visualisations ».
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 4. **Une section par CHANTIER**, TOUS désormais (demande explicite de direction, 2026-09-29 : plus
@@ -472,11 +476,14 @@ niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
 **`GroupChantierEvolution`** — `isStartNewPage="true"`, c'est lui qui démarre la nouvelle page du
 chapitre, TOUJOURS affiché :
 
-1. **4 cartes KPI** (même style que la Vue d'ensemble) : Masse salariale (+ comparaison mois
-   précédent), Effectif (+ comparaison), Coût moyen / employé, STC / sorties.
+1. **4 cartes KPI** (même style que la Vue d'ensemble, label + valeur uniquement) : Masse salariale
+   (avec comparaison mois précédent sur la même ligne que la valeur), Effectif, Coût moyen / employé,
+   STC / sorties.
 2. La **phrase courte de synthèse** du chantier (voir « Narratif léger »).
 
-**`GroupChantier`, "Équipes de chantier X"** — enchaîne directement, SANS saut de page, sur la même
+**`GroupChantier`, "Répartition par équipe"** (renommé depuis "Équipes de chantier X" le 2026-09-29,
+demande explicite de direction — le chantier est déjà identifié par le titre de chapitre et le
+bandeau récurrent) — enchaîne directement, SANS saut de page, sur la même
 page que `GroupChantierEvolution`, **uniquement si au moins une équipe de ce chantier a été
 sélectionnée** pour un détail séparé (`ChantierBiVue.avecDetailEquipe`) : la bande entière porte un
 `printWhenExpression`, absente (hauteur nulle, aucun espace réservé) sinon. Quand elle s'imprime :
@@ -485,16 +492,31 @@ UN SEUL `<barChart>` horizontal à barres groupées (masse/effectif/STC en perso
 complète de toutes les équipes réelles du chantier, même si seule une partie a sa propre section
 ci-dessous) — **SEUL, sans tableau**.
 
-Puis, sur une page dédiée chacune (`GroupEquipe`, `isStartNewPage="true"` depuis le 2026-09-29) :
-une section par équipe **sélectionnée**, puis, si des employés restent (équipes non sélectionnées,
-"Sans équipe" compris), une dernière section "reste" les regroupant tous — jamais un employé dans
-deux sections. Si aucune équipe n'a été sélectionnée pour ce chantier, une seule section réunit
-tous ses employés. Chaque section (11 colonnes, tout en noir — voir « Style visuel »), triée par
-fonction (celle qui consomme le plus de masse en premier, voir `PaieBiReportBuilder.equipeVue»),
-se termine par les lignes de résumé, le tableau récap et, le cas échéant, le squelette matériel
-(voir « Lignes de résumé et tableau récap »). Le tableau employé reprend les colonnes de la liste
-Paie à l'écran, moins Chantier et Équipe (déjà portées par les titres de section) : Nom & prénom,
-Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
+Puis, sur une page dédiée chacune (`GroupEquipe`, `isStartNewPage="true"` depuis le 2026-09-29,
+`isReprintHeaderOnEachPage="false"` depuis le même jour — voir plus bas) : une section par équipe
+**sélectionnée**, puis, si des employés restent (équipes non sélectionnées, "Sans équipe" compris),
+une dernière section "reste" les regroupant tous — jamais un employé dans deux sections. Si aucune
+équipe n'a été sélectionnée pour ce chantier, une seule section réunit tous ses employés. Chaque
+section (12 colonnes, tout en noir — voir « Style visuel »), triée par fonction (celle qui consomme
+le plus de masse en premier, voir `PaieBiReportBuilder.equipeVue»), se termine par les lignes de
+résumé, le tableau récap et, le cas échéant, le squelette matériel (voir « Lignes de résumé et
+tableau récap »). Le tableau employé reprend les colonnes de la liste Paie à l'écran, moins Chantier
+(déjà porté par le titre de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire
+(Salaire/RO/RD), Total, Obs, **Équipe** (ajoutée le 2026-09-29 — vide dans une section équipe déjà
+nommée par son titre, renseignée uniquement dans la section "reste" où les employés viennent
+potentiellement de plusieurs équipes non sélectionnées mélangées, voir `LigneEmployeVue.equipeReelle`).
+Colonne Fonction élargie (90→100, prise sur Nom & prénom 130→120) et police réduite (8pt) : un
+libellé fonction long ("CH. CAMION PORT CHAR") se retrouvait tronqué de façon indiscernable d'un
+autre ("CH. CAMION GASOIL", tous deux affichés "CH. CAMION...") — constaté par l'utilisateur sur
+données réelles.
+
+**`isReprintHeaderOnEachPage="false"`** (depuis le 2026-09-29, demande explicite de direction) :
+avec `true`, une équipe assez nombreuse pour que son tableau déborde sur plusieurs pages (ex. 74
+employés) pouvait voir son `groupFooter` (résumé + récap) atterrir seul sur une page où
+JasperReports réimprimait le bandeau équipe + les en-têtes de colonnes juste au-dessus — une page
+qui ressemblait à un tableau vide suivi de ses totaux (constaté par l'utilisateur sur données
+réelles). Avec `false`, cette page ne montre plus que les totaux/récaps ; en contrepartie, les
+pages de continuation d'un tableau qui déborde n'ont plus l'en-tête de colonnes répété.
 
 ### Lignes de résumé et tableau récap (2026-09-29)
 
@@ -520,9 +542,12 @@ Collés directement au bas de CHAQUE tableau employé (`GroupEquipe`, `groupFoot
 **Convention du document : barres groupées horizontales à 4 séries (masse/effectif/STC en
 personnes/STC en DH), aucun graphique empilé — et depuis le 2026-09-28, la SEULE famille de
 graphique du rapport (voir « Évolution mensuelle » ci-dessous).** **Un seul customizer,
-`PaieReportGroupedChartCustomizer`, réutilisé partout** : "Vue par chantier" (chapitre I) et
+`PaieReportGroupedChartCustomizer`, réutilisé partout** : répartition par chantier (chapitre I) et
 répartition par équipe de chaque chantier concerné — la donnée sous-jacente (`RepartitionBean`) est
-la même forme à chaque niveau.
+la même forme à chaque niveau. Marges resserrées et hauteur de graphique augmentée le 2026-09-29
+(demande explicite de direction, après constat sur données réelles que les étiquettes de valeur de
+barres adjacentes se chevauchaient au plafond de 16 catégories × 4 séries) — voir le Javadoc de
+`PaieReportGroupedChartCustomizer` pour le détail des marges (`categoryMargin`/`itemMargin`).
 
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
