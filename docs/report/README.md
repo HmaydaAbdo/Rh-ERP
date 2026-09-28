@@ -378,8 +378,9 @@ résume, seul le dernier détaille.
 3. **I — Vue d'ensemble** (`<group name="GroupSynthese">`, expression constante — son en-tête ne
    s'imprime qu'une seule fois, au tout début du corps du document) : 5 cartes KPI compactées
    (masse réelle, effectif, masse moyenne/employé, nombre de chantiers, STC/sorties), une phrase
-   courte de synthèse (voir « Narratif léger »), puis **"Vue par chantier"** (`GroupGraphChantier`,
-   sur SA PROPRE PAGE) : UN SEUL `<barChart>` à 4 séries (masse/effectif/STC en personnes/STC en
+   courte de synthèse (voir « Narratif léger »), puis, SUR LA MÊME PAGE (`GroupGraphChantier`,
+   `isStartNewPage="false"` depuis le 2026-09-28 — voir « Fusion des pages KPI + graphique »),
+   **"Vue par chantier"** : UN SEUL `<barChart>` à 4 séries (masse/effectif/STC en personnes/STC en
    DH), plafonné aux 15 plus gros chantiers + "Autres" — voir « Visualisations ». Plus de
    graphique d'évolution mensuelle ni de sous-numérotation arabe ici — retirés le 2026-09-28, voir
    `docs/report/rapport-v2.md`.
@@ -398,27 +399,31 @@ par ligne) — zéro duplication de bande, zéro sous-rapport.
 
 ### Vue détaillée d'un chantier détaillé
 
-Un chantier détaillé occupe **2 pages d'en-tête** avant son détail employé
-(`GroupChantierEvolution`, `GroupChantier`, `rapport.jrxml` — toutes deux déclenchées par le même
-code chantier, donc imprimées exactement une fois par chantier, immédiatement l'une après l'autre).
-Cette découpe suit la même hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe →
-tableau**.
+Un chantier détaillé occupe **1 seule page continue** avant son détail employé
+(`GroupChantierEvolution` puis `GroupChantier`, `rapport.jrxml` — toutes deux déclenchées par le même
+code chantier, imprimées exactement une fois par chantier, l'une enchaînée sur l'autre SANS saut de
+page depuis le 2026-09-28, voir plus bas). Cette page suit la même hiérarchie de lecture qu'à chaque
+niveau du rapport : **KPI → graphe → tableau**.
 
-**Page 1 — `GroupChantierEvolution`, "Vue d'ensemble du chantier X"** (le nom du groupe JRXML,
-hérité d'avant le retrait du graphique d'évolution — voir `docs/report/rapport-v2.md` — n'a pas été
-changé, cette page ne porte plus de graphique) :
+**`GroupChantierEvolution`** (le nom du groupe JRXML, hérité d'avant le retrait du graphique
+d'évolution — voir `docs/report/rapport-v2.md` — n'a pas été changé, ce bloc ne porte plus de
+graphique) — `isStartNewPage="true"` INCHANGÉ, c'est lui qui démarre la nouvelle page du chapitre :
 
 1. **4 cartes KPI** (même style que la Vue d'ensemble) : Masse salariale (+ comparaison mois
    précédent), Effectif (+ comparaison), Coût moyen / employé, STC / sorties.
 2. La **phrase courte de synthèse** du chantier (voir « Narratif léger »).
 
-**Page 2 — `GroupChantier`, "Équipes de chantier X"** : UN SEUL `<barChart>` horizontal à
-barres groupées (masse/effectif/STC en personnes/STC en DH, `PaieReportGroupedChartCustomizer`,
-`ChantierBiVue.repartitionEquipe`) — **SEUL, sans tableau** (l'ancienne table de répartition par
-équipe accompagnant ce graphique a été retirée, doublon pur). Puis, à sa suite, chaque équipe
-individuelle (`GroupEquipe`, `keepTogether`) — **NON numérotée séparément** (demande explicite de
-direction) — juste son tableau employé (11 colonnes, tout en noir — voir « Style visuel »), trié
-par fonction (celle qui consomme le plus de masse en premier, voir `PaieBiReportBuilder.equipeVue`).
+**`GroupChantier`, "Équipes de chantier X"** — `isStartNewPage="false"` depuis le 2026-09-28 (demande
+explicite de direction, voir « Fusion des pages KPI + graphique » ci-dessous) : enchaîne
+directement, SANS saut de page, sur la même page que `GroupChantierEvolution`. UN SEUL `<barChart>`
+horizontal à barres groupées (masse/effectif/STC en personnes/STC en DH,
+`PaieReportGroupedChartCustomizer`, `ChantierBiVue.repartitionEquipe`, hauteur réduite à 340 pour
+tenir sur l'espace restant) — **SEUL, sans tableau** (l'ancienne table de répartition par équipe
+accompagnant ce graphique a été retirée, doublon pur). Puis, à sa suite (sur la même page si la
+place le permet, sinon la suivante), chaque équipe individuelle (`GroupEquipe`, `keepTogether`) —
+**NON numérotée séparément** (demande explicite de direction) — juste son tableau employé (11
+colonnes, tout en noir — voir « Style visuel »), trié par fonction (celle qui consomme le plus de
+masse en premier, voir `PaieBiReportBuilder.equipeVue`).
 
 Une équipe ne démarre pas systématiquement sur sa propre page — elle garde son détail employé sur la
 même page que son en-tête tant qu'elle y tient (`isStartNewPage="false"`) et n'est coupée entre deux
@@ -429,12 +434,31 @@ ci-dessous. Le tableau employé reprend les colonnes de la liste Paie à l'écra
 Équipe (déjà portées par les titres de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/
 J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
 
-> **Point ouvert** : la page 1 ci-dessus (KPI + narratif seuls, depuis le retrait du graphique
-> d'évolution) est nettement plus courte que la page 2 qui suit (pleine hauteur, pour le graphique)
-> — elle se termine donc avec une zone blanche importante. Volontairement non traité pour l'instant
-> (fusionner les 2 pages est un choix de mise en page distinct, avec son propre risque de rendu à
-> vérifier) — voir `docs/report/rapport-v2.md` et `TODO.md`. Même remarque pour la page "I — Vue
-> d'ensemble" au niveau global.
+### Fusion des pages KPI + graphique (2026-09-28)
+
+Depuis le retrait du graphique d'évolution (voir `docs/report/rapport-v2.md`), les pages "KPI +
+narratif" (chapitre I et chaque chantier détaillé) étaient devenues nettement plus courtes que la
+page de graphique qui les suivait — laissant une zone blanche importante en bas de chacune. Corrigé
+en passant `isStartNewPage="false"` sur `GroupGraphChantier` (niveau global) et `GroupChantier`
+(niveau chantier) : ces bandes enchaînent désormais directement sur la même page que les cartes KPI
+qui précèdent (`GroupSynthese`/`GroupChantierEvolution`), qui gardent elles `isStartNewPage="true"`
+et démarrent donc toujours la nouvelle page.
+
+**Budget de hauteur vérifié précisément** (pas un simple essai/erreur) : une page de contenu offre
+`pageHeight(595) - margeHaut(20) - margeBas(20) - pageHeader(62) - pageFooter(20) = 473` de hauteur
+utile. Les cartes KPI + narratif (`GroupSynthese` ≈110, `GroupChantierEvolution` ≈100) laissent donc
+respectivement ≈363 et ≈373 pour le graphique qui suit — d'où la réduction des `<barChart>` de 428→
+325 (niveau global) et 413→340 (niveau chantier détaillé), avec quelques pixels de marge de sécurité
+dans chaque cas (voir les commentaires de bande dans `rapport.jrxml` pour le détail du calcul).
+Vérifié visuellement au cas le plus dense (15 catégories + "Autres", 16 barres × 4 séries) : les
+bars restent lisibles, aucune étiquette rognée.
+
+Le sous-titre qui introduisait chaque graphique perd au passage sa taille de "titre de chapitre"
+(16pt/hauteur 22, avec filet de soulignement) au profit d'un simple sous-titre (12pt/hauteur 18, sans
+filet) — cohérent avec le fait que ce n'est plus la première chose vue sur une nouvelle page, juste
+la suite de la page KPI. **Exception** : le titre du chapitre final "Chantiers à effectif réduit"
+(voir ci-dessous) GARDE sa taille pleine — cette page-là reste un vrai chapitre à part entière,
+jamais précédée d'une page KPI avec laquelle la fusionner.
 
 ### Chantiers à effectif réduit
 
@@ -689,13 +713,6 @@ consommait le flux, les suivantes restaient blanches (bug corrigé, voir l'histo
 > sommaire, table de répartition par équipe), avec pour chacun ce qui reste réutilisable sans
 > redévelopper.
 
-- **Fusionner les pages "Vue d'ensemble" (KPI + narratif) avec la page de graphique qui suit** : au
-  niveau global et pour chaque chantier détaillé, depuis le retrait du graphique d'évolution
-  (2026-09-28), ces pages se terminent avec une zone blanche importante — voir « Vue détaillée d'un
-  chantier détaillé ». Faisable en passant `isStartNewPage="false"` sur `GroupGraphChantier`/
-  `GroupChantier` et en réduisant légèrement la hauteur des `<barChart>` concernés pour tenir sur la
-  page restante ; nécessite une vérification visuelle dédiée (rendu PDF réel), volontairement pas
-  fait dans la même passe que le retrait du graphique.
 - **Réintroduire la répartition par fonction** : retirée à tous les niveaux (global, intra-chantier,
   intra-équipe) — le référentiel Fonction contient des doublons non nettoyés, qui rendraient un
   graphique par fonction illisible et trompeur (voir TODO.md pour la tâche de nettoyage côté

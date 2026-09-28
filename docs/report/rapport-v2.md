@@ -44,13 +44,13 @@ affiché juste au-dessus.
   chantier X" de s'afficher pour un chantier compact, indépendamment du fait qu'elle contienne un
   graphique ou non.
 
-**Effet de bord connu, non traité ici** : les pages "I — Vue d'ensemble" et "Vue d'ensemble du
-chantier X" ne contiennent plus que les cartes KPI + le narratif — un bloc bien plus court que la
-page qui suit (page pleine hauteur pour "Vue par chantier"/"Équipes de chantier X"). Chacune de ces
-2 pages se termine donc désormais avec une zone blanche significative en bas. **Volontairement non
-corrigé dans ce commit** (retirer le graphique est ce qui a été demandé ; fusionner ces pages avec
-celles qui suivent est un choix de mise en page distinct, avec son propre risque de rendu à vérifier
-— à faire dans un commit séparé si confirmé). Voir TODO.md.
+**Effet de bord constaté puis corrigé (2026-09-28)** : les pages "I — Vue d'ensemble" et "Vue
+d'ensemble du chantier X" ne contenant plus que les cartes KPI + le narratif, elles se terminaient
+avec une zone blanche importante avant la page de graphique qui suivait. Corrigé le jour même en
+fusionnant chaque page KPI avec la page de graphique qui la suit (`isStartNewPage="false"` sur
+`GroupGraphChantier`/`GroupChantier`, hauteur des `<barChart>` concernés réduite pour tenir sur
+l'espace restant, vérifié visuellement au cas le plus dense) — voir `docs/report/README.md`,
+« Fusion des pages KPI + graphique », pour le détail complet du calcul de budget et le résultat.
 
 ---
 
