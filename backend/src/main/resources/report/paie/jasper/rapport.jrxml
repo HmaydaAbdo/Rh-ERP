@@ -8,37 +8,36 @@
           n'imprime jamais pageHeader/pageFooter sur cette page dédiée, ce qui convient à une
           couverture (elle porte déjà sa propre mise en avant de la période/logo).
        2. "I — Vue d'ensemble" (groupe GroupSynthese, expression constante donc imprimé une seule fois
-          en tout début du corps du document), UN SEUL chapitre romain regroupant 2 sous-sections
-          numérotées en chiffres arabes (demande explicite de direction — la 2ᵉ sous-section était
-          auparavant un chapitre romain séparé, "II") :
-            2.1. "1 — Évolution mensuelle..." : KPI + narratif + UN SEUL <lineChart> à 2 séries
-                 (masse, effectif — le STC a été retiré des graphiques d'évolution, demande explicite
-                 de direction ; il reste visible dans les graphiques à barres ci-dessous), chacune
-                 normalisée à sa propre valeur maximale, 2 axes Y visibles comme simples repères
-                 d'unité (DH à gauche, personnes à droite — jamais de graduation réelle dessus), voir
-                 PaieReportEvolutionChartCustomizer. Fenêtre glissante d'AU PLUS 12 mois, mais jamais
-                 avant le premier mois où une paie existe réellement en base (voir
-                 PaieBiReportBuilder.evolutionParNiveau) — pas de mois "fantômes" à zéro.
-            2.2. "2 — Vue par chantier" (GroupGraphChantier), sur SA PROPRE PAGE (le graphique a
-                 besoin de toute la hauteur disponible) : UN SEUL <barChart> horizontal à barres
-                 groupées (4 séries, chacune nommée avec son unité dans la légende), plafonné aux 15
-                 plus gros chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE,
+          en tout début du corps du document), UN SEUL chapitre romain :
+            2.1. KPI (masse, effectif, moyenne, chantiers, STC) + narratif léger — plus de graphique
+                 d'évolution mensuelle ici (retiré de TOUT le document, demande explicite de
+                 direction : manque d'historique suffisant pour qu'une tendance mensuelle soit
+                 significative — voir docs/report/rapport-v2.md pour le détail de cette décision et de
+                 celles qui l'ont précédée). PaieReportEvolutionChartCustomizer et le paramètre
+                 P_EVOLUTION_MENSUELLE n'ont plus de consommateur dans ce gabarit ; la donnée elle-même
+                 reste calculée côté Java (PaieBiReportBuilder.evolutionParNiveau), voir TODO.md.
+            2.2. "Vue par chantier" (GroupGraphChantier), sur SA PROPRE PAGE (le graphique a besoin de
+                 toute la hauteur disponible) : UN SEUL <barChart> horizontal à barres groupées (4
+                 séries, chacune nommée avec son unité dans la légende), plafonné aux 15 plus gros
+                 chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE,
                  PaieReportGroupedChartCustomizer) — axe des valeurs masqué, étiquette exacte affichée
-                 sur chaque barre (sauf valeur nulle, alors omise plutôt que d'empiler des "0").
+                 sur chaque barre (sauf valeur nulle, alors omise plutôt que d'empiler des "0"). Plus
+                 de numérotation arabe "1"/"2" ici (un seul sous-point restant depuis le retrait du
+                 graphique d'évolution, qui était le "1").
           Chapitre "Répartition par fonction" retiré temporairement (doublons non nettoyés dans le
           référentiel Fonction, voir TODO.md).
-       3. Une section par chantier (GroupChantier, isStartNewPage), numérotée en chiffre romain à la
-          suite du seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe, II et
-          suivants un par chantier), reprenant le MÊME schéma de 2 sous-sections numérotées :
-            3.1. "1 — Vue d'ensemble du chantier X" : KPI + narratif + évolution mensuelle (2 séries
-                 normalisées, masse et effectif — même fenêtre glissante qu'au niveau global).
-            3.2. "2 — Équipes de chantier X" (GroupChantier, sa propre page) : graphique de
-                 répartition par équipe (4 séries, SEUL, sans tableau), puis chaque équipe
-                 individuelle (GroupEquipe, keepTogether) — NON numérotée séparément (demande
-                 explicite de direction), juste son tableau employé, trié par fonction (la fonction
-                 consommant le plus de masse en premier, voir PaieBiReportBuilder.equipeVue). Aucune
-                 BI au niveau équipe (ni graphique d'évolution, ni répartition par fonction — retirées,
-                 jugées redondantes avec le niveau chantier).
+       3. Une section par chantier DÉTAILLÉ (GroupChantier, isStartNewPage), numérotée en chiffre
+          romain à la suite du seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe,
+          II et suivants un par chantier détaillé) :
+            3.1. KPI (masse, effectif, coût moyen, STC) + narratif — même retrait du graphique
+                 d'évolution qu'au niveau global, voir point 2.1 ci-dessus.
+            3.2. "Équipes de chantier X" (GroupChantier, sa propre page) : graphique de répartition
+                 par équipe (4 séries, SEUL, sans tableau), puis chaque équipe individuelle
+                 (GroupEquipe, keepTogether) — NON numérotée séparément (demande explicite de
+                 direction), juste son tableau employé, trié par fonction (la fonction consommant le
+                 plus de masse en premier, voir PaieBiReportBuilder.equipeVue). Aucune BI au niveau
+                 équipe (ni graphique d'évolution, ni répartition par fonction — retirées, jugées
+                 redondantes avec le niveau chantier).
           Toutes ces sections partagent la même source de données à plat (un employé par ligne).
        4. UN SEUL chapitre final consolidant tous les chantiers "compacts" (effectif ≤
           PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT, demande explicite de direction : un chantier à 1
@@ -68,13 +67,11 @@
 
     <property name="net.sf.jasperreports.default.font.name" value="Liberation Serif"/>
 
-    <!-- Source de données des barChart/lineChart (masse/effectif/STC par chantier, équipe, fonction,
-         ou point mensuel d'une évolution) — même forme (libellé, effectif, montant, stc, stcMontant),
-         voir RepartitionBean. stcMontant (masse salariale des seules lignes STC/sortie) n'est
-         consommé que par les <barChart> groupés (4ᵉ série "STC (DH)", demande explicite : le STC doit
-         être visible en personnes ET en montant) — les <lineChart> d'évolution n'affichent plus le
-         STC du tout (retiré, demande explicite de direction), seulement masse et effectif ; le champ
-         reste présent dans le sous-dataset pour tous les usages, simplement pas exploité par eux. -->
+    <!-- Source de données des <barChart> groupés (masse/effectif/STC par chantier ou équipe) — même
+         forme (libellé, effectif, montant, stc, stcMontant), voir RepartitionBean. Plus aucun
+         <lineChart> dans ce gabarit (graphique d'évolution mensuelle retiré de tout le document,
+         demande explicite de direction — voir docs/report/rapport-v2.md) : stcMontant (masse
+         salariale des seules lignes STC/sortie) alimente la 4ᵉ série "STC (DH)" de chaque barChart. -->
     <subDataset name="dsRepartition">
         <field name="libelle" class="java.lang.String"/>
         <field name="effectif" class="java.lang.Integer"/>
@@ -103,6 +100,10 @@
     <parameter name="P_STC_VALEUR" class="java.lang.String"/>
     <parameter name="P_REPARTITION_CHANTIER" class="java.util.List"/>
     <parameter name="P_REPARTITION_FONCTION" class="java.util.List"/>
+    <!-- Plus consommé par aucun élément de ce gabarit (graphique d'évolution retiré de tout le
+         document, voir docs/report/rapport-v2.md) — la donnée reste calculée côté Java
+         (PaieBiReportBuilder.evolutionParNiveau) pour ne pas tout redévelopper en cas de
+         réintroduction, même principe que P_REPARTITION_FONCTION ci-dessus. -->
     <parameter name="P_EVOLUTION_MENSUELLE" class="java.util.List"/>
     <!-- Répartition (masse/effectif/STC) des seuls chantiers "compacts" (voir ChantierBiVue.compact) —
          UN SEUL barChart consolidé pour tous, jamais un graphique par chantier compact (voir le
@@ -125,6 +126,7 @@
     <field name="chantierStc" class="java.lang.Integer"/>
     <field name="chantierNarratif" class="java.lang.String"/>
     <field name="chantierRepartitionEquipe" class="java.util.List"/>
+    <!-- Plus consommé (voir P_EVOLUTION_MENSUELLE ci-dessus) — conservé pour la même raison. -->
     <field name="chantierEvolutionMensuelle" class="java.util.List"/>
     <!-- Voir le Javadoc de LigneRapportDetailBean pour le mécanisme complet de ces 4 champs (chantiers
          "compacts" consolidés dans un chapitre final unique, jamais leur propre page). -->
@@ -157,7 +159,7 @@
     <group name="GroupSynthese" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["SYNTHESE"]]></groupExpression>
         <groupHeader>
-            <band height="455" splitType="Stretch">
+            <band height="110" splitType="Stretch">
 
                 <!-- ============================== I — SYNTHÈSE GLOBALE ============================== -->
                 <textField>
@@ -171,10 +173,7 @@
                 </line>
 
                 <!-- 5 cartes KPI (masse, effectif, moyenne, chantiers, STC) — STC présent à chaque
-                     niveau du rapport (global, chantier, équipe), pas seulement au niveau chantier.
-                     Cartes compressées (hauteur réduite) pour laisser le plus de place possible au
-                     graphique d'évolution ci-dessous (demande explicite : maximiser l'espace du
-                     graphique, désormais à 4 séries plutôt que 2). -->
+                     niveau du rapport (global, chantier, équipe), pas seulement au niveau chantier. -->
                 <!-- KPI : masse réelle de paie -->
                 <rectangle>
                     <reportElement x="0" y="28" width="150" height="58" mode="Transparent"/>
@@ -295,61 +294,22 @@
                     <textElement><font fontName="Liberation Serif" size="10" isItalic="true"/></textElement>
                     <textFieldExpression><![CDATA[$P{P_SYNTHESE_NARRATIF}]]></textFieldExpression>
                 </textField>
-
-                <!-- Évolution mensuelle (masse, effectif — 2 séries ; le STC a été retiré de ce
-                     graphique, demande explicite de direction, il reste visible dans le graphique à
-                     barres du chapitre suivant) — UN SEUL <lineChart>. Chaque série est normalisée à
-                     sa propre valeur maximale avant d'être tracée ; 2 axes Y restent affichés (DH à
-                     gauche, personnes à droite) comme simples repères d'unité, sans graduation réelle
-                     — voir PaieReportEvolutionChartCustomizer. -->
-                <staticText>
-                    <reportElement x="0" y="106" width="802" height="14" forecolor="#000000"/>
-                    <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <text><![CDATA[1 — Évolution mensuelle — masse et effectif]]></text>
-                </staticText>
-                <lineChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
-                        <reportElement x="0" y="124" width="802" height="325"/>
-                        <chartLegend position="Bottom">
-                            <font fontName="Liberation Serif" size="8.5"/>
-                        </chartLegend>
-                    </chart>
-                    <categoryDataset>
-                        <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{P_EVOLUTION_MENSUELLE})]]></dataSourceExpression>
-                            </datasetRun>
-                        </dataset>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                    </categoryDataset>
-                    <linePlot><plot/></linePlot>
-                </lineChart>
             </band>
         </groupHeader>
     </group>
 
-    <!-- Sous-section "2" du chapitre I (voir GroupSynthese ci-dessus, sous-section "1") — demande
-         explicite de direction : ce graphique n'est plus un chapitre romain séparé, il devient le 2ᵉ
-         sous-point de "I — Vue d'ensemble", ce qui décale le 1er chantier à "II" (voir
-         PaieReportPdfService.CHAPITRES_FIXES, désormais 1 au lieu de 2). Reste néanmoins sur SA
-         PROPRE PAGE (isStartNewPage) : le graphique a besoin de toute la hauteur disponible, aucune
-         page ne pourrait accueillir en plus les cartes KPI + narratif + graphique d'évolution du
-         sous-point "1". UN SEUL <barChart> horizontal à barres groupées (masse, effectif, STC en
-         personnes ET en DH — 4 séries par chantier) — remplace les 2 pages de colonnes empilées par
-         équipe d'une itération précédente. Axe des valeurs masqué (DH et personnes n'ont pas la même
-         échelle ; un double axe X a été jugé trop risqué à fiabiliser pour des barres groupées),
-         étiquette exacte affichée sur chaque barre — voir PaieReportGroupedChartCustomizer et
-         docs/report/README.md « Visualisations ». Plafonné aux 15 plus gros chantiers + "Autres"
-         (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). -->
+    <!-- Vue par chantier — demande explicite de direction : ce graphique n'est plus un chapitre
+         romain séparé, il devient le contenu de "I — Vue d'ensemble" qui suit les cartes KPI (voir
+         PaieReportPdfService.CHAPITRES_FIXES, 1 au lieu de 2 — le 1er chantier démarre donc à "II").
+         Plus de numérotation arabe "2 —" ici (retiré en même temps que le graphique d'évolution
+         mensuelle, qui était la sous-section "1" — un seul sous-point restant n'a plus besoin d'être
+         numéroté, voir docs/report/rapport-v2.md). Reste sur SA PROPRE PAGE (isStartNewPage) : le
+         graphique a besoin de toute la hauteur disponible. UN SEUL <barChart> horizontal à barres
+         groupées (masse, effectif, STC en personnes ET en DH — 4 séries par chantier). Axe des
+         valeurs masqué (DH et personnes n'ont pas la même échelle ; un double axe X a été jugé trop
+         risqué à fiabiliser pour des barres groupées), étiquette exacte affichée sur chaque barre —
+         voir PaieReportGroupedChartCustomizer et docs/report/README.md « Visualisations ». Plafonné
+         aux 15 plus gros chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). -->
     <group name="GroupGraphChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["GRAPH_CHANTIER"]]></groupExpression>
         <groupHeader>
@@ -357,7 +317,7 @@
                 <textField>
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
                     <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["2 — Vue par chantier"]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["Vue par chantier"]]></textFieldExpression>
                 </textField>
                 <line>
                     <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
@@ -411,16 +371,13 @@
          (PaieBiReportBuilder/PaieReportPdfService) pour éviter de tout redévelopper à la
          réintroduction, simplement plus consommé ici tant que la donnée n'est pas fiable. -->
 
-    <!-- Vue détaillée par chantier, sur 2 pages (même principe que le chapitre II — un seul
-         graphique groupé à 4 séries masse/effectif/STC personnes/STC DH, jamais 2 graphiques
-         séparés) :
-           - page 1 (GroupChantierEvolution) : titre + cartes KPI + narratif + historique mensuel
-             (4 séries normalisées, premier graphique vu, voir la hiérarchie KPI → graphes → tableaux) ;
-           - page 2 (GroupChantier) : "MASSE, EFFECTIF ET STC PAR ÉQUIPE", UN SEUL graphique groupé
-             à 4 séries — SANS tableau (demande explicite de direction). La répartition par fonction
-             au niveau chantier (ex-GroupChantierFonction, 3ᵉ page) a été supprimée : doublon avec la
-             répartition par fonction alors affichée au niveau équipe — cette dernière a depuis, elle
-             aussi, été retirée (aucune BI au niveau équipe, voir GroupEquipeEvolution ci-dessous).
+    <!-- Vue détaillée par chantier, sur 2 pages :
+           - page 1 (GroupChantierEvolution) : titre + cartes KPI + narratif (plus d'historique
+             mensuel ici — le graphique d'évolution a été retiré de tout le document, demande
+             explicite de direction, manque d'historique suffisant pour être significatif — voir
+             docs/report/rapport-v2.md) ;
+           - page 2 (GroupChantier) : "Équipes de chantier X", UN SEUL graphique groupé à 4 séries
+             (masse/effectif/STC personnes/STC DH) — SANS tableau (demande explicite de direction).
          RÉSERVÉ AUX CHANTIERS DÉTAILLÉS (voir ChantierBiVue.compact) : groupExpression sur
          $F{chantierEvolutionCle}, PAS $F{chantierCode} directement — cette clé vaut le vrai code
          chantier pour un chantier détaillé (le groupe se déclenche normalement, une fois chacun), mais
@@ -436,7 +393,7 @@
     <group name="GroupChantierEvolution" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierEvolutionCle}]]></groupExpression>
         <groupHeader>
-            <band height="455" splitType="Stretch">
+            <band height="100" splitType="Stretch">
                 <!-- Titre de chapitre chantier — même style que "I — Vue d'ensemble" (texte noir, sans
                      fond), un chantier étant un chapitre du rapport au même titre que le chapitre I
                      (le seul chapitre romain fixe désormais, voir PaieReportPdfService.CHAPITRES_FIXES
@@ -453,9 +410,7 @@
                 </line>
 
                 <!-- Cartes KPI — même style que la Vue d'ensemble (filet gris, label + valeur),
-                     sans identité visuelle à part (voir « Style visuel »). Cartes compressées
-                     (hauteur réduite) pour laisser le plus de place possible au graphique d'évolution
-                     ci-dessous (demande explicite : maximiser l'espace du graphique). -->
+                     sans identité visuelle à part (voir « Style visuel »). -->
                 <rectangle>
                     <reportElement x="0" y="26" width="192" height="50" mode="Transparent"/>
                     <graphicElement><pen lineWidth="0.5" lineColor="#CCCCCC"/></graphicElement>
@@ -533,61 +488,15 @@
                     <textFieldExpression><![CDATA[$F{chantierNarratif}]]></textFieldExpression>
                 </textField>
 
-                <!-- Sous-section "1" du chapitre chantier (mirroir de "1 — Évolution mensuelle..." au
-                     niveau global, voir GroupSynthese) — nommée "Vue d'ensemble du chantier X" plutôt
-                     que répéter "Évolution mensuelle..." : ce bloc couvre déjà les cartes KPI et le
-                     narratif ci-dessus, pas seulement le graphique. UN SEUL <lineChart>, masse et
-                     effectif (le STC a été retiré de ce graphique, demande explicite de direction, il
-                     reste visible dans le graphique à barres de la sous-section "2" qui suit), chaque
-                     série normalisée à sa propre valeur maximale (voir
-                     PaieReportEvolutionChartCustomizer), alimenté par la requête unique
-                     sommerParChantierEquipePeriode (voir PaieBiReportBuilder.evolutionParNiveau) —
-                     aucune requête supplémentaire par chantier. Piège JasperReports constaté en
-                     production lors de l'ajout de ce textField : une hauteur de reportElement trop
-                     proche de la taille de police (ex. height="13" pour size="12") fait que le texte
-                     ne s'affiche PAS DU TOUT, sans aucune exception ni avertissement au remplissage —
-                     ni dans les logs, ni dans le PDF (juste un vide silencieux) ; une marge d'au moins
-                     ~6pt entre la hauteur et la taille de police (height="18" pour size="12", "22"
-                     pour size="16", cohérent avec les titres de chapitre existants) évite le problème. -->
-                <textField>
-                    <reportElement x="0" y="96" width="802" height="18" forecolor="#000000"/>
-                    <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["1 — Vue d'ensemble du chantier " + $F{chantierCode}]]></textFieldExpression>
-                </textField>
-                <lineChart>
-                    <chart customizerClass="staport.rh.paie.report.PaieReportEvolutionChartCustomizer">
-                        <reportElement x="0" y="116" width="802" height="333"/>
-                        <chartLegend position="Bottom">
-                            <font fontName="Liberation Serif" size="8.5"/>
-                        </chartLegend>
-                    </chart>
-                    <categoryDataset>
-                        <dataset>
-                            <datasetRun subDataset="dsRepartition">
-                                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource((java.util.List)$F{chantierEvolutionMensuelle})]]></dataSourceExpression>
-                            </datasetRun>
-                        </dataset>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Masse (DH)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{montant}]]></valueExpression>
-                        </categorySeries>
-                        <categorySeries>
-                            <seriesExpression><![CDATA["Effectif (personnes)"]]></seriesExpression>
-                            <categoryExpression><![CDATA[$F{libelle}]]></categoryExpression>
-                            <valueExpression><![CDATA[$F{effectif}]]></valueExpression>
-                        </categorySeries>
-                    </categoryDataset>
-                    <linePlot><plot/></linePlot>
-                </lineChart>
             </band>
         </groupHeader>
     </group>
 
-    <!-- Sous-section "2" du chapitre chantier (mirroir de "2 — Vue par chantier" au niveau global) :
-         "Équipes de chantier X" — titre de SECTION introduisant à la fois le graphique de répartition
+    <!-- "Équipes de chantier X" — titre de SECTION introduisant à la fois le graphique de répartition
          par équipe ci-dessous ET, à sa suite (voir GroupEquipe plus bas), chaque équipe individuelle
-         (non numérotée séparément, demande explicite de direction). UN SEUL graphique à barres
+         (non numérotée séparément, demande explicite de direction). Plus de numérotation arabe "2 —"
+         ici (retiré en même temps que le graphique d'évolution mensuelle du chantier, qui était la
+         sous-section "1" — voir docs/report/rapport-v2.md). UN SEUL graphique à barres
          groupées horizontales (masse, effectif, STC en personnes ET en DH — 4 séries par équipe —
          jamais 2 graphiques séparés) — SEUL, sans tableau (demande explicite de direction : la section
          « répartition par fonction » du chantier, qui avait le même tableau, a été supprimée, voir
@@ -620,7 +529,7 @@
                         <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
                     </reportElement>
                     <textElement><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["2 — Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
                 </textField>
                 <staticText>

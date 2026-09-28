@@ -20,12 +20,14 @@ import java.util.List;
  * "lourds" (une page dédiée chacun) :
  * <ul>
  *   <li>{@code chantierEvolutionCle} — expression de {@code GroupChantierEvolution} (page "Vue
- *       d'ensemble" + graphique d'évolution) : le vrai code chantier pour un chantier détaillé (le
- *       groupe se déclenche normalement, une fois par chantier détaillé) ; pour un chantier compact,
- *       la valeur est GELÉE à celle du dernier chantier détaillé rencontré (ou "" s'il n'y en a aucun)
- *       — l'expression ne change alors JAMAIS d'une ligne compacte à l'autre, donc ce groupe ne se
- *       déclenche plus du tout pour eux (page supprimée entièrement, demande explicite de direction :
- *       inutile de tracer une évolution mensuelle pour 1-2 personnes).</li>
+ *       d'ensemble du chantier" : KPI + narratif ; le graphique d'évolution qu'elle portait a depuis
+ *       été retiré de tout le document, voir {@code docs/report/rapport-v2.md} — le nom du groupe n'a
+ *       pas été changé pour autant, page toujours utile pour les KPI) : le vrai code chantier pour un
+ *       chantier détaillé (le groupe se déclenche normalement, une fois par chantier détaillé) ; pour
+ *       un chantier compact, la valeur est GELÉE à celle du dernier chantier détaillé rencontré (ou ""
+ *       s'il n'y en a aucun) — l'expression ne change alors JAMAIS d'une ligne compacte à l'autre, donc
+ *       ce groupe ne se déclenche plus du tout pour eux (page supprimée entièrement, demande explicite
+ *       de direction : inutile de détailler les KPI d'un chantier à 1-2 personnes).</li>
  *   <li>{@code chantierEquipesCle} — expression de {@code GroupChantier} (page "Équipes de chantier" +
  *       graphique de répartition) : le vrai code chantier pour un chantier détaillé (inchangé) ; pour
  *       TOUS les chantiers compacts, la MÊME constante ("__CHANTIERS_COMPACTS__") — le groupe se

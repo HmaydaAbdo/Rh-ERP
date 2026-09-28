@@ -9,14 +9,16 @@ import java.util.List;
  * interne par équipe (incluant "Sans équipe" — {@code repartitionEquipe}, voir
  * {@code PaieBiReportBuilder}) — la répartition par fonction à CE niveau a été retirée (demande
  * explicite de direction, doublon avec celle, plus fine, portée par chaque {@link EquipeBiVue}),
- * nombre de départs STC / sortie, évolution mensuelle (masse et effectif de CE chantier, 12 derniers
- * mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}). Le détail employé est porté par
+ * nombre de départs STC / sortie, {@code evolutionMensuelle} (masse et effectif de CE chantier, 12
+ * derniers mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}) : reste calculé mais n'alimente
+ * plus aucun graphique du rapport (évolution mensuelle retirée de tout le document, demande explicite
+ * de direction — voir {@code docs/report/rapport-v2.md}). Le détail employé est porté par
  * {@link #equipes()}.
  *
  * <p>{@code compact} : {@code true} quand l'effectif de CE chantier est ≤
  * {@code PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT} (demande explicite de direction : un chantier à 1
- * ou 2 personnes ne justifie pas son propre chapitre, sa propre page « Vue d'ensemble » + graphique
- * d'évolution, ni sa propre page « Équipes de chantier » — voir {@code PaieReportPdfService} pour la
+ * ou 2 personnes ne justifie pas son propre chapitre, ni sa propre page « Vue d'ensemble », ni sa
+ * propre page « Équipes de chantier » — voir {@code PaieReportPdfService} pour la
  * consolidation de tous les chantiers compacts dans une unique section finale « Chantiers à effectif
  * réduit »). {@code masseFormatee} : masse de CE chantier, montant brut sans comparaison au mois
  * précédent (contrairement à {@code masse}) — sert d'en-tête compact quand ce chantier est affiché

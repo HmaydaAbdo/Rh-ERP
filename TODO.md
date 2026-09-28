@@ -399,3 +399,28 @@ snapshot (employé/fonction/chantier/équipe figés par bulletin) et la contrain
 
 Ce projet n'étant pas sous contrôle de version (pas de dépôt git), cette suppression est
 irréversible — décision prise et exécutée avec confirmation explicite de l'utilisateur.
+
+---
+
+## Rapport PDF BI — simplifications successives (voir docs/report/rapport-v2.md)
+
+**Décision (HMAYDA, 2026-09-28)** : plusieurs fonctionnalités du rapport PDF BI (paie) ont été
+retirées au fil des itérations — graphiques d'évolution mensuelle (masse/effectif, retirés
+entièrement le 2026-09-28, manque d'historique suffisant pour une tendance significative), STC
+retiré de ces mêmes graphiques avant leur retrait complet, répartition par fonction (référentiel
+avec doublons non nettoyés), sommaire imprimé, table de répartition par équipe (doublon avec son
+graphique) — chacune pour une raison différente, documentée en détail dans
+[docs/report/rapport-v2.md](docs/report/rapport-v2.md). Ce fichier sert de journal de décisions :
+à consulter avant de réintroduire l'une de ces fonctionnalités (certaines restent calculées côté
+Java sans être affichées, prêtes à être réactivées sans recalcul si le blocage qui a motivé leur
+retrait est levé — le détail par fonctionnalité, y compris ce qui n'a PAS de chemin de
+réintroduction direct, est dans ce fichier).
+
+**Reste à faire, noté mais pas traité** : les pages "Vue d'ensemble" (globale et par chantier
+détaillé) ne portent plus que les cartes KPI + le narratif depuis le retrait du graphique
+d'évolution — elles se terminent donc avec une zone blanche significative avant la page suivante
+(pleine hauteur, dédiée au graphique de répartition). Fusionner ces pages avec celles qui suivent
+réduirait le nombre de pages mais demande de recalibrer précisément la hauteur des `<barChart>`
+concernés et une vérification visuelle dédiée — volontairement laissé de côté dans ce commit (retirer
+le graphique est ce qui a été demandé, pas restructurer la mise en page). Voir
+`docs/report/rapport-v2.md`, section 1.

@@ -44,9 +44,9 @@ class PaieBiReportBuilder {
     private static final int MOIS_EVOLUTION = 12;
     /** Effectif maximum d'un chantier "compact" (voir {@link ChantierBiVue#compact()}) — seuil validé
      * explicitement avec la direction après constat qu'un chantier à 1 ou 2 personnes générait 3 pages
-     * quasi vides (vue d'ensemble + évolution, répartition par équipe, tableau employé) pour un
-     * chantier négligeable dans le rapport. Ces chantiers sont regroupés dans une unique section finale
-     * (voir {@code PaieReportPdfService}), jamais donnés à chacun sa propre page/chapitre. */
+     * quasi vides (vue d'ensemble, répartition par équipe, tableau employé) pour un chantier
+     * négligeable dans le rapport. Ces chantiers sont regroupés dans une unique section finale (voir
+     * {@code PaieReportPdfService}), jamais donnés à chacun sa propre page/chapitre. */
     private static final int SEUIL_CHANTIER_COMPACT = 3;
     private static final DateTimeFormatter FORMAT_DATE_GENERATION =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE);
@@ -98,8 +98,9 @@ class PaieBiReportBuilder {
     }
 
     /** Surcharge sans historique d'évolution (utilisée par les tests de {@link PaieBiReportBuilder},
-     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : les graphiques
-     * d'évolution restent alors simplement vides, sans incidence sur le reste du calcul. */
+     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : les données
+     * d'évolution restent alors simplement vides, sans incidence sur le reste du calcul (aucun
+     * graphique du rapport ne les consomme de toute façon, voir {@code docs/report/rapport-v2.md}). */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
         return construireDepuis(periode, requete, courant, precedent, EvolutionParNiveau.VIDE);
     }
@@ -280,9 +281,14 @@ class PaieBiReportBuilder {
      * requête supplémentaire par chantier. Fenêtre glissante d'AU PLUS {@value #MOIS_EVOLUTION} mois,
      * mais jamais avant le premier mois où une paie existe réellement en base (voir
      * {@link PaieRepository#premierePeriode()}) — sans ce plancher, un système mis en place il y a 2
-     * mois afficherait 10 mois "fantômes" à zéro avant la donnée réelle (demande explicite de
-     * direction : le graphique doit grandir mois après mois, jamais partir d'un historique qui n'a
-     * jamais existé). */
+     * mois afficherait 10 mois "fantômes" à zéro avant la donnée réelle.
+     *
+     * <p><b>Retiré de tout graphique du rapport</b> (demande explicite de direction, 2026-09-28 :
+     * manque d'historique suffisant pour qu'une tendance mensuelle soit significative — voir
+     * {@code docs/report/rapport-v2.md}), mais volontairement conservé ici, calculé sans être
+     * consommé : même principe que {@code PaieBiReportBuilder.versRepartition} pour la fonction
+     * (voir {@code SyntheseGlobaleVue.repartitionFonction}) — éviter de tout redévelopper si
+     * l'historique disponible devient un jour suffisant pour justifier de le réafficher. */
     private EvolutionParNiveau evolutionParNiveau(YearMonth periode) {
         YearMonth premierePeriode = repository.premierePeriode().orElse(periode);
         YearMonth debut = premierePeriode.isAfter(periode.minusMonths(MOIS_EVOLUTION - 1))
