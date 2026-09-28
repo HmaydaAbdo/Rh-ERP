@@ -163,6 +163,12 @@
     <field name="primeRoulageDimanche" class="java.lang.String"/>
     <field name="salaireTotal" class="java.lang.String"/>
     <field name="observation" class="java.lang.String"/>
+    <!-- Vraie équipe de l'employé ("Sans équipe" incluse) — chaîne vide dans une section équipe
+         sélectionnée (redondante avec le titre de section), renseignée uniquement dans la section
+         "reste" (voir PaieBiReportBuilder.ligneEmploye/afficherEquipeReelle et le Javadoc de
+         LigneEmployeVue.equipeReelle) : c'est la VALEUR, jamais la visibilité de la cellule, qui
+         porte cette distinction. -->
+    <field name="employeEquipeReelle" class="java.lang.String"/>
 
     <!-- Groupes à expression constante : leur en-tête s'imprime une seule fois, au tout début du
          document (le premier enregistrement fait toujours "changer" l'expression depuis null) —
@@ -711,10 +717,20 @@
                     <text><![CDATA[Total]]></text>
                 </staticText>
                 <staticText>
-                    <reportElement x="640" y="20" width="162" height="36" forecolor="#000000"/>
+                    <reportElement x="640" y="20" width="90" height="36" forecolor="#000000"/>
                     <box><pen lineWidth="0.5" lineColor="#000000"/></box>
                     <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
                     <text><![CDATA[Obs]]></text>
+                </staticText>
+                <!-- "Équipe" — colonne réservée dans la mise en page mais dont le contenu (voir
+                     <detail> ci-dessous) ne s'affiche que dans la section "reste" d'un chantier :
+                     redondant de répéter l'équipe par ligne dans une section équipe déjà nommée par
+                     son titre. -->
+                <staticText>
+                    <reportElement x="730" y="20" width="72" height="36" forecolor="#000000"/>
+                    <box><pen lineWidth="0.5" lineColor="#000000"/></box>
+                    <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5" isBold="true"/></textElement>
+                    <text><![CDATA[Équipe]]></text>
                 </staticText>
             </band>
         </groupHeader>
@@ -1068,10 +1084,22 @@
                 <textFieldExpression><![CDATA[$F{salaireTotal}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="640" y="0" width="162" height="16"/>
+                <reportElement x="640" y="0" width="90" height="16"/>
                 <box leftPadding="4" bottomPadding="2"><pen lineWidth="0.5" lineColor="#000000"/></box>
                 <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="10.5"/></textElement>
                 <textFieldExpression><![CDATA[$F{observation}]]></textFieldExpression>
+            </textField>
+            <!-- Vide dans une section équipe sélectionnée (déjà nommée par son titre, redondant de
+                 répéter l'équipe par ligne) ; renseignée uniquement dans la section "reste", où les
+                 employés viennent de plusieurs équipes non sélectionnées mélangées (voir
+                 PaieBiReportBuilder.ligneEmploye, afficherEquipeReelle) — la valeur, jamais la
+                 visibilité de la cellule, porte cette distinction : le quadrillage du tableau reste
+                 identique quelle que soit la section. -->
+            <textField>
+                <reportElement x="730" y="0" width="72" height="16"/>
+                <box leftPadding="4" bottomPadding="2"><pen lineWidth="0.5" lineColor="#000000"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="9"/></textElement>
+                <textFieldExpression><![CDATA[$F{employeEquipeReelle}]]></textFieldExpression>
             </textField>
         </band>
     </detail>

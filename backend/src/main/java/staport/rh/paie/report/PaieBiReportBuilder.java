@@ -179,16 +179,16 @@ class PaieBiReportBuilder {
                     .forEach(nom -> equipes.add(equipeVue(
                             nom, titreEquipe(nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
-                            masseChantier, MaterielChantierCatalogue.libelles(code, nom))));
+                            masseChantier, MaterielChantierCatalogue.libelles(code, nom), false)));
             List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
             if (!reste.isEmpty()) {
                 List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
-                equipes.add(equipeVue(code, titreChantier, reste, restePrecedent, masseChantier, List.of()));
+                equipes.add(equipeVue(code, titreChantier, reste, restePrecedent, masseChantier, List.of(), true));
             }
         } else {
             // Aucune équipe sélectionnée pour ce chantier : une seule section réunissant tous ses
             // employés, sans graphique de répartition par équipe (voir rapport.jrxml, GroupChantier).
-            equipes.add(equipeVue(code, titreChantier, lignesChantier, lignesChantierPrecedent, masseChantier, List.of()));
+            equipes.add(equipeVue(code, titreChantier, lignesChantier, lignesChantierPrecedent, masseChantier, List.of(), true));
         }
 
         return new ChantierBiVue(
@@ -225,7 +225,7 @@ class PaieBiReportBuilder {
     }
 
     private EquipeBiVue equipeVue(String nom, String titre, List<Paie> lignesEquipe, List<Paie> lignesEquipePrecedent,
-                                   BigDecimal masseChantier, List<String> materielLibelles) {
+                                   BigDecimal masseChantier, List<String> materielLibelles, boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
         // agregatFonctionEquipe sert à la fois à ordonner le tableau employé (la fonction consommant
@@ -240,7 +240,7 @@ class PaieBiReportBuilder {
         List<LigneEmployeVue> employes = lignesEquipe.stream()
                 .sorted(Comparator.comparing((Paie p) -> rangFonction.get(libelleFonction(p)))
                         .thenComparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
-                .map(this::ligneEmploye)
+                .map(p -> ligneEmploye(p, afficherEquipeReelle))
                 .toList();
 
         return new EquipeBiVue(
@@ -266,7 +266,12 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    private LigneEmployeVue ligneEmploye(Paie paie) {
+    /** {@code afficherEquipeReelle} : {@code false} dans une section équipe sélectionnée (déjà nommée
+     * par son titre, redondant de répéter l'équipe par ligne) ; {@code true} dans la section "reste"
+     * d'un chantier (ou l'unique section d'un chantier sans détail), où les employés viennent
+     * potentiellement de plusieurs équipes non sélectionnées mélangées — voir le Javadoc de
+     * {@link LigneEmployeVue#equipeReelle()}. */
+    private LigneEmployeVue ligneEmploye(Paie paie, boolean afficherEquipeReelle) {
         return new LigneEmployeVue(
                 paie.getEmployee().getNomPrenom(),
                 paie.getFonction().getLibelle(),
@@ -278,7 +283,8 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageOrdinaire()),
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireTotal()),
-                paie.getObservation() != null ? paie.getObservation() : "");
+                paie.getObservation() != null ? paie.getObservation() : "",
+                afficherEquipeReelle ? libelleEquipe(paie) : "");
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
