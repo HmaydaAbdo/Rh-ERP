@@ -62,9 +62,9 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
   exporting = false;
   format: Format = 'PDF';
 
-  readonly formatOptions: { label: string; value: Format; icon: string }[] = [
-    { label: 'Rapport PDF', value: 'PDF', icon: 'pi pi-file-pdf' },
-    { label: 'Classeur Excel', value: 'EXCEL', icon: 'pi pi-file-excel' }
+  readonly formatOptions: { label: string; value: Format }[] = [
+    { label: 'Rapport PDF', value: 'PDF' },
+    { label: 'Classeur Excel', value: 'EXCEL' }
   ];
   readonly anneeOptions: number[] = this.construireAnneeOptions();
   readonly moisOptions: { label: string; value: number }[] = LIBELLES_MOIS.map((label, index) => ({ label, value: index + 1 }));
@@ -103,11 +103,6 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
   setVisible(valeur: boolean): void {
     this.visible = valeur;
     this.visibleChange.emit(valeur);
-  }
-
-  onFormatChange(): void {
-    // Rien à recalculer : la sélection d'équipes est partagée par les deux formats, seule la
-    // présentation (inclure/exclure, texte d'aide) change avec le format.
   }
 
   hintTexte(): string {
@@ -168,30 +163,6 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
       exclues.delete(equipe);
     }
     this.equipesExcluesParChantier = { ...this.equipesExcluesParChantier, [code]: exclues };
-  }
-
-  /** Une phrase par chantier concerné, reformulant la structure réelle qui sera générée — guide
-   * l'utilisateur avant le téléchargement (voir la maquette validée avec la direction). */
-  resumeParChantier(): string[] {
-    const codes = this.form.controls.chantiersConcernes.value ?? [];
-    return codes.map((code) => {
-      const equipes = this.equipesSepareesParChantier[code] ?? [];
-      if (equipes.length === 0) {
-        return this.format === 'PDF'
-          ? `Chantier ${code} : un tableau "CHANTIER : ${code}" avec tous ses employés, sans graphique.`
-          : `Chantier ${code} : feuille ${code} avec tous ses employés (comme toujours).`;
-      }
-      if (this.format === 'PDF') {
-        return `Chantier ${code} : graphique répartition par équipe + section détaillée pour ${equipes.join(', ')}, et un tableau "CHANTIER : ${code}" pour le reste des employés.`;
-      }
-      const details = equipes
-        .map((equipe) => {
-          const inclu = !this.equipesExcluesParChantier[code]?.has(equipe);
-          return `feuille ${equipe} (${inclu ? 'aussi visible' : 'retirée'} de la feuille ${code})`;
-        })
-        .join(', ');
-      return `Chantier ${code} : feuille ${code} complète, plus ${details}.`;
-    });
   }
 
   onExporter(): void {
