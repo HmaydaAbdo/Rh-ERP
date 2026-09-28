@@ -162,7 +162,8 @@ class PaieBiReportBuilder {
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
         int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
         boolean avecDetailEquipe = !equipesSelectionnees.isEmpty();
-        String titreChantier = titreChantier(code, lignesChantier);
+        String identifiantChantier = identifiantChantier(code, lignesChantier);
+        String titreChantier = "CHANTIER : " + identifiantChantier;
 
         List<EquipeBiVue> equipes = new ArrayList<>();
         if (avecDetailEquipe) {
@@ -192,6 +193,7 @@ class PaieBiReportBuilder {
 
         return new ChantierBiVue(
                 code,
+                identifiantChantier,
                 titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
@@ -204,13 +206,14 @@ class PaieBiReportBuilder {
                 avecDetailEquipe);
     }
 
-    /** "CHANTIER : &lt;code&gt; (&lt;nom&gt;)" quand {@code Chantier.nom} est renseigné (champ
-     * optionnel, jamais exposé par la synchronisation ERP — voir {@code docs/chantier/README.md}),
-     * "CHANTIER : &lt;code&gt;" sinon. Le nom est lu sur la première ligne du chantier : toutes les
+    /** "&lt;nom&gt; (&lt;code&gt;)" quand {@code Chantier.nom} est renseigné (champ optionnel, jamais
+     * exposé par la synchronisation ERP — voir {@code docs/chantier/README.md}), "&lt;code&gt;" seul
+     * sinon (demande explicite de direction, 2026-09-29 : le nom prime partout où il existe, le code
+     * reste l'identifiant de repli). Le nom est lu sur la première ligne du chantier : toutes les
      * lignes d'un même {@code code} partagent la même entité {@code Chantier}. */
-    private String titreChantier(String code, List<Paie> lignesChantier) {
+    private String identifiantChantier(String code, List<Paie> lignesChantier) {
         String nom = lignesChantier.isEmpty() ? null : lignesChantier.get(0).getChantier().getNom();
-        return nom != null && !nom.isBlank() ? "CHANTIER : " + code + " (" + nom + ")" : "CHANTIER : " + code;
+        return nom != null && !nom.isBlank() ? nom + " (" + code + ")" : code;
     }
 
     private String titreEquipe(String nom) {

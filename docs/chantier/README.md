@@ -54,7 +54,7 @@ Table `chantier` :
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
 | `code` | `VARCHAR(100)` | `NOT NULL`, **unique** | Clé métier du chantier (ex. `C079`) |
 | `designation` | `VARCHAR(500)` | nullable | Libellé descriptif — synchronisé depuis l'ERP, écrasé à chaque synchronisation |
-| `nom` | `VARCHAR(255)` | nullable | Nom optionnel, distinct de `designation` — **jamais exposé ni modifié par la synchronisation ERP** (ajouté le 2026-09-29, migration `V5__add_chantier_nom.sql`), uniquement saisi/modifié manuellement via le formulaire. Affiché par le rapport PDF/l'export Excel de la paie sous la forme `"CHANTIER : <code> (<nom>)"` quand renseigné (voir `docs/report/README.md`) |
+| `nom` | `VARCHAR(255)` | nullable | Nom optionnel, distinct de `designation` — **jamais exposé ni modifié par la synchronisation ERP** (ajouté le 2026-09-29, migration `V5__add_chantier_nom.sql`), uniquement saisi/modifié manuellement via le formulaire. Affiché par le rapport PDF/l'export Excel de la paie sous la forme `"CHANTIER : <nom> (<code>)"` quand renseigné, `"CHANTIER : <code>"` sinon (voir `docs/report/README.md`, « Identifiant chantier ») |
 | `source_erp` | `BIT` | `NOT NULL`, défaut `false` | Vrai si géré par la synchronisation ERP |
 | `actif` | `BIT` | `NOT NULL`, défaut `true` | Faux = désactivé — jamais modifié par la synchronisation (voir « Règles métier ») |
 

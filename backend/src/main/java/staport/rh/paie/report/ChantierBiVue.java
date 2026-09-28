@@ -15,6 +15,12 @@ import java.util.List;
  * de direction — voir {@code docs/report/rapport-v2.md}). Le détail employé est porté par
  * {@link #equipes()}.
  *
+ * <p>{@code identifiant} : "&lt;nom&gt; (&lt;code&gt;)" quand {@code Chantier.nom} est renseigné,
+ * "&lt;code&gt;" seul sinon (demande explicite de direction, 2026-09-29 : le nom prime partout où il
+ * existe) — voir {@code PaieBiReportBuilder.identifiantChantier} (même règle, calculée
+ * indépendamment côté Excel par {@code PaieExportService.titreZone}, jamais partagée en code :
+ * chaque format construit son propre titre, voir docs/report/README.md « Pourquoi deux pipelines »).
+ *
  * <p>Chaque chantier a désormais sa propre section (demande explicite de direction, 2026-09-29 :
  * fusion des exports PDF/Excel autour d'une seule sélection manuelle d'équipes — voir
  * {@code docs/report/rapport-v2.md}). {@code avecDetailEquipe} : {@code true} quand l'utilisateur a
@@ -29,6 +35,7 @@ import java.util.List;
  */
 record ChantierBiVue(
         String code,
+        String identifiant,
         String titre,
         KpiMontantVue masse,
         KpiEffectifVue effectif,

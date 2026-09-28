@@ -4,7 +4,7 @@ export interface Chantier {
   designation: string;
   /** Optionnel, jamais exposé ni modifié par la synchronisation ERP (voir designation) — uniquement
    * saisi/modifié manuellement. Affiché par le rapport PDF/l'export Excel de la paie sous la forme
-   * "CHANTIER : <code> (<nom>)" quand renseigné. */
+   * "CHANTIER : <nom> (<code>)" quand renseigné (le nom prime, code en repli sinon). */
   nom: string | null;
   sourceErp: boolean;
   actif: boolean;

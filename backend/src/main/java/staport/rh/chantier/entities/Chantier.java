@@ -32,7 +32,7 @@ public class Chantier {
      * Nom optionnel du chantier, distinct de {@code designation} — jamais exposé ni modifié par la
      * synchronisation ERP (voir {@code ChantierSyncTransactionalOperations}), uniquement saisi/modifié
      * manuellement. Affiché par le rapport PDF/l'export Excel de la paie sous la forme
-     * "CHANTIER : &lt;code&gt; (&lt;nom&gt;)" quand renseigné.
+     * "CHANTIER : &lt;nom&gt; (&lt;code&gt;)" quand renseigné (le nom prime, code en repli sinon).
      */
     @Column(name = "nom", length = 255)
     private String nom;
