@@ -416,11 +416,9 @@ Java sans être affichées, prêtes à être réactivées sans recalcul si le bl
 retrait est levé — le détail par fonctionnalité, y compris ce qui n'a PAS de chemin de
 réintroduction direct, est dans ce fichier).
 
-**Reste à faire, noté mais pas traité** : les pages "Vue d'ensemble" (globale et par chantier
-détaillé) ne portent plus que les cartes KPI + le narratif depuis le retrait du graphique
-d'évolution — elles se terminent donc avec une zone blanche significative avant la page suivante
-(pleine hauteur, dédiée au graphique de répartition). Fusionner ces pages avec celles qui suivent
-réduirait le nombre de pages mais demande de recalibrer précisément la hauteur des `<barChart>`
-concernés et une vérification visuelle dédiée — volontairement laissé de côté dans ce commit (retirer
-le graphique est ce qui a été demandé, pas restructurer la mise en page). Voir
-`docs/report/rapport-v2.md`, section 1.
+**Effet de bord corrigé le jour même (2026-09-28)** : les pages "Vue d'ensemble" (globale et par
+chantier détaillé), devenues bien plus courtes après le retrait du graphique d'évolution, ont été
+fusionnées avec la page de graphique qui les suivait (`isStartNewPage="false"` sur
+`GroupGraphChantier`/`GroupChantier`, hauteur des `<barChart>` recalibrée, vérifié visuellement au
+cas le plus dense) — plus de zone blanche, voir `docs/report/README.md`, « Fusion des pages KPI +
+graphique », et `docs/report/rapport-v2.md`, section 1.

@@ -16,28 +16,35 @@
                  celles qui l'ont précédée). PaieReportEvolutionChartCustomizer et le paramètre
                  P_EVOLUTION_MENSUELLE n'ont plus de consommateur dans ce gabarit ; la donnée elle-même
                  reste calculée côté Java (PaieBiReportBuilder.evolutionParNiveau), voir TODO.md.
-            2.2. "Vue par chantier" (GroupGraphChantier), sur SA PROPRE PAGE (le graphique a besoin de
-                 toute la hauteur disponible) : UN SEUL <barChart> horizontal à barres groupées (4
-                 séries, chacune nommée avec son unité dans la légende), plafonné aux 15 plus gros
-                 chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE,
+            2.2. "Vue par chantier" (GroupGraphChantier) : UN SEUL <barChart> horizontal à barres
+                 groupées (4 séries, chacune nommée avec son unité dans la légende), plafonné aux 15
+                 plus gros chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE,
                  PaieReportGroupedChartCustomizer) — axe des valeurs masqué, étiquette exacte affichée
                  sur chaque barre (sauf valeur nulle, alors omise plutôt que d'empiler des "0"). Plus
                  de numérotation arabe "1"/"2" ici (un seul sous-point restant depuis le retrait du
-                 graphique d'évolution, qui était le "1").
+                 graphique d'évolution, qui était le "1"). isStartNewPage="false" DEPUIS le retrait du
+                 graphique d'évolution (2026-09-28, demande explicite de direction) : continue sur LA
+                 MÊME PAGE que le point 2.1 ci-dessus (plus de page quasi vide entre les 2) — chart
+                 réduit à 325 (contre 428) pour tenir sur l'espace restant, voir le commentaire de
+                 bande dans le gabarit pour le calcul précis du budget.
           Chapitre "Répartition par fonction" retiré temporairement (doublons non nettoyés dans le
           référentiel Fonction, voir TODO.md).
-       3. Une section par chantier DÉTAILLÉ (GroupChantier, isStartNewPage), numérotée en chiffre
-          romain à la suite du seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe,
-          II et suivants un par chantier détaillé) :
+       3. Une section par chantier DÉTAILLÉ (GroupChantier), numérotée en chiffre romain à la suite du
+          seul chapitre fixe (voir PaieReportPdfService.chapitreChantier — I fixe, II et suivants un
+          par chantier détaillé) :
             3.1. KPI (masse, effectif, coût moyen, STC) + narratif — même retrait du graphique
-                 d'évolution qu'au niveau global, voir point 2.1 ci-dessus.
-            3.2. "Équipes de chantier X" (GroupChantier, sa propre page) : graphique de répartition
-                 par équipe (4 séries, SEUL, sans tableau), puis chaque équipe individuelle
-                 (GroupEquipe, keepTogether) — NON numérotée séparément (demande explicite de
-                 direction), juste son tableau employé, trié par fonction (la fonction consommant le
-                 plus de masse en premier, voir PaieBiReportBuilder.equipeVue). Aucune BI au niveau
-                 équipe (ni graphique d'évolution, ni répartition par fonction — retirées, jugées
-                 redondantes avec le niveau chantier).
+                 d'évolution qu'au niveau global, voir point 2.1 ci-dessus (GroupChantierEvolution,
+                 isStartNewPage="true" INCHANGÉ : chaque chantier détaillé démarre bien sa propre
+                 nouvelle page ici, seule la page SUIVANTE ci-dessous lui est fusionnée).
+            3.2. "Équipes de chantier X" (GroupChantier) : graphique de répartition par équipe (4
+                 séries, SEUL, sans tableau), puis chaque équipe individuelle (GroupEquipe,
+                 keepTogether) — NON numérotée séparément (demande explicite de direction), juste son
+                 tableau employé, trié par fonction (la fonction consommant le plus de masse en
+                 premier, voir PaieBiReportBuilder.equipeVue). Aucune BI au niveau équipe (ni
+                 graphique d'évolution, ni répartition par fonction — retirées, jugées redondantes
+                 avec le niveau chantier). isStartNewPage="false" DEPUIS le retrait du graphique
+                 d'évolution : continue sur LA MÊME PAGE que le point 3.1 (chart réduit à 340, contre
+                 413) — même principe qu'au niveau global.
           Toutes ces sections partagent la même source de données à plat (un employé par ligne).
        4. UN SEUL chapitre final consolidant tous les chantiers "compacts" (effectif ≤
           PaieBiReportBuilder.SEUIL_CHANTIER_COMPACT, demande explicite de direction : un chantier à 1
@@ -303,30 +310,39 @@
          PaieReportPdfService.CHAPITRES_FIXES, 1 au lieu de 2 — le 1er chantier démarre donc à "II").
          Plus de numérotation arabe "2 —" ici (retiré en même temps que le graphique d'évolution
          mensuelle, qui était la sous-section "1" — un seul sous-point restant n'a plus besoin d'être
-         numéroté, voir docs/report/rapport-v2.md). Reste sur SA PROPRE PAGE (isStartNewPage) : le
-         graphique a besoin de toute la hauteur disponible. UN SEUL <barChart> horizontal à barres
-         groupées (masse, effectif, STC en personnes ET en DH — 4 séries par chantier). Axe des
-         valeurs masqué (DH et personnes n'ont pas la même échelle ; un double axe X a été jugé trop
-         risqué à fiabiliser pour des barres groupées), étiquette exacte affichée sur chaque barre —
-         voir PaieReportGroupedChartCustomizer et docs/report/README.md « Visualisations ». Plafonné
-         aux 15 plus gros chantiers + "Autres" (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). -->
-    <group name="GroupGraphChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
+         numéroté, voir docs/report/rapport-v2.md).
+
+         isStartNewPage="false" (depuis 2026-09-28, demande explicite de direction) : ce graphique
+         continue directement sur LA MÊME PAGE que les cartes KPI de GroupSynthese ci-dessus — plus
+         de page quasiment vide entre les 2 depuis que GroupSynthese a perdu son graphique
+         d'évolution (voir docs/report/rapport-v2.md). Hauteur du barChart réduite de 428 à 330 pour
+         tenir sur l'espace restant (page - pageHeader - pageFooter - marges = 473, moins ~110 déjà
+         pris par GroupSynthese, voir le calcul détaillé dans le commentaire équivalent de
+         GroupChantier plus bas) : chaque catégorie perd un peu d'épaisseur mais reste lisible même
+         au plafond de 15 chantiers + "Autres" (vérifié visuellement, voir docs/report/README.md). UN
+         SEUL <barChart> horizontal à barres groupées (masse, effectif, STC en personnes ET en DH —
+         4 séries par chantier). Axe des valeurs masqué (DH et personnes n'ont pas la même échelle ;
+         un double axe X a été jugé trop risqué à fiabiliser pour des barres groupées), étiquette
+         exacte affichée sur chaque barre — voir PaieReportGroupedChartCustomizer et
+         docs/report/README.md « Visualisations ». Plafonné aux 15 plus gros chantiers + "Autres"
+         (voir PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). -->
+    <group name="GroupGraphChantier" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA["GRAPH_CHANTIER"]]></groupExpression>
         <groupHeader>
-            <band height="468" splitType="Stretch">
-                <textField>
-                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000"/>
-                    <textElement verticalAlignment="Bottom"><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["Vue par chantier"]]></textFieldExpression>
-                </textField>
-                <line>
-                    <reportElement x="0" y="23" width="802" height="0" forecolor="#000000"/>
-                    <graphicElement><pen lineWidth="1.0"/></graphicElement>
-                </line>
+            <band height="355" splitType="Stretch">
+                <!-- Hauteur 18 pour taille 12 (marge ~6pt, voir le piège JasperReports documenté plus
+                     bas dans GroupChantierEvolution) — texte plus petit qu'avant (16pt/22) car cette
+                     page n'est plus un titre de chapitre à part entière, juste un sous-titre au fil de
+                     la page KPI qui précède (voir le commentaire de groupe ci-dessus). -->
+                <staticText>
+                    <reportElement x="0" y="0" width="802" height="18" forecolor="#000000"/>
+                    <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
+                    <text><![CDATA[Vue par chantier]]></text>
+                </staticText>
 
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="34" width="802" height="428"/>
+                        <reportElement x="0" y="20" width="802" height="325"/>
                         <chartLegend position="Bottom">
                             <font fontName="Liberation Serif" size="8.5"/>
                         </chartLegend>
@@ -516,33 +532,41 @@
          RapportBiVue.repartitionChantiersCompacts) au lieu d'un graphique par chantier — demande
          explicite de direction, un chantier à 1-2 personnes ne justifie ni sa propre page ni son
          propre graphique de répartition par équipe. -->
-    <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="true" isReprintHeaderOnEachPage="false" keepTogether="false">
+    <group name="GroupChantier" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="false">
         <groupExpression><![CDATA[$F{chantierEquipesCle}]]></groupExpression>
         <groupHeader>
-            <band height="460" splitType="Stretch">
-                <!-- Hauteurs 22/16 (pas 18/14) pour les 2 textes ci-dessous : une hauteur trop proche
-                     de la taille de police fait disparaître le texte sans erreur ni log (piège
-                     JasperReports constaté en production, voir le commentaire équivalent dans
-                     GroupChantierEvolution ci-dessus — marge d'au moins ~6pt nécessaire). -->
+            <band height="365" splitType="Stretch">
+                <!-- isStartNewPage="false" (depuis 2026-09-28, demande explicite de direction) : pour
+                     un chantier détaillé, continue sur LA MÊME PAGE que les cartes KPI de
+                     GroupChantierEvolution ci-dessus (plus de page quasiment vide entre les 2 depuis
+                     le retrait du graphique d'évolution, voir docs/report/rapport-v2.md) — budget
+                     vérifié : une page de contenu offre pageHeight(595) - marges(20+20) -
+                     pageHeader(62) - pageFooter(20) = 473 de hauteur utile ; GroupChantierEvolution
+                     n'en consomme plus que 100 (titre + 4 cartes KPI + narratif, plus de graphique),
+                     il reste donc 373 pour cette bande — d'où le chartHeight réduit à 340 (contre 413
+                     auparavant) pour tenir avec une marge de sécurité. Pour le chapitre final
+                     compact (voir plus bas), ce même isStartNewPage="false" fonctionne aussi : cette
+                     bande a besoin de plus de place que ce qui reste généralement sur la page du
+                     dernier tableau employé détaillé, JasperReports la reporte alors automatiquement
+                     sur une nouvelle page (comportement standard de dépassement de bande) — même
+                     résultat qu'avant, sans le saut de page forcé qui gâchait de l'espace dans le cas
+                     détaillé. -->
+                <!-- Hauteur 18 pour taille 12 (marge ~6pt, voir le piège JasperReports documenté dans
+                     GroupChantierEvolution ci-dessus) — texte plus petit qu'avant (16pt/22) car cette
+                     page n'est plus un titre de chapitre à part entière, juste un sous-titre au fil de
+                     la page KPI qui précède (voir le commentaire de bande ci-dessus). -->
                 <textField>
-                    <reportElement x="0" y="0" width="802" height="22" forecolor="#000000">
-                        <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
-                    </reportElement>
-                    <textElement><font fontName="Liberation Serif" size="16" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
-                    <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
-                </textField>
-                <staticText>
-                    <reportElement x="0" y="24" width="802" height="16" forecolor="#000000">
+                    <reportElement x="0" y="0" width="802" height="18" forecolor="#000000">
                         <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
                     </reportElement>
                     <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <text><![CDATA[Masse, effectif et STC par équipe]]></text>
-                </staticText>
+                    <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
+                    <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
+                </textField>
 
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="42" width="802" height="413">
+                        <reportElement x="0" y="20" width="802" height="340">
                             <printWhenExpression><![CDATA[!$F{chantierCompact}]]></printWhenExpression>
                         </reportElement>
                         <chartLegend position="Bottom">
@@ -581,9 +605,15 @@
 
                 <!-- Chapitre final consolidé "Chantiers à effectif réduit" — contenu affiché UNE SEULE
                      fois (voir groupExpression ci-dessus), à la place du contenu "détaillé" ci-dessus,
-                     pour l'ensemble des chantiers compacts. Même position/taille que les éléments
-                     "détaillés" qu'il remplace (jamais une bande séparée) : les deux contenus ne
-                     s'affichent jamais ensemble (printWhenExpression mutuellement exclusifs). -->
+                     dans la MÊME bande partagée (jamais une bande séparée) : les deux contenus ne
+                     s'affichent jamais ensemble (printWhenExpression mutuellement exclusifs). Ce
+                     titre-ci GARDE sa hauteur/taille pleine (22/16pt, pas 18/12 comme la version
+                     "détaillée" ci-dessus) : cette page reste un VRAI chapitre romain à part entière
+                     (jamais précédée d'une page KPI à fusionner avec elle, voir le commentaire de
+                     bande ci-dessus), donc jamais raccourcie. Chart réduit à 300 (contre 413
+                     auparavant) uniquement pour que la hauteur de bande PARTAGÉE avec la version
+                     détaillée (dont le budget est plus contraint, voir le commentaire de bande) reste
+                     raisonnable — cette page seule aurait eu la place pour un chart plus grand. -->
                 <textField>
                     <reportElement x="0" y="0" width="802" height="22" forecolor="#000000">
                         <printWhenExpression><![CDATA[$F{chantierCompact}]]></printWhenExpression>
@@ -601,7 +631,7 @@
                 </staticText>
                 <barChart>
                     <chart customizerClass="staport.rh.paie.report.PaieReportGroupedChartCustomizer">
-                        <reportElement x="0" y="42" width="802" height="413">
+                        <reportElement x="0" y="42" width="802" height="300">
                             <printWhenExpression><![CDATA[$F{chantierCompact}]]></printWhenExpression>
                         </reportElement>
                         <chartLegend position="Bottom">
