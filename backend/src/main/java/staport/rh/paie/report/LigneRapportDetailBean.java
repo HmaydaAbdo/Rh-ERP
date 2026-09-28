@@ -23,6 +23,7 @@ import java.util.List;
 public final class LigneRapportDetailBean {
 
     private final String chantierCode;
+    private final String chantierIdentifiant;
     private final String chantierTitre;
     private final String chantierMasseLigne;
     private final String chantierMasseMoyenneParEmploye;
@@ -55,7 +56,7 @@ public final class LigneRapportDetailBean {
     private final String salaireTotal;
     private final String observation;
 
-    LigneRapportDetailBean(String chantierCode, String chantierTitre, String chantierMasseLigne,
+    LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur, String chantierEffectifNote,
                             String chantierPartMasseGlobale, int chantierStc, String chantierNarratif,
                             List<RepartitionBean> chantierRepartitionEquipe,
@@ -68,6 +69,7 @@ public final class LigneRapportDetailBean {
                             List<MaterielLigneVue> equipeMateriel,
                             LigneEmployeVue employe) {
         this.chantierCode = chantierCode;
+        this.chantierIdentifiant = chantierIdentifiant;
         this.chantierTitre = chantierTitre;
         this.chantierMasseLigne = chantierMasseLigne;
         this.chantierMasseMoyenneParEmploye = chantierMasseMoyenneParEmploye;
@@ -103,6 +105,10 @@ public final class LigneRapportDetailBean {
 
     public String getChantierCode() {
         return chantierCode;
+    }
+
+    public String getChantierIdentifiant() {
+        return chantierIdentifiant;
     }
 
     public String getChantierTitre() {

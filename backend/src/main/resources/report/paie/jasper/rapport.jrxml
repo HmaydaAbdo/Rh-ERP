@@ -123,6 +123,12 @@
     <parameter name="P_SUBREPORT_RECAP_MATERIEL" class="net.sf.jasperreports.engine.JasperReport"/>
 
     <field name="chantierCode" class="java.lang.String"/>
+    <!-- "<nom> (<code>)" quand Chantier.nom est renseigné, "<code>" seul sinon (demande explicite de
+         direction, 2026-09-29 : le nom prime partout où il existe) — voir
+         PaieBiReportBuilder.identifiantChantier. Utilisé pour tout affichage visible du chantier
+         (titre de chapitre, bandeau, sous-titre équipe) ; $F{chantierCode} reste réservé aux
+         mécanismes internes (ancre de page, comparaison equipeNom/reste), jamais à l'affichage. -->
+    <field name="chantierIdentifiant" class="java.lang.String"/>
     <field name="chantierTitre" class="java.lang.String"/>
     <field name="chantierMasseLigne" class="java.lang.String"/>
     <field name="chantierMasseMoyenneParEmploye" class="java.lang.String"/>
@@ -537,7 +543,7 @@
                 <textField>
                     <reportElement x="0" y="0" width="802" height="18" forecolor="#000000"/>
                     <textElement><font fontName="Liberation Serif" size="12" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierCode}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["Équipes de chantier " + $F{chantierIdentifiant}]]></textFieldExpression>
                     <anchorNameExpression><![CDATA["chantier-" + $F{chantierCode} + "-equipe"]]></anchorNameExpression>
                 </textField>
 
@@ -986,7 +992,7 @@
             <textField>
                 <reportElement x="590" y="17" width="202" height="14" forecolor="#000000"/>
                 <textElement><font fontName="Liberation Serif" size="9" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
             </textField>
 
             <line>
@@ -1081,7 +1087,7 @@
             <textField>
                 <reportElement x="10" y="5" width="400" height="12" forecolor="#595959"/>
                 <textElement textAlignment="Left"><font fontName="Liberation Serif" size="8.5"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierCode}) : ("CHANTIER : " + $F{chantierCode} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="602" y="5" width="150" height="12" forecolor="#595959"/>

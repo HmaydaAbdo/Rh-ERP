@@ -445,7 +445,9 @@ centralisée dans `MaterielChantierCatalogue` (partagée avec l'Excel).
 `designation` (synchronisée depuis l'ERP et écrasée à chaque synchronisation quotidienne) — `nom`
 n'est **jamais** touché par la synchronisation, uniquement saisi/modifié manuellement via le
 formulaire chantier. Le rapport PDF et l'export Excel affichent désormais
-`"CHANTIER : <code> (<nom>)"` quand ce champ est renseigné, `"CHANTIER : <code>"` sinon.
+`"CHANTIER : <nom> (<code>)"` quand ce champ est renseigné (le nom prime partout, code en repli),
+`"CHANTIER : <code>"` sinon (mis à jour le 2026-09-29 : ordre nom/code inversé sur demande
+explicite de direction, appliqué aussi au bandeau récurrent et au sous-titre "Équipes de chantier").
 
 **Seed effectué (2026-09-29)** : noms de 23 chantiers existants renseignés via
 `V6__seed_chantier_noms.sql` (source : fichier "code chantier.xlsx" fourni par la direction,

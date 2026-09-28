@@ -82,13 +82,14 @@ public class PaieExportService {
         }
     }
 
-    /** "&lt;code&gt; (&lt;nom&gt;)" quand {@code Chantier.nom} est renseigné (champ optionnel, jamais
-     * exposé par la synchronisation ERP), "&lt;code&gt;" sinon — même règle que le rapport PDF, voir
-     * {@code PaieBiReportBuilder.titreChantier}. Le nom est lu sur la première ligne du chantier :
-     * toutes les lignes d'un même code partagent la même entité {@code Chantier}. */
+    /** "&lt;nom&gt; (&lt;code&gt;)" quand {@code Chantier.nom} est renseigné (champ optionnel, jamais
+     * exposé par la synchronisation ERP), "&lt;code&gt;" seul sinon (demande explicite de direction,
+     * 2026-09-29 : le nom prime partout où il existe) — même règle que le rapport PDF, voir
+     * {@code PaieBiReportBuilder.identifiantChantier}. Le nom est lu sur la première ligne du
+     * chantier : toutes les lignes d'un même code partagent la même entité {@code Chantier}. */
     private String titreZone(String code, List<Paie> lignes) {
         String nom = lignes.isEmpty() ? null : lignes.get(0).getChantier().getNom();
-        return nom != null && !nom.isBlank() ? code + " (" + nom + ")" : code;
+        return nom != null && !nom.isBlank() ? nom + " (" + code + ")" : code;
     }
 
     /**

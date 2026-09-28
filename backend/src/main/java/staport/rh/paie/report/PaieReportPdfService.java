@@ -231,7 +231,7 @@ public class PaieReportPdfService {
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
                     lignes.add(new LigneRapportDetailBean(
-                            chantier.code(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
+                            chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur, chantierEffectifNote,
                             chantier.partMasseGlobalePourcent(), chantier.stc(), chantierNarratif,
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),

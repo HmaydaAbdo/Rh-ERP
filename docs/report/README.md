@@ -400,9 +400,23 @@ libellé **`Sans équipe`** dans le graphique de répartition par équipe (`Chan
 toujours calculé sur la distribution complète). Au niveau du détail employé, en revanche, il n'existe
 plus de section "Sans équipe" dédiée : ses employés rejoignent la section **"reste"** du chantier
 (voir « Export unifié PDF/Excel ») avec les employés des autres équipes non sélectionnées pour un
-détail séparé — cette section porte le nom du chantier (`"CHANTIER : <code>"`), jamais "Sans
-équipe" (elle peut contenir des employés d'une vraie équipe non sélectionnée, l'appeler "Sans
-équipe" serait trompeur).
+détail séparé — cette section porte le titre du chantier (`"CHANTIER : <identifiant>"`, voir
+« Identifiant chantier (nom + code) » ci-dessous), jamais "Sans équipe" (elle peut contenir des
+employés d'une vraie équipe non sélectionnée, l'appeler "Sans équipe" serait trompeur).
+
+### Identifiant chantier (nom + code)
+
+Partout où un chantier est identifié dans un texte affiché (titre de chapitre, section "reste",
+bandeau `pageHeader`/`pageFooter`, sous-titre "Équipes de chantier X", titres de feuille Excel) :
+**`"<nom> (<code>)"`** quand `Chantier.nom` est renseigné (champ optionnel, jamais exposé par la
+synchronisation ERP — voir `docs/chantier/README.md`), **`"<code>"`** seul sinon (demande explicite
+de direction, 2026-09-29 : le nom prime partout où il existe, le code reste l'identifiant de
+repli). Calculé indépendamment par chaque format — `PaieBiReportBuilder.identifiantChantier` côté
+PDF, `PaieExportService.titreZone` côté Excel — jamais partagé en code (voir « Pourquoi deux
+pipelines ? »), mais avec la même règle. Côté PDF, ce texte est porté par
+`ChantierBiVue.identifiant()`/`LigneRapportDetailBean.chantierIdentifiant` — à ne jamais confondre
+avec `chantierCode`, réservé aux mécanismes internes (ancre de page, détection de la section
+"reste" via `equipeNom.equals(chantierCode)"`), jamais affiché tel quel.
 
 ### Anti-duplication du détail employé
 
@@ -426,8 +440,9 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    horizontalement et séparés par de fins filets verticaux : Logo / Département / Mois / Année /
    **Niveau**. Le bloc **Niveau** est dynamique — `GLOBAL` tant que la page précède le premier
    chantier (`$P{P_PAGE_PREMIER_CHANTIER}`, connu grâce à un premier remplissage silencieux de
-   découverte, voir « Numérotation des chapitres et des pages »), `CHANTIER : <code> · ÉQUIPE :
-   <nom>` pour une section équipe détaillée, ou **`CHANTIER : <code>` seul** (sans « · ÉQUIPE »)
+   découverte, voir « Numérotation des chapitres et des pages »), `CHANTIER : <identifiant> ·
+   ÉQUIPE : <nom>` pour une section équipe détaillée (voir « Identifiant chantier (nom + code) »
+   pour la forme de `<identifiant>`), ou **`CHANTIER : <identifiant>` seul** (sans « · ÉQUIPE »)
    pour la section "reste" (afficher `equipeNom` tel quel y aurait donné un doublon trompeur,
    `equipeNom` valant alors le code chantier). Le **`pageFooter`** porte la même information (texte
    discret, aligné à gauche à côté de la pagination).
