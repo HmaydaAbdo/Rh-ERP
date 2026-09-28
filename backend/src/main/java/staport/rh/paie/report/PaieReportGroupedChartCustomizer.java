@@ -141,9 +141,9 @@ public final class PaieReportGroupedChartCustomizer implements JRChartCustomizer
         renderer.setDrawBarOutline(true);
         renderer.setItemMargin(0.10);
 
-        // Étiquette de valeur à l'extérieur de chaque barre (jamais à l'intérieur, voir
-        // PaieReportEvolutionChartCustomizer pour la même règle) — lit la VRAIE valeur dans la table
-        // conservée avant normalisation, jamais la valeur normalisée réellement tracée. Formatage
+        // Étiquette de valeur à l'extérieur de chaque barre, jamais à l'intérieur — lit la VRAIE
+        // valeur dans la table conservée avant normalisation, jamais la valeur normalisée réellement
+        // tracée. Formatage
         // différent selon la série : montant en DH pour la masse et le STC en DH, entier brut pour
         // l'effectif et le STC en personnes (nombre de personnes, jamais d'unité). Aucune étiquette
         // pour une valeur exactement nulle (demande explicite de direction) : la barre est de toute

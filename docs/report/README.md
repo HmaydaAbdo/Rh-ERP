@@ -44,11 +44,13 @@ staport.rh.paie.export/      ← sortie Excel (Apache POI)
 
 staport.rh.paie.repositories/
 ├── EvolutionChantierEquipeProjection.java  Projection JPQL (chantierCode, equipe, periode, masse,
-│                                 effectif, stc, stcMontant) — la donnée la plus fine dont le rapport a
-│                                 besoin ; les niveaux Global et Chantier (SEULS niveaux avec évolution,
-│                                 voir « Évolution mensuelle ») en sont dérivés en Java par simple somme
-└── PaieRepository.premierePeriode()  Mois le plus ancien où une paie existe réellement en base — plancher
-                                  de la fenêtre glissante d'évolution (voir « Évolution mensuelle »),
+│                                 effectif, stc, stcMontant) — la donnée la plus fine dont le rapport
+│                                 calcule un historique (Global, Chantier). Plus consommée par aucun
+│                                 graphique du rapport (évolution mensuelle retirée, voir
+│                                 docs/report/rapport-v2.md) mais toujours calculée, prête à être
+│                                 réutilisée sans redévelopper si le besoin se confirme un jour.
+└── PaieRepository.premierePeriode()  Mois le plus ancien où une paie existe réellement en base —
+                                  plancher de la fenêtre glissante utilisée par le calcul ci-dessus,
                                   jamais un historique qui n'a jamais existé (mois "fantômes" à 0)
 
 staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML compilé au démarrage,
@@ -74,9 +76,9 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 périmètres ? ».
 ├── PaieReportGroupedChartCustomizer.java Personnalise TOUS les <barChart> à barres groupées
 │                                 horizontales du document (masse/effectif/STC en personnes/STC en DH —
-│                                 4 séries, chacune nommée avec son unité dans la légende) : chapitre I
-│                                 sous-section "2" (répartition par chantier), répartition par équipe de
-│                                 chaque chantier détaillé, et répartition consolidée du chapitre final
+│                                 4 séries, chacune nommée avec son unité dans la légende) : "Vue par
+│                                 chantier" (chapitre I), répartition par équipe de chaque chantier
+│                                 détaillé, et répartition consolidée du chapitre final
 │                                 "Chantiers à effectif réduit" — une seule classe réutilisée partout, la
 │                                 donnée sous-jacente (RepartitionBean) étant la même forme à chaque
 │                                 niveau. Axe des valeurs masqué — **chaque série est normalisée à sa
@@ -87,18 +89,6 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 en étiquette sur chaque barre, lue dans une table à part conservée avant
 │                                 normalisation. Plafonné aux 15 plus grosses valeurs + "Autres" (voir
 │                                 PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). Voir « Visualisations ».
-├── PaieReportEvolutionChartCustomizer.java Personnalise TOUS les <lineChart> JRXML d'évolution
-│                                 mensuelle (masse, effectif — 2 séries ; le STC en a été retiré, demande
-│                                 explicite de direction, il reste visible dans les <barChart> — voir
-│                                 « Évolution mensuelle »), aux 2 seuls niveaux Global et Chantier
-│                                 détaillé (aucune évolution pour un chantier compact ni pour une
-│                                 équipe). Même technique de normalisation par série que
-│                                 PaieReportGroupedChartCustomizer. Fenêtre glissante d'AU PLUS 12 mois,
-│                                 jamais avant le premier mois où une paie existe réellement en base
-│                                 (PaieRepository.premierePeriode) — aucun mois "fantôme" à zéro. Chaque
-│                                 point (pas seulement le dernier) porte l'étiquette de sa vraie valeur —
-│                                 un rapport imprimé n'a pas d'infobulle au survol, contrairement à un
-│                                 graphique web — un point à exactement 0 n'a pas d'étiquette.
 ├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
 │   LigneEmployeVue                Vue-modèle (records), aucune logique métier — utilisée uniquement
 │                                 côté Java (paramètres JRXML), jamais liée par réflexion.
@@ -121,8 +111,7 @@ staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML 
 │                                 groupes JRXML "lourds" pour ne jamais donner sa propre page à un
 │                                 chantier compact (voir « Chantiers à effectif réduit »). RepartitionBean
 │                                 (libellé, effectif, montant, stc, stcMontant) alimente TOUS les
-│                                 barChart/lineChart du document — même forme réutilisée partout, le
-│                                 champ stcMontant n'étant exploité que par les barChart (4ᵉ série).
+│                                 barChart du document — même forme réutilisée partout.
 ├── PaieReportNumberFormat.java   Formatage des nombres, variations, tendances (HAUSSE/BAISSE/STABLE)
 │                                 et chiffres romains (numérotation des chapitres)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page Paie)
@@ -134,8 +123,11 @@ resources/report/paie/jasper/  ← gabarit JRXML — style noir/blanc/gris, poli
                                    partagée ont tous deux été retirés, voir plus bas) : page de garde
                                    (bande title, isTitleNewPage — seule page sans pageHeader/
                                    pageFooter), puis « I — Vue d'ensemble » (GroupSynthese, expression
-                                   constante — imprimé une seule fois, en tout début de document, avec
-                                   ses 2 sous-sections arabes), puis une section par chantier DÉTAILLÉ
+                                   constante — imprimé une seule fois, en tout début de document : KPI
+                                   + narratif, puis « Vue par chantier » sur sa propre page — plus de
+                                   graphique d'évolution ni de sous-numérotation arabe depuis son
+                                   retrait, voir docs/report/rapport-v2.md), puis une section par
+                                   chantier DÉTAILLÉ
                                    (GroupChantierEvolution + GroupChantier, isStartNewPage, un chapitre
                                    romain chacun), puis UN SEUL chapitre final consolidant tous les
                                    chantiers "compacts" (réutilise GroupChantier/GroupEquipe avec des
@@ -289,7 +281,7 @@ pagination) pour un appel API direct, mais le frontend n'envoie jamais que `peri
 | **Dimensions** | Chantier (obligatoire sur `Paie`), Fonction (obligatoire — sert uniquement à trier le tableau employé, voir « Anti-duplication »), Équipe (optionnelle → `Sans équipe`), Employé, Période (mois analysé + mois précédent). |
 | **Mesures de base** | Masse réelle de paie = `SUM(salaireTotal)` (**jamais** `salaireMensuel` — voir ci-dessous) ; Effectif = `COUNT(*)` ; STC / sortie = `COUNT` des lignes où `ObservationStc.estStcOuSortie`, calculé **par chantier** (indicateur, jamais une liste globale — voir « Catalogue de KPI »). |
 | **Mesures calculées** | Part du total (%), variation absolue, variation %, masse moyenne par employé. |
-| **Historique** | Chaque bulletin `Paie` est un instantané figé de chantier/fonction/équipe pour son mois — le rapport agrège donc les valeurs *stockées sur `Paie`*, jamais l'affectation actuelle de `Employee` (qui peut avoir changé depuis). La comparaison au mois précédent respecte le même principe. L'évolution mensuelle (voir plus bas), elle, n'existe qu'à 2 niveaux : Global et Chantier détaillé — jamais par équipe, jamais pour un chantier compact. |
+| **Historique** | Chaque bulletin `Paie` est un instantané figé de chantier/fonction/équipe pour son mois — le rapport agrège donc les valeurs *stockées sur `Paie`*, jamais l'affectation actuelle de `Employee` (qui peut avoir changé depuis). La comparaison au mois précédent respecte le même principe. |
 
 **Pourquoi `salaireTotal` et pas `salaireMensuel`** : `salaireMensuel` est une composante du
 bulletin (le salaire de base) ; `salaireTotal` est le montant réellement versé (salaire + primes de
@@ -303,13 +295,13 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Effectif | `COUNT(*)` | Global / chantier | Oui — Δ absolu (jamais ambigu, 0 est une valeur légitime) |
 | Masse moyenne par employé | masse ÷ effectif | Global / chantier | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
-| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées (chapitre I, sous-section "2") — voir « Visualisations » |
-| ~~Masse/Effectif par fonction~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension » et TODO.md) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
-| Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier **détaillé** uniquement | Non — 1 graphique par chantier détaillé (sous-section "2 — Équipes de chantier X") — voir « Visualisations » |
+| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées ("Vue par chantier", chapitre I) — voir « Visualisations » |
+| ~~Masse/Effectif par fonction~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
+| Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier **détaillé** uniquement | Non — 1 graphique par chantier détaillé ("Équipes de chantier X") — voir « Visualisations » |
 | Répartition consolidée des chantiers **compacts** | `SUM(salaireTotal)`/`COUNT`/STC groupés par chantier, restreints aux chantiers compacts | Global (chapitre final) | Non — 1 SEUL graphique pour tous les chantiers compacts confondus, jamais un graphique par chantier compact — voir « Chantiers à effectif réduit » |
 | Coût moyen / employé (chantier) | masse chantier ÷ effectif chantier | Chantier détaillé | Non (dérivé, même principe que la moyenne globale) |
 | STC / sortie | `COUNT` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Équipe (ou chantier compact) | Non — indicateur numérique à chaque niveau, **et** 3ᵉ/4ᵉ série de chaque `<barChart>` |
-| Évolution masse/effectif (fenêtre glissante ≤ 12 mois) | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode`, agrégés en base en **une seule requête** (`PaieRepository.sommerParChantierEquipePeriode`), le niveau Chantier étant ensuite dérivé en Java (voir « Évolution mensuelle ») | Global / Chantier **détaillé** uniquement | Implicite (tendance visuelle sur la fenêtre, pas un delta chiffré) |
+| ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier détaillé | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
 
 Pas de KPI dupliqué : chaque carte/graphique répond à une question différente (jamais deux façons de
 montrer le même montant). La dimension Fonction n'a, pour l'instant, plus d'écran dédié dans le
@@ -386,19 +378,17 @@ résume, seul le dernier détaille.
 3. **I — Vue d'ensemble** (`<group name="GroupSynthese">`, expression constante — son en-tête ne
    s'imprime qu'une seule fois, au tout début du corps du document) : 5 cartes KPI compactées
    (masse réelle, effectif, masse moyenne/employé, nombre de chantiers, STC/sorties), une phrase
-   courte de synthèse (voir « Narratif léger »), puis **2 sous-sections numérotées en chiffres
-   arabes** :
-   - **"1 — Évolution mensuelle — masse et effectif"** : UN SEUL `<lineChart>` à 2 séries (masse,
-     effectif), fenêtre glissante d'au plus 12 mois — voir « Évolution mensuelle ».
-   - **"2 — Vue par chantier"** (`GroupGraphChantier`, sur SA PROPRE PAGE) : UN SEUL `<barChart>`
-     à 4 séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros chantiers +
-     "Autres" — voir « Visualisations ».
+   courte de synthèse (voir « Narratif léger »), puis **"Vue par chantier"** (`GroupGraphChantier`,
+   sur SA PROPRE PAGE) : UN SEUL `<barChart>` à 4 séries (masse/effectif/STC en personnes/STC en
+   DH), plafonné aux 15 plus gros chantiers + "Autres" — voir « Visualisations ». Plus de
+   graphique d'évolution mensuelle ni de sous-numérotation arabe ici — retirés le 2026-09-28, voir
+   `docs/report/rapport-v2.md`.
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 4. **Une section par chantier DÉTAILLÉ** (effectif > `SEUIL_CHANTIER_COMPACT`), chacun son propre
    chapitre romain à la suite du seul chapitre fixe (II, III, ... — voir
-   `PaieReportPdfService.chapitreChantier`), reprenant le MÊME schéma de 2 sous-sections
-   numérotées — voir « Vue détaillée d'un chantier détaillé » pour le détail.
+   `PaieReportPdfService.chapitreChantier`) — voir « Vue détaillée d'un chantier détaillé » pour le
+   détail.
 5. **UN SEUL chapitre final** consolidant TOUS les chantiers **compacts** (effectif ≤
    `SEUIL_CHANTIER_COMPACT`) : « N — Chantiers à effectif réduit » — voir « Chantiers à effectif
    réduit » pour le détail complet et la justification de cette section.
@@ -414,16 +404,15 @@ code chantier, donc imprimées exactement une fois par chantier, immédiatement 
 Cette découpe suit la même hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe →
 tableau**.
 
-**Page 1 — `GroupChantierEvolution`, "1 — Vue d'ensemble du chantier X"** :
+**Page 1 — `GroupChantierEvolution`, "Vue d'ensemble du chantier X"** (le nom du groupe JRXML,
+hérité d'avant le retrait du graphique d'évolution — voir `docs/report/rapport-v2.md` — n'a pas été
+changé, cette page ne porte plus de graphique) :
 
 1. **4 cartes KPI** (même style que la Vue d'ensemble) : Masse salariale (+ comparaison mois
    précédent), Effectif (+ comparaison), Coût moyen / employé, STC / sorties.
 2. La **phrase courte de synthèse** du chantier (voir « Narratif léger »).
-3. **Historique mensuel du chantier** — UN SEUL `<lineChart>` à 2 séries (masse, effectif), même
-   fenêtre glissante qu'au niveau global (`ChantierBiVue.evolutionMensuelle`,
-   `PaieReportEvolutionChartCustomizer`) — voir « Évolution mensuelle ».
 
-**Page 2 — `GroupChantier`, "2 — Équipes de chantier X"** : UN SEUL `<barChart>` horizontal à
+**Page 2 — `GroupChantier`, "Équipes de chantier X"** : UN SEUL `<barChart>` horizontal à
 barres groupées (masse/effectif/STC en personnes/STC en DH, `PaieReportGroupedChartCustomizer`,
 `ChantierBiVue.repartitionEquipe`) — **SEUL, sans tableau** (l'ancienne table de répartition par
 équipe accompagnant ce graphique a été retirée, doublon pur). Puis, à sa suite, chaque équipe
@@ -439,6 +428,13 @@ exactement ce même principe qui, poussé plus loin, justifie « Chantiers à ef
 ci-dessous. Le tableau employé reprend les colonnes de la liste Paie à l'écran, moins Chantier et
 Équipe (déjà portées par les titres de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/
 J.R.D), Salaire (Salaire/RO/RD), Total, Obs.
+
+> **Point ouvert** : la page 1 ci-dessus (KPI + narratif seuls, depuis le retrait du graphique
+> d'évolution) est nettement plus courte que la page 2 qui suit (pleine hauteur, pour le graphique)
+> — elle se termine donc avec une zone blanche importante. Volontairement non traité pour l'instant
+> (fusionner les 2 pages est un choix de mise en page distinct, avec son propre risque de rendu à
+> vérifier) — voir `docs/report/rapport-v2.md` et `TODO.md`. Même remarque pour la page "I — Vue
+> d'ensemble" au niveau global.
 
 ### Chantiers à effectif réduit
 
@@ -509,11 +505,12 @@ pire une page en plus, jamais une page manquante ou un contenu incorrect.
 ### Visualisations
 
 **Convention du document : barres groupées horizontales à 4 séries (masse/effectif/STC en
-personnes/STC en DH), aucun graphique empilé.** **Un seul customizer,
-`PaieReportGroupedChartCustomizer`, réutilisé partout** : chapitre I sous-section "2" (répartition
-par chantier), répartition par équipe de chaque chantier détaillé, répartition consolidée du
-chapitre final "Chantiers à effectif réduit" — la donnée sous-jacente (`RepartitionBean`) est la
-même forme à chaque niveau.
+personnes/STC en DH), aucun graphique empilé — et depuis le 2026-09-28, la SEULE famille de
+graphique du rapport (voir « Évolution mensuelle » ci-dessous).** **Un seul customizer,
+`PaieReportGroupedChartCustomizer`, réutilisé partout** : "Vue par chantier" (chapitre I),
+répartition par équipe de chaque chantier détaillé, répartition consolidée du chapitre final
+"Chantiers à effectif réduit" — la donnée sous-jacente (`RepartitionBean`) est la même forme à
+chaque niveau.
 
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
@@ -554,40 +551,18 @@ même forme à chaque niveau.
 > ce qui aurait demandé un renderer sur mesure — risque jugé disproportionné face à la normalisation
 > par série, une alternative explicitement admise par la direction.
 
-### Évolution mensuelle
+### Évolution mensuelle — retirée (2026-09-28)
 
-**Un seul `<lineChart>` par niveau (Global, Chantier détaillé — voir plus haut), 2 séries
-seulement : masse et effectif.** Le STC (en personnes et en DH) a été retiré de ces graphiques
-(demande explicite de direction) — il reste visible dans tous les `<barChart>` (voir
-« Visualisations »), simplement plus dans l'historique mensuel.
-
-- **2 axes Y visibles comme simples repères d'unité, jamais comme échelle réelle** : axe gauche
-  libellé "DH" (masse), axe droit libellé "Personnes" (effectif) — leurs graduations numériques
-  restent masquées. Un double axe Y à échelle RÉELLE a d'abord été tenté et fonctionnait sur
-  données synthétiques modestes, mais s'est révélé insuffisant sur données réelles (un effectif à
-  ~969 personnes écrasait visuellement un STC à ~37 sur le même axe droit, sa courbe devenant
-  quasi plate) — remplacé par la normalisation par série (même technique que
-  `PaieReportGroupedChartCustomizer`, chaque série ramenée à sa propre valeur maximale).
-- **Chaque point (pas seulement le dernier) porte l'étiquette de sa vraie valeur** — demande
-  explicite de direction : un rapport imprimé n'a pas de survol souris pour révéler une valeur,
-  contrairement à un graphique web. Un point à exactement 0 n'a pas d'étiquette (avec la fenêtre
-  glissante ci-dessous, un 0 signifie une absence réelle de donnée ce mois-là, pas une valeur à
-  mettre en avant).
-- **Étiquette de masse orientée vers la gauche (son axe), étiquette d'effectif vers la droite** —
-  pour ne jamais faire cohabiter au même endroit une étiquette en DH et une en personnes.
-- **Palette à 2 couleurs fixes** : Masse (bleu `#2563EB`), Effectif (orange `#F59E0B`) — mêmes
-  couleurs que les séries homonymes des `<barChart>`.
-
-**Fenêtre glissante d'AU PLUS 12 mois, jamais avant le premier mois où une paie existe réellement en
-base** (`PaieRepository.premierePeriode()`, `PaieBiReportBuilder.evolutionParNiveau`) : sans ce
-plancher, un système mis en place il y a 2 mois afficherait 10 mois "fantômes" à zéro avant la
-donnée réelle. Le graphique grandit donc mois après mois (1 point le premier mois, 2 le suivant,
-...) jusqu'à atteindre son maximum de 12 points, sans jamais partir d'un historique qui n'a jamais
-existé. Alimentée par une **seule requête JPQL groupée** à la plus fine granularité utile
-(`PaieRepository.sommerParChantierEquipePeriode`, groupée par chantier/équipe/période) quel que soit
-le nombre de chantiers du périmètre — `PaieBiReportBuilder.evolutionParNiveau` dérive ensuite les 2
-niveaux (Global, Chantier) en Java par simple somme des lignes déjà groupées, jamais une requête
-supplémentaire par chantier (le niveau Équipe n'est plus dérivé du tout, voir plus haut).
+Le rapport a porté, à une itération précédente, un `<lineChart>` d'évolution mensuelle (masse,
+effectif) aux niveaux Global et Chantier détaillé, avec une fenêtre glissante d'au plus 12 mois
+(jamais avant le premier mois où une paie existe réellement en base,
+`PaieRepository.premierePeriode()`) et un système de normalisation par série (même principe que
+`PaieReportGroupedChartCustomizer` ci-dessus) pour contourner les limites d'un vrai double axe Y à
+échelle réelle. **Ce graphique a été retiré entièrement** (manque d'historique suffisant pour qu'une
+tendance mensuelle soit significative) — voir `docs/report/rapport-v2.md` pour le détail complet de
+cette décision, de celle qui l'a précédée (retrait du STC de ce même graphique), et de ce qui reste
+calculé côté Java sans être affiché (prêt à être réactivé sans recalcul si le besoin se confirme un
+jour). Le rapport ne porte donc plus aucun `<lineChart>` — voir la note en tête de cette section.
 
 ### Narratif léger
 
@@ -617,9 +592,10 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
   cellules du tableau employé, pas seulement l'en-tête (demande explicite de direction). Palette
   restante, hors texte courant et tableaux : `#595959` (libellés/captions secondaires), `#CCCCCC`
   (filets décoratifs hors tableau, contour des cartes KPI), `#808080`/`#999999` (séparateurs de
-  blocs d'en-tête). **Seuls les `<barChart>`/`<lineChart>` restent en couleur** — la seule
-  exception délibérée à la règle noir/blanc (voir « Visualisations » et « Évolution mensuelle » pour
-  les palettes exactes). Les indicateurs de tendance HAUSSE/BAISSE/STABLE sont du texte noir gras
+  blocs d'en-tête). **Seuls les `<barChart>` restent en couleur** (plus aucun `<lineChart>` dans le
+  document, voir « Évolution mensuelle ») — la seule exception délibérée à la règle noir/blanc (voir
+  « Visualisations » pour la palette exacte). Les indicateurs de tendance HAUSSE/BAISSE/STABLE sont
+  du texte noir gras
   préfixé du mot (« Hausse : … », « Baisse : … », « Stable : … ») — la couleur ne porte pas
   l'information, le texte si.
 - **Police Liberation Serif** dans tout le document (gabarit JRXML et les customizers de graphique,
@@ -636,14 +612,12 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
      — couvre tous les éléments texte des gabarits JRXML.
   2. Un bloc statique de `PaieReportPdfService` charge les 4 mêmes `.ttf` et les enregistre auprès de
      `GraphicsEnvironment` (`Font.createFont` + `registerFont`) — nécessaire car
-     `PaieReportGroupedChartCustomizer`/`PaieReportEvolutionChartCustomizer` construisent des
-     `java.awt.Font` directement pour JFreeChart (pas via JasperReports), un chemin que l'extension de
-     police JRXML ne couvre pas.
+     `PaieReportGroupedChartCustomizer` construit des `java.awt.Font` directement pour JFreeChart (pas
+     via JasperReports), un chemin que l'extension de police JRXML ne couvre pas.
 - **Hiérarchie typographique**, taille de référence 16pt (Liberation Serif) :
   - **Titres de chapitre** (I — Vue d'ensemble, puis un par chantier détaillé, puis le chapitre
     final compact) : 16pt gras, texte noir sans fond, souligné d'un filet fin.
-  - **Sous-titres** (sous-sections "1"/"2" arabes, bandeau équipe, titre de chaque graphique) :
-    12-13pt gras, texte noir.
+  - **Sous-titres** (bandeau équipe, titre de chaque graphique) : 12-13pt gras, texte noir.
   - **Indicateurs KPI** : 13-18pt gras pour la valeur, 7.5-9pt gras pour son libellé.
   - **Tableau détaillé employé** (11 colonnes) : 10.5pt.
   - **Captions/notes** (libellés de blocs d'en-tête, pied de page) : 6.5-10pt.
@@ -694,8 +668,7 @@ pour un rapport de direction généré à la demande, pas en masse.
 | `PaieExportService` / `PaieSheetWriter` / `PaieExcelStyles` | Génération du classeur Excel |
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF, classement détaillé/compact — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
 | `PaieReportPdfService` | Orchestration JRXML → PDF (compilation du gabarit unique, aplatissement des données, **double remplissage** — voir « Numérotation des chapitres et des pages », export) — testée de bout en bout par `PaieReportPdfServiceTest` |
-| `PaieReportGroupedChartCustomizer` | Personnalisation Java de TOUS les `<barChart>` à barres groupées horizontales (masse/effectif/STC personnes/STC DH, 4 séries normalisées chacune à son propre maximum, étiquette = vraie valeur, plafond des 15 plus grosses valeurs + "Autres" — voir « Visualisations ») |
-| `PaieReportEvolutionChartCustomizer` | Personnalisation Java de TOUS les `<lineChart>` d'évolution mensuelle (masse/effectif, 2 séries normalisées, chaque point étiqueté, fenêtre glissante — voir « Évolution mensuelle ») |
+| `PaieReportGroupedChartCustomizer` | Personnalisation Java de TOUS les `<barChart>` du document (SEULE famille de graphique restante — masse/effectif/STC personnes/STC DH, 4 séries normalisées chacune à son propre maximum, étiquette = vraie valeur, plafond des 15 plus grosses valeurs + "Autres" — voir « Visualisations ») |
 | `PaieExportExcelDialogComponent` (frontend) | UX dédiée à la configuration de l'export Excel |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
 
@@ -711,12 +684,30 @@ consommait le flux, les suivantes restaient blanches (bug corrigé, voir l'histo
 
 ## Points d'extension
 
+> Voir aussi [docs/report/rapport-v2.md](docs/report/rapport-v2.md) — journal détaillé de tout ce qui
+> a été retiré du rapport (évolution mensuelle, STC dans ces graphiques, répartition par fonction,
+> sommaire, table de répartition par équipe), avec pour chacun ce qui reste réutilisable sans
+> redévelopper.
+
+- **Fusionner les pages "Vue d'ensemble" (KPI + narratif) avec la page de graphique qui suit** : au
+  niveau global et pour chaque chantier détaillé, depuis le retrait du graphique d'évolution
+  (2026-09-28), ces pages se terminent avec une zone blanche importante — voir « Vue détaillée d'un
+  chantier détaillé ». Faisable en passant `isStartNewPage="false"` sur `GroupGraphChantier`/
+  `GroupChantier` et en réduisant légèrement la hauteur des `<barChart>` concernés pour tenir sur la
+  page restante ; nécessite une vérification visuelle dédiée (rendu PDF réel), volontairement pas
+  fait dans la même passe que le retrait du graphique.
 - **Réintroduire la répartition par fonction** : retirée à tous les niveaux (global, intra-chantier,
   intra-équipe) — le référentiel Fonction contient des doublons non nettoyés, qui rendraient un
   graphique par fonction illisible et trompeur (voir TODO.md pour la tâche de nettoyage côté
   données). `SyntheseGlobaleVue.repartitionFonction`/`P_REPARTITION_FONCTION` restent calculés côté
   Java pour ne pas tout redévelopper à la réintroduction : il suffira de rajouter le groupe JRXML
   correspondant une fois le référentiel fiable, et de décaler `CHAPITRES_FIXES`.
+- **Réintroduire l'évolution mensuelle** : retirée entièrement (manque d'historique, voir
+  `docs/report/rapport-v2.md`) mais toujours calculée côté Java
+  (`PaieBiReportBuilder.evolutionParNiveau`) — à reconsidérer une fois plusieurs mois/années de
+  données accumulées, si le besoin se confirme réellement. Le customizer dédié
+  (`PaieReportEvolutionChartCustomizer`) a été supprimé du dépôt ; son implémentation reste
+  consultable dans l'historique Git avant ce retrait.
 - **Ajuster `SEUIL_CHANTIER_COMPACT`** (`PaieBiReportBuilder`, actuellement 3) : seuil validé avec la
   direction sur un cas de production concret, pas une science exacte — à revoir si un périmètre réel
   révèle qu'il est trop bas (des chantiers à 4-5 personnes méritant le même traitement compact) ou

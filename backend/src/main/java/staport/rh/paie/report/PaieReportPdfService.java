@@ -80,10 +80,9 @@ public class PaieReportPdfService {
      * installé au niveau du système d'exploitation qui exécute le backend. L'extension de police
      * JasperReports ({@code jasperreports_extension.properties} + {@code
      * report/paie/fonts/liberation-serif-fonts.xml}) couvre déjà les éléments texte des gabarits
-     * JRXML, mais {@link PaieReportGroupedChartCustomizer}/{@link PaieReportEvolutionChartCustomizer}
-     * construisent des {@code java.awt.Font} directement (JFreeChart, pas JasperReports) — ce chemin
-     * ne passe pas par cette extension et doit donc
-     * pouvoir résoudre le nom de famille via le {@code GraphicsEnvironment} standard. Sans cet
+     * JRXML, mais {@link PaieReportGroupedChartCustomizer} construit des {@code java.awt.Font}
+     * directement (JFreeChart, pas JasperReports) — ce chemin ne passe pas par cette extension et doit
+     * donc pouvoir résoudre le nom de famille via le {@code GraphicsEnvironment} standard. Sans cet
      * enregistrement explicite, un environnement de déploiement sans cette police installée au
      * niveau OS lève {@code JRFontNotFoundException} au premier remplissage (constaté en production,
      * alors que le même rapport se générait sans erreur dans un environnement de développement où la
