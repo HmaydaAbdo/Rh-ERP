@@ -447,10 +447,10 @@ n'est **jamais** touché par la synchronisation, uniquement saisi/modifié manue
 formulaire chantier. Le rapport PDF et l'export Excel affichent désormais
 `"CHANTIER : <code> (<nom>)"` quand ce champ est renseigné, `"CHANTIER : <code>"` sinon.
 
-**Reste à faire** : les valeurs réelles des noms de chantiers existants doivent être saisies (une
-fois par chantier concerné) — la liste attendue de l'utilisateur n'est pas parvenue à l'assistant,
-à fournir puis saisir/seeder (voir « CI/CD » ci-dessous pour la mécanique de déploiement d'une
-migration de seed en production).
+**Seed effectué (2026-09-29)** : noms de 23 chantiers existants renseignés via
+`V6__seed_chantier_noms.sql` (source : fichier "code chantier.xlsx" fourni par la direction,
+période Avril 2023 — UPDATE uniquement, sans effet sur un code absent de la base). Les chantiers
+créés après cette date, ou absents de cette liste, restent sans nom jusqu'à saisie manuelle.
 
 ---
 
