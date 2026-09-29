@@ -84,7 +84,37 @@ public class PaieReportPdfService {
     private static final int PAGE_HAUTEUR_UTILE = 495; // 595 (pageHeight) - 20 - 20 (marges) - 40 (pageHeader) - 20 (pageFooter)
     private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 56; // GroupEquipe.groupHeader, 1re page d'une section seulement
     private static final int LIGNE_HAUTEUR = 16; // <detail>
-    private static final int GROUPE_EQUIPE_PIED_RESERVE = 220; // GroupEquipe.groupFooter, hauteur nominale (voir son commentaire dans rapport.jrxml)
+
+    /** Hauteur du groupFooter de GroupEquipe AVANT la première ligne du tableau récap
+     * Fonction/Effectif/STC (2 lignes TOTAL GENERAL + libellé "Répartition par fonction" + en-tête du
+     * sous-rapport recap-fonction.jrxml, voir son <columnHeader>) — fixe, ne dépend d'aucune donnée. */
+    private static final int PIED_HAUTEUR_BASE = 78;
+
+    /** Hauteur d'une ligne du tableau récap Fonction/Effectif/STC ou du squelette matériel (même
+     * valeur pour les deux, voir recap-fonction.jrxml/recap-materiel.jrxml, <detail><band height="15">) —
+     * PAS la même hauteur que {@link #LIGNE_HAUTEUR} (16, lignes employé). */
+    private static final int LIGNE_RECAP_HAUTEUR = 15;
+
+    /** Seuil MAXIMAL de contenu total sur UNE page (lignes employé de cette page + groupFooter complet
+     * qui la suit) en-deçà duquel JasperReports rend correctement la page — au-delà, il produit une
+     * page totalement blanche au lieu de reporter proprement l'excédent sur la page suivante.
+     *
+     * <p><b>Valeur déterminée EMPIRIQUEMENT</b> (reproduction locale, voir historique Git), PAS calculée
+     * à partir de {@code PAGE_HAUTEUR_UTILE} (495) : le vrai seuil observé est largement INFÉRIEUR à ce
+     * que l'espace de page disponible laisserait supposer possible — au-delà de ce seuil, JasperReports
+     * échoue à reporter proprement l'excédent du sous-rapport recap-fonction/recap-materiel (bande à
+     * hauteur variable) sur la page suivante, quel que soit l'espace réellement restant sur la page.
+     * Mesures : {@code 339} (6 lignes employé + 11 fonctions) et {@code 341} (8 lignes employé + 9
+     * fonctions) rendent correctement ; {@code 354}, {@code 355} et {@code 356} produisent tous une
+     * page blanche. {@code 345} est choisi au milieu de cet intervalle, avec marge des deux côtés. */
+    private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
+
+    /** Nombre de lignes visé sur la nouvelle dernière page lorsqu'un saut de page anticipé est
+     * nécessaire (demande explicite de direction, 2026-09-29) — un plafond, pas un minimum garanti (voir
+     * son usage dans {@link #calculerSautPage}) : la page précédente doit rester aussi remplie que
+     * possible, la toute dernière page n'a besoin que de "quelques" lignes pour ne pas laisser le
+     * groupFooter orphelin. */
+    private static final int RESERVE_LIGNES_PREFEREE = 4;
 
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
@@ -239,7 +269,8 @@ public class PaieReportPdfService {
             for (EquipeBiVue equipe : chantier.equipes()) {
                 List<LigneEmployeVue> employes = equipe.employes();
                 int total = employes.size();
-                int indexSautPage = calculerSautPage(total);
+                int lignesRecapMax = Math.max(equipe.repartitionFonction().size(), equipe.materiel().size());
+                int indexSautPage = calculerSautPage(total, lignesRecapMax);
                 for (int i = 0; i < total; i++) {
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
@@ -258,25 +289,29 @@ public class PaieReportPdfService {
         return lignes;
     }
 
-    /** Calcule, pour une section équipe de {@code total} employés, l'index 0-based (dans cette
-     * section) de la ligne devant porter {@code sautPageAvant=true} — ou {@code -1} si aucun saut
-     * anticipé n'est nécessaire (voir le champ {@code $F{sautPageAvant}} de rapport.jrxml et son
-     * {@code <break type="Page">} en tête de la bande {@code <detail>}).
+    /** Calcule, pour une section équipe de {@code total} employés dont le groupFooter contiendra
+     * jusqu'à {@code lignesRecapMax} lignes de récap (le plus grand des deux tableaux côte à côte,
+     * Fonction/Effectif/STC et parc matériel — voir {@code equipe.repartitionFonction()}/
+     * {@code equipe.materiel()}), l'index 0-based (dans cette section) de la ligne devant porter
+     * {@code sautPageAvant=true} — ou {@code -1} si aucun saut anticipé n'est nécessaire (voir le champ
+     * {@code $F{sautPageAvant}} de rapport.jrxml et son {@code <break type="Page">} en tête de la bande
+     * {@code <detail>}).
      *
      * <p><b>Pourquoi un calcul arithmétique plutôt qu'une astuce JasperReports</b> (demande explicite
      * de direction, 2026-09-29 : le bloc TOTAL GENERAL ne doit jamais apparaître seul en haut d'une
      * page) : un premier essai, un groupe JRXML imbriqué gardant les 4 dernières lignes ensemble via
-     * {@code keepTogether}, s'est révélé insuffisant sur données réelles — d'une part 4 lignes (64px)
-     * ne suffisent pas à garantir que le groupFooter (jusqu'à {@value #GROUPE_EQUIPE_PIED_RESERVE}px)
-     * tienne derrière elles, d'autre part JasperReports décide qu'une bande "tient" sur la page
-     * courante en comparant sa HAUTEUR DÉCLARÉE à l'espace restant, jamais sa hauteur réellement
-     * nécessaire — un groupFooter peut donc être intégralement repoussé même quand il resterait
-     * largement la place pour son contenu réel (peu de fonctions/matériel ce mois-ci). Cette méthode
-     * contourne cette limite en prédisant, par le calcul, EXACTEMENT où JasperReports ferait déborder
-     * chaque page (la hauteur de ligne, des bandeaux et des marges sont toutes des constantes fixes du
-     * gabarit, jamais du texte à hauteur variable) et en forçant un unique saut de page anticipé
-     * lorsque la dernière page ainsi prédite ne laisserait pas la place à
-     * {@value #GROUPE_EQUIPE_PIED_RESERVE}px de groupFooter.
+     * {@code keepTogether}, s'est révélé insuffisant sur données réelles — 4 lignes ne suffisent pas à
+     * garantir que le groupFooter tienne derrière elles. Un deuxième essai, une réserve FIXE de 220px
+     * pour le groupFooter (sans tenir compte du nombre réel de fonctions), s'est AUSSI révélé
+     * insuffisant sur données réelles : une équipe avec beaucoup de fonctions distinctes (ex. ATELIER,
+     * 11 fonctions) a un groupFooter dont la hauteur RÉELLE dépasse largement 220px — voir
+     * {@link #hauteurPiedReelle} — et JasperReports produit alors une page totalement blanche au lieu
+     * de reporter proprement l'excédent, quel que soit l'espace restant sur la page (voir le Javadoc de
+     * {@value #SEUIL_CONTENU_PAGE_AVEC_FOOTER}). Cette méthode prédit, par le calcul, EXACTEMENT où
+     * JasperReports ferait déborder chaque page (la hauteur de ligne, des bandeaux et des marges sont
+     * toutes des constantes fixes du gabarit, jamais du texte à hauteur variable) et en forçant un
+     * unique saut de page anticipé lorsque la dernière page ainsi prédite dépasserait
+     * {@value #SEUIL_CONTENU_PAGE_AVEC_FOOTER}px de contenu total (lignes + groupFooter).
      *
      * <p>Principe : simule le remplissage NATUREL des pages (1re page : {@code
      * GROUPE_EQUIPE_ENTETE_HAUTEUR} + lignes ; pages suivantes : lignes seules, l'en-tête de section
@@ -285,11 +320,12 @@ public class PaieReportPdfService {
      * capacité qu'elle aurait AVEC le footer réservé, l'excédent est déplacé vers une page
      * supplémentaire via un unique saut de page anticipé — jamais recalculé pour les pages
      * précédentes, qui débordent normalement (débordement JasperReports natif, inchangé). */
-    int calculerSautPage(int total) {
+    int calculerSautPage(int total, int lignesRecapMax) {
+        int hauteurPied = hauteurPiedReelle(lignesRecapMax);
         int capPremiereSansFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_ENTETE_HAUTEUR) / LIGNE_HAUTEUR;
-        int capPremiereAvecFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_ENTETE_HAUTEUR - GROUPE_EQUIPE_PIED_RESERVE) / LIGNE_HAUTEUR;
+        int capPremiereAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - GROUPE_EQUIPE_ENTETE_HAUTEUR - hauteurPied) / LIGNE_HAUTEUR;
         int capContinuationSansFooter = PAGE_HAUTEUR_UTILE / LIGNE_HAUTEUR;
-        int capContinuationAvecFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_PIED_RESERVE) / LIGNE_HAUTEUR;
+        int capContinuationAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - hauteurPied) / LIGNE_HAUTEUR;
 
         if (total <= capPremiereAvecFooter) {
             return -1; // tout (lignes + footer) tient sur la seule 1re page, aucun saut à forcer
@@ -315,8 +351,33 @@ public class PaieReportPdfService {
         if (taillePageCourante <= capDerniereAvecFooter) {
             return -1; // la dernière page naturelle laisse déjà la place au footer
         }
-        int aDeplacer = taillePageCourante - capDerniereAvecFooter;
-        return total - aDeplacer; // 1er index (0-based) de la nouvelle dernière page, avec le footer
+        // Nombre de lignes VISÉ sur la nouvelle dernière page (toujours une page de continuation,
+        // jamais la 1re page d'une section, qui ne se répète pas) : RESERVE_LIGNES_PREFEREE
+        // (demande explicite de direction, 2026-09-29 — reprend le nombre initialement proposé pour
+        // "accompagner" le footer), plafonné par ce que la page peut réellement accueillir
+        // (capContinuationAvecFooter, au moins 1 — même si un tableau récap extrêmement fourni le
+        // rendait autrement nul ou négatif : mieux vaut un footer qui déborde lui-même sur la page
+        // suivante qu'un total intégralement repoussé sans aucun employé) et par ce qui reste
+        // disponible (total - 1, pour ne jamais vider entièrement la page précédente). Volontairement
+        // PETIT (pas "aussi grand que possible") : la page précédente (1re page ou page de continuation
+        // pleine) doit rester aussi REMPLIE que possible — c'est elle, pas la toute dernière, que
+        // l'utilisateur voit et compare aux autres sections (constaté sur données réelles : une grande
+        // page vide devant un total accompagné d'à peine quelques lignes est plus dérangeant qu'une
+        // dernière page courte). Le nombre de lignes "avant" n'a PAS besoin d'être recalculé
+        // explicitement : JasperReports les remplit naturellement à pleine capacité jusqu'au point de
+        // saut, quel que soit leur nombre — un SEUL saut de page anticipé suffit donc, même si la
+        // section a besoin de plusieurs pages de continuation avant la dernière.
+        int surPageFinale = Math.min(total - 1, Math.min(RESERVE_LIGNES_PREFEREE, Math.max(1, capContinuationAvecFooter)));
+        return total - surPageFinale; // 1er index (0-based) de la nouvelle dernière page, avec le footer
+    }
+
+    /** Hauteur réellement nécessaire au groupFooter de GroupEquipe (TOTAL GENERAL + tableau récap
+     * Fonction/Effectif/STC + squelette matériel), fonction du nombre de lignes du plus grand des 2
+     * tableaux côte à côte ({@code lignesRecapMax}) — {@value #PIED_HAUTEUR_BASE}px fixes (totaux +
+     * libellé + en-tête du sous-rapport) avant la première ligne de récap, puis
+     * {@value #LIGNE_RECAP_HAUTEUR}px par ligne. */
+    private int hauteurPiedReelle(int lignesRecapMax) {
+        return PIED_HAUTEUR_BASE + LIGNE_RECAP_HAUTEUR * lignesRecapMax;
     }
 
     private JasperPrint remplir(JasperReport report, Map<String, Object> parametres, net.sf.jasperreports.engine.JRDataSource datasource) {
