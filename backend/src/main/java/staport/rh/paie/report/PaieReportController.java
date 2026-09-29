@@ -28,9 +28,9 @@ import java.time.format.DateTimeParseException;
 @Tag(name = "Paie", description = "Rapport PDF BI de synthèse RH/Paie pour la direction")
 public class PaieReportController {
 
-    private final PaieReportPdfService pdfService;
+    private final PaieReportHtmlPdfService pdfService;
 
-    public PaieReportController(PaieReportPdfService pdfService) {
+    public PaieReportController(PaieReportHtmlPdfService pdfService) {
         this.pdfService = pdfService;
     }
 

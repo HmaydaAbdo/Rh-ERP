@@ -1,0 +1,444 @@
+/* Feuille de style STATIQUE du rapport PDF de paie (voir PaieReportHtmlBuilder) — jamais chargée
+   comme un template, jamais interpolée avec une donnée métier : son contenu est injecté tel quel
+   (jsoup DataNode) dans le document généré. Aucune valeur ici ne doit jamais dépendre d'une donnée
+   de paie/employé — c'est précisément ce qui garantit qu'aucune injection n'est possible par ce
+   chemin (voir le Javadoc de PaieReportHtmlBuilder pour l'incident de production que ce choix
+   évite structurellement : un ancien pipeline HTML injectait du CSS non échappé et un commentaire
+   contenant "<tr>" avait cassé le parseur XML strict d'openhtmltopdf).
+
+   Toutes les dimensions sont en "pt" (point PDF, 1/72 pouce) — jamais en "px" CSS (qui vaut
+   1/96 pouce et fausserait la géométrie une fois imprimée sur A4 réel). Les valeurs numériques
+   reprennent telles quelles celles de l'ancien gabarit JasperReports (rapport.jrxml), qui étaient
+   déjà exprimées en points PDF.
+
+   IMPORTANT — moteur CSS d'openhtmltopdf 1.0.x : c'est un moteur CSS 2.1 (+ quelques ajouts CSS3
+   ciblés), PAS un moteur de navigateur moderne. Constaté empiriquement (avertissements de
+   compilation lors du 1er rendu de test) : AUCUN support de `var()`/custom properties, AUCUN
+   support de flexbox (`display:flex`, `gap`, `align-items`, `justify-content`), AUCUN support de
+   `object-fit`/`text-overflow`. Toute mise en page horizontale ici utilise donc `float`+`margin`
+   (jamais flexbox) et toutes les couleurs sont des valeurs hexadécimales littérales (jamais une
+   variable) — pas une préférence de style, une CONTRAINTE du moteur de rendu cible.
+
+   Pagination : chaque page physique est un DIV .page à taille FIXE (842×595pt, A4 paysage),
+   entièrement pré-découpé côté Java (RapportPageModelBuilder) — @page n'a donc qu'à fixer la
+   taille du support PDF, sans marge (la marge de 20pt devient le padding interne de .page), et
+   aucune règle CSS de pagination avancée (running headers, string-set, compteurs de page) n'est
+   utilisée : voir docs/report/README.md pour la justification de ce choix. */
+
+@page {
+    size: 842pt 595pt;
+    margin: 0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 842pt;
+    font-family: "Liberation Serif", serif;
+    color: #000000;
+    font-size: 10.5pt;
+}
+
+/* ================================ PAGE : structure commune ================================ */
+
+.page {
+    position: relative;
+    width: 842pt;
+    height: 595pt;
+    padding: 20pt;
+    page-break-after: always;
+    overflow: hidden;
+}
+
+.page:last-child {
+    page-break-after: avoid;
+}
+
+/* Page de garde : aucun page-header/page-footer (comportement JasperReports isTitleNewPage
+   délibérément reproduit — une couverture n'a pas besoin du bandeau récurrent). Centrage par
+   text-align + largeurs fixes centrées (jamais flexbox, non supporté — voir en-tête du fichier). */
+.page.cover {
+    text-align: center;
+}
+
+/* ================================ BANDEAU / PIED RÉCURRENTS ================================ */
+
+.page-header {
+    height: 40pt;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header .logo {
+    float: left;
+    margin-left: 8pt;
+    margin-top: 8pt;
+    width: 60pt;
+    height: 24pt;
+}
+
+.page-header .separateur {
+    float: left;
+    width: 0;
+    height: 24pt;
+    margin-top: 8pt;
+    border-left: 1pt solid #999999;
+}
+
+.page-header .separateur.s1 { margin-left: 8pt; }
+.page-header .separateur.s2 { margin-left: 10pt; }
+.page-header .separateur.s3 { margin-left: 10pt; }
+
+.page-header .bloc {
+    float: left;
+    margin-top: 13pt;
+    font-size: 9pt;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.page-header .bloc.b1 { margin-left: 12pt; width: 190pt; }
+.page-header .bloc.b2 { margin-left: 10pt; width: 160pt; }
+.page-header .bloc.bloc-niveau { margin-left: 10pt; width: 316pt; }
+
+.page-header .filet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-bottom: 1pt solid #000000;
+}
+
+.page-body {
+    height: 495pt;
+    overflow: hidden;
+}
+
+.page-footer {
+    height: 20pt;
+    position: relative;
+    font-size: 9.5pt;
+    color: #808080;
+    border-top: 0.5pt solid #CCCCCC;
+    overflow: hidden;
+}
+
+.page-footer .niveau {
+    float: left;
+    width: 600pt;
+    margin-top: 5pt;
+    font-size: 8.5pt;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.page-footer .pagination {
+    float: right;
+    width: 190pt;
+    margin-top: 5pt;
+    text-align: right;
+    font-size: 9.5pt;
+}
+
+/* ================================ PAGE DE GARDE ================================ */
+
+.cover .logo-couverture {
+    display: block;
+    width: 200pt;
+    height: 75pt;
+    margin: 20pt auto 0;
+}
+
+.cover .titre {
+    font-size: 30pt;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10pt;
+}
+
+.cover .filet-titre {
+    width: 200pt;
+    border-bottom: 1.2pt solid #000000;
+    margin: 25pt auto 0;
+}
+
+.cover .bloc-identite {
+    text-align: center;
+    margin-top: 12pt;
+}
+
+.cover .bloc-identite .label {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #595959;
+}
+
+.cover .bloc-identite .valeur {
+    font-size: 16pt;
+    font-weight: bold;
+    margin-top: 2pt;
+}
+
+/* Largeur volontairement plus grande que 2×280+42=602pt : openhtmltopdf peut faire passer des
+   flottants à la ligne quand leur largeur cumulée correspond EXACTEMENT à celle du conteneur
+   (marge d'arrondi interne du moteur, constaté empiriquement) — une marge de sécurité de 20pt
+   évite ce repli sans décalage perceptible du centrage. */
+.cover .signatures {
+    width: 622pt;
+    margin: 95pt auto 0;
+    overflow: hidden;
+}
+
+.cover .signature {
+    float: left;
+    width: 280pt;
+    margin-right: 42pt;
+    text-align: center;
+}
+
+.cover .signature.derniere {
+    margin-right: 0;
+}
+
+.cover .signature .role {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #595959;
+}
+
+.cover .signature .nom {
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 2pt;
+}
+
+.cover .signature .filet {
+    border-bottom: 0.75pt solid #000000;
+    margin-top: 49pt;
+}
+
+.cover .signature .legende {
+    font-size: 8pt;
+    color: #808080;
+    margin-top: 4pt;
+}
+
+.cover .tagline {
+    position: absolute;
+    bottom: 40pt;
+    left: 20pt;
+    right: 20pt;
+    text-align: center;
+    font-size: 10pt;
+    color: #808080;
+}
+
+/* ================================ TITRES DE CHAPITRE / SECTION ================================ */
+
+.titre-chapitre {
+    font-size: 16pt;
+    font-weight: bold;
+    padding-bottom: 3pt;
+    border-bottom: 1pt solid #000000;
+}
+
+.titre-section {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 8pt;
+}
+
+.titre-equipe {
+    font-size: 12pt;
+    font-weight: bold;
+    padding: 2pt 0 2pt 4pt;
+    border-bottom: 1pt solid #000000;
+}
+
+/* ================================ CARTES KPI ================================ */
+
+.kpi-row {
+    margin-top: 8pt;
+    overflow: hidden;
+}
+
+.kpi-carte {
+    float: left;
+    border: 0.5pt solid #CCCCCC;
+    padding: 5pt 8pt;
+}
+
+.kpi-carte .label {
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #595959;
+    text-transform: uppercase;
+}
+
+.kpi-carte .valeur {
+    font-weight: bold;
+    margin-top: 4pt;
+}
+
+/* Niveau global (5 cartes, 150x40, ecart 10pt) */
+.kpi-row.global .kpi-carte {
+    width: 150pt;
+    height: 40pt;
+    margin-right: 10pt;
+}
+
+.kpi-row.global .kpi-carte.derniere {
+    margin-right: 0;
+}
+
+.kpi-row.global .valeur {
+    font-size: 13pt;
+}
+
+/* Niveau chantier / equipe (4 cartes, 192x36, ecart 8pt) */
+.kpi-row.chantier .kpi-carte,
+.kpi-row.equipe .kpi-carte {
+    width: 192pt;
+    height: 36pt;
+    margin-right: 8pt;
+}
+
+.kpi-row.chantier .kpi-carte.derniere,
+.kpi-row.equipe .kpi-carte.derniere {
+    margin-right: 0;
+}
+
+.kpi-row.chantier .valeur.compte,
+.kpi-row.equipe .valeur.compte {
+    font-size: 12pt;
+}
+
+.kpi-row.chantier .valeur.montant,
+.kpi-row.equipe .valeur.montant {
+    font-size: 10pt;
+}
+
+/* ================================ TABLEAU EMPLOYÉ ================================ */
+
+table.employes {
+    width: 802pt;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 8pt;
+}
+
+table.employes th,
+table.employes td {
+    border: 0.5pt solid #000000;
+    height: 16pt;
+    font-size: 10.5pt;
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    padding: 0 3pt;
+    text-align: left;
+    vertical-align: middle;
+}
+
+table.employes th {
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Largeurs de colonnes — somme = 802pt (voir spec). L'ordre des colonnes DOIT correspondre à
+   l'ordre d'émission des <col> dans PaieReportHtmlBuilder. */
+table.employes col.nom-prenom { width: 120pt; }
+table.employes col.fonction { width: 100pt; }
+table.employes col.cin { width: 65pt; }
+table.employes col.jours-p { width: 35pt; }
+table.employes col.jours-jro { width: 40pt; }
+table.employes col.jours-jrd { width: 40pt; }
+table.employes col.salaire { width: 65pt; }
+table.employes col.salaire-ro { width: 55pt; }
+table.employes col.salaire-rd { width: 55pt; }
+table.employes col.total { width: 65pt; }
+table.employes col.obs { width: 90pt; }
+table.employes col.equipe { width: 72pt; }
+
+table.employes td.fonction { font-size: 8pt; }
+table.employes td.cin,
+table.employes td.jours-p,
+table.employes td.jours-jro,
+table.employes td.jours-jrd { text-align: center; }
+table.employes td.salaire,
+table.employes td.salaire-ro,
+table.employes td.salaire-rd,
+table.employes td.total { text-align: right; padding-right: 3pt; }
+table.employes td.total { font-weight: bold; }
+table.employes td.equipe { font-size: 9pt; }
+
+/* ================================ TABLEAUX RÉCAP (pied de section équipe) ================================ */
+
+.recap-row {
+    margin-top: 4pt;
+    overflow: hidden;
+}
+
+.recap-bloc {
+    float: left;
+    margin-right: 120pt;
+}
+
+.recap-bloc.derniere {
+    margin-right: 0;
+}
+
+.recap-bloc .titre-recap {
+    font-size: 9.5pt;
+    font-weight: bold;
+    font-style: italic;
+    margin-bottom: 2pt;
+}
+
+table.recap {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+table.recap th,
+table.recap td {
+    border: 0.5pt solid #000000;
+    height: 15pt;
+    font-size: 9pt;
+    padding: 0 4pt;
+    vertical-align: middle;
+}
+
+table.recap th {
+    font-weight: bold;
+    font-size: 9.5pt;
+    text-align: center;
+}
+
+table.recap.fonction { width: 300pt; }
+table.recap.fonction col.libelle { width: 160pt; }
+table.recap.fonction col.effectif,
+table.recap.fonction col.stc { width: 70pt; }
+table.recap.fonction td.libelle { text-align: left; }
+table.recap.fonction td.effectif,
+table.recap.fonction td.stc { text-align: center; }
+
+table.recap.materiel { width: 250pt; }
+table.recap.materiel col.libelle { width: 180pt; }
+table.recap.materiel col.nbre { width: 70pt; }
+table.recap.materiel td.libelle { text-align: left; }
+
+/* ================================ GRAPHIQUES (SVG, voir RapportChartSvgBuilder) ================================ */
+
+.chart-container {
+    margin-top: 8pt;
+}
+
+.chart-container svg text {
+    font-family: "Liberation Serif", serif;
+}

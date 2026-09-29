@@ -456,35 +456,36 @@ créés après cette date, ou absents de cette liste, restent sans nom jusqu'à 
 
 ---
 
-## Rapport PDF BI — évaluer une migration hors JasperReports (pas encore décidé)
+## Rapport PDF BI — migration hors JasperReports vers HTML/CSS — TERMINÉE (2026-09-29)
 
-**Constat (2026-09-29)**, après plusieurs bugs de pagination résolus un par un dans
+**Décision (HMAYDA, 2026-09-29)** : après plusieurs bugs de pagination résolus un par un dans
 `PaieReportPdfService`/`rapport.jrxml` (pages blanches provoquées par le moteur JasperReports sur des
-frontières précises, jamais documentées, trouvées uniquement par reproduction locale empirique — voir
-`docs/report/README.md`, sections sur `calculerSautPage`) : JasperReports se prête mal à un gabarit
-avec autant de tableaux à hauteur variable imbriqués (sous-rapports récap Fonction/Effectif/STC + parc
-matériel) — chaque évolution du layout a un risque réel de faire réapparaître ce genre de bug sur un
-cas non testé.
+frontières précises, jamais documentées, trouvées uniquement par reproduction locale empirique),
+HMAYDA a demandé de refaire le rapport en HTML — "maîtrisez-le, pas d'erreur cette fois". Moteur
+choisi : **jsoup (construction du DOM) + openhtmltopdf (rendu PDF, pur Java)**, jamais Playwright/
+wkhtmltopdf (évités pour ne rien changer au déploiement Docker existant, pur-JVM).
 
-**Options évoquées avec HMAYDA**, aucune tranchée :
+**Découverte critique en cours de route** : ce rapport avait DÉJÀ été en HTML une première fois
+(Thymeleaf + openhtmltopdf + JFreeChart), abandonné le 2026-09-25 pour JasperReports après 3 incidents
+de production précis (`SAXParseException` par injection CSS non échappée, `"null"` affiché
+littéralement, police fragile) — cette migration est donc une 3ᵉ tentative sur le même problème,
+neutralisant structurellement les 3 modes d'échec historiques (voir `docs/report/README.md`, section
+« Historique — pourquoi 3 pipelines », pour le détail complet).
 
-- Rester sur JasperReports (aucun coût de migration, mais le risque décrit ci-dessus reste entier).
-- **HTML/CSS + moteur de rendu PDF (Playwright/wkhtmltopdf)** — piste préférée par Claude : pagination
-  CSS standard et bien documentée (`break-inside: avoid`, etc.), plus prévisible que le moteur
-  JasperReports ; réécriture complète du gabarit à prévoir.
-- iText/OpenPDF bas niveau — contrôle total, mais perd tout le déclaratif (graphiques, sous-rapports),
-  plus de travail de mise en page à la main, pas justifié à ce stade.
+**Livré et vérifié** (97+ tests, dont un test exhaustif de pagination sur 1-120 employés × 0-16 lignes
+de récap, un test de non-régression échappement/injection, un test de non-régression null-safety des
+graphiques, et une reproduction locale à l'échelle réelle) :
 
-**Contrainte explicite (HMAYDA, 2026-09-29) : si migration il y a, le rapport doit garder EXACTEMENT
-le même style visuel** (cartes KPI, grille noir/blanc du tableau employé, graphiques à barres
-groupées horizontales, page de garde avec signatures — voir `docs/report/README.md`, « Style
-visuel ») — une migration ne doit jamais être prétexte à revoir la présentation, seulement le moteur
-de rendu sous-jacent.
+- Pagination désormais 100 % pilotée en Java (`RapportPageModelBuilder`), plus aucune dépendance au
+  comportement d'un moteur de rendu tiers — élimine la catégorie de bugs JasperReports à la racine.
+- Graphiques reconstruits en SVG à la main (`RapportChartSvgBuilder`), JFreeChart retiré.
+- **Même style visuel qu'avant** (contrainte explicite respectée) : cartes KPI, grille noir/blanc du
+  tableau employé, graphiques à barres groupées horizontales, page de garde avec signatures.
+- JasperReports/JFreeChart entièrement retirés (`pom.xml`, JRXML, `PaieReportPdfService` et
+  dépendances associées).
 
-**À faire** : rien pour l'instant — noté ici pour ne pas perdre la piste, à reprendre uniquement si une
-nouvelle évolution du rapport BI se heurte de nouveau à ce type de bug JasperReports, ou si HMAYDA
-décide de trancher indépendamment (conventions/architecture.md : ne jamais introduire une refonte
-majeure sans nécessité clairement identifiée ni validation explicite).
+Voir `docs/report/README.md`, sections « Pagination : contrôle 100 % Java » et « Historique — pourquoi
+3 pipelines », pour l'architecture complète et le détail des décisions techniques.
 
 ---
 
