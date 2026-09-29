@@ -1,0 +1,115 @@
+# rh-erp
+
+> rh-erp est le système de gestion du personelle poitange est paie de  **Staport**,
+> une entreprise du BTP (bâtiment et travaux publics).
+>
+> Ce document est la porte d'entrée du projet.
+>
+> Les conventions détaillées sont définies dans `conventions`.
+> Elles constituent la source de vérité et doivent être respectées lors de toute modification.
+
+---
+
+# Principes
+
+Avant toute modification :
+
+- comprendre le besoin ;
+- identifier le ou les modules concernés ;
+- respecter les conventions existantes ;
+- privilégier la cohérence de l'architecture.
+
+Après toute modification :
+
+- vérifier que le projet compile ;
+- supprimer le dead code ;
+- mettre à jour la documentation concernée.
+
+Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
+
+---
+
+# Ordre de lecture
+
+1. conventions/architecture.md
+2. conventions/design-patterns.md
+3. conventions/configuration.md
+4. conventions/jpa.md
+5. conventions/database.md
+6. conventions/deployment.md
+7. conventions/security.md
+8. conventions/audit.md
+9. conventions/logging.md
+10. conventions/swagger.md
+11. conventions/metrics.md
+12. conventions/performance.md
+13. conventions/frontend.md
+
+En cas de conflit entre plusieurs conventions :
+
+- `architecture.md` fait foi pour toutes les décisions d'architecture ;
+- les autres documents complètent cette architecture dans leur domaine.
+
+
+# Décisions d'architecture
+
+Les conventions définissent les principes généraux du projet, mais elles ne remplacent pas le jugement d'architecture.
+
+Lorsqu'une évolution nécessite un choix d'architecture important (nouveau Design Pattern, refactoring majeur, changement de structure, introduction d'une nouvelle abstraction ou modification d'un composant transversal), ne jamais prendre cette décision seul.
+
+Dans ce cas :
+
+- expliquer brièvement le problème identifié ;
+- proposer les différentes approches possibles ;
+- recommander celle qui respecte le mieux les conventions du projet ;
+- attendre la validation avant de modifier l'architecture.
+
+Ne jamais introduire un Design Pattern, une abstraction ou une refonte importante sans nécessité clairement identifiée.
+
+---
+# En cas de doute
+
+Ne jamais faire d'hypothèse sur :
+
+- une règle métier ;
+- une décision d'architecture ;
+- une convention ;
+- une valeur métier ;
+- le comportement attendu.
+
+Si une information est manquante ou ambiguë :
+
+- poser une question avant de modifier le code ;
+- ne jamais inventer un comportement ;
+- ne jamais ajouter une fonctionnalité ou une abstraction non demandée.
+
+Si plusieurs approches sont possibles :
+
+- expliquer brièvement les différentes options ;
+- proposer celle qui respecte le mieux les conventions du projet ;
+- attendre validation avant de réaliser une modification importante.
+
+Privilégier une question plutôt qu'une mauvaise hypothèse.
+
+---
+
+# Règles générales
+
+Ne jamais :
+
+- contourner une convention existante ;
+- introduire de la dette technique ;
+- dupliquer une logique métier ;
+- laisser du dead code ;
+- laisser une fonctionnalité ou une règle métier non documentée.
+
+Toujours privilégier :
+
+- un code simple ;
+- une architecture cohérente ;
+- une documentation complète ;
+- la maintenabilité à long terme.
+
+En cas de doute, les documents présents dans `conventions/` sont la source de vérité du projet.
+
+

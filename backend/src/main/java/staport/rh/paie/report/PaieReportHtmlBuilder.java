@@ -71,7 +71,7 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocGraphique b) {
             chartSvgBuilder.ajouterGraphique(corps, b.donnees());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
-            ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes());
+            ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {
             ajouterRecap(corps, b.repartitionFonction(), b.materiel(), b.titreMateriel());
         } else {
@@ -164,6 +164,7 @@ final class PaieReportHtmlBuilder {
      * "chantier" ou "equipe", voir rapport.css) ; {@code classeValeur} de chaque carte pilote la
      * taille de police de sa valeur ("compte" ou "montant", voir rapport.css). */
     private void ajouterCartesKpi(Element pageBody, String niveauClasse, List<CarteKpi> cartes) {
+        pageBody.appendElement("div").addClass("titre-indicateurs").text("Indicateurs clés");
         Element ligne = pageBody.appendElement("div").addClass("kpi-row").addClass(niveauClasse);
         for (int i = 0; i < cartes.size(); i++) {
             CarteKpi carte = cartes.get(i);
@@ -177,6 +178,9 @@ final class PaieReportHtmlBuilder {
                 valeur.addClass(carte.classeValeur());
             }
             valeur.text(carte.valeur());
+            if (carte.detail() != null) {
+                carteEl.appendElement("div").addClass("detail").text(carte.detail());
+            }
         }
     }
 
@@ -184,14 +188,22 @@ final class PaieReportHtmlBuilder {
      * {@code avecEnTeteColonnes} vrai uniquement sur la 1re page d'une section (voir
      * {@link PageModel.BlocTableauEmployes}). Chaque cellule passe par {@code .text(...)},
      * jamais {@code .html(...)} — voir le Javadoc de la classe. */
-    private void ajouterTableauEmployes(Element corps, List<LigneEmployeVue> lignes, boolean avecEnTeteColonnes) {
+    private void ajouterTableauEmployes(Element corps, List<LigneEmployeVue> lignes,
+                                        boolean avecEnTeteColonnes, boolean avecColonneEquipe) {
         Element table = corps.appendElement("table").addClass("employes");
-        for (String classeColonne : new String[]{"nom-prenom", "fonction", "cin", "jours-p", "jours-jro", "jours-jrd",
-                "salaire", "salaire-ro", "salaire-rd", "total", "obs", "equipe"}) {
+        if (!avecColonneEquipe) {
+            table.addClass("sans-equipe");
+        }
+        List<String> classesColonnes = new java.util.ArrayList<>(List.of("nom-prenom", "fonction", "cin", "jours-p", "jours-jro", "jours-jrd",
+                "salaire", "salaire-ro", "salaire-rd", "total", "obs"));
+        if (avecColonneEquipe) {
+            classesColonnes.add("equipe");
+        }
+        for (String classeColonne : classesColonnes) {
             table.appendElement("col").addClass(classeColonne);
         }
         if (avecEnTeteColonnes) {
-            ajouterEnTeteTableauEmployes(table);
+            ajouterEnTeteTableauEmployes(table, avecColonneEquipe);
         }
         Element corpsTable = table.appendElement("tbody");
         for (LigneEmployeVue ligne : lignes) {
@@ -207,11 +219,13 @@ final class PaieReportHtmlBuilder {
             tr.appendElement("td").addClass("salaire-rd").text(ligne.primeRoulageDimanche());
             tr.appendElement("td").addClass("total").text(ligne.salaireTotal());
             tr.appendElement("td").addClass("obs").text(ligne.observation());
-            tr.appendElement("td").addClass("equipe").text(ligne.equipeReelle());
+            if (avecColonneEquipe) {
+                tr.appendElement("td").addClass("equipe").text(ligne.equipeReelle());
+            }
         }
     }
 
-    private void ajouterEnTeteTableauEmployes(Element table) {
+    private void ajouterEnTeteTableauEmployes(Element table, boolean avecColonneEquipe) {
         Element thead = table.appendElement("thead");
         Element ligne1 = thead.appendElement("tr");
         ligne1.appendElement("th").attr("rowspan", "2").text("Nom et prénom");
@@ -221,7 +235,9 @@ final class PaieReportHtmlBuilder {
         ligne1.appendElement("th").attr("colspan", "3").text("Salaire");
         ligne1.appendElement("th").attr("rowspan", "2").text("Total");
         ligne1.appendElement("th").attr("rowspan", "2").text("Obs");
-        ligne1.appendElement("th").attr("rowspan", "2").text("Équipe");
+        if (avecColonneEquipe) {
+            ligne1.appendElement("th").attr("rowspan", "2").text("Équipe");
+        }
         Element ligne2 = thead.appendElement("tr");
         ligne2.appendElement("th").text("P");
         ligne2.appendElement("th").text("J.R.O");

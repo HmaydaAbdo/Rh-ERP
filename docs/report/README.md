@@ -350,11 +350,11 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 
 | KPI | Formule | Grain | Comparaison mois précédent |
 |---|---|---|---|
-| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — Δ absolu + Δ % (voir « Null-handling ») |
+| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — montant du mois précédent visible au global, Δ absolu + Δ % au chantier (voir « Null-handling ») |
 | Effectif | `COUNT(*)` | Global / chantier / section | Oui — Δ absolu (jamais ambigu, 0 est une valeur légitime) |
 | Masse moyenne par employé | masse ÷ effectif | Global / chantier | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
-| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées (chapitre I, sans titre au-dessus) — voir « Visualisations » |
+| Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
 | ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
 | Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Répartition par équipe"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
@@ -463,7 +463,8 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    temps qu'il construit chaque page (voir « Numérotation des chapitres et des pages » : plus de
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
-3. **I — Vue d'ensemble** : 5 cartes KPI (label + valeur), une seule page — masse réelle, effectif,
+3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 5 cartes KPI, une seule page — la
+   carte Masse affiche aussi le montant du mois précédent (ou `INTROUVABLE`) ; masse réelle, effectif,
    masse moyenne/employé, nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, UN SEUL
    graphique à 4 séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros
    chantiers + "Autres" — voir « Visualisations ».
@@ -480,7 +481,8 @@ JasperReports, dont l'aplatissement n'a plus d'utilité une fois la pagination p
 
 ### Vue détaillée d'un chantier
 
-Un chantier occupe **1 seule page** pour ses cartes KPI + son graphique de répartition par équipe
+Un chantier occupe **1 seule page** pour sa rubrique « Indicateurs clés », ses cartes KPI + son
+graphique titré « Répartition par équipe »
 (le cas échéant), suivie d'une ou plusieurs pages par section équipe. Cette page suit la même
 hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
 
@@ -502,12 +504,11 @@ deux sections. Si aucune équipe n'a été sélectionnée pour ce chantier, une 
 ses employés. Chaque section (12 colonnes, tout en noir — voir « Style visuel »), triée par ordre
 **alphabétique** de fonction (voir `PaieBiReportBuilder.equipeVue`, même tri que le tableau récap
 Fonction/Effectif/STC ci-dessous), se termine par le tableau récap et, le cas échéant, le squelette
-matériel (voir « Cartes KPI de section et tableau récap »). Le tableau employé reprend les colonnes
+matériel (voir « Cartes KPI de section et tableau récap »). Les KPI portent la rubrique « Indicateurs
+clés ». Le tableau employé reprend 11 colonnes dans une section équipe nommée, 12 dans le « reste » :
 de la liste Paie à l'écran, moins Chantier (déjà porté par le titre de section) : Nom & prénom,
-Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs, **Équipe** (vide dans
-une section équipe déjà nommée par son titre, ou quand l'employé n'a aucune équipe renseignée
-(jamais "Sans équipe"), renseignée uniquement dans la section "reste" où les employés viennent
-potentiellement de plusieurs équipes non sélectionnées mélangées, voir
+Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs et **Équipe** dans la
+section "reste" uniquement, où les employés viennent potentiellement de plusieurs équipes non sélectionnées mélangées, voir
 `LigneEmployeVue.equipeReelle`). Cette colonne, comme tous les autres endroits du rapport où une
 équipe est nommée (titre de section, bandeau CHANTIER/ÉQUIPE, graphique "Répartition par équipe"),
 affiche le **nom complet** de l'équipe ("CHAUFFEURS"), jamais son code brut ("CH") — voir « Nom
@@ -572,8 +573,8 @@ blanche et de ligne perdue.
 
 ### Cartes KPI de section et tableau récap
 
-En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "reste") : titre, puis 4
-cartes KPI — Effectif, STC/sorties, Masse (`EquipeBiVue.masse`, part du chantier), **Masse mois
+En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "reste") : titre, rubrique
+« Indicateurs clés », puis 4 cartes KPI — Effectif, STC/sorties, Masse (`EquipeBiVue.masse`, part du chantier), **Masse mois
 précédent** (`EquipeBiVue.montantMoisPrecedentOuIntrouvable`, `INTROUVABLE` si aucune donnée, même
 règle que « Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque
 chantier. Ces 2 derniers indicateurs sont des cartes à hauteur FIXE dans l'en-tête plutôt que des
@@ -676,9 +677,10 @@ Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un expo
   - **Titres de chapitre** (I — Vue d'ensemble, puis un par chantier) : 16pt gras, texte noir sans
     fond, souligné d'un filet fin.
   - **Sous-titres** (bandeau équipe, titre de chaque graphique) : 12-13pt gras, texte noir.
-  - **Indicateurs KPI** : 10-13pt gras pour la valeur, 7.5pt gras pour son libellé.
-  - **Tableau détaillé employé** (12 colonnes) : 10.5pt (8pt pour la colonne Fonction, 9pt pour la
-    colonne Équipe).
+  - **Indicateurs KPI** : 10-13pt gras pour la valeur, 7.5pt gras pour son libellé, avec la rubrique
+    « Indicateurs clés » au-dessus de chaque rangée.
+  - **Tableau détaillé employé** (11 colonnes en équipe nommée, 12 dans le « reste ») : 10.5pt
+    (8pt pour la colonne Fonction, 9pt pour la colonne Équipe).
   - **Captions/notes** (libellés de blocs d'en-tête, pied de page) : 6.5-10pt.
 - **Aucun sommaire imprimé** : un rapport généré à la demande n'a pas besoin d'une table des
   matières.

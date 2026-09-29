@@ -253,6 +253,12 @@ html, body {
     margin-top: 8pt;
 }
 
+.titre-indicateurs {
+    margin-top: 4pt;
+    font-size: 10pt;
+    font-weight: bold;
+}
+
 .titre-equipe {
     font-size: 12pt;
     font-weight: bold;
@@ -263,7 +269,7 @@ html, body {
 /* ================================ CARTES KPI ================================ */
 
 .kpi-row {
-    margin-top: 8pt;
+    margin-top: 4pt;
     overflow: hidden;
 }
 
@@ -285,10 +291,17 @@ html, body {
     margin-top: 4pt;
 }
 
-/* Niveau global (5 cartes, 150x40, ecart 10pt) */
+.kpi-carte .detail {
+    margin-top: 2pt;
+    font-size: 6.5pt;
+    color: #595959;
+    white-space: nowrap;
+}
+
+/* Niveau global (5 cartes, 150x50, ecart 10pt) */
 .kpi-row.global .kpi-carte {
     width: 150pt;
-    height: 40pt;
+    height: 50pt;
     margin-right: 10pt;
 }
 
@@ -297,7 +310,7 @@ html, body {
 }
 
 .kpi-row.global .valeur {
-    font-size: 13pt;
+    font-size: 11pt;
 }
 
 /* Niveau chantier / equipe (4 cartes, 192x36, ecart 8pt) */
@@ -364,6 +377,7 @@ table.employes col.salaire-rd { width: 55pt; }
 table.employes col.total { width: 65pt; }
 table.employes col.obs { width: 90pt; }
 table.employes col.equipe { width: 72pt; }
+table.employes.sans-equipe col.nom-prenom { width: 192pt; }
 
 table.employes td.fonction { font-size: 8pt; }
 table.employes td.cin,

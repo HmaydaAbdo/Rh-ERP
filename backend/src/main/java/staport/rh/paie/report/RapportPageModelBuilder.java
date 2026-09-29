@@ -51,7 +51,7 @@ final class RapportPageModelBuilder {
     /** Hauteur du bloc titre+cartes KPI+en-têtes de colonnes d'une section équipe — 1re page
      * uniquement (voir {@code BlocTitreEquipe}+{@code BlocKpi}+en-tête de {@code table.employes}
      * dans rapport.css). */
-    private static final double EQUIPE_ENTETE_HAUTEUR = 100;
+    private static final double EQUIPE_ENTETE_HAUTEUR = 112;
 
     /** Hauteur d'une ligne du tableau employé (voir {@code table.employes td/th} dans rapport.css). */
     private static final double LIGNE_HAUTEUR = 16;
@@ -103,13 +103,18 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
+        String massePrecedente = synthese.masse().valeurPrecedente() == null
+                ? "INTROUVABLE"
+                : synthese.masse().valeurPrecedente() + " DH";
         blocs.add(new PageModel.BlocKpi("global", List.of(
-                CarteKpi.de("MASSE", synthese.masse().valeurCourante() + " DH"),
+                new CarteKpi("MASSE", synthese.masse().valeurCourante() + " DH", null,
+                        "Mois précédent : " + massePrecedente),
                 CarteKpi.de("EFFECTIF", String.valueOf(synthese.effectif().effectifCourant())),
                 CarteKpi.de("MASSE MOYENNE / EMPLOYÉ", synthese.masseMoyenneParEmploye() + " DH"),
                 CarteKpi.de("CHANTIERS", String.valueOf(synthese.nombreChantiers())),
                 CarteKpi.de("STC / SORTIES", String.valueOf(synthese.stc()))
         )));
+        blocs.add(new PageModel.BlocTitreSection("Répartition par chantier"));
         blocs.add(new PageModel.BlocGraphique(synthese.repartitionChantier(), true));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
     }
@@ -168,7 +173,8 @@ final class RapportPageModelBuilder {
                 blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
                 blocs.add(cartesKpiEquipe(equipe));
             }
-            blocs.add(new PageModel.BlocTableauEmployes(ligneSlice, estPremiere));
+            boolean avecColonneEquipe = equipe.nom().equals(chantier.code());
+            blocs.add(new PageModel.BlocTableauEmployes(ligneSlice, estPremiere, avecColonneEquipe));
 
             double hauteurUtilisee = (estPremiere ? EQUIPE_ENTETE_HAUTEUR : 0) + ligneSlice.size() * LIGNE_HAUTEUR;
             double hauteurRestante = PAGE_BODY_HAUTEUR - MARGE_SECURITE - hauteurUtilisee;
