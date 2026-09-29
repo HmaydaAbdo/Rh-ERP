@@ -110,11 +110,20 @@ public class PaieReportPdfService {
     private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
 
     /** Nombre de lignes visé sur la nouvelle dernière page lorsqu'un saut de page anticipé est
-     * nécessaire (demande explicite de direction, 2026-09-29) — un plafond, pas un minimum garanti (voir
-     * son usage dans {@link #calculerSautPage}) : la page précédente doit rester aussi remplie que
-     * possible, la toute dernière page n'a besoin que de "quelques" lignes pour ne pas laisser le
-     * groupFooter orphelin. */
-    private static final int RESERVE_LIGNES_PREFEREE = 4;
+     * nécessaire (voir son usage dans {@link #calculerSautPage}) — le plus PETIT possible (1), jamais
+     * "quelques" lignes de plus par confort visuel.
+     *
+     * <p>Une première version visait 4 lignes (valeur initialement proposée) en partant du principe
+     * que la page précédente serait presque toujours pleine, donc peu affectée par la perte de
+     * quelques lignes de plus. Constaté FAUX sur données réelles (2026-09-29) : quand une section
+     * déborde déjà sur plusieurs pages de continuation (ex. CHAUFFEURS, 74 lignes → 27 + 30 + 17), la
+     * DERNIÈRE page naturelle AVANT le saut n'est elle-même pas pleine (il ne reste que 17 lignes, pas
+     * 30 — il n'y a simplement plus de données) : lui retirer 4 lignes de plus (au lieu d'1 seule)
+     * agrandit inutilement un vide déjà présent. Prendre le minimum absolu (1) n'aggrave jamais le
+     * remplissage d'une page qui n'était de toute façon pas pleine, et laisse la page précédente aussi
+     * proche que possible de son état naturel — quel que soit le nombre de pages de continuation déjà
+     * pleines avant elle. */
+    private static final int RESERVE_LIGNES_PREFEREE = 1;
 
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
@@ -352,21 +361,19 @@ public class PaieReportPdfService {
             return -1; // la dernière page naturelle laisse déjà la place au footer
         }
         // Nombre de lignes VISÉ sur la nouvelle dernière page (toujours une page de continuation,
-        // jamais la 1re page d'une section, qui ne se répète pas) : RESERVE_LIGNES_PREFEREE
-        // (demande explicite de direction, 2026-09-29 — reprend le nombre initialement proposé pour
-        // "accompagner" le footer), plafonné par ce que la page peut réellement accueillir
-        // (capContinuationAvecFooter, au moins 1 — même si un tableau récap extrêmement fourni le
-        // rendait autrement nul ou négatif : mieux vaut un footer qui déborde lui-même sur la page
-        // suivante qu'un total intégralement repoussé sans aucun employé) et par ce qui reste
-        // disponible (total - 1, pour ne jamais vider entièrement la page précédente). Volontairement
-        // PETIT (pas "aussi grand que possible") : la page précédente (1re page ou page de continuation
-        // pleine) doit rester aussi REMPLIE que possible — c'est elle, pas la toute dernière, que
-        // l'utilisateur voit et compare aux autres sections (constaté sur données réelles : une grande
-        // page vide devant un total accompagné d'à peine quelques lignes est plus dérangeant qu'une
-        // dernière page courte). Le nombre de lignes "avant" n'a PAS besoin d'être recalculé
-        // explicitement : JasperReports les remplit naturellement à pleine capacité jusqu'au point de
-        // saut, quel que soit leur nombre — un SEUL saut de page anticipé suffit donc, même si la
-        // section a besoin de plusieurs pages de continuation avant la dernière.
+        // jamais la 1re page d'une section, qui ne se répète pas) : RESERVE_LIGNES_PREFEREE (1, le
+        // minimum absolu — voir son Javadoc pour pourquoi PAS un nombre plus "confortable"), plafonné
+        // par ce que la page peut réellement accueillir (capContinuationAvecFooter, au moins 1 — même
+        // si un tableau récap extrêmement fourni le rendait autrement nul ou négatif : mieux vaut un
+        // footer qui déborde lui-même sur la page suivante qu'un total intégralement repoussé sans
+        // aucun employé) et par ce qui reste disponible (total - 1, pour ne jamais vider entièrement la
+        // page précédente). La page précédente (1re page, page de continuation pleine, OU page de
+        // continuation déjà naturellement incomplète faute de données) garde ainsi TOUJOURS le plus
+        // possible de ses lignes naturelles — jamais moins que nécessaire, quel que soit son état avant
+        // le saut. Le nombre de lignes "avant" n'a PAS besoin d'être recalculé explicitement :
+        // JasperReports les remplit naturellement à pleine capacité jusqu'au point de saut, quel que
+        // soit leur nombre — un SEUL saut de page anticipé suffit donc, même si la section a besoin de
+        // plusieurs pages de continuation avant la dernière.
         int surPageFinale = Math.min(total - 1, Math.min(RESERVE_LIGNES_PREFEREE, Math.max(1, capContinuationAvecFooter)));
         return total - surPageFinale; // 1er index (0-based) de la nouvelle dernière page, avec le footer
     }
