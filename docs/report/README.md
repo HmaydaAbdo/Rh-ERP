@@ -599,19 +599,6 @@ celle qui l'a précédée (retrait du STC de ce même graphique), et de ce qui r
 sans être affiché (prêt à être réactivé sans recalcul si le besoin se confirme un jour). Le rapport
 ne porte donc plus aucun `<lineChart>`.
 
-### Narratif léger
-
-Sous les cartes KPI de la Vue d'ensemble, et sous le bandeau KPI de chaque chantier, une phrase
-courte en italique résume les chiffres déjà affichés — style factuel, pas un paragraphe rédigé :
-
-- Globale : `Masse : <valeur> DH (<variation>)  ·  Effectif : <n>  ·  <n> chantiers.`
-- Par chantier : `<part>% de la masse globale  ·  <effectif> pers  ·  <n> STC/sortie(s).` (clause
-  STC/sortie omise quand elle vaut 0 — rien à signaler).
-
-Calculé dans `PaieReportPdfService` (`syntheseNarratif`/`chantierNarratif`), à partir des mêmes
-valeurs déjà agrégées par `PaieBiReportBuilder` — aucune nouvelle donnée, aucun seuil de « hausse
-notable » : ce niveau reste volontairement descriptif, jamais une détection d'anomalie/tendance.
-
 ### Style visuel
 
 Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un export de données habillé.

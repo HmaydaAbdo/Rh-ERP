@@ -155,7 +155,6 @@ public class PaieReportPdfService {
         parametres.put("P_REPARTITION_CHANTIER", synthese.repartitionChantier());
         parametres.put("P_REPARTITION_FONCTION", synthese.repartitionFonction());
         parametres.put("P_EVOLUTION_MENSUELLE", synthese.evolutionMensuelle());
-        parametres.put("P_SYNTHESE_NARRATIF", syntheseNarratif(synthese));
         parametres.put("P_SUBREPORT_RECAP_FONCTION", recapFonctionReport);
         parametres.put("P_SUBREPORT_RECAP_MATERIEL", recapMaterielReport);
         return parametres;
@@ -222,13 +221,12 @@ public class PaieReportPdfService {
             String chantierTitreNumerote = chapitreChantier(index, chantier);
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
-            String chantierNarratif = chantierNarratif(chantier);
             for (EquipeBiVue equipe : chantier.equipes()) {
                 for (LigneEmployeVue employe : equipe.employes()) {
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur,
-                            chantier.stc(), chantierNarratif,
+                            chantier.stc(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             chantier.avecDetailEquipe(),
                             equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
@@ -279,27 +277,6 @@ public class PaieReportPdfService {
         return variation == null
                 ? masse.valeurCourante() + " DH  (aucune donnée mois précédent)"
                 : masse.valeurCourante() + " DH  (" + variation + ")";
-    }
-
-    /** Phrase courte de synthèse (style « narratif léger ») affichée sous les cartes KPI de la page
-     * Synthèse globale — un résumé factuel en une ligne, pas un tableau de plus. */
-    private String syntheseNarratif(SyntheseGlobaleVue synthese) {
-        String variation = variationLibelle(synthese.masse());
-        String masseSegment = "Masse : " + synthese.masse().valeurCourante() + " DH"
-                + (variation == null ? " (aucune donnée mois précédent)" : " (" + variation + ")");
-        return masseSegment
-                + "  ·  Effectif : " + PaieReportNumberFormat.entier(synthese.effectif().effectifCourant())
-                + "  ·  " + PaieReportNumberFormat.entier(synthese.nombreChantiers()) + " chantiers.";
-    }
-
-    /** Phrase courte de synthèse d'un chantier — même esprit que {@link #syntheseNarratif}, la
-     * clause STC/sortie est omise quand elle vaut 0 (rien à signaler). */
-    private String chantierNarratif(ChantierBiVue chantier) {
-        String base = chantier.partMasseGlobalePourcent() + " de la masse globale  ·  "
-                + PaieReportNumberFormat.entier(chantier.effectif().effectifCourant()) + " pers";
-        return chantier.stc() > 0
-                ? base + "  ·  " + chantier.stc() + " STC/sortie(s)."
-                : base + ".";
     }
 
     private JasperReport compiler(String nomFichier) {
