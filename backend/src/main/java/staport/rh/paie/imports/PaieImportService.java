@@ -92,6 +92,7 @@ public class PaieImportService {
 
             Map<String, Long> employesParCin = chargerEmployesParCin();
             Map<String, Long> chantiersParCode = chargerChantiersActifs();
+            Set<String> cinsTraites = new LinkedHashSet<>();
 
             int numeroLigne = 0;
             for (Row row : sheet) {
@@ -123,13 +124,14 @@ public class PaieImportService {
                 String equipe = getCellAsString(row.getCell(12));
 
                 String raison = validerLigne(cin, fonctionLibelle, chantierCode, nombreJoursTravailles,
-                        salaireMensuel,salaireTotal, employesParCin, chantiersParCode);
+                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
                     continue;
                 }
 
+                cinsTraites.add(cin.trim().toUpperCase());
                 Long employeeId = employesParCin.get(cin.trim().toUpperCase());
                 aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.trim(),
                         chantiersParCode.get(chantierCode.trim().toUpperCase()),
@@ -228,7 +230,8 @@ public class PaieImportService {
 
     private String validerLigne(String cin, String fonctionLibelle, String chantierCode,
                                  Integer nombreJoursTravailles, BigDecimal salaireMensuel,BigDecimal salaireTotal,
-                                 Map<String, Long> employesParCin, Map<String, Long> chantiersParCode) {
+                                 Set<String> cinsTraites, Map<String, Long> employesParCin,
+                                 Map<String, Long> chantiersParCode) {
         List<String> champsManquants = new ArrayList<>();
         if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
             champsManquants.add("Fonction");
@@ -249,7 +252,11 @@ public class PaieImportService {
             return "Champs obligatoires manquants ou invalides : " + String.join(", ", champsManquants);
         }
 
-        if (!employesParCin.containsKey(cin.trim().toUpperCase())) {
+        String cinNormalise = cin.trim().toUpperCase();
+        if (cinsTraites.contains(cinNormalise)) {
+            return "CIN en doublon dans le fichier";
+        }
+        if (!employesParCin.containsKey(cinNormalise)) {
             return "Employé introuvable avec ce CIN";
         }
         if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
