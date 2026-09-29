@@ -211,9 +211,11 @@ class PaieExportServiceTest {
             assertThat(workbook.getSheet("C059_EQUIPE A")).isNotNull();
             assertThat(workbook.getSheet("C059_EQUIPE B")).isNull();
             // La feuille chantier elle-même n'est jamais filtrée par la sélection des sous-feuilles équipe.
+            // Les deux lignes partagent la même fonction (OPERATEUR) : tri alphabétique par nom/prénom
+            // en second critère (demande explicite de direction, 2026-09-29) - "EMPLOYE DEUX" < "EMPLOYE UN".
             Sheet feuilleChantier = workbook.getSheet("C059");
-            assertThat(feuilleChantier.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
-            assertThat(feuilleChantier.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+            assertThat(feuilleChantier.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+            assertThat(feuilleChantier.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
         }
     }
 
@@ -240,10 +242,12 @@ class PaieExportServiceTest {
             assertThat(feuilleChantier.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
             assertThat(feuilleChantier.getRow(5).getCell(3).getStringCellValue()).isEqualTo("TOTAL GENERAL");
 
-            // La feuille GLB (tous chantiers) n'est jamais filtrée par cette exclusion : les deux lignes restent.
+            // La feuille GLB (tous chantiers) n'est jamais filtrée par cette exclusion : les deux lignes
+            // restent, triées alphabétiquement par nom/prénom (même fonction OPERATEUR pour les deux -
+            // demande explicite de direction, 2026-09-29) - "EMPLOYE DEUX" < "EMPLOYE UN".
             Sheet feuilleGlobale = workbook.getSheet("GLB");
-            assertThat(feuilleGlobale.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
-            assertThat(feuilleGlobale.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+            assertThat(feuilleGlobale.getRow(4).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE DEUX");
+            assertThat(feuilleGlobale.getRow(5).getCell(0).getStringCellValue()).isEqualTo("EMPLOYE UN");
         }
     }
 
