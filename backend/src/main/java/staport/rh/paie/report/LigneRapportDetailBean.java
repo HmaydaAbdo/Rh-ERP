@@ -29,7 +29,6 @@ public final class LigneRapportDetailBean {
     private final String chantierMasseMoyenneParEmploye;
     private final String chantierEffectifValeur;
     private final int chantierStc;
-    private final String chantierNarratif;
     private final List<RepartitionBean> chantierRepartitionEquipe;
     private final List<RepartitionBean> chantierEvolutionMensuelle;
     private final boolean chantierAvecDetailEquipe;
@@ -57,7 +56,7 @@ public final class LigneRapportDetailBean {
 
     LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur,
-                            int chantierStc, String chantierNarratif,
+                            int chantierStc,
                             List<RepartitionBean> chantierRepartitionEquipe,
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             boolean chantierAvecDetailEquipe,
@@ -74,7 +73,6 @@ public final class LigneRapportDetailBean {
         this.chantierMasseMoyenneParEmploye = chantierMasseMoyenneParEmploye;
         this.chantierEffectifValeur = chantierEffectifValeur;
         this.chantierStc = chantierStc;
-        this.chantierNarratif = chantierNarratif;
         this.chantierRepartitionEquipe = chantierRepartitionEquipe;
         this.chantierEvolutionMensuelle = chantierEvolutionMensuelle;
         this.chantierAvecDetailEquipe = chantierAvecDetailEquipe;
@@ -127,10 +125,6 @@ public final class LigneRapportDetailBean {
 
     public int getChantierStc() {
         return chantierStc;
-    }
-
-    public String getChantierNarratif() {
-        return chantierNarratif;
     }
 
     public List<RepartitionBean> getChantierRepartitionEquipe() {

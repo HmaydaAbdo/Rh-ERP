@@ -133,7 +133,7 @@ class PaieBiReportBuilder {
         // voir docs/report/rapport-v2.md).
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
-                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code), masseCourante,
+                .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code),
                         evolutions, equipesSelectionneesPour(requete, code)))
                 .toList();
 
@@ -155,7 +155,7 @@ class PaieBiReportBuilder {
         return equipes == null ? Set.of() : new HashSet<>(equipes);
     }
 
-    private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent, BigDecimal masseGlobale,
+    private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent,
                                        EvolutionParNiveau evolutions, Set<String> equipesSelectionnees) {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
@@ -198,7 +198,6 @@ class PaieBiReportBuilder {
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
                 PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
-                PaieReportNumberFormat.part(masseChantier, masseGlobale),
                 stc,
                 versRepartition(agregatEquipe),
                 evolutions.pourChantier(code),
