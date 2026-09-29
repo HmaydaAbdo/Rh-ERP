@@ -71,11 +71,20 @@ public class PaieReportPdfService {
      * numérotation des chantiers (voir {@link #chapitreChantier}), désormais II au lieu de III. */
     private static final int CHAPITRES_FIXES = 1;
 
-    /** Nombre de dernières lignes employé d'une section qu'il faut GARDER AVEC le groupFooter (TOTAL
-     * GENERAL + récaps) qui les suit (demande explicite de direction, 2026-09-29 : le bloc des totaux
-     * ne doit jamais apparaître seul en haut d'une page) — voir {@code GroupQueueEquipe} dans
-     * rapport.jrxml et le Javadoc de {@link LigneRapportDetailBean#getDernieresLignesEquipe()}. */
-    private static final int RESERVE_DERNIERES_LIGNES_EQUIPE = 4;
+    /** Constantes de mise en page utilisées UNIQUEMENT par {@link #calculerSautPage} pour prédire,
+     * arithmétiquement, où le tableau employé de chaque section équipe déborderait naturellement de
+     * page en page — jamais consommées ailleurs (la mise en page réelle reste entièrement pilotée par
+     * {@code rapport.jrxml}) : toutes tirées telles quelles des attributs du gabarit
+     * ({@code pageWidth}/{@code pageHeight}/marges, hauteur du {@code pageHeader}/{@code pageFooter},
+     * hauteur du {@code groupHeader} de {@code GroupEquipe}, hauteur de la bande {@code <detail>}) — à
+     * maintenir manuellement synchronisées si l'un de ces attributs change un jour dans le gabarit
+     * (aucun moyen de les lire dynamiquement depuis un simple {@code JasperReport} compilé sans risquer
+     * l'aller-retour que {@code docs/report/README.md} déconseille). Voir le Javadoc de
+     * {@link #calculerSautPage} pour l'algorithme complet. */
+    private static final int PAGE_HAUTEUR_UTILE = 495; // 595 (pageHeight) - 20 - 20 (marges) - 40 (pageHeader) - 20 (pageFooter)
+    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 56; // GroupEquipe.groupHeader, 1re page d'une section seulement
+    private static final int LIGNE_HAUTEUR = 16; // <detail>
+    private static final int GROUPE_EQUIPE_PIED_RESERVE = 220; // GroupEquipe.groupFooter, hauteur nominale (voir son commentaire dans rapport.jrxml)
 
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
@@ -230,12 +239,8 @@ public class PaieReportPdfService {
             for (EquipeBiVue equipe : chantier.equipes()) {
                 List<LigneEmployeVue> employes = equipe.employes();
                 int total = employes.size();
+                int indexSautPage = calculerSautPage(total);
                 for (int i = 0; i < total; i++) {
-                    // >= et non == : si la section compte 4 employés ou moins, TOUTES ses lignes sont
-                    // "les 4 dernières" — GroupQueueEquipe (rapport.jrxml) englobe alors la section
-                    // entière, sans effet indésirable (juste ce qu'on veut : jamais de total isolé même
-                    // pour une toute petite section).
-                    boolean dernieresLignesEquipe = i >= total - RESERVE_DERNIERES_LIGNES_EQUIPE;
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur,
@@ -246,11 +251,72 @@ public class PaieReportPdfService {
                             equipe.stc(), equipe.montantMoisPrecedentOuIntrouvable(), equipe.repartitionFonction(),
                             equipe.materiel(),
                             employes.get(i),
-                            dernieresLignesEquipe));
+                            i == indexSautPage));
                 }
             }
         }
         return lignes;
+    }
+
+    /** Calcule, pour une section équipe de {@code total} employés, l'index 0-based (dans cette
+     * section) de la ligne devant porter {@code sautPageAvant=true} — ou {@code -1} si aucun saut
+     * anticipé n'est nécessaire (voir le champ {@code $F{sautPageAvant}} de rapport.jrxml et son
+     * {@code <break type="Page">} en tête de la bande {@code <detail>}).
+     *
+     * <p><b>Pourquoi un calcul arithmétique plutôt qu'une astuce JasperReports</b> (demande explicite
+     * de direction, 2026-09-29 : le bloc TOTAL GENERAL ne doit jamais apparaître seul en haut d'une
+     * page) : un premier essai, un groupe JRXML imbriqué gardant les 4 dernières lignes ensemble via
+     * {@code keepTogether}, s'est révélé insuffisant sur données réelles — d'une part 4 lignes (64px)
+     * ne suffisent pas à garantir que le groupFooter (jusqu'à {@value #GROUPE_EQUIPE_PIED_RESERVE}px)
+     * tienne derrière elles, d'autre part JasperReports décide qu'une bande "tient" sur la page
+     * courante en comparant sa HAUTEUR DÉCLARÉE à l'espace restant, jamais sa hauteur réellement
+     * nécessaire — un groupFooter peut donc être intégralement repoussé même quand il resterait
+     * largement la place pour son contenu réel (peu de fonctions/matériel ce mois-ci). Cette méthode
+     * contourne cette limite en prédisant, par le calcul, EXACTEMENT où JasperReports ferait déborder
+     * chaque page (la hauteur de ligne, des bandeaux et des marges sont toutes des constantes fixes du
+     * gabarit, jamais du texte à hauteur variable) et en forçant un unique saut de page anticipé
+     * lorsque la dernière page ainsi prédite ne laisserait pas la place à
+     * {@value #GROUPE_EQUIPE_PIED_RESERVE}px de groupFooter.
+     *
+     * <p>Principe : simule le remplissage NATUREL des pages (1re page : {@code
+     * GROUPE_EQUIPE_ENTETE_HAUTEUR} + lignes ; pages suivantes : lignes seules, l'en-tête de section
+     * n'étant jamais réimprimé — voir {@code isReprintHeaderOnEachPage="false"}), à pleine capacité
+     * SANS réserver de place pour le footer. Si la DERNIÈRE de ces pages naturelles dépasse la
+     * capacité qu'elle aurait AVEC le footer réservé, l'excédent est déplacé vers une page
+     * supplémentaire via un unique saut de page anticipé — jamais recalculé pour les pages
+     * précédentes, qui débordent normalement (débordement JasperReports natif, inchangé). */
+    int calculerSautPage(int total) {
+        int capPremiereSansFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_ENTETE_HAUTEUR) / LIGNE_HAUTEUR;
+        int capPremiereAvecFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_ENTETE_HAUTEUR - GROUPE_EQUIPE_PIED_RESERVE) / LIGNE_HAUTEUR;
+        int capContinuationSansFooter = PAGE_HAUTEUR_UTILE / LIGNE_HAUTEUR;
+        int capContinuationAvecFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_PIED_RESERVE) / LIGNE_HAUTEUR;
+
+        if (total <= capPremiereAvecFooter) {
+            return -1; // tout (lignes + footer) tient sur la seule 1re page, aucun saut à forcer
+        }
+
+        // Simule le remplissage naturel jusqu'à trouver la taille de la DERNIÈRE page, et si c'est
+        // encore la 1re page de la section ou déjà une page de continuation (les 2 capacités "avec
+        // footer" diffèrent, voir plus haut) — total > capPremiereAvecFooter est déjà acquis ci-dessus,
+        // mais NE garantit PAS que la section déborde sur plusieurs pages (total peut très bien rester
+        // ≤ capPremiereSansFooter, auquel cas la 1re page reste aussi la dernière).
+        int taillePageCourante;
+        boolean dernierePageEstPremiere;
+        if (total <= capPremiereSansFooter) {
+            taillePageCourante = total;
+            dernierePageEstPremiere = true;
+        } else {
+            dernierePageEstPremiere = false;
+            int restant = (total - capPremiereSansFooter) % capContinuationSansFooter;
+            taillePageCourante = restant == 0 ? capContinuationSansFooter : restant;
+        }
+
+        int capDerniereAvecFooter = dernierePageEstPremiere ? capPremiereAvecFooter : capContinuationAvecFooter;
+        if (taillePageCourante <= capDerniereAvecFooter) {
+            return -1; // la dernière page naturelle laisse déjà la place au footer
+        }
+        int aDeplacer = taillePageCourante - capDerniereAvecFooter;
+        return total - aDeplacer; // 1er index (0-based) de la nouvelle dernière page, avec le footer
     }
 
     private JasperPrint remplir(JasperReport report, Map<String, Object> parametres, net.sf.jasperreports.engine.JRDataSource datasource) {

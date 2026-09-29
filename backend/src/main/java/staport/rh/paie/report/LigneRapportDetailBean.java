@@ -24,14 +24,17 @@ import java.util.List;
  * pageHeader/pageFooter) — {@code equipeNom} reste le code brut, réservé aux mécanismes internes
  * (ancre de page, comparaison avec {@code chantierCode}), voir le Javadoc de {@code EquipeBiVue}.
  *
- * <p>{@code dernieresLignesEquipe} : {@code true} pour les 4 dernières lignes employé de la section en
- * cours (voir {@code PaieReportPdfService.RESERVE_DERNIERES_LIGNES}) — pilote le
- * {@code groupExpression} du groupe JRXML imbriqué {@code GroupQueueEquipe}
- * ({@code keepTogether="true"}), dont le seul rôle est d'empêcher le bloc TOTAL GENERAL de se
- * retrouver seul en haut d'une page sans aucun employé au-dessus (demande explicite de direction,
- * 2026-09-29) : si ces 4 lignes ne tiennent pas dans l'espace restant, JasperReports les bascule EN
- * BLOC sur la page suivante, où le groupFooter (juste derrière) a alors largement la place de
- * s'imprimer à leur suite.
+ * <p>{@code sautPageAvant} : {@code true} sur EXACTEMENT la ligne (s'il y en a une) où
+ * {@code PaieReportPdfService.calculerSautPage} a déterminé qu'un saut de page anticipé est
+ * nécessaire pour que le groupFooter de GroupEquipe (TOTAL GENERAL + récaps) ne se retrouve jamais
+ * seul en haut d'une page sans aucun employé au-dessus (demande explicite de direction, 2026-09-29) —
+ * pilote un {@code <break type="Page">} au tout début de la bande {@code <detail>} de
+ * {@code rapport.jrxml}. Calcul arithmétique exact (hauteur de page/marges/bandeaux/ligne tous
+ * constants, voir le Javadoc de la méthode), PAS une heuristique JasperReports ni un groupe JRXML
+ * supplémentaire : un premier essai avec un groupe imbriqué gardant les 4 dernières lignes ensemble
+ * s'est révélé insuffisant sur données réelles (4 lignes ne suffisent pas à garantir que le footer,
+ * jusqu'à 220px, tienne derrière elles) et semble avoir provoqué des pages totalement blanches à
+ * certaines frontières de section.
  */
 public final class LigneRapportDetailBean {
 
@@ -67,7 +70,7 @@ public final class LigneRapportDetailBean {
     private final String salaireTotal;
     private final String observation;
     private final String employeEquipeReelle;
-    private final boolean dernieresLignesEquipe;
+    private final boolean sautPageAvant;
 
     LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur,
@@ -81,7 +84,7 @@ public final class LigneRapportDetailBean {
                             List<RepartitionBean> equipeRepartitionFonction,
                             List<MaterielLigneVue> equipeMateriel,
                             LigneEmployeVue employe,
-                            boolean dernieresLignesEquipe) {
+                            boolean sautPageAvant) {
         this.chantierCode = chantierCode;
         this.chantierIdentifiant = chantierIdentifiant;
         this.chantierTitre = chantierTitre;
@@ -114,7 +117,7 @@ public final class LigneRapportDetailBean {
         this.salaireTotal = employe.salaireTotal();
         this.observation = employe.observation();
         this.employeEquipeReelle = employe.equipeReelle();
-        this.dernieresLignesEquipe = dernieresLignesEquipe;
+        this.sautPageAvant = sautPageAvant;
     }
 
     public String getChantierCode() {
@@ -245,7 +248,7 @@ public final class LigneRapportDetailBean {
         return employeEquipeReelle;
     }
 
-    public boolean getDernieresLignesEquipe() {
-        return dernieresLignesEquipe;
+    public boolean getSautPageAvant() {
+        return sautPageAvant;
     }
 }
