@@ -71,6 +71,12 @@ public class PaieReportPdfService {
      * numérotation des chantiers (voir {@link #chapitreChantier}), désormais II au lieu de III. */
     private static final int CHAPITRES_FIXES = 1;
 
+    /** Nombre de dernières lignes employé d'une section qu'il faut GARDER AVEC le groupFooter (TOTAL
+     * GENERAL + récaps) qui les suit (demande explicite de direction, 2026-09-29 : le bloc des totaux
+     * ne doit jamais apparaître seul en haut d'une page) — voir {@code GroupQueueEquipe} dans
+     * rapport.jrxml et le Javadoc de {@link LigneRapportDetailBean#getDernieresLignesEquipe()}. */
+    private static final int RESERVE_DERNIERES_LIGNES_EQUIPE = 4;
+
     /** Enregistrée une seule fois par JVM (bloc statique, chargé avant toute instanciation de ce
      * service) : rend la police "Liberation Serif" disponible à AWT indépendamment de ce qui est
      * installé au niveau du système d'exploitation qui exécute le backend. L'extension de police
@@ -222,17 +228,25 @@ public class PaieReportPdfService {
             String chantierMasseLigne = masseLigne(chantier.masse());
             String chantierEffectifValeur = PaieReportNumberFormat.entier(chantier.effectif().effectifCourant());
             for (EquipeBiVue equipe : chantier.equipes()) {
-                for (LigneEmployeVue employe : equipe.employes()) {
+                List<LigneEmployeVue> employes = equipe.employes();
+                int total = employes.size();
+                for (int i = 0; i < total; i++) {
+                    // >= et non == : si la section compte 4 employés ou moins, TOUTES ses lignes sont
+                    // "les 4 dernières" — GroupQueueEquipe (rapport.jrxml) englobe alors la section
+                    // entière, sans effet indésirable (juste ce qu'on veut : jamais de total isolé même
+                    // pour une toute petite section).
+                    boolean dernieresLignesEquipe = i >= total - RESERVE_DERNIERES_LIGNES_EQUIPE;
                     lignes.add(new LigneRapportDetailBean(
                             chantier.code(), chantier.identifiant(), chantierTitreNumerote, chantierMasseLigne, chantier.masseMoyenneParEmploye(),
                             chantierEffectifValeur,
                             chantier.stc(),
                             chantier.repartitionEquipe(), chantier.evolutionMensuelle(),
                             chantier.avecDetailEquipe(),
-                            equipe.nom(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
+                            equipe.nom(), equipe.libelleAffiche(), equipe.titre(), equipe.effectif(), equipe.masse(), equipe.partChantierPourcent(),
                             equipe.stc(), equipe.montantMoisPrecedentOuIntrouvable(), equipe.repartitionFonction(),
                             equipe.materiel(),
-                            employe));
+                            employes.get(i),
+                            dernieresLignesEquipe));
                 }
             }
         }

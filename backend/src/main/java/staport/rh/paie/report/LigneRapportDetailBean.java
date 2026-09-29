@@ -19,6 +19,19 @@ import java.util.List;
  * rapport.jrxml) — pas le déclenchement du groupe lui-même (qui reste sur {@code $F{chantierCode}},
  * comme {@code GroupChantierEvolution}) : quand {@code false}, la bande entière est absente (hauteur
  * nulle, aucun espace réservé), jamais un contenu masqué élément par élément.
+ *
+ * <p>{@code equipeLibelleAffiche} : nom complet de l'équipe pour AFFICHAGE (bandeau CHANTIER/ÉQUIPE du
+ * pageHeader/pageFooter) — {@code equipeNom} reste le code brut, réservé aux mécanismes internes
+ * (ancre de page, comparaison avec {@code chantierCode}), voir le Javadoc de {@code EquipeBiVue}.
+ *
+ * <p>{@code dernieresLignesEquipe} : {@code true} pour les 4 dernières lignes employé de la section en
+ * cours (voir {@code PaieReportPdfService.RESERVE_DERNIERES_LIGNES}) — pilote le
+ * {@code groupExpression} du groupe JRXML imbriqué {@code GroupQueueEquipe}
+ * ({@code keepTogether="true"}), dont le seul rôle est d'empêcher le bloc TOTAL GENERAL de se
+ * retrouver seul en haut d'une page sans aucun employé au-dessus (demande explicite de direction,
+ * 2026-09-29) : si ces 4 lignes ne tiennent pas dans l'espace restant, JasperReports les bascule EN
+ * BLOC sur la page suivante, où le groupFooter (juste derrière) a alors largement la place de
+ * s'imprimer à leur suite.
  */
 public final class LigneRapportDetailBean {
 
@@ -33,6 +46,7 @@ public final class LigneRapportDetailBean {
     private final List<RepartitionBean> chantierEvolutionMensuelle;
     private final boolean chantierAvecDetailEquipe;
     private final String equipeNom;
+    private final String equipeLibelleAffiche;
     private final String equipeTitre;
     private final int equipeEffectif;
     private final String equipeMasse;
@@ -53,6 +67,7 @@ public final class LigneRapportDetailBean {
     private final String salaireTotal;
     private final String observation;
     private final String employeEquipeReelle;
+    private final boolean dernieresLignesEquipe;
 
     LigneRapportDetailBean(String chantierCode, String chantierIdentifiant, String chantierTitre, String chantierMasseLigne,
                             String chantierMasseMoyenneParEmploye, String chantierEffectifValeur,
@@ -60,12 +75,13 @@ public final class LigneRapportDetailBean {
                             List<RepartitionBean> chantierRepartitionEquipe,
                             List<RepartitionBean> chantierEvolutionMensuelle,
                             boolean chantierAvecDetailEquipe,
-                            String equipeNom, String equipeTitre, int equipeEffectif, String equipeMasse,
+                            String equipeNom, String equipeLibelleAffiche, String equipeTitre, int equipeEffectif, String equipeMasse,
                             String equipePartChantierPourcent, int equipeStc,
                             String equipeMontantMoisPrecedentOuIntrouvable,
                             List<RepartitionBean> equipeRepartitionFonction,
                             List<MaterielLigneVue> equipeMateriel,
-                            LigneEmployeVue employe) {
+                            LigneEmployeVue employe,
+                            boolean dernieresLignesEquipe) {
         this.chantierCode = chantierCode;
         this.chantierIdentifiant = chantierIdentifiant;
         this.chantierTitre = chantierTitre;
@@ -77,6 +93,7 @@ public final class LigneRapportDetailBean {
         this.chantierEvolutionMensuelle = chantierEvolutionMensuelle;
         this.chantierAvecDetailEquipe = chantierAvecDetailEquipe;
         this.equipeNom = equipeNom;
+        this.equipeLibelleAffiche = equipeLibelleAffiche;
         this.equipeTitre = equipeTitre;
         this.equipeEffectif = equipeEffectif;
         this.equipeMasse = equipeMasse;
@@ -97,6 +114,7 @@ public final class LigneRapportDetailBean {
         this.salaireTotal = employe.salaireTotal();
         this.observation = employe.observation();
         this.employeEquipeReelle = employe.equipeReelle();
+        this.dernieresLignesEquipe = dernieresLignesEquipe;
     }
 
     public String getChantierCode() {
@@ -141,6 +159,10 @@ public final class LigneRapportDetailBean {
 
     public String getEquipeNom() {
         return equipeNom;
+    }
+
+    public String getEquipeLibelleAffiche() {
+        return equipeLibelleAffiche;
     }
 
     public String getEquipeTitre() {
@@ -221,5 +243,9 @@ public final class LigneRapportDetailBean {
 
     public String getEmployeEquipeReelle() {
         return employeEquipeReelle;
+    }
+
+    public boolean getDernieresLignesEquipe() {
+        return dernieresLignesEquipe;
     }
 }

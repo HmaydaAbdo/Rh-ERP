@@ -49,13 +49,16 @@
                  chantier — voir le Javadoc de EquipeBiVue) — un employé n'apparaît JAMAIS dans deux
                  sections (contrairement à l'export Excel). Si aucune équipe n'a été sélectionnée pour
                  ce chantier (3.2 absente), une seule section réunit tous ses employés. Chaque section :
-                 tableau employé trié par fonction (la fonction consommant le plus de masse en premier,
-                 voir PaieBiReportBuilder.equipeVue), puis, collés directement au bas de ce tableau
-                 (groupFooter) : lignes TOTAL GENERAL / TOTAL GENERAL MOIS PRECEDENT, tableau récap
-                 Fonction/Effectif/STC (sous-rapport, nombre de lignes variable — voir
-                 recap-fonction.jrxml), et, pour le chantier "C168" équipes "CH"/"OP" uniquement (voir
-                 MaterielChantierCatalogue), le squelette "parc matériel" à remplir au stylo
-                 (recap-materiel.jrxml).
+                 tableau employé trié par ordre ALPHABÉTIQUE de fonction (demande explicite de
+                 direction, 2026-09-29 — voir PaieBiReportBuilder.equipeVue), puis, collés directement
+                 au bas de ce tableau (groupFooter) : lignes TOTAL GENERAL / TOTAL GENERAL MOIS
+                 PRECEDENT, tableau récap Fonction/Effectif/STC (sous-rapport, nombre de lignes
+                 variable, trié dans le même ordre alphabétique — voir recap-fonction.jrxml), et, pour
+                 le chantier "C168" équipes "CH"/"OP" uniquement (voir MaterielChantierCatalogue), le
+                 squelette "parc matériel" à remplir au stylo (recap-materiel.jrxml). Ce groupFooter ne
+                 se retrouve jamais seul en haut d'une page sans employé au-dessus (demande explicite de
+                 direction, 2026-09-29) : voir GroupQueueEquipe, groupe imbriqué juste après GroupEquipe
+                 plus bas, qui réserve les 4 dernières lignes employé de chaque section avec lui.
           Toutes ces sections partagent la même source de données à plat (un employé par ligne).
      Style documentaire entièrement noir/blanc/gris (aucune couleur décorative) — seuls les
      <barChart>/<lineChart> conservent des couleurs (bleu masse, orange effectif, rouge sourd STC —
@@ -135,6 +138,12 @@
          (pilote le printWhenExpression de la bande GroupChantier ci-dessous, chantier par chantier). -->
     <field name="chantierAvecDetailEquipe" class="java.lang.Boolean"/>
     <field name="equipeNom" class="java.lang.String"/>
+    <!-- Nom complet d'affichage de l'équipe (voir staport.rh.paie.reporting.EquipeLibelleCatalogue,
+         "CHAUFFEURS" pour equipeNom="CH") — demande explicite de direction, 2026-09-29 : les noms
+         complets priment partout à l'affichage, jamais le code brut. equipeNom reste réservé aux
+         mécanismes internes (voir son commentaire ci-dessus) ; sans signification pour une section
+         "reste" (non utilisé dans ce cas, voir le pageHeader plus bas). -->
+    <field name="equipeLibelleAffiche" class="java.lang.String"/>
     <field name="equipeTitre" class="java.lang.String"/>
     <field name="equipeEffectif" class="java.lang.Integer"/>
     <field name="equipeMasse" class="java.lang.String"/>
@@ -154,12 +163,17 @@
     <field name="primeRoulageDimanche" class="java.lang.String"/>
     <field name="salaireTotal" class="java.lang.String"/>
     <field name="observation" class="java.lang.String"/>
-    <!-- Vraie équipe de l'employé ("Sans équipe" incluse) — chaîne vide dans une section équipe
-         sélectionnée (redondante avec le titre de section), renseignée uniquement dans la section
-         "reste" (voir PaieBiReportBuilder.ligneEmploye/afficherEquipeReelle et le Javadoc de
+    <!-- Vraie équipe de l'employé, nom complet d'affichage (voir EquipeLibelleCatalogue), chaîne VIDE
+         si l'employé n'a aucune équipe renseignée (jamais "Sans équipe" — demande explicite de
+         direction, 2026-09-29) — chaîne vide également dans une section équipe sélectionnée
+         (redondante avec le titre de section), renseignée uniquement dans la section "reste" (voir
+         PaieBiReportBuilder.ligneEmploye/afficherEquipeReelle et le Javadoc de
          LigneEmployeVue.equipeReelle) : c'est la VALEUR, jamais la visibilité de la cellule, qui
          porte cette distinction. -->
     <field name="employeEquipeReelle" class="java.lang.String"/>
+    <!-- Voir le Javadoc de LigneRapportDetailBean.getDernieresLignesEquipe() — pilote GroupQueueEquipe
+         (voir plus bas, juste après GroupEquipe). -->
+    <field name="dernieresLignesEquipe" class="java.lang.Boolean"/>
 
     <!-- Groupes à expression constante : leur en-tête s'imprime une seule fois, au tout début du
          document (le premier enregistrement fait toujours "changer" l'expression depuis null) —
@@ -775,6 +789,31 @@
         </groupFooter>
     </group>
 
+    <!-- Groupe imbriqué SANS AUCUN CONTENU (header/footer à hauteur 0) — son seul rôle : forcer
+         JasperReports à traiter les 4 dernières lignes employé de chaque section comme un bloc
+         insécable (keepTogether="true"), pour que le groupFooter de GroupEquipe juste au-dessus
+         (TOTAL GENERAL + récaps) ne se retrouve jamais seul en haut d'une page sans aucun employé
+         visible (demande explicite de direction, 2026-09-29) : si ces 4 lignes ne tiennent pas dans
+         l'espace restant de la page courante, JasperReports les bascule ENTIÈREMENT sur la page
+         suivante (jamais scindées entre elles), où le groupFooter — imprimé juste à leur suite,
+         puisque GroupEquipe reste keepTogether="false" — a alors largement la place de s'imprimer
+         immédiatement après. isStartNewPage="false" : ce groupe ne force JAMAIS un saut de page à lui
+         seul, il ne fait que le rendre nécessaire quand la place manque réellement (voir
+         PaieReportPdfService.RESERVE_DERNIERES_LIGNES_EQUIPE et le Javadoc de
+         LigneRapportDetailBean.getDernieresLignesEquipe() pour le calcul de $F{dernieresLignesEquipe}).
+         Déclaré ICI (après GroupEquipe, avant <detail>) pour être le groupe le plus IMBRIQUÉ du
+         gabarit — l'ordre de déclaration des <group> détermine leur imbrication en JRXML, jamais un
+         attribut explicite. -->
+    <group name="GroupQueueEquipe" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="true">
+        <groupExpression><![CDATA[$F{dernieresLignesEquipe}]]></groupExpression>
+        <groupHeader>
+            <band height="0"/>
+        </groupHeader>
+        <groupFooter>
+            <band height="0"/>
+        </groupFooter>
+    </group>
+
     <!-- ================================ PAGE DE GARDE (title) ================================
          Contenu volontairement simple et statique (pas de graphique, pas de tableau) — une vraie
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
@@ -904,12 +943,15 @@
            - "GLOBAL" tant que $V{PAGE_NUMBER} précède la première page chantier (page de garde,
              synthèse globale, répartition par chantier — voir P_PAGE_PREMIER_CHANTIER, calculé via
              un premier passage de découverte, voir PaieReportPdfService.generer) ;
-           - "CHANTIER : <identifiant>  ·  ÉQUIPE : <nom>" une fois entré dans la boucle chantier/équipe
-             ($F{chantierIdentifiant}/$F{equipeNom} y sont alors les vraies valeurs de la ligne en cours
-             de traitement, contrairement aux pages globales où ce sont algébriquement les valeurs de la
-             toute première ligne du document — d'où le seuil de page plutôt qu'un test sur ces champs) ;
-           - "CHANTIER : <identifiant>" SEUL (sans "· ÉQUIPE"), quand $F{equipeNom} vaut le CODE
-             CHANTIER plutôt qu'une vraie équipe (voir le Javadoc de EquipeBiVue : le "reste" du
+           - "CHANTIER : <identifiant>  ·  ÉQUIPE : <nom complet>" une fois entré dans la boucle
+             chantier/équipe ($F{chantierIdentifiant}/$F{equipeLibelleAffiche} y sont alors les vraies
+             valeurs de la ligne en cours de traitement, contrairement aux pages globales où ce sont
+             algébriquement les valeurs de la toute première ligne du document — d'où le seuil de page
+             plutôt qu'un test sur ces champs) — $F{equipeLibelleAffiche} porte le NOM COMPLET
+             d'affichage (voir EquipeLibelleCatalogue), jamais $F{equipeNom} (code brut, réservé au
+             test de sentinelle ci-dessous) ;
+           - "CHANTIER : <identifiant>" SEUL (sans "· ÉQUIPE"), quand $F{equipeNom} (code brut) vaut le
+             CODE CHANTIER plutôt qu'une vraie équipe (voir le Javadoc de EquipeBiVue : le "reste" du
              chantier, ou sa seule section quand aucune équipe n'a été sélectionnée) — l'afficher tel
              quel aurait donné un doublon trompeur ("CHANTIER : C085 · ÉQUIPE : C085"). -->
     <pageHeader>
@@ -953,7 +995,7 @@
             <textField>
                 <reportElement x="478" y="8" width="316" height="14" forecolor="#000000"/>
                 <textElement verticalAlignment="Middle"><font fontName="Liberation Serif" size="9" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeLibelleAffiche}))]]></textFieldExpression>
             </textField>
 
             <line>
@@ -1065,7 +1107,7 @@
             <textField>
                 <reportElement x="10" y="5" width="400" height="12" forecolor="#595959"/>
                 <textElement textAlignment="Left"><font fontName="Liberation Serif" size="8.5"/></textElement>
-                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeNom}))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$V{PAGE_NUMBER} < $P{P_PAGE_PREMIER_CHANTIER} ? "GLOBAL" : ($F{equipeNom}.equals($F{chantierCode}) ? ("CHANTIER : " + $F{chantierIdentifiant}) : ("CHANTIER : " + $F{chantierIdentifiant} + "  ·  ÉQUIPE : " + $F{equipeLibelleAffiche}))]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="602" y="5" width="150" height="12" forecolor="#595959"/>

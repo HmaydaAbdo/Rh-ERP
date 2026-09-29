@@ -6,11 +6,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.reporting.EquipeLibelleCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,9 +36,18 @@ class PaieSheetWriter {
         ecrireTitre(sheet, styles, titreZone, periode);
         ecrireEntetes(sheet, styles);
 
+        // Tri alphabétique par Fonction (demande explicite de direction, 2026-09-29 — auparavant
+        // l'ordre brut de la requête, sans tri) : nom/prénom en second critère. Tri à l'écriture
+        // uniquement — n'affecte ni les totaux (SUBTOTAL sur la plage, indifférent à l'ordre) ni le
+        // tableau "effectif par fonction" ci-dessous (déjà regroupé/trié indépendamment via TreeMap).
+        List<Paie> lignesTriees = lignes.stream()
+                .sorted(Comparator.comparing((Paie p) -> p.getFonction().getLibelle(), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(p -> p.getEmployee().getNomPrenom(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+
         int premiereLigneDonnees = 4;
         int ligneCourante = premiereLigneDonnees;
-        for (Paie paie : lignes) {
+        for (Paie paie : lignesTriees) {
             ecrireLigneEmploye(sheet, styles, ligneCourante++, paie);
         }
         int derniereLigneDonnees = ligneCourante - 1;
@@ -103,7 +114,7 @@ class PaieSheetWriter {
         ecrireMontant(ligne, 9, paie.getSalaireTotal(), styles.donneeMontant);
         ecrireTexte(ligne, 10, paie.getObservation(), styles.donneeCentre);
         ecrireTexte(ligne, 11, paie.getChantier().getCode(), styles.donneeCentre);
-        ecrireTexte(ligne, 12, paie.getEquipe(), styles.donneeCentre);
+        ecrireTexte(ligne, 12, EquipeLibelleCatalogue.libelle(paie.getEquipe()), styles.donneeCentre);
     }
 
     private int ecrireLigneTotal(Sheet sheet, PaieExcelStyles styles, int indexLigne, String libelle,
