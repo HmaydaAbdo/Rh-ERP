@@ -28,7 +28,7 @@ final class RapportChartSvgBuilder {
     private static final double LARGEUR_LABEL_CATEGORIE = 140;
     private static final double MARGE_DROITE = 65;
     private static final double LARGEUR_PLOT = LARGEUR_TOTALE - LARGEUR_LABEL_CATEGORIE - MARGE_DROITE;
-    private static final double HAUTEUR_TOTALE_CHART = 370;
+    private static final double HAUTEUR_TOTALE_CHART = 340;
     private static final double HAUTEUR_LEGENDE = 24;
     private static final double HAUTEUR_CATEGORIE_MAX = 44;
 
@@ -67,8 +67,8 @@ final class RapportChartSvgBuilder {
 
         Element svg = container.appendElement("svg")
                 .attr("xmlns", "http://www.w3.org/2000/svg")
-                .attr("width", String.valueOf(Math.round(LARGEUR_TOTALE)))
-                .attr("height", String.valueOf(Math.round(hauteurSvg)))
+                .attr("width", format(LARGEUR_TOTALE * 4 / 3) + "px")
+                .attr("height", format(hauteurSvg * 4 / 3) + "px")
                 .attr("viewBox", "0 0 " + format(LARGEUR_TOTALE) + " " + format(hauteurSvg));
 
         double groupeHauteur = hauteurCategorie * 0.85;

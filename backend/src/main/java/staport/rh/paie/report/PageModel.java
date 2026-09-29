@@ -42,7 +42,8 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
      * 1re page de la section (voir {@code isReprintHeaderOnEachPage=false} de l'ancien gabarit,
      * comportement délibérément reconduit : une page de continuation ne réaffiche jamais les
      * en-têtes de colonnes). */
-    record BlocTableauEmployes(List<LigneEmployeVue> lignes, boolean avecEnTeteColonnes) implements Bloc {
+    record BlocTableauEmployes(List<LigneEmployeVue> lignes, boolean avecEnTeteColonnes,
+                               boolean avecColonneEquipe) implements Bloc {
     }
 
     /** Pied de section équipe — tableau récap Fonction/Effectif/STC (toujours) + squelette parc
