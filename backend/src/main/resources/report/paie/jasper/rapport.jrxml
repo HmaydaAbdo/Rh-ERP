@@ -827,7 +827,7 @@
                         <printWhenExpression><![CDATA[$F{equipeMateriel} != null && !$F{equipeMateriel}.isEmpty()]]></printWhenExpression>
                     </reportElement>
                     <textElement><font fontName="Liberation Serif" size="9.5" isBold="true" isItalic="true"/></textElement>
-                    <text><![CDATA[Parc matériel (à remplir)]]></text>
+                    <text><![CDATA[Parc matériel]]></text>
                 </staticText>
                 <subreport>
                     <reportElement x="420" y="16" width="250" height="18"/>
