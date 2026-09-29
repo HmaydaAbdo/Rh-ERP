@@ -82,13 +82,19 @@ public class PaieReportPdfService {
      * l'aller-retour que {@code docs/report/README.md} déconseille). Voir le Javadoc de
      * {@link #calculerSautPage} pour l'algorithme complet. */
     private static final int PAGE_HAUTEUR_UTILE = 495; // 595 (pageHeight) - 20 - 20 (marges) - 40 (pageHeader) - 20 (pageFooter)
-    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 56; // GroupEquipe.groupHeader, 1re page d'une section seulement
+    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 100; // GroupEquipe.groupHeader, 1re page d'une section seulement (4 cartes KPI, voir rapport.jrxml)
     private static final int LIGNE_HAUTEUR = 16; // <detail>
 
     /** Hauteur du groupFooter de GroupEquipe AVANT la première ligne du tableau récap
-     * Fonction/Effectif/STC (2 lignes TOTAL GENERAL + libellé "Répartition par fonction" + en-tête du
-     * sous-rapport recap-fonction.jrxml, voir son <columnHeader>) — fixe, ne dépend d'aucune donnée. */
-    private static final int PIED_HAUTEUR_BASE = 78;
+     * Fonction/Effectif/STC (libellé "Répartition par fonction" + en-tête du sous-rapport
+     * recap-fonction.jrxml, voir son <columnHeader>) — fixe, ne dépend d'aucune donnée. Les lignes
+     * TOTAL GENERAL / TOTAL GENERAL MOIS PRECEDENT, qui occupaient jusqu'ici les 32 premiers pixels
+     * de cette bande, ont été déplacées vers des cartes KPI à hauteur fixe dans le groupHeader
+     * (demande explicite de direction, 2026-09-29 — voir GROUPE_EQUIPE_ENTETE_HAUTEUR ci-dessus) : un
+     * indicateur à hauteur fixe ne peut plus jamais se retrouver seul en haut d'une page, contrairement
+     * à une ligne au bas d'un tableau à hauteur variable — la cause structurelle du problème est ainsi
+     * éliminée pour ces 2 indicateurs, pas seulement contournée par un calcul. */
+    private static final int PIED_HAUTEUR_BASE = 34;
 
     /** Hauteur d'une ligne du tableau récap Fonction/Effectif/STC ou du squelette matériel (même
      * valeur pour les deux, voir recap-fonction.jrxml/recap-materiel.jrxml, <detail><band height="15">) —

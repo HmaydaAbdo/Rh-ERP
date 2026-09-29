@@ -89,10 +89,10 @@ class PaieReportPdfServiceTest {
      * est une valeur empirique (voir son Javadoc côté production) : le contenu total d'une page qui
      * porte le groupFooter (lignes employé de cette page + groupFooter complet) ne doit jamais la
      * dépasser, sous peine de page blanche produite par JasperReports. */
-    private static final int CAP_PREMIERE_SANS_FOOTER = 27;
+    private static final int CAP_PREMIERE_SANS_FOOTER = 24;
     private static final int CAP_CONTINUATION_SANS_FOOTER = 30;
-    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 56;
-    private static final int PIED_HAUTEUR_BASE = 78;
+    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 100;
+    private static final int PIED_HAUTEUR_BASE = 34;
     private static final int LIGNE_RECAP_HAUTEUR = 15;
     private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
 

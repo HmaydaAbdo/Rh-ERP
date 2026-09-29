@@ -596,12 +596,28 @@ au-delà, JasperReports échoue à reporter proprement l'excédent du sous-rappo
 l'espace réellement restant sur la page).
 
 Une fois le saut jugé nécessaire, la nouvelle dernière page ne reçoit que
-`RESERVE_LIGNES_PREFEREE` (4) lignes au maximum (plafonné par ce qu'elle peut réellement accueillir) :
-c'est la page qui la PRÉCÈDE (1re page ou page de continuation pleine) qui doit rester la plus remplie
-possible, pas l'inverse — demande explicite de direction, 2026-09-29, après un premier essai qui
-maximisait au contraire la dernière page (constaté visuellement moins satisfaisant : une grande page
-quasi vide suivie d'une dernière page bien remplie, plutôt qu'une page bien remplie suivie d'une
-courte dernière page).
+`RESERVE_LIGNES_PREFEREE` (1, le minimum absolu — voir son Javadoc) lignes au maximum (plafonné par ce
+qu'elle peut réellement accueillir) : c'est la page qui la PRÉCÈDE (1re page ou page de continuation,
+pleine ou déjà naturellement partielle faute de données) qui garde toujours le plus de lignes
+possible, jamais l'inverse — demande explicite de direction, 2026-09-29 ("le total ne doit passer à la
+page suivante que lorsqu'il n'y a vraiment plus d'espace"), après un premier essai à 4 lignes qui,
+quand une section débordait déjà sur plusieurs pages de continuation pleines, retirait des lignes
+supplémentaires à une page qui n'était de toute façon pas pleine (constaté sur CHAUFFEURS, 74 lignes).
+
+**Solution architecturale complémentaire (2026-09-29)** : TOTAL GENERAL et TOTAL GENERAL MOIS
+PRECEDENT, jusque-là au bas du tableau (dans le `groupFooter` à hauteur variable, donc structurellement
+capables de se retrouver orphelins), sont désormais deux CARTES KPI supplémentaires dans le
+`groupHeader` de `GroupEquipe` — même style (filet gris, libellé gris, valeur en gras) que les cartes
+déjà utilisées au niveau global (`GroupSynthese`) et par chantier (`GroupChantierEvolution`), pour une
+présentation homogène à tous les niveaux du rapport. La masse courante ("TOTAL GENERAL") était de
+toute façon déjà affichée dans la carte MASSE existante (aucun doublon d'information, un doublon
+d'affichage en moins) ; le mois précédent rejoint une carte dédiée MASSE MOIS PRECEDENT. Un indicateur
+à hauteur FIXE dans l'en-tête ne peut structurellement plus jamais se retrouver seul en haut d'une
+page — la cause du problème est éliminée pour ces 2 indicateurs, pas seulement contournée par un
+calcul. Le `groupFooter` ne porte donc plus que les tableaux récap (Fonction/Effectif/STC, parc
+matériel), toujours à hauteur variable et toujours protégés par `calculerSautPage` ci-dessus.
+`GroupEquipe.groupHeader` passe de 56 à 100px (4 cartes au lieu de 3 champs "libellé : valeur" en une
+ligne) ; son `groupFooter` passe de 220 à 188px (32px de moins, les 2 lignes TOTAL retirées).
 
 Vérifié par un test dédié
 (`PaieReportPdfServiceTest.calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderLeSeuilAvecFooter`,
@@ -610,22 +626,27 @@ lignes de récap) et par une reproduction locale du document réel de l'utilisat
 chantier C168, mêmes effectifs et mêmes fonctions distinctes que sur données réelles) confirmant
 l'absence de page blanche.
 
-### Lignes de résumé et tableau récap (2026-09-29)
+### Cartes KPI de section et tableau récap (2026-09-29)
 
-Collés directement au bas de CHAQUE tableau employé (`GroupEquipe`, `groupFooter` de
-`rapport.jrxml`), quelle que soit la section (équipe détaillée ou "reste") :
+En-tête de CHAQUE section (`GroupEquipe`, `groupHeader` de `rapport.jrxml`), quelle que soit la
+section (équipe détaillée ou "reste") : titre, puis 4 cartes KPI — Effectif, STC/sorties, Masse
+(`EquipeBiVue.masse`, part du chantier), **Masse mois précédent**
+(`EquipeBiVue.montantMoisPrecedentOuIntrouvable`, `INTROUVABLE` si aucune donnée, même règle que
+« Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque chantier (voir
+« Pourquoi un calcul arithmétique... » ci-dessus pour l'historique : ces 2 derniers indicateurs
+étaient auparavant des lignes `TOTAL GENERAL`/`TOTAL GENERAL MOIS PRECEDENT` au bas du tableau, seul
+scénario ayant causé des pages blanches sur données réelles — une carte à hauteur fixe dans l'en-tête
+ne peut structurellement plus jamais se retrouver orpheline).
 
-1. **Lignes de résumé** : `TOTAL GENERAL` (somme de la colonne Total de cette section, déjà
-   disponible via `EquipeBiVue.masse`) et `TOTAL GENERAL MOIS PRECEDENT` (même somme sur la
-   période précédente pour la même section — `EquipeBiVue.montantMoisPrecedentOuIntrouvable`,
-   `INTROUVABLE` si aucune donnée, même règle que « Null-handling »).
-2. **Tableau récap Fonction/Effectif/STC** : effectif et nombre de STC/sorties de CETTE section,
+Collé directement au bas de CHAQUE tableau employé (`groupFooter`) :
+
+1. **Tableau récap Fonction/Effectif/STC** : effectif et nombre de STC/sorties de CETTE section,
    groupés par fonction (`EquipeBiVue.repartitionFonction`, réutilise `RepartitionBean` sans ses
    champs montant) — jamais un graphique (redondant avec celui du chantier), imprimé via un
    sous-rapport (`recap-fonction.jrxml`) car le nombre de fonctions distinctes varie d'une section
    à l'autre — seul mécanisme JasperReports permettant à la bande parente de s'étirer pour un
    nombre de lignes inconnu à la compilation.
-3. **Squelette parc matériel**, uniquement pour le chantier C168 équipes CH/OP (voir « Squelette
+2. **Squelette parc matériel**, uniquement pour le chantier C168 équipes CH/OP (voir « Squelette
    parc matériel ») — même mécanisme de sous-rapport (`recap-materiel.jrxml`), invoqué avec une
    liste vide (donc invisible) pour toute autre section.
 
