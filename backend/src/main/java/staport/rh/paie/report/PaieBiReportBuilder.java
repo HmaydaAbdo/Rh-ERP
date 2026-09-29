@@ -6,6 +6,7 @@ import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
 import staport.rh.paie.repositories.EvolutionChantierEquipeProjection;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.reporting.EquipeLibelleCatalogue;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
@@ -199,7 +200,7 @@ class PaieBiReportBuilder {
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
                 PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
                 stc,
-                versRepartition(agregatEquipe),
+                versRepartitionEquipe(agregatEquipe),
                 evolutions.pourChantier(code),
                 equipes,
                 avecDetailEquipe);
@@ -216,7 +217,9 @@ class PaieBiReportBuilder {
     }
 
     private String titreEquipe(String nom) {
-        return nom.equals(SANS_EQUIPE) ? SANS_EQUIPE.toUpperCase(Locale.FRANCE) : "ÉQUIPE : " + nom.toUpperCase(Locale.FRANCE);
+        return nom.equals(SANS_EQUIPE)
+                ? SANS_EQUIPE.toUpperCase(Locale.FRANCE)
+                : "ÉQUIPE : " + EquipeLibelleCatalogue.libelle(nom).toUpperCase(Locale.FRANCE);
     }
 
     private List<Paie> filtrerHorsEquipes(List<Paie> lignes, Set<String> equipesSelectionnees) {
@@ -227,11 +230,15 @@ class PaieBiReportBuilder {
                                    BigDecimal masseChantier, List<String> materielLibelles, boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
-        // agregatFonctionEquipe sert à la fois à ordonner le tableau employé (la fonction consommant
-        // le plus de masse de cette section en premier) ET à alimenter le nouveau tableau récap
-        // Fonction/Effectif/STC (demande explicite de direction, 2026-09-29) — jamais un graphique,
-        // voir le Javadoc de EquipeBiVue.
-        List<Agregat> agregatFonctionEquipe = agreger(lignesEquipe, this::libelleFonction);
+        // agregatFonctionEquipe sert à la fois à ordonner le tableau employé ET à alimenter le tableau
+        // récap Fonction/Effectif/STC (demande explicite de direction, 2026-09-29) — jamais un
+        // graphique, voir le Javadoc de EquipeBiVue. Trié par ordre ALPHABÉTIQUE de la fonction
+        // (demande explicite de direction, 2026-09-29 : plus par masse décroissante comme le reste des
+        // classements BI du rapport — spécifique à ce tableau employé/récap) : on écrase donc le tri
+        // par montant décroissant renvoyé par agreger().
+        List<Agregat> agregatFonctionEquipe = agreger(lignesEquipe, this::libelleFonction).stream()
+                .sorted(Comparator.comparing(Agregat::cle, String.CASE_INSENSITIVE_ORDER))
+                .toList();
         Map<String, Integer> rangFonction = new LinkedHashMap<>();
         for (int i = 0; i < agregatFonctionEquipe.size(); i++) {
             rangFonction.put(agregatFonctionEquipe.get(i).cle(), i);
@@ -245,6 +252,7 @@ class PaieBiReportBuilder {
         return new EquipeBiVue(
                 nom,
                 titre,
+                EquipeLibelleCatalogue.libelle(nom),
                 lignesEquipe.size(),
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
@@ -283,7 +291,15 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(paie.getPrimeRoulageDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireTotal()),
                 paie.getObservation() != null ? paie.getObservation() : "",
-                afficherEquipeReelle ? libelleEquipe(paie) : "");
+                afficherEquipeReelle ? libelleAfficheEquipe(paie) : "");
+    }
+
+    /** Nom complet de l'équipe pour la colonne "Équipe" ("CHAUFFEURS" pour {@code "CH"}), ou {@code ""}
+     * (jamais "Sans équipe" — demande explicite de direction, 2026-09-29) quand l'employé n'a aucune
+     * équipe renseignée. */
+    private String libelleAfficheEquipe(Paie paie) {
+        String brut = paie.getEquipe();
+        return brut == null || brut.isBlank() ? "" : EquipeLibelleCatalogue.libelle(brut);
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
@@ -333,6 +349,18 @@ class PaieBiReportBuilder {
         }
         valeurs.sort(Comparator.comparing(RepartitionBean::getMontant).reversed());
         return valeurs;
+    }
+
+    /** Comme {@link #versRepartition}, pour la distribution "Répartition par équipe" spécifiquement :
+     * remplace le code brut de chaque {@code Agregat} par son nom complet d'affichage (voir
+     * {@code EquipeLibelleCatalogue}) avant le plafonnage/tri — jamais sur {@code agregatEquipe}
+     * lui-même, qui doit rester indexé par code brut pour {@code equipesSelectionnees.contains(...)}
+     * et {@link #filtrerParEquipe}. */
+    private List<RepartitionBean> versRepartitionEquipe(List<Agregat> agregatEquipe) {
+        List<Agregat> avecLibelleAffiche = agregatEquipe.stream()
+                .map(a -> new Agregat(EquipeLibelleCatalogue.libelle(a.cle()), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
+                .toList();
+        return versRepartition(avecLibelleAffiche);
     }
 
     /** Historique mensuel aux 2 niveaux (global, chantier) — une seule requête groupée au niveau le

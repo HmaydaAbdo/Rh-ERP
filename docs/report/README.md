@@ -402,7 +402,30 @@ plus de section "Sans équipe" dédiée : ses employés rejoignent la section **
 (voir « Export unifié PDF/Excel ») avec les employés des autres équipes non sélectionnées pour un
 détail séparé — cette section porte le titre du chantier (`"CHANTIER : <identifiant>"`, voir
 « Identifiant chantier (nom + code) » ci-dessous), jamais "Sans équipe" (elle peut contenir des
-employés d'une vraie équipe non sélectionnée, l'appeler "Sans équipe" serait trompeur).
+employés d'une vraie équipe non sélectionnée, l'appeler "Sans équipe" serait trompeur). Dans la
+colonne "Équipe" de la section "reste" en revanche (par ligne, pas par section), un employé sans
+équipe affiche une cellule **vide**, jamais le texte "Sans équipe" (demande explicite de direction,
+2026-09-29).
+
+### Nom complet des équipes
+
+Partout où le rapport affiche une équipe (titre de section "ÉQUIPE : ...", bandeau
+`pageHeader`/`pageFooter` "CHANTIER : ... · ÉQUIPE : ...", colonne "Équipe" du tableau employé,
+graphique "Répartition par équipe", titres de feuille Excel) : le **nom complet** de l'équipe
+("CHAUFFEURS"), jamais son code brut tel que saisi en base ("CH") — demande explicite de direction,
+2026-09-29, table fournie par la direction. Voir `staport.rh.paie.reporting.EquipeLibelleCatalogue`
+(même package/principe que `MaterielChantierCatalogue`, partagé entre le rapport PDF et l'export
+Excel) : un code absent de cette table est affiché tel quel (jamais de crash ni de masquage d'une
+équipe imprévue).
+
+Ce mapping est **strictement un habillage d'affichage** : le code brut reste la clé utilisée partout
+ailleurs — sélection manuelle des équipes à détailler dans le dialog d'export
+(`PaieReportPdfRequestDto.equipesParChantier`/`PaieExportRequestDto.equipesParChantier`, qui
+continuent d'afficher et de manipuler les codes bruts, demande explicite de direction), agrégation
+BI, détection de la section "reste". Même principe que `chantierCode` vs `identifiantChantier` pour
+les chantiers (voir ci-dessous) : `EquipeBiVue.nom`/`LigneRapportDetailBean.equipeNom` restent le
+code brut à usage interne, `EquipeBiVue.libelleAffiche`/`LigneRapportDetailBean.equipeLibelleAffiche`
+portent le nom complet, réservé à l'affichage.
 
 ### Identifiant chantier (nom + code)
 
@@ -493,22 +516,28 @@ complète de toutes les équipes réelles du chantier, même si seule une partie
 ci-dessous) — **SEUL, sans tableau**.
 
 Puis, sur une page dédiée chacune (`GroupEquipe`, `isStartNewPage="true"` depuis le 2026-09-29,
-`isReprintHeaderOnEachPage="false"` depuis le même jour — voir plus bas) : une section par équipe
-**sélectionnée**, puis, si des employés restent (équipes non sélectionnées, "Sans équipe" compris),
-une dernière section "reste" les regroupant tous — jamais un employé dans deux sections. Si aucune
-équipe n'a été sélectionnée pour ce chantier, une seule section réunit tous ses employés. Chaque
-section (12 colonnes, tout en noir — voir « Style visuel »), triée par fonction (celle qui consomme
-le plus de masse en premier, voir `PaieBiReportBuilder.equipeVue»), se termine par les lignes de
-résumé, le tableau récap et, le cas échéant, le squelette matériel (voir « Lignes de résumé et
-tableau récap »). Le tableau employé reprend les colonnes de la liste Paie à l'écran, moins Chantier
-(déjà porté par le titre de section) : Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire
-(Salaire/RO/RD), Total, Obs, **Équipe** (ajoutée le 2026-09-29 — vide dans une section équipe déjà
-nommée par son titre, renseignée uniquement dans la section "reste" où les employés viennent
-potentiellement de plusieurs équipes non sélectionnées mélangées, voir `LigneEmployeVue.equipeReelle`).
-Colonne Fonction élargie (90→100, prise sur Nom & prénom 130→120) et police réduite (8pt) : un
-libellé fonction long ("CH. CAMION PORT CHAR") se retrouvait tronqué de façon indiscernable d'un
-autre ("CH. CAMION GASOIL", tous deux affichés "CH. CAMION...") — constaté par l'utilisateur sur
-données réelles.
+`isReprintHeaderOnEachPage="false"` et `keepTogether="false"` depuis le même jour — voir plus bas) :
+une section par équipe **sélectionnée**, puis, si des employés restent (équipes non sélectionnées,
+"Sans équipe" compris), une dernière section "reste" les regroupant tous — jamais un employé dans
+deux sections. Si aucune équipe n'a été sélectionnée pour ce chantier, une seule section réunit tous
+ses employés. Chaque section (12 colonnes, tout en noir — voir « Style visuel »), triée par ordre
+**alphabétique** de fonction (demande explicite de direction, 2026-09-29 — plus par masse
+décroissante, voir `PaieBiReportBuilder.equipeVue`, même tri que le tableau récap
+Fonction/Effectif/STC ci-dessous), se termine par les lignes de résumé, le tableau récap et, le cas
+échéant, le squelette matériel (voir « Lignes de résumé et tableau récap »). Le tableau employé
+reprend les colonnes de la liste Paie à l'écran, moins Chantier (déjà porté par le titre de section) :
+Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs, **Équipe**
+(ajoutée le 2026-09-29 — vide dans une section équipe déjà nommée par son titre, ou quand l'employé
+n'a aucune équipe renseignée (jamais "Sans équipe" — demande explicite de direction, 2026-09-29),
+renseignée uniquement dans la section "reste" où les employés viennent potentiellement de plusieurs
+équipes non sélectionnées mélangées, voir `LigneEmployeVue.equipeReelle`). Cette colonne, comme tous
+les autres endroits du rapport où une équipe est nommée (titre de section, bandeau
+CHANTIER/ÉQUIPE, graphique "Répartition par équipe"), affiche le **nom complet** de l'équipe
+("CHAUFFEURS"), jamais son code brut ("CH") — voir « Nom complet des équipes » ci-dessous. Colonne
+Fonction élargie (90→100, prise sur Nom & prénom 130→120) et police réduite (8pt) : un libellé
+fonction long ("CH. CAMION PORT CHAR") se retrouvait tronqué de façon indiscernable d'un autre
+("CH. CAMION GASOIL", tous deux affichés "CH. CAMION...") — constaté par l'utilisateur sur données
+réelles.
 
 **`isReprintHeaderOnEachPage="false"`** (depuis le 2026-09-29, demande explicite de direction) :
 avec `true`, une équipe assez nombreuse pour que son tableau déborde sur plusieurs pages (ex. 74
@@ -517,6 +546,25 @@ JasperReports réimprimait le bandeau équipe + les en-têtes de colonnes juste 
 qui ressemblait à un tableau vide suivi de ses totaux (constaté par l'utilisateur sur données
 réelles). Avec `false`, cette page ne montre plus que les totaux/récaps ; en contrepartie, les
 pages de continuation d'un tableau qui déborde n'ont plus l'en-tête de colonnes répété.
+
+**`keepTogether="false"`** (depuis le 2026-09-29, remplace `true` — constaté par l'utilisateur sur
+données réelles) : avec `true`, JasperReports essayait de garder TOUT le groupe (en-tête + lignes +
+`groupFooter`) ensemble sur une page à chaque fois que possible, ce qui, combiné à
+`isStartNewPage="true"`, causait des pages totalement blanches et reléguait systématiquement le
+`groupFooter` (220px) à la page suivante dès que l'espace restant sous le dernier employé était
+inférieur à sa hauteur déclarée — même quand cet espace restait largement suffisant pour les 2 lignes
+TOTAL GENERAL. Sans utilité de toute façon : `isStartNewPage="true"` garantit déjà que l'en-tête de
+section ne démarre jamais en bas d'une page précédente (seul le vrai rôle de `keepTogether`).
+
+**Le bloc TOTAL GENERAL ne doit JAMAIS apparaître seul en haut d'une page sans employé au-dessus**
+(demande explicite de direction, 2026-09-29) : `keepTogether="false"` seul ne suffit pas à le
+garantir (un `groupFooter` peut encore être intégralement repoussé si AUCUNE place ne reste du tout).
+Voir `GroupQueueEquipe` : un groupe imbriqué supplémentaire, sans aucun contenu propre, immédiatement
+après `GroupEquipe` dans le gabarit — son seul rôle est de forcer les **4 dernières lignes employé**
+de chaque section à rester ensemble (`keepTogether="true"`, piloté par le champ calculé
+`$F{dernieresLignesEquipe}`, voir `PaieReportPdfService.RESERVE_DERNIERES_LIGNES_EQUIPE`) : si elles
+ne tiennent pas dans l'espace restant, JasperReports les bascule EN BLOC sur la page suivante, où le
+`groupFooter` — juste à leur suite — a alors largement la place de s'imprimer immédiatement après.
 
 ### Lignes de résumé et tableau récap (2026-09-29)
 
