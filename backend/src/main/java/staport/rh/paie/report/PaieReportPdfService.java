@@ -112,8 +112,25 @@ public class PaieReportPdfService {
      * hauteur variable) sur la page suivante, quel que soit l'espace réellement restant sur la page.
      * Mesures : {@code 339} (6 lignes employé + 11 fonctions) et {@code 341} (8 lignes employé + 9
      * fonctions) rendent correctement ; {@code 354}, {@code 355} et {@code 356} produisent tous une
-     * page blanche. {@code 345} est choisi au milieu de cet intervalle, avec marge des deux côtés. */
+     * page blanche. {@code 345} est choisi au milieu de cet intervalle, avec marge des deux côtés.
+     *
+     * <p>Ce seuil protège le cas où le groupFooter s'imprime EN LIGNE, collé aux dernières lignes
+     * employé de la page (voir {@link #seuilLignesSansRisquePushOff} pour l'AUTRE cas sûr, où
+     * JasperReports reporte spontanément tout le footer sur une page neuve). */
     private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
+
+    /** Marge de sécurité supplémentaire (en lignes), soustraite de la capacité "avec footer" calculée à
+     * partir de {@value #SEUIL_CONTENU_PAGE_AVEC_FOOTER} (voir {@link #calculerSautPage}) — absorbe une
+     * imprécision ponctuelle constatée lors de la reproduction empirique exhaustive (2026-09-29) : sur
+     * un cas précis (11 fonctions), la formule sans marge autorisait 1 ligne de trop avant la frontière
+     * réelle où JasperReports produit une page blanche. Voir le Javadoc du point d'usage. */
+    private static final int MARGE_SECURITE_LIGNES = 1;
+
+    /** Hauteur DÉCLARÉE (attribut {@code height} du XML, PAS la hauteur réelle une fois les
+     * sous-rapports étirés) du groupFooter de GroupEquipe dans {@code rapport.jrxml}
+     * ({@code <groupFooter><band height="188">}) — sert UNIQUEMENT à {@link #seuilLignesSansRisquePushOff},
+     * jamais à un calcul de contenu réel (voir {@link #hauteurPiedReelle} pour ça). */
+    private static final int PIED_HAUTEUR_DECLAREE_JRXML = 188;
 
     /** Nombre de lignes visé sur la nouvelle dernière page lorsqu'un saut de page anticipé est
      * nécessaire (voir son usage dans {@link #calculerSautPage}) — le plus PETIT possible (1), jamais
@@ -334,13 +351,46 @@ public class PaieReportPdfService {
      * SANS réserver de place pour le footer. Si la DERNIÈRE de ces pages naturelles dépasse la
      * capacité qu'elle aurait AVEC le footer réservé, l'excédent est déplacé vers une page
      * supplémentaire via un unique saut de page anticipé — jamais recalculé pour les pages
-     * précédentes, qui débordent normalement (débordement JasperReports natif, inchangé). */
+     * précédentes, qui débordent normalement (débordement JasperReports natif, inchangé).
+     *
+     * <p><b>Deux zones sûres, PAS une seule</b> (constaté par reproduction locale exhaustive,
+     * 2026-09-29, suite à un nouveau signalement d'espace vide évitable — voir {@code
+     * docs/report/README.md}) : au-delà de {@value #SEUIL_CONTENU_PAGE_AVEC_FOOTER}px de contenu
+     * "lignes + footer EN LIGNE sur la même page", JasperReports ne se contente pas toujours de
+     * produire une page blanche — quand la dernière page naturelle est déjà PRESQUE pleine (son espace
+     * restant est inférieur à {@value #PIED_HAUTEUR_DECLAREE_JRXML}px, la hauteur DÉCLARÉE du
+     * groupFooter dans le XML), JasperReports reporte spontanément et SANS AUCUN RISQUE tout le
+     * groupFooter sur une page neuve (où il dispose alors de {@code PAGE_HAUTEUR_UTILE} entier, largement
+     * suffisant quel que soit {@code lignesRecapMax}) — un comportement natif normal, pas le bug. Une
+     * série de reproductions locales balayant lignesRecapMax de 5 à 16 (avec et sans sous-rapport
+     * matériel) a montré que ce report automatique est sûr dès que la dernière page naturelle compte au
+     * moins {@link #seuilLignesSansRisquePushOff} lignes, quel que soit lignesRecapMax — cette valeur ne
+     * dépend QUE de {@code PAGE_HAUTEUR_UTILE} et de la hauteur déclarée du footer, jamais du contenu
+     * réel. Une PREMIÈRE version de cette méthode forçait un saut anticipé dès que la dernière page
+     * dépassait {@code capContinuationAvecFooter} (calculé à partir de {@value
+     * #SEUIL_CONTENU_PAGE_AVEC_FOOTER}), sans jamais vérifier si elle était déjà dans cette seconde zone
+     * sûre — ce qui déplaçait inutilement 1 seule ligne vers une page dédiée alors que JasperReports
+     * aurait de toute façon reporté le footer tout seul (cas observé sur données réelles : équipe
+     * CHAUFFEURS, 74 lignes, 5 fonctions — la dernière page naturelle de 20 lignes, largement au-dessus
+     * du seuil de sûreté, se voyait amputée d'1 ligne pour rien). Entre les deux zones sûres (environ 9 à
+     * 19 lignes selon lignesRecapMax) se trouve une zone où JasperReports produit réellement une page
+     * blanche corrompue (le footer commence à s'imprimer EN LIGNE car l'espace restant dépasse
+     * {@value #PIED_HAUTEUR_DECLAREE_JRXML}px, mais son contenu RÉEL, une fois les sous-rapports étirés,
+     * excède ce qui reste) — c'est UNIQUEMENT cette zone que le saut anticipé doit éviter. */
     int calculerSautPage(int total, int lignesRecapMax) {
         int hauteurPied = hauteurPiedReelle(lignesRecapMax);
         int capPremiereSansFooter = (PAGE_HAUTEUR_UTILE - GROUPE_EQUIPE_ENTETE_HAUTEUR) / LIGNE_HAUTEUR;
-        int capPremiereAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - GROUPE_EQUIPE_ENTETE_HAUTEUR - hauteurPied) / LIGNE_HAUTEUR;
+        // -1 ligne de marge de sécurité supplémentaire (voir MARGE_SECURITE_LIGNES) : la simple division
+        // entière par SEUIL_CONTENU_PAGE_AVEC_FOOTER s'est révélée insuffisante sur UN cas précis lors de
+        // la reproduction empirique exhaustive (11 fonctions : formule = 9 lignes sûres, réalité = 8
+        // seulement, la 9e produisant une page blanche à 343px de contenu réel, sous le seuil de 345) —
+        // 5 et 16 fonctions, eux, correspondaient exactement à la formule sans marge. Plutôt que de
+        // recalibrer #SEUIL_CONTENU_PAGE_AVEC_FOOTER (qui a sa propre marge documentée, validée sur
+        // d'autres mesures), cette marge supplémentaire absorbe cette imprécision ponctuelle du moteur
+        // JasperReports près de la frontière, au prix d'au plus 1 ligne de capacité en moins.
+        int capPremiereAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - GROUPE_EQUIPE_ENTETE_HAUTEUR - hauteurPied) / LIGNE_HAUTEUR - MARGE_SECURITE_LIGNES;
         int capContinuationSansFooter = PAGE_HAUTEUR_UTILE / LIGNE_HAUTEUR;
-        int capContinuationAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - hauteurPied) / LIGNE_HAUTEUR;
+        int capContinuationAvecFooter = (SEUIL_CONTENU_PAGE_AVEC_FOOTER - hauteurPied) / LIGNE_HAUTEUR - MARGE_SECURITE_LIGNES;
 
         if (total <= capPremiereAvecFooter) {
             return -1; // tout (lignes + footer) tient sur la seule 1re page, aucun saut à forcer
@@ -365,6 +415,12 @@ public class PaieReportPdfService {
         int capDerniereAvecFooter = dernierePageEstPremiere ? capPremiereAvecFooter : capContinuationAvecFooter;
         if (taillePageCourante <= capDerniereAvecFooter) {
             return -1; // la dernière page naturelle laisse déjà la place au footer
+        }
+        // 2e zone sûre (voir Javadoc ci-dessus) : jamais sur la 1re page d'une section (son budget
+        // inclut déjà GROUPE_EQUIPE_ENTETE_HAUTEUR, un cas non couvert par la reproduction empirique qui
+        // a établi ce seuil — on garde alors le comportement prudent existant, capDerniereAvecFooter).
+        if (!dernierePageEstPremiere && taillePageCourante >= seuilLignesSansRisquePushOff()) {
+            return -1; // JasperReports reporte tout seul, sans risque, le footer sur une page neuve
         }
         // Nombre de lignes VISÉ sur la nouvelle dernière page (toujours une page de continuation,
         // jamais la 1re page d'une section, qui ne se répète pas) : RESERVE_LIGNES_PREFEREE (1, le
@@ -391,6 +447,21 @@ public class PaieReportPdfService {
      * {@value #LIGNE_RECAP_HAUTEUR}px par ligne. */
     private int hauteurPiedReelle(int lignesRecapMax) {
         return PIED_HAUTEUR_BASE + LIGNE_RECAP_HAUTEUR * lignesRecapMax;
+    }
+
+    /** Nombre minimal de lignes sur une page de CONTINUATION (jamais la 1re page d'une section, voir
+     * {@link #calculerSautPage}) à partir duquel JasperReports reporte spontanément et sans risque tout
+     * le groupFooter sur une page neuve (voir le Javadoc de {@link #calculerSautPage} pour la
+     * reproduction empirique qui établit ce seuil) — ne dépend QUE de l'espace de page disponible et de
+     * la hauteur DÉCLARÉE du groupFooter dans le XML ({@value #PIED_HAUTEUR_DECLAREE_JRXML}px, PAS sa
+     * hauteur réelle une fois étiré, voir {@value #PIED_HAUTEUR_DECLAREE_JRXML}), jamais de
+     * lignesRecapMax : une fois le footer reporté seul sur sa propre page, il y dispose de
+     * {@value #PAGE_HAUTEUR_UTILE}px entiers, largement suffisant quel que soit le nombre réel de
+     * fonctions/matériel. +1 (par rapport à la simple division entière) : à la limite exacte, l'espace
+     * restant vaudrait exactement {@value #PIED_HAUTEUR_DECLAREE_JRXML}px — reproduit comme sûr
+     * uniquement à partir d'un espace restant strictement inférieur à cette hauteur déclarée. */
+    private int seuilLignesSansRisquePushOff() {
+        return (PAGE_HAUTEUR_UTILE - PIED_HAUTEUR_DECLAREE_JRXML) / LIGNE_HAUTEUR + 1;
     }
 
     private JasperPrint remplir(JasperReport report, Map<String, Object> parametres, net.sf.jasperreports.engine.JRDataSource datasource) {

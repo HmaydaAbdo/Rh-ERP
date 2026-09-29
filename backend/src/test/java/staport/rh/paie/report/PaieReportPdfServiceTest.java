@@ -87,22 +87,36 @@ class PaieReportPdfServiceTest {
      * si les hauteurs déclarées dans rapport.jrxml changent un jour, ces constantes ET celles de
      * PaieReportPdfService doivent être mises à jour ensemble. {@code SEUIL_CONTENU_PAGE_AVEC_FOOTER}
      * est une valeur empirique (voir son Javadoc côté production) : le contenu total d'une page qui
-     * porte le groupFooter (lignes employé de cette page + groupFooter complet) ne doit jamais la
-     * dépasser, sous peine de page blanche produite par JasperReports. */
+     * porte le groupFooter EN LIGNE (lignes employé de cette page + groupFooter complet) ne doit jamais
+     * la dépasser, sous peine de page blanche produite par JasperReports — {@code
+     * PIED_HAUTEUR_DECLAREE_JRXML} définit l'AUTRE zone sûre (voir {@code
+     * seuilLignesSansRisquePushOff} côté production et son Javadoc). */
+    private static final int PAGE_HAUTEUR_UTILE = 495;
     private static final int CAP_PREMIERE_SANS_FOOTER = 24;
     private static final int CAP_CONTINUATION_SANS_FOOTER = 30;
     private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 100;
     private static final int PIED_HAUTEUR_BASE = 34;
     private static final int LIGNE_RECAP_HAUTEUR = 15;
     private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
+    private static final int PIED_HAUTEUR_DECLAREE_JRXML = 188;
+    private static final int SEUIL_LIGNES_SANS_RISQUE_PUSH_OFF = (PAGE_HAUTEUR_UTILE - PIED_HAUTEUR_DECLAREE_JRXML) / 16 + 1;
 
     /** Vérifie, pour un large éventail de tailles de section ET de nombres de lignes de récap
      * (Fonction/Effectif/STC ou matériel, le plus grand des deux), que {@code calculerSautPage}
-     * garantit bien la règle métier (demande explicite de direction, 2026-09-29) : la page qui porte
-     * finalement le groupFooter ne dépasse jamais {@code SEUIL_CONTENU_PAGE_AVEC_FOOTER}px de contenu
-     * total, et aucune page intermédiaire ne se retrouve vide ou négative — en reconstruisant, à partir
-     * du seul index de saut renvoyé, le découpage en pages que produirait rapport.jrxml (remplissage
-     * naturel de JasperReports partout, sauf au point de saut calculé). */
+     * garantit bien la règle métier (demande explicite de direction, 2026-09-29) : la page qui finit par
+     * porter le groupFooter EN LIGNE (collé aux dernières lignes employé) ne dépasse jamais {@code
+     * SEUIL_CONTENU_PAGE_AVEC_FOOTER}px de contenu total, et aucune page intermédiaire ne se retrouve
+     * vide ou négative — en reconstruisant, à partir du seul index de saut renvoyé, le découpage en
+     * pages que produirait rapport.jrxml (remplissage naturel de JasperReports partout, sauf au point de
+     * saut calculé).
+     *
+     * <p>Depuis la 2e zone sûre (voir {@code seuilLignesSansRisquePushOff} côté production, 2026-09-29) :
+     * quand {@code calculerSautPage} renvoie {@code -1} alors que la dernière page naturelle est déjà
+     * dans cette zone (≥ {@value #SEUIL_LIGNES_SANS_RISQUE_PUSH_OFF} lignes), JasperReports reporte tout
+     * seul le groupFooter sur une page neuve — cette page NE PORTE PAS le footer en ligne, donc ne doit
+     * PAS être comparée au seuil (elle dépasserait légitimement, ex. 30 lignes + footer réel, sans aucun
+     * risque de page blanche puisque le footer s'imprime en réalité sur une page à part, vide de lignes
+     * employé). Le test vérifie alors la page fantôme (footer seul) à sa place. */
     @Test
     void calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderLeSeuilAvecFooter() {
         for (int total = 1; total <= 200; total++) {
@@ -123,11 +137,15 @@ class PaieReportPdfServiceTest {
                 int tailleDerniere = taillesPages.get(taillesPages.size() - 1);
                 boolean dernierePageEstPremiere = taillesPages.size() == 1;
                 int hauteurEntete = dernierePageEstPremiere ? GROUPE_EQUIPE_ENTETE_HAUTEUR : 0;
-                int contenuTotalPageFinale = hauteurEntete + tailleDerniere * 16 + hauteurPied;
+
+                boolean pousseeSansRisque = !dernierePageEstPremiere && tailleDerniere >= SEUIL_LIGNES_SANS_RISQUE_PUSH_OFF;
+                int contenuTotalPageFinale = pousseeSansRisque
+                        ? hauteurPied // page fantôme : footer seul, aucune ligne employé
+                        : hauteurEntete + tailleDerniere * 16 + hauteurPied;
 
                 assertThat(contenuTotalPageFinale)
-                        .as("total=%d, lignesRecapMax=%d, indexSaut=%d, pages=%s",
-                                total, lignesRecapMax, indexSaut, taillesPages)
+                        .as("total=%d, lignesRecapMax=%d, indexSaut=%d, pages=%s, pousseeSansRisque=%s",
+                                total, lignesRecapMax, indexSaut, taillesPages, pousseeSansRisque)
                         .isLessThanOrEqualTo(SEUIL_CONTENU_PAGE_AVEC_FOOTER);
                 assertThat(taillesPages)
                         .as("total=%d, lignesRecapMax=%d : aucune page ne doit être vide", total, lignesRecapMax)
