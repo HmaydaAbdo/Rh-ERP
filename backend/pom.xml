@@ -47,31 +47,32 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.5.1</version>
         </dependency>
-        <!-- Rapport PDF (staport.rh.paie.report) : gabarits JRXML rendus en PDF via JasperReports
-             Library, licence LGPL (contrairement à iText 7+ qui est AGPL/commercial) — voir
-             docs/report/README.md, section "Rapport PDF". Les 4 visualisations de la synthèse
-             globale sont des <barChart> JRXML natifs (moteur JFreeChart interne à JasperReports,
-             jamais de PNG pré-généré séparément).
-             Épinglé sur la ligne 6.21.x (dernière LTS, pas la 7.x) : JasperReports 7 a remplacé le
-             chargeur JRXML historique (Digester/XSD) par un chargeur Jackson dont le schéma diffère
-             structurellement (constaté à la compilation : "Unrecognized field staticText" sur un
-             <band> pourtant conforme au schéma JRXML documenté partout, y compris par Jaspersoft
-             Studio) — non documenté à ce jour, aucun outillage/communauté encore fiable dessus. La 6.21.x
-             reste le format JRXML standard, stable et sur lequel tout l'écosystème (Jaspersoft
-             Studio inclus) est aligné ; l'export PDF et les classes chart (JRChart/JRChartCustomizer)
-             sont directement dans ce jar, pas de sous-module séparé. -->
+        <!-- Rapport PDF (staport.rh.paie.report, PaieReportHtmlPdfService) : pipeline HTML/CSS pur
+             (jsoup + openhtmltopdf), voir docs/report/README.md — remplace JasperReports (retiré le
+             2026-09-29, demande explicite de direction après plusieurs bugs de pagination). jsoup
+             construit le DOM par programmation (jamais de concaténation de chaîne/template — voir
+             le Javadoc de PaieReportHtmlBuilder pour l'incident de production que ce choix évite
+             structurellement : un ancien pipeline HTML pré-JasperReports avait été abandonné après
+             une SAXParseException causée par une injection non échappée). openhtmltopdf-pdfbox rend
+             ce DOM en PDF (pur Java, aucun navigateur/Node — s'intègre sans rien changer au
+             Dockerfile actuel). openhtmltopdf-svg-support (+ Batik, transitif) rend les graphiques,
+             construits en SVG à la main (voir RapportChartSvgBuilder) plutôt que via une
+             bibliothèque de charting (JFreeChart, utilisé par l'ancien pipeline JasperReports, a été
+             retiré avec lui). -->
         <dependency>
-            <groupId>net.sf.jasperreports</groupId>
-            <artifactId>jasperreports</artifactId>
-            <version>6.21.5</version>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.1</version>
         </dependency>
-        <!-- Police DejaVu Sans embarquée (accents FR, PDF) — extension officielle JasperReports,
-             licence LGPL, remplace la résolution de police système fragile de l'ancien pipeline
-             HTML/openhtmltopdf. -->
         <dependency>
-            <groupId>net.sf.jasperreports</groupId>
-            <artifactId>jasperreports-fonts</artifactId>
-            <version>6.21.5</version>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-svg-support</artifactId>
+            <version>1.0.10</version>
         </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

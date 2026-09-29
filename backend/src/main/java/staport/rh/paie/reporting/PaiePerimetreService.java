@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * Calcule le périmètre d'une période (GLB + par chantier, avec exclusions et sélection des
  * équipes à générer) — logique partagée entre l'export Excel ({@code PaieExportService}) et le
- * rapport PDF ({@code PaieReportPdfService}), pour ne jamais dupliquer la lecture de
+ * rapport PDF ({@code PaieReportHtmlPdfService}), pour ne jamais dupliquer la lecture de
  * {@code feuillesEquipeMode}/{@code equipesParChantier}/{@code equipesExcluesFeuilleChantier}.
  *
  * <p>Le paramètre {@code chantiers} restreint tout le périmètre (y compris la feuille/section GLB)

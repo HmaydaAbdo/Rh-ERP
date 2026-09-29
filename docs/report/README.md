@@ -61,90 +61,88 @@ staport.rh.paie.repositories/
                                   plancher de la fenêtre glissante utilisée par le calcul ci-dessus,
                                   jamais un historique qui n'a jamais existé (mois "fantômes" à 0)
 
-staport.rh.paie.report/      ← sortie PDF BI (JasperReports Library — JRXML compilé au démarrage,
-│                                 resources/report/paie/jasper/)
+staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup + openhtmltopdf, voir
+│                                 « Rapport PDF (BI) » plus bas pour l'historique complet de cette
+│                                 migration, 2026-09-29 — remplace JasperReports/JRXML)
 ├── PaieReportController.java     POST /paie/report/pdf
-├── PaieReportPdfService.java     Orchestration : appelle PaieBiReportBuilder, aplatit chantiers →
-│                                 sections (équipe détaillée ou "reste") → employés en une seule
-│                                 liste dénormalisée (LigneRapportDetailBean), remplit le gabarit
-│                                 JRXML principal (rapport.jrxml, avec ses 2 sous-rapports — voir
-│                                 plus bas) en DEUX passages (voir « Numérotation des chapitres et
-│                                 des pages ») et exporte en PDF (JRPdfExporter).
-├── PaieBiReportBuilder.java      Périmètre + agrégations BI (fait/dimensions/mesures — voir plus bas).
-│                                 Chaque chantier a désormais sa propre section
+├── PaieReportHtmlPdfService.java Orchestration ET moteur de rendu : appelle
+│                                 PaieBiReportBuilder.construire() (inchangé) → découpe en pages
+│                                 (RapportPageModelBuilder) → construit le DOM (PaieReportHtmlBuilder)
+│                                 → UN SEUL rendu PDF (openhtmltopdf) — voir « Numérotation des
+│                                 chapitres et des pages » (plus de double passage, contrairement à
+│                                 l'ancien pipeline JasperReports). Porte aussi l'enregistrement des 4
+│                                 polices Liberation Serif auprès d'openhtmltopdf.
+├── RapportPageModelBuilder.java  Moteur de PAGINATION — pur Java, aucune dépendance HTML/PDF,
+│                                 entièrement testable sans rendu (RapportPageModelBuilderTest).
+│                                 Parcourt RapportBiVue et décide, par arithmétique (largeurs de
+│                                 colonnes et hauteur de ligne FIXES, connues d'avance), exactement
+│                                 quel contenu va sur quelle page — voir « Pagination : contrôle
+│                                 100% Java » pour pourquoi ce choix plutôt que de laisser le moteur
+│                                 de rendu déborder naturellement (leçon de l'ancien pipeline
+│                                 JasperReports, dont le comportement de débordement près de
+│                                 certaines limites internes non documentées s'est révélé
+│                                 imprévisible).
+├── PageModel.java / CarteKpi.java  Vue-modèle de PAGINATION — chaque PageModel est une page physique
+│                                 déjà entièrement résolue (texte d'en-tête/pied, numéro de page,
+│                                 liste de Bloc : titre de chapitre/section/équipe, cartes KPI,
+│                                 graphique, tranche de tableau employé, pied récap). Types de
+│                                 données purs, jamais un élément jsoup.
+├── PaieReportHtmlBuilder.java    Construit le DOM — EXCLUSIVEMENT par programmation via l'API
+│                                 jsoup Element/Document, jamais par concaténation de chaîne ni
+│                                 template (voir son Javadoc pour l'incident de production que ce
+│                                 choix évite structurellement). Traduit chaque PageModel.Bloc en
+│                                 HTML/CSS, aucune décision de pagination ici.
+├── RapportChartSvgBuilder.java   Graphiques en barres groupées — construits en SVG à la main (voir
+│                                 « Visualisations »), remplace PaieReportGroupedChartCustomizer/
+│                                 JFreeChart (retirés avec JasperReports). Même logique de
+│                                 normalisation par série (voir plus bas).
+├── RapportRessourcesStatiques.java  Charge une seule fois (constructeur) les polices/CSS/logo,
+│                                 partagés entre PaieReportHtmlBuilder et PaieReportHtmlPdfService
+│                                 sans dépendance circulaire entre les deux.
+├── PaieBiReportBuilder.java      Périmètre + agrégations BI (fait/dimensions/mesures — voir plus bas)
+│                                 — INCHANGÉ par la migration HTML, toute la logique métier et le
+│                                 formatage restent ici. Chaque chantier a sa propre section
 │                                 (`ChantierBiVue.avecDetailEquipe`, piloté par la sélection
 │                                 manuelle `PaieReportPdfRequestDto.equipesParChantier` — voir
-│                                 « Export unifié PDF/Excel »), plus de classement "détaillé/compact"
-│                                 par effectif. N'utilise PAS PaiePerimetreService : besoin différent
-│                                 (agrégation systématique de tout le périmètre filtré) — voir
-│                                 « Pourquoi deux pipelines ? ».
-├── PaieReportGroupedChartCustomizer.java Personnalise TOUS les <barChart> à barres groupées
-│                                 horizontales du document (masse/effectif/STC en personnes/STC en DH —
-│                                 4 séries, chacune nommée avec son unité dans la légende) : "Vue par
-│                                 chantier" (chapitre I) et répartition par équipe de chaque chantier
-│                                 ayant au moins une équipe détaillée — une seule classe réutilisée
-│                                 partout, la donnée sous-jacente (RepartitionBean) étant la même
-│                                 forme à chaque niveau. Axe des valeurs masqué — **chaque série est
-│                                 normalisée à sa propre valeur maximale** (0 à 1, indépendamment des
-│                                 3 autres) avant d'être tracée : masquer l'axe ne suffit pas à lui
-│                                 seul à rendre lisibles 4 séries d'ordres de grandeur très différents
-│                                 sur une échelle linéaire partagée. La vraie valeur (jamais la valeur
-│                                 normalisée) reste affichée en étiquette sur chaque barre, lue dans
-│                                 une table à part conservée avant normalisation. Plafonné aux 15 plus
-│                                 grosses valeurs + "Autres" (voir
-│                                 PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE). Voir « Visualisations ».
+│                                 « Export unifié PDF/Excel »). N'utilise PAS PaiePerimetreService :
+│                                 besoin différent (agrégation systématique de tout le périmètre
+│                                 filtré) — voir « Pourquoi deux pipelines ? ».
 ├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
-│   LigneEmployeVue / MaterielLigneVue  Vue-modèle (records, sauf classes à getters — voir plus bas),
-│                                 aucune logique métier — utilisée uniquement côté Java (paramètres
-│                                 JRXML), jamais liée par réflexion. `ChantierBiVue.avecDetailEquipe`
-│                                 remplace l'ancien `compact` (seuil d'effectif) : `true` dès qu'au
-│                                 moins une équipe du chantier a été sélectionnée manuellement.
-│                                 `EquipeBiVue` porte, en plus du détail employé,
-│                                 `montantMoisPrecedentOuIntrouvable` (ligne de résumé),
-│                                 `repartitionFonction` (tableau récap) et `materiel` (squelette
-│                                 parc matériel, vide sauf C168/CH/OP) — voir « Lignes de résumé et
-│                                 tableau récap ».
-├── RepartitionBean / LigneRapportDetailBean / MaterielLigneVue
-│                                 Classes à getters (pas des records) : lignes de table/graphique
-│                                 liées par introspection JavaBean (JRBeanCollectionDataSource) — un
-│                                 getter public sur une classe non publique n'est pas accessible par
-│                                 réflexion depuis un autre package, ces classes sont publiques.
-│                                 LigneRapportDetailBean est la source de données unique et à plat de
-│                                 rapport.jrxml : un employé par ligne, dénormalisée avec le contexte
-│                                 chantier + section. Porte `chantierAvecDetailEquipe`, qui pilote un
-│                                 `printWhenExpression` au niveau de la BANDE `GroupChantier` (pas
-│                                 d'un élément) — bande totalement absente, hauteur nulle, quand le
-│                                 chantier n'a aucune équipe détaillée. RepartitionBean (libellé,
-│                                 effectif, montant, stc, stcMontant) alimente TOUS les barChart du
-│                                 document et, réutilisée sans montant/stcMontant, le tableau récap
-│                                 Fonction/Effectif/STC.
+│   LigneEmployeVue / RepartitionBean / MaterielLigneVue  Vue-modèle (records, sauf RepartitionBean/
+│                                 MaterielLigneVue — classes à getters historiques, conservées telles
+│                                 quelles), aucune logique métier — TOUTE valeur affichable y est déjà
+│                                 une String pré-formatée non nulle (sentinel "INTROUVABLE"/"-"),
+│                                 sauf RepartitionBean.montant/stcMontant (BigDecimal potentiellement
+│                                 null, consommé uniquement par RapportChartSvgBuilder — voir son
+│                                 Javadoc pour le null-check dédié). `ChantierBiVue.avecDetailEquipe` :
+│                                 `true` dès qu'au moins une équipe du chantier a été sélectionnée
+│                                 manuellement. `EquipeBiVue` porte, en plus du détail employé,
+│                                 `montantMoisPrecedentOuIntrouvable` (carte KPI "MASSE MOIS
+│                                 PRECEDENT"), `repartitionFonction` (tableau récap) et `materiel`
+│                                 (squelette parc matériel, vide sauf C168/CH/OP).
 ├── PaieReportNumberFormat.java   Formatage des nombres, variations, tendances (HAUSSE/BAISSE/STABLE)
 │                                 et chiffres romains (numérotation des chapitres)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page
                                   Paie) + `equipesParChantier` (même forme et même sélection que
                                   PaieExportRequestDto.equipesParChantier, voir « Export unifié »).
 
-resources/report/paie/jasper/  ← gabarits JRXML — style noir/blanc/gris, police Liberation Serif,
-                                  seul les graphiques restent en couleur — voir « Style visuel »
-├── rapport.jrxml                 Gabarit principal : page de garde (bande title, isTitleNewPage —
-│                                   seule page sans pageHeader/pageFooter, sans date de génération,
-│                                   voir docs/report/rapport-v2.md), puis « I — Vue d'ensemble »
-│                                   (GroupSynthese, expression constante), puis une section par
-│                                   CHANTIER — TOUS désormais, chacun son propre chapitre romain
-│                                   (GroupChantierEvolution, toujours affichée), suivie
-│                                   optionnellement du graphique de répartition par équipe
-│                                   (GroupChantier, bande conditionnelle) et d'une section par équipe
-│                                   détaillée ou "reste" (GroupEquipe, isStartNewPage="true" — chaque
-│                                   section démarre sur sa propre page). Le pageHeader/pageFooter (5
-│                                   blocs / repère de hiérarchie, une seule bande définie une fois
-│                                   chacun) se répètent nativement sur toutes ces pages. Voir
-│                                   « Structure du rapport ».
-├── recap-fonction.jrxml          Sous-rapport : tableau récap Fonction/Effectif/STC de chaque
-│                                   section (nombre de lignes variable — voir « Lignes de résumé et
-│                                   tableau récap »).
-└── recap-materiel.jrxml          Sous-rapport : squelette "parc matériel" (CAMION/ENGINS),
-                                    invoqué avec une liste vide (donc invisible) hors chantier
-                                    C168/CH/OP — voir « Squelette parc matériel ».
+resources/report/paie/html/rapport.css  ← feuille de style STATIQUE, jamais interpolée avec une
+                                  donnée métier (voir le Javadoc de PaieReportHtmlBuilder) — style
+                                  noir/blanc/gris, police Liberation Serif, seuls les graphiques
+                                  restent en couleur (voir « Style visuel »). Dimensions en `pt`
+                                  (point PDF), jamais `px` CSS — géométrie A4 exacte, imprimée sur
+                                  papier réel. Moteur CSS d'openhtmltopdf = CSS 2.1 pur : aucun
+                                  support de `var()`/flexbox/`gap`/`object-fit` — toute la mise en
+                                  page horizontale utilise `float`+`margin` (jamais flexbox), voir
+                                  les commentaires en tête du fichier.
+
+resources/report/paie/fonts/  ← 4 TTF Liberation Serif (Regular/Bold/Italic/BoldItalic), embarqués
+                                  et enregistrés programmatiquement (jamais une police OS) — à la
+                                  fois auprès d'AWT (RapportRessourcesStatiques, bloc statique, pour
+                                  le rendu SVG des graphiques via Batik) ET auprès d'openhtmltopdf
+                                  (PaieReportHtmlPdfService.enregistrerPolices, pour le texte du
+                                  PDF) — deux sous-systèmes de police distincts, chacun a besoin du
+                                  sien.
 ```
 
 Frontend (`frontend/src/app/portail/paie/`) :
@@ -423,9 +421,8 @@ ailleurs — sélection manuelle des équipes à détailler dans le dialog d'exp
 (`PaieReportPdfRequestDto.equipesParChantier`/`PaieExportRequestDto.equipesParChantier`, qui
 continuent d'afficher et de manipuler les codes bruts, demande explicite de direction), agrégation
 BI, détection de la section "reste". Même principe que `chantierCode` vs `identifiantChantier` pour
-les chantiers (voir ci-dessous) : `EquipeBiVue.nom`/`LigneRapportDetailBean.equipeNom` restent le
-code brut à usage interne, `EquipeBiVue.libelleAffiche`/`LigneRapportDetailBean.equipeLibelleAffiche`
-portent le nom complet, réservé à l'affichage.
+les chantiers (voir ci-dessous) : `EquipeBiVue.nom` reste le code brut à usage interne,
+`EquipeBiVue.libelleAffiche` porte le nom complet, réservé à l'affichage.
 
 ### Identifiant chantier (nom + code)
 
@@ -436,10 +433,9 @@ synchronisation ERP — voir `docs/chantier/README.md`), **`"<code>"`** seul sin
 de direction, 2026-09-29 : le nom prime partout où il existe, le code reste l'identifiant de
 repli). Calculé indépendamment par chaque format — `PaieBiReportBuilder.identifiantChantier` côté
 PDF, `PaieExportService.titreZone` côté Excel — jamais partagé en code (voir « Pourquoi deux
-pipelines ? »), mais avec la même règle. Côté PDF, ce texte est porté par
-`ChantierBiVue.identifiant()`/`LigneRapportDetailBean.chantierIdentifiant` — à ne jamais confondre
-avec `chantierCode`, réservé aux mécanismes internes (ancre de page, détection de la section
-"reste" via `equipeNom.equals(chantierCode)"`), jamais affiché tel quel.
+pipelines ? »), mais avec la même règle. Côté PDF, ce texte est porté par `ChantierBiVue.identifiant()`
+— à ne jamais confondre avec `chantierCode`, réservé aux mécanismes internes (détection de la
+section "reste" via `equipe.nom().equals(chantier.code())`), jamais affiché tel quel.
 
 ### Anti-duplication du détail employé
 
@@ -450,253 +446,158 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
 
 ### Structure du rapport
 
-1. **Page de garde** (`title` JRXML, `isTitleNewPage` — la seule page du document sans
-   `pageHeader`/`pageFooter`, comportement JasperReports pour une bande title en isTitleNewPage,
-   exploité ici plutôt que subi) : logo, titre du rapport, puis 3 clés-valeurs
-   **Département** (`Ressources Humaines`) / **Mois** / **Année** (Mois avant Année — l'ordre de
-   lecture naturel d'une période « Août 2026 »), empilées **verticalement**, puis un bloc
-   **signatures** (Directeur Général à gauche, DRH à droite — rôle + nom du signataire en dur +
-   filet à signer, jamais le filet pré-rempli). **Pas de date de génération** (retirée le
-   2026-09-29, demande explicite de direction — voir `docs/report/rapport-v2.md`).
-2. **Bandeau** (`pageHeader` JRXML, un seul défini dans `rapport.jrxml`) : répété à l'identique sur
-   **toutes** les pages de contenu qui suivent. Réduit au minimum (2026-09-29, demande explicite de
-   direction — hauteur 30 contre 62 avant, logo réduit) : **3 blocs sur une seule ligne chacun**
-   (plus de libellé séparé au-dessus de la valeur), séparés par de fins filets verticaux —
-   Ressources Humaines / Mois-Année / **Niveau**. Le bloc **Niveau** est dynamique — `GLOBAL` tant
-   que la page précède le premier
-   chantier (`$P{P_PAGE_PREMIER_CHANTIER}`, connu grâce à un premier remplissage silencieux de
-   découverte, voir « Numérotation des chapitres et des pages »), `CHANTIER : <identifiant> ·
-   ÉQUIPE : <nom>` pour une section équipe détaillée (voir « Identifiant chantier (nom + code) »
-   pour la forme de `<identifiant>`), ou **`CHANTIER : <identifiant>` seul** (sans « · ÉQUIPE »)
-   pour la section "reste" (afficher `equipeNom` tel quel y aurait donné un doublon trompeur,
-   `equipeNom` valant alors le code chantier). Le **`pageFooter`** porte la même information (texte
-   discret, aligné à gauche à côté de la pagination).
-3. **I — Vue d'ensemble** (`<group name="GroupSynthese">`, expression constante — son en-tête ne
-   s'imprime qu'une seule fois, au tout début du corps du document) : 5 cartes KPI compactées, label
-   + valeur uniquement, sans note de comparaison sous la valeur (retirée le 2026-09-29, demande
-   explicite de direction — masse réelle, effectif, masse moyenne/employé, nombre de chantiers,
-   STC/sorties), une phrase courte de synthèse (voir « Narratif léger »), puis, SUR LA MÊME PAGE
-   (`GroupGraphChantier`, sans titre au-dessus depuis le 2026-09-29) : UN SEUL `<barChart>` à 4
-   séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros chantiers +
-   "Autres" — voir « Visualisations ».
+1. **Page de garde** (`.page.cover`, sans bandeau/pied récurrent — voir rapport.css) : logo, titre
+   du rapport, puis 3 clés-valeurs **Département** (`Ressources Humaines`) / **Mois** / **Année**
+   (Mois avant Année — l'ordre de lecture naturel d'une période « Août 2026 »), empilées
+   **verticalement**, puis un bloc **signatures** (Directeur Général à gauche, DRH à droite — rôle +
+   nom du signataire en dur + filet à signer, jamais le filet pré-rempli). **Pas de date de
+   génération** (retirée le 2026-09-29, demande explicite de direction — voir
+   `docs/report/rapport-v2.md`).
+2. **Bandeau récurrent** (`.page-header`, construit une seule fois par `PaieReportHtmlBuilder` et
+   répété sur chaque page de contenu — jamais sur la page de garde) : 3 blocs sur une seule ligne
+   chacun, séparés par de fins filets verticaux — Ressources Humaines / Mois-Année / **Niveau**. Le
+   bloc **Niveau** est `GLOBAL` pour la page de synthèse, `CHANTIER : <identifiant> · ÉQUIPE : <nom>`
+   pour une section équipe détaillée (voir « Identifiant chantier (nom + code) » pour la forme de
+   `<identifiant>`), ou **`CHANTIER : <identifiant>` seul** (sans « · ÉQUIPE ») pour la section
+   "reste" — `RapportPageModelBuilder` décide ce texte immédiatement, section par section, en même
+   temps qu'il construit chaque page (voir « Numérotation des chapitres et des pages » : plus de
+   passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
+   porte la même information (texte discret, aligné à gauche à côté de la pagination).
+3. **I — Vue d'ensemble** : 5 cartes KPI (label + valeur), une seule page — masse réelle, effectif,
+   masse moyenne/employé, nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, UN SEUL
+   graphique à 4 séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros
+   chantiers + "Autres" — voir « Visualisations ».
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
-4. **Une section par CHANTIER**, TOUS désormais (demande explicite de direction, 2026-09-29 : plus
-   de distinction "détaillé"/"compact" par effectif) — chacun son propre chapitre romain à la suite
-   du seul chapitre fixe (II, III, ... — voir `PaieReportPdfService.chapitreChantier`) — voir « Vue
+4. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
+   seul chapitre fixe (II, III, ... — voir `RapportPageModelBuilder.chapitreChantier`) — voir « Vue
    détaillée d'un chantier » pour le détail.
 
-Toutes ces sections partagent la même source de données à plat (`LigneRapportDetailBean`, un employé
-par ligne).
+Toutes ces sections partagent la même vue-modèle (`RapportBiVue`, voir « Modèle analytique ») —
+`RapportPageModelBuilder` la parcourt directement (chantiers → équipes → employés), sans
+aplatissement intermédiaire (contrairement à l'ancien `LigneRapportDetailBean` de l'ère
+JasperReports, dont l'aplatissement n'a plus d'utilité une fois la pagination pilotée en Java).
 
 ### Vue détaillée d'un chantier
 
-Un chantier occupe **1 seule page continue** avant son détail employé
-(`GroupChantierEvolution` puis, optionnellement, `GroupChantier` — `rapport.jrxml`, toutes deux
-déclenchées par le même code chantier). Cette page suit la même hiérarchie de lecture qu'à chaque
-niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
+Un chantier occupe **1 seule page** pour ses cartes KPI + son graphique de répartition par équipe
+(le cas échéant), suivie d'une ou plusieurs pages par section équipe. Cette page suit la même
+hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
 
-**`GroupChantierEvolution`** — `isStartNewPage="true"`, c'est lui qui démarre la nouvelle page du
-chapitre, TOUJOURS affiché :
+1. **4 cartes KPI** : Masse salariale (avec comparaison mois précédent sur la même ligne que la
+   valeur), Effectif, Coût moyen / employé, STC / sorties.
+2. **"Répartition par équipe"** (renommé depuis "Équipes de chantier X" le 2026-09-29 — le chantier
+   est déjà identifié par le titre de chapitre et le bandeau récurrent), SUR LA MÊME PAGE,
+   **uniquement si au moins une équipe de ce chantier a été sélectionnée** pour un détail séparé
+   (`ChantierBiVue.avecDetailEquipe`) — sinon la page se limite aux 4 cartes KPI. Quand affiché : UN
+   SEUL graphique à barres groupées (masse/effectif/STC en personnes/STC en DH,
+   `ChantierBiVue.repartitionEquipe` — TOUJOURS la distribution complète de toutes les équipes
+   réelles du chantier, même si seule une partie a sa propre section ci-dessous) — **SEUL, sans
+   tableau**.
 
-1. **4 cartes KPI** (même style que la Vue d'ensemble, label + valeur uniquement) : Masse salariale
-   (avec comparaison mois précédent sur la même ligne que la valeur), Effectif, Coût moyen / employé,
-   STC / sorties.
-2. La **phrase courte de synthèse** du chantier (voir « Narratif léger »).
-
-**`GroupChantier`, "Répartition par équipe"** (renommé depuis "Équipes de chantier X" le 2026-09-29,
-demande explicite de direction — le chantier est déjà identifié par le titre de chapitre et le
-bandeau récurrent) — enchaîne directement, SANS saut de page, sur la même
-page que `GroupChantierEvolution`, **uniquement si au moins une équipe de ce chantier a été
-sélectionnée** pour un détail séparé (`ChantierBiVue.avecDetailEquipe`) : la bande entière porte un
-`printWhenExpression`, absente (hauteur nulle, aucun espace réservé) sinon. Quand elle s'imprime :
-UN SEUL `<barChart>` horizontal à barres groupées (masse/effectif/STC en personnes/STC en DH,
-`PaieReportGroupedChartCustomizer`, `ChantierBiVue.repartitionEquipe` — TOUJOURS la distribution
-complète de toutes les équipes réelles du chantier, même si seule une partie a sa propre section
-ci-dessous) — **SEUL, sans tableau**.
-
-Puis, sur une page dédiée chacune (`GroupEquipe`, `isStartNewPage="true"` depuis le 2026-09-29,
-`isReprintHeaderOnEachPage="false"` et `keepTogether="false"` depuis le même jour — voir plus bas) :
+Puis, sur une ou plusieurs pages dédiées chacune (`RapportPageModelBuilder.ajouterPagesEquipe`) :
 une section par équipe **sélectionnée**, puis, si des employés restent (équipes non sélectionnées,
 "Sans équipe" compris), une dernière section "reste" les regroupant tous — jamais un employé dans
 deux sections. Si aucune équipe n'a été sélectionnée pour ce chantier, une seule section réunit tous
 ses employés. Chaque section (12 colonnes, tout en noir — voir « Style visuel »), triée par ordre
-**alphabétique** de fonction (demande explicite de direction, 2026-09-29 — plus par masse
-décroissante, voir `PaieBiReportBuilder.equipeVue`, même tri que le tableau récap
-Fonction/Effectif/STC ci-dessous), se termine par les lignes de résumé, le tableau récap et, le cas
-échéant, le squelette matériel (voir « Lignes de résumé et tableau récap »). Le tableau employé
-reprend les colonnes de la liste Paie à l'écran, moins Chantier (déjà porté par le titre de section) :
-Nom & prénom, Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs, **Équipe**
-(ajoutée le 2026-09-29 — vide dans une section équipe déjà nommée par son titre, ou quand l'employé
-n'a aucune équipe renseignée (jamais "Sans équipe" — demande explicite de direction, 2026-09-29),
-renseignée uniquement dans la section "reste" où les employés viennent potentiellement de plusieurs
-équipes non sélectionnées mélangées, voir `LigneEmployeVue.equipeReelle`). Cette colonne, comme tous
-les autres endroits du rapport où une équipe est nommée (titre de section, bandeau
-CHANTIER/ÉQUIPE, graphique "Répartition par équipe"), affiche le **nom complet** de l'équipe
-("CHAUFFEURS"), jamais son code brut ("CH") — voir « Nom complet des équipes » ci-dessous. Colonne
-Fonction élargie (90→100, prise sur Nom & prénom 130→120) et police réduite (8pt) : un libellé
-fonction long ("CH. CAMION PORT CHAR") se retrouvait tronqué de façon indiscernable d'un autre
-("CH. CAMION GASOIL", tous deux affichés "CH. CAMION...") — constaté par l'utilisateur sur données
-réelles.
+**alphabétique** de fonction (voir `PaieBiReportBuilder.equipeVue`, même tri que le tableau récap
+Fonction/Effectif/STC ci-dessous), se termine par le tableau récap et, le cas échéant, le squelette
+matériel (voir « Cartes KPI de section et tableau récap »). Le tableau employé reprend les colonnes
+de la liste Paie à l'écran, moins Chantier (déjà porté par le titre de section) : Nom & prénom,
+Fonction, CIN, Nbre jrs (P/J.R.O/J.R.D), Salaire (Salaire/RO/RD), Total, Obs, **Équipe** (vide dans
+une section équipe déjà nommée par son titre, ou quand l'employé n'a aucune équipe renseignée
+(jamais "Sans équipe"), renseignée uniquement dans la section "reste" où les employés viennent
+potentiellement de plusieurs équipes non sélectionnées mélangées, voir
+`LigneEmployeVue.equipeReelle`). Cette colonne, comme tous les autres endroits du rapport où une
+équipe est nommée (titre de section, bandeau CHANTIER/ÉQUIPE, graphique "Répartition par équipe"),
+affiche le **nom complet** de l'équipe ("CHAUFFEURS"), jamais son code brut ("CH") — voir « Nom
+complet des équipes » ci-dessous. Colonne Fonction élargie (100pt) et police réduite (8pt) : un
+libellé fonction long ("CH. CAMION PORT CHAR") se retrouvait tronqué de façon indiscernable d'un
+autre ("CH. CAMION GASOIL", tous deux affichés "CH. CAMION...") — constaté par l'utilisateur sur
+données réelles.
 
-**`isReprintHeaderOnEachPage="false"`** (depuis le 2026-09-29, demande explicite de direction) :
-avec `true`, une équipe assez nombreuse pour que son tableau déborde sur plusieurs pages (ex. 74
-employés) pouvait voir son `groupFooter` (résumé + récap) atterrir seul sur une page où
-JasperReports réimprimait le bandeau équipe + les en-têtes de colonnes juste au-dessus — une page
-qui ressemblait à un tableau vide suivi de ses totaux (constaté par l'utilisateur sur données
-réelles). Avec `false`, cette page ne montre plus que les totaux/récaps ; en contrepartie, les
-pages de continuation d'un tableau qui déborde n'ont plus l'en-tête de colonnes répété.
+Les en-têtes de colonnes ne se répètent JAMAIS sur les pages de continuation d'une section qui
+déborde (`PageModel.BlocTableauEmployes.avecEnTeteColonnes`, vrai uniquement sur la 1re page) —
+évite l'effet "tableau vide suivi de ses totaux" sur les pages de continuation.
 
-**`keepTogether="false"`** (depuis le 2026-09-29, remplace `true` — constaté par l'utilisateur sur
-données réelles) : avec `true`, JasperReports essayait de garder TOUT le groupe (en-tête + lignes +
-`groupFooter`) ensemble sur une page à chaque fois que possible, ce qui, combiné à
-`isStartNewPage="true"`, causait des pages totalement blanches et reléguait systématiquement le
-`groupFooter` (220px) à la page suivante dès que l'espace restant sous le dernier employé était
-inférieur à sa hauteur déclarée — même quand cet espace restait largement suffisant pour les 2 lignes
-TOTAL GENERAL. Sans utilité de toute façon : `isStartNewPage="true"` garantit déjà que l'en-tête de
-section ne démarre jamais en bas d'une page précédente (seul le vrai rôle de `keepTogether`).
+### Pagination : contrôle 100 % Java (2026-09-29)
 
-**Le bloc TOTAL GENERAL ne doit JAMAIS apparaître seul en haut d'une page sans employé au-dessus**
-(demande explicite de direction, 2026-09-29) : `keepTogether="false"` seul ne suffit pas à le
-garantir (un `groupFooter` peut encore être intégralement repoussé si AUCUNE place ne reste du tout).
+**Ce rapport a connu 2 architectures de rendu avant celle-ci** : un premier pipeline HTML (Thymeleaf
++ openhtmltopdf + JFreeChart), abandonné le 2026-09-25 pour JasperReports après plusieurs incidents
+de production (voir « Historique — pourquoi 3 pipelines » ci-dessous) ; puis JasperReports/JRXML,
+abandonné à son tour le 2026-09-29 (demande explicite de direction, après plusieurs bugs de
+pagination — pages blanches provoquées par une limite interne non documentée du moteur, résolue par
+une longue série de corrections empiriques). Cette 3e architecture revient à un pipeline HTML, mais
+neutralise structurellement les 3 modes d'échec historiques (voir le Javadoc de
+`PaieReportHtmlBuilder`/`RapportChartSvgBuilder` pour le détail de chacun).
 
-Un premier essai — un groupe JRXML imbriqué (`GroupQueueEquipe`) gardant les 4 dernières lignes
-employé ensemble via `keepTogether="true"` — s'est révélé insuffisant, **constaté sur données
-réelles** : (1) 4 lignes (64px) ne suffisent pas à garantir que le `groupFooter` (jusqu'à 220px)
-tienne derrière elles — le vrai besoin va jusqu'à 17 lignes selon où la section se termine sur la
-page ; (2) JasperReports décide qu'une bande "tient" sur la page courante en comparant sa **hauteur
-déclarée** à l'espace restant, jamais sa hauteur réellement nécessaire — un `groupFooter` peut donc
-être intégralement repoussé même quand il resterait largement la place pour son contenu réel (peu de
-fonctions/matériel ce mois-ci) ; (3) l'ajout de ce groupe semble avoir provoqué, à certaines
-frontières de section, des pages totalement blanches.
+**Décision centrale** : `RapportPageModelBuilder` découpe CHAQUE page à l'avance, en Java pur, avant
+tout rendu HTML — jamais de règle CSS de pagination avancée (`@page` margin boxes, `position:
+running()`, compteurs de page), dont le support par openhtmltopdf 1.0.x est incomplet et sensible à
+la version. Chaque page physique (`PageModel`) est un bloc HTML à taille FIXE (842×595pt, A4
+paysage), avec son texte d'en-tête/pied déjà résolu et sa tranche exacte de contenu — le moteur de
+rendu n'a plus aucune décision de pagination à prendre, seulement de la mise en page de contenu à
+taille fixe (la partie la mieux supportée et la moins risquée d'un moteur CSS).
 
-**Solution retenue : un calcul arithmétique exact, pas une astuce de groupe JRXML.**
-`PaieReportPdfService.calculerSautPage` prédit, par le calcul, EXACTEMENT où JasperReports ferait
-déborder chaque page (hauteur de page, marges, bandeaux et hauteur de ligne sont toutes des
-constantes fixes du gabarit — aucun texte à hauteur variable dans le tableau employé) : il simule le
-remplissage naturel des pages d'une section (1re page : hauteur de `GroupEquipe.groupHeader` + lignes
-; pages suivantes : lignes seules, l'en-tête n'étant jamais réimprimé) et, si la DERNIÈRE page ainsi
-prédite dépasserait un seuil de contenu total (voir plus bas), calcule l'index exact de la ligne à
-partir de laquelle il faut basculer sur une page supplémentaire. Ce champ (`$F{sautPageAvant}`)
-pilote un `<break type="Page">` natif de JasperReports, placé en tête de la bande `<detail>`, avec
-`printWhenExpression="$F{sautPageAvant}"` — un mécanisme déclaratif standard, jamais un groupe
-supplémentaire. Toutes les pages AUTRES que celle ajustée continuent de déborder normalement (flux
-JasperReports natif, inchangé) : seul le point d'ajustement est calculé, jamais l'intégralité de la
-pagination.
+Pourquoi c'est sûr et pas du sur-ingénierie : le tableau employé a des colonnes de largeur FIXE et
+une hauteur de ligne FIXE (16pt, `table.employes td` dans rapport.css) — sa pagination est de
+l'arithmétique, pas de la composition typographique ouverte. Puisque la hauteur de ligne est choisie
+et fixée par nous-mêmes en CSS (jamais rétro-ingénierée depuis le comportement d'un moteur tiers,
+contrairement à l'ancien `LIGNE_HAUTEUR` JasperReports), cette constante est fiable par construction.
 
-**Un deuxième bug distinct**, découvert seulement en reproduisant le document réel de l'utilisateur
-(mois 8, chantier C168 en entier) : une réserve FIXE de 220px pour le `groupFooter` (sans tenir
-compte du nombre réel de fonctions distinctes) est ELLE-MÊME insuffisante pour une équipe avec
-beaucoup de fonctions (ex. ATELIER, 11 fonctions — hauteur réelle du footer ≈243px). `calculerSautPage`
-calcule donc désormais la hauteur RÉELLE du footer (`hauteurPiedReelle` : {@code 78 + 15 ×
-nombre de lignes de récap}, le plus grand des deux tableaux côte à côte Fonction/Effectif/STC et
-matériel) plutôt qu'une valeur fixe, comparée à un seuil empirique
-(`SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345`, voir son Javadoc : bien en-deçà des 495px de page utile —
-au-delà, JasperReports échoue à reporter proprement l'excédent du sous-rapport, quel que soit
-l'espace réellement restant sur la page).
+**La règle qui a causé le plus de bugs sous JasperReports — le pied récapitulatif d'une section ne
+doit jamais apparaître seul en haut d'une page sans aucune ligne employé au-dessus — devient une
+simple condition Java** dans la boucle de découpage
+(`RapportPageModelBuilder.ajouterPagesEquipe`) : en découpant les employés d'une section en pages,
+si la dernière tranche laisserait le récap sans aucune ligne employé au-dessus, un saut de page est
+forcé plus tôt ; sinon le récap est ajouté à la suite des dernières lignes, sur cette même page. Plus
+aucun seuil empirique en pixels façon `SEUIL_CONTENU_PAGE_AVEC_FOOTER` : ce fudge-factor n'existait
+que pour compenser un bug moteur (JasperReports décidait qu'une bande "tenait" sur la page courante
+en comparant sa hauteur DÉCLARÉE à l'espace restant, jamais sa hauteur réellement nécessaire — voir
+l'historique Git pour le détail complet de cette saga, `docs/report/README.md` avant le 2026-09-29)
+qui n'a plus lieu d'être : une page est un bloc HTML à taille fixe (`overflow: hidden`), calculée
+directement à partir de constantes que nous choisissons (`PAGE_BODY_HAUTEUR`, `LIGNE_HAUTEUR`,
+`RECAP_BASE_HAUTEUR`/`RECAP_LIGNE_HAUTEUR`), avec une marge de sécurité (`MARGE_SECURITE`) absorbant
+un éventuel écart d'arrondi entre cette arithmétique et le rendu CSS réel — jamais pour contourner un
+bug de moteur.
 
-Une fois le saut jugé nécessaire, la nouvelle dernière page ne reçoit que
-`RESERVE_LIGNES_PREFEREE` (1, le minimum absolu — voir son Javadoc) lignes au maximum (plafonné par ce
-qu'elle peut réellement accueillir) : c'est la page qui la PRÉCÈDE (1re page ou page de continuation,
-pleine ou déjà naturellement partielle faute de données) qui garde toujours le plus de lignes
-possible, jamais l'inverse — demande explicite de direction, 2026-09-29 ("le total ne doit passer à la
-page suivante que lorsqu'il n'y a vraiment plus d'espace"), après un premier essai à 4 lignes qui,
-quand une section débordait déjà sur plusieurs pages de continuation pleines, retirait des lignes
-supplémentaires à une page qui n'était de toute façon pas pleine (constaté sur CHAUFFEURS, 74 lignes).
+Vérifié par un test dédié (`RapportPageModelBuilderTest`, qui balaie 1 à 120 employés croisés avec 0
+à 16 lignes de récap et vérifie, sur le `List<PageModel>` retourné : aucun employé perdu ni dupliqué,
+aucune page ne dépasse la hauteur utile, le récap n'est jamais accompagné d'un tableau vide) — plus
+fort que l'ancien test JasperReports (`calculerSautPage_...`, supprimé) car il porte sur NOTRE modèle
+explicite, jamais sur la prédiction du comportement d'un moteur tiers — et par une reproduction
+locale à l'échelle réelle (plusieurs chantiers, dont une équipe à 74 employés/5 fonctions avec
+squelette matériel C168/CH, une autre à 45 employés/11 fonctions) confirmant l'absence de page
+blanche et de ligne perdue.
 
-**Solution architecturale complémentaire (2026-09-29)** : TOTAL GENERAL et TOTAL GENERAL MOIS
-PRECEDENT, jusque-là au bas du tableau (dans le `groupFooter` à hauteur variable, donc structurellement
-capables de se retrouver orphelins), sont désormais deux CARTES KPI supplémentaires dans le
-`groupHeader` de `GroupEquipe` — même style (filet gris, libellé gris, valeur en gras) que les cartes
-déjà utilisées au niveau global (`GroupSynthese`) et par chantier (`GroupChantierEvolution`), pour une
-présentation homogène à tous les niveaux du rapport. La masse courante ("TOTAL GENERAL") était de
-toute façon déjà affichée dans la carte MASSE existante (aucun doublon d'information, un doublon
-d'affichage en moins) ; le mois précédent rejoint une carte dédiée MASSE MOIS PRECEDENT. Un indicateur
-à hauteur FIXE dans l'en-tête ne peut structurellement plus jamais se retrouver seul en haut d'une
-page — la cause du problème est éliminée pour ces 2 indicateurs, pas seulement contournée par un
-calcul. Le `groupFooter` ne porte donc plus que les tableaux récap (Fonction/Effectif/STC, parc
-matériel), toujours à hauteur variable et toujours protégés par `calculerSautPage` ci-dessus.
-`GroupEquipe.groupHeader` passe de 56 à 100px (4 cartes au lieu de 3 champs "libellé : valeur" en une
-ligne) ; son `groupFooter` passe de 220 à 188px (32px de moins, les 2 lignes TOTAL retirées).
+### Cartes KPI de section et tableau récap
 
-Vérifié par un test dédié
-(`PaieReportPdfServiceTest.calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderLeSeuilAvecFooter`,
-qui rejoue le découpage en pages pour des tailles de section de 1 à 200 employés croisées avec 0 à 16
-lignes de récap) et par une reproduction locale du document réel de l'utilisateur (7 équipes du
-chantier C168, mêmes effectifs et mêmes fonctions distinctes que sur données réelles) confirmant
-l'absence de page blanche.
+En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "reste") : titre, puis 4
+cartes KPI — Effectif, STC/sorties, Masse (`EquipeBiVue.masse`, part du chantier), **Masse mois
+précédent** (`EquipeBiVue.montantMoisPrecedentOuIntrouvable`, `INTROUVABLE` si aucune donnée, même
+règle que « Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque
+chantier. Ces 2 derniers indicateurs sont des cartes à hauteur FIXE dans l'en-tête plutôt que des
+lignes au bas du tableau (héritage d'une décision JasperReports du 2026-09-29 qui reste valide ici :
+un indicateur à hauteur fixe ne peut structurellement jamais se retrouver orphelin en haut de page).
 
-### Deuxième zone sûre : report automatique du footer sans risque (2026-09-29)
-
-**Signalement** : même après la solution architecturale ci-dessus (cartes KPI), l'utilisateur a
-constaté sur données réelles qu'une page pouvait encore se terminer avec un espace visiblement inutilisé
-juste avant de basculer sur la page suivante — ex. équipe CHAUFFEURS (74 lignes, 5 fonctions
-distinctes) : la dernière page de continuation naturelle (20 lignes) se voyait amputée d'1 ligne par
-`calculerSautPage` pour la renvoyer seule sur une page dédiée avec le footer, alors que rien ne
-l'imposait.
-
-**Cause** : `calculerSautPage` ne connaissait qu'UNE seule zone sûre (le footer tient EN LIGNE, collé
-aux dernières lignes employé — voir `SEUIL_CONTENU_PAGE_AVEC_FOOTER` ci-dessus) et forçait un saut dès
-qu'une page la dépassait, sans jamais vérifier qu'il existe une SECONDE zone sûre, à l'opposé :
-JasperReports décide de reporter TOUT le `groupFooter` sur une page neuve en comparant l'espace
-restant à sa hauteur DÉCLARÉE dans le XML (188px, `<groupFooter><band height="188">`), jamais sa
-hauteur réelle une fois les sous-rapports étirés — dès que l'espace restant est inférieur à cette
-hauteur déclarée, le report est automatique et SANS AUCUN RISQUE (le footer se retrouve seul sur une
-page neuve, avec les 495px de page utile entiers à sa disposition, largement suffisants quel que soit
-le nombre réel de fonctions/matériel). Une reproduction locale exhaustive (balayage de 1 à 30 lignes
-sur la dernière page de continuation, croisé avec 5/11/16 lignes de récap, avec et sans sous-rapport
-matériel) a confirmé que ce report automatique est sûr dès que cette dernière page compte au moins 20
-lignes (`seuilLignesSansRisquePushOff`, dérivé de `PAGE_HAUTEUR_UTILE` et de la hauteur déclarée
-188px — indépendant de `lignesRecapMax`), quelle que soit la configuration testée.
-
-Cette même reproduction a aussi affiné `SEUIL_CONTENU_PAGE_AVEC_FOOTER` : une valeur empirique unique
-laissait passer un cas limite (11 fonctions, 9 lignes — 343px de contenu réel, sous le seuil de 345,
-produisait malgré tout une page blanche), corrigé par `MARGE_SECURITE_LIGNES` (1 ligne de marge
-supplémentaire sur la capacité "avec footer en ligne", validée sur 5/11/16 fonctions sans plus aucune
-page blanche).
-
-`calculerSautPage` vérifie donc désormais, avant de forcer un saut : si la dernière page naturelle est
-déjà dans cette seconde zone sûre, ne PAS forcer de saut (JasperReports s'en charge tout seul,
-proprement) — uniquement entre les deux zones sûres (environ 9 à 19 lignes selon `lignesRecapMax`) le
-saut anticipé reste nécessaire. Cette vérification ne s'applique jamais à la 1re page d'une section
-(son budget inclut `GROUPE_EQUIPE_ENTETE_HAUTEUR`, un cas non couvert par cette reproduction — le
-comportement prudent existant y est conservé).
-
-### Cartes KPI de section et tableau récap (2026-09-29)
-
-En-tête de CHAQUE section (`GroupEquipe`, `groupHeader` de `rapport.jrxml`), quelle que soit la
-section (équipe détaillée ou "reste") : titre, puis 4 cartes KPI — Effectif, STC/sorties, Masse
-(`EquipeBiVue.masse`, part du chantier), **Masse mois précédent**
-(`EquipeBiVue.montantMoisPrecedentOuIntrouvable`, `INTROUVABLE` si aucune donnée, même règle que
-« Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque chantier (voir
-« Pourquoi un calcul arithmétique... » ci-dessus pour l'historique : ces 2 derniers indicateurs
-étaient auparavant des lignes `TOTAL GENERAL`/`TOTAL GENERAL MOIS PRECEDENT` au bas du tableau, seul
-scénario ayant causé des pages blanches sur données réelles — une carte à hauteur fixe dans l'en-tête
-ne peut structurellement plus jamais se retrouver orpheline).
-
-Collé directement au bas de CHAQUE tableau employé (`groupFooter`) :
+Collé directement au bas de CHAQUE tableau employé, quand il tient (voir « Pagination : contrôle
+100 % Java » ci-dessus) :
 
 1. **Tableau récap Fonction/Effectif/STC** : effectif et nombre de STC/sorties de CETTE section,
    groupés par fonction (`EquipeBiVue.repartitionFonction`, réutilise `RepartitionBean` sans ses
-   champs montant) — jamais un graphique (redondant avec celui du chantier), imprimé via un
-   sous-rapport (`recap-fonction.jrxml`) car le nombre de fonctions distinctes varie d'une section
-   à l'autre — seul mécanisme JasperReports permettant à la bande parente de s'étirer pour un
-   nombre de lignes inconnu à la compilation.
+   champs montant) — jamais un graphique (redondant avec celui du chantier), nombre de lignes
+   variable d'une section à l'autre.
 2. **Squelette parc matériel**, uniquement pour le chantier C168 équipes CH/OP (voir « Squelette
-   parc matériel ») — même mécanisme de sous-rapport (`recap-materiel.jrxml`), invoqué avec une
-   liste vide (donc invisible) pour toute autre section.
+   parc matériel ») — absent (pas de tableau du tout) pour toute autre section.
 
 ### Visualisations
 
 **Convention du document : barres groupées horizontales à 4 séries (masse/effectif/STC en
-personnes/STC en DH), aucun graphique empilé — et depuis le 2026-09-28, la SEULE famille de
-graphique du rapport (voir « Évolution mensuelle » ci-dessous).** **Un seul customizer,
-`PaieReportGroupedChartCustomizer`, réutilisé partout** : répartition par chantier (chapitre I) et
-répartition par équipe de chaque chantier concerné — la donnée sous-jacente (`RepartitionBean`) est
-la même forme à chaque niveau. Marges resserrées et hauteur de graphique augmentée le 2026-09-29
-(demande explicite de direction, après constat sur données réelles que les étiquettes de valeur de
-barres adjacentes se chevauchaient au plafond de 16 catégories × 4 séries) — voir le Javadoc de
-`PaieReportGroupedChartCustomizer` pour le détail des marges (`categoryMargin`/`itemMargin`).
+personnes/STC en DH), aucun graphique empilé — la SEULE famille de graphique du rapport (voir
+« Évolution mensuelle » ci-dessous).** Construits en **SVG à la main** (`RapportChartSvgBuilder`,
+jsoup — voir son Javadoc), rendu nativement par openhtmltopdf (support Batik) : répartition par
+chantier (chapitre I) et répartition par équipe de chaque chantier concerné — la donnée sous-jacente
+(`RepartitionBean`) est la même forme à chaque niveau.
 
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
@@ -704,124 +605,110 @@ barres adjacentes se chevauchaient au plafond de 16 catégories × 4 séries) �
 - **Axe des valeurs masqué ET chaque série normalisée à sa propre valeur maximale** (0 à 1,
   indépendamment des 3 autres séries) : masse/STC en DH (milliers de DH) et effectif/STC en
   personnes (quelques unités) ont des ordres de grandeur si différents qu'un axe masqué seul ne
-  suffit pas — les 4 séries restent dessinées sur la même échelle linéaire sous-jacente, ce qui
-  rendait les barres personnes visuellement nulles à côté des barres DH (constaté en production).
-  L'étiquette affichée sur chaque barre reste la **vraie** valeur, lue dans une table conservée
-  avant normalisation — jamais la valeur normalisée réellement tracée. Une valeur exactement nulle
-  n'a pas d'étiquette (la barre est de toute façon invisible) — son absence dit déjà "zéro" sans
-  ambiguïté.
+  suffit pas. L'étiquette affichée sur chaque barre reste la **vraie** valeur, lue AVANT
+  normalisation, avec un null-check explicite (`RapportChartSvgBuilder.valeurMontant`,
+  `RepartitionBean.montant`/`stcMontant` pouvant être `null` — seul endroit de toute la vue-modèle
+  dans ce cas, voir « Architecture » — traité comme zéro, jamais la chaîne littérale "null", couvert
+  par un test de non-régression dédié). Une valeur exactement nulle (ou `null`) n'a pas d'étiquette
+  (la barre est de toute façon invisible) — son absence dit déjà "zéro" sans ambiguïté.
 - **Chaque barre au maximum de sa série est mise à l'échelle à 82 % du tracé** (`ECHELLE_MAX`,
-  `PaieReportGroupedChartCustomizer`), jamais 100 % : sans cette marge, l'étiquette d'une barre au
-  maximum se retrouve à la toute limite du canevas et se fait tronquer par son bord — constaté en
-  production avec de gros montants dont les derniers caractères disparaissaient, quel que soit
-  l'inset du plot par ailleurs.
-- **`<chartLegend position="Bottom">`** obligatoire (4 séries à distinguer). Palette fixe : Masse
-  `#2563EB`, Effectif `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC
-  restent dans la même famille de rouges, sous ses 2 représentations) — seule exception à la règle
-  noir/blanc/gris du document (voir « Style visuel »).
+  `RapportChartSvgBuilder`), jamais 100 % — évite qu'une étiquette de barre au maximum se retrouve à
+  la toute limite du tracé et soit tronquée par son bord.
+- Légende obligatoire en bas (4 séries à distinguer). Palette fixe : Masse `#2563EB`, Effectif
+  `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC restent dans la même
+  famille de rouges, sous ses 2 représentations) — seule exception à la règle noir/blanc/gris du
+  document (voir « Style visuel »).
 - **Plafonné aux 15 plus grosses valeurs** (`PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE`) au niveau
   global (chapitre I) — le reste regroupé sous « Autres », masse/effectif/STC cumulés, toujours
   retrié à sa vraie place. Pas de plafond au niveau « répartition par équipe » d'un chantier : le
   nombre d'équipes distinctes au sein d'un même chantier reste naturellement modeste.
-- Étiquette de valeur à l'extérieur de chaque barre (`ItemLabelAnchor.OUTSIDE3`/
-  `TextAnchor.CENTER_LEFT`), jamais à l'intérieur — une barre courte (petite valeur normalisée)
-  étant parfois trop étroite pour contenir son étiquette.
 
-> **Historique** : ce graphique a connu plusieurs conventions antérieures, toutes abandonnées sur
-> demande explicite de direction — barres verticales à série unique, puis colonnes verticales
-> empilées (`<stackedBarChart>`) par équipe. **Plus aucun graphique empilé n'existe dans ce
-> document.** Un vrai double axe X numérique (2 échelles simultanées) a également été envisagé puis
-> écarté : JFreeChart ne gère pas nativement des barres groupées réparties sur 2 axes indépendants,
-> ce qui aurait demandé un renderer sur mesure — risque jugé disproportionné face à la normalisation
-> par série, une alternative explicitement admise par la direction.
+> **Historique** : ce graphique a connu plusieurs conventions antérieures côté JasperReports, toutes
+> abandonnées sur demande explicite de direction — barres verticales à série unique, puis colonnes
+> verticales empilées. **Plus aucun graphique empilé n'existe dans ce document.** Un vrai double axe
+> X numérique (2 échelles simultanées) a également été envisagé puis écarté — la normalisation par
+> série reste l'alternative retenue, explicitement admise par la direction.
 
 ### Évolution mensuelle — retirée (2026-09-28)
 
-Le rapport a porté, à une itération précédente, un `<lineChart>` d'évolution mensuelle (masse,
-effectif) aux niveaux Global et Chantier, avec une fenêtre glissante d'au plus 12 mois (jamais
-avant le premier mois où une paie existe réellement en base, `PaieRepository.premierePeriode()`) et
-un système de normalisation par série (même principe que `PaieReportGroupedChartCustomizer`
-ci-dessus) pour contourner les limites d'un vrai double axe Y à échelle réelle. **Ce graphique a été
-retiré entièrement** (manque d'historique suffisant pour qu'une tendance mensuelle soit
-significative) — voir `docs/report/rapport-v2.md` pour le détail complet de cette décision, de
+Le rapport a porté, à une itération précédente, un graphique d'évolution mensuelle (masse, effectif)
+aux niveaux Global et Chantier, avec une fenêtre glissante d'au plus 12 mois (jamais avant le
+premier mois où une paie existe réellement en base, `PaieRepository.premierePeriode()`). **Ce
+graphique a été retiré entièrement** (manque d'historique suffisant pour qu'une tendance mensuelle
+soit significative) — voir `docs/report/rapport-v2.md` pour le détail complet de cette décision, de
 celle qui l'a précédée (retrait du STC de ce même graphique), et de ce qui reste calculé côté Java
-sans être affiché (prêt à être réactivé sans recalcul si le besoin se confirme un jour). Le rapport
-ne porte donc plus aucun `<lineChart>`.
+sans être affiché (`PaieBiReportBuilder.evolutionParNiveau`, prêt à être réactivé sans recalcul si le
+besoin se confirme un jour). Le rapport ne porte donc aucun graphique d'évolution.
 
 ### Style visuel
 
 Rendu recherché : un rapport BI de direction imprimé, sobre — jamais un export de données habillé.
 
-- **Noir / blanc / gris partout dans le document, aucune exception, aucun fond de couleur.** Le
-  document a connu une itération intermédiaire où certains titres (bandeau équipe, sous-titres de
-  graphique) étaient en bleu marine `#011F5B` — **entièrement abandonnée sur demande explicite de
-  direction** ("tout en noir") : plus aucune trace de cette couleur nulle part dans le gabarit,
-  `#000000` est désormais le seul texte utilisé pour tout contenu (titres de chapitre, sous-titres,
-  bandeaux, tableaux). **Toutes les tables du document sont 100 % blanches** (aucun fond, aucune
-  alternance de lignes), chaque cellule délimitée par un filet noir `#000000` — sur **toutes** les
-  cellules du tableau employé, pas seulement l'en-tête (demande explicite de direction). Palette
-  restante, hors texte courant et tableaux : `#595959` (libellés/captions secondaires), `#CCCCCC`
-  (filets décoratifs hors tableau, contour des cartes KPI), `#808080`/`#999999` (séparateurs de
-  blocs d'en-tête). **Seuls les `<barChart>` restent en couleur** (plus aucun `<lineChart>` dans le
-  document, voir « Évolution mensuelle ») — la seule exception délibérée à la règle noir/blanc (voir
-  « Visualisations » pour la palette exacte). Les indicateurs de tendance HAUSSE/BAISSE/STABLE sont
-  du texte noir gras
-  préfixé du mot (« Hausse : … », « Baisse : … », « Stable : … ») — la couleur ne porte pas
-  l'information, le texte si.
-- **Police Liberation Serif** dans tout le document (gabarit JRXML et les customizers de graphique,
-  propriété `net.sf.jasperreports.default.font.name`) — substitut de « Times New Roman » demandé par
-  la direction : la police Microsoft n'est pas installée sur l'environnement de rendu PDF, et
-  Liberation Serif en est métriquement compatible. **La police est embarquée dans l'application,
-  jamais supposée installée au niveau du système d'exploitation qui exécute le backend** — un premier
-  déploiement s'appuyait sur la police *de l'environnement de développement*, ce qui a levé
-  `JRFontNotFoundException` au premier remplissage en production. Deux mécanismes, nécessaires
-  ensemble :
-  1. `resources/report/paie/fonts/LiberationSerif-{Regular,Bold,Italic,BoldItalic}.ttf` (licence SIL
-     Open Font License) + `resources/report/paie/fonts/liberation-serif-fonts.xml` (déclaration de
-     famille JasperReports, encodage PDF `Identity-H`) + `resources/jasperreports_extension.properties`
-     — couvre tous les éléments texte des gabarits JRXML.
-  2. Un bloc statique de `PaieReportPdfService` charge les 4 mêmes `.ttf` et les enregistre auprès de
-     `GraphicsEnvironment` (`Font.createFont` + `registerFont`) — nécessaire car
-     `PaieReportGroupedChartCustomizer` construit des `java.awt.Font` directement pour JFreeChart (pas
-     via JasperReports), un chemin que l'extension de police JRXML ne couvre pas.
+- **Noir / blanc / gris partout dans le document, aucune exception, aucun fond de couleur.**
+  `#000000` est le seul texte utilisé pour tout contenu (titres de chapitre, sous-titres, bandeaux,
+  tableaux). **Toutes les tables du document sont 100 % blanches** (aucun fond, aucune alternance de
+  lignes), chaque cellule délimitée par un filet noir `#000000` — sur **toutes** les cellules du
+  tableau employé, pas seulement l'en-tête. Palette restante, hors texte courant et tableaux :
+  `#595959` (libellés/captions secondaires), `#CCCCCC` (filets décoratifs hors tableau, contour des
+  cartes KPI), `#808080`/`#999999` (séparateurs de blocs d'en-tête). **Seuls les graphiques restent
+  en couleur** — la seule exception délibérée à la règle noir/blanc (voir « Visualisations » pour la
+  palette exacte). Les indicateurs de tendance HAUSSE/BAISSE/STABLE sont du texte noir gras préfixé
+  du mot (« Hausse : … », « Baisse : … », « Stable : … ») — la couleur ne porte pas l'information, le
+  texte si.
+- **Police Liberation Serif** dans tout le document (`rapport.css`, `font-family: "Liberation
+  Serif"`) — substitut de « Times New Roman » demandé par la direction : la police Microsoft n'est
+  pas installée sur l'environnement de rendu PDF, et Liberation Serif en est métriquement
+  compatible. **La police est embarquée dans l'application, jamais supposée installée au niveau du
+  système d'exploitation qui exécute le backend** (leçon d'un incident de production antérieur,
+  `JRFontNotFoundException`, quand un déploiement s'appuyait sur la police *de l'environnement de
+  développement*). Les 4 fichiers `.ttf` (licence SIL Open Font License,
+  `resources/report/paie/fonts/`) sont enregistrés programmatiquement auprès de DEUX sous-systèmes
+  de police distincts, chacun nécessaire pour sa propre moitié du rendu :
+  1. `RapportRessourcesStatiques` (bloc statique) les enregistre auprès du `GraphicsEnvironment` AWT
+     — nécessaire car `RapportChartSvgBuilder`/Batik résolvent leurs polices de texte SVG par ce
+     chemin, jamais via openhtmltopdf.
+  2. `PaieReportHtmlPdfService.enregistrerPolices` les enregistre en plus auprès
+     d'openhtmltopdf (`PdfRendererBuilder.useFont`, un appel par fichier avec son poids/style exact)
+     — nécessaire pour que le texte PDF proprement dit (tout sauf les graphiques) résolve la police,
+     et que `font-weight: bold`/`font-style: italic` en CSS pointent vers le vrai fichier gras/
+     italique embarqué plutôt qu'un gras/italique synthétique.
 - **Hiérarchie typographique**, taille de référence 16pt (Liberation Serif) :
   - **Titres de chapitre** (I — Vue d'ensemble, puis un par chantier) : 16pt gras, texte noir sans
     fond, souligné d'un filet fin.
   - **Sous-titres** (bandeau équipe, titre de chaque graphique) : 12-13pt gras, texte noir.
-  - **Indicateurs KPI** : 13-18pt gras pour la valeur, 7.5-9pt gras pour son libellé.
-  - **Tableau détaillé employé** (11 colonnes) : 10.5pt.
+  - **Indicateurs KPI** : 10-13pt gras pour la valeur, 7.5pt gras pour son libellé.
+  - **Tableau détaillé employé** (12 colonnes) : 10.5pt (8pt pour la colonne Fonction, 9pt pour la
+    colonne Équipe).
   - **Captions/notes** (libellés de blocs d'en-tête, pied de page) : 6.5-10pt.
-  - **⚠️ Piège JasperReports constaté en production** : une hauteur de `reportElement` trop proche
-    de la taille de police (ex. `height="13"` pour `size="12"`) fait que le texte **ne s'affiche pas
-    du tout, sans aucune exception ni avertissement** — ni dans les logs, ni dans le PDF, juste un
-    vide silencieux. Une marge d'au moins ~6pt entre la hauteur et la taille de police
-    (`height="18"` pour `size="12"`, `"22"` pour `size="16"`) évite le problème.
 - **Aucun sommaire imprimé** : un rapport généré à la demande n'a pas besoin d'une table des
-  matières. Le double remplissage (voir « Numérotation des chapitres et des pages ») subsiste,
-  mais uniquement pour connaître la page de départ du premier chantier (bloc "Niveau" du bandeau).
+  matières.
+- **Dimensions CSS en `pt` (point PDF), jamais `px`** (qui vaudrait 1/96 pouce et fausserait la
+  géométrie une fois imprimée sur A4 réel — voir « Pagination : contrôle 100 % Java »).
+- **Moteur CSS d'openhtmltopdf 1.0.x = CSS 2.1 pur, pas un moteur de navigateur moderne** : aucun
+  support de `var()`/custom properties, flexbox (`display:flex`/`gap`/`align-items`/
+  `justify-content`), `object-fit`, `text-overflow` (constaté empiriquement lors de la migration,
+  voir les avertissements de compilation openhtmltopdf) — toute la mise en page horizontale de
+  `rapport.css` utilise donc `float`+`margin` (jamais flexbox), toutes les couleurs sont des
+  hexadécimaux littéraux. **Piège constaté** : une rangée de flottants dont la largeur cumulée
+  correspond EXACTEMENT à la largeur de son conteneur peut repasser à la ligne (arrondi interne du
+  moteur) — toujours laisser ~15-20pt de marge de sécurité sur la largeur du conteneur d'une rangée
+  de flottants (voir `.cover .signatures` dans rapport.css).
 
 ### Numérotation des chapitres et des pages
 
-**Chapitres** : `PaieReportPdfService.chapitreChantier(index, chantier)` numérote en chiffre romain
-CHAQUE chantier de `vue.chantiers()` (déjà triée par masse décroissante), `index` étant sa position
-dans cette liste — plus de partition "détaillé d'abord, compact ensuite" (voir
-`docs/report/rapport-v2.md`).
+**Chapitres** : `RapportPageModelBuilder.chapitreChantier(index, chantier)` numérote en chiffre
+romain CHAQUE chantier de `vue.chantiers()` (déjà triée par masse décroissante), `index` étant sa
+position dans cette liste.
 
-**Pages** : le numéro de page réel n'est connu qu'après la mise en page complète du document, alors
-que le bandeau récurrent a besoin de savoir, dès la première page, à partir de quelle page basculer
-de "GLOBAL" à "CHANTIER" (voir « Structure du rapport »). `PaieReportPdfService.generer` résout ça
-par un **double remplissage** du même gabarit (jamais un second gabarit) :
-
-1. **Passage de découverte** (silencieux, jamais exporté) : rempli avec un seuil provisoire
-   (`Integer.MAX_VALUE`, tout est "GLOBAL"). Le premier chantier porte une ancre JRXML
-   (`anchorNameExpression="chantier-" + code`, sur `GroupChantierEvolution`, TOUJOURS affichée
-   pour tout chantier). Le `JasperPrint` obtenu est relu page par page (`pagesParAncre`) pour
-   retrouver la première page où cette ancre apparaît.
-2. **Passage final** : le même gabarit est rempli une seconde fois avec ce seuil réel injecté — la
-   mise en page du reste du document ne dépendant en rien de ce seuil, le résultat est exact.
-
-Coût : la génération prend environ deux fois plus de temps (deux mises en page complètes) — accepté
-pour un rapport de direction généré à la demande, pas en masse.
+**Pages** : `RapportPageModelBuilder.construire` décide lui-même, dans le MÊME passage, la liste
+complète des pages et sur laquelle démarre chaque chapitre — il n'y a donc RIEN à découvrir après
+coup, contrairement à l'ancien pipeline JasperReports (qui ne connaissait les numéros de page réels
+qu'après une mise en page complète, et résolvait ça par un double remplissage : un passage de
+découverte silencieux, puis un passage final avec le seuil réel injecté). Le texte "Niveau" de
+chaque page (`PageModel.niveauTexte`) est déjà résolu au moment où la page est construite, de même
+que "Page N / TOTAL" (`TOTAL = pages.size()`, trivialement connu une fois la liste complète
+construite). `PaieReportHtmlPdfService` appelle donc openhtmltopdf **UNE SEULE fois** — un gain net
+de temps de génération par rapport à l'ancien double remplissage.
 
 ### Composants et services principaux
 
@@ -831,18 +718,44 @@ pour un rapport de direction généré à la demande, pas en masse.
 | `PaieExportService` / `PaieSheetWriter` / `PaieExcelStyles` | Génération du classeur Excel |
 | `MaterielChantierCatalogue` | Règle métier partagée PDF/Excel : squelette parc matériel du chantier C168 |
 | `PaieBiReportBuilder` | Périmètre + agrégations BI du rapport PDF, calcul de `avecDetailEquipe` par chantier à partir de la sélection manuelle — testé isolément (`PaieBiReportBuilderTest`) sans dépendre du repository via `construireDepuis` |
-| `PaieReportPdfService` | Orchestration JRXML → PDF (compilation du gabarit principal + 2 sous-rapports, aplatissement des données, **double remplissage** — voir « Numérotation des chapitres et des pages », export) — testée de bout en bout par `PaieReportPdfServiceTest` |
-| `PaieReportGroupedChartCustomizer` | Personnalisation Java de TOUS les `<barChart>` du document (SEULE famille de graphique restante — masse/effectif/STC personnes/STC DH, 4 séries normalisées chacune à son propre maximum, étiquette = vraie valeur, plafond des 15 plus grosses valeurs + "Autres" — voir « Visualisations ») |
+| `RapportPageModelBuilder` | Pagination pure Java (voir « Pagination : contrôle 100 % Java ») — testée isolément (`RapportPageModelBuilderTest`), aucun rendu |
+| `PaieReportHtmlBuilder` | Construction du DOM (jsoup pur) à partir des `PageModel` déjà résolus |
+| `RapportChartSvgBuilder` | Graphiques en SVG (voir « Visualisations ») |
+| `RapportRessourcesStatiques` | Chargement unique des polices/CSS/logo |
+| `PaieReportHtmlPdfService` | Orchestration + rendu PDF final (un seul appel openhtmltopdf) — testée de bout en bout par `PaieReportHtmlPdfServiceTest`, y compris un test de non-régression dédié à l'échappement (charge hostile dans une observation) |
 | `PaieExportDialogComponent` (frontend) | Dialog d'export UNIQUE, PDF ou Excel, une seule sélection manuelle d'équipes pour les deux formats |
 | `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
 
-Le logo Staport (`resources/report/paie/logo-staport.png`, chargé en classpath par
-`PaieReportPdfService` et transmis au gabarit JRXML en paramètre **`byte[]`**, pas `InputStream`)
-apparaît sur la page de garde et à gauche de chaque bandeau d'en-tête récurrent. `byte[]` est
-réévaluable à volonté par le moteur de rendu, contrairement à un `InputStream` : ce dernier ne se lit
-qu'une fois, et le logo est référencé par plusieurs `<image>` distincts dans le même gabarit (page de
-garde + `pageHeader` répété) — avec un `InputStream` partagé, seule la première image affichée
-consommait le flux, les suivantes restaient blanches (bug corrigé, voir l'historique Git).
+Le logo Staport (`resources/report/paie/logo-staport.png`) est chargé une seule fois
+(`RapportRessourcesStatiques`) et embarqué en **data-URI base64** (`data:image/png;base64,...`) dans
+chaque balise `<img>` qui le référence (page de garde + bandeau de chaque page) — openhtmltopdf n'a
+pas d'URI de base pour résoudre un chemin de fichier relatif (même contrainte que l'ancien pipeline
+HTML pré-JasperReports), et une chaîne base64 fonctionne à l'identique quel que soit le nombre
+d'éléments qui la référencent, contrairement à un flux qui ne se lit qu'une fois (piège déjà
+rencontré côté JasperReports avec un `InputStream`, voir l'historique Git).
+
+### Historique — pourquoi 3 pipelines
+
+Ce rapport a été reconstruit 2 fois (2026-09-25 puis 2026-09-29), toujours pour la même raison de
+fond : fiabiliser un document dont la pagination/le rendu se comportait de façon imprévisible.
+
+1. **Thymeleaf + openhtmltopdf + JFreeChart** (pipeline d'origine) → abandonné pour 3 incidents de
+   production précis : (a) une `SAXParseException` fatale — un commentaire CSS contenant
+   littéralement `<td>`/`<tr>`, injecté SANS échappement via `th:utext` dans une balise `<style>`,
+   avait fait planter le parseur XML strict d'openhtmltopdf ; (b) `"null"` affiché littéralement
+   dans la colonne Obs — concaténation de chaîne brute sans null-check ; (c) une résolution de
+   police fragile.
+2. **JasperReports/JRXML** → a résolu les 3 points ci-dessus (binding de champ automatique avec
+   null-check intégré, police embarquée programmatiquement, aucune concaténation de chaîne HTML) —
+   mais a introduit sa propre catégorie de bugs : un comportement de pagination interne non
+   documenté produisant des pages blanches, résolu par une longue série de corrections empiriques
+   (voir l'historique Git de ce fichier avant le 2026-09-29 pour le détail complet, notamment
+   `calculerSautPage` et ses multiples itérations).
+3. **jsoup + openhtmltopdf + SVG fait main** (pipeline ACTUEL) → revient à un pipeline HTML, mais
+   neutralise les 3 incidents historiques par construction (jsoup `Element.text(...)` échappe
+   TOUJOURS, jamais de `.html(String)` — voir le Javadoc de `PaieReportHtmlBuilder`) et évite la
+   catégorie de bugs JasperReports en ne déléguant JAMAIS de décision de pagination au moteur de
+   rendu (voir « Pagination : contrôle 100 % Java »).
 
 ---
 
@@ -864,16 +777,16 @@ consommait le flux, les suivantes restaient blanches (bug corrigé, voir l'histo
   sans persistance ni UI de saisie (voir « Squelette parc matériel ») — si le besoin s'étend à
   d'autres chantiers/équipes, la règle métier centralisée dans `MaterielChantierCatalogue` est le
   seul point à faire évoluer (aucune duplication à corriger des deux côtés).
-- **Comparaison mois précédent au niveau équipe/section** : déjà en place (`TOTAL GENERAL MOIS
-  PRECEDENT` de chaque section, voir « Lignes de résumé et tableau récap »).
+- **Comparaison mois précédent au niveau équipe/section** : déjà en place (carte KPI "MASSE MOIS
+  PRECEDENT" de chaque section, voir « Cartes KPI de section et tableau récap »).
 - **Autres filtres du dialog (nom, CIN, fonction, chantier unique)** : volontairement non exposés
   par `PaieExportDialogComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
   sur l'ensemble des chantiers/employés de la période, pas sur une recherche ponctuelle.
   `PaieReportPdfRequestDto` les garde optionnels pour un appel API direct ; à réexposer côté UI
   seulement si un besoin réel de rapport filtré se confirme.
 - **Nouveaux indicateurs BI** : ajouter une mesure suit toujours le même chemin —
-  `PaieBiReportBuilder` (calcul), un nouveau record de vue-modèle (paramètre scalaire) ou une classe
-  à getters (ligne de table/graphique liée par réflexion) si la forme ne rentre dans aucun existant,
-  les éléments correspondants dans le gabarit JRXML concerné, une entrée dans le catalogue de KPI
-  ci-dessus. Avant d'ajouter un KPI, vérifier qu'il répond à une question non déjà couverte pour
+  `PaieBiReportBuilder` (calcul), un nouveau champ de vue-modèle si la forme ne rentre dans aucun
+  existant, le `PageModel.Bloc` et le rendu `PaieReportHtmlBuilder` correspondants, une entrée dans
+  le catalogue de KPI ci-dessus. Avant d'ajouter un KPI, vérifier qu'il répond à une question non
+  déjà couverte pour
   éviter la duplication.

@@ -128,7 +128,7 @@ class PaieBiReportBuilder {
 
         // agregatChantier est déjà trié par masse (salaireTotal) décroissante — voir agreger() — le
         // plus gros chantier en premier, jamais un ré-tri alphabétique qui l'annulerait. Cet ordre de
-        // liste, lu tel quel par PaieReportPdfService/rapport.jrxml, détermine entièrement la
+        // liste, lu tel quel par RapportPageModelBuilder, détermine entièrement la
         // numérotation des chapitres : chaque chantier a désormais sa propre section, qu'il ait ou non
         // une équipe détaillée (voir ChantierBiVue.avecDetailEquipe, plus de chapitre final consolidé —
         // voir docs/report/rapport-v2.md).
@@ -325,7 +325,7 @@ class PaieBiReportBuilder {
      * monotone, jamais un bloc "Autres" plus grand que plusieurs barres qui le précèdent. Déjà trié
      * par montant décroissant en entrée (voir {@link #agreger}). La même liste alimente le graphique
      * à barres groupées (masse/effectif/STC, 3 séries) de la dimension (chantier, équipe ou fonction),
-     * voir {@code PaieReportGroupedChartCustomizer}. */
+     * voir {@code RapportChartSvgBuilder}. */
     private List<RepartitionBean> versRepartition(List<Agregat> agregats) {
         List<RepartitionBean> valeurs = new ArrayList<>();
         int effectifAutres = 0;

@@ -41,7 +41,13 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      - name: Install fonts for the PDF report
+      # Necessaire a l'initialisation du sous-systeme de polices AWT (GraphicsEnvironment) sur un
+      # runner CI nu, sans quoi le rendu SVG des graphiques du rapport de paie (Batik, voir
+      # RapportRessourcesStatiques) peut echouer au demarrage headless. Ancien commentaire
+      # ("Install fonts for the PDF report") datait du pipeline JasperReports/JFreeChart, retire le
+      # 2026-09-29 (voir docs/report/README.md) - le besoin AWT/Batik sous-jacent reste le meme,
+      # jamais verifie comme superflu, donc conserve par prudence.
+      - name: Install fonts for AWT/SVG chart rendering
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core
 
       - name: Run backend tests
