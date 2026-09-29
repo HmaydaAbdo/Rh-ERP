@@ -187,6 +187,7 @@ créé ni mis à jour, **aucune fonction n'est créée non plus** :
 |---|---|
 | Champ obligatoire manquant (fonction, jours, salaire, chantier) | `Champs obligatoires manquants ou invalides : ...` |
 | CIN sans employé correspondant | `Employé introuvable avec ce CIN` |
+| CIN présent plus d'une fois dans le fichier | `CIN en doublon dans le fichier` |
 | Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |
 | Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, `misAJour = 0`, détail complet dans `lignesIgnorees` |
 | Toutes les lignes valides | `200 OK`, tous les bulletins créés/mis à jour, fonctions manquantes créées |
