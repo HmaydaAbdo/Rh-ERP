@@ -576,15 +576,39 @@ déborder chaque page (hauteur de page, marges, bandeaux et hauteur de ligne son
 constantes fixes du gabarit — aucun texte à hauteur variable dans le tableau employé) : il simule le
 remplissage naturel des pages d'une section (1re page : hauteur de `GroupEquipe.groupHeader` + lignes
 ; pages suivantes : lignes seules, l'en-tête n'étant jamais réimprimé) et, si la DERNIÈRE page ainsi
-prédite ne laisserait pas la place au `groupFooter`, calcule l'index exact de la ligne à partir de
-laquelle il faut basculer sur une page supplémentaire. Ce champ (`$F{sautPageAvant}`) pilote un
-`<break type="Page">` natif de JasperReports, placé en tête de la bande `<detail>`, avec
+prédite dépasserait un seuil de contenu total (voir plus bas), calcule l'index exact de la ligne à
+partir de laquelle il faut basculer sur une page supplémentaire. Ce champ (`$F{sautPageAvant}`)
+pilote un `<break type="Page">` natif de JasperReports, placé en tête de la bande `<detail>`, avec
 `printWhenExpression="$F{sautPageAvant}"` — un mécanisme déclaratif standard, jamais un groupe
 supplémentaire. Toutes les pages AUTRES que celle ajustée continuent de déborder normalement (flux
 JasperReports natif, inchangé) : seul le point d'ajustement est calculé, jamais l'intégralité de la
-pagination. Vérifié par un test dédié
-(`PaieReportPdfServiceTest.calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderSaCapaciteAvecFooter`,
-qui rejoue le découpage en pages pour des tailles de section de 1 à 400 employés).
+pagination.
+
+**Un deuxième bug distinct**, découvert seulement en reproduisant le document réel de l'utilisateur
+(mois 8, chantier C168 en entier) : une réserve FIXE de 220px pour le `groupFooter` (sans tenir
+compte du nombre réel de fonctions distinctes) est ELLE-MÊME insuffisante pour une équipe avec
+beaucoup de fonctions (ex. ATELIER, 11 fonctions — hauteur réelle du footer ≈243px). `calculerSautPage`
+calcule donc désormais la hauteur RÉELLE du footer (`hauteurPiedReelle` : {@code 78 + 15 ×
+nombre de lignes de récap}, le plus grand des deux tableaux côte à côte Fonction/Effectif/STC et
+matériel) plutôt qu'une valeur fixe, comparée à un seuil empirique
+(`SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345`, voir son Javadoc : bien en-deçà des 495px de page utile —
+au-delà, JasperReports échoue à reporter proprement l'excédent du sous-rapport, quel que soit
+l'espace réellement restant sur la page).
+
+Une fois le saut jugé nécessaire, la nouvelle dernière page ne reçoit que
+`RESERVE_LIGNES_PREFEREE` (4) lignes au maximum (plafonné par ce qu'elle peut réellement accueillir) :
+c'est la page qui la PRÉCÈDE (1re page ou page de continuation pleine) qui doit rester la plus remplie
+possible, pas l'inverse — demande explicite de direction, 2026-09-29, après un premier essai qui
+maximisait au contraire la dernière page (constaté visuellement moins satisfaisant : une grande page
+quasi vide suivie d'une dernière page bien remplie, plutôt qu'une page bien remplie suivie d'une
+courte dernière page).
+
+Vérifié par un test dédié
+(`PaieReportPdfServiceTest.calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderLeSeuilAvecFooter`,
+qui rejoue le découpage en pages pour des tailles de section de 1 à 200 employés croisées avec 0 à 16
+lignes de récap) et par une reproduction locale du document réel de l'utilisateur (7 équipes du
+chantier C168, mêmes effectifs et mêmes fonctions distinctes que sur données réelles) confirmant
+l'absence de page blanche.
 
 ### Lignes de résumé et tableau récap (2026-09-29)
 

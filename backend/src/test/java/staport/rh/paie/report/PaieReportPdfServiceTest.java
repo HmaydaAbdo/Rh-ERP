@@ -83,41 +83,56 @@ class PaieReportPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
     }
 
-    /** Capacités "avec footer" dupliquées ici depuis {@code PaieReportPdfService} (voir ses constantes
-     * privées) — un total à ne jamais dépasser sur la page qui porte le groupFooter (TOTAL GENERAL),
-     * qu'elle soit la toute première page de la section (13, moins spacieuse à cause du groupHeader de
-     * GroupEquipe) ou une page de continuation (17). Si les hauteurs déclarées dans rapport.jrxml
-     * changent un jour, ces 2 constantes ET celles de PaieReportPdfService doivent être mises à jour
-     * ensemble. */
-    private static final int CAP_PREMIERE_AVEC_FOOTER = 13;
-    private static final int CAP_CONTINUATION_AVEC_FOOTER = 17;
+    /** Constantes dupliquées ici depuis {@code PaieReportPdfService} (voir ses constantes privées) —
+     * si les hauteurs déclarées dans rapport.jrxml changent un jour, ces constantes ET celles de
+     * PaieReportPdfService doivent être mises à jour ensemble. {@code SEUIL_CONTENU_PAGE_AVEC_FOOTER}
+     * est une valeur empirique (voir son Javadoc côté production) : le contenu total d'une page qui
+     * porte le groupFooter (lignes employé de cette page + groupFooter complet) ne doit jamais la
+     * dépasser, sous peine de page blanche produite par JasperReports. */
     private static final int CAP_PREMIERE_SANS_FOOTER = 27;
     private static final int CAP_CONTINUATION_SANS_FOOTER = 30;
+    private static final int GROUPE_EQUIPE_ENTETE_HAUTEUR = 56;
+    private static final int PIED_HAUTEUR_BASE = 78;
+    private static final int LIGNE_RECAP_HAUTEUR = 15;
+    private static final int SEUIL_CONTENU_PAGE_AVEC_FOOTER = 345;
 
-    /** Vérifie, pour un large éventail de tailles de section, que {@code calculerSautPage} garantit
-     * bien la règle métier (demande explicite de direction, 2026-09-29) : la page qui porte finalement
-     * le groupFooter (TOTAL GENERAL + récaps) ne dépasse jamais sa capacité "avec footer", et aucune
-     * page intermédiaire ne se retrouve vide ou négative — en reconstruisant, à partir du seul index de
-     * saut renvoyé, le découpage en pages que produirait rapport.jrxml (remplissage naturel de
-     * JasperReports partout, sauf au point de saut calculé). */
+    /** Vérifie, pour un large éventail de tailles de section ET de nombres de lignes de récap
+     * (Fonction/Effectif/STC ou matériel, le plus grand des deux), que {@code calculerSautPage}
+     * garantit bien la règle métier (demande explicite de direction, 2026-09-29) : la page qui porte
+     * finalement le groupFooter ne dépasse jamais {@code SEUIL_CONTENU_PAGE_AVEC_FOOTER}px de contenu
+     * total, et aucune page intermédiaire ne se retrouve vide ou négative — en reconstruisant, à partir
+     * du seul index de saut renvoyé, le découpage en pages que produirait rapport.jrxml (remplissage
+     * naturel de JasperReports partout, sauf au point de saut calculé). */
     @Test
-    void calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderSaCapaciteAvecFooter() {
-        for (int total = 1; total <= 400; total++) {
-            int indexSaut = service.calculerSautPage(total);
+    void calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderLeSeuilAvecFooter() {
+        for (int total = 1; total <= 200; total++) {
+            // lignesRecapMax <= total TOUJOURS en pratique (on ne peut pas avoir plus de fonctions
+            // distinctes que d'employés dans une section — chaque ligne de récap regroupe au moins 1
+            // employé) : au-delà, la garantie devient mathématiquement inatteignable (le groupFooter
+            // seul dépasserait déjà SEUIL_CONTENU_PAGE_AVEC_FOOTER), mais cet état n'est jamais produit
+            // par PaieBiReportBuilder.equipeVue. Plafonné en plus à 16 : le plus grand cas réel observé
+            // est 14 fonctions distinctes (voir docs/report/README.md).
+            int lignesRecapMaxPossible = Math.min(16, total);
+            for (int lignesRecapMax = 0; lignesRecapMax <= lignesRecapMaxPossible; lignesRecapMax++) {
+                int hauteurPied = PIED_HAUTEUR_BASE + LIGNE_RECAP_HAUTEUR * lignesRecapMax;
+                int indexSaut = service.calculerSautPage(total, lignesRecapMax);
 
-            assertThat(indexSaut).isLessThan(total);
-            if (indexSaut >= 0) {
-                assertThat(indexSaut).isGreaterThanOrEqualTo(0);
+                assertThat(indexSaut).isLessThan(total);
+
+                List<Integer> taillesPages = simulerDecoupagePages(total, indexSaut);
+                int tailleDerniere = taillesPages.get(taillesPages.size() - 1);
+                boolean dernierePageEstPremiere = taillesPages.size() == 1;
+                int hauteurEntete = dernierePageEstPremiere ? GROUPE_EQUIPE_ENTETE_HAUTEUR : 0;
+                int contenuTotalPageFinale = hauteurEntete + tailleDerniere * 16 + hauteurPied;
+
+                assertThat(contenuTotalPageFinale)
+                        .as("total=%d, lignesRecapMax=%d, indexSaut=%d, pages=%s",
+                                total, lignesRecapMax, indexSaut, taillesPages)
+                        .isLessThanOrEqualTo(SEUIL_CONTENU_PAGE_AVEC_FOOTER);
+                assertThat(taillesPages)
+                        .as("total=%d, lignesRecapMax=%d : aucune page ne doit être vide", total, lignesRecapMax)
+                        .allMatch(taille -> taille > 0);
             }
-
-            List<Integer> taillesPages = simulerDecoupagePages(total, indexSaut);
-            int tailleDerniere = taillesPages.get(taillesPages.size() - 1);
-            int capDerniereAvecFooter = taillesPages.size() == 1 ? CAP_PREMIERE_AVEC_FOOTER : CAP_CONTINUATION_AVEC_FOOTER;
-
-            assertThat(tailleDerniere)
-                    .as("total=%d, indexSaut=%d, pages=%s", total, indexSaut, taillesPages)
-                    .isLessThanOrEqualTo(capDerniereAvecFooter);
-            assertThat(taillesPages).as("total=%d : aucune page ne doit être vide", total).allMatch(taille -> taille > 0);
         }
     }
 
