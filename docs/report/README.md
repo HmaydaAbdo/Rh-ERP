@@ -626,6 +626,42 @@ lignes de récap) et par une reproduction locale du document réel de l'utilisat
 chantier C168, mêmes effectifs et mêmes fonctions distinctes que sur données réelles) confirmant
 l'absence de page blanche.
 
+### Deuxième zone sûre : report automatique du footer sans risque (2026-09-29)
+
+**Signalement** : même après la solution architecturale ci-dessus (cartes KPI), l'utilisateur a
+constaté sur données réelles qu'une page pouvait encore se terminer avec un espace visiblement inutilisé
+juste avant de basculer sur la page suivante — ex. équipe CHAUFFEURS (74 lignes, 5 fonctions
+distinctes) : la dernière page de continuation naturelle (20 lignes) se voyait amputée d'1 ligne par
+`calculerSautPage` pour la renvoyer seule sur une page dédiée avec le footer, alors que rien ne
+l'imposait.
+
+**Cause** : `calculerSautPage` ne connaissait qu'UNE seule zone sûre (le footer tient EN LIGNE, collé
+aux dernières lignes employé — voir `SEUIL_CONTENU_PAGE_AVEC_FOOTER` ci-dessus) et forçait un saut dès
+qu'une page la dépassait, sans jamais vérifier qu'il existe une SECONDE zone sûre, à l'opposé :
+JasperReports décide de reporter TOUT le `groupFooter` sur une page neuve en comparant l'espace
+restant à sa hauteur DÉCLARÉE dans le XML (188px, `<groupFooter><band height="188">`), jamais sa
+hauteur réelle une fois les sous-rapports étirés — dès que l'espace restant est inférieur à cette
+hauteur déclarée, le report est automatique et SANS AUCUN RISQUE (le footer se retrouve seul sur une
+page neuve, avec les 495px de page utile entiers à sa disposition, largement suffisants quel que soit
+le nombre réel de fonctions/matériel). Une reproduction locale exhaustive (balayage de 1 à 30 lignes
+sur la dernière page de continuation, croisé avec 5/11/16 lignes de récap, avec et sans sous-rapport
+matériel) a confirmé que ce report automatique est sûr dès que cette dernière page compte au moins 20
+lignes (`seuilLignesSansRisquePushOff`, dérivé de `PAGE_HAUTEUR_UTILE` et de la hauteur déclarée
+188px — indépendant de `lignesRecapMax`), quelle que soit la configuration testée.
+
+Cette même reproduction a aussi affiné `SEUIL_CONTENU_PAGE_AVEC_FOOTER` : une valeur empirique unique
+laissait passer un cas limite (11 fonctions, 9 lignes — 343px de contenu réel, sous le seuil de 345,
+produisait malgré tout une page blanche), corrigé par `MARGE_SECURITE_LIGNES` (1 ligne de marge
+supplémentaire sur la capacité "avec footer en ligne", validée sur 5/11/16 fonctions sans plus aucune
+page blanche).
+
+`calculerSautPage` vérifie donc désormais, avant de forcer un saut : si la dernière page naturelle est
+déjà dans cette seconde zone sûre, ne PAS forcer de saut (JasperReports s'en charge tout seul,
+proprement) — uniquement entre les deux zones sûres (environ 9 à 19 lignes selon `lignesRecapMax`) le
+saut anticipé reste nécessaire. Cette vérification ne s'applique jamais à la 1re page d'une section
+(son budget inclut `GROUPE_EQUIPE_ENTETE_HAUTEUR`, un cas non couvert par cette reproduction — le
+comportement prudent existant y est conservé).
+
 ### Cartes KPI de section et tableau récap (2026-09-29)
 
 En-tête de CHAQUE section (`GroupEquipe`, `groupHeader` de `rapport.jrxml`), quelle que soit la
