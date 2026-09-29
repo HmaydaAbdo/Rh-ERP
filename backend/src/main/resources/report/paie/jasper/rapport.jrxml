@@ -57,8 +57,10 @@
                  le chantier "C168" équipes "CH"/"OP" uniquement (voir MaterielChantierCatalogue), le
                  squelette "parc matériel" à remplir au stylo (recap-materiel.jrxml). Ce groupFooter ne
                  se retrouve jamais seul en haut d'une page sans employé au-dessus (demande explicite de
-                 direction, 2026-09-29) : voir GroupQueueEquipe, groupe imbriqué juste après GroupEquipe
-                 plus bas, qui réserve les 4 dernières lignes employé de chaque section avec lui.
+                 direction, 2026-09-29) : voir le champ $F{sautPageAvant} (calculé par
+                 PaieReportPdfService.calculerSautPage) et le <break> en tête de la bande <detail> plus
+                 bas — un saut de page anticipé, calculé arithmétiquement, PAS une astuce de groupe
+                 JRXML (un premier essai en ce sens s'est révélé insuffisant sur données réelles).
           Toutes ces sections partagent la même source de données à plat (un employé par ligne).
      Style documentaire entièrement noir/blanc/gris (aucune couleur décorative) — seuls les
      <barChart>/<lineChart> conservent des couleurs (bleu masse, orange effectif, rouge sourd STC —
@@ -171,9 +173,21 @@
          LigneEmployeVue.equipeReelle) : c'est la VALEUR, jamais la visibilité de la cellule, qui
          porte cette distinction. -->
     <field name="employeEquipeReelle" class="java.lang.String"/>
-    <!-- Voir le Javadoc de LigneRapportDetailBean.getDernieresLignesEquipe() — pilote GroupQueueEquipe
-         (voir plus bas, juste après GroupEquipe). -->
-    <field name="dernieresLignesEquipe" class="java.lang.Boolean"/>
+    <!-- Pilote le <break type="Page"> en tête de la bande <detail> ci-dessous — true sur EXACTEMENT la
+         ligne où PaieReportPdfService.calculerSautPage a déterminé qu'un saut de page anticipé est
+         nécessaire pour que le groupFooter de GroupEquipe (TOTAL GENERAL + récaps) ne se retrouve
+         jamais seul en haut d'une page sans aucun employé visible (demande explicite de direction,
+         2026-09-29) — calcul arithmétique exact, pas une heuristique JasperReports : hauteur de page,
+         marges, bandeaux et hauteur de ligne sont tous des constantes connues à l'avance, ce qui permet
+         de prédire précisément où chaque page se remplirait naturellement et d'anticiper le seul point
+         où ça ne laisserait pas assez de place au footer. false pour toutes les autres lignes — un
+         débordement NATUREL de JasperReports continue de s'appliquer partout ailleurs, jamais recalculé
+         ici (voir aussi le Javadoc de la méthode pour l'historique : un premier essai avec un groupe
+         JRXML imbriqué "GroupQueueEquipe" gardant les 4 dernières lignes ensemble s'est révélé
+         insuffisant sur données réelles — 4 lignes ne suffisent pas à garantir que le footer, jusqu'à
+         220px, tienne derrière elles, et l'ajout de ce groupe semble avoir provoqué des pages
+         totalement blanches à certaines frontières de section). -->
+    <field name="sautPageAvant" class="java.lang.Boolean"/>
 
     <!-- Groupes à expression constante : leur en-tête s'imprime une seule fois, au tout début du
          document (le premier enregistrement fait toujours "changer" l'expression depuis null) —
@@ -789,31 +803,6 @@
         </groupFooter>
     </group>
 
-    <!-- Groupe imbriqué SANS AUCUN CONTENU (header/footer à hauteur 0) — son seul rôle : forcer
-         JasperReports à traiter les 4 dernières lignes employé de chaque section comme un bloc
-         insécable (keepTogether="true"), pour que le groupFooter de GroupEquipe juste au-dessus
-         (TOTAL GENERAL + récaps) ne se retrouve jamais seul en haut d'une page sans aucun employé
-         visible (demande explicite de direction, 2026-09-29) : si ces 4 lignes ne tiennent pas dans
-         l'espace restant de la page courante, JasperReports les bascule ENTIÈREMENT sur la page
-         suivante (jamais scindées entre elles), où le groupFooter — imprimé juste à leur suite,
-         puisque GroupEquipe reste keepTogether="false" — a alors largement la place de s'imprimer
-         immédiatement après. isStartNewPage="false" : ce groupe ne force JAMAIS un saut de page à lui
-         seul, il ne fait que le rendre nécessaire quand la place manque réellement (voir
-         PaieReportPdfService.RESERVE_DERNIERES_LIGNES_EQUIPE et le Javadoc de
-         LigneRapportDetailBean.getDernieresLignesEquipe() pour le calcul de $F{dernieresLignesEquipe}).
-         Déclaré ICI (après GroupEquipe, avant <detail>) pour être le groupe le plus IMBRIQUÉ du
-         gabarit — l'ordre de déclaration des <group> détermine leur imbrication en JRXML, jamais un
-         attribut explicite. -->
-    <group name="GroupQueueEquipe" isStartNewColumn="false" isStartNewPage="false" isReprintHeaderOnEachPage="false" keepTogether="true">
-        <groupExpression><![CDATA[$F{dernieresLignesEquipe}]]></groupExpression>
-        <groupHeader>
-            <band height="0"/>
-        </groupHeader>
-        <groupFooter>
-            <band height="0"/>
-        </groupFooter>
-    </group>
-
     <!-- ================================ PAGE DE GARDE (title) ================================
          Contenu volontairement simple et statique (pas de graphique, pas de tableau) — une vraie
          couverture de rapport imprimable, jamais de pageHeader/pageFooter dessus (comportement
@@ -1010,6 +999,15 @@
          GroupEquipe ci-dessus — "tout en noir", demande explicite de direction). -->
     <detail>
         <band height="16" splitType="Prevent">
+            <!-- Saut de page anticipé, calculé arithmétiquement (voir le Javadoc de $F{sautPageAvant}
+                 ci-dessus et PaieReportPdfService.calculerSautPage) — hauteur/largeur 1 (élément non
+                 visuel, purement structurel), ne s'imprime jamais réellement (printWhenExpression false
+                 sur toutes les lignes sauf celle où un saut est nécessaire). -->
+            <break type="Page">
+                <reportElement x="0" y="0" width="1" height="1">
+                    <printWhenExpression><![CDATA[$F{sautPageAvant}]]></printWhenExpression>
+                </reportElement>
+            </break>
             <textField>
                 <reportElement x="0" y="0" width="120" height="16"/>
                 <box leftPadding="4" bottomPadding="2"><pen lineWidth="0.5" lineColor="#000000"/></box>

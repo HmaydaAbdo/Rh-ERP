@@ -559,12 +559,32 @@ section ne démarre jamais en bas d'une page précédente (seul le vrai rôle de
 **Le bloc TOTAL GENERAL ne doit JAMAIS apparaître seul en haut d'une page sans employé au-dessus**
 (demande explicite de direction, 2026-09-29) : `keepTogether="false"` seul ne suffit pas à le
 garantir (un `groupFooter` peut encore être intégralement repoussé si AUCUNE place ne reste du tout).
-Voir `GroupQueueEquipe` : un groupe imbriqué supplémentaire, sans aucun contenu propre, immédiatement
-après `GroupEquipe` dans le gabarit — son seul rôle est de forcer les **4 dernières lignes employé**
-de chaque section à rester ensemble (`keepTogether="true"`, piloté par le champ calculé
-`$F{dernieresLignesEquipe}`, voir `PaieReportPdfService.RESERVE_DERNIERES_LIGNES_EQUIPE`) : si elles
-ne tiennent pas dans l'espace restant, JasperReports les bascule EN BLOC sur la page suivante, où le
-`groupFooter` — juste à leur suite — a alors largement la place de s'imprimer immédiatement après.
+
+Un premier essai — un groupe JRXML imbriqué (`GroupQueueEquipe`) gardant les 4 dernières lignes
+employé ensemble via `keepTogether="true"` — s'est révélé insuffisant, **constaté sur données
+réelles** : (1) 4 lignes (64px) ne suffisent pas à garantir que le `groupFooter` (jusqu'à 220px)
+tienne derrière elles — le vrai besoin va jusqu'à 17 lignes selon où la section se termine sur la
+page ; (2) JasperReports décide qu'une bande "tient" sur la page courante en comparant sa **hauteur
+déclarée** à l'espace restant, jamais sa hauteur réellement nécessaire — un `groupFooter` peut donc
+être intégralement repoussé même quand il resterait largement la place pour son contenu réel (peu de
+fonctions/matériel ce mois-ci) ; (3) l'ajout de ce groupe semble avoir provoqué, à certaines
+frontières de section, des pages totalement blanches.
+
+**Solution retenue : un calcul arithmétique exact, pas une astuce de groupe JRXML.**
+`PaieReportPdfService.calculerSautPage` prédit, par le calcul, EXACTEMENT où JasperReports ferait
+déborder chaque page (hauteur de page, marges, bandeaux et hauteur de ligne sont toutes des
+constantes fixes du gabarit — aucun texte à hauteur variable dans le tableau employé) : il simule le
+remplissage naturel des pages d'une section (1re page : hauteur de `GroupEquipe.groupHeader` + lignes
+; pages suivantes : lignes seules, l'en-tête n'étant jamais réimprimé) et, si la DERNIÈRE page ainsi
+prédite ne laisserait pas la place au `groupFooter`, calcule l'index exact de la ligne à partir de
+laquelle il faut basculer sur une page supplémentaire. Ce champ (`$F{sautPageAvant}`) pilote un
+`<break type="Page">` natif de JasperReports, placé en tête de la bande `<detail>`, avec
+`printWhenExpression="$F{sautPageAvant}"` — un mécanisme déclaratif standard, jamais un groupe
+supplémentaire. Toutes les pages AUTRES que celle ajustée continuent de déborder normalement (flux
+JasperReports natif, inchangé) : seul le point d'ajustement est calculé, jamais l'intégralité de la
+pagination. Vérifié par un test dédié
+(`PaieReportPdfServiceTest.calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderSaCapaciteAvecFooter`,
+qui rejoue le découpage en pages pour des tailles de section de 1 à 400 employés).
 
 ### Lignes de résumé et tableau récap (2026-09-29)
 

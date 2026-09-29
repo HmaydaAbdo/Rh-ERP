@@ -83,6 +83,66 @@ class PaieReportPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
     }
 
+    /** Capacités "avec footer" dupliquées ici depuis {@code PaieReportPdfService} (voir ses constantes
+     * privées) — un total à ne jamais dépasser sur la page qui porte le groupFooter (TOTAL GENERAL),
+     * qu'elle soit la toute première page de la section (13, moins spacieuse à cause du groupHeader de
+     * GroupEquipe) ou une page de continuation (17). Si les hauteurs déclarées dans rapport.jrxml
+     * changent un jour, ces 2 constantes ET celles de PaieReportPdfService doivent être mises à jour
+     * ensemble. */
+    private static final int CAP_PREMIERE_AVEC_FOOTER = 13;
+    private static final int CAP_CONTINUATION_AVEC_FOOTER = 17;
+    private static final int CAP_PREMIERE_SANS_FOOTER = 27;
+    private static final int CAP_CONTINUATION_SANS_FOOTER = 30;
+
+    /** Vérifie, pour un large éventail de tailles de section, que {@code calculerSautPage} garantit
+     * bien la règle métier (demande explicite de direction, 2026-09-29) : la page qui porte finalement
+     * le groupFooter (TOTAL GENERAL + récaps) ne dépasse jamais sa capacité "avec footer", et aucune
+     * page intermédiaire ne se retrouve vide ou négative — en reconstruisant, à partir du seul index de
+     * saut renvoyé, le découpage en pages que produirait rapport.jrxml (remplissage naturel de
+     * JasperReports partout, sauf au point de saut calculé). */
+    @Test
+    void calculerSautPage_neDevraitJamaisLaisserLaPageFinaleDeborderSaCapaciteAvecFooter() {
+        for (int total = 1; total <= 400; total++) {
+            int indexSaut = service.calculerSautPage(total);
+
+            assertThat(indexSaut).isLessThan(total);
+            if (indexSaut >= 0) {
+                assertThat(indexSaut).isGreaterThanOrEqualTo(0);
+            }
+
+            List<Integer> taillesPages = simulerDecoupagePages(total, indexSaut);
+            int tailleDerniere = taillesPages.get(taillesPages.size() - 1);
+            int capDerniereAvecFooter = taillesPages.size() == 1 ? CAP_PREMIERE_AVEC_FOOTER : CAP_CONTINUATION_AVEC_FOOTER;
+
+            assertThat(tailleDerniere)
+                    .as("total=%d, indexSaut=%d, pages=%s", total, indexSaut, taillesPages)
+                    .isLessThanOrEqualTo(capDerniereAvecFooter);
+            assertThat(taillesPages).as("total=%d : aucune page ne doit être vide", total).allMatch(taille -> taille > 0);
+        }
+    }
+
+    /** Reconstruit le découpage en pages (nombre de lignes par page) qu'un remplissage JasperReports
+     * produirait pour {@code total} lignes avec, le cas échéant, un unique saut de page forcé juste
+     * avant l'index {@code indexSaut} (ou aucun saut forcé si {@code indexSaut} vaut -1) — remplissage
+     * glouton à pleine capacité partout, sauf sur la page interrompue par le saut forcé, qui se termine
+     * prématurément à cet index. */
+    private List<Integer> simulerDecoupagePages(int total, int indexSaut) {
+        List<Integer> pages = new java.util.ArrayList<>();
+        int index = 0;
+        boolean premierePage = true;
+        while (index < total) {
+            int capacite = premierePage ? CAP_PREMIERE_SANS_FOOTER : CAP_CONTINUATION_SANS_FOOTER;
+            int findeCettePage = Math.min(index + capacite, total);
+            if (indexSaut > index && indexSaut < findeCettePage) {
+                findeCettePage = indexSaut;
+            }
+            pages.add(findeCettePage - index);
+            index = findeCettePage;
+            premierePage = false;
+        }
+        return pages;
+    }
+
     private Paie paie(String nomPrenom, String cin, String fonctionLibelle, String chantierCode,
                        String equipe, String salaireTotal, String observation) {
         Employee employee = new Employee();
