@@ -114,8 +114,7 @@ class PaieSheetWriter {
         ecrireMontant(ligne, 9, paie.getSalaireTotal(), styles.donneeMontant);
         ecrireTexte(ligne, 10, paie.getObservation(), styles.donneeCentre);
         ecrireTexte(ligne, 11, paie.getChantier().getCode(), styles.donneeCentre);
-        ecrireTexte(ligne, 12, EquipeLibelleCatalogue.libelle(paie.getEquipe()), styles.donneeCentre);
-    }
+        ecrireTexte(ligne, 12, paie.getEquipe(), styles.donneeCentre);    }
 
     private int ecrireLigneTotal(Sheet sheet, PaieExcelStyles styles, int indexLigne, String libelle,
                                   String formule, BigDecimal valeurFixe) {
