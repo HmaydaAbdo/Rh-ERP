@@ -299,7 +299,7 @@ class PaieBiReportBuilder {
      * équipe renseignée. */
     private String libelleAfficheEquipe(Paie paie) {
         String brut = paie.getEquipe();
-        return brut == null || brut.isBlank() ? "" : EquipeLibelleCatalogue.libelle(brut);
+        return brut == null || brut.isBlank() ? "" :brut.trim();
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
