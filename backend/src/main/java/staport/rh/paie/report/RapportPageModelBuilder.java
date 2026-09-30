@@ -48,10 +48,20 @@ final class RapportPageModelBuilder {
      * padding de {@code .page}) - 40 (bandeau) - 20 (pied) = 495. */
     private static final double PAGE_BODY_HAUTEUR = 495;
 
-    /** Hauteur du bloc titre+cartes KPI+en-têtes de colonnes d'une section équipe — 1re page
-     * uniquement (voir {@code BlocTitreEquipe}+{@code BlocKpi}+en-tête de {@code table.employes}
-     * dans rapport.css). */
-    private static final double EQUIPE_ENTETE_HAUTEUR = 112;
+    /** Titre de section équipe (12pt + padding + filet). */
+    private static final double EQUIPE_TITRE_HAUTEUR = 20;
+
+    /** Rangée de cartes KPI équipe (marge 4 + carte 36 + padding/bordures). */
+    private static final double KPI_EQUIPE_HAUTEUR = 52;
+
+    /** Titre « Détails » (marge 8 + 12pt). */
+    private static final double DETAILS_TITRE_HAUTEUR = 24;
+
+    /** Marge du tableau (8) + en-tête à deux lignes (2 × 16). */
+    private static final double TABLEAU_ENTETE_HAUTEUR = 40;
+
+    /** Si moins de lignes que ça tiennent sous le récap, « Détails » démarre sur la page suivante. */
+    private static final int MIN_LIGNES_PREMIERE_PAGE = 3;
 
     /** Hauteur d'une ligne du tableau employé (voir {@code table.employes td/th} dans rapport.css). */
     private static final double LIGNE_HAUTEUR = 16;
@@ -135,58 +145,57 @@ final class RapportPageModelBuilder {
         pages.add(new PageEnConstruction(niveauTexteChantier(chantier), blocs));
     }
 
-    /** Découpe le tableau employé d'une section équipe/reste en autant de pages que nécessaire, et
-     * place le pied récap (voir {@link PageModel.BlocRecap}) soit à la suite des dernières lignes de
-     * la dernière page (s'il y tient), soit seul sur une page neuve — jamais recalculé pour les
-     * pages précédentes, qui reçoivent toujours leur capacité naturelle pleine. */
     private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe) {
         String niveau = niveauTexteEquipe(chantier, equipe);
         List<LigneEmployeVue> employes = equipe.employes();
         int total = employes.size();
-
-        int capPremiere = (int) ((PAGE_BODY_HAUTEUR - MARGE_SECURITE - EQUIPE_ENTETE_HAUTEUR) / LIGNE_HAUTEUR);
-        int capContinuation = (int) ((PAGE_BODY_HAUTEUR - MARGE_SECURITE) / LIGNE_HAUTEUR);
-
-        List<int[]> tranches = new ArrayList<>();
-        int position = 0;
-        boolean premierePage = true;
-        while (position < total) {
-            int capacite = premierePage ? capPremiere : capContinuation;
-            int fin = Math.min(position + capacite, total);
-            tranches.add(new int[]{position, fin});
-            position = fin;
-            premierePage = false;
-        }
+        boolean avecColonneEquipe = equipe.nom().equals(chantier.code());
+        String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
 
         int lignesRecapMax = Math.max(equipe.repartitionFonction().size(), equipe.materiel().size());
         double hauteurRecap = RECAP_BASE_HAUTEUR + RECAP_LIGNE_HAUTEUR * lignesRecapMax;
-        String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
 
-        for (int t = 0; t < tranches.size(); t++) {
-            int[] tranche = tranches.get(t);
-            boolean estPremiere = t == 0;
-            boolean estDerniere = t == tranches.size() - 1;
-            List<LigneEmployeVue> ligneSlice = employes.subList(tranche[0], tranche[1]);
+        double utile = PAGE_BODY_HAUTEUR - MARGE_SECURITE;
+        double enteteDetails = DETAILS_TITRE_HAUTEUR + TABLEAU_ENTETE_HAUTEUR;
 
+        // Place restante sur la 1re page, une fois titre + KPI + récap posés
+        double resteApresRecap = utile - EQUIPE_TITRE_HAUTEUR - KPI_EQUIPE_HAUTEUR - hauteurRecap;
+        int capPremiere = (int) ((resteApresRecap - enteteDetails) / LIGNE_HAUTEUR);
+        boolean detailsSurPremierePage = capPremiere >= MIN_LIGNES_PREMIERE_PAGE;
+
+        int capDetailsSeul = (int) ((utile - enteteDetails) / LIGNE_HAUTEUR);   // page qui démarre « Détails »
+        int capContinuation = (int) (utile / LIGNE_HAUTEUR);                     // pages suivantes (sans en-tête)
+
+        int position = 0;
+        boolean premierePage = true;
+        boolean detailsAFaire = true;
+
+        while (true) {
             List<PageModel.Bloc> blocs = new ArrayList<>();
-            if (estPremiere) {
+            int capacite;
+            if (premierePage) {
                 blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
                 blocs.add(cartesKpiEquipe(equipe));
-            }
-            boolean avecColonneEquipe = equipe.nom().equals(chantier.code());
-            blocs.add(new PageModel.BlocTableauEmployes(ligneSlice, estPremiere, avecColonneEquipe));
-
-            double hauteurUtilisee = (estPremiere ? EQUIPE_ENTETE_HAUTEUR : 0) + ligneSlice.size() * LIGNE_HAUTEUR;
-            double hauteurRestante = PAGE_BODY_HAUTEUR - MARGE_SECURITE - hauteurUtilisee;
-            boolean recapSurCettePage = estDerniere && hauteurRestante >= hauteurRecap;
-            if (recapSurCettePage) {
                 blocs.add(new PageModel.BlocRecap(equipe.repartitionFonction(), equipe.materiel(), titreMateriel));
+                capacite = detailsSurPremierePage ? capPremiere : 0;
+            } else {
+                capacite = detailsAFaire ? capDetailsSeul : capContinuation;
             }
-            pages.add(new PageEnConstruction(niveau, blocs));
 
-            if (estDerniere && !recapSurCettePage) {
-                pages.add(new PageEnConstruction(niveau, List.of(
-                        new PageModel.BlocRecap(equipe.repartitionFonction(), equipe.materiel(), titreMateriel))));
+            if (capacite > 0 && position < total) {
+                if (detailsAFaire) {
+                    blocs.add(new PageModel.BlocTitreSection("Détails"));
+                }
+                int fin = Math.min(position + capacite, total);
+                blocs.add(new PageModel.BlocTableauEmployes(employes.subList(position, fin), detailsAFaire, avecColonneEquipe));
+                position = fin;
+                detailsAFaire = false;
+            }
+
+            pages.add(new PageEnConstruction(niveau, blocs));
+            premierePage = false;
+            if (position >= total) {
+                break;
             }
         }
     }
