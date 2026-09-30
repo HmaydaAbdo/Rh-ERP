@@ -101,7 +101,10 @@ final class PaieReportHtmlBuilder {
         ajouterBlocIdentite(page, "ANNÉE", anneeLibelle);
         Element signatures = page.appendElement("div").addClass("signatures");
         ajouterSignature(signatures, "DIRECTEUR GÉNÉRAL", "M. Mouhamed BARHICH", false);
-        ajouterSignature(signatures, "DIRECTEUR DES RESSOURCES HUMAINES", "M. Ismail MOUSTAJID", true);
+        ajouterSignature(signatures, "DIRECTEUR DES RESSOURCES HUMAINES", "M. Ismail MOUSTAJID", false);
+        ajouterSignature(signatures, "DIRECTEUR DÉVELOPPEMENT", "M. Mehdi TROUSSI", false);
+        ajouterSignature(signatures, "DIRECTEUR DES TRAVAUX", "M. Soukrat BRAHIM", true);
+
         page.appendElement("div").addClass("tagline")
                 .text("STAPORT S.A — Société de travaux d'assainissement, ponts et routes");
         return page;

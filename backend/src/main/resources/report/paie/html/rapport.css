@@ -188,27 +188,29 @@ html, body {
    flottants à la ligne quand leur largeur cumulée correspond EXACTEMENT à celle du conteneur
    (marge d'arrondi interne du moteur, constaté empiriquement) — une marge de sécurité de 20pt
    évite ce repli sans décalage perceptible du centrage. */
+
 .cover .signatures {
-    width: 622pt;
+    width: 780pt;              /* 4×178 + 3×14 = 754pt, +26pt de marge anti-repli des flottants */
     margin: 95pt auto 0;
     overflow: hidden;
 }
-
 .cover .signature {
     float: left;
-    width: 280pt;
-    margin-right: 42pt;
+    width: 178pt;
+    margin-right: 14pt;
     text-align: center;
 }
+
 
 .cover .signature.derniere {
     margin-right: 0;
 }
 
 .cover .signature .role {
-    font-size: 10pt;
+    font-size: 9pt;
     font-weight: bold;
     color: #595959;
+    height: 24pt;              /* 2 lignes : aligne les filets même si un rôle passe à la ligne */
 }
 
 .cover .signature .nom {
@@ -337,6 +339,9 @@ html, body {
 }
 
 /* ================================ TABLEAU EMPLOYÉ ================================ */
+.kpi-row.equipe {
+    margin-top: 8pt;
+}
 
 table.employes {
     width: 802pt;

@@ -19,7 +19,7 @@ public final class EquipeLibelleCatalogue {
             Map.entry("CH", "CHAUFFEURS"),
             Map.entry("OP", "OPERATEURS"),
             Map.entry("AT", "ATELIER"),
-            Map.entry("EE", "EQUIPE ENROBE"),
+            Map.entry("EE", "ENROBE"),
             Map.entry("TER", "TERASSEMENT"),
             Map.entry("GA", "GARDIENS"),
             Map.entry("TOPO", "TOPOGRAPHES"),
@@ -29,7 +29,7 @@ public final class EquipeLibelleCatalogue {
             Map.entry("R CONT", "REMBLAIS CONTIGUE"),
             Map.entry("GABION", "GABION"),
             Map.entry("PHS", "PLAN HYGIENE ET SECURITE"),
-            Map.entry("EB", "EQUIPE BETON")
+            Map.entry("EB", "BETON")
     );
 
     private EquipeLibelleCatalogue() {
