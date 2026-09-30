@@ -339,9 +339,6 @@ html, body {
 }
 
 /* ================================ TABLEAU EMPLOYÉ ================================ */
-.kpi-row.equipe {
-    margin-top: 8pt;
-}
 
 table.employes {
     width: 802pt;
