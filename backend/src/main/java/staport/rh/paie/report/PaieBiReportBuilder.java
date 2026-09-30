@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @Service
 class PaieBiReportBuilder {
 
-    private static final String SANS_EQUIPE = "Sans équipe";
+    private static final String SANS_EQUIPE = "Autre";
     private static final int MAX_BARRES_GRAPHIQUE = 15;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
