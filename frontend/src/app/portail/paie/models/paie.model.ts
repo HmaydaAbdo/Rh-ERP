@@ -21,6 +21,39 @@ export interface PaieEquipeSummary {
   libelle: string;
 }
 
+/** Un mois qui contient de la paie (GET /paie/periodes) — `periode` au format aaaa-MM. */
+export interface PaiePeriodeResume {
+  periode: string;
+  nombreBulletins: number;
+  nombreChantiers: number;
+  masse: number;
+  stc: number;
+}
+
+export interface PaieEquipePeriode {
+  id: number;
+  code: string;
+  libelle: string;
+  effectif: number;
+}
+
+/** Un chantier d'un mois avec ses équipes (GET /paie/chantiers) — `libelle` : nom, à défaut désignation. */
+export interface PaieChantierPeriode {
+  code: string;
+  libelle: string | null;
+  effectif: number;
+  masse: number;
+  equipes: PaieEquipePeriode[];
+}
+
+/** Un tableau du parc matériel (GET /paie/materiel) : ses lignes sont celles dont l'assistant d'export demande le nombre. */
+export interface PaieMaterielTableau {
+  chantierCode: string;
+  equipeCode: string;
+  titre: string;
+  libelles: string[];
+}
+
 export interface Paie {
   id: number;
   employee: PaieEmployeeSummary;
@@ -80,7 +113,7 @@ export interface PaieSearchCriteria {
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
 
 /** Les équipes sont désignées par leur CODE (clé stable, voir docs/equipe/README.md) — les valeurs
- * possibles par chantier viennent de PaieService.listerEquipes(). */
+ * possibles par chantier viennent de PaieService.listerChantiersDeLaPeriode(). */
 export interface PaieExportRequest {
   periode: string;
   feuillesEquipeMode: FeuillesEquipeMode;
@@ -90,6 +123,8 @@ export interface PaieExportRequest {
   equipesExcluesFeuilleChantier: Record<string, string[]> | null;
   /** Restreint tout l'export (y compris la feuille GLB) à ces chantiers ; null/vide = tous les chantiers. */
   chantiers: string[] | null;
+  /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
+  materiel: Record<string, number> | null;
 }
 
 export interface PaieImportLigneIgnoree {
@@ -123,4 +158,6 @@ export interface PaieRapportPdfRequest {
   fonctionId?: number | null;
   chantierId?: number | null;
   equipesParChantier?: Record<string, string[]> | null;
+  /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
+  materiel?: Record<string, number> | null;
 }

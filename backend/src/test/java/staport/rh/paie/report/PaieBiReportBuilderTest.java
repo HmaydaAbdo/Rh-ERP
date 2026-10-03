@@ -21,7 +21,7 @@ class PaieBiReportBuilderTest {
     private final PaieBiReportBuilder builder = new PaieBiReportBuilder(null);
 
     private static final PaieReportPdfRequestDto REQUETE_SANS_FILTRE =
-            new PaieReportPdfRequestDto("2026-09", null, null, null, null, null);
+            new PaieReportPdfRequestDto("2026-09", null, null, null, null, null, null);
 
     @Test
     void construireDepuis_devraitOrdonnerLesChantiersParMasseDecroissante() {
@@ -176,13 +176,35 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
+    void construireDepuis_devraitPorterLesNombresDuParcMaterielSurLesSectionsC168ChEtOp() {
+        Paie camion = paie("EMPLOYE UN", "CIN1", "CHAUFFEUR", "C168", "CH", "1000");
+        Paie engin = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C168", "OP", "1000");
+        PaieReportPdfRequestDto requete = new PaieReportPdfRequestDto("2026-09", null, null, null, null,
+                Map.of("C168", List.of("CH", "OP")), Map.of("CAMION CITERNE", 3, "BULL", 0));
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requete, List.of(camion, engin), List.of());
+
+        List<EquipeBiVue> equipes = vue.chantiers().get(0).equipes();
+        MaterielLigneVue citerne = equipes.stream().flatMap(e -> e.materiel().stream())
+                .filter(l -> l.getLibelle().equals("CAMION CITERNE")).findFirst().orElseThrow();
+        MaterielLigneVue bull = equipes.stream().flatMap(e -> e.materiel().stream())
+                .filter(l -> l.getLibelle().equals("BULL")).findFirst().orElseThrow();
+        MaterielLigneVue picku = equipes.stream().flatMap(e -> e.materiel().stream())
+                .filter(l -> l.getLibelle().equals("PICK UP")).findFirst().orElseThrow();
+        assertThat(citerne.getNombre()).isEqualTo(3);
+        assertThat(bull.getNombre()).isZero();
+        // Ligne non renseignée : aucune valeur, la cellule reste vide (à remplir au stylo).
+        assertThat(picku.getNombre()).isNull();
+    }
+
+    @Test
     void construireDepuis_devraitDetaillerUniquementLesEquipesSelectionnees() {
         Paie equipeA = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "3000");
         Paie equipeB = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE B", "2000");
         Paie sansEquipe = paie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C059", null, "1000");
 
         PaieReportPdfRequestDto requeteAvecSelection = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, Map.of("C059", List.of("EQUIPE A")));
+                "2026-09", null, null, null, null, Map.of("C059", List.of("EQUIPE A")), null);
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requeteAvecSelection,
                 List.of(equipeA, equipeB, sansEquipe), List.of());
@@ -237,7 +259,7 @@ class PaieBiReportBuilderTest {
         // (rejoint donc la section "reste") - verifie que la somme des sections couvre exactement la
         // masse totale du chantier, quel que soit le decoupage equipe(s) selectionnee(s) + reste.
         PaieReportPdfRequestDto requete = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, Map.of("C059", List.of("EQUIPE A", "EQUIPE B")));
+                "2026-09", null, null, null, null, Map.of("C059", List.of("EQUIPE A", "EQUIPE B")), null);
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requete,
                 List.of(equipeA, equipeB, sansEquipe), List.of());
@@ -272,7 +294,7 @@ class PaieBiReportBuilderTest {
         chantier.setCode("C059");
         Paie ligne = paieAvecChantier("EMPLOYE UN", "CIN1", "OPERATEUR", chantier, "EQUIPE A", "3000");
 
-        PaieReportPdfRequestDto requeteFiltreeChantier = new PaieReportPdfRequestDto("2026-09", null, null, null, 42L, null);
+        PaieReportPdfRequestDto requeteFiltreeChantier = new PaieReportPdfRequestDto("2026-09", null, null, null, 42L, null, null);
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requeteFiltreeChantier, List.of(ligne), List.of());
 
         assertThat(vue.filtresActifs()).containsExactly("Chantier : C059");

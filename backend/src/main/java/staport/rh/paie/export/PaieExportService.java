@@ -57,7 +57,7 @@ public class PaieExportService {
                 sheetWriter.ecrire(feuilleChantier, styles, titreZone(chantier.code(), chantier.lignes()), periode,
                         chantier.lignes(), chantier.totalMoisPrecedent(), null);
 
-                ecrireFeuillesEquipes(workbook, styles, periode, chantier);
+                ecrireFeuillesEquipes(workbook, styles, periode, chantier, requete.materiel());
             }
 
             // POI écrit la formule SUBTOTAL de "TOTAL GENERAL" sans valeur mise en cache : sans ce
@@ -72,7 +72,8 @@ public class PaieExportService {
         }
     }
 
-    private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode, PerimetreChantier chantier) {
+    private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode, PerimetreChantier chantier,
+                                       Map<String, Integer> materiel) {
         for (Map.Entry<String, List<Paie>> entree : chantier.lignesParEquipeAGenerer().entrySet()) {
             String equipe = entree.getKey();
             // Nom de la feuille : garde le CODE (identifiant technique, court, stable — voir
@@ -83,7 +84,7 @@ public class PaieExportService {
             sheetWriter.ecrire(feuilleEquipe, styles,
                     titreZone(chantier.code(), entree.getValue()) + " - Equipe: " + entree.getValue().get(0).getEquipe().getLibelle(),
                     periode, entree.getValue(), chantier.totalMoisPrecedentParEquipe().get(equipe),
-                    squeletteMateriel(chantier.code(), equipe));
+                    squeletteMateriel(chantier.code(), equipe, materiel));
         }
     }
 
@@ -102,9 +103,9 @@ public class PaieExportService {
      * chantier/l'équipe ne correspond à aucun cas prévu (voir {@link MaterielChantierCatalogue},
      * règle partagée avec le rapport PDF).
      */
-    private SqueletteMateriel squeletteMateriel(String chantierCode, String equipe) {
+    private SqueletteMateriel squeletteMateriel(String chantierCode, String equipe, Map<String, Integer> nombres) {
         String titre = MaterielChantierCatalogue.titre(chantierCode, equipe);
-        return titre == null ? null : new SqueletteMateriel(titre, MaterielChantierCatalogue.libelles(chantierCode, equipe));
+        return titre == null ? null : new SqueletteMateriel(titre, MaterielChantierCatalogue.libelles(chantierCode, equipe), nombres);
     }
 
     private String nomFeuilleValide(String nom) {

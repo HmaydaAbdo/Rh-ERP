@@ -56,7 +56,9 @@ src/app/
 └── shared/
     ├── components/
     │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé
+    │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
     │   └── column-chooser/  Choix des colonnes visibles d'un tableau
+    ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
     ├── models/page.model.ts Forme d'une page Spring (content, totalElements, …)
     ├── reference-data/      Adaptateurs de sélecteur par domaine (fonction, chantier, équipe, employé)
     └── table/table-columns.ts  TableColumn, ColumnState, constantes de pagination
@@ -165,6 +167,18 @@ un délai de recherche dans un composant d'écran.
 Règle de cardinalité : filtre de liste → sélection multiple ; relation unique d'un formulaire → sélection
 simple ; statut binaire (actif/inactif) → sélection simple.
 
+### Sélecteur de mois (`app-month-picker`)
+
+Sélecteur de mois **en un seul champ** : flèches d'année et 12 tuiles. Valeur : une période `aaaa-MM` (celle de l'API).
+`[disponibles]` limite les mois choisissables — les autres sont **grisés** et non sélectionnables, et la navigation
+d'année reste entre la première et la dernière année qui en contiennent ; `null` autorise tous les mois (ex. la période
+d'un import). Utilisé par l'assistant d'export de la paie (voir `docs/report/README.md`, « Assistant d'export »).
+
+### Compteur animé (`appCountUp`)
+
+Directive qui affiche un nombre en l'animant depuis sa valeur précédente, au format `fr-FR` ; supprimée si
+l'utilisateur a demandé moins de mouvement dans son système.
+
 ### Tableaux (`p-table`) et choix des colonnes
 
 Tous les tableaux de données — **sans exception** — offrent :
@@ -201,6 +215,16 @@ Pour les tableaux paginés côté serveur, un chemin de tri invalide provoque un
 est testé contre le backend.
 
 ---
+
+## Assistant d'export de la paie
+
+`portail/paie/export/paie-export-wizard.component.*` : dialogue en étapes guidées (mois, format, équipes, matériel
+conditionnel, génération) piloté par des signaux ; les étapes sont une liste calculée (l'étape matériel n'y figure
+que si un tableau sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
+
+**Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
+des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~14 ko). Si un autre composant approche la limite, le découper
+en sous-composants plutôt que de la relever encore.
 
 ## Formulaires, notifications et erreurs
 

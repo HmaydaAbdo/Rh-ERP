@@ -24,7 +24,7 @@
   </form>
 </p-dialog>
 
-<app-paie-export-dialog [(visible)]="showExportDialog"></app-paie-export-dialog>
+<app-paie-export-wizard [(visible)]="showExportDialog"></app-paie-export-wizard>
 
 <p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '640px' }">
   @if (importResult) {

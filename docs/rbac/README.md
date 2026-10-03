@@ -69,6 +69,7 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 | Filtrer la liste Paie par fonction, chantier ou équipe | `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ` | Mêmes sélecteurs |
 | Saisir un employé (`EMPLOYEE_WRITE`) | `FUNCTION_READ`, `CHANTIER_READ` | Sélecteurs fonction et chantier |
 | Associer un employé à un compte (`USER_MANAGE`) | `EMPLOYEE_READ` | Sélecteur d'employé |
+| Exporter (`PAIE_EXPORT`) | `PAIE_READ` | L'assistant d'export lit les mois, chantiers et tableaux matériel (`/paie/periodes`, `/paie/chantiers`, `/paie/materiel`) |
 | Importer (Paie, Employé) | Aucune | Les référentiels sont résolus par le serveur (appels de service, pas HTTP) |
 
 ---
@@ -107,7 +108,7 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |
 | | `POST /employees/import` · `GET /employees/import/modele` | `EMPLOYEE_IMPORT` |
 | Paie | `POST /paie` · `PUT /paie/{id}` | `PAIE_WRITE` |
-| | `GET /paie/{id}` · `POST /paie/search` · `GET /paie/equipes` | `PAIE_READ` |
+| | `GET /paie/{id}` · `POST /paie/search` · `GET /paie/periodes` · `GET /paie/chantiers` · `GET /paie/materiel` | `PAIE_READ` |
 | | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | | `POST /paie/import` · `GET /paie/import/modele` | `PAIE_IMPORT` |
 | | `POST /paie/export` · `POST /paie/report/pdf` | `PAIE_EXPORT` |

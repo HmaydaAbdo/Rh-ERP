@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +38,7 @@ public class PaieReportController {
     @PostMapping("/pdf")
     @Operation(summary = "Télécharger le rapport PDF BI de la paie sur le périmètre filtré (période obligatoire)")
     @PreAuthorize("hasAuthority('PAIE_EXPORT')")
-    public ResponseEntity<byte[]> telecharger(@RequestBody PaieReportPdfRequestDto requete) {
+    public ResponseEntity<byte[]> telecharger(@Valid @RequestBody PaieReportPdfRequestDto requete) {
         YearMonth periode = parsePeriode(requete.periode());
         byte[] pdf = pdfService.generer(periode, requete);
 

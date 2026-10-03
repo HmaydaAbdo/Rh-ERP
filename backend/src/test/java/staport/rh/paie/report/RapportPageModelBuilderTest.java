@@ -304,7 +304,7 @@ class RapportPageModelBuilderTest {
         List<MaterielLigneVue> materiel =
                 avecMateriel
                         ? List.of(
-                        new MaterielLigneVue("CAMION CITERNE")
+                        new MaterielLigneVue("CAMION CITERNE", null)
                 )
                         : List.of();
 

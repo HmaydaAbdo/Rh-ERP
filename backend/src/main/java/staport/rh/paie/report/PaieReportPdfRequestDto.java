@@ -1,5 +1,8 @@
 package staport.rh.paie.report;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +20,10 @@ import java.util.Map;
  * chantier absent de cette map, ou dont la liste est vide, n'a aucune équipe détaillée séparément
  * (voir {@code ChantierBiVue.avecDetailEquipe}) : tous ses employés sont alors réunis dans une seule
  * section. {@code null} ou vide : aucun chantier détaillé par équipe.
+ *
+ * <p>{@code materiel} : nombre de chaque ligne du parc matériel (clé = libellé de la ligne, voir
+ * {@code MaterielChantierCatalogue.tableaux()}) imprimé dans la colonne « Nbre » ; une ligne absente reste vide,
+ * à remplir au stylo.
  */
 public record PaieReportPdfRequestDto(
         String periode,
@@ -24,6 +31,7 @@ public record PaieReportPdfRequestDto(
         String cin,
         Long fonctionId,
         Long chantierId,
-        Map<String, List<String>> equipesParChantier
+        Map<String, List<String>> equipesParChantier,
+        Map<String, @Min(0) @Max(999) Integer> materiel
 ) {
 }

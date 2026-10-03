@@ -35,7 +35,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 | **Équipe** | Référentiel des équipes de travail | [equipe/README.md](equipe/README.md) | [rbac/equipe.md](rbac/equipe.md) |
 | **Employé** | Fiche d'identité, affectation fonction/chantier | [employee/README.md](employee/README.md) | [rbac/employee.md](rbac/employee.md) |
 | **Paie** | Bulletins mensuels (saisie, import, export) | [paie/README.md](paie/README.md) | [rbac/paie.md](rbac/paie.md) |
-| **Rapport** | Export Excel et rapport PDF BI de la paie | [report/README.md](report/README.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
+| **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [report/README.md](report/README.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
 | **Auth** | Comptes, rôles, permissions, sessions | [auth/README.md](auth/README.md) | [rbac/auth.md](rbac/auth.md) |
 
 Journal des décisions du rapport PDF (ce qui a été retiré et pourquoi) :

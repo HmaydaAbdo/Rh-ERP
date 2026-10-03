@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
-import staport.rh.paie.dtos.response.EquipeSummaryDto;
+import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
+import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
+import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.services.interfaces.IPaieService;
@@ -91,14 +93,27 @@ public class PaieController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/equipes")
-    @Operation(summary = "Lister les équipes distinctes d'un chantier pour une période (alimente la configuration de l'export)")
+    @GetMapping("/periodes")
+    @Operation(summary = "Lister les mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export)")
     @PreAuthorize("hasAuthority('PAIE_READ')")
-    public ResponseEntity<List<EquipeSummaryDto>> listerEquipes(
-            @RequestParam String chantierCode,
+    public ResponseEntity<List<PaiePeriodeResumeDto>> listerPeriodes() {
+        return ResponseEntity.ok(paieService.findPeriodes());
+    }
+
+    @GetMapping("/materiel")
+    @Operation(summary = "Lister les tableaux du parc matériel prévus (chantier, équipe, lignes) pour l'assistant d'export")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<List<PaieMaterielTableauDto>> listerTableauxMateriel() {
+        return ResponseEntity.ok(paieService.findTableauxMateriel());
+    }
+
+    @GetMapping("/chantiers")
+    @Operation(summary = "Lister les chantiers d'un mois avec leurs équipes et effectifs (étape « détail par équipe » de l'export)")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<List<PaieChantierPeriodeDto>> listerChantiersDeLaPeriode(
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
             @RequestParam String periode) {
-        return ResponseEntity.ok(paieService.findDistinctEquipes(chantierCode, parsePeriode(periode)));
+        return ResponseEntity.ok(paieService.findChantiersDeLaPeriode(parsePeriode(periode)));
     }
 
     private YearMonth parsePeriode(String periode) {
