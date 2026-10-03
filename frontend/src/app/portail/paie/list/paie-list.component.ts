@@ -21,6 +21,8 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { PaieExportDialogComponent } from '../export/paie-export-dialog.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
@@ -36,6 +38,7 @@ function toPeriodeString(date: Date | null): string | undefined {
   standalone: true,
   imports: [
     CommonModule,
+    ColumnChooserComponent,
     ReactiveFormsModule,
     RouterLink,
     TableModule,
@@ -53,6 +56,25 @@ function toPeriodeString(date: Date | null): string | undefined {
   styleUrl: './paie-list.component.scss'
 })
 export class PaieListComponent implements OnInit {
+  readonly columns = new ColumnState([
+    { field: 'nomPrenom', header: 'Nom & prénom', sortField: 'employee.nomPrenom', cellClass: 'font-semibold' },
+    { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
+    { field: 'cin', header: 'CIN', sortField: 'employee.cin' },
+    { field: 'nombreJoursTravailles', header: 'Jours trav.', align: 'text-center' },
+    { field: 'joursRecuperationOuvrable', header: 'J.R.O', align: 'text-center' },
+    { field: 'joursRecuperationDimanche', header: 'J.R.D', align: 'text-center' },
+    { field: 'salaireMensuel', header: 'Salaire', align: 'text-right' },
+    { field: 'primeRoulageOrdinaire', header: 'Prime RO', align: 'text-right' },
+    { field: 'primeRoulageDimanche', header: 'Prime RD', align: 'text-right' },
+    { field: 'salaireTotal', header: 'Total', align: 'text-right', cellClass: 'font-bold' },
+    { field: 'observation', header: 'Obs' },
+    { field: 'chantier', header: 'Chantier', sortField: 'chantier.code', align: 'text-center' },
+    { field: 'equipe', header: 'Équipe', sortField: 'equipe.code', align: 'text-center' },
+    { field: 'periode', header: 'Période', align: 'text-center' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
   private readonly paieService = inject(PaieService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly chantierReferenceService = inject(ChantierReferenceService);

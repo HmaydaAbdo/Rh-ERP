@@ -14,6 +14,8 @@ import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Function, FunctionImportResult } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
@@ -22,6 +24,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   standalone: true,
   imports: [
     CommonModule,
+    ColumnChooserComponent,
     ReactiveFormsModule,
     RouterLink,
     TableModule,
@@ -35,6 +38,12 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   styleUrl: './function-list.component.scss'
 })
 export class FunctionListComponent implements OnInit {
+  readonly columns = new ColumnState([
+    { field: 'libelle', header: 'Libellé' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
   private readonly functionService = inject(FunctionService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);

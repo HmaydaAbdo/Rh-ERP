@@ -125,9 +125,10 @@
       placeholder="Équipe"
     ></app-lazy-select>
 
-    <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
     <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
   </form>
+
+  <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
     [value]="paies"
@@ -137,66 +138,78 @@
     [paginator]="true"
     [rows]="10"
     [totalRecords]="totalRecords"
-    [rowsPerPageOptions]="[10, 20, 50]"
+    [rowsPerPageOptions]="rowsPerPage"
     [showCurrentPageReport]="true"
-    currentPageReportTemplate="Page {currentPage} sur {totalPages} — {totalRecords} lignes"
+    [currentPageReportTemplate]="pageReport"
+    [columns]="columns.visible"
+    [resizableColumns]="true"
+    columnResizeMode="expand"
+    [reorderableColumns]="true"
+    (onColReorder)="columns.onReorder($event.columns)"
     dataKey="id"
     styleClass="p-datatable-gridlines p-datatable-sm paie-excel-table"
   >
     <ng-template pTemplate="header">
-      <!-- Ligne 1 : En-têtes principaux -->
       <tr>
-        <th rowspan="2">NOM & PRENOM</th>
-        <th rowspan="2">FONCTION</th>
-        <th rowspan="2">CIN</th>
-        <th colspan="3" class="text-center">Nbre Jrs</th>
-        <th colspan="3" class="text-center">SALAIRE</th>
-        <th rowspan="2" class="text-right">TOTAL</th>
-        <th rowspan="2">OBS</th>
-        <th rowspan="2" class="text-center">CHANTIER</th>
-        <th rowspan="2" class="text-center">EQ</th>
-        <th rowspan="2">Période</th>
-        <th rowspan="2" class="text-center"></th>
-      </tr>
-      <!-- Ligne 2 : Sous-colonnes -->
-      <tr>
-        <th pSortableColumn="periode" class="text-center">P <p-sortIcon field="periode"></p-sortIcon></th>
-        <th class="text-center">J.R.O</th>
-        <th class="text-center">J.R.D</th>
-        <th class="text-right">SALAIRE</th>
-        <th class="text-right">RO</th>
-        <th class="text-right">RD</th>
+        @for (col of columns.visible; track col.field) {
+          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
+            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
+          </th>
+        }
+        <th></th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-paie>
       <tr>
-        <td class="font-semibold">{{ paie.employee?.nomPrenom || '-' }}</td>
-        <td>{{ paie.fonction?.libelle || '-' }}</td>
-        <td>{{ paie.employee?.cin || '-' }}</td>
-
-        <!-- Nbre Jrs -->
-        <td class="text-center">{{ paie.nombreJoursTravailles ?? '-' }}</td>
-        <td class="text-center">{{ paie.joursRecuperationOuvrable ?? '-' }}</td>
-        <td class="text-center">{{ paie.joursRecuperationDimanche ?? '-' }}</td>
-
-        <!-- SALAIRE -->
-        <td class="text-right">{{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}</td>
-        <td class="text-right">{{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}</td>
-        <td class="text-right">{{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}</td>
-
-        <!-- TOTAL -->
-        <td class="text-right font-bold">{{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}</td>
-
-        <!-- OBS, CHANTIER, EQ -->
-        <td>{{ paie.observation || '-' }}</td>
-        <td class="text-center">{{ paie.chantier?.code || '-' }}</td>
-        <td class="text-center">{{ paie.equipe?.code || '-' }}</td>
-
-        <td class="text-center">{{ paie.periode}}</td>
-
-
-        <!-- Actions -->
+        @for (col of columns.visible; track col.field) {
+          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
+            @switch (col.field) {
+              @case ('nomPrenom') {
+                {{ paie.employee?.nomPrenom || '-' }}
+              }
+              @case ('fonction') {
+                {{ paie.fonction?.libelle || '-' }}
+              }
+              @case ('cin') {
+                {{ paie.employee?.cin || '-' }}
+              }
+              @case ('nombreJoursTravailles') {
+                {{ paie.nombreJoursTravailles ?? '-' }}
+              }
+              @case ('joursRecuperationOuvrable') {
+                {{ paie.joursRecuperationOuvrable ?? '-' }}
+              }
+              @case ('joursRecuperationDimanche') {
+                {{ paie.joursRecuperationDimanche ?? '-' }}
+              }
+              @case ('salaireMensuel') {
+                {{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
+              }
+              @case ('primeRoulageOrdinaire') {
+                {{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}
+              }
+              @case ('primeRoulageDimanche') {
+                {{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}
+              }
+              @case ('salaireTotal') {
+                {{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}
+              }
+              @case ('observation') {
+                {{ paie.observation || '-' }}
+              }
+              @case ('chantier') {
+                {{ paie.chantier?.code || '-' }}
+              }
+              @case ('equipe') {
+                {{ paie.equipe?.code || '-' }}
+              }
+              @case ('periode') {
+                {{ paie.periode }}
+              }
+            }
+          </td>
+        }
         <td class="paie-list__actions text-center">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" (click)="onView(paie)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="onEdit(paie)"></button>

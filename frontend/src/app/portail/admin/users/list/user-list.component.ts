@@ -1,23 +1,30 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { PasswordModule } from 'primeng/password';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
 
 import { AdminUser } from '../../models/admin.model';
 import { UserService } from '../../services/user.service';
+import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../../shared/table/table-columns';
+import { DropdownModule } from 'primeng/dropdown';
+import { InputTextModule } from 'primeng/inputtext';
+import { debounceTime } from 'rxjs';
+
+const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [
+  imports: [ColumnChooserComponent, InputTextModule, DropdownModule, 
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
@@ -47,8 +54,40 @@ export class UserListComponent {
     nouveauMotDePasse: ['', [Validators.required, Validators.minLength(8)]]
   });
 
+  readonly columns = new ColumnState([
+    { field: 'username', header: 'Username' },
+    { field: 'email', header: 'Email' },
+    { field: 'roles', header: 'Rôles', sortField: 'roles.length' },
+    { field: 'actif', header: 'Statut' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
+  @ViewChild('dt') private table?: Table;
+
+  readonly actifOptions = [
+    { label: 'Actif', value: true },
+    { label: 'Inactif', value: false }
+  ];
+
+  /** Filtres en temps réel : appliqués côté client sur la liste complète déjà chargée (liste non paginée côté serveur). */
+  readonly filterForm = this.fb.group({
+    username: [''],
+    email: [''],
+    actif: [null as boolean | null]
+  });
+
   constructor() {
+    this.filterForm.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRE_MS)).subscribe((value) => {
+      this.table?.filter(value.username ?? '', 'username', 'contains');
+      this.table?.filter(value.email ?? '', 'email', 'contains');
+      this.table?.filter(value.actif ?? null, 'actif', 'equals');
+    });
     this.fetch();
+  }
+
+  onResetFilters(): void {
+    this.filterForm.reset();
   }
 
   onEdit(user: AdminUser): void {

@@ -12,18 +12,27 @@ import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-equipe-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TableModule, ButtonModule, InputTextModule, ConfirmDialogModule],
+  imports: [CommonModule, ColumnChooserComponent, ReactiveFormsModule, RouterLink, TableModule, ButtonModule, InputTextModule, ConfirmDialogModule],
   providers: [ConfirmationService],
   templateUrl: './equipe-list.component.html',
   styleUrl: './equipe-list.component.scss'
 })
 export class EquipeListComponent implements OnInit {
+  readonly columns = new ColumnState([
+    { field: 'code', header: 'Code' },
+    { field: 'libelle', header: 'Libellé' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
   private readonly equipeService = inject(EquipeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);

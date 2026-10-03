@@ -5,3 +5,23 @@
 .lazy-select {
   width: 100%;
 }
+
+/* Le panneau est attaché au body (appendTo) ou aligné sur un champ étroit (filtres de liste) : sans
+ * largeur minimale, les libellés longs sont tronqués et une barre de défilement horizontale apparaît.
+ * `!important` : PrimeNG pose lui-même un `min-width` en ligne égal à la largeur du champ. */
+::ng-deep .lazy-select-panel {
+  min-width: var(--select-panel-min-width) !important;
+  max-width: min(var(--select-panel-max-width), 95vw);
+
+  .p-multiselect-items-wrapper,
+  .p-dropdown-items-wrapper {
+    overflow-x: hidden;
+  }
+
+  .p-multiselect-item,
+  .p-dropdown-item {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
