@@ -5,11 +5,13 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
+import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.ChantierSummaryDto;
 import staport.rh.paie.dtos.response.EmployeeSummaryDto;
+import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.FunctionSummaryDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
@@ -20,10 +22,12 @@ public interface PaieMapper {
     @Mapping(target = "employee", ignore = true)
     @Mapping(target = "fonction", ignore = true)
     @Mapping(target = "chantier", ignore = true)
+    @Mapping(target = "equipe", ignore = true)
     Paie toEntity(PaieCreateRequestDto dto);
 
     @Mapping(target = "fonction", ignore = true)
     @Mapping(target = "chantier", ignore = true)
+    @Mapping(target = "equipe", ignore = true)
     void updateEntityFromDto(PaieUpdateRequestDto dto, @MappingTarget Paie entity);
 
     PaieResponseDto toDto(Paie entity);
@@ -33,4 +37,6 @@ public interface PaieMapper {
     FunctionSummaryDto toSummaryDto(Function fonction);
 
     ChantierSummaryDto toSummaryDto(Chantier chantier);
+
+    EquipeSummaryDto toSummaryDto(Equipe equipe);
 }

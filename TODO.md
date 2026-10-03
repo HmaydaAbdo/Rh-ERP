@@ -22,13 +22,6 @@
 Sujets soulevés en cours de route, jamais explicitement tranchés par HMAYDA — un choix par défaut a
 été appliqué dans chaque cas pour ne pas bloquer l'avancement, mais aucun n'a été confirmé :
 
-- **Comparaison chantier/équipe pour le squelette matériel (C168)** : `PaieExportService` compare
-  le chantier et l'équipe de façon insensible à la casse et aux espaces superflus, alors que le
-  regroupement en sous-feuilles équipe ailleurs dans le même export (et la sélection équipe par
-  chantier de `PaieExportRequestDto`) est volontairement une correspondance **exacte**
-  (`"Equipe A"` ≠ `"EQUIPE A"`, voir `docs/paie/README.md`, section « Regroupement par équipe »).
-  Si une correspondance stricte est préférée pour cette règle aussi, le changement est mineur — voir
-  `PaieExportService.squeletteMateriel`.
 - **`conventions/frontend.md` — Angular Signals autorisés pour l'état local** : la version d'origine
   du fichier interdisait les Signals (probablement un reliquat d'un autre projet, jamais confirmé
   comme un choix délibéré pour rh-erp). Lors du nettoyage des conventions, la règle a été changée

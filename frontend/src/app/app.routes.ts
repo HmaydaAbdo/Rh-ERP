@@ -32,6 +32,11 @@ export const routes: Routes = [
     loadChildren: () => import('./portail/function/function.routes').then((m) => m.FUNCTION_ROUTES)
   },
   {
+    path: 'equipes',
+    canActivate: [authGuard],
+    loadChildren: () => import('./portail/equipe/equipe.routes').then((m) => m.EQUIPE_ROUTES)
+  },
+  {
     path: 'paie',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/paie/paie.routes').then((m) => m.PAIE_ROUTES)

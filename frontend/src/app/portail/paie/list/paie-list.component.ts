@@ -16,6 +16,7 @@ import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieExportDialogComponent } from '../export/paie-export-dialog.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
@@ -55,6 +56,7 @@ export class PaieListComponent implements OnInit {
   private readonly paieService = inject(PaieService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly equipeReferenceService = inject(EquipeReferenceService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -75,7 +77,8 @@ export class PaieListComponent implements OnInit {
     cin: [''],
     periode: [null as Date | null],
     fonctionIds: [[] as number[]],
-    chantierIds: [[] as number[]]
+    chantierIds: [[] as number[]],
+    equipeIds: [[] as number[]]
   });
 
   showImportDialog = false;
@@ -227,7 +230,8 @@ export class PaieListComponent implements OnInit {
           cin: criteria.cin || undefined,
           periode: toPeriodeString(criteria.periode),
           fonctionIds: criteria.fonctionIds?.length ? criteria.fonctionIds : undefined,
-          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined
+          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined,
+          equipeIds: criteria.equipeIds?.length ? criteria.equipeIds : undefined
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
       )

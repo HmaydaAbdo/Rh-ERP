@@ -20,6 +20,9 @@ import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
+import staport.rh.equipe.dtos.response.EquipeResponseDto;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
 import staport.rh.function.dtos.response.FunctionResponseDto;
 import staport.rh.function.entities.Function;
@@ -49,7 +52,8 @@ import java.util.Set;
  * format hérité de paie_old). La période s'applique à tout le fichier, elle n'est pas une colonne.
  *
  * Contrairement à l'import Employee (qui crée les employés), l'import Paie exige que l'employé
- * (par CIN) et le chantier existent déjà — il ne fait que constater/historiser une paie. La
+ * (par CIN), le chantier et l'équipe (par code, optionnelle mais jamais créée à la volée : un code
+ * inconnu rejette la ligne) existent déjà — il ne fait que constater/historiser une paie. La
  * **fonction** fait exception : une fonction inconnue n'est plus une erreur, elle est **créée**
  * automatiquement (comme le ferait un import Function), jamais l'employé ni le chantier. Import
  * atomique : soit toutes les lignes valides sont créées/mises à jour (et les fonctions manquantes
@@ -67,17 +71,20 @@ public class PaieImportService {
     private final IEmployeeService employeeService;
     private final IFunctionService functionService;
     private final IChantierService chantierService;
+    private final IEquipeService equipeService;
     private final EntityManager entityManager;
 
     public PaieImportService(PaieRepository repository,
                               IEmployeeService employeeService,
                               IFunctionService functionService,
                               IChantierService chantierService,
+                              IEquipeService equipeService,
                               EntityManager entityManager) {
         this.repository = repository;
         this.employeeService = employeeService;
         this.functionService = functionService;
         this.chantierService = chantierService;
+        this.equipeService = equipeService;
         this.entityManager = entityManager;
     }
 
@@ -92,6 +99,7 @@ public class PaieImportService {
 
             Map<String, Long> employesParCin = chargerEmployesParCin();
             Map<String, Long> chantiersParCode = chargerChantiersActifs();
+            Map<String, Long> equipesParCode = chargerEquipesParCode();
             Set<String> cinsTraites = new LinkedHashSet<>();
 
             int numeroLigne = 0;
@@ -123,8 +131,8 @@ public class PaieImportService {
                 String chantierCode = getCellAsString(row.getCell(11));
                 String equipe = getCellAsString(row.getCell(12));
 
-                String raison = validerLigne(cin, fonctionLibelle, chantierCode, nombreJoursTravailles,
-                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode);
+                String raison = validerLigne(cin, fonctionLibelle, chantierCode, equipe, nombreJoursTravailles,
+                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode, equipesParCode);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
@@ -135,7 +143,7 @@ public class PaieImportService {
                 Long employeeId = employesParCin.get(cin.trim().toUpperCase());
                 aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.trim(),
                         chantiersParCode.get(chantierCode.trim().toUpperCase()),
-                        equipe, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
+                        equipe != null ? equipesParCode.get(equipe.trim().toUpperCase()) : null, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
                         salaireMensuel, primeRoulageOrdinaire, primeRoulageDimanche,salaireTotal,observation));
             }
         } catch (IOException | RuntimeException e) {
@@ -172,7 +180,7 @@ public class PaieImportService {
             }
             paie.setFonction(entityManager.getReference(Function.class, fonctionId));
             paie.setChantier(entityManager.getReference(Chantier.class, ligne.chantierId()));
-            paie.setEquipe(ligne.equipe() != null ? ligne.equipe().trim() : null);
+            paie.setEquipe(ligne.equipeId() != null ? entityManager.getReference(Equipe.class, ligne.equipeId()) : null);
             paie.setNombreJoursTravailles(ligne.nombreJoursTravailles());
             paie.setJoursRecuperationOuvrable(ligne.joursRecuperationOuvrable());
             paie.setJoursRecuperationDimanche(ligne.joursRecuperationDimanche());
@@ -221,17 +229,17 @@ public class PaieImportService {
         return creees;
     }
 
-    private record LigneAAppliquer(Long employeeId, String fonctionLibelle, Long chantierId, String equipe,
+    private record LigneAAppliquer(Long employeeId, String fonctionLibelle, Long chantierId, Long equipeId,
                                     Integer nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
                                     BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
                                     BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,BigDecimal salaireTotal,
                                     String observation) {
     }
 
-    private String validerLigne(String cin, String fonctionLibelle, String chantierCode,
+    private String validerLigne(String cin, String fonctionLibelle, String chantierCode, String equipeCode,
                                  Integer nombreJoursTravailles, BigDecimal salaireMensuel,BigDecimal salaireTotal,
                                  Set<String> cinsTraites, Map<String, Long> employesParCin,
-                                 Map<String, Long> chantiersParCode) {
+                                 Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode) {
         List<String> champsManquants = new ArrayList<>();
         if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
             champsManquants.add("Fonction");
@@ -262,8 +270,9 @@ public class PaieImportService {
         if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
             return "Chantier introuvable ou inactif : " + chantierCode.trim();
         }
-
-
+        if (equipeCode != null && !equipesParCode.containsKey(equipeCode.trim().toUpperCase())) {
+            return "Équipe introuvable : " + equipeCode.trim();
+        }
 
         return null;
     }
@@ -290,6 +299,14 @@ public class PaieImportService {
             if (chantier.actif()) {
                 resultat.put(chantier.code().toUpperCase(), chantier.id());
             }
+        }
+        return resultat;
+    }
+
+    private Map<String, Long> chargerEquipesParCode() {
+        Map<String, Long> resultat = new HashMap<>();
+        for (EquipeResponseDto equipe : equipeService.search(null, Pageable.unpaged())) {
+            resultat.put(equipe.code().toUpperCase(), equipe.id());
         }
         return resultat;
     }

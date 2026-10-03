@@ -47,6 +47,8 @@
 
         <p-multiSelect
           [options]="equipesDisponiblesPour(code)"
+          optionLabel="libelle"
+          optionValue="code"
           [ngModel]="equipesSepareesParChantier[code] ?? []"
           (ngModelChange)="onEquipesSepareesChange(code, $event)"
           [ngModelOptions]="{ standalone: true }"
@@ -59,7 +61,7 @@
         @if (format === 'EXCEL') {
           @for (equipe of equipesSepareesParChantier[code] ?? []; track equipe) {
             <div class="paie-export__equipe-row">
-              <span class="paie-export__equipe-nom">{{ equipe }}</span>
+              <span class="paie-export__equipe-nom">{{ libelleEquipe(code, equipe) }}</span>
               <p-selectButton
                 [options]="inclusionOptions"
                 optionLabel="label"

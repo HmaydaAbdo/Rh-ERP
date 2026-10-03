@@ -21,6 +21,9 @@ import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
+import staport.rh.equipe.dtos.response.EquipeResponseDto;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
 import staport.rh.function.dtos.response.FunctionResponseDto;
 import staport.rh.function.entities.Function;
@@ -60,6 +63,9 @@ class PaieImportServiceTest {
     private IChantierService chantierService;
 
     @Mock
+    private IEquipeService equipeService;
+
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
@@ -74,6 +80,10 @@ class PaieImportServiceTest {
                 new FunctionResponseDto(10L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(List.of(
                 new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
+        Page<EquipeResponseDto> equipes = new PageImpl<>(List.of(
+                new EquipeResponseDto(30L, "EQUIPE A", "Equipe A")));
+        lenient().when(equipeService.search(isNull(), any(Pageable.class))).thenReturn(equipes);
+        lenient().when(entityManager.getReference(eq(Equipe.class), any())).thenReturn(new Equipe());
         lenient().when(employeeService.search(isNull(), any(Pageable.class))).thenReturn(employees);
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);
@@ -157,6 +167,62 @@ class PaieImportServiceTest {
 
         assertThat(result.lignesIgnorees().get(0).raison()).contains("Chantier introuvable");
         verify(repository, never()).save(any(Paie.class));
+    }
+
+    @Test
+    void importer_devraitIgnorerUneEquipeInconnue() throws IOException {
+        stubReferentiels();
+
+        MockMultipartFile fichier = buildExcelFile(
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, 5300.0, "", "C059", "EQUIPE Z"}
+        );
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.ignores()).isEqualTo(1);
+        assertThat(result.lignesIgnorees().get(0).raison()).isEqualTo("Équipe introuvable : EQUIPE Z");
+        verify(repository, never()).save(any(Paie.class));
+    }
+
+    @Test
+    void importer_devraitResoudreLEquipeSansTenirCompteDeLaCasseNiDesEspaces() throws IOException {
+        stubReferentiels();
+        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
+
+        MockMultipartFile fichier = buildExcelFile(
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, 5300.0, "", "C059", " equipe a "}
+        );
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.crees()).isEqualTo(1);
+        verify(entityManager).getReference(Equipe.class, 30L);
+    }
+
+    @Test
+    void importer_devraitAccepterUneLigneSansEquipe() throws IOException {
+        stubReferentiels();
+        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
+
+        MockMultipartFile fichier = buildExcelFile(
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, 5300.0, "", "C059", ""}
+        );
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.crees()).isEqualTo(1);
+        ArgumentCaptor<Paie> captor = ArgumentCaptor.forClass(Paie.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getEquipe()).isNull();
     }
 
     @Test

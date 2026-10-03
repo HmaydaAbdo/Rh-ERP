@@ -23,9 +23,8 @@ import java.util.List;
  * "CH"/"OP" (voir {@code PaieBiReportBuilder.squeletteMateriel}) — imprimé via le même mécanisme de
  * sous-rapport que {@code repartitionFonction} (recap-materiel.jrxml).
  *
- * <p>{@code libelleAffiche} : nom complet de l'équipe pour AFFICHAGE uniquement (voir
- * {@code EquipeLibelleCatalogue}, "CHAUFFEURS" pour {@code nom == "CH"}) — {@code nom} reste le code
- * brut, réservé aux mécanismes internes (sélection utilisateur, ancre de page, comparaison avec
+ * <p>{@code libelleAffiche} : libellé de l'équipe ({@code Equipe.libelle}, "CHAUFFEURS" pour
+ * {@code nom == "CH"}) pour AFFICHAGE uniquement — {@code nom} reste le code, réservé aux mécanismes internes (sélection utilisateur, ancre de page, comparaison avec
  * {@code chantierCode} pour détecter la section "reste") ; ne jamais afficher {@code nom} directement
  * dans le rapport (même principe que {@code chantierCode} vs {@code identifiantChantier}). Sans
  * signification pour une section "reste" (où {@code nom} vaut le code chantier, jamais affiché via ce

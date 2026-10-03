@@ -6,7 +6,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
 import staport.rh.paie.entities.Paie;
-import staport.rh.paie.reporting.EquipeLibelleCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 
 import java.math.BigDecimal;
@@ -114,7 +113,8 @@ class PaieSheetWriter {
         ecrireMontant(ligne, 9, paie.getSalaireTotal(), styles.donneeMontant);
         ecrireTexte(ligne, 10, paie.getObservation(), styles.donneeCentre);
         ecrireTexte(ligne, 11, paie.getChantier().getCode(), styles.donneeCentre);
-        ecrireTexte(ligne, 12, paie.getEquipe(), styles.donneeCentre);    }
+        ecrireTexte(ligne, 12, paie.getEquipe() != null ? paie.getEquipe().getCode() : null, styles.donneeCentre);
+    }
 
     private int ecrireLigneTotal(Sheet sheet, PaieExcelStyles styles, int indexLigne, String libelle,
                                   String formule, BigDecimal valeurFixe) {

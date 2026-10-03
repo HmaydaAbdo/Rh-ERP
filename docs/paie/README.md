@@ -51,7 +51,7 @@ Table `paie` :
 | `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) via `YearMonthAttributeConverter` |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | **Snapshot** — chantier d'affectation ce mois-là |
-| `equipe` | `VARCHAR(50)` | nullable | **Snapshot** — équipe ce mois-là (texte libre, pas de domaine dédié) |
+| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | **Snapshot** — équipe ce mois-là (voir `docs/equipe/README.md`) ; `NULL` = employé sans équipe |
 | `nombre_jours_travailles` | `INT` | `NOT NULL` | Jours travaillés |
 | `jours_recuperation_ouvrable` | `DECIMAL(5,2)` | nullable | Jours de récupération (jour ouvrable) |
 | `jours_recuperation_dimanche` | `DECIMAL(5,2)` | nullable | Jours de récupération (dimanche) |
@@ -64,13 +64,13 @@ Table `paie` :
 **Contrainte unique** : `uk_paie_employee_periode` (`employee_id`, `periode`) — un employé a au plus
 un bulletin par mois.
 
-Index : `idx_paie_employee`, `idx_paie_periode`, `idx_paie_chantier`.
+Index : `idx_paie_employee`, `idx_paie_periode`, `idx_paie_chantier`, `idx_paie_equipe`.
 
 ### Pourquoi fonction/chantier/équipe sont dupliqués depuis Employee ?
 
 **Ce n'est pas une duplication accidentelle — c'est un snapshot volontaire.** `Employee.fonction` et
 `Employee.chantier` reflètent la situation *actuelle* de l'employé (ils changent quand l'employé est
-réaffecté). `Paie.fonction`/`Paie.chantier`/`Paie.equipe` figent la situation *du mois du bulletin*.
+réaffecté). `Paie.fonction`/`Paie.chantier`/`Paie.equipe` figent la situation *du mois du bulletin* (l'équipe est une référence vers le référentiel Équipe, comme fonction et chantier).
 Sans ce choix, faire pointer `Paie` directement sur `Employee` pour lire fonction/chantier
 déformerait l'historique dès qu'un employé change d'affectation : un bulletin d'août afficherait le
 chantier de décembre.
@@ -93,7 +93,7 @@ rétroactive ou automatique des bulletins déjà existants.
   expose pas. Un bulletin est un document historique — le corriger reviendrait à en créer un autre
   pour un employé/mois différent, jamais à réassigner un bulletin existant.
 - `fonction`/`chantier` restent modifiables après création (correction d'une erreur de saisie),
-  `equipe` aussi.
+  `equipe` aussi (`equipeId`, facultatif : `null` = sans équipe ; un id inconnu est rejeté).
 - `salaireTotal` n'est **jamais saisi** — ni via l'API (absent de `PaieCreateRequestDto` et
   `PaieUpdateRequestDto`), ni via l'import Excel (colonne "Total" du fichier ignorée). Il est
   systématiquement recalculé côté serveur (`Paie.calculerSalaireTotal()`) à partir de
@@ -114,16 +114,16 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie` | Créer un bulletin | 201, 400, 409 |
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
-| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipe`) — `fonctionIds`/`chantierIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
+| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
-| `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes distinctes trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
+| `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes (`id`, `code`, `libelle`) trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search`, voir `docs/report/README.md` | 200, 404 |
 
 `PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
-`fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe`,
+`fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe` (`id`, `code`, `libelle`, ou `null`),
 `nombreJoursTravailles`, `joursRecuperationOuvrable`, `joursRecuperationDimanche`,
 `salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche`, `salaireTotal`, `observation`.
 
@@ -163,7 +163,7 @@ ordre exact :
 | J | Total — **ignorée**, `salaireTotal` est toujours recalculé (G + H + I), quelle que soit la valeur de cette colonne |
 | K | Observation |
 | L | Chantier (code, doit exister et être actif) |
-| M | Équipe |
+| M | Équipe (code d'une équipe **existante**, facultative — un code inconnu rejette la ligne, l'équipe n'est jamais créée par l'import) |
 
 La **période s'applique à tout le fichier** — c'est un paramètre de la requête
 (`?periode=aaaa-MM`), pas une colonne : un fichier = la paie d'un mois pour tous les employés
@@ -237,21 +237,20 @@ ici — seules les règles ci-dessous, propres au champ `Paie.equipe` en tant qu
 
 `GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
 bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
-— c'est la seule source possible pour peupler ces sélecteurs côté UI, `équipe` n'ayant aucun
-référentiel dédié (voir section suivante).
+— source des sélecteurs d'équipe du dialog d'export côté UI : renvoie `id`, `code` et `libelle`, la
+sélection manipulée et envoyée au backend restant le **code** (voir section suivante).
 
-### Regroupement par équipe : correspondance texte exact, pas de normalisation
+### Regroupement par équipe : par code du référentiel Équipe
 
-`Paie.equipe` est un champ texte libre (décision actée : pas de domaine dédié). Le regroupement pour
-les sous-feuilles équipe (`PaieExportService.ecrireFeuillesEquipes`) et le rapprochement avec le mois
-précédent se font par **égalité de chaîne exacte** sur cette valeur (`Collectors.groupingBy(Paie::getEquipe)`).
-À l'import, `equipe` n'est que **trimée**, jamais mise en majuscule ni normalisée
-(`PaieImportService` : `equipe.trim()`) — contrairement à `fonction`/`chantier`, résolus par référentiel.
-Conséquence concrète : `"Equipe A"` et `"EQUIPE A"` produisent **deux sous-feuilles distinctes** et ne
-se rapprochent jamais d'un mois sur l'autre pour le total précédent, même s'il s'agit de la même
-équipe pour l'utilisateur. C'est une source d'erreur silencieuse si la saisie/l'import n'est pas
-rigoureusement homogène d'un mois à l'autre — candidat naturel à une normalisation (`trim` +
-`toUpperCase`, ou promotion en domaine dédié) si ce cas se présente en pratique.
+`Paie.equipe` référence le domaine **Équipe** (`docs/equipe/README.md`). Le regroupement pour les
+sous-feuilles équipe (`PaieExportService.ecrireFeuillesEquipes`) et le rapprochement avec le mois
+précédent se font par **code d'équipe** (`Equipe.code`, normalisé trim + majuscules et unique en
+base) : `"ch"` et `"CH"` ne peuvent plus produire deux équipes distinctes, ce qui supprime l'ancienne
+source d'erreur silencieuse du texte libre.
+
+À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
+contre le référentiel ; un code inconnu rejette la ligne (`« Équipe introuvable : X »`), donc tout le
+fichier (import atomique). Une cellule vide laisse le bulletin sans équipe.
 
 Le détail des règles de mise en page (total du mois précédent, colonne STC, squelette matériel
 C168, cas des feuilles sans ligne) et du rapport PDF est dans `docs/report/README.md`.

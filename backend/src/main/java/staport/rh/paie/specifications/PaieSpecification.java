@@ -51,11 +51,8 @@ public class PaieSpecification {
                 predicates.add(root.get("chantier").get("id").in(criteria.chantierIds()));
             }
 
-            if (criteria.equipe() != null && !criteria.equipe().isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("equipe")),
-                        "%" + criteria.equipe().toLowerCase() + "%"
-                ));
+            if (criteria.equipeIds() != null && !criteria.equipeIds().isEmpty()) {
+                predicates.add(root.get("equipe").get("id").in(criteria.equipeIds()));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

@@ -11,9 +11,12 @@ import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
+import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.InvalidReferenceException;
@@ -53,6 +56,9 @@ class PaieServiceTest {
     private IChantierService chantierService;
 
     @Mock
+    private IEquipeService equipeService;
+
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
@@ -64,7 +70,7 @@ class PaieServiceTest {
     @BeforeEach
     void setUp() {
         createDto = new PaieCreateRequestDto(
-                1L, YearMonth.of(2026, 8), 10L, 20L, "EQUIPE A",
+                1L, YearMonth.of(2026, 8), 10L, 20L, 30L,
                 26, BigDecimal.ZERO, BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null
@@ -85,15 +91,61 @@ class PaieServiceTest {
         when(mapper.toEntity(createDto)).thenReturn(entity);
         when(functionService.existsById(10L)).thenReturn(true);
         when(chantierService.existsById(20L)).thenReturn(true);
+        when(equipeService.existsById(30L)).thenReturn(true);
         when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
         when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
         when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
+        Equipe equipe = new Equipe();
+        when(entityManager.getReference(Equipe.class, 30L)).thenReturn(equipe);
         when(repository.save(entity)).thenReturn(entity);
         when(mapper.toDto(entity)).thenReturn(mockResponseDto());
 
         PaieResponseDto result = paieService.create(createDto);
 
         assertThat(result.id()).isEqualTo(1L);
+        assertThat(entity.getEquipe()).isSameAs(equipe);
+    }
+
+    @Test
+    void create_devraitAccepterUnBulletinSansEquipe() {
+        PaieCreateRequestDto sansEquipe = new PaieCreateRequestDto(
+                1L, YearMonth.of(2026, 8), 10L, 20L, null,
+                26, BigDecimal.ZERO, BigDecimal.ZERO,
+                new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
+                null);
+        when(employeeService.existsById(1L)).thenReturn(true);
+        when(repository.existsByEmployee_IdAndPeriode(1L, sansEquipe.periode())).thenReturn(false);
+        when(mapper.toEntity(sansEquipe)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
+        when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
+        when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
+        when(repository.save(entity)).thenReturn(entity);
+        when(mapper.toDto(entity)).thenReturn(mockResponseDto());
+
+        paieService.create(sansEquipe);
+
+        assertThat(entity.getEquipe()).isNull();
+        verify(equipeService, never()).existsById(any());
+    }
+
+    @Test
+    void create_devraitEchouerQuandLEquipeEstIntrouvable() {
+        when(employeeService.existsById(1L)).thenReturn(true);
+        when(repository.existsByEmployee_IdAndPeriode(1L, createDto.periode())).thenReturn(false);
+        when(mapper.toEntity(createDto)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
+        when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
+        when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
+        when(equipeService.existsById(30L)).thenReturn(false);
+
+        assertThatThrownBy(() -> paieService.create(createDto))
+                .isInstanceOf(InvalidReferenceException.class);
+
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -149,7 +201,8 @@ class PaieServiceTest {
     }
 
     private PaieResponseDto mockResponseDto() {
-        return new PaieResponseDto(1L, null, createDto.periode(), null, null, "EQUIPE A",
+        return new PaieResponseDto(1L, null, createDto.periode(), null, null,
+                new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"),
                 26, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("5000"),
                 new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"), null);
     }

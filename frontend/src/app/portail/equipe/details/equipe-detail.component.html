@@ -1,0 +1,24 @@
+@if (equipe) {
+  <div class="equipe-detail">
+    <div class="equipe-detail__header">
+      <h1>{{ equipe.libelle }}</h1>
+      <div class="equipe-detail__header-actions">
+        @if (canWrite()) {
+          <a [routerLink]="['/equipes', equipe.id, 'edit']" class="p-button">Modifier</a>
+        }
+        <a routerLink="/equipes" class="p-button p-button-outlined">Retour à la liste</a>
+      </div>
+    </div>
+
+    <dl class="equipe-detail__grid">
+      <div>
+        <dt>Code</dt>
+        <dd>{{ equipe.code }}</dd>
+      </div>
+      <div>
+        <dt>Libellé</dt>
+        <dd>{{ equipe.libelle }}</dd>
+      </div>
+    </dl>
+  </div>
+}

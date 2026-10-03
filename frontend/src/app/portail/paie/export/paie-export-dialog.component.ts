@@ -12,7 +12,7 @@ import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { PaieExportRequest, PaieRapportPdfRequest } from '../models/paie.model';
+import { PaieEquipeSummary, PaieExportRequest, PaieRapportPdfRequest } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
 type Inclusion = 'INCLURE' | 'EXCLURE';
@@ -87,7 +87,7 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
    * jamais dans deux sections (voir le Javadoc de EquipeBiVue côté backend). */
   private equipesExcluesParChantier: Record<string, Set<string>> = {};
 
-  private readonly equipesCache = new Map<string, string[]>();
+  private readonly equipesCache = new Map<string, PaieEquipeSummary[]>();
   private readonly equipesLoading = new Set<string>();
 
   ngOnInit(): void {
@@ -135,9 +135,14 @@ export class PaieExportDialogComponent implements OnChanges, OnInit {
     }
   }
 
-  equipesDisponiblesPour(chantierCode: string): string[] {
+  equipesDisponiblesPour(chantierCode: string): PaieEquipeSummary[] {
     const cle = this.cleEquipesCache(chantierCode);
     return cle ? (this.equipesCache.get(cle) ?? []) : [];
+  }
+
+  /** Libellé affiché d'une équipe sélectionnée (la sélection, elle, manipule le CODE) — le code en repli. */
+  libelleEquipe(chantierCode: string, codeEquipe: string): string {
+    return this.equipesDisponiblesPour(chantierCode).find((equipe) => equipe.code === codeEquipe)?.libelle ?? codeEquipe;
   }
 
   chargementEquipesEnCours(chantierCode: string): boolean {

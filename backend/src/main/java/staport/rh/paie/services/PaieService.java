@@ -12,11 +12,14 @@ import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
+import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.InvalidReferenceException;
@@ -40,6 +43,7 @@ public class PaieService implements IPaieService {
     private final IEmployeeService employeeService;
     private final IFunctionService functionService;
     private final IChantierService chantierService;
+    private final IEquipeService equipeService;
     private final EntityManager entityManager;
 
     public PaieService(PaieRepository repository,
@@ -47,12 +51,14 @@ public class PaieService implements IPaieService {
                         IEmployeeService employeeService,
                         IFunctionService functionService,
                         IChantierService chantierService,
+                        IEquipeService equipeService,
                         EntityManager entityManager) {
         this.repository = repository;
         this.mapper = mapper;
         this.employeeService = employeeService;
         this.functionService = functionService;
         this.chantierService = chantierService;
+        this.equipeService = equipeService;
         this.entityManager = entityManager;
     }
 
@@ -70,6 +76,7 @@ public class PaieService implements IPaieService {
         entity.setEmployee(entityManager.getReference(Employee.class, dto.employeeId()));
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Paie saved = repository.save(entity);
         log.info("Bulletin de paie créé : id={}, employeeId={}, periode={}", saved.getId(), dto.employeeId(), dto.periode());
@@ -84,6 +91,7 @@ public class PaieService implements IPaieService {
         mapper.updateEntityFromDto(dto, entity);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Paie updated = repository.save(entity);
         log.info("Bulletin de paie mis à jour : id={}", updated.getId());
@@ -115,8 +123,10 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<String> findDistinctEquipes(String chantierCode, YearMonth periode) {
-        return repository.findDistinctEquipesByChantierCodeAndPeriode(chantierCode, periode);
+    public List<EquipeSummaryDto> findDistinctEquipes(String chantierCode, YearMonth periode) {
+        return repository.findDistinctEquipesByChantierCodeAndPeriode(chantierCode, periode).stream()
+                .map(mapper::toSummaryDto)
+                .toList();
     }
 
     private Paie getEntityById(Long id) {
@@ -129,6 +139,17 @@ public class PaieService implements IPaieService {
             throw new InvalidReferenceException("Fonction introuvable avec l'id : " + fonctionId);
         }
         return entityManager.getReference(Function.class, fonctionId);
+    }
+
+    /** Un bulletin peut ne pas avoir d'équipe : {@code null} reste {@code null}, un id inconnu est rejeté. */
+    private Equipe resolveEquipeReference(Long equipeId) {
+        if (equipeId == null) {
+            return null;
+        }
+        if (!equipeService.existsById(equipeId)) {
+            throw new InvalidReferenceException("Équipe introuvable avec l'id : " + equipeId);
+        }
+        return entityManager.getReference(Equipe.class, equipeId);
     }
 
     private Chantier resolveChantierReference(Long chantierId) {

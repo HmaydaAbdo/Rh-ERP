@@ -13,6 +13,7 @@ import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieService } from '../services/paie.service';
@@ -53,6 +54,7 @@ export class PaieFormComponent implements OnInit {
   readonly employeeReferenceService = inject(EmployeeReferenceService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly chantierReferenceService = inject(ChantierReferenceService);
+  readonly equipeReferenceService = inject(EquipeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
@@ -65,7 +67,7 @@ export class PaieFormComponent implements OnInit {
     periode: [null as Date | null, Validators.required],
     fonctionId: [null as number | null, Validators.required],
     chantierId: [null as number | null, Validators.required],
-    equipe: [''],
+    equipeId: [null as number | null],
     nombreJoursTravailles: [null as number | null, [Validators.required, Validators.min(0)]],
     joursRecuperationOuvrable: [null as number | null],
     joursRecuperationDimanche: [null as number | null],
@@ -95,7 +97,7 @@ export class PaieFormComponent implements OnInit {
           periode: fromPeriodeString(paie.periode),
           fonctionId: paie.fonction.id,
           chantierId: paie.chantier.id,
-          equipe: paie.equipe ?? '',
+          equipeId: paie.equipe?.id ?? null,
           nombreJoursTravailles: paie.nombreJoursTravailles,
           joursRecuperationOuvrable: paie.joursRecuperationOuvrable,
           joursRecuperationDimanche: paie.joursRecuperationDimanche,
@@ -119,7 +121,7 @@ export class PaieFormComponent implements OnInit {
     const dto = {
       fonctionId: raw.fonctionId!,
       chantierId: raw.chantierId!,
-      equipe: raw.equipe || null,
+      equipeId: raw.equipeId,
       nombreJoursTravailles: raw.nombreJoursTravailles!,
       joursRecuperationOuvrable: raw.joursRecuperationOuvrable,
       joursRecuperationDimanche: raw.joursRecuperationDimanche,

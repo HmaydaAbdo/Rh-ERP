@@ -19,8 +19,7 @@ public record PaieUpdateRequestDto(
         @NotNull
         Long chantierId,
 
-        @Size(max = 50)
-        String equipe,
+        Long equipeId,
 
         @NotNull
         @Min(0)

@@ -9,7 +9,7 @@ public record PaieResponseDto(
         YearMonth periode,
         FunctionSummaryDto fonction,
         ChantierSummaryDto chantier,
-        String equipe,
+        EquipeSummaryDto equipe,
         Integer nombreJoursTravailles,
         BigDecimal joursRecuperationOuvrable,
         BigDecimal joursRecuperationDimanche,

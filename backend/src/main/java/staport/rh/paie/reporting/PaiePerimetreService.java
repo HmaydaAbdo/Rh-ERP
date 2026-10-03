@@ -59,14 +59,14 @@ public class PaiePerimetreService {
             List<String> equipesAGenerer = equipesAGenererPour(chantierCode, lignesChantier, modeResolu, equipesParChantier);
             Map<String, List<Paie>> lignesParEquipeAGenerer = groupBy(
                     lignesChantier.stream()
-                            .filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank() && equipesAGenerer.contains(p.getEquipe()))
+                            .filter(p -> p.getEquipe() != null && equipesAGenerer.contains(codeEquipe(p)))
                             .toList(),
-                    Paie::getEquipe);
+                    PaiePerimetreService::codeEquipe);
             Map<String, List<Paie>> lignesPrecedentesParEquipe = groupBy(
                     lignesPrecedentesParChantier.getOrDefault(chantierCode, List.of()).stream()
-                            .filter(p -> p.getEquipe() != null && !p.getEquipe().isBlank())
+                            .filter(p -> p.getEquipe() != null)
                             .toList(),
-                    Paie::getEquipe);
+                    PaiePerimetreService::codeEquipe);
             Map<String, BigDecimal> totalMoisPrecedentParEquipe = new TreeMap<>();
             for (String equipe : equipesAGenerer) {
                 BigDecimal total = totalSalairesOuNull(lignesPrecedentesParEquipe.getOrDefault(equipe, List.of()));
@@ -88,8 +88,8 @@ public class PaiePerimetreService {
         return switch (mode) {
             case AUCUNE -> List.of();
             case TOUTES -> lignesChantier.stream()
-                    .map(Paie::getEquipe)
-                    .filter(equipe -> equipe != null && !equipe.isBlank())
+                    .filter(p -> p.getEquipe() != null)
+                    .map(PaiePerimetreService::codeEquipe)
                     .distinct()
                     .toList();
             case PERSONNALISE -> equipesParChantier == null
@@ -107,7 +107,13 @@ public class PaiePerimetreService {
             return lignes;
         }
         Set<String> exclusionSet = new HashSet<>(exclues);
-        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(p.getEquipe())).toList();
+        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(codeEquipe(p))).toList();
+    }
+
+    /** Code de l'équipe du bulletin — clé de sélection/regroupement partagée avec le dialog d'export
+     * ({@code equipesParChantier}). Ne doit être appelé que si {@code p.getEquipe() != null}. */
+    private static String codeEquipe(Paie p) {
+        return p.getEquipe().getCode();
     }
 
     private List<Paie> filtrerParChantiers(List<Paie> lignes, List<String> chantiers) {

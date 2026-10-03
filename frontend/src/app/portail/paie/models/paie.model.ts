@@ -15,13 +15,19 @@ export interface PaieChantierSummary {
   designation: string;
 }
 
+export interface PaieEquipeSummary {
+  id: number;
+  code: string;
+  libelle: string;
+}
+
 export interface Paie {
   id: number;
   employee: PaieEmployeeSummary;
   periode: string;
   fonction: PaieFunctionSummary;
   chantier: PaieChantierSummary;
-  equipe: string | null;
+  equipe: PaieEquipeSummary | null;
   nombreJoursTravailles: number;
   joursRecuperationOuvrable: number | null;
   joursRecuperationDimanche: number | null;
@@ -37,7 +43,7 @@ export interface PaieCreateRequest {
   periode: string;
   fonctionId: number;
   chantierId: number;
-  equipe?: string | null;
+  equipeId?: number | null;
   nombreJoursTravailles: number;
   joursRecuperationOuvrable?: number | null;
   joursRecuperationDimanche?: number | null;
@@ -51,7 +57,7 @@ export interface PaieCreateRequest {
 export interface PaieUpdateRequest {
   fonctionId: number;
   chantierId: number;
-  equipe?: string | null;
+  equipeId?: number | null;
   nombreJoursTravailles: number;
   joursRecuperationOuvrable?: number | null;
   joursRecuperationDimanche?: number | null;
@@ -68,13 +74,13 @@ export interface PaieSearchCriteria {
   periode?: string;
   fonctionIds?: number[];
   chantierIds?: number[];
-  equipe?: string;
+  equipeIds?: number[];
 }
 
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
 
-/** Aucun référentiel Équipe dédié (texte libre sur chaque bulletin, voir docs/paie/README.md) —
- * les valeurs possibles par chantier viennent de PaieService.listerEquipes(). */
+/** Les équipes sont désignées par leur CODE (clé stable, voir docs/equipe/README.md) — les valeurs
+ * possibles par chantier viennent de PaieService.listerEquipes(). */
 export interface PaieExportRequest {
   periode: string;
   feuillesEquipeMode: FeuillesEquipeMode;

@@ -405,24 +405,22 @@ colonne "Équipe" de la section "reste" en revanche (par ligne, pas par section)
 équipe affiche une cellule **vide**, jamais le texte "Sans équipe" (demande explicite de direction,
 2026-09-29).
 
-### Nom complet des équipes
+### Libellé des équipes
 
 Partout où le rapport affiche une équipe (titre de section "ÉQUIPE : ...", bandeau
-`pageHeader`/`pageFooter` "CHANTIER : ... · ÉQUIPE : ...", colonne "Équipe" du tableau employé,
-graphique "Répartition par équipe", titres de feuille Excel) : le **nom complet** de l'équipe
-("CHAUFFEURS"), jamais son code brut tel que saisi en base ("CH") — demande explicite de direction,
-2026-09-29, table fournie par la direction. Voir `staport.rh.paie.reporting.EquipeLibelleCatalogue`
-(même package/principe que `MaterielChantierCatalogue`, partagé entre le rapport PDF et l'export
-Excel) : un code absent de cette table est affiché tel quel (jamais de crash ni de masquage d'une
-équipe imprévue).
+`pageHeader`/`pageFooter` "CHANTIER : ... · ÉQUIPE : ...", graphique "Répartition par équipe", titres
+de feuille Excel) : le **libellé** de l'équipe ("CHAUFFEURS", `Equipe.libelle` du référentiel Équipe,
+voir `docs/equipe/README.md`), jamais son code ("CH") — demande explicite de direction, 2026-09-29.
+Il est lu sur l'entité `Equipe` des bulletins (`PaieBiReportBuilder.libellesParCode`,
+`PaieExportService.ecrireFeuillesEquipes`), plus aucune table codée en dur. La colonne « Équipe » du
+tableau employé affiche en revanche le **code** (demande de direction du 2026-10-03).
 
-Ce mapping est **strictement un habillage d'affichage** : le code brut reste la clé utilisée partout
+Le libellé est **strictement un habillage d'affichage** : le code reste la clé utilisée partout
 ailleurs — sélection manuelle des équipes à détailler dans le dialog d'export
 (`PaieReportPdfRequestDto.equipesParChantier`/`PaieExportRequestDto.equipesParChantier`, qui
-continuent d'afficher et de manipuler les codes bruts, demande explicite de direction), agrégation
-BI, détection de la section "reste". Même principe que `chantierCode` vs `identifiantChantier` pour
-les chantiers (voir ci-dessous) : `EquipeBiVue.nom` reste le code brut à usage interne,
-`EquipeBiVue.libelleAffiche` porte le nom complet, réservé à l'affichage.
+manipulent les codes), agrégation BI, détection de la section "reste". Même principe que
+`chantierCode` vs `identifiantChantier` pour les chantiers (voir ci-dessous) : `EquipeBiVue.nom` reste
+le code à usage interne, `EquipeBiVue.libelleAffiche` porte le libellé, réservé à l'affichage.
 
 ### Identifiant chantier (nom + code)
 

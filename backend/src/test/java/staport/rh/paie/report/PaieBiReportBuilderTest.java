@@ -3,6 +3,7 @@ package staport.rh.paie.report;
 import org.junit.jupiter.api.Test;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
+import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
@@ -58,12 +59,12 @@ class PaieBiReportBuilderTest {
 
     @Test
     void construireDepuis_devraitRegrouperLesBulletinsSansEquipeSousSansEquipeDansLaRepartition() {
-        Paie sansEquipeNull = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", null, "3000");
-        Paie sansEquipeBlank = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "  ", "2000");
+        Paie sansEquipe1 = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", null, "3000");
+        Paie sansEquipe2 = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", null, "2000");
         Paie avecEquipe = paie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C059", "EQUIPE A", "1000");
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
-                List.of(sansEquipeNull, sansEquipeBlank, avecEquipe), List.of());
+                List.of(sansEquipe1, sansEquipe2, avecEquipe), List.of());
 
         // repartitionEquipe() alimente le graphique de repartition par equipe - toujours calculee sur
         // TOUTES les equipes reelles, independamment de la selection manuelle d'equipes a detailler
@@ -209,10 +210,17 @@ class PaieBiReportBuilderTest {
         paie.setEmployee(employee);
         paie.setFonction(fonction);
         paie.setChantier(chantier);
-        paie.setEquipe(equipe);
+        paie.setEquipe(equipe == null ? null : equipe(equipe));
         paie.setNombreJoursTravailles(26);
         paie.setSalaireMensuel(new BigDecimal(salaireTotal));
         paie.setSalaireTotal(new BigDecimal(salaireTotal));
         return paie;
+    }
+
+    private Equipe equipe(String code) {
+        Equipe equipe = new Equipe();
+        equipe.setCode(code);
+        equipe.setLibelle(code);
+        return equipe;
     }
 }
