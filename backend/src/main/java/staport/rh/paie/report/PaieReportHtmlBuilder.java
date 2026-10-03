@@ -69,7 +69,7 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocKpi b) {
             ajouterCartesKpi(corps, b.niveauClasse(), b.cartes());
         } else if (bloc instanceof PageModel.BlocGraphique b) {
-            chartSvgBuilder.ajouterGraphique(corps, b.donnees());
+            chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
             ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {

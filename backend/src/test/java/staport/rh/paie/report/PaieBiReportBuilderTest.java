@@ -36,8 +36,8 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void construireDepuis_devraitLimiterLeGraphiqueChantierAuxDixPlusGrosSansRegroupementAutres() {
-        // 12 chantiers de masses croissantes (C01 = 1 000 ... C12 = 12 000) : seuls les 10 plus gros restent.
+    void construireDepuis_devraitGarderTousLesChantiersDansLeGraphiqueSansRegroupementAutres() {
+        // 12 chantiers de masses croissantes (C01 = 1 000 ... C12 = 12 000) : tous figurent, du plus gros au plus petit.
         List<Paie> courant = new java.util.ArrayList<>();
         for (int i = 1; i <= 12; i++) {
             courant.add(paie("EMPLOYE " + i, "CIN" + i, "OPERATEUR", String.format("C%02d", i), "EQUIPE A", String.valueOf(i * 1000)));
@@ -48,15 +48,15 @@ class PaieBiReportBuilderTest {
         assertThat(vue.synthese().nombreChantiers()).isEqualTo(12);
         assertThat(vue.synthese().repartitionChantier())
                 .extracting(RepartitionBean::getLibelle)
-                .containsExactly("C12", "C11", "C10", "C09", "C08", "C07", "C06", "C05", "C04", "C03");
+                .containsExactly("C12", "C11", "C10", "C09", "C08", "C07", "C06", "C05", "C04", "C03", "C02", "C01");
         assertThat(vue.synthese().repartitionChantier())
                 .extracting(RepartitionBean::getLibelle).doesNotContain("Autres");
-        // Le rapport reste exhaustif : les 12 chantiers ont leur propre section, seul le graphique est limité.
+        // Le rapport reste exhaustif : les 12 chantiers ont aussi leur propre section.
         assertThat(vue.chantiers()).hasSize(12);
     }
 
     @Test
-    void construireDepuis_devraitGarderTousLesChantiersDansLeGraphiqueQuandIlsSontDixOuMoins() {
+    void construireDepuis_devraitOrdonnerLeGraphiqueChantierParMasseDecroissante() {
         Paie a = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000");
         Paie b = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A", "9000");
 
@@ -66,24 +66,54 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void laPageGlobaleDoitAnnoncerLeTop10QuandIlYAPlusDeDixChantiers() {
-        List<Paie> courant = new java.util.ArrayList<>();
-        for (int i = 1; i <= 12; i++) {
-            courant.add(paie("EMPLOYE " + i, "CIN" + i, "OPERATEUR", String.format("C%02d", i), "EQUIPE A", String.valueOf(i * 1000)));
-        }
-        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, courant, List.of());
+    void leGraphiqueChantierTientSurUnePageJusquaSeizeChantiers() {
+        RapportBiVue vue = vueAvecChantiers(16);
 
-        assertThat(titresSectionRepartitionChantier(vue))
-                .containsExactly("Répartition par chantier — les 10 chantiers qui consomment le plus");
+        assertThat(titresSectionRepartitionChantier(vue)).containsExactly("Répartition par chantier");
+        assertThat(lignesDesGraphiquesChantier(vue)).containsExactly(16);
     }
 
     @Test
-    void laPageGlobaleGardeLeTitreSimpleQuandIlYADixChantiersOuMoins() {
-        Paie a = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000");
-        Paie b = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A", "9000");
-        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(a, b), List.of());
+    void leGraphiqueChantierSeRepartitSurPlusieursPagesATaillesQuasiEgales() {
+        RapportBiVue vue = vueAvecChantiers(25);
 
-        assertThat(titresSectionRepartitionChantier(vue)).containsExactly("Répartition par chantier");
+        assertThat(titresSectionRepartitionChantier(vue))
+                .containsExactly("Répartition par chantier", "Répartition par chantier (suite)");
+        // Tous les chantiers sont présents, 13 puis 12 : jamais une dernière page presque vide.
+        assertThat(lignesDesGraphiquesChantier(vue)).containsExactly(13, 12);
+    }
+
+    @Test
+    void lesPagesDuGraphiqueChantierPartagentLEchelleDeLEnsemble() {
+        RapportBiVue vue = vueAvecChantiers(25);
+
+        List<PageModel.BlocGraphique> graphiques = new RapportPageModelBuilder().construire(vue).stream()
+                .flatMap(page -> page.blocs().stream())
+                .filter(PageModel.BlocGraphique.class::isInstance)
+                .map(PageModel.BlocGraphique.class::cast)
+                .limit(2)
+                .toList();
+
+        // Sinon la 2e page serait dessinée à sa propre échelle et ses barres ne seraient plus comparables à celles de la 1re.
+        assertThat(graphiques).allSatisfy(g -> assertThat(g.echelle()).hasSize(25));
+    }
+
+    private RapportBiVue vueAvecChantiers(int nombre) {
+        List<Paie> courant = new java.util.ArrayList<>();
+        for (int i = 1; i <= nombre; i++) {
+            courant.add(paie("EMPLOYE " + i, "CIN" + i, "OPERATEUR", String.format("C%02d", i), "EQUIPE A", String.valueOf(i * 1000)));
+        }
+        return builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, courant, List.of());
+    }
+
+    /** Nombre de lignes de chaque page du graphique « Répartition par chantier » (pages globales uniquement). */
+    private List<Integer> lignesDesGraphiquesChantier(RapportBiVue vue) {
+        return new RapportPageModelBuilder().construire(vue).stream()
+                .filter(page -> "GLOBAL".equals(page.niveauTexte()))
+                .flatMap(page -> page.blocs().stream())
+                .filter(PageModel.BlocGraphique.class::isInstance)
+                .map(bloc -> ((PageModel.BlocGraphique) bloc).donnees().size())
+                .toList();
     }
 
     private List<String> titresSectionRepartitionChantier(RapportBiVue vue) {

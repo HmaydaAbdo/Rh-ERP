@@ -461,11 +461,12 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    temps qu'il construit chaque page (voir « Numérotation des chapitres et des pages » : plus de
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
-3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 5 cartes KPI, une seule page — la
-   carte Masse affiche aussi le montant du mois précédent (ou `INTROUVABLE`) ; masse réelle, effectif,
-   masse moyenne/employé, nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, UN SEUL
-   graphique à 4 séries (masse/effectif/STC en personnes/STC en DH), limité aux **10 chantiers qui
-   consomment le plus** (sans « Autres ») — voir « Visualisations ».
+3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 5 cartes KPI — la carte Masse affiche aussi
+   le montant du mois précédent (ou `INTROUVABLE`) ; masse réelle, effectif, masse moyenne/employé,
+   nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
+   à 4 séries (masse/effectif/STC en personnes/STC en DH), qui montre **TOUS les chantiers**. Au-delà de 16
+   chantiers, il continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir
+   « Visualisations ».
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 4. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
@@ -633,12 +634,17 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
   `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC restent dans la même
   famille de rouges, sous ses 2 représentations) — seule exception à la règle noir/blanc/gris du
   document (voir « Style visuel »).
-- **Répartition par chantier (chapitre I) : les 10 chantiers qui consomment le plus**
-  (`PaieBiReportBuilder.MAX_CHANTIERS_GRAPHIQUE`, masse salariale décroissante, **sans** regroupement
-  « Autres » — demande de direction du 2026-10-03). Quand il y a plus de 10 chantiers, le titre de la
-  rubrique l'annonce : « Répartition par chantier — les 10 chantiers qui consomment le plus » ; sinon
-  « Répartition par chantier ». Le rapport reste exhaustif : chaque chantier garde sa propre section, seul
-  le graphique est limité.
+- **Répartition par chantier (chapitre I) : TOUS les chantiers**, par masse salariale décroissante, **sans**
+  regroupement « Autres » ni plafond (décision du 2026-10-03 : un premier plafond à 10 chantiers a été levé
+  une fois la disposition en colonnes en place). Jusqu'à 16 chantiers, tout tient sur la page de synthèse.
+  Au-delà, `RapportPageModelBuilder` répartit le graphique **à parts égales** sur plusieurs pages
+  (`MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE = 16` ; 25 chantiers = 13 puis 12, jamais une dernière page presque vide) :
+  la 1re page garde le titre « Répartition par chantier », les suivantes portent « Répartition par chantier
+  (suite) » avec le bandeau `GLOBAL`. **Toutes les pages partagent la même échelle** (`BlocGraphique.echelle` =
+  l'ensemble des chantiers) : sans cela chaque page serait dessinée à sa propre échelle et ses barres ne seraient
+  plus comparables à celles de la page précédente. Chaque page répète l'en-tête des colonnes et la légende. Le
+  graphique « Répartition par équipe » d'un chantier n'est pas réparti : le nombre d'équipes d'un même chantier
+  reste modeste.
 - Les autres distributions (fonction, calculée sans être affichée) restent plafonnées aux 15 plus grosses
   valeurs (`MAX_BARRES_GRAPHIQUE`), le reste regroupé sous « Autres ». Pas de plafond au niveau
   « répartition par équipe » d'un chantier : le nombre d'équipes distinctes au sein d'un même chantier

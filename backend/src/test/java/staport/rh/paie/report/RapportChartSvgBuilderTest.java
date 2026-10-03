@@ -50,6 +50,32 @@ class RapportChartSvgBuilderTest {
         assertThat(svg.selectFirst("g").attr("transform")).startsWith("scale(1.33");
     }
 
+    /** Un graphique réparti sur plusieurs pages passe l'ensemble des lignes comme échelle : une même valeur doit
+     * donner une barre plus courte quand l'ensemble contient une valeur bien plus grande. */
+    @Test
+    void ajouterGraphique_doitCalerLesBarresSurLEchelleFournie() {
+        RepartitionBean petit = new RepartitionBean("C001", 10, new BigDecimal("1000.00"), 0, BigDecimal.ZERO);
+        RepartitionBean grand = new RepartitionBean("C002", 10, new BigDecimal("4000.00"), 0, BigDecimal.ZERO);
+
+        Document seul = Document.createShell("");
+        builder.ajouterGraphique(seul.body().appendElement("div"), List.of(petit));
+        Document surEchelleCommune = Document.createShell("");
+        builder.ajouterGraphique(surEchelleCommune.body().appendElement("div"), List.of(petit), List.of(petit, grand));
+
+        double largeurSeul = largeurBarreMasse(seul);
+        double largeurCommune = largeurBarreMasse(surEchelleCommune);
+        assertThat(largeurCommune).isCloseTo(largeurSeul / 4, org.assertj.core.data.Offset.offset(0.02));
+    }
+
+    /** Largeur de la barre « Masse » (bleue) : les autres rectangles bleus sont le filet d'en-tête (2,5 pt de haut)
+     * et la pastille de légende (8 pt). */
+    private double largeurBarreMasse(Document doc) {
+        return doc.select("rect[fill=#2563EB]").stream()
+                .filter(rect -> !rect.attr("height").equals("2.5") && !rect.attr("height").equals("8"))
+                .mapToDouble(rect -> Double.parseDouble(rect.attr("width")))
+                .findFirst().orElseThrow();
+    }
+
     @Test
     void ajouterGraphique_neDoitRienAfficherPourUneListeVide() {
         Document doc = Document.createShell("");

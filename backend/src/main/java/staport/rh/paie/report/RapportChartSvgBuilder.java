@@ -67,13 +67,19 @@ final class RapportChartSvgBuilder {
     );
 
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees) {
+        ajouterGraphique(corps, donnees, donnees);
+    }
+
+    /** {@code echelle} : lignes dont les maxima fixent la longueur des barres (un graphique réparti sur plusieurs
+     * pages passe ici l'ensemble des lignes, pour que les barres restent comparables d'une page à l'autre). */
+    void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle) {
         Element container = corps.appendElement("div").addClass("chart-container");
         if (donnees.isEmpty()) {
             return;
         }
 
         double[] maxParSerie = new double[SERIES.size()];
-        for (RepartitionBean ligne : donnees) {
+        for (RepartitionBean ligne : echelle) {
             maxParSerie[0] = Math.max(maxParSerie[0], valeurMontant(ligne.getMontant()));
             maxParSerie[1] = Math.max(maxParSerie[1], ligne.getEffectif());
             maxParSerie[2] = Math.max(maxParSerie[2], ligne.getStc());

@@ -42,7 +42,7 @@ simulées, sans base de données. Seul `PaieApplicationTests` démarre l'applica
 | Équipe | `EquipeServiceTest` | Normalisation du code, doublons, suppression bloquée |
 | Employé | `EmployeeServiceTest`, `EmployeeControllerTest`, `EmployeeImportServiceTest` | CRUD et références ; contrôleur ; import (CIN existant rejeté, un seul motif par ligne, atomicité) |
 | Paie | `PaieServiceTest`, `PaieImportServiceTest`, `PaieExportServiceTest` | CRUD, bulletin en double ; import (bulletin existant rejeté, création des fonctions manquantes, équipe) ; export Excel (feuille globale et par chantier, tri par fonction puis nom, sorties STC, mois précédent, squelette matériel du chantier C168, sélection et exclusion d'équipes) |
-| Rapport PDF | `PaieBiReportBuilderTest`, `RapportPageModelBuilderTest`, `RapportChartSvgBuilderTest`, `PaieReportHtmlPdfServiceTest` | Agrégation (top 10 chantiers sans « Autres », sections conservées) ; titres ; graphique SVG **pleine largeur** (non-régression) ; génération d'un PDF valide, y compris une charge hostile jamais interprétée comme du balisage |
+| Rapport PDF | `PaieBiReportBuilderTest`, `RapportPageModelBuilderTest`, `RapportChartSvgBuilderTest`, `PaieReportHtmlPdfServiceTest` | Agrégation (tous les chantiers dans le graphique, sans « Autres », sections conservées) ; répartition du graphique sur plusieurs pages à tailles égales avec échelle commune ; graphique SVG **pleine largeur** (non-régression) ; génération d'un PDF valide, y compris une charge hostile jamais interprétée comme du balisage |
 
 ### Les deux tests de sécurité à connaître
 

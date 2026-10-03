@@ -31,10 +31,15 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocKpi(String niveauClasse, List<CarteKpi> cartes) implements Bloc {
     }
 
-    /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}). La troncature du nombre de barres
-     * est faite en amont par {@code PaieBiReportBuilder} (10 plus gros chantiers, voir
-     * {@code MAX_CHANTIERS_GRAPHIQUE}). */
-    record BlocGraphique(List<RepartitionBean> donnees) implements Bloc {
+    /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}). {@code echelle} est l'ensemble des
+     * lignes qui servent à calculer la longueur des barres : quand un même graphique est réparti sur plusieurs
+     * pages, chaque page ne porte que ses {@code donnees} mais toutes partagent l'échelle de l'ensemble, pour que
+     * les barres restent comparables d'une page à l'autre. */
+    record BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle) implements Bloc {
+
+        BlocGraphique(List<RepartitionBean> donnees) {
+            this(donnees, donnees);
+        }
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la

@@ -47,9 +47,6 @@ class PaieBiReportBuilder {
 
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 15;
-    /** Le graphique « Répartition par chantier » se limite aux chantiers qui consomment le plus (masse
-     * salariale), sans regroupement « Autres » (demande de direction, 2026-10-03). */
-    private static final int MAX_CHANTIERS_GRAPHIQUE = 10;
     private static final int MOIS_EVOLUTION = 12;
     private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
 
@@ -124,7 +121,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
-                plusGrosChantiers(agregatChantier),
+                repartitionChantiers(agregatChantier),
                 versRepartition(agregatFonction),
                 evolutions.global()
         );
@@ -333,12 +330,11 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Les {@value #MAX_CHANTIERS_GRAPHIQUE} chantiers à la masse salariale la plus élevée, du plus gros au
-     * plus petit — {@code agregats} est déjà trié par montant décroissant (voir {@link #agreger}). Aucun
-     * regroupement « Autres » : les chantiers au-delà du 10e ne figurent pas dans ce graphique. */
-    private List<RepartitionBean> plusGrosChantiers(List<Agregat> agregats) {
+    /** TOUS les chantiers, du plus gros au plus petit — {@code agregats} est déjà trié par montant décroissant
+     * (voir {@link #agreger}). Ni plafond ni regroupement « Autres » (décision du 2026-10-03) : quand ils sont
+     * nombreux, c'est {@link RapportPageModelBuilder} qui répartit le graphique sur plusieurs pages. */
+    private List<RepartitionBean> repartitionChantiers(List<Agregat> agregats) {
         return agregats.stream()
-                .limit(MAX_CHANTIERS_GRAPHIQUE)
                 .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
                 .toList();
     }
