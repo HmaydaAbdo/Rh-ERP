@@ -81,6 +81,11 @@ final class RapportPageModelBuilder {
 
     private static final int CHAPITRES_FIXES = 1;
 
+    /** Nombre maximal de chantiers par page dans le graphique « Répartition par chantier » : au-delà, il est
+     * réparti sur plusieurs pages, à parts égales. Avec 16 lignes, chacune garde environ 20 pt de hauteur (voir
+     * {@code RapportChartSvgBuilder}) : des barres encore lisibles et des valeurs jamais serrées. */
+    private static final int MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE = 16;
+
     /** Une page en cours de construction — {@code niveauTexte} et {@code blocs} déjà connus,
      * {@code numeroPage}/{@code totalPages} résolus seulement à la fin (voir {@link #construire}),
      * une fois le nombre total de pages connu. */
@@ -124,18 +129,33 @@ final class RapportPageModelBuilder {
                 CarteKpi.de("CHANTIERS", String.valueOf(synthese.nombreChantiers())),
                 CarteKpi.de("STC / SORTIES", String.valueOf(synthese.stc()))
         )));
-        blocs.add(new PageModel.BlocTitreSection(titreRepartitionChantier(synthese)));
-        blocs.add(new PageModel.BlocGraphique(synthese.repartitionChantier()));
+        List<RepartitionBean> tous = synthese.repartitionChantier();
+        List<List<RepartitionBean>> tranches = repartirParPages(tous);
+        blocs.add(new PageModel.BlocTitreSection("Répartition par chantier"));
+        blocs.add(new PageModel.BlocGraphique(tranches.get(0), tous));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
+
+        for (List<RepartitionBean> suite : tranches.subList(1, tranches.size())) {
+            List<PageModel.Bloc> blocsSuite = new ArrayList<>();
+            blocsSuite.add(new PageModel.BlocTitreSection("Répartition par chantier (suite)"));
+            blocsSuite.add(new PageModel.BlocGraphique(suite, tous));
+            pages.add(new PageEnConstruction("GLOBAL", blocsSuite));
+        }
     }
 
-    /** Le graphique ne montre que les chantiers qui consomment le plus (voir
-     * {@code PaieBiReportBuilder.MAX_CHANTIERS_GRAPHIQUE}) : quand il y en a davantage, le titre le dit. */
-    private String titreRepartitionChantier(SyntheseGlobaleVue synthese) {
-        int affiches = synthese.repartitionChantier().size();
-        return synthese.nombreChantiers() > affiches
-                ? "Répartition par chantier — les " + affiches + " chantiers qui consomment le plus"
-                : "Répartition par chantier";
+    /** Répartit les chantiers (déjà triés par masse décroissante) en tranches de taille presque égale, d'au plus
+     * {@value #MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE} chacune — jamais une page presque vide à la fin. Toujours au
+     * moins une tranche. */
+    private List<List<RepartitionBean>> repartirParPages(List<RepartitionBean> chantiers) {
+        int nombrePages = Math.max(1, (chantiers.size() + MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE - 1) / MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE);
+        List<List<RepartitionBean>> tranches = new ArrayList<>();
+        int debut = 0;
+        for (int page = 0; page < nombrePages; page++) {
+            int taille = chantiers.size() / nombrePages + (page < chantiers.size() % nombrePages ? 1 : 0);
+            tranches.add(chantiers.subList(debut, debut + taille));
+            debut += taille;
+        }
+        return tranches;
     }
 
     private void ajouterPageChantier(List<PageEnConstruction> pages, ChantierBiVue chantier, int index) {
