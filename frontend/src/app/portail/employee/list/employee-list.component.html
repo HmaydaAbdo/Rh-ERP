@@ -93,9 +93,10 @@
       [showClear]="true"
     ></p-dropdown>
 
-    <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
     <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
   </form>
+
+  <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
     [value]="employees"
@@ -105,34 +106,53 @@
     [rows]="10"
     [totalRecords]="totalRecords"
     [loading]="loading"
-    [rowsPerPageOptions]="[10, 20, 50]"
+    [rowsPerPageOptions]="rowsPerPage"
+    [showCurrentPageReport]="true"
+    [currentPageReportTemplate]="pageReport"
+    [columns]="columns.visible"
+    [resizableColumns]="true"
+    columnResizeMode="expand"
+    [reorderableColumns]="true"
+    (onColReorder)="columns.onReorder($event.columns)"
     dataKey="id"
   >
     <ng-template pTemplate="header">
       <tr>
-        <th pSortableColumn="nomPrenom">Nom &amp; prénom <p-sortIcon field="nomPrenom"></p-sortIcon></th>
-        <th>CIN</th>
-        <th>Fonction</th>
-        <th>Chantier</th>
-        <th pSortableColumn="dateEmbauche">Date d'embauche <p-sortIcon field="dateEmbauche"></p-sortIcon></th>
-        <th>Statut</th>
+        @for (col of columns.visible; track col.field) {
+          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
+            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
+          </th>
+        }
         <th></th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-employee>
       <tr>
-        <td>{{ employee.nomPrenom }}</td>
-        <td>{{ employee.cin }}</td>
-        <td>{{ employee.fonction.libelle }}</td>
-        <td>{{ employee.chantier.code }}</td>
-        <td>{{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}</td>
-        <td>
-          <p-tag
-            [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'"
-            [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"
-          ></p-tag>
-        </td>
+        @for (col of columns.visible; track col.field) {
+          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
+            @switch (col.field) {
+              @case ('nomPrenom') {
+                {{ employee.nomPrenom }}
+              }
+              @case ('cin') {
+                {{ employee.cin }}
+              }
+              @case ('fonction') {
+                {{ employee.fonction.libelle }}
+              }
+              @case ('chantier') {
+                {{ employee.chantier.code }}
+              }
+              @case ('dateEmbauche') {
+                {{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}
+              }
+              @case ('statut') {
+                <p-tag [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></p-tag>
+              }
+            }
+          </td>
+        }
         <td class="employee-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(employee)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(employee)"></button>
@@ -152,7 +172,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="7">Aucun employé ne correspond à ces critères.</td>
+        <td [attr.colspan]="columns.visible.length + 1">Aucun employé ne correspond à ces critères.</td>
       </tr>
     </ng-template>
   </p-table>

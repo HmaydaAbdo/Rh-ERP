@@ -62,9 +62,10 @@
   <form [formGroup]="filterForm" class="function-list__filters" (ngSubmit)="onSearch()">
     <input pInputText type="text" formControlName="libelle" placeholder="Libellé" />
 
-    <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
     <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
   </form>
+
+  <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
     [value]="functions"
@@ -74,19 +75,38 @@
     [rows]="10"
     [totalRecords]="totalRecords"
     [loading]="loading"
-    [rowsPerPageOptions]="[10, 20, 50]"
+    [rowsPerPageOptions]="rowsPerPage"
+    [showCurrentPageReport]="true"
+    [currentPageReportTemplate]="pageReport"
+    [columns]="columns.visible"
+    [resizableColumns]="true"
+    columnResizeMode="expand"
+    [reorderableColumns]="true"
+    (onColReorder)="columns.onReorder($event.columns)"
     dataKey="id"
   >
     <ng-template pTemplate="header">
       <tr>
-        <th pSortableColumn="libelle">Libellé <p-sortIcon field="libelle"></p-sortIcon></th>
+        @for (col of columns.visible; track col.field) {
+          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
+            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
+          </th>
+        }
         <th></th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-fonction>
       <tr>
-        <td>{{ fonction.libelle }}</td>
+        @for (col of columns.visible; track col.field) {
+          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
+            @switch (col.field) {
+              @case ('libelle') {
+                {{ fonction.libelle }}
+              }
+            }
+          </td>
+        }
         <td class="function-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(fonction)"></button>
           <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(fonction)"></button>
@@ -106,7 +126,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="2">Aucune fonction ne correspond à ces critères.</td>
+        <td [attr.colspan]="columns.visible.length + 1">Aucune fonction ne correspond à ces critères.</td>
       </tr>
     </ng-template>
   </p-table>

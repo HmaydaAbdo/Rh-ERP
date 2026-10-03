@@ -14,6 +14,8 @@ import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Chantier } from '../models/chantier.model';
 import { ChantierService } from '../services/chantier.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Actif', value: true },
@@ -27,6 +29,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   standalone: true,
   imports: [
     CommonModule,
+    ColumnChooserComponent,
     ReactiveFormsModule,
     RouterLink,
     TableModule,
@@ -41,6 +44,16 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   styleUrl: './chantier-list.component.scss'
 })
 export class ChantierListComponent implements OnInit {
+  readonly columns = new ColumnState([
+    { field: 'code', header: 'Code' },
+    { field: 'nom', header: 'Nom' },
+    { field: 'designation', header: 'Désignation', cellClass: 'chantier-list__designation' },
+    { field: 'sourceErp', header: 'Source' },
+    { field: 'actif', header: 'Statut' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
   private readonly chantierService = inject(ChantierService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);

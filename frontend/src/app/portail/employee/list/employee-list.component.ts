@@ -19,6 +19,8 @@ import { ChantierReferenceService } from '../../../shared/reference-data/chantie
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { Employee, EmployeeImportResult, EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
   { label: 'Actif', value: 'ACTIF' },
@@ -32,6 +34,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   standalone: true,
   imports: [
     CommonModule,
+    ColumnChooserComponent,
     ReactiveFormsModule,
     RouterLink,
     TableModule,
@@ -48,6 +51,17 @@ const DEBOUNCE_RECHERCHE_MS = 300;
   styleUrl: './employee-list.component.scss'
 })
 export class EmployeeListComponent implements OnInit {
+  readonly columns = new ColumnState([
+    { field: 'nomPrenom', header: 'Nom & prénom' },
+    { field: 'cin', header: 'CIN' },
+    { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
+    { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
+    { field: 'dateEmbauche', header: "Date d'embauche" },
+    { field: 'statut', header: 'Statut' }
+  ]);
+  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+  readonly pageReport = TABLE_PAGE_REPORT;
+
   private readonly employeeService = inject(EmployeeService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly chantierReferenceService = inject(ChantierReferenceService);

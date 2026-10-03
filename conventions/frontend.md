@@ -123,6 +123,14 @@ existe déjà côté backend pour la lister ailleurs ; un sélecteur la réutili
   valeur déjà sélectionnée avant même que sa page ne soit chargée, ex. en modification) — jamais
   une duplication de la pagination/du debounce dans chaque composant consommateur.
 
+## Largeur du panneau
+
+Le panneau d'options d'un sélecteur ne doit jamais être limité à la largeur (étroite) du champ qui
+l'ouvre, notamment dans une barre de filtres : les libellés longs seraient tronqués et une barre de
+défilement horizontale apparaîtrait. Le composant partagé impose une largeur minimale issue des
+tokens `--select-panel-min-width` / `--select-panel-max-width` (`_tokens.scss`) et masque le
+défilement horizontal — ne jamais contourner cette règle dans un écran, corriger le composant.
+
 ## Composant partagé
 
 Le composant partagé encapsule le composant de sélection simple et le composant de sélection
@@ -130,6 +138,57 @@ multiple de la librairie UI derrière un seul point d'entrée (`ControlValueAcce
 exposée au formulaire hôte reste un identifiant (ou un tableau d'identifiants), jamais l'objet
 complet, pour ne rien changer aux DTO existants. Toute nouvelle liste déroulante du projet réutilise
 ce composant plutôt que d'implémenter sa propre pagination/recherche.
+
+---
+
+# Tableaux
+
+Tout tableau de données utilise `p-table` de PrimeNG avec les fonctionnalités suivantes, **sans
+exception** — le tableau d'une nouvelle page les reprend dès sa création :
+
+* **Tri** : toute colonne de données est triable (`pSortableColumn` + `<p-sortIcon>`) ; seules les
+  colonnes d'actions ne le sont pas.
+* **Redimensionnement** (`[resizableColumns]="true"`, `columnResizeMode="expand"`,
+  `pResizableColumn`), **réordonnancement** par glisser-déposer (`[reorderableColumns]="true"`,
+  `pReorderableColumn`) et **choix des colonnes visibles** (composant partagé
+  `app-column-chooser`).
+* **Pagination** avec total : `[paginator]`, `[rowsPerPageOptions]="rowsPerPage"`,
+  `[showCurrentPageReport]="true"` et `[currentPageReportTemplate]="pageReport"`.
+* **Filtres en temps réel** (délai de saisie de 300 ms) : aucun bouton « Rechercher », seul un bouton
+  « Réinitialiser » reste dans la barre de filtres.
+
+## Colonnes pilotées par la configuration
+
+Les colonnes sont déclarées une seule fois dans le composant (`TableColumn`, voir
+`shared/table/table-columns.ts`) et regroupées dans un `ColumnState` :
+
+```ts
+readonly columns = new ColumnState([{ field: 'code', header: 'Code' }, ...]);
+readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
+readonly pageReport = TABLE_PAGE_REPORT;
+```
+
+L'en-tête et le corps parcourent `columns.visible` (`@for`), le corps choisissant le rendu de chaque
+colonne par `@switch (col.field)` ; la table reçoit `[columns]="columns.visible"` et
+`(onColReorder)="columns.onReorder($event.columns)"`. Le corps ne doit **jamais** écrire ses `<td>`
+en dur dans l'ordre d'origine : le réordonnancement ne déplacerait alors que l'en-tête. Le
+`colspan` du message « aucun résultat » vaut `columns.visible.length + 1` (colonne d'actions).
+
+Un en-tête **groupé** sur plusieurs lignes (`colspan`/`rowspan`) est à proscrire : PrimeNG ne permet
+ni de réordonner ni de masquer proprement des colonnes dans un en-tête groupé.
+
+## Tri
+
+* Tableau paginé côté serveur (`[lazy]="true"`) : `TableColumn.sortField` porte le chemin de propriété
+  de l'entité (ex. `chantier.code` pour une relation) transmis tel quel au paramètre `sort` du
+  backend (`Pageable`) — chaque champ ajouté doit être testé contre le backend (un chemin invalide
+  provoque une erreur 500). Une relation facultative (clé étrangère nullable) ne doit pas faire
+  disparaître les lignes sans valeur du résultat trié.
+* Tableau non paginé côté serveur (liste complète en mémoire, ex. rôles, utilisateurs) : tri,
+  pagination et filtres sont faits côté client par `p-table` (`#dt` + `table.filter(valeur, champ,
+  'contains')` à chaque changement du formulaire de filtres) ; `sortField` peut cibler un nombre
+  d'éléments (ex. `permissions.length`).
+* Une nouvelle colonne s'ajoute toujours avec son tri, dans le même changement.
 
 ---
 
@@ -307,6 +366,7 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
   même donnée.
 * Les Services centralisent les appels HTTP.
 * Les composants restent centrés sur la présentation.
+* Tout tableau de données offre tri, redimensionnement, réordonnancement, choix des colonnes, pagination avec total et filtres en temps réel.
 * Les erreurs HTTP sont gérées de manière centralisée.
 * Toute nouvelle route est chargée en Lazy Loading.
 * Tout sélecteur recherche et charge ses options par page depuis le backend via le composant

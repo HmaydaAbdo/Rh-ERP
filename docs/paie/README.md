@@ -277,6 +277,14 @@ chacun une implémentation du contrat de pagination/recherche attendu par ce com
 distinction entre une recherche paginée (employés) et un chargement complet (fonction/chantier),
 les trois interrogent désormais leur endpoint `/search` page par page.
 
+Le tableau de la liste (comme tous les tableaux de l'application, voir `conventions/frontend.md`,
+section Tableaux) propose : tri sur chaque colonne, redimensionnement, réordonnancement par
+glisser-déposer, sélecteur de colonnes visibles et pagination avec total de lignes. L'en-tête est sur
+**une seule ligne** (Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO,
+Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé à deux lignes (« Nbre Jrs »,
+« SALAIRE ») a été abandonné car PrimeNG ne permet pas de réordonner ni de masquer des colonnes dans un
+en-tête groupé (décision du 2026-10-03).
+
 Accès via la barre latérale de l'application (`app.component.ts`, entrée "Paie").
 
 ---
