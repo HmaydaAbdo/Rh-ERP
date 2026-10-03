@@ -50,7 +50,7 @@ migration `V8__paie_equipe_fk.sql`) — voir `docs/paie/README.md`.
 
 ### Données de départ (seed V7)
 
-13 équipes issues de la table fournie par la direction (`EQUIPES.xlsx`, 2026-09-29) :
+La migration crée 17 équipes. Les 13 premières viennent de la table fournie par la direction (`EQUIPES.xlsx`, 2026-09-29) :
 `CH` CHAUFFEURS, `OP` OPERATEURS, `AT` ATELIER, `EE` ENROBE, `TER` TERASSEMENT, `GA` GARDIENS,
 `TOPO` TOPOGRAPHES, `ADMIN` ADMINISTRATION, `ENROCHEMENT` ENROCHEMENT, `R CONT` REMBLAIS CONTIGUE,
 `GABION` GABION, `PHS` PLAN HYGIENE ET SECURITE, `EB` BETON.
@@ -59,10 +59,10 @@ L'ancien catalogue contenait à la fois `ENR` et `ENROCHEMENT` pour la même éq
 le code **`ENROCHEMENT`** (valeur réellement présente sur les bulletins et dans les fichiers
 d'import). `ENR` n'est plus un code valide.
 
-4 équipes supplémentaires ont été créées d'après les valeurs trouvées sur les bulletins existants
+Les 4 autres ont été créées d'après les valeurs trouvées sur les bulletins existants
 (diagnostic du 2026-10-03), absentes de l'ancien catalogue : `A` (45 bulletins), `LABO` (6),
 `ASPHALET` (5) et `8` (1). Leur **libellé est provisoirement égal au code** — à renseigner avec la RH
-via l'écran Équipes (`PUT /equipes/{id}`). Les 319 bulletins sans équipe restent sans équipe.
+via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'équipe restent sans équipe (`equipe_id` nul).
 
 ---
 
@@ -112,8 +112,26 @@ Routes sous `/equipes` (lazy loading, `equipe.routes.ts`, protégées par `permi
 | `/equipes/:id` | `EquipeDetailComponent` | Consultation |
 | `/equipes/:id/edit` | `EquipeFormComponent` | Modification |
 
-Entrée « Équipes » dans la barre latérale (`app.component.ts`), visible avec `EQUIPE_READ`.
+Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. La liste est un
+tableau standard (tri, colonnes, pagination, filtres code/libellé en temps réel, voir
+[../frontend/README.md](../frontend/README.md)) ; les boutons de création, modification et suppression sont
+conditionnés par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
 
 Le référentiel est consommé par Paie via `shared/reference-data/equipe-reference.service.ts`
 (contrat du sélecteur générique `shared/components/lazy-select`, voir `conventions/frontend.md`) :
 sélection simple dans le formulaire d'un bulletin, sélection multiple dans le filtre de la liste.
+
+---
+
+## Limites connues
+
+Voir [TODO.md](../../TODO.md) :
+
+- **Libellés provisoires** : `A`, `LABO`, `ASPHALET` et `8` ont pour libellé leur propre code. À compléter avec la
+  RH depuis l'écran Équipes.
+- **Équipe facultative sur un bulletin** : un bulletin peut ne pas avoir d'équipe (`equipe_id` nul). Savoir si
+  elle doit devenir obligatoire fait partie de la tâche « Qualité des données ».
+- **Modifier le code d'une équipe** (`PUT`) le change pour tous les bulletins qui la référencent, historique
+  compris ; le regroupement des exports se fait par code.
+- Pas d'import Excel ni de synchronisation : le référentiel se gère uniquement par l'écran Équipes.
+- Aucun audit (Hibernate Envers).

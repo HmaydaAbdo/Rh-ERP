@@ -1,7 +1,8 @@
 # Module Paie
 
 > Bulletins de paie mensuels des employés. Un employé a au plus **un** bulletin par mois
-> (contrainte unique `employé × période`).
+> (contrainte unique `employé × période`). La paie **n'est pas calculée** : le total est saisi ou importé tel
+> quel. Les bulletins se créent par saisie ou par import Excel, et se **modifient uniquement depuis l'écran**.
 
 ---
 
@@ -12,7 +13,7 @@
 | Backend | `backend/src/main/java/staport/rh/paie/` |
 | Frontend | `frontend/src/app/portail/paie/` |
 | Table | `paie` |
-| Endpoints | `/paie`, `/paie/search`, `/paie/import`, `/paie/export` |
+| Endpoints | `/paie`, `/paie/search`, `/paie/equipes`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
 ```text
 paie/
@@ -27,15 +28,18 @@ paie/
 ├── services/ (PaieService + IPaieService)
 ├── specifications/PaieSpecification.java
 ├── imports/
-│   ├── PaieImportService.java       ← lecture du fichier, résolution CIN/fonction/chantier, upsert, création des fonctions manquantes, génération du modèle
+│   ├── PaieImportService.java       ← lecture du fichier, résolution CIN/fonction/chantier/équipe, création des bulletins, création des fonctions manquantes, génération du modèle
 │   ├── PaieImportController.java    ← POST /paie/import?periode=aaaa-MM, GET /paie/import/modele
 │   └── PaieImportResultDto.java, PaieImportException.java
-└── export/
-    ├── PaieExportService.java       ← orchestration (regroupement, totaux, période précédente)
-    ├── PaieSheetWriter.java         ← mise en page d'une feuille (partagée GLB/chantier/équipe)
-    ├── PaieExcelStyles.java         ← styles de cellule créés une fois par classeur
-    ├── PaieExportRequestDto.java    ← périmètre équipe de l'export (voir section Export Excel)
-    └── PaieExportController.java    ← POST /paie/export (corps : PaieExportRequestDto)
+├── export/
+│   ├── PaieExportService.java       ← orchestration (regroupement, totaux, période précédente)
+│   ├── PaieSheetWriter.java         ← mise en page d'une feuille (partagée GLB/chantier/équipe)
+│   ├── PaieExcelStyles.java         ← styles de cellule créés une fois par classeur
+│   ├── SqueletteMateriel.java       ← tableaux « parc matériel » du chantier C168
+│   ├── PaieExportRequestDto.java    ← périmètre équipe de l'export (voir section Export Excel)
+│   └── PaieExportController.java    ← POST /paie/export (corps : PaieExportRequestDto)
+├── reporting/                       ← périmètre commun à l'export Excel et au rapport PDF (chantiers, équipes, exclusions)
+└── report/                          ← rapport PDF BI (voir docs/report/README.md)
 ```
 
 ---
@@ -58,7 +62,7 @@ Table `paie` :
 | `salaire_mensuel` | `DECIMAL(10,2)` | `NOT NULL` | Salaire de base |
 | `prime_roulage_ordinaire` | `DECIMAL(10,2)` | nullable | Prime de roulage (ordinaire) |
 | `prime_roulage_dimanche` | `DECIMAL(10,2)` | nullable | Prime de roulage (dimanche) |
-| `salaire_total` | `DECIMAL(10,2)` | `NOT NULL` | **Calculé, jamais saisi** — `salaireMensuel + primeRoulageOrdinaire + primeRoulageDimanche` |
+| `salaire_total` | `DECIMAL(10,2)` | `NOT NULL` | **Saisi (ou importé) tel quel, jamais recalculé** par le serveur — voir « Règles métier » |
 | `observation` | `VARCHAR(255)` | nullable | Note libre |
 
 **Contrainte unique** : `uk_paie_employee_periode` (`employee_id`, `periode`) — un employé a au plus
@@ -101,8 +105,10 @@ rétroactive ou automatique des bulletins déjà existants.
   reste modifiable. Décision du 2026-10-03 : pour l'instant la paie n'est **pas calculée**, elle est prise telle que
   saisie (formulaire) ou importée (Excel) ; un calcul automatique à partir du Pointage reste une évolution
   envisagée (voir [TODO.md](../../TODO.md), « Domaines restants »).
-- La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage particulière au-delà de
-  l'existence du bulletin.
+- Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
+  `nombreJoursTravailles` est un entier positif ou nul ; `observation` fait 255 caractères au plus.
+- La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
+  bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »).
 
 ---
 
@@ -197,14 +203,11 @@ fait uniquement depuis l'écran Paie (`PUT /paie/{id}`). Pour ré-importer un mo
 bulletins concernés.
 
 Toutes les lignes sont d'abord validées, en ne gardant en mémoire que les valeurs brutes de chaque
-ligne (pas d'entité JPA, pas de libellé de fonction résolu). La création des fonctions manquantes, la
-résolution (employé, période) → bulletin existant et sa mutation n'ont lieu qu'une fois la totalité
-du fichier confirmée valide : créer une fonction ou charger/muter une entité JPA gérée plus tôt
-exposerait l'import au dirty-checking automatique d'Hibernate (flush déclenché par la requête d'une
-ligne suivante, ou par le commit de la transaction) — la fonction resterait créée en base, ou la
-mutation serait persistée, même si l'import est finalement rejeté à cause d'une autre ligne. Les
-fonctions manquantes sont dédupliquées avant création : si dix lignes du même fichier référencent un
-même libellé inédit, il n'est créé qu'une fois.
+ligne (pas d'entité JPA, pas de libellé de fonction résolu) : voir [../imports.md](../imports.md) pour le
+principe commun. La création des fonctions manquantes et celle des bulletins n'ont lieu qu'une fois la totalité
+du fichier confirmée valide : créer une fonction plus tôt la laisserait en base même si l'import est finalement
+rejeté à cause d'une autre ligne. Les fonctions manquantes sont dédupliquées avant création : si dix lignes du
+même fichier référencent un même libellé inédit, il n'est créé qu'une fois.
 
 `salaireTotal` est repris de la colonne J du fichier, sans recalcul ; une ligne sans total valide est
 rejetée (champ obligatoire).
@@ -217,8 +220,9 @@ HTTP change.
 
 ### Performance
 
-Employés (par CIN) et chantiers actifs sont chargés **une seule fois** avant la boucle de lecture
-(deux requêtes, pas une par ligne), conformément à `conventions/performance.md`. Le référentiel
+Employés (par CIN), chantiers actifs, équipes (par code) et l'ensemble des employés qui ont déjà un bulletin
+pour la période (`PaieRepository.findEmployeeIdsByPeriode`) sont chargés **une seule fois** avant la boucle de
+lecture (aucune requête par ligne), conformément à `conventions/performance.md`. Le référentiel
 Function est chargé une seconde fois, séparément, dans la phase de persistance (après confirmation
 que le fichier est entièrement valide) — nécessaire pour disposer d'un état à jour incluant les
 fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne.
@@ -229,7 +233,7 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 
 La génération de documents à partir des bulletins de paie est documentée dans
 **`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, dialog dédié
-`PaieExportExcelDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
+`PaieExportDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
 téléchargement direct sans dialog sur la période sélectionnée dans la liste) — architecture, modèle
 analytique et catalogue de KPI du rapport PDF, structure des feuilles/sections, paramétrage
 chantier/équipe, règle Include/Exclude, et points d'extension. Ne pas dupliquer cette documentation
@@ -264,8 +268,8 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export, voir `docs/report/README.md` — « Exporter Excel » ouvre un dialog dédié (`PaieExportExcelDialogComponent`, configuration chantier/équipe) ; « Exporter PDF » télécharge directement le rapport BI, sans dialog, sur la période sélectionnée dans le filtre de la liste (les autres filtres ne s'appliquent pas au rapport) |
-| `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction et du chantier via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
+| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export, voir `docs/report/README.md` — un seul bouton « Exporter » ouvre `PaieExportDialogComponent` (choix PDF ou Excel, configuration chantier/équipe) ; le rapport couvre la période choisie dans le dialogue |
+| `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
@@ -286,19 +290,22 @@ Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé �
 « SALAIRE ») a été abandonné car PrimeNG ne permet pas de réordonner ni de masquer des colonnes dans un
 en-tête groupé (décision du 2026-10-03).
 
-Accès via la barre latérale de l'application (`app.component.ts`, entrée "Paie").
+Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Paie », permission `PAIE_READ`). Les boutons
+de création, modification, suppression, import et export sont conditionnés par `PAIE_WRITE`, `PAIE_DELETE`,
+`PAIE_IMPORT` et `PAIE_EXPORT` (voir [../rbac/paie.md](../rbac/paie.md)). Les sélecteurs du formulaire et des
+filtres (employé, fonction, chantier, équipe) interrogent les autres domaines : un rôle qui saisit des bulletins
+doit aussi pouvoir les lire.
 
 ---
 
 ## Évolutions prévues
 
-Voir [TODO.md](../../TODO.md) pour le détail complet — deux décisions produit actées mais pas encore
-implémentées (le domaine Pointage, dont elles dépendent, n'existe pas encore) :
+Voir [TODO.md](../../TODO.md) pour le détail complet — deux sujets qui dépendent du domaine Pointage, qui
+n'existe pas encore :
 
-- **Calcul de la paie depuis le Pointage** : à terme, l'import Excel de la paie disparaît. La saisie
-  du Pointage (jours travaillés, récupérations...) déclenchera le calcul automatique du bulletin
-  correspondant, sans intervention humaine sur les valeurs calculables — poursuite logique du calcul
-  déjà automatique de `salaireTotal` (voir « Règles métier » ci-dessus).
+- **Calcul de la paie depuis le Pointage** : évolution envisagée (décision du 2026-09-22), **non retenue pour
+  l'instant** : la paie est prise telle que saisie ou importée (décision du 2026-10-03). Si elle est un jour
+  construite, l'import Excel de la paie disparaîtrait au profit d'un calcul à la validation du Pointage.
 - **Statuts provisoire / validé (Pointage et Paie)** : une fois validé, un pointage ou un bulletin
   sera figé (non modifiable) ; seul l'état provisoire restera éditable. Un mois ne pourra être saisi
   que si le mois précédent est validé, imposant une progression strictement séquentielle.
@@ -309,9 +316,10 @@ implémentées (le domaine Pointage, dont elles dépendent, n'existe pas encore)
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
-  permission adéquate (voir `docs/rbac/paie.md`).
-- Aucun audit (Hibernate Envers).
-- `salaireMensuel` et les primes restent saisis/importés, jamais calculés — seul `salaireTotal` en
-  est dérivé pour l'instant. Le calcul complet depuis le Pointage (voir « Évolutions prévues »
-  ci-dessus) reste à construire.
+- **Aucun calcul** : `salaireMensuel`, les primes et `salaireTotal` sont saisis ou importés. Rien ne vérifie
+  leur cohérence entre eux (pas de contrôle « total = tarif × jours »).
+- **Qualité des données** : l'équipe, l'observation, les jours de récupération et les primes sont facultatifs
+  (340 bulletins n'ont pas d'équipe au dernier relevé) ; décision « tous champs obligatoires » dans la tâche
+  dédiée du TODO.
+- **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
+- Aucun audit (Hibernate Envers) — une modification de bulletin n'est tracée que dans les logs.

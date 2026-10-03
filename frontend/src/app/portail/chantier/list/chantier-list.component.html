@@ -40,6 +40,7 @@
   <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
+    styleClass="app-table p-datatable-gridlines p-datatable-sm"
     [value]="chantiers"
     [lazy]="true"
     (onLazyLoad)="onLazyLoad($event)"

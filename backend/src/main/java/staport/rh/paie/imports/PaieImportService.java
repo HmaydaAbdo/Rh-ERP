@@ -48,7 +48,7 @@ import java.util.Set;
 /**
  * Import d'un fichier Excel de paie pour une période donnée (colonnes : Nom &amp; prénom, Fonction,
  * CIN, Nbre jours travaillés, J.R.O, J.R.D, Salaire, Prime roulage ordinaire, Prime roulage
- * dimanche, Total [ignorée, calculée], Observation, Chantier, Équipe — trois lignes d'en-tête,
+ * dimanche, Total [repris tel quel, jamais recalculé], Observation, Chantier, Équipe — trois lignes d'en-tête,
  * format hérité de paie_old). La période s'applique à tout le fichier, elle n'est pas une colonne.
  *
  * Contrairement à l'import Employee (qui crée les employés), l'import Paie exige que l'employé

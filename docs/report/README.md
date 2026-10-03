@@ -619,6 +619,12 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
   valeur (64 pt à droite) — jamais 100 % de la largeur, pour que l'étiquette ne soit pas tronquée. La
   hauteur du tracé est plafonnée à 292 pt (`HAUTEUR_TOTALE_CHART`) pour que graphique et légende tiennent
   sous le bandeau, le titre de chapitre et les cartes KPI.
+- **Aération** : les 4 barres d'une catégorie occupent 78 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste
+  est de l'espace blanc entre catégories, renforcé par un filet gris clair entre deux catégories et un axe vertical
+  fin à gauche des barres. Barres séparées de 0,6 pt (`ECART_ENTRE_BARRES`), libellés de catégorie en gras 9,5 pt,
+  valeurs en gras dont la taille suit le pas entre barres (4,5 à 6,5 pt : au-delà, les étiquettes de deux barres
+  voisines se chevauchent). Quand les catégories sont nombreuses (13 équipes d'un chantier), les barres occupent
+  86 % de la hauteur au lieu de 78 %. Réglé le 2026-10-03 sur des rendus de 10 chantiers et de 13 équipes.
 - Légende obligatoire en bas (4 séries à distinguer). Palette fixe : Masse `#2563EB`, Effectif
   `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC restent dans la même
   famille de rouges, sous ses 2 représentations) — seule exception à la règle noir/blanc/gris du
@@ -773,7 +779,7 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
 
 ## Points d'extension
 
-> Voir aussi [docs/report/rapport-v2.md](docs/report/rapport-v2.md) — journal détaillé de tout ce qui
+> Voir aussi [rapport-v2.md](rapport-v2.md) — journal détaillé de tout ce qui
 > a été retiré ou restructuré dans le rapport, avec pour chacun ce qui reste réutilisable sans
 > redévelopper.
 

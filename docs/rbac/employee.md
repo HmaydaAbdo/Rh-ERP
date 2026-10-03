@@ -19,12 +19,18 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar « Employés » | `EMPLOYEE_READ` |
+| Lien sidebar « Employés » | `EMPLOYEE_READ` (`NAV_ITEMS`) |
 | Routes `/employees` et `/employees/:id` | `authGuard` + `permissionGuard` (`EMPLOYEE_READ`) |
 | Routes `/employees/new` et `/employees/:id/edit` | `authGuard` + `permissionGuard` (`EMPLOYEE_WRITE`) |
 | Boutons « Nouvel employé » et « Modifier » (liste, détail) | `EMPLOYEE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `EMPLOYEE_IMPORT` — `canImport()` |
 | Bouton « Supprimer » (liste) | `EMPLOYEE_DELETE` — `canDelete()` |
+
+## Note — sélecteurs du formulaire
+
+Le formulaire d'un employé interroge `/functions/search` et `/chantiers/search` : saisir un employé demande
+donc aussi `FUNCTION_READ` et `CHANTIER_READ` (voir [README.md](README.md), « Dépendances entre permissions »).
+L'import Excel résout fonctions et chantiers côté serveur (appels de service) : seul `EMPLOYEE_IMPORT` est requis.
 
 ## Rôles disposant de ces permissions (seed initial)
 

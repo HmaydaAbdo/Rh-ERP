@@ -15,21 +15,24 @@
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/equipes` | `PAIE_READ` |
-
-> Le sélecteur d'équipe des écrans Paie appelle aussi `/equipes/search` (`EQUIPE_READ`, voir `docs/rbac/equipe.md`).
 | `POST /paie/export` | `PAIE_EXPORT` |
 | `POST /paie/report/pdf` | `PAIE_EXPORT` |
+
+> Les sélecteurs des écrans Paie appellent aussi les domaines voisins : `/functions/search` (`FUNCTION_READ`),
+> `/chantiers/search` (`CHANTIER_READ`), `/equipes/search` (`EQUIPE_READ`) et `/employees/search`
+> (`EMPLOYEE_READ`). Un rôle qui saisit des bulletins doit porter ces permissions de lecture — voir
+> [README.md](README.md), « Dépendances entre permissions ».
 
 ## Frontend
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar « Paie » | `PAIE_READ` |
+| Lien sidebar « Paie » | `PAIE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
 | Routes `/paie` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) |
 | Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
 | Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
-| Bouton « Exporter » (Excel et PDF, dialog d'export) | `PAIE_EXPORT` — `canExport()` |
+| Bouton « Exporter » (Excel et PDF, dialogue d'export) | `PAIE_EXPORT` — `canExport()` |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)

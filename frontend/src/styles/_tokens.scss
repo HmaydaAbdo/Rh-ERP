@@ -22,6 +22,14 @@
   --select-panel-min-width: 22rem;
   --select-panel-max-width: 40rem;
 
+  // Tableaux de données (voir styles/_tables.scss)
+  --table-header-bg: #f8fafc;
+  --table-border: #cbd5e1;
+  --table-border-light: #e2e8f0;
+  --table-cell-text: #334155;
+  --table-row-alt-bg: #f8fafc;
+  --table-row-hover-bg: #f1f5f9;
+
   // Rayons
   --radius-sm: 4px;
   --radius-md: 8px;

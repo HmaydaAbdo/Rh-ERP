@@ -30,7 +30,7 @@ NGINX INNER (conteneur "frontend", voir frontend/nginx.conf)
 Nginx **outer** est le seul point d'entrée public, TLS terminé là. Il ne parle qu'à nginx **inner**
 (le conteneur `frontend`) — c'est nginx inner qui décide, en interne, si une requête sert un
 fichier statique Angular ou doit être relayée au backend (voir `frontend/nginx.conf` : les
-préfixes `/employees`, `/chantiers`, `/functions`, `/paie` sont ambigus — à la fois une route
+préfixes `/employees`, `/chantiers`, `/functions`, `/equipes`, `/paie` sont ambigus — à la fois une route
 Angular et un préfixe d'API — et sont désambiguïsés par l'en-tête `Accept`, comme le fait déjà
 `frontend/proxy.conf.js` en développement).
 

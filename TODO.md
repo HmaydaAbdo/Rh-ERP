@@ -37,6 +37,29 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 ---
 
+## Anomalies constatées à trancher (relevées lors de la mise à jour de la documentation, 2026-10-03)
+
+Comportements actuels, documentés tels quels (voir `docs/data-model.md`, `docs/auth/README.md`) mais qui
+demandent une décision avant correction :
+
+- **Suppression d'un employé qui a des bulletins ou un compte utilisateur** : la base refuse (clés
+  étrangères) et l'API répond par une erreur `500` générique. À décider : bloquer avec un `409` explicite (comme
+  pour fonction, chantier et équipe), ou autre règle. Le passage à `INACTIF` conserve l'historique.
+- **Compte désactivé** : `AuthService.refresh` ne vérifie pas `actif` et la désactivation ne révoque pas les
+  jetons de rafraîchissement : un compte désactivé garde son accès jusqu'à 30 jours. À corriger (refuser le
+  rafraîchissement d'un compte inactif et/ou révoquer ses jetons à la désactivation).
+- **Réinitialisation du mot de passe par un administrateur** (`POST /users/{id}/reset-password`) : ne révoque pas
+  les sessions ouvertes, contrairement à la réinitialisation par courriel.
+- **Pas de limitation des tentatives** de connexion ni de demandes de réinitialisation (force brute).
+- **Aucune règle de complexité** de mot de passe (8 à 100 caractères seulement).
+- **Suppression d'un rôle** : possible même s'il est porté par des utilisateurs (ils le perdent), y compris
+  `SYSTEM_ADMIN` — risque de se retrouver sans administrateur. À décider (rôles protégés, blocage si utilisé).
+- **Métriques** : les compteurs de synchronisation sont enregistrés dans Micrometer mais aucun export
+  (Prometheus) n'est configuré, alors que `/actuator/prometheus` est autorisé par la configuration de sécurité.
+- **Tests frontend** : seuls les guards et la coque de l'application sont testés ; aucun test sur les écrans.
+
+---
+
 ## À part — gros chantiers et déploiement (à reprendre plus tard)
 
 ### Audit (Hibernate Envers)

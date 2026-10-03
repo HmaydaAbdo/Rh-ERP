@@ -41,6 +41,17 @@ final class RapportChartSvgBuilder {
     private static final double PX_PAR_PT = 4.0 / 3;
     private static final double HAUTEUR_LEGENDE = 24;
     private static final double HAUTEUR_CATEGORIE_MAX = 44;
+    /** Part de la hauteur d'une catégorie occupée par ses 4 barres : le reste est l'espace blanc qui sépare
+     * visuellement deux catégories voisines. Légèrement plus élevée quand les catégories sont nombreuses
+     * (hauteur de catégorie sous {@link #HAUTEUR_CATEGORIE_SERREE}), pour que les étiquettes de valeur de deux
+     * barres voisines ne se chevauchent pas. */
+    private static final double PART_BARRES_PAR_CATEGORIE = 0.78;
+    private static final double PART_BARRES_CATEGORIES_SERREES = 0.86;
+    private static final double HAUTEUR_CATEGORIE_SERREE = 26;
+    private static final double TAILLE_VALEUR_MAX = 6.5;
+    private static final double TAILLE_VALEUR_MIN = 4.5;
+    /** Espace entre deux barres d'une même catégorie, en pt. */
+    private static final double ECART_ENTRE_BARRES = 0.6;
 
     private record Serie(String nom, String couleur) {
     }
@@ -79,20 +90,36 @@ final class RapportChartSvgBuilder {
                 .attr("viewBox", "0 0 " + format(LARGEUR_TOTALE * PX_PAR_PT) + " " + format(hauteurSvg * PX_PAR_PT));
         Element dessin = svg.appendElement("g").attr("transform", "scale(" + PX_PAR_PT + ")");
 
-        double groupeHauteur = hauteurCategorie * 0.85;
-        double itemGap = groupeHauteur * 0.05;
-        double barHauteur = (groupeHauteur - 3 * itemGap) / SERIES.size();
+        double partBarres = hauteurCategorie < HAUTEUR_CATEGORIE_SERREE ? PART_BARRES_CATEGORIES_SERREES : PART_BARRES_PAR_CATEGORIE;
+        double groupeHauteur = hauteurCategorie * partBarres;
+        double itemGap = ECART_ENTRE_BARRES;
+        double barHauteur = (groupeHauteur - (SERIES.size() - 1) * itemGap) / SERIES.size();
+        // Une étiquette ne doit pas dépasser le pas vertical entre deux barres (sinon elle recouvre sa voisine).
+        String tailleValeur = format(Math.max(TAILLE_VALEUR_MIN, Math.min(TAILLE_VALEUR_MAX, barHauteur + itemGap)));
+
+        dessin.appendElement("line")
+                .attr("x1", format(largeurLabel)).attr("y1", "0")
+                .attr("x2", format(largeurLabel)).attr("y2", format(hauteurPlot))
+                .attr("stroke", "#9CA3AF").attr("stroke-width", "0.6");
 
         for (int i = 0; i < donnees.size(); i++) {
             RepartitionBean ligne = donnees.get(i);
             double yCategorie = i * hauteurCategorie + (hauteurCategorie - groupeHauteur) / 2;
+
+            if (i > 0) {
+                dessin.appendElement("line")
+                        .attr("x1", "0").attr("y1", format(i * hauteurCategorie))
+                        .attr("x2", format(LARGEUR_TOTALE)).attr("y2", format(i * hauteurCategorie))
+                        .attr("stroke", "#E5E7EB").attr("stroke-width", "0.5");
+            }
 
             Element texteLabel = dessin.appendElement("text")
                     .attr("x", format(largeurLabel - 6))
                     .attr("y", format(yCategorie + groupeHauteur / 2))
                     .attr("text-anchor", "end")
                     .attr("dominant-baseline", "middle")
-                    .attr("font-size", "9");
+                    .attr("font-size", "9.5")
+                    .attr("font-weight", "bold");
             texteLabel.text(ligne.getLibelle());
 
             double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(), valeurMontant(ligne.getStcMontant())};
@@ -115,7 +142,7 @@ final class RapportChartSvgBuilder {
                             .attr("x", format(largeurLabel + largeur + 4))
                             .attr("y", format(y + barHauteur / 2))
                             .attr("dominant-baseline", "middle")
-                            .attr("font-size", "6")
+                            .attr("font-size", tailleValeur)
                             .attr("font-weight", "bold")
                             .text(libelleValeur);
                 }

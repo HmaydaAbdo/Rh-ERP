@@ -18,6 +18,7 @@
   <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
+    styleClass="app-table p-datatable-gridlines p-datatable-sm"
     [value]="equipes"
     [lazy]="true"
     (onLazyLoad)="onLazyLoad($event)"

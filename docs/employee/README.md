@@ -1,8 +1,8 @@
 # Module Employee
 
 > Fiche d'identité des employés — domaine de référence de l'ERP RH. Référence les domaines Function
-> (fonction occupée) et Chantier (affectation) par clé étrangère. Alimenté par saisie manuelle ou
-> par import Excel en masse.
+> (fonction occupée) et Chantier (affectation) par clé étrangère. Les nouveaux employés s'ajoutent par saisie
+> ou par import Excel en masse ; toute **modification** d'un employé existant se fait depuis l'interface.
 
 ---
 
@@ -32,7 +32,7 @@ employee/
 ├── services/ (EmployeeService + IEmployeeService)
 ├── specifications/EmployeeSpecification.java
 └── imports/
-    ├── EmployeeImportService.java     ← lecture du fichier, résolution Fonction/Chantier, création/MAJ atomique par CIN, génération du modèle
+    ├── EmployeeImportService.java     ← lecture du fichier, résolution Fonction/Chantier, création atomique (CIN inédit), génération du modèle
     ├── EmployeeImportController.java  ← POST /employees/import, GET /employees/import/modele
     ├── EmployeeImportResultDto.java
     └── EmployeeImportException.java   ← fichier illisible ou format inattendu (pas une ligne invalide)
@@ -72,8 +72,13 @@ l'import comme l'API exigent déjà ces deux dates).
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
   lève `InvalidReferenceException` (400).
-- La suppression (`DELETE /employees/{id}`) n'a pas de contrainte de blocage particulière au-delà de
-  l'existence de l'employé (aucune entité ne référence `Employee` à ce jour).
+- La suppression (`DELETE /employees/{id}`) supprime l'employé. **Cas non traité** : si l'employé est
+  référencé par au moins un bulletin de paie (`paie.employee_id`) ou lié à un compte utilisateur
+  (`utilisateur.employee_id`), la base refuse la suppression et l'API répond aujourd'hui par une erreur `500`
+  générique, au lieu d'un `409` explicite. Le comportement voulu (bloquer, ou autre) reste à décider — voir
+  [TODO.md](../../TODO.md). En pratique, passer l'employé à `INACTIF` conserve son historique.
+- Un employé `INACTIF` reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
+  employés `ACTIF`.
 
 ---
 
@@ -128,9 +133,8 @@ Fichier `.xlsx`, une ligne d'en-tête (ignorée), **6 colonnes**, dans cet ordre
 | E | Chantier (code, doit exister et être actif) | `C059` |
 | F | Date de naissance | `26/05/1984` |
 
-Ce format correspond exactement au fichier `employee.xlsx` à la racine du projet. Si le fichier a
-moins de 6 colonnes en en-tête, l'import est rejeté immédiatement (`400`, message explicite) avant
-même de tenter de lire les données.
+Le plus sûr est de partir du modèle téléchargeable. Si le fichier a moins de 6 colonnes en en-tête, l'import est
+rejeté immédiatement (`400`, message explicite) avant même de tenter de lire les données.
 
 **Le statut n'est pas une colonne de ce format** — il ne peut pas être modifié en masse par l'import,
 uniquement via l'UI (formulaire), employé par employé : les employés créés sont toujours `ACTIF`.
@@ -174,22 +178,16 @@ Concrètement : une ligne avec un CIN trop long *et* une fonction manquante ne r
 `Nom/prénom ou CIN trop long` — corriger cette ligne et réimporter peut donc révéler une deuxième
 erreur qui n'était pas visible au premier rejet.
 
-Toutes les lignes sont validées avant toute écriture en base. La résolution CIN → employé existant
-(et sa mutation) n'a lieu qu'une fois la totalité du fichier confirmée valide : charger puis muter une
-entité JPA gérée plus tôt exposerait l'import au dirty-checking automatique d'Hibernate (flush
-déclenché par une requête ultérieure ou par le commit), qui persisterait la mutation même si l'import
-est finalement rejeté à cause d'une autre ligne — voir la même précaution dans
-[docs/paie/README.md](../paie/README.md).
+Toutes les lignes sont validées avant toute écriture en base, sur des valeurs brutes (aucune entité JPA gérée
+pendant la validation) : voir [../imports.md](../imports.md) pour le principe commun à tous les imports.
 
 ### Performance
 
-Le référentiel Function (entier) et les chantiers actifs sont chargés **une seule fois** avant la boucle
+Le référentiel Function (entier), les chantiers actifs et l'ensemble des CIN déjà présents en base
+(`EmployeeRepository.findAllCinsEnMajuscules`) sont chargés **une seule fois** avant la boucle
 (`Pageable.unpaged()` sur les façades `IFunctionService`/`IChantierService`) et gardés en mémoire
-(`Map<String, Long>`) pour la résolution de chaque ligne — pas de requête SQL par ligne dans la
-boucle, conformément à `conventions/performance.md`. La résolution CIN → employé existant reste, elle,
-une requête indexée par ligne (`findByCinIgnoreCase`, colonne `cin` unique) — même choix que la
-résolution (employé, période) de l'import Paie, non préchargeable puisqu'elle dépend du contenu de
-chaque ligne.
+(`Map`/`Set`) pour la résolution de chaque ligne — aucune requête SQL par ligne dans la boucle,
+conformément à `conventions/performance.md`.
 
 ---
 
@@ -199,7 +197,7 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/employees` | `EmployeeListComponent` | Liste paginée, recherche (nom, CIN, fonction, chantier, statut), tri, suppression, téléchargement du modèle, import Excel |
+| `/employees` | `EmployeeListComponent` | Tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtres en temps réel (nom, CIN, fonctions, chantiers, statut), suppression, téléchargement du modèle, import Excel |
 | `/employees/new` | `EmployeeFormComponent` | Création |
 | `/employees/:id` | `EmployeeDetailComponent` | Consultation |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut) |
@@ -216,7 +214,10 @@ sélecteur de fichier natif (`<input type="file" accept=".xlsx">` masqué), envo
 `POST /employees/import`, puis affiche un résumé (toast) et le détail de chaque ligne ignorée — avec
 sa raison exacte — dans une boîte de dialogue défilante.
 
-Accès via la barre latérale de l'application (`app.component.ts`, entrée "Employés").
+Colonnes du tableau : Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut. Accès via la barre latérale
+(`core/navigation/nav-items.ts`, entrée « Employés », permission `EMPLOYEE_READ`). Les boutons de création,
+modification, suppression et import sont conditionnés par `EMPLOYEE_WRITE`, `EMPLOYEE_DELETE` et
+`EMPLOYEE_IMPORT` (voir [../rbac/employee.md](../rbac/employee.md)).
 
 ---
 
@@ -224,9 +225,8 @@ Accès via la barre latérale de l'application (`app.component.ts`, entrée "Emp
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
-  permission adéquate (voir `docs/rbac/employee.md`).
+- **Suppression d'un employé qui a des bulletins ou un compte** : erreur `500` au lieu d'un refus explicite
+  (voir « Règles métier »).
 - Aucun audit (Hibernate Envers) — les créations/modifications/imports ne sont pas tracés au-delà
   des logs applicatifs.
-- Aucune limite liée à la persistance : le schéma est géré par Flyway et les données survivent aux
-  redémarrages (`ddl-auto=validate`, voir `conventions/database.md`).
+- Aucun lien avec le Pointage, qui reste à construire.

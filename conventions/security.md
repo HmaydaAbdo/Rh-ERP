@@ -26,16 +26,17 @@
   aléatoire), stocké **hashé** en base (jamais en clair). Posé en cookie `httpOnly` — jamais lisible
   par JavaScript, jamais transmis dans un corps JSON.
 * **Rotation à usage unique** : chaque appel à `/auth/refresh` révoque le Refresh Token utilisé et
-  en émet un nouveau. Un Refresh Token déjà consommé qui est réutilisé (vol détecté) est simplement
-  rejeté (401) — la détection de compromission en cascade (révocation de toute la famille de
-  tokens) est une amélioration possible, pas un prérequis (voir « Points d'attention »).
+  en émet un nouveau, de la même **famille** (tous les tokens issus d'une même connexion). Un Refresh
+  Token déjà consommé qui est réutilisé (vol détecté) est rejeté (401) **et révoque toute sa famille**, ce qui
+  force une reconnexion complète (voir « Points d'attention »). La révocation doit rester enregistrée même
+  quand la requête se termine par une erreur.
 
 ## Révocation — ce qui est réellement révocable
 
 | Token | Révocable avant expiration ? |
 |---|---|
 | Access Token (JWT) | **Non** — un JWT signé reste valide jusqu'à son expiration naturelle, même si le compte est désactivé ou le mot de passe changé entre-temps. Risque accepté et borné par la durée courte du token. |
-| Refresh Token (opaque, en base) | **Oui** — logout, réinitialisation de mot de passe (doit révoquer tous les Refresh Tokens actifs de l'utilisateur), et une révocation admin explicite peuvent l'invalider immédiatement. |
+| Refresh Token (opaque, en base) | **Oui** — logout, réinitialisation de mot de passe (doit révoquer tous les Refresh Tokens actifs de l'utilisateur), détection de vol (révocation de la famille) et une révocation admin explicite peuvent l'invalider immédiatement. |
 
 ## Cookie Refresh Token
 

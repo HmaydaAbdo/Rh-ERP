@@ -4,14 +4,6 @@
     <a routerLink="/chantiers" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
-  @if (issuDeLErp) {
-    <p-message
-      severity="info"
-      text="Ce chantier provient de l'ERP source. Le code et la désignation seront écrasés par la prochaine synchronisation quotidienne."
-      styleClass="chantier-form__erp-notice"
-    ></p-message>
-  }
-
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="chantier-form__grid">
     <div class="field">
       <label for="code">Code *</label>
