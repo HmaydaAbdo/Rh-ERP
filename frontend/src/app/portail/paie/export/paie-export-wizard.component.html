@@ -122,6 +122,13 @@
               @if (chantiersEnCours()) {
                 <p class="export-wizard__legende">Chargement des chantiers…</p>
               }
+              <div class="export-wizard__selection-globale">
+                <span>{{ nombreChantiersDetailles() }} chantier{{ nombreChantiersDetailles() > 1 ? 's' : '' }} détaillé{{ nombreChantiersDetailles() > 1 ? 's' : '' }}</span>
+                <span>
+                  <button type="button" (click)="toutSelectionner(true)">Tout sélectionner</button>
+                  <button type="button" (click)="toutSelectionner(false)">Tout désélectionner</button>
+                </span>
+              </div>
               <div class="export-wizard__chantiers">
                 @for (c of chantiersFiltres(); track c.code) {
                   <div class="export-wizard__chantier" [class.export-wizard__chantier--actif]="estDetaille(c.code)">

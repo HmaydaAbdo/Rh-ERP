@@ -233,6 +233,24 @@ export class PaieExportWizardComponent implements OnChanges {
     this.detail.set(detail);
   }
 
+  /** Action globale sur les chantiers affichés (la recherche restreint la liste) : les détaille tous avec toutes leurs
+   * équipes, ou les remet tous à zéro. Un chantier sans équipe est ignoré. Comme « Toutes » par chantier, c'est un choix
+   * explicite de l'utilisateur — activer un seul chantier ne coche, lui, aucune équipe. */
+  toutSelectionner(selectionner: boolean): void {
+    const detail = { ...this.detail() };
+    const retirees = { ...this.retirees() };
+    for (const chantier of this.chantiersFiltres().filter((c) => c.equipes.length > 0)) {
+      if (selectionner) {
+        detail[chantier.code] = chantier.equipes.map((e) => e.code);
+      } else {
+        delete detail[chantier.code];
+        delete retirees[chantier.code];
+      }
+    }
+    this.detail.set(detail);
+    this.retirees.set(retirees);
+  }
+
   basculerEquipe(code: string, equipe: string): void {
     const choisies = this.equipesChoisies(code);
     const suivantes = choisies.includes(equipe) ? choisies.filter((e) => e !== equipe) : [...choisies, equipe];
