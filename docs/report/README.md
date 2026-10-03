@@ -601,30 +601,34 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
   rouge), STC (DH, marron) — chacune nommée avec son unité dans la légende.
+- **Valeurs en colonnes, pas au bout des barres** (refonte du 2026-10-03). Chaque catégorie occupe une ligne :
+  libellé à gauche, 4 barres fines au centre, et **4 valeurs écrites en colonnes alignées à droite** (Masse,
+  Effectif, STC pers., STC DH), sur une seule ligne. Les valeurs posées au bout de chaque barre se chevauchaient
+  dès que les barres étaient fines (4 textes empilés dans la hauteur de 4 barres) ; en colonnes, la hauteur
+  minimale d'une ligne est celle d'**un** texte, donc aucun chevauchement n'est possible, quel que soit le
+  nombre de catégories. Chaque colonne a un en-tête souligné d'un filet de la couleur de sa série, ce qui la
+  relie à ses barres sans mesurer la largeur du texte.
 - **Axe des valeurs masqué ET chaque série normalisée à sa propre valeur maximale** (0 à 1,
   indépendamment des 3 autres séries) : masse/STC en DH (milliers de DH) et effectif/STC en
   personnes (quelques unités) ont des ordres de grandeur si différents qu'un axe masqué seul ne
-  suffit pas. L'étiquette affichée sur chaque barre reste la **vraie** valeur, lue AVANT
-  normalisation, avec un null-check explicite (`RapportChartSvgBuilder.valeurMontant`,
-  `RepartitionBean.montant`/`stcMontant` pouvant être `null` — seul endroit de toute la vue-modèle
-  dans ce cas, voir « Architecture » — traité comme zéro, jamais la chaîne littérale "null", couvert
-  par un test de non-régression dédié). Une valeur exactement nulle (ou `null`) n'a pas d'étiquette
-  (la barre est de toute façon invisible) — son absence dit déjà "zéro" sans ambiguïté.
+  suffit pas. Le texte de chaque colonne reste la **vraie** valeur, lue AVANT normalisation, avec un
+  null-check explicite (`RapportChartSvgBuilder.valeurMontant`, `RepartitionBean.montant`/`stcMontant` pouvant
+  être `null` — seul endroit de toute la vue-modèle dans ce cas, voir « Architecture » — traité comme zéro,
+  jamais la chaîne littérale "null", couvert par un test de non-régression dédié). Une valeur nulle (ou `null`)
+  n'a pas de barre et s'affiche « – » : une cellule vide serait ambiguë.
 - **Pleine largeur utile** : le dessin est construit en pt puis agrandi de 4/3 (`PX_PAR_PT`) pour occuper
   les 802 pt de largeur utile de la page. Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs
   `width`/`height` du SVG et dimensionne le dessin d'après son `viewBox`, en px (1 px = 0,75 pt) : sans cet
   agrandissement, le graphique n'occupait que les trois quarts de la largeur (corrigé le 2026-10-03, test de
   non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus long libellé
-  (48 à 200 pt) et la barre la plus longue de chaque série va jusqu'à la marge réservée à son étiquette de
-  valeur (64 pt à droite) — jamais 100 % de la largeur, pour que l'étiquette ne soit pas tronquée. La
-  hauteur du tracé est plafonnée à 337 pt (`HAUTEUR_TOTALE_CHART`) pour que graphique et légende tiennent
-  sous le bandeau, le titre de chapitre et les cartes KPI.
-- **Aération** : les 4 barres d'une catégorie occupent 78 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste
-  est de l'espace blanc entre catégories, renforcé par un filet gris clair entre deux catégories et un axe vertical
-  fin à gauche des barres. Barres séparées de 0,6 pt (`ECART_ENTRE_BARRES`), libellés de catégorie en gras 9,5 pt,
-  valeurs en gras dont la taille suit le pas entre barres (4,5 à 6,5 pt : au-delà, les étiquettes de deux barres
-  voisines se chevauchent). Quand les catégories sont nombreuses (13 équipes d'un chantier), les barres occupent
-  86 % de la hauteur au lieu de 78 %. Réglé le 2026-10-03 sur des rendus de 10 chantiers et de 13 équipes.
+  (48 à 200 pt), les 4 colonnes de valeurs prennent 292 pt à droite (`LARGEUR_COLONNES`) et la barre la plus
+  longue de chaque série occupe tout l'espace restant entre les deux. La hauteur totale (en-tête des colonnes,
+  lignes, légende) est plafonnée à 361 pt (`HAUTEUR_TOTALE_CHART`) pour tenir sous le bandeau, le titre de
+  chapitre et les cartes KPI ; une ligne fait au plus 40 pt.
+- **Aération** : les 4 barres d'une ligne occupent 72 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste est
+  de l'espace blanc entre lignes, renforcé par un filet gris clair entre deux lignes et un axe vertical fin à
+  gauche des barres. Barres séparées de 1,4 pt (`ECART_ENTRE_BARRES`), libellés de catégorie en gras 9,5 pt,
+  valeurs en gras 7,5 pt. Vérifié sur des rendus de 10 chantiers et de 13 équipes.
 - Légende obligatoire en bas (4 séries à distinguer). Palette fixe : Masse `#2563EB`, Effectif
   `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC restent dans la même
   famille de rouges, sous ses 2 représentations) — seule exception à la règle noir/blanc/gris du
