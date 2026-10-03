@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
+import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.services.interfaces.IPaieService;
@@ -93,7 +94,7 @@ public class PaieController {
     @GetMapping("/equipes")
     @Operation(summary = "Lister les équipes distinctes d'un chantier pour une période (alimente la configuration de l'export)")
     @PreAuthorize("hasAuthority('PAIE_READ')")
-    public ResponseEntity<List<String>> listerEquipes(
+    public ResponseEntity<List<EquipeSummaryDto>> listerEquipes(
             @RequestParam String chantierCode,
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
             @RequestParam String periode) {

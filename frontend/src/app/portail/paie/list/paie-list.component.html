@@ -117,6 +117,14 @@
       placeholder="Chantier"
     ></app-lazy-select>
 
+    <app-lazy-select
+      formControlName="equipeIds"
+      [multiple]="true"
+      [source]="equipeReferenceService"
+      optionLabel="code"
+      placeholder="Équipe"
+    ></app-lazy-select>
+
     <button pButton type="submit" icon="pi pi-search" label="Rechercher"></button>
     <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
   </form>
@@ -183,7 +191,7 @@
         <!-- OBS, CHANTIER, EQ -->
         <td>{{ paie.observation || '-' }}</td>
         <td class="text-center">{{ paie.chantier?.code || '-' }}</td>
-        <td class="text-center">{{ paie.equipe || '-' }}</td>
+        <td class="text-center">{{ paie.equipe?.code || '-' }}</td>
 
         <td class="text-center">{{ paie.periode}}</td>
 

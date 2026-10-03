@@ -35,6 +35,7 @@ export class AppComponent {
     { label: 'Employés', icon: 'pi pi-users', route: '/employees' },
     { label: 'Chantiers', icon: 'pi pi-building', route: '/chantiers' },
     { label: 'Fonctions', icon: 'pi pi-briefcase', route: '/functions' },
+    { label: 'Équipes', icon: 'pi pi-sitemap', route: '/equipes', permission: 'EQUIPE_READ' },
     { label: 'Utilisateurs', icon: 'pi pi-user-edit', route: '/admin/users', permission: 'USER_MANAGE' },
     { label: 'Rôles', icon: 'pi pi-shield', route: '/admin/roles', permission: 'ROLE_MANAGE' }
   ];

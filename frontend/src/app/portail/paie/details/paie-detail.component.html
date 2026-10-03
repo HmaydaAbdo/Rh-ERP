@@ -23,7 +23,7 @@
       </div>
       <div>
         <dt>Équipe</dt>
-        <dd>{{ paie.equipe || '—' }}</dd>
+        <dd>{{ paie.equipe ? paie.equipe.libelle + ' (' + paie.equipe.code + ')' : '—' }}</dd>
       </div>
       <div>
         <dt>Jours travaillés</dt>

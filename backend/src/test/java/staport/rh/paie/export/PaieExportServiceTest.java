@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
+import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.repositories.PaieRepository;
@@ -293,10 +294,17 @@ class PaieExportServiceTest {
         paie.setEmployee(employee);
         paie.setFonction(fonction);
         paie.setChantier(chantier);
-        paie.setEquipe(equipe);
+        paie.setEquipe(equipe == null ? null : equipe(equipe));
         paie.setNombreJoursTravailles(26);
         paie.setSalaireMensuel(new BigDecimal("5000"));
         paie.setSalaireTotal(new BigDecimal("5000"));
         return paie;
+    }
+
+    private Equipe equipe(String code) {
+        Equipe equipe = new Equipe();
+        equipe.setCode(code);
+        equipe.setLibelle(code);
+        return equipe;
     }
 }

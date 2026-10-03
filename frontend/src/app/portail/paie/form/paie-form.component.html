@@ -64,8 +64,14 @@
     </div>
 
     <div class="field">
-      <label for="equipe">Équipe</label>
-      <input pInputText id="equipe" type="text" formControlName="equipe" />
+      <label for="equipeId">Équipe</label>
+      <app-lazy-select
+        inputId="equipeId"
+        formControlName="equipeId"
+        [source]="equipeReferenceService"
+        optionLabel="libelle"
+        placeholder="Sélectionner une équipe"
+      ></app-lazy-select>
     </div>
 
     <div class="field">

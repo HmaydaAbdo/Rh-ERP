@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import {
   Paie,
+  PaieEquipeSummary,
   PaieCreateRequest,
   PaieExportRequest,
   PaieImportResult,
@@ -68,8 +69,8 @@ export class PaieService {
     return this.http.post(`${this.baseUrl}/report/pdf`, requete, { responseType: 'blob' });
   }
 
-  listerEquipes(chantierCode: string, periode: string): Observable<string[]> {
+  listerEquipes(chantierCode: string, periode: string): Observable<PaieEquipeSummary[]> {
     const params = new HttpParams().set('chantierCode', chantierCode).set('periode', periode);
-    return this.http.get<string[]>(`${this.baseUrl}/equipes`, { params });
+    return this.http.get<PaieEquipeSummary[]>(`${this.baseUrl}/equipes`, { params });
   }
 }

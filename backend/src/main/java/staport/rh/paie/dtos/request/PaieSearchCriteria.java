@@ -3,7 +3,7 @@ package staport.rh.paie.dtos.request;
 import java.time.YearMonth;
 import java.util.List;
 
-/** {@code fonctionIds}/{@code chantierIds} : filtres de liste multi-valeurs (voir
+/** {@code fonctionIds}/{@code chantierIds}/{@code equipeIds} : filtres de liste multi-valeurs (voir
  * {@code conventions/frontend.md}, section Sélecteurs). {@code null} ou vide = pas de filtre sur
  * cette dimension. */
 public record PaieSearchCriteria(
@@ -12,6 +12,6 @@ public record PaieSearchCriteria(
         YearMonth periode,
         List<Long> fonctionIds,
         List<Long> chantierIds,
-        String equipe
+        List<Long> equipeIds
 ) {
 }

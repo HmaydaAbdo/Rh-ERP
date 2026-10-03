@@ -15,6 +15,8 @@
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/equipes` | `PAIE_READ` |
+
+> Le sélecteur d'équipe des écrans Paie appelle aussi `/equipes/search` (`EQUIPE_READ`, voir `docs/rbac/equipe.md`).
 | `POST /paie/export` | `PAIE_EXPORT` |
 | `POST /paie/report/pdf` | `PAIE_EXPORT` |
 

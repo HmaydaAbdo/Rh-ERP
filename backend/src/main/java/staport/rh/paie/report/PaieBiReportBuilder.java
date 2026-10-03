@@ -6,7 +6,6 @@ import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
 import staport.rh.paie.repositories.EvolutionChantierEquipeProjection;
 import staport.rh.paie.repositories.PaieRepository;
-import staport.rh.paie.reporting.EquipeLibelleCatalogue;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
@@ -18,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -161,6 +161,7 @@ class PaieBiReportBuilder {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
+        Map<String, String> libellesEquipes = libellesParCode(lignesChantier);
         int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
         boolean avecDetailEquipe = !equipesSelectionnees.isEmpty();
         String identifiantChantier = identifiantChantier(code, lignesChantier);
@@ -178,18 +179,18 @@ class PaieBiReportBuilder {
                     .map(Agregat::cle)
                     .filter(equipesSelectionnees::contains)
                     .forEach(nom -> equipes.add(equipeVue(
-                            nom, titreEquipe(nom),
+                            nom, titreEquipe(nom, libellesEquipes), libellesEquipes.getOrDefault(nom, nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
                             masseChantier, MaterielChantierCatalogue.libelles(code, nom), false)));
             List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
             if (!reste.isEmpty()) {
                 List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
-                equipes.add(equipeVue(code, titreChantier, reste, restePrecedent, masseChantier, List.of(), true));
+                equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, masseChantier, List.of(), true));
             }
         } else {
             // Aucune équipe sélectionnée pour ce chantier : une seule section réunissant tous ses
             // employés, sans graphique de répartition par équipe (voir rapport.jrxml, GroupChantier).
-            equipes.add(equipeVue(code, titreChantier, lignesChantier, lignesChantierPrecedent, masseChantier, List.of(), true));
+            equipes.add(equipeVue(code, titreChantier, code, lignesChantier, lignesChantierPrecedent, masseChantier, List.of(), true));
         }
 
         return new ChantierBiVue(
@@ -200,7 +201,7 @@ class PaieBiReportBuilder {
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
                 PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
                 stc,
-                versRepartitionEquipe(agregatEquipe),
+                versRepartitionEquipe(agregatEquipe, libellesEquipes),
                 evolutions.pourChantier(code),
                 equipes,
                 avecDetailEquipe);
@@ -216,18 +217,32 @@ class PaieBiReportBuilder {
         return nom != null && !nom.isBlank() ? nom + " (" + code + ")" : code;
     }
 
-    private String titreEquipe(String nom) {
+    private String titreEquipe(String nom, Map<String, String> libellesEquipes) {
         return nom.equals(SANS_EQUIPE)
                 ? SANS_EQUIPE.toUpperCase(Locale.FRANCE)
-                : "ÉQUIPE : " + EquipeLibelleCatalogue.libelle(nom).toUpperCase(Locale.FRANCE);
+                : "ÉQUIPE : " + libellesEquipes.getOrDefault(nom, nom).toUpperCase(Locale.FRANCE);
+    }
+
+    /** Code → libellé des équipes présentes dans ces lignes (les bulletins sans équipe sont absents :
+     * "Sans équipe" n'a pas de libellé, il s'affiche tel quel). Le code reste la clé de
+     * sélection/regroupement, le libellé ne sert qu'à l'AFFICHAGE. */
+    private Map<String, String> libellesParCode(List<Paie> lignes) {
+        Map<String, String> libelles = new HashMap<>();
+        for (Paie paie : lignes) {
+            if (paie.getEquipe() != null) {
+                libelles.put(paie.getEquipe().getCode(), paie.getEquipe().getLibelle());
+            }
+        }
+        return libelles;
     }
 
     private List<Paie> filtrerHorsEquipes(List<Paie> lignes, Set<String> equipesSelectionnees) {
         return lignes.stream().filter(p -> !equipesSelectionnees.contains(libelleEquipe(p))).toList();
     }
 
-    private EquipeBiVue equipeVue(String nom, String titre, List<Paie> lignesEquipe, List<Paie> lignesEquipePrecedent,
-                                   BigDecimal masseChantier, List<String> materielLibelles, boolean afficherEquipeReelle) {
+    private EquipeBiVue equipeVue(String nom, String titre, String libelleAffiche, List<Paie> lignesEquipe,
+                                   List<Paie> lignesEquipePrecedent, BigDecimal masseChantier,
+                                   List<String> materielLibelles, boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
         // agregatFonctionEquipe sert à la fois à ordonner le tableau employé ET à alimenter le tableau
@@ -252,7 +267,7 @@ class PaieBiReportBuilder {
         return new EquipeBiVue(
                 nom,
                 titre,
-                EquipeLibelleCatalogue.libelle(nom),
+                libelleAffiche,
                 lignesEquipe.size(),
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
@@ -294,12 +309,10 @@ class PaieBiReportBuilder {
                 afficherEquipeReelle ? libelleAfficheEquipe(paie) : "");
     }
 
-    /** Nom complet de l'équipe pour la colonne "Équipe" ("CHAUFFEURS" pour {@code "CH"}), ou {@code ""}
-     * (jamais "Sans équipe" — demande explicite de direction, 2026-09-29) quand l'employé n'a aucune
-     * équipe renseignée. */
+    /** Code de l'équipe pour la colonne "Équipe", ou {@code ""} (jamais "Sans équipe" — demande
+     * explicite de direction, 2026-09-29) quand l'employé n'a aucune équipe renseignée. */
     private String libelleAfficheEquipe(Paie paie) {
-        String brut = paie.getEquipe();
-        return brut == null || brut.isBlank() ? "" :brut.trim();
+        return paie.getEquipe() == null ? "" : paie.getEquipe().getCode();
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans
@@ -352,13 +365,12 @@ class PaieBiReportBuilder {
     }
 
     /** Comme {@link #versRepartition}, pour la distribution "Répartition par équipe" spécifiquement :
-     * remplace le code brut de chaque {@code Agregat} par son nom complet d'affichage (voir
-     * {@code EquipeLibelleCatalogue}) avant le plafonnage/tri — jamais sur {@code agregatEquipe}
-     * lui-même, qui doit rester indexé par code brut pour {@code equipesSelectionnees.contains(...)}
-     * et {@link #filtrerParEquipe}. */
-    private List<RepartitionBean> versRepartitionEquipe(List<Agregat> agregatEquipe) {
+     * remplace le code de chaque {@code Agregat} par le libellé de l'équipe avant le plafonnage/tri
+     * — jamais sur {@code agregatEquipe} lui-même, qui doit rester indexé par code pour
+     * {@code equipesSelectionnees.contains(...)} et {@link #filtrerParEquipe}. */
+    private List<RepartitionBean> versRepartitionEquipe(List<Agregat> agregatEquipe, Map<String, String> libellesEquipes) {
         List<Agregat> avecLibelleAffiche = agregatEquipe.stream()
-                .map(a -> new Agregat(EquipeLibelleCatalogue.libelle(a.cle()), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
+                .map(a -> new Agregat(libellesEquipes.getOrDefault(a.cle(), a.cle()), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
                 .toList();
         return versRepartition(avecLibelleAffiche);
     }
@@ -482,11 +494,7 @@ class PaieBiReportBuilder {
 
     /** "Sans équipe" pour un bulletin sans équipe renseignée — jamais exclu des distributions. */
     private String libelleEquipe(Paie paie) {
-        return libelleEquipe(paie.getEquipe());
-    }
-
-    private String libelleEquipe(String equipeBrut) {
-        return equipeBrut == null || equipeBrut.isBlank() ? SANS_EQUIPE : equipeBrut;
+        return paie.getEquipe() == null ? SANS_EQUIPE : paie.getEquipe().getCode();
     }
 
     private List<Paie> filtrerParChantier(List<Paie> lignes, String code) {

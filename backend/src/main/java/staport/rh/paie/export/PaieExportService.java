@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import staport.rh.paie.entities.Paie;
-import staport.rh.paie.reporting.EquipeLibelleCatalogue;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.PaiePerimetreService;
 import staport.rh.paie.reporting.PerimetreChantier;
@@ -76,12 +75,13 @@ public class PaieExportService {
     private void ecrireFeuillesEquipes(Workbook workbook, PaieExcelStyles styles, YearMonth periode, PerimetreChantier chantier) {
         for (Map.Entry<String, List<Paie>> entree : chantier.lignesParEquipeAGenerer().entrySet()) {
             String equipe = entree.getKey();
-            // Nom de la feuille : garde le CODE brut (identifiant technique, court, stable — voir
-            // nomFeuilleValide) ; seul le TITRE affiché en cellule A1 (ecrireTitre) montre le nom
-            // complet (voir EquipeLibelleCatalogue, même règle que le rapport PDF).
+            // Nom de la feuille : garde le CODE (identifiant technique, court, stable — voir
+            // nomFeuilleValide) ; seul le TITRE affiché en cellule A1 (ecrireTitre) montre le libellé
+            // de l'équipe (même règle que le rapport PDF). Toutes les lignes d'une même clé partagent
+            // la même entité Equipe, donc le libellé est lu sur la première.
             Sheet feuilleEquipe = workbook.createSheet(nomFeuilleValide(chantier.code() + "_" + equipe));
             sheetWriter.ecrire(feuilleEquipe, styles,
-                    titreZone(chantier.code(), entree.getValue()) + " - Equipe: " + EquipeLibelleCatalogue.libelle(equipe),
+                    titreZone(chantier.code(), entree.getValue()) + " - Equipe: " + entree.getValue().get(0).getEquipe().getLibelle(),
                     periode, entree.getValue(), chantier.totalMoisPrecedentParEquipe().get(equipe),
                     squeletteMateriel(chantier.code(), equipe));
         }

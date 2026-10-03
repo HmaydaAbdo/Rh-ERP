@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
+import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 
 import java.time.YearMonth;
@@ -27,6 +28,6 @@ public interface IPaieService {
     void delete(Long id);
 
     /** Équipes distinctes trouvées sur les bulletins d'un chantier pour une période — alimente la
-     * configuration de l'export (aucun référentiel Équipe dédié, voir docs/paie/README.md). */
-    List<String> findDistinctEquipes(String chantierCode, YearMonth periode);
+     * configuration de l'export (voir docs/paie/README.md). */
+    List<EquipeSummaryDto> findDistinctEquipes(String chantierCode, YearMonth periode);
 }
