@@ -74,10 +74,18 @@ location /rh-erp/ {
     # sub_filter n'opère que sur du texte brut.
     proxy_set_header Accept-Encoding "";
 
+    # OBLIGATOIRE sous un sous-chemin : le backend pose le cookie du jeton de rafraîchissement avec
+    # Path=/auth, or le navigateur appelle /rh-erp/auth/refresh. Sans cette réécriture, le cookie n'est
+    # jamais renvoyé et l'utilisateur doit se reconnecter à chaque rechargement de page.
+    proxy_cookie_path /auth /rh-erp/auth;
+
     sub_filter '<base href="/">' '<base href="/rh-erp/">';
     sub_filter_once on;
 }
 ```
+
+Si le sous-chemin change, adapter aussi `proxy_cookie_path`. `COOKIE_SECURE=true` exige un accès HTTPS : en HTTP
+le navigateur rejette le cookie.
 
 Remplacer `${FRONTEND_PORT}` par la valeur réelle configurée dans `.env` sur le serveur, et
 `/rh-erp/` par le sous-chemin réellement choisi.

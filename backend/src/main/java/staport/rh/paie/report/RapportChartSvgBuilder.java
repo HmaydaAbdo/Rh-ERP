@@ -33,7 +33,7 @@ final class RapportChartSvgBuilder {
     private static final double MARGE_DROITE = 64;
     /** Hauteur maximale de la zone de tracé, en pt : le graphique (légende comprise) doit tenir sous le
      * bandeau, le titre de chapitre et les cartes KPI d'une page paysage A4 (corps de page de 495 pt). */
-    private static final double HAUTEUR_TOTALE_CHART = 292;
+    private static final double HAUTEUR_TOTALE_CHART = 337;
     /** Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs {@code width}/{@code height} du SVG et
      * dimensionne le dessin d'après son {@code viewBox}, exprimé en px (1 px = 0,75 pt) : le repère de dessin
      * ci-dessous est en pt, il est donc agrandi de 4/3 pour occuper TOUTE la largeur utile de la page (802 pt) —

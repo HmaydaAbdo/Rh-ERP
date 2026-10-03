@@ -617,7 +617,7 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
   non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus long libellé
   (48 à 200 pt) et la barre la plus longue de chaque série va jusqu'à la marge réservée à son étiquette de
   valeur (64 pt à droite) — jamais 100 % de la largeur, pour que l'étiquette ne soit pas tronquée. La
-  hauteur du tracé est plafonnée à 292 pt (`HAUTEUR_TOTALE_CHART`) pour que graphique et légende tiennent
+  hauteur du tracé est plafonnée à 337 pt (`HAUTEUR_TOTALE_CHART`) pour que graphique et légende tiennent
   sous le bandeau, le titre de chapitre et les cartes KPI.
 - **Aération** : les 4 barres d'une catégorie occupent 78 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste
   est de l'espace blanc entre catégories, renforcé par un filet gris clair entre deux catégories et un axe vertical
