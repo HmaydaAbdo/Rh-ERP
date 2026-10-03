@@ -73,7 +73,9 @@ export class PaieExportWizardComponent implements OnChanges {
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
   readonly chantiersEnCours = signal(false);
   readonly recherche = signal('');
-  /** Chantier -> codes des équipes à détailler. Un chantier présent (même avec une liste vide) est « activé ». */
+  /** Chantiers dont la liste d'équipes est dépliée (simple état d'affichage). */
+  readonly ouverts = signal<string[]>([]);
+  /** Chantier -> codes des équipes à détailler (liste vide ou absente : aucune équipe détaillée). */
   readonly detail = signal<Record<string, string[]>>({});
   /** Chantier -> codes des équipes retirées de la feuille du chantier (Excel uniquement). */
   readonly retirees = signal<Record<string, string[]>>({});
@@ -153,6 +155,7 @@ export class PaieExportWizardComponent implements OnChanges {
     this.periode.set(periode);
     this.erreur.set(null);
     this.chantiers.set([]);
+    this.ouverts.set([]);
     this.detail.set({});
     this.retirees.set({});
   }
@@ -209,46 +212,28 @@ export class PaieExportWizardComponent implements OnChanges {
     this.recherche.set(valeur);
   }
 
+  /** Un chantier est « détaillé » dès qu'au moins une de ses équipes est cochée. */
   estDetaille(code: string): boolean {
-    return code in this.detail();
+    return this.equipesChoisies(code).length > 0;
+  }
+
+  estOuvert(code: string): boolean {
+    return this.ouverts().includes(code);
+  }
+
+  /** Déplie ou replie la liste des équipes d'un chantier. Tous les chantiers figurent de toute façon dans l'export :
+   * ouvrir un chantier ne sert qu'à en choisir les équipes. Un chantier sans équipe ne se déplie pas. */
+  basculerOuverture(chantier: PaieChantierPeriode): void {
+    if (chantier.equipes.length === 0) {
+      return;
+    }
+    this.ouverts.set(
+      this.estOuvert(chantier.code) ? this.ouverts().filter((c) => c !== chantier.code) : [...this.ouverts(), chantier.code]
+    );
   }
 
   equipesChoisies(code: string): string[] {
     return this.detail()[code] ?? [];
-  }
-
-  basculerChantier(chantier: PaieChantierPeriode): void {
-    if (chantier.equipes.length === 0) {
-      return;
-    }
-    const detail = { ...this.detail() };
-    if (this.estDetaille(chantier.code)) {
-      delete detail[chantier.code];
-      const retirees = { ...this.retirees() };
-      delete retirees[chantier.code];
-      this.retirees.set(retirees);
-    } else {
-      detail[chantier.code] = [];
-    }
-    this.detail.set(detail);
-  }
-
-  /** Action globale sur les chantiers affichés (la recherche restreint la liste) : les détaille tous avec toutes leurs
-   * équipes, ou les remet tous à zéro. Un chantier sans équipe est ignoré. Comme « Toutes » par chantier, c'est un choix
-   * explicite de l'utilisateur — activer un seul chantier ne coche, lui, aucune équipe. */
-  toutSelectionner(selectionner: boolean): void {
-    const detail = { ...this.detail() };
-    const retirees = { ...this.retirees() };
-    for (const chantier of this.chantiersFiltres().filter((c) => c.equipes.length > 0)) {
-      if (selectionner) {
-        detail[chantier.code] = chantier.equipes.map((e) => e.code);
-      } else {
-        delete detail[chantier.code];
-        delete retirees[chantier.code];
-      }
-    }
-    this.detail.set(detail);
-    this.retirees.set(retirees);
   }
 
   basculerEquipe(code: string, equipe: string): void {
@@ -279,10 +264,6 @@ export class PaieExportWizardComponent implements OnChanges {
 
   private retirerDeLaListeRetiree(code: string, equipe: string): void {
     this.retirees.set({ ...this.retirees(), [code]: (this.retirees()[code] ?? []).filter((e) => e !== equipe) });
-  }
-
-  nombreChantiersDetailles(): number {
-    return Object.values(this.detail()).filter((equipes) => equipes.length > 0).length;
   }
 
   texteDetail(): string {
@@ -504,6 +485,7 @@ export class PaieExportWizardComponent implements OnChanges {
     this.format.set('PDF');
     this.chantiers.set([]);
     this.recherche.set('');
+    this.ouverts.set([]);
     this.detail.set({});
     this.retirees.set({});
     this.laisseVide.set({});

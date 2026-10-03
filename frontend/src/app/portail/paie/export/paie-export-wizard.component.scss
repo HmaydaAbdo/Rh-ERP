@@ -285,25 +285,6 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     font-size: 0.875rem;
   }
 
-  &__selection-globale {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--space-sm);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-
-    button {
-      margin-left: var(--space-md);
-      padding: 0;
-      border: none;
-      background: none;
-      color: var(--color-primary);
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-  }
-
   &__chantiers {
     display: flex;
     flex-direction: column;
@@ -327,7 +308,47 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     align-items: center;
     justify-content: space-between;
     gap: var(--space-md);
+    width: 100%;
     padding: 0.6rem var(--space-md);
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--color-surface-alt);
+    }
+  }
+
+  &__chantier-etat {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-text-muted);
+
+    i {
+      font-size: 0.75rem;
+      transition: transform 0.3s;
+    }
+  }
+
+  &__chevron--ouvert {
+    transform: rotate(180deg);
+  }
+
+  &__badge {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: $accent-doux;
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 
   &__code {
