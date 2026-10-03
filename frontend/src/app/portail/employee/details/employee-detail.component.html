@@ -3,7 +3,9 @@
     <div class="employee-detail__header">
       <h1>{{ employee.nomPrenom }}</h1>
       <div class="employee-detail__header-actions">
-        <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
+        @if (canWrite()) {
+          <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
+        }
         <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
       </div>
     </div>

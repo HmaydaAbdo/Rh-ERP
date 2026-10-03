@@ -8,7 +8,7 @@ import staport.rh.chantier.repositories.ChantierRepository;
 /**
  * Chaque méthode s'exécute dans sa propre transaction, appelée depuis {@link ChantierSyncService}
  * (bean distinct — un appel interne à une méthode @Transactional de la même classe contournerait
- * le proxy Spring). Isoler chaque upsert dans sa propre transaction évite qu'un conflit sur une
+ * le proxy Spring). Isoler chaque création dans sa propre transaction évite qu'un conflit sur une
  * ligne ERP invalide la session Hibernate pour le reste du lot.
  */
 @Component
@@ -21,26 +21,25 @@ public class ChantierSyncTransactionalOperations {
     }
 
     /**
-     * Réconciliation par {@code code} : id_chantier côté ERP n'est pas un identifiant fiable
-     * par chantier (voir Chantier.sourceErp).
+     * Crée le chantier si son {@code code} est absent, sinon ne touche à RIEN (décision du 2026-10-03 :
+     * toute modification d'un chantier existant se fait depuis l'UI, la synchronisation ne fait
+     * qu'ajouter les chantiers manquants). Rapprochement par {@code code}, insensible à la casse :
+     * id_chantier côté ERP n'est pas un identifiant fiable par chantier (voir Chantier.sourceErp).
+     *
+     * @return {@code true} si un chantier a été créé, {@code false} s'il existait déjà (inchangé)
      */
     @Transactional
-    public boolean upsert(ChantierErpDto record) {
-        Chantier chantier = repository.findByCodeIgnoreCase(record.code()).orElseGet(Chantier::new);
-        boolean isNew = chantier.getId() == null;
+    public boolean creerSiAbsent(ChantierErpDto record) {
+        if (repository.existsByCodeIgnoreCase(record.code())) {
+            return false;
+        }
 
+        Chantier chantier = new Chantier();
         chantier.setCode(record.code());
         chantier.setDesignation(record.designation());
         chantier.setSourceErp(true);
-        // L'ERP n'expose aucun champ actif/statut (seulement id_chantier, code, designation,
-        // CodeErreur) : on ne touche jamais actif sur une mise à jour, pour ne pas réactiver
-        // silencieusement un chantier désactivé manuellement. Seule la création applique le défaut
-        // actif=true (valeur par défaut de l'entité Chantier).
-        if (isNew) {
-            chantier.setActif(true);
-        }
-
+        chantier.setActif(true);
         repository.save(chantier);
-        return isNew;
+        return true;
     }
 }

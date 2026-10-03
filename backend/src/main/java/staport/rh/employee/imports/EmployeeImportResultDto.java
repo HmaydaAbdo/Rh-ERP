@@ -5,7 +5,6 @@ import java.util.List;
 public record EmployeeImportResultDto(
         int totalLignes,
         int crees,
-        int misAJour,
         int ignores,
         List<LigneIgnoreeDto> lignesIgnorees
 ) {

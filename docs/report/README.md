@@ -464,8 +464,8 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
 3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 5 cartes KPI, une seule page — la
    carte Masse affiche aussi le montant du mois précédent (ou `INTROUVABLE`) ; masse réelle, effectif,
    masse moyenne/employé, nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, UN SEUL
-   graphique à 4 séries (masse/effectif/STC en personnes/STC en DH), plafonné aux 15 plus gros
-   chantiers + "Autres" — voir « Visualisations ».
+   graphique à 4 séries (masse/effectif/STC en personnes/STC en DH), limité aux **10 chantiers qui
+   consomment le plus** (sans « Autres ») — voir « Visualisations ».
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 4. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
@@ -610,17 +610,29 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
   dans ce cas, voir « Architecture » — traité comme zéro, jamais la chaîne littérale "null", couvert
   par un test de non-régression dédié). Une valeur exactement nulle (ou `null`) n'a pas d'étiquette
   (la barre est de toute façon invisible) — son absence dit déjà "zéro" sans ambiguïté.
-- **Chaque barre au maximum de sa série est mise à l'échelle à 82 % du tracé** (`ECHELLE_MAX`,
-  `RapportChartSvgBuilder`), jamais 100 % — évite qu'une étiquette de barre au maximum se retrouve à
-  la toute limite du tracé et soit tronquée par son bord.
+- **Pleine largeur utile** : le dessin est construit en pt puis agrandi de 4/3 (`PX_PAR_PT`) pour occuper
+  les 802 pt de largeur utile de la page. Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs
+  `width`/`height` du SVG et dimensionne le dessin d'après son `viewBox`, en px (1 px = 0,75 pt) : sans cet
+  agrandissement, le graphique n'occupait que les trois quarts de la largeur (corrigé le 2026-10-03, test de
+  non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus long libellé
+  (48 à 200 pt) et la barre la plus longue de chaque série va jusqu'à la marge réservée à son étiquette de
+  valeur (64 pt à droite) — jamais 100 % de la largeur, pour que l'étiquette ne soit pas tronquée. La
+  hauteur du tracé est plafonnée à 292 pt (`HAUTEUR_TOTALE_CHART`) pour que graphique et légende tiennent
+  sous le bandeau, le titre de chapitre et les cartes KPI.
 - Légende obligatoire en bas (4 séries à distinguer). Palette fixe : Masse `#2563EB`, Effectif
   `#F59E0B`, STC personnes `#B91C1C`, STC DH `#7F1D1D` (les 2 nuances de STC restent dans la même
   famille de rouges, sous ses 2 représentations) — seule exception à la règle noir/blanc/gris du
   document (voir « Style visuel »).
-- **Plafonné aux 15 plus grosses valeurs** (`PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE`) au niveau
-  global (chapitre I) — le reste regroupé sous « Autres », masse/effectif/STC cumulés, toujours
-  retrié à sa vraie place. Pas de plafond au niveau « répartition par équipe » d'un chantier : le
-  nombre d'équipes distinctes au sein d'un même chantier reste naturellement modeste.
+- **Répartition par chantier (chapitre I) : les 10 chantiers qui consomment le plus**
+  (`PaieBiReportBuilder.MAX_CHANTIERS_GRAPHIQUE`, masse salariale décroissante, **sans** regroupement
+  « Autres » — demande de direction du 2026-10-03). Quand il y a plus de 10 chantiers, le titre de la
+  rubrique l'annonce : « Répartition par chantier — les 10 chantiers qui consomment le plus » ; sinon
+  « Répartition par chantier ». Le rapport reste exhaustif : chaque chantier garde sa propre section, seul
+  le graphique est limité.
+- Les autres distributions (fonction, calculée sans être affichée) restent plafonnées aux 15 plus grosses
+  valeurs (`MAX_BARRES_GRAPHIQUE`), le reste regroupé sous « Autres ». Pas de plafond au niveau
+  « répartition par équipe » d'un chantier : le nombre d'équipes distinctes au sein d'un même chantier
+  reste naturellement modeste.
 
 > **Historique** : ce graphique a connu plusieurs conventions antérieures côté JasperReports, toutes
 > abandonnées sur demande explicite de direction — barres verticales à série unique, puis colonnes

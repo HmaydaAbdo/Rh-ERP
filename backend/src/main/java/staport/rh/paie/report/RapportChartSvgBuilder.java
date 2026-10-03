@@ -25,17 +25,22 @@ import java.util.List;
 final class RapportChartSvgBuilder {
 
     private static final double LARGEUR_TOTALE = 802;
-    private static final double LARGEUR_LABEL_CATEGORIE = 140;
-    private static final double MARGE_DROITE = 65;
-    private static final double LARGEUR_PLOT = LARGEUR_TOTALE - LARGEUR_LABEL_CATEGORIE - MARGE_DROITE;
-    private static final double HAUTEUR_TOTALE_CHART = 340;
+    /** Largeur de la colonne des libellés : estimée d'après le plus long libellé (police 9 pt), bornée. */
+    private static final double LARGEUR_LABEL_MIN = 48;
+    private static final double LARGEUR_LABEL_MAX = 200;
+    private static final double LARGEUR_PAR_CARACTERE = 5.8;
+    /** Marge réservée à droite des barres pour l'étiquette de valeur (police 6 pt gras, ex. « 12 345 678,00 DH »). */
+    private static final double MARGE_DROITE = 64;
+    /** Hauteur maximale de la zone de tracé, en pt : le graphique (légende comprise) doit tenir sous le
+     * bandeau, le titre de chapitre et les cartes KPI d'une page paysage A4 (corps de page de 495 pt). */
+    private static final double HAUTEUR_TOTALE_CHART = 292;
+    /** Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs {@code width}/{@code height} du SVG et
+     * dimensionne le dessin d'après son {@code viewBox}, exprimé en px (1 px = 0,75 pt) : le repère de dessin
+     * ci-dessous est en pt, il est donc agrandi de 4/3 pour occuper TOUTE la largeur utile de la page (802 pt) —
+     * sans cela, le graphique n'en occupait que les trois quarts. */
+    private static final double PX_PAR_PT = 4.0 / 3;
     private static final double HAUTEUR_LEGENDE = 24;
     private static final double HAUTEUR_CATEGORIE_MAX = 44;
-
-    /** Plafond du plus long segment d'une série (jamais 100% de la largeur du plot, pour que son
-     * étiquette de valeur ne soit jamais coupée en bord de zone de tracé) — reconduit à l'identique
-     * depuis {@code PaieReportGroupedChartCustomizer.ECHELLE_MAX}. */
-    private static final double ECHELLE_MAX = 0.82;
 
     private record Serie(String nom, String couleur) {
     }
@@ -61,15 +66,18 @@ final class RapportChartSvgBuilder {
             maxParSerie[3] = Math.max(maxParSerie[3], valeurMontant(ligne.getStcMontant()));
         }
 
+        double largeurLabel = largeurColonneLibelles(donnees);
+        double largeurPlot = LARGEUR_TOTALE - largeurLabel - MARGE_DROITE;
         double hauteurCategorie = Math.min(HAUTEUR_CATEGORIE_MAX, HAUTEUR_TOTALE_CHART / donnees.size());
         double hauteurPlot = hauteurCategorie * donnees.size();
         double hauteurSvg = hauteurPlot + HAUTEUR_LEGENDE;
 
         Element svg = container.appendElement("svg")
                 .attr("xmlns", "http://www.w3.org/2000/svg")
-                .attr("width", format(LARGEUR_TOTALE * 4 / 3) + "px")
-                .attr("height", format(hauteurSvg * 4 / 3) + "px")
-                .attr("viewBox", "0 0 " + format(LARGEUR_TOTALE) + " " + format(hauteurSvg));
+                .attr("width", format(LARGEUR_TOTALE * PX_PAR_PT) + "px")
+                .attr("height", format(hauteurSvg * PX_PAR_PT) + "px")
+                .attr("viewBox", "0 0 " + format(LARGEUR_TOTALE * PX_PAR_PT) + " " + format(hauteurSvg * PX_PAR_PT));
+        Element dessin = svg.appendElement("g").attr("transform", "scale(" + PX_PAR_PT + ")");
 
         double groupeHauteur = hauteurCategorie * 0.85;
         double itemGap = groupeHauteur * 0.05;
@@ -79,8 +87,8 @@ final class RapportChartSvgBuilder {
             RepartitionBean ligne = donnees.get(i);
             double yCategorie = i * hauteurCategorie + (hauteurCategorie - groupeHauteur) / 2;
 
-            Element texteLabel = svg.appendElement("text")
-                    .attr("x", format(LARGEUR_LABEL_CATEGORIE - 6))
+            Element texteLabel = dessin.appendElement("text")
+                    .attr("x", format(largeurLabel - 6))
                     .attr("y", format(yCategorie + groupeHauteur / 2))
                     .attr("text-anchor", "end")
                     .attr("dominant-baseline", "middle")
@@ -90,11 +98,11 @@ final class RapportChartSvgBuilder {
             double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(), valeurMontant(ligne.getStcMontant())};
             for (int s = 0; s < SERIES.size(); s++) {
                 double y = yCategorie + s * (barHauteur + itemGap);
-                double largeur = maxParSerie[s] <= 0 ? 0 : (valeurs[s] / maxParSerie[s]) * ECHELLE_MAX * LARGEUR_PLOT;
+                double largeur = maxParSerie[s] <= 0 ? 0 : (valeurs[s] / maxParSerie[s]) * largeurPlot;
 
                 if (largeur > 0) {
-                    svg.appendElement("rect")
-                            .attr("x", format(LARGEUR_LABEL_CATEGORIE))
+                    dessin.appendElement("rect")
+                            .attr("x", format(largeurLabel))
                             .attr("y", format(y))
                             .attr("width", format(largeur))
                             .attr("height", format(barHauteur))
@@ -103,8 +111,8 @@ final class RapportChartSvgBuilder {
                     String libelleValeur = s == 0 || s == 3
                             ? libelleMontant(s == 0 ? ligne.getMontant() : ligne.getStcMontant())
                             : PaieReportNumberFormat.entier((int) valeurs[s]);
-                    svg.appendElement("text")
-                            .attr("x", format(LARGEUR_LABEL_CATEGORIE + largeur + 4))
+                    dessin.appendElement("text")
+                            .attr("x", format(largeurLabel + largeur + 4))
                             .attr("y", format(y + barHauteur / 2))
                             .attr("dominant-baseline", "middle")
                             .attr("font-size", "6")
@@ -114,11 +122,16 @@ final class RapportChartSvgBuilder {
             }
         }
 
-        ajouterLegende(svg, hauteurPlot);
+        ajouterLegende(dessin, hauteurPlot, largeurLabel);
     }
 
-    private void ajouterLegende(Element svg, double y) {
-        double x = LARGEUR_LABEL_CATEGORIE;
+    private double largeurColonneLibelles(List<RepartitionBean> donnees) {
+        int plusLong = donnees.stream().mapToInt(ligne -> ligne.getLibelle() == null ? 0 : ligne.getLibelle().length()).max().orElse(0);
+        return Math.max(LARGEUR_LABEL_MIN, Math.min(LARGEUR_LABEL_MAX, plusLong * LARGEUR_PAR_CARACTERE + 12));
+    }
+
+    private void ajouterLegende(Element svg, double y, double xDepart) {
+        double x = xDepart;
         for (Serie serie : SERIES) {
             svg.appendElement("rect")
                     .attr("x", format(x))

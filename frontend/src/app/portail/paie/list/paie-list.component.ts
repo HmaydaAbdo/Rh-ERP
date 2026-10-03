@@ -85,6 +85,18 @@ export class PaieListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
+  canWrite(): boolean {
+    return this.authService.hasPermission('PAIE_WRITE');
+  }
+
+  canImport(): boolean {
+    return this.authService.hasPermission('PAIE_IMPORT');
+  }
+
+  canExport(): boolean {
+    return this.authService.hasPermission('PAIE_EXPORT');
+  }
+
   canDelete(): boolean {
     return this.authService.hasPermission('PAIE_DELETE');
   }
@@ -214,7 +226,7 @@ export class PaieListComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Import terminé',
-            detail: `${result.crees} créé(s), ${result.misAJour} mis à jour sur ${result.totalLignes} ligne(s)${fonctionsCreeesDetail}`,
+            detail: `${result.crees} créé(s) sur ${result.totalLignes} ligne(s)${fonctionsCreeesDetail}`,
             life: 8000
           });
           this.fetchPage();

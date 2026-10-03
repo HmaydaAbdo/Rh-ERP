@@ -37,9 +37,10 @@ public class PaieImportController {
     @PostMapping
     @Operation(summary = "Importer des bulletins de paie pour une période depuis un fichier Excel. " +
             "Import atomique : une seule ligne invalide rejette tout le fichier. Une fonction absente du " +
-            "référentiel est créée automatiquement (jamais l'employé ni le chantier).")
+            "référentiel est créée automatiquement (jamais l'employé ni le chantier). Un bulletin déjà existant " +
+            "pour l'employé et la période rejette la ligne : l'import ne modifie jamais un bulletin.")
     @ApiResponse(responseCode = "400", description = "Période invalide, fichier illisible, ou au moins une ligne "
-            + "invalide (voir lignesIgnorees) — rien n'a été créé ou mis à jour")
+            + "invalide (voir lignesIgnorees) — rien n'a été créé")
     @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<PaieImportResultDto> importer(
             @RequestParam("file") MultipartFile file,

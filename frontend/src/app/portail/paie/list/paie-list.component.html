@@ -32,7 +32,6 @@
       Période <strong>{{ importResult.periode }}</strong> —
       <strong>{{ importResult.totalLignes }}</strong> ligne(s) traitée(s) —
       <strong>{{ importResult.crees }}</strong> créé(s),
-      <strong>{{ importResult.misAJour }}</strong> mis à jour,
       <strong>{{ importResult.ignores }}</strong> ignoré(s).
     </p>
 
@@ -73,25 +72,33 @@
   <div class="paie-list__header">
     <h1>Paie</h1>
     <div class="paie-list__header-actions">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-file-excel"
-        label="Modèle Excel"
-        class="p-button-outlined"
-        [loading]="downloadingTemplate"
-        (click)="onDownloadTemplate()"
-      ></button>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-download"
-        label="Exporter"
-        class="p-button-outlined"
-        (click)="showExportDialog = true"
-      ></button>
-      <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
-      <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
+      @if (canImport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-file-excel"
+          label="Modèle Excel"
+          class="p-button-outlined"
+          [loading]="downloadingTemplate"
+          (click)="onDownloadTemplate()"
+        ></button>
+      }
+      @if (canExport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-download"
+          label="Exporter"
+          class="p-button-outlined"
+          (click)="showExportDialog = true"
+        ></button>
+      }
+      @if (canImport()) {
+        <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
+      }
     </div>
   </div>
 
@@ -212,7 +219,9 @@
         }
         <td class="paie-list__actions text-center">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" (click)="onView(paie)"></button>
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="onEdit(paie)"></button>
+          @if (canWrite()) {
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="onEdit(paie)"></button>
+          }
           @if (canDelete()) {
             <button
               pButton

@@ -19,10 +19,12 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar "Employés" | Aucune (visible dès qu'authentifié) |
-| Route `/employees/**` | `authGuard` (authentification seule) |
-| Bouton "Supprimer" (liste) | `authService.hasPermission('EMPLOYEE_DELETE')` — voir `EmployeeListComponent.canDelete()` |
-| Boutons "Importer" / "Modèle Excel" | Aucune vérification frontend dédiée — repose sur le 403 backend si `EMPLOYEE_IMPORT` manque |
+| Lien sidebar « Employés » | `EMPLOYEE_READ` |
+| Routes `/employees` et `/employees/:id` | `authGuard` + `permissionGuard` (`EMPLOYEE_READ`) |
+| Routes `/employees/new` et `/employees/:id/edit` | `authGuard` + `permissionGuard` (`EMPLOYEE_WRITE`) |
+| Boutons « Nouvel employé » et « Modifier » (liste, détail) | `EMPLOYEE_WRITE` — `canWrite()` |
+| Boutons « Importer » / « Modèle Excel » | `EMPLOYEE_IMPORT` — `canImport()` |
+| Bouton « Supprimer » (liste) | `EMPLOYEE_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)
 

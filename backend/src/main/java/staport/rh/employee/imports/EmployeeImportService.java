@@ -41,20 +41,19 @@ import java.util.Set;
 
 /**
  * Import d'un fichier Excel employés (colonnes : Date d'embauche, Nom &amp; prénom, CIN, Fonction,
- * Chantier, Date de naissance — une ligne d'en-tête). L'employé est identifié par son CIN : une
- * ligne dont le CIN correspond à un employé existant le **met à jour** (tous les champs de la ligne
- * remplacent les valeurs existantes, sauf le statut — voir plus bas — ré-import = correction, jamais
- * un merge partiel), une ligne dont le CIN est inédit **crée** un nouvel employé (toujours actif).
- * Import atomique : soit toutes les lignes valides sont créées/mises à jour, soit rien n'est
- * persisté — une seule ligne invalide rejette tout le fichier. Le résultat détaille toujours chaque
- * ligne en cause, même en cas de rejet complet. Fonction et Chantier sont résolus par libellé/code
- * parmi les référentiels existants (Chantier doit en plus être actif) — ils doivent exister au
- * préalable (import Function, synchronisation Chantier ou saisie manuelle) ; l'import Employee ne
- * crée jamais de Fonction ni de Chantier automatiquement.
+ * Chantier, Date de naissance — une ligne d'en-tête). L'employé est identifié par son CIN. L'import ne
+ * sert qu'à **ajouter** de nouveaux employés : il ne modifie jamais un employé existant (décision du
+ * 2026-10-03, toute modification se fait depuis l'écran Employés) — une ligne dont le CIN existe déjà en
+ * base est rejetée. Les employés créés sont toujours actifs.
+ * Import atomique : soit toutes les lignes sont créées, soit rien n'est persisté — une seule ligne
+ * invalide rejette tout le fichier. Le résultat détaille toujours chaque ligne en cause, même en cas de
+ * rejet complet. Fonction et Chantier sont résolus par libellé/code parmi les référentiels existants
+ * (Chantier doit en plus être actif) — ils doivent exister au préalable (import Function, synchronisation
+ * Chantier ou saisie manuelle) ; l'import Employee ne crée jamais de Fonction ni de Chantier
+ * automatiquement.
  *
  * Le statut (actif/inactif) n'est pas une colonne de ce format — il ne peut être modifié en masse
- * par cet import, uniquement via l'UI (formulaire) ligne par ligne ; une mise à jour ne touche donc
- * jamais le statut existant d'un employé.
+ * par cet import, uniquement via l'UI (formulaire) ligne par ligne.
  */
 @Service
 public class EmployeeImportService {
@@ -93,6 +92,7 @@ public class EmployeeImportService {
 
             Map<String, Long> fonctionsParLibelle = chargerFonctions();
             Map<String, Long> chantiersParCode = chargerChantiersActifs();
+            Set<String> cinsExistants = repository.findAllCinsEnMajuscules();
 
             int numeroLigne = 0;
             for (Row row : sheet) {
@@ -113,7 +113,7 @@ public class EmployeeImportService {
                 LocalDate dateNaissance = getCellAsLocalDate(row.getCell(5));
 
                 String raison = validerLigne(nomPrenom, cin, dateNaissance, dateEmbauche,
-                        fonctionLibelle, chantierCode, cinsTraites, fonctionsParLibelle, chantiersParCode);
+                        fonctionLibelle, chantierCode, cinsTraites, cinsExistants, fonctionsParLibelle, chantiersParCode);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
@@ -140,41 +140,24 @@ public class EmployeeImportService {
         if (!lignesIgnorees.isEmpty()) {
             log.warn("Import employés rejeté : {} ligne(s) invalide(s) sur {}, rien persisté",
                     lignesIgnorees.size(), totalLignes);
-            return new EmployeeImportResultDto(totalLignes, 0, 0, lignesIgnorees.size(), lignesIgnorees);
+            return new EmployeeImportResultDto(totalLignes, 0, lignesIgnorees.size(), lignesIgnorees);
         }
 
-        // Le chargement et la mutation des employés existants ne se font qu'ici, une fois le fichier
-        // entier confirmé valide : une entité JPA gérée mutée plus tôt serait susceptible d'être
-        // persistée par le dirty-checking d'Hibernate même si l'import est rejeté ensuite (flush
-        // automatique déclenché par une requête ultérieure ou par le commit de la transaction).
-        int crees = 0;
-        int misAJour = 0;
         for (LigneAAppliquer ligne : aAppliquer) {
-            Employee employe = repository.findByCinIgnoreCase(ligne.cin()).orElseGet(Employee::new);
-            boolean isNew = employe.getId() == null;
-
+            Employee employe = new Employee();
             employe.setNomPrenom(ligne.nomPrenom());
             employe.setCin(ligne.cin());
             employe.setDateNaissance(ligne.dateNaissance());
             employe.setDateEmbauche(ligne.dateEmbauche());
             employe.setFonction(entityManager.getReference(Function.class, ligne.fonctionId()));
             employe.setChantier(entityManager.getReference(Chantier.class, ligne.chantierId()));
-            if (isNew) {
-                employe.setStatut(EmployeeStatut.ACTIF);
-            }
-            // Sinon (mise à jour) : le statut existant n'est jamais modifié par cet import.
-
+            employe.setStatut(EmployeeStatut.ACTIF);
             repository.save(employe);
-            if (isNew) {
-                crees++;
-            } else {
-                misAJour++;
-            }
         }
 
-        log.info("Import employés terminé : total={}, créés={}, misAJour={}", totalLignes, crees, misAJour);
+        log.info("Import employés terminé : total={}, créés={}", totalLignes, aAppliquer.size());
 
-        return new EmployeeImportResultDto(totalLignes, crees, misAJour, 0, lignesIgnorees);
+        return new EmployeeImportResultDto(totalLignes, aAppliquer.size(), 0, lignesIgnorees);
     }
 
     private record LigneAAppliquer(String nomPrenom, String cin, LocalDate dateNaissance, LocalDate dateEmbauche,
@@ -183,6 +166,7 @@ public class EmployeeImportService {
 
     private String validerLigne(String nomPrenom, String cin, LocalDate dateNaissance, LocalDate dateEmbauche,
                                  String fonctionLibelle, String chantierCode, Set<String> cinsTraites,
+                                 Set<String> cinsExistants,
                                  Map<String, Long> fonctionsParLibelle, Map<String, Long> chantiersParCode) {
         List<String> champsManquants = new ArrayList<>();
         if (nomPrenom == null || nomPrenom.isBlank()) {
@@ -214,6 +198,9 @@ public class EmployeeImportService {
         String cinNormalise = cin.trim().toUpperCase();
         if (cinsTraites.contains(cinNormalise)) {
             return "CIN en doublon dans le fichier";
+        }
+        if (cinsExistants.contains(cinNormalise)) {
+            return "Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)";
         }
 
         if (!fonctionsParLibelle.containsKey(fonctionLibelle.trim().toUpperCase())) {

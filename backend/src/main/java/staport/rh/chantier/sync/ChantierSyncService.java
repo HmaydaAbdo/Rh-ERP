@@ -36,8 +36,8 @@ public class ChantierSyncService {
         try {
             ChantierSyncResultDto result = doSynchronize();
             metrics.recordSuccess(System.currentTimeMillis() - start);
-            log.info("Synchronisation chantiers terminée : reçus={}, créés={}, misAJour={}, ignorés={}",
-                    result.totalRecus(), result.crees(), result.misAJour(), result.ignores());
+            log.info("Synchronisation chantiers terminée : reçus={}, créés={}, déjàPrésents={}, ignorés={}",
+                    result.totalRecus(), result.crees(), result.dejaPresents(), result.ignores());
             return result;
         } catch (Exception e) {
             metrics.recordFailure(System.currentTimeMillis() - start);
@@ -50,7 +50,7 @@ public class ChantierSyncService {
         List<ChantierErpDto> records = client.fetchChantiers();
 
         int crees = 0;
-        int misAJour = 0;
+        int dejaPresents = 0;
         int ignores = 0;
 
         for (ChantierErpDto record : records) {
@@ -61,11 +61,10 @@ public class ChantierSyncService {
             }
 
             try {
-                boolean isNew = transactionalOperations.upsert(record);
-                if (isNew) {
+                if (transactionalOperations.creerSiAbsent(record)) {
                     crees++;
                 } else {
-                    misAJour++;
+                    dejaPresents++;
                 }
             } catch (DataIntegrityViolationException e) {
                 log.warn("Ligne ERP ignorée (conflit d'intégrité) : code={}", record.code());
@@ -75,6 +74,6 @@ public class ChantierSyncService {
 
         metrics.recordIgnoredRecords(ignores);
 
-        return new ChantierSyncResultDto(records.size(), crees, misAJour, ignores);
+        return new ChantierSyncResultDto(records.size(), crees, dejaPresents, ignores);
     }
 }

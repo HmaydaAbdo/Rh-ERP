@@ -6,6 +6,7 @@ import { TagModule } from 'primeng/tag';
 
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
   selector: 'app-employee-detail',
@@ -15,6 +16,12 @@ import { EmployeeService } from '../services/employee.service';
   styleUrl: './employee-detail.component.scss'
 })
 export class EmployeeDetailComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+
+  canWrite(): boolean {
+    return this.authService.hasPermission('EMPLOYEE_WRITE');
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly employeeService = inject(EmployeeService);
 

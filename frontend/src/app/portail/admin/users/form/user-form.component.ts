@@ -4,7 +4,6 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
@@ -12,6 +11,8 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PasswordModule } from 'primeng/password';
 import { finalize, forkJoin, switchMap } from 'rxjs';
 
+import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
+import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
 import { PermissionSummary, Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
@@ -29,7 +30,7 @@ import { UserService } from '../../services/user.service';
     PasswordModule,
     MultiSelectModule,
     InputSwitchModule,
-    InputNumberModule,
+    LazySelectComponent,
     CheckboxModule
   ],
   templateUrl: './user-form.component.html',
@@ -39,6 +40,7 @@ export class UserFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UserService);
   private readonly roleService = inject(RoleService);
+  readonly employeeReferenceService = inject(EmployeeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);

@@ -31,10 +31,10 @@ public class EmployeeImportController {
     }
 
     @PostMapping
-    @Operation(summary = "Importer/mettre à jour des employés depuis un fichier Excel (CIN inédit = création, "
-            + "CIN existant = mise à jour complète de la ligne). Import atomique : une seule ligne invalide "
-            + "rejette tout le fichier.")
-    @ApiResponse(responseCode = "400", description = "Fichier illisible, ou au moins une ligne invalide (voir lignesIgnorees) — rien n'a été créé ni mis à jour")
+    @Operation(summary = "Importer de nouveaux employés depuis un fichier Excel (un CIN déjà présent en base "
+            + "rejette la ligne : l'import ne modifie jamais un employé existant). Import atomique : une seule "
+            + "ligne invalide rejette tout le fichier.")
+    @ApiResponse(responseCode = "400", description = "Fichier illisible, ou au moins une ligne invalide (voir lignesIgnorees) — rien n'a été créé")
     @PreAuthorize("hasAuthority('EMPLOYEE_IMPORT')")
     public ResponseEntity<EmployeeImportResultDto> importer(@RequestParam("file") MultipartFile file) {
         EmployeeImportResultDto resultat = importService.importer(file);

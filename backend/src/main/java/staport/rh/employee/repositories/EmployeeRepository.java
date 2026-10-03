@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import staport.rh.employee.entities.Employee;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
@@ -25,4 +26,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
     boolean existsByCinIgnoreCase(String cin);
 
     Optional<Employee> findByCinIgnoreCase(String cin);
+
+    /** CIN de tous les employés, en majuscules — l'import Excel ne modifie jamais un employé existant,
+     * il rejette la ligne dont le CIN existe déjà. */
+    @Query("SELECT UPPER(e.cin) FROM Employee e")
+    Set<String> findAllCinsEnMajuscules();
 }

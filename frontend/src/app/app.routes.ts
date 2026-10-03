@@ -1,9 +1,14 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth/guards/auth.guard';
+import { authGuard, homeGuard } from './core/auth/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'paie', pathMatch: 'full' },
+  { path: '', pathMatch: 'full', canActivate: [homeGuard], children: [] },
+  {
+    path: 'acces-refuse',
+    canActivate: [authGuard],
+    loadComponent: () => import('./core/auth/access-denied/access-denied.component').then((m) => m.AccessDeniedComponent)
+  },
   {
     path: 'login',
     loadComponent: () => import('./core/auth/login/login.component').then((m) => m.LoginComponent)

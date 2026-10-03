@@ -103,7 +103,6 @@ export interface PaieImportResult {
   periode: string;
   totalLignes: number;
   crees: number;
-  misAJour: number;
   ignores: number;
   lignesIgnorees: PaieImportLigneIgnoree[];
   fonctionsCreees: string[];

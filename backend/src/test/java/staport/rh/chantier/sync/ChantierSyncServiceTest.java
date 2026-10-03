@@ -37,14 +37,14 @@ class ChantierSyncServiceTest {
         ChantierErpDto nouveau = new ChantierErpDto(1L, "Chantier neuf", "C001", 0);
         ChantierErpDto existant = new ChantierErpDto(2L, "Chantier existant", "C002", 0);
         when(client.fetchChantiers()).thenReturn(List.of(nouveau, existant));
-        when(transactionalOperations.upsert(nouveau)).thenReturn(true);
-        when(transactionalOperations.upsert(existant)).thenReturn(false);
+        when(transactionalOperations.creerSiAbsent(nouveau)).thenReturn(true);
+        when(transactionalOperations.creerSiAbsent(existant)).thenReturn(false);
 
         ChantierSyncResultDto result = syncService.synchroniser();
 
         assertThat(result.totalRecus()).isEqualTo(2);
         assertThat(result.crees()).isEqualTo(1);
-        assertThat(result.misAJour()).isEqualTo(1);
+        assertThat(result.dejaPresents()).isEqualTo(1);
         assertThat(result.ignores()).isZero();
         verify(metrics).recordSuccess(anyLong());
     }
@@ -53,13 +53,13 @@ class ChantierSyncServiceTest {
     void synchroniser_devraitTraiterUneLigneMemeQuandCodeErreurEstNonNul() {
         ChantierErpDto ligneEnErreurErp = new ChantierErpDto(1L, "Chantier en erreur ERP", "C001", 5);
         when(client.fetchChantiers()).thenReturn(List.of(ligneEnErreurErp));
-        when(transactionalOperations.upsert(ligneEnErreurErp)).thenReturn(true);
+        when(transactionalOperations.creerSiAbsent(ligneEnErreurErp)).thenReturn(true);
 
         ChantierSyncResultDto result = syncService.synchroniser();
 
         assertThat(result.crees()).isEqualTo(1);
         assertThat(result.ignores()).isZero();
-        verify(transactionalOperations).upsert(ligneEnErreurErp);
+        verify(transactionalOperations).creerSiAbsent(ligneEnErreurErp);
     }
 
     @Test
@@ -71,7 +71,7 @@ class ChantierSyncServiceTest {
 
         assertThat(result.ignores()).isEqualTo(1);
         assertThat(result.crees()).isZero();
-        verify(transactionalOperations, never()).upsert(any());
+        verify(transactionalOperations, never()).creerSiAbsent(any());
         verify(metrics).recordIgnoredRecords(1);
     }
 
@@ -80,14 +80,14 @@ class ChantierSyncServiceTest {
         ChantierErpDto record1 = new ChantierErpDto(1L, "Chantier 1", "C001", 0);
         ChantierErpDto record2 = new ChantierErpDto(2L, "Chantier 2", "C002", 0);
         when(client.fetchChantiers()).thenReturn(List.of(record1, record2));
-        when(transactionalOperations.upsert(record1)).thenThrow(new DataIntegrityViolationException("conflit"));
-        when(transactionalOperations.upsert(record2)).thenReturn(true);
+        when(transactionalOperations.creerSiAbsent(record1)).thenThrow(new DataIntegrityViolationException("conflit"));
+        when(transactionalOperations.creerSiAbsent(record2)).thenReturn(true);
 
         ChantierSyncResultDto result = syncService.synchroniser();
 
         assertThat(result.ignores()).isEqualTo(1);
         assertThat(result.crees()).isEqualTo(1);
-        verify(transactionalOperations, times(2)).upsert(any());
+        verify(transactionalOperations, times(2)).creerSiAbsent(any());
     }
 
     @Test
@@ -101,6 +101,6 @@ class ChantierSyncServiceTest {
         }
 
         verify(metrics).recordFailure(anyLong());
-        verify(transactionalOperations, never()).upsert(any());
+        verify(transactionalOperations, never()).creerSiAbsent(any());
     }
 }

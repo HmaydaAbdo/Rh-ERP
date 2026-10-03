@@ -150,14 +150,58 @@ class AuthServiceTest {
     void refresh_devraitEchouerSiTokenDejaRevoque() {
         RefreshToken existant = new RefreshToken();
         existant.setUtilisateur(utilisateur);
+        existant.setFamille("famille-1");
         existant.setExpireLe(Instant.now().plusSeconds(3600));
         existant.setRevoque(true);
 
         when(tokenHasher.hasher("vole")).thenReturn("hash-vole");
         when(refreshTokenRepository.findByTokenHash("hash-vole")).thenReturn(Optional.of(existant));
+        when(refreshTokenRepository.findAllByFamilleAndRevoqueFalse("famille-1")).thenReturn(List.of());
 
         assertThatThrownBy(() -> authService.refresh("vole"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void refresh_devraitRevoquerToutLaFamilleQuandUnTokenConsommeEstReutilise() {
+        RefreshToken consomme = new RefreshToken();
+        consomme.setUtilisateur(utilisateur);
+        consomme.setFamille("famille-1");
+        consomme.setExpireLe(Instant.now().plusSeconds(3600));
+        consomme.setRevoque(true);
+        // Token actif issu de la dernière rotation, détenu par le propriétaire légitime.
+        RefreshToken actif = new RefreshToken();
+        actif.setUtilisateur(utilisateur);
+        actif.setFamille("famille-1");
+        actif.setExpireLe(Instant.now().plusSeconds(3600));
+
+        when(tokenHasher.hasher("rejoue")).thenReturn("hash-rejoue");
+        when(refreshTokenRepository.findByTokenHash("hash-rejoue")).thenReturn(Optional.of(consomme));
+        when(refreshTokenRepository.findAllByFamilleAndRevoqueFalse("famille-1")).thenReturn(List.of(actif));
+
+        assertThatThrownBy(() -> authService.refresh("rejoue"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+
+        assertThat(actif.isRevoque()).isTrue();
+        verify(refreshTokenRepository).saveAll(List.of(actif));
+    }
+
+    @Test
+    void refresh_devraitConserverLaFamilleLorsDeLaRotation() {
+        RefreshToken existant = new RefreshToken();
+        existant.setUtilisateur(utilisateur);
+        existant.setFamille("famille-1");
+        existant.setExpireLe(Instant.now().plusSeconds(3600));
+
+        when(tokenHasher.hasher("ancien-brut")).thenReturn("ancien-hash");
+        when(refreshTokenRepository.findByTokenHash("ancien-hash")).thenReturn(Optional.of(existant));
+        stubEmission();
+
+        authService.refresh("ancien-brut");
+
+        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(1).getFamille()).isEqualTo("famille-1");
     }
 
     @Test

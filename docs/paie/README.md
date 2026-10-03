@@ -94,14 +94,13 @@ rétroactive ou automatique des bulletins déjà existants.
   pour un employé/mois différent, jamais à réassigner un bulletin existant.
 - `fonction`/`chantier` restent modifiables après création (correction d'une erreur de saisie),
   `equipe` aussi (`equipeId`, facultatif : `null` = sans équipe ; un id inconnu est rejeté).
-- `salaireTotal` n'est **jamais saisi** — ni via l'API (absent de `PaieCreateRequestDto` et
-  `PaieUpdateRequestDto`), ni via l'import Excel (colonne "Total" du fichier ignorée). Il est
-  systématiquement recalculé côté serveur (`Paie.calculerSalaireTotal()`) à partir de
-  `salaireMensuel + primeRoulageOrdinaire + primeRoulageDimanche` (primes nulles comptées pour zéro),
-  à la création comme à la modification. Aucun setter public n'existe sur l'entité pour ce champ.
-  C'est un premier pas vers le calcul automatique complet acté comme décision produit (voir
-  [TODO.md](../../TODO.md)) : à terme, la paie doit se calculer depuis le Pointage, sans saisie
-  manuelle d'aucune valeur calculable.
+- `salaireTotal` est **saisi (formulaire/API) ou repris du fichier (import Excel, colonne « Total »)
+  tel quel**, jamais recalculé par le serveur : pour la main-d'œuvre journalière, `salaireMensuel`
+  porte le tarif journalier et le total vaut tarif × jours (ex. 120 × 31 = 3 720), ce qu'une somme
+  `salaireMensuel + primes` fausserait. Le formulaire propose un aperçu de saisie, mais le champ
+  reste modifiable. Décision du 2026-10-03 : pour l'instant la paie n'est **pas calculée**, elle est prise telle que
+  saisie (formulaire) ou importée (Excel) ; un calcul automatique à partir du Pointage reste une évolution
+  envisagée (voir [TODO.md](../../TODO.md), « Domaines restants »).
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage particulière au-delà de
   l'existence du bulletin.
 
@@ -140,9 +139,8 @@ permission et `conventions/security.md` pour la conception du RBAC.
 `GET /paie/import/modele` (bouton "Modèle Excel" dans l'UI) renvoie un fichier `.xlsx` vierge avec
 les trois lignes d'en-tête et les 13 colonnes dans l'ordre attendu, généré par
 `PaieImportService.genererModele()` — pour que l'utilisateur parte d'un fichier au bon format plutôt
-que de deviner ou de réutiliser un fichier dont la structure a pu changer. La colonne "Total" est
-étiquetée *"Total (calculé automatiquement)"* plutôt que retirée, pour ne pas décaler les colonnes
-suivantes (Observation, Chantier, Équipe) par rapport aux fichiers mensuels déjà utilisés.
+que de deviner ou de réutiliser un fichier dont la structure a pu changer. La colonne « Total » est
+lue telle quelle (voir « Règles métier »).
 
 ### Format attendu
 
@@ -160,7 +158,7 @@ ordre exact :
 | G | Salaire mensuel |
 | H | Prime roulage ordinaire |
 | I | Prime roulage dimanche |
-| J | Total — **ignorée**, `salaireTotal` est toujours recalculé (G + H + I), quelle que soit la valeur de cette colonne |
+| J | Total — repris **tel quel** dans `salaireTotal` (obligatoire, jamais recalculé) |
 | K | Observation |
 | L | Chantier (code, doit exister et être actif) |
 | M | Équipe (code d'une équipe **existante**, facultative — un code inconnu rejette la ligne, l'équipe n'est jamais créée par l'import) |
@@ -181,7 +179,7 @@ un chantier inconnu reste le signe d'une vraie erreur de saisie à corriger.
 ### Comportement
 
 Import **atomique** (tout ou rien) — une seule ligne invalide rejette tout le fichier, rien n'est
-créé ni mis à jour, **aucune fonction n'est créée non plus** :
+créé, **aucune fonction n'est créée non plus** :
 
 | Cas | Message affiché |
 |---|---|
@@ -189,11 +187,14 @@ créé ni mis à jour, **aucune fonction n'est créée non plus** :
 | CIN sans employé correspondant | `Employé introuvable avec ce CIN` |
 | CIN présent plus d'une fois dans le fichier | `CIN en doublon dans le fichier` |
 | Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |
-| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, `misAJour = 0`, détail complet dans `lignesIgnorees` |
-| Toutes les lignes valides | `200 OK`, tous les bulletins créés/mis à jour, fonctions manquantes créées |
+| Bulletin déjà existant pour cet employé et cette période | `Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)` |
+| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, détail complet dans `lignesIgnorees` |
+| Toutes les lignes valides | `200 OK`, tous les bulletins créés, fonctions manquantes créées |
 
-**Ré-import = correction, pas doublon** : si un bulletin existe déjà pour (employé, période), il est
-**mis à jour**, jamais dupliqué.
+**L'import ne modifie jamais un bulletin existant** (décision du 2026-10-03) : si un bulletin existe déjà
+pour (employé, période), la ligne est rejetée — donc tout le fichier. La correction d'un bulletin se
+fait uniquement depuis l'écran Paie (`PUT /paie/{id}`). Pour ré-importer un mois, supprimer d'abord les
+bulletins concernés.
 
 Toutes les lignes sont d'abord validées, en ne gardant en mémoire que les valeurs brutes de chaque
 ligne (pas d'entité JPA, pas de libellé de fonction résolu). La création des fonctions manquantes, la
@@ -205,10 +206,10 @@ mutation serait persistée, même si l'import est finalement rejeté à cause d'
 fonctions manquantes sont dédupliquées avant création : si dix lignes du même fichier référencent un
 même libellé inédit, il n'est créé qu'une fois.
 
-`salaireTotal` est recalculé pour chaque ligne (`Paie.calculerSalaireTotal()`) après résolution des
-montants — la colonne J du fichier n'est jamais lue.
+`salaireTotal` est repris de la colonne J du fichier, sans recalcul ; une ligne sans total valide est
+rejetée (champ obligatoire).
 
-`PaieImportResultDto` : `periode`, `totalLignes`, `crees`, `misAJour`, `ignores`, `lignesIgnorees[]`
+`PaieImportResultDto` : `periode`, `totalLignes`, `crees`, `ignores`, `lignesIgnorees[]`
 (`numeroLigne`, `cin`, `nomPrenom`, `raison`), `fonctionsCreees[]` (libellés des fonctions créées par
 cet import, pour transparence — l'UI les affiche explicitement dans le toast et le détail du
 résultat). Le corps de réponse a la même forme en succès (`200`) qu'en rejet (`400`) — seul le code

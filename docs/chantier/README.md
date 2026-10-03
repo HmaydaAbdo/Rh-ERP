@@ -35,7 +35,7 @@ chantier/
 └── sync/
     ├── ChantierErpDto.java                    ← forme brute de la réponse ERP
     ├── ChantierSyncClient.java                ← appel HTTP à l'ERP
-    ├── ChantierSyncTransactionalOperations.java ← upsert, une transaction par ligne
+    ├── ChantierSyncTransactionalOperations.java ← création si absent, une transaction par ligne
     ├── ChantierSyncService.java                ← orchestration, logs, métriques
     ├── ChantierSyncScheduler.java               ← déclenchement quotidien (@Scheduled)
     ├── ChantierSyncController.java              ← déclenchement manuel (POST /chantiers/sync)
@@ -65,22 +65,17 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 ## Règles métier
 
 - `code` est la clé métier, unique, insensible à la casse (`findByCodeIgnoreCase`).
-- La synchronisation est un **simple upsert par `code`**, sans filtrage ni désactivation :
-  - un chantier créé manuellement (`source_erp = false`) n'est jamais touché tant que son `code`
-    n'apparaît pas dans un import ERP ;
-  - un `code` synchronisé qui coïncide avec un chantier déjà existant (manuel ou non) est repris :
-    `designation` est écrasée, `source_erp` passe à `true` — comportement "code-first" assumé par
-    défaut, faute de règle métier explicite fournie (voir [TODO.md](../../TODO.md)) ;
-  - un chantier absent d'un import ERP **conserve son état précédent**, il n'est jamais désactivé
-    ni modifié par la synchronisation.
-- `actif` n'est jamais modifié par `upsert` sur un chantier déjà existant — seule la **création**
-  applique `actif = true` (valeur par défaut de l'entité). L'ERP n'expose aucun champ actif/statut
-  (seulement `id_chantier`, `code`, `designation`, `CodeErreur`), donc un chantier désactivé
-  manuellement ne peut jamais être réactivé silencieusement par la synchronisation. La seule façon de
-  changer `actif` est la modification manuelle (`PUT /chantiers/{id}`, formulaire `ChantierFormComponent`).
-- `nom` suit le même principe que `actif` : `upsert` ne le touche jamais, dans aucun cas (ni création
-  ni mise à jour) — l'ERP ne l'expose pas du tout, donc rien à réconcilier. Uniquement modifiable via
-  le formulaire (`PUT /chantiers/{id}`).
+- La synchronisation **ajoute uniquement les chantiers manquants** (décision du 2026-10-03 : toute
+  modification d'un chantier se fait depuis l'UI) :
+  - un `code` absent de la base (comparaison insensible à la casse) crée un chantier actif
+    (`source_erp = true`, `designation` issue de l'ERP) ;
+  - un `code` déjà présent (créé manuellement ou issu d'une synchronisation précédente) n'est **jamais
+    modifié** : ni `designation`, ni `actif`, ni `source_erp`, ni `nom` — il est simplement compté dans
+    `dejaPresents` ;
+  - un chantier absent d'un import ERP **conserve son état**, il n'est jamais désactivé ni supprimé.
+- `actif` et `nom` ne sont donc modifiables que par la saisie manuelle (`PUT /chantiers/{id}`,
+  formulaire `ChantierFormComponent`) ; l'ERP n'expose de toute façon ni statut ni `nom`
+  (seulement `id_chantier`, `code`, `designation`, `CodeErreur`).
 - La suppression (`DELETE /chantiers/{id}`) est bloquée (409) si le chantier est référencé par au
   moins un employé (contrainte de clé étrangère `employe.chantier_id`).
 
@@ -122,26 +117,26 @@ conception du RBAC.
    désérialisée en `List<ChantierErpDto>`).
 2. Pour chaque ligne :
    - `code` manquant/vide → ligne ignorée, `WARN` journalisé, compteur `ignores` incrémenté. C'est
-     le **seul** filtre appliqué avant upsert — `CodeErreur` (champ d'erreur de ligne côté ERP)
+     le **seul** filtre appliqué avant création — `CodeErreur` (champ d'erreur de ligne côté ERP)
      n'est **pas** utilisé : une ligne avec `CodeErreur != 0` est traitée exactement comme une ligne
      à `0`.
-   - Sinon, `ChantierSyncTransactionalOperations.upsert` est appelé (**une transaction par ligne**,
-     retourne un booléen `isNew` qui alimente `crees`/`misAJour`). Si l'upsert lève une
+   - Sinon, `ChantierSyncTransactionalOperations.creerSiAbsent` est appelé (**une transaction par ligne**,
+     retourne `true` si le chantier a été créé : `crees`, sinon `dejaPresents`). Si la création lève une
      `DataIntegrityViolationException` (ex. contrainte unique violée), la ligne est comptée dans
      `ignores`.
-3. Journaliser un résumé (`INFO`, compteurs `totalRecus`/`crees`/`misAJour`/`ignores`) et enregistrer
+3. Journaliser un résumé (`INFO`, compteurs `totalRecus`/`crees`/`dejaPresents`/`ignores`) et enregistrer
    les métriques.
 
 **Aucune désactivation automatique** : un chantier `source_erp = true` dont le `code` n'apparaît pas
 dans un import ERP (qu'il ait disparu de l'ERP, ou que sa ligne ait un `code` manquant) conserve
-simplement son état précédent — la synchronisation ne fait jamais que créer ou mettre à jour, jamais
+simplement son état précédent — la synchronisation ne fait jamais que créer, jamais modifier ni
 désactiver.
 
 ### Pourquoi une transaction par ligne ?
 
 Catcher une `DataIntegrityViolationException` au milieu d'une transaction JPA partagée peut laisser
 la session Hibernate dans un état inutilisable pour la suite du lot. `ChantierSyncTransactionalOperations`
-est donc un bean séparé dont la méthode `upsert` est `@Transactional` indépendamment pour chaque
+est donc un bean séparé dont la méthode `creerSiAbsent` est `@Transactional` indépendamment pour chaque
 appel, réalisé depuis `ChantierSyncService` (qui, lui, n'est pas transactionnel) — un échec sur une
 ligne reste isolé et n'affecte pas les lignes suivantes.
 

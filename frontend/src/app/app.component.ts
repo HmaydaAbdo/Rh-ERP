@@ -6,13 +6,7 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from './core/auth/services/auth.service';
-
-interface NavItem {
-  label: string;
-  icon: string;
-  route: string;
-  permission?: string;
-}
+import { NAV_ITEMS } from './core/navigation/nav-items';
 
 @Component({
   selector: 'app-root',
@@ -30,18 +24,8 @@ export class AppComponent {
   readonly user = this.authService.user;
   readonly isAuthenticated = this.authService.isAuthenticated;
 
-  private readonly allNavItems: NavItem[] = [
-    { label: 'Paie', icon: 'pi pi-wallet', route: '/paie' },
-    { label: 'Employés', icon: 'pi pi-users', route: '/employees' },
-    { label: 'Chantiers', icon: 'pi pi-building', route: '/chantiers' },
-    { label: 'Fonctions', icon: 'pi pi-briefcase', route: '/functions' },
-    { label: 'Équipes', icon: 'pi pi-sitemap', route: '/equipes', permission: 'EQUIPE_READ' },
-    { label: 'Utilisateurs', icon: 'pi pi-user-edit', route: '/admin/users', permission: 'USER_MANAGE' },
-    { label: 'Rôles', icon: 'pi pi-shield', route: '/admin/roles', permission: 'ROLE_MANAGE' }
-  ];
-
   readonly navItems = computed(() =>
-    this.allNavItems.filter((item) => !item.permission || this.authService.hasPermission(item.permission))
+    NAV_ITEMS.filter((item) => this.authService.hasPermission(item.permission))
   );
 
   onLogout(): void {

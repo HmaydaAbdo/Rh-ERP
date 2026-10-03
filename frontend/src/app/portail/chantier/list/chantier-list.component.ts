@@ -61,6 +61,14 @@ export class ChantierListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
+  canWrite(): boolean {
+    return this.authService.hasPermission('CHANTIER_WRITE');
+  }
+
+  canSync(): boolean {
+    return this.authService.hasPermission('CHANTIER_SYNC');
+  }
+
   canDelete(): boolean {
     return this.authService.hasPermission('CHANTIER_DELETE');
   }
@@ -143,7 +151,7 @@ export class ChantierListComponent implements OnInit {
         this.messageService.add({
           severity: 'success',
           summary: 'Synchronisation terminée',
-          detail: `${result.crees} créé(s), ${result.misAJour} mis à jour, ${result.ignores} ignoré(s)`,
+          detail: `${result.crees} créé(s), ${result.dejaPresents} déjà présent(s), ${result.ignores} ignoré(s)`,
           life: 8000
         });
         this.fetchPage();

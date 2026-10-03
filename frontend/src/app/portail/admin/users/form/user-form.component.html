@@ -41,8 +41,14 @@
 
       <div class="field">
         <label for="employeeId">Employé lié (optionnel)</label>
-        <p-inputNumber inputId="employeeId" formControlName="employeeId" [useGrouping]="false"></p-inputNumber>
-        <small>Identifiant de l'employé (référentiel Employee), laisser vide si aucun.</small>
+        <app-lazy-select
+          inputId="employeeId"
+          formControlName="employeeId"
+          [source]="employeeReferenceService"
+          optionLabel="displayLabel"
+          placeholder="Rechercher un employé par nom ou CIN"
+        ></app-lazy-select>
+        <small>Compte de connexion rattaché à un employé du référentiel — laisser vide si aucun.</small>
       </div>
 
       <div class="field">

@@ -6,6 +6,7 @@ import { TagModule } from 'primeng/tag';
 
 import { Chantier } from '../models/chantier.model';
 import { ChantierService } from '../services/chantier.service';
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
   selector: 'app-chantier-detail',
@@ -15,6 +16,12 @@ import { ChantierService } from '../services/chantier.service';
   styleUrl: './chantier-detail.component.scss'
 })
 export class ChantierDetailComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+
+  canWrite(): boolean {
+    return this.authService.hasPermission('CHANTIER_WRITE');
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly chantierService = inject(ChantierService);
 

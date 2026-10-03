@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -18,7 +19,7 @@ import java.time.Instant;
  * jamais le token en clair (même principe qu'un mot de passe).
  */
 @Entity
-@Table(name = "refresh_token")
+@Table(name = "refresh_token", indexes = @Index(name = "idx_refresh_token_famille", columnList = "famille"))
 public class RefreshToken {
 
     @Id
@@ -34,6 +35,10 @@ public class RefreshToken {
 
     @Column(name = "expire_le", nullable = false)
     private Instant expireLe;
+
+    /** Identifiant de la connexion d'origine : identique pour un token et tous ceux issus de ses rotations. */
+    @Column(name = "famille", nullable = false, length = 36)
+    private String famille;
 
     @Column(name = "revoque", nullable = false)
     private boolean revoque = false;
@@ -58,6 +63,14 @@ public class RefreshToken {
 
     public void setUtilisateur(Utilisateur utilisateur) {
         this.utilisateur = utilisateur;
+    }
+
+    public String getFamille() {
+        return famille;
+    }
+
+    public void setFamille(String famille) {
+        this.famille = famille;
     }
 
     public String getTokenHash() {

@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class AuthService implements IAuthService {
@@ -71,23 +72,37 @@ public class AuthService implements IAuthService {
         }
 
         log.info("Connexion réussie : username={}", username);
-        return emettreConnexion(utilisateur);
+        return emettreConnexion(utilisateur, UUID.randomUUID().toString());
     }
 
+    /**
+     * Rotation à usage unique. Un token déjà révoqué qui est présenté de nouveau signale un vol possible
+     * (le voleur et le propriétaire légitime ont chacun le même token) : toute la famille du token est
+     * alors révoquée, ce qui force une reconnexion complète. {@code noRollbackFor} : cette révocation doit
+     * rester enregistrée même si la méthode se termine par l'exception qui rejette la requête.
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public Connexion refresh(String refreshTokenBrut) {
         RefreshToken existant = refreshTokenRepository.findByTokenHash(tokenHasher.hasher(refreshTokenBrut))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
-        if (existant.isRevoque() || existant.getExpireLe().isBefore(Instant.now())) {
+        if (existant.isRevoque()) {
+            List<RefreshToken> famille = refreshTokenRepository.findAllByFamilleAndRevoqueFalse(existant.getFamille());
+            famille.forEach(token -> token.setRevoque(true));
+            refreshTokenRepository.saveAll(famille);
+            log.warn("Refresh token déjà consommé réutilisé : famille révoquée ({} token(s) actif(s)), utilisateurId={}",
+                    famille.size(), existant.getUtilisateur().getId());
+            throw new InvalidRefreshTokenException();
+        }
+        if (existant.getExpireLe().isBefore(Instant.now())) {
             throw new InvalidRefreshTokenException();
         }
 
         existant.setRevoque(true);
         refreshTokenRepository.save(existant);
 
-        return emettreConnexion(existant.getUtilisateur());
+        return emettreConnexion(existant.getUtilisateur(), existant.getFamille());
     }
 
     @Override
@@ -141,7 +156,7 @@ public class AuthService implements IAuthService {
         log.info("Mot de passe réinitialisé via lien email : utilisateurId={}", utilisateur.getId());
     }
 
-    private Connexion emettreConnexion(Utilisateur utilisateur) {
+    private Connexion emettreConnexion(Utilisateur utilisateur, String famille) {
         Set<String> permissions = permissionResolver.resolve(utilisateur);
         Set<String> roles = permissionResolver.roleNames(utilisateur);
         String accessToken = jwtService.genererAccessToken(utilisateur, permissions, roles);
@@ -149,6 +164,7 @@ public class AuthService implements IAuthService {
         String refreshTokenBrut = tokenHasher.genererTokenBrut();
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUtilisateur(utilisateur);
+        refreshToken.setFamille(famille);
         refreshToken.setTokenHash(tokenHasher.hasher(refreshTokenBrut));
         refreshToken.setExpireLe(Instant.now().plus(REFRESH_TOKEN_TTL));
         refreshTokenRepository.save(refreshToken);

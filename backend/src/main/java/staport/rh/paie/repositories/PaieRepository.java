@@ -14,6 +14,7 @@ import staport.rh.paie.entities.Paie;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificationExecutor<Paie> {
@@ -28,7 +29,10 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
 
     boolean existsByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
 
-    Optional<Paie> findByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
+    /** Employés qui ont déjà un bulletin pour cette période — l'import ne modifie jamais un bulletin
+     * existant (modification depuis l'écran Paie uniquement). */
+    @Query("SELECT p.employee.id FROM Paie p WHERE p.periode = :periode")
+    Set<Long> findEmployeeIdsByPeriode(@Param("periode") YearMonth periode);
 
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
