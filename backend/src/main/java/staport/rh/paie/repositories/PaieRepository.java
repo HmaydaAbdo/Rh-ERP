@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import staport.rh.equipe.entities.Equipe;
 import staport.rh.paie.entities.Paie;
 
 import java.time.YearMonth;
@@ -37,11 +36,23 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
 
-    @Query("SELECT DISTINCT e FROM Paie p JOIN p.equipe e " +
-            "WHERE p.chantier.code = :chantierCode AND p.periode = :periode " +
-            "ORDER BY e.code")
-    List<Equipe> findDistinctEquipesByChantierCodeAndPeriode(@Param("chantierCode") String chantierCode,
-                                                              @Param("periode") YearMonth periode);
+    /** Un résumé par mois qui contient de la paie, du plus récent au plus ancien — une seule requête groupée,
+     * pour que l'assistant d'export connaisse d'un coup les mois disponibles et leur contenu. Le décompte STC
+     * reproduit {@code ObservationStc.estStcOuSortie} en JPQL (même définition que le rapport). */
+    @Query("SELECT p.periode AS periode, COUNT(p) AS bulletins, COUNT(DISTINCT p.chantier.id) AS chantiers, " +
+            "SUM(p.salaireTotal) AS masse, " +
+            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc " +
+            "FROM Paie p GROUP BY p.periode ORDER BY p.periode DESC")
+    List<PaiePeriodeProjection> resumerParPeriode();
+
+    /** Effectif et masse de chaque couple (chantier, équipe) d'un mois — une seule requête pour toute l'étape
+     * « détail par équipe » de l'assistant d'export. */
+    @Query("SELECT c.code AS chantierCode, c.nom AS chantierNom, c.designation AS chantierDesignation, " +
+            "e.id AS equipeId, e.code AS equipeCode, e.libelle AS equipeLibelle, " +
+            "COUNT(p) AS effectif, SUM(p.salaireTotal) AS masse " +
+            "FROM Paie p JOIN p.chantier c LEFT JOIN p.equipe e WHERE p.periode = :periode " +
+            "GROUP BY c.code, c.nom, c.designation, e.id, e.code, e.libelle")
+    List<ChantierEquipePeriodeProjection> resumerChantiersEtEquipesParPeriode(@Param("periode") YearMonth periode);
 
     /** Masse, effectif et STC/sorties agrégés par (chantier, équipe, mois) sur l'intervalle
      * {@code [debut, fin]} — alimente les 3 niveaux d'évolution du rapport PDF (global, par chantier,

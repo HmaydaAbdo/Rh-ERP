@@ -14,7 +14,9 @@
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
-| `GET /paie/equipes` | `PAIE_READ` |
+| `GET /paie/periodes` | `PAIE_READ` |
+| `GET /paie/chantiers` | `PAIE_READ` |
+| `GET /paie/materiel` | `PAIE_READ` |
 | `POST /paie/export` | `PAIE_EXPORT` |
 | `POST /paie/report/pdf` | `PAIE_EXPORT` |
 
@@ -32,7 +34,7 @@
 | Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
 | Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
-| Bouton « Exporter » (Excel et PDF, dialogue d'export) | `PAIE_EXPORT` — `canExport()` |
+| Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)

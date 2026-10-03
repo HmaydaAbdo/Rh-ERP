@@ -25,7 +25,7 @@ environnement sans écran.
 
 ---
 
-## Backend (plus de 130 tests)
+## Backend (141 tests)
 
 JUnit 5, Mockito, AssertJ. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
 simulées, sans base de données. Seul `PaieApplicationTests` démarre l'application complète.
@@ -54,17 +54,20 @@ simulées, sans base de données. Seul `PaieApplicationTests` démarre l'applica
 
 ---
 
-## Frontend (9 tests)
+## Frontend (24 tests)
 
 Jasmine + Karma, Chrome headless.
 
 | Fichier | Ce qu'il vérifie |
 |---|---|
 | `app.component.spec.ts` | Création de l'application, titre, pas de barre latérale sans connexion, barre latérale avec connexion |
+| `shared/components/month-picker/month-picker.component.spec.ts` | Mois indisponibles grisés et non sélectionnables, émission au format `aaaa-MM`, bornes de navigation d'année, tous les mois autorisés sans liste |
+| `portail/paie/export/paie-export-wizard.component.spec.ts` | Assistant d'export : dernier mois présélectionné, refus sans mois valide, chargement des chantiers, aucune équipe cochée d'office à l'activation d'un chantier, apparition de l'étape matériel (seulement C168 avec CH/OP), contenu des requêtes PDF et Excel, nombres invalides, colonne laissée vide, mémorisation des nombres |
 | `core/auth/guards/auth.guard.spec.ts` | `homeGuard` : premier écran autorisé, `/acces-refuse` sans aucune permission (**pas de boucle**), `/login` sans connexion ; `permissionGuard` : accès avec la permission, `/acces-refuse` sans |
 
 Le reste de l'interface (écrans, formulaires, tableaux) n'a **pas** de test automatisé : il est vérifié à la main
-dans le navigateur. C'est une limite connue.
+dans le navigateur. C'est une limite connue. L'assistant d'export a, lui, été vérifié de bout en bout (backend sur une copie
+de la base, génération réelle du PDF et de l'Excel, nombres du parc matériel relus dans les fichiers).
 
 ---
 

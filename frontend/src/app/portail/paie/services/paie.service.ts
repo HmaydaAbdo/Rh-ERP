@@ -5,10 +5,12 @@ import { Observable } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import {
   Paie,
-  PaieEquipeSummary,
+  PaieChantierPeriode,
   PaieCreateRequest,
   PaieExportRequest,
   PaieImportResult,
+  PaieMaterielTableau,
+  PaiePeriodeResume,
   PaieSearchCriteria,
   PaieUpdateRequest,
   PaieRapportPdfRequest
@@ -69,8 +71,16 @@ export class PaieService {
     return this.http.post(`${this.baseUrl}/report/pdf`, requete, { responseType: 'blob' });
   }
 
-  listerEquipes(chantierCode: string, periode: string): Observable<PaieEquipeSummary[]> {
-    const params = new HttpParams().set('chantierCode', chantierCode).set('periode', periode);
-    return this.http.get<PaieEquipeSummary[]>(`${this.baseUrl}/equipes`, { params });
+  listerPeriodes(): Observable<PaiePeriodeResume[]> {
+    return this.http.get<PaiePeriodeResume[]>(`${this.baseUrl}/periodes`);
+  }
+
+  listerTableauxMateriel(): Observable<PaieMaterielTableau[]> {
+    return this.http.get<PaieMaterielTableau[]>(`${this.baseUrl}/materiel`);
+  }
+
+  listerChantiersDeLaPeriode(periode: string): Observable<PaieChantierPeriode[]> {
+    const params = new HttpParams().set('periode', periode);
+    return this.http.get<PaieChantierPeriode[]>(`${this.baseUrl}/chantiers`, { params });
   }
 }

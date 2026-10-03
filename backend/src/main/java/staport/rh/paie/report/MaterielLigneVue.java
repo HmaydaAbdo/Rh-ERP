@@ -12,9 +12,16 @@ package staport.rh.paie.report;
 public final class MaterielLigneVue {
 
     private final String libelle;
+    private final Integer nombre;
 
-    MaterielLigneVue(String libelle) {
+    /** {@code nombre} nul : ligne non renseignée, la colonne « Nbre » reste vide. */
+    MaterielLigneVue(String libelle, Integer nombre) {
         this.libelle = libelle;
+        this.nombre = nombre;
+    }
+
+    public Integer getNombre() {
+        return nombre;
     }
 
     public String getLibelle() {

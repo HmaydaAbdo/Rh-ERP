@@ -1,0 +1,27 @@
+<div class="month-picker">
+  <div class="month-picker__annee">
+    <button type="button" class="month-picker__nav" (click)="changerAnnee(-1)" [disabled]="!peutReculer()" aria-label="Année précédente">
+      <i class="pi pi-chevron-left" aria-hidden="true"></i>
+    </button>
+    <span class="month-picker__annee-libelle" aria-live="polite">{{ annee() }}</span>
+    <button type="button" class="month-picker__nav" (click)="changerAnnee(1)" [disabled]="!peutAvancer()" aria-label="Année suivante">
+      <i class="pi pi-chevron-right" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <div class="month-picker__grille">
+    @for (tuile of tuiles(); track annee() + '-' + tuile.numero) {
+      <button
+        type="button"
+        class="month-picker__mois"
+        [class.month-picker__mois--selectionne]="tuile.selectionnee"
+        [style.animation-delay.ms]="tuile.numero * 22"
+        [disabled]="!tuile.disponible"
+        [attr.aria-pressed]="tuile.selectionnee"
+        (click)="choisir(tuile)"
+      >
+        {{ tuile.libelle }}
+      </button>
+    }
+  </div>
+</div>

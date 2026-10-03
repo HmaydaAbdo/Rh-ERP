@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
 
 import java.math.BigDecimal;
@@ -180,7 +181,12 @@ class PaieSheetWriter {
         for (String libelle : materiel.libelles()) {
             Row ligne = obtenirOuCreerLigne(sheet, indexLigne++);
             ecrireTexte(ligne, COLONNE_SQUELETTE, libelle, styles.donneeGauche);
-            ligne.createCell(COLONNE_SQUELETTE + 1).setCellStyle(styles.donneeCentre);
+            Cell cellule = ligne.createCell(COLONNE_SQUELETTE + 1);
+            cellule.setCellStyle(styles.donneeCentre);
+            Integer nombre = MaterielChantierCatalogue.nombre(materiel.nombres(), libelle);
+            if (nombre != null) {
+                cellule.setCellValue(nombre);
+            }
         }
     }
 

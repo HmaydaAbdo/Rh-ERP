@@ -45,7 +45,7 @@ class PaieReportHtmlPdfServiceTest {
     private PaieReportHtmlPdfService service;
 
     private static final PaieReportPdfRequestDto REQUETE_SANS_FILTRE =
-            new PaieReportPdfRequestDto("2026-09", null, null, null, null, null);
+            new PaieReportPdfRequestDto("2026-09", null, null, null, null, null, null);
 
     @BeforeEach
     void setUp() {
@@ -87,7 +87,7 @@ class PaieReportHtmlPdfServiceTest {
         when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of());
 
         PaieReportPdfRequestDto requeteAvecDetail = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, Map.of("C168", List.of("CH", "OP")));
+                "2026-09", null, null, null, null, Map.of("C168", List.of("CH", "OP")), null);
 
         byte[] pdf = service.generer(YearMonth.of(2026, 9), requeteAvecDetail);
 

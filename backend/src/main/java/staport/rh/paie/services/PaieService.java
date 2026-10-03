@@ -19,19 +19,29 @@ import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
-import staport.rh.paie.dtos.response.EquipeSummaryDto;
+import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
+import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
+import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
+import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.InvalidReferenceException;
 import staport.rh.paie.exceptions.PaieAlreadyExistsException;
 import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
+import staport.rh.paie.reporting.MaterielChantierCatalogue;
+import staport.rh.paie.repositories.ChantierEquipePeriodeProjection;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.services.interfaces.IPaieService;
 import staport.rh.paie.specifications.PaieSpecification;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PaieService implements IPaieService {
@@ -123,10 +133,48 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EquipeSummaryDto> findDistinctEquipes(String chantierCode, YearMonth periode) {
-        return repository.findDistinctEquipesByChantierCodeAndPeriode(chantierCode, periode).stream()
-                .map(mapper::toSummaryDto)
+    public List<PaiePeriodeResumeDto> findPeriodes() {
+        return repository.resumerParPeriode().stream()
+                .map(p -> new PaiePeriodeResumeDto(p.getPeriode().toString(), p.getBulletins(), p.getChantiers(),
+                        p.getMasse(), p.getStc()))
                 .toList();
+    }
+
+    @Override
+    public List<PaieMaterielTableauDto> findTableauxMateriel() {
+        return MaterielChantierCatalogue.tableaux().stream()
+                .map(t -> new PaieMaterielTableauDto(t.chantierCode(), t.equipeCode(), t.titre(), t.libelles()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaieChantierPeriodeDto> findChantiersDeLaPeriode(YearMonth periode) {
+        Map<String, List<ChantierEquipePeriodeProjection>> parChantier = new LinkedHashMap<>();
+        for (ChantierEquipePeriodeProjection ligne : repository.resumerChantiersEtEquipesParPeriode(periode)) {
+            parChantier.computeIfAbsent(ligne.getChantierCode(), code -> new ArrayList<>()).add(ligne);
+        }
+        return parChantier.values().stream()
+                .map(this::versChantierPeriode)
+                .sorted(Comparator.comparing(PaieChantierPeriodeDto::masse).reversed())
+                .toList();
+    }
+
+    private PaieChantierPeriodeDto versChantierPeriode(List<ChantierEquipePeriodeProjection> lignes) {
+        ChantierEquipePeriodeProjection premiere = lignes.get(0);
+        String nom = premiere.getChantierNom();
+        String libelle = nom != null && !nom.isBlank() ? nom : premiere.getChantierDesignation();
+        List<PaieEquipePeriodeDto> equipes = lignes.stream()
+                .filter(l -> l.getEquipeId() != null)
+                .map(l -> new PaieEquipePeriodeDto(l.getEquipeId(), l.getEquipeCode(), l.getEquipeLibelle(), l.getEffectif()))
+                .sorted(Comparator.comparing(PaieEquipePeriodeDto::code))
+                .toList();
+        return new PaieChantierPeriodeDto(
+                premiere.getChantierCode(),
+                libelle,
+                lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getEffectif).sum(),
+                lignes.stream().map(ChantierEquipePeriodeProjection::getMasse).reduce(BigDecimal.ZERO, BigDecimal::add),
+                equipes);
     }
 
     private Paie getEntityById(Long id) {

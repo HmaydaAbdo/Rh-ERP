@@ -43,11 +43,11 @@ class PaieExportServiceTest {
     }
 
     private static PaieExportRequestDto requeteToutesEquipes(String periode) {
-        return new PaieExportRequestDto(periode, FeuillesEquipeMode.TOUTES, null, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.TOUTES, null, null, null, null);
     }
 
     private static PaieExportRequestDto requeteAucuneEquipe(String periode) {
-        return new PaieExportRequestDto(periode, FeuillesEquipeMode.AUCUNE, null, null, null);
+        return new PaieExportRequestDto(periode, FeuillesEquipeMode.AUCUNE, null, null, null, null);
     }
 
     @Test
@@ -177,6 +177,27 @@ class PaieExportServiceTest {
     }
 
     @Test
+    void exporter_devraitEcrireLesNombresSaisisDansLaColonneNbreEtLaisserVideLesAutres() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie paie = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C168", "CH");
+        when(repository.findByPeriode(periode)).thenReturn(List.of(paie));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+        // CAMION CITERNE = 4, CAMION 8*4 = 0 (un zéro est une saisie), les 3 autres lignes non renseignées.
+        PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(), FeuillesEquipeMode.TOUTES, null, null, null,
+                Map.of("CAMION CITERNE", 4, "CAMION 8*4", 0));
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, requete);
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            Sheet feuilleEquipe = workbook.getSheet("C168_CH");
+            assertThat(feuilleEquipe.getRow(9).getCell(7).getNumericCellValue()).isEqualTo(4);
+            assertThat(feuilleEquipe.getRow(10).getCell(7).getNumericCellValue()).isEqualTo(0);
+            assertThat(feuilleEquipe.getRow(11).getCell(7).getCellType()).isEqualTo(CellType.BLANK);
+            assertThat(feuilleEquipe.getRow(13).getCell(7).getCellType()).isEqualTo(CellType.BLANK);
+        }
+    }
+
+    @Test
     void exporter_devraitAjouterLeSqueletteEnginsPourChantierC168EquipeOp() throws IOException {
         YearMonth periode = YearMonth.of(2026, 8);
         Paie paie = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C168", "OP");
@@ -232,6 +253,7 @@ class PaieExportServiceTest {
                 FeuillesEquipeMode.PERSONNALISE,
                 Map.of("C059", List.of("EQUIPE A")),
                 null,
+                null,
                 null);
 
         ByteArrayInputStream resultat = exportService.exporter(periode, requete);
@@ -261,6 +283,7 @@ class PaieExportServiceTest {
                 FeuillesEquipeMode.AUCUNE,
                 null,
                 Map.of("C059", List.of("EQUIPE B")),
+                null,
                 null);
 
         ByteArrayInputStream resultat = exportService.exporter(periode, requete);
@@ -290,7 +313,7 @@ class PaieExportServiceTest {
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
-                FeuillesEquipeMode.AUCUNE, null, null, List.of("C068"));
+                FeuillesEquipeMode.AUCUNE, null, null, List.of("C068"), null);
 
         ByteArrayInputStream resultat = exportService.exporter(periode, requete);
 

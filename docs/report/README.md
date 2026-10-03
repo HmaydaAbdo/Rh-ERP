@@ -149,9 +149,9 @@ Frontend (`frontend/src/app/portail/paie/`) :
 
 ```text
 export/
-└── PaieExportDialogComponent    Dialog d'export UNIQUE (bouton "Exporter") — un p-selectButton
-                                  PDF/Excel, la même sélection manuelle de chantiers/équipes pour
-                                  les deux formats (voir « Export unifié PDF/Excel »).
+└── PaieExportWizardComponent    Assistant d'export UNIQUE (bouton "Exporter") en étapes guidées : mois,
+                                  format PDF/Excel, équipes, parc matériel, génération. La même sélection
+                                  d'équipes pour les deux formats (voir « Assistant d'export »).
 
 list/
 └── PaieListComponent            Porte le bouton "Exporter", ouvre le dialog ci-dessus.
@@ -174,9 +174,9 @@ frontend, voir « Export unifié PDF/Excel ») et la même règle métier pour l
 
 ## Export unifié PDF/Excel (2026-09-29)
 
-Un seul bouton "Exporter" (`PaieListComponent`) ouvre `PaieExportDialogComponent` : un
-`p-selectButton` choisit le format (PDF ou Excel), le reste du formulaire — période, chantiers à
-détailler par équipe, équipes à séparer par chantier — est **identique pour les deux formats** et
+Un seul bouton "Exporter" (`PaieListComponent`) ouvre `PaieExportWizardComponent` : l'étape « Format »
+choisit PDF ou Excel, le reste de l'assistant — période, chantiers à détailler par équipe, équipes à
+séparer par chantier — est **identique pour les deux formats** et
 construit une seule structure `Map<code chantier, équipes>` envoyée soit à
 `POST /paie/export` (`PaieExportRequestDto.equipesParChantier`), soit à `POST /paie/report/pdf`
 (`PaieReportPdfRequestDto.equipesParChantier`).
@@ -197,6 +197,51 @@ Le dialog affiche, avant de télécharger, un panneau récapitulatif reformulant
 chantier ce qui sera réellement généré (ex. « Chantier C168 : graphique répartition par équipe +
 section détaillée pour CH, OP, et un tableau "CHANTIER : C168" pour le reste des employés. ») — un
 garde-fou visuel avant l'export, pas seulement une liste de cases cochées.
+
+---
+
+## Assistant d'export (2026-10-03)
+
+Le bouton « Exporter » de la liste Paie ouvre `PaieExportWizardComponent`, un assistant en étapes guidées qui
+remplace l'ancien dialogue unique. Bandeau d'étapes en haut (les étapes faites sont cliquables pour revenir en
+arrière), panneaux qui glissent d'une étape à l'autre, animations coupées si l'utilisateur a demandé moins de
+mouvement dans son système.
+
+| Étape | Contenu |
+|---|---|
+| **1. Mois** | Un seul champ : sélecteur de mois partagé (`app-month-picker`, flèches d'année et 12 tuiles). Les mois **sans paie sont grisés** et non sélectionnables ; le dernier mois disponible est présélectionné. Dès qu'un mois est choisi, une carte annonce son contenu avec des compteurs animés (bulletins, chantiers, masse salariale, STC / sorties). Sans aucune paie : message « Aucune paie enregistrée ». Source : `GET /paie/periodes` (chargée une fois à l'ouverture, donc sans attente) |
+| **2. Format** | Deux cartes : Rapport PDF (synthèse pour la direction) et Classeur Excel (détail ligne par ligne), avec aperçu animé |
+| **3. Équipes** (facultative) | Chantiers du mois triés par masse, avec recherche. Un interrupteur par chantier le « détaille » : **aucune équipe n'est cochée d'office** : l'utilisateur choisit explicitement les équipes (une par une, ou « Toutes » / « Aucune »). En Excel, une icône œil barré par équipe la **retire de la feuille du chantier** (elle garde sa propre feuille). Un chantier sans équipe ne peut pas être détaillé. Source : `GET /paie/chantiers` |
+| **4. Matériel** (conditionnelle) | Voir ci-dessous |
+| **5. Export** | Récapitulatif (chaque ligne a un lien « Modifier » qui ramène à son étape) et nom du fichier ; « Générer » lance l'appel, avec une barre d'attente **sans pourcentage** (le backend ne notifie pas son avancement), puis un écran de fin avec « Télécharger à nouveau » et « Nouvel export ». Les erreurs du backend (corps JSON en `Blob`) sont relues et affichées |
+
+### Étape « Matériel »
+
+Elle n'apparaît **que si un tableau matériel sera imprimé**, c'est-à-dire si un tableau du catalogue
+(`GET /paie/materiel`) a son chantier détaillé **avec l'équipe qui le porte** (C168 avec CH pour CAMION, avec OP
+pour ENGINS) ; sinon l'assistant passe directement au récapitulatif. Une carte par tableau concerné :
+
+- une ligne par libellé du catalogue, avec un champ numérique et des boutons moins / plus, navigation au clavier
+  par Entrée jusqu'au bouton « Continuer » ;
+- barre « n sur N renseignées », total animé, carte en vert quand toutes les lignes sont renseignées ;
+- **vide ou zéro** : une ligne vide s'imprime vide (à remplir au stylo), un `0` s'imprime `0` ; l'interrupteur
+  « laisser vide » d'une carte conserve le comportement d'avant en un clic ; « Mettre 0 aux lignes vides » évite de
+  saisir les zéros un par un ;
+- saisie validée : entier de 0 à 999, message d'erreur sous la zone sinon, et on ne peut pas continuer tant qu'il
+  est affiché ;
+- **mémorisation** : les derniers nombres saisis sont gardés dans le navigateur (`localStorage`, clé
+  `paie.export.materiel`) et préremplissent l'export suivant ; jamais écrits en base, jamais partagés entre
+  utilisateurs ni appareils.
+
+Seuls les nombres des tableaux réellement imprimés et non « laissés vides » sont envoyés (`materiel`).
+
+### Tests
+
+`paie-export-wizard.component.spec.ts` (mois présélectionné, refus sans mois valide, chargement des chantiers,
+équipes cochées, apparition de l'étape matériel, contenu des requêtes PDF et Excel, nombres invalides,
+mémorisation), `month-picker.component.spec.ts` (mois grisés, émission `aaaa-MM`, bornes d'année),
+`PaieServiceTest` (routes de lecture), `PaieExportServiceTest` et `PaieBiReportBuilderTest` (nombres du parc
+matériel dans l'Excel et le PDF). Voir `docs/testing.md`.
 
 ---
 
@@ -250,18 +295,18 @@ interprétés par `PaiePerimetreService.calculer` :
 | Champ | Rôle |
 |---|---|
 | `feuillesEquipeMode` | `AUCUNE` (aucune sous-feuille équipe) ou `PERSONNALISE` (liste explicite via `equipesParChantier`). `TOUTES` existe dans l'enum et reste supportée par le backend (une sous-feuille par équipe trouvée, pour chaque chantier), mais n'est **plus produite par le dialog actuel** — conservée pour compatibilité API. |
-| `equipesParChantier` | `Map<code chantier, équipes>` — uniquement en mode `PERSONNALISE` : pour chaque chantier listé, exactement les équipes indiquées obtiennent leur propre sous-feuille. Un chantier absent de la map n'a aucune sous-feuille équipe. **Sélectionner un chantier ne sélectionne aucune équipe automatiquement** — la sélection est toujours explicite, équipe par équipe. Même map envoyée au PDF (voir « Export unifié »). |
+| `equipesParChantier` | `Map<code chantier, équipes>` — uniquement en mode `PERSONNALISE` : pour chaque chantier listé, exactement les équipes indiquées obtiennent leur propre sous-feuille. Un chantier absent de la map n'a aucune sous-feuille équipe. Activer un chantier dans l'assistant **ne coche aucune équipe** (décision du 2026-10-03) : la sélection est toujours explicite, comme côté API où seules les équipes envoyées sont détaillées. Même map envoyée au PDF (voir « Export unifié »). |
 | `equipesExcluesFeuilleChantier` | `Map<code chantier, équipes>` — indépendant du champ précédent : pour un chantier donné, les équipes listées ici n'apparaissent pas sur **la feuille de ce chantier** (le total du mois précédent affiché sur cette feuille applique la même exclusion, pour rester comparable). Spécifique à l'Excel, ignoré par le PDF. |
 
-Le dialog (`PaieExportDialogComponent`) construit ces champs à partir d'une UX à trois niveaux,
+L'assistant (`PaieExportWizardComponent`) construit ces champs à partir d'une UX à trois niveaux,
 plus simple que la structure `AUCUNE`/`TOUTES`/`PERSONNALISE` brute :
 
 1. **Chantiers à détailler par équipe** (multi-sélection) : chantiers pour lesquels une
    configuration équipe va être définie. En sélectionner un n'a par lui-même aucun effet sur les
    documents générés.
 2. Pour chaque chantier concerné, **Équipes à détailler** (multi-sélection, alimentée par
-   `GET /paie/equipes?chantierCode=...&periode=...`) : équipes qui obtiennent leur propre
-   sous-feuille (Excel) et/ou section (PDF). Rien n'est présélectionné.
+   `GET /paie/chantiers?periode=...`) : équipes qui obtiennent leur propre
+   sous-feuille (Excel) et/ou section (PDF). Rien n'est présélectionné : le choix est toujours explicite (boutons « Toutes » / « Aucune » disponibles).
 3. **Format Excel uniquement** : pour chaque équipe à détailler, un toggle **Inclure / Exclure** :
    la présence de cette équipe sur la feuille du chantier lui-même (par défaut Inclure). Absent de
    l'UI en format PDF (voir « Export unifié »).
@@ -293,20 +338,24 @@ volontairement cette possibilité : l'UI ne propose le toggle Inclure/Exclure qu
 déjà choisies comme « à détailler », pour garder une hiérarchie de configuration simple. La
 capacité plus large reste disponible pour un appel direct à l'API.
 
-### Squelette parc matériel (chantier C168)
+### Parc matériel (chantier C168)
 
 Décision (HMAYDA, 2026-09-22, étendue au PDF le 2026-09-29) : sur les sections équipe du chantier
-**C168**, un squelette de tableau matériel — labels uniquement, colonne "Nbre" laissée vide — est
-ajouté à côté du tableau récap Fonction/Effectif/STC :
+**C168**, un tableau matériel est ajouté à côté du tableau récap Fonction/Effectif/STC. Sa colonne
+« Nbre » est **remplie avec les nombres saisis dans l'assistant d'export** (décision du 2026-10-03,
+voir « Assistant d'export », étape « Matériel »), ou laissée vide pour une ligne non renseignée :
 
 - Équipe **CH** → tableau **CAMION** (Camion citerne, Camion 8x4, Camion SR, Port char, Pick up).
 - Équipe **OP** → tableau **ENGINS** (Pelle pneu, Pelle chenille, Niveleuse, Compacteurs, Chargeur,
   Bull, Tractopelle).
 
 Règle propre à ce chantier uniquement, aucune règle générale identifiée pour les autres —
-**volontairement pas généralisée** (pas de saisie ni d'écran dédié, pas de persistance) : la
-colonne "Nbre" est remplie à la main, au stylo, sur le document imprimé (PDF) ou dans le classeur
-téléchargé (Excel, cellule libre). La règle métier (quel chantier/équipe → quels libellés) vit dans
+**volontairement pas généralisée** (décision du 2026-10-03 : pas d'écran de paramétrage, pas de
+persistance en base). Les nombres voyagent avec la demande d'export
+(`materiel` : libellé de la ligne → nombre, 0 à 999, dans `PaieExportRequestDto` et
+`PaieReportPdfRequestDto`, validé par le backend, `400` sinon) ; une ligne absente de la map reste vide, à
+remplir au stylo sur le document imprimé, et un `0` s'imprime `0`. Le PDF les imprime via
+`MaterielLigneVue.nombre`, l'Excel les écrit en cellule numérique (`SqueletteMateriel.nombres`). La règle métier (quel chantier/équipe → quels libellés) vit dans
 `MaterielChantierCatalogue` (package `staport.rh.paie.reporting`), partagée par les deux formats —
 `PaieExportService.squeletteMateriel` et `PaieBiReportBuilder` (via `EquipeBiVue.materiel`)
 délèguent tous deux à cette classe, jamais de duplication de la règle. Le PDF affiche ce squelette
@@ -325,7 +374,7 @@ masse/l'effectif (chantier, équipe) ? et pour chaque chantier, que se passe-t-i
 
 ### Périmètre et filtres
 
-Le dialog unifié (`PaieExportDialogComponent`, voir « Export unifié PDF/Excel ») pilote : la
+L'assistant unifié (`PaieExportWizardComponent`, voir « Assistant d'export ») pilote : la
 période et la sélection d'équipes à détailler par chantier (`equipesParChantier`). Les autres
 filtres (nom & prénom, CIN, fonction, chantier) **ne sont pas exposés par ce dialog** : le rapport
 porte toujours sur l'ensemble des chantiers/employés de la période. Le backend
@@ -751,8 +800,8 @@ de temps de génération par rapport à l'ancien double remplissage.
 | `RapportChartSvgBuilder` | Graphiques en SVG (voir « Visualisations ») |
 | `RapportRessourcesStatiques` | Chargement unique des polices/CSS/logo |
 | `PaieReportHtmlPdfService` | Orchestration + rendu PDF final (un seul appel openhtmltopdf) — testée de bout en bout par `PaieReportHtmlPdfServiceTest`, y compris un test de non-régression dédié à l'échappement (charge hostile dans une observation) |
-| `PaieExportDialogComponent` (frontend) | Dialog d'export UNIQUE, PDF ou Excel, une seule sélection manuelle d'équipes pour les deux formats |
-| `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerEquipes()` (frontend) | Appels HTTP, aucune logique métier côté client |
+| `PaieExportWizardComponent` (frontend) | Assistant d'export UNIQUE en étapes, PDF ou Excel, une seule sélection d'équipes pour les deux formats |
+| `PaieService.exporter()` / `.telechargerRapportPdf()` / `.listerPeriodes()` / `.listerChantiersDeLaPeriode()` / `.listerTableauxMateriel()` (frontend) | Appels HTTP, aucune logique métier côté client |
 
 Le logo Staport (`resources/report/paie/logo-staport.png`) est chargé une seule fois
 (`RapportRessourcesStatiques`) et embarqué en **data-URI base64** (`data:image/png;base64,...`) dans
@@ -808,7 +857,7 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
 - **Comparaison mois précédent au niveau équipe/section** : déjà en place (carte KPI "MASSE MOIS
   PRECEDENT" de chaque section, voir « Cartes KPI de section et tableau récap »).
 - **Autres filtres du dialog (nom, CIN, fonction, chantier unique)** : volontairement non exposés
-  par `PaieExportDialogComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
+  par `PaieExportWizardComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
   sur l'ensemble des chantiers/employés de la période, pas sur une recherche ponctuelle.
   `PaieReportPdfRequestDto` les garde optionnels pour un appel API direct ; à réexposer côté UI
   seulement si un besoin réel de rapport filtré se confirme.

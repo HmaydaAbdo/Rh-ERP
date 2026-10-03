@@ -13,7 +13,7 @@
 | Backend | `backend/src/main/java/staport/rh/paie/` |
 | Frontend | `frontend/src/app/portail/paie/` |
 | Table | `paie` |
-| Endpoints | `/paie`, `/paie/search`, `/paie/equipes`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
+| Endpoints | `/paie`, `/paie/search`, `/paie/periodes`, `/paie/chantiers`, `/paie/materiel`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
 ```text
 paie/
@@ -123,7 +123,9 @@ rétroactive ou automatique des bulletins déjà existants.
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
-| `GET` | `/paie/equipes?chantierCode=C168&periode=2026-08` | Équipes (`id`, `code`, `libelle`) trouvées sur ce chantier pour cette période (alimente la configuration de l'export) | 200 |
+| `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
+| `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes et effectifs (étape « équipes » de l'export) | 200 |
+| `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search`, voir `docs/report/README.md` | 200, 404 |
 
@@ -232,18 +234,28 @@ fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne
 ## Export Excel et Rapport PDF
 
 La génération de documents à partir des bulletins de paie est documentée dans
-**`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, dialog dédié
-`PaieExportDialogComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
+**`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, assistant d'export dédié
+`PaieExportWizardComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
 téléchargement direct sans dialog sur la période sélectionnée dans la liste) — architecture, modèle
 analytique et catalogue de KPI du rapport PDF, structure des feuilles/sections, paramétrage
 chantier/équipe, règle Include/Exclude, et points d'extension. Ne pas dupliquer cette documentation
 ici — seules les règles ci-dessous, propres au champ `Paie.equipe` en tant que donnée métier
 (indépendantes du format de sortie), restent dans ce document.
 
-`GET /paie/equipes?chantierCode=X&periode=aaaa-MM` liste les équipes distinctes trouvées sur les
-bulletins de ce chantier pour cette période (`PaieRepository.findDistinctEquipesByChantierCodeAndPeriode`)
-— source des sélecteurs d'équipe du dialog d'export côté UI : renvoie `id`, `code` et `libelle`, la
-sélection manipulée et envoyée au backend restant le **code** (voir section suivante).
+Trois routes de lecture alimentent l'assistant d'export (toutes `PAIE_READ`, chacune en **une seule requête
+groupée**) :
+
+- `GET /paie/periodes` : un résumé par mois qui contient de la paie, du plus récent au plus ancien
+  (`periode` `aaaa-MM`, `nombreBulletins`, `nombreChantiers`, `masse`, `stc`). L'assistant l'utilise pour
+  proposer uniquement ces mois et afficher aussitôt leur contenu. Le décompte STC reproduit
+  `ObservationStc.estStcOuSortie` en JPQL.
+- `GET /paie/chantiers?periode=aaaa-MM` : les chantiers du mois du plus gros (masse) au plus petit, chacun avec
+  `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
+  `effectif`). Les bulletins sans équipe comptent dans l'effectif du chantier mais n'ont pas d'équipe listée.
+  La sélection manipulée et envoyée au backend reste le **code** de l'équipe (voir section suivante).
+- `GET /paie/materiel` : les tableaux du parc matériel prévus (`chantierCode`, `equipeCode`, `titre`, `libelles`),
+  lus dans `MaterielChantierCatalogue` pour que l'assistant sache quels nombres demander sans dupliquer la règle
+  (voir `docs/report/README.md`, « Parc matériel »).
 
 ### Regroupement par équipe : par code du référentiel Équipe
 
@@ -268,7 +280,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Liste paginée, recherche temps réel avec debounce (nom, CIN, période, fonction, chantier), tri, suppression, téléchargement du modèle, import (avec sélecteur de période). Export, voir `docs/report/README.md` — un seul bouton « Exporter » ouvre `PaieExportDialogComponent` (choix PDF ou Excel, configuration chantier/équipe) ; le rapport couvre la période choisie dans le dialogue |
+| `/paie` | `PaieListComponent` | Tableau standard avec filtres en temps réel (nom, CIN, période, fonctions, chantiers, équipes), suppression, téléchargement du modèle, import (avec sélecteur de période). Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
 | `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |

@@ -135,7 +135,7 @@ class PaieBiReportBuilder {
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
                 .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code),
-                        evolutions, equipesSelectionneesPour(requete, code)))
+                        evolutions, equipesSelectionneesPour(requete, code), requete.materiel()))
                 .toList();
 
         return new RapportBiVue(
@@ -157,7 +157,8 @@ class PaieBiReportBuilder {
     }
 
     private ChantierBiVue chantierVue(String code, List<Paie> lignesChantier, List<Paie> lignesChantierPrecedent,
-                                       EvolutionParNiveau evolutions, Set<String> equipesSelectionnees) {
+                                       EvolutionParNiveau evolutions, Set<String> equipesSelectionnees,
+                                       Map<String, Integer> nombresMateriel) {
         BigDecimal masseChantier = sommer(lignesChantier);
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
@@ -181,7 +182,7 @@ class PaieBiReportBuilder {
                     .forEach(nom -> equipes.add(equipeVue(
                             nom, titreEquipe(nom, libellesEquipes), libellesEquipes.getOrDefault(nom, nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
-                            masseChantier, MaterielChantierCatalogue.libelles(code, nom), false)));
+                            masseChantier, materiel(code, nom, nombresMateriel), false)));
             List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
             if (!reste.isEmpty()) {
                 List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
@@ -240,9 +241,17 @@ class PaieBiReportBuilder {
         return lignes.stream().filter(p -> !equipesSelectionnees.contains(libelleEquipe(p))).toList();
     }
 
+    /** Lignes du parc matériel de ce chantier/équipe (vide si aucun cas prévu), avec le nombre saisi dans l'assistant
+     * d'export — {@code null} pour une ligne non renseignée. */
+    private List<MaterielLigneVue> materiel(String chantierCode, String equipe, Map<String, Integer> nombres) {
+        return MaterielChantierCatalogue.libelles(chantierCode, equipe).stream()
+                .map(libelle -> new MaterielLigneVue(libelle, MaterielChantierCatalogue.nombre(nombres, libelle)))
+                .toList();
+    }
+
     private EquipeBiVue equipeVue(String nom, String titre, String libelleAffiche, List<Paie> lignesEquipe,
                                    List<Paie> lignesEquipePrecedent, BigDecimal masseChantier,
-                                   List<String> materielLibelles, boolean afficherEquipeReelle) {
+                                   List<MaterielLigneVue> materiel, boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
         // agregatFonctionEquipe sert à la fois à ordonner le tableau employé ET à alimenter le tableau
@@ -274,7 +283,7 @@ class PaieBiReportBuilder {
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
                 PaieReportNumberFormat.montantOuIntrouvable(masseEquipePrecedente),
                 repartitionFonctionSimple(agregatFonctionEquipe),
-                materielLibelles.stream().map(MaterielLigneVue::new).toList(),
+                materiel,
                 employes);
     }
 

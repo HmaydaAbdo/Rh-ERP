@@ -289,7 +289,7 @@ final class PaieReportHtmlBuilder {
             for (MaterielLigneVue ligneMateriel : materiel) {
                 Element tr = tbodyMateriel.appendElement("tr");
                 tr.appendElement("td").addClass("libelle").text(ligneMateriel.getLibelle());
-                tr.appendElement("td").addClass("nbre").text("");
+                tr.appendElement("td").addClass("nbre").text(ligneMateriel.getNombre() == null ? "" : String.valueOf(ligneMateriel.getNombre()));
             }
         }
     }

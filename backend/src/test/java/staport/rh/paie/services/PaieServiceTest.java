@@ -17,22 +17,30 @@ import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.response.EquipeSummaryDto;
+import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
+import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
+import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.InvalidReferenceException;
 import staport.rh.paie.exceptions.PaieAlreadyExistsException;
 import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
+import staport.rh.paie.repositories.ChantierEquipePeriodeProjection;
+import staport.rh.paie.repositories.PaiePeriodeProjection;
 import staport.rh.paie.repositories.PaieRepository;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -198,6 +206,80 @@ class PaieServiceTest {
         paieService.delete(1L);
 
         verify(repository).delete(entity);
+    }
+
+    @Test
+    void findPeriodes_devraitRenvoyerLesMoisAvecLeurContenu() {
+        PaiePeriodeProjection aout = periode(YearMonth.of(2026, 8), 969L, 25L, "4399080.74", 37L);
+        PaiePeriodeProjection juillet = periode(YearMonth.of(2026, 7), 958L, 24L, "4352774.10", 29L);
+        List<PaiePeriodeProjection> projections = List.of(aout, juillet);
+        when(repository.resumerParPeriode()).thenReturn(projections);
+
+        List<PaiePeriodeResumeDto> resultat = paieService.findPeriodes();
+
+        assertThat(resultat).extracting(PaiePeriodeResumeDto::periode).containsExactly("2026-08", "2026-07");
+        assertThat(resultat.get(0).nombreBulletins()).isEqualTo(969);
+        assertThat(resultat.get(0).nombreChantiers()).isEqualTo(25);
+        assertThat(resultat.get(0).masse()).isEqualByComparingTo("4399080.74");
+        assertThat(resultat.get(0).stc()).isEqualTo(37);
+    }
+
+    @Test
+    void findChantiersDeLaPeriode_devraitGrouperParChantierEtTrierParMasseDecroissante() {
+        YearMonth periode = YearMonth.of(2026, 8);
+        List<ChantierEquipePeriodeProjection> lignes = List.of(
+                ligne("C057", "DEPOT HARBIL", null, 3L, "OP", "OPERATEURS", 40L, "100000"),
+                ligne("C168", "NADOR", null, 2L, "OP", "OPERATEURS", 69L, "300000"),
+                ligne("C168", "NADOR", null, 1L, "CH", "CHAUFFEURS", 74L, "400000"),
+                ligne("C168", "NADOR", null, null, null, null, 5L, "20000"));
+        when(repository.resumerChantiersEtEquipesParPeriode(periode)).thenReturn(lignes);
+
+        List<PaieChantierPeriodeDto> resultat = paieService.findChantiersDeLaPeriode(periode);
+
+        assertThat(resultat).extracting(PaieChantierPeriodeDto::code).containsExactly("C168", "C057");
+        PaieChantierPeriodeDto c168 = resultat.get(0);
+        // L'effectif du chantier compte aussi les bulletins sans équipe ; la liste des équipes, non.
+        assertThat(c168.effectif()).isEqualTo(148);
+        assertThat(c168.masse()).isEqualByComparingTo("720000");
+        assertThat(c168.equipes()).extracting(PaieEquipePeriodeDto::code).containsExactly("CH", "OP");
+        assertThat(c168.equipes()).extracting(PaieEquipePeriodeDto::effectif).containsExactly(74L, 69L);
+    }
+
+    @Test
+    void findChantiersDeLaPeriode_devraitPrivilegierLeNomDuChantierSurSaDesignation() {
+        YearMonth periode = YearMonth.of(2026, 8);
+        List<ChantierEquipePeriodeProjection> lignes = List.of(
+                ligne("C168", "NADOR", "Désignation ERP", null, null, null, 1L, "1000"),
+                ligne("C196", null, "Désignation ERP 196", null, null, null, 1L, "500"));
+        when(repository.resumerChantiersEtEquipesParPeriode(periode)).thenReturn(lignes);
+
+        List<PaieChantierPeriodeDto> resultat = paieService.findChantiersDeLaPeriode(periode);
+
+        assertThat(resultat).extracting(PaieChantierPeriodeDto::libelle).containsExactly("NADOR", "Désignation ERP 196");
+    }
+
+    private PaiePeriodeProjection periode(YearMonth periode, Long bulletins, Long chantiers, String masse, Long stc) {
+        PaiePeriodeProjection projection = mock(PaiePeriodeProjection.class);
+        when(projection.getPeriode()).thenReturn(periode);
+        when(projection.getBulletins()).thenReturn(bulletins);
+        when(projection.getChantiers()).thenReturn(chantiers);
+        when(projection.getMasse()).thenReturn(new BigDecimal(masse));
+        when(projection.getStc()).thenReturn(stc);
+        return projection;
+    }
+
+    private ChantierEquipePeriodeProjection ligne(String code, String nom, String designation, Long equipeId,
+                                                   String equipeCode, String equipeLibelle, Long effectif, String masse) {
+        ChantierEquipePeriodeProjection projection = mock(ChantierEquipePeriodeProjection.class);
+        lenient().when(projection.getChantierCode()).thenReturn(code);
+        lenient().when(projection.getChantierNom()).thenReturn(nom);
+        lenient().when(projection.getChantierDesignation()).thenReturn(designation);
+        lenient().when(projection.getEquipeId()).thenReturn(equipeId);
+        lenient().when(projection.getEquipeCode()).thenReturn(equipeCode);
+        lenient().when(projection.getEquipeLibelle()).thenReturn(equipeLibelle);
+        lenient().when(projection.getEffectif()).thenReturn(effectif);
+        lenient().when(projection.getMasse()).thenReturn(new BigDecimal(masse));
+        return projection;
     }
 
     private PaieResponseDto mockResponseDto() {

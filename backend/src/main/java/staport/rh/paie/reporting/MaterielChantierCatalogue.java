@@ -1,6 +1,7 @@
 package staport.rh.paie.reporting;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Catalogue du squelette "parc matériel" (CAMION ou ENGINS) — décision (HMAYDA, 2026-09-22) : sur le
@@ -26,6 +27,24 @@ public final class MaterielChantierCatalogue {
             "PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS", "CHARGEUR", "BULL", "TRACTOPELLE");
 
     private MaterielChantierCatalogue() {
+    }
+
+    /** Un tableau du parc matériel : le chantier et l'équipe qui le portent, son titre de colonne et ses lignes. */
+    public record Tableau(String chantierCode, String equipeCode, String titre, List<String> libelles) {
+    }
+
+    /** Tous les tableaux prévus — l'assistant d'export les lit ici pour savoir quels nombres demander, sans dupliquer
+     * la règle. */
+    public static List<Tableau> tableaux() {
+        return List.of(
+                new Tableau(CHANTIER_MATERIEL, EQUIPE_CAMION, TITRE_CAMION, LIBELLES_CAMION),
+                new Tableau(CHANTIER_MATERIEL, EQUIPE_ENGINS, TITRE_ENGINS, LIBELLES_ENGINS));
+    }
+
+    /** Nombre saisi pour une ligne du parc matériel, ou {@code null} si non renseigné (la cellule reste alors
+     * vide, à remplir à la main). {@code nombres} peut être {@code null}. */
+    public static Integer nombre(Map<String, Integer> nombres, String libelle) {
+        return nombres == null ? null : nombres.get(libelle);
     }
 
     /** Libellés du squelette matériel de ce chantier/équipe, ou liste vide si aucun cas prévu.

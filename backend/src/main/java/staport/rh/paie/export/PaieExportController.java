@@ -2,6 +2,7 @@ package staport.rh.paie.export;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +40,7 @@ public class PaieExportController {
     @PostMapping
     @Operation(summary = "Exporter la paie d'une période (GLB + par chantier + par équipe)")
     @PreAuthorize("hasAuthority('PAIE_EXPORT')")
-    public ResponseEntity<Resource> exporter(@RequestBody PaieExportRequestDto requete) {
+    public ResponseEntity<Resource> exporter(@Valid @RequestBody PaieExportRequestDto requete) {
         YearMonth periodeAnalysee = parsePeriode(requete.periode());
         ByteArrayInputStream flux = exportService.exporter(periodeAnalysee, requete);
         InputStreamResource ressource = new InputStreamResource(flux);

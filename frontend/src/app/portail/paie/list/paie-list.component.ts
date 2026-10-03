@@ -18,7 +18,7 @@ import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { PaieExportDialogComponent } from '../export/paie-export-dialog.component';
+import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
@@ -48,7 +48,7 @@ function toPeriodeString(date: Date | null): string | undefined {
     CalendarModule,
     ConfirmDialogModule,
     DialogModule,
-    PaieExportDialogComponent,
+    PaieExportWizardComponent,
     LazySelectComponent
   ],
   providers: [ConfirmationService],
