@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
+import { NAV_ITEMS } from '../../navigation/nav-items';
 import { AuthService } from '../services/auth.service';
 
 /** Route protégée par simple authentification (pas de permission spécifique requise). */
@@ -33,5 +34,22 @@ export const permissionGuard: CanActivateFn = (route) => {
     (!permission || authService.hasPermission(permission)) &&
     (!permissions || authService.hasAnyPermission(permissions));
 
-  return autorise ? true : router.createUrlTree(['/']);
+  return autorise ? true : router.createUrlTree(['/acces-refuse']);
+};
+
+/**
+ * Écran d'accueil (`/`) : redirige vers le premier écran du menu auquel l'utilisateur a accès, ou vers
+ * la page « accès refusé » s'il n'en a aucun. Évite toute boucle de redirection : un écran dont la
+ * permission manque n'est jamais l'accueil.
+ */
+export const homeGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (!authService.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  const premier = NAV_ITEMS.find((item) => authService.hasPermission(item.permission));
+  return router.createUrlTree([premier ? premier.route : '/acces-refuse']);
 };

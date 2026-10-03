@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 
 import { Function } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
   selector: 'app-function-detail',
@@ -14,6 +15,12 @@ import { FunctionService } from '../services/function.service';
   styleUrl: './function-detail.component.scss'
 })
 export class FunctionDetailComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+
+  canWrite(): boolean {
+    return this.authService.hasPermission('FUNCTION_WRITE');
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly functionService = inject(FunctionService);
 

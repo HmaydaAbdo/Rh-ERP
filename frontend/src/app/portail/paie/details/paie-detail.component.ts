@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 
 import { Paie } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
   selector: 'app-paie-detail',
@@ -14,6 +15,12 @@ import { PaieService } from '../services/paie.service';
   styleUrl: './paie-detail.component.scss'
 })
 export class PaieDetailComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+
+  canWrite(): boolean {
+    return this.authService.hasPermission('PAIE_WRITE');
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly paieService = inject(PaieService);
 

@@ -31,11 +31,10 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocKpi(String niveauClasse, List<CarteKpi> cartes) implements Bloc {
     }
 
-    /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}) — {@code plafonneTop15}
-     * n'est vrai qu'au niveau global (voir {@code PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE}, déjà
-     * appliqué en amont : ce booléen ne sert qu'à choisir la hauteur/le contexte d'affichage, jamais
-     * à retronquer une liste déjà tronquée). */
-    record BlocGraphique(List<RepartitionBean> donnees, boolean plafonneTop15) implements Bloc {
+    /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}). La troncature du nombre de barres
+     * est faite en amont par {@code PaieBiReportBuilder} (10 plus gros chantiers, voir
+     * {@code MAX_CHANTIERS_GRAPHIQUE}). */
+    record BlocGraphique(List<RepartitionBean> donnees) implements Bloc {
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la

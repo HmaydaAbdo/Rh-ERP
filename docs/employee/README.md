@@ -101,11 +101,10 @@ détail endpoint ↔ permission et `conventions/security.md` pour la conception 
 
 ## Import Excel
 
-L'import Excel sert à la fois à **créer** de nouveaux employés et à **mettre à jour en masse** des
-employés existants — même bouton, même fichier, même endpoint. L'employé est identifié par son
-**CIN** (colonne C) : un CIN inédit crée un nouvel employé, un CIN déjà présent en base **met à jour
-tous les champs de la ligne** sur l'employé existant (ré-import = correction complète, jamais un
-merge partiel des seuls champs modifiés).
+L'import Excel sert uniquement à **ajouter de nouveaux employés** (décision du 2026-10-03 : toute
+modification se fait depuis l'écran Employés, jamais par un fichier). L'employé est identifié par son
+**CIN** (colonne C) : un CIN inédit crée un nouvel employé, un CIN déjà présent en base **rejette la
+ligne** — donc tout le fichier — sans rien modifier.
 
 ### Modèle téléchargeable
 
@@ -124,7 +123,7 @@ Fichier `.xlsx`, une ligne d'en-tête (ignorée), **6 colonnes**, dans cet ordre
 |---|---|---|
 | A | Date d'embauche | `14/07/2018` |
 | B | Nom & prénom | `BOULJIHEL SALH` |
-| C | CIN — clé de correspondance création/mise à jour | `PB85747` |
+| C | CIN — doit être inédit en base | `PB85747` |
 | D | Fonction (libellé, doit exister) | `OPERATEUR` |
 | E | Chantier (code, doit exister et être actif) | `C059` |
 | F | Date de naissance | `26/05/1984` |
@@ -134,10 +133,7 @@ moins de 6 colonnes en en-tête, l'import est rejeté immédiatement (`400`, mes
 même de tenter de lire les données.
 
 **Le statut n'est pas une colonne de ce format** — il ne peut pas être modifié en masse par l'import,
-uniquement via l'UI (formulaire), employé par employé :
-
-- à la **création** : le statut par défaut `ACTIF` est toujours appliqué ;
-- à la **mise à jour** : le statut existant de l'employé n'est **jamais modifié** par l'import.
+uniquement via l'UI (formulaire), employé par employé : les employés créés sont toujours `ACTIF`.
 
 **Prérequis** : Fonction est résolue par libellé (aucune notion d'actif/inactif sur ce référentiel),
 Chantier par code parmi les chantiers déjà **actifs** en base — ils doivent exister au préalable
@@ -147,7 +143,7 @@ Fonction ni de Chantier automatiquement.
 ### Comportement
 
 Import **atomique** (tout ou rien) — une seule ligne invalide rejette tout le fichier, rien n'est
-créé ni mis à jour :
+créé :
 
 | Cas | Message affiché |
 |---|---|
@@ -156,12 +152,13 @@ créé ni mis à jour :
 | Champ obligatoire manquant (nom, CIN, dates, fonction, chantier) | `Champs obligatoires manquants ou invalides : ...` |
 | Nom & prénom > 150 caractères ou CIN > 30 caractères | `Nom/prénom ou CIN trop long` (mêmes limites que les colonnes `nom_prenom`/`cin` en base) |
 | CIN en double dans le même fichier | `CIN en doublon dans le fichier` |
+| CIN déjà présent en base (insensible à la casse) | `Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)` |
 | Fonction absente du référentiel | `Fonction introuvable : <valeur>` |
 | Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |
-| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, `misAJour = 0`, détail complet dans `lignesIgnorees` |
-| Toutes les lignes valides | `200 OK`, chaque ligne crée ou met à jour son employé selon le CIN |
+| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, détail complet dans `lignesIgnorees` |
+| Toutes les lignes valides | `200 OK`, chaque ligne crée un employé |
 
-`EmployeeImportResultDto` : `totalLignes`, `crees`, `misAJour`, `ignores`, `lignesIgnorees[]`
+`EmployeeImportResultDto` : `totalLignes`, `crees`, `ignores`, `lignesIgnorees[]`
 (`numeroLigne`, `cin`, `nomPrenom`, `raison`). Le corps de réponse a la même forme en succès (`200`)
 qu'en rejet (`400`) — seul le code HTTP change.
 

@@ -24,10 +24,13 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar "Paie" | Aucune (visible dès qu'authentifié) |
-| Route `/paie/**` | `authGuard` (authentification seule) |
-| Bouton "Supprimer" (liste) | `authService.hasPermission('PAIE_DELETE')` — voir `PaieListComponent.canDelete()` |
-| Boutons "Importer" / "Modèle Excel" / "Exporter Excel" / "Exporter PDF" | Aucune vérification frontend dédiée — repose sur le 403 backend si la permission manque |
+| Lien sidebar « Paie » | `PAIE_READ` |
+| Routes `/paie` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) |
+| Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
+| Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
+| Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
+| Bouton « Exporter » (Excel et PDF, dialog d'export) | `PAIE_EXPORT` — `canExport()` |
+| Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)
 

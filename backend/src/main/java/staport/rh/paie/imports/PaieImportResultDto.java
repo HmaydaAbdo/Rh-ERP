@@ -7,7 +7,6 @@ public record PaieImportResultDto(
         YearMonth periode,
         int totalLignes,
         int crees,
-        int misAJour,
         int ignores,
         List<LigneIgnoreeDto> lignesIgnorees,
         List<String> fonctionsCreees

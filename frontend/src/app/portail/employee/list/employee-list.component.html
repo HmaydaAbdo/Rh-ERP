@@ -7,7 +7,6 @@
     <p>
       <strong>{{ importResult.totalLignes }}</strong> ligne(s) traitée(s) —
       <strong>{{ importResult.crees }}</strong> créée(s),
-      <strong>{{ importResult.misAJour }}</strong> mise(s) à jour,
       <strong>{{ importResult.ignores }}</strong> ignorée(s).
     </p>
 
@@ -42,25 +41,31 @@
   <div class="employee-list__header">
     <h1>Employés</h1>
     <div class="employee-list__header-actions">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-download"
-        label="Modèle Excel"
-        class="p-button-outlined"
-        [loading]="downloadingTemplate"
-        (click)="onDownloadTemplate()"
-      ></button>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-upload"
-        label="Importer"
-        class="p-button-outlined"
-        [loading]="importing"
-        (click)="onTriggerImport()"
-      ></button>
-      <button pButton type="button" icon="pi pi-plus" label="Nouvel employé" routerLink="/employees/new"></button>
+      @if (canImport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-download"
+          label="Modèle Excel"
+          class="p-button-outlined"
+          [loading]="downloadingTemplate"
+          (click)="onDownloadTemplate()"
+        ></button>
+      }
+      @if (canImport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-upload"
+          label="Importer"
+          class="p-button-outlined"
+          [loading]="importing"
+          (click)="onTriggerImport()"
+        ></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouvel employé" routerLink="/employees/new"></button>
+      }
     </div>
   </div>
 
@@ -155,7 +160,9 @@
         }
         <td class="employee-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(employee)"></button>
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(employee)"></button>
+          @if (canWrite()) {
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(employee)"></button>
+          }
           @if (canDelete()) {
             <button
               pButton

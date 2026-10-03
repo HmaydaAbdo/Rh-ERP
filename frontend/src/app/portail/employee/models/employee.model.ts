@@ -45,7 +45,6 @@ export interface EmployeeImportLigneIgnoree {
 export interface EmployeeImportResult {
   totalLignes: number;
   crees: number;
-  misAJour: number;
   ignores: number;
   lignesIgnorees: EmployeeImportLigneIgnoree[];
 }

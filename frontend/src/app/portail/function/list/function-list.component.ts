@@ -53,6 +53,14 @@ export class FunctionListComponent implements OnInit {
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
+  canWrite(): boolean {
+    return this.authService.hasPermission('FUNCTION_WRITE');
+  }
+
+  canImport(): boolean {
+    return this.authService.hasPermission('FUNCTION_IMPORT');
+  }
+
   canDelete(): boolean {
     return this.authService.hasPermission('FUNCTION_DELETE');
   }

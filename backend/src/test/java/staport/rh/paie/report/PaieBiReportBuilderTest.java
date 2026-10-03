@@ -36,6 +36,66 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
+    void construireDepuis_devraitLimiterLeGraphiqueChantierAuxDixPlusGrosSansRegroupementAutres() {
+        // 12 chantiers de masses croissantes (C01 = 1 000 ... C12 = 12 000) : seuls les 10 plus gros restent.
+        List<Paie> courant = new java.util.ArrayList<>();
+        for (int i = 1; i <= 12; i++) {
+            courant.add(paie("EMPLOYE " + i, "CIN" + i, "OPERATEUR", String.format("C%02d", i), "EQUIPE A", String.valueOf(i * 1000)));
+        }
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, courant, List.of());
+
+        assertThat(vue.synthese().nombreChantiers()).isEqualTo(12);
+        assertThat(vue.synthese().repartitionChantier())
+                .extracting(RepartitionBean::getLibelle)
+                .containsExactly("C12", "C11", "C10", "C09", "C08", "C07", "C06", "C05", "C04", "C03");
+        assertThat(vue.synthese().repartitionChantier())
+                .extracting(RepartitionBean::getLibelle).doesNotContain("Autres");
+        // Le rapport reste exhaustif : les 12 chantiers ont leur propre section, seul le graphique est limité.
+        assertThat(vue.chantiers()).hasSize(12);
+    }
+
+    @Test
+    void construireDepuis_devraitGarderTousLesChantiersDansLeGraphiqueQuandIlsSontDixOuMoins() {
+        Paie a = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000");
+        Paie b = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A", "9000");
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(a, b), List.of());
+
+        assertThat(vue.synthese().repartitionChantier()).extracting(RepartitionBean::getLibelle).containsExactly("C068", "C059");
+    }
+
+    @Test
+    void laPageGlobaleDoitAnnoncerLeTop10QuandIlYAPlusDeDixChantiers() {
+        List<Paie> courant = new java.util.ArrayList<>();
+        for (int i = 1; i <= 12; i++) {
+            courant.add(paie("EMPLOYE " + i, "CIN" + i, "OPERATEUR", String.format("C%02d", i), "EQUIPE A", String.valueOf(i * 1000)));
+        }
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, courant, List.of());
+
+        assertThat(titresSectionRepartitionChantier(vue))
+                .containsExactly("Répartition par chantier — les 10 chantiers qui consomment le plus");
+    }
+
+    @Test
+    void laPageGlobaleGardeLeTitreSimpleQuandIlYADixChantiersOuMoins() {
+        Paie a = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000");
+        Paie b = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE A", "9000");
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(a, b), List.of());
+
+        assertThat(titresSectionRepartitionChantier(vue)).containsExactly("Répartition par chantier");
+    }
+
+    private List<String> titresSectionRepartitionChantier(RapportBiVue vue) {
+        return new RapportPageModelBuilder().construire(vue).stream()
+                .flatMap(page -> page.blocs().stream())
+                .filter(PageModel.BlocTitreSection.class::isInstance)
+                .map(bloc -> ((PageModel.BlocTitreSection) bloc).texte())
+                .filter(texte -> texte.startsWith("Répartition par chantier"))
+                .toList();
+    }
+
+    @Test
     void construireDepuis_devraitLeverUneExceptionSiAucuneLignePourLaPeriode() {
         assertThatThrownBy(() -> builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(), List.of()))
                 .isInstanceOf(AucunePaiePeriodeException.class);

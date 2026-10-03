@@ -73,6 +73,14 @@ export class EmployeeListComponent implements OnInit {
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
+  canWrite(): boolean {
+    return this.authService.hasPermission('EMPLOYEE_WRITE');
+  }
+
+  canImport(): boolean {
+    return this.authService.hasPermission('EMPLOYEE_IMPORT');
+  }
+
   canDelete(): boolean {
     return this.authService.hasPermission('EMPLOYEE_DELETE');
   }
@@ -189,7 +197,7 @@ export class EmployeeListComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Import terminé',
-            detail: `${result.crees} créé(s), ${result.misAJour} mis à jour sur ${result.totalLignes} ligne(s)`,
+            detail: `${result.crees} créé(s) sur ${result.totalLignes} ligne(s)`,
             life: 6000
           });
           this.fetchPage();

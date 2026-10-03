@@ -12,7 +12,9 @@
 
 ## JWT — Access Token / Refresh Token
 
-* Le backend est son propre émetteur de JWT (pas d'IdP externe) — signature HMAC (HS256), secret
+* Le backend est son propre émetteur de JWT (pas d'IdP externe) — signature HMAC (HS256, choix confirmé le
+  2026-10-03 : un seul service émet et valide les tokens, une paire de clés RS256 n'apporterait rien tant qu'aucun
+  autre service ne valide les tokens), secret
   `${JWT_SECRET}` (voir `conventions/configuration.md`). Validation via
   `spring-boot-starter-oauth2-resource-server` (`SecurityConfig.jwtDecoder`).
 * **Access Token** : courte durée (ex. 15 minutes), contient les claims `permissions` (codes
@@ -178,17 +180,29 @@ doit vérifier la **permission effective** de l'utilisateur courant, jamais un r
   — pas de révocation immédiate d'une permission en cours de session. Acceptable pour la plupart des
   projets ; à revoir (vérification en base à chaque requête, ou notification de refresh forcé) si un
   besoin de révocation instantanée apparaît.
-* **Pas de détection de compromission en cascade sur le Refresh Token** par défaut : la réutilisation
-  d'un Refresh Token déjà consommé est rejetée, mais ne révoque pas automatiquement les autres
-  tokens de l'utilisateur — un attaquant qui vole un Refresh Token et l'utilise une fois avant
-  l'utilisateur légitime peut passer inaperçu au-delà du rejet de la requête suivante de la victime.
-  Amélioration possible : marquer toute la « famille » de tokens compromise et forcer une
-  reconnexion complète.
+* **Compromission du Refresh Token** : la réutilisation d'un token déjà consommé révoque toute sa
+  « famille » (tous les tokens issus de la même connexion), ce qui force une reconnexion complète — voir
+  `docs/rbac/auth.md`. Les sessions des autres appareils ne sont pas touchées ; un attaquant qui utilise le
+  token volé *avant* le propriétaire reste possible une fois (la rotation suivante du propriétaire le démasque).
 * **CSRF désactivé globalement**, si ce choix est fait — documenter la justification (Bearer token
   sur tout endpoint métier) à chaque fois qu'il est repris dans un nouveau projet.
 * **Access Token non révocable avant expiration** — accepté, borné par sa courte durée de vie.
 * **`SameSite=Lax` dépend d'un mécanisme rendant frontend/backend same-origin** (proxy de dev,
   reverse-proxy) — à revoir si ce n'est plus le cas.
+
+---
+
+# Tests de sécurité
+
+* Un test automatique découvre tous les contrôleurs et vérifie que chaque endpoint a une permission
+  explicite, la fait respecter et correspond à une table de référence (endpoint → permission) : tout
+  nouvel endpoint s'y ajoute, dans le même changement que la documentation RBAC.
+* Un test de bout en bout avec de vrais Access Tokens valide la chaîne d'authentification (401 sans
+  token ou avec un token invalide/forgé, 403 sans la permission, 200 avec).
+* Côté frontend, chaque route est protégée par un guard de permission et chaque bouton d'action
+  (création, modification, suppression, import, export, synchronisation) par la permission
+  correspondante ; un refus mène à une page « accès refusé », jamais à une redirection qui pourrait
+  boucler. Les tests du projet sont décrits dans `docs/rbac/auth.md`.
 
 ---
 

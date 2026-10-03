@@ -124,9 +124,18 @@ final class RapportPageModelBuilder {
                 CarteKpi.de("CHANTIERS", String.valueOf(synthese.nombreChantiers())),
                 CarteKpi.de("STC / SORTIES", String.valueOf(synthese.stc()))
         )));
-        blocs.add(new PageModel.BlocTitreSection("Répartition par chantier"));
-        blocs.add(new PageModel.BlocGraphique(synthese.repartitionChantier(), true));
+        blocs.add(new PageModel.BlocTitreSection(titreRepartitionChantier(synthese)));
+        blocs.add(new PageModel.BlocGraphique(synthese.repartitionChantier()));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
+    }
+
+    /** Le graphique ne montre que les chantiers qui consomment le plus (voir
+     * {@code PaieBiReportBuilder.MAX_CHANTIERS_GRAPHIQUE}) : quand il y en a davantage, le titre le dit. */
+    private String titreRepartitionChantier(SyntheseGlobaleVue synthese) {
+        int affiches = synthese.repartitionChantier().size();
+        return synthese.nombreChantiers() > affiches
+                ? "Répartition par chantier — les " + affiches + " chantiers qui consomment le plus"
+                : "Répartition par chantier";
     }
 
     private void ajouterPageChantier(List<PageEnConstruction> pages, ChantierBiVue chantier, int index) {
@@ -140,7 +149,7 @@ final class RapportPageModelBuilder {
         )));
         if (chantier.avecDetailEquipe()) {
             blocs.add(new PageModel.BlocTitreSection("Répartition par équipe"));
-            blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe(), false));
+            blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe()));
         }
         pages.add(new PageEnConstruction(niveauTexteChantier(chantier), blocs));
     }

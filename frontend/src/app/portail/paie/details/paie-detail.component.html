@@ -3,7 +3,9 @@
     <div class="paie-detail__header">
       <h1>{{ paie.employee.nomPrenom }} — {{ paie.periode }}</h1>
       <div class="paie-detail__header-actions">
-        <a [routerLink]="['/paie', paie.id, 'edit']" class="p-button">Modifier</a>
+        @if (canWrite()) {
+          <a [routerLink]="['/paie', paie.id, 'edit']" class="p-button">Modifier</a>
+        }
         <a routerLink="/paie" class="p-button p-button-outlined">Retour à la liste</a>
       </div>
     </div>

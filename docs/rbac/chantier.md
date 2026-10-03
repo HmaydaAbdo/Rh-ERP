@@ -18,10 +18,12 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar "Chantiers" | Aucune (visible dès qu'authentifié — la page elle-même échoue proprement en 403 si `CHANTIER_READ` manque) |
-| Route `/chantiers/**` | `authGuard` (authentification seule, pas de permission spécifique au niveau route) |
-| Bouton "Supprimer" (liste) | `authService.hasPermission('CHANTIER_DELETE')` — voir `ChantierListComponent.canDelete()` |
-| Bouton "Synchroniser maintenant" | Aucune vérification frontend dédiée — repose sur le 403 backend si `CHANTIER_SYNC` manque (amélioration possible : gater aussi côté UI) |
+| Lien sidebar « Chantiers » | `CHANTIER_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
+| Routes `/chantiers` et `/chantiers/:id` | `authGuard` + `permissionGuard` (`CHANTIER_READ`) |
+| Routes `/chantiers/new` et `/chantiers/:id/edit` | `authGuard` + `permissionGuard` (`CHANTIER_WRITE`) |
+| Boutons « Nouveau chantier » et « Modifier » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` |
+| Bouton « Synchroniser maintenant » | `CHANTIER_SYNC` — `ChantierListComponent.canSync()` |
+| Bouton « Supprimer » (liste) | `CHANTIER_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)
 

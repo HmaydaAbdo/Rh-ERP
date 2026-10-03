@@ -222,7 +222,8 @@ Interdit :
 
 * RxJS/Observables pour les flux asynchrones (HTTP, événements répétés dans le temps) — un
   intercepteur ou un Service qui expose un flux continu reste en RxJS.
-* Angular Signals (`signal`, `computed`) pour un état synchrone simple porté par un Service ou un
+* Angular Signals (`signal`, `computed`) — autorisés, choix confirmé le 2026-10-03 (déjà utilisés par
+  `AuthService` et `AppComponent`) — pour un état synchrone simple porté par un Service ou un
   composant (ex. utilisateur courant, état d'authentification, dérivés calculés d'un état local) —
   préférer un Signal à une propriété de classe mutable brute dès que des composants doivent réagir
   à ce changement d'état.

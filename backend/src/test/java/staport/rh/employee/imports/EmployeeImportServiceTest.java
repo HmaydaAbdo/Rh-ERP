@@ -28,6 +28,7 @@ import staport.rh.function.services.interfaces.IFunctionService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +65,7 @@ class EmployeeImportServiceTest {
                 List.of(new FunctionResponseDto(10L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(
                 List.of(new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
+        lenient().when(repository.findAllCinsEnMajuscules()).thenReturn(Set.of());
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);
         lenient().when(entityManager.getReference(eq(Function.class), any())).thenReturn(new Function());
@@ -73,7 +75,6 @@ class EmployeeImportServiceTest {
     @Test
     void importer_devraitCreerToutesLesLignesQuandLeFichierEstEntierementValide() throws IOException {
         stubReferentiels();
-        when(repository.findByCinIgnoreCase(anyString())).thenReturn(Optional.empty());
 
         MockMultipartFile file = buildExcelFile(
                 new Object[]{"Date", "Nom", "CIN", "Fonction", "Chantier", "naissance"},
@@ -84,7 +85,6 @@ class EmployeeImportServiceTest {
 
         assertThat(result.totalLignes()).isEqualTo(1);
         assertThat(result.crees()).isEqualTo(1);
-        assertThat(result.misAJour()).isZero();
         assertThat(result.ignores()).isZero();
 
         ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
@@ -93,27 +93,23 @@ class EmployeeImportServiceTest {
     }
 
     @Test
-    void importer_devraitMettreAJourQuandLeCinExisteDejaSansToucherAuStatut() throws IOException {
+    void importer_devraitRejeterLeFichierQuandLeCinExisteDejaEnBaseSansModifierLEmploye() throws IOException {
         stubReferentiels();
-        Employee existant = new Employee();
-        existant.setId(5L);
-        existant.setNomPrenom("ANCIEN NOM");
-        existant.setCin("PB85747");
-        existant.setStatut(EmployeeStatut.INACTIF);
-        when(repository.findByCinIgnoreCase("PB85747")).thenReturn(Optional.of(existant));
+        // Le CIN existe en base, avec une casse différente de celle du fichier.
+        when(repository.findAllCinsEnMajuscules()).thenReturn(Set.of("PB85747"));
 
         MockMultipartFile file = buildExcelFile(
                 new Object[]{"Date", "Nom", "CIN", "Fonction", "Chantier", "naissance"},
-                new Object[]{toSerial(2018, 7, 14), "NOUVEAU NOM", "PB85747", "OPERATEUR", "C059", toSerial(1984, 5, 1)}
+                new Object[]{toSerial(2018, 7, 14), "NOUVEAU NOM", "pb85747", "OPERATEUR", "C059", toSerial(1984, 5, 1)}
         );
 
         EmployeeImportResultDto result = importService.importer(file);
 
         assertThat(result.crees()).isZero();
-        assertThat(result.misAJour()).isEqualTo(1);
-        assertThat(existant.getNomPrenom()).isEqualTo("NOUVEAU NOM");
-        assertThat(existant.getStatut()).isEqualTo(EmployeeStatut.INACTIF);
-        verify(repository).save(existant);
+        assertThat(result.ignores()).isEqualTo(1);
+        assertThat(result.lignesIgnorees().get(0).raison()).contains("Un employé existe déjà avec ce CIN");
+        // L'import ne modifie jamais un employé existant : rien n'est sauvegardé.
+        verify(repository, never()).save(any(Employee.class));
     }
 
     @Test
@@ -148,7 +144,6 @@ class EmployeeImportServiceTest {
 
         assertThat(result.totalLignes()).isEqualTo(2);
         assertThat(result.crees()).isZero();
-        assertThat(result.misAJour()).isZero();
         assertThat(result.ignores()).isEqualTo(1);
         verify(repository, never()).save(any(Employee.class));
     }

@@ -36,7 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,6 +84,7 @@ class PaieImportServiceTest {
                 new EquipeResponseDto(30L, "EQUIPE A", "Equipe A")));
         lenient().when(equipeService.search(isNull(), any(Pageable.class))).thenReturn(equipes);
         lenient().when(entityManager.getReference(eq(Equipe.class), any())).thenReturn(new Equipe());
+        lenient().when(repository.findEmployeeIdsByPeriode(periode)).thenReturn(Set.of());
         lenient().when(employeeService.search(isNull(), any(Pageable.class))).thenReturn(employees);
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);
@@ -95,7 +96,6 @@ class PaieImportServiceTest {
     @Test
     void importer_devraitCreerUnBulletinQuandToutEstValideEtInexistant() throws IOException {
         stubReferentiels();
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
@@ -108,17 +108,14 @@ class PaieImportServiceTest {
 
         assertThat(result.totalLignes()).isEqualTo(1);
         assertThat(result.crees()).isEqualTo(1);
-        assertThat(result.misAJour()).isZero();
         assertThat(result.ignores()).isZero();
         verify(repository).save(any(Paie.class));
     }
 
     @Test
-    void importer_devraitMettreAJourQuandLeBulletinExisteDeja() throws IOException {
+    void importer_devraitRejeterLeFichierQuandUnBulletinExisteDejaPourCetEmployeEtCettePeriode() throws IOException {
         stubReferentiels();
-        Paie existant = new Paie();
-        existant.setId(5L);
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.of(existant));
+        lenient().when(repository.findEmployeeIdsByPeriode(periode)).thenReturn(Set.of(1L));
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
@@ -130,7 +127,10 @@ class PaieImportServiceTest {
         PaieImportResultDto result = importService.importer(fichier, periode);
 
         assertThat(result.crees()).isZero();
-        assertThat(result.misAJour()).isEqualTo(1);
+        assertThat(result.ignores()).isEqualTo(1);
+        assertThat(result.lignesIgnorees().get(0).raison()).contains("Un bulletin existe déjà");
+        // Jamais de modification d'un bulletin existant par l'import : ni lecture ni sauvegarde.
+        verify(repository, never()).save(any(Paie.class));
     }
 
     @Test
@@ -170,6 +170,28 @@ class PaieImportServiceTest {
     }
 
     @Test
+    void importer_devraitRejeterLeFichierQuandUnCinApparaitDeuxFoisPourLaMemePeriode() throws IOException {
+        stubReferentiels();
+
+        MockMultipartFile fichier = buildExcelFile(
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
+                new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"},
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", "PB85747", 26.0, 0.0, 0.0, 5000.0, 200.0, 100.0, 5300.0, "", "C059", "EQUIPE A"},
+                // Même CIN, casse et espaces différents : c'est le même employé, donc la même clé (employé, période).
+                new Object[]{"BOULJIHEL SALH", "OPERATEUR", " pb85747 ", 20.0, 0.0, 0.0, 4000.0, 0.0, 0.0, 4000.0, "", "C059", "EQUIPE A"}
+        );
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.crees()).isZero();
+        assertThat(result.ignores()).isEqualTo(1);
+        assertThat(result.lignesIgnorees().get(0).numeroLigne()).isEqualTo(5);
+        assertThat(result.lignesIgnorees().get(0).raison()).isEqualTo("CIN en doublon dans le fichier");
+        verify(repository, never()).save(any(Paie.class));
+    }
+
+    @Test
     void importer_devraitIgnorerUneEquipeInconnue() throws IOException {
         stubReferentiels();
 
@@ -190,7 +212,6 @@ class PaieImportServiceTest {
     @Test
     void importer_devraitResoudreLEquipeSansTenirCompteDeLaCasseNiDesEspaces() throws IOException {
         stubReferentiels();
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
@@ -208,7 +229,6 @@ class PaieImportServiceTest {
     @Test
     void importer_devraitAccepterUneLigneSansEquipe() throws IOException {
         stubReferentiels();
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
@@ -228,7 +248,6 @@ class PaieImportServiceTest {
     @Test
     void importer_devraitCreerAutomatiquementUneFonctionInconnue() throws IOException {
         stubReferentiels();
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
         when(functionService.create(new FunctionCreateRequestDto("GRUTIER")))
                 .thenReturn(new FunctionResponseDto(99L, "GRUTIER"));
 
@@ -250,7 +269,6 @@ class PaieImportServiceTest {
     @Test
     void importer_devraitReprendreLaColonneTotalTelleQuelle() throws IOException {
         stubReferentiels();
-        when(repository.findByEmployee_IdAndPeriode(1L, periode)).thenReturn(Optional.empty());
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},
@@ -318,7 +336,6 @@ class PaieImportServiceTest {
 
         assertThat(result.totalLignes()).isEqualTo(2);
         assertThat(result.crees()).isZero();
-        assertThat(result.misAJour()).isZero();
         assertThat(result.ignores()).isEqualTo(1);
         verify(repository, never()).save(any(Paie.class));
     }

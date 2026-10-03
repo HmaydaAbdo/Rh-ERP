@@ -29,6 +29,6 @@ export interface ChantierSearchCriteria {
 export interface ChantierSyncResult {
   totalRecus: number;
   crees: number;
-  misAJour: number;
+  dejaPresents: number;
   ignores: number;
 }

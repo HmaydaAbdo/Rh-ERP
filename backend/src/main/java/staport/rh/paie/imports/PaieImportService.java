@@ -56,9 +56,10 @@ import java.util.Set;
  * inconnu rejette la ligne) existent déjà — il ne fait que constater/historiser une paie. La
  * **fonction** fait exception : une fonction inconnue n'est plus une erreur, elle est **créée**
  * automatiquement (comme le ferait un import Function), jamais l'employé ni le chantier. Import
- * atomique : soit toutes les lignes valides sont créées/mises à jour (et les fonctions manquantes
- * créées), soit rien n'est persisté — une seule ligne invalide rejette tout le fichier. Une ligne
- * dont (employé, période) existe déjà est mise à jour (ré-import = correction), jamais dupliquée.
+ * atomique : soit toutes les lignes sont créées (et les fonctions manquantes créées), soit rien n'est
+ * persisté — une seule ligne invalide rejette tout le fichier. L'import ne **modifie jamais** un
+ * bulletin existant : une ligne dont (employé, période) existe déjà est rejetée, la correction d'un
+ * bulletin se fait uniquement depuis l'écran Paie.
  */
 @Service
 public class PaieImportService {
@@ -100,6 +101,7 @@ public class PaieImportService {
             Map<String, Long> employesParCin = chargerEmployesParCin();
             Map<String, Long> chantiersParCode = chargerChantiersActifs();
             Map<String, Long> equipesParCode = chargerEquipesParCode();
+            Set<Long> employesAvecBulletin = repository.findEmployeeIdsByPeriode(periode);
             Set<String> cinsTraites = new LinkedHashSet<>();
 
             int numeroLigne = 0;
@@ -132,7 +134,8 @@ public class PaieImportService {
                 String equipe = getCellAsString(row.getCell(12));
 
                 String raison = validerLigne(cin, fonctionLibelle, chantierCode, equipe, nombreJoursTravailles,
-                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode, equipesParCode);
+                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode, equipesParCode,
+                        employesAvecBulletin);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
@@ -156,28 +159,20 @@ public class PaieImportService {
         if (!lignesIgnorees.isEmpty()) {
             log.warn("Import paie rejeté : periode={}, {} ligne(s) invalide(s) sur {}, rien persisté",
                     periode, lignesIgnorees.size(), totalLignes);
-            return new PaieImportResultDto(periode, totalLignes, 0, 0, lignesIgnorees.size(), lignesIgnorees, List.of());
+            return new PaieImportResultDto(periode, totalLignes, 0, lignesIgnorees.size(), lignesIgnorees, List.of());
         }
 
-        // La création des fonctions manquantes et la mutation des bulletins existants ne se font
-        // qu'ici, une fois le fichier entier confirmé valide : une entité JPA gérée mutée plus tôt
-        // (ou une fonction créée plus tôt) serait susceptible d'être persistée par le
-        // dirty-checking d'Hibernate / de rester en base même si l'import est rejeté ensuite.
+        // La création des fonctions manquantes ne se fait qu'ici, une fois le fichier entier confirmé
+        // valide : une fonction créée plus tôt resterait en base même si l'import est rejeté ensuite.
         Map<String, Long> fonctionsParLibelle = chargerFonctions();
         List<String> fonctionsCreees = creerFonctionsManquantes(aAppliquer, fonctionsParLibelle);
 
-        int crees = 0;
-        int misAJour = 0;
         for (LigneAAppliquer ligne : aAppliquer) {
             Long fonctionId = fonctionsParLibelle.get(ligne.fonctionLibelle().toUpperCase());
 
-            Paie paie = repository.findByEmployee_IdAndPeriode(ligne.employeeId(), periode).orElseGet(Paie::new);
-            boolean isNew = paie.getId() == null;
-
-            if (isNew) {
-                paie.setEmployee(entityManager.getReference(Employee.class, ligne.employeeId()));
-                paie.setPeriode(periode);
-            }
+            Paie paie = new Paie();
+            paie.setEmployee(entityManager.getReference(Employee.class, ligne.employeeId()));
+            paie.setPeriode(periode);
             paie.setFonction(entityManager.getReference(Function.class, fonctionId));
             paie.setChantier(entityManager.getReference(Chantier.class, ligne.chantierId()));
             paie.setEquipe(ligne.equipeId() != null ? entityManager.getReference(Equipe.class, ligne.equipeId()) : null);
@@ -191,17 +186,12 @@ public class PaieImportService {
             paie.setObservation(ligne.observation());
 
             repository.save(paie);
-            if (isNew) {
-                crees++;
-            } else {
-                misAJour++;
-            }
         }
 
-        log.info("Import paie terminé : periode={}, total={}, créés={}, misAJour={}, fonctionsCreees={}",
-                periode, totalLignes, crees, misAJour, fonctionsCreees.size());
+        log.info("Import paie terminé : periode={}, total={}, créés={}, fonctionsCreees={}",
+                periode, totalLignes, aAppliquer.size(), fonctionsCreees.size());
 
-        return new PaieImportResultDto(periode, totalLignes, crees, misAJour, 0, lignesIgnorees, fonctionsCreees);
+        return new PaieImportResultDto(periode, totalLignes, aAppliquer.size(), 0, lignesIgnorees, fonctionsCreees);
     }
 
     /**
@@ -239,7 +229,8 @@ public class PaieImportService {
     private String validerLigne(String cin, String fonctionLibelle, String chantierCode, String equipeCode,
                                  Integer nombreJoursTravailles, BigDecimal salaireMensuel,BigDecimal salaireTotal,
                                  Set<String> cinsTraites, Map<String, Long> employesParCin,
-                                 Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode) {
+                                 Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode,
+                                 Set<Long> employesAvecBulletin) {
         List<String> champsManquants = new ArrayList<>();
         if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
             champsManquants.add("Fonction");
@@ -266,6 +257,9 @@ public class PaieImportService {
         }
         if (!employesParCin.containsKey(cinNormalise)) {
             return "Employé introuvable avec ce CIN";
+        }
+        if (employesAvecBulletin.contains(employesParCin.get(cinNormalise))) {
+            return "Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)";
         }
         if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
             return "Chantier introuvable ou inactif : " + chantierCode.trim();

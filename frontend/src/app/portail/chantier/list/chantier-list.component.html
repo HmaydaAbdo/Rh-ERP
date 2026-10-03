@@ -4,16 +4,20 @@
   <div class="chantier-list__header">
     <h1>Chantiers</h1>
     <div class="chantier-list__header-actions">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-refresh"
-        label="Synchroniser maintenant"
-        class="p-button-outlined"
-        [loading]="syncing"
-        (click)="onSynchroniser()"
-      ></button>
-      <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+      @if (canSync()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-refresh"
+          label="Synchroniser maintenant"
+          class="p-button-outlined"
+          [loading]="syncing"
+          (click)="onSynchroniser()"
+        ></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+      }
     </div>
   </div>
 
@@ -93,7 +97,9 @@
         }
         <td class="chantier-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(chantier)"></button>
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(chantier)"></button>
+          @if (canWrite()) {
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(chantier)"></button>
+          }
           @if (canDelete()) {
             <button
               pButton

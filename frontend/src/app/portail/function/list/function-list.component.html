@@ -37,25 +37,31 @@
   <div class="function-list__header">
     <h1>Fonctions</h1>
     <div class="function-list__header-actions">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-download"
-        label="Modèle Excel"
-        class="p-button-outlined"
-        [loading]="downloadingTemplate"
-        (click)="onDownloadTemplate()"
-      ></button>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-upload"
-        label="Importer"
-        class="p-button-outlined"
-        [loading]="importing"
-        (click)="onTriggerImport()"
-      ></button>
-      <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
+      @if (canImport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-download"
+          label="Modèle Excel"
+          class="p-button-outlined"
+          [loading]="downloadingTemplate"
+          (click)="onDownloadTemplate()"
+        ></button>
+      }
+      @if (canImport()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-upload"
+          label="Importer"
+          class="p-button-outlined"
+          [loading]="importing"
+          (click)="onTriggerImport()"
+        ></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
+      }
     </div>
   </div>
 
@@ -109,7 +115,9 @@
         }
         <td class="function-list__actions">
           <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(fonction)"></button>
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(fonction)"></button>
+          @if (canWrite()) {
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(fonction)"></button>
+          }
           @if (canDelete()) {
             <button
               pButton

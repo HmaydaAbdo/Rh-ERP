@@ -35,6 +35,21 @@ class RapportChartSvgBuilderTest {
         assertThat(texteComplet).contains("C999");
     }
 
+    /** Non-régression : le moteur de rendu dimensionne le SVG d'après son viewBox (en px, 1 px = 0,75 pt) et
+     * ignore width/height ; le dessin (en pt) doit donc être agrandi de 4/3 pour occuper toute la largeur utile
+     * de la page (802 pt = 1069,33 px). Avant correction, le graphique n'en occupait que les trois quarts. */
+    @Test
+    void ajouterGraphique_doitOccuperToutLaLargeurUtileDeLaPage() {
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+        builder.ajouterGraphique(corps, List.of(new RepartitionBean("C168", 74, new BigDecimal("444000.00"), 0, BigDecimal.ZERO)));
+
+        Element svg = doc.selectFirst("svg");
+        assertThat(svg.attr("viewBox")).startsWith("0 0 1069.33 ");
+        assertThat(svg.attr("width")).isEqualTo("1069.33px");
+        assertThat(svg.selectFirst("g").attr("transform")).startsWith("scale(1.33");
+    }
+
     @Test
     void ajouterGraphique_neDoitRienAfficherPourUneListeVide() {
         Document doc = Document.createShell("");

@@ -19,10 +19,12 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar "Fonctions" | Aucune (visible dès qu'authentifié) |
-| Route `/functions/**` | `authGuard` (authentification seule) |
-| Bouton "Supprimer" (liste) | `authService.hasPermission('FUNCTION_DELETE')` — voir `FunctionListComponent.canDelete()` |
-| Boutons "Importer" / "Modèle Excel" | Aucune vérification frontend dédiée — repose sur le 403 backend si `FUNCTION_IMPORT` manque |
+| Lien sidebar « Fonctions » | `FUNCTION_READ` |
+| Routes `/functions` et `/functions/:id` | `authGuard` + `permissionGuard` (`FUNCTION_READ`) |
+| Routes `/functions/new` et `/functions/:id/edit` | `authGuard` + `permissionGuard` (`FUNCTION_WRITE`) |
+| Boutons « Nouvelle fonction » et « Modifier » (liste, détail) | `FUNCTION_WRITE` — `canWrite()` |
+| Boutons « Importer » / « Modèle Excel » | `FUNCTION_IMPORT` — `canImport()` |
+| Bouton « Supprimer » (liste) | `FUNCTION_DELETE` — `canDelete()` |
 
 ## Note — import automatique de fonctions depuis Paie
 

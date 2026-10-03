@@ -91,6 +91,34 @@ class PaieExportServiceTest {
     }
 
     @Test
+    void exporter_devraitTrierLesLignesParFonctionPuisParNomDansToutesLesFeuilles() throws IOException {
+        YearMonth periode = YearMonth.of(2026, 8);
+        Paie operateurZ = construirePaie("ZIANI", "CIN1", "OPERATEUR", "C059", "CH");
+        Paie chauffeurB = construirePaie("BENALI", "CIN2", "chauffeur", "C059", "CH");
+        Paie operateurA = construirePaie("ALAMI", "CIN3", "OPERATEUR", "C059", "CH");
+        Paie admin = construirePaie("YOUSSEF", "CIN4", "ADMIN", "C059", "CH");
+
+        when(repository.findByPeriode(periode)).thenReturn(List.of(operateurZ, chauffeurB, operateurA, admin));
+        when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
+
+        ByteArrayInputStream resultat = exportService.exporter(periode, requeteToutesEquipes(periode.toString()));
+
+        try (Workbook workbook = new XSSFWorkbook(resultat)) {
+            for (String nomFeuille : List.of("GLB", "C059", "C059_CH")) {
+                Sheet feuille = workbook.getSheet(nomFeuille);
+                // Données à partir de la ligne 4 : fonction alphabétique (insensible à la casse), puis nom.
+                List<String> ordre = List.of(
+                        feuille.getRow(4).getCell(0).getStringCellValue() + "/" + feuille.getRow(4).getCell(1).getStringCellValue(),
+                        feuille.getRow(5).getCell(0).getStringCellValue() + "/" + feuille.getRow(5).getCell(1).getStringCellValue(),
+                        feuille.getRow(6).getCell(0).getStringCellValue() + "/" + feuille.getRow(6).getCell(1).getStringCellValue(),
+                        feuille.getRow(7).getCell(0).getStringCellValue() + "/" + feuille.getRow(7).getCell(1).getStringCellValue());
+                assertThat(ordre).as(nomFeuille)
+                        .containsExactly("YOUSSEF/ADMIN", "BENALI/chauffeur", "ALAMI/OPERATEUR", "ZIANI/OPERATEUR");
+            }
+        }
+    }
+
+    @Test
     void exporter_devraitCompterLesSortiesStcParFonction() throws IOException {
         YearMonth periode = YearMonth.of(2026, 8);
         Paie sortieStc = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
