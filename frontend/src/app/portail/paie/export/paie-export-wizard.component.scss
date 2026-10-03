@@ -285,6 +285,25 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     font-size: 0.875rem;
   }
 
+  &__selection-globale {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+
+    button {
+      margin-left: var(--space-md);
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+  }
+
   &__chantiers {
     display: flex;
     flex-direction: column;

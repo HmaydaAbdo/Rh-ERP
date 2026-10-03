@@ -95,6 +95,29 @@ describe('PaieExportWizardComponent', () => {
     expect(composant.estDetaille('C168')).toBeFalse();
   });
 
+  it("sélectionne ou désélectionne d'un coup tous les chantiers affichés, avec toutes leurs équipes", () => {
+    composant.suivant();
+
+    composant.toutSelectionner(true);
+    expect(composant.equipesChoisies('C168')).toEqual(['CH', 'OP']);
+    expect(composant.equipesChoisies('C196')).toEqual(['CH']);
+    expect(composant.nombreChantiersDetailles()).toBe(2);
+
+    composant.toutSelectionner(false);
+    expect(composant.estDetaille('C168')).toBeFalse();
+    expect(composant.nombreChantiersDetailles()).toBe(0);
+  });
+
+  it("limite l'action globale aux chantiers que la recherche laisse affichés", () => {
+    composant.suivant();
+    composant.rechercher('marrakech');
+
+    composant.toutSelectionner(true);
+
+    expect(composant.estDetaille('C196')).toBeTrue();
+    expect(composant.estDetaille('C168')).toBeFalse();
+  });
+
   it("n'envoie aucun détail pour un chantier activé sans équipe choisie", () => {
     composant.suivant();
     composant.basculerChantier(CHANTIERS[0]);
