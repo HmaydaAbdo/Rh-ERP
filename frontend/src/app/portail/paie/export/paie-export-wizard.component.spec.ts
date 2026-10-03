@@ -82,45 +82,44 @@ describe('PaieExportWizardComponent', () => {
     expect(composant.chantiers().length).toBe(2);
   });
 
-  it("n'a coché aucune équipe quand on active un chantier : le choix est toujours explicite", () => {
+  it("ne coche aucune équipe d'office : ouvrir un chantier ne fait que déplier ses équipes", () => {
     composant.suivant();
-    composant.basculerChantier(CHANTIERS[0]);
-    expect(composant.estDetaille('C168')).toBeTrue();
+    composant.basculerOuverture(CHANTIERS[0]);
+    expect(composant.estOuvert('C168')).toBeTrue();
+    expect(composant.estDetaille('C168')).toBeFalse();
     expect(composant.equipesChoisies('C168')).toEqual([]);
+
+    composant.basculerOuverture(CHANTIERS[0]);
+    expect(composant.estOuvert('C168')).toBeFalse();
+  });
+
+  it("permet de cocher seulement quelques équipes d'un chantier, ou toutes / aucune d'un coup", () => {
+    composant.suivant();
+
+    composant.basculerEquipe('C168', 'CH');
+    expect(composant.equipesChoisies('C168')).toEqual(['CH']);
+    expect(composant.estDetaille('C168')).toBeTrue();
 
     composant.toutesLesEquipes(CHANTIERS[0], true);
     expect(composant.equipesChoisies('C168')).toEqual(['CH', 'OP']);
 
-    composant.basculerChantier(CHANTIERS[0]);
+    composant.toutesLesEquipes(CHANTIERS[0], false);
+    expect(composant.equipesChoisies('C168')).toEqual([]);
     expect(composant.estDetaille('C168')).toBeFalse();
   });
 
-  it("sélectionne ou désélectionne d'un coup tous les chantiers affichés, avec toutes leurs équipes", () => {
+  it("ne déplie pas un chantier qui n'a aucune équipe", () => {
     composant.suivant();
+    const sansEquipe = { ...CHANTIERS[1], code: 'C999', equipes: [] };
 
-    composant.toutSelectionner(true);
-    expect(composant.equipesChoisies('C168')).toEqual(['CH', 'OP']);
-    expect(composant.equipesChoisies('C196')).toEqual(['CH']);
-    expect(composant.nombreChantiersDetailles()).toBe(2);
+    composant.basculerOuverture(sansEquipe);
 
-    composant.toutSelectionner(false);
-    expect(composant.estDetaille('C168')).toBeFalse();
-    expect(composant.nombreChantiersDetailles()).toBe(0);
+    expect(composant.estOuvert('C999')).toBeFalse();
   });
 
-  it("limite l'action globale aux chantiers que la recherche laisse affichés", () => {
+  it("n'envoie aucun détail quand aucune équipe n'est cochée", () => {
     composant.suivant();
-    composant.rechercher('marrakech');
-
-    composant.toutSelectionner(true);
-
-    expect(composant.estDetaille('C196')).toBeTrue();
-    expect(composant.estDetaille('C168')).toBeFalse();
-  });
-
-  it("n'envoie aucun détail pour un chantier activé sans équipe choisie", () => {
-    composant.suivant();
-    composant.basculerChantier(CHANTIERS[0]);
+    composant.basculerOuverture(CHANTIERS[0]);
 
     composant.etape.set('recap');
     composant.suivant();
@@ -133,11 +132,11 @@ describe('PaieExportWizardComponent', () => {
     composant.suivant();
     expect(composant.etapes()).not.toContain('materiel');
 
-    composant.basculerChantier(CHANTIERS[1]); // C196 : pas de tableau matériel
+    composant.basculerEquipe('C196', 'CH'); // C196 : pas de tableau matériel
     expect(composant.etapes()).not.toContain('materiel');
 
-    composant.basculerChantier(CHANTIERS[0]);
-    expect(composant.etapes()).not.toContain('materiel'); // chantier activé, aucune équipe choisie
+    composant.basculerOuverture(CHANTIERS[0]);
+    expect(composant.etapes()).not.toContain('materiel'); // chantier ouvert, aucune équipe cochée
 
     composant.basculerEquipe('C168', 'CH');
     composant.basculerEquipe('C168', 'OP');
@@ -150,7 +149,6 @@ describe('PaieExportWizardComponent', () => {
 
   it("n'envoie que les nombres saisis des tableaux imprimés, et un zéro compte comme une saisie", () => {
     composant.suivant();
-    composant.basculerChantier(CHANTIERS[0]);
     composant.basculerEquipe('C168', 'CH'); // seul CAMION est imprimé : OP n'est pas choisie
     composant.saisirNombre('CAMION CITERNE', '4');
     composant.saisirNombre('PICK UP', '0');
@@ -167,7 +165,6 @@ describe('PaieExportWizardComponent', () => {
 
   it('laisse la colonne vide quand le tableau est marqué « vide »', () => {
     composant.suivant();
-    composant.basculerChantier(CHANTIERS[0]);
     composant.basculerEquipe('C168', 'CH');
     composant.saisirNombre('CAMION CITERNE', '4');
     composant.basculerVide(TABLEAUX[0]);
@@ -191,7 +188,6 @@ describe('PaieExportWizardComponent', () => {
   it("construit la requête Excel avec le mode personnalisé et les équipes retirées de la feuille du chantier", () => {
     composant.suivant();
     composant.choisirFormat('EXCEL');
-    composant.basculerChantier(CHANTIERS[0]);
     composant.toutesLesEquipes(CHANTIERS[0], true);
     composant.basculerRetrait('C168', 'OP');
 
@@ -206,7 +202,6 @@ describe('PaieExportWizardComponent', () => {
 
   it('mémorise les derniers nombres saisis pour préremplir le prochain export', () => {
     composant.suivant();
-    composant.basculerChantier(CHANTIERS[0]);
     composant.basculerEquipe('C168', 'CH');
     composant.saisirNombre('CAMION CITERNE', '7');
     composant.etape.set('recap');

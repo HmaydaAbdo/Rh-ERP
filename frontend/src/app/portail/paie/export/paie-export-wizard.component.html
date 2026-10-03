@@ -122,36 +122,33 @@
               @if (chantiersEnCours()) {
                 <p class="export-wizard__legende">Chargement des chantiers…</p>
               }
-              <div class="export-wizard__selection-globale">
-                <span>{{ nombreChantiersDetailles() }} chantier{{ nombreChantiersDetailles() > 1 ? 's' : '' }} détaillé{{ nombreChantiersDetailles() > 1 ? 's' : '' }}</span>
-                <span>
-                  <button type="button" (click)="toutSelectionner(true)">Tout sélectionner</button>
-                  <button type="button" (click)="toutSelectionner(false)">Tout désélectionner</button>
-                </span>
-              </div>
               <div class="export-wizard__chantiers">
                 @for (c of chantiersFiltres(); track c.code) {
                   <div class="export-wizard__chantier" [class.export-wizard__chantier--actif]="estDetaille(c.code)">
-                    <div class="export-wizard__chantier-tete">
-                      <div>
+                    <button
+                      type="button"
+                      class="export-wizard__chantier-tete"
+                      [attr.aria-expanded]="estOuvert(c.code)"
+                      [disabled]="c.equipes.length === 0"
+                      (click)="basculerOuverture(c)"
+                    >
+                      <span>
                         <span class="export-wizard__code">{{ c.code }}</span>
                         <span class="export-wizard__meta">
                           {{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés ·
                           {{ c.equipes.length > 0 ? c.equipes.length + ' équipes' : 'aucune équipe' }}
                         </span>
-                      </div>
-                      <button
-                        type="button"
-                        class="export-wizard__interrupteur"
-                        [class.export-wizard__interrupteur--actif]="estDetaille(c.code)"
-                        role="switch"
-                        [attr.aria-checked]="estDetaille(c.code)"
-                        [attr.aria-label]="'Détailler le chantier ' + c.code"
-                        [disabled]="c.equipes.length === 0"
-                        (click)="basculerChantier(c)"
-                      ></button>
-                    </div>
-                    <div class="export-wizard__deplie" [class.export-wizard__deplie--ouvert]="estDetaille(c.code)">
+                      </span>
+                      <span class="export-wizard__chantier-etat">
+                        @if (estDetaille(c.code)) {
+                          <span class="export-wizard__badge">{{ equipesChoisies(c.code).length }} / {{ c.equipes.length }} équipes</span>
+                        }
+                        @if (c.equipes.length > 0) {
+                          <i class="pi pi-chevron-down" [class.export-wizard__chevron--ouvert]="estOuvert(c.code)" aria-hidden="true"></i>
+                        }
+                      </span>
+                    </button>
+                    <div class="export-wizard__deplie" [class.export-wizard__deplie--ouvert]="estOuvert(c.code)">
                       <div>
                         <div class="export-wizard__equipes">
                           <div class="export-wizard__equipes-tete">
