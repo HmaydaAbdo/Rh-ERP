@@ -1,8 +1,9 @@
 # Module Chantier
 
-> Référentiel des chantiers de Staport. Alimenté principalement par synchronisation quotidienne
-> depuis l'ERP source (`webServiceBS/getChantiers`), consommé par le domaine Employee (affectation
-> d'un employé à un chantier) et, à terme, par Pointage et Paie.
+> Référentiel des chantiers de Staport. Les chantiers manquants sont **ajoutés** par une synchronisation
+> quotidienne depuis l'ERP source (`webServiceBS/getChantiers`) ; toute modification se fait ensuite depuis
+> l'interface. Consommé par le domaine Employé (affectation), par Paie (snapshot du bulletin et regroupement des
+> exports) et, à terme, par Pointage.
 
 ---
 
@@ -53,10 +54,10 @@ Table `chantier` :
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
 | `code` | `VARCHAR(100)` | `NOT NULL`, **unique** | Clé métier du chantier (ex. `C079`) |
-| `designation` | `VARCHAR(500)` | nullable | Libellé descriptif — synchronisé depuis l'ERP, écrasé à chaque synchronisation |
+| `designation` | `VARCHAR(500)` | nullable | Libellé descriptif — repris de l'ERP à la **création** du chantier, jamais réécrit ensuite |
 | `nom` | `VARCHAR(255)` | nullable | Nom optionnel, distinct de `designation` — **jamais exposé ni modifié par la synchronisation ERP** (ajouté le 2026-09-29, migration `V5__add_chantier_nom.sql`), uniquement saisi/modifié manuellement via le formulaire. Affiché par le rapport PDF/l'export Excel de la paie sous la forme `"CHANTIER : <nom> (<code>)"` quand renseigné, `"CHANTIER : <code>"` sinon (voir `docs/report/README.md`, « Identifiant chantier ») |
-| `source_erp` | `BIT` | `NOT NULL`, défaut `false` | Vrai si géré par la synchronisation ERP |
-| `actif` | `BIT` | `NOT NULL`, défaut `true` | Faux = désactivé — jamais modifié par la synchronisation (voir « Règles métier ») |
+| `source_erp` | `BOOLEAN` | `NOT NULL`, défaut `false` | Vrai si le chantier a été **créé** par la synchronisation ERP (information d'origine, sans effet sur la suite) |
+| `actif` | `BOOLEAN` | `NOT NULL`, défaut `true` | Faux = désactivé — jamais modifié par la synchronisation (voir « Règles métier ») |
 
 Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 
@@ -64,7 +65,10 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 
 ## Règles métier
 
-- `code` est la clé métier, unique, insensible à la casse (`findByCodeIgnoreCase`).
+- `code` est la clé métier, unique, insensible à la casse (`existsByCodeIgnoreCase` pour le contrôle,
+  `findByCodeIgnoreCase` pour la recherche).
+- À la création manuelle, `code` et `designation` sont obligatoires (`designation` : 500 caractères au plus) ;
+  `nom` est facultatif (255 caractères au plus). Voir « Qualité des données » dans [TODO.md](../../TODO.md).
 - La synchronisation **ajoute uniquement les chantiers manquants** (décision du 2026-10-03 : toute
   modification d'un chantier se fait depuis l'UI) :
   - un `code` absent de la base (comparaison insensible à la casse) crée un chantier actif
@@ -76,8 +80,11 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 - `actif` et `nom` ne sont donc modifiables que par la saisie manuelle (`PUT /chantiers/{id}`,
   formulaire `ChantierFormComponent`) ; l'ERP n'expose de toute façon ni statut ni `nom`
   (seulement `id_chantier`, `code`, `designation`, `CodeErreur`).
+- Seuls les chantiers **actifs** sont proposés à l'import Excel des employés et de la paie (un chantier
+  inactif reste consultable et reste référencé par l'historique).
 - La suppression (`DELETE /chantiers/{id}`) est bloquée (409) si le chantier est référencé par au
-  moins un employé (contrainte de clé étrangère `employe.chantier_id`).
+  moins un employé ou un bulletin de paie (clés étrangères `employe.chantier_id` et `paie.chantier_id`) :
+  désactiver (`actif = false`) est l'alternative.
 
 ---
 
@@ -168,12 +175,15 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/chantiers` | `ChantierListComponent` | Liste paginée, recherche (code, désignation, statut), tri, suppression, bouton de synchronisation manuelle |
+| `/chantiers` | `ChantierListComponent` | Tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtres en temps réel (code, désignation, statut), suppression, bouton « Synchroniser maintenant » |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
-| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (y compris `nom`) — un bandeau avertit si le chantier provient de l'ERP (le code/la désignation seront écrasés à la prochaine synchronisation, `nom` jamais concerné) |
+| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
 
-Accès via la barre latérale de l'application (`app.component.ts`, entrée "Chantiers").
+Colonnes du tableau : Code, Nom, Désignation, Source (ERP ou manuel), Statut. Accès via la barre latérale
+(`core/navigation/nav-items.ts`, entrée « Chantiers », permission `CHANTIER_READ`). Les boutons de création,
+modification, suppression et synchronisation sont conditionnés par `CHANTIER_WRITE`, `CHANTIER_DELETE` et
+`CHANTIER_SYNC` (voir [../rbac/chantier.md](../rbac/chantier.md)).
 
 Le référentiel chantier est également consommé par les formulaires/filtres Employee et Paie
 (`shared/reference-data/chantier-reference.service.ts`, implémentation du contrat de pagination
@@ -186,9 +196,11 @@ section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
-  permission adéquate (voir `docs/rbac/chantier.md`).
+- **Pas de mise à jour depuis l'ERP** : si la désignation d'un chantier change dans l'ERP, elle ne change pas ici
+  (décision du 2026-10-03). Un chantier supprimé ou désactivé dans l'ERP reste tel quel.
+- **Qualité des données** : `nom` et `designation` ne sont pas obligatoires en base (la désignation l'est à la
+  saisie) ; tâche dédiée dans le TODO.
 - Aucun audit (Hibernate Envers) — les créations/modifications de chantiers ne sont pas tracées
   au-delà des logs applicatifs.
-- Aucune limite liée à la persistance : le schéma est géré par Flyway et les données survivent aux
-  redémarrages (`ddl-auto=validate`, voir `conventions/database.md`).
+- Les métriques de synchronisation sont enregistrées mais pas encore exportées (aucun Prometheus configuré, voir
+  [../architecture.md](../architecture.md)).

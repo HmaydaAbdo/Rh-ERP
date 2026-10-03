@@ -62,9 +62,15 @@ Chantier, où un chantier peut être désactivé sans être supprimé). Ce champ
 
 - `libelle` est la clé métier, unique, insensible à la casse (`findByLibelleIgnoreCase`).
 - La suppression (`DELETE /functions/{id}`) est bloquée (409) si la fonction est référencée par au
-  moins un employé (contrainte de clé étrangère `employe.fonction_id`).
+  moins un employé ou un bulletin de paie (clés étrangères `employe.fonction_id` et `paie.fonction_id`).
 - L'import ne **crée** jamais de doublon : une ligne dont le libellé existe déjà (en base ou déjà
-  rencontré plus tôt dans le même fichier) est ignorée.
+  rencontré plus tôt dans le même fichier) est **rejetée**, et comme l'import est atomique, tout le fichier
+  avec elle (voir [../imports.md](../imports.md)).
+- Les fonctions peuvent aussi être créées **automatiquement** par l'import Excel de la paie, quand un bulletin
+  porte une fonction encore inconnue (voir [../paie/README.md](../paie/README.md)) : même règles de libellé,
+  aucune permission `FUNCTION_*` requise pour ce cas.
+- La fonction d'un bulletin ou d'un employé est copiée par référence : renommer une fonction (`PUT`) change son
+  libellé partout, historique compris.
 
 ---
 
@@ -137,7 +143,7 @@ Routes sous `/functions` (lazy loading, `function.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/functions` | `FunctionListComponent` | Liste paginée, recherche (libellé), tri, suppression, téléchargement du modèle, import Excel |
+| `/functions` | `FunctionListComponent` | Tableau standard (tri, colonnes, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtre libellé en temps réel, suppression, téléchargement du modèle, import Excel |
 | `/functions/new` | `FunctionFormComponent` | Création |
 | `/functions/:id` | `FunctionDetailComponent` | Consultation |
 | `/functions/:id/edit` | `FunctionFormComponent` | Modification |
@@ -148,7 +154,9 @@ sélecteur de fichier natif (`<input type="file" accept=".xlsx">` masqué), envo
 `POST /functions/import`, puis affiche un résumé (toast) et le détail des lignes ignorées dans une
 boîte de dialogue.
 
-Accès via la barre latérale de l'application (`app.component.ts`, entrée "Fonctions").
+Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Fonctions », permission `FUNCTION_READ`).
+Les boutons de création, modification, suppression et import sont conditionnés par `FUNCTION_WRITE`,
+`FUNCTION_DELETE` et `FUNCTION_IMPORT` (voir [../rbac/function.md](../rbac/function.md)).
 
 Le référentiel fonction est également consommé par les formulaires/filtres Employee et Paie
 (`shared/reference-data/function-reference.service.ts`, implémentation du contrat de pagination
@@ -161,9 +169,9 @@ section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- Aucune limite liée à l'authentification : tous les endpoints requièrent un JWT valide et la
-  permission adéquate (voir `docs/rbac/function.md`).
+- **Quasi-doublons** : seule l'égalité exacte (hors casse) est bloquée. Le référentiel actuel contient 114
+  fonctions dont 9 paires très proches (fautes de frappe), toutes utilisées ; leur fusion est une décision métier
+  suivie dans la tâche « Qualité des données ». Tant qu'elle n'est pas faite, le chapitre « Répartition par
+  fonction » du rapport PDF reste retiré (voir [../report/rapport-v2.md](../report/rapport-v2.md)).
 - Aucun audit (Hibernate Envers) — les créations/modifications/imports ne sont pas tracés au-delà
   des logs applicatifs.
-- Aucune limite liée à la persistance : le schéma est géré par Flyway et les données survivent aux
-  redémarrages (`ddl-auto=validate`, voir `conventions/database.md`).

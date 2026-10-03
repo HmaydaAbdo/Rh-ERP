@@ -19,7 +19,7 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar « Fonctions » | `FUNCTION_READ` |
+| Lien sidebar « Fonctions » | `FUNCTION_READ` (`NAV_ITEMS`) |
 | Routes `/functions` et `/functions/:id` | `authGuard` + `permissionGuard` (`FUNCTION_READ`) |
 | Routes `/functions/new` et `/functions/:id/edit` | `authGuard` + `permissionGuard` (`FUNCTION_WRITE`) |
 | Boutons « Nouvelle fonction » et « Modifier » (liste, détail) | `FUNCTION_WRITE` — `canWrite()` |

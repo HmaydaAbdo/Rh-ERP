@@ -17,7 +17,7 @@
 
 | Élément | Condition |
 |---|---|
-| Lien sidebar « Équipes » | `EQUIPE_READ` (`allNavItems`, `app.component.ts`) |
+| Lien sidebar « Équipes » | `EQUIPE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
 | Route `/equipes` (liste) et `/equipes/:id` (détail) | `authGuard` + `permissionGuard` (`EQUIPE_READ`) |
 | Route `/equipes/new` et `/equipes/:id/edit` | `authGuard` + `permissionGuard` (`EQUIPE_WRITE`) |
 | Bouton « Nouvelle équipe » et « Modifier » (liste, détail) | `authService.hasPermission('EQUIPE_WRITE')` — `canWrite()` |

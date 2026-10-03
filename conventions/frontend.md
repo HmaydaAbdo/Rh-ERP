@@ -157,6 +157,16 @@ exception** — le tableau d'une nouvelle page les reprend dès sa création :
 * **Filtres en temps réel** (délai de saisie de 300 ms) : aucun bouton « Rechercher », seul un bouton
   « Réinitialiser » reste dans la barre de filtres.
 
+## Style unique
+
+Tous les tableaux ont **le même style**, défini une seule fois dans la feuille de style globale
+(`styles/_tables.scss`, couleurs dans les tokens `--table-*` de `_tokens.scss`) : lignes compactes, grille
+visible, en-têtes en majuscules sur fond clair, alternance de lignes, survol, paginateur compact. Chaque
+`p-table` reçoit `styleClass="app-table p-datatable-gridlines p-datatable-sm"`. Les classes d'alignement
+(`text-center`, `text-right`) et de graisse (`font-semibold`, `font-bold`) utilisées par `TableColumn.align` et
+`cellClass` y sont définies. **Aucun écran ne redéfinit ces règles** : toute évolution du style se fait dans
+`_tables.scss`, pour tous les tableaux à la fois.
+
 ## Colonnes pilotées par la configuration
 
 Les colonnes sont déclarées une seule fois dans le composant (`TableColumn`, voir

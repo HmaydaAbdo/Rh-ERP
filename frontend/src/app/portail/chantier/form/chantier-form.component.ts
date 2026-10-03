@@ -4,7 +4,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { DropdownModule } from 'primeng/dropdown';
 import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
@@ -19,7 +18,7 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 @Component({
   selector: 'app-chantier-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule, MessageModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule],
   templateUrl: './chantier-form.component.html',
   styleUrl: './chantier-form.component.scss'
 })
@@ -34,7 +33,6 @@ export class ChantierFormComponent implements OnInit {
 
   chantierId: number | null = null;
   saving = false;
-  issuDeLErp = false;
 
   readonly form = this.fb.group({
     code: ['', [Validators.required, Validators.maxLength(100)]],
@@ -52,7 +50,6 @@ export class ChantierFormComponent implements OnInit {
     if (idParam) {
       this.chantierId = Number(idParam);
       this.chantierService.getById(this.chantierId).subscribe((chantier) => {
-        this.issuDeLErp = chantier.sourceErp;
         this.form.patchValue({
           code: chantier.code,
           designation: chantier.designation,

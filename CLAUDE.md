@@ -23,7 +23,8 @@ Après toute modification :
 
 - vérifier que le projet compile ;
 - supprimer le dead code ;
-- mettre à jour la documentation concernée.
+- mettre à jour la documentation concernée (le README du domaine, `docs/rbac/` si une permission change,
+  `docs/data-model.md` si le schéma change, `TODO.md` si un sujet est traité ou découvert).
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 
@@ -44,6 +45,11 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 11. conventions/metrics.md
 12. conventions/performance.md
 13. conventions/frontend.md
+
+Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
+comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
+authentification, permissions (RBAC), frontend, tests, configuration, déploiement. Avant de modifier un domaine,
+lire son README dans `docs/<domaine>/` et son fichier `docs/rbac/<domaine>.md`.
 
 En cas de conflit entre plusieurs conventions :
 

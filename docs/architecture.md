@@ -1,0 +1,162 @@
+# Architecture de rh-erp
+
+> Vue d'ensemble **concrète** du projet : ce qu'il contient, comment les domaines dépendent les uns des
+> autres, et le trajet d'une requête de bout en bout. Les principes généraux (couches, patterns,
+> conventions de code) sont dans `conventions/architecture.md` ; ce document décrit leur application ici.
+
+---
+
+## Vue d'ensemble
+
+```text
+Navigateur ── Angular 17 (PrimeNG) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 17
+                    │                                   │
+                    │                                   ├── Flyway (schéma, migrations V1…V10)
+                    │                                   ├── Apache POI (imports/exports Excel)
+                    │                                   ├── jsoup + openhtmltopdf + Batik (rapport PDF)
+                    │                                   ├── JavaMail (mot de passe oublié)
+                    │                                   └── Appel HTTP quotidien à l'ERP Staport (chantiers)
+                    └── jeton d'accès en mémoire, jeton de rafraîchissement en cookie httpOnly
+```
+
+| Brique | Choix |
+|---|---|
+| Backend | Java 21 (JDK de build et d'exécution), Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (resource server JWT), MapStruct, springdoc-openapi |
+| Base | PostgreSQL 17 avec l'extension pgvector (activée par anticipation, aucune colonne vectorielle aujourd'hui) |
+| Migrations | Flyway ; Hibernate en `ddl-auto: validate` (il vérifie le schéma, ne le modifie jamais) |
+| Frontend | Angular 17, composants standalone, signaux, PrimeNG 17, formulaires réactifs |
+| Tests | JUnit 5 + Mockito + AssertJ (backend), Jasmine/Karma (frontend) — voir [testing.md](testing.md) |
+| Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](deployment.md) |
+
+---
+
+## Les domaines
+
+Un module backend par domaine métier (`backend/src/main/java/staport/rh/<domaine>/`) et un dossier
+frontend du même nom (`frontend/src/app/portail/<domaine>/`).
+
+| Domaine | Package backend | Table(s) | Dépend de (par façade de service) |
+|---|---|---|---|
+| Fonction | `function` | `fonction` | — |
+| Chantier | `chantier` | `chantier` | — (source externe : ERP) |
+| Équipe | `equipe` | `equipe` | — |
+| Employé | `employee` | `employe` | Fonction, Chantier |
+| Paie | `paie` | `paie` | Employé, Fonction, Chantier, Équipe |
+| Auth | `auth` | `utilisateur`, `role`, `permission`, `role_permission`, `utilisateur_role`, `utilisateur_permission_refusee`, `refresh_token`, `reset_password_token` | Employé |
+| Commun | `common` | — | Gestionnaire d'erreurs global, `ErrorResponseDto`, configuration OpenAPI et planification |
+
+```mermaid
+flowchart LR
+  Fonction --> Employe[Employé]
+  Chantier --> Employe
+  Employe --> Paie
+  Fonction --> Paie
+  Chantier --> Paie
+  Equipe[Équipe] --> Paie
+  Employe -.lien optionnel.-> Auth
+```
+
+Une flèche signifie « utilise la façade de service de ». **Aucun domaine n'utilise le repository d'un
+autre** (`conventions/architecture.md`, « Encapsulation des domaines ») : un domaine qui doit référencer
+une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entité par référence JPA
+(`EntityManager.getReference`) sans la charger.
+
+### Structure d'un module
+
+```text
+<domaine>/
+├── controller/      Endpoints REST minces (aucune logique), @PreAuthorize sur chacun
+├── dtos/            request/ (Create, Update, SearchCriteria) et response/
+├── entities/        Entités JPA
+├── exceptions/      Exceptions métier + gestionnaire d'erreurs du domaine
+├── mappers/         MapStruct
+├── repositories/    Spring Data JPA
+├── services/        <Domaine>Service + interface I<Domaine>Service (la façade)
+├── specifications/  Filtres de recherche dynamiques (JPA Specification)
+├── imports/         (si applicable) import Excel
+└── sync/ export/ report/   (si applicable) synchronisation ERP, export Excel, rapport PDF
+```
+
+---
+
+## Trajet d'une requête
+
+1. **Frontend** : l'intercepteur d'authentification ajoute `Authorization: Bearer <jeton d'accès>`. Sur un
+   `401`, il tente un unique rafraîchissement (`/auth/refresh`, partagé entre les requêtes concurrentes) puis
+   rejoue la requête ; en cas d'échec, il vide la session et renvoie vers `/login`.
+2. **nginx inner** (en production) ou **proxy Angular** (en développement) : relaie vers le backend les
+   chemins d'API. Les préfixes `/employees`, `/chantiers`, `/functions`, `/equipes`, `/paie` sont à la fois
+   des routes Angular et des préfixes d'API : l'en-tête `Accept: text/html` (navigation) sert l'application,
+   le reste va au backend.
+3. **Spring Security** : valide la signature HS256 et l'expiration du jeton, transforme les claims
+   `permissions` et `roles` en autorités.
+4. **`@PreAuthorize("hasAuthority('X')")`** sur la méthode du contrôleur : refuse en `403` sans la permission.
+5. **Validation** des DTO (`@Valid`) : `400` avec la liste `champ : message`.
+6. **Service** : règles métier, vérification des doublons (`409`) et des références (`400`), transaction.
+7. **Réponse** : DTO (jamais une entité). Toute erreur a la forme `ErrorResponseDto`
+   (`timestamp`, `status`, `error`, `message`, `path`), affichée par l'intercepteur d'erreurs du frontend
+   dans une notification.
+
+### Codes d'erreur courants
+
+| Code | Cause |
+|---|---|
+| 400 | Validation, référence inconnue (fonction, chantier, équipe, employé), import rejeté |
+| 401 | Jeton absent, expiré, invalide ou signé avec un autre secret |
+| 403 | Permission manquante |
+| 404 | Ressource inexistante |
+| 409 | Doublon (code, CIN, libellé, bulletin) ou suppression d'un élément encore référencé |
+| 500 | Erreur inattendue (message générique, détail dans les logs) |
+
+---
+
+## Traitements planifiés et externes
+
+| Élément | Détail |
+|---|---|
+| Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](chantier/README.md) |
+| Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](auth/README.md) |
+| Courriel | Envoi du lien « mot de passe oublié » (SMTP) |
+
+---
+
+## Supervision et documentation d'API
+
+| Élément | Accès |
+|---|---|
+| Swagger UI | `/swagger-ui.html` (public) ; spécification dans `/v3/api-docs` |
+| Santé | `/actuator/health` (public — utilisé par les healthchecks Docker) ; l'état du serveur SMTP n'y est volontairement pas inclus |
+| Autres endpoints Actuator | Non exposés par défaut (seul `health` l'est) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
+| Métriques Prometheus | Non configurées : aucune dépendance d'export Prometheus et aucune exposition (`/actuator/prometheus` est autorisé par la règle de sécurité mais n'existe pas) |
+| Métriques métier | Compteurs et durée de la synchronisation des chantiers, enregistrés dans Micrometer mais pas encore exportés (voir [chantier/README.md](chantier/README.md)) |
+| Logs | SLF4J ; un journal par création/modification/suppression et par import ; jamais de donnée sensible (voir `conventions/logging.md`) |
+
+---
+
+## Frontend
+
+Voir [frontend/README.md](frontend/README.md) : structure, routes, guards par permission, composants
+partagés (sélecteur à chargement différé, tableaux configurables), conventions d'interface.
+
+---
+
+## Décisions d'architecture notables
+
+| Décision | Raison |
+|---|---|
+| Schéma géré uniquement par Flyway (`validate`) | Aucune modification de schéma silencieuse ; les écarts entités/base font échouer le démarrage |
+| Fonction, chantier et équipe copiés sur le bulletin (snapshot) | Un bulletin garde la situation du mois, même si l'employé est réaffecté ensuite |
+| JWT auto-émis en HS256 | Un seul service émet et valide les jetons ; une paire de clés ne se justifie que si un autre service doit les valider |
+| Jeton d'accès en mémoire, jeton de rafraîchissement en cookie `httpOnly` | Le jeton d'accès n'est jamais volable par du JavaScript injecté |
+| Imports Excel atomiques et en ajout seul | Un fichier invalide ne laisse rien d'à moitié importé ; aucune modification silencieuse par fichier |
+| Rapport PDF en HTML + openhtmltopdf, graphiques SVG | Pagination entièrement pilotée en Java (voir [report/README.md](report/README.md)) |
+| CORS ouvert à toute origine | Décision du 2026-09-23, risque borné par `SameSite=Lax` (voir [deployment.md](deployment.md)) |
+| Paie non calculée | Le total est repris tel que saisi ou importé (décision du 2026-10-03) |
+
+---
+
+## Limites connues
+
+Voir [../TODO.md](../TODO.md) : aucun audit (Hibernate Envers), domaine Pointage non construit, backup
+PostgreSQL non implémenté, déploiement continu manuel, qualité des données (champs obligatoires et
+doublons) à traiter en une tâche dédiée.

@@ -1,0 +1,68 @@
+// Style unique de tous les tableaux de données (`p-table`) de l'application : chaque tableau reçoit
+// `styleClass="app-table p-datatable-gridlines p-datatable-sm"`. Aucun écran ne redéfinit ces règles
+// (voir conventions/frontend.md, section Tableaux) — la modification se fait ici, pour tous à la fois.
+.app-table {
+  font-size: 0.75rem;
+
+  .p-datatable-wrapper {
+    border: 1px solid var(--table-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .p-datatable-thead > tr > th {
+    background-color: var(--table-header-bg);
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 6px 8px;
+    border-right: 1px solid var(--table-border) !important;
+    border-bottom: 1px solid var(--table-border) !important;
+    white-space: nowrap;
+    text-transform: uppercase;
+
+    &:last-child {
+      border-right: none !important;
+    }
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: 4px 8px;
+    border-right: 1px solid var(--table-border-light) !important;
+    border-bottom: 1px solid var(--table-border-light) !important;
+    white-space: nowrap;
+    color: var(--table-cell-text);
+
+    &:last-child {
+      border-right: none !important;
+    }
+  }
+
+  .p-datatable-tbody > tr:nth-child(even) {
+    background-color: var(--table-row-alt-bg);
+  }
+
+  .p-datatable-tbody > tr:hover {
+    background-color: var(--table-row-hover-bg);
+  }
+
+  .p-paginator {
+    padding: var(--space-xs);
+    font-size: 0.8125rem;
+  }
+
+  .text-center {
+    text-align: center !important;
+  }
+
+  .text-right {
+    text-align: right !important;
+  }
+
+  .font-semibold {
+    font-weight: 600;
+  }
+
+  .font-bold {
+    font-weight: 700;
+  }
+}

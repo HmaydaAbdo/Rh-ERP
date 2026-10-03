@@ -25,6 +25,11 @@
 | Bouton « Synchroniser maintenant » | `CHANTIER_SYNC` — `ChantierListComponent.canSync()` |
 | Bouton « Supprimer » (liste) | `CHANTIER_DELETE` — `canDelete()` |
 
+## Note — synchronisation automatique
+
+La synchronisation **planifiée** (23 h chaque jour) s'exécute côté serveur, sans utilisateur : elle n'est soumise
+à aucune permission. Seul le déclenchement **manuel** (`POST /chantiers/sync`) exige `CHANTIER_SYNC`.
+
 ## Rôles disposant de ces permissions (seed initial)
 
 `SYSTEM_ADMIN` et `PAIE_MANAGER` ont les quatre permissions (voir

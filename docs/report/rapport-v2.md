@@ -6,6 +6,15 @@
 > réintroduire sans tout redévelopper si le blocage qui a motivé le retrait est un jour levé.
 > Référencé depuis `TODO.md` (dernière section) : à consulter avant de rouvrir l'une de ces
 > fonctionnalités.
+>
+> **À lire avec cette précaution** : ce journal a été écrit à l'époque de JasperReports. Depuis le
+> 2026-09-29, le rapport est produit par un pipeline HTML (`PageModel` → `PaieReportHtmlBuilder` →
+> openhtmltopdf) et les graphiques sont des SVG (`RapportChartSvgBuilder`). Les noms `rapport.jrxml`,
+> `<lineChart>`, `<barChart>`, `P_*` ou `GroupSynthese` qui apparaissent ci-dessous désignent l'**ancien**
+> gabarit : la décision de retrait et ses raisons restent valables, mais pour réintroduire une rubrique il faut
+> aujourd'hui ajouter un bloc au `PageModel` (`RapportPageModelBuilder`) et son rendu HTML — voir
+> `docs/report/README.md`, « Points d'extension ». Les données restées calculées côté Java (évolution mensuelle,
+> répartition par fonction) existent toujours dans les vues-modèles.
 
 ---
 
