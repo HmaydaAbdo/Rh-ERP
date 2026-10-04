@@ -80,7 +80,7 @@ de rôle).
 | `/` | Accueil : redirige vers le premier écran du menu autorisé | connecté (`homeGuard`) |
 | `/login`, `/forgot-password`, `/reset-password` | Authentification | publique |
 | `/acces-refuse` | Permission manquante | connecté |
-| `/paie`, `/paie/cartes`, `/paie/analytique`, `/paie/:id` | Les trois vues (tabulaire, cartes, analytique) sous une coque commune avec une barre de filtres partagée dans l'URL, et le détail d'un bulletin | `PAIE_READ` |
+| `/paie`, `/paie/cartes`, `/paie/analytique`, `/paie/:id` | Les trois vues (tabulaire, cartes, analytique) sous une coque commune avec une barre de contexte partagée dans l'URL, adaptée à la vue, et le détail d'un bulletin | `PAIE_READ` |
 | `/paie/new`, `/paie/:id/edit` | Création, modification | `PAIE_WRITE` |
 | `/employees`, `/employees/:id` | Employés | `EMPLOYEE_READ` |
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
@@ -203,7 +203,7 @@ entre deux visites.
 
 | Écran | Colonnes | Filtres | Pagination |
 |---|---|---|---|
-| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre commune aux trois vues (mois, nom, CIN, fonctions, chantiers, équipes, dans l'URL) | Serveur |
+| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre de contexte commune (mois, nom, CIN, et panneau chantiers, fonctions, équipes ; dans l'URL) | Serveur |
 | Employés | Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut | Nom, CIN, fonctions, chantiers, statut | Serveur |
 | Chantiers | Code, Nom, Désignation, Source, Statut | Code, désignation, statut | Serveur |
 | Fonctions | Libellé | Libellé | Serveur |

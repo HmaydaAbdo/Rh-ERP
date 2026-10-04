@@ -34,51 +34,72 @@
 
           <div class="paie-analytique__grille">
             <section class="paie-analytique__carte" [style.animation-delay.ms]="320">
-              <h2>Masse par chantier</h2>
+              <h2>Évolution</h2>
               <p class="paie-analytique__aide">
-                Cliquez une barre pour filtrer sur ce chantier.
-                @if (chantiersMasques() > 0) {
-                  {{ chantiersMasques() }} autre(s) chantier(s) non affiché(s), voir les Cartes.
-                }
+                Tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est mis en évidence.
               </p>
               <div class="paie-analytique__graphique">
-                <p-chart
-                  type="bar"
-                  [data]="graphiqueChantiers().data"
-                  [options]="graphiqueChantiers().options"
-                  height="100%"
-                  (onDataSelect)="surBarreChantier($event)"
-                ></p-chart>
+                <p-chart type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
               </div>
             </section>
 
             <section class="paie-analytique__carte" [style.animation-delay.ms]="400">
-              <h2>Évolution</h2>
-              @if (evolutionVisible()) {
-                <p class="paie-analytique__aide">Masse et nombre de bulletins sur les derniers mois, pour cette sélection.</p>
-                <div class="paie-analytique__graphique">
-                  <p-chart type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
-                </div>
-              } @else {
-                <p class="paie-analytique__message">
-                  L'évolution apparaît à partir de {{ minMoisEvolution }} mois de paie pour cette sélection ({{ d.evolution.length }} aujourd'hui).
-                </p>
-              }
-            </section>
-
-            <section class="paie-analytique__carte" [style.animation-delay.ms]="480">
-              <h2>Répartition par fonction</h2>
-              <p class="paie-analytique__aide">Nombre de bulletins par fonction.</p>
+              <h2>Répartition des totaux</h2>
+              <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH), tous les bulletins du mois.</p>
               <div class="paie-analytique__graphique">
-                <p-chart type="doughnut" [data]="graphiqueFonctions().data" [options]="graphiqueFonctions().options" height="100%"></p-chart>
+                <p-chart type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
               </div>
             </section>
 
-            <section class="paie-analytique__carte" [style.animation-delay.ms]="560">
-              <h2>Répartition des totaux</h2>
-              <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH).</p>
-              <div class="paie-analytique__graphique">
-                <p-chart type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
+            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="480">
+              <div class="paie-analytique__entete">
+                <div>
+                  <h2>Répartition par chantier</h2>
+                  <p class="paie-analytique__aide">
+                    Les {{ chantiersTries().length }} chantiers du mois, sans exception. Cliquez une barre pour filtrer sur ce chantier.
+                  </p>
+                </div>
+                <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par chantier">
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureChantiers() === 'masse'" (click)="mesureChantiers.set('masse')">Masse</button>
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureChantiers() === 'effectif'" (click)="mesureChantiers.set('effectif')">Bulletins</button>
+                </div>
+              </div>
+              <div class="paie-analytique__defilement">
+                <div class="paie-analytique__graphique" [style.height.rem]="hauteurChantiers()">
+                  <p-chart
+                    type="bar"
+                    [data]="graphiqueChantiers().data"
+                    [options]="graphiqueChantiers().options"
+                    height="100%"
+                    (onDataSelect)="surBarreChantier($event)"
+                  ></p-chart>
+                </div>
+              </div>
+            </section>
+
+            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="560">
+              <div class="paie-analytique__entete">
+                <div>
+                  <h2>Répartition par fonction</h2>
+                  <p class="paie-analytique__aide">
+                    Les {{ fonctionsTriees().length }} fonctions du mois, sans exception. Cliquez une barre pour filtrer sur cette fonction.
+                  </p>
+                </div>
+                <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par fonction">
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureFonctions() === 'masse'" (click)="mesureFonctions.set('masse')">Masse</button>
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureFonctions() === 'effectif'" (click)="mesureFonctions.set('effectif')">Bulletins</button>
+                </div>
+              </div>
+              <div class="paie-analytique__defilement">
+                <div class="paie-analytique__graphique" [style.height.rem]="hauteurFonctions()">
+                  <p-chart
+                    type="bar"
+                    [data]="graphiqueFonctions().data"
+                    [options]="graphiqueFonctions().options"
+                    height="100%"
+                    (onDataSelect)="surBarreFonction($event)"
+                  ></p-chart>
+                </div>
               </div>
             </section>
 

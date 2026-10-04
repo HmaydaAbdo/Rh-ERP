@@ -1,85 +1,190 @@
 <div class="paie-filtres">
-  <div class="paie-filtres__periode">
-    <button
-      pButton
-      type="button"
-      icon="pi pi-chevron-left"
-      class="p-button-text p-button-sm"
-      aria-label="Mois plus ancien"
-      [disabled]="!plusAncien()"
-      (click)="choisir(plusAncien())"
-    ></button>
-    <button
-      pButton
-      type="button"
-      icon="pi pi-calendar"
-      class="p-button-outlined paie-filtres__mois"
-      [label]="libelle()"
-      aria-label="Choisir le mois"
-      (click)="panneau.toggle($event)"
-    ></button>
-    <button
-      pButton
-      type="button"
-      icon="pi pi-chevron-right"
-      class="p-button-text p-button-sm"
-      aria-label="Mois plus récent"
-      [disabled]="!plusRecent()"
-      (click)="choisir(plusRecent())"
-    ></button>
+  @if (mode() === 'navigation') {
+    <nav class="paie-filtres__fil" aria-label="Position dans les cartes">
+      <button
+        type="button"
+        class="paie-filtres__segment"
+        [class.paie-filtres__segment--courant]="!periode()"
+        (click)="allerAuNiveau(1)"
+      >
+        Tous les mois
+      </button>
+      @if (periode()) {
+        <i class="pi pi-angle-right" aria-hidden="true"></i>
+        <button
+          type="button"
+          class="paie-filtres__segment paie-filtres__mois"
+          [class.paie-filtres__segment--courant]="!chantierOuvert()"
+          (click)="allerAuNiveau(2)"
+        >
+          {{ libelle() }}
+        </button>
+      }
+      @if (periode() && chantierOuvert(); as chantier) {
+        <i class="pi pi-angle-right" aria-hidden="true"></i>
+        <span class="paie-filtres__segment paie-filtres__segment--courant">{{ chantier }}</span>
+      }
+    </nav>
+
     @if (periode()) {
+      <button pButton type="button" icon="pi pi-arrow-up" label="Remonter" class="p-button-text" (click)="remonter()"></button>
+    }
+    @if (herites().length > 0) {
       <button
         pButton
         type="button"
-        icon="pi pi-times"
-        class="p-button-text p-button-sm"
-        aria-label="Tous les mois"
-        title="Tous les mois"
-        (click)="choisir(null)"
-      ></button>
+        class="p-button-outlined"
+        [attr.aria-expanded]="ouvert()"
+        (click)="basculerPanneau()"
+      >
+        Filtres actifs<span class="paie-filtres__badge">{{ herites().length }}</span>
+        <i class="pi" [class.pi-chevron-down]="!ouvert()" [class.pi-chevron-up]="ouvert()" aria-hidden="true"></i>
+      </button>
     }
-    <p-overlayPanel #panneau appendTo="body">
-      <app-month-picker
-        [value]="periode()"
-        [disponibles]="disponibles()"
-        (valueChange)="choisir($event); panneau.hide()"
-      ></app-month-picker>
-    </p-overlayPanel>
-  </div>
+  } @else {
+    <div class="paie-filtres__periode">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-chevron-left"
+        class="p-button-text p-button-sm"
+        aria-label="Mois plus ancien"
+        [disabled]="!plusAncien()"
+        (click)="choisir(plusAncien())"
+      ></button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-calendar"
+        class="p-button-outlined paie-filtres__mois"
+        [label]="libelle()"
+        aria-label="Choisir le mois"
+        (click)="panneauMois.toggle($event)"
+      ></button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-chevron-right"
+        class="p-button-text p-button-sm"
+        aria-label="Mois plus récent"
+        [disabled]="!plusRecent()"
+        (click)="choisir(plusRecent())"
+      ></button>
+      @if (periode() && !moisObligatoire()) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-times"
+          class="p-button-text p-button-sm"
+          aria-label="Tous les mois"
+          title="Tous les mois"
+          (click)="choisir(null)"
+        ></button>
+      }
+      <p-overlayPanel #panneauMois appendTo="body">
+        <app-month-picker
+          [value]="periode()"
+          [disponibles]="disponibles()"
+          (valueChange)="choisir($event); panneauMois.hide()"
+        ></app-month-picker>
+      </p-overlayPanel>
+    </div>
 
-  <form [formGroup]="formulaire" class="paie-filtres__champs">
-    <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
-    <input pInputText type="text" formControlName="cin" placeholder="CIN" aria-label="CIN" />
-    <app-lazy-select
-      formControlName="chantierIds"
-      [multiple]="true"
-      [source]="chantierReferenceService"
-      optionLabel="code"
-      placeholder="Chantiers"
-    ></app-lazy-select>
-    <app-lazy-select
-      formControlName="fonctionIds"
-      [multiple]="true"
-      [source]="functionReferenceService"
-      optionLabel="libelle"
-      placeholder="Fonctions"
-    ></app-lazy-select>
-    <app-lazy-select
-      formControlName="equipeIds"
-      [multiple]="true"
-      [source]="equipeReferenceService"
-      optionLabel="code"
-      placeholder="Équipes"
-    ></app-lazy-select>
-  </form>
+    <form [formGroup]="formulaire" class="paie-filtres__recherche">
+      <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
+      <input pInputText type="text" formControlName="cin" placeholder="CIN" aria-label="CIN" />
+    </form>
 
-  <button
-    pButton
-    type="button"
-    icon="pi pi-times"
-    label="Réinitialiser"
-    class="p-button-outlined"
-    [disabled]="!aDesFiltres()"
-    (click)="reinitialiser()"
-  ></button>
+    <button
+      pButton
+      type="button"
+      class="p-button-outlined"
+      [attr.aria-expanded]="ouvert()"
+      (click)="basculerPanneau()"
+    >
+      Filtres@if (nombreChoisis() > 0) {
+        <span class="paie-filtres__badge">{{ nombreChoisis() }}</span>
+      }
+      <i class="pi" [class.pi-chevron-down]="!ouvert()" [class.pi-chevron-up]="ouvert()" aria-hidden="true"></i>
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-times"
+      label="Effacer"
+      class="p-button-text paie-filtres__effacer"
+      [disabled]="!aDesFiltres()"
+      (click)="reinitialiser()"
+    ></button>
+  }
 </div>
+
+@if (mode() === 'filtres' && resume()) {
+  <p class="paie-filtres__resume">
+    <button type="button" (click)="ouvert.set(true)">{{ resume() }}</button>
+  </p>
+}
+
+@if (ouvert()) {
+  <div class="paie-filtres__panneau">
+    @if (mode() === 'filtres') {
+      <form [formGroup]="formulaire" class="paie-filtres__colonnes">
+        <div class="paie-filtres__colonne">
+          <h3>Chantiers</h3>
+          @for (source of sourcesChantiers(); track source) {
+            <app-lazy-select
+              formControlName="chantierIds"
+              [multiple]="true"
+              [source]="source"
+              optionLabel="code"
+              placeholder="Tous les chantiers"
+            ></app-lazy-select>
+          }
+        </div>
+        <div class="paie-filtres__colonne">
+          <h3>Équipes</h3>
+          @for (source of sourcesEquipes(); track source) {
+            <app-lazy-select
+              formControlName="equipeIds"
+              [multiple]="true"
+              [source]="source"
+              optionLabel="code"
+              placeholder="Toutes les équipes"
+            ></app-lazy-select>
+          }
+          @if (periode() && courant().chantierIds.length > 0) {
+            <p class="paie-filtres__aide">Équipes des chantiers choisis en {{ libelle() }}.</p>
+          }
+        </div>
+        <div class="paie-filtres__colonne">
+          <h3>Fonctions</h3>
+          <app-lazy-select
+            formControlName="fonctionIds"
+            [multiple]="true"
+            [source]="functionReferenceService"
+            optionLabel="libelle"
+            placeholder="Toutes les fonctions"
+          ></app-lazy-select>
+        </div>
+      </form>
+      @if (periode()) {
+        <p class="paie-filtres__aide">Les chantiers proposés sont ceux qui ont de la paie en {{ libelle() }}.</p>
+      }
+    } @else {
+      <ul class="paie-filtres__heritage">
+        @for (filtre of herites(); track filtre.libelle) {
+          <li>
+            {{ filtre.libelle }}
+            <button type="button" class="paie-filtres__retirer" [attr.aria-label]="'Retirer le filtre ' + filtre.libelle" (click)="retirer(filtre)">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          </li>
+        }
+      </ul>
+      <p class="paie-filtres__aide">
+        Ces filtres viennent du tableau ou de l'analytique et s'appliquent aussi aux cartes : on peut les retirer ici, pas en ajouter.
+      </p>
+    }
+  </div>
+}

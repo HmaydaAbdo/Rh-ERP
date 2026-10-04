@@ -4,7 +4,19 @@
     <app-paie-vue-switcher></app-paie-vue-switcher>
   </div>
 
-  <app-paie-filtres [periodes]="periodes()" [value]="filtres()" (valueChange)="appliquer($event)"></app-paie-filtres>
+  <app-paie-filtres
+    [periodes]="periodes()"
+    [value]="filtres()"
+    [vue]="mode()"
+    [moisRequis]="moisRequis()"
+    (valueChange)="appliquer($event)"
+  ></app-paie-filtres>
 
-  <router-outlet (activate)="chargerPeriodes()"></router-outlet>
+  @if (annonce(); as phrase) {
+    <p class="paie-vues__annonce" role="status">
+      <i class="pi pi-info-circle" aria-hidden="true"></i> {{ phrase }}
+    </p>
+  }
+
+  <router-outlet (activate)="surActivation()"></router-outlet>
 </div>

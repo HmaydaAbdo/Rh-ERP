@@ -1,32 +1,4 @@
 .paie-cartes {
-  // ---- Fil d'Ariane ----
-  &__fil {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-
-    a {
-      color: var(--color-primary);
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
-    i {
-      font-size: 0.75rem;
-    }
-  }
-
-  &__fil-courant {
-    color: var(--color-text);
-    font-weight: 600;
-  }
-
   &__majuscule::first-letter {
     text-transform: uppercase;
   }
@@ -65,6 +37,53 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
     gap: var(--space-md);
+  }
+
+  // Une carte et son bouton de suppression : le bouton ne peut pas être dans le lien (un bouton dans un lien est invalide).
+  &__element {
+    position: relative;
+    display: flex;
+
+    > .paie-cartes__carte {
+      flex: 1;
+    }
+  }
+
+  &__supprimer {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+  }
+
+  &__outils-suppression {
+    margin-left: auto;
+  }
+
+  &__suppression-titre {
+    margin: 0 0 var(--space-sm);
+  }
+
+  &__suppression-liste {
+    margin: 0 0 var(--space-md);
+    padding-left: var(--space-lg);
+    font-size: 0.875rem;
+  }
+
+  &__suppression-alerte {
+    display: flex;
+    gap: var(--space-sm);
+    margin: 0 0 var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
+    color: var(--color-danger);
+    font-size: 0.8125rem;
+  }
+
+  &__suppression-champ {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-size: 0.875rem;
   }
 
   &__carte {

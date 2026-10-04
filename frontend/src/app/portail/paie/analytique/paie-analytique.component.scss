@@ -106,6 +106,48 @@
     height: 18rem;
   }
 
+  // Les graphiques par chantier et par fonction montrent toutes leurs catégories : ils grandissent avec leur nombre et
+  // défilent dans leur carte plutôt que d'en omettre.
+  &__defilement {
+    max-height: 36rem;
+    overflow-y: auto;
+  }
+
+  &__entete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  &__mesure {
+    display: inline-flex;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+
+    button {
+      border: none;
+      background: transparent;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+
+      &:hover {
+        background: var(--color-surface-alt);
+      }
+
+      &.paie-analytique__mesure--active {
+        background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+        color: var(--color-primary);
+        font-weight: 600;
+      }
+    }
+  }
+
   // ---- Qualité des données ----
   &__qualite {
     display: grid;

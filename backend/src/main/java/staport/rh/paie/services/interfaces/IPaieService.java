@@ -29,6 +29,13 @@ public interface IPaieService {
 
     void delete(Long id);
 
+    /**
+     * Supprime d'un coup les bulletins que décrit {@code criteres} (le mois est obligatoire : on ne supprime jamais « toute la
+     * paie » par erreur). {@code nombreAttendu} est le nombre confirmé par l'utilisateur : si le groupe en compte un autre
+     * à cet instant, rien n'est supprimé ({@code PaieGroupeModifieException}). Retourne le nombre de bulletins supprimés.
+     */
+    long deleteGroupe(PaieSearchCriteria criteres, long nombreAttendu);
+
     /** Mois qui contiennent de la paie, du plus récent au plus ancien, avec leur contenu résumé — alimente le sélecteur de
      * mois de l'assistant d'export et la vue Cartes (voir docs/paie/README.md). {@code criteres} filtre les bulletins
      * comptés (son mois est ignoré : on liste justement les mois) ; {@code null} = toute la paie. */

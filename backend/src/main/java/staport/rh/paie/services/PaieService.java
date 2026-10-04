@@ -25,8 +25,10 @@ import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.exceptions.InvalidReferenceException;
 import staport.rh.paie.exceptions.PaieAlreadyExistsException;
+import staport.rh.paie.exceptions.PaieGroupeModifieException;
 import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
@@ -130,6 +132,22 @@ public class PaieService implements IPaieService {
         Paie entity = getEntityById(id);
         repository.delete(entity);
         log.info("Bulletin de paie supprimé : id={}", id);
+    }
+
+    @Override
+    @Transactional
+    public long deleteGroupe(PaieSearchCriteria criteres, long nombreAttendu) {
+        if (criteres == null || criteres.periode() == null) {
+            throw new InvalidPeriodeException("La période est obligatoire pour supprimer un groupe de bulletins (format aaaa-MM)");
+        }
+        // Même filtre que la liste (PaieSpecification) : le groupe supprimé est celui que la carte comptait.
+        List<Paie> groupe = repository.findAll(PaieSpecification.searchByCriteria(criteres));
+        if (groupe.size() != nombreAttendu) {
+            throw new PaieGroupeModifieException(groupe.size(), nombreAttendu);
+        }
+        repository.deleteAllInBatch(groupe);
+        log.info("Groupe de bulletins de paie supprimé : periode={}, nombre={}, critères={}", criteres.periode(), groupe.size(), criteres);
+        return groupe.size();
     }
 
     @Override

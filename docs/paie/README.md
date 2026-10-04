@@ -108,7 +108,8 @@ rétroactive ou automatique des bulletins déjà existants.
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
   `nombreJoursTravailles` est un entier positif ou nul ; `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
-  bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »).
+  bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**
+  (`POST /paie/suppression`) suit la même règle, avec les garde-fous décrits dans « Suppression en groupe ».
 
 ---
 
@@ -121,6 +122,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
 | `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
+| `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
@@ -292,22 +294,35 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **coque commune**, `PaieVuesComponent`
 (`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **conserve les filtres** en changeant de vue) et la
-**barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
+**barre de contexte commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
 (`/paie/new`, `/paie/:id`…) n'en font pas partie.
 
-### Barre de filtres commune
+### Barre de contexte commune
 
-`PaieFiltresComponent` (`filtres/`) : le **mois** (facultatif — vide veut dire « tous les mois » —, avec flèches vers le mois
-précédent / suivant qui contient de la paie, grille de mois dans un panneau et bouton pour revenir à tous les mois), le
-**nom et prénom**, le **CIN** (texte, « contient », sans tenir compte de la casse), les **chantiers**, les **fonctions** et les
-**équipes** (sélecteur générique multiple, recherche serveur), et « Réinitialiser » (qui remet aussi le mois à vide). Les
-saisies sont émises après 300 ms.
+`PaieFiltresComponent` (`filtres/`) est **une seule ligne, quel que soit le nombre de valeurs choisies** — avec 25 chantiers et
+leurs équipes, jamais de puces qui débordent. Elle **s'adapte à la vue** (la coque lui indique laquelle) :
+
+| Vue | Forme de la barre |
+|---|---|
+| Tabulaire, Analytique | **Filtres multiples.** Le mois (flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), un bouton **Filtres (n)** qui ouvre le panneau des chantiers, équipes et fonctions (sélecteur générique multiple, recherche serveur), et « Effacer ». Sous la barre, un **résumé en texte** — « 4 chantiers · 2 équipes · 1 fonction », des nombres, jamais la liste — qui rouvre le panneau. En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve |
+| Cartes | **Fil de navigation à valeurs uniques** : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus « Remonter ». Pas de sélection multiple. Les filtres venus des autres vues (nom, CIN, fonctions, équipes, plusieurs chantiers) sont **repliés dans « Filtres actifs (n) »** : on peut les y retirer, pas en ajouter. Ils s'appliquent toujours aux cartes, jamais en cachette |
+
+**Cascade** (tabulaire et analytique) : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec
+des chantiers choisis, les équipes proposées sont celles de ces chantiers ce mois-là (une seule requête,
+`POST /paie/chantiers/search`, gardée par mois). **Sans mois**, ou sans chantier choisi pour les équipes, ce sont les listes
+complètes du référentiel — le référentiel Équipe n'est pas rattaché aux chantiers, seule la paie d'un mois les relie. Un choix
+qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'office : il reste visible dans le panneau.
 
 **Les filtres vivent dans l'URL** (`?periode=2026-08&nom=ali&cin=AB1&chantierIds=3,4&fonctionIds=7&equipeIds=2`, voir
 `filtres/paie-filtres.ts`) : la barre les écrit — en remplaçant l'entrée d'historique, pour ne pas en empiler une par saisie —
 et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct, retour navigateur et changement de vue conservent
-donc tout. Une valeur invalide est ignorée. Les mois grisés de la barre viennent de `GET /paie/periodes`, rechargé à chaque
-changement de vue.
+donc tout. Une valeur invalide est ignorée. Les mois grisés viennent de `GET /paie/periodes`, rechargé à chaque changement de
+vue.
+
+**Le contexte voyage, et on l'explique.** En changeant de vue, la position devient des filtres et inversement ; une phrase
+discrète sous la barre (8 secondes, `annonceChangementDeVue`) dit ce qui s'est passé : « Cartes : niveau chantiers, limité à vos
+3 chantiers », « Cartes : ouvertes directement sur le chantier choisi », « Votre position dans les cartes devient des filtres :
+août 2026, 1 chantier », avec le rappel des filtres que les cartes gardent.
 
 | Vue | Effet du mois vide | Effet du mois choisi |
 |---|---|---|
@@ -323,14 +338,33 @@ filtre vide est ignoré).
 
 `PaieCartesComponent` (`cartes/`), **lecture seule**, descend en trois niveaux. **Descendre, c'est filtrer** : le niveau se
 déduit des filtres de la barre — pas de mois : les mois ; un mois : les chantiers ; un mois et **un seul** chantier : ses
-équipes — et cliquer une carte pose le filtre correspondant dans la barre (le fil d'Ariane lève ceux de niveau). Les autres
-filtres (nom, CIN, fonctions, équipes, chantiers) restreignent les bulletins comptés à chaque niveau.
+équipes — et cliquer une carte pose le filtre correspondant dans la barre, dont le fil de navigation montre toujours la position. Les
+autres filtres (nom, CIN, fonctions, équipes, plusieurs chantiers) restreignent les bulletins comptés à chaque niveau.
 
 | Niveau | Contenu | Source |
 |---|---|---|
 | 1. Mois | Une carte par mois contenant de la paie : masse, bulletins, chantiers, STC / sorties, variation de la masse **par rapport au mois contigu** (absente si le mois précédent n'a aucune paie dans ce périmètre ou une masse nulle, jamais comparée à un mois plus ancien) | `POST /paie/periodes/search` |
 | 2. Chantiers | Tuiles de synthèse du mois (calculées sur les chantiers filtrés), une carte par chantier (masse, bulletins, équipes, jauge de sa part de la masse du mois) | `POST /paie/chantiers/search` |
 | 3. Équipes | Tuiles du chantier, tableau des équipes (équipe, libellé, effectif, masse, part du chantier) avec ligne de total. Une ligne **« Sans équipe »** est déduite (effectif et masse du chantier moins ceux des équipes) pour que le total égale celui du chantier ; elle n'apparaît que s'il existe des bulletins sans équipe | même appel |
+
+#### Suppression en groupe
+
+Chaque carte de mois, chaque carte de chantier, chaque ligne d'équipe et le chantier ouvert (niveau 3, bouton « Supprimer ce
+chantier ») propose un bouton de suppression (permission `PAIE_DELETE`) : plus besoin de supprimer un à un, depuis la vue
+tabulaire, les bulletins d'un mois importé par erreur.
+
+- **Portée : ce que la carte compte.** Les bulletins qu'elle affiche, **filtres de la barre compris** : une carte qui dit
+  « 74 bulletins » sous un filtre fonction supprime ces 74-là. Le dialogue rappelle la cible et les filtres en cours.
+- **Confirmation** : un dialogue décrit ce qui sera supprimé et demande de **retaper le nombre de bulletins** pour activer le
+  bouton « Supprimer ». L'action est annoncée irréversible (pas d'audit, pas de corbeille : seul le mois entier peut être
+  réimporté depuis son fichier).
+- **Garde-fous serveur** (`PaieService.deleteGroupe`) : le mois est obligatoire (jamais « toute la paie » par erreur) ; le
+  serveur revérifie le nombre de bulletins du groupe et **ne supprime rien (`409`) s'il diffère du nombre confirmé** (import
+  ou suppression entre-temps) ; le tout dans une transaction. Le groupe est calculé avec le même filtre que la liste
+  (`PaieSpecification`).
+- Les bulletins **sans équipe** ne se suppriment pas depuis la ligne « Sans équipe » : l'API ne sait pas filtrer sur l'absence
+  d'équipe. Après une suppression, les réponses gardées sont vidées et le niveau est rechargé ; si le chantier ouvert est
+  supprimé, on remonte aux chantiers.
 
 Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une équipe**
 (ou Entrée sur sa ligne) ouvre la vue tabulaire avec les mêmes filtres plus cette équipe ; la ligne « Sans équipe » n'est pas
@@ -345,7 +379,7 @@ la vue tabulaire.
 
 ### Vue Analytique
 
-`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune.
+`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune. **Exhaustif par principe** : aucun graphique ne se limite à un palmarès (« top 10 », « Autres », fenêtre glissante), tout ce que contient le périmètre est affiché et analysé.
 Chaque changement de filtre relance l'analyse (une demande encore en cours est abandonnée) ; pendant le chargement l'écran
 précédent reste affiché, atténué, sous une barre de progression. Sans mois, le plus récent est ouvert (et inscrit dans la
 barre).
@@ -353,10 +387,10 @@ barre).
 | Bloc | Contenu |
 |---|---|
 | Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
-| Masse par chantier | Barres horizontales des 10 plus gros chantiers ; **un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
-| Évolution | Masse et bulletins sur les 12 derniers mois du périmètre, **à partir de 3 mois** de paie seulement (sinon un message) |
-| Répartition par fonction | Anneau des bulletins par fonction (7 premières, le reste en « Autres ») |
-| Répartition des totaux | Histogramme du `salaireTotal` en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
+| Évolution | Masse et bulletins de **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est mis en évidence. Avec un seul mois, un seul point |
+| Répartition par chantier | **Tous** les chantiers du mois, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
+| Répartition par fonction | **Toutes** les fonctions du mois, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction n'est regroupée sous « Autres » |
+| Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
 | Qualité des données | Bulletins sans équipe et sans observation (nombre et part), pour suivre la tâche « Qualité des données » du TODO |
 
 **Backend** : `PaieAnalytiqueService` (façade `IPaieAnalytiqueService`), appelé par `POST /paie/analytique` (`PAIE_READ`).
@@ -421,4 +455,4 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   (340 bulletins n'ont pas d'équipe au dernier relevé) ; décision « tous champs obligatoires » dans la tâche
   dédiée du TODO.
 - **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
-- Aucun audit (Hibernate Envers) — une modification de bulletin n'est tracée que dans les logs.
+- Aucun audit (Hibernate Envers) — une modification ou une suppression de bulletin (y compris en groupe) n'est tracée que dans les logs.

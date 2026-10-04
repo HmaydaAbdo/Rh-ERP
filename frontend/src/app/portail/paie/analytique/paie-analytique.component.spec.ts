@@ -134,15 +134,87 @@ describe('PaieAnalytiqueComponent', () => {
     expect(TestBed.inject(Router).url).not.toContain('chantierIds');
   });
 
-  it('n\'affiche l\'évolution qu\'à partir de trois mois', async () => {
+  it('montre toute l\'évolution, même avec un seul mois, et met en évidence le mois analysé', async () => {
+    service.analyser.and.returnValue(of(donnees({ evolution: [{ periode: '2026-08', masse: 40000, effectif: 10 }] })));
+
     const composant = await ouvrir('/paie/analytique?periode=2026-08');
-    expect(composant.evolutionVisible()).toBeFalse();
+
+    expect(composant.graphiqueEvolution().data.labels).toEqual(['août 2026']);
 
     service.analyser.and.returnValue(
-      of(donnees({ evolution: ['2026-06', '2026-07', '2026-08'].map((periode) => ({ periode, masse: 1, effectif: 1 })) }))
+      of(donnees({ evolution: ['2024-01', '2026-07', '2026-08', '2026-09'].map((periode) => ({ periode, masse: 1, effectif: 1 })) }))
     );
-    await ouvrir('/paie/analytique?periode=2026-08&chantierIds=1');
-    expect(composant.evolutionVisible()).toBeTrue();
+    await ouvrir('/paie/analytique?periode=2026-08&nom=a');
+    expect(composant.graphiqueEvolution().data.labels?.length).toBe(4);
+    expect(composant.graphiqueEvolution().data.datasets[0].pointRadius).toEqual([4, 4, 8, 4]);
+  });
+
+  it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
+    service.analyser.and.returnValue(
+      of(
+        donnees({
+          parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0 })),
+          parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
+        })
+      )
+    );
+
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    expect(composant.graphiqueChantiers().data.labels?.length).toBe(40);
+    expect(composant.graphiqueFonctions().data.labels?.length).toBe(114);
+    expect(composant.graphiqueFonctions().data.labels).not.toContain('Autres');
+  });
+
+  it('agrandit les graphiques avec le nombre de catégories pour que chaque ligne reste lisible', async () => {
+    service.analyser.and.returnValue(
+      of(donnees({ parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `F${i}`, masse: 1, effectif: 1 })) }))
+    );
+
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    expect(composant.hauteurFonctions()).toBeGreaterThan(composant.hauteurChantiers());
+    expect(composant.hauteurChantiers()).toBeGreaterThanOrEqual(12);
+  });
+
+  it('trie les barres selon la mesure choisie, sans en perdre', async () => {
+    service.analyser.and.returnValue(
+      of(
+        donnees({
+          parChantier: [
+            { id: 1, code: 'A', libelle: null, masse: 900, effectif: 1, stc: 0 },
+            { id: 2, code: 'B', libelle: null, masse: 100, effectif: 9, stc: 0 }
+          ]
+        })
+      )
+    );
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    expect(composant.chantiersTries().map((c) => c.code)).toEqual(['A', 'B']);
+
+    composant.mesureChantiers.set('effectif');
+
+    expect(composant.chantiersTries().map((c) => c.code)).toEqual(['B', 'A']);
+    expect(composant.graphiqueChantiers().data.datasets[0].data).toEqual([9, 1]);
+  });
+
+  it('filtre sur la fonction d\'une barre cliquée, dans l\'ordre affiché', async () => {
+    service.analyser.and.returnValue(
+      of(
+        donnees({
+          parFonction: [
+            { id: 4, libelle: 'PETITE', masse: 10, effectif: 1 },
+            { id: 8, libelle: 'GRANDE', masse: 900, effectif: 1 }
+          ]
+        })
+      )
+    );
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    // La plus grosse masse est affichée en premier : l'index 0 désigne « GRANDE ».
+    composant.surBarreFonction({ element: { index: 0 } });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toContain('fonctionIds=8');
   });
 
   it('calcule la part des bulletins sans équipe et sans observation', async () => {

@@ -1,6 +1,7 @@
 package staport.rh.paie.services;
 
 import jakarta.persistence.EntityManager;
+import org.springframework.data.jpa.domain.Specification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,14 +17,17 @@ import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
+import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.EquipeSummaryDto;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.exceptions.InvalidReferenceException;
 import staport.rh.paie.exceptions.PaieAlreadyExistsException;
+import staport.rh.paie.exceptions.PaieGroupeModifieException;
 import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
 import staport.rh.paie.repositories.ChantierEquipePeriodeProjection;
@@ -206,6 +210,47 @@ class PaieServiceTest {
         paieService.delete(1L);
 
         verify(repository).delete(entity);
+    }
+
+    @Test
+    void deleteGroupe_devraitSupprimerLeGroupeQuandLeNombreCorrespond() {
+        List<Paie> groupe = List.of(mock(Paie.class), mock(Paie.class));
+        when(repository.findAll(any(Specification.class))).thenReturn(groupe);
+
+        long supprimes = paieService.deleteGroupe(criteresDuMois(), 2);
+
+        assertThat(supprimes).isEqualTo(2);
+        verify(repository).deleteAllInBatch(groupe);
+    }
+
+    @Test
+    void deleteGroupe_devraitRefuserEtNeRienSupprimerQuandLeGroupeATChange() {
+        when(repository.findAll(any(Specification.class))).thenReturn(List.of(mock(Paie.class)));
+
+        assertThatThrownBy(() -> paieService.deleteGroupe(criteresDuMois(), 74))
+                .isInstanceOf(PaieGroupeModifieException.class)
+                .hasMessageContaining("1 bulletin(s)")
+                .hasMessageContaining("74");
+        verify(repository, never()).deleteAllInBatch(any());
+    }
+
+    @Test
+    void deleteGroupe_devraitExigerLePeriodePourNePasSupprimerToutLaPaie() {
+        assertThatThrownBy(() -> paieService.deleteGroupe(new PaieSearchCriteria(null, null, null, null, null, null), 0))
+                .isInstanceOf(InvalidPeriodeException.class);
+        assertThatThrownBy(() -> paieService.deleteGroupe(null, 0)).isInstanceOf(InvalidPeriodeException.class);
+        verify(repository, never()).findAll(any(Specification.class));
+    }
+
+    @Test
+    void deleteGroupe_devraitNeRienSupprimerQuandLeGroupeEstVideEtConfirmeVide() {
+        when(repository.findAll(any(Specification.class))).thenReturn(List.of());
+
+        assertThat(paieService.deleteGroupe(criteresDuMois(), 0)).isZero();
+    }
+
+    private static PaieSearchCriteria criteresDuMois() {
+        return new PaieSearchCriteria(null, null, YearMonth.of(2026, 8), null, List.of(3L), null);
     }
 
     @Test

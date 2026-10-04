@@ -1,22 +1,4 @@
 <div class="paie-cartes">
-  <nav class="paie-cartes__fil" aria-label="Fil d'Ariane">
-    @if (niveau() === 1) {
-      <span class="paie-cartes__fil-courant">Mois</span>
-    } @else {
-      <a routerLink="/paie/cartes" queryParamsHandling="merge" [queryParams]="{ periode: null, chantierIds: null }">Mois</a>
-      <i class="pi pi-angle-right" aria-hidden="true"></i>
-      @if (niveau() === 2) {
-        <span class="paie-cartes__fil-courant paie-cartes__majuscule">{{ libellePeriode(periode()) }}</span>
-      } @else {
-        <a routerLink="/paie/cartes" queryParamsHandling="merge" [queryParams]="{ chantierIds: null }" class="paie-cartes__majuscule">
-          {{ libellePeriode(periode()) }}
-        </a>
-        <i class="pi pi-angle-right" aria-hidden="true"></i>
-        <span class="paie-cartes__fil-courant">{{ chantier()?.code ?? filtres().chantierIds[0] }}</span>
-      }
-    }
-  </nav>
-
   @if (chargement() && !chantiers().length && !periodes().length) {
     <p class="paie-cartes__message">Chargement…</p>
   } @else if (aucunResultat()) {
@@ -32,6 +14,7 @@
       @case (1) {
         <div class="paie-cartes__grille paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
           @for (carte of cartesMois(); track carte.resume.periode; let i = $index) {
+            <div class="paie-cartes__element">
             <a
               class="paie-cartes__carte"
               [style.animation-delay.ms]="delaiCascade(i)"
@@ -52,6 +35,18 @@
                 <span class="paie-cartes__detail">{{ carte.resume.stc }} STC / sorties</span>
               }
             </a>
+            @if (canDelete()) {
+              <button
+                pButton
+                type="button"
+                icon="pi pi-trash"
+                class="p-button-text p-button-danger p-button-sm paie-cartes__supprimer"
+                [attr.aria-label]="'Supprimer les bulletins de ' + libellePeriode(carte.resume.periode)"
+                title="Supprimer les bulletins de ce mois"
+                (click)="demanderSuppressionMois(carte)"
+              ></button>
+            }
+            </div>
           }
         </div>
       }
@@ -71,6 +66,7 @@
           </div>
           <div class="paie-cartes__grille">
             @for (carte of cartesChantier(); track carte.chantier.code; let i = $index) {
+              <div class="paie-cartes__element">
               <a
                 class="paie-cartes__carte"
                 [style.animation-delay.ms]="delaiCascade(i + 3)"
@@ -88,6 +84,18 @@
                 <span class="paie-cartes__jauge" aria-hidden="true"><span [style.width.%]="carte.part"></span></span>
                 <span class="paie-cartes__detail">{{ formaterPart(carte.part) }} de la masse du mois</span>
               </a>
+              @if (canDelete()) {
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-text p-button-danger p-button-sm paie-cartes__supprimer"
+                  [attr.aria-label]="'Supprimer les bulletins du chantier ' + carte.chantier.code"
+                  title="Supprimer les bulletins de ce chantier"
+                  (click)="demanderSuppressionChantier(carte.chantier)"
+                ></button>
+              }
+              </div>
             }
           </div>
         </div>
@@ -131,6 +139,16 @@
                   class="p-button-outlined"
                   (click)="rechercheEquipe.setValue('')"
                 ></button>
+                @if (canDelete()) {
+                  <button
+                    pButton
+                    type="button"
+                    icon="pi pi-trash"
+                    label="Supprimer ce chantier"
+                    class="p-button-outlined p-button-danger paie-cartes__outils-suppression"
+                    (click)="demanderSuppressionChantier(c)"
+                  ></button>
+                }
               </div>
 
               <app-column-chooser [state]="columns"></app-column-chooser>
@@ -158,6 +176,9 @@
                         <th [pSortableColumn]="col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
                           {{ col.header }} <p-sortIcon [field]="col.field"></p-sortIcon>
                         </th>
+                      }
+                      @if (canDelete()) {
+                        <th></th>
                       }
                     </tr>
                   </ng-template>
@@ -191,6 +212,22 @@
                           }
                         </td>
                       }
+                      @if (canDelete()) {
+                        <td class="text-center">
+                          @if (ligne.equipeId !== null) {
+                            <button
+                              pButton
+                              type="button"
+                              icon="pi pi-trash"
+                              class="p-button-text p-button-danger p-button-sm"
+                              [attr.aria-label]="'Supprimer les bulletins de l\'équipe ' + ligne.code"
+                              title="Supprimer les bulletins de cette équipe"
+                              (click)="$event.stopPropagation(); demanderSuppressionEquipe(ligne)"
+                              (keydown.enter)="$event.stopPropagation()"
+                            ></button>
+                          }
+                        </td>
+                      }
                     </tr>
                   </ng-template>
 
@@ -214,12 +251,15 @@
                           }
                         </td>
                       }
+                      @if (canDelete()) {
+                        <td></td>
+                      }
                     </tr>
                   </ng-template>
 
                   <ng-template pTemplate="emptymessage">
                     <tr>
-                      <td [attr.colspan]="columns.visible.length" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
+                      <td [attr.colspan]="columns.visible.length + (canDelete() ? 1 : 0)" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
                     </tr>
                   </ng-template>
                 </p-table>
@@ -231,3 +271,54 @@
     }
   }
 </div>
+
+<p-dialog
+  header="Supprimer des bulletins"
+  [visible]="suppression() !== null"
+  (visibleChange)="$event || annulerSuppression()"
+  [modal]="true"
+  [closable]="!suppressionEnCours()"
+  [style]="{ width: '34rem' }"
+>
+  @if (suppression(); as s) {
+    <p class="paie-cartes__suppression-titre">
+      Vous allez supprimer <strong>{{ s.nombre }} bulletin(s)</strong> :
+    </p>
+    <ul class="paie-cartes__suppression-liste">
+      <li>{{ s.cible }}</li>
+      @for (filtre of s.filtres; track filtre) {
+        <li>{{ filtre }}</li>
+      }
+    </ul>
+    <p class="paie-cartes__suppression-alerte">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
+      réimporté depuis son fichier Excel.
+    </p>
+    <label class="paie-cartes__suppression-champ" for="confirmation-suppression">
+      Pour confirmer, saisissez le nombre de bulletins : <strong>{{ s.nombre }}</strong>
+    </label>
+    <input
+      id="confirmation-suppression"
+      pInputText
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      [formControl]="confirmation"
+      (keydown.enter)="confirmerSuppression()"
+    />
+  }
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Annuler" class="p-button-text" [disabled]="suppressionEnCours()" (click)="annulerSuppression()"></button>
+    <button
+      pButton
+      type="button"
+      icon="pi pi-trash"
+      label="Supprimer"
+      class="p-button-danger"
+      [disabled]="!confirmationValide()"
+      [loading]="suppressionEnCours()"
+      (click)="confirmerSuppression()"
+    ></button>
+  </ng-template>
+</p-dialog>

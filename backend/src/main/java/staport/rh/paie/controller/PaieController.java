@@ -21,12 +21,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
+import staport.rh.paie.dtos.request.PaieSuppressionGroupeRequestDto;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.dtos.response.PaieSuppressionDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
 import staport.rh.paie.services.interfaces.IPaieService;
@@ -95,6 +97,15 @@ public class PaieController {
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         paieService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/suppression")
+    @Operation(summary = "Supprimer d'un coup un groupe de bulletins (mois, chantier ou équipe d'une carte), après confirmation de leur nombre")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "409", description = "Le groupe ne compte plus le nombre confirmé : rien n'est supprimé")
+    @PreAuthorize("hasAuthority('PAIE_DELETE')")
+    public ResponseEntity<PaieSuppressionDto> supprimerGroupe(@Valid @RequestBody PaieSuppressionGroupeRequestDto requete) {
+        return ResponseEntity.ok(new PaieSuppressionDto(paieService.deleteGroupe(requete.criteres(), requete.nombreAttendu())));
     }
 
     @GetMapping("/periodes")
