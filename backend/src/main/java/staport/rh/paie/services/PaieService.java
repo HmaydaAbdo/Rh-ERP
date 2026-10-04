@@ -166,7 +166,7 @@ public class PaieService implements IPaieService {
         String libelle = nom != null && !nom.isBlank() ? nom : premiere.getChantierDesignation();
         List<PaieEquipePeriodeDto> equipes = lignes.stream()
                 .filter(l -> l.getEquipeId() != null)
-                .map(l -> new PaieEquipePeriodeDto(l.getEquipeId(), l.getEquipeCode(), l.getEquipeLibelle(), l.getEffectif()))
+                .map(l -> new PaieEquipePeriodeDto(l.getEquipeId(), l.getEquipeCode(), l.getEquipeLibelle(), l.getEffectif(), l.getMasse()))
                 .sorted(Comparator.comparing(PaieEquipePeriodeDto::code))
                 .toList();
         return new PaieChantierPeriodeDto(

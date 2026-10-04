@@ -35,6 +35,7 @@ export interface PaieEquipePeriode {
   code: string;
   libelle: string;
   effectif: number;
+  masse: number;
 }
 
 /** Un chantier d'un mois avec ses équipes (GET /paie/chantiers) — `libelle` : nom, à défaut désignation. */

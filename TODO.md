@@ -37,6 +37,20 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 ---
 
+## Paie — trois vues (en cours, décision du 2026-10-04)
+
+Tabulaire (existante) et **Cartes** (livrée, voir `docs/paie/README.md`, « Vue Cartes »). Reste :
+
+- **Vue Analytique** : tableau de bord interactif, avec sélection de la période et filtres (chantiers, fonctions…),
+  KPI et variation vs mois précédent, masse par chantier, répartition des totaux par tranche, évolution (si au moins
+  3 mois), qualité des données. Prévu : Chart.js via `p-chart` (nouvelle dépendance validée), un endpoint
+  `GET /paie/analytique` (`PAIE_READ`), une barre de sélection partagée avec la vue Cartes, et un lien
+  « Analyser ce chantier » depuis une carte. À construire une fois la vue Cartes validée.
+- **Niveau 3 des Cartes → vue tabulaire** : cliquer une équipe ouvrirait la liste déjà filtrée (période, chantier,
+  équipe). Demande que la liste lise des paramètres d'URL, et que l'API expose l'id du chantier (seul son code l'est).
+
+---
+
 ## Anomalies constatées à trancher (relevées lors de la mise à jour de la documentation, 2026-10-03)
 
 Comportements actuels, documentés tels quels (voir `docs/data-model.md`, `docs/auth/README.md`) mais qui

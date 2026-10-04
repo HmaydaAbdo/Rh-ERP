@@ -80,7 +80,7 @@ de rôle).
 | `/` | Accueil : redirige vers le premier écran du menu autorisé | connecté (`homeGuard`) |
 | `/login`, `/forgot-password`, `/reset-password` | Authentification | publique |
 | `/acces-refuse` | Permission manquante | connecté |
-| `/paie`, `/paie/:id` | Liste et détail des bulletins | `PAIE_READ` |
+| `/paie`, `/paie/cartes`, `/paie/:id` | Liste, vue Cartes (descente mois → chantier → équipes) et détail des bulletins | `PAIE_READ` |
 | `/paie/new`, `/paie/:id/edit` | Création, modification | `PAIE_WRITE` |
 | `/employees`, `/employees/:id` | Employés | `EMPLOYEE_READ` |
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |

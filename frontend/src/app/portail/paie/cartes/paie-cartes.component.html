@@ -1,0 +1,239 @@
+<div class="paie-cartes">
+  <div class="paie-cartes__header">
+    <h1>Paie</h1>
+    <app-paie-vue-switcher></app-paie-vue-switcher>
+  </div>
+
+  <nav class="paie-cartes__fil" aria-label="Fil d'Ariane">
+    @if (niveau() === 1) {
+      <span class="paie-cartes__fil-courant">Mois</span>
+    } @else {
+      <a routerLink="/paie/cartes">Mois</a>
+      <i class="pi pi-angle-right" aria-hidden="true"></i>
+      @if (niveau() === 2) {
+        <span class="paie-cartes__fil-courant paie-cartes__majuscule">{{ libellePeriode(periode()) }}</span>
+      } @else {
+        <a routerLink="/paie/cartes" [queryParams]="{ periode: periode() }" class="paie-cartes__majuscule">{{ libellePeriode(periode()) }}</a>
+        <i class="pi pi-angle-right" aria-hidden="true"></i>
+        <span class="paie-cartes__fil-courant">{{ chantierCode() }}</span>
+      }
+    }
+  </nav>
+
+  @if (periodesEnCours()) {
+    <p class="paie-cartes__message">Chargement…</p>
+  } @else if (periodes().length === 0) {
+    <p class="paie-cartes__message">Aucune paie enregistrée.</p>
+  } @else if (periodeIntrouvable()) {
+    <p class="paie-cartes__message">
+      Aucune paie pour {{ libellePeriode(periode()) }}. <a routerLink="/paie/cartes">Revenir aux mois</a>
+    </p>
+  } @else {
+    @switch (niveau()) {
+      @case (1) {
+        <div class="paie-cartes__grille paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
+          @for (carte of cartesMois(); track carte.resume.periode; let i = $index) {
+            <a
+              class="paie-cartes__carte"
+              [style.animation-delay.ms]="delaiCascade(i)"
+              routerLink="/paie/cartes"
+              [queryParams]="{ periode: carte.resume.periode }"
+            >
+              <span class="paie-cartes__libelle paie-cartes__majuscule">{{ libellePeriode(carte.resume.periode) }}</span>
+              <span class="paie-cartes__valeur"><span [appCountUp]="carte.resume.masse"></span> DH</span>
+              <span class="paie-cartes__detail">{{ carte.resume.nombreBulletins }} bulletins · {{ carte.resume.nombreChantiers }} chantiers</span>
+              @if (carte.variation !== null) {
+                <span class="paie-cartes__detail">
+                  <i class="pi" [ngClass]="carte.variation >= 0 ? 'pi-arrow-up-right' : 'pi-arrow-down-right'" aria-hidden="true"></i>
+                  {{ formaterVariation(carte.variation) }} vs mois précédent
+                </span>
+              }
+              @if (carte.resume.stc > 0) {
+                <span class="paie-cartes__detail">{{ carte.resume.stc }} STC / sorties</span>
+              }
+            </a>
+          }
+        </div>
+      }
+
+      @case (2) {
+        <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
+        @if (resume(); as r) {
+          <div class="paie-cartes__tuiles">
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(0)">
+              <span>Masse salariale</span><strong><span [appCountUp]="r.masse"></span> DH</strong>
+            </div>
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(1)">
+              <span>Bulletins</span><strong [appCountUp]="r.nombreBulletins"></strong>
+            </div>
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(2)">
+              <span>Chantiers</span><strong [appCountUp]="r.nombreChantiers"></strong>
+            </div>
+          </div>
+        }
+        <div class="paie-cartes__outils">
+          <input pInputText type="text" [formControl]="rechercheChantier" placeholder="Chantier (code ou nom)" aria-label="Rechercher un chantier" />
+        </div>
+        @if (chantiersEnCours()) {
+          <p class="paie-cartes__message">Chargement…</p>
+        } @else if (cartesChantier().length === 0) {
+          <p class="paie-cartes__message">Aucun chantier ne correspond à cette recherche.</p>
+        } @else {
+          <div class="paie-cartes__grille">
+            @for (carte of cartesChantier(); track carte.chantier.code; let i = $index) {
+              <a
+                class="paie-cartes__carte"
+                [style.animation-delay.ms]="delaiCascade(i + 3)"
+                routerLink="/paie/cartes"
+                [queryParams]="{ periode: periode(), chantier: carte.chantier.code }"
+              >
+                <span class="paie-cartes__libelle">{{ carte.chantier.code }}</span>
+                <span class="paie-cartes__titre">{{ carte.chantier.libelle || '-' }}</span>
+                <span class="paie-cartes__valeur"><span [appCountUp]="carte.chantier.masse"></span> DH</span>
+                <span class="paie-cartes__detail">
+                  {{ carte.chantier.effectif }} bulletins · {{ carte.chantier.equipes.length }}
+                  {{ carte.chantier.equipes.length > 1 ? 'équipes' : 'équipe' }}
+                </span>
+                <span class="paie-cartes__jauge" aria-hidden="true"><span [style.width.%]="carte.part"></span></span>
+                <span class="paie-cartes__detail">{{ formaterPart(carte.part) }} de la masse du mois</span>
+              </a>
+            }
+          </div>
+        }
+        </div>
+      }
+
+      @case (3) {
+        @if (chantiersEnCours()) {
+          <p class="paie-cartes__message">Chargement…</p>
+        } @else if (chantierIntrouvable()) {
+          <p class="paie-cartes__message">
+            Le chantier {{ chantierCode() }} n'a pas de paie en {{ libellePeriode(periode()) }}.
+            <a routerLink="/paie/cartes" [queryParams]="{ periode: periode() }">Revenir aux chantiers</a>
+          </p>
+        } @else {
+          @if (chantier(); as c) {
+          <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
+          <h2 class="paie-cartes__sous-titre">
+            {{ c.code }}@if (c.libelle) { · {{ c.libelle }} }
+          </h2>
+
+          <div class="paie-cartes__tuiles">
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(0)">
+              <span>Masse salariale</span><strong><span [appCountUp]="c.masse"></span> DH</strong>
+            </div>
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(1)">
+              <span>Bulletins</span><strong [appCountUp]="c.effectif"></strong>
+            </div>
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(2)">
+              <span>Équipes</span><strong [appCountUp]="c.equipes.length"></strong>
+            </div>
+            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(3)">
+              <span>Part de la masse du mois</span><strong><span [appCountUp]="partDuMois()"></span> %</strong>
+            </div>
+          </div>
+
+          <div class="paie-cartes__outils">
+            <input pInputText type="text" [formControl]="rechercheEquipe" placeholder="Équipe" aria-label="Rechercher une équipe" />
+            <button
+              pButton
+              type="button"
+              icon="pi pi-times"
+              label="Réinitialiser"
+              class="p-button-outlined"
+              (click)="rechercheEquipe.setValue('')"
+            ></button>
+          </div>
+
+          <app-column-chooser [state]="columns"></app-column-chooser>
+
+          <div class="paie-cartes__tableau">
+          <p-table
+            [value]="lignesEquipes()"
+            [globalFilterFields]="['code', 'libelle']"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="rowsPerPage"
+            [showCurrentPageReport]="true"
+            [currentPageReportTemplate]="pageReport"
+            [columns]="columns.visible"
+            [resizableColumns]="true"
+            columnResizeMode="expand"
+            [reorderableColumns]="true"
+            (onColReorder)="columns.onReorder($event.columns)"
+            dataKey="code"
+            styleClass="app-table p-datatable-gridlines p-datatable-sm"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                @for (col of columns.visible; track col.field) {
+                  <th [pSortableColumn]="col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
+                    {{ col.header }} <p-sortIcon [field]="col.field"></p-sortIcon>
+                  </th>
+                }
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-ligne>
+              <tr>
+                @for (col of columns.visible; track col.field) {
+                  <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
+                    @switch (col.field) {
+                      @case ('code') {
+                        {{ ligne.code }}
+                      }
+                      @case ('libelle') {
+                        {{ ligne.libelle }}
+                      }
+                      @case ('effectif') {
+                        {{ ligne.effectif }}
+                      }
+                      @case ('masse') {
+                        {{ formaterMontant(ligne.masse) }}
+                      }
+                      @case ('part') {
+                        {{ formaterPart(ligne.part) }}
+                      }
+                    }
+                  </td>
+                }
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="footer">
+              <tr>
+                @for (col of columns.visible; track col.field) {
+                  <td [ngClass]="[col.align ?? '', 'font-bold']">
+                    @switch (col.field) {
+                      @case ('code') {
+                        Total
+                      }
+                      @case ('effectif') {
+                        {{ effectifTotalEquipes() }}
+                      }
+                      @case ('masse') {
+                        {{ formaterMontant(masseTotaleEquipes()) }}
+                      }
+                      @case ('part') {
+                        {{ formaterPart(100) }}
+                      }
+                    }
+                  </td>
+                }
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td [attr.colspan]="columns.visible.length" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
+              </tr>
+            </ng-template>
+          </p-table>
+          </div>
+          </div>
+          }
+        }
+      }
+    }
+  }
+</div>

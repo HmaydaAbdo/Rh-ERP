@@ -10,6 +10,12 @@ export const PAIE_ROUTES: Routes = [
     loadComponent: () => import('./list/paie-list.component').then((m) => m.PaieListComponent)
   },
   {
+    path: 'cartes',
+    canActivate: [permissionGuard],
+    data: { permission: 'PAIE_READ' },
+    loadComponent: () => import('./cartes/paie-cartes.component').then((m) => m.PaieCartesComponent)
+  },
+  {
     path: 'new',
     canActivate: [permissionGuard],
     data: { permission: 'PAIE_WRITE' },
