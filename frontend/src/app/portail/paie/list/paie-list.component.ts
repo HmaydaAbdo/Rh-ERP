@@ -21,6 +21,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
+import { PaieVueSwitcherComponent } from '../vue-switcher/paie-vue-switcher.component';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
@@ -49,6 +50,7 @@ function toPeriodeString(date: Date | null): string | undefined {
     ConfirmDialogModule,
     DialogModule,
     PaieExportWizardComponent,
+    PaieVueSwitcherComponent,
     LazySelectComponent
   ],
   providers: [ConfirmationService],

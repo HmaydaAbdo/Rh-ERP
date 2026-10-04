@@ -15,13 +15,13 @@ import {
   PaiePeriodeResume,
   PaieRapportPdfRequest
 } from '../models/paie.model';
+import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
 type Format = 'PDF' | 'EXCEL';
 type EtapeId = 'periode' | 'format' | 'equipes' | 'materiel' | 'recap';
 type Etat = 'saisie' | 'generation' | 'termine';
 
-const LIBELLES_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
   format: 'Format',
@@ -138,17 +138,8 @@ export class PaieExportWizardComponent implements OnChanges {
     return this.etat() === 'termine' ? 'Téléchargement lancé' : SOUS_TITRES[this.etape()];
   }
 
-  libellePeriode(periode: string | null): string {
-    if (!periode) {
-      return '';
-    }
-    const [annee, mois] = periode.split('-');
-    return `${LIBELLES_MOIS[Number(mois) - 1]} ${annee}`;
-  }
-
-  formaterMontant(valeur: number): string {
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valeur);
-  }
+  readonly libellePeriode = libellePeriode;
+  readonly formaterMontant = formaterMontant;
 
   /** Un nouveau mois invalide tout ce qui dépend du précédent (chantiers chargés, équipes choisies). */
   choisirPeriode(periode: string): void {

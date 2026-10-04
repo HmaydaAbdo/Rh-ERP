@@ -243,6 +243,10 @@ class PaieServiceTest {
         assertThat(c168.masse()).isEqualByComparingTo("720000");
         assertThat(c168.equipes()).extracting(PaieEquipePeriodeDto::code).containsExactly("CH", "OP");
         assertThat(c168.equipes()).extracting(PaieEquipePeriodeDto::effectif).containsExactly(74L, 69L);
+        // La masse de chaque équipe permet de déduire celle des bulletins sans équipe (720000 - 400000 - 300000).
+        assertThat(c168.equipes()).extracting(PaieEquipePeriodeDto::masse)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("400000"), new BigDecimal("300000"));
     }
 
     @Test
