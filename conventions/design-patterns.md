@@ -20,6 +20,10 @@
 
 lorsqu'une Strategy rend le code plus extensible.
 
+Exemple retenu : le **périmètre d'audit** d'une opération de masse (`PerimetreAudit`, `conventions/audit.md`) — une
+classe par opération (import, suppression en groupe, export), dans son module, pour que ni le service métier ni
+l'aspect d'audit ne contiennent de logique de description.
+
 ---
 
 # Factory
@@ -43,6 +47,10 @@ Les étapes communes restent dans la classe abstraite.
 À utiliser lorsqu'un traitement doit déclencher plusieurs actions indépendantes.
 
 Privilégier les événements Spring plutôt que les appels directs lorsque les traitements sont indépendants.
+
+Exemple retenu : les **événements de sécurité** (connexion, refus, jeton réutilisé…) sont publiés par le service qui
+les connaît et écrits par un écouteur unique dans le journal d'audit (`conventions/audit.md`) — le service
+d'authentification ne dépend jamais du journal.
 
 ---
 

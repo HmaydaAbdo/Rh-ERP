@@ -53,6 +53,10 @@ class EndpointSecurityTest {
      * par READ), qu'un test dérivé de l'annotation elle-même ne verrait pas.
      */
     private static final Map<String, String> PERMISSIONS_ATTENDUES = Map.ofEntries(
+            Map.entry("AuditController.rechercher", "AUDIT_READ"),
+            Map.entry("AuditController.lireParId", "AUDIT_READ"),
+            Map.entry("AuditController.details", "AUDIT_READ"),
+            Map.entry("AuditController.historique", "AUDIT_READ"),
             Map.entry("ChantierController.creer", "CHANTIER_WRITE"),
             Map.entry("ChantierController.modifier", "CHANTIER_WRITE"),
             Map.entry("ChantierController.lireParId", "CHANTIER_READ"),
@@ -83,7 +87,7 @@ class EndpointSecurityTest {
             Map.entry("PaieController.lireParId", "PAIE_READ"),
             Map.entry("PaieController.rechercher", "PAIE_READ"),
             Map.entry("PaieController.supprimer", "PAIE_DELETE"),
-            Map.entry("PaieController.supprimerGroupe", "PAIE_DELETE"),
+            Map.entry("PaieController.supprimerGroupe", "PAIE_PURGE"),
             Map.entry("PaieController.listerPeriodes", "PAIE_READ"),
             Map.entry("PaieController.listerChantiersDeLaPeriode", "PAIE_READ"),
             Map.entry("PaieController.listerTableauxMateriel", "PAIE_READ"),

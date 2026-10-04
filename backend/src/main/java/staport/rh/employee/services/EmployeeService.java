@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
@@ -50,6 +52,7 @@ public class EmployeeService implements IEmployeeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EMPLOYE_CREATION", type = TypeOperation.CREATE, entite = Employee.class)
     public EmployeeResponseDto create(EmployeeCreateRequestDto dto) {
         if (repository.existsByCinIgnoreCase(dto.cin())) {
             throw new CinAlreadyExistsException(dto.cin());
@@ -66,6 +69,7 @@ public class EmployeeService implements IEmployeeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EMPLOYE_MODIFICATION", type = TypeOperation.UPDATE, entite = Employee.class)
     public EmployeeResponseDto update(Long id, EmployeeUpdateRequestDto dto) {
         Employee entity = getEntityById(id);
 
@@ -101,6 +105,7 @@ public class EmployeeService implements IEmployeeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EMPLOYE_SUPPRESSION", type = TypeOperation.DELETE, entite = Employee.class)
     public void delete(Long id) {
         Employee entity = getEntityById(id);
         repository.delete(entity);

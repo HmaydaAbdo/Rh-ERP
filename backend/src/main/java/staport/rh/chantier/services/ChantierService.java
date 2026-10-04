@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
@@ -34,6 +36,7 @@ public class ChantierService implements IChantierService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "CHANTIER_CREATION", type = TypeOperation.CREATE, entite = Chantier.class)
     public ChantierResponseDto create(ChantierCreateRequestDto dto) {
         if (repository.existsByCodeIgnoreCase(dto.code())) {
             throw new ChantierAlreadyExistsException(dto.code());
@@ -47,6 +50,7 @@ public class ChantierService implements IChantierService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "CHANTIER_MODIFICATION", type = TypeOperation.UPDATE, entite = Chantier.class)
     public ChantierResponseDto update(Long id, ChantierUpdateRequestDto dto) {
         Chantier entity = getEntityById(id);
 
@@ -77,6 +81,7 @@ public class ChantierService implements IChantierService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "CHANTIER_SUPPRESSION", type = TypeOperation.DELETE, entite = Chantier.class)
     public void delete(Long id) {
         Chantier entity = getEntityById(id);
         repository.delete(entity);

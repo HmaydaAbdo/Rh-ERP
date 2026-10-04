@@ -6,6 +6,9 @@
         @if (canWrite()) {
           <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
         }
+        @if (canViewHistory()) {
+          <button pButton type="button" icon="pi pi-history" label="Historique" class="p-button-outlined" (click)="historiqueOuvert = true"></button>
+        }
         <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
       </div>
     </div>
@@ -42,4 +45,12 @@
       </div>
     </dl>
   </div>
+}
+
+@if (employee && canViewHistory()) {
+  <p-dialog header="Historique de l’employé" [(visible)]="historiqueOuvert" [modal]="true" [style]="{ width: '50rem' }" [draggable]="false">
+    @if (historiqueOuvert) {
+      <app-audit-historique entite="Employee" [id]="employee.id"></app-audit-historique>
+    }
+  </p-dialog>
 }

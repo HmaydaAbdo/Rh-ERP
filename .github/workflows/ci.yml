@@ -64,6 +64,8 @@ jobs:
           DB_NAME: ci_test
           DB_USER: ci_test
           DB_PASSWORD: ci_test
+          DB_MIGRATION_USER: ci_test
+          DB_MIGRATION_PASSWORD: ci_test
           CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
           JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
           FRONTEND_URL: http://localhost:4200

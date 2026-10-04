@@ -21,7 +21,7 @@ export class EquipeReferenceService implements LazySelectSource<EquipeReference>
 
     return this.http
       .post<Page<EquipeReference>>(`${this.baseUrl}/search`, criteria, { params })
-      .pipe(map((result) => ({ items: result.content, totalRecords: result.totalElements })));
+      .pipe(map((result) => ({ items: result.content, totalRecords: result.page.totalElements })));
   }
 
   fetchById(id: number | string): Observable<EquipeReference> {

@@ -35,7 +35,7 @@
                 <span class="paie-cartes__detail">{{ carte.resume.stc }} STC / sorties</span>
               }
             </a>
-            @if (canDelete()) {
+            @if (canPurge()) {
               <button
                 pButton
                 type="button"
@@ -84,7 +84,7 @@
                 <span class="paie-cartes__jauge" aria-hidden="true"><span [style.width.%]="carte.part"></span></span>
                 <span class="paie-cartes__detail">{{ formaterPart(carte.part) }} de la masse du mois</span>
               </a>
-              @if (canDelete()) {
+              @if (canPurge()) {
                 <button
                   pButton
                   type="button"
@@ -139,7 +139,7 @@
                   class="p-button-outlined"
                   (click)="rechercheEquipe.setValue('')"
                 ></button>
-                @if (canDelete()) {
+                @if (canPurge()) {
                   <button
                     pButton
                     type="button"
@@ -177,7 +177,7 @@
                           {{ col.header }} <p-sortIcon [field]="col.field"></p-sortIcon>
                         </th>
                       }
-                      @if (canDelete()) {
+                      @if (canPurge()) {
                         <th></th>
                       }
                     </tr>
@@ -212,7 +212,7 @@
                           }
                         </td>
                       }
-                      @if (canDelete()) {
+                      @if (canPurge()) {
                         <td class="text-center">
                           @if (ligne.equipeId !== null) {
                             <button
@@ -251,7 +251,7 @@
                           }
                         </td>
                       }
-                      @if (canDelete()) {
+                      @if (canPurge()) {
                         <td></td>
                       }
                     </tr>
@@ -259,7 +259,7 @@
 
                   <ng-template pTemplate="emptymessage">
                     <tr>
-                      <td [attr.colspan]="columns.visible.length + (canDelete() ? 1 : 0)" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
+                      <td [attr.colspan]="columns.visible.length + (canPurge() ? 1 : 0)" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
                     </tr>
                   </ng-template>
                 </p-table>

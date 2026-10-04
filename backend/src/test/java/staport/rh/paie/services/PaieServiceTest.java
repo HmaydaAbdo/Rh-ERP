@@ -42,6 +42,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -220,7 +221,7 @@ class PaieServiceTest {
         long supprimes = paieService.deleteGroupe(criteresDuMois(), 2);
 
         assertThat(supprimes).isEqualTo(2);
-        verify(repository).deleteAllInBatch(groupe);
+        verify(repository).deleteAll(groupe);
     }
 
     @Test
@@ -231,7 +232,7 @@ class PaieServiceTest {
                 .isInstanceOf(PaieGroupeModifieException.class)
                 .hasMessageContaining("1 bulletin(s)")
                 .hasMessageContaining("74");
-        verify(repository, never()).deleteAllInBatch(any());
+        verify(repository, never()).deleteAll(anyIterable());
     }
 
     @Test

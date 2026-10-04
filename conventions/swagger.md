@@ -161,18 +161,23 @@ Ne jamais redéfinir cette configuration ailleurs.
 
 # Swagger UI
 
-Les endpoints suivants restent accessibles sans authentification :
+Les endpoints suivants ne sont accessibles sans authentification **que lorsque Swagger est activé** :
 
 ```text
+/swagger-ui.html
 /swagger-ui/**
 /v3/api-docs/**
 ```
 
 Le bouton **Authorize** de Swagger gère l'authentification JWT.
 
-L'activation de Swagger est pilotée par la configuration de l'application.
+**Éteint par défaut.** `application.yml` fixe `springdoc.api-docs.enabled` et `springdoc.swagger-ui.enabled` à `false` : la
+liste de toutes les routes n'a pas à être lisible sans connexion, et un oubli de configuration doit laisser Swagger éteint,
+pas allumé. Le développement l'allume par variables d'environnement (`SPRINGDOC_API_DOCS_ENABLED=true`,
+`SPRINGDOC_SWAGGER_UI_ENABLED=true`) ; la production ne les définit jamais.
 
-Swagger est activé en développement et désactivé en production.
+La chaîne de sécurité n'ouvre ces routes que si la documentation est allumée (même propriété) ; éteinte, elles exigent un
+jeton comme toute autre route. Le reverse proxy de production ne les relaie pas.
 
 ---
 

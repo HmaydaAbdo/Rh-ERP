@@ -251,7 +251,7 @@ export class PaieListComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((result) => {
         this.paies = result.content;
-        this.totalRecords = result.totalElements;
+        this.totalRecords = result.page.totalElements;
       });
   }
 }

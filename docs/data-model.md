@@ -22,6 +22,8 @@ erDiagram
   UTILISATEUR }o--o{ PERMISSION : "utilisateur_permission_refusee"
   UTILISATEUR ||--o{ REFRESH_TOKEN : "sessions"
   UTILISATEUR ||--o{ RESET_PASSWORD_TOKEN : "liens de réinitialisation"
+  AUDIT_REVISION ||--o{ AUDIT_JOURNAL : "revision_id"
+  AUDIT_REVISION ||--o{ TABLE_AUD : "rev (instantanés, sans clé vers les tables métier)"
 ```
 
 Les clés primaires sont toutes des `BIGINT GENERATED ALWAYS AS IDENTITY`. Les noms de table sont au
@@ -49,14 +51,31 @@ Détail et règles métier : [function](function/README.md), [chantier](chantier
 |---|---|
 | `permission` | Catalogue **fixe** des permissions (une ligne par domaine × action), alimenté par migration, jamais modifié depuis l'interface. Code unique |
 | `role` | Rôles administrables via l'interface. Nom unique |
-| `role_permission` | Association rôle ↔ permission (suppression en cascade des deux côtés) |
+| `role_permission` | Association rôle ↔ permission (`ON DELETE RESTRICT` des deux côtés depuis `V13` : Hibernate retire d'abord les liaisons d'un rôle supprimé, ce que l'audit voit) |
 | `utilisateur` | Compte de connexion : `username` et `email` uniques, `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel |
-| `utilisateur_role` | Association utilisateur ↔ rôle (cascade) |
-| `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles |
+| `utilisateur_role` | Association utilisateur ↔ rôle (`ON DELETE RESTRICT` depuis `V13`) |
+| `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
 | `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille` (identifiant de session, voir [auth/README.md](auth/README.md)) |
 | `reset_password_token` | Lien « mot de passe oublié » **haché**, `expire_le`, `utilise` |
 
 Détail : [auth/README.md](auth/README.md).
+
+---
+
+## Tables d'audit
+
+Écrites par Hibernate Envers et par l'aspect d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
+[`conventions/database.md`](../conventions/database.md)). Description fonctionnelle : [audit/README.md](audit/README.md).
+
+| Table | Rôle |
+|---|---|
+| `audit_revision` | Une ligne par transaction qui modifie des données auditées : `horodatage` (`TIMESTAMPTZ`), `utilisateur_id` (**sans clé étrangère** : l'historique survit au compte), `utilisateur_nom` (figé), `origine` (`API`, `TACHE_PLANIFIEE`, `DEMARRAGE`, `MIGRATION`, `INCONNUE`), `request_id`, `adresse_ip` |
+| `audit_revision_entite` | Types d'entités modifiés par chaque révision (clé `(revision_id, entite)`) |
+| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `paie_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
+| `audit_journal` | Le journal unique : `categorie` (`OPERATION`, `SECURITE`, `ACCES`), `action`, `type_operation`, `resultat` (`SUCCES`, `ECHEC`), identité et contexte, cible (`entite_type`, `entite_id`), `nombre_elements`, `perimetre` (`JSONB`), `motif`, `revision_id` (→ `audit_revision`). Index sur l'horodatage, l'utilisateur, la catégorie et l'action, la cible, l'identifiant de requête et la révision |
+
+Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMigrate.sql` ci-dessous et
+[audit/README.md](audit/README.md), « Intégrité »).
 
 ---
 
@@ -89,7 +108,9 @@ partout (seule l'équipe a un index sur `UPPER(code)`). Traité dans la tâche �
 | Employé **sans** bulletin ni compte lié | Supprimé |
 | Employé **avec** des bulletins ou un compte utilisateur lié | **Erreur `500`** : aucune règle n'a été définie pour ce cas (voir [../TODO.md](../TODO.md)) |
 | Bulletin | Supprimé (aucune contrainte) |
-| Rôle | Supprimé, avec ses associations rôle ↔ permission et utilisateur ↔ rôle (les utilisateurs perdent ce rôle à leur prochain rafraîchissement) |
+| Rôle **attribué** à au moins un compte | Bloqué : `409` (retirez-le d'abord des comptes) |
+| Rôle `SYSTEM_ADMIN` | Bloqué : `409`, jamais supprimable |
+| Rôle non attribué | Supprimé, avec ses associations rôle ↔ permission (retirées une à une, donc auditées) |
 | Utilisateur | Pas d'endpoint de suppression : un compte se désactive (`actif = false`) |
 
 ### Snapshot du bulletin
@@ -124,6 +145,12 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V8` | `paie.equipe` (texte libre) remplacé par `paie.equipe_id` (clé étrangère), avec reprise des données et garde-fou : la migration échoue plutôt que de perdre une valeur |
 | `V9` | Permissions `EQUIPE_READ/WRITE/DELETE`, attribuées aux rôles qui portent déjà celles du chantier |
 | `V10` | `refresh_token.famille` (révocation de toute la session en cas de réutilisation d'un jeton) |
+| `V11` | Audit : `audit_revision`, `audit_revision_entite`, une table `_aud` par entité auditée et par liaison, `audit_journal` |
+| `V12` | Permission `AUDIT_READ`, attribuée à `SYSTEM_ADMIN` seulement |
+| `V13` | Liaisons rôle / permission / compte en `ON DELETE RESTRICT` (plus de retrait silencieux de droits par cascade SQL) |
+| `V14` | **État initial de l'audit** : une révision (origine `MIGRATION`) qui enregistre toutes les lignes existantes, et son entrée `AUDIT_ETAT_INITIAL` |
+| `V15` | Permission `PAIE_PURGE` (suppression en groupe), attribuée à `SYSTEM_ADMIN` et aux rôles qui ont `PAIE_DELETE` ; écrit sa révision d'audit (premier usage du gabarit de migration auditée) |
+| `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
 
@@ -131,7 +158,10 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 - Une migration qui transforme des données doit vérifier qu'elle ne perd rien et échouer sinon (voir `V8`).
 - Les permissions se créent par migration (catalogue fixe) ; l'attribution aux rôles existants est faite dans
   la même migration.
-- Les tests (`PaieApplicationTests`) démarrent l'application sur une base vide : toute la chaîne V1 → V10 est
-  rejouée et validée contre les entités à chaque exécution.
+- **Depuis `V14`, une migration qui modifie des données d'une table auditée écrit aussi sa révision, ses lignes d'audit et son
+  entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
+  entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
+- Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
+  toute la chaîne V1 → V15 est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

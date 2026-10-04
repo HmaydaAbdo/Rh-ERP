@@ -1,4 +1,4 @@
-// Les chemins proxifiés (/employees, /functions, /chantiers, /equipes) recoupent les routes Angular
+// Les chemins proxifiés (/employees, /functions, /chantiers, /equipes, /paie) recoupent les routes Angular
 // (ex. /employees liste, /employees/:id détail). `bypass` laisse le serveur de dev Angular
 // servir la navigation de page (Accept: text/html) et ne proxifie vers le backend que les
 // véritables appels API (JSON).
@@ -7,7 +7,7 @@
 // docker-compose (résolution par nom de service, voir docker-compose.yml à la racine).
 const target = process.env.BACKEND_URL || 'http://localhost:8080';
 
-const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/auth', '/users', '/roles', '/permissions'];
+const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/auth', '/users', '/roles', '/permissions', '/logs'];
 
 module.exports = apiPaths.map((path) => ({
   context: [path],

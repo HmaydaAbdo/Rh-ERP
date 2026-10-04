@@ -1,5 +1,6 @@
 package staport.rh.paie.repositories;
 
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 
 import java.util.List;
@@ -7,7 +8,7 @@ import java.util.List;
 /**
  * Filtres de la barre de la page Paie, appliqués aux requêtes d'agrégation de {@link PaieRepository} (mois, chantiers,
  * tableau de bord). Ils lisent {@link PaieSearchCriteria} avec les mêmes règles que {@code PaieSpecification}, qui filtre
- * la liste : nom et CIN « contient » sans tenir compte de la casse, identifiants multi-valeurs, un filtre vide ou absent
+ * la liste : nom et CIN « contient » sans tenir compte de la casse (jokers échappés, {@link MotifRecherche}), identifiants multi-valeurs, un filtre vide ou absent
  * est ignoré. Le mois n'en fait pas partie : chaque requête le traite à sa façon.
  *
  * <p>Lus par SpEL dans les {@code @Query} (d'où de vrais getters, pas un record). Un filtre ignoré porte {@code tous = true}
@@ -34,9 +35,9 @@ public final class FiltresPaie {
 
     public FiltresPaie(String nomPrenom, String cin, List<Long> chantierIds, List<Long> fonctionIds, List<Long> equipeIds) {
         this.tousNoms = estVide(nomPrenom);
-        this.motifNom = tousNoms ? "%" : motif(nomPrenom);
+        this.motifNom = tousNoms ? "%" : MotifRecherche.contient(nomPrenom);
         this.tousCin = estVide(cin);
-        this.motifCin = tousCin ? "%" : motif(cin);
+        this.motifCin = tousCin ? "%" : MotifRecherche.contient(cin);
         this.tousChantiers = estVide(chantierIds);
         this.chantierIds = tousChantiers ? AUCUN_ID : List.copyOf(chantierIds);
         this.toutesFonctions = estVide(fonctionIds);
@@ -58,10 +59,6 @@ public final class FiltresPaie {
 
     private static boolean estVide(List<Long> ids) {
         return ids == null || ids.isEmpty();
-    }
-
-    private static String motif(String texte) {
-        return "%" + texte.toLowerCase() + "%";
     }
 
     public boolean isTousNoms() {

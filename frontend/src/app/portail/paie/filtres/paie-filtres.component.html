@@ -130,43 +130,49 @@
   <div class="paie-filtres__panneau">
     @if (mode() === 'filtres') {
       <form [formGroup]="formulaire" class="paie-filtres__colonnes">
-        <div class="paie-filtres__colonne">
-          <h3>Chantiers</h3>
-          @for (source of sourcesChantiers(); track source) {
+        @if (peutChoisirChantiers) {
+          <div class="paie-filtres__colonne">
+            <h3>Chantiers</h3>
+            @for (source of sourcesChantiers(); track source) {
+              <app-lazy-select
+                formControlName="chantierIds"
+                [multiple]="true"
+                [source]="source"
+                optionLabel="code"
+                placeholder="Tous les chantiers"
+              ></app-lazy-select>
+            }
+          </div>
+        }
+        @if (peutChoisirEquipes) {
+          <div class="paie-filtres__colonne">
+            <h3>Équipes</h3>
+            @for (source of sourcesEquipes(); track source) {
+              <app-lazy-select
+                formControlName="equipeIds"
+                [multiple]="true"
+                [source]="source"
+                optionLabel="code"
+                placeholder="Toutes les équipes"
+              ></app-lazy-select>
+            }
+            @if (periode() && courant().chantierIds.length > 0) {
+              <p class="paie-filtres__aide">Équipes des chantiers choisis en {{ libelle() }}.</p>
+            }
+          </div>
+        }
+        @if (peutChoisirFonctions) {
+          <div class="paie-filtres__colonne">
+            <h3>Fonctions</h3>
             <app-lazy-select
-              formControlName="chantierIds"
+              formControlName="fonctionIds"
               [multiple]="true"
-              [source]="source"
-              optionLabel="code"
-              placeholder="Tous les chantiers"
+              [source]="functionReferenceService"
+              optionLabel="libelle"
+              placeholder="Toutes les fonctions"
             ></app-lazy-select>
-          }
-        </div>
-        <div class="paie-filtres__colonne">
-          <h3>Équipes</h3>
-          @for (source of sourcesEquipes(); track source) {
-            <app-lazy-select
-              formControlName="equipeIds"
-              [multiple]="true"
-              [source]="source"
-              optionLabel="code"
-              placeholder="Toutes les équipes"
-            ></app-lazy-select>
-          }
-          @if (periode() && courant().chantierIds.length > 0) {
-            <p class="paie-filtres__aide">Équipes des chantiers choisis en {{ libelle() }}.</p>
-          }
-        </div>
-        <div class="paie-filtres__colonne">
-          <h3>Fonctions</h3>
-          <app-lazy-select
-            formControlName="fonctionIds"
-            [multiple]="true"
-            [source]="functionReferenceService"
-            optionLabel="libelle"
-            placeholder="Toutes les fonctions"
-          ></app-lazy-select>
-        </div>
+          </div>
+        }
       </form>
       @if (periode()) {
         <p class="paie-filtres__aide">Les chantiers proposés sont ceux qui ont de la paie en {{ libelle() }}.</p>

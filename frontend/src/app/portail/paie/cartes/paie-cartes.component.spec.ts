@@ -35,6 +35,7 @@ describe('PaieCartesComponent', () => {
   let service: jasmine.SpyObj<PaieService>;
   let messages: jasmine.SpyObj<MessageService>;
   let harness: RouterTestingHarness;
+  let autorise: (permission: string) => boolean;
 
   async function ouvrir(url: string): Promise<PaieCartesComponent> {
     harness ??= await RouterTestingHarness.create();
@@ -43,6 +44,7 @@ describe('PaieCartesComponent', () => {
 
   beforeEach(() => {
     harness = undefined as unknown as RouterTestingHarness;
+    autorise = () => true;
     service = jasmine.createSpyObj<PaieService>('PaieService', ['rechercherPeriodes', 'rechercherChantiers', 'supprimerGroupe']);
     messages = jasmine.createSpyObj<MessageService>('MessageService', ['add']);
     service.rechercherPeriodes.and.returnValue(of(PERIODES));
@@ -55,7 +57,7 @@ describe('PaieCartesComponent', () => {
         provideRouter([{ path: 'paie/cartes', component: PaieCartesComponent }]),
         { provide: PaieService, useValue: service },
         { provide: MessageService, useValue: messages },
-        { provide: AuthService, useValue: { hasPermission: () => true } }
+        { provide: AuthService, useValue: { hasPermission: (permission: string) => autorise(permission) } }
       ]
     });
   });
@@ -72,6 +74,15 @@ describe('PaieCartesComponent', () => {
 
     await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
     expect(composant.niveau()).toBe(3);
+  });
+
+  it("ne propose la suppression en groupe qu'avec PAIE_PURGE : PAIE_DELETE (un bulletin) ne suffit pas", async () => {
+    autorise = (permission) => permission === 'PAIE_DELETE';
+    const composant = await ouvrir('/paie/cartes');
+    expect(composant.canPurge()).toBeFalse();
+
+    autorise = (permission) => permission === 'PAIE_PURGE';
+    expect(composant.canPurge()).toBeTrue();
   });
 
   it('affiche les mois au niveau 1 sans charger de chantiers', async () => {

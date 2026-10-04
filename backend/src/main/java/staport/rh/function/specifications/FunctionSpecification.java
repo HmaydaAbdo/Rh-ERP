@@ -2,6 +2,7 @@ package staport.rh.function.specifications;
 
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.function.dtos.request.FunctionSearchCriteria;
 import staport.rh.function.entities.Function;
 
@@ -24,7 +25,8 @@ public class FunctionSpecification {
             if (criteria.libelle() != null && !criteria.libelle().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("libelle")),
-                        "%" + criteria.libelle().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.libelle()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 

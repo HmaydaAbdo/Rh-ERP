@@ -200,7 +200,8 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   (décision du 2026-10-03). Un chantier supprimé ou désactivé dans l'ERP reste tel quel.
 - **Qualité des données** : `nom` et `designation` ne sont pas obligatoires en base (la désignation l'est à la
   saisie) ; tâche dédiée dans le TODO.
-- Aucun audit (Hibernate Envers) — les créations/modifications de chantiers ne sont pas tracées
-  au-delà des logs applicatifs.
+- Audité (voir [../audit/README.md](../audit/README.md)) : chaque création, modification et suppression de chantier, et chaque
+  synchronisation (une entrée pour l'ensemble, une révision par chantier créé), sont tracées ; la synchronisation planifiée
+  est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.
 - Les métriques de synchronisation sont enregistrées mais pas encore exportées (aucun Prometheus configuré, voir
   [../architecture.md](../architecture.md)).

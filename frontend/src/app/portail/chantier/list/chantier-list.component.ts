@@ -185,7 +185,7 @@ export class ChantierListComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((result) => {
         this.chantiers = result.content;
-        this.totalRecords = result.totalElements;
+        this.totalRecords = result.page.totalElements;
       });
   }
 }

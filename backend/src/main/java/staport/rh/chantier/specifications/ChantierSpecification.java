@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.entities.Chantier;
+import staport.rh.common.recherche.MotifRecherche;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,14 +25,16 @@ public class ChantierSpecification {
             if (criteria.code() != null && !criteria.code().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("code")),
-                        "%" + criteria.code().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.code()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
             if (criteria.designation() != null && !criteria.designation().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("designation")),
-                        "%" + criteria.designation().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.designation()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
@@ -41,10 +44,10 @@ public class ChantierSpecification {
             // sélecteur tape ce qu'il voit (le code, affiché comme option), une correspondance sur la
             // seule désignation ne le trouverait jamais.
             if (criteria.recherche() != null && !criteria.recherche().isBlank()) {
-                String motif = "%" + criteria.recherche().toLowerCase() + "%";
+                String motif = MotifRecherche.contient(criteria.recherche());
                 predicates.add(criteriaBuilder.or(
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("code")), motif),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("designation")), motif)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("code")), motif, MotifRecherche.ECHAPPEMENT),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("designation")), motif, MotifRecherche.ECHAPPEMENT)
                 ));
             }
 

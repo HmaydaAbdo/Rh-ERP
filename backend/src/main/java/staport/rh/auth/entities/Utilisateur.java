@@ -11,6 +11,8 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.envers.NotAudited;
+import org.hibernate.envers.Audited;
 import staport.rh.employee.entities.Employee;
 
 import java.util.HashSet;
@@ -23,6 +25,7 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "utilisateur")
+@Audited
 public class Utilisateur {
 
     @Id
@@ -35,6 +38,9 @@ public class Utilisateur {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
+    /** Jamais audité : on n'enregistre jamais un secret. Un changement de mot de passe est tracé comme événement
+     * de sécurité (voir conventions/audit.md). */
+    @NotAudited
     @Column(name = "mot_de_passe_hash", nullable = false, length = 255)
     private String motDePasseHash;
 

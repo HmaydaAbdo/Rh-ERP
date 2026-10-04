@@ -72,11 +72,12 @@ l'import comme l'API exigent déjà ces deux dates).
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
   lève `InvalidReferenceException` (400).
-- La suppression (`DELETE /employees/{id}`) supprime l'employé. **Cas non traité** : si l'employé est
-  référencé par au moins un bulletin de paie (`paie.employee_id`) ou lié à un compte utilisateur
-  (`utilisateur.employee_id`), la base refuse la suppression et l'API répond aujourd'hui par une erreur `500`
-  générique, au lieu d'un `409` explicite. Le comportement voulu (bloquer, ou autre) reste à décider — voir
-  [TODO.md](../../TODO.md). En pratique, passer l'employé à `INACTIF` conserve son historique.
+- La suppression (`DELETE /employees/{id}`) supprime l'employé. **Un employé référencé par au moins un bulletin de paie**
+  (`paie.employee_id`) **ou lié à un compte utilisateur** (`utilisateur.employee_id`) **n'est pas supprimable** : la base refuse
+  et l'API répond `409` avec un message explicite (`EmployeeExceptionHandler`, comme pour fonction, chantier et équipe — un
+  contrôle dans le service créerait une dépendance circulaire avec les domaines Paie et Auth). Le message invite à passer
+  l'employé à `INACTIF`, qui conserve son historique ; l'écran le rappelle dans la confirmation. La tentative refusée reste
+  tracée dans le journal d'audit (échec).
 - Un employé `INACTIF` reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
   employés `ACTIF`.
 
@@ -90,7 +91,7 @@ l'import comme l'API exigent déjà ces deux dates).
 | `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
 | `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
 | `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `statut`) — `fonctionIds`/`chantierIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
-| `DELETE` | `/employees/{id}` | Supprimer | 204, 404 |
+| `DELETE` | `/employees/{id}` | Supprimer | 204, 404, 409 (bulletins ou compte liés) |
 | `POST` | `/employees/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
 | `GET` | `/employees/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 
@@ -225,8 +226,6 @@ modification, suppression et import sont conditionnés par `EMPLOYEE_WRITE`, `EM
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
-- **Suppression d'un employé qui a des bulletins ou un compte** : erreur `500` au lieu d'un refus explicite
-  (voir « Règles métier »).
-- Aucun audit (Hibernate Envers) — les créations/modifications/imports ne sont pas tracés au-delà
-  des logs applicatifs.
+- Audité (voir [../audit/README.md](../audit/README.md)) : créations, modifications, suppressions et imports (fichier : nom,
+  taille, empreinte) ; l'historique d'un employé s'ouvre depuis son détail (bouton **Historique**, permission `AUDIT_READ`).
 - Aucun lien avec le Pointage, qui reste à construire.
