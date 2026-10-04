@@ -145,6 +145,41 @@ automatiquement au démarrage de l'application, avant l'initialisation de Hibern
 
 ---
 
+## Deux comptes PostgreSQL — l'application ne réécrit pas l'audit
+
+Pour qu'un audit (`conventions/audit.md`) soit opposable, l'application ne doit pas pouvoir modifier son propre
+historique : deux comptes, jamais un seul.
+
+| Compte | Utilisé par | Droits |
+|---|---|---|
+| **Propriétaire** du schéma (`DB_MIGRATION_USER`) | Flyway, au démarrage, seulement | Tous (il crée les tables) |
+| **Applicatif** (`DB_USER`) | L'application, à l'exécution | `SELECT, INSERT, UPDATE, DELETE` sur les tables métier ; **`SELECT, INSERT` seulement** sur les tables d'audit ; lecture seule sur l'historique Flyway |
+
+* Les droits sont recalculés après chaque migration par un rappel Flyway `afterMigrate.sql` (idempotent) : un rappel
+  plutôt qu'une migration, pour couvrir aussi les tables créées plus tard. Il ne fait rien quand les deux comptes sont
+  identiques (développement, CI).
+* Le compte applicatif est créé par ce même rappel quand il n'existe pas (le mot de passe vient de l'environnement,
+  jamais d'un fichier versionné) — aucune étape manuelle au déploiement.
+* Les deux paires d'identifiants sont des variables d'environnement obligatoires (`conventions/configuration.md`) ;
+  en développement et en CI, elles peuvent désigner le même compte.
+* L'application vérifie au démarrage que son compte ne peut pas modifier une table d'audit et le signale sinon.
+* **Mise en place sur une base existante** : procédure documentée dans le `docs/deployment.md` du projet, essayée
+  d'abord sur une copie de la base, avec retour arrière possible (revenir au compte unique).
+* Un test d'intégration prouve que le compte applicatif ne peut ni modifier, ni supprimer, ni vider une table d'audit.
+
+---
+
+## Adresse IP du client
+
+L'audit enregistre l'adresse IP du client réel. Derrière un ou plusieurs reverse-proxys (nginx outer, puis inner),
+l'adresse vue par l'application est celle du dernier proxy : chaque proxy doit transmettre `X-Forwarded-For`
+(`$proxy_add_x_forwarded_for`, qui **ajoute** l'adresse reçue plutôt que de la remplacer — un client ne peut donc pas
+usurper l'adresse enregistrée), et l'application doit honorer cet en-tête **uniquement de ses proxys de confiance**
+(configuration du serveur embarqué, `server.forward-headers-strategy`). Le backend n'est joignable que par ses
+proxys (réseau Docker interne, port publié en loopback seulement — voir « Ports »).
+
+---
+
 ## Healthchecks
 
 Chaque service définit un healthcheck adapté :

@@ -211,7 +211,7 @@ export class FunctionListComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((result) => {
         this.functions = result.content;
-        this.totalRecords = result.totalElements;
+        this.totalRecords = result.page.totalElements;
       });
   }
 }

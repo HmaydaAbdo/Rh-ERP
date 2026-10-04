@@ -21,6 +21,12 @@
 
       <div class="role-form__permissions">
         <h2>Permissions</h2>
+        @if (protege) {
+          <p class="role-form__protege">
+            Rôle d’administration : son nom et ses permissions sont verrouillés (le retirer ou l’amputer laisserait le système sans
+            administrateur). Seule sa description peut être modifiée.
+          </p>
+        }
         @for (group of permissionGroups; track group.domaine) {
           <div class="role-form__group">
             <div class="role-form__group-header">
@@ -28,6 +34,7 @@
                 [binary]="true"
                 [ngModel]="isGroupFullySelected(group)"
                 [ngModelOptions]="{ standalone: true }"
+                [disabled]="protege"
                 (onChange)="toggleGroup(group, $event.checked)"
               ></p-checkbox>
               <strong>{{ group.domaine }}</strong>
@@ -39,6 +46,7 @@
                     [binary]="true"
                     [ngModel]="isChecked(permission)"
                     [ngModelOptions]="{ standalone: true }"
+                    [disabled]="protege"
                     (onChange)="toggle(permission, $event.checked)"
                   ></p-checkbox>
                   <span>{{ permission.code }}</span>

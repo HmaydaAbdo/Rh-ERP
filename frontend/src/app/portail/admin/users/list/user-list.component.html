@@ -9,7 +9,7 @@
         styleClass="user-list__reset-password"
       ></p-password>
       @if (resetForm.controls.nouveauMotDePasse.invalid && resetForm.controls.nouveauMotDePasse.touched) {
-        <small class="field-error">8 caractères minimum.</small>
+        <small class="field-error">{{ regleMotDePasse }}</small>
       }
       <button pButton type="submit" label="Réinitialiser" [loading]="resetting" [disabled]="resetting"></button>
     </form>

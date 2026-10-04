@@ -72,7 +72,7 @@ export class RoleListComponent {
   onDelete(role: Role): void {
     this.confirmationService.confirm({
       header: 'Supprimer ce rôle',
-      message: `Confirmez-vous la suppression du rôle ${role.nom} ? Les utilisateurs qui l'ont perdront les permissions qu'il accordait.`,
+      message: `Confirmez-vous la suppression du rôle ${role.nom} ? Un rôle encore attribué à des comptes ne peut pas être supprimé : retirez-le d’abord de ces comptes.`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',

@@ -2,6 +2,7 @@ package staport.rh.equipe.specifications;
 
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.equipe.dtos.request.EquipeSearchCriteria;
 import staport.rh.equipe.entities.Equipe;
 
@@ -24,22 +25,24 @@ public class EquipeSpecification {
             if (criteria.code() != null && !criteria.code().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("code")),
-                        "%" + criteria.code().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.code()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
             if (criteria.libelle() != null && !criteria.libelle().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("libelle")),
-                        "%" + criteria.libelle().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.libelle()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
             if (criteria.recherche() != null && !criteria.recherche().isBlank()) {
-                String motif = "%" + criteria.recherche().toLowerCase() + "%";
+                String motif = MotifRecherche.contient(criteria.recherche());
                 predicates.add(criteriaBuilder.or(
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("code")), motif),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("libelle")), motif)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("code")), motif, MotifRecherche.ECHAPPEMENT),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("libelle")), motif, MotifRecherche.ECHAPPEMENT)
                 ));
             }
 

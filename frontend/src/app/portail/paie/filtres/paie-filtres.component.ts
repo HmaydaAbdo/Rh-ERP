@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BehaviorSubject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { LazySelectInMemorySource } from '../../../shared/components/lazy-select/lazy-select-in-memory.source';
 import { LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
@@ -56,10 +57,25 @@ export class PaieFiltresComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly paieService = inject(PaieService);
+  private readonly authService = inject(AuthService);
 
   readonly chantierReferenceService = inject(ChantierReferenceService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly equipeReferenceService = inject(EquipeReferenceService);
+
+  /** Un sélecteur appelle la route de recherche de son référentiel : sans la permission de lecture correspondante, il
+   * recevrait un refus (403) à chaque ouverture — il n'est donc pas proposé (conventions/security.md, « Journal de sécurité »). */
+  get peutChoisirChantiers(): boolean {
+    return this.authService.hasPermission('CHANTIER_READ');
+  }
+
+  get peutChoisirEquipes(): boolean {
+    return this.authService.hasPermission('EQUIPE_READ');
+  }
+
+  get peutChoisirFonctions(): boolean {
+    return this.authService.hasPermission('FUNCTION_READ');
+  }
 
   readonly disponibles = signal<string[]>([]);
   readonly courant = signal<PaieFiltres>(AUCUN_FILTRE);

@@ -37,12 +37,13 @@ public class AuthExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    @ExceptionHandler({UsernameAlreadyExistsException.class, EmailAlreadyExistsException.class, RoleAlreadyExistsException.class})
+    @ExceptionHandler({UsernameAlreadyExistsException.class, EmailAlreadyExistsException.class, RoleAlreadyExistsException.class,
+            RoleInUseException.class, ProtectedRoleException.class})
     public ResponseEntity<ErrorResponseDto> handleAlreadyExists(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
-    @ExceptionHandler({UnknownPermissionException.class, InvalidReferenceException.class})
+    @ExceptionHandler({UnknownPermissionException.class, InvalidReferenceException.class, MotDePasseNonConformeException.class})
     public ResponseEntity<ErrorResponseDto> handleBadRequest(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }

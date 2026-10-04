@@ -14,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import staport.rh.paie.audit.PerimetreImportPaie;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
@@ -90,6 +93,7 @@ public class PaieImportService {
     }
 
     @Transactional
+    @AuditableAction(action = "PAIE_IMPORT", type = TypeOperation.CREATE, entite = Paie.class, perimetre = PerimetreImportPaie.class)
     public PaieImportResultDto importer(MultipartFile file, YearMonth periode) {
         List<LigneIgnoreeDto> lignesIgnorees = new ArrayList<>();
         List<LigneAAppliquer> aAppliquer = new ArrayList<>();

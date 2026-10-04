@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { firstValueFrom, of } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { PaieChantierPeriode } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 import { AUCUN_FILTRE, PaieFiltres } from './paie-filtres';
@@ -30,6 +31,7 @@ describe('PaieFiltresComponent', () => {
   let composant: PaieFiltresComponent;
   let service: jasmine.SpyObj<PaieService>;
   let emis: PaieFiltres[];
+  let permissions: string[];
 
   function afficher(filtres: PaieFiltres): void {
     composant.value = filtres;
@@ -37,11 +39,17 @@ describe('PaieFiltresComponent', () => {
   }
 
   beforeEach(() => {
+    permissions = ['CHANTIER_READ', 'EQUIPE_READ', 'FUNCTION_READ'];
     service = jasmine.createSpyObj<PaieService>('PaieService', ['rechercherChantiers']);
     service.rechercherChantiers.and.returnValue(of(CHANTIERS));
     TestBed.configureTestingModule({
       imports: [PaieFiltresComponent, NoopAnimationsModule],
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: PaieService, useValue: service }]
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PaieService, useValue: service },
+        { provide: AuthService, useValue: { hasPermission: (code: string) => permissions.includes(code) } }
+      ]
     });
     fixture = TestBed.createComponent(PaieFiltresComponent);
     composant = fixture.componentInstance;
@@ -181,6 +189,30 @@ describe('PaieFiltresComponent', () => {
       afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
 
       expect(service.rechercherChantiers).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('permissions des sélecteurs', () => {
+    function colonnes(): string[] {
+      composant.ouvert.set(true);
+      fixture.detectChanges();
+      return Array.from(fixture.nativeElement.querySelectorAll('.paie-filtres__colonne h3')).map((h: unknown) => (h as HTMLElement).textContent?.trim() ?? '');
+    }
+
+    it('propose les trois sélecteurs à qui peut lire les trois référentiels', () => {
+      expect(colonnes()).toEqual(['Chantiers', 'Équipes', 'Fonctions']);
+    });
+
+    it('ne propose pas un sélecteur dont la route de recherche refuserait l’accès (403)', () => {
+      permissions = ['EQUIPE_READ'];
+
+      expect(colonnes()).toEqual(['Équipes']);
+    });
+
+    it('ne propose aucun sélecteur sans aucune de ces permissions', () => {
+      permissions = [];
+
+      expect(colonnes()).toEqual([]);
     });
   });
 

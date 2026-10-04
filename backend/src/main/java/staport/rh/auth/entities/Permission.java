@@ -6,9 +6,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "permission")
+@Audited
 public class Permission {
 
     @Id

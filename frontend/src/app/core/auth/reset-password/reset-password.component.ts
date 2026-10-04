@@ -7,6 +7,8 @@ import { ButtonModule } from 'primeng/button';
 import { PasswordModule } from 'primeng/password';
 import { finalize } from 'rxjs';
 
+import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../shared/validators/mot-de-passe.validator';
+
 @Component({
   selector: 'app-reset-password',
   standalone: true,
@@ -20,12 +22,13 @@ export class ResetPasswordComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  readonly regle = REGLE_MOT_DE_PASSE;
   token: string | null = null;
   submitting = false;
   errorMessage: string | null = null;
 
   readonly form = this.fb.group({
-    nouveauMotDePasse: ['', [Validators.required, Validators.minLength(8)]]
+    nouveauMotDePasse: ['', [Validators.required, motDePasseConforme]]
   });
 
   ngOnInit(): void {

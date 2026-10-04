@@ -28,7 +28,7 @@ export class EmployeeReferenceService implements LazySelectSource<EmployeeRefere
 
     return this.http
       .post<Page<EmployeeReference>>(`${this.baseUrl}/search`, criteria, { params })
-      .pipe(map((result) => ({ items: result.content.map(avecLibelle), totalRecords: result.totalElements })));
+      .pipe(map((result) => ({ items: result.content.map(avecLibelle), totalRecords: result.page.totalElements })));
   }
 
   fetchById(id: number | string): Observable<EmployeeReferenceOption> {

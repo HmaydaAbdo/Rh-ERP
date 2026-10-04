@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.envers.Audited;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
 import staport.rh.equipe.entities.Equipe;
@@ -39,6 +40,7 @@ import java.time.YearMonth;
                 @Index(name = "idx_paie_equipe", columnList = "equipe_id")
         }
 )
+@Audited
 public class Paie {
 
     @Id

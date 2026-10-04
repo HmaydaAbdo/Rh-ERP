@@ -12,7 +12,7 @@
 | `GET /paie/{id}` | `PAIE_READ` |
 | `POST /paie/search` | `PAIE_READ` |
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
-| `POST /paie/suppression` | `PAIE_DELETE` |
+| `POST /paie/suppression` | `PAIE_PURGE` (un mois, un chantier ou une équipe d'un coup : permission distincte de `PAIE_DELETE`) |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/periodes` | `PAIE_READ` |
@@ -27,7 +27,8 @@
 > Les sélecteurs des écrans Paie appellent aussi les domaines voisins : `/functions/search` (`FUNCTION_READ`),
 > `/chantiers/search` (`CHANTIER_READ`), `/equipes/search` (`EQUIPE_READ`) et `/employees/search`
 > (`EMPLOYEE_READ`). Un rôle qui saisit des bulletins doit porter ces permissions de lecture — voir
-> [README.md](README.md), « Dépendances entre permissions ».
+> [README.md](README.md), « Dépendances entre permissions ». **Dans la barre de filtres**, un sélecteur dont la permission
+> manque n'est pas proposé (`PaieFiltresComponent`) : l'appeler provoquerait un `403`, journalisé comme un faux refus.
 
 ## Frontend
 
@@ -40,9 +41,13 @@
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
-| Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_DELETE` — `canDelete()` |
+| Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_PURGE` — `canPurge()` |
+| Bouton « Historique » (détail d'un bulletin) | `AUDIT_READ` — `canViewHistory()` |
+| Colonnes Chantiers / Équipes / Fonctions du panneau de filtres | `CHANTIER_READ` / `EQUIPE_READ` / `FUNCTION_READ` |
 
 ## Rôles disposant de ces permissions (seed initial)
 
-`SYSTEM_ADMIN` et `PAIE_MANAGER` ont les cinq permissions (voir
-`V4__seed_permissions_et_roles.sql`) — administrable ensuite via `/admin/roles`.
+`SYSTEM_ADMIN` et `PAIE_MANAGER` ont les cinq permissions d'origine (voir
+`V4__seed_permissions_et_roles.sql`) **et `PAIE_PURGE`** (`V15__permission_paie_purge.sql`, attribuée à `SYSTEM_ADMIN` et à
+chaque rôle qui détenait `PAIE_DELETE`, pour ne rien retirer aux comptes existants). Pour séparer les pouvoirs, retirer
+`PAIE_PURGE` des rôles qui ne doivent supprimer qu'un bulletin à la fois — administrable via `/admin/roles`.

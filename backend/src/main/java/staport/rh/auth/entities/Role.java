@@ -10,12 +10,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
+import org.hibernate.envers.Audited;
 
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "role")
+@Audited
 public class Role {
 
     @Id

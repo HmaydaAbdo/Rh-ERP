@@ -6,6 +6,8 @@ public record RoleResponseDto(
         Long id,
         String nom,
         String description,
-        Set<PermissionResponseDto> permissions
+        Set<PermissionResponseDto> permissions,
+        /** Rôle d'administration de départ : ni supprimable, ni renommable, ni amputable (l'écran verrouille ces champs). */
+        boolean protege
 ) {
 }

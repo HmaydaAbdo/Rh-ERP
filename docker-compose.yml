@@ -48,8 +48,13 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Deux comptes (voir docs/deployment.md, « Deux comptes PostgreSQL ») : le compte applicatif n'a que SELECT et
+      # INSERT sur les tables d'audit ; le propriétaire (POSTGRES_USER) ne sert qu'à Flyway. Sans POSTGRES_APP_USER,
+      # un seul compte comme avant (repli de transition) — l'application le signale au démarrage.
+      DB_USER: ${POSTGRES_APP_USER:-${POSTGRES_USER}}
+      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:-${POSTGRES_PASSWORD}}
+      DB_MIGRATION_USER: ${POSTGRES_USER}
+      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
       CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL}

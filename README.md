@@ -48,8 +48,8 @@ npm install
 npm start                            # proxy vers http://localhost:8080 par défaut (proxy.conf.js)
 ```
 
-Frontend sur http://localhost:4200, backend (API + Swagger UI sur `/swagger-ui.html`) sur
-http://localhost:8080. Toutes les variables d'environnement sont décrites dans
+Frontend sur http://localhost:4200, backend (API ; Swagger UI sur `/swagger-ui.html` si activé, voir
+`backend/.env.example`) sur http://localhost:8080. Toutes les variables d'environnement sont décrites dans
 [`docs/configuration.md`](docs/configuration.md).
 
 ### Tests
@@ -156,7 +156,7 @@ complet : [`docs/configuration.md`](docs/configuration.md).
 
 Authentification par JWT (jeton d'accès de 15 minutes en mémoire, jeton de rafraîchissement de 30 jours en
 cookie `httpOnly`, rotation à usage unique avec révocation de toute la session en cas de réutilisation) avec
-RBAC dynamique : 22 permissions fixes, rôles administrables via l'UI (`/admin/roles`, `/admin/users`), refus
+RBAC dynamique : 24 permissions fixes, rôles administrables via l'UI (`/admin/roles`, `/admin/users`), refus
 individuels prioritaires sur les rôles. Chaque écran et chaque bouton d'action est conditionné par une
 permission. Détail : [`docs/auth/README.md`](docs/auth/README.md) et [`docs/rbac/README.md`](docs/rbac/README.md).
 
@@ -174,7 +174,7 @@ la première fois, puis changer le mot de passe via l'UI.
 
 ## État du projet
 
-- Aucun audit (Hibernate Envers) n'est encore en place. Voir [TODO.md](TODO.md), section « Audit ».
+- L'audit (Hibernate Envers + journal unique + événements de sécurité) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options non retenues (restauration d'un groupe supprimé, conservation, journal des consultations) sont dans [TODO.md](TODO.md).
 - Domaine Pointage non construit. Voir [TODO.md](TODO.md).
 - Prochaine tâche : qualité des données (tous champs obligatoires, aucun doublon). Voir [TODO.md](TODO.md).
 

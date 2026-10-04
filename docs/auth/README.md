@@ -54,18 +54,19 @@ auth/
 
 | Rôle | Permissions |
 |---|---|
-| `SYSTEM_ADMIN` | Toutes (y compris `USER_MANAGE` et `ROLE_MANAGE`) |
+| `SYSTEM_ADMIN` | Toutes (y compris `USER_MANAGE`, `ROLE_MANAGE` et `AUDIT_READ`) |
 | `PAIE_MANAGER` | Toutes les permissions métier, sans `USER_MANAGE` ni `ROLE_MANAGE` |
 
 Les permissions `EQUIPE_*` (migration V9) sont attribuées aux rôles qui portaient déjà les permissions
-`CHANTIER_*`. Tout autre rôle se crée depuis l'écran **Rôles**.
+`CHANTIER_*`. `AUDIT_READ` (migration V12) est attribuée à `SYSTEM_ADMIN` seulement. Tout autre rôle se crée depuis l'écran **Rôles**.
 
 ### Compte administrateur de départ
 
 Au démarrage, `AdminBootstrapRunner` crée un compte `SYSTEM_ADMIN` à partir de `ADMIN_USERNAME`,
 `ADMIN_EMAIL` et `ADMIN_PASSWORD` **s'il n'existe aucun compte portant ce rôle**. Ensuite, la variable est
 sans effet : changer le mot de passe se fait depuis l'interface. Ne jamais laisser le mot de passe d'exemple
-(voir [../configuration.md](../configuration.md)).
+(voir [../configuration.md](../configuration.md)). La création est attribuée à « Système », d'origine `DEMARRAGE`, dans
+l'audit (`UserService.creerAdminInitial`, appelé seulement quand `adminExiste()` est faux : un redémarrage ne laisse aucune trace).
 
 ---
 
@@ -105,6 +106,9 @@ et le voleur doivent alors se reconnecter. Les sessions ouvertes sur d'autres ap
 La révocation reste enregistrée même si la requête échoue (`noRollbackFor`). Un jeton expiré est simplement
 refusé.
 
+Un jeton présenté par un **compte désactivé** est refusé (`401`) et consommé, avec un événement `CONNEXION_ECHOUEE`
+(motif `COMPTE_INACTIF`) : une session ne survit pas à la désactivation, même faite hors de l'application (par SQL).
+
 ### Mot de passe oublié
 
 1. `POST /auth/forgot-password {email}` répond **toujours `202`**, que le compte existe ou non (on ne révèle
@@ -119,17 +123,25 @@ refusé.
 
 ### Mots de passe
 
-BCrypt. Longueur de 8 à 100 caractères (création et réinitialisation). Aucune règle de complexité.
+BCrypt. Règle unique (`PolitiqueMotDePasse`, décision du 2026-10-04) : **10 caractères minimum** (100 au plus), **au moins une lettre
+et un chiffre**, **différent de l'identifiant** (casse ignorée). Elle s'applique à la création d'un compte et aux deux
+réinitialisations (par lien, par un administrateur) ; un mot de passe refusé répond `400` avec la règle, jamais la valeur, et ne
+brûle pas le lien de réinitialisation. Les mots de passe existants ne changent pas. Le mot de passe du compte d'amorçage vient de
+la configuration (`ADMIN_PASSWORD`) et n'y est pas soumis. Les formulaires répètent longueur, lettre et chiffre pour guider la
+saisie ; le serveur reste l'autorité.
 
 ### Ce qui est révocable
 
 | Élément | Révocable avant expiration ? |
 |---|---|
 | Jeton d'accès | **Non** : valable jusqu'à ses 15 minutes, même si le compte est désactivé ou ses permissions modifiées |
-| Jeton de rafraîchissement | Oui : déconnexion, réinitialisation par courriel, détection de vol |
+| Jeton de rafraîchissement | Oui : déconnexion, réinitialisation du mot de passe (par courriel **ou par un administrateur**), **désactivation du compte**, détection de vol — `AuthService.revoquerSessions` coupe toutes les sessions d'un compte |
 
 **Conséquence** : un changement de rôle ou de refus individuel ne prend effet qu'au prochain rafraîchissement
 de l'utilisateur concerné (au plus 15 minutes). Le frontend relit ses permissions à chaque rafraîchissement.
+De même, un compte désactivé ou dont le mot de passe vient d'être réinitialisé **perd ses sessions tout de suite, sauf
+le jeton d'accès déjà émis, qui reste valable 15 minutes au plus** (risque assumé : le révoquer exigerait une lecture en
+base à chaque requête).
 
 ---
 
@@ -142,14 +154,15 @@ Un compte est **indépendant** d'un employé (un administrateur n'est pas forcé
 |---|---|
 | `username` | 3 à 50 caractères, **unique** ; **non modifiable** après création |
 | `email` | Format courriel, **unique** |
-| `motDePasse` | 8 à 100 caractères (création uniquement) |
-| `actif` | Un compte inactif ne peut pas se connecter |
+| `motDePasse` | Règle des mots de passe (voir plus haut), création uniquement |
+| `actif` | Un compte inactif ne peut ni se connecter ni se rafraîchir ; **le désactiver coupe ses sessions** (jetons de rafraîchissement révoqués) |
 | `employeeId` | Optionnel ; un identifiant inconnu est refusé (`400`) |
 | `roleIds` | Zéro ou plusieurs rôles existants |
 | Permissions refusées | Modifiées séparément (`PUT /users/{id}/permissions-refusees`), limitées côté interface aux permissions que les rôles actuels accordent |
 
-Un administrateur peut réinitialiser le mot de passe d'un compte (`POST /users/{id}/reset-password`). Il n'existe
-**pas** de suppression de compte : on désactive.
+Un administrateur peut réinitialiser le mot de passe d'un compte (`POST /users/{id}/reset-password`) : comme la
+réinitialisation par courriel, cela **révoque toutes les sessions ouvertes** du compte (leur nombre figure dans l'entrée
+d'audit). Il n'existe **pas** de suppression de compte : on désactive.
 
 ### Écran Utilisateurs (`/admin/users`)
 
@@ -166,6 +179,15 @@ différé), rôles, et — en modification seulement — les permissions refusé
 | `permissionIds` | Zéro ou plusieurs permissions du catalogue ; un identifiant inconnu est refusé (`400`) |
 
 `GET /permissions` renvoie le catalogue pour alimenter l'écran **Rôles** (`/admin/roles`).
+
+**Suppression** : refusée (`409`) si le rôle est encore attribué à des comptes — le message donne leur nombre — et toujours
+refusée pour `SYSTEM_ADMIN` ; les liaisons sont en `ON DELETE RESTRICT`, la base confirme la règle. Un rôle supprimé retire
+ses permissions une à une : l'audit voit chaque retrait.
+
+**Le rôle `SYSTEM_ADMIN` est protégé** (`409`, `ProtectedRoleException`) : il ne peut être ni supprimé, ni **renommé** (l'amorçage du
+premier compte le cherche par son nom), ni **privé d'une permission** (il perdrait de quoi administrer les comptes, les rôles
+et l'audit). Seule sa description se modifie ; l'écran verrouille le nom et les cases à cocher (`protege` dans la réponse de l'API).
+Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `V15`).
 
 ---
 
@@ -220,7 +242,7 @@ Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
 - **CORS ouvert à toute origine** avec cookies autorisés (décision du 2026-09-23) : risque borné par
   `SameSite=Lax`. Voir [../deployment.md](../deployment.md).
 - Chemins publics : `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`,
-  `/actuator/health`, Swagger. Tout le reste exige un jeton valide.
+  `/actuator/health`, et Swagger **seulement en développement** (éteint par défaut, voir [../configuration.md](../configuration.md)). Tout le reste exige un jeton valide.
 
 ---
 
@@ -236,10 +258,5 @@ JWT complète ; `AuthServiceTest` couvre connexion, rotation, vol de jeton et r�
 
 À trancher et corriger — suivies dans [TODO.md](../../TODO.md) :
 
-- **Un compte désactivé peut continuer à se rafraîchir** : `refresh` ne vérifie pas `actif`, et la
-  désactivation ne révoque pas les jetons existants. Le compte garde donc un accès jusqu'à 30 jours.
-- **La réinitialisation du mot de passe par un administrateur ne révoque pas** les sessions ouvertes du compte
-  (contrairement à la réinitialisation par courriel).
 - **Pas de limitation du nombre de tentatives** de connexion ni de demandes de réinitialisation.
-- **Aucune règle de complexité** de mot de passe (longueur seulement).
-- Aucun audit des connexions et des changements de droits (voir « Audit » dans le TODO).
+- Les connexions, refus d'accès, changements de droits et de mots de passe sont journalisés (voir [../audit/README.md](../audit/README.md)).

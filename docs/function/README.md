@@ -173,5 +173,6 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   fonctions dont 9 paires très proches (fautes de frappe), toutes utilisées ; leur fusion est une décision métier
   suivie dans la tâche « Qualité des données ». Tant qu'elle n'est pas faite, le chapitre « Répartition par
   fonction » du rapport PDF reste retiré (voir [../report/rapport-v2.md](../report/rapport-v2.md)).
-- Aucun audit (Hibernate Envers) — les créations/modifications/imports ne sont pas tracés au-delà
-  des logs applicatifs.
+- Audité (voir [../audit/README.md](../audit/README.md)) : créations, modifications, suppressions et imports. Le nettoyage
+  des doublons (tâche « Qualité des données ») est une migration de données : elle doit suivre le gabarit de migration auditée
+  de `conventions/database.md`.

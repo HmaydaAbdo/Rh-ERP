@@ -8,6 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.paie.audit.PerimetreSuppressionGroupePaie;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
@@ -77,6 +80,7 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "PAIE_CREATION", type = TypeOperation.CREATE, entite = Paie.class)
     public PaieResponseDto create(PaieCreateRequestDto dto) {
         if (!employeeService.existsById(dto.employeeId())) {
             throw new InvalidReferenceException("Employé introuvable avec l'id : " + dto.employeeId());
@@ -98,6 +102,7 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "PAIE_MODIFICATION", type = TypeOperation.UPDATE, entite = Paie.class)
     public PaieResponseDto update(Long id, PaieUpdateRequestDto dto) {
         Paie entity = getEntityById(id);
 
@@ -128,6 +133,7 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "PAIE_SUPPRESSION", type = TypeOperation.DELETE, entite = Paie.class)
     public void delete(Long id) {
         Paie entity = getEntityById(id);
         repository.delete(entity);
@@ -136,6 +142,8 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "PAIE_SUPPRESSION_GROUPE", type = TypeOperation.DELETE, entite = Paie.class,
+            perimetre = PerimetreSuppressionGroupePaie.class)
     public long deleteGroupe(PaieSearchCriteria criteres, long nombreAttendu) {
         if (criteres == null || criteres.periode() == null) {
             throw new InvalidPeriodeException("La période est obligatoire pour supprimer un groupe de bulletins (format aaaa-MM)");
@@ -145,8 +153,10 @@ public class PaieService implements IPaieService {
         if (groupe.size() != nombreAttendu) {
             throw new PaieGroupeModifieException(groupe.size(), nombreAttendu);
         }
-        repository.deleteAllInBatch(groupe);
-        log.info("Groupe de bulletins de paie supprimé : periode={}, nombre={}, critères={}", criteres.periode(), groupe.size(), criteres);
+        // Entité par entité, jamais en masse (deleteAllInBatch) : seul moyen pour que l'audit voie chaque bulletin
+        // supprimé (conventions/audit.md). Le log ne porte que des identifiants et des nombres, pas les textes de filtre.
+        repository.deleteAll(groupe);
+        log.info("Groupe de bulletins de paie supprimé : periode={}, nombre={}", criteres.periode(), groupe.size());
         return groupe.size();
     }
 

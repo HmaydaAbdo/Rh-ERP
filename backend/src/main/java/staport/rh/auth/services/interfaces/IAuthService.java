@@ -21,4 +21,10 @@ public interface IAuthService {
     void demanderReinitialisationMotDePasse(String email);
 
     void reinitialiserMotDePasse(String tokenBrut, String nouveauMotDePasse);
+
+    /**
+     * Coupe toutes les sessions d'un compte : ses jetons de rafraîchissement actifs sont révoqués, il devra se reconnecter
+     * (son jeton d'accès en cours reste valable jusqu'à son expiration, 15 minutes au plus). Rend le nombre de sessions coupées.
+     */
+    int revoquerSessions(Long utilisateurId);
 }

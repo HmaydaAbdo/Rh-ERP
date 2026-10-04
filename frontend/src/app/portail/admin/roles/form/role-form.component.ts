@@ -35,6 +35,8 @@ export class RoleFormComponent implements OnInit {
   loading = true;
   permissionGroups: PermissionGroup[] = [];
   selectedPermissionIds = new Set<number>();
+  /** Rôle d'administration : seule sa description se modifie, le serveur refuse le reste. */
+  protege = false;
 
   readonly form = this.fb.group({
     nom: ['', [Validators.required, Validators.maxLength(50)]],
@@ -58,6 +60,10 @@ export class RoleFormComponent implements OnInit {
           this.buildGroups(permissions);
           this.selectedPermissionIds = new Set(role.permissions.map((p) => p.id));
           this.form.patchValue({ nom: role.nom, description: role.description ?? '' });
+          this.protege = role.protege;
+          if (this.protege) {
+            this.form.controls.nom.disable();
+          }
         });
     } else {
       permissions$.pipe(finalize(() => (this.loading = false))).subscribe((permissions) => this.buildGroups(permissions));
@@ -69,6 +75,9 @@ export class RoleFormComponent implements OnInit {
   }
 
   toggle(permission: PermissionSummary, checked: boolean): void {
+    if (this.protege) {
+      return;
+    }
     if (checked) {
       this.selectedPermissionIds.add(permission.id);
     } else {

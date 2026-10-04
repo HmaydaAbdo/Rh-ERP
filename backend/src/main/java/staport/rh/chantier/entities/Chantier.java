@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(
@@ -16,6 +17,7 @@ import jakarta.persistence.Table;
                 @Index(name = "idx_chantier_source_erp", columnList = "source_erp")
         }
 )
+@Audited
 public class Chantier {
 
     @Id

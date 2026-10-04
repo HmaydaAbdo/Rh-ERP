@@ -118,7 +118,10 @@ Ne jamais logger :
 * numéro de compte ;
 * montant financier brut ;
 * entité complète ;
-* DTO complet.
+* DTO complet ;
+* **donnée personnelle saisie librement** : nom, identifiant national, adresse e-mail, texte d'une recherche ou d'un
+  filtre. Un critère de recherche se journalise par ses identifiants et son nombre de résultats, jamais par le texte
+  tapé ; un événement dont l'auteur compte (qui a fait quoi) va dans le **journal d'audit**, pas dans un log.
 
 Logger uniquement des identifiants métier.
 
@@ -149,6 +152,15 @@ Ne jamais logger dans :
 
 * Ne jamais les renseigner manuellement.
 * Tous les logs d'une requête les héritent automatiquement.
+* `requestId` est **toujours généré par le serveur** (jamais repris d'un en-tête du client : il relie l'audit aux logs,
+  un client ne doit pas pouvoir le choisir) et **renvoyé dans l'en-tête de réponse `X-Request-Id`**, pour qu'un
+  utilisateur puisse citer une requête précise. Il est posé le plus tôt possible, avant les contrôles d'accès, pour
+  que les refus le portent aussi.
+* `userId` n'est connu qu'une fois la requête authentifiée : il est posé dès que l'authentification est faite.
+* Le MDC est vidé à la fin de chaque requête (thread réutilisé).
+* Un traitement hors requête (tâche planifiée, initialisation) reçoit son propre `requestId` — l'identifiant
+  d'exécution du `BatchAuditContext` (`conventions/audit.md`) —, qui relie ses logs, ses révisions d'audit et son entrée
+  de journal.
 
 ---
 
@@ -165,9 +177,12 @@ Ne jamais logger dans :
 Les logs ne remplacent jamais l'audit.
 
 * Les logs servent au diagnostic.
-* L'audit sert à tracer les actions métier.
+* L'audit sert à tracer les actions métier (`conventions/audit.md`).
 
-Une opération sensible doit respecter les conventions des deux mécanismes.
+Une opération sensible doit respecter les conventions des deux mécanismes : le log `INFO` d'un événement métier ne
+porte que des identifiants et des nombres (jamais ce qui a été saisi) ; l'entrée du journal d'audit porte l'auteur, le
+périmètre et le résultat. Un événement de sécurité (connexion, refus, jeton réutilisé) garde son log `INFO` ou `WARN` de
+diagnostic **et** son entrée d'audit.
 
 ---
 

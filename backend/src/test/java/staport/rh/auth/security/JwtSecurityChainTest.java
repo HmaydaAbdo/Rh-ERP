@@ -112,6 +112,33 @@ class JwtSecurityChainTest {
     }
 
     @Test
+    void unePageEstSerialiseeParUnDtoStable() throws Exception {
+        when(equipeService.search(any(), any())).thenReturn(
+                new PageImpl<>(List.of(new EquipeResponseDto(1L, "CH", "CHAUFFEURS")), org.springframework.data.domain.PageRequest.of(1, 1), 5));
+
+        mockMvc.perform(post("/equipes/search").header("Authorization", "Bearer " + token(Set.of("EQUIPE_READ"), Set.of()))
+                        .contentType(APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.content[0].code").value("CH"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.page.totalElements").value(5))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.page.totalPages").value(5))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.page.number").value(1))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.page.size").value(1))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalElements").doesNotExist());
+    }
+
+    @Test
+    void uneRequeteMalFormeEstUneErreurDuClientPasDuServeur() throws Exception {
+        String lecture = token(Set.of("EQUIPE_READ"), Set.of());
+
+        mockMvc.perform(post("/equipes/search").header("Authorization", "Bearer " + lecture)
+                        .contentType(APPLICATION_JSON).content("{ pas du json"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/equipes/pas-un-nombre").header("Authorization", "Bearer " + lecture))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void unRoleSansLaPermissionNeDonnePasAcces() throws Exception {
         // Le nom d'un rôle devient une autorité (SecurityConfig) mais ne remplace jamais la permission.
         String adminSansPermission = token(Set.of(), Set.of("SYSTEM_ADMIN"));

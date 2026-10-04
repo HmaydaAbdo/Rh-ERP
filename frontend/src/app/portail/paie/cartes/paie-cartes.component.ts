@@ -219,8 +219,9 @@ export class PaieCartesComponent implements OnInit {
     }
   }
 
-  canDelete(): boolean {
-    return this.authService.hasPermission('PAIE_DELETE');
+  /** La suppression en groupe a sa permission propre : supprimer un bulletin (PAIE_DELETE) ne suffit pas. */
+  canPurge(): boolean {
+    return this.authService.hasPermission('PAIE_PURGE');
   }
 
   /** Suppression d'un mois : les bulletins de ce mois que comptait la carte, filtres de la barre compris (sauf le mois, qui est le sien). */

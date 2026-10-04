@@ -3,9 +3,14 @@ package staport.rh.auth.services;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.audit.events.ActionSecurite;
+import staport.rh.audit.events.EvenementSecurite;
 import staport.rh.auth.dtos.request.AdminResetPasswordRequestDto;
 import staport.rh.auth.dtos.request.DenyPermissionsRequestDto;
 import staport.rh.auth.dtos.request.UserCreateRequestDto;
@@ -13,6 +18,7 @@ import staport.rh.auth.dtos.request.UserUpdateRequestDto;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.entities.Permission;
 import staport.rh.auth.entities.Role;
+import staport.rh.auth.entities.RolesSysteme;
 import staport.rh.auth.entities.Utilisateur;
 import staport.rh.auth.exceptions.EmailAlreadyExistsException;
 import staport.rh.auth.exceptions.InvalidReferenceException;
@@ -25,12 +31,15 @@ import staport.rh.auth.repositories.PermissionRepository;
 import staport.rh.auth.repositories.RoleRepository;
 import staport.rh.auth.repositories.UtilisateurRepository;
 import staport.rh.auth.security.EffectivePermissionResolver;
+import staport.rh.auth.security.PolitiqueMotDePasse;
+import staport.rh.auth.services.interfaces.IAuthService;
 import staport.rh.auth.services.interfaces.IUserService;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,7 +47,6 @@ import java.util.stream.Collectors;
 public class UserService implements IUserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
-    private static final String ROLE_SYSTEM_ADMIN = "SYSTEM_ADMIN";
 
     private final UtilisateurRepository repository;
     private final RoleRepository roleRepository;
@@ -48,11 +56,14 @@ public class UserService implements IUserService {
     private final EffectivePermissionResolver permissionResolver;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher evenements;
+    private final IAuthService authService;
 
     public UserService(UtilisateurRepository repository, RoleRepository roleRepository,
                         PermissionRepository permissionRepository, IEmployeeService employeeService,
                         UserMapper mapper, EffectivePermissionResolver permissionResolver,
-                        PasswordEncoder passwordEncoder, EntityManager entityManager) {
+                        PasswordEncoder passwordEncoder, EntityManager entityManager,
+                        ApplicationEventPublisher evenements, IAuthService authService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
@@ -61,6 +72,8 @@ public class UserService implements IUserService {
         this.permissionResolver = permissionResolver;
         this.passwordEncoder = passwordEncoder;
         this.entityManager = entityManager;
+        this.evenements = evenements;
+        this.authService = authService;
     }
 
     @Override
@@ -77,7 +90,9 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public UserResponseDto create(UserCreateRequestDto dto) {
+        PolitiqueMotDePasse.exiger(dto.motDePasse(), dto.username());
         if (repository.existsByUsername(dto.username())) {
             throw new UsernameAlreadyExistsException(dto.username());
         }
@@ -100,6 +115,7 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "UTILISATEUR_MODIFICATION", type = TypeOperation.UPDATE, entite = Utilisateur.class)
     public UserResponseDto update(Long id, UserUpdateRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
 
@@ -109,18 +125,25 @@ public class UserService implements IUserService {
                     throw new EmailAlreadyExistsException(dto.email());
                 });
 
+        boolean desactive = utilisateur.isActif() && !dto.actif();
+
         utilisateur.setEmail(dto.email());
         utilisateur.setActif(dto.actif());
         utilisateur.setEmployee(resolveEmployeeReference(dto.employeeId()));
         utilisateur.setRoles(resolveRoles(dto.roleIds()));
 
         Utilisateur updated = repository.save(utilisateur);
+        if (desactive) {
+            int sessions = authService.revoquerSessions(id);
+            log.info("Compte désactivé : utilisateurId={}, sessions coupées={}", id, sessions);
+        }
         log.info("Utilisateur mis à jour : id={}, username={}", updated.getId(), updated.getUsername());
         return toDto(updated);
     }
 
     @Override
     @Transactional
+    @AuditableAction(action = "UTILISATEUR_PERMISSIONS_REFUSEES", type = TypeOperation.UPDATE, entite = Utilisateur.class)
     public UserResponseDto updateDeniedPermissions(Long id, DenyPermissionsRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
         utilisateur.setPermissionsRefusees(resolvePermissions(dto.permissionIds()));
@@ -133,20 +156,29 @@ public class UserService implements IUserService {
     @Transactional
     public void adminResetPassword(Long id, AdminResetPasswordRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
+        PolitiqueMotDePasse.exiger(dto.nouveauMotDePasse(), utilisateur.getUsername());
         utilisateur.setMotDePasseHash(passwordEncoder.encode(dto.nouveauMotDePasse()));
         repository.save(utilisateur);
-        log.info("Mot de passe réinitialisé par un administrateur : utilisateurId={}", id);
+        // Comme la réinitialisation par lien : l'ancien mot de passe est peut-être celui que l'on cherche à écarter.
+        int sessions = authService.revoquerSessions(id);
+        log.info("Mot de passe réinitialisé par un administrateur : utilisateurId={}, sessions coupées={}", id, sessions);
+        // L'acteur est l'administrateur authentifié (contexte) ; le compte visé est dans le détail.
+        evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.MOT_DE_PASSE_REINITIALISE_PAR_ADMIN, null, null,
+                Map.of("cibleId", id, "cibleUsername", utilisateur.getUsername(), "sessionsRevoquees", sessions)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean adminExiste() {
+        return repository.existsByRoles_Nom(RolesSysteme.SYSTEM_ADMIN);
     }
 
     @Override
     @Transactional
-    public void bootstrapAdminIfMissing(String username, String email, String motDePasse) {
-        if (repository.existsByRoles_Nom(ROLE_SYSTEM_ADMIN)) {
-            return;
-        }
-
+    @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
+    public Long creerAdminInitial(String username, String email, String motDePasse) {
         Role adminRole = roleRepository.findAllByOrderByNomAsc().stream()
-                .filter(r -> r.getNom().equals(ROLE_SYSTEM_ADMIN))
+                .filter(r -> r.getNom().equals(RolesSysteme.SYSTEM_ADMIN))
                 .findFirst()
                 .orElseThrow(() -> new RoleNotFoundException(-1L));
 
@@ -157,8 +189,9 @@ public class UserService implements IUserService {
         admin.setActif(true);
         admin.setRoles(Set.of(adminRole));
 
-        repository.save(admin);
-        log.info("Compte SYSTEM_ADMIN de bootstrap créé : username={}", username);
+        Utilisateur saved = repository.save(admin);
+        log.info("Compte SYSTEM_ADMIN de bootstrap créé : id={}, username={}", saved.getId(), username);
+        return saved.getId();
     }
 
     private Employee resolveEmployeeReference(Long employeeId) {

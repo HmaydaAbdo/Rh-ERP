@@ -3,6 +3,7 @@ package staport.rh.paie.specifications;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.employee.entities.Employee;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.entities.Paie;
@@ -27,7 +28,8 @@ public class PaieSpecification {
                 Join<Paie, Employee> employee = root.join("employee");
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(employee.get("cin")),
-                        "%" + criteria.cin().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.cin()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
@@ -35,7 +37,8 @@ public class PaieSpecification {
                 Join<Paie, Employee> employee = root.join("employee");
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(employee.get("nomPrenom")),
-                        "%" + criteria.nomPrenom().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.nomPrenom()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
