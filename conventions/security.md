@@ -157,7 +157,47 @@ doublon si un administrateur existe déjà. Le mot de passe fourni par variable 
   (ex. Mailpit, MailHog) plutôt qu'un vrai fournisseur SMTP — aucun envoi réel, inspection via une UI
   locale.
 * Prévoir également une réinitialisation par un administrateur (permission d'administration dédiée)
-  pour les cas où l'utilisateur n'a pas accès à sa boîte mail.
+  pour les cas où l'utilisateur n'a pas accès à sa boîte mail — elle **révoque aussi tous les Refresh Tokens actifs**
+  du compte (l'ancien mot de passe est peut-être celui que l'on cherche à écarter).
+* **Désactiver un compte coupe ses sessions** : la désactivation révoque tous ses Refresh Tokens, et le renouvellement d'un
+  compte inactif est refusé quelle que soit la façon dont il a été désactivé. Une seule opération de révocation, partagée
+  par la réinitialisation par lien, la réinitialisation par un administrateur et la désactivation.
+
+---
+
+## Suppression d'un rôle — jamais une cascade silencieuse
+
+* Un rôle **encore attribué** à au moins un compte ne peut pas être supprimé : le service répond `409` avec le nombre de
+  comptes concernés. La suppression ne doit jamais retirer des droits en silence (cascade SQL), ni à l'insu de
+  l'audit (`conventions/audit.md`).
+* Le rôle d'administration de départ (celui qui porte la gestion des comptes et des rôles) **n'est jamais supprimable** :
+  sa suppression laisserait le système sans administrateur et ferait échouer l'amorçage du premier compte.
+* Il n'est **ni renommable ni amputable** non plus : l'amorçage le cherche par son nom, et lui retirer une permission
+  (gestion des comptes, des rôles, audit) peut verrouiller l'administration. Seule sa description se modifie ; les nouvelles
+  permissions lui sont ajoutées par les migrations. L'API signale ce verrouillage (`protege`) pour que l'écran désactive les
+  champs concernés au lieu de laisser échouer le formulaire.
+* Les liaisons rôle ↔ compte et rôle ↔ permission sont en `ON DELETE RESTRICT` (`conventions/database.md`) : la base
+  confirme la règle du service.
+
+---
+
+## Journal de sécurité
+
+Les événements d'authentification et d'autorisation sont **journalisés dans l'audit**, pas seulement dans les logs
+(`conventions/audit.md`, « Événements de sécurité ») : connexion réussie ou échouée (avec motif), déconnexion,
+réutilisation d'un jeton consommé, demandes et réinitialisations de mot de passe, accès refusé (`403`).
+
+* Le service d'authentification **publie** l'événement ; il ne l'écrit pas.
+* **Aucune fuite par le journal ni par la réponse** : un identifiant saisi n'est conservé que s'il correspond à un
+  compte, une demande de réinitialisation ne conserve jamais l'adresse saisie, la réponse HTTP ne change pas selon le
+  motif.
+* Les refus d'accès passent par **un point unique** : l'événement de refus que publie le framework de sécurité (contrôles
+  de méthode et de chaîne de filtres), écrit par l'écouteur d'audit — il suffit de déclarer un bean
+  `AuthorizationEventPublisher`.
+* Un écran ne doit jamais appeler une route que son utilisateur n'a pas le droit d'appeler : un refus `403` d'une route
+  que l'interface a elle-même sollicitée est un **bug d'interface** (il noie le journal de faux refus) — masquer ou
+  désactiver le contrôle plutôt que laisser l'appel échouer.
+* La lecture du journal exige une permission dédiée (`conventions/audit.md`, « Consultation »).
 
 ---
 
@@ -255,6 +295,32 @@ déni de service trivial.
 * Toute entrée utilisateur est validée avec Jakarta Validation.
 * Les validations métier complémentaires sont réalisées dans les Services.
 * Une donnée invalide doit être rejetée le plus tôt possible (Fail Fast).
+
+---
+
+# Règle des mots de passe
+
+* **Une seule règle, en un seul endroit** (un composant du domaine d'authentification), appelée par la création d'un compte
+  et par **chaque** réinitialisation (par lien, par un administrateur) — jamais recopiée dans chaque DTO. Elle fixe au
+  minimum une longueur, la présence d'une lettre et d'un chiffre, et l'interdiction d'être égal à l'identifiant.
+* Un mot de passe refusé répond `400` avec la **règle** — jamais la valeur saisie — et **ne consomme pas** le lien de
+  réinitialisation ni ne coupe de session : l'utilisateur ressaisit.
+* Le frontend répète la longueur, la lettre et le chiffre pour guider la saisie ; **le serveur reste l'autorité**.
+* Les mots de passe existants ne sont pas touchés. Le mot de passe d'un compte d'amorçage vient de la configuration de
+  l'exploitant et n'est pas soumis à la règle.
+
+---
+
+# Recherches textuelles — la saisie est du texte, jamais un motif
+
+* Une recherche « contient » (`LIKE`) construite sur une saisie **échappe les jokers** `%` et `_` (et le caractère
+  d'échappement) : « 100% » ne trouve que « 100% », pas tout. Ce n'est pas une injection (les valeurs sont liées), mais un
+  critère qui ne filtre plus rien, ou qui renvoie des lignes qu'on n'a pas demandées.
+* **Un seul utilitaire** construit le motif (`MotifRecherche.contient`) et fournit le caractère d'échappement à déclarer
+  avec lui (Criteria : `like(expression, motif, MotifRecherche.ECHAPPEMENT)` ; JPQL : `LIKE :motif ESCAPE '\'`). Un motif
+  assemblé à la main (`"%" + texte + "%"`) est refusé à la revue.
+* **Tous les chemins** d'un même filtre appliquent la règle : une liste par Specification et des agrégats par JPQL
+  doivent se comporter de la même façon (tests sur les deux).
 
 ---
 

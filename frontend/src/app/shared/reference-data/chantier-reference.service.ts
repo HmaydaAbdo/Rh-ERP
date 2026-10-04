@@ -24,7 +24,7 @@ export class ChantierReferenceService implements LazySelectSource<ChantierRefere
 
     return this.http
       .post<Page<ChantierReference>>(`${this.baseUrl}/search`, criteria, { params })
-      .pipe(map((result) => ({ items: result.content, totalRecords: result.totalElements })));
+      .pipe(map((result) => ({ items: result.content, totalRecords: result.page.totalElements })));
   }
 
   fetchById(id: number | string): Observable<ChantierReference> {

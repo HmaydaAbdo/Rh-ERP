@@ -134,4 +134,4 @@ Voir [TODO.md](../../TODO.md) :
 - **Modifier le code d'une équipe** (`PUT`) le change pour tous les bulletins qui la référencent, historique
   compris ; le regroupement des exports se fait par code.
 - Pas d'import Excel ni de synchronisation : le référentiel se gère uniquement par l'écran Équipes.
-- Aucun audit (Hibernate Envers).
+- Audité : voir [../audit/README.md](../audit/README.md).

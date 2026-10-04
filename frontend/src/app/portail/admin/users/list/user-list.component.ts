@@ -15,6 +15,7 @@ import { AdminUser } from '../../models/admin.model';
 import { UserService } from '../../services/user.service';
 import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../../shared/table/table-columns';
+import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { debounceTime } from 'rxjs';
@@ -50,8 +51,10 @@ export class UserListComponent {
   showResetDialog = false;
   resetDialogUser: AdminUser | null = null;
   resetting = false;
+  readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
+
   readonly resetForm = this.fb.group({
-    nouveauMotDePasse: ['', [Validators.required, Validators.minLength(8)]]
+    nouveauMotDePasse: ['', [Validators.required, motDePasseConforme]]
   });
 
   readonly columns = new ColumnState([

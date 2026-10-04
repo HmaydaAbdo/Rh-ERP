@@ -30,6 +30,8 @@ export interface Role {
   nom: string;
   description: string | null;
   permissions: PermissionSummary[];
+  /** Rôle d'administration de départ : ni supprimable, ni renommable, ni amputable de ses permissions. */
+  protege: boolean;
 }
 
 export interface RoleCreateRequest {

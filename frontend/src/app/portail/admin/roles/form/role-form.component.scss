@@ -18,6 +18,14 @@
     gap: var(--space-lg);
   }
 
+  &__protege {
+    margin: 0 0 var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+  }
+
   &__permissions h2 {
     font-size: 1rem;
     margin-bottom: var(--space-sm);

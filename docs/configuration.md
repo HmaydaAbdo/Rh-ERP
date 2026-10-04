@@ -23,7 +23,8 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 
 | Variable | Rôle | Exemple (développement) |
 |---|---|---|
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Connexion PostgreSQL | `localhost`, `5432`, `staport_rh`, `staport` |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Connexion PostgreSQL du compte **applicatif** (l'application, à l'exécution) | `localhost`, `5432`, `staport_rh`, `staport_app` |
+| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway seulement. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
 | `CHANTIER_SYNC_BASE_URL` | URL de l'ERP qui liste les chantiers | `http://staport.dyndns.org/webServiceBS/getChantiers` |
 | `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum** | `openssl rand -base64 32` |
 | `FRONTEND_URL` | URL **publique complète** de l'application ; sert à construire le lien du courriel « mot de passe oublié » | `http://localhost:4200`, `https://<domaine>/rh-erp` |
@@ -33,9 +34,12 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Identifiants SMTP (vides si le serveur n'exige pas d'authentification) | |
 | `SMTP_AUTH`, `SMTP_STARTTLS` | `true`/`false` | `false` en local |
 | `MAIL_FROM` | Adresse expéditrice des courriels | `noreply@staport-rh.local` |
+| `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED` | **Facultatives** : `true` allume la documentation d'API (Swagger UI) — développement seulement. Absentes, elle est éteinte (réglage `springdoc.*` de `application.yml`) ; le Compose de production ne les transmet pas | `true` en local |
 
-Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432` et `DB_NAME`/`DB_USER`/`DB_PASSWORD`
-sont dérivés de `POSTGRES_*`.
+Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,
+`DB_MIGRATION_USER`/`DB_MIGRATION_PASSWORD` de `POSTGRES_USER`/`POSTGRES_PASSWORD` et `DB_USER`/`DB_PASSWORD` de
+`POSTGRES_APP_USER`/`POSTGRES_APP_PASSWORD` (repli de transition : sans elles, le compte propriétaire sert aussi à
+l'application). Le compte applicatif est créé tout seul par Flyway s'il n'existe pas.
 
 ## Variables du Compose de production (`.env` racine)
 
@@ -43,7 +47,8 @@ sont dérivés de `POSTGRES_*`.
 |---|---|
 | `DOCKERHUB_USERNAME` | Compte Docker Hub qui publie les images |
 | `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG` | Version des images (`latest` par défaut) |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL (le backend reçoit les mêmes valeurs) |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL et son compte **propriétaire** (migrations) |
+| `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |
 | `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Ports publiés, **liés à `127.0.0.1`** (jamais exposés à Internet) |
 | `CHANTIER_SYNC_BASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM` | Transmises telles quelles au backend |
 
@@ -55,9 +60,15 @@ Variable du frontend (développement) : `BACKEND_URL` (défaut `http://localhost
 | Réglage | Valeur | Remarque |
 |---|---|---|
 | `spring.jpa.hibernate.ddl-auto` | `validate` | Le schéma n'est géré que par Flyway |
-| `spring.jpa.show-sql` | `true` | Affiche les requêtes SQL dans les logs |
+| `spring.jpa.show-sql` | `false` | Aucune requête SQL dans les logs (bruit et coût en production) ; le développement les allume avec `SPRING_JPA_SHOW_SQL=true` |
+| `spring.jpa.open-in-view` | `false` | Pas de session JPA ouverte pendant le rendu de la réponse (`conventions/jpa.md`) : une association paresseuse se charge dans la transaction du service |
+| `springdoc.api-docs.enabled`, `springdoc.swagger-ui.enabled` | `false` | Documentation d'API éteinte par défaut, donc en production (voir `SPRINGDOC_*` plus haut) |
 | `spring.servlet.multipart.max-file-size` | `20MB` | Taille maximale d'un fichier d'import |
 | `spring.data.web.pageable.max-page-size` | `200` | Plafond du paramètre de taille de page |
+| `spring.jpa.properties.org.hibernate.envers.*` | `audit_table_suffix=_aud`, `revision_field_name=rev`, `revision_type_field_name=revtype`, `store_data_at_delete=true` | Instantanés d'audit (stratégie par défaut : insertions seulement) — voir [audit/README.md](audit/README.md) |
+| `spring.jpa.properties.hibernate.jdbc.batch_size`, `order_inserts`, `order_updates` | `50`, `true`, `true` | Écritures regroupées : un import ou une suppression de 1 000 lignes écrit autant de lignes d'audit en quelques requêtes |
+| `server.forward-headers-strategy` | `native` | L'adresse IP enregistrée par l'audit est celle du client réel (`X-Forwarded-For` posé par nginx, honoré des proxys internes) |
+| `spring.flyway.user` / `password` / `placeholders` | `DB_MIGRATION_*` ; `app_user`, `app_password` ← `DB_USER`, `DB_PASSWORD` | Flyway s'exécute avec le propriétaire ; `afterMigrate.sql` reçoit le compte applicatif à créer et à restreindre |
 | `chantier.sync.cron` | `0 0 23 * * *` | Synchronisation quotidienne à 23 h (fuseau du serveur) |
 | `management.health.mail.enabled` | `false` | Une panne SMTP ne doit pas faire passer l'application en `DOWN` |
 | Durée du jeton d'accès / de rafraîchissement | 15 minutes / 30 jours | Constantes du code (`JwtService`, `AuthService`) |
@@ -83,7 +94,7 @@ docker compose up -d postgres        # seule la base tourne en Docker
 
 cd backend
 cp .env.example .env                 # adapter DB_* si besoin
-./mvnw spring-boot:run               # API + Swagger UI sur http://localhost:8080/swagger-ui.html
+./mvnw spring-boot:run               # API ; Swagger UI sur http://localhost:8080/swagger-ui.html (si activé dans .env)
 
 cd ../frontend
 npm install

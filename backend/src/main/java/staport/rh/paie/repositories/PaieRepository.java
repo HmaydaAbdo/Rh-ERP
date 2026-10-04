@@ -20,8 +20,8 @@ import java.util.Set;
 public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificationExecutor<Paie> {
 
     /** Fragment WHERE commun : un filtre est ignoré quand son indicateur « tous » est vrai (voir {@link FiltresPaie}). */
-    String FILTRES = " AND (:#{#f.tousNoms} = true OR LOWER(p.employee.nomPrenom) LIKE :#{#f.motifNom})" +
-            " AND (:#{#f.tousCin} = true OR LOWER(p.employee.cin) LIKE :#{#f.motifCin})" +
+    String FILTRES = " AND (:#{#f.tousNoms} = true OR LOWER(p.employee.nomPrenom) LIKE :#{#f.motifNom} ESCAPE '\\')" +
+            " AND (:#{#f.tousCin} = true OR LOWER(p.employee.cin) LIKE :#{#f.motifCin} ESCAPE '\\')" +
             " AND (:#{#f.tousChantiers} = true OR p.chantier.id IN :#{#f.chantierIds})" +
             " AND (:#{#f.toutesFonctions} = true OR p.fonction.id IN :#{#f.fonctionIds})" +
             " AND (:#{#f.toutesEquipes} = true OR p.equipe.id IN :#{#f.equipeIds})";
@@ -36,6 +36,11 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     @Override
     Page<Paie> findAll(org.springframework.data.jpa.domain.Specification<Paie> spec, Pageable pageable);
+
+    /** Sans pagination (rapport PDF, suppression en groupe) : les références sont chargées avec les bulletins, jamais après. */
+    @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
+    @Override
+    List<Paie> findAll(org.springframework.data.jpa.domain.Specification<Paie> spec);
 
     boolean existsByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
 

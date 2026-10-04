@@ -59,7 +59,7 @@ src/app/
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
     │   └── column-chooser/  Choix des colonnes visibles d'un tableau
     ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
-    ├── models/page.model.ts Forme d'une page Spring (content, totalElements, …)
+    ├── models/page.model.ts Forme d'une page du serveur : `content` et `page` (size, number, totalElements, totalPages)
     ├── reference-data/      Adaptateurs de sélecteur par domaine (fonction, chantier, équipe, employé)
     └── table/table-columns.ts  TableColumn, ColumnState, constantes de pagination
 ```
@@ -92,6 +92,7 @@ de rôle).
 | `/equipes/new`, `/equipes/:id/edit` | | `EQUIPE_WRITE` |
 | `/admin/users`, `/admin/users/new`, `/admin/users/:id/edit` | Utilisateurs | `USER_MANAGE` |
 | `/admin/roles`, `/admin/roles/new`, `/admin/roles/:id/edit` | Rôles | `ROLE_MANAGE` |
+| `/audit` | **Journal** d'audit (tableau, panneau latéral par entrée) ; l'historique d'un enregistrement s'ouvre en fenêtre depuis le détail d'un bulletin ou d'un employé (bouton **Historique**) | `AUDIT_READ` |
 
 ### Guards
 
@@ -210,6 +211,7 @@ entre deux visites.
 | Équipes | Code, Libellé | Code, libellé | Serveur |
 | Utilisateurs | Username, Email, Rôles, Statut | Username, email, statut | Client (liste complète en mémoire) |
 | Rôles | Nom, Description, Permissions | Nom, description | Client |
+| Journal | Date, Catégorie, Action, Résultat, Utilisateur, Origine, Cible, Éléments, Motif | Dates, utilisateur, catégorie, action, résultat, entité, identifiant de requête | Serveur (tri par défaut : date décroissante) |
 
 Pour les tableaux paginés côté serveur, un chemin de tri invalide provoque une erreur `500` : chaque `sortField`
 est testé contre le backend.

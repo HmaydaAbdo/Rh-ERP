@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.envers.Audited;
 
 /**
  * Équipe de travail (CHAUFFEURS, OPERATEURS...) — référentiel global, partagé par tous les chantiers.
@@ -14,6 +15,7 @@ import jakarta.persistence.Table;
  */
 @Entity
 @Table(name = "equipe")
+@Audited
 public class Equipe {
 
     @Id

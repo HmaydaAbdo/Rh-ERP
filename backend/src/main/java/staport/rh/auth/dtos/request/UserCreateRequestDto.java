@@ -10,7 +10,7 @@ import java.util.Set;
 public record UserCreateRequestDto(
         @NotBlank @Size(min = 3, max = 50) String username,
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 8, max = 100) String motDePasse,
+        @NotBlank @Size(max = 100) String motDePasse,
         Long employeeId,
         @NotNull Set<Long> roleIds
 ) {

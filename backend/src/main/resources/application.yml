@@ -13,11 +13,37 @@ spring:
       # validate compare les entités au schéma réel et échoue au démarrage en cas d'écart, sans
       # jamais modifier la base lui-même (conventions/database.md).
       ddl-auto: validate
-    show-sql: true
+    # Ni les requêtes SQL dans les logs (bruit et coût en production ; le développement les allume avec
+    # SPRING_JPA_SHOW_SQL=true), ni de session JPA ouverte pendant tout le rendu de la réponse (conventions/jpa.md) :
+    # une association paresseuse se charge dans la transaction du service, jamais après.
+    show-sql: false
+    open-in-view: false
+    properties:
+      # Envers (conventions/audit.md) : une table <table>_aud par entité auditée, écrite par insertion seulement
+      # (stratégie par défaut — la stratégie « validity » met à jour l'historique, incompatible avec un audit
+      # que l'application ne peut pas réécrire). store_data_at_delete : le contenu d'une ligne supprimée est
+      # conservé (comparaison avant/après et restauration), pas seulement son identifiant.
+      org.hibernate.envers.audit_table_suffix: _aud
+      org.hibernate.envers.revision_field_name: rev
+      org.hibernate.envers.revision_type_field_name: revtype
+      org.hibernate.envers.store_data_at_delete: true
+      # Écritures regroupées : un import ou une suppression de ~1 000 lignes écrit autant de lignes d'audit,
+      # envoyées par lots plutôt qu'une par une.
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
 
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Flyway s'exécute avec le compte PROPRIÉTAIRE du schéma ; l'application, avec un compte applicatif distinct qui n'a
+    # que SELECT et INSERT sur les tables d'audit (conventions/deployment.md, « Deux comptes PostgreSQL »). Le rappel
+    # afterMigrate.sql crée ce compte et recalcule ses droits : il reçoit son nom et son mot de passe ici.
+    user: ${DB_MIGRATION_USER}
+    password: ${DB_MIGRATION_PASSWORD}
+    placeholders:
+      app_user: ${DB_USER}
+      app_password: ${DB_PASSWORD}
 
   servlet:
     multipart:
@@ -40,6 +66,27 @@ spring:
           auth: ${SMTP_AUTH}
           starttls:
             enable: ${SMTP_STARTTLS}
+
+# Documentation d'API (conventions/swagger.md) : ÉTEINTE par défaut, donc en production — la liste de toutes les routes
+# n'a pas à être lisible sans connexion. Le développement l'allume avec les variables d'environnement
+# SPRINGDOC_API_DOCS_ENABLED=true et SPRINGDOC_SWAGGER_UI_ENABLED=true (backend/.env.example).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+server:
+  # Le backend n'est joignable que par nginx (réseau Docker interne) : l'adresse du client réel, enregistrée par
+  # l'audit (conventions/audit.md), vient de X-Forwarded-For, honoré seulement de proxys internes de confiance
+  # (conventions/deployment.md, « Adresse IP du client »).
+  forward-headers-strategy: native
+
+logging:
+  pattern:
+    # Chaque ligne de log porte l'identifiant de requête et l'utilisateur (MdcRequestFilter, conventions/logging.md) : le même
+    # identifiant relie une entrée du journal d'audit, ses révisions et les logs techniques de la requête.
+    level: "%5p [%X{requestId:-}] [%X{userId:-}]"
 
 management:
   health:

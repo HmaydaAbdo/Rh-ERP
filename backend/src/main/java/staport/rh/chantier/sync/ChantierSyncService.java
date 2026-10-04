@@ -6,6 +6,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import staport.rh.chantier.entities.Chantier;
+import staport.rh.chantier.audit.PerimetreSynchronisationChantier;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 
 /**
  * Réconciliation des chantiers avec l'ERP source (webServiceBS/getChantiers).
@@ -31,6 +35,8 @@ public class ChantierSyncService {
         this.metrics = metrics;
     }
 
+    @AuditableAction(action = "CHANTIER_SYNCHRONISATION", type = TypeOperation.CREATE, entite = Chantier.class,
+            perimetre = PerimetreSynchronisationChantier.class)
     public ChantierSyncResultDto synchroniser() {
         long start = System.currentTimeMillis();
         try {

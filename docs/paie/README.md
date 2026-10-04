@@ -140,7 +140,7 @@ rétroactive ou automatique des bulletins déjà existants.
 `salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche`, `salaireTotal`, `observation`.
 
 Authentification JWT + permissions requises sur chaque endpoint (`PAIE_READ`/`PAIE_WRITE`/
-`PAIE_DELETE`/`PAIE_IMPORT`/`PAIE_EXPORT`) — voir `docs/rbac/paie.md` pour le détail endpoint ↔
+`PAIE_DELETE`/`PAIE_PURGE`/`PAIE_IMPORT`/`PAIE_EXPORT`) — voir `docs/rbac/paie.md` pour le détail endpoint ↔
 permission et `conventions/security.md` pour la conception du RBAC.
 
 ---
@@ -307,6 +307,10 @@ leurs équipes, jamais de puces qui débordent. Elle **s'adapte à la vue** (la 
 | Tabulaire, Analytique | **Filtres multiples.** Le mois (flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), un bouton **Filtres (n)** qui ouvre le panneau des chantiers, équipes et fonctions (sélecteur générique multiple, recherche serveur), et « Effacer ». Sous la barre, un **résumé en texte** — « 4 chantiers · 2 équipes · 1 fonction », des nombres, jamais la liste — qui rouvre le panneau. En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve |
 | Cartes | **Fil de navigation à valeurs uniques** : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus « Remonter ». Pas de sélection multiple. Les filtres venus des autres vues (nom, CIN, fonctions, équipes, plusieurs chantiers) sont **repliés dans « Filtres actifs (n) »** : on peut les y retirer, pas en ajouter. Ils s'appliquent toujours aux cartes, jamais en cachette |
 
+**Permissions** : chaque colonne du panneau (chantiers, équipes, fonctions) interroge le référentiel correspondant ; elle n'est
+proposée que si l'utilisateur a `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ` — un refus `403` serait un faux refus dans le
+journal d'audit (voir [../rbac/paie.md](../rbac/paie.md)).
+
 **Cascade** (tabulaire et analytique) : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec
 des chantiers choisis, les équipes proposées sont celles de ces chantiers ce mois-là (une seule requête,
 `POST /paie/chantiers/search`, gardée par mois). **Sans mois**, ou sans chantier choisi pour les équipes, ce sont les listes
@@ -331,7 +335,7 @@ août 2026, 1 chantier », avec le rappel des filtres que les cartes gardent.
 | Analytique | le mois le plus récent est ouvert et inscrit dans la barre | ce mois |
 
 Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des
-Cartes et de l'Analytique par `FiltresPaie` (mêmes règles : nom et CIN « contient » sans casse, identifiants multiples, un
+Cartes et de l'Analytique par `FiltresPaie` (mêmes règles : nom et CIN « contient » sans casse (les jokers `%` et `_` tapés sont des caractères ordinaires, `MotifRecherche`), identifiants multiples, un
 filtre vide est ignoré).
 
 ### Vue Cartes
@@ -350,14 +354,15 @@ autres filtres (nom, CIN, fonctions, équipes, plusieurs chantiers) restreignent
 #### Suppression en groupe
 
 Chaque carte de mois, chaque carte de chantier, chaque ligne d'équipe et le chantier ouvert (niveau 3, bouton « Supprimer ce
-chantier ») propose un bouton de suppression (permission `PAIE_DELETE`) : plus besoin de supprimer un à un, depuis la vue
+chantier ») propose un bouton de suppression (permission **`PAIE_PURGE`**, distincte de `PAIE_DELETE` qui ne couvre qu'un bulletin) : plus besoin de supprimer un à un, depuis la vue
 tabulaire, les bulletins d'un mois importé par erreur.
 
 - **Portée : ce que la carte compte.** Les bulletins qu'elle affiche, **filtres de la barre compris** : une carte qui dit
   « 74 bulletins » sous un filtre fonction supprime ces 74-là. Le dialogue rappelle la cible et les filtres en cours.
 - **Confirmation** : un dialogue décrit ce qui sera supprimé et demande de **retaper le nombre de bulletins** pour activer le
-  bouton « Supprimer ». L'action est annoncée irréversible (pas d'audit, pas de corbeille : seul le mois entier peut être
-  réimporté depuis son fichier).
+  bouton « Supprimer ». L'action est annoncée irréversible (pas de corbeille : seul le mois entier peut être réimporté
+  depuis son fichier) — mais elle est **tracée** : chaque bulletin supprimé est conservé, avec tout son contenu, dans
+  l'historique d'audit (voir [../audit/README.md](../audit/README.md)).
 - **Garde-fous serveur** (`PaieService.deleteGroupe`) : le mois est obligatoire (jamais « toute la paie » par erreur) ; le
   serveur revérifie le nombre de bulletins du groupe et **ne supprime rien (`409`) s'il diffère du nombre confirmé** (import
   ou suppression entre-temps) ; le tout dans une transaction. Le groupe est calculé avec le même filtre que la liste
@@ -424,7 +429,7 @@ Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé �
 en-tête groupé (décision du 2026-10-03).
 
 Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Paie », permission `PAIE_READ`). Les boutons
-de création, modification, suppression, import et export sont conditionnés par `PAIE_WRITE`, `PAIE_DELETE`,
+de création, modification, suppression, import et export sont conditionnés par `PAIE_WRITE`, `PAIE_DELETE` (un bulletin), `PAIE_PURGE` (suppression en groupe),
 `PAIE_IMPORT` et `PAIE_EXPORT` (voir [../rbac/paie.md](../rbac/paie.md)). Les sélecteurs du formulaire et des
 filtres (employé, fonction, chantier, équipe) interrogent les autres domaines : un rôle qui saisit des bulletins
 doit aussi pouvoir les lire.
@@ -455,4 +460,6 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   (340 bulletins n'ont pas d'équipe au dernier relevé) ; décision « tous champs obligatoires » dans la tâche
   dédiée du TODO.
 - **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
-- Aucun audit (Hibernate Envers) — une modification ou une suppression de bulletin (y compris en groupe) n'est tracée que dans les logs.
+- Audité (voir [../audit/README.md](../audit/README.md)) : création, modification, suppression (unitaire ou en groupe, **bulletin par
+  bulletin**), import et exports Excel / PDF. L'historique d'un bulletin s'ouvre depuis son détail (bouton **Historique**,
+  permission `AUDIT_READ`). Aucune restauration automatique d'un groupe supprimé pour l'instant (voir `TODO.md`).

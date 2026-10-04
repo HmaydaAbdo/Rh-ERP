@@ -2,6 +2,7 @@ package staport.rh.employee.specifications;
 
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.entities.Employee;
 
@@ -24,14 +25,16 @@ public class EmployeeSpecification {
             if (criteria.nomPrenom() != null && !criteria.nomPrenom().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("nomPrenom")),
-                        "%" + criteria.nomPrenom().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.nomPrenom()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 
             if (criteria.cin() != null && !criteria.cin().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("cin")),
-                        "%" + criteria.cin().toLowerCase() + "%"
+                        MotifRecherche.contient(criteria.cin()),
+                        MotifRecherche.ECHAPPEMENT
                 ));
             }
 

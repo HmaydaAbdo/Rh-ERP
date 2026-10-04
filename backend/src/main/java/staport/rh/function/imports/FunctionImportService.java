@@ -11,6 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import staport.rh.function.audit.PerimetreImportFunction;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.function.entities.Function;
 import staport.rh.function.imports.FunctionImportResultDto.LigneIgnoreeDto;
 import staport.rh.function.repositories.FunctionRepository;
@@ -45,6 +48,7 @@ public class FunctionImportService {
     }
 
     @Transactional
+    @AuditableAction(action = "FONCTION_IMPORT", type = TypeOperation.CREATE, entite = Function.class, perimetre = PerimetreImportFunction.class)
     public FunctionImportResultDto importer(MultipartFile file) {
         List<LigneIgnoreeDto> lignesIgnorees = new ArrayList<>();
         List<Function> aCreer = new ArrayList<>();
