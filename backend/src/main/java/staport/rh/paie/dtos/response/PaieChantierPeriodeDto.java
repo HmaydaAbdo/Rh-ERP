@@ -7,6 +7,7 @@ import java.util.List;
  * de l'assistant d'export. {@code libelle} est le nom du chantier, à défaut sa désignation (peut être nul).
  * Les bulletins sans équipe ne figurent pas dans {@code equipes}, mais comptent dans {@code effectif}. */
 public record PaieChantierPeriodeDto(
+        Long id,
         String code,
         String libelle,
         long effectif,

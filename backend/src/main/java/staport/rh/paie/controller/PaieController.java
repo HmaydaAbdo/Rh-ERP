@@ -22,11 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
+import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
+import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
@@ -39,9 +41,11 @@ import java.util.List;
 public class PaieController {
 
     private final IPaieService paieService;
+    private final IPaieAnalytiqueService paieAnalytiqueService;
 
-    public PaieController(IPaieService paieService) {
+    public PaieController(IPaieService paieService, IPaieAnalytiqueService paieAnalytiqueService) {
         this.paieService = paieService;
+        this.paieAnalytiqueService = paieAnalytiqueService;
     }
 
     @PostMapping
@@ -97,7 +101,7 @@ public class PaieController {
     @Operation(summary = "Lister les mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export)")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<List<PaiePeriodeResumeDto>> listerPeriodes() {
-        return ResponseEntity.ok(paieService.findPeriodes());
+        return ResponseEntity.ok(paieService.findPeriodes(null));
     }
 
     @GetMapping("/materiel")
@@ -107,13 +111,42 @@ public class PaieController {
         return ResponseEntity.ok(paieService.findTableauxMateriel());
     }
 
+    @PostMapping("/periodes/search")
+    @Operation(summary = "Lister les mois qui contiennent de la paie sur un périmètre filtré (niveau « mois » de la vue Cartes)")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<List<PaiePeriodeResumeDto>> rechercherPeriodes(@RequestBody(required = false) PaieSearchCriteria criteria) {
+        return ResponseEntity.ok(paieService.findPeriodes(criteria));
+    }
+
+    @PostMapping("/chantiers/search")
+    @Operation(summary = "Lister les chantiers d'un mois, avec leurs équipes, sur un périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes)")
+    @ApiResponse(responseCode = "400")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<List<PaieChantierPeriodeDto>> rechercherChantiersDeLaPeriode(@RequestBody PaieSearchCriteria criteria) {
+        if (criteria == null || criteria.periode() == null) {
+            throw new InvalidPeriodeException("La période est obligatoire (format aaaa-MM, ex. 2026-08)");
+        }
+        return ResponseEntity.ok(paieService.findChantiersDeLaPeriode(criteria.periode(), criteria));
+    }
+
     @GetMapping("/chantiers")
     @Operation(summary = "Lister les chantiers d'un mois avec leurs équipes et effectifs (étape « détail par équipe » de l'export)")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<List<PaieChantierPeriodeDto>> listerChantiersDeLaPeriode(
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
             @RequestParam String periode) {
-        return ResponseEntity.ok(paieService.findChantiersDeLaPeriode(parsePeriode(periode)));
+        return ResponseEntity.ok(paieService.findChantiersDeLaPeriode(parsePeriode(periode), null));
+    }
+
+    @PostMapping("/analytique")
+    @Operation(summary = "Indicateurs du tableau de bord analytique d'un mois, sur un périmètre filtré (nom, CIN, chantiers, fonctions, équipes)")
+    @ApiResponse(responseCode = "400")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<PaieAnalytiqueDto> analyser(@RequestBody PaieSearchCriteria criteria) {
+        if (criteria == null || criteria.periode() == null) {
+            throw new InvalidPeriodeException("La période est obligatoire (format aaaa-MM, ex. 2026-08)");
+        }
+        return ResponseEntity.ok(paieAnalytiqueService.analyser(criteria));
     }
 
     private YearMonth parsePeriode(String periode) {

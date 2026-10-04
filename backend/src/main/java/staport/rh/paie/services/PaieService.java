@@ -31,6 +31,7 @@ import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.repositories.ChantierEquipePeriodeProjection;
+import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.services.interfaces.IPaieService;
 import staport.rh.paie.specifications.PaieSpecification;
@@ -133,8 +134,8 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaiePeriodeResumeDto> findPeriodes() {
-        return repository.resumerParPeriode().stream()
+    public List<PaiePeriodeResumeDto> findPeriodes(PaieSearchCriteria criteres) {
+        return repository.resumerParPeriode(FiltresPaie.depuis(criteres)).stream()
                 .map(p -> new PaiePeriodeResumeDto(p.getPeriode().toString(), p.getBulletins(), p.getChantiers(),
                         p.getMasse(), p.getStc()))
                 .toList();
@@ -149,9 +150,9 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaieChantierPeriodeDto> findChantiersDeLaPeriode(YearMonth periode) {
+    public List<PaieChantierPeriodeDto> findChantiersDeLaPeriode(YearMonth periode, PaieSearchCriteria criteres) {
         Map<String, List<ChantierEquipePeriodeProjection>> parChantier = new LinkedHashMap<>();
-        for (ChantierEquipePeriodeProjection ligne : repository.resumerChantiersEtEquipesParPeriode(periode)) {
+        for (ChantierEquipePeriodeProjection ligne : repository.resumerChantiersEtEquipesParPeriode(periode, FiltresPaie.depuis(criteres))) {
             parChantier.computeIfAbsent(ligne.getChantierCode(), code -> new ArrayList<>()).add(ligne);
         }
         return parChantier.values().stream()
@@ -170,6 +171,7 @@ public class PaieService implements IPaieService {
                 .sorted(Comparator.comparing(PaieEquipePeriodeDto::code))
                 .toList();
         return new PaieChantierPeriodeDto(
+                premiere.getChantierId(),
                 premiere.getChantierCode(),
                 libelle,
                 lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getEffectif).sum(),

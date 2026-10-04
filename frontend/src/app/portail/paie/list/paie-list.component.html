@@ -70,8 +70,6 @@
 
 <div class="paie-list">
   <div class="paie-list__header">
-    <h1>Paie</h1>
-    <app-paie-vue-switcher></app-paie-vue-switcher>
     <div class="paie-list__header-actions">
       @if (canImport()) {
         <button
@@ -103,39 +101,6 @@
     </div>
   </div>
 
-  <form [formGroup]="filterForm" class="paie-list__filters" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" />
-    <input pInputText type="text" formControlName="cin" placeholder="CIN" />
-
-    <p-calendar formControlName="periode" view="month" dateFormat="mm/yy" placeholder="Période" [showIcon]="true"></p-calendar>
-
-    <app-lazy-select
-      formControlName="fonctionIds"
-      [multiple]="true"
-      [source]="functionReferenceService"
-      optionLabel="libelle"
-      placeholder="Fonction"
-    ></app-lazy-select>
-
-    <app-lazy-select
-      formControlName="chantierIds"
-      [multiple]="true"
-      [source]="chantierReferenceService"
-      optionLabel="code"
-      placeholder="Chantier"
-    ></app-lazy-select>
-
-    <app-lazy-select
-      formControlName="equipeIds"
-      [multiple]="true"
-      [source]="equipeReferenceService"
-      optionLabel="code"
-      placeholder="Équipe"
-    ></app-lazy-select>
-
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
-  </form>
-
   <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
@@ -144,6 +109,7 @@
     (onLazyLoad)="onLazyLoad($event)"
     [loading]="loading"
     [paginator]="true"
+    [first]="first"
     [rows]="10"
     [totalRecords]="totalRecords"
     [rowsPerPageOptions]="rowsPerPage"

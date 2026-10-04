@@ -15,6 +15,9 @@
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/periodes` | `PAIE_READ` |
+| `POST /paie/analytique` | `PAIE_READ` |
+| `POST /paie/periodes/search` | `PAIE_READ` |
+| `POST /paie/chantiers/search` | `PAIE_READ` |
 | `GET /paie/chantiers` | `PAIE_READ` |
 | `GET /paie/materiel` | `PAIE_READ` |
 | `POST /paie/export` | `PAIE_EXPORT` |
@@ -30,7 +33,7 @@
 | Élément | Condition |
 |---|---|
 | Lien sidebar « Paie » | `PAIE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
-| Routes `/paie`, `/paie/cartes` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) — la vue Cartes n'appelle que `/paie/periodes` et `/paie/chantiers` (`PAIE_READ`) |
+| Routes `/paie`, `/paie/cartes`, `/paie/analytique` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) — les trois vues partagent la barre de filtres (sélecteurs `CHANTIER_READ`, `FUNCTION_READ`, `EQUIPE_READ`) ; la vue Cartes appelle `/paie/periodes/search` et `/paie/chantiers/search`, la vue Analytique `/paie/analytique` (toutes `PAIE_READ`), la barre `/paie/periodes` pour griser les mois sans paie |
 | Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
 | Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |

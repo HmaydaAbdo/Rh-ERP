@@ -7,6 +7,8 @@ import java.math.BigDecimal;
  * sans équipe. */
 public interface ChantierEquipePeriodeProjection {
 
+    Long getChantierId();
+
     String getChantierCode();
 
     String getChantierNom();

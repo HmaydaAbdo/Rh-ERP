@@ -18,6 +18,16 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
 
+  // Palette des graphiques (lue par le code des graphiques, voir portail/paie/analytique/paie-chart-theme.ts)
+  --chart-1: #2563eb;
+  --chart-2: #f59e0b;
+  --chart-3: #10b981;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+  --chart-6: #06b6d4;
+  --chart-7: #ec4899;
+  --chart-8: #64748b;
+
   // Panneaux de sélection (listes déroulantes)
   --select-panel-min-width: 22rem;
   --select-panel-max-width: 40rem;

@@ -13,6 +13,7 @@ const PERIODES: PaiePeriodeResume[] = [
 ];
 const CHANTIERS: PaieChantierPeriode[] = [
   {
+    id: 1,
     code: 'C168',
     libelle: 'Nador',
     effectif: 313,
@@ -22,7 +23,7 @@ const CHANTIERS: PaieChantierPeriode[] = [
       { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 69, masse: 600000 }
     ]
   },
-  { code: 'C196', libelle: 'Marrakech', effectif: 125, masse: 559886.92, equipes: [{ id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 48, masse: 200000 }] }
+  { id: 2, code: 'C196', libelle: 'Marrakech', effectif: 125, masse: 559886.92, equipes: [{ id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 48, masse: 200000 }] }
 ];
 const TABLEAUX: PaieMaterielTableau[] = [
   { chantierCode: 'C168', equipeCode: 'CH', titre: 'CAMION', libelles: ['CAMION CITERNE', 'PICK UP'] },

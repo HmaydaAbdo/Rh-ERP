@@ -125,6 +125,9 @@ rétroactive ou automatique des bulletins déjà existants.
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
 | `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export, niveaux 2 et 3 de la vue Cartes) | 200 |
+| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs du tableau de bord d'un mois sur le périmètre filtré (vue Analytique) | 200, 400 |
+| `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré (niveau « mois » de la vue Cartes) | 200 |
+| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Les chantiers du mois, avec leurs équipes, sur le périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search`, voir `docs/report/README.md` | 200, 404 |
@@ -250,7 +253,7 @@ groupée**) :
   proposer uniquement ces mois et afficher aussitôt leur contenu. Le décompte STC reproduit
   `ObservationStc.estStcOuSortie` en JPQL.
 - `GET /paie/chantiers?periode=aaaa-MM` : les chantiers du mois du plus gros (masse) au plus petit, chacun avec
-  `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
+  `id`, `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
   `effectif`, `masse`). Les bulletins sans équipe comptent dans l'effectif du chantier mais n'ont pas d'équipe listée.
   La sélection manipulée et envoyée au backend reste le **code** de l'équipe (voir section suivante).
 - `GET /paie/materiel` : les tableaux du parc matériel prévus (`chantierCode`, `equipeCode`, `titre`, `libelles`),
@@ -280,38 +283,94 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | Tableau standard avec filtres en temps réel (nom, CIN, période, fonctions, chantiers, équipes), suppression, téléchargement du modèle, import (avec sélecteur de période). Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
+| `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression, téléchargement du modèle, import (avec sélecteur de période). Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
 | `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** en trois niveaux de descente, voir « Vue Cartes » ci-dessous |
+| `/paie/analytique` | `PaieAnalytiqueComponent` | Vue **Analytique** : tableau de bord interactif, voir « Vue Analytique » ci-dessous |
 | `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
-Un sélecteur de vue (`PaieVueSwitcherComponent`, `vue-switcher/`) est affiché en tête de chaque vue du module :
-Tabulaire (`/paie`) et Cartes (`/paie/cartes`). Chaque vue est une route lazy autonome ; le sélecteur ne fait que
-les relier. Une troisième vue, Analytique, est prévue (voir [TODO.md](../../TODO.md)).
+Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **coque commune**, `PaieVuesComponent`
+(`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **conserve les filtres** en changeant de vue) et la
+**barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
+(`/paie/new`, `/paie/:id`…) n'en font pas partie.
+
+### Barre de filtres commune
+
+`PaieFiltresComponent` (`filtres/`) : le **mois** (facultatif — vide veut dire « tous les mois » —, avec flèches vers le mois
+précédent / suivant qui contient de la paie, grille de mois dans un panneau et bouton pour revenir à tous les mois), le
+**nom et prénom**, le **CIN** (texte, « contient », sans tenir compte de la casse), les **chantiers**, les **fonctions** et les
+**équipes** (sélecteur générique multiple, recherche serveur), et « Réinitialiser » (qui remet aussi le mois à vide). Les
+saisies sont émises après 300 ms.
+
+**Les filtres vivent dans l'URL** (`?periode=2026-08&nom=ali&cin=AB1&chantierIds=3,4&fonctionIds=7&equipeIds=2`, voir
+`filtres/paie-filtres.ts`) : la barre les écrit — en remplaçant l'entrée d'historique, pour ne pas en empiler une par saisie —
+et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct, retour navigateur et changement de vue conservent
+donc tout. Une valeur invalide est ignorée. Les mois grisés de la barre viennent de `GET /paie/periodes`, rechargé à chaque
+changement de vue.
+
+| Vue | Effet du mois vide | Effet du mois choisi |
+|---|---|---|
+| Tabulaire | tous les mois | seulement ce mois |
+| Cartes | niveau « mois » | niveau « chantiers » de ce mois (voir ci-dessous) |
+| Analytique | le mois le plus récent est ouvert et inscrit dans la barre | ce mois |
+
+Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des
+Cartes et de l'Analytique par `FiltresPaie` (mêmes règles : nom et CIN « contient » sans casse, identifiants multiples, un
+filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`), **lecture seule**, descend en trois niveaux. Le niveau courant est porté par
-l'URL — `/paie/cartes` (mois), `/paie/cartes?periode=2026-08` (chantiers du mois),
-`/paie/cartes?periode=2026-08&chantier=C168` (équipes du chantier) — donc le retour du navigateur et le lien direct
-fonctionnent, et un mois ou un chantier inconnu affiche un message avec un lien de retour.
+`PaieCartesComponent` (`cartes/`), **lecture seule**, descend en trois niveaux. **Descendre, c'est filtrer** : le niveau se
+déduit des filtres de la barre — pas de mois : les mois ; un mois : les chantiers ; un mois et **un seul** chantier : ses
+équipes — et cliquer une carte pose le filtre correspondant dans la barre (le fil d'Ariane lève ceux de niveau). Les autres
+filtres (nom, CIN, fonctions, équipes, chantiers) restreignent les bulletins comptés à chaque niveau.
 
 | Niveau | Contenu | Source |
 |---|---|---|
-| 1. Mois | Une carte par mois contenant de la paie : masse, bulletins, chantiers, STC / sorties, variation de la masse **par rapport au mois contigu** (absente si le mois précédent n'a aucune paie ou une masse nulle, jamais comparée à un mois plus ancien) | `GET /paie/periodes` |
-| 2. Chantiers | Tuiles de synthèse du mois, recherche par code ou nom, une carte par chantier (masse, bulletins, équipes, jauge de sa part de la masse du mois) | `GET /paie/chantiers?periode=` (chargé une seule fois par mois, puis gardé en mémoire) |
+| 1. Mois | Une carte par mois contenant de la paie : masse, bulletins, chantiers, STC / sorties, variation de la masse **par rapport au mois contigu** (absente si le mois précédent n'a aucune paie dans ce périmètre ou une masse nulle, jamais comparée à un mois plus ancien) | `POST /paie/periodes/search` |
+| 2. Chantiers | Tuiles de synthèse du mois (calculées sur les chantiers filtrés), une carte par chantier (masse, bulletins, équipes, jauge de sa part de la masse du mois) | `POST /paie/chantiers/search` |
 | 3. Équipes | Tuiles du chantier, tableau des équipes (équipe, libellé, effectif, masse, part du chantier) avec ligne de total. Une ligne **« Sans équipe »** est déduite (effectif et masse du chantier moins ceux des équipes) pour que le total égale celui du chantier ; elle n'apparaît que s'il existe des bulletins sans équipe | même appel |
 
-Le tableau du niveau 3 suit les conventions des tableaux (tri, redimensionnement, réordonnancement, choix des
-colonnes, pagination avec total, recherche en temps réel) en mode client : la liste est courte et déjà en mémoire.
+Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une équipe**
+(ou Entrée sur sa ligne) ouvre la vue tabulaire avec les mêmes filtres plus cette équipe ; la ligne « Sans équipe » n'est pas
+cliquable (l'API ne sait pas filtrer sur l'absence d'équipe). Le tableau du niveau 3 suit les conventions des tableaux (tri,
+redimensionnement, réordonnancement, choix des colonnes, pagination avec total, recherche en temps réel) en mode client : la
+liste est courte et déjà en mémoire.
 
-**Animations** : cartes et tuiles apparaissent en cascade, les montants et effectifs s'incrémentent
-(`CountUpDirective`), la jauge se remplit, et chaque niveau glisse depuis la droite en descendant, depuis la gauche en
-remontant. Tout est coupé quand l'utilisateur a demandé moins de mouvement dans son système.
+**Animations** : cartes et tuiles apparaissent en cascade, les montants et effectifs s'incrémentent (`CountUpDirective`), la
+jauge se remplit, et chaque niveau glisse depuis la droite en descendant, depuis la gauche en remontant. Tout est coupé quand
+l'utilisateur a demandé moins de mouvement dans son système. Les boutons d'import, d'export et de création restent propres à
+la vue tabulaire.
 
-Les filtres de la vue tabulaire (nom, CIN, fonctions…) ne s'appliquent pas aux cartes : elles portent sur le mois entier.
-Les boutons d'import, d'export et de création restent propres à la vue tabulaire.
+### Vue Analytique
+
+`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune.
+Chaque changement de filtre relance l'analyse (une demande encore en cours est abandonnée) ; pendant le chargement l'écran
+précédent reste affiché, atténué, sous une barre de progression. Sans mois, le plus récent est ouvert (et inscrit dans la
+barre).
+
+| Bloc | Contenu |
+|---|---|
+| Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
+| Masse par chantier | Barres horizontales des 10 plus gros chantiers ; **un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
+| Évolution | Masse et bulletins sur les 12 derniers mois du périmètre, **à partir de 3 mois** de paie seulement (sinon un message) |
+| Répartition par fonction | Anneau des bulletins par fonction (7 premières, le reste en « Autres ») |
+| Répartition des totaux | Histogramme du `salaireTotal` en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
+| Qualité des données | Bulletins sans équipe et sans observation (nombre et part), pour suivre la tâche « Qualité des données » du TODO |
+
+**Backend** : `PaieAnalytiqueService` (façade `IPaieAnalytiqueService`), appelé par `POST /paie/analytique` (`PAIE_READ`).
+Tout est agrégé en base par des requêtes JPQL de `PaieRepository` qui partagent le même fragment de filtres (`FiltresPaie`) ; le
+STC reprend la définition de `ObservationStc` (comme `/paie/periodes`) et la masse est `SUM(salaireTotal)` comme partout. Le
+mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas de paie. **Les tranches** n'ont pas de seuil
+métier : la largeur est celle qui couvre le plus gros total du périmètre en 6 tranches, arrondie à 500 DH au-dessus, donc des
+bornes lisibles qui suivent les données.
+
+**Graphiques** : Chart.js via `p-chart` de PrimeNG (dépendance `chart.js` ajoutée, chargée à la demande avec la page). Chart.js
+dessine dans un canvas et ne lit pas le CSS : les couleurs viennent des tokens `--chart-1` à `--chart-8` de `_tokens.scss`, lus
+à l'exécution (`paie-chart-theme.ts`). **Animations** : tuiles et cartes en cascade, chiffres incrémentés, graphiques tracés
+progressivement, jauges remplies ; coupées quand l'utilisateur a demandé moins de mouvement (sauf le tracé de Chart.js, propre
+à la bibliothèque).
 
 Les filtres fonction/chantier de la liste (`fonctionIds`/`chantierIds`) et les champs employé/
 fonction/chantier du formulaire utilisent tous le même sélecteur générique — seule la cardinalité

@@ -29,15 +29,17 @@ public interface IPaieService {
 
     void delete(Long id);
 
-    /** Mois qui contiennent de la paie, du plus récent au plus ancien, avec leur contenu résumé — alimente le
-     * sélecteur de mois de l'assistant d'export (voir docs/paie/README.md). */
-    List<PaiePeriodeResumeDto> findPeriodes();
+    /** Mois qui contiennent de la paie, du plus récent au plus ancien, avec leur contenu résumé — alimente le sélecteur de
+     * mois de l'assistant d'export et la vue Cartes (voir docs/paie/README.md). {@code criteres} filtre les bulletins
+     * comptés (son mois est ignoré : on liste justement les mois) ; {@code null} = toute la paie. */
+    List<PaiePeriodeResumeDto> findPeriodes(PaieSearchCriteria criteres);
 
     /** Tableaux du parc matériel prévus (chantier, équipe, titre, lignes) — l'assistant d'export s'en sert pour savoir
      * quels nombres demander, sans dupliquer la règle de {@code MaterielChantierCatalogue}. */
     List<PaieMaterielTableauDto> findTableauxMateriel();
 
-    /** Chantiers d'un mois avec leurs équipes et effectifs, du plus gros (masse) au plus petit — alimente l'étape
-     * « détail par équipe » de l'assistant d'export. */
-    List<PaieChantierPeriodeDto> findChantiersDeLaPeriode(YearMonth periode);
+    /** Chantiers d'un mois avec leurs équipes, effectifs et masses, du plus gros (masse) au plus petit — alimente l'étape
+     * « détail par équipe » de l'assistant d'export et les niveaux chantier et équipe de la vue Cartes. {@code criteres}
+     * filtre les bulletins comptés (son mois est ignoré : {@code periode} fait foi) ; {@code null} = tout le mois. */
+    List<PaieChantierPeriodeDto> findChantiersDeLaPeriode(YearMonth periode, PaieSearchCriteria criteres);
 }

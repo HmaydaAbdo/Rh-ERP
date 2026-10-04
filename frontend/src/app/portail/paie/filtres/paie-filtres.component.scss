@@ -1,0 +1,39 @@
+.paie-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+
+  &__periode {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  &__mois {
+    min-width: 9rem;
+    font-size: 0.8125rem;
+    text-transform: capitalize;
+  }
+
+  &__champs {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+
+    input,
+    app-lazy-select {
+      font-size: 0.8125rem;
+    }
+  }
+
+  .p-button {
+    font-size: 0.8125rem;
+  }
+}
