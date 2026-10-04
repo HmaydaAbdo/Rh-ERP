@@ -15,4 +15,29 @@
       font-size: 1.125rem;
     }
   }
+
+  &__annonce {
+    margin: calc(-1 * var(--space-xs)) 0 var(--space-md);
+    font-size: 0.8125rem;
+    color: var(--color-primary);
+    animation: annonce-entree 0.3s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__annonce {
+      animation: none;
+    }
+  }
+}
+
+@keyframes annonce-entree {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

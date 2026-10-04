@@ -121,12 +121,12 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             " GROUP BY f.id, f.libelle ORDER BY SUM(p.salaireTotal) DESC")
     List<FonctionMasseProjection> sommerParFonction(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
 
-    /** Masse et effectif de chaque mois de {@code [debut, fin]} qui contient de la paie dans le périmètre, du plus ancien au plus récent. */
+    /** Masse et effectif de **chaque** mois qui contient de la paie dans le périmètre (tout l'historique, sans fenêtre),
+     * du plus ancien au plus récent. */
     @Query("SELECT p.periode AS periode, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +
-            "FROM Paie p WHERE p.periode BETWEEN :debut AND :fin" + FILTRES +
+            "FROM Paie p WHERE 1 = 1" + FILTRES +
             " GROUP BY p.periode ORDER BY p.periode")
-    List<EvolutionMasseProjection> sommerParPeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin,
-                                                   @Param("f") FiltresPaie f);
+    List<EvolutionMasseProjection> sommerParPeriode(@Param("f") FiltresPaie f);
 
     /** Le {@code salaireTotal} de chaque bulletin du mois sur le périmètre filtré — répartition par tranche. */
     @Query("SELECT p.salaireTotal FROM Paie p WHERE p.periode = :periode" + FILTRES)

@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
+
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 import { PaieChantierPeriode, PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -30,6 +33,7 @@ const CHANTIERS: PaieChantierPeriode[] = [
 
 describe('PaieCartesComponent', () => {
   let service: jasmine.SpyObj<PaieService>;
+  let messages: jasmine.SpyObj<MessageService>;
   let harness: RouterTestingHarness;
 
   async function ouvrir(url: string): Promise<PaieCartesComponent> {
@@ -39,13 +43,20 @@ describe('PaieCartesComponent', () => {
 
   beforeEach(() => {
     harness = undefined as unknown as RouterTestingHarness;
-    service = jasmine.createSpyObj<PaieService>('PaieService', ['rechercherPeriodes', 'rechercherChantiers']);
+    service = jasmine.createSpyObj<PaieService>('PaieService', ['rechercherPeriodes', 'rechercherChantiers', 'supprimerGroupe']);
+    messages = jasmine.createSpyObj<MessageService>('MessageService', ['add']);
     service.rechercherPeriodes.and.returnValue(of(PERIODES));
     service.rechercherChantiers.and.returnValue(of(CHANTIERS));
+    service.supprimerGroupe.and.returnValue(of({ supprimes: 0 }));
 
     TestBed.configureTestingModule({
       imports: [NoopAnimationsModule],
-      providers: [provideRouter([{ path: 'paie/cartes', component: PaieCartesComponent }]), { provide: PaieService, useValue: service }]
+      providers: [
+        provideRouter([{ path: 'paie/cartes', component: PaieCartesComponent }]),
+        { provide: PaieService, useValue: service },
+        { provide: MessageService, useValue: messages },
+        { provide: AuthService, useValue: { hasPermission: () => true } }
+      ]
     });
   });
 
@@ -167,5 +178,104 @@ describe('PaieCartesComponent', () => {
 
     await ouvrir('/paie/cartes');
     expect(composant.sens()).toBe('arriere');
+  });
+
+  describe('suppression en groupe', () => {
+    it('vise les bulletins du mois que comptait la carte, avec les filtres de la barre sauf le mois', async () => {
+      const composant = await ouvrir('/paie/cartes?nom=ali&fonctionIds=5');
+
+      composant.demanderSuppressionMois(composant.cartesMois()[1]);
+
+      const suppression = composant.suppression();
+      expect(suppression?.nombre).toBe(969);
+      expect(suppression?.criteres).toEqual(jasmine.objectContaining({ periode: '2026-08', nomPrenom: 'ali', fonctionIds: [5] }));
+      expect(suppression?.cible).toContain('août 2026');
+      expect(suppression?.filtres).toEqual(['Nom et prénom contient « ali »', '1 fonction(s) sélectionnée(s)']);
+    });
+
+    it('vise le chantier de la carte, en remplaçant un éventuel filtre chantier', async () => {
+      const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1,2');
+
+      composant.demanderSuppressionChantier(composant.chantiers()[1]);
+
+      expect(composant.suppression()?.criteres).toEqual(jasmine.objectContaining({ periode: '2026-08', chantierIds: [2] }));
+      expect(composant.suppression()?.nombre).toBe(10);
+      expect(composant.suppression()?.remonterApres).toBeFalse();
+    });
+
+    it('vise l\'équipe de la ligne, et ignore les bulletins sans équipe', async () => {
+      const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
+
+      composant.demanderSuppressionEquipe(composant.lignesEquipes()[2]);
+      expect(composant.suppression()).toBeNull();
+
+      composant.demanderSuppressionEquipe(composant.lignesEquipes()[1]);
+      expect(composant.suppression()?.criteres).toEqual(jasmine.objectContaining({ chantierIds: [1], equipeIds: [2] }));
+      expect(composant.suppression()?.nombre).toBe(69);
+    });
+
+    it('n\'active la suppression qu\'une fois le nombre retapé à l\'identique', async () => {
+      const composant = await ouvrir('/paie/cartes');
+      composant.demanderSuppressionMois(composant.cartesMois()[1]);
+      expect(composant.confirmationValide()).toBeFalse();
+
+      composant.confirmation.setValue('96');
+      expect(composant.confirmationValide()).toBeFalse();
+
+      composant.confirmation.setValue(' 969 ');
+      expect(composant.confirmationValide()).toBeTrue();
+    });
+
+    it('ne supprime rien tant que la confirmation n\'est pas valide', async () => {
+      const composant = await ouvrir('/paie/cartes');
+      composant.demanderSuppressionMois(composant.cartesMois()[1]);
+
+      composant.confirmerSuppression();
+
+      expect(service.supprimerGroupe).not.toHaveBeenCalled();
+    });
+
+    it('supprime avec le nombre confirmé, annonce le résultat, puis recharge sans réponse gardée', async () => {
+      service.supprimerGroupe.and.returnValue(of({ supprimes: 969 }));
+      const composant = await ouvrir('/paie/cartes');
+      composant.demanderSuppressionMois(composant.cartesMois()[1]);
+      composant.confirmation.setValue('969');
+      service.rechercherPeriodes.calls.reset();
+
+      composant.confirmerSuppression();
+
+      expect(service.supprimerGroupe).toHaveBeenCalledOnceWith({
+        criteres: jasmine.objectContaining({ periode: '2026-08' }),
+        nombreAttendu: 969
+      });
+      expect(messages.add).toHaveBeenCalledWith(jasmine.objectContaining({ severity: 'success' }));
+      expect(composant.suppression()).toBeNull();
+      // Les mois sont rechargés : la réponse gardée datait d'avant la suppression.
+      expect(service.rechercherPeriodes).toHaveBeenCalledTimes(1);
+    });
+
+    it('remonte aux chantiers quand le chantier ouvert vient d\'être supprimé', async () => {
+      service.supprimerGroupe.and.returnValue(of({ supprimes: 148 }));
+      const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
+      composant.demanderSuppressionChantier(composant.chantier()!);
+      composant.confirmation.setValue('148');
+
+      composant.confirmerSuppression();
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).not.toContain('chantierIds');
+      expect(composant.niveau()).toBe(2);
+    });
+
+    it('annule sans rien supprimer', async () => {
+      const composant = await ouvrir('/paie/cartes');
+      composant.demanderSuppressionMois(composant.cartesMois()[1]);
+
+      composant.annulerSuppression();
+
+      expect(composant.suppression()).toBeNull();
+      expect(composant.confirmation.value).toBe('');
+      expect(service.supprimerGroupe).not.toHaveBeenCalled();
+    });
   });
 });

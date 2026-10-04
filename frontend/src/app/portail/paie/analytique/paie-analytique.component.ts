@@ -7,17 +7,19 @@ import { ChartModule } from 'primeng/chart';
 import { EMPTY, catchError, filter, switchMap, tap } from 'rxjs';
 
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
+import { PaieFiltres, lireFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
 import { PaieAnalytique, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
-import { PaieFiltres, lireFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
 import { PaieService } from '../services/paie.service';
 import { couleurGraphique, jeton } from './paie-chart-theme';
 
-const MAX_CHANTIERS_GRAPHIQUE = 10;
-const MAX_FONCTIONS_GRAPHIQUE = 7;
-/** Une courbe d'évolution n'a de sens qu'à partir de trois mois. */
-const MIN_MOIS_EVOLUTION = 3;
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+/** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories, aucune n'est omise. */
+const HAUTEUR_LIGNE_REM = 1.75;
+const HAUTEUR_MIN_REM = 12;
+
+/** Ce que mesurent les barres d'un graphique de répartition. */
+export type Mesure = 'masse' | 'effectif';
 
 interface Tuile {
   libelle: string;
@@ -27,15 +29,25 @@ interface Tuile {
   variation: string | null;
 }
 
-interface Graphique<T extends 'bar' | 'line' | 'doughnut'> {
+interface Graphique<T extends 'bar' | 'line'> {
   data: ChartData<T>;
   options: ChartOptions<T>;
+}
+
+/** Les éléments du plus grand au plus petit selon la mesure choisie — tous, jamais une sélection. */
+function trierParMesure<T extends { masse: number; effectif: number }>(elements: T[], mesure: Mesure): T[] {
+  return [...elements].sort((a, b) => b[mesure] - a[mesure]);
+}
+
+function hauteurPourLignes(lignes: number): number {
+  return Math.max(HAUTEUR_MIN_REM, lignes * HAUTEUR_LIGNE_REM);
 }
 
 /**
  * Vue « Analytique » de la paie : tableau de bord interactif d'un mois sur un périmètre filtré. Le périmètre est celui de la
  * barre de filtres commune (voir `filtres/paie-filtres.ts`), portée par l'URL : chaque changement relance l'analyse (la
  * demande précédente, si elle tarde, est abandonnée). Le mois est indispensable ici : sans mois, le plus récent est ouvert.
+ * **Exhaustive** : chaque graphique montre tous les chantiers, toutes les fonctions, tous les mois — jamais un palmarès tronqué.
  * Aucun calcul métier ici : tout vient de `POST /paie/analytique` (voir docs/paie/README.md, « Vue Analytique »).
  */
 @Component({
@@ -58,9 +70,12 @@ export class PaieAnalytiqueComponent implements OnInit {
   readonly donnees = signal<PaieAnalytique | null>(null);
   readonly chargement = signal(false);
 
+  readonly mesureChantiers = signal<Mesure>('masse');
+  readonly mesureFonctions = signal<Mesure>('masse');
+
   readonly libellePeriode = libellePeriode;
   readonly formaterMontant = formaterMontant;
-  readonly minMoisEvolution = MIN_MOIS_EVOLUTION;
+  readonly formaterPart = formaterPart;
 
   readonly vide = computed(() => this.donnees()?.kpis.effectif === 0);
   readonly aucunePaie = computed(() => this.periodesChargees() && this.periodes().length === 0);
@@ -85,27 +100,31 @@ export class PaieAnalytiqueComponent implements OnInit {
     ];
   });
 
-  readonly chantiersAffiches = computed(() => this.donnees()?.parChantier.slice(0, MAX_CHANTIERS_GRAPHIQUE) ?? []);
-  readonly chantiersMasques = computed(() => Math.max(0, (this.donnees()?.parChantier.length ?? 0) - MAX_CHANTIERS_GRAPHIQUE));
-  readonly evolutionVisible = computed(() => (this.donnees()?.evolution.length ?? 0) >= MIN_MOIS_EVOLUTION);
+  readonly chantiersTries = computed(() => trierParMesure(this.donnees()?.parChantier ?? [], this.mesureChantiers()));
+  readonly fonctionsTriees = computed(() => trierParMesure(this.donnees()?.parFonction ?? [], this.mesureFonctions()));
+  readonly hauteurChantiers = computed(() => hauteurPourLignes(this.chantiersTries().length));
+  readonly hauteurFonctions = computed(() => hauteurPourLignes(this.fonctionsTriees().length));
 
   readonly graphiqueChantiers = computed<Graphique<'bar'>>(() => {
-    const chantiers = this.chantiersAffiches();
+    const chantiers = this.chantiersTries();
+    const mesure = this.mesureChantiers();
     return {
       data: {
         labels: chantiers.map((c) => c.code),
-        datasets: [{ label: 'Masse (DH)', data: chantiers.map((c) => c.masse), backgroundColor: couleurGraphique(1), borderRadius: 4 }]
+        datasets: [
+          {
+            label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins',
+            data: chantiers.map((c) => c[mesure]),
+            backgroundColor: couleurGraphique(mesure === 'masse' ? 1 : 2),
+            borderRadius: 4
+          }
+        ]
       },
       options: {
         indexAxis: 'y',
         maintainAspectRatio: false,
         animation: { duration: 900 },
-        onHover: (evenement, elements) => {
-          const cible = evenement.native?.target as HTMLElement | null | undefined;
-          if (cible) {
-            cible.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-          }
-        },
+        onHover: this.curseurSurBarre,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -116,26 +135,69 @@ export class PaieAnalytiqueComponent implements OnInit {
               },
               label: (element) => {
                 const chantier = chantiers[element.dataIndex];
-                return `${formaterMontant(chantier.masse)} DH · ${chantier.effectif} bulletins`;
+                return [
+                  `Masse : ${formaterMontant(chantier.masse)} DH`,
+                  `Bulletins : ${chantier.effectif}`,
+                  `STC / sorties : ${chantier.stc}`
+                ];
               }
             }
           }
         },
-        scales: this.echelles(false)
+        scales: this.echellesHorizontales()
       }
     };
   });
 
+  readonly graphiqueFonctions = computed<Graphique<'bar'>>(() => {
+    const fonctions = this.fonctionsTriees();
+    const mesure = this.mesureFonctions();
+    return {
+      data: {
+        labels: fonctions.map((f) => f.libelle),
+        datasets: [
+          {
+            label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins',
+            data: fonctions.map((f) => f[mesure]),
+            backgroundColor: couleurGraphique(mesure === 'masse' ? 5 : 6),
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        animation: { duration: 900 },
+        onHover: this.curseurSurBarre,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (element) => {
+                const fonction = fonctions[element.dataIndex];
+                return [`Masse : ${formaterMontant(fonction.masse)} DH`, `Bulletins : ${fonction.effectif}`];
+              }
+            }
+          }
+        },
+        scales: this.echellesHorizontales()
+      }
+    };
+  });
+
+  /** Tous les mois qui ont de la paie sur le périmètre, du plus ancien au plus récent ; le mois analysé est mis en évidence. */
   readonly graphiqueEvolution = computed<Graphique<'line'>>(() => {
-    const evolution = this.donnees()?.evolution ?? [];
+    const donnees = this.donnees();
+    const evolution = donnees?.evolution ?? [];
     const masse = couleurGraphique(1);
     const effectif = couleurGraphique(2);
+    const rayons = evolution.map((e) => (e.periode === donnees?.periode ? 8 : 4));
     return {
       data: {
         labels: evolution.map((e) => libellePeriode(e.periode)),
         datasets: [
-          { label: 'Masse (DH)', data: evolution.map((e) => e.masse), borderColor: masse, backgroundColor: masse, yAxisID: 'y', tension: 0.3, pointRadius: 4 },
-          { label: 'Bulletins', data: evolution.map((e) => e.effectif), borderColor: effectif, backgroundColor: effectif, yAxisID: 'y1', tension: 0.3, pointRadius: 4 }
+          { label: 'Masse (DH)', data: evolution.map((e) => e.masse), borderColor: masse, backgroundColor: masse, yAxisID: 'y', tension: 0.3, pointRadius: rayons },
+          { label: 'Bulletins', data: evolution.map((e) => e.effectif), borderColor: effectif, backgroundColor: effectif, yAxisID: 'y1', tension: 0.3, pointRadius: rayons }
         ]
       },
       options: {
@@ -144,7 +206,7 @@ export class PaieAnalytiqueComponent implements OnInit {
         interaction: { mode: 'index', intersect: false },
         plugins: { legend: { position: 'bottom', labels: { color: jeton('--color-text-muted') } } },
         scales: {
-          x: { ticks: { color: jeton('--color-text-muted') }, grid: { display: false } },
+          x: { ticks: { color: jeton('--color-text-muted'), autoSkip: false }, grid: { display: false } },
           y: { position: 'left', ticks: { color: jeton('--color-text-muted'), callback: (v) => FORMAT_ENTIER.format(Number(v)) }, grid: { color: jeton('--color-border') } },
           y1: { position: 'right', ticks: { color: jeton('--color-text-muted') }, grid: { display: false } }
         }
@@ -152,36 +214,9 @@ export class PaieAnalytiqueComponent implements OnInit {
     };
   });
 
-  readonly graphiqueFonctions = computed<Graphique<'doughnut'>>(() => {
-    const fonctions = this.donnees()?.parFonction ?? [];
-    const principales = [...fonctions].sort((a, b) => b.effectif - a.effectif).slice(0, MAX_FONCTIONS_GRAPHIQUE);
-    const autres = fonctions.reduce((somme, f) => somme + f.effectif, 0) - principales.reduce((somme, f) => somme + f.effectif, 0);
-    const libelles = [...principales.map((f) => f.libelle), ...(autres > 0 ? ['Autres'] : [])];
-    const valeurs = [...principales.map((f) => f.effectif), ...(autres > 0 ? [autres] : [])];
-    const total = valeurs.reduce((somme, v) => somme + v, 0);
-    return {
-      data: {
-        labels: libelles,
-        datasets: [{ data: valeurs, backgroundColor: valeurs.map((_, i) => couleurGraphique(i + 1)), borderColor: jeton('--color-surface'), borderWidth: 2 }]
-      },
-      options: {
-        maintainAspectRatio: false,
-        cutout: '60%',
-        animation: { duration: 900 },
-        plugins: {
-          legend: { position: 'right', labels: { color: jeton('--color-text-muted'), boxWidth: 12 } },
-          tooltip: {
-            callbacks: {
-              label: (element) => `${element.label} : ${element.parsed} bulletins (${formaterPart((element.parsed / total) * 100)})`
-            }
-          }
-        }
-      }
-    };
-  });
-
   readonly graphiqueTranches = computed<Graphique<'bar'>>(() => {
     const tranches = this.donnees()?.tranches ?? [];
+    const texte = jeton('--color-text-muted');
     return {
       data: {
         labels: tranches.map((t) => this.libelleTranche(t)),
@@ -191,7 +226,10 @@ export class PaieAnalytiqueComponent implements OnInit {
         maintainAspectRatio: false,
         animation: { duration: 900 },
         plugins: { legend: { display: false } },
-        scales: this.echelles(true)
+        scales: {
+          x: { ticks: { color: texte, autoSkip: false }, grid: { color: 'transparent' } },
+          y: { beginAtZero: true, ticks: { color: texte }, grid: { color: jeton('--color-border') } }
+        }
       }
     };
   });
@@ -210,8 +248,6 @@ export class PaieAnalytiqueComponent implements OnInit {
     return [ligne('Bulletins sans équipe', donnees.qualite.sansEquipe), ligne('Bulletins sans observation', donnees.qualite.sansObservation)];
   });
 
-  readonly formaterPart = formaterPart;
-
   ngOnInit(): void {
     this.paieService.listerPeriodes().subscribe((periodes) => {
       this.periodes.set(periodes.map((p) => p.periode));
@@ -227,12 +263,12 @@ export class PaieAnalytiqueComponent implements OnInit {
         }),
         filter(() => this.filtres().periode !== null),
         tap(() => this.chargement.set(true)),
-        switchMap(() => {
-          return this.paieService.analyser(versCriteres(this.filtres())).pipe(
+        switchMap(() =>
+          this.paieService.analyser(versCriteres(this.filtres())).pipe(
             tap({ next: () => this.chargement.set(false), error: () => this.chargement.set(false) }),
             catchError(() => EMPTY)
-          );
-        }),
+          )
+        ),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((donnees) => this.donnees.set(donnees));
@@ -245,23 +281,38 @@ export class PaieAnalytiqueComponent implements OnInit {
 
   /** Clic sur une barre du graphique des chantiers : l'analyse se resserre sur ce chantier. */
   surBarreChantier(evenement: { element?: { index?: number } }): void {
-    const chantier = this.chantiersAffiches()[evenement.element?.index ?? -1];
+    const chantier = this.chantiersTries()[evenement.element?.index ?? -1];
     if (chantier) {
       this.appliquer({ ...this.filtres(), chantierIds: [chantier.id] });
     }
   }
+
+  /** Clic sur une barre du graphique des fonctions : l'analyse se resserre sur cette fonction. */
+  surBarreFonction(evenement: { element?: { index?: number } }): void {
+    const fonction = this.fonctionsTriees()[evenement.element?.index ?? -1];
+    if (fonction) {
+      this.appliquer({ ...this.filtres(), fonctionIds: [fonction.id] });
+    }
+  }
+
+  private readonly curseurSurBarre: ChartOptions<'bar'>['onHover'] = (evenement, elements) => {
+    const cible = evenement.native?.target as HTMLElement | null | undefined;
+    if (cible) {
+      cible.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+    }
+  };
 
   private libelleTranche(tranche: PaieTranche): string {
     const min = FORMAT_ENTIER.format(tranche.min);
     return tranche.max === null ? `≥ ${min}` : `${min} – ${FORMAT_ENTIER.format(tranche.max)}`;
   }
 
-  private echelles(verticale: boolean): ChartOptions<'bar'>['scales'] {
+  /** Barres horizontales : une ligne par catégorie, et **toutes** les étiquettes affichées (sans quoi Chart.js en sauterait). */
+  private echellesHorizontales(): ChartOptions<'bar'>['scales'] {
     const texte = jeton('--color-text-muted');
-    const grille = jeton('--color-border');
     return {
-      x: { ticks: { color: texte, callback: verticale ? undefined : (v) => FORMAT_ENTIER.format(Number(v)) }, grid: { color: verticale ? 'transparent' : grille } },
-      y: { beginAtZero: true, ticks: { color: texte }, grid: { color: verticale ? grille : 'transparent' } }
+      x: { beginAtZero: true, ticks: { color: texte, callback: (v) => FORMAT_ENTIER.format(Number(v)) }, grid: { color: jeton('--color-border') } },
+      y: { ticks: { color: texte, autoSkip: false }, grid: { color: 'transparent' } }
     };
   }
 

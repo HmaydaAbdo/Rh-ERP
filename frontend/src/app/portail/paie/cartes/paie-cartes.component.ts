@@ -3,16 +3,19 @@ import { Component, DestroyRef, OnInit, ViewChild, computed, inject, signal } fr
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { Table, TableModule } from 'primeng/table';
-import { EMPTY, Observable, debounceTime, finalize, switchMap, tap } from 'rxjs';
+import { EMPTY, Observable, Subject, debounceTime, finalize, merge, switchMap, tap } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 import { PaieFiltres, lireFiltres, versCriteres } from '../filtres/paie-filtres';
-import { PaieChantierPeriode, PaiePeriodeResume } from '../models/paie.model';
+import { PaieChantierPeriode, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode, periodePrecedente } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
@@ -43,6 +46,19 @@ interface LigneEquipe {
   part: number;
 }
 
+/** Une suppression en groupe en attente de confirmation : ce qui sera supprimé, décrit pour l'utilisateur. */
+interface Suppression {
+  /** Le groupe visé, en une ligne (« Mois : août 2026 », « Chantier C168 · Nador »…). */
+  cible: string;
+  criteres: PaieSearchCriteria;
+  /** Nombre de bulletins que la carte comptait : celui que l'utilisateur doit retaper, et que le serveur revérifie. */
+  nombre: number;
+  /** Les filtres qui restreignent le groupe, un par ligne. */
+  filtres: string[];
+  /** Vrai quand le groupe est le chantier ouvert (niveau 3) : une fois supprimé, on remonte aux chantiers. */
+  remonterApres: boolean;
+}
+
 /**
  * Vue « Cartes » de la paie, en trois niveaux de descente : cartes par mois, puis cartes par chantier du mois, puis
  * tableau des équipes du chantier. **Descendre, c'est filtrer** : le niveau se déduit des filtres de la barre commune
@@ -50,12 +66,13 @@ interface LigneEquipe {
  * ses équipes — et cliquer une carte pose le filtre correspondant dans l'URL. Retour navigateur, lien direct et barre de
  * filtres restent donc toujours d'accord. Les autres filtres (nom, CIN, fonctions, équipes, chantiers) restreignent les
  * bulletins comptés à chaque niveau. Aucune donnée propre : tout vient de `/paie/periodes/search` et
- * `/paie/chantiers/search` (voir docs/paie/README.md, « Vue Cartes »).
+ * `/paie/chantiers/search` (voir docs/paie/README.md, « Vue Cartes »). Chaque carte (mois, chantier, équipe) propose aussi de
+ * **supprimer d'un coup** les bulletins qu'elle compte, après une confirmation qui demande de retaper leur nombre.
  */
 @Component({
   selector: 'app-paie-cartes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, TableModule, ColumnChooserComponent, CountUpDirective],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TableModule, ColumnChooserComponent, CountUpDirective],
   templateUrl: './paie-cartes.component.html',
   styleUrl: './paie-cartes.component.scss'
 })
@@ -64,6 +81,8 @@ export class PaieCartesComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+  private readonly messageService = inject(MessageService);
 
   readonly columns = new ColumnState([
     { field: 'code', header: 'Équipe', cellClass: 'font-semibold' },
@@ -85,6 +104,19 @@ export class PaieCartesComponent implements OnInit {
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
 
   readonly rechercheEquipe = new FormControl('', { nonNullable: true });
+
+  readonly suppression = signal<Suppression | null>(null);
+  readonly suppressionEnCours = signal(false);
+  readonly confirmation = new FormControl('', { nonNullable: true });
+  private readonly confirmationSaisie = signal('');
+  /** La suppression n'est possible qu'une fois son nombre de bulletins retapé à l'identique. */
+  readonly confirmationValide = computed(() => {
+    const suppression = this.suppression();
+    return suppression !== null && this.confirmationSaisie().trim() === String(suppression.nombre);
+  });
+
+  /** Demande de rechargement du niveau affiché (après une suppression), sans changement d'URL. */
+  private readonly rechargement = new Subject<void>();
 
   /** Réponses déjà reçues, par filtres : revenir sur une même vue ne relance aucun appel. */
   private readonly cachePeriodes = new Map<string, PaiePeriodeResume[]>();
@@ -157,18 +189,22 @@ export class PaieCartesComponent implements OnInit {
   readonly formaterPart = formaterPart;
 
   ngOnInit(): void {
-    this.route.queryParamMap
+    const parametres$ = this.route.queryParamMap.pipe(
+      tap((params) => {
+        const niveauPrecedent = this.niveau();
+        this.filtres.set(lireFiltres(params));
+        this.sens.set(this.niveau() >= niveauPrecedent ? 'avant' : 'arriere');
+        this.rechercheEquipe.setValue('', { emitEvent: false });
+      })
+    );
+    merge(parametres$, this.rechargement)
       .pipe(
-        tap((params) => {
-          const niveauPrecedent = this.niveau();
-          this.filtres.set(lireFiltres(params));
-          this.sens.set(this.niveau() >= niveauPrecedent ? 'avant' : 'arriere');
-          this.rechercheEquipe.setValue('', { emitEvent: false });
-        }),
         switchMap(() => (this.niveau() === 1 ? this.chargerMois() : this.chargerChantiers())),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
+
+    this.confirmation.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((saisie) => this.confirmationSaisie.set(saisie));
 
     this.rechercheEquipe.valueChanges
       .pipe(debounceTime(DEBOUNCE_RECHERCHE_MS), takeUntilDestroyed(this.destroyRef))
@@ -183,6 +219,76 @@ export class PaieCartesComponent implements OnInit {
     }
   }
 
+  canDelete(): boolean {
+    return this.authService.hasPermission('PAIE_DELETE');
+  }
+
+  /** Suppression d'un mois : les bulletins de ce mois que comptait la carte, filtres de la barre compris (sauf le mois, qui est le sien). */
+  demanderSuppressionMois(carte: CarteMois): void {
+    this.demander(
+      `Mois : ${libellePeriode(carte.resume.periode)}`,
+      { ...versCriteres(this.filtres(), false), periode: carte.resume.periode },
+      carte.resume.nombreBulletins,
+      false
+    );
+  }
+
+  /** Suppression d'un chantier du mois : les bulletins que comptait sa carte (ou, au niveau 3, le chantier ouvert). */
+  demanderSuppressionChantier(chantier: PaieChantierPeriode): void {
+    const nom = chantier.libelle ? `${chantier.code} · ${chantier.libelle}` : chantier.code;
+    this.demander(
+      `Chantier ${nom}, ${libellePeriode(this.periode())}`,
+      { ...versCriteres(this.filtres()), chantierIds: [chantier.id] },
+      chantier.effectif,
+      this.niveau() === 3
+    );
+  }
+
+  /** Suppression d'une équipe du chantier ouvert. Les bulletins sans équipe ne se suppriment pas ainsi : l'API ne sait pas les cibler. */
+  demanderSuppressionEquipe(ligne: LigneEquipe): void {
+    const chantier = this.chantier();
+    if (ligne.equipeId === null || !chantier) {
+      return;
+    }
+    this.demander(
+      `Équipe ${ligne.code} · ${ligne.libelle}, chantier ${chantier.code}, ${libellePeriode(this.periode())}`,
+      { ...versCriteres(this.filtres()), equipeIds: [ligne.equipeId] },
+      ligne.effectif,
+      false
+    );
+  }
+
+  annulerSuppression(): void {
+    if (!this.suppressionEnCours()) {
+      this.suppression.set(null);
+      this.confirmation.setValue('');
+    }
+  }
+
+  confirmerSuppression(): void {
+    const suppression = this.suppression();
+    if (!suppression || !this.confirmationValide() || this.suppressionEnCours()) {
+      return;
+    }
+    this.suppressionEnCours.set(true);
+    this.paieService
+      .supprimerGroupe({ criteres: suppression.criteres, nombreAttendu: suppression.nombre })
+      .pipe(finalize(() => this.suppressionEnCours.set(false)))
+      .subscribe({
+        next: (resultat) => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Bulletins supprimés',
+            detail: `${resultat.supprimes} bulletin(s) supprimé(s) — ${suppression.cible}`,
+            life: 6000
+          });
+          this.suppression.set(null);
+          this.confirmation.setValue('');
+          this.apresSuppression(suppression);
+        }
+      });
+  }
+
   /** Délai d'apparition d'un élément dans la cascade ; plafonné pour que la dernière carte d'une longue liste ne tarde pas. */
   delaiCascade(indice: number): number {
     return Math.min(indice, DELAI_CASCADE_MAX_RANG) * DELAI_CASCADE_MS;
@@ -194,6 +300,44 @@ export class PaieCartesComponent implements OnInit {
 
   masseTotaleEquipes(): number {
     return this.lignesEquipes().reduce((somme, l) => somme + l.masse, 0);
+  }
+
+  private demander(cible: string, criteres: PaieSearchCriteria, nombre: number, remonterApres: boolean): void {
+    this.confirmation.setValue('');
+    this.suppression.set({ cible, criteres, nombre, filtres: this.decrireFiltres(criteres), remonterApres });
+  }
+
+  /** Les filtres qui restreignent le groupe, hors le mois et le groupe visé eux-mêmes — à relire avant de confirmer. */
+  private decrireFiltres(criteres: PaieSearchCriteria): string[] {
+    const lignes: string[] = [];
+    if (criteres.nomPrenom) {
+      lignes.push(`Nom et prénom contient « ${criteres.nomPrenom} »`);
+    }
+    if (criteres.cin) {
+      lignes.push(`CIN contient « ${criteres.cin} »`);
+    }
+    const nombre = (ids: number[] | undefined): number => ids?.length ?? 0;
+    if (nombre(criteres.fonctionIds) > 0) {
+      lignes.push(`${nombre(criteres.fonctionIds)} fonction(s) sélectionnée(s)`);
+    }
+    if (nombre(criteres.chantierIds) > 1) {
+      lignes.push(`${nombre(criteres.chantierIds)} chantiers sélectionnés`);
+    }
+    if (nombre(criteres.equipeIds) > 1) {
+      lignes.push(`${nombre(criteres.equipeIds)} équipes sélectionnées`);
+    }
+    return lignes;
+  }
+
+  /** Les réponses gardées ne valent plus rien : on les vide et on recharge ; le chantier ouvert supprimé, on remonte aux chantiers. */
+  private apresSuppression(suppression: Suppression): void {
+    this.cachePeriodes.clear();
+    this.cacheChantiers.clear();
+    if (suppression.remonterApres) {
+      void this.router.navigate([], { queryParams: { chantierIds: null }, queryParamsHandling: 'merge' });
+    } else {
+      this.rechargement.next();
+    }
   }
 
   /** Niveau 1 : les mois qui ont de la paie sur le périmètre filtré (le mois des filtres n'a pas de sens ici). */

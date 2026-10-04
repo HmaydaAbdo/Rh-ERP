@@ -1,9 +1,13 @@
+:host {
+  display: block;
+  margin-bottom: var(--space-md);
+}
+
 .paie-filtres {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -21,19 +25,176 @@
     text-transform: capitalize;
   }
 
-  &__champs {
+  &__recherche {
     display: flex;
     flex: 1;
-    flex-wrap: wrap;
     gap: var(--space-xs);
 
-    input,
-    app-lazy-select {
+    input {
+      flex: 1;
+      min-width: 7rem;
+      max-width: 14rem;
       font-size: 0.8125rem;
     }
   }
 
+  &__effacer {
+    margin-left: auto;
+  }
+
+  &__badge {
+    display: inline-block;
+    min-width: 1.25rem;
+    margin: 0 var(--space-xs);
+    padding: 0 0.35rem;
+    border-radius: 0.625rem;
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+    font-size: 0.6875rem;
+    text-align: center;
+  }
+
   .p-button {
     font-size: 0.8125rem;
+  }
+
+  // ---- Fil de navigation (Cartes) ----
+  &__fil {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+
+    i {
+      font-size: 0.75rem;
+    }
+  }
+
+  &__segment {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &--courant {
+      border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+      color: var(--color-primary);
+      font-weight: 600;
+      cursor: default;
+    }
+  }
+
+  // ---- Résumé, panneau ----
+  &__resume {
+    margin: var(--space-xs) var(--space-xs) 0;
+    font-size: 0.8125rem;
+
+    button {
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--color-text-muted);
+      font-size: inherit;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--color-primary);
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__panneau {
+    margin-top: var(--space-sm);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    animation: panneau-ouverture 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__colonnes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  &__colonne {
+    h3 {
+      margin: 0 0 var(--space-xs);
+      font-size: 0.8125rem;
+    }
+
+    app-lazy-select {
+      display: block;
+      font-size: 0.8125rem;
+    }
+  }
+
+  &__aide {
+    margin: var(--space-sm) 0 0;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  &__heritage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+    }
+  }
+
+  &__retirer {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-danger);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__panneau {
+      animation: none;
+    }
+  }
+}
+
+@keyframes panneau-ouverture {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

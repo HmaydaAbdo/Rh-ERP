@@ -33,6 +33,11 @@ public class PaieExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(PaieGroupeModifieException.class)
+    public ResponseEntity<ErrorResponseDto> handleGroupeModifie(PaieGroupeModifieException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(InvalidReferenceException.class)
     public ResponseEntity<ErrorResponseDto> handleInvalidReference(InvalidReferenceException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);

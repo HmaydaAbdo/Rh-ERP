@@ -12,6 +12,7 @@
 | `GET /paie/{id}` | `PAIE_READ` |
 | `POST /paie/search` | `PAIE_READ` |
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
+| `POST /paie/suppression` | `PAIE_DELETE` |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/periodes` | `PAIE_READ` |
@@ -39,6 +40,7 @@
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
+| Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_DELETE` — `canDelete()` |
 
 ## Rôles disposant de ces permissions (seed initial)
 

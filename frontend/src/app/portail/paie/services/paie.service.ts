@@ -13,6 +13,8 @@ import {
   PaieMaterielTableau,
   PaiePeriodeResume,
   PaieSearchCriteria,
+  PaieSuppression,
+  PaieSuppressionGroupeRequest,
   PaieUpdateRequest,
   PaieRapportPdfRequest
 } from '../models/paie.model';
@@ -51,6 +53,11 @@ export class PaieService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /** Supprime d'un coup un groupe de bulletins ; refusé (409) si son nombre n'est plus celui confirmé. */
+  supprimerGroupe(requete: PaieSuppressionGroupeRequest): Observable<PaieSuppression> {
+    return this.http.post<PaieSuppression>(`${this.baseUrl}/suppression`, requete);
   }
 
   importer(file: File, periode: string): Observable<PaieImportResult> {

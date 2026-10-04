@@ -13,14 +13,17 @@ export const PAIE_ROUTES: Routes = [
     children: [
       {
         path: '',
+        data: { vue: 'tabulaire' },
         loadComponent: () => import('./list/paie-list.component').then((m) => m.PaieListComponent)
       },
       {
         path: 'cartes',
+        data: { vue: 'cartes' },
         loadComponent: () => import('./cartes/paie-cartes.component').then((m) => m.PaieCartesComponent)
       },
       {
         path: 'analytique',
+        data: { vue: 'analytique' },
         loadComponent: () => import('./analytique/paie-analytique.component').then((m) => m.PaieAnalytiqueComponent)
       }
     ]

@@ -24,8 +24,6 @@ import java.util.stream.IntStream;
 @Service
 public class PaieAnalytiqueService implements IPaieAnalytiqueService {
 
-    /** Nombre de mois, le mois analysé compris, que couvre l'évolution. */
-    private static final int MOIS_EVOLUTION = 12;
     private static final int NOMBRE_TRANCHES = 6;
     /** Largeur minimale d'une tranche, et pas d'arrondi de sa largeur (en DH) : des bornes lisibles (500, 1 000, 1 500…). */
     private static final BigDecimal PAS_TRANCHE = new BigDecimal("500");
@@ -61,7 +59,7 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
                         .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif()))
                         .toList(),
                 repartirParTranche(repository.listerTotaux(periode, filtres)),
-                repository.sommerParPeriode(periode.minusMonths(MOIS_EVOLUTION - 1L), periode, filtres).stream()
+                repository.sommerParPeriode(filtres).stream()
                         .map(e -> new Evolution(e.getPeriode().toString(), e.getMasse(), e.getEffectif()))
                         .toList(),
                 new Qualite(courant.getSansEquipe(), courant.getSansObservation()));

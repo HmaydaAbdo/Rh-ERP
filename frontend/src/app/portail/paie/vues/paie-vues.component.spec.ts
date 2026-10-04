@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -25,14 +25,23 @@ describe('PaieVuesComponent', () => {
   let harness: RouterTestingHarness;
 
   beforeEach(async () => {
-    service = jasmine.createSpyObj<PaieService>('PaieService', ['listerPeriodes']);
+    service = jasmine.createSpyObj<PaieService>('PaieService', ['listerPeriodes', 'rechercherChantiers']);
     service.listerPeriodes.and.returnValue(of(PERIODES));
+    service.rechercherChantiers.and.returnValue(of([]));
 
     TestBed.configureTestingModule({
       imports: [NoopAnimationsModule],
       providers: [
         provideRouter([
-          { path: 'paie', component: PaieVuesComponent, children: [{ path: '', component: VueFactice }, { path: 'cartes', component: VueFactice }] }
+          {
+            path: 'paie',
+            component: PaieVuesComponent,
+            children: [
+              { path: '', component: VueFactice, data: { vue: 'tabulaire' } },
+              { path: 'cartes', component: VueFactice, data: { vue: 'cartes' } },
+              { path: 'analytique', component: VueFactice, data: { vue: 'analytique' } }
+            ]
+          }
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -78,5 +87,48 @@ describe('PaieVuesComponent', () => {
     await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
 
     expect(service.listerPeriodes.calls.count()).toBeGreaterThan(appels);
+  });
+
+  describe('barre adaptée à la vue', () => {
+    it('est une navigation à valeurs uniques dans les cartes, des filtres ailleurs', async () => {
+      const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
+      expect(composant.mode()).toBe('filtres');
+
+      await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
+      expect(composant.mode()).toBe('navigation');
+
+      await harness.navigateByUrl('/paie/analytique', PaieVuesComponent);
+      expect(composant.mode()).toBe('filtres');
+    });
+
+    it('rend le mois indispensable en analytique seulement', async () => {
+      const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
+      expect(composant.moisRequis()).toBeFalse();
+
+      await harness.navigateByUrl('/paie/analytique', PaieVuesComponent);
+      expect(composant.moisRequis()).toBeTrue();
+    });
+  });
+
+  describe('phrase qui explique le changement de vue', () => {
+    it('n\'en dit rien à la première arrivée', async () => {
+      const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-08', PaieVuesComponent);
+
+      expect(composant.annonce()).toBeNull();
+    });
+
+    it('explique ce que devient le contexte, puis s\'efface d\'elle-même', fakeAsync(() => {
+      let composant!: PaieVuesComponent;
+      void harness.navigateByUrl('/paie?periode=2026-08&chantierIds=3,4', PaieVuesComponent).then((c) => (composant = c));
+      tick();
+
+      void harness.navigateByUrl('/paie/cartes?periode=2026-08&chantierIds=3,4');
+      tick();
+
+      expect(composant.annonce()).toBe('Cartes : niveau chantiers, limité à vos 2 chantiers.');
+
+      tick(8000);
+      expect(composant.annonce()).toBeNull();
+    }));
   });
 });

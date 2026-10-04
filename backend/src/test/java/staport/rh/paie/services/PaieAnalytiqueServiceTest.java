@@ -12,6 +12,7 @@ import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Tranche;
 import staport.rh.paie.repositories.ChantierMasseProjection;
 import staport.rh.paie.repositories.EvolutionMasseProjection;
 import staport.rh.paie.repositories.FiltresPaie;
+import staport.rh.paie.repositories.FonctionMasseProjection;
 import staport.rh.paie.repositories.PaieKpiProjection;
 import staport.rh.paie.repositories.PaieRepository;
 
@@ -144,19 +145,34 @@ class PaieAnalytiqueServiceTest {
     }
 
     @Test
-    void analyser_devraitCouvrirLesDouzeDerniersMoisPourLEvolution() {
+    void analyser_devraitRenvoyerToutLHistoriqueDuPerimetreSansFenetre() {
         when(repository.resumerKpi(any(), any())).thenReturn(kpi(1, "100", 1, 0, 0, 0));
         lenient().when(repository.listerTotaux(any(), any())).thenReturn(List.of());
-        when(repository.sommerParPeriode(any(), any(), any())).thenReturn(List.of(evolution(JUILLET, "900", 5)));
+        when(repository.sommerParPeriode(any())).thenReturn(List.of(
+                evolution(YearMonth.of(2024, 1), "700", 4),
+                evolution(JUILLET, "900", 5),
+                evolution(YearMonth.of(2026, 9), "1100", 6)));
 
         PaieAnalytiqueDto resultat = service.analyser(criteres(AOUT, null, null, null));
 
-        verify(repository).sommerParPeriode(eq(YearMonth.of(2025, 9)),
-                eq(AOUT), any());
-        assertThat(resultat.evolution()).singleElement().satisfies(e -> {
-            assertThat(e.periode()).isEqualTo("2026-07");
-            assertThat(e.effectif()).isEqualTo(5);
-        });
+        // Aucun mois n'est écarté, y compris plus de 12 mois avant et un mois après le mois analysé.
+        assertThat(resultat.evolution()).extracting(PaieAnalytiqueDto.Evolution::periode).containsExactly("2024-01", "2026-07", "2026-09");
+    }
+
+    @Test
+    void analyser_devraitRenvoyerTousLesChantiersEtToutesLesFonctionsSansPlafond() {
+        when(repository.resumerKpi(any(), any())).thenReturn(kpi(60, "6000", 40, 0, 0, 0));
+        lenient().when(repository.listerTotaux(any(), any())).thenReturn(List.of());
+        List<ChantierMasseProjection> chantiers = java.util.stream.IntStream.rangeClosed(1, 40)
+                .mapToObj(i -> chantier((long) i, "C" + i, "Chantier " + i, null, "100")).toList();
+        when(repository.sommerParChantier(any(), any())).thenReturn(chantiers);
+        when(repository.sommerParFonction(any(), any())).thenReturn(java.util.stream.IntStream.rangeClosed(1, 114)
+                .mapToObj(i -> fonction((long) i, "FONCTION " + i)).toList());
+
+        PaieAnalytiqueDto resultat = service.analyser(criteres(AOUT, null, null, null));
+
+        assertThat(resultat.parChantier()).hasSize(40);
+        assertThat(resultat.parFonction()).hasSize(114);
     }
 
     private static PaieSearchCriteria criteres(YearMonth periode, List<Long> chantierIds, List<Long> fonctionIds, List<Long> equipeIds) {
@@ -183,6 +199,15 @@ class PaieAnalytiqueServiceTest {
             public BigDecimal getMasse() { return new BigDecimal(masse); }
             public Long getEffectif() { return 1L; }
             public Long getStc() { return 0L; }
+        };
+    }
+
+    private static FonctionMasseProjection fonction(Long id, String libelle) {
+        return new FonctionMasseProjection() {
+            public Long getId() { return id; }
+            public String getLibelle() { return libelle; }
+            public BigDecimal getMasse() { return new BigDecimal("10"); }
+            public Long getEffectif() { return 1L; }
         };
     }
 

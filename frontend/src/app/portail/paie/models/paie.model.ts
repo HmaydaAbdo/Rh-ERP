@@ -161,6 +161,17 @@ export interface PaieAnalytique {
   qualite: { sansEquipe: number; sansObservation: number };
 }
 
+/** Suppression d'un groupe de bulletins (POST /paie/suppression) : ceux que décrivent `criteres` (mois obligatoire), à
+ * condition que leur nombre soit encore `nombreAttendu` — celui que l'utilisateur a confirmé. */
+export interface PaieSuppressionGroupeRequest {
+  criteres: PaieSearchCriteria;
+  nombreAttendu: number;
+}
+
+export interface PaieSuppression {
+  supprimes: number;
+}
+
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
 
 /** Les équipes sont désignées par leur CODE (clé stable, voir docs/equipe/README.md) — les valeurs

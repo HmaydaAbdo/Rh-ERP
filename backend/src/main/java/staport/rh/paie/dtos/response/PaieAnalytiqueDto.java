@@ -6,8 +6,9 @@ import java.util.List;
 /**
  * Tableau de bord analytique d'un mois sur un périmètre filtré (voir {@code docs/paie/README.md}, « Vue Analytique »).
  * {@code moisPrecedent} est {@code null} quand le mois contigu n'a aucun bulletin dans ce périmètre : la comparaison
- * est alors indisponible, jamais un zéro trompeur. {@code evolution} couvre au plus les 12 derniers mois qui ont de la
- * paie dans le périmètre, du plus ancien au plus récent.
+ * est alors indisponible, jamais un zéro trompeur. {@code evolution} couvre **tous** les mois qui ont de la paie dans le
+ * périmètre (tout l'historique, avant et après le mois analysé), du plus ancien au plus récent ; {@code parChantier} et
+ * {@code parFonction} listent **tous** les chantiers et toutes les fonctions du mois, sans plafond.
  */
 public record PaieAnalytiqueDto(
         String periode,
