@@ -1,0 +1,85 @@
+<div class="paie-filtres">
+  <div class="paie-filtres__periode">
+    <button
+      pButton
+      type="button"
+      icon="pi pi-chevron-left"
+      class="p-button-text p-button-sm"
+      aria-label="Mois plus ancien"
+      [disabled]="!plusAncien()"
+      (click)="choisir(plusAncien())"
+    ></button>
+    <button
+      pButton
+      type="button"
+      icon="pi pi-calendar"
+      class="p-button-outlined paie-filtres__mois"
+      [label]="libelle()"
+      aria-label="Choisir le mois"
+      (click)="panneau.toggle($event)"
+    ></button>
+    <button
+      pButton
+      type="button"
+      icon="pi pi-chevron-right"
+      class="p-button-text p-button-sm"
+      aria-label="Mois plus récent"
+      [disabled]="!plusRecent()"
+      (click)="choisir(plusRecent())"
+    ></button>
+    @if (periode()) {
+      <button
+        pButton
+        type="button"
+        icon="pi pi-times"
+        class="p-button-text p-button-sm"
+        aria-label="Tous les mois"
+        title="Tous les mois"
+        (click)="choisir(null)"
+      ></button>
+    }
+    <p-overlayPanel #panneau appendTo="body">
+      <app-month-picker
+        [value]="periode()"
+        [disponibles]="disponibles()"
+        (valueChange)="choisir($event); panneau.hide()"
+      ></app-month-picker>
+    </p-overlayPanel>
+  </div>
+
+  <form [formGroup]="formulaire" class="paie-filtres__champs">
+    <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
+    <input pInputText type="text" formControlName="cin" placeholder="CIN" aria-label="CIN" />
+    <app-lazy-select
+      formControlName="chantierIds"
+      [multiple]="true"
+      [source]="chantierReferenceService"
+      optionLabel="code"
+      placeholder="Chantiers"
+    ></app-lazy-select>
+    <app-lazy-select
+      formControlName="fonctionIds"
+      [multiple]="true"
+      [source]="functionReferenceService"
+      optionLabel="libelle"
+      placeholder="Fonctions"
+    ></app-lazy-select>
+    <app-lazy-select
+      formControlName="equipeIds"
+      [multiple]="true"
+      [source]="equipeReferenceService"
+      optionLabel="code"
+      placeholder="Équipes"
+    ></app-lazy-select>
+  </form>
+
+  <button
+    pButton
+    type="button"
+    icon="pi pi-times"
+    label="Réinitialiser"
+    class="p-button-outlined"
+    [disabled]="!aDesFiltres()"
+    (click)="reinitialiser()"
+  ></button>
+</div>

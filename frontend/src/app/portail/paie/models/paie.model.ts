@@ -40,6 +40,7 @@ export interface PaieEquipePeriode {
 
 /** Un chantier d'un mois avec ses équipes (GET /paie/chantiers) — `libelle` : nom, à défaut désignation. */
 export interface PaieChantierPeriode {
+  id: number;
   code: string;
   libelle: string | null;
   effectif: number;
@@ -109,6 +110,55 @@ export interface PaieSearchCriteria {
   fonctionIds?: number[];
   chantierIds?: number[];
   equipeIds?: number[];
+}
+
+export interface PaieKpi {
+  masse: number;
+  effectif: number;
+  coutMoyen: number | null;
+  nombreChantiers: number;
+  stc: number;
+}
+
+export interface PaieChantierMasse {
+  id: number;
+  code: string;
+  libelle: string | null;
+  masse: number;
+  effectif: number;
+  stc: number;
+}
+
+export interface PaieFonctionMasse {
+  id: number;
+  libelle: string;
+  masse: number;
+  effectif: number;
+}
+
+/** Tranche de total : de `min` (inclus) à `max` (exclu) ; `max` est nul pour la dernière tranche, ouverte. */
+export interface PaieTranche {
+  min: number;
+  max: number | null;
+  effectif: number;
+}
+
+export interface PaieEvolution {
+  periode: string;
+  masse: number;
+  effectif: number;
+}
+
+/** Réponse de POST /paie/analytique. `moisPrecedent` est nul quand le mois contigu n'a aucun bulletin dans le périmètre. */
+export interface PaieAnalytique {
+  periode: string;
+  kpis: PaieKpi;
+  moisPrecedent: PaieKpi | null;
+  parChantier: PaieChantierMasse[];
+  parFonction: PaieFonctionMasse[];
+  tranches: PaieTranche[];
+  evolution: PaieEvolution[];
+  qualite: { sansEquipe: number; sansObservation: number };
 }
 
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';

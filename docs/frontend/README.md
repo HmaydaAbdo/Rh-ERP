@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Emplacement | `frontend/` (code dans `frontend/src/app/`) |
-| Technologies | Angular 17 (composants standalone, signaux), PrimeNG 17, PrimeIcons, RxJS, SCSS |
+| Technologies | Angular 17 (composants standalone, signaux), PrimeNG 17, PrimeIcons, RxJS, Chart.js (graphiques de la vue Analytique de la paie, via `p-chart`), SCSS |
 | Rendu | Application monopage (SPA) ; routes chargées à la demande (lazy loading) par domaine |
 | Tests | Jasmine + Karma (voir [../testing.md](../testing.md)) |
 | Production | Image nginx qui sert les fichiers statiques et relaie l'API (`frontend/nginx.conf`, voir [../deployment.md](../deployment.md)) |
@@ -80,7 +80,7 @@ de rôle).
 | `/` | Accueil : redirige vers le premier écran du menu autorisé | connecté (`homeGuard`) |
 | `/login`, `/forgot-password`, `/reset-password` | Authentification | publique |
 | `/acces-refuse` | Permission manquante | connecté |
-| `/paie`, `/paie/cartes`, `/paie/:id` | Liste, vue Cartes (descente mois → chantier → équipes) et détail des bulletins | `PAIE_READ` |
+| `/paie`, `/paie/cartes`, `/paie/analytique`, `/paie/:id` | Les trois vues (tabulaire, cartes, analytique) sous une coque commune avec une barre de filtres partagée dans l'URL, et le détail d'un bulletin | `PAIE_READ` |
 | `/paie/new`, `/paie/:id/edit` | Création, modification | `PAIE_WRITE` |
 | `/employees`, `/employees/:id` | Employés | `EMPLOYEE_READ` |
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
@@ -203,7 +203,7 @@ entre deux visites.
 
 | Écran | Colonnes | Filtres | Pagination |
 |---|---|---|---|
-| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Nom, CIN, période, fonctions, chantiers, équipes | Serveur |
+| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre commune aux trois vues (mois, nom, CIN, fonctions, chantiers, équipes, dans l'URL) | Serveur |
 | Employés | Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut | Nom, CIN, fonctions, chantiers, statut | Serveur |
 | Chantiers | Code, Nom, Désignation, Source, Statut | Code, désignation, statut | Serveur |
 | Fonctions | Libellé | Libellé | Serveur |

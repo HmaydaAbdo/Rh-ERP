@@ -1,31 +1,24 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
-import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
 import { Paie, PaieImportResult } from '../models/paie.model';
+import { PaieFiltres, lireFiltres, versCriteres } from '../filtres/paie-filtres';
 import { PaieService } from '../services/paie.service';
-import { PaieVueSwitcherComponent } from '../vue-switcher/paie-vue-switcher.component';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
-
-const DEBOUNCE_RECHERCHE_MS = 300;
 
 function toPeriodeString(date: Date | null): string | undefined {
   if (!date) {
@@ -44,14 +37,10 @@ function toPeriodeString(date: Date | null): string | undefined {
     RouterLink,
     TableModule,
     ButtonModule,
-    InputTextModule,
-    DropdownModule,
     CalendarModule,
     ConfirmDialogModule,
     DialogModule,
-    PaieExportWizardComponent,
-    PaieVueSwitcherComponent,
-    LazySelectComponent
+    PaieExportWizardComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
@@ -78,14 +67,13 @@ export class PaieListComponent implements OnInit {
   readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly paieService = inject(PaieService);
-  readonly functionReferenceService = inject(FunctionReferenceService);
-  readonly chantierReferenceService = inject(ChantierReferenceService);
-  readonly equipeReferenceService = inject(EquipeReferenceService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   canWrite(): boolean {
     return this.authService.hasPermission('PAIE_WRITE');
@@ -108,14 +96,11 @@ export class PaieListComponent implements OnInit {
   loading = false;
   deletingId: number | null = null;
 
-  readonly filterForm = this.fb.group({
-    nomPrenom: [''],
-    cin: [''],
-    periode: [null as Date | null],
-    fonctionIds: [[] as number[]],
-    chantierIds: [[] as number[]],
-    equipeIds: [[] as number[]]
-  });
+  /** Filtres de la barre commune, lus dans l'URL (voir `filtres/paie-filtres.ts`). */
+  private filtres: PaieFiltres = lireFiltres(this.route.snapshot.queryParamMap);
+
+  /** Première ligne de la page affichée, liée au tableau pour qu'un changement de filtres le ramène à la première page. */
+  first = 0;
 
   showImportDialog = false;
   importing = false;
@@ -134,12 +119,18 @@ export class PaieListComponent implements OnInit {
   private lastSort = 'periode,desc';
 
   ngOnInit(): void {
-    this.filterForm.valueChanges
+    // La première émission est celle de l'URL déjà lue ci-dessus : le premier chargement vient du tableau (`onLazyLoad`).
+    this.route.queryParamMap
       .pipe(
-        debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        map(lireFiltres),
+        skip(1),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.onSearch());
+      .subscribe((filtres) => {
+        this.filtres = filtres;
+        this.onSearch();
+      });
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
@@ -148,6 +139,7 @@ export class PaieListComponent implements OnInit {
     const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
     const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
+    this.first = event.first ?? 0;
     this.lastPage = page;
     this.lastSize = size;
     this.lastSort = sort;
@@ -157,12 +149,8 @@ export class PaieListComponent implements OnInit {
 
   onSearch(): void {
     this.lastPage = 0;
+    this.first = 0;
     this.fetchPage();
-  }
-
-  onResetFilters(): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.onSearch();
   }
 
   onView(paie: Paie): void {
@@ -257,20 +245,9 @@ export class PaieListComponent implements OnInit {
 
   private fetchPage(): void {
     this.loading = true;
-    const criteria = this.filterForm.getRawValue();
 
     this.paieService
-      .search(
-        {
-          nomPrenom: criteria.nomPrenom || undefined,
-          cin: criteria.cin || undefined,
-          periode: toPeriodeString(criteria.periode),
-          fonctionIds: criteria.fonctionIds?.length ? criteria.fonctionIds : undefined,
-          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined,
-          equipeIds: criteria.equipeIds?.length ? criteria.equipeIds : undefined
-        },
-        { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
-      )
+      .search(versCriteres(this.filtres), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((result) => {
         this.paies = result.content;

@@ -16,6 +16,17 @@ export function periodePrecedente(periode: string): string {
   return mois === 1 ? `${annee - 1}-12` : `${annee}-${String(mois - 1).padStart(2, '0')}`;
 }
 
+/** Variation en pourcentage avec son signe et sa virgule française : `+3,1 %`, `-0,8 %`. */
+export function formaterVariation(variation: number): string {
+  const arrondie = Math.round(variation * 10) / 10;
+  return `${arrondie > 0 ? '+' : ''}${arrondie.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+/** Part en pourcentage, une décimale : `34,8 %`. */
+export function formaterPart(part: number): string {
+  return `${part.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
 /** Montant au format de l'application (`fr-FR`, deux décimales). */
 export function formaterMontant(valeur: number): string {
   return FORMAT_MONTANT.format(valeur);

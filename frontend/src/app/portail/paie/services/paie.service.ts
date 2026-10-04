@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import {
   Paie,
+  PaieAnalytique,
   PaieChantierPeriode,
   PaieCreateRequest,
   PaieExportRequest,
@@ -69,6 +70,21 @@ export class PaieService {
 
   telechargerRapportPdf(requete: PaieRapportPdfRequest): Observable<Blob> {
     return this.http.post(`${this.baseUrl}/report/pdf`, requete, { responseType: 'blob' });
+  }
+
+  /** Indicateurs du tableau de bord du mois de `criteres` (obligatoire) sur son périmètre filtré. */
+  analyser(criteres: PaieSearchCriteria): Observable<PaieAnalytique> {
+    return this.http.post<PaieAnalytique>(`${this.baseUrl}/analytique`, criteres);
+  }
+
+  /** Les mois qui contiennent de la paie sur le périmètre filtré (le mois de `criteres` est ignoré). */
+  rechercherPeriodes(criteres: PaieSearchCriteria): Observable<PaiePeriodeResume[]> {
+    return this.http.post<PaiePeriodeResume[]>(`${this.baseUrl}/periodes/search`, criteres);
+  }
+
+  /** Les chantiers, avec leurs équipes, du mois de `criteres` (obligatoire) sur son périmètre filtré. */
+  rechercherChantiers(criteres: PaieSearchCriteria): Observable<PaieChantierPeriode[]> {
+    return this.http.post<PaieChantierPeriode[]>(`${this.baseUrl}/chantiers/search`, criteres);
   }
 
   listerPeriodes(): Observable<PaiePeriodeResume[]> {

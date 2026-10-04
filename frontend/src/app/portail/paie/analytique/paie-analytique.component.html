@@ -1,0 +1,103 @@
+<div class="paie-analytique">
+  @if (chargement()) {
+    <div class="paie-analytique__barre" role="progressbar" aria-label="Analyse en cours"></div>
+  }
+
+  @if (aucunePaie()) {
+    <p class="paie-analytique__message">Aucune paie enregistrée.</p>
+  } @else {
+    @if (donnees(); as d) {
+      <div class="paie-analytique__contenu" [class.paie-analytique__contenu--chargement]="chargement()">
+        @if (vide()) {
+          <p class="paie-analytique__message">Aucun bulletin pour {{ libellePeriode(d.periode) }} avec cette sélection.</p>
+        } @else {
+          <div class="paie-analytique__tuiles">
+            @for (tuile of tuiles(); track tuile.libelle; let i = $index) {
+              <div class="paie-analytique__tuile" [style.animation-delay.ms]="i * 60">
+                <span class="paie-analytique__libelle">{{ tuile.libelle }}</span>
+                <strong><span [appCountUp]="tuile.valeur"></span>@if (tuile.suffixe) { {{ tuile.suffixe }} }</strong>
+                @if (tuile.variation; as variation) {
+                  <span class="paie-analytique__variation">
+                    <i
+                      class="pi"
+                      [ngClass]="variation.startsWith('+') ? 'pi-arrow-up-right' : variation.startsWith('-') ? 'pi-arrow-down-right' : 'pi-minus'"
+                      aria-hidden="true"
+                    ></i>
+                    {{ variation }} vs mois précédent
+                  </span>
+                } @else {
+                  <span class="paie-analytique__variation">Pas de mois précédent comparable</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="paie-analytique__grille">
+            <section class="paie-analytique__carte" [style.animation-delay.ms]="320">
+              <h2>Masse par chantier</h2>
+              <p class="paie-analytique__aide">
+                Cliquez une barre pour filtrer sur ce chantier.
+                @if (chantiersMasques() > 0) {
+                  {{ chantiersMasques() }} autre(s) chantier(s) non affiché(s), voir les Cartes.
+                }
+              </p>
+              <div class="paie-analytique__graphique">
+                <p-chart
+                  type="bar"
+                  [data]="graphiqueChantiers().data"
+                  [options]="graphiqueChantiers().options"
+                  height="100%"
+                  (onDataSelect)="surBarreChantier($event)"
+                ></p-chart>
+              </div>
+            </section>
+
+            <section class="paie-analytique__carte" [style.animation-delay.ms]="400">
+              <h2>Évolution</h2>
+              @if (evolutionVisible()) {
+                <p class="paie-analytique__aide">Masse et nombre de bulletins sur les derniers mois, pour cette sélection.</p>
+                <div class="paie-analytique__graphique">
+                  <p-chart type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
+                </div>
+              } @else {
+                <p class="paie-analytique__message">
+                  L'évolution apparaît à partir de {{ minMoisEvolution }} mois de paie pour cette sélection ({{ d.evolution.length }} aujourd'hui).
+                </p>
+              }
+            </section>
+
+            <section class="paie-analytique__carte" [style.animation-delay.ms]="480">
+              <h2>Répartition par fonction</h2>
+              <p class="paie-analytique__aide">Nombre de bulletins par fonction.</p>
+              <div class="paie-analytique__graphique">
+                <p-chart type="doughnut" [data]="graphiqueFonctions().data" [options]="graphiqueFonctions().options" height="100%"></p-chart>
+              </div>
+            </section>
+
+            <section class="paie-analytique__carte" [style.animation-delay.ms]="560">
+              <h2>Répartition des totaux</h2>
+              <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH).</p>
+              <div class="paie-analytique__graphique">
+                <p-chart type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
+              </div>
+            </section>
+
+            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="640">
+              <h2>Qualité des données</h2>
+              <p class="paie-analytique__aide">Bulletins du périmètre auxquels il manque une information facultative.</p>
+              @for (ligne of qualite(); track ligne.libelle) {
+                <div class="paie-analytique__qualite">
+                  <span>{{ ligne.libelle }}</span>
+                  <strong>{{ ligne.nombre }} · {{ formaterPart(ligne.part) }}</strong>
+                  <span class="paie-analytique__jauge" aria-hidden="true"><span [style.width.%]="ligne.part"></span></span>
+                </div>
+              }
+            </section>
+          </div>
+        }
+      </div>
+    } @else {
+      <p class="paie-analytique__message">Chargement…</p>
+    }
+  }
+</div>

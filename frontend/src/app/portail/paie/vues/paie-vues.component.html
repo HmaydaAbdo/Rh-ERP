@@ -1,0 +1,10 @@
+<div class="paie-vues">
+  <div class="paie-vues__header">
+    <h1>Paie</h1>
+    <app-paie-vue-switcher></app-paie-vue-switcher>
+  </div>
+
+  <app-paie-filtres [periodes]="periodes()" [value]="filtres()" (valueChange)="appliquer($event)"></app-paie-filtres>
+
+  <router-outlet (activate)="chargerPeriodes()"></router-outlet>
+</div>
