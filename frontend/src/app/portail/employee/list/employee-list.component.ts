@@ -151,7 +151,7 @@ export class EmployeeListComponent implements OnInit {
   onDelete(employee: Employee): void {
     this.confirmationService.confirm({
       header: 'Supprimer cet employé',
-      message: `Confirmez-vous la suppression de ${employee.nomPrenom} ?`,
+      message: `Confirmez-vous la suppression de ${employee.nomPrenom} ? Un employé qui a des bulletins de paie ou un compte utilisateur ne peut pas être supprimé : passez-le à INACTIF pour conserver son historique.`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
@@ -241,7 +241,7 @@ export class EmployeeListComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((result) => {
         this.employees = result.content;
-        this.totalRecords = result.totalElements;
+        this.totalRecords = result.page.totalElements;
       });
   }
 }

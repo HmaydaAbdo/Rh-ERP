@@ -15,5 +15,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Fonctions', icon: 'pi pi-briefcase', route: '/functions', permission: 'FUNCTION_READ' },
   { label: 'Équipes', icon: 'pi pi-sitemap', route: '/equipes', permission: 'EQUIPE_READ' },
   { label: 'Utilisateurs', icon: 'pi pi-user-edit', route: '/admin/users', permission: 'USER_MANAGE' },
-  { label: 'Rôles', icon: 'pi pi-shield', route: '/admin/roles', permission: 'ROLE_MANAGE' }
+  { label: 'Rôles', icon: 'pi pi-shield', route: '/admin/roles', permission: 'ROLE_MANAGE' },
+  { label: 'Journal', icon: 'pi pi-history', route: '/audit', permission: 'AUDIT_READ' }
 ];

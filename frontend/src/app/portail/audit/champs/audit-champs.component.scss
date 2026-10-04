@@ -1,0 +1,41 @@
+.audit-champs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+
+  thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  tbody th {
+    font-weight: 600;
+    width: 30%;
+  }
+
+  &__retire {
+    color: var(--color-danger);
+  }
+
+  &__ajoute {
+    color: var(--color-success);
+  }
+
+  &__element {
+    display: block;
+  }
+
+  &__vide {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+}

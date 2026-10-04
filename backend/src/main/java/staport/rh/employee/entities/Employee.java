@@ -12,6 +12,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.envers.Audited;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.function.entities.Function;
 
@@ -27,6 +28,7 @@ import java.time.LocalDate;
                 @Index(name = "idx_employe_date_embauche", columnList = "date_embauche")
         }
 )
+@Audited
 public class Employee {
 
     @Id

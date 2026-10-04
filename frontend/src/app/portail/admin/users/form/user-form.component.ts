@@ -13,6 +13,7 @@ import { finalize, forkJoin, switchMap } from 'rxjs';
 
 import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
+import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
 import { PermissionSummary, Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
@@ -51,6 +52,7 @@ export class UserFormComponent implements OnInit {
   allRoles: Role[] = [];
 
   /** Permissions déniables = union des permissions des rôles actuellement sélectionnés. */
+  readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
   deniablePermissions: PermissionSummary[] = [];
   deniedPermissionIds = new Set<number>();
 
@@ -72,7 +74,7 @@ export class UserFormComponent implements OnInit {
     this.userId = idParam ? Number(idParam) : null;
 
     if (!this.isEditMode) {
-      this.form.controls.motDePasse.addValidators([Validators.required, Validators.minLength(8)]);
+      this.form.controls.motDePasse.addValidators([Validators.required, motDePasseConforme]);
     } else {
       // Le username n'est pas modifiable après création (UserUpdateRequestDto ne le porte pas).
       this.form.controls.username.disable();

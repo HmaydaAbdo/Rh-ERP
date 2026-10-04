@@ -11,7 +11,8 @@
 ```text
 Navigateur ── Angular 17 (PrimeNG) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 17
                     │                                   │
-                    │                                   ├── Flyway (schéma, migrations V1…V10)
+                    │                                   ├── Flyway (schéma, migrations V1…V15, droits du compte applicatif)
+                    │                                   ├── Hibernate Envers + journal d'audit (qui, quoi, quand, avant / après)
                     │                                   ├── Apache POI (imports/exports Excel)
                     │                                   ├── jsoup + openhtmltopdf + Batik (rapport PDF)
                     │                                   ├── JavaMail (mot de passe oublié)
@@ -103,9 +104,10 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 |---|---|
 | 400 | Validation, référence inconnue (fonction, chantier, équipe, employé), import rejeté |
 | 401 | Jeton absent, expiré, invalide ou signé avec un autre secret |
-| 403 | Permission manquante |
+| 403 | Permission manquante (journalisé : événement `ACCES_REFUSE`) |
+| 405 | Méthode HTTP non prévue pour la route |
 | 404 | Ressource inexistante |
-| 409 | Doublon (code, CIN, libellé, bulletin) ou suppression d'un élément encore référencé |
+| 409 | Doublon (code, CIN, libellé, bulletin), suppression d'un élément encore référencé (dont un rôle attribué), groupe de bulletins modifié entre-temps |
 | 500 | Erreur inattendue (message générique, détail dans les logs) |
 
 ---
@@ -116,6 +118,7 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 |---|---|
 | Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](chantier/README.md) |
 | Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](auth/README.md) |
+| Vérification de l'intégrité de l'audit | Au démarrage, signale si le compte de la base peut modifier une table d'audit. Voir [audit/README.md](audit/README.md) |
 | Courriel | Envoi du lien « mot de passe oublié » (SMTP) |
 
 ---
@@ -124,7 +127,7 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 
 | Élément | Accès |
 |---|---|
-| Swagger UI | `/swagger-ui.html` (public) ; spécification dans `/v3/api-docs` |
+| Swagger UI | `/swagger-ui.html` et spécification `/v3/api-docs`, **éteints par défaut** (donc en production) ; allumés en développement par `SPRINGDOC_API_DOCS_ENABLED` / `SPRINGDOC_SWAGGER_UI_ENABLED`, et publics alors. Éteints, leurs routes exigent un jeton comme le reste |
 | Santé | `/actuator/health` (public — utilisé par les healthchecks Docker) ; l'état du serveur SMTP n'y est volontairement pas inclus |
 | Autres endpoints Actuator | Non exposés par défaut (seul `health` l'est) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
 | Métriques Prometheus | Non configurées : aucune dépendance d'export Prometheus et aucune exposition (`/actuator/prometheus` est autorisé par la règle de sécurité mais n'existe pas) |
@@ -152,11 +155,14 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 | Rapport PDF en HTML + openhtmltopdf, graphiques SVG | Pagination entièrement pilotée en Java (voir [report/README.md](report/README.md)) |
 | CORS ouvert à toute origine | Décision du 2026-09-23, risque borné par `SameSite=Lax` (voir [deployment.md](deployment.md)) |
 | Paie non calculée | Le total est repris tel que saisi ou importé (décision du 2026-10-03) |
+| Audit : Envers + journal unique + événements de sécurité + garde-fous | Envers seul a des angles morts (écritures en masse, cascades SQL, migrations, événements sans donnée modifiée) ; chacun est fermé et prouvé par un test — voir [audit/README.md](audit/README.md) |
+| Aspect d'audit à l'intérieur de la transaction (ordre explicite) | L'entrée d'une opération réussie est validée ou annulée avec ses données ; un échec est tracé à part |
+| Deux comptes PostgreSQL | Sans séparation, l'application pourrait réécrire l'historique : un `REVOKE` serait cosmétique |
 
 ---
 
 ## Limites connues
 
-Voir [../TODO.md](../TODO.md) : aucun audit (Hibernate Envers), domaine Pointage non construit, backup
+Voir [../TODO.md](../TODO.md) : domaine Pointage non construit, backup
 PostgreSQL non implémenté, déploiement continu manuel, qualité des données (champs obligatoires et
 doublons) à traiter en une tâche dédiée.

@@ -1,0 +1,21 @@
+@if (versions().length === 0 && !chargement()) {
+  <p class="audit-historique__vide">Aucune version enregistrée pour cet enregistrement.</p>
+}
+
+<ol class="audit-historique">
+  @for (version of versions(); track version.revision) {
+    <li class="audit-historique__version">
+      <header class="audit-historique__entete">
+        <strong>{{ libelleOperation(version.operation) }}</strong>
+        <span>{{ formaterHorodatage(version.horodatage) }}</span>
+        <span>par {{ version.utilisateurNom }}</span>
+        <span class="audit-historique__origine">{{ libelleOrigine(version.origine) }}</span>
+      </header>
+      <app-audit-champs [champs]="version.champs"></app-audit-champs>
+    </li>
+  }
+</ol>
+
+@if (resteAcharger()) {
+  <button pButton type="button" class="p-button-outlined" label="Versions plus anciennes" [loading]="chargement()" (click)="plus()"></button>
+}

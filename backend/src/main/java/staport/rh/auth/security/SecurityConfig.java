@@ -1,9 +1,12 @@
 package staport.rh.auth.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationEventPublisher;
+import org.springframework.security.authorization.SpringAuthorizationEventPublisher;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
@@ -16,10 +19,12 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import staport.rh.common.logging.MdcRequestFilter;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
@@ -45,14 +50,27 @@ import java.util.stream.Stream;
 public class SecurityConfig {
 
     private final String jwtSecret;
+    private final boolean documentationApiActive;
 
-    public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret) {
+    public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret,
+                          @Value("${springdoc.api-docs.enabled}") boolean documentationApiActive) {
         this.jwtSecret = jwtSecret;
+        this.documentationApiActive = documentationApiActive;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Fait publier à Spring Security un {@code AuthorizationDeniedEvent} pour chaque refus d'accès, qu'il vienne d'un
+     * {@code @PreAuthorize} ou de la chaîne de filtres : un seul point d'accroche pour journaliser tous les {@code 403}
+     * (voir {@code EcouteurEvenementsSecurite}).
+     */
+    @Bean
+    public AuthorizationEventPublisher authorizationEventPublisher(ApplicationEventPublisher publieur) {
+        return new SpringAuthorizationEventPublisher(publieur);
     }
 
     @Bean
@@ -99,6 +117,7 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(List.of(MdcRequestFilter.EN_TETE_REQUEST_ID));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -112,14 +131,21 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password").permitAll()
-                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/actuator/**").hasAuthority("SYSTEM_ADMIN")
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password").permitAll();
+                    auth.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll();
+                    // Publique seulement quand la documentation est allumée (développement) ; sinon ces routes ne sont rien.
+                    if (documentationApiActive) {
+                        auth.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
+                    }
+                    auth.requestMatchers("/actuator/**").hasAuthority("SYSTEM_ADMIN");
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> resourceServer) -> resourceServer
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                // Identifiant de requête et utilisateur dans le MDC, dès que l'authentification est faite : les contrôles
+                // d'accès qui suivent (et leurs refus) portent déjà l'identifiant (conventions/logging.md).
+                .addFilterAfter(new MdcRequestFilter(), BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }

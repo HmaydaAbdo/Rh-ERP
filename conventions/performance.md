@@ -26,6 +26,10 @@
 * Toute liste pouvant contenir un grand volume de données doit être paginée.
 * Ne jamais retourner une liste complète lorsque le volume peut devenir important.
 * Toute pagination doit également supporter le tri (`sorting`) et le filtrage (`filtering`).
+* **Le JSON d'une page est un DTO stable**, jamais la sérialisation brute de `PageImpl` (Spring Data n'en garantit pas la
+  structure et avertit à chaque réponse) : `@EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)` sur la classe
+  d'application. La page est alors `{ "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }` ; le
+  frontend modélise cette forme (`Page<T>`) et ne lit jamais `PageImpl`.
 
 ---
 

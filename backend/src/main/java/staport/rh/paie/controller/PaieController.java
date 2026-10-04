@@ -103,7 +103,7 @@ public class PaieController {
     @Operation(summary = "Supprimer d'un coup un groupe de bulletins (mois, chantier ou équipe d'une carte), après confirmation de leur nombre")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "409", description = "Le groupe ne compte plus le nombre confirmé : rien n'est supprimé")
-    @PreAuthorize("hasAuthority('PAIE_DELETE')")
+    @PreAuthorize("hasAuthority('PAIE_PURGE')")
     public ResponseEntity<PaieSuppressionDto> supprimerGroupe(@Valid @RequestBody PaieSuppressionGroupeRequestDto requete) {
         return ResponseEntity.ok(new PaieSuppressionDto(paieService.deleteGroupe(requete.criteres(), requete.nombreAttendu())));
     }

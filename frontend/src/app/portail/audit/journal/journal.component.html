@@ -1,0 +1,209 @@
+<div class="journal">
+  <div class="journal__header">
+    <h1>Journal d’audit</h1>
+  </div>
+
+  <form [formGroup]="filterForm" class="journal__filters">
+    <label class="journal__date">
+      Du
+      <input pInputText type="date" formControlName="dateDebut" />
+    </label>
+    <label class="journal__date">
+      Au
+      <input pInputText type="date" formControlName="dateFin" />
+    </label>
+    <input pInputText type="text" formControlName="utilisateur" placeholder="Utilisateur" />
+    <p-dropdown formControlName="categorie" [options]="categorieOptions" optionLabel="label" optionValue="value" placeholder="Catégorie" [showClear]="true"></p-dropdown>
+    <p-dropdown formControlName="action" [options]="actionOptions" optionLabel="label" optionValue="value" placeholder="Action" [showClear]="true" [filter]="true"></p-dropdown>
+    <p-dropdown formControlName="resultat" [options]="resultatOptions" optionLabel="label" optionValue="value" placeholder="Résultat" [showClear]="true"></p-dropdown>
+    <p-dropdown formControlName="entiteType" [options]="entiteOptions" optionLabel="label" optionValue="value" placeholder="Entité" [showClear]="true"></p-dropdown>
+    <input pInputText type="text" formControlName="requestId" placeholder="Identifiant de requête" />
+
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+  </form>
+
+  <app-column-chooser [state]="columns"></app-column-chooser>
+
+  <p-table
+    styleClass="app-table p-datatable-gridlines p-datatable-sm"
+    [value]="lignes"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="10"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [rowsPerPageOptions]="rowsPerPage"
+    [showCurrentPageReport]="true"
+    [currentPageReportTemplate]="pageReport"
+    [columns]="columns.visible"
+    [resizableColumns]="true"
+    columnResizeMode="expand"
+    [reorderableColumns]="true"
+    (onColReorder)="columns.onReorder($event.columns)"
+    [sortField]="'horodatage'"
+    [sortOrder]="-1"
+    dataKey="id"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        @for (col of columns.visible; track col.field) {
+          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
+            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
+          </th>
+        }
+        <th></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-ligne>
+      <tr>
+        @for (col of columns.visible; track col.field) {
+          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
+            @switch (col.field) {
+              @case ('horodatage') {
+                {{ formaterHorodatage(ligne.horodatage) }}
+              }
+              @case ('categorie') {
+                {{ libelleCategorie(ligne.categorie) }}
+              }
+              @case ('action') {
+                {{ libelleAction(ligne.action) }}
+              }
+              @case ('resultat') {
+                <span [class]="'journal__resultat journal__resultat--' + ligne.resultat.toLowerCase()">{{ libelleResultat(ligne.resultat) }}</span>
+              }
+              @case ('utilisateurNom') {
+                {{ ligne.utilisateurNom }}
+              }
+              @case ('origine') {
+                {{ libelleOrigine(ligne.origine) }}
+              }
+              @case ('cible') {
+                {{ cible(ligne) }}
+              }
+              @case ('nombreElements') {
+                {{ ligne.nombreElements }}
+              }
+              @case ('motif') {
+                {{ ligne.motif }}
+              }
+            }
+          </td>
+        }
+        <td class="journal__actions">
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" aria-label="Ouvrir l’entrée" (click)="onOuvrir(ligne)"></button>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="columns.visible.length + 1">Aucune entrée ne correspond à ces critères.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-sidebar [(visible)]="panneauOuvert" position="right" [style]="{ width: '46rem' }" [modal]="true">
+  <ng-template pTemplate="header">
+    <h2 class="journal__panneau-titre">{{ entree ? libelleAction(entree.action) : 'Entrée du journal' }}</h2>
+  </ng-template>
+
+  @if (entree; as e) {
+    <dl class="journal__contexte">
+      <div>
+        <dt>Date</dt>
+        <dd>{{ formaterHorodatage(e.horodatage) }}</dd>
+      </div>
+      <div>
+        <dt>Résultat</dt>
+        <dd>
+          <span [class]="'journal__resultat journal__resultat--' + e.resultat.toLowerCase()">{{ libelleResultat(e.resultat) }}</span>
+          @if (e.motif) {
+            — {{ e.motif }}
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Utilisateur</dt>
+        <dd>{{ e.utilisateurNom }}</dd>
+      </div>
+      <div>
+        <dt>Origine</dt>
+        <dd>{{ libelleOrigine(e.origine) }}</dd>
+      </div>
+      @if (e.adresseIp) {
+        <div>
+          <dt>Adresse IP</dt>
+          <dd>{{ e.adresseIp }}</dd>
+        </div>
+      }
+      @if (e.userAgent) {
+        <div>
+          <dt>Navigateur</dt>
+          <dd>{{ e.userAgent }}</dd>
+        </div>
+      }
+      @if (cible(e)) {
+        <div>
+          <dt>Cible</dt>
+          <dd>{{ cible(e) }}</dd>
+        </div>
+      }
+      @if (e.nombreElements != null) {
+        <div>
+          <dt>Éléments concernés</dt>
+          <dd>{{ e.nombreElements }}</dd>
+        </div>
+      }
+      @if (e.requestId) {
+        <div>
+          <dt>Requête</dt>
+          <dd>
+            <code>{{ e.requestId }}</code>
+            <button pButton type="button" class="p-button-text p-button-sm" label="Voir toutes les entrées de cette requête" (click)="onVoirLaRequete(e.requestId)"></button>
+          </dd>
+        </div>
+      }
+    </dl>
+
+    @if (perimetreEntrees().length > 0) {
+      <h3>Périmètre</h3>
+      <dl class="journal__contexte">
+        @for (element of perimetreEntrees(); track element[0]) {
+          <div>
+            <dt>{{ element[0] }}</dt>
+            <dd>{{ element[1] }}</dd>
+          </div>
+        }
+      </dl>
+    }
+
+    @if (e.categorie === 'OPERATION' && e.resultat === 'SUCCES') {
+      <h3>Modifications</h3>
+      @if (!chargementDetail && changements.length === 0) {
+        <p class="journal__vide">Aucun changement enregistré par cette opération.</p>
+      }
+      @for (changement of changements; track changement.entiteType + changement.entiteId + changement.operation) {
+        <section class="journal__changement">
+          <h4>
+            {{ changement.operation === 'AJOUT' ? 'Ajout' : changement.operation === 'SUPPRESSION' ? 'Suppression' : 'Modification' }} —
+            {{ libelleEntite(changement.entiteType) }} n° {{ changement.entiteId }}
+            @if (changement.libelle) {
+              <span class="journal__libelle">({{ changement.libelle }})</span>
+            }
+          </h4>
+          <app-audit-champs [champs]="changement.champs"></app-audit-champs>
+        </section>
+      }
+      @if (totalChangements > 10) {
+        <div class="journal__pagination">
+          <button pButton type="button" class="p-button-outlined p-button-sm" icon="pi pi-chevron-left" aria-label="Page précédente" [disabled]="pageChangements === 0 || chargementDetail" (click)="changementsPrecedents()"></button>
+          <span>Page {{ pageChangements + 1 }} / {{ nombrePagesChangements() }} — {{ totalChangements }} élément(s)</span>
+          <button pButton type="button" class="p-button-outlined p-button-sm" icon="pi pi-chevron-right" aria-label="Page suivante" [disabled]="pageChangements + 1 >= nombrePagesChangements() || chargementDetail" (click)="changementsSuivants()"></button>
+        </div>
+      }
+    }
+  }
+</p-sidebar>

@@ -115,6 +115,23 @@ docker compose pull    # récupère les images publiées par la CI (voir .github
 docker compose up -d
 ```
 
+### Deux comptes PostgreSQL
+
+Le backend se connecte avec un **compte applicatif** (`POSTGRES_APP_USER`) qui n'a que `SELECT` et `INSERT` sur les tables
+d'audit ; le **propriétaire** (`POSTGRES_USER`) ne sert qu'à Flyway. Au démarrage, Flyway crée le compte applicatif s'il
+n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manuelle**.
+
+- **Bascule** : ajouter `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` dans `.env` (voir `.env.example`), puis
+  `docker compose pull && docker compose up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
+  applicatif ne peut pas modifier les tables d'audit ». À essayer d'abord sur une copie de la base.
+- **Retour arrière** : retirer ces deux variables ; le compte propriétaire sert de nouveau à tout (l'application signale
+  alors, au démarrage, que l'intégrité de l'audit n'est pas garantie).
+- **Restauration d'une sauvegarde** : l'audit est dans la même base ; il revient au même instant que les données. À noter
+  dans le registre d'exploitation (voir [audit/README.md](audit/README.md)).
+- **Adresse IP** : l'audit enregistre l'adresse du client réel. Le bloc nginx outer ci-dessus pose `X-Forwarded-For`
+  (`$proxy_add_x_forwarded_for`), nginx inner le relaie, et Tomcat l'honore des seuls proxys internes
+  (`server.forward-headers-strategy: native`) : un client ne peut pas usurper l'adresse enregistrée.
+
 Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub.
 Pour re-déployer une nouvelle version : `docker compose pull && docker compose up -d` (met à jour
 les conteneurs dont l'image a changé, sans toucher au volume `postgres_data`).

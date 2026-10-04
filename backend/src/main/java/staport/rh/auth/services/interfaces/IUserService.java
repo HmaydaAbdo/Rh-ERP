@@ -22,6 +22,9 @@ public interface IUserService {
 
     void adminResetPassword(Long id, AdminResetPasswordRequestDto dto);
 
-    /** Crée le compte SYSTEM_ADMIN de bootstrap si aucun n'existe encore — voir AdminBootstrapRunner. */
-    void bootstrapAdminIfMissing(String username, String email, String motDePasse);
+    /** Vrai si au moins un compte porte déjà le rôle SYSTEM_ADMIN — voir AdminBootstrapRunner. */
+    boolean adminExiste();
+
+    /** Crée le compte SYSTEM_ADMIN de bootstrap et retourne son identifiant — voir AdminBootstrapRunner. */
+    Long creerAdminInitial(String username, String email, String motDePasse);
 }

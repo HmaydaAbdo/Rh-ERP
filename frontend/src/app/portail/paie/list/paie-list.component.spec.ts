@@ -18,7 +18,7 @@ describe('PaieListComponent — filtres de la barre commune', () => {
 
   beforeEach(async () => {
     service = jasmine.createSpyObj<PaieService>('PaieService', ['search']);
-    service.search.and.returnValue(of({ content: [], totalElements: 0 } as unknown as Page<Paie>));
+    service.search.and.returnValue(of({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } } as Page<Paie>));
 
     TestBed.configureTestingModule({
       imports: [NoopAnimationsModule],

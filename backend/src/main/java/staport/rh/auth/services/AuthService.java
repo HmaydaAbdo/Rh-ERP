@@ -2,9 +2,12 @@ package staport.rh.auth.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.events.ActionSecurite;
+import staport.rh.audit.events.EvenementSecurite;
 import staport.rh.auth.dtos.response.LoginResponseDto;
 import staport.rh.auth.entities.RefreshToken;
 import staport.rh.auth.entities.ResetPasswordToken;
@@ -19,12 +22,15 @@ import staport.rh.auth.repositories.ResetPasswordTokenRepository;
 import staport.rh.auth.repositories.UtilisateurRepository;
 import staport.rh.auth.security.EffectivePermissionResolver;
 import staport.rh.auth.security.JwtService;
+import staport.rh.auth.security.PolitiqueMotDePasse;
 import staport.rh.auth.security.TokenHasher;
 import staport.rh.auth.services.interfaces.IAuthService;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,11 +51,13 @@ public class AuthService implements IAuthService {
     private final EffectivePermissionResolver permissionResolver;
     private final UserMapper userMapper;
     private final EmailService emailService;
+    private final ApplicationEventPublisher evenements;
 
     public AuthService(UtilisateurRepository utilisateurRepository, RefreshTokenRepository refreshTokenRepository,
                         ResetPasswordTokenRepository resetPasswordTokenRepository, PasswordEncoder passwordEncoder,
                         JwtService jwtService, TokenHasher tokenHasher, EffectivePermissionResolver permissionResolver,
-                        UserMapper userMapper, EmailService emailService) {
+                        UserMapper userMapper, EmailService emailService,
+                        ApplicationEventPublisher evenements) {
         this.utilisateurRepository = utilisateurRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.resetPasswordTokenRepository = resetPasswordTokenRepository;
@@ -59,20 +67,31 @@ public class AuthService implements IAuthService {
         this.permissionResolver = permissionResolver;
         this.userMapper = userMapper;
         this.emailService = emailService;
+        this.evenements = evenements;
     }
 
     @Override
     @Transactional
     public Connexion login(String username, String motDePasse) {
-        Utilisateur utilisateur = utilisateurRepository.findByUsername(username)
-                .orElseThrow(InvalidCredentialsException::new);
-
-        if (!utilisateur.isActif() || !passwordEncoder.matches(motDePasse, utilisateur.getMotDePasseHash())) {
+        Optional<Utilisateur> trouve = utilisateurRepository.findByUsername(username);
+        if (trouve.isEmpty()) {
+            // L'identifiant saisi n'est pas conservé : il peut être un mot de passe tapé au mauvais endroit.
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, null, null, "COMPTE_INCONNU"));
             throw new InvalidCredentialsException();
         }
+        Utilisateur utilisateur = trouve.get();
 
-        log.info("Connexion réussie : username={}", username);
-        return emettreConnexion(utilisateur, UUID.randomUUID().toString());
+        if (!utilisateur.isActif()) {
+            refuserConnexion(utilisateur, "COMPTE_INACTIF");
+        }
+        if (!passwordEncoder.matches(motDePasse, utilisateur.getMotDePasseHash())) {
+            refuserConnexion(utilisateur, "IDENTIFIANTS_INVALIDES");
+        }
+
+        log.info("Connexion réussie : utilisateurId={}", utilisateur.getId());
+        Connexion connexion = emettreConnexion(utilisateur, UUID.randomUUID().toString());
+        evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.CONNEXION_REUSSIE, utilisateur.getId(), utilisateur.getUsername()));
+        return connexion;
     }
 
     /**
@@ -93,6 +112,8 @@ public class AuthService implements IAuthService {
             refreshTokenRepository.saveAll(famille);
             log.warn("Refresh token déjà consommé réutilisé : famille révoquée ({} token(s) actif(s)), utilisateurId={}",
                     famille.size(), existant.getUtilisateur().getId());
+            evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.JETON_REUTILISE, existant.getUtilisateur().getId(),
+                    existant.getUtilisateur().getUsername(), Map.of("sessionsRevoquees", famille.size())));
             throw new InvalidRefreshTokenException();
         }
         if (existant.getExpireLe().isBefore(Instant.now())) {
@@ -102,7 +123,15 @@ public class AuthService implements IAuthService {
         existant.setRevoque(true);
         refreshTokenRepository.save(existant);
 
-        return emettreConnexion(existant.getUtilisateur(), existant.getFamille());
+        // Une session ne survit pas à la désactivation du compte, quelle que soit la façon dont il a été désactivé.
+        Utilisateur proprietaire = existant.getUtilisateur();
+        if (!proprietaire.isActif()) {
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, proprietaire.getId(),
+                    proprietaire.getUsername(), "COMPTE_INACTIF"));
+            throw new InvalidRefreshTokenException();
+        }
+
+        return emettreConnexion(proprietaire, existant.getFamille());
     }
 
     @Override
@@ -112,13 +141,20 @@ public class AuthService implements IAuthService {
                 .ifPresent(token -> {
                     token.setRevoque(true);
                     refreshTokenRepository.save(token);
+                    evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.DECONNEXION, token.getUtilisateur().getId(),
+                            token.getUtilisateur().getUsername()));
                 });
     }
 
     @Override
     @Transactional
     public void demanderReinitialisationMotDePasse(String email) {
-        utilisateurRepository.findByEmail(email).ifPresent(utilisateur -> {
+        Optional<Utilisateur> compte = utilisateurRepository.findByEmail(email);
+        // Un événement à chaque demande (repère les demandes en rafale) : le compte seulement s'il existe, jamais l'adresse saisie.
+        evenements.publishEvent(compte
+                .map(u -> EvenementSecurite.pour(ActionSecurite.MOT_DE_PASSE_OUBLIE, u.getId(), u.getUsername()))
+                .orElseGet(() -> EvenementSecurite.de(ActionSecurite.MOT_DE_PASSE_OUBLIE)));
+        compte.ifPresent(utilisateur -> {
             String tokenBrut = tokenHasher.genererTokenBrut();
 
             ResetPasswordToken token = new ResetPasswordToken();
@@ -143,17 +179,33 @@ public class AuthService implements IAuthService {
         }
 
         Utilisateur utilisateur = token.getUtilisateur();
+        // Avant de consommer le lien : un mot de passe refusé ne brûle pas le lien, l'utilisateur peut resaisir.
+        PolitiqueMotDePasse.exiger(nouveauMotDePasse, utilisateur.getUsername());
         utilisateur.setMotDePasseHash(passwordEncoder.encode(nouveauMotDePasse));
         utilisateurRepository.save(utilisateur);
 
         token.setUtilise(true);
         resetPasswordTokenRepository.save(token);
 
-        List<RefreshToken> actifs = refreshTokenRepository.findAllByUtilisateur_IdAndRevoqueFalse(utilisateur.getId());
-        actifs.forEach(rt -> rt.setRevoque(true));
-        refreshTokenRepository.saveAll(actifs);
+        revoquerSessions(utilisateur.getId());
 
         log.info("Mot de passe réinitialisé via lien email : utilisateurId={}", utilisateur.getId());
+        evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.MOT_DE_PASSE_REINITIALISE, utilisateur.getId(), utilisateur.getUsername()));
+    }
+
+    @Override
+    @Transactional
+    public int revoquerSessions(Long utilisateurId) {
+        List<RefreshToken> actifs = refreshTokenRepository.findAllByUtilisateur_IdAndRevoqueFalse(utilisateurId);
+        actifs.forEach(token -> token.setRevoque(true));
+        refreshTokenRepository.saveAll(actifs);
+        return actifs.size();
+    }
+
+    /** La réponse reste identique quel que soit le motif (conventions/security.md) : seul le journal le connaît. */
+    private void refuserConnexion(Utilisateur utilisateur, String motif) {
+        evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, utilisateur.getId(), utilisateur.getUsername(), motif));
+        throw new InvalidCredentialsException();
     }
 
     private Connexion emettreConnexion(Utilisateur utilisateur, String famille) {

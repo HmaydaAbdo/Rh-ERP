@@ -67,6 +67,8 @@
             icon="pi pi-trash"
             class="p-button-text p-button-danger"
             [loading]="deletingId === role.id"
+            [disabled]="role.protege"
+            [title]="role.protege ? 'Rôle d’administration : non supprimable' : ''"
             (click)="onDelete(role)"
           ></button>
         </td>

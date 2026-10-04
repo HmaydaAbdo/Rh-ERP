@@ -90,7 +90,8 @@ Exemples :
 * expressions régulières ;
 * routes REST ;
 * noms de tables ;
-* noms de colonnes.
+* noms de colonnes ;
+* codes d'action d'audit (`conventions/audit.md`).
 
 ---
 

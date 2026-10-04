@@ -49,6 +49,18 @@ XSpecification.searchByCriteria(XSearchCriteria)
 
 ---
 
+# Écritures en masse
+
+* **Aucune écriture en masse sur une entité auditée** (`conventions/audit.md`) : ni `deleteAllInBatch`,
+  `deleteInBatch`, `deleteAll()` sans argument, ni requête `@Modifying` (`UPDATE` / `DELETE` JPQL), ni SQL natif
+  d'écriture. Ces écritures partent directement en base : Hibernate n'émet aucun événement, donc Envers ne voit rien.
+* Supprimer ou modifier un groupe se fait **entité par entité** (`repository.deleteAll(entites)` avec les entités
+  chargées) ; le regroupement JDBC (`hibernate.jdbc.batch_size`) garde un coût raisonnable.
+* Aucune cascade SQL (`ON DELETE CASCADE`) sur une table auditée (`conventions/database.md`) ; `CascadeType` JPA
+  seulement pour une vraie composition (voir « Relations »).
+
+---
+
 # Transactions
 
 * `@Transactional` sur les opérations d'écriture.

@@ -20,6 +20,7 @@
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
 | Lancer ou écrire des tests | [testing.md](testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
+| Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 
 ---
 
@@ -37,6 +38,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 | **Paie** | Bulletins mensuels (saisie, import, export) | [paie/README.md](paie/README.md) | [rbac/paie.md](rbac/paie.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [report/README.md](report/README.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
 | **Auth** | Comptes, rôles, permissions, sessions | [auth/README.md](auth/README.md) | [rbac/auth.md](rbac/auth.md) |
+| **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [audit/README.md](audit/README.md) | [rbac/audit.md](rbac/audit.md) |
 
 Journal des décisions du rapport PDF (ce qui a été retiré et pourquoi) :
 [report/rapport-v2.md](report/rapport-v2.md).
@@ -58,14 +60,15 @@ dans le document indiqué.
 | Une permission par action ; jamais un rôle codé en dur | [rbac/README.md](rbac/README.md) |
 | Chaque écran et chaque bouton d'action est conditionné par une permission | [frontend/README.md](frontend/README.md) |
 | Les tableaux sont triables, redimensionnables, réordonnables, configurables, avec filtres en temps réel | [frontend/README.md](frontend/README.md) |
+| Toute écriture et tout export laissent une trace (qui, quoi, quand, d'où, avant / après) ; l'application ne peut pas réécrire l'audit | [audit/README.md](audit/README.md) |
 
 ---
 
 ## Ce qui reste à faire
 
 Le suivi des sujets ouverts est dans [../TODO.md](../TODO.md) : la tâche « Qualité des données » (tous
-champs obligatoires, aucun doublon, nettoyage des données existantes), puis, à part, l'audit
-(Hibernate Envers), le domaine Pointage, et le déploiement (backup, CD).
+champs obligatoires, aucun doublon, nettoyage des données existantes), l'audit de sécurité (points à traiter), puis, à part,
+le domaine Pointage et le déploiement (backup, CD).
 
 ---
 

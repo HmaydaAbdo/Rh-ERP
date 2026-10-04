@@ -6,7 +6,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import staport.rh.audit.events.ActionSecurite;
+import staport.rh.audit.events.EvenementSecurite;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.entities.RefreshToken;
 import staport.rh.auth.entities.ResetPasswordToken;
@@ -58,6 +61,8 @@ class AuthServiceTest {
     private UserMapper userMapper;
     @Mock
     private EmailService emailService;
+    @Mock
+    private ApplicationEventPublisher evenements;
 
     private AuthService authService;
     private Utilisateur utilisateur;
@@ -65,7 +70,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         authService = new AuthService(utilisateurRepository, refreshTokenRepository, resetPasswordTokenRepository,
-                passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService);
+                passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService, evenements);
 
         utilisateur = new Utilisateur();
         utilisateur.setId(1L);
@@ -219,6 +224,38 @@ class AuthServiceTest {
     }
 
     @Test
+    void refresh_devraitRefuserUnCompteDesactiveEtJournaliserLeRefus() {
+        utilisateur.setActif(false);
+        RefreshToken existant = new RefreshToken();
+        existant.setUtilisateur(utilisateur);
+        existant.setFamille("famille-1");
+        existant.setExpireLe(Instant.now().plusSeconds(3600));
+
+        when(tokenHasher.hasher("brut")).thenReturn("hash");
+        when(refreshTokenRepository.findByTokenHash("hash")).thenReturn(Optional.of(existant));
+
+        assertThatThrownBy(() -> authService.refresh("brut")).isInstanceOf(InvalidRefreshTokenException.class);
+
+        assertThat(existant.isRevoque()).as("le jeton présenté est consommé").isTrue();
+        verify(jwtService, never()).genererAccessToken(any(), any(), any());
+        verify(evenements).publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, 1L, "hmayda", "COMPTE_INACTIF"));
+    }
+
+    @Test
+    void revoquerSessions_devraitRevoquerTousLesJetonsActifsEtRendreLeurNombre() {
+        RefreshToken un = new RefreshToken();
+        RefreshToken deux = new RefreshToken();
+        when(refreshTokenRepository.findAllByUtilisateur_IdAndRevoqueFalse(1L)).thenReturn(List.of(un, deux));
+
+        int coupees = authService.revoquerSessions(1L);
+
+        assertThat(coupees).isEqualTo(2);
+        assertThat(un.isRevoque()).isTrue();
+        assertThat(deux.isRevoque()).isTrue();
+        verify(refreshTokenRepository).saveAll(List.of(un, deux));
+    }
+
+    @Test
     void refresh_devraitEchouerSiTokenInconnu() {
         when(tokenHasher.hasher("inconnu")).thenReturn("hash-inconnu");
         when(refreshTokenRepository.findByTokenHash("hash-inconnu")).thenReturn(Optional.empty());
@@ -231,6 +268,7 @@ class AuthServiceTest {
     void logout_devraitRevoquerLeTokenSiTrouve() {
         RefreshToken existant = new RefreshToken();
         existant.setRevoque(false);
+        existant.setUtilisateur(utilisateur);
         when(tokenHasher.hasher("brut")).thenReturn("hash");
         when(refreshTokenRepository.findByTokenHash("hash")).thenReturn(Optional.of(existant));
 
@@ -238,6 +276,7 @@ class AuthServiceTest {
 
         assertThat(existant.isRevoque()).isTrue();
         verify(refreshTokenRepository).save(existant);
+        verify(evenements).publishEvent(EvenementSecurite.pour(ActionSecurite.DECONNEXION, 1L, "hmayda"));
     }
 
     @Test
@@ -293,6 +332,23 @@ class AuthServiceTest {
         assertThat(token.isUtilise()).isTrue();
         assertThat(actif.isRevoque()).isTrue();
         verify(refreshTokenRepository).saveAll(List.of(actif));
+    }
+
+    @Test
+    void reinitialiserMotDePasse_devraitRefuserUnMotDePasseNonConformeSansConsommerLeLien() {
+        ResetPasswordToken token = new ResetPasswordToken();
+        token.setUtilisateur(utilisateur);
+        token.setExpireLe(Instant.now().plusSeconds(3600));
+        token.setUtilise(false);
+        when(tokenHasher.hasher("reset-brut")).thenReturn("reset-hash");
+        when(resetPasswordTokenRepository.findByTokenHash("reset-hash")).thenReturn(Optional.of(token));
+
+        assertThatThrownBy(() -> authService.reinitialiserMotDePasse("reset-brut", "court1"))
+                .isInstanceOf(staport.rh.auth.exceptions.MotDePasseNonConformeException.class);
+
+        assertThat(token.isUtilise()).as("le lien reste utilisable").isFalse();
+        assertThat(utilisateur.getMotDePasseHash()).isEqualTo("hash");
+        verify(refreshTokenRepository, never()).findAllByUtilisateur_IdAndRevoqueFalse(any());
     }
 
     @Test

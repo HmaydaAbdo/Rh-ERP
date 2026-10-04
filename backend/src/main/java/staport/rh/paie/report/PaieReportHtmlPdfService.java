@@ -14,6 +14,9 @@ import java.io.InputStream;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import staport.rh.paie.audit.PerimetreRapportPdfPaie;
+import staport.rh.audit.entities.CategorieAudit;
+import staport.rh.audit.annotations.AuditableAction;
 
 /**
  * Génère le rapport PDF de paie — remplace {@code PaieReportPdfService} (JasperReports/JRXML),
@@ -53,6 +56,7 @@ public class PaieReportHtmlPdfService {
 
     /** @throws staport.rh.paie.exceptions.AucunePaiePeriodeException si aucun bulletin n'existe pour
      *          la période et les filtres donnés */
+    @AuditableAction(action = "PAIE_RAPPORT_PDF", categorie = CategorieAudit.ACCES, perimetre = PerimetreRapportPdfPaie.class)
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         RapportBiVue vue = biReportBuilder.construire(periode, requete);
         java.util.List<PageModel> pages = pageModelBuilder.construire(vue);

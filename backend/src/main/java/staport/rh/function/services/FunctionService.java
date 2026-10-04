@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
 import staport.rh.function.dtos.request.FunctionSearchCriteria;
 import staport.rh.function.dtos.request.FunctionUpdateRequestDto;
@@ -34,6 +36,7 @@ public class FunctionService implements IFunctionService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "FONCTION_CREATION", type = TypeOperation.CREATE, entite = Function.class)
     public FunctionResponseDto create(FunctionCreateRequestDto dto) {
         if (repository.existsByLibelleIgnoreCase(dto.libelle())) {
             throw new FunctionAlreadyExistsException(dto.libelle());
@@ -47,6 +50,7 @@ public class FunctionService implements IFunctionService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "FONCTION_MODIFICATION", type = TypeOperation.UPDATE, entite = Function.class)
     public FunctionResponseDto update(Long id, FunctionUpdateRequestDto dto) {
         Function entity = getEntityById(id);
 
@@ -77,6 +81,7 @@ public class FunctionService implements IFunctionService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "FONCTION_SUPPRESSION", type = TypeOperation.DELETE, entite = Function.class)
     public void delete(Long id) {
         Function entity = getEntityById(id);
         repository.delete(entity);

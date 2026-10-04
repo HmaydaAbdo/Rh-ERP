@@ -3,11 +3,15 @@ package staport.rh.auth.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import staport.rh.audit.context.BatchAuditContext;
+import staport.rh.audit.context.Origine;
+import staport.rh.audit.context.ResolveurContexteAudit;
 import staport.rh.auth.services.interfaces.IUserService;
 
 /**
  * Crée le compte SYSTEM_ADMIN de bootstrap au démarrage si aucun n'existe encore en base (voir
- * conventions/security.md, "Bootstrap admin") — ne fait rien si un SYSTEM_ADMIN existe déjà.
+ * conventions/security.md, "Bootstrap admin") — ne fait rien si un SYSTEM_ADMIN existe déjà. Hors de toute requête :
+ * la création est attribuée à « Système », d'origine DEMARRAGE (conventions/audit.md).
  */
 @Component
 public class AdminBootstrapRunner implements CommandLineRunner {
@@ -29,6 +33,11 @@ public class AdminBootstrapRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        userService.bootstrapAdminIfMissing(adminUsername, adminEmail, adminPassword);
+        if (userService.adminExiste()) {
+            return;
+        }
+        try (BatchAuditContext.Scope ignore = BatchAuditContext.ouvrir(ResolveurContexteAudit.SYSTEME, Origine.DEMARRAGE)) {
+            userService.creerAdminInitial(adminUsername, adminEmail, adminPassword);
+        }
     }
 }

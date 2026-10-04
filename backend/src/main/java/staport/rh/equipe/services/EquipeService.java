@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import staport.rh.audit.entities.TypeOperation;
+import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.equipe.dtos.request.EquipeCreateRequestDto;
 import staport.rh.equipe.dtos.request.EquipeSearchCriteria;
 import staport.rh.equipe.dtos.request.EquipeUpdateRequestDto;
@@ -36,6 +38,7 @@ public class EquipeService implements IEquipeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EQUIPE_CREATION", type = TypeOperation.CREATE, entite = Equipe.class)
     public EquipeResponseDto create(EquipeCreateRequestDto dto) {
         String code = normaliserCode(dto.code());
         String libelle = dto.libelle().trim();
@@ -51,6 +54,7 @@ public class EquipeService implements IEquipeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EQUIPE_MODIFICATION", type = TypeOperation.UPDATE, entite = Equipe.class)
     public EquipeResponseDto update(Long id, EquipeUpdateRequestDto dto) {
         Equipe entity = getEntityById(id);
         String code = normaliserCode(dto.code());
@@ -80,6 +84,7 @@ public class EquipeService implements IEquipeService {
 
     @Override
     @Transactional
+    @AuditableAction(action = "EQUIPE_SUPPRESSION", type = TypeOperation.DELETE, entite = Equipe.class)
     public void delete(Long id) {
         Equipe entity = getEntityById(id);
         repository.delete(entity);
