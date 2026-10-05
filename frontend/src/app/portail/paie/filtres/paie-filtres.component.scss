@@ -135,7 +135,8 @@
     }
 
     &__champ {
-      flex: 1 1 8rem;
+      flex: 1 1 6rem;
+      min-width: 0;
       max-width: none;
     }
 
