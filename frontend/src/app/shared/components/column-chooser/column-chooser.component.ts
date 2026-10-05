@@ -34,6 +34,23 @@ import { ColumnState } from '../../table/table-columns';
         justify-content: flex-end;
         margin-bottom: var(--space-sm);
       }
+
+      /* Posé dans une barre d'outils (classe \`en-ligne\`) : à la hauteur des autres contrôles, sans marge propre. */
+      :host(.en-ligne) {
+        display: inline-flex;
+        margin-bottom: 0;
+      }
+
+      :host(.en-ligne) ::ng-deep .p-multiselect {
+        height: var(--control-height);
+        font-size: var(--text-sm);
+      }
+
+      :host(.en-ligne) ::ng-deep .p-multiselect-label {
+        display: flex;
+        align-items: center;
+        padding-block: 0;
+      }
     `
   ]
 })

@@ -1,21 +1,33 @@
 .paie-list {
   /* ==========================================================================
-     Header
+     Barre du tableau : le total à gauche, les outils à droite — les actions de la page, du moins au plus important
      ========================================================================== */
-  &__header {
+  &__barre {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+  }
+
+  &__total {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  &__outils {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    margin-bottom: var(--space-md);
+    gap: var(--space-sm);
 
-    &-actions {
-      display: flex;
-      gap: var(--space-xs);
-
-      .p-button {
-        font-size: 0.8125rem;
-        padding: 0.4rem 0.75rem;
-      }
+    .p-button,
+    ::ng-deep .p-splitbutton .p-button {
+      height: var(--control-height);
+      font-size: var(--text-sm);
     }
   }
 

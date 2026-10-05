@@ -45,6 +45,7 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 11. conventions/metrics.md
 12. conventions/performance.md
 13. conventions/frontend.md
+14. conventions/design-system.md
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,

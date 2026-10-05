@@ -1,43 +1,22 @@
 .paie-vues {
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  padding: var(--space-md);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
   box-shadow: var(--shadow-sm);
 
+  // Titre et onglets de vue sur une seule ligne, posés sur un filet qui sépare l'en-tête du travail
   &__header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--space-xl);
     margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
 
     h1 {
       margin: 0;
-      font-size: 1.125rem;
+      padding-bottom: var(--space-sm);
+      font-size: var(--text-lg);
+      font-weight: 600;
     }
-  }
-
-  &__annonce {
-    margin: calc(-1 * var(--space-xs)) 0 var(--space-md);
-    font-size: 0.8125rem;
-    color: var(--color-primary);
-    animation: annonce-entree 0.3s ease-out;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__annonce {
-      animation: none;
-    }
-  }
-}
-
-@keyframes annonce-entree {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
   }
 }

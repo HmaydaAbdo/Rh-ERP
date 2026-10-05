@@ -25,6 +25,7 @@ npm install
 npm start                                   # http://localhost:4200, proxy API vers http://localhost:8080
 npm run build                               # build de production dans dist/
 npx ng test --watch=false --browsers=ChromeHeadless
+npm run theme:generate                      # régénère src/styles/primeng-theme.css (après une mise à jour de PrimeNG)
 ```
 
 Le proxy de développement (`frontend/proxy.conf.js`) relaie `/employees`, `/functions`, `/chantiers`,
@@ -45,7 +46,8 @@ src/app/
 │   ├── auth/                Connexion, mot de passe oublié/réinitialisé, accès refusé, AuthService,
 │   │                        guards (authGuard, permissionGuard, homeGuard), intercepteur d'authentification
 │   ├── interceptors/        Intercepteur d'erreurs (notification du message de l'API)
-│   └── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil
+│   ├── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil
+│   └── theme/               ThemeService : thème clair / sombre (attribut data-theme sur <html>)
 ├── portail/                 Un dossier par domaine, comme côté backend
 │   ├── chantier/ employee/ equipe/ function/ paie/
 │   │       ├── <domaine>.routes.ts   Routes du domaine, protégées par permission
@@ -64,9 +66,21 @@ src/app/
     └── table/table-columns.ts  TableColumn, ColumnState, constantes de pagination
 ```
 
-Les styles globaux et les **tokens de design** (couleurs, espacements, rayons, ombres, largeur des panneaux de
-sélection) sont dans `src/styles/_tokens.scss`, exposés en variables CSS (`--color-primary`, `--space-md`, …).
-Aucune valeur de design n'est écrite en dur dans un composant.
+Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_tokens.scss` (jetons exposés en variables CSS —
+`--color-primary`, `--space-md`, `--font-sans`, … — pour les deux thèmes), `_tables.scss` (style unique des tableaux) et
+`primeng-theme.css` (thème PrimeNG **généré** par `npm run theme:generate`, lisant les jetons). Aucune valeur de design n'est
+écrite en dur dans un composant. Règles : `conventions/design-system.md`.
+
+### Identité visuelle et thèmes
+
+| | |
+|---|---|
+| Couleur de marque | Le bleu marine du logo, `#084478` (`--brand-700`, `--color-primary` en thème clair), décliné en échelle `--brand-50` … `--brand-950` ; en thème sombre le bleu d'action s'éclaircit (`#5b9be0`) |
+| Logo | `src/assets/brand/logo-staport.png` (logo existant de Staport, repris du rapport PDF) sur les écrans de connexion ; en thème sombre, il passe en blanc par un filtre CSS. Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon et menu latéral) — dessin provisoire, à remplacer par une version vectorielle du logo |
+| Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne |
+| Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage |
+| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère bleu clair sur l'écran actif |
+| Connexion | Fond bleu profond à courbes de niveau en filigrane (SVG intégré à la feuille de style), sans photo |
 
 ---
 
@@ -80,7 +94,7 @@ de rôle).
 | `/` | Accueil : redirige vers le premier écran du menu autorisé | connecté (`homeGuard`) |
 | `/login`, `/forgot-password`, `/reset-password` | Authentification | publique |
 | `/acces-refuse` | Permission manquante | connecté |
-| `/paie`, `/paie/cartes`, `/paie/analytique`, `/paie/:id` | Les trois vues (tabulaire, cartes, analytique) sous une coque commune avec une barre de contexte partagée dans l'URL, adaptée à la vue, et le détail d'un bulletin | `PAIE_READ` |
+| `/paie`, `/paie/cartes`, `/paie/analytique`, `/paie/:id` | Les trois vues (tabulaire, cartes, analytique) sous une coque commune avec une même barre de filtres pour les trois (dans l'URL, réinitialisée quand on change de vue), et le détail d'un bulletin | `PAIE_READ` |
 | `/paie/new`, `/paie/:id/edit` | Création, modification | `PAIE_WRITE` |
 | `/employees`, `/employees/:id` | Employés | `EMPLOYEE_READ` |
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
@@ -154,6 +168,8 @@ formulaire est un **identifiant** (ou un tableau d'identifiants), jamais l'objet
 | `pageSize` | Taille d'une page (défaut 30) |
 | `appendTo` | `"body"` obligatoire dans un conteneur à débordement contraint (ex. un dialogue) |
 | `placeholder`, `filterPlaceholder`, `showClear` | Textes et bouton d'effacement |
+| `summaryLabel` | Mode compact d'un filtre multiple, sur une ligne : la valeur choisie seule, puis ce texte à partir de deux (`{0} chantiers`) au lieu de pastilles |
+| `ariaLabel` | Nom accessible du champ quand son placeholder disparaît (barre d'outils sans libellé visible) |
 
 Comportement : recherche **côté serveur** à la frappe (délai de saisie), options chargées **page par page**,
 et `fetchById` pour afficher la valeur déjà choisie en modification avant même que sa page soit chargée. Le
@@ -189,7 +205,7 @@ Tous les tableaux de données — **sans exception** — offrent :
 | Tri | Sur chaque colonne de données (pas sur la colonne d'actions) ; `sortField` donne le chemin transmis au backend (ex. `chantier.code`) |
 | Redimensionnement | Glisser le bord d'un en-tête |
 | Réordonnancement | Glisser-déposer un en-tête ; l'ordre est reporté sur le corps du tableau |
-| Colonnes visibles | `app-column-chooser` ; au moins une colonne reste affichée |
+| Colonnes visibles | `app-column-chooser` ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
 | Pagination | 10 / 20 / 50 / 100 lignes, avec « 1 - 20 sur 134 — page 1/7 » |
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
@@ -204,7 +220,7 @@ entre deux visites.
 
 | Écran | Colonnes | Filtres | Pagination |
 |---|---|---|---|
-| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre de contexte commune (mois, nom, CIN, et panneau chantiers, fonctions, équipes ; dans l'URL) | Serveur |
+| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre de filtres commune aux trois vues, toute visible (mois, nom, CIN, chantiers, équipes, fonctions ; dans l'URL) | Serveur |
 | Employés | Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut | Nom, CIN, fonctions, chantiers, statut | Serveur |
 | Chantiers | Code, Nom, Désignation, Source, Statut | Code, désignation, statut | Serveur |
 | Fonctions | Libellé | Libellé | Serveur |

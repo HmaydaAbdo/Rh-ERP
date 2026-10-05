@@ -1,50 +1,230 @@
-:root {
-  // Couleurs
-  --color-primary: #2563eb;
-  --color-primary-contrast: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-danger: #dc2626;
+// Design tokens de Staport RH — source unique de toute valeur de design (voir conventions/design-system.md).
+//
+// Trois couches :
+//   1. primitives   — l'échelle de bleus de la marque (le bleu du logo est --brand-700) ; ne changent jamais de thème ;
+//   2. sémantiques  — ce que les composants utilisent (--color-*, --table-*, --chart-*, …) ; redéfinies pour le thème sombre ;
+//   3. pont PrimeNG — --pn-surface-* et --pn-primary-* : le thème PrimeNG (primeng-theme.css, généré par
+//                     `npm run theme:generate`) ne contient plus aucune couleur écrite en dur, il lit ces variables.
+//
+// Le thème est porté par `data-theme="light|dark"` sur <html> (voir core/theme/theme.service.ts, et le script d'index.html qui
+// le pose avant le premier affichage). Sans attribut, le thème clair s'applique.
 
-  // Espacements
+// ---- Valeurs propres au thème sombre, partagées par l'attribut et (hors JS) la préférence système ----
+@mixin theme-dark {
+  color-scheme: dark;
+
+  // Neutres : bleu-gris très sombre, de la même teinte que la marque
+  --neutral-0: #101f33;
+  --neutral-50: #0a1523;
+  --neutral-100: #17283f;
+  --neutral-200: #24384f;
+  --neutral-300: #34495f;
+  --neutral-400: #6f86a0;
+  --neutral-500: #93a7be;
+  --neutral-600: #b4c4d6;
+  --neutral-700: #e6eef8;
+  --neutral-800: #f1f6fb;
+  --neutral-900: #f7fafd;
+  --neutral-950: #ffffff;
+
+  // Le bleu d'action s'éclaircit pour rester lisible sur fond sombre
+  --primary-50: #17314f;
+  --primary-100: #1c3a5c;
+  --primary-200: #254a73;
+  --primary-300: #3f6a9e;
+  --primary-400: #4f8dcb;
+  --primary-500: #5b9be0;
+  --primary-600: #82b2e0;
+  --primary-700: #9cc4f0;
+  --primary-800: #b3d1ef;
+  --primary-900: #d9e8f7;
+  --primary-950: #eef5fc;
+  --color-primary-contrast: #06203a;
+
+  --color-canvas: var(--neutral-50);
+  --color-sidebar-bg: #07101c;
+  --color-sidebar-text: #8fa6c2;
+  --color-sidebar-active-bg: rgba(130, 178, 224, 0.14);
+  --color-success: #3fb873;
+  --color-warning: #f0a53a;
+  --color-danger: #f2706b;
+  --color-overlay: rgba(2, 8, 16, 0.6);
+
+  --chart-1: #5b9be0;
+  --chart-2: #f0a53a;
+  --chart-3: #3cc2b0;
+  --chart-4: #a78bfa;
+  --chart-5: #f2706b;
+  --chart-6: #82b2e0;
+  --chart-7: #d46aa8;
+  --chart-8: #8fa6c2;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+:root {
+  color-scheme: light;
+
+  // ---- 1. Primitives : l'échelle de bleus (700 = bleu du logo Staport ; nommées « brand » car le thème PrimeNG définit déjà --blue-*) ----
+  --brand-50: #eef5fc;
+  --brand-100: #d9e8f7;
+  --brand-200: #b3d1ef;
+  --brand-300: #82b2e0;
+  --brand-400: #4f8dcb;
+  --brand-500: #2a6db0;
+  --brand-600: #0c5190;
+  --brand-700: #084478;
+  --brand-800: #06365f;
+  --brand-900: #052a49;
+  --brand-950: #031a2e;
+
+  // ---- 2. Sémantiques (thème clair) ----
+  // Neutres : gris-bleu de la teinte de la marque, jamais de gris pur
+  --neutral-0: #ffffff;
+  --neutral-50: #f4f7fb;
+  --neutral-100: #eaf0f7;
+  --neutral-200: #dce4ee;
+  --neutral-300: #c3d0df;
+  --neutral-400: #8499b0;
+  --neutral-500: #5b6e85;
+  --neutral-600: #3f5167;
+  --neutral-700: #1c3148;
+  --neutral-800: #0f2236;
+  --neutral-900: #0a1a2b;
+  --neutral-950: #031a2e;
+
+  // Le bleu d'action (boutons, liens, ligne active, focus)
+  --primary-50: #e4eef9;
+  --primary-100: var(--brand-100);
+  --primary-200: var(--brand-200);
+  --primary-300: var(--brand-300);
+  --primary-400: var(--brand-400);
+  --primary-500: var(--brand-700);
+  --primary-600: var(--brand-800);
+  --primary-700: var(--brand-900);
+  --primary-800: var(--brand-950);
+  --primary-900: var(--brand-950);
+  --primary-950: var(--brand-950);
+
+  --color-primary: var(--primary-500);
+  --color-primary-hover: var(--primary-600);
+  --color-primary-soft: var(--primary-50);
+  --color-primary-contrast: #ffffff;
+  --color-focus: color-mix(in srgb, var(--primary-500) 35%, transparent);
+
+  --color-canvas: var(--neutral-50);
+  --color-surface: var(--neutral-0);
+  --color-surface-alt: var(--neutral-50);
+  --color-border: var(--neutral-200);
+  --color-border-strong: var(--neutral-300);
+  --color-text: var(--neutral-800);
+  --color-text-muted: var(--neutral-500);
+  --color-overlay: rgba(3, 26, 46, 0.5);
+
+  // Menu latéral : bleu très foncé dans les deux thèmes
+  --color-sidebar-bg: var(--brand-900);
+  --color-sidebar-text: #b7cbe3;
+  --color-sidebar-active-bg: rgba(255, 255, 255, 0.12);
+  --color-sidebar-active-text: #ffffff;
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-accent: var(--brand-300);
+
+  // Le statut ne se confond jamais avec la marque
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+
+  // ---- Espacements, rayons, ombres ----
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
 
-  // Palette des graphiques (lue par le code des graphiques, voir portail/paie/analytique/paie-chart-theme.ts)
-  --chart-1: #2563eb;
-  --chart-2: #f59e0b;
-  --chart-3: #10b981;
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
-  --chart-6: #06b6d4;
-  --chart-7: #ec4899;
-  --chart-8: #64748b;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
-  // Panneaux de sélection (listes déroulantes)
+  --shadow-sm: 0 1px 2px rgba(3, 26, 46, 0.06);
+  --shadow-md: 0 2px 8px rgba(3, 26, 46, 0.08);
+  --shadow-lg: 0 12px 32px rgba(3, 26, 46, 0.16);
+
+  // ---- Typographie ----
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+
+  // Hauteur commune des contrôles d'une barre d'outils (champ, bouton, sélecteur)
+  --control-height: 2.25rem;
+
+  // ---- Mouvement ----
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // ---- Graphiques (lus par portail/paie/analytique/paie-chart-theme.ts) ----
+  --chart-1: #0c5190;
+  --chart-2: #e0902b;
+  --chart-3: #1a9e8f;
+  --chart-4: #7c5cc4;
+  --chart-5: #d6564e;
+  --chart-6: #4f8dcb;
+  --chart-7: #b8438a;
+  --chart-8: #8a9bb0;
+
+  // ---- Panneaux de sélection (listes déroulantes) ----
   --select-panel-min-width: 22rem;
   --select-panel-max-width: 40rem;
 
-  // Tableaux de données (voir styles/_tables.scss)
-  --table-header-bg: #f8fafc;
-  --table-border: #cbd5e1;
-  --table-border-light: #e2e8f0;
-  --table-cell-text: #334155;
-  --table-row-alt-bg: #f8fafc;
-  --table-row-hover-bg: #f1f5f9;
+  // ---- Tableaux de données (voir styles/_tables.scss) ----
+  --table-header-bg: var(--neutral-100);
+  --table-border: var(--neutral-300);
+  --table-border-light: var(--neutral-200);
+  --table-cell-text: var(--neutral-700);
+  --table-row-alt-bg: var(--neutral-50);
+  --table-row-hover-bg: var(--neutral-100);
 
-  // Rayons
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  // ---- 3. Pont PrimeNG ----
+  --pn-surface-0: var(--neutral-0);
+  --pn-surface-50: var(--neutral-50);
+  --pn-surface-100: var(--neutral-100);
+  --pn-surface-200: var(--neutral-200);
+  --pn-surface-300: var(--neutral-300);
+  --pn-surface-400: var(--neutral-400);
+  --pn-surface-500: var(--neutral-500);
+  --pn-surface-600: var(--neutral-600);
+  --pn-surface-700: var(--neutral-700);
+  --pn-surface-800: var(--neutral-800);
+  --pn-surface-900: var(--neutral-900);
+  --pn-surface-950: var(--neutral-950);
+  --pn-primary-50: var(--primary-50);
+  --pn-primary-100: var(--primary-100);
+  --pn-primary-200: var(--primary-200);
+  --pn-primary-300: var(--primary-300);
+  --pn-primary-400: var(--primary-400);
+  --pn-primary-500: var(--primary-500);
+  --pn-primary-600: var(--primary-600);
+  --pn-primary-700: var(--primary-700);
+  --pn-primary-800: var(--primary-800);
+  --pn-primary-900: var(--primary-900);
+  --pn-primary-950: var(--primary-950);
+}
 
-  // Ombres
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+:root[data-theme='dark'] {
+  @include theme-dark;
+}
+
+// Sans JavaScript, ni attribut posé : la préférence du système décide.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    @include theme-dark;
+  }
 }

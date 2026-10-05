@@ -2,7 +2,8 @@
 // `styleClass="app-table p-datatable-gridlines p-datatable-sm"`. Aucun écran ne redéfinit ces règles
 // (voir conventions/frontend.md, section Tableaux) — la modification se fait ici, pour tous à la fois.
 .app-table {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 
   .p-datatable-wrapper {
     border: 1px solid var(--table-border);
@@ -12,8 +13,9 @@
   .p-datatable-thead > tr > th {
     background-color: var(--table-header-bg);
     color: var(--color-text);
-    font-weight: 700;
-    font-size: 0.75rem;
+    font-weight: 600;
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
     padding: 6px 8px;
     border-right: 1px solid var(--table-border) !important;
     border-bottom: 1px solid var(--table-border) !important;
