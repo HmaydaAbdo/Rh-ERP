@@ -1,0 +1,106 @@
+@use 'breakpoints' as bp;
+
+// Fenêtres de dialogue, confirmations, panneau latéral et sélecteur de fichier : un seul style pour tous les écrans
+// (voir conventions/design-system.md). Les largeurs données par chaque écran (`[style]="{ width: … }"`) restent respectées,
+// plafonnées à l'écran sur téléphone.
+
+.p-dialog {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+
+  .p-dialog-header {
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .p-dialog-title {
+    font-size: var(--text-md);
+    font-weight: 600;
+  }
+
+  .p-dialog-content {
+    padding: 0 var(--space-lg) var(--space-lg);
+  }
+
+  .p-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+  }
+
+  @include bp.phone {
+    width: calc(100vw - 2rem) !important;
+    max-height: calc(100dvh - 2rem) !important;
+
+    .p-dialog-header,
+    .p-dialog-footer {
+      padding-inline: var(--space-md);
+    }
+
+    .p-dialog-content {
+      padding: 0 var(--space-md) var(--space-md);
+    }
+  }
+}
+
+// Confirmation de suppression : étroite, l'icône d'alerte en couleur d'avertissement, « Annuler » discret, « Supprimer » en rouge
+.p-confirm-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+
+  .p-confirm-dialog-icon {
+    color: var(--color-warning);
+    font-size: 1.5rem;
+  }
+
+  .p-confirm-dialog-message {
+    line-height: 1.5;
+  }
+
+  .p-confirm-dialog-reject {
+    border: 1px solid var(--color-border-strong);
+    background: transparent;
+    color: var(--color-text);
+
+    &:hover {
+      background: var(--color-surface-alt);
+    }
+  }
+
+  .p-confirm-dialog-accept {
+    border-color: var(--color-danger);
+    background: var(--color-danger);
+    color: var(--color-danger-contrast);
+
+    &:hover {
+      border-color: var(--color-danger);
+      background: color-mix(in srgb, var(--color-danger) 88%, black);
+      color: var(--color-danger-contrast);
+    }
+  }
+}
+
+// Choix d'un fichier (import Excel) : le bouton natif prend l'allure d'un bouton secondaire
+input[type='file'] {
+  max-width: 100%;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+
+  &::file-selector-button {
+    height: var(--control-height);
+    margin-right: var(--space-sm);
+    padding: 0 var(--space-md);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  &:disabled::file-selector-button {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

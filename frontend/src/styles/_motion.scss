@@ -1,0 +1,105 @@
+// Mouvement de l'application, défini une seule fois (voir conventions/design-system.md, section « Mouvement »). Principe : le
+// mouvement explique un changement d'état — un écran qui arrive, un thème qui change, une donnée en chargement, un appui — et ne
+// décore jamais un écran de travail. Durées et courbe viennent des jetons (`--duration-*`, `--ease-out`). Un utilisateur qui
+// demande moins de mouvement n'en voit presque plus (voir la fin de ce fichier).
+
+// ---- Un écran qui arrive : il apparaît en fondu en montant de quelques pixels ----
+// `backwards` et non `both` : une animation qui garde son état final crée un contexte d'empilement permanent, et les fenêtres et
+// panneaux de l'écran (position fixe) passeraient sous le fond qui les masque.
+.app-content > :not(router-outlet) {
+  animation: page-entree var(--duration-base) var(--ease-out) backwards;
+}
+
+@keyframes page-entree {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// ---- Bascule de thème : les couleurs glissent d'un thème à l'autre au lieu de claquer (classe posée par ThemeService, 300 ms) ----
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out),
+    fill var(--duration-base) var(--ease-out),
+    stroke var(--duration-base) var(--ease-out) !important;
+}
+
+// ---- Données en chargement : une silhouette de ce qui arrive, qui respire doucement (jamais un « Chargement… » seul) ----
+.app-skeleton {
+  display: block;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    100deg,
+    var(--color-surface-alt) 30%,
+    color-mix(in srgb, var(--color-border) 55%, var(--color-surface-alt)) 50%,
+    var(--color-surface-alt) 70%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-balayage 1.4s var(--ease-in-out) infinite;
+}
+
+@keyframes skeleton-balayage {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+// Texte réservé aux lecteurs d'écran (annonce « Chargement… » d'un squelette)
+.app-lecteur {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+// ---- Un appui : le bouton s'enfonce légèrement, ce qui confirme que le clic a été pris en compte ----
+.p-button {
+  transition:
+    background-color var(--duration-fast),
+    color var(--duration-fast),
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast) var(--ease-out);
+
+  &:not(:disabled):active {
+    transform: scale(0.98);
+  }
+}
+
+// ---- Une ligne de tableau survolée : le fond change sans à-coup ----
+.app-table .p-datatable-tbody > tr {
+  transition: background-color var(--duration-fast);
+}
+
+// ---- Moins de mouvement : plus d'animation ni de transition perceptible, le contenu apparaît d'emblée ----
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .app-skeleton {
+    animation: none;
+  }
+}

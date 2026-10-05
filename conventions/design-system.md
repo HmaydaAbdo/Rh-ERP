@@ -72,11 +72,83 @@ avec `::ng-deep` borné par `:host` pour ne pas fuir hors du composant.
 
 # Mouvement
 
-* Durées et courbe par jetons (`--duration-fast`, `--duration-base`, `--ease-out`) ; transitions courtes (150–250 ms) sur le
-  survol, l'ouverture d'un panneau, le changement de thème.
-* Aucune animation décorative sur un écran de travail ; le mouvement explique un changement d'état.
-* **`prefers-reduced-motion`** est respecté : la feuille globale neutralise les durées, et tout mouvement propre à un composant
-  prévoit sa variante sans animation.
+Le mouvement **explique un changement d'état** — un écran qui arrive, un thème qui change, une donnée qui charge, un appui —
+et ne décore jamais un écran de travail. Tout est défini une seule fois dans `src/styles/_motion.scss`.
+
+| Situation | Mouvement |
+|---|---|
+| Un écran apparaît | Fondu en montant de 6 px, `--duration-base` (220 ms) |
+| Bascule de thème | Les couleurs glissent d'un thème à l'autre (classe `theme-transition` posée 300 ms par `ThemeService`, jamais au premier affichage) |
+| Données en chargement | **Squelette** (`app-skeleton`) : la silhouette de ce qui arrive, qui respire doucement — jamais un « Chargement… » seul |
+| Un appui sur un bouton | Il s'enfonce de 2 % (`--duration-fast`) |
+| Survol (ligne de tableau, onglet, bouton) | Changement de fond ou de couleur en `--duration-fast`, sans déplacement |
+| Menu en tiroir, panneaux, fenêtres | `--duration-base`, courbe `--ease-out`, jamais de rebond |
+| Un graphique | Tracé de 600 ms, supprimé si l'utilisateur demande moins de mouvement |
+
+* **Jetons** : `--duration-fast` (150 ms), `--duration-base` (220 ms), `--duration-slow` (400 ms, entrées en cascade),
+  `--duration-slower` (700 ms, remplissage d'une jauge), `--ease-out` (la courbe de toute entrée), `--ease-in-out` (un
+  balayage continu). Un composant n'écrit jamais une durée ni une courbe en dur.
+* On n'anime que `opacity` et `transform` (et les couleurs) : jamais une propriété qui force une mise en page. Seule exception
+  assumée : l'ouverture du menu latéral anime sa `width` — c'est un élément fixe superposé au contenu, aucune mise en page ne se
+  recalcule autour de lui.
+* **`prefers-reduced-motion`** : la feuille de mouvement neutralise toute animation et transition (durée quasi nulle) ; un
+  mouvement propre à une bibliothèque (Chart.js) est coupé par le code (`mouvementReduit()`).
+
+---
+
+# Graphiques
+
+Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`paie-chart-theme.ts`) et lit les jetons.
+
+* **Une mesure, un axe.** Jamais deux échelles dans un même graphique (masse et bulletins ne sont pas comparables) : on
+  propose un choix de mesure ou deux graphiques.
+* **La couleur suit l'entité, jamais son rang** : une mesure a la même couleur dans tous les graphiques, quel que soit le
+  filtre. Palette catégorielle `--chart-1…8` validée avec le validateur de la méthode (écart de vision des couleurs ≥ 8,
+  plancher de vision normale ≥ 15) en clair **et** en sombre, dans un ordre fixe ; au-delà de trois séries on regroupe ou on
+  sépare. Les couleurs de statut ne servent jamais de série.
+* **Marques fines** : barres de 18 px au plus, bout arrondi de 4 px, ligne de 2 px, repères d'au moins 8 px cerclés de la
+  couleur de la carte ; grille discrète, jamais de cadre ; pas de légende pour une série unique (le titre la nomme).
+* **Thème** : un graphique dépend de `ThemeService.theme()` pour être redessiné à la bascule ; il lit police, textes, grille
+  et infobulle dans les jetons.
+* **Accessibilité** : un tableau de données déplié à la demande et un `aria-label` par graphique ; une infobulle au survol de
+  toute la ligne ou de toute la colonne, pas seulement de la barre ; le texte n'a jamais la couleur de la série.
+
+---
+
+# Mise en page des écrans
+
+La structure d'un écran de liste est définie **une seule fois**, dans la feuille globale `src/styles/_page.scss` (comme le style
+des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni la barre du tableau.
+
+| Classe | Rôle |
+|---|---|
+| `app-page` | La carte de l'écran (fond, rayon, ombre, marge) |
+| `app-page__header` | Le titre de l'écran (`<h1>`) |
+| `app-toolbar` | Les filtres : une ligne de contrôles de même hauteur (`--control-height`), à plat sur la page ; deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » à droite ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
+| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils à droite (`app-table-bar__tools`) |
+| `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
+
+Formulaires et consultations (`src/styles/_forms.scss`) :
+
+| Classe | Rôle |
+|---|---|
+| `app-page--narrow` / `app-page--wide` | Largeur maximale de la carte (760 / 1000 px) |
+| `app-back` | Le retour à la liste : un lien discret « ← Employés » au-dessus du titre, jamais un bouton |
+| `app-page__actions` | Les actions de l'en-tête (consultation : Historique puis **Modifier**, l'action principale, en dernier) |
+| `app-form__grid` (`--3`) | La grille de champs : 2 colonnes (ou 3), 1 sur téléphone ; `app-form__wide` pour un champ pleine largeur |
+| `app-form__section` | Le titre d'un groupe de champs (ligne de séparation) — dès qu'un formulaire dépasse six champs |
+| `field`, `field__req`, `field-error` | Un champ : libellé, contrôle, aide, erreur ; l'astérisque d'un champ obligatoire est rouge ; un champ invalide et touché a la bordure rouge |
+| `app-form__actions` | Annuler (texte) puis l'action principale (à droite) ; collé au bas de l'écran sur téléphone |
+| `app-detail` (`--3`) | Une consultation : étiquette en petites capitales, valeur, une ligne de séparation par information |
+
+Fenêtres (`src/styles/_overlays.scss`) : toutes les fenêtres de dialogue ont le même rayon, les mêmes marges et un pied
+séparé ; les **confirmations de suppression** sont étroites (30 rem), avec « Annuler » discret et « Supprimer » en rouge
+(`--color-danger`) ; le sélecteur de fichier natif prend l'allure d'un bouton secondaire. Les textes des composants PrimeNG
+(mois et jours du calendrier, messages vides) sont en français (`core/i18n/primeng-fr.ts`).
+
+**Ordre des outils, du moins au plus important** : choix des colonnes (`app-column-chooser` avec la classe `en-ligne`), actions
+secondaires (Exporter, Importer — bouton fractionné dont le menu porte le modèle de fichier, Synchroniser), puis l'**action
+principale** en bleu plein, toujours en dernier (« Nouveau… »). Une seule action principale par écran.
 
 ---
 
@@ -105,9 +177,28 @@ horizontalement, à l'intérieur de sa carte.
 
 # Accessibilité
 
-* Contraste de texte d'au moins 4,5:1 dans les deux thèmes (3:1 pour les grands textes et les contrôles).
-* Un anneau de focus clavier unique (`:focus-visible`, couleur de marque) ; jamais supprimé sans équivalent.
-* Un bouton qui ne porte qu'une icône a un libellé accessible (`aria-label`) ; une icône décorative est `aria-hidden`.
+Vérifiée automatiquement (axe-core, WCAG 2.1 A/AA et bonnes pratiques) dans les deux thèmes sur les écrans principaux : **aucune
+violation** est la barre à tenir.
+
+* **Contraste** : texte d'au moins 4,5:1 dans les deux thèmes (3:1 pour les grands textes et les contrôles). Les pastilles d'état
+  (`p-tag`) tirent leurs couleurs des jetons de statut (`styles/_status.scss`), jamais du thème de la librairie ; un état n'est
+  jamais porté par la seule couleur (la pastille dit « Actif », « Inactif »).
+* **Noms accessibles** : tout bouton d'icône a un `aria-label` précis (« Modifier AABIDDI MOHAMED », pas « Modifier ») ; tout champ
+  a un `<label for>` ou un `aria-label` (un champ de barre de filtres, qui n'a que son placeholder, porte `aria-label`) ; une
+  colonne d'actions vide a un en-tête lu par les lecteurs d'écran (`app-lecteur`) ; un graphique a un `ariaLabel` et un tableau
+  de données.
+* **Clavier** : un lien d'évitement « Aller au contenu » en premier ; un anneau de focus unique (`:focus-visible`) sur tout élément
+  interactif, jamais supprimé sans équivalent ; une zone qui défile (graphique, tableau) est atteignable au clavier
+  (`tabindex="0"`, `role="region"`, libellé) ; le menu latéral ne s'ouvre au clavier que sur `:focus-visible`, pas après un clic.
+* **Formulaires** : un message d'erreur est annoncé (`role="alert"`) ; une soumission refusée met le focus sur le premier champ
+  invalide (`focaliserPremiereErreur`) ; quitter un formulaire modifié demande confirmation (`unsavedChangesGuard`, boîte
+  « Quitter sans enregistrer ? ») et un formulaire enregistré est remis à l'état intact avant de naviguer ; les champs hors
+  authentification ont `autocomplete="off"`, et `spellcheck="false"` quand ils portent un code (CIN, code, identifiant).
+* **Langue et formats** : `lang="fr"`, locale `fr-FR` (nombres « 5 500,00 », dates), textes PrimeNG français ; les noms de marque
+  portent `translate="no"` ; les points de suspension sont typographiques (`…`).
+* **Tactile et écrans à encoche** : `touch-action: manipulation`, pas de halo de toucher, `overscroll-behavior: contain` sur les
+  panneaux défilants, `viewport-fit=cover` et `env(safe-area-inset-*)` sur la barre du haut et le pied de formulaire.
+* **Mouvement** : voir la section « Mouvement » ; `prefers-reduced-motion` est respecté.
 
 ---
 

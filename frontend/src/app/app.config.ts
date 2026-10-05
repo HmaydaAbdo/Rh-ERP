@@ -1,7 +1,9 @@
-import { APP_INITIALIZER, ApplicationConfig, inject } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import { APP_INITIALIZER, ApplicationConfig, LOCALE_ID, inject } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { TitleStrategy, provideRouter } from '@angular/router';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 
@@ -9,6 +11,9 @@ import { routes } from './app.routes';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 import { AuthService } from './core/auth/services/auth.service';
+import { PageTitleStrategy } from './core/navigation/page-title.strategy';
+
+registerLocaleData(localeFr);
 
 /**
  * Tente une restauration de session au démarrage (le Refresh Token, en cookie httpOnly, survit au
@@ -22,7 +27,9 @@ function initializeAuth() {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useValue: 'fr-FR' },
     provideRouter(routes),
+    { provide: TitleStrategy, useClass: PageTitleStrategy },
     provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     { provide: APP_INITIALIZER, useFactory: initializeAuth, multi: true },

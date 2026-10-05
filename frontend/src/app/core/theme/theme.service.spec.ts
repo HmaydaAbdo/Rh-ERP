@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import { ThemeService } from './theme.service';
 
@@ -8,11 +8,13 @@ describe('ThemeService', () => {
   beforeEach(() => {
     localStorage.removeItem('staport-theme');
     racine.removeAttribute('data-theme');
+    racine.classList.remove('theme-transition');
   });
 
   afterEach(() => {
     localStorage.removeItem('staport-theme');
     racine.removeAttribute('data-theme');
+    racine.classList.remove('theme-transition');
   });
 
   function creer(): ThemeService {
@@ -22,7 +24,6 @@ describe('ThemeService', () => {
 
   it('applique le thème sur <html>', () => {
     const service = creer();
-    TestBed.flushEffects();
 
     expect(racine.getAttribute('data-theme')).toBe(service.theme());
   });
@@ -44,10 +45,26 @@ describe('ThemeService', () => {
     const service = creer();
 
     service.basculer();
-    TestBed.flushEffects();
 
     expect(service.theme()).toBe('dark');
     expect(racine.getAttribute('data-theme')).toBe('dark');
     expect(localStorage.getItem('staport-theme')).toBe('dark');
+  });
+
+  it('fait glisser les couleurs à la bascule, puis retire la classe de transition', fakeAsync(() => {
+    localStorage.setItem('staport-theme', 'light');
+    const service = creer();
+
+    service.basculer();
+    expect(racine.classList.contains('theme-transition')).toBeTrue();
+
+    tick(300);
+    expect(racine.classList.contains('theme-transition')).toBeFalse();
+  }));
+
+  it('ne joue aucune transition au premier affichage', () => {
+    creer();
+
+    expect(racine.classList.contains('theme-transition')).toBeFalse();
   });
 });
