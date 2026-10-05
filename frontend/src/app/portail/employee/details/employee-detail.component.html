@@ -1,19 +1,19 @@
 @if (employee) {
-  <div class="employee-detail">
-    <div class="employee-detail__header">
+  <div class="employee-detail app-page app-page--narrow">
+    <a routerLink="/employees" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Employés</a>
+    <div class="app-page__header">
       <h1>{{ employee.nomPrenom }}</h1>
-      <div class="employee-detail__header-actions">
-        @if (canWrite()) {
-          <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
-        }
+      <div class="app-page__actions">
         @if (canViewHistory()) {
           <button pButton type="button" icon="pi pi-history" label="Historique" class="p-button-outlined" (click)="historiqueOuvert = true"></button>
         }
-        <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
+        @if (canWrite()) {
+          <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
+        }
       </div>
     </div>
 
-    <dl class="employee-detail__grid">
+    <dl class="app-detail">
       <div>
         <dt>CIN</dt>
         <dd>{{ employee.cin }}</dd>

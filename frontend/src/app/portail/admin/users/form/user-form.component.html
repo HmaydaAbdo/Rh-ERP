@@ -1,33 +1,33 @@
-<div class="user-form">
-  <div class="user-form__header">
+<div class="user-form app-page app-page--narrow">
+  <a routerLink="/admin/users" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Utilisateurs</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? "Modifier l'utilisateur" : 'Nouvel utilisateur' }}</h1>
-    <a routerLink="/admin/users" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
   @if (!loading) {
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="user-form__grid">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
       <div class="field">
-        <label for="username">Username *</label>
-        <input pInputText id="username" type="text" formControlName="username" autocomplete="username" />
+        <label for="username">Username <span class="field__req" aria-hidden="true">*</span></label>
+        <input pInputText spellcheck="false" id="username" type="text" formControlName="username" autocomplete="username" />
         @if (form.controls.username.invalid && form.controls.username.touched) {
-          <small class="field-error">3 à 50 caractères.</small>
+          <small class="field-error" role="alert">3 à 50 caractères.</small>
         }
       </div>
 
       <div class="field">
-        <label for="email">Email *</label>
-        <input pInputText id="email" type="email" formControlName="email" autocomplete="email" />
+        <label for="email">Email <span class="field__req" aria-hidden="true">*</span></label>
+        <input pInputText spellcheck="false" id="email" type="email" formControlName="email" autocomplete="email" />
         @if (form.controls.email.invalid && form.controls.email.touched) {
-          <small class="field-error">Email invalide.</small>
+          <small class="field-error" role="alert">Email invalide.</small>
         }
       </div>
 
       @if (!isEditMode) {
         <div class="field">
-          <label for="motDePasse">Mot de passe *</label>
+          <label for="motDePasse">Mot de passe <span class="field__req" aria-hidden="true">*</span></label>
           <p-password inputId="motDePasse" formControlName="motDePasse" [toggleMask]="true" autocomplete="new-password"></p-password>
           @if (form.controls.motDePasse.invalid && form.controls.motDePasse.touched) {
-            <small class="field-error">{{ regleMotDePasse }}</small>
+            <small class="field-error" role="alert">{{ regleMotDePasse }}</small>
           }
         </div>
       }
@@ -39,10 +39,10 @@
         </div>
       }
 
-      <div class="field">
+      <div class="field app-form__wide">
         <label for="employeeId">Employé lié (optionnel)</label>
         <app-lazy-select
-          inputId="employeeId"
+          ariaLabel="Employé lié (optionnel)" inputId="employeeId"
           formControlName="employeeId"
           [source]="employeeReferenceService"
           optionLabel="displayLabel"
@@ -51,10 +51,10 @@
         <small>Compte de connexion rattaché à un employé du référentiel — laisser vide si aucun.</small>
       </div>
 
-      <div class="field">
+      <div class="field app-form__wide">
         <label for="roleIds">Rôles</label>
         <p-multiSelect
-          inputId="roleIds"
+          ariaLabel="Rôles" inputId="roleIds"
           formControlName="roleIds"
           [options]="allRoles"
           optionLabel="nom"
@@ -65,28 +65,30 @@
       </div>
 
       @if (isEditMode && deniablePermissions.length > 0) {
-        <div class="user-form__deny">
-          <h2>Permissions refusées (deny override)</h2>
-          <p class="user-form__deny-hint">
-            Cochez une permission pour la refuser explicitement à cet utilisateur, même si un de ses rôles l'accorde.
-          </p>
+        <div class="app-form__wide user-form__deny">
+          <div class="app-form__section">
+            <h2>Permissions refusées (deny override)</h2>
+            <p>Cochez une permission pour la refuser explicitement à cet utilisateur, même si un de ses rôles l'accorde.</p>
+          </div>
           <div class="user-form__deny-items">
             @for (permission of deniablePermissions; track permission.id) {
               <label class="user-form__deny-item">
                 <p-checkbox
                   [binary]="true"
+                  [ariaLabel]="'Refuser ' + permission.code"
                   [ngModel]="isDenied(permission)"
                   [ngModelOptions]="{ standalone: true }"
                   (onChange)="toggleDenied(permission, $event.checked)"
                 ></p-checkbox>
-                <span>{{ permission.code }}</span>
+                <span class="user-form__code">{{ permission.code }}</span>
               </label>
             }
           </div>
         </div>
       }
 
-      <div class="user-form__actions">
+      <div class="app-form__actions">
+        <a routerLink="/admin/users" class="p-button p-button-text">Annuler</a>
         <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
       </div>
     </form>

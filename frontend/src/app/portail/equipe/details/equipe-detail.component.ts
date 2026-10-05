@@ -11,8 +11,7 @@ import { EquipeService } from '../services/equipe.service';
   selector: 'app-equipe-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule],
-  templateUrl: './equipe-detail.component.html',
-  styleUrl: './equipe-detail.component.scss'
+  templateUrl: './equipe-detail.component.html'
 })
 export class EquipeDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

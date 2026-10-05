@@ -33,45 +33,42 @@
   }
 </p-dialog>
 
-<div class="function-list">
-  <div class="function-list__header">
+<div class="function-list app-page">
+  <div class="app-page__header">
     <h1>Fonctions</h1>
-    <div class="function-list__header-actions">
-      @if (canImport()) {
-        <button
-          pButton
-          type="button"
-          icon="pi pi-download"
-          label="Modèle Excel"
-          class="p-button-outlined"
-          [loading]="downloadingTemplate"
-          (click)="onDownloadTemplate()"
-        ></button>
+  </div>
+
+  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
+    <input pInputText type="text" formControlName="libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
+
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
+  </form>
+
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      @if (!loading) {
+        {{ totalRecords }} fonction{{ totalRecords > 1 ? 's' : '' }}
       }
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
       @if (canImport()) {
-        <button
-          pButton
-          type="button"
-          icon="pi pi-upload"
+        <p-splitButton
+          [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
           label="Importer"
-          class="p-button-outlined"
-          [loading]="importing"
-          (click)="onTriggerImport()"
-        ></button>
+          icon="pi pi-upload"
+          [model]="menuImport"
+          [outlined]="true"
+          appendTo="body"
+          [disabled]="importing"
+          (onClick)="onTriggerImport()"
+        ></p-splitButton>
       }
       @if (canWrite()) {
         <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
       }
     </div>
   </div>
-
-  <form [formGroup]="filterForm" class="function-list__filters" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="libelle" placeholder="Libellé" />
-
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
-  </form>
-
-  <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -99,7 +96,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -115,9 +112,9 @@
           </td>
         }
         <td class="function-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(fonction)"></button>
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" [attr.aria-label]="'Voir la fonction ' + fonction.libelle" (click)="onView(fonction)"></button>
           @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(fonction)"></button>
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier la fonction ' + fonction.libelle" (click)="onEdit(fonction)"></button>
           }
           @if (canDelete()) {
             <button
@@ -126,7 +123,7 @@
               icon="pi pi-trash"
               class="p-button-text p-button-danger"
               [loading]="deletingId === fonction.id"
-              (click)="onDelete(fonction)"
+              [attr.aria-label]="'Supprimer la fonction ' + fonction.libelle" (click)="onDelete(fonction)"
             ></button>
           }
         </td>

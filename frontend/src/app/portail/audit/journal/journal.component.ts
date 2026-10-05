@@ -94,6 +94,10 @@ export class JournalComponent implements OnInit {
     requestId: ['']
   });
 
+  /** « Plus de filtres » : résultat, entité et identifiant de requête, les moins utilisés. Le panneau reste ouvert tant qu'un
+   * de ces filtres est actif (ex. après « Voir toutes les entrées de cette requête »). */
+  plusOuverts = false;
+
   /** Panneau latéral : l'entrée ouverte et ce qu'elle a changé. */
   panneauOuvert = false;
   entree: AuditEntree | null = null;
@@ -113,6 +117,20 @@ export class JournalComponent implements OnInit {
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
       )
       .subscribe(() => this.onSearch());
+  }
+
+  /** Nombre de filtres actifs du panneau « Plus de filtres ». */
+  nombreAvances(): number {
+    const f = this.filterForm.getRawValue();
+    return [f.resultat, f.entiteType, f.requestId].filter((valeur) => Boolean(valeur)).length;
+  }
+
+  avancesVisibles(): boolean {
+    return this.plusOuverts || this.nombreAvances() > 0;
+  }
+
+  basculerPlus(): void {
+    this.plusOuverts = !this.avancesVisibles();
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {

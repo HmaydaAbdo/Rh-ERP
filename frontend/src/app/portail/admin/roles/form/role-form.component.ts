@@ -10,6 +10,7 @@ import { finalize, forkJoin } from 'rxjs';
 
 import { PermissionSummary } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
+import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 
 interface PermissionGroup {
   domaine: string;
@@ -75,6 +76,7 @@ export class RoleFormComponent implements OnInit {
   }
 
   toggle(permission: PermissionSummary, checked: boolean): void {
+    this.form.markAsDirty();
     if (this.protege) {
       return;
     }
@@ -98,6 +100,7 @@ export class RoleFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -119,6 +122,7 @@ export class RoleFormComponent implements OnInit {
           summary: this.isEditMode ? 'Rôle modifié' : 'Rôle créé',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/admin/roles']);
       });
   }

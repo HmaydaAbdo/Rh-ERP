@@ -4,9 +4,10 @@ import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService, MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
@@ -31,7 +32,8 @@ const DEBOUNCE_RECHERCHE_MS = 300;
     ButtonModule,
     InputTextModule,
     ConfirmDialogModule,
-    DialogModule
+    DialogModule,
+    SplitButtonModule
   ],
   providers: [ConfirmationService],
   templateUrl: './function-list.component.html',
@@ -73,6 +75,19 @@ export class FunctionListComponent implements OnInit {
   importResult: FunctionImportResult | null = null;
   showImportResultDialog = false;
   downloadingTemplate = false;
+
+  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
+  readonly menuImport: MenuItem[] = [
+    {
+      label: 'Télécharger le modèle Excel',
+      icon: 'pi pi-file-excel',
+      command: () => {
+        if (!this.downloadingTemplate) {
+          this.onDownloadTemplate();
+        }
+      }
+    }
+  ];
 
   readonly filterForm = this.fb.group({
     libelle: ['']

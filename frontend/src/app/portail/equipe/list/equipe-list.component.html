@@ -1,21 +1,30 @@
 <p-confirmDialog></p-confirmDialog>
 
-<div class="equipe-list">
-  <div class="equipe-list__header">
+<div class="equipe-list app-page">
+  <div class="app-page__header">
     <h1>Équipes</h1>
-    @if (canWrite()) {
-      <button pButton type="button" icon="pi pi-plus" label="Nouvelle équipe" routerLink="/equipes/new"></button>
-    }
   </div>
 
-  <form [formGroup]="filterForm" class="equipe-list__filters" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="code" placeholder="Code" />
-    <input pInputText type="text" formControlName="libelle" placeholder="Libellé" />
+  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
+    <input pInputText type="text" formControlName="code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
+    <input pInputText type="text" formControlName="libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
 
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
   </form>
 
-  <app-column-chooser [state]="columns"></app-column-chooser>
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      @if (!loading) {
+        {{ totalRecords }} équipe{{ totalRecords > 1 ? 's' : '' }}
+      }
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouvelle équipe" routerLink="/equipes/new"></button>
+      }
+    </div>
+  </div>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -43,7 +52,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -62,9 +71,9 @@
           </td>
         }
         <td class="equipe-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(equipe)"></button>
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" [attr.aria-label]="'Voir l’équipe ' + equipe.code" (click)="onView(equipe)"></button>
           @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(equipe)"></button>
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier l’équipe ' + equipe.code" (click)="onEdit(equipe)"></button>
           }
           @if (canDelete()) {
             <button
@@ -73,7 +82,7 @@
               icon="pi pi-trash"
               class="p-button-text p-button-danger"
               [loading]="deletingId === equipe.id"
-              (click)="onDelete(equipe)"
+              [attr.aria-label]="'Supprimer l’équipe ' + equipe.code" (click)="onDelete(equipe)"
             ></button>
           }
         </td>

@@ -1,18 +1,25 @@
 <p-confirmDialog></p-confirmDialog>
 
-<div class="role-list">
-  <div class="role-list__header">
+<div class="role-list app-page">
+  <div class="app-page__header">
     <h1>Rôles</h1>
-    <button pButton type="button" icon="pi pi-plus" label="Nouveau rôle" routerLink="/admin/roles/new"></button>
   </div>
 
-  <form [formGroup]="filterForm" class="role-list__filters" (ngSubmit)="$event.preventDefault()">
-    <input pInputText type="text" formControlName="nom" placeholder="Nom" />
-    <input pInputText type="text" formControlName="description" placeholder="Description" />
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="$event.preventDefault()">
+    <input pInputText type="text" formControlName="nom" aria-label="Nom" autocomplete="off" spellcheck="false" placeholder="Nom" />
+    <input pInputText type="text" formControlName="description" aria-label="Description" autocomplete="off" placeholder="Description" />
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
   </form>
 
-  <app-column-chooser [state]="columns"></app-column-chooser>
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      {{ total(dt) }} rôle{{ total(dt) > 1 ? 's' : '' }}
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+      <button pButton type="button" icon="pi pi-plus" label="Nouveau rôle" routerLink="/admin/roles/new"></button>
+    </div>
+  </div>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -38,7 +45,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -60,7 +67,7 @@
           </td>
         }
         <td class="role-list__actions">
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(role)"></button>
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier le rôle ' + role.nom" (click)="onEdit(role)"></button>
           <button
             pButton
             type="button"
@@ -69,7 +76,7 @@
             [loading]="deletingId === role.id"
             [disabled]="role.protege"
             [title]="role.protege ? 'Rôle d’administration : non supprimable' : ''"
-            (click)="onDelete(role)"
+            [attr.aria-label]="'Supprimer le rôle ' + role.nom" (click)="onDelete(role)"
           ></button>
         </td>
       </tr>

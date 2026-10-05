@@ -1,36 +1,4 @@
-@use 'breakpoints' as bp;
-
 .role-list {
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--space-lg);
-
-    h1 {
-      margin: 0;
-    }
-
-    @include bp.phone {
-      flex-wrap: wrap;
-      gap: var(--space-sm);
-    }
-  }
-
-  &__filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-lg);
-
-    @include bp.phone {
-      > * {
-        flex: 1 1 100%;
-        min-width: 0;
-      }
-    }
-  }
-
   &__actions {
     display: flex;
     gap: var(--space-xs);
