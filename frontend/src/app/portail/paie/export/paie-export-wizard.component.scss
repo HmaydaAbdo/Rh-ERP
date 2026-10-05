@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
 
 .export-wizard {
@@ -25,7 +27,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     color: var(--color-text-muted);
     cursor: default;
     white-space: nowrap;
-    transition: color 0.25s;
+    transition: color var(--duration-base);
 
     &--active {
       color: var(--color-text);
@@ -34,6 +36,15 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     &--faite {
       color: var(--color-text-muted);
       cursor: pointer;
+    }
+  }
+
+  // Téléphone : seule l'étape en cours garde son libellé, les autres se réduisent à leur pastille
+  &__libelle {
+    @include bp.phone {
+      .export-wizard__etape:not(.export-wizard__etape--active) & {
+        display: none;
+      }
     }
   }
 
@@ -46,7 +57,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     border: 1px solid var(--color-border);
     border-radius: 50%;
     font-size: 0.75rem;
-    transition: background 0.3s, color 0.3s, border-color 0.3s, transform 0.3s;
+    transition: background var(--duration-slow), color var(--duration-slow), border-color var(--duration-slow), transform var(--duration-slow);
 
     .export-wizard__etape--active & {
       background: var(--color-primary);
@@ -71,16 +82,18 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     background: var(--color-border);
     overflow: hidden;
 
+    // Le remplissage grandit par `transform` (jamais par `width`) : aucune mise en page recalculée
     span {
       position: absolute;
-      inset: 0 auto 0 0;
-      width: 0;
+      inset: 0;
       background: var(--color-primary);
-      transition: width 0.5s;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--duration-slow) var(--ease-out);
     }
 
     &--plein span {
-      width: 100%;
+      transform: none;
     }
   }
 
@@ -92,7 +105,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
   }
 
   &__panneau {
-    animation: export-wizard-avant 0.4s;
+    animation: export-wizard-avant var(--duration-slow);
 
     &--arriere {
       animation-name: export-wizard-arriere;
@@ -131,7 +144,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     padding: var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    animation: export-wizard-avant 0.35s;
+    animation: export-wizard-avant var(--duration-slow);
 
     > i {
       font-size: 1.25rem;
@@ -201,7 +214,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     color: var(--color-text);
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    transition: border-color var(--duration-base), background var(--duration-base), transform var(--duration-fast);
 
     &:hover {
       border-color: var(--color-primary);
@@ -243,11 +256,12 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       height: 6px;
       border-radius: 2px;
       background: var(--color-border);
-      transition: width 0.6s, background 0.3s;
+      transform-origin: left;
+      transition: transform var(--duration-slower) var(--ease-out), background var(--duration-slow);
     }
 
     &--pdf span {
-      width: 20%;
+      transform: scaleX(0.2);
     }
 
     &--excel {
@@ -265,10 +279,10 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
   &__format--choisi &__apercu--pdf span {
     background: var(--color-primary);
 
-    &:nth-child(1) { width: 92%; }
-    &:nth-child(2) { width: 64%; }
-    &:nth-child(3) { width: 78%; }
-    &:nth-child(4) { width: 40%; }
+    &:nth-child(1) { transform: scaleX(0.92); }
+    &:nth-child(2) { transform: scaleX(0.64); }
+    &:nth-child(3) { transform: scaleX(0.78); }
+    &:nth-child(4) { transform: scaleX(0.4); }
   }
 
   &__format--choisi &__apercu--excel span:nth-child(odd) {
@@ -296,7 +310,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
   &__chantier {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    transition: border-color 0.2s;
+    transition: border-color var(--duration-base);
 
     &--actif {
       border-color: var(--color-primary);
@@ -334,7 +348,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
 
     i {
       font-size: 0.75rem;
-      transition: transform 0.3s;
+      transition: transform var(--duration-slow);
     }
   }
 
@@ -371,7 +385,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     border-radius: 0.625rem;
     background: var(--color-border);
     cursor: pointer;
-    transition: background 0.25s;
+    transition: background var(--duration-base);
 
     &::after {
       content: '';
@@ -382,7 +396,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       height: calc(1.25rem - 4px);
       border-radius: 50%;
       background: var(--neutral-0);
-      transition: transform 0.25s;
+      transition: transform var(--duration-base);
     }
 
     &--actif {
@@ -416,7 +430,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
   &__deplie {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.35s;
+    transition: grid-template-rows var(--duration-slow);
 
     > div {
       overflow: hidden;
@@ -463,7 +477,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     border-radius: 999px;
     background: var(--color-surface);
     font-size: 0.75rem;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    transition: background var(--duration-base), border-color var(--duration-base), color var(--duration-base);
 
     button {
       padding: 0.25rem 0.65rem;
@@ -523,7 +537,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     padding: var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    transition: border-color 0.25s;
+    transition: border-color var(--duration-base);
 
     &--complet {
       border-color: var(--color-success);
@@ -566,7 +580,8 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       display: block;
       height: 100%;
       background: var(--color-success);
-      transition: width 0.35s;
+      transform-origin: left;
+      transition: transform var(--duration-slow) var(--ease-out);
     }
   }
 
@@ -579,7 +594,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     border-bottom: 1px solid var(--color-border);
     font-size: 0.8125rem;
     color: var(--color-text-muted);
-    transition: opacity 0.25s;
+    transition: opacity var(--duration-base);
 
     &:last-of-type {
       border-bottom: none;
@@ -671,7 +686,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       padding: 0.65rem var(--space-md);
       border-bottom: 1px solid var(--color-border);
       font-size: 0.8125rem;
-      animation: export-wizard-avant 0.35s backwards;
+      animation: export-wizard-avant var(--duration-slow) backwards;
 
       &:last-child {
         border-bottom: none;
@@ -767,7 +782,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       stroke-width: 3;
       stroke-dasharray: 170;
       stroke-dashoffset: 170;
-      animation: export-wizard-trace 0.6s forwards;
+      animation: export-wizard-trace var(--duration-slower) forwards;
     }
 
     path {
@@ -778,7 +793,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       stroke-linejoin: round;
       stroke-dasharray: 40;
       stroke-dashoffset: 40;
-      animation: export-wizard-trace 0.4s 0.55s forwards;
+      animation: export-wizard-trace var(--duration-slow) 0.55s forwards;
     }
   }
 

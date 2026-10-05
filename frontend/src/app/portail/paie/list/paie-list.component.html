@@ -3,7 +3,7 @@
 <p-dialog header="Importer des bulletins de paie" [(visible)]="showImportDialog" [modal]="true" [style]="{ width: '480px' }">
   <form [formGroup]="importForm">
     <div class="paie-list__dialog-field">
-      <label for="importPeriode">Période *</label>
+      <label for="importPeriode">Période <span class="field__req" aria-hidden="true">*</span></label>
       <p-calendar
         inputId="importPeriode"
         formControlName="periode"
@@ -69,20 +69,21 @@
 </p-dialog>
 
 <div class="paie-list">
-  <div class="paie-list__barre">
-    <p class="paie-list__total" role="status">
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
       @if (!loading) {
         {{ totalRecords }} bulletin{{ totalRecords > 1 ? 's' : '' }}
       }
     </p>
 
-    <div class="paie-list__outils">
+    <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
       @if (canExport()) {
         <button pButton type="button" icon="pi pi-download" label="Exporter" class="p-button-outlined" (click)="showExportDialog = true"></button>
       }
       @if (canImport()) {
         <p-splitButton
+          [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
           label="Importer"
           icon="pi pi-upload"
           [model]="menuImport"
@@ -124,7 +125,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -179,9 +180,9 @@
           </td>
         }
         <td class="paie-list__actions text-center">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" (click)="onView(paie)"></button>
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" [attr.aria-label]="'Voir le bulletin de ' + paie.employee.nomPrenom" (click)="onView(paie)"></button>
           @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="onEdit(paie)"></button>
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" [attr.aria-label]="'Modifier le bulletin de ' + paie.employee.nomPrenom" (click)="onEdit(paie)"></button>
           }
           @if (canDelete()) {
             <button
@@ -190,7 +191,7 @@
               icon="pi pi-trash"
               class="p-button-text p-button-danger p-button-sm"
               [loading]="deletingId === paie.id"
-              (click)="onDelete(paie)"
+              [attr.aria-label]="'Supprimer le bulletin de ' + paie.employee.nomPrenom" (click)="onDelete(paie)"
             ></button>
           }
         </td>
