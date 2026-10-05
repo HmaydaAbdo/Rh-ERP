@@ -2,7 +2,8 @@
   display: block;
 }
 
-.lazy-select {
+/* `.lazy-select` est posé sur l'élément racine du composant PrimeNG, qui n'a pas l'attribut d'encapsulation de ce composant. */
+:host ::ng-deep .lazy-select {
   width: 100%;
 }
 

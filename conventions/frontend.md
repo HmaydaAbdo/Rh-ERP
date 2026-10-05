@@ -342,7 +342,9 @@ Ne jamais écrire directement :
 
 lorsqu'un token existe déjà.
 
-Si un token manque, l'ajouter dans `_tokens.scss`.
+Si un token manque, l'ajouter dans `_tokens.scss` — avec sa valeur dans les deux thèmes (clair et sombre).
+
+Les thèmes, les jetons sémantiques, la typographie et le mouvement sont décrits dans `design-system.md`.
 
 ---
 

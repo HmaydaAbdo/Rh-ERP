@@ -381,7 +381,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
       width: calc(1.25rem - 4px);
       height: calc(1.25rem - 4px);
       border-radius: 50%;
-      background: #fff;
+      background: var(--neutral-0);
       transition: transform 0.25s;
     }
 

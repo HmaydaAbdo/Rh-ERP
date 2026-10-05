@@ -7,16 +7,10 @@
   <app-paie-filtres
     [periodes]="periodes()"
     [value]="filtres()"
-    [vue]="mode()"
     [moisRequis]="moisRequis()"
+    [avecFil]="cartes()"
     (valueChange)="appliquer($event)"
   ></app-paie-filtres>
-
-  @if (annonce(); as phrase) {
-    <p class="paie-vues__annonce" role="status">
-      <i class="pi pi-info-circle" aria-hidden="true"></i> {{ phrase }}
-    </p>
-  }
 
   <router-outlet (activate)="surActivation()"></router-outlet>
 </div>

@@ -45,6 +45,11 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   @Input() pageSize = 30;
   @Input() virtualScrollItemSize = 36;
   @Input() showClear = true;
+  /** Nom accessible du champ quand son placeholder disparaît (valeur choisie) — utile dans une barre d'outils sans libellé visible. */
+  @Input() ariaLabel: string | null = null;
+  /** Sélection multiple compacte, sur une seule ligne : la valeur choisie s'affiche seule, puis ce texte à partir de deux
+   * valeurs (`{0}` = leur nombre, ex. `{0} chantiers`) au lieu d'une pile de pastilles. Sans lui : pastilles. */
+  @Input() summaryLabel: string | null = null;
   /** `null` (défaut) laisse le panneau s'afficher dans son conteneur naturel — suffisant pour un champ
    * de formulaire de page. `"body"` fait sortir le panneau du flux (overlay ajouté à `<body>`) :
    * NÉCESSAIRE dès que ce composant est utilisé dans un conteneur à défilement/overflow contraint

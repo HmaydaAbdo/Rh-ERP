@@ -293,40 +293,47 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
 Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **coque commune**, `PaieVuesComponent`
-(`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **conserve les filtres** en changeant de vue) et la
-**barre de contexte commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
+(`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **réinitialise les filtres** en changeant de vue) et la
+**barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
 (`/paie/new`, `/paie/:id`…) n'en font pas partie.
 
-### Barre de contexte commune
+### Barre de filtres commune
 
-`PaieFiltresComponent` (`filtres/`) est **une seule ligne, quel que soit le nombre de valeurs choisies** — avec 25 chantiers et
-leurs équipes, jamais de puces qui débordent. Elle **s'adapte à la vue** (la coque lui indique laquelle) :
+**Mise en page de l'écran (identique dans les trois vues).** L'en-tête porte le titre **Paie** et, sur la même ligne, les trois
+**onglets de vue** soulignés (Tabulaire, Cartes, Analytique) posés sur un filet ; dessous, la **barre de filtres** ; dessous, le
+contenu de la vue. Dans le tabulaire, une **barre du tableau** porte le total (« 972 bulletins ») à gauche et, à droite, les
+outils du moins au plus important : **Colonnes**, **Exporter**, **Importer** (bouton fractionné dont le menu propose le
+**modèle Excel**, le fichier que l'import attend) et **Nouveau bulletin** (bouton plein).
 
-| Vue | Forme de la barre |
-|---|---|
-| Tabulaire, Analytique | **Filtres multiples.** Le mois (flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), un bouton **Filtres (n)** qui ouvre le panneau des chantiers, équipes et fonctions (sélecteur générique multiple, recherche serveur), et « Effacer ». Sous la barre, un **résumé en texte** — « 4 chantiers · 2 équipes · 1 fonction », des nombres, jamais la liste — qui rouvre le panneau. En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve |
-| Cartes | **Fil de navigation à valeurs uniques** : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus « Remonter ». Pas de sélection multiple. Les filtres venus des autres vues (nom, CIN, fonctions, équipes, plusieurs chantiers) sont **repliés dans « Filtres actifs (n) »** : on peut les y retirer, pas en ajouter. Ils s'appliquent toujours aux cartes, jamais en cachette |
+`PaieFiltresComponent` (`filtres/`) est **la même barre dans les trois vues, sur une seule ligne et entièrement visible dès
+l'arrivée** — aucun bouton « Filtres » à ouvrir. Contrôles de même hauteur (`--control-height`), posés à plat sur la page : le
+mois (groupe `‹ Août 2026 › ✕` : flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un
+panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), les
+sélecteurs **chantiers, équipes et fonctions** (sélecteur générique multiple, recherche serveur, mode compact : la valeur seule
+quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante.
+En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, un **fil de
+navigation** s'ajoute sous la barre : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus
+« Remonter ».
 
-**Permissions** : chaque colonne du panneau (chantiers, équipes, fonctions) interroge le référentiel correspondant ; elle n'est
+**Permissions** : chaque sélecteur (chantiers, équipes, fonctions) interroge le référentiel correspondant ; elle n'est
 proposée que si l'utilisateur a `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ` — un refus `403` serait un faux refus dans le
 journal d'audit (voir [../rbac/paie.md](../rbac/paie.md)).
 
-**Cascade** (tabulaire et analytique) : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec
+**Cascade** (indiquée au survol des sélecteurs) : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec
 des chantiers choisis, les équipes proposées sont celles de ces chantiers ce mois-là (une seule requête,
 `POST /paie/chantiers/search`, gardée par mois). **Sans mois**, ou sans chantier choisi pour les équipes, ce sont les listes
 complètes du référentiel — le référentiel Équipe n'est pas rattaché aux chantiers, seule la paie d'un mois les relie. Un choix
-qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'office : il reste visible dans le panneau.
+qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'office : il reste visible dans son sélecteur.
 
 **Les filtres vivent dans l'URL** (`?periode=2026-08&nom=ali&cin=AB1&chantierIds=3,4&fonctionIds=7&equipeIds=2`, voir
 `filtres/paie-filtres.ts`) : la barre les écrit — en remplaçant l'entrée d'historique, pour ne pas en empiler une par saisie —
-et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct, retour navigateur et changement de vue conservent
-donc tout. Une valeur invalide est ignorée. Les mois grisés viennent de `GET /paie/periodes`, rechargé à chaque changement de
-vue.
+et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct et retour navigateur les conservent donc. Une valeur
+invalide est ignorée. Les mois grisés viennent de `GET /paie/periodes`, rechargé à chaque changement de vue.
 
-**Le contexte voyage, et on l'explique.** En changeant de vue, la position devient des filtres et inversement ; une phrase
-discrète sous la barre (8 secondes, `annonceChangementDeVue`) dit ce qui s'est passé : « Cartes : niveau chantiers, limité à vos
-3 chantiers », « Cartes : ouvertes directement sur le chantier choisi », « Votre position dans les cartes devient des filtres :
-août 2026, 1 chantier », avec le rappel des filtres que les cartes gardent.
+**Changer de vue réinitialise les filtres.** Le sélecteur de vue ne reporte aucun paramètre d'URL : chaque vue s'ouvre sur son
+état de départ (tous les mois ; en Analytique, le mois le plus récent). Seule exception : depuis une ligne d'équipe des Cartes,
+« Voir les bulletins de cette équipe » ouvre le tabulaire avec les filtres en cours **et** cette équipe — c'est une descente
+explicite, pas un changement de vue.
 
 | Vue | Effet du mois vide | Effet du mois choisi |
 |---|---|---|

@@ -1,9 +1,13 @@
+// Courbes de niveau en filigrane : le terrain et le tracé de route, sans photo
+$courbes: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600' preserveAspectRatio='xMidYMid slice' fill='none' stroke='%2382b2e0' stroke-opacity='.2' stroke-width='1.2'%3E%3Cpath d='M-40 520 C160 400 280 560 460 440 S720 300 860 380'/%3E%3Cpath d='M-40 470 C160 350 280 510 460 390 S720 250 860 330'/%3E%3Cpath d='M-40 420 C160 300 280 460 460 340 S720 200 860 280'/%3E%3Cpath d='M-40 370 C160 250 280 410 460 290 S720 150 860 230'/%3E%3Cpath d='M-40 320 C160 200 280 360 460 240 S720 100 860 180'/%3E%3Cpath d='M-40 570 C160 450 280 610 460 490 S720 350 860 430'/%3E%3C/svg%3E";
+
 .auth-page {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--color-surface-alt);
+  padding: var(--space-md);
+  background: url($courbes) center / cover no-repeat, linear-gradient(160deg, var(--brand-900) 0%, var(--brand-700) 60%, var(--brand-600) 100%);
 }
 
 .auth-card {
@@ -15,19 +19,18 @@
   padding: var(--space-xl);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    color: var(--color-primary);
-    font-weight: 600;
+  &__logo {
+    align-self: center;
+    height: auto;
+    margin-bottom: var(--space-xs);
+  }
 
-    i {
-      font-size: 1.5rem;
-    }
+  // Le logo est monochrome : en thème sombre il passe en blanc
+  :host-context([data-theme='dark']) &__logo {
+    filter: brightness(0) invert(1);
   }
 
   h1 {
@@ -43,14 +46,6 @@
     font-size: 0.9rem;
   }
 
-  &__password {
-    width: 100%;
-
-    ::ng-deep input {
-      width: 100%;
-    }
-  }
-
   &__submit {
     width: 100%;
     justify-content: center;
@@ -60,6 +55,16 @@
     text-align: center;
     font-size: 0.9rem;
     color: var(--color-text-muted);
+  }
+}
+
+// La classe est posée sur le <p-password> lui-même (élément PrimeNG, hors encapsulation de ce composant)
+:host ::ng-deep .auth-card__password {
+  display: block;
+  width: 100%;
+
+  input {
+    width: 100%;
   }
 }
 

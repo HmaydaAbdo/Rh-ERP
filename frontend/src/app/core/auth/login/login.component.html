@@ -1,9 +1,6 @@
 <div class="auth-page">
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-card">
-    <div class="auth-card__brand">
-      <i class="pi pi-building-columns"></i>
-      <span>Staport RH</span>
-    </div>
+    <img class="auth-card__logo" src="assets/brand/logo-staport.png" alt="Staport" width="160" height="81" />
     <h1>Connexion</h1>
 
     @if (errorMessage) {

@@ -4,10 +4,10 @@
   <div class="app-shell">
     <aside class="app-sidebar">
       <div class="app-sidebar__brand">
-        <i class="pi pi-building-columns app-sidebar__brand-icon"></i>
+        <img class="app-sidebar__logo" src="assets/brand/monogramme.svg" alt="" width="36" height="36" />
         <span class="app-sidebar__label">{{ title }}</span>
       </div>
-      <nav class="app-sidebar__nav">
+      <nav class="app-sidebar__nav" aria-label="Navigation principale">
         @for (item of navItems(); track item.route) {
           <a
             [routerLink]="item.route"
@@ -17,7 +17,7 @@
             tooltipPosition="right"
             [showDelay]="300"
           >
-            <i [class]="item.icon"></i>
+            <i [class]="item.icon" aria-hidden="true"></i>
             <span class="app-sidebar__label">{{ item.label }}</span>
           </a>
         }
@@ -28,14 +28,25 @@
           <span class="app-sidebar__label app-sidebar__username">{{ u.username }}</span>
         }
         <button
-          pButton
           type="button"
-          icon="pi pi-sign-out"
-          class="p-button-text p-button-sm app-sidebar__logout"
+          class="app-sidebar__action"
+          [attr.aria-label]="theme.theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'"
+          [pTooltip]="theme.theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
+          tooltipPosition="right"
+          (click)="theme.basculer()"
+        >
+          <i class="pi" [class.pi-moon]="theme.theme() === 'light'" [class.pi-sun]="theme.theme() === 'dark'" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="app-sidebar__action"
+          aria-label="Se déconnecter"
           pTooltip="Se déconnecter"
           tooltipPosition="right"
           (click)="onLogout()"
-        ></button>
+        >
+          <i class="pi pi-sign-out" aria-hidden="true"></i>
+        </button>
       </div>
     </aside>
 

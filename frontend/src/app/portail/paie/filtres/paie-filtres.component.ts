@@ -23,21 +23,12 @@ import { AUCUN_FILTRE, PaieFiltres } from './paie-filtres';
 
 const DEBOUNCE_FILTRES_MS = 300;
 
-/** `filtres` : tabulaire et analytique, filtres multiples dans un panneau. `navigation` : cartes, fil de navigation à valeurs
- * uniques — les filtres venus des autres vues y restent visibles et retirables, mais ne s'y ajoutent pas. */
-export type ModeBarre = 'filtres' | 'navigation';
-
-/** Un filtre actif que la vue Cartes ne sait pas poser elle-même : affiché pour pouvoir être retiré. */
-interface FiltreHerite {
-  libelle: string;
-  retirer: () => PaieFiltres;
-}
-
 /**
- * Barre de contexte commune aux trois vues de la paie. **Une seule ligne, quel que soit le nombre de valeurs choisies** :
+ * Barre de filtres commune aux trois vues de la paie, **identique dans chacune** et **entièrement visible dès l'arrivée** :
  * le mois (flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un panneau), la recherche
- * par nom et par CIN, et un bouton « Filtres (n) » qui ouvre le panneau des chantiers, équipes et fonctions. Un résumé en
- * texte (« 3 chantiers · 2 équipes ») dit ce qui est actif sans jamais lister de valeurs.
+ * par nom et par CIN, puis les sélecteurs de chantiers, d'équipes et de fonctions — jamais cachés derrière un bouton. Un
+ * sélecteur ne montre que quelques valeurs puis un compteur, quel que soit le nombre de valeurs choisies. Dans les Cartes
+ * (`avecFil`), un fil de navigation montre la position (mois, chantier) et permet de remonter.
  *
  * **Cascade** : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec des chantiers choisis,
  * les équipes proposées sont celles de ces chantiers ce mois-là. Sans mois, les listes complètes du référentiel.
@@ -79,8 +70,7 @@ export class PaieFiltresComponent implements OnInit {
 
   readonly disponibles = signal<string[]>([]);
   readonly courant = signal<PaieFiltres>(AUCUN_FILTRE);
-  readonly ouvert = signal(false);
-  readonly mode = signal<ModeBarre>('filtres');
+  readonly fil = signal(false);
   readonly moisObligatoire = signal(false);
 
   /** Les chantiers du mois choisi, avec leurs équipes : de quoi restreindre les choix de la cascade. */
@@ -93,15 +83,14 @@ export class PaieFiltresComponent implements OnInit {
     this.disponibles.set(periodes);
   }
 
-  /** Cartes : navigation à valeurs uniques ; tabulaire et analytique : filtres multiples. */
-  @Input() set vue(mode: ModeBarre) {
-    this.mode.set(mode);
-    this.ouvert.set(false);
-  }
-
   /** Vrai en analytique : un mois est indispensable, on ne propose donc pas de l'effacer. */
   @Input() set moisRequis(requis: boolean) {
     this.moisObligatoire.set(requis);
+  }
+
+  /** Vrai dans les Cartes : affiche le fil de navigation sous la barre. */
+  @Input() set avecFil(avec: boolean) {
+    this.fil.set(avec);
   }
 
   @Input() set value(filtres: PaieFiltres) {
@@ -125,30 +114,10 @@ export class PaieFiltresComponent implements OnInit {
   readonly plusRecent = computed(() => this.voisin(-1));
   readonly plusAncien = computed(() => this.voisin(1));
 
-  /** Nombre de valeurs choisies dans le panneau (chantiers, équipes, fonctions) : le « n » du bouton Filtres. */
-  readonly nombreChoisis = computed(() => {
+  readonly aDesFiltres = computed(() => {
     const f = this.courant();
-    return f.chantierIds.length + f.equipeIds.length + f.fonctionIds.length;
+    return this.periode() !== null || f.chantierIds.length + f.equipeIds.length + f.fonctionIds.length > 0 || this.nomOuCinSaisi(f);
   });
-
-  /** Ce qui est actif, en une ligne de texte — des nombres, jamais la liste des valeurs. */
-  readonly resume = computed(() => {
-    const f = this.courant();
-    const pluriel = (n: number, mot: string): string => `${n} ${mot}${n > 1 ? 's' : ''}`;
-    const parties: string[] = [];
-    if (f.chantierIds.length > 0) {
-      parties.push(pluriel(f.chantierIds.length, 'chantier'));
-    }
-    if (f.equipeIds.length > 0) {
-      parties.push(pluriel(f.equipeIds.length, 'équipe'));
-    }
-    if (f.fonctionIds.length > 0) {
-      parties.push(pluriel(f.fonctionIds.length, 'fonction'));
-    }
-    return parties.join(' · ');
-  });
-
-  readonly aDesFiltres = computed(() => this.periode() !== null || this.nombreChoisis() > 0 || this.nomOuCinSaisi(this.courant()));
 
   /** Chantier du fil de navigation (niveau 3 des Cartes), nommé d'après les chantiers du mois. */
   readonly chantierOuvert = computed(() => {
@@ -158,28 +127,6 @@ export class PaieFiltresComponent implements OnInit {
     }
     const trouve = this.chantiersDuMois().find((c) => c.id === ids[0]);
     return trouve?.code ?? `n° ${ids[0]}`;
-  });
-
-  /** Les filtres que les Cartes ne posent pas elles-mêmes : visibles et retirables, jamais cachés. */
-  readonly herites = computed<FiltreHerite[]>(() => {
-    const f = this.courant();
-    const lignes: FiltreHerite[] = [];
-    if (f.nomPrenom.trim()) {
-      lignes.push({ libelle: `Nom contient « ${f.nomPrenom.trim()} »`, retirer: () => ({ ...f, nomPrenom: '' }) });
-    }
-    if (f.cin.trim()) {
-      lignes.push({ libelle: `CIN contient « ${f.cin.trim()} »`, retirer: () => ({ ...f, cin: '' }) });
-    }
-    if (f.fonctionIds.length > 0) {
-      lignes.push({ libelle: `${f.fonctionIds.length} fonction(s)`, retirer: () => ({ ...f, fonctionIds: [] }) });
-    }
-    if (f.equipeIds.length > 0) {
-      lignes.push({ libelle: `${f.equipeIds.length} équipe(s)`, retirer: () => ({ ...f, equipeIds: [] }) });
-    }
-    if (f.chantierIds.length > 1) {
-      lignes.push({ libelle: `${f.chantierIds.length} chantiers`, retirer: () => ({ ...f, chantierIds: [] }) });
-    }
-    return lignes;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
@@ -224,10 +171,6 @@ export class PaieFiltresComponent implements OnInit {
       .subscribe((chantiers) => this.chantiersDuMois.set(chantiers));
   }
 
-  basculerPanneau(): void {
-    this.ouvert.update((ouvert) => !ouvert);
-  }
-
   /** Choisit un mois ; `null` revient à « tous les mois ». Les choix qui dépendaient de l'ancien mois restent : on les voit. */
   choisir(periode: string | null): void {
     this.emettreFiltres({ ...this.courant(), periode });
@@ -245,13 +188,8 @@ export class PaieFiltresComponent implements OnInit {
     this.emettreFiltres(f.chantierIds.length > 0 ? { ...f, chantierIds: [] } : { ...f, periode: null });
   }
 
-  retirer(filtre: FiltreHerite): void {
-    this.emettreFiltres(filtre.retirer());
-  }
-
   reinitialiser(): void {
     this.emettreFiltres({ ...AUCUN_FILTRE, periode: this.moisObligatoire() ? this.periode() : null });
-    this.ouvert.set(false);
   }
 
   private chargerChantiersDuMois(periode: string | null) {

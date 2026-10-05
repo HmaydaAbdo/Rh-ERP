@@ -4,8 +4,8 @@ import { PaieSearchCriteria } from '../models/paie.model';
 
 /**
  * Filtres de la barre commune aux trois vues de la paie. Ils vivent dans l'URL (`?periode=2026-08&nom=ali&cin=ab1
- * &chantierIds=3,4&fonctionIds=7&equipeIds=2`) : tout lien, retour navigateur et changement de vue les conserve, et chaque
- * vue les lit sans passer par un état partagé.
+ * &chantierIds=3,4&fonctionIds=7&equipeIds=2`) : tout lien et retour navigateur les conserve, et chaque vue les lit sans
+ * passer par un état partagé. Changer de vue par le sélecteur les réinitialise.
  */
 export interface PaieFiltres {
   periode: string | null;

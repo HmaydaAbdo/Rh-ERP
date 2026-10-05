@@ -69,39 +69,33 @@
 </p-dialog>
 
 <div class="paie-list">
-  <div class="paie-list__header">
-    <div class="paie-list__header-actions">
-      @if (canImport()) {
-        <button
-          pButton
-          type="button"
-          icon="pi pi-file-excel"
-          label="Modèle Excel"
-          class="p-button-outlined"
-          [loading]="downloadingTemplate"
-          (click)="onDownloadTemplate()"
-        ></button>
+  <div class="paie-list__barre">
+    <p class="paie-list__total" role="status">
+      @if (!loading) {
+        {{ totalRecords }} bulletin{{ totalRecords > 1 ? 's' : '' }}
       }
+    </p>
+
+    <div class="paie-list__outils">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
       @if (canExport()) {
-        <button
-          pButton
-          type="button"
-          icon="pi pi-download"
-          label="Exporter"
-          class="p-button-outlined"
-          (click)="showExportDialog = true"
-        ></button>
+        <button pButton type="button" icon="pi pi-download" label="Exporter" class="p-button-outlined" (click)="showExportDialog = true"></button>
       }
       @if (canImport()) {
-        <button pButton type="button" icon="pi pi-upload" label="Importer" class="p-button-outlined" (click)="onOpenImportDialog()"></button>
+        <p-splitButton
+          label="Importer"
+          icon="pi pi-upload"
+          [model]="menuImport"
+          [outlined]="true"
+          appendTo="body"
+          (onClick)="onOpenImportDialog()"
+        ></p-splitButton>
       }
       @if (canWrite()) {
         <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
       }
     </div>
   </div>
-
-  <app-column-chooser [state]="columns"></app-column-chooser>
 
   <p-table
     [value]="paies"

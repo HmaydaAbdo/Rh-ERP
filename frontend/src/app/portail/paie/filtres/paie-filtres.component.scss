@@ -3,73 +3,118 @@
   margin-bottom: var(--space-md);
 }
 
+// Une seule ligne de contrôles de même hauteur, posée à plat sur la page (pas de cadre) : mois, recherche, trois sélecteurs.
+// Sous la largeur disponible, la ligne passe à la suivante au lieu de déborder.
 .paie-filtres {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-alt);
 
   &__periode {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
+    display: inline-flex;
+    align-items: stretch;
+    height: var(--control-height);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    overflow: hidden;
+
+    .p-button {
+      height: 100%;
+      border-radius: 0;
+      font-size: var(--text-sm);
+    }
+
+    .p-button-icon-only {
+      width: 2rem;
+      padding: 0;
+    }
   }
 
   &__mois {
-    min-width: 9rem;
-    font-size: 0.8125rem;
-    text-transform: capitalize;
+    min-width: 9.5rem;
+    justify-content: center;
+    border-inline: 1px solid var(--color-border) !important;
+
+    // Majuscule initiale seulement (« Août 2026 », « Tous les mois ») : `capitalize` mettrait une majuscule à chaque mot
+    ::ng-deep .p-button-label::first-letter {
+      text-transform: uppercase;
+    }
   }
 
-  &__recherche {
-    display: flex;
-    flex: 1;
-    gap: var(--space-xs);
+  &__capitale {
+    display: inline-block;
+
+    &::first-letter {
+      text-transform: uppercase;
+    }
+  }
+
+  &__champ {
+    position: relative;
+    flex: 1 1 11rem;
+    max-width: 15rem;
 
     input {
-      flex: 1;
-      min-width: 7rem;
-      max-width: 14rem;
-      font-size: 0.8125rem;
+      width: 100%;
+    }
+  }
+
+  &__cin {
+    flex: 0 1 8rem;
+  }
+
+  &__champ input,
+  &__cin {
+    height: var(--control-height);
+    font-size: var(--text-sm);
+  }
+
+  &__selecteur {
+    flex: 1 1 10rem;
+    max-width: 14rem;
+    min-width: 0;
+
+    ::ng-deep .p-multiselect {
+      width: 100%;
+      height: var(--control-height);
+      font-size: var(--text-sm);
+    }
+
+    ::ng-deep .p-multiselect-label {
+      display: flex;
+      align-items: center;
+      padding-block: 0;
     }
   }
 
   &__effacer {
     margin-left: auto;
-  }
-
-  &__badge {
-    display: inline-block;
-    min-width: 1.25rem;
-    margin: 0 var(--space-xs);
-    padding: 0 0.35rem;
-    border-radius: 0.625rem;
-    background: var(--color-primary);
-    color: var(--color-primary-contrast);
-    font-size: 0.6875rem;
-    text-align: center;
-  }
-
-  .p-button {
-    font-size: 0.8125rem;
+    height: var(--control-height);
+    font-size: var(--text-sm);
   }
 
   // ---- Fil de navigation (Cartes) ----
+  &__navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+
   &__fil {
     display: flex;
-    flex: 1;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-xs);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--color-text-muted);
 
     i {
-      font-size: 0.75rem;
+      font-size: var(--text-xs);
     }
   }
 
@@ -79,9 +124,9 @@
     border-radius: var(--radius-md);
     background: var(--color-surface);
     color: var(--color-text);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
+    transition: background-color var(--duration-fast), border-color var(--duration-fast);
 
     &:hover {
       border-color: var(--color-primary);
@@ -89,112 +134,10 @@
 
     &--courant {
       border-color: var(--color-primary);
-      background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+      background: var(--color-primary-soft);
       color: var(--color-primary);
       font-weight: 600;
       cursor: default;
     }
-  }
-
-  // ---- Résumé, panneau ----
-  &__resume {
-    margin: var(--space-xs) var(--space-xs) 0;
-    font-size: 0.8125rem;
-
-    button {
-      padding: 0;
-      border: none;
-      background: none;
-      color: var(--color-text-muted);
-      font-size: inherit;
-      cursor: pointer;
-
-      &:hover {
-        color: var(--color-primary);
-        text-decoration: underline;
-      }
-    }
-  }
-
-  &__panneau {
-    margin-top: var(--space-sm);
-    padding: var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
-    animation: panneau-ouverture 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &__colonnes {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-md);
-  }
-
-  &__colonne {
-    h3 {
-      margin: 0 0 var(--space-xs);
-      font-size: 0.8125rem;
-    }
-
-    app-lazy-select {
-      display: block;
-      font-size: 0.8125rem;
-    }
-  }
-
-  &__aide {
-    margin: var(--space-sm) 0 0;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-  }
-
-  &__heritage {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-
-    li {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-xs);
-      padding: var(--space-xs) var(--space-sm);
-      border: 1px dashed var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: 0.8125rem;
-    }
-  }
-
-  &__retirer {
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-
-    &:hover {
-      color: var(--color-danger);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__panneau {
-      animation: none;
-    }
-  }
-}
-
-@keyframes panneau-ouverture {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
   }
 }

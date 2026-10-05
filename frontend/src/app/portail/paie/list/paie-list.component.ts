@@ -5,10 +5,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
@@ -40,6 +41,7 @@ function toPeriodeString(date: Date | null): string | undefined {
     CalendarModule,
     ConfirmDialogModule,
     DialogModule,
+    SplitButtonModule,
     PaieExportWizardComponent
   ],
   providers: [ConfirmationService],
@@ -107,6 +109,19 @@ export class PaieListComponent implements OnInit {
   importResult: PaieImportResult | null = null;
   showImportResultDialog = false;
   downloadingTemplate = false;
+
+  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
+  readonly menuImport: MenuItem[] = [
+    {
+      label: 'Télécharger le modèle Excel',
+      icon: 'pi pi-file-excel',
+      command: () => {
+        if (!this.downloadingTemplate) {
+          this.onDownloadTemplate();
+        }
+      }
+    }
+  ];
 
   readonly importForm = this.fb.group({
     periode: [null as Date | null]

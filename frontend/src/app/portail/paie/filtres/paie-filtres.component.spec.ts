@@ -110,7 +110,7 @@ describe('PaieFiltresComponent', () => {
     });
   });
 
-  describe('saisies, résumé et effacement', () => {
+  describe('saisies et effacement', () => {
     it('émet après un court délai, une seule fois pour une rafale de frappes', fakeAsync(() => {
       composant.formulaire.controls.nomPrenom.setValue('a');
       composant.formulaire.controls.nomPrenom.setValue('al');
@@ -119,20 +119,6 @@ describe('PaieFiltresComponent', () => {
 
       expect(emis).toEqual([{ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'al', cin: 'AB', chantierIds: [3] }]);
     }));
-
-    it('résume en nombres ce qui est choisi, jamais en listant les valeurs', () => {
-      afficher({ ...AUCUN_FILTRE, chantierIds: [1, 2, 3, 4], equipeIds: [7], fonctionIds: [5, 6] });
-
-      expect(composant.resume()).toBe('4 chantiers · 1 équipe · 2 fonctions');
-      expect(composant.nombreChoisis()).toBe(7);
-    });
-
-    it('ne résume rien sans valeur choisie', () => {
-      afficher(AUCUN_FILTRE);
-
-      expect(composant.resume()).toBe('');
-      expect(composant.nombreChoisis()).toBe(0);
-    });
 
     it('efface tout, mois compris, sauf quand le mois est indispensable', () => {
       composant.reinitialiser();
@@ -192,21 +178,24 @@ describe('PaieFiltresComponent', () => {
     });
   });
 
-  describe('permissions des sélecteurs', () => {
+  describe('sélecteurs toujours visibles, selon les permissions', () => {
     function colonnes(): string[] {
-      composant.ouvert.set(true);
       fixture.detectChanges();
-      return Array.from(fixture.nativeElement.querySelectorAll('.paie-filtres__colonne h3')).map((h: unknown) => (h as HTMLElement).textContent?.trim() ?? '');
+      return Array.from(fixture.nativeElement.querySelectorAll('app-lazy-select')).map((e: unknown) => (e as HTMLElement).getAttribute('formcontrolname') ?? '');
     }
 
+    it("affiche les trois sélecteurs dès l'arrivée, sans bouton à ouvrir", () => {
+      expect(fixture.nativeElement.querySelector('button[aria-expanded]')).toBeNull();
+    });
+
     it('propose les trois sélecteurs à qui peut lire les trois référentiels', () => {
-      expect(colonnes()).toEqual(['Chantiers', 'Équipes', 'Fonctions']);
+      expect(colonnes()).toEqual(['chantierIds', 'equipeIds', 'fonctionIds']);
     });
 
     it('ne propose pas un sélecteur dont la route de recherche refuserait l’accès (403)', () => {
       permissions = ['EQUIPE_READ'];
 
-      expect(colonnes()).toEqual(['Équipes']);
+      expect(colonnes()).toEqual(['equipeIds']);
     });
 
     it('ne propose aucun sélecteur sans aucune de ces permissions', () => {
@@ -216,9 +205,13 @@ describe('PaieFiltresComponent', () => {
     });
   });
 
-  describe('mode navigation (cartes)', () => {
-    beforeEach(() => {
-      composant.vue = 'navigation';
+  describe('fil de navigation (cartes)', () => {
+    it("n'apparaît que dans les cartes", () => {
+      expect(fixture.nativeElement.querySelector('.paie-filtres__fil')).toBeNull();
+
+      composant.avecFil = true;
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.paie-filtres__fil')).not.toBeNull();
     });
 
     it('revient aux mois, ou aux chantiers du mois, depuis le fil', () => {
@@ -230,7 +223,7 @@ describe('PaieFiltresComponent', () => {
       expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: null, chantierIds: [], fonctionIds: [5] });
     });
 
-    it('remonte d\'un cran à la fois : le chantier d\'abord, puis le mois', () => {
+    it("remonte d'un cran à la fois : le chantier d'abord, puis le mois", () => {
       composant.remonter();
       expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [] });
 
@@ -239,33 +232,11 @@ describe('PaieFiltresComponent', () => {
       expect(emis.at(-1)).toEqual(AUCUN_FILTRE);
     });
 
-    it('nomme le chantier ouvert d\'après les chantiers du mois', () => {
+    it("nomme le chantier ouvert d'après les chantiers du mois", () => {
       expect(composant.chantierOuvert()).toBe('C168');
 
       afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
       expect(composant.chantierOuvert()).toBeNull();
-    });
-
-    it('garde visibles et retirables les filtres que les cartes ne posent pas', () => {
-      afficher({ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', fonctionIds: [5, 6], equipeIds: [2], chantierIds: [3, 4] });
-
-      expect(composant.herites().map((h) => h.libelle)).toEqual([
-        'Nom contient « ali »',
-        'CIN contient « AB1 »',
-        '2 fonction(s)',
-        '1 équipe(s)',
-        '2 chantiers'
-      ]);
-
-      composant.retirer(composant.herites()[2]);
-
-      expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', equipeIds: [2], chantierIds: [3, 4] });
-    });
-
-    it('n\'a aucun filtre hérité quand la position est seule', () => {
-      afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3] });
-
-      expect(composant.herites()).toEqual([]);
     });
   });
 });
