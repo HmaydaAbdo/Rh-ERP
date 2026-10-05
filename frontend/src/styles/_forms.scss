@@ -1,0 +1,234 @@
+@use 'breakpoints' as bp;
+
+// Mise en page unique des écrans de formulaire et de consultation, définie une seule fois (voir conventions/design-system.md,
+// section « Mise en page des écrans »). Elle complète `_page.scss` (carte, en-tête) :
+//
+//   <div class="… app-page app-page--narrow">
+//     <a class="app-back">← Liste</a>
+//     <div class="app-page__header"><h1>Titre</h1> [<div class="app-page__actions">…</div>]</div>
+//     <form class="app-form__grid">  champs `.field`, sections `.app-form__section`, `.app-form__actions`
+//     <dl class="app-detail">        pour une consultation
+
+.app-page--narrow {
+  max-width: 760px;
+}
+
+.app-page--wide {
+  max-width: 1000px;
+}
+
+// Retour à la liste : un lien discret au-dessus du titre, pas un bouton
+.app-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: color var(--duration-fast);
+
+  &:hover {
+    color: var(--color-primary);
+  }
+
+  .pi {
+    font-size: var(--text-xs);
+  }
+}
+
+.app-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+
+  .p-button {
+    height: var(--control-height);
+    font-size: var(--text-sm);
+  }
+}
+
+// ---- Formulaire ----
+.app-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md) var(--space-lg);
+
+  &--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    @include bp.tablet-down {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @include bp.phone {
+    &,
+    &--3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+// Titre d'un groupe de champs : sépare les blocs d'un long formulaire
+.app-form__section {
+  grid-column: 1 / -1;
+  margin-top: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+
+  &:first-child {
+    margin-top: 0;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: 600;
+  }
+
+  p {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+}
+
+.app-form__wide {
+  grid-column: 1 / -1;
+}
+
+// Actions : Annuler puis l'action principale (à droite) ; collées au bas de l'écran sur téléphone, toujours à portée du pouce
+.app-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+
+  .p-button {
+    height: var(--control-height);
+  }
+
+  @include bp.phone {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: var(--space-sm) calc(-1 * var(--space-md)) calc(-1 * var(--space-md));
+    padding: var(--space-sm) var(--space-md) max(var(--space-sm), env(safe-area-inset-bottom));
+    background: var(--color-surface);
+
+    .p-button {
+      flex: 1;
+    }
+  }
+}
+
+// ---- Champ ----
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  label {
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+
+  small {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  // Interrupteur : le libellé à côté
+  &--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .p-inputtext,
+  .p-dropdown,
+  .p-multiselect,
+  .p-inputnumber-input {
+    min-height: var(--control-height);
+  }
+
+  .p-inputnumber,
+  .p-calendar,
+  .p-password {
+    width: 100%;
+  }
+
+  .p-inputnumber-input,
+  .p-calendar .p-inputtext {
+    width: 100%;
+    min-width: 0;
+  }
+
+  // Champ invalide et touché : bordure rouge (le message est dessous)
+  .p-inputtext.ng-invalid.ng-touched,
+  .ng-invalid.ng-touched > .p-inputtext,
+  .ng-invalid.ng-touched > .p-inputnumber > .p-inputtext,
+  .ng-invalid.ng-touched > .p-dropdown,
+  .ng-invalid.ng-touched > .p-multiselect,
+  .ng-invalid.ng-touched.p-inputwrapper > .p-inputtext,
+  .ng-invalid.ng-touched > .p-calendar > .p-inputtext {
+    border-color: var(--color-danger);
+  }
+}
+
+.field__req {
+  margin-left: 2px;
+  color: var(--color-danger);
+}
+
+.field-error {
+  color: var(--color-danger) !important;
+}
+
+// ---- Consultation : étiquette / valeur, une ligne de séparation par information ----
+.app-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-lg);
+  margin: 0;
+
+  &--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    @include bp.tablet-down {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  > div {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  dt {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  dd {
+    margin: var(--space-xs) 0 0;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  @include bp.phone {
+    &,
+    &--3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

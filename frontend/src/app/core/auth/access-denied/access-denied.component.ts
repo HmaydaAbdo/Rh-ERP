@@ -7,29 +7,21 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="access-denied">
-      <h1>Accès refusé</h1>
-      <p>Vous n'avez pas la permission d'accéder à cet écran. Contactez un administrateur si vous pensez que c'est une erreur.</p>
+    <div class="app-page app-page--narrow">
+      <div class="app-page__header">
+        <h1>Accès refusé</h1>
+      </div>
+      <p class="access-denied__message">
+        Vous n'avez pas la permission d'accéder à cet écran. Contactez un administrateur si vous pensez que c'est une erreur.
+      </p>
       <a routerLink="/" class="p-button">Retour à l'accueil</a>
     </div>
   `,
   styles: [
     `
-      .access-denied {
-        background: var(--color-surface);
-        border-radius: var(--radius-md);
-        padding: var(--space-lg);
-        box-shadow: var(--shadow-sm);
-        max-width: 720px;
-
-        h1 {
-          margin-top: 0;
-          font-size: 1.25rem;
-        }
-
-        p {
-          color: var(--color-text-muted);
-        }
+      .access-denied__message {
+        margin: 0 0 var(--space-lg);
+        color: var(--color-text-muted);
       }
     `
   ]
