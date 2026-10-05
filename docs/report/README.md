@@ -484,6 +484,13 @@ pipelines ? »), mais avec la même règle. Côté PDF, ce texte est porté par 
 — à ne jamais confondre avec `chantierCode`, réservé aux mécanismes internes (détection de la
 section "reste" via `equipe.nom().equals(chantier.code())`), jamais affiché tel quel.
 
+**Exception : le graphique « Répartition par chantier »** (synthèse globale) porte le **nom seul** du chantier (`Chantier.nom`),
+sans son code, quand il est renseigné ; le **code** reste le libellé de repli (nom vide ou absent) — demande de direction,
+2026-10-05 (`PaieBiReportBuilder.repartitionChantiers`). Seul le libellé de la barre change : l'agrégat reste indexé par
+code (filtrage des sections). Un nom trop long pour la colonne des libellés (jusqu'à 255 caractères) est coupé par
+« … » (`RapportChartSvgBuilder.libelleAffiche`, environ 30 caractères) au lieu de déborder de la page. Deux chantiers qui
+porteraient le même nom auraient deux barres de même libellé : le nom n'est pas unique, contrairement au code.
+
 ### Anti-duplication du détail employé
 
 Un employé n'apparaît dans le tableau détaillé qu'**une seule fois**, dans sa section (une équipe

@@ -238,6 +238,29 @@ class PaieBiReportBuilderTest {
                         org.assertj.core.groups.Tuple.tuple("OPERATEUR", 1, 3000));
     }
 
+    /** Demande de direction (2026-10-05) : le graphique de répartition par chantier porte le NOM du chantier, jamais son
+     * code, quand il est renseigné ; le code reste le libellé de repli (nom absent ou vide). */
+    @Test
+    void construireDepuis_devraitLibellerLesBarresDuGraphiqueChantierParLeNomEtRepliSurLeCode() {
+        Chantier nomme = chantier("C059", "Nador");
+        Chantier nomBlanc = chantier("C068", "   ");
+        Chantier sansNom = chantier("C196", null);
+        Paie a = paieAvecChantier("EMPLOYE UN", "CIN1", "MACON", nomme, "EQUIPE A", "5000");
+        Paie b = paieAvecChantier("EMPLOYE DEUX", "CIN2", "MACON", nomBlanc, "EQUIPE A", "4000");
+        Paie c = paieAvecChantier("EMPLOYE TROIS", "CIN3", "MACON", sansNom, "EQUIPE A", "3000");
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(a, b, c), List.of());
+
+        assertThat(vue.synthese().repartitionChantier())
+                .extracting(RepartitionBean::getLibelle, r -> r.getMontant().intValue())
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Nador", 5000),
+                        org.assertj.core.groups.Tuple.tuple("C068", 4000),
+                        org.assertj.core.groups.Tuple.tuple("C196", 3000));
+        // Les sections par chantier, elles, gardent leur règle « nom (code) » : seul le graphique change.
+        assertThat(vue.chantiers().get(0).code()).isEqualTo("C059");
+    }
+
     @Test
     void construireDepuis_neDevraitPasCalculerDePourcentageQuandLeMoisPrecedentEstIndisponible() {
         Paie ligne = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "5000");
@@ -302,6 +325,13 @@ class PaieBiReportBuilderTest {
 
     private BigDecimal montantDepuisFormat(String montantFormate) {
         return new BigDecimal(montantFormate.replace(" ", "").replace(",", "."));
+    }
+
+    private Chantier chantier(String code, String nom) {
+        Chantier chantier = new Chantier();
+        chantier.setCode(code);
+        chantier.setNom(nom);
+        return chantier;
     }
 
     private Paie paie(String nomPrenom, String cin, String fonctionLibelle, String chantierCode, String equipe, String salaireTotal) {
