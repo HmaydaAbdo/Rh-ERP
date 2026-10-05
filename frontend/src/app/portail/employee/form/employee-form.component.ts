@@ -14,6 +14,7 @@ import { ChantierReferenceService } from '../../../shared/reference-data/chantie
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
   { label: 'Actif', value: 'ACTIF' },
@@ -36,8 +37,7 @@ function fromIsoDate(isoDate: string): Date {
   selector: 'app-employee-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule, LazySelectComponent],
-  templateUrl: './employee-form.component.html',
-  styleUrl: './employee-form.component.scss'
+  templateUrl: './employee-form.component.html'
 })
 export class EmployeeFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -88,6 +88,7 @@ export class EmployeeFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -115,6 +116,7 @@ export class EmployeeFormComponent implements OnInit {
           summary: this.isEditMode ? 'Employé modifié' : 'Employé créé',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/employees', employee.id]);
       });
   }

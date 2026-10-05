@@ -1,28 +1,29 @@
-<div class="equipe-form">
-  <div class="equipe-form__header">
+<div class="equipe-form app-page app-page--narrow">
+  <a routerLink="/equipes" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Équipes</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? "Modifier l'équipe" : 'Nouvelle équipe' }}</h1>
-    <a routerLink="/equipes" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="equipe-form__grid">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
-      <label for="code">Code *</label>
-      <input pInputText id="code" type="text" formControlName="code" />
-      <small class="field-hint">Enregistré en majuscules — c'est le code utilisé par l'import Excel de la paie.</small>
+      <label for="code">Code <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText spellcheck="false" autocomplete="off" id="code" type="text" formControlName="code" />
+      <small>Enregistré en majuscules — c'est le code utilisé par l'import Excel de la paie.</small>
       @if (form.controls.code.invalid && form.controls.code.touched) {
-        <small class="field-error">Le code est obligatoire.</small>
+        <small class="field-error" role="alert">Le code est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="libelle">Libellé *</label>
-      <input pInputText id="libelle" type="text" formControlName="libelle" />
+      <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText autocomplete="off" id="libelle" type="text" formControlName="libelle" />
       @if (form.controls.libelle.invalid && form.controls.libelle.touched) {
-        <small class="field-error">Le libellé est obligatoire.</small>
+        <small class="field-error" role="alert">Le libellé est obligatoire.</small>
       }
     </div>
 
-    <div class="equipe-form__actions">
+    <div class="app-form__actions">
+      <a routerLink="/equipes" class="p-button p-button-text">Annuler</a>
       <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
     </div>
   </form>

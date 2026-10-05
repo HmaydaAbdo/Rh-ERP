@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { CurrentUser } from './core/auth/models/auth.model';
@@ -24,6 +24,7 @@ describe('AppComponent', () => {
         providers: [
           provideRouter([]),
           MessageService,
+          ConfirmationService,
           { provide: AuthService, useValue: buildAuthServiceStub(null) }
         ]
       }).compileComponents();
@@ -65,9 +66,30 @@ describe('AppComponent', () => {
         providers: [
           provideRouter([]),
           MessageService,
+          ConfirmationService,
           { provide: AuthService, useValue: buildAuthServiceStub(user) }
         ]
       }).compileComponents();
+    });
+
+    it("offre un lien d'évitement qui met le focus sur le contenu principal", () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const lien = compiled.querySelector<HTMLAnchorElement>('.app-skip');
+      lien?.click();
+
+      expect(lien?.textContent).toContain('Aller au contenu');
+      expect(compiled.querySelector('main#contenu')).not.toBeNull();
+      expect(document.activeElement?.id).toBe('contenu');
+    });
+
+    it('protège le nom du produit de la traduction automatique', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.app-sidebar__brand [translate="no"]')).not.toBeNull();
     });
 
     it('should render the sidebar brand', () => {

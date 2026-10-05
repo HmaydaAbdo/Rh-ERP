@@ -114,7 +114,7 @@ ligne** — donc tout le fichier — sans rien modifier.
 
 ### Modèle téléchargeable
 
-`GET /employees/import/modele` (bouton "Modèle Excel" dans l'UI, à côté du bouton "Importer") renvoie
+`GET /employees/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI) renvoie
 un fichier `.xlsx` vierge contenant uniquement les 6 en-têtes attendus, dans l'ordre, généré par
 `EmployeeImportService.genererModele()`. Objectif : que l'utilisateur parte toujours d'un fichier au
 bon format plutôt que de deviner ou de réutiliser un fichier dont la structure a pu changer.
@@ -209,7 +209,7 @@ multiple pour les filtres de liste (`fonctionIds`/`chantierIds`), sélection sim
 (relation unique de l'employé). Le filtre Statut reste en sélection simple (2 valeurs seulement, le
 multiselect n'y apporterait rien).
 
-Le bouton "Modèle Excel" télécharge le fichier vierge (`GET /employees/import/modele`) via un lien
+L'entrée « Télécharger le modèle Excel » du bouton « Importer » télécharge le fichier vierge (`GET /employees/import/modele`) via un lien
 `<a download>` généré dynamiquement à partir du `Blob` reçu. Le bouton "Importer" déclenche un
 sélecteur de fichier natif (`<input type="file" accept=".xlsx">` masqué), envoie le fichier à
 `POST /employees/import`, puis affiche un résumé (toast) et le détail de chaque ligne ignorée — avec

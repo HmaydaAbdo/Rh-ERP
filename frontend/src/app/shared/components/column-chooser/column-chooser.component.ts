@@ -23,6 +23,7 @@ import { ColumnState } from '../../table/table-columns';
       [maxSelectedLabels]="0"
       selectedItemsLabel="Colonnes ({0})"
       placeholder="Colonnes"
+      ariaLabel="Choisir les colonnes visibles"
       [showHeader]="true"
       appendTo="body"
     ></p-multiSelect>

@@ -34,21 +34,75 @@
 
           <div class="paie-analytique__grille">
             <section class="paie-analytique__carte" [style.animation-delay.ms]="320">
-              <h2>Évolution</h2>
-              <p class="paie-analytique__aide">
-                Tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est mis en évidence.
-              </p>
-              <div class="paie-analytique__graphique">
-                <p-chart type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
+              <div class="paie-analytique__entete">
+                <div>
+                  <h2>Évolution</h2>
+                  <p class="paie-analytique__aide">
+                    {{ libelleMesure(mesureEvolution()) }} sur tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est cerclé.
+                  </p>
+                </div>
+                <div class="paie-analytique__mesure" role="group" aria-label="Mesure de l'évolution">
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'masse'" (click)="mesureEvolution.set('masse')">Masse</button>
+                  <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'effectif'" (click)="mesureEvolution.set('effectif')">Bulletins</button>
+                </div>
               </div>
+              <div
+                class="paie-analytique__graphique"
+              >
+                <p-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
+              </div>
+              <button
+                type="button"
+                class="paie-analytique__donnees"
+                [attr.aria-expanded]="tableaux().evolution"
+                (click)="basculerTableau('evolution')"
+              >
+                <i class="pi pi-table" aria-hidden="true"></i>
+                {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
+              </button>
+              @if (tableaux().evolution) {
+                <div class="paie-analytique__tableau" tabindex="0">
+                  <table>
+                    <caption class="paie-analytique__lecteur">Évolution mensuelle de la masse salariale et des bulletins</caption>
+                    <thead><tr><th scope="col">Mois</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
+                    <tbody>
+                      @for (ligne of lignesEvolution(); track ligne.mois) {
+                        <tr><th scope="row">{{ ligne.mois }}</th><td class="text-right">{{ formaterMontant(ligne.masse) }}</td><td class="text-right">{{ ligne.effectif }}</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
             </section>
 
             <section class="paie-analytique__carte" [style.animation-delay.ms]="400">
               <h2>Répartition des totaux</h2>
               <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH), tous les bulletins du mois.</p>
               <div class="paie-analytique__graphique">
-                <p-chart type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
+                <p-chart ariaLabel="Nombre de bulletins par tranche de total ; le détail est dans le tableau des données." type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
               </div>
+              <button
+                type="button"
+                class="paie-analytique__donnees"
+                [attr.aria-expanded]="tableaux().tranches"
+                (click)="basculerTableau('tranches')"
+              >
+                <i class="pi pi-table" aria-hidden="true"></i>
+                {{ tableaux().tranches ? 'Masquer les données' : 'Afficher les données' }}
+              </button>
+              @if (tableaux().tranches) {
+                <div class="paie-analytique__tableau" tabindex="0">
+                  <table>
+                    <caption class="paie-analytique__lecteur">Nombre de bulletins par tranche de total</caption>
+                    <thead><tr><th scope="col">Tranche (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
+                    <tbody>
+                      @for (ligne of lignesTranches(); track ligne.tranche) {
+                        <tr><th scope="row">{{ ligne.tranche }}</th><td class="text-right">{{ ligne.effectif }}</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
             </section>
 
             <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="480">
@@ -64,9 +118,12 @@
                   <button type="button" [class.paie-analytique__mesure--active]="mesureChantiers() === 'effectif'" (click)="mesureChantiers.set('effectif')">Bulletins</button>
                 </div>
               </div>
-              <div class="paie-analytique__defilement">
-                <div class="paie-analytique__graphique" [style.height.rem]="hauteurChantiers()">
-                  <p-chart
+              <div class="paie-analytique__defilement" tabindex="0" role="region" aria-label="Graphique par chantier, défilable">
+                <div
+                  class="paie-analytique__graphique"
+                  [style.height.rem]="hauteurChantiers()"
+                >
+                  <p-chart [ariaLabel]="'Répartition par chantier : ' + libelleMesure(mesureChantiers()) + ', ' + chantiersTries().length + ' chantiers ; le détail est dans le tableau des données.'"
                     type="bar"
                     [data]="graphiqueChantiers().data"
                     [options]="graphiqueChantiers().options"
@@ -75,6 +132,33 @@
                   ></p-chart>
                 </div>
               </div>
+              <button
+                type="button"
+                class="paie-analytique__donnees"
+                [attr.aria-expanded]="tableaux().chantiers"
+                (click)="basculerTableau('chantiers')"
+              >
+                <i class="pi pi-table" aria-hidden="true"></i>
+                {{ tableaux().chantiers ? 'Masquer les données' : 'Afficher les données' }}
+              </button>
+              @if (tableaux().chantiers) {
+                <div class="paie-analytique__tableau" tabindex="0">
+                  <table>
+                    <caption class="paie-analytique__lecteur">Masse, bulletins et sorties par chantier</caption>
+                    <thead><tr><th scope="col">Chantier</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th><th scope="col" class="text-right">STC / sorties</th></tr></thead>
+                    <tbody>
+                      @for (chantier of chantiersTries(); track chantier.id) {
+                        <tr>
+                          <th scope="row">{{ chantier.code }}@if (chantier.libelle) { · {{ chantier.libelle }} }</th>
+                          <td class="text-right">{{ formaterMontant(chantier.masse) }}</td>
+                          <td class="text-right">{{ chantier.effectif }}</td>
+                          <td class="text-right">{{ chantier.stc }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
             </section>
 
             <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="560">
@@ -90,9 +174,12 @@
                   <button type="button" [class.paie-analytique__mesure--active]="mesureFonctions() === 'effectif'" (click)="mesureFonctions.set('effectif')">Bulletins</button>
                 </div>
               </div>
-              <div class="paie-analytique__defilement">
-                <div class="paie-analytique__graphique" [style.height.rem]="hauteurFonctions()">
-                  <p-chart
+              <div class="paie-analytique__defilement" tabindex="0" role="region" aria-label="Graphique par fonction, défilable">
+                <div
+                  class="paie-analytique__graphique"
+                  [style.height.rem]="hauteurFonctions()"
+                >
+                  <p-chart [ariaLabel]="'Répartition par fonction : ' + libelleMesure(mesureFonctions()) + ', ' + fonctionsTriees().length + ' fonctions ; le détail est dans le tableau des données.'"
                     type="bar"
                     [data]="graphiqueFonctions().data"
                     [options]="graphiqueFonctions().options"
@@ -101,6 +188,28 @@
                   ></p-chart>
                 </div>
               </div>
+              <button
+                type="button"
+                class="paie-analytique__donnees"
+                [attr.aria-expanded]="tableaux().fonctions"
+                (click)="basculerTableau('fonctions')"
+              >
+                <i class="pi pi-table" aria-hidden="true"></i>
+                {{ tableaux().fonctions ? 'Masquer les données' : 'Afficher les données' }}
+              </button>
+              @if (tableaux().fonctions) {
+                <div class="paie-analytique__tableau" tabindex="0">
+                  <table>
+                    <caption class="paie-analytique__lecteur">Masse et bulletins par fonction</caption>
+                    <thead><tr><th scope="col">Fonction</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
+                    <tbody>
+                      @for (fonction of fonctionsTriees(); track fonction.id) {
+                        <tr><th scope="row">{{ fonction.libelle }}</th><td class="text-right">{{ formaterMontant(fonction.masse) }}</td><td class="text-right">{{ fonction.effectif }}</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
             </section>
 
             <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="640">
@@ -118,7 +227,14 @@
         }
       </div>
     } @else {
-      <p class="paie-analytique__message">Chargement…</p>
+      <div class="paie-analytique__squelette" role="status" aria-busy="true">
+        <span class="app-lecteur">Chargement…</span>
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <span class="app-skeleton paie-analytique__squelette-tuile"></span>
+        }
+        <span class="app-skeleton paie-analytique__squelette-carte"></span>
+        <span class="app-skeleton paie-analytique__squelette-carte"></span>
+      </div>
     }
   }
 </div>

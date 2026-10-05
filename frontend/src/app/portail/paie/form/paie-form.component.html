@@ -1,7 +1,7 @@
-<div class="paie-form">
-  <div class="paie-form__header">
+<div class="paie-form app-page app-page--wide">
+  <a routerLink="/paie" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Paie</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? 'Modifier le bulletin' : 'Nouveau bulletin de paie' }}</h1>
-    <a routerLink="/paie" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
   @if (isEditMode) {
@@ -12,61 +12,63 @@
     ></p-message>
   }
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="paie-form__grid">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid app-form__grid--3">
+    <div class="app-form__section"><h2>Affectation</h2></div>
+
     <div class="field">
-      <label for="employeeId">Employé *</label>
+      <label for="employeeId">Employé <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
-        inputId="employeeId"
+        ariaLabel="Employé" inputId="employeeId"
         formControlName="employeeId"
         [source]="employeeReferenceService"
         optionLabel="displayLabel"
         placeholder="Rechercher par nom"
       ></app-lazy-select>
       @if (form.controls.employeeId.invalid && form.controls.employeeId.touched) {
-        <small class="field-error">L'employé est obligatoire.</small>
+        <small class="field-error" role="alert">L'employé est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="periode">Période *</label>
+      <label for="periode">Période <span class="field__req" aria-hidden="true">*</span></label>
       <p-calendar inputId="periode" formControlName="periode" view="month" dateFormat="mm/yy" [showIcon]="true"></p-calendar>
       @if (form.controls.periode.invalid && form.controls.periode.touched) {
-        <small class="field-error">La période est obligatoire.</small>
+        <small class="field-error" role="alert">La période est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="fonctionId">Fonction *</label>
+      <label for="fonctionId">Fonction <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
-        inputId="fonctionId"
+        ariaLabel="Fonction" inputId="fonctionId"
         formControlName="fonctionId"
         [source]="functionReferenceService"
         optionLabel="libelle"
         placeholder="Sélectionner une fonction"
       ></app-lazy-select>
       @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
-        <small class="field-error">La fonction est obligatoire.</small>
+        <small class="field-error" role="alert">La fonction est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="chantierId">Chantier *</label>
+      <label for="chantierId">Chantier <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
-        inputId="chantierId"
+        ariaLabel="Chantier" inputId="chantierId"
         formControlName="chantierId"
         [source]="chantierReferenceService"
         optionLabel="code"
         placeholder="Sélectionner un chantier"
       ></app-lazy-select>
       @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
-        <small class="field-error">Le chantier est obligatoire.</small>
+        <small class="field-error" role="alert">Le chantier est obligatoire.</small>
       }
     </div>
 
     <div class="field">
       <label for="equipeId">Équipe</label>
       <app-lazy-select
-        inputId="equipeId"
+        ariaLabel="Équipe" inputId="equipeId"
         formControlName="equipeId"
         [source]="equipeReferenceService"
         optionLabel="libelle"
@@ -74,56 +76,61 @@
       ></app-lazy-select>
     </div>
 
+    <div class="app-form__section"><h2>Jours</h2></div>
+
     <div class="field">
-      <label for="nombreJoursTravailles">Jours travaillés *</label>
-      <p-inputNumber inputId="nombreJoursTravailles" formControlName="nombreJoursTravailles" [min]="0"></p-inputNumber>
+      <label for="nombreJoursTravailles">Jours travaillés <span class="field__req" aria-hidden="true">*</span></label>
+      <p-inputNumber locale="fr-FR" inputId="nombreJoursTravailles" formControlName="nombreJoursTravailles" [min]="0"></p-inputNumber>
       @if (form.controls.nombreJoursTravailles.invalid && form.controls.nombreJoursTravailles.touched) {
-        <small class="field-error">Le nombre de jours travaillés est obligatoire.</small>
+        <small class="field-error" role="alert">Le nombre de jours travaillés est obligatoire.</small>
       }
     </div>
 
     <div class="field">
       <label for="joursRecuperationOuvrable">Jours récup. ouvrable</label>
-      <p-inputNumber inputId="joursRecuperationOuvrable" formControlName="joursRecuperationOuvrable" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
+      <p-inputNumber locale="fr-FR" inputId="joursRecuperationOuvrable" formControlName="joursRecuperationOuvrable" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
     </div>
 
     <div class="field">
       <label for="joursRecuperationDimanche">Jours récup. dimanche</label>
-      <p-inputNumber inputId="joursRecuperationDimanche" formControlName="joursRecuperationDimanche" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
+      <p-inputNumber locale="fr-FR" inputId="joursRecuperationDimanche" formControlName="joursRecuperationDimanche" [min]="0" [maxFractionDigits]="2"></p-inputNumber>
     </div>
 
+    <div class="app-form__section"><h2>Rémunération</h2></div>
+
     <div class="field">
-      <label for="salaireMensuel">Salaire mensuel *</label>
-      <p-inputNumber inputId="salaireMensuel" formControlName="salaireMensuel" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      <label for="salaireMensuel">Salaire mensuel <span class="field__req" aria-hidden="true">*</span></label>
+      <p-inputNumber locale="fr-FR" inputId="salaireMensuel" formControlName="salaireMensuel" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
       @if (form.controls.salaireMensuel.invalid && form.controls.salaireMensuel.touched) {
-        <small class="field-error">Le salaire mensuel est obligatoire.</small>
+        <small class="field-error" role="alert">Le salaire mensuel est obligatoire.</small>
       }
     </div>
 
     <div class="field">
       <label for="primeRoulageOrdinaire">Prime roulage ordinaire</label>
-      <p-inputNumber inputId="primeRoulageOrdinaire" formControlName="primeRoulageOrdinaire" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      <p-inputNumber locale="fr-FR" inputId="primeRoulageOrdinaire" formControlName="primeRoulageOrdinaire" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
     </div>
 
     <div class="field">
       <label for="primeRoulageDimanche">Prime roulage dimanche</label>
-      <p-inputNumber inputId="primeRoulageDimanche" formControlName="primeRoulageDimanche" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      <p-inputNumber locale="fr-FR" inputId="primeRoulageDimanche" formControlName="primeRoulageDimanche" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
     </div>
 
     <div class="field">
-      <label for="salaireTotal">Salaire total *</label>
-      <p-inputNumber inputId="salaireTotal" formControlName="salaireTotal" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
+      <label for="salaireTotal">Salaire total <span class="field__req" aria-hidden="true">*</span></label>
+      <p-inputNumber locale="fr-FR" inputId="salaireTotal" formControlName="salaireTotal" mode="decimal" [minFractionDigits]="2" [min]="0"></p-inputNumber>
       @if (form.controls.salaireTotal.invalid && form.controls.salaireTotal.touched) {
-        <small class="field-error">Le salaire total est obligatoire.</small>
+        <small class="field-error" role="alert">Le salaire total est obligatoire.</small>
       }
     </div>
 
-    <div class="field paie-form__field-wide">
+    <div class="field app-form__wide">
       <label for="observation">Observation</label>
-      <input pInputText id="observation" type="text" formControlName="observation" />
+      <input pInputText autocomplete="off" id="observation" type="text" formControlName="observation" />
     </div>
 
-    <div class="paie-form__actions">
+    <div class="app-form__actions">
+      <a routerLink="/paie" class="p-button p-button-text">Annuler</a>
       <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
     </div>
   </form>

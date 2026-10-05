@@ -86,7 +86,7 @@ règles : `conventions/design-system.md`.
   texte `#e6eef8`.
 - **Statut** (`success`, `warning`, `danger`) : ne se confond jamais avec la marque ; teintes plus claires en sombre.
 - **Menu latéral** : bleu très foncé (`#052a49`) dans les deux thèmes, repère `brand-300` sur l'écran actif.
-- **Graphiques** : `--chart-1…8`, bleu en tête puis ambre, sarcelle, violet, rouge ; versions éclaircies en sombre.
+- **Graphiques** : `--chart-1…8` (palette catégorielle validée en clair et en sombre) ; la couleur suit la mesure : masse = bleu `--chart-1`, bulletins = orange `--chart-2`, dans tous les graphiques.
 
 ## Typography
 
@@ -118,10 +118,22 @@ forme de marque est le monogramme « S » à pointe triangulaire (favicon, menu)
 - **En-tête de page** : titre et onglets de vue soulignés sur une ligne, posés sur un filet ; l'onglet actif porte le trait de marque.
 - **Barre de filtres** (Paie) : une seule ligne à plat de contrôles de même hauteur (`--control-height` 2,25 rem) — mois, nom,
   CIN, chantiers / équipes / fonctions en mode compact — toujours visibles ; fil de navigation dans les Cartes.
-- **Barre de tableau** : total à gauche ; à droite, du moins au plus important : colonnes, exporter, importer (bouton fractionné),
-  action principale en bleu plein.
+- **Écran de liste** (tous : Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, Paie) : carte (`app-page`),
+  titre, ligne de filtres à plat (`app-toolbar`), barre du tableau (`app-table-bar`) puis tableau.
+- **Barre de tableau** : total à gauche ; à droite, du moins au plus important : colonnes, action secondaire (exporter, importer en
+  bouton fractionné, synchroniser), action principale en bleu plein — toujours en dernier.
 - **Bouton principal** : un seul par écran, bleu plein ; secondaires en contour, tertiaires en texte.
+- **Formulaire** : lien « ← Liste », titre, grille de champs (libellé en gras, astérisque rouge, bordure rouge si invalide), sections
+  pour les longs formulaires, pied « Annuler » + action principale à droite (collé en bas sur téléphone).
+- **Consultation** : étiquette en petites capitales / valeur, une ligne de séparation par information ; Historique puis Modifier.
+- **Fenêtre de dialogue** : rayon 12 px, marges 24 px, pied séparé ; confirmation de suppression étroite, « Supprimer » en rouge.
 - **Connexion** : carte sur fond bleu profond à courbes de niveau, logo officiel (blanc en sombre).
+
+## Motion
+
+Le mouvement explique un changement d'état : écran qui apparaît (fondu, 6 px, 220 ms), thème qui change (couleurs en fondu, 300 ms),
+squelette de chargement, appui d'un bouton (2 %), tracé d'un graphique (600 ms). Durées et courbe par jetons (`--duration-*`,
+`--ease-out`), `opacity` et `transform` seulement, aucun rebond ; `prefers-reduced-motion` supprime tout.
 
 ## Do's and Don'ts
 

@@ -1,5 +1,10 @@
 @use 'styles/tokens';
 @use 'styles/tables';
+@use 'styles/page';
+@use 'styles/forms';
+@use 'styles/overlays';
+@use 'styles/motion';
+@use 'styles/status';
 
 html,
 body {
@@ -10,31 +15,51 @@ body {
   font-family: var(--font-sans);
 }
 
+// Un lien stylé en bouton (`<a class="p-button">`) ne se souligne pas
+a.p-button {
+  text-decoration: none;
+}
+
 // Anneau de focus clavier unique, aux couleurs de la marque
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
+// Titres : pas de mot orphelin en fin de ligne
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+// Écran tactile : pas de délai de double-tap, pas de halo gris au toucher (le retour visuel est celui du composant)
+a,
+button,
+[role='button'],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Un panneau qui défile (tiroir, fenêtre, panneau latéral) ne fait pas défiler la page derrière lui
+.p-dialog-content,
+.p-sidebar-content,
+.app-sidebar,
+.p-overlaypanel-content,
+.p-dropdown-items-wrapper,
+.p-multiselect-items-wrapper {
+  overscroll-behavior: contain;
+}
+
 // Identifiants (CIN, codes chantier, périodes) : chasse fixe, chiffres alignés
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-}
-
-// Champs de formulaire (`.field`) : les composants PrimeNG composés (nombre, date, mot de passe) prennent toute la largeur de leur colonne
-.field {
-  .p-inputnumber,
-  .p-calendar,
-  .p-password {
-    width: 100%;
-  }
-
-  .p-inputnumber-input,
-  .p-calendar .p-inputtext {
-    width: 100%;
-    min-width: 0;
-  }
 }
 
 // Écran tactile ou téléphone : cibles d'au moins 44 px, texte de champ d'au moins 16 px (sinon iOS zoome à la saisie)
@@ -54,22 +79,5 @@ body {
   .p-dropdown .p-dropdown-label,
   .p-multiselect .p-multiselect-label {
     font-size: var(--control-font-size);
-  }
-}
-
-// Téléphone : les fenêtres de dialogue (largeur fixée en ligne par chaque écran) tiennent dans l'écran
-@media (max-width: 767px) {
-  .p-dialog {
-    width: calc(100vw - 2rem) !important;
-    max-height: calc(100dvh - 2rem) !important;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
   }
 }

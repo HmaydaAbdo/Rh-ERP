@@ -3261,45 +3261,6 @@
     margin: 0;
   }
 
-  .p-organizationchart .p-organizationchart-node-content.p-organizationchart-selectable-node:not(.p-highlight):hover {
-    background: var(--pn-surface-100);
-    color: var(--pn-surface-800);
-  }
-  .p-organizationchart .p-organizationchart-node-content.p-highlight {
-    background: var(--pn-primary-50);
-    color: var(--pn-primary-700);
-  }
-  .p-organizationchart .p-organizationchart-node-content.p-highlight .p-node-toggler i {
-    color: #70aeff;
-  }
-  .p-organizationchart .p-organizationchart-line-down {
-    background: var(--pn-surface-200);
-  }
-  .p-organizationchart .p-organizationchart-line-left {
-    border-right: 1px solid var(--pn-surface-200);
-    border-color: var(--pn-surface-200);
-  }
-  .p-organizationchart .p-organizationchart-line-top {
-    border-top: 1px solid var(--pn-surface-200);
-    border-color: var(--pn-surface-200);
-  }
-  .p-organizationchart .p-organizationchart-node-content {
-    border: 1px solid var(--pn-surface-200);
-    background: var(--pn-surface-0);
-    color: var(--pn-surface-700);
-    padding: 0 1.125rem 1.125rem 1.125rem;
-  }
-  .p-organizationchart .p-organizationchart-node-content .p-node-toggler {
-    background: inherit;
-    color: inherit;
-    border-radius: 50%;
-  }
-  .p-organizationchart .p-organizationchart-node-content .p-node-toggler:focus-visible {
-    outline: 1px solid var(--p-focus-ring-color);
-    outline-offset: 2px;
-    box-shadow: none;
-  }
-
   .p-paginator {
     background: var(--pn-surface-0);
     color: var(--pn-surface-700);
@@ -7295,34 +7256,6 @@
   }
   .p-orderlist .p-orderlist-filter-container {
     border: 0 none;
-  }
-
-  .p-organizationchart .p-organizationchart-node-content {
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-  }
-  .p-organizationchart .p-organizationchart-node-content .p-node-toggler {
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
-    border: 1px solid var(--pn-surface-200);
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .p-organizationchart .p-organizationchart-node-content .p-node-toggler .p-node-toggler-icon {
-    position: static;
-  }
-  .p-organizationchart .p-organizationchart-node-content:has(.p-node-toggler) {
-    padding: 0.75rem 1rem 1.25rem 1rem;
-  }
-  .p-organizationchart .p-organizationchart-lines :nth-child(1 of .p-organizationchart-line-left) {
-    border-right: 0 none;
-  }
-  .p-organizationchart .p-organizationchart-lines :nth-last-child(1 of .p-organizationchart-line-left) {
-    border-top-right-radius: 6px;
-  }
-  .p-organizationchart .p-organizationchart-lines :nth-child(1 of .p-organizationchart-line-right) {
-    border-left: 1px solid var(--pn-surface-200);
-    border-top-left-radius: 6px;
   }
 
   .p-overlaypanel {

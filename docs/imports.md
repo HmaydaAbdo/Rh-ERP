@@ -54,7 +54,7 @@ dans les deux cas. Un fichier **illisible ou au mauvais format** est un rejet gl
 
 ### 5. Modèle téléchargeable
 
-Chaque import fournit un modèle `.xlsx` vierge (`GET …/import/modele`, bouton « Modèle Excel »), qui ne contient
+Chaque import fournit un modèle `.xlsx` vierge (`GET …/import/modele`, entrée « Télécharger le modèle Excel » du bouton fractionné « Importer »), qui ne contient
 **que les en-têtes**, jamais de ligne d'exemple : une valeur d'exemple pourrait être importée par erreur.
 Partir du modèle évite de se baser sur un ancien fichier dont la structure a changé.
 
@@ -94,7 +94,7 @@ n'ont lieu que si **tout** le fichier est valide.
 
 ## Interface
 
-Sur chaque écran concerné, les boutons « Modèle Excel » et « Importer » apparaissent avec la permission
+Sur chaque écran concerné, le bouton fractionné « Importer » (dont le menu propose le modèle Excel) apparaît avec la permission
 `*_IMPORT`. « Importer » ouvre le sélecteur de fichier (Paie : choix de la période d'abord), envoie le fichier,
 affiche un résumé en notification, puis le détail des lignes rejetées dans une fenêtre défilante. Voir
 [frontend/README.md](frontend/README.md).

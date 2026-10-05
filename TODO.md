@@ -9,13 +9,14 @@
 
 ## Refonte visuelle (en cours, phase par phase — voir `DESIGN.md` et `conventions/design-system.md`)
 
-Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion (phase 2), responsive (phase 3). Reste, dans l'ordre du plan de refonte :
+Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). Revue finale faite (phase 7). Points déjà identifiés :
 
-- **Listes des autres écrans** (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal) : elles passent le
-  contrôle responsive (aucun débordement) mais gardent leur ancienne barre de filtres, empilée sur téléphone — à refondre sur le
-  modèle de la Paie dans la phase « Refonte des écrans ».
-- **Graphiques** : `paie-chart-theme.ts` lit les couleurs une fois à la création — un changement de thème en cours de page ne
-  recolore pas un graphique déjà affiché (phase « Graphiques »).
+- **Filtres des listes dans l'URL** : seuls ceux de la Paie y sont (lien partageable, retour navigateur) ; Employés, Chantiers,
+  Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
+- **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
+  (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
+- **Poids du CSS** : le thème PrimeNG généré embarque tous les composants (258 ko bruts) ; l'élaguer aux composants utilisés
+  réduirait le chargement initial.
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
 - **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
   `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.

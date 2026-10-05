@@ -98,4 +98,9 @@ export class RoleListComponent {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((roles) => (this.roles = roles));
   }
+
+  /** Nombre de lignes affichées : la liste complète est en mémoire, le tableau la filtre côté client. */
+  total(table: Table): number {
+    return table.filteredValue?.length ?? this.roles.length;
+  }
 }

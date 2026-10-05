@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { permissionGuard } from '../../core/auth/guards/auth.guard';
+import { unsavedChangesGuard } from '../../shared/forms/unsaved-changes.guard';
 
 /** Les trois vues de la paie (tabulaire, cartes, analytique) partagent une coque — titre, sélecteur de vue et barre de
  * filtres, voir `PaieVuesComponent`. Les écrans de saisie et de consultation d'un bulletin n'en font pas partie. */
@@ -31,6 +32,7 @@ export const PAIE_ROUTES: Routes = [
   {
     path: 'new',
     canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
     data: { permission: 'PAIE_WRITE' },
     loadComponent: () => import('./form/paie-form.component').then((m) => m.PaieFormComponent)
   },
@@ -43,6 +45,7 @@ export const PAIE_ROUTES: Routes = [
   {
     path: ':id/edit',
     canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
     data: { permission: 'PAIE_WRITE' },
     loadComponent: () => import('./form/paie-form.component').then((m) => m.PaieFormComponent)
   }

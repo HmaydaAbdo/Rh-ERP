@@ -80,6 +80,8 @@ css = css.replace(/^\s*font-family: "Inter var", sans-serif;\n/m, '');
 css = css.replace(/^\s*font-feature-settings: [^;]*;\n/gm, '');
 css = css.replace(/^\s*font-variation-settings: normal;\n/m, '');
 css = css.replace(/--font-family: "Inter var", sans-serif;/, '--font-family: var(--font-sans);');
+// Le composant « organigramme » n'est pas utilisé, et trois de ses règles (`:nth-child(1 of.…)`) ne se compilent pas : on les retire.
+css = css.replace(/[^{}]*p-organizationchart[^{}]*\{[^{}]*\}/g, '');
 // Le schéma de couleur (formulaires, barres de défilement) est posé par les jetons, clair ou sombre.
 css = css.replace(/^\s*color-scheme: light;\n/m, '');
 

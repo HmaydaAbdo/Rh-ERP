@@ -8,13 +8,13 @@ import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
 import { FunctionService } from '../services/function.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 @Component({
   selector: 'app-function-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
-  templateUrl: './function-form.component.html',
-  styleUrl: './function-form.component.scss'
+  templateUrl: './function-form.component.html'
 })
 export class FunctionFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -49,6 +49,7 @@ export class FunctionFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -69,6 +70,7 @@ export class FunctionFormComponent implements OnInit {
           summary: this.isEditMode ? 'Fonction modifiée' : 'Fonction créée',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/functions', fonction.id]);
       });
   }
