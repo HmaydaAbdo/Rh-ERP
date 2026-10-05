@@ -84,4 +84,28 @@ class RapportChartSvgBuilderTest {
 
         assertThat(doc.select("svg")).isEmpty();
     }
+
+    /** Un nom de chantier peut compter jusqu'à 255 caractères : il est coupé avec « … » au lieu de déborder de la page. */
+    @Test
+    void ajouterGraphique_doitCouperUnLibelleTropLongAvecDesPointsDeSuspension() {
+        String nomTresLong = "AVENUE MY ABD ELLAH MARRAKECH - TRAVAUX D'ASSAINISSEMENT ET DE VOIRIE DE LA ZONE INDUSTRIELLE";
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+
+        builder.ajouterGraphique(corps, List.of(new RepartitionBean(nomTresLong, 74, new BigDecimal("444000.00"), 0, BigDecimal.ZERO)));
+
+        String libelle = doc.select("text").stream().map(Element::text).filter(t -> t.startsWith("AVENUE")).findFirst().orElseThrow();
+        assertThat(libelle).endsWith("…").hasSizeLessThan(nomTresLong.length());
+        assertThat(libelle.length()).isLessThanOrEqualTo(30);
+    }
+
+    @Test
+    void ajouterGraphique_neDoitPasCouperUnLibelleCourt() {
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+
+        builder.ajouterGraphique(corps, List.of(new RepartitionBean("Nador", 74, new BigDecimal("444000.00"), 0, BigDecimal.ZERO)));
+
+        assertThat(doc.body().text()).contains("Nador").doesNotContain("…");
+    }
 }

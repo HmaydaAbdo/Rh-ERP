@@ -35,6 +35,9 @@ final class RapportChartSvgBuilder {
     private static final double LARGEUR_LABEL_MIN = 48;
     private static final double LARGEUR_LABEL_MAX = 200;
     private static final double LARGEUR_PAR_CARACTERE = 6.2;
+    /** Nombre de caractères que la colonne des libellés peut contenir à sa largeur maximale : un nom de chantier plus long
+     * (jusqu'à 255 caractères) est coupé avec « … » plutôt que de déborder hors de la page. */
+    private static final int LONGUEUR_LIBELLE_MAX = (int) ((LARGEUR_LABEL_MAX - 12) / LARGEUR_PAR_CARACTERE);
     /** Largeur des 4 colonnes de valeurs (Masse, Effectif, STC personnes, STC DH), dans l'ordre des séries. */
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
     /** Espace entre la fin des barres et la première colonne de valeurs. */
@@ -141,7 +144,7 @@ final class RapportChartSvgBuilder {
                     .attr("dominant-baseline", "middle")
                     .attr("font-size", "9.5")
                     .attr("font-weight", "bold")
-                    .text(ligne.getLibelle());
+                    .text(libelleAffiche(ligne.getLibelle()));
 
             double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(), valeurMontant(ligne.getStcMontant())};
             String[] libelles = {
@@ -198,8 +201,17 @@ final class RapportChartSvgBuilder {
         }
     }
 
+    /** Le libellé tel qu'il est écrit : jamais {@code null}, coupé à {@link #LONGUEUR_LIBELLE_MAX} caractères et terminé
+     * par « … » s'il est plus long. */
+    static String libelleAffiche(String libelle) {
+        if (libelle == null) {
+            return "";
+        }
+        return libelle.length() <= LONGUEUR_LIBELLE_MAX ? libelle : libelle.substring(0, LONGUEUR_LIBELLE_MAX - 1).stripTrailing() + "…";
+    }
+
     private double largeurColonneLibelles(List<RepartitionBean> donnees) {
-        int plusLong = donnees.stream().mapToInt(ligne -> ligne.getLibelle() == null ? 0 : ligne.getLibelle().length()).max().orElse(0);
+        int plusLong = donnees.stream().mapToInt(ligne -> libelleAffiche(ligne.getLibelle()).length()).max().orElse(0);
         return Math.max(LARGEUR_LABEL_MIN, Math.min(LARGEUR_LABEL_MAX, plusLong * LARGEUR_PAR_CARACTERE + 12));
     }
 
