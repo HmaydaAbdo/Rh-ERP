@@ -1,8 +1,24 @@
 <p-toast></p-toast>
 
 @if (isAuthenticated()) {
-  <div class="app-shell">
-    <aside class="app-sidebar">
+  <div class="app-shell" [class.app-shell--menu-ouvert]="menuOuvert()" (keydown.escape)="fermerMenu()">
+    <header class="app-topbar">
+      <button
+        type="button"
+        class="app-topbar__menu"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="menuOuvert()"
+        [attr.aria-label]="menuOuvert() ? 'Fermer le menu' : 'Ouvrir le menu'"
+        (click)="basculerMenu()"
+      >
+        <i class="pi" [class.pi-bars]="!menuOuvert()" [class.pi-times]="menuOuvert()" aria-hidden="true"></i>
+      </button>
+      <img class="app-topbar__logo" src="assets/brand/monogramme.svg" alt="" width="28" height="28" />
+      <span class="app-topbar__titre">{{ title }}</span>
+    </header>
+    <div class="app-backdrop" (click)="fermerMenu()" aria-hidden="true"></div>
+
+    <aside id="menu-principal" class="app-sidebar">
       <div class="app-sidebar__brand">
         <img class="app-sidebar__logo" src="assets/brand/monogramme.svg" alt="" width="36" height="36" />
         <span class="app-sidebar__label">{{ title }}</span>
@@ -13,6 +29,7 @@
             [routerLink]="item.route"
             routerLinkActive="active"
             class="app-sidebar__link"
+            (click)="fermerMenu()"
             pTooltip="{{ item.label }}"
             tooltipPosition="right"
             [showDelay]="300"

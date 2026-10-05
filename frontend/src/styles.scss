@@ -22,6 +22,49 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+// Champs de formulaire (`.field`) : les composants PrimeNG composés (nombre, date, mot de passe) prennent toute la largeur de leur colonne
+.field {
+  .p-inputnumber,
+  .p-calendar,
+  .p-password {
+    width: 100%;
+  }
+
+  .p-inputnumber-input,
+  .p-calendar .p-inputtext {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+// Écran tactile ou téléphone : cibles d'au moins 44 px, texte de champ d'au moins 16 px (sinon iOS zoome à la saisie)
+@media (pointer: coarse), (max-width: 767px) {
+  .p-button,
+  .p-inputtext,
+  .p-dropdown,
+  .p-multiselect {
+    min-height: var(--control-height);
+  }
+
+  .p-button.p-button-icon-only {
+    min-width: var(--control-height);
+  }
+
+  .p-inputtext,
+  .p-dropdown .p-dropdown-label,
+  .p-multiselect .p-multiselect-label {
+    font-size: var(--control-font-size);
+  }
+}
+
+// Téléphone : les fenêtres de dialogue (largeur fixée en ligne par chaque écran) tiennent dans l'écran
+@media (max-width: 767px) {
+  .p-dialog {
+    width: calc(100vw - 2rem) !important;
+    max-height: calc(100dvh - 2rem) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .paie-form {
   background: var(--color-surface);
   border-radius: var(--radius-md);
@@ -15,6 +17,11 @@
       margin: 0;
       font-size: 1.25rem;
     }
+
+    @include bp.phone {
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
   }
 
   &__notice {
@@ -24,22 +31,35 @@
 
   &__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-md);
+
+    @include bp.tablet-down {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp.phone {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   &__field-wide {
-    grid-column: span 3;
+    grid-column: 1 / -1;
   }
 
   &__actions {
     grid-column: 1 / -1;
     margin-top: var(--space-md);
   }
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
 }
 
 .field {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-xs);
 

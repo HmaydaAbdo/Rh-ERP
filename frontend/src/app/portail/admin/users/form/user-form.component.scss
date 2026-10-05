@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .user-form {
   max-width: 640px;
 
@@ -9,6 +11,11 @@
 
     h1 {
       margin: 0;
+    }
+
+    @include bp.phone {
+      flex-wrap: wrap;
+      gap: var(--space-sm);
     }
   }
 
@@ -53,6 +60,7 @@
 
 .field {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-xs);
 

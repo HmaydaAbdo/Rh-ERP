@@ -1,7 +1,16 @@
+@use 'breakpoints' as bp;
+
 .app-shell {
   --sidebar-width-collapsed: 64px;
   --sidebar-width-expanded: 240px;
+  --topbar-height: 3.5rem;
   min-height: 100vh;
+}
+
+// Barre du haut et fond du tiroir : n'existent qu'en navigation compacte
+.app-topbar,
+.app-backdrop {
+  display: none;
 }
 
 .app-sidebar {
@@ -127,6 +136,7 @@
     place-items: center;
     width: 2.25rem;
     height: 2.25rem;
+    min-width: 2.25rem;
     border: none;
     border-radius: var(--radius-md);
     background: transparent;
@@ -145,9 +155,108 @@
   padding: var(--space-xl);
   margin-left: var(--sidebar-width-collapsed);
   min-width: 0;
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
+}
+
+// ---- Navigation compacte : le menu devient un tiroir ouvert par la barre du haut ----
+@include bp.compact-nav {
+  .app-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    height: var(--topbar-height);
+    padding: 0 var(--space-sm);
+    background: var(--color-sidebar-bg);
+    color: var(--color-sidebar-active-text);
+
+    &__menu {
+      display: grid;
+      place-items: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border: none;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: inherit;
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+
+    &__logo {
+      border-radius: var(--radius-sm);
+    }
+
+    &__titre {
+      font-weight: 600;
+    }
+  }
+
+  .app-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: var(--color-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--duration-base), visibility var(--duration-base);
+  }
+
+  .app-shell--menu-ouvert .app-backdrop {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .app-sidebar {
+    width: min(18rem, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--duration-base) var(--ease-out), visibility var(--duration-base);
+
+    // Tiroir : libellés toujours visibles, pas d'ouverture au survol
+    &:hover,
+    &:focus-within {
+      width: min(18rem, 85vw);
+      box-shadow: none;
+    }
+
+    &__label {
+      opacity: 1;
+    }
+
+    &__link {
+      min-height: 2.75rem;
+    }
+
+    &__action {
+      width: 2.75rem;
+      height: 2.75rem;
+      min-width: 2.75rem;
+    }
+  }
+
+  .app-shell--menu-ouvert .app-sidebar {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-content {
+    margin-left: 0;
+    padding-top: calc(var(--topbar-height) + var(--space-md));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-backdrop,
   .app-sidebar,
   .app-sidebar__label,
   .app-sidebar__link,

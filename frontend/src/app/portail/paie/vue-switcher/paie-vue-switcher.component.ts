@@ -41,6 +41,15 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         transition: color var(--duration-fast), border-color var(--duration-fast);
       }
 
+      @media (max-width: 767px) {
+        .vue-switcher__lien {
+          flex: 1;
+          justify-content: center;
+          padding-inline: var(--space-sm);
+          min-height: 2.75rem;
+        }
+      }
+
       .vue-switcher__lien:hover {
         color: var(--color-text);
         border-bottom-color: var(--color-border-strong);

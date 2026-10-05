@@ -164,6 +164,7 @@
 
   // Hauteur commune des contrôles d'une barre d'outils (champ, bouton, sélecteur)
   --control-height: 2.25rem;
+  --control-font-size: var(--text-sm);
 
   // ---- Mouvement ----
   --duration-fast: 150ms;
@@ -226,5 +227,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     @include theme-dark;
+  }
+}
+
+// Écrans tactiles et téléphones : cibles d'au moins 44 px et texte de champ d'au moins 16 px (sinon iOS zoome à la saisie).
+@media (pointer: coarse), (max-width: 767px) {
+  :root {
+    --control-height: 2.75rem;
+    --control-font-size: 1rem;
   }
 }

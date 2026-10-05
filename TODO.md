@@ -9,10 +9,11 @@
 
 ## Refonte visuelle (en cours, phase par phase — voir `DESIGN.md` et `conventions/design-system.md`)
 
-Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion (phase 2). Reste, dans l'ordre du plan de refonte :
+Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion (phase 2), responsive (phase 3). Reste, dans l'ordre du plan de refonte :
 
-- **Mobile (390 px)** : le menu latéral fixe de 64 px, l'en-tête de la vue Paie et les boutons d'action débordent ; la page défile
-  horizontalement. À traiter dans la phase « Responsive ».
+- **Listes des autres écrans** (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal) : elles passent le
+  contrôle responsive (aucun débordement) mais gardent leur ancienne barre de filtres, empilée sur téléphone — à refondre sur le
+  modèle de la Paie dans la phase « Refonte des écrans ».
 - **Graphiques** : `paie-chart-theme.ts` lit les couleurs une fois à la création — un changement de thème en cours de page ne
   recolore pas un graphique déjà affiché (phase « Graphiques »).
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.

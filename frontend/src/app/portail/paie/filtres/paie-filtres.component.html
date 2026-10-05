@@ -51,56 +51,73 @@
     <i class="pi pi-search" aria-hidden="true"></i>
     <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
   </span>
-  <input pInputText type="text" formControlName="cin" class="paie-filtres__cin" placeholder="CIN" aria-label="CIN" />
+  <button
+    pButton
+    type="button"
+    class="p-button-outlined paie-filtres__bascule"
+    aria-controls="paie-filtres-secondaires"
+    [attr.aria-expanded]="secondairesOuverts()"
+    (click)="basculerSecondaires()"
+  >
+    Filtres@if (nombreSecondaires() > 0) {
+      <span class="paie-filtres__badge">{{ nombreSecondaires() }}</span>
+    }
+    <i class="pi" [class.pi-chevron-down]="!secondairesOuverts()" [class.pi-chevron-up]="secondairesOuverts()" aria-hidden="true"></i>
+  </button>
 
-  @if (peutChoisirChantiers) {
-    @for (source of sourcesChantiers(); track source) {
+  <div id="paie-filtres-secondaires" class="paie-filtres__secondaires" [class.paie-filtres__secondaires--ouvert]="secondairesOuverts()">
+    <input pInputText type="text" formControlName="cin" class="paie-filtres__cin" placeholder="CIN" aria-label="CIN" />
+
+    @if (peutChoisirChantiers) {
+      @for (source of sourcesChantiers(); track source) {
+        <app-lazy-select
+          class="paie-filtres__selecteur"
+          formControlName="chantierIds"
+          [multiple]="true"
+          [source]="source"
+          optionLabel="code"
+          placeholder="Chantiers"
+          ariaLabel="Chantiers"
+          summaryLabel="{0} chantiers"
+          [attr.title]="periode() ? 'Chantiers qui ont de la paie en ' + libelle() : null"
+        ></app-lazy-select>
+      }
+    }
+    @if (peutChoisirEquipes) {
+      @for (source of sourcesEquipes(); track source) {
+        <app-lazy-select
+          class="paie-filtres__selecteur"
+          formControlName="equipeIds"
+          [multiple]="true"
+          [source]="source"
+          optionLabel="code"
+          placeholder="Équipes"
+          ariaLabel="Équipes"
+          summaryLabel="{0} équipes"
+          [attr.title]="periode() && courant().chantierIds.length > 0 ? 'Équipes des chantiers choisis en ' + libelle() : null"
+        ></app-lazy-select>
+      }
+    }
+    @if (peutChoisirFonctions) {
       <app-lazy-select
         class="paie-filtres__selecteur"
-        formControlName="chantierIds"
+        formControlName="fonctionIds"
         [multiple]="true"
-        [source]="source"
-        optionLabel="code"
-        placeholder="Chantiers"
-        ariaLabel="Chantiers"
-        summaryLabel="{0} chantiers"
-        [attr.title]="periode() ? 'Chantiers qui ont de la paie en ' + libelle() : null"
+        [source]="functionReferenceService"
+        optionLabel="libelle"
+        placeholder="Fonctions"
+        ariaLabel="Fonctions"
+        summaryLabel="{0} fonctions"
       ></app-lazy-select>
     }
-  }
-  @if (peutChoisirEquipes) {
-    @for (source of sourcesEquipes(); track source) {
-      <app-lazy-select
-        class="paie-filtres__selecteur"
-        formControlName="equipeIds"
-        [multiple]="true"
-        [source]="source"
-        optionLabel="code"
-        placeholder="Équipes"
-        ariaLabel="Équipes"
-        summaryLabel="{0} équipes"
-        [attr.title]="periode() && courant().chantierIds.length > 0 ? 'Équipes des chantiers choisis en ' + libelle() : null"
-      ></app-lazy-select>
-    }
-  }
-  @if (peutChoisirFonctions) {
-    <app-lazy-select
-      class="paie-filtres__selecteur"
-      formControlName="fonctionIds"
-      [multiple]="true"
-      [source]="functionReferenceService"
-      optionLabel="libelle"
-      placeholder="Fonctions"
-      ariaLabel="Fonctions"
-      summaryLabel="{0} fonctions"
-    ></app-lazy-select>
-  }
+  </div>
 
   <button
     pButton
     type="button"
     icon="pi pi-times"
     label="Effacer"
+    aria-label="Effacer les filtres"
     class="p-button-text paie-filtres__effacer"
     [disabled]="!aDesFiltres()"
     (click)="reinitialiser()"

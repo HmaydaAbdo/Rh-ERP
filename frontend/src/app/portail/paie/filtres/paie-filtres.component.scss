@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
   margin-bottom: var(--space-md);
@@ -72,14 +74,14 @@
   }
 
   &__selecteur {
-    flex: 1 1 10rem;
+    flex: 1 1 8rem;
     max-width: 14rem;
     min-width: 0;
 
     ::ng-deep .p-multiselect {
       width: 100%;
       height: var(--control-height);
-      font-size: var(--text-sm);
+      font-size: var(--control-font-size);
     }
 
     ::ng-deep .p-multiselect-label {
@@ -93,6 +95,86 @@
     margin-left: auto;
     height: var(--control-height);
     font-size: var(--text-sm);
+  }
+
+  // Le CIN et les sélecteurs restent dans la ligne (pas de boîte propre) ; le bouton « Filtres » n'existe que sur téléphone
+  &__secondaires {
+    display: contents;
+  }
+
+  &__bascule {
+    display: none;
+    height: var(--control-height);
+    font-size: var(--text-sm);
+  }
+
+  &__badge {
+    display: inline-block;
+    min-width: 1.25rem;
+    margin: 0 var(--space-xs);
+    padding: 0 0.35rem;
+    border-radius: 0.625rem;
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+
+  // ---- Téléphone : mois, recherche et « Filtres » sur deux lignes ; le reste se déplie ----
+  @include bp.phone {
+    &__periode {
+      flex: 1 1 100%;
+
+      .p-button-icon-only {
+        width: 2.75rem;
+      }
+    }
+
+    &__mois {
+      flex: 1;
+    }
+
+    &__champ {
+      flex: 1 1 8rem;
+      max-width: none;
+    }
+
+    &__bascule {
+      display: inline-flex;
+    }
+
+    &__secondaires {
+      order: 4;
+    }
+
+    &__secondaires {
+      display: none;
+      flex: 1 1 100%;
+      flex-direction: column;
+      gap: var(--space-sm);
+
+      &--ouvert {
+        display: flex;
+      }
+    }
+
+    &__cin,
+    &__selecteur {
+      flex: none;
+      width: 100%;
+      max-width: none;
+    }
+
+    // « Effacer » ne garde que son icône (nom accessible conservé) pour tenir sur la ligne de la recherche
+    // Ordre à l'écran : mois, recherche, « Filtres », « Effacer », puis le panneau déplié
+    &__effacer {
+      order: 3;
+      margin-left: 0;
+
+      ::ng-deep .p-button-label {
+        display: none;
+      }
+    }
   }
 
   // ---- Fil de navigation (Cartes) ----

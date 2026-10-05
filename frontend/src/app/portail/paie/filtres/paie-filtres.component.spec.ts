@@ -184,8 +184,8 @@ describe('PaieFiltresComponent', () => {
       return Array.from(fixture.nativeElement.querySelectorAll('app-lazy-select')).map((e: unknown) => (e as HTMLElement).getAttribute('formcontrolname') ?? '');
     }
 
-    it("affiche les trois sélecteurs dès l'arrivée, sans bouton à ouvrir", () => {
-      expect(fixture.nativeElement.querySelector('button[aria-expanded]')).toBeNull();
+    it("affiche les trois sélecteurs dès l'arrivée, sans rien à ouvrir", () => {
+      expect(colonnes().length).toBe(3);
     });
 
     it('propose les trois sélecteurs à qui peut lire les trois référentiels', () => {
@@ -202,6 +202,27 @@ describe('PaieFiltresComponent', () => {
       permissions = [];
 
       expect(colonnes()).toEqual([]);
+    });
+  });
+
+  describe('téléphone : filtres repliés', () => {
+    it('compte les filtres du panneau replié (CIN, chantiers, équipes, fonctions), pas le mois ni le nom', () => {
+      afficher({ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', chantierIds: [3, 4], fonctionIds: [5] });
+
+      expect(composant.nombreSecondaires()).toBe(3);
+
+      afficher({ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'ali' });
+      expect(composant.nombreSecondaires()).toBe(0);
+    });
+
+    it('déplie et replie le panneau par le bouton « Filtres »', () => {
+      expect(composant.secondairesOuverts()).toBeFalse();
+
+      composant.basculerSecondaires();
+      expect(composant.secondairesOuverts()).toBeTrue();
+
+      composant.basculerSecondaires();
+      expect(composant.secondairesOuverts()).toBeFalse();
     });
   });
 
