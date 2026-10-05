@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
+import { ThemeService } from '../../../core/theme/theme.service';
 import { AUCUN_FILTRE } from '../filtres/paie-filtres';
 import { PaieAnalytique, PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -147,6 +148,73 @@ describe('PaieAnalytiqueComponent', () => {
     await ouvrir('/paie/analytique?periode=2026-08&nom=a');
     expect(composant.graphiqueEvolution().data.labels?.length).toBe(4);
     expect(composant.graphiqueEvolution().data.datasets[0].pointRadius).toEqual([4, 4, 8, 4]);
+  });
+
+  it("trace l'évolution d'une seule mesure sur un seul axe, jamais deux échelles dans un graphique", async () => {
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    const evolution = composant.graphiqueEvolution();
+    expect(evolution.data.datasets.length).toBe(1);
+    expect(evolution.data.datasets[0].data).toEqual([32000, 40000]);
+    expect(Object.keys(evolution.options.scales ?? {})).toEqual(['x', 'y']);
+
+    composant.mesureEvolution.set('effectif');
+
+    expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([8, 10]);
+    expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('Bulletins');
+  });
+
+  it('colore chaque mesure de la même façon dans tous les graphiques (la couleur suit la mesure, pas le rang)', async () => {
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    const masse = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
+    expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(masse);
+    expect(composant.graphiqueEvolution().data.datasets[0].borderColor).toBe(masse);
+
+    composant.mesureChantiers.set('effectif');
+    composant.mesureFonctions.set('effectif');
+
+    const bulletins = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
+    expect(bulletins).not.toBe(masse);
+    expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(bulletins);
+    expect(composant.graphiqueTranches().data.datasets[0].backgroundColor).toBe(bulletins);
+  });
+
+  it('se redessine quand le thème change : les couleurs sont relues dans les jetons', async () => {
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    const racine = document.documentElement;
+    racine.style.setProperty('--chart-1', '#111111');
+    const theme = TestBed.inject(ThemeService);
+    const avant = composant.graphiqueChantiers();
+
+    theme.basculer();
+    const apres = composant.graphiqueChantiers();
+
+    expect(apres).not.toBe(avant);
+    expect(apres.data.datasets[0].backgroundColor).toBe('#111111');
+    racine.style.removeProperty('--chart-1');
+    localStorage.removeItem('staport-theme');
+  });
+
+  it("replie le tableau des données de chaque graphique, et l'ouvre à la demande", async () => {
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    expect(composant.tableaux().chantiers).toBeFalse();
+
+    composant.basculerTableau('chantiers');
+    expect(composant.tableaux().chantiers).toBeTrue();
+    expect(composant.tableaux().fonctions).toBeFalse();
+
+    composant.basculerTableau('chantiers');
+    expect(composant.tableaux().chantiers).toBeFalse();
+  });
+
+  it("expose les tranches et l'évolution sous forme de lignes de tableau", async () => {
+    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+    // `Intl` sépare les milliers par une espace insécable fine : on compare après normalisation des espaces.
+    const tranches = composant.lignesTranches().map((l) => ({ ...l, tranche: l.tranche.replace(/\s/g, ' ') }));
+    expect(tranches).toEqual([{ tranche: '0 – 5 000', effectif: 6 }, { tranche: '≥ 5 000', effectif: 4 }]);
+    expect(composant.lignesEvolution().map((l) => l.effectif)).toEqual([8, 10]);
   });
 
   it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
