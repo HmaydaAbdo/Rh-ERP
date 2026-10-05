@@ -98,7 +98,7 @@ détail endpoint ↔ permission et `conventions/security.md` pour la conception 
 
 ### Modèle téléchargeable
 
-`GET /functions/import/modele` (bouton "Modèle Excel" dans l'UI, à côté du bouton "Importer")
+`GET /functions/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI)
 renvoie un fichier `.xlsx` vierge contenant uniquement l'en-tête attendu ("Fonction" en cellule A1),
 généré par `FunctionImportService.genererModele()`. Objectif : que l'utilisateur parte toujours d'un
 fichier au bon format plutôt que de deviner ou de réutiliser un ancien export dont la structure a pu
@@ -148,7 +148,7 @@ Routes sous `/functions` (lazy loading, `function.routes.ts`) :
 | `/functions/:id` | `FunctionDetailComponent` | Consultation |
 | `/functions/:id/edit` | `FunctionFormComponent` | Modification |
 
-Le bouton "Modèle Excel" télécharge le fichier vierge (`GET /functions/import/modele`) via un lien
+L'entrée « Télécharger le modèle Excel » du bouton « Importer » télécharge le fichier vierge (`GET /functions/import/modele`) via un lien
 `<a download>` généré dynamiquement à partir du `Blob` reçu. Le bouton "Importer" déclenche un
 sélecteur de fichier natif (`<input type="file" accept=".xlsx">` masqué), envoie le fichier à
 `POST /functions/import`, puis affiche un résumé (toast) et le détail des lignes ignorées dans une

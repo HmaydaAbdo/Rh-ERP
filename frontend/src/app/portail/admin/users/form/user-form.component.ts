@@ -17,6 +17,7 @@ import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/valid
 import { PermissionSummary, Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
+import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 
 @Component({
   selector: 'app-user-form',
@@ -112,6 +113,7 @@ export class UserFormComponent implements OnInit {
   }
 
   toggleDenied(permission: PermissionSummary, denied: boolean): void {
+    this.form.markAsDirty();
     if (denied) {
       this.deniedPermissionIds.add(permission.id);
     } else {
@@ -122,6 +124,7 @@ export class UserFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -144,6 +147,7 @@ export class UserFormComponent implements OnInit {
         )
         .subscribe(() => {
           this.messageService.add({ severity: 'success', summary: 'Utilisateur modifié', life: 4000 });
+          this.form.markAsPristine();
           this.router.navigate(['/admin/users']);
         });
     } else {
@@ -158,6 +162,7 @@ export class UserFormComponent implements OnInit {
         .pipe(finalize(() => (this.saving = false)))
         .subscribe(() => {
           this.messageService.add({ severity: 'success', summary: 'Utilisateur créé', life: 4000 });
+          this.form.markAsPristine();
           this.router.navigate(['/admin/users']);
         });
     }

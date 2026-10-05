@@ -1,6 +1,11 @@
 <div class="paie-cartes">
   @if (chargement() && !chantiers().length && !periodes().length) {
-    <p class="paie-cartes__message">Chargement…</p>
+    <div class="paie-cartes__squelette" role="status" aria-busy="true">
+      <span class="app-lecteur">Chargement…</span>
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <span class="app-skeleton paie-cartes__squelette-carte"></span>
+      }
+    </div>
   } @else if (aucunResultat()) {
     <p class="paie-cartes__message">
       @if (niveau() === 1) {
@@ -129,29 +134,34 @@
                 </div>
               </div>
 
-              <div class="paie-cartes__outils">
-                <input pInputText type="text" [formControl]="rechercheEquipe" placeholder="Équipe" aria-label="Rechercher une équipe" />
+              <div class="app-toolbar">
+                <input pInputText type="text" [formControl]="rechercheEquipe" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
                 <button
                   pButton
                   type="button"
                   icon="pi pi-times"
                   label="Réinitialiser"
-                  class="p-button-outlined"
+                  class="p-button-text app-toolbar__clear"
                   (click)="rechercheEquipe.setValue('')"
                 ></button>
-                @if (canPurge()) {
-                  <button
-                    pButton
-                    type="button"
-                    icon="pi pi-trash"
-                    label="Supprimer ce chantier"
-                    class="p-button-outlined p-button-danger paie-cartes__outils-suppression"
-                    (click)="demanderSuppressionChantier(c)"
-                  ></button>
-                }
               </div>
 
-              <app-column-chooser [state]="columns"></app-column-chooser>
+              <div class="app-table-bar">
+                <p class="app-table-bar__total" role="status">{{ lignesEquipes().length }} équipe{{ lignesEquipes().length > 1 ? 's' : '' }}</p>
+                <div class="app-table-bar__tools">
+                  <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+                  @if (canPurge()) {
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-trash"
+                      label="Supprimer ce chantier"
+                      class="p-button-outlined p-button-danger"
+                      (click)="demanderSuppressionChantier(c)"
+                    ></button>
+                  }
+                </div>
+              </div>
 
               <div class="paie-cartes__tableau">
                 <p-table
@@ -178,7 +188,7 @@
                         </th>
                       }
                       @if (canPurge()) {
-                        <th></th>
+                        <th><span class="app-lecteur">Actions</span></th>
                       }
                     </tr>
                   </ng-template>

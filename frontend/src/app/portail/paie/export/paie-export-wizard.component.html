@@ -28,7 +28,7 @@
               {{ i + 1 }}
             }
           </span>
-          {{ libelleEtapes[id] }}
+          <span class="export-wizard__libelle">{{ libelleEtapes[id] }}</span>
         </button>
         @if (i < etapes().length - 1) {
           <span class="export-wizard__trait" [class.export-wizard__trait--plein]="i < indexEtape() || etat() === 'termine'"><span></span></span>
@@ -225,7 +225,7 @@
                     <p class="export-wizard__legende">Équipe {{ t.equipeCode }} · laisser vide pour remplir au stylo</p>
                     <div class="export-wizard__progression">
                       <span>{{ estVide(t) ? 'Laissé vide' : renseignees(t) + ' sur ' + t.libelles.length + ' renseignées' }}</span>
-                      <span class="export-wizard__barre"><span [style.width.%]="estVide(t) ? 0 : (renseignees(t) / t.libelles.length) * 100"></span></span>
+                      <span class="export-wizard__barre"><span [style.transform]="'scaleX(' + (estVide(t) ? 0 : renseignees(t) / t.libelles.length) + ')'"></span></span>
                     </div>
                     @for (libelle of t.libelles; track libelle) {
                       <div class="export-wizard__ligne" [class.export-wizard__ligne--remplie]="nombre(libelle) !== null">

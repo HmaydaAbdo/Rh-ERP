@@ -6,48 +6,58 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [homeGuard], children: [] },
   {
     path: 'acces-refuse',
+    title: 'Accès refusé',
     canActivate: [authGuard],
     loadComponent: () => import('./core/auth/access-denied/access-denied.component').then((m) => m.AccessDeniedComponent)
   },
   {
     path: 'login',
+    title: 'Connexion',
     loadComponent: () => import('./core/auth/login/login.component').then((m) => m.LoginComponent)
   },
   {
     path: 'forgot-password',
+    title: 'Mot de passe oublié',
     loadComponent: () => import('./core/auth/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent)
   },
   {
     path: 'reset-password',
+    title: 'Nouveau mot de passe',
     loadComponent: () => import('./core/auth/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent)
   },
   {
     path: 'employees',
+    title: 'Employés',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/employee/employee.routes').then((m) => m.EMPLOYEE_ROUTES)
   },
   {
     path: 'chantiers',
+    title: 'Chantiers',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/chantier/chantier.routes').then((m) => m.CHANTIER_ROUTES)
   },
   {
     path: 'functions',
+    title: 'Fonctions',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/function/function.routes').then((m) => m.FUNCTION_ROUTES)
   },
   {
     path: 'equipes',
+    title: 'Équipes',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/equipe/equipe.routes').then((m) => m.EQUIPE_ROUTES)
   },
   {
     path: 'paie',
+    title: 'Paie',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/paie/paie.routes').then((m) => m.PAIE_ROUTES)
   },
   {
     path: 'audit',
+    title: "Journal d’audit",
     canActivate: [authGuard],
     loadChildren: () => import('./portail/audit/audit.routes').then((m) => m.AUDIT_ROUTES)
   },

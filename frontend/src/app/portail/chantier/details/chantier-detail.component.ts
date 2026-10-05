@@ -12,8 +12,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   selector: 'app-chantier-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule, TagModule],
-  templateUrl: './chantier-detail.component.html',
-  styleUrl: './chantier-detail.component.scss'
+  templateUrl: './chantier-detail.component.html'
 })
 export class ChantierDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

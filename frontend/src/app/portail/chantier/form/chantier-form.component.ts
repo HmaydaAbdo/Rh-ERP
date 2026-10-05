@@ -9,6 +9,7 @@ import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
 import { ChantierService } from '../services/chantier.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Actif', value: true },
@@ -19,8 +20,7 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   selector: 'app-chantier-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule],
-  templateUrl: './chantier-form.component.html',
-  styleUrl: './chantier-form.component.scss'
+  templateUrl: './chantier-form.component.html'
 })
 export class ChantierFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -63,6 +63,7 @@ export class ChantierFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -83,6 +84,7 @@ export class ChantierFormComponent implements OnInit {
           summary: this.isEditMode ? 'Chantier modifié' : 'Chantier créé',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/chantiers', chantier.id]);
       });
   }

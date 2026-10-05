@@ -1,6 +1,8 @@
 <p-toast></p-toast>
+<p-confirmDialog key="sortie"></p-confirmDialog>
 
 @if (isAuthenticated()) {
+  <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
   <div class="app-shell" [class.app-shell--menu-ouvert]="menuOuvert()" (keydown.escape)="fermerMenu()">
     <header class="app-topbar">
       <button
@@ -14,14 +16,14 @@
         <i class="pi" [class.pi-bars]="!menuOuvert()" [class.pi-times]="menuOuvert()" aria-hidden="true"></i>
       </button>
       <img class="app-topbar__logo" src="assets/brand/monogramme.svg" alt="" width="28" height="28" />
-      <span class="app-topbar__titre">{{ title }}</span>
+      <span class="app-topbar__titre" translate="no">{{ title }}</span>
     </header>
     <div class="app-backdrop" (click)="fermerMenu()" aria-hidden="true"></div>
 
     <aside id="menu-principal" class="app-sidebar">
       <div class="app-sidebar__brand">
         <img class="app-sidebar__logo" src="assets/brand/monogramme.svg" alt="" width="36" height="36" />
-        <span class="app-sidebar__label">{{ title }}</span>
+        <span class="app-sidebar__label" translate="no">{{ title }}</span>
       </div>
       <nav class="app-sidebar__nav" aria-label="Navigation principale">
         @for (item of navItems(); track item.route) {
@@ -67,7 +69,7 @@
       </div>
     </aside>
 
-    <main class="app-content">
+    <main id="contenu" class="app-content" tabindex="-1">
       <router-outlet></router-outlet>
     </main>
   </div>

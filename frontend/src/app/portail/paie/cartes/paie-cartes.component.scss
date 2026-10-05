@@ -10,26 +10,20 @@
     color: var(--color-text-muted);
   }
 
+  // Chargement : six silhouettes de carte à la place du texte « Chargement… »
+  &__squelette {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  &__squelette-carte {
+    height: 7.5rem;
+  }
+
   &__sous-titre {
     margin: 0 0 var(--space-sm);
     font-size: 1rem;
-  }
-
-  &__outils {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
-
-    input {
-      font-size: 0.8125rem;
-    }
-
-    .p-button {
-      font-size: 0.8125rem;
-      padding: 0.4rem 0.75rem;
-    }
   }
 
   // ---- Cartes ----
@@ -53,10 +47,6 @@
     position: absolute;
     top: var(--space-xs);
     right: var(--space-xs);
-  }
-
-  &__outils-suppression {
-    margin-left: auto;
   }
 
   &__suppression-titre {
@@ -87,7 +77,7 @@
   }
 
   &__carte {
-    animation: carte-entree 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -97,7 +87,7 @@
     background: var(--color-surface);
     color: var(--color-text);
     text-decoration: none;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    transition: border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base);
 
     &:hover,
     &:focus-visible {
@@ -149,13 +139,13 @@
       height: 100%;
       background: var(--color-primary);
       transform-origin: left;
-      animation: jauge-remplir 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+      animation: jauge-remplir var(--duration-slower) var(--ease-out) 0.3s backwards;
     }
   }
 
   // ---- Scène d'un niveau : glisse depuis la droite en descendant, depuis la gauche en remontant ----
   &__scene {
-    animation: scene-avant 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: scene-avant var(--duration-slow) var(--ease-out) backwards;
 
     &--arriere {
       animation-name: scene-arriere;
@@ -165,13 +155,13 @@
   // ---- Tuiles de synthèse (chiffres animés) ----
   &__tuiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
     gap: var(--space-md);
     margin-bottom: var(--space-md);
   }
 
   &__tuile {
-    animation: carte-entree 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -192,7 +182,7 @@
 
   // ---- Lignes du tableau : apparition en cascade ----
   &__tableau ::ng-deep .p-datatable-tbody > tr {
-    animation: carte-entree 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
 
     @for $rang from 1 through 10 {
       &:nth-child(#{$rang}) {

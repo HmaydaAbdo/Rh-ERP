@@ -1,0 +1,222 @@
+@use 'breakpoints' as bp;
+
+// Mise en page unique des écrans de liste, définie une seule fois comme le style des tableaux (`_tables.scss`) : aucun écran ne
+// redéfinit ces règles (voir conventions/design-system.md, section « Mise en page des écrans »).
+//
+//   <div class="… app-page">
+//     <div class="app-page__header"><h1>Titre</h1></div>
+//     <form class="app-toolbar">           filtres, une ligne de contrôles de même hauteur
+//     <div class="app-table-bar">          total à gauche, outils à droite (du moins au plus important)
+//     <p-table …>
+
+.app-page {
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
+}
+
+.app-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+
+  h1 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+  }
+}
+
+// ---- Filtres : une ligne de contrôles de même hauteur, à plat sur la page ; elle passe à la suivante si la largeur manque ----
+.app-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+
+  > input.p-inputtext,
+  > .p-inputwrapper,
+  > p-dropdown,
+  > p-multiselect,
+  > app-lazy-select,
+  > label {
+    flex: 1 1 10rem;
+    max-width: 15rem;
+    min-width: 0;
+  }
+
+  .p-inputtext,
+  .p-dropdown,
+  .p-multiselect,
+  .p-button {
+    height: var(--control-height);
+    font-size: var(--control-font-size);
+  }
+
+  .p-dropdown,
+  .p-multiselect {
+    width: 100%;
+  }
+
+  .p-dropdown .p-dropdown-label,
+  .p-multiselect .p-multiselect-label {
+    display: flex;
+    align-items: center;
+    padding-block: 0;
+  }
+
+  // Un champ précédé d'un petit libellé sur la même ligne (« Du », « Au »)
+  .app-toolbar__date {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+
+    input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  .app-toolbar__clear {
+    margin-left: auto;
+  }
+
+  // « Plus de filtres » : l'icône est séparée du texte (le contenu projeté n'a pas la marge d'un libellé PrimeNG)
+  .app-toolbar__plus .p-button-icon {
+    margin-right: var(--space-sm);
+  }
+
+  // Compteur de filtres actifs d'un bouton « Plus de filtres » ou « Filtres »
+  .app-toolbar__badge {
+    display: inline-block;
+    min-width: 1.25rem;
+    margin: 0 var(--space-xs);
+    padding: 0 0.35rem;
+    border-radius: 0.625rem;
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+
+  // Les filtres moins utilisés, repliés derrière un bouton : une seconde ligne pleine largeur
+  .app-toolbar__more {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+
+    > * {
+      flex: 1 1 10rem;
+      max-width: 15rem;
+      min-width: 0;
+    }
+  }
+
+  // Téléphone : deux contrôles par ligne
+  @include bp.phone {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > input.p-inputtext,
+    > .p-inputwrapper,
+    > p-dropdown,
+    > p-multiselect,
+    > app-lazy-select,
+    > label {
+      max-width: none;
+    }
+
+    .app-toolbar__clear {
+      grid-column: 1 / -1;
+      margin-left: 0;
+    }
+
+    .app-toolbar__more {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+      > * {
+        max-width: none;
+      }
+    }
+  }
+}
+
+// ---- Barre du tableau : le total à gauche, les outils à droite ----
+.app-table-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+
+  @include bp.phone {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+}
+
+.app-table-bar__total {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.app-table-bar__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+
+  .p-button,
+  .p-splitbutton .p-button {
+    height: var(--control-height);
+    font-size: var(--text-sm);
+  }
+
+  // Téléphone : Colonnes et l'action secondaire côte à côte, l'action principale (dernier élément) en pleine largeur
+  @include bp.phone {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    app-column-chooser {
+      display: flex;
+      min-width: 0;
+
+      p-multiselect,
+      .p-multiselect {
+        width: 100%;
+      }
+    }
+
+    > :last-child {
+      grid-column: 1 / -1;
+    }
+
+    .p-splitbutton {
+      display: flex;
+      width: 100%;
+    }
+
+    .p-splitbutton .p-splitbutton-defaultbutton {
+      flex: 1;
+    }
+  }
+}

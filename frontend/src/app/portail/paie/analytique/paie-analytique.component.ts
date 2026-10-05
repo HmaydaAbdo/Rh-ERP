@@ -6,12 +6,22 @@ import type { ChartData, ChartOptions } from 'chart.js';
 import { ChartModule } from 'primeng/chart';
 import { EMPTY, catchError, filter, switchMap, tap } from 'rxjs';
 
+import { ThemeService } from '../../../core/theme/theme.service';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
 import { PaieFiltres, lireFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
 import { PaieAnalytique, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import { couleurGraphique, jeton } from './paie-chart-theme';
+import {
+  MesureGraphique,
+  animationGraphique,
+  couleurMesure,
+  grille,
+  infobulle,
+  jeton,
+  libelleMesure,
+  police
+} from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 /** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories, aucune n'est omise. */
@@ -19,7 +29,10 @@ const HAUTEUR_LIGNE_REM = 1.75;
 const HAUTEUR_MIN_REM = 12;
 
 /** Ce que mesurent les barres d'un graphique de répartition. */
-export type Mesure = 'masse' | 'effectif';
+export type Mesure = MesureGraphique;
+
+/** Les graphiques dont les données peuvent s'afficher sous forme de tableau (alternative accessible au dessin). */
+export type GraphiqueAvecTableau = 'evolution' | 'tranches' | 'chantiers' | 'fonctions';
 
 interface Tuile {
   libelle: string;
@@ -62,6 +75,7 @@ export class PaieAnalytiqueComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly theme = inject(ThemeService);
 
   readonly periodes = signal<string[]>([]);
   readonly periodesChargees = signal(false);
@@ -70,10 +84,15 @@ export class PaieAnalytiqueComponent implements OnInit {
   readonly donnees = signal<PaieAnalytique | null>(null);
   readonly chargement = signal(false);
 
+  readonly mesureEvolution = signal<Mesure>('masse');
   readonly mesureChantiers = signal<Mesure>('masse');
   readonly mesureFonctions = signal<Mesure>('masse');
 
+  /** Le tableau des données d'un graphique, replié par défaut : le dessin d'abord, le détail à la demande. */
+  readonly tableaux = signal<Record<GraphiqueAvecTableau, boolean>>({ evolution: false, tranches: false, chantiers: false, fonctions: false });
+
   readonly libellePeriode = libellePeriode;
+  readonly libelleMesure = libelleMesure;
   readonly formaterMontant = formaterMontant;
   readonly formaterPart = formaterPart;
 
@@ -106,28 +125,20 @@ export class PaieAnalytiqueComponent implements OnInit {
   readonly hauteurFonctions = computed(() => hauteurPourLignes(this.fonctionsTriees().length));
 
   readonly graphiqueChantiers = computed<Graphique<'bar'>>(() => {
+    this.theme.theme();
     const chantiers = this.chantiersTries();
     const mesure = this.mesureChantiers();
     return {
       data: {
         labels: chantiers.map((c) => c.code),
-        datasets: [
-          {
-            label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins',
-            data: chantiers.map((c) => c[mesure]),
-            backgroundColor: couleurGraphique(mesure === 'masse' ? 1 : 2),
-            borderRadius: 4
-          }
-        ]
+        datasets: [this.jeuDeBarres(libelleMesure(mesure), chantiers.map((c) => c[mesure]), couleurMesure(mesure), 'horizontal')]
       },
       options: {
-        indexAxis: 'y',
-        maintainAspectRatio: false,
-        animation: { duration: 900 },
-        onHover: this.curseurSurBarre,
+        ...this.optionsBarresHorizontales(),
         plugins: {
           legend: { display: false },
           tooltip: {
+            ...infobulle(),
             callbacks: {
               title: (elements) => {
                 const chantier = chantiers[elements[0].dataIndex];
@@ -135,43 +146,30 @@ export class PaieAnalytiqueComponent implements OnInit {
               },
               label: (element) => {
                 const chantier = chantiers[element.dataIndex];
-                return [
-                  `Masse : ${formaterMontant(chantier.masse)} DH`,
-                  `Bulletins : ${chantier.effectif}`,
-                  `STC / sorties : ${chantier.stc}`
-                ];
+                return [`Masse : ${formaterMontant(chantier.masse)} DH`, `Bulletins : ${chantier.effectif}`, `STC / sorties : ${chantier.stc}`];
               }
             }
           }
-        },
-        scales: this.echellesHorizontales()
+        }
       }
     };
   });
 
   readonly graphiqueFonctions = computed<Graphique<'bar'>>(() => {
+    this.theme.theme();
     const fonctions = this.fonctionsTriees();
     const mesure = this.mesureFonctions();
     return {
       data: {
         labels: fonctions.map((f) => f.libelle),
-        datasets: [
-          {
-            label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins',
-            data: fonctions.map((f) => f[mesure]),
-            backgroundColor: couleurGraphique(mesure === 'masse' ? 5 : 6),
-            borderRadius: 4
-          }
-        ]
+        datasets: [this.jeuDeBarres(libelleMesure(mesure), fonctions.map((f) => f[mesure]), couleurMesure(mesure), 'horizontal')]
       },
       options: {
-        indexAxis: 'y',
-        maintainAspectRatio: false,
-        animation: { duration: 900 },
-        onHover: this.curseurSurBarre,
+        ...this.optionsBarresHorizontales(),
         plugins: {
           legend: { display: false },
           tooltip: {
+            ...infobulle(),
             callbacks: {
               label: (element) => {
                 const fonction = fonctions[element.dataIndex];
@@ -179,60 +177,102 @@ export class PaieAnalytiqueComponent implements OnInit {
               }
             }
           }
-        },
-        scales: this.echellesHorizontales()
+        }
       }
     };
   });
 
-  /** Tous les mois qui ont de la paie sur le périmètre, du plus ancien au plus récent ; le mois analysé est mis en évidence. */
+  /**
+   * Tous les mois qui ont de la paie sur le périmètre, du plus ancien au plus récent ; le mois analysé est mis en évidence
+   * (grand repère cerclé de la couleur de la carte). **Une seule mesure, un seul axe** : la masse et les bulletins n'ont pas la
+   * même échelle, ils ne partagent jamais un graphique — l'utilisateur choisit celle qu'il lit.
+   */
   readonly graphiqueEvolution = computed<Graphique<'line'>>(() => {
+    this.theme.theme();
     const donnees = this.donnees();
     const evolution = donnees?.evolution ?? [];
-    const masse = couleurGraphique(1);
-    const effectif = couleurGraphique(2);
+    const mesure = this.mesureEvolution();
+    const couleur = couleurMesure(mesure);
     const rayons = evolution.map((e) => (e.periode === donnees?.periode ? 8 : 4));
+    const texte = jeton('--color-text-muted');
     return {
       data: {
         labels: evolution.map((e) => libellePeriode(e.periode)),
         datasets: [
-          { label: 'Masse (DH)', data: evolution.map((e) => e.masse), borderColor: masse, backgroundColor: masse, yAxisID: 'y', tension: 0.3, pointRadius: rayons },
-          { label: 'Bulletins', data: evolution.map((e) => e.effectif), borderColor: effectif, backgroundColor: effectif, yAxisID: 'y1', tension: 0.3, pointRadius: rayons }
+          {
+            label: libelleMesure(mesure),
+            data: evolution.map((e) => e[mesure]),
+            borderColor: couleur,
+            backgroundColor: couleur,
+            borderWidth: 2,
+            tension: 0.25,
+            pointRadius: rayons,
+            pointHoverRadius: 9,
+            pointBorderColor: jeton('--color-surface'),
+            pointBorderWidth: 2
+          }
         ]
       },
       options: {
         maintainAspectRatio: false,
-        animation: { duration: 900 },
+        animation: animationGraphique(),
+        // Marge autour du tracé : le repère du mois analysé (8 px + cercle) ne doit jamais être rogné par le bord du graphique
+        layout: { padding: { left: 14, right: 14, top: 10, bottom: 2 } },
         interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'bottom', labels: { color: jeton('--color-text-muted') } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...infobulle(),
+            callbacks: {
+              label: (element) => `${libelleMesure(mesure)} : ${mesure === 'masse' ? formaterMontant(Number(element.parsed.y)) : element.parsed.y}`
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: jeton('--color-text-muted'), autoSkip: false }, grid: { display: false } },
-          y: { position: 'left', ticks: { color: jeton('--color-text-muted'), callback: (v) => FORMAT_ENTIER.format(Number(v)) }, grid: { color: jeton('--color-border') } },
-          y1: { position: 'right', ticks: { color: jeton('--color-text-muted') }, grid: { display: false } }
+          x: { ticks: { color: texte, font: police(), autoSkip: true, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+          y: {
+            grace: '8%',
+            ticks: { color: texte, font: police(), callback: (v) => FORMAT_ENTIER.format(Number(v)) },
+            grid: grille(),
+            border: { display: false }
+          }
         }
       }
     };
   });
 
   readonly graphiqueTranches = computed<Graphique<'bar'>>(() => {
+    this.theme.theme();
     const tranches = this.donnees()?.tranches ?? [];
     const texte = jeton('--color-text-muted');
     return {
       data: {
-        labels: tranches.map((t) => this.libelleTranche(t)),
-        datasets: [{ label: 'Bulletins', data: tranches.map((t) => t.effectif), backgroundColor: couleurGraphique(3), borderRadius: 4 }]
+        // Une étiquette sur deux lignes (« 12 000 – » / « 15 000 ») : elles tiennent à l'horizontale, sans rotation
+        labels: tranches.map((t) => this.libelleTranche(t).split(' – ').map((partie, i, parties) => (i < parties.length - 1 ? `${partie} –` : partie))),
+        datasets: [this.jeuDeBarres('Bulletins', tranches.map((t) => t.effectif), couleurMesure('effectif'), 'vertical')]
       },
       options: {
         maintainAspectRatio: false,
-        animation: { duration: 900 },
-        plugins: { legend: { display: false } },
+        animation: animationGraphique(),
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...infobulle(),
+            callbacks: { title: (elements) => `Total ${this.libelleTranche(tranches[elements[0].dataIndex])} DH`, label: (element) => `Bulletins : ${element.parsed.y}` }
+          }
+        },
         scales: {
-          x: { ticks: { color: texte, autoSkip: false }, grid: { color: 'transparent' } },
-          y: { beginAtZero: true, ticks: { color: texte }, grid: { color: jeton('--color-border') } }
+          x: { ticks: { color: texte, font: police(), autoSkip: false }, grid: { display: false }, border: { display: false } },
+          y: { beginAtZero: true, ticks: { color: texte, font: police() }, grid: grille(), border: { display: false } }
         }
       }
     };
   });
+
+  /** Les lignes des tableaux de données : l'alternative accessible au dessin, deux mesures côte à côte (un tableau n'a pas d'échelle). */
+  readonly lignesEvolution = computed(() => (this.donnees()?.evolution ?? []).map((e) => ({ mois: libellePeriode(e.periode), masse: e.masse, effectif: e.effectif })));
+  readonly lignesTranches = computed(() => (this.donnees()?.tranches ?? []).map((t) => ({ tranche: this.libelleTranche(t), effectif: t.effectif })));
 
   readonly qualite = computed(() => {
     const donnees = this.donnees();
@@ -274,6 +314,11 @@ export class PaieAnalytiqueComponent implements OnInit {
       .subscribe((donnees) => this.donnees.set(donnees));
   }
 
+  /** Bascule l'affichage du tableau de données d'un graphique. */
+  basculerTableau(graphique: GraphiqueAvecTableau): void {
+    this.tableaux.update((etat) => ({ ...etat, [graphique]: !etat[graphique] }));
+  }
+
   /** Le périmètre devient l'URL : c'est elle qui relance l'analyse (voir `ngOnInit`). */
   appliquer(filtres: PaieFiltres): void {
     void this.router.navigate([], { relativeTo: this.route, replaceUrl: true, queryParams: versParametres(filtres) });
@@ -307,12 +352,33 @@ export class PaieAnalytiqueComponent implements OnInit {
     return tranche.max === null ? `≥ ${min}` : `${min} – ${FORMAT_ENTIER.format(tranche.max)}`;
   }
 
-  /** Barres horizontales : une ligne par catégorie, et **toutes** les étiquettes affichées (sans quoi Chart.js en sauterait). */
-  private echellesHorizontales(): ChartOptions<'bar'>['scales'] {
+  /** Une série de barres fine, au bout arrondi (4 px) et ancrée sur la ligne de base ; jamais d'ombre ni de contour. */
+  private jeuDeBarres(label: string, data: number[], couleur: string, sens: 'horizontal' | 'vertical') {
+    return {
+      label,
+      data,
+      backgroundColor: couleur,
+      borderRadius: sens === 'horizontal' ? { topRight: 4, bottomRight: 4 } : { topLeft: 4, topRight: 4 },
+      borderSkipped: sens === 'horizontal' ? ('start' as const) : ('bottom' as const),
+      maxBarThickness: sens === 'horizontal' ? 18 : 56,
+      categoryPercentage: 0.82
+    };
+  }
+
+  /** Barres horizontales : une ligne par catégorie, **toutes** les étiquettes affichées (sans quoi Chart.js en sauterait) ; survoler
+   * la ligne entière suffit à voir l'infobulle. */
+  private optionsBarresHorizontales(): Pick<ChartOptions<'bar'>, 'indexAxis' | 'maintainAspectRatio' | 'animation' | 'interaction' | 'onHover' | 'scales'> {
     const texte = jeton('--color-text-muted');
     return {
-      x: { beginAtZero: true, ticks: { color: texte, callback: (v) => FORMAT_ENTIER.format(Number(v)) }, grid: { color: jeton('--color-border') } },
-      y: { ticks: { color: texte, autoSkip: false }, grid: { color: 'transparent' } }
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      animation: animationGraphique(),
+      interaction: { mode: 'nearest', axis: 'y', intersect: false },
+      onHover: this.curseurSurBarre,
+      scales: {
+        x: { beginAtZero: true, ticks: { color: texte, font: police(), callback: (v) => FORMAT_ENTIER.format(Number(v)) }, grid: grille(), border: { display: false } },
+        y: { ticks: { color: texte, font: police(), autoSkip: false }, grid: { display: false }, border: { display: false } }
+      }
     };
   }
 

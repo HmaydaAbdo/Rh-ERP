@@ -1,37 +1,37 @@
-<div class="chantier-form">
-  <div class="chantier-form__header">
+<div class="chantier-form app-page app-page--narrow">
+  <a routerLink="/chantiers" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Chantiers</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? 'Modifier le chantier' : 'Nouveau chantier' }}</h1>
-    <a routerLink="/chantiers" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="chantier-form__grid">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
-      <label for="code">Code *</label>
-      <input pInputText id="code" type="text" formControlName="code" />
+      <label for="code">Code <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText spellcheck="false" autocomplete="off" id="code" type="text" formControlName="code" />
       @if (form.controls.code.invalid && form.controls.code.touched) {
-        <small class="field-error">Le code est obligatoire.</small>
+        <small class="field-error" role="alert">Le code est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="designation">Désignation *</label>
-      <input pInputText id="designation" type="text" formControlName="designation" />
+      <label for="designation">Désignation <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText autocomplete="off" id="designation" type="text" formControlName="designation" />
       @if (form.controls.designation.invalid && form.controls.designation.touched) {
-        <small class="field-error">La désignation est obligatoire.</small>
+        <small class="field-error" role="alert">La désignation est obligatoire.</small>
       }
     </div>
 
     <div class="field">
       <label for="nom">Nom (optionnel)</label>
-      <input pInputText id="nom" type="text" formControlName="nom" />
+      <input pInputText autocomplete="off" id="nom" type="text" formControlName="nom" />
       <small>Jamais synchronisé depuis l'ERP — affiché entre parenthèses après le code dans le rapport PDF et l'export Excel de la paie.</small>
     </div>
 
     @if (isEditMode) {
       <div class="field">
-        <label for="actif">Statut *</label>
+        <label for="actif">Statut <span class="field__req" aria-hidden="true">*</span></label>
         <p-dropdown
-          inputId="actif"
+          ariaLabel="Statut" inputId="actif"
           formControlName="actif"
           [options]="actifOptions"
           optionLabel="label"
@@ -40,7 +40,8 @@
       </div>
     }
 
-    <div class="chantier-form__actions">
+    <div class="app-form__actions">
+      <a routerLink="/chantiers" class="p-button p-button-text">Annuler</a>
       <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
     </div>
   </form>

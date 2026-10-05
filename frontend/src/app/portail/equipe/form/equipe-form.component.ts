@@ -8,13 +8,13 @@ import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
 import { EquipeService } from '../services/equipe.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 @Component({
   selector: 'app-equipe-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
-  templateUrl: './equipe-form.component.html',
-  styleUrl: './equipe-form.component.scss'
+  templateUrl: './equipe-form.component.html'
 })
 export class EquipeFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -48,6 +48,7 @@ export class EquipeFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -68,6 +69,7 @@ export class EquipeFormComponent implements OnInit {
           summary: this.isEditMode ? 'Équipe modifiée' : 'Équipe créée',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/equipes', equipe.id]);
       });
   }

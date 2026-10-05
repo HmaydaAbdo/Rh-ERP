@@ -1,26 +1,26 @@
-<div class="role-form">
-  <div class="role-form__header">
+<div class="role-form app-page app-page--narrow">
+  <a routerLink="/admin/roles" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Rôles</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? 'Modifier le rôle' : 'Nouveau rôle' }}</h1>
-    <a routerLink="/admin/roles" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
   @if (!loading) {
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="role-form__grid">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
       <div class="field">
-        <label for="nom">Nom *</label>
-        <input pInputText id="nom" type="text" formControlName="nom" />
+        <label for="nom">Nom <span class="field__req" aria-hidden="true">*</span></label>
+        <input pInputText autocomplete="off" id="nom" type="text" formControlName="nom" />
         @if (form.controls.nom.invalid && form.controls.nom.touched) {
-          <small class="field-error">Le nom est obligatoire.</small>
+          <small class="field-error" role="alert">Le nom est obligatoire.</small>
         }
       </div>
 
       <div class="field">
         <label for="description">Description</label>
-        <input pInputText id="description" type="text" formControlName="description" />
+        <input pInputText autocomplete="off" id="description" type="text" formControlName="description" />
       </div>
 
-      <div class="role-form__permissions">
-        <h2>Permissions</h2>
+      <div class="app-form__wide role-form__permissions">
+        <div class="app-form__section"><h2>Permissions</h2></div>
         @if (protege) {
           <p class="role-form__protege">
             Rôle d’administration : son nom et ses permissions sont verrouillés (le retirer ou l’amputer laisserait le système sans
@@ -32,6 +32,7 @@
             <div class="role-form__group-header">
               <p-checkbox
                 [binary]="true"
+                [ariaLabel]="'Tout sélectionner : ' + group.domaine"
                 [ngModel]="isGroupFullySelected(group)"
                 [ngModelOptions]="{ standalone: true }"
                 [disabled]="protege"
@@ -44,12 +45,13 @@
                 <label class="role-form__permission">
                   <p-checkbox
                     [binary]="true"
+                    [ariaLabel]="permission.code"
                     [ngModel]="isChecked(permission)"
                     [ngModelOptions]="{ standalone: true }"
                     [disabled]="protege"
                     (onChange)="toggle(permission, $event.checked)"
                   ></p-checkbox>
-                  <span>{{ permission.code }}</span>
+                  <span class="role-form__code">{{ permission.code }}</span>
                   <small>{{ permission.description }}</small>
                 </label>
               }
@@ -58,7 +60,8 @@
         }
       </div>
 
-      <div class="role-form__actions">
+      <div class="app-form__actions">
+        <a routerLink="/admin/roles" class="p-button p-button-text">Annuler</a>
         <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
       </div>
     </form>

@@ -131,4 +131,9 @@ export class UserListComponent {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe((users) => (this.users = users));
   }
+
+  /** Nombre de lignes affichées : la liste complète est en mémoire, le tableau la filtre côté client. */
+  total(table: Table): number {
+    return table.filteredValue?.length ?? this.users.length;
+  }
 }

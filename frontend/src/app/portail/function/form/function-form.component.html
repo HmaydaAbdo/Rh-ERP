@@ -1,19 +1,20 @@
-<div class="function-form">
-  <div class="function-form__header">
+<div class="function-form app-page app-page--narrow">
+  <a routerLink="/functions" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Fonctions</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? 'Modifier la fonction' : 'Nouvelle fonction' }}</h1>
-    <a routerLink="/functions" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="function-form__grid">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
-      <label for="libelle">Libellé *</label>
-      <input pInputText id="libelle" type="text" formControlName="libelle" />
+      <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText autocomplete="off" id="libelle" type="text" formControlName="libelle" />
       @if (form.controls.libelle.invalid && form.controls.libelle.touched) {
-        <small class="field-error">Le libellé est obligatoire.</small>
+        <small class="field-error" role="alert">Le libellé est obligatoire.</small>
       }
     </div>
 
-    <div class="function-form__actions">
+    <div class="app-form__actions">
+      <a routerLink="/functions" class="p-button p-button-text">Annuler</a>
       <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
     </div>
   </form>

@@ -14,8 +14,7 @@ import { AuditHistoriqueComponent } from '../../audit/historique/audit-historiqu
   selector: 'app-employee-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule, TagModule, DialogModule, AuditHistoriqueComponent],
-  templateUrl: './employee-detail.component.html',
-  styleUrl: './employee-detail.component.scss'
+  templateUrl: './employee-detail.component.html'
 })
 export class EmployeeDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

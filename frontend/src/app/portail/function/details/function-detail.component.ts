@@ -11,8 +11,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   selector: 'app-function-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule],
-  templateUrl: './function-detail.component.html',
-  styleUrl: './function-detail.component.scss'
+  templateUrl: './function-detail.component.html'
 })
 export class FunctionDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

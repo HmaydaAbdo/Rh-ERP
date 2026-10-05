@@ -28,7 +28,7 @@
   transition: width var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
 
   &:hover,
-  &:focus-within {
+  &:has(:focus-visible) {
     width: var(--sidebar-width-expanded);
     box-shadow: var(--shadow-lg);
   }
@@ -107,7 +107,7 @@
   }
 
   &:hover &__label,
-  &:focus-within &__label {
+  &:has(:focus-visible) &__label {
     opacity: 1;
   }
 
@@ -172,8 +172,8 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    height: var(--topbar-height);
-    padding: 0 var(--space-sm);
+    height: calc(var(--topbar-height) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(var(--space-sm), env(safe-area-inset-right)) 0 max(var(--space-sm), env(safe-area-inset-left));
     background: var(--color-sidebar-bg);
     color: var(--color-sidebar-active-text);
 
@@ -223,7 +223,7 @@
 
     // Tiroir : libellés toujours visibles, pas d'ouverture au survol
     &:hover,
-    &:focus-within {
+    &:has(:focus-visible) {
       width: min(18rem, 85vw);
       box-shadow: none;
     }
@@ -251,7 +251,7 @@
 
   .app-content {
     margin-left: 0;
-    padding-top: calc(var(--topbar-height) + var(--space-md));
+    padding-top: calc(var(--topbar-height) + env(safe-area-inset-top) + var(--space-md));
   }
 }
 
@@ -263,4 +263,27 @@
   .app-sidebar__action {
     transition: none;
   }
+}
+
+// Lien d'évitement : invisible, il apparaît au premier appui sur Tab pour passer directement au contenu
+.app-skip {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 200;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+
+  &:focus-visible {
+    transform: none;
+  }
+}
+
+.app-content:focus {
+  outline: none;
 }

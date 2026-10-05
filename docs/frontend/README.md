@@ -46,7 +46,8 @@ src/app/
 │   ├── auth/                Connexion, mot de passe oublié/réinitialisé, accès refusé, AuthService,
 │   │                        guards (authGuard, permissionGuard, homeGuard), intercepteur d'authentification
 │   ├── interceptors/        Intercepteur d'erreurs (notification du message de l'API)
-│   ├── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil
+│   ├── i18n/                primeng-fr.ts : textes français des composants PrimeNG (calendrier…)
+│   ├── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil ; PageTitleStrategy : titre de l'onglet (« Employés · Staport RH »)
 │   └── theme/               ThemeService : thème clair / sombre (attribut data-theme sur <html>)
 ├── portail/                 Un dossier par domaine, comme côté backend
 │   ├── chantier/ employee/ equipe/ function/ paie/
@@ -70,6 +71,46 @@ Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_token
 `--color-primary`, `--space-md`, `--font-sans`, … — pour les deux thèmes), `_tables.scss` (style unique des tableaux) et
 `primeng-theme.css` (thème PrimeNG **généré** par `npm run theme:generate`, lisant les jetons). Aucune valeur de design n'est
 écrite en dur dans un composant. Règles : `conventions/design-system.md`.
+
+### Mise en page des écrans de liste
+
+Tous les écrans de liste (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, et le tabulaire de la Paie)
+ont **la même structure** : titre, ligne de filtres à plat, barre du tableau (total à gauche ; outils à droite — Colonnes,
+action secondaire, puis l'action principale en bleu plein), tableau. Employés et Fonctions regroupent « Importer » et le
+téléchargement du modèle Excel dans un seul bouton fractionné. Classes : `app-page`, `app-toolbar`, `app-table-bar`
+(`src/styles/_page.scss`, voir `conventions/design-system.md`). Le total est celui du serveur (listes paginées) ou des lignes
+affichées après filtre (Utilisateurs, Rôles). Un nouvel écran de liste reprend ces classes dès sa création.
+
+### Formulaires, consultations et fenêtres
+
+Même structure partout (classes de `src/styles/_forms.scss`, voir `conventions/design-system.md`) : lien de retour « ← Liste »
+au-dessus du titre ; formulaire en grille de champs (libellé en gras, astérisque rouge des champs obligatoires, bordure rouge
+et message sous un champ invalide) ; le formulaire d'un bulletin est découpé en **Affectation**, **Jours** et **Rémunération** ;
+pied « Annuler » + action principale (collé au bas de l'écran sur téléphone). Une consultation (`app-detail`) affiche
+étiquette / valeur ; ses actions sont **Historique** (si `AUDIT_READ`) puis **Modifier** (si `*_WRITE`). Les fenêtres
+(`_overlays.scss`) ont un style unique ; les confirmations de suppression sont étroites, « Supprimer » en rouge. Les textes
+PrimeNG (calendrier, messages) sont en français (`core/i18n/primeng-fr.ts`).
+
+### Graphiques et mouvement
+
+Graphiques : habillage commun `paie-chart-theme.ts` (couleurs, police et infobulle lues dans les jetons), redessinés à la
+bascule de thème, une seule mesure par axe, tableau de données accessible — voir `docs/paie/README.md` (Vue Analytique) et
+`conventions/design-system.md`. Mouvement : `styles/_motion.scss` (écran qui apparaît, bascule de thème en fondu, squelettes de
+chargement, appui sur un bouton), durées et courbe en jetons, supprimé par `prefers-reduced-motion`.
+
+### Accessibilité et qualité
+
+Contrôles de la revue finale (voir `conventions/design-system.md`, section « Accessibilité ») : axe-core ne trouve aucune violation
+(WCAG 2.1 A/AA et bonnes pratiques) sur les écrans principaux dans les deux thèmes ; le focus clavier est visible sur tous les
+éléments parcourus ; lien d'évitement ; boutons d'icône nommés ; champs étiquetés ; formulaires qui annoncent leurs erreurs, mettent
+le focus sur la première et demandent confirmation avant d'être quittés modifiés (`shared/forms/`). Nombres et dates en `fr-FR`.
+Poids : ~167 ko transférés au chargement initial (le budget d'avertissement porte sur la taille brute, relevé à 800 ko) ; le thème
+PrimeNG généré (258 ko bruts, 25 ko transférés) est le premier poste, graphiques et assistant d'export sont chargés à la demande.
+
+### Titres d'onglet
+
+Chaque section déclare un `title` dans `app.routes.ts` (le titre le plus profond l'emporte, ses écrans enfants le gardent) ;
+`PageTitleStrategy` y ajoute « · Staport RH ». Un nouvel écran de premier niveau déclare son `title`.
 
 ### Responsive
 
@@ -249,7 +290,7 @@ conditionnel, génération) piloté par des signaux ; les étapes sont une liste
 que si un tableau sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
 
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
-des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~14 ko). Si un autre composant approche la limite, le découper
+des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15 ko). Si un autre composant approche la limite, le découper
 en sous-composants plutôt que de la relever encore.
 
 ## Formulaires, notifications et erreurs
@@ -277,7 +318,7 @@ autorisés, pas de NgRx).
    modification) et les enregistrer dans `app.routes.ts` (avec `authGuard`).
 3. Ajouter l'entrée à `NAV_ITEMS`.
 4. Conditionner chaque bouton d'action par sa permission (`canWrite()`…).
-5. Pour un tableau : `styleClass="app-table p-datatable-gridlines p-datatable-sm"`, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination, filtres en temps
+5. Pour un écran de liste : classes `app-page`, `app-toolbar` et `app-table-bar` (voir ci-dessus). Pour un tableau : `styleClass="app-table p-datatable-gridlines p-datatable-sm"`, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination, filtres en temps
    réel.
 6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select`.
 7. Ajouter le préfixe d'API à `proxy.conf.js` et `nginx.conf`.

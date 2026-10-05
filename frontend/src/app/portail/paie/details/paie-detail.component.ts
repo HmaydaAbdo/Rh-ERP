@@ -13,8 +13,7 @@ import { AuditHistoriqueComponent } from '../../audit/historique/audit-historiqu
   selector: 'app-paie-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule, DialogModule, AuditHistoriqueComponent],
-  templateUrl: './paie-detail.component.html',
-  styleUrl: './paie-detail.component.scss'
+  templateUrl: './paie-detail.component.html'
 })
 export class PaieDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

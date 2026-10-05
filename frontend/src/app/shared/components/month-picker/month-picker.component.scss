@@ -45,8 +45,8 @@
     font-size: 0.875rem;
     cursor: pointer;
     opacity: 0;
-    animation: month-picker-apparition 0.35s forwards;
-    transition: transform 0.15s, border-color 0.2s, background 0.2s, color 0.2s;
+    animation: month-picker-apparition var(--duration-slow) forwards;
+    transition: transform var(--duration-fast), border-color var(--duration-base), background var(--duration-base), color var(--duration-base);
 
     &:hover:not(:disabled) {
       border-color: var(--color-primary);

@@ -17,6 +17,7 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { PaieService } from '../services/paie.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 function toPeriodeString(date: Date | null): string | undefined {
   if (!date) {
@@ -114,6 +115,7 @@ export class PaieFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focaliserPremiereErreur();
       return;
     }
 
@@ -150,6 +152,7 @@ export class PaieFormComponent implements OnInit {
           summary: this.isEditMode ? 'Bulletin modifié' : 'Bulletin créé',
           life: 4000
         });
+        this.form.markAsPristine();
         this.router.navigate(['/paie', paie.id]);
       });
   }
