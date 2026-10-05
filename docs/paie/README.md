@@ -149,7 +149,7 @@ permission et `conventions/security.md` pour la conception du RBAC.
 
 ### Modèle téléchargeable
 
-`GET /paie/import/modele` (bouton "Modèle Excel" dans l'UI) renvoie un fichier `.xlsx` vierge avec
+`GET /paie/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI) renvoie un fichier `.xlsx` vierge avec
 les trois lignes d'en-tête et les 13 colonnes dans l'ordre attendu, généré par
 `PaieImportService.genererModele()` — pour que l'utilisateur parte d'un fichier au bon format plutôt
 que de deviner ou de réutiliser un fichier dont la structure a pu changer. La colonne « Total » est
@@ -399,7 +399,7 @@ barre).
 | Bloc | Contenu |
 |---|---|
 | Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
-| Évolution | Masse et bulletins de **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est mis en évidence. Avec un seul mois, un seul point |
+| Évolution | **Une seule mesure à la fois, sur un seul axe** (bouton Masse / Bulletins : les deux n'ont pas la même échelle, ils ne partagent jamais un graphique) pour **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est cerclé. Avec un seul mois, un seul point |
 | Répartition par chantier | **Tous** les chantiers du mois, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
 | Répartition par fonction | **Toutes** les fonctions du mois, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction n'est regroupée sous « Autres » |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
@@ -412,11 +412,16 @@ mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas d
 métier : la largeur est celle qui couvre le plus gros total du périmètre en 6 tranches, arrondie à 500 DH au-dessus, donc des
 bornes lisibles qui suivent les données.
 
-**Graphiques** : Chart.js via `p-chart` de PrimeNG (dépendance `chart.js` ajoutée, chargée à la demande avec la page). Chart.js
-dessine dans un canvas et ne lit pas le CSS : les couleurs viennent des tokens `--chart-1` à `--chart-8` de `_tokens.scss`, lus
-à l'exécution (`paie-chart-theme.ts`). **Animations** : tuiles et cartes en cascade, chiffres incrémentés, graphiques tracés
-progressivement, jauges remplies ; coupées quand l'utilisateur a demandé moins de mouvement (sauf le tracé de Chart.js, propre
-à la bibliothèque).
+**Graphiques** : Chart.js via `p-chart` de PrimeNG (dépendance `chart.js`, chargée à la demande avec la page). Chart.js dessine
+dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles viennent des jetons, lus à l'exécution
+(`paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
+couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
+(`--chart-1`), les bulletins toujours orange (`--chart-2`), dans tous les graphiques. Marques fines (barres de 18 px au bout
+arrondi), grille discrète, infobulle au survol de toute la ligne, aucune légende pour une série unique. **Alternative
+accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois, chantiers, fonctions,
+tranches) et un libellé `aria-label` ; le tracé est supprimé quand l'utilisateur a demandé moins de mouvement. Premier
+chargement : des silhouettes (squelettes) à la place du texte « Chargement… ». Règles : `conventions/design-system.md`,
+section « Graphiques ».
 
 Les filtres fonction/chantier de la liste (`fonctionIds`/`chantierIds`) et les champs employé/
 fonction/chantier du formulaire utilisent tous le même sélecteur générique — seule la cardinalité
