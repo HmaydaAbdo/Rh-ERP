@@ -71,6 +71,8 @@ export class PaieFiltresComponent implements OnInit {
   readonly disponibles = signal<string[]>([]);
   readonly courant = signal<PaieFiltres>(AUCUN_FILTRE);
   readonly fil = signal(false);
+  /** Téléphone : le CIN et les trois sélecteurs se replient derrière le bouton « Filtres » ; ailleurs la barre est toujours entière. */
+  readonly secondairesOuverts = signal(false);
   readonly moisObligatoire = signal(false);
 
   /** Les chantiers du mois choisi, avec leurs équipes : de quoi restreindre les choix de la cascade. */
@@ -117,6 +119,12 @@ export class PaieFiltresComponent implements OnInit {
   readonly aDesFiltres = computed(() => {
     const f = this.courant();
     return this.periode() !== null || f.chantierIds.length + f.equipeIds.length + f.fonctionIds.length > 0 || this.nomOuCinSaisi(f);
+  });
+
+  /** Filtres du panneau replié (CIN, chantiers, équipes, fonctions) : le « n » du bouton « Filtres ». */
+  readonly nombreSecondaires = computed(() => {
+    const f = this.courant();
+    return (f.cin.trim() ? 1 : 0) + (f.chantierIds.length > 0 ? 1 : 0) + (f.equipeIds.length > 0 ? 1 : 0) + (f.fonctionIds.length > 0 ? 1 : 0);
   });
 
   /** Chantier du fil de navigation (niveau 3 des Cartes), nommé d'après les chantiers du mois. */
@@ -174,6 +182,10 @@ export class PaieFiltresComponent implements OnInit {
   /** Choisit un mois ; `null` revient à « tous les mois ». Les choix qui dépendaient de l'ancien mois restent : on les voit. */
   choisir(periode: string | null): void {
     this.emettreFiltres({ ...this.courant(), periode });
+  }
+
+  basculerSecondaires(): void {
+    this.secondairesOuverts.update((ouverts) => !ouverts);
   }
 
   /** Fil de navigation (Cartes) : revient au niveau demandé, 1 = tous les mois, 2 = chantiers du mois. */

@@ -165,7 +165,7 @@
   // ---- Tuiles de synthèse (chiffres animés) ----
   &__tuiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
     gap: var(--space-md);
     margin-bottom: var(--space-md);
   }

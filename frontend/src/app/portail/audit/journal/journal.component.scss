@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .journal {
   background: var(--color-surface);
   border-radius: var(--radius-md);
@@ -14,6 +16,11 @@
       margin: 0;
       font-size: 1.25rem;
     }
+
+    @include bp.phone {
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
   }
 
   &__filters {
@@ -22,6 +29,13 @@
     gap: var(--space-sm);
     align-items: end;
     margin-bottom: var(--space-lg);
+
+    @include bp.phone {
+      > * {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+    }
   }
 
   &__date {
@@ -105,5 +119,9 @@
 
   &__vide {
     color: var(--color-text-muted);
+  }
+
+  @include bp.phone {
+    padding: var(--space-md);
   }
 }

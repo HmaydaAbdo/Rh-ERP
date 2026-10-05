@@ -80,6 +80,29 @@ avec `::ng-deep` borné par `:host` pour ne pas fuir hors du composant.
 
 ---
 
+# Responsive
+
+Tout écran fonctionne du téléphone (390 px) au grand écran, **sans défilement horizontal de la page** : seul un tableau défile
+horizontalement, à l'intérieur de sa carte.
+
+* **Points de rupture** : jetons Sass dans `src/styles/_breakpoints.scss` (`phone` ≤ 767 px, `tablet-down` ≤ 1023 px,
+  `compact-nav` pour la navigation en tiroir) ; une feuille de composant les utilise par `@use 'breakpoints' as bp;`
+  puis `@include bp.phone { … }`. Jamais un `@media` à valeur écrite en dur dans un composant.
+* **Navigation** : le menu latéral replié (bureau et tablette à souris) devient un **tiroir** ouvert par une barre du haut
+  sur téléphone et tablette tactile — fond sombre cliquable, `Échap` et le choix d'un écran le referment.
+* **Cibles tactiles** : sur écran tactile (`pointer: coarse`) ou téléphone, tout contrôle fait au moins 44 px
+  (`--control-height`) et le texte d'un champ au moins 16 px (`--control-font-size`) — sinon iOS zoome à la saisie.
+* **Grilles** : colonnes en `minmax(0, 1fr)` (jamais `1fr` seul : un contenu large étirerait la colonne), réduites à deux
+  colonnes sur tablette et à une sur téléphone. Un élément pleine largeur se place par `grid-column: 1 / -1`
+  (jamais `span n`, qui crée des colonnes implicites).
+* **Tableaux** : la première colonne reste en vue pendant le défilement horizontal ; le paginateur se replie sur
+  plusieurs lignes, sans « première / dernière page ».
+* **Barres de filtres** : ce qui est secondaire se replie derrière un bouton « Filtres (n) » sur téléphone (le n compte les
+  filtres actifs cachés) ; sur grand écran tout reste visible.
+* **Dialogues** : plafonnés à la largeur de l'écran sur téléphone (`styles.scss`), quelle que soit la largeur donnée par l'écran.
+
+---
+
 # Accessibilité
 
 * Contraste de texte d'au moins 4,5:1 dans les deux thèmes (3:1 pour les grands textes et les contrôles).

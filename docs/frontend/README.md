@@ -71,6 +71,14 @@ Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_token
 `primeng-theme.css` (thème PrimeNG **généré** par `npm run theme:generate`, lisant les jetons). Aucune valeur de design n'est
 écrite en dur dans un composant. Règles : `conventions/design-system.md`.
 
+### Responsive
+
+Les points de rupture sont des jetons Sass (`src/styles/_breakpoints.scss`, chemin d'inclusion déclaré dans `angular.json`).
+Vérifié de 390 à 1440 px : aucune page ne défile horizontalement (seul le tableau défile, dans sa carte, première colonne
+figée), les contrôles font 44 px sur écran tactile, les grilles de formulaire passent à deux puis une colonne, les dialogues
+tiennent dans l'écran. Règles : `conventions/design-system.md`, section « Responsive ». Un écran de liste ou de formulaire
+nouveau reprend ces règles dès sa création.
+
 ### Identité visuelle et thèmes
 
 | | |
@@ -79,7 +87,7 @@ Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_token
 | Logo | `src/assets/brand/logo-staport.png` (logo existant de Staport, repris du rapport PDF) sur les écrans de connexion ; en thème sombre, il passe en blanc par un filtre CSS. Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon et menu latéral) — dessin provisoire, à remplacer par une version vectorielle du logo |
 | Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne |
 | Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage |
-| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère bleu clair sur l'écran actif |
+| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère bleu clair sur l'écran actif. Replié à 64 px, il s'ouvre au survol ; sur **téléphone et tablette tactile** il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
 | Connexion | Fond bleu profond à courbes de niveau en filigrane (SVG intégré à la feuille de style), sans photo |
 
 ---

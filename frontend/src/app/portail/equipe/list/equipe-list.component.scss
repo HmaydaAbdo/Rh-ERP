@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .equipe-list {
   background: var(--color-surface);
   border-radius: var(--radius-md);
@@ -14,6 +16,11 @@
       margin: 0;
       font-size: 1.25rem;
     }
+
+    @include bp.phone {
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
   }
 
   &__filters {
@@ -21,10 +28,21 @@
     flex-wrap: wrap;
     gap: var(--space-sm);
     margin-bottom: var(--space-lg);
+
+    @include bp.phone {
+      > * {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+    }
   }
 
   &__actions {
     display: flex;
     gap: var(--space-xs);
+  }
+
+  @include bp.phone {
+    padding: var(--space-md);
   }
 }

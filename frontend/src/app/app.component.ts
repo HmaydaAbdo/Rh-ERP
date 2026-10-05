@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -22,12 +22,23 @@ export class AppComponent {
 
   title = 'Staport RH';
 
+  /** Menu en tiroir (téléphone, tablette tactile) : ouvert par le bouton de la barre du haut, fermé par le fond, Échap ou un choix. */
+  readonly menuOuvert = signal(false);
+
   readonly user = this.authService.user;
   readonly isAuthenticated = this.authService.isAuthenticated;
 
   readonly navItems = computed(() =>
     NAV_ITEMS.filter((item) => this.authService.hasPermission(item.permission))
   );
+
+  basculerMenu(): void {
+    this.menuOuvert.update((ouvert) => !ouvert);
+  }
+
+  fermerMenu(): void {
+    this.menuOuvert.set(false);
+  }
 
   onLogout(): void {
     this.authService.logout().subscribe(() => this.router.navigate(['/login']));
