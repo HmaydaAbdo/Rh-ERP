@@ -626,6 +626,15 @@ locale à l'échelle réelle (plusieurs chantiers, dont une équipe à 74 employ
 squelette matériel C168/CH, une autre à 45 employés/11 fonctions) confirmant l'absence de page
 blanche et de ligne perdue.
 
+**Chantier sans détail par équipe** (aucune équipe sélectionnée, donc pas de graphique « Répartition par
+équipe ») : la page du chantier n'a que le chapitre et ses cartes KPI, et le reste de la page serait vide. La
+section « reste » (titre, KPI, récap, détail des employés) démarre donc **directement sous les cartes KPI du
+chantier, sur la même page** : `RapportPageModelBuilder` déduit la hauteur de l'en-tête chantier
+(`ENTETE_CHANTIER_HAUTEUR`) de la capacité de cette 1re page, et la suite de la pagination est inchangée. Avec un
+détail par équipe, le chantier garde sa page propre (chapitre, KPI, graphique) et chaque équipe la sienne.
+Couvert par `RapportPageModelBuilderTest` (1 à 120 employés × 0 à 16 lignes de récap : rien ne déborde, aucun
+employé perdu).
+
 ### Cartes KPI de section et tableau récap
 
 En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "reste") : titre, rubrique

@@ -34,6 +34,7 @@ class RapportPageModelBuilderTest {
     private static final double PAGE_BODY_HAUTEUR = 495;
     private static final double MARGE_SECURITE = 8;
 
+    private static final double TITRE_CHAPITRE_HAUTEUR = 24;
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
     private static final double KPI_EQUIPE_HAUTEUR = 52;
     private static final double DETAILS_TITRE_HAUTEUR = 24;
@@ -238,6 +239,57 @@ class RapportPageModelBuilderTest {
     }
 
     /**
+     * Sans détail par équipe (donc sans graphique « Répartition par équipe »), la section « reste » suit
+     * directement les cartes KPI du chantier sur la même page : aucune page ne porte le seul chapitre
+     * chantier, et rien ne déborde, quelle que soit la taille de la section.
+     */
+    @Test
+    void construire_sansDetailEquipe_laSectionResteSuitLesCartesKpiDuChantierSurLaMemePage() {
+
+        for (int total = 1; total <= 120; total++) {
+
+            for (int lignesRecapMax = 0; lignesRecapMax <= Math.min(16, total); lignesRecapMax++) {
+
+                List<PageModel> pages = builder.construire(vueAvecUneEquipe(total, lignesRecapMax, false, false));
+
+                // page 0 = synthèse globale ; la 1re page du chantier porte tout l'en-tête puis la section
+                List<PageModel.Bloc> premiere = pages.get(1).blocs();
+                assertThat(premiere.subList(0, 4))
+                        .as("total=%d, recap=%d : chapitre, KPI chantier, titre et KPI de la section", total, lignesRecapMax)
+                        .satisfiesExactly(
+                                b -> assertThat(b).isInstanceOf(PageModel.BlocTitreChapitre.class),
+                                b -> assertThat(b).isInstanceOf(PageModel.BlocKpi.class),
+                                b -> assertThat(b).isInstanceOf(PageModel.BlocTitreEquipe.class),
+                                b -> assertThat(b).isInstanceOf(PageModel.BlocKpi.class));
+                assertThat(premiere).noneMatch(b -> b instanceof PageModel.BlocGraphique);
+
+                int lignes = 0;
+                for (int p = 1; p < pages.size(); p++) {
+                    double hauteur = p == 1 ? TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR : 0;
+                    for (PageModel.Bloc bloc : pages.get(p).blocs()) {
+                        if (bloc instanceof PageModel.BlocTitreEquipe) {
+                            hauteur += EQUIPE_TITRE_HAUTEUR;
+                        } else if (bloc instanceof PageModel.BlocKpi && !(p == 1 && bloc == premiere.get(1))) {
+                            hauteur += KPI_EQUIPE_HAUTEUR;
+                        } else if (bloc instanceof PageModel.BlocTitreSection) {
+                            hauteur += DETAILS_TITRE_HAUTEUR;
+                        } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
+                            lignes += b.lignes().size();
+                            hauteur += b.lignes().size() * LIGNE_HAUTEUR + (b.avecEnTeteColonnes() ? TABLEAU_ENTETE_HAUTEUR : 0);
+                        } else if (bloc instanceof PageModel.BlocRecap) {
+                            hauteur += RECAP_BASE_HAUTEUR + RECAP_LIGNE_HAUTEUR * lignesRecapMax;
+                        }
+                    }
+                    assertThat(hauteur)
+                            .as("total=%d, recap=%d, page %d : contenu dans la hauteur utile", total, lignesRecapMax, p)
+                            .isLessThanOrEqualTo(PAGE_BODY_HAUTEUR - MARGE_SECURITE + 0.001);
+                }
+                assertThat(lignes).as("total=%d, recap=%d : chaque employé une fois", total, lignesRecapMax).isEqualTo(total);
+            }
+        }
+    }
+
+    /**
      * Numéro de page et total cohérents (1-based, total = nombre de pages hors couverture —
      * la couverture n'est pas un {@link PageModel}, voir {@code PaieReportHtmlBuilder}).
      */
@@ -262,6 +314,15 @@ class RapportPageModelBuilderTest {
             int totalEmployes,
             int lignesRecapMax,
             boolean avecMateriel
+    ) {
+        return vueAvecUneEquipe(totalEmployes, lignesRecapMax, avecMateriel, true);
+    }
+
+    private RapportBiVue vueAvecUneEquipe(
+            int totalEmployes,
+            int lignesRecapMax,
+            boolean avecMateriel,
+            boolean avecDetailEquipe
     ) {
 
         List<LigneEmployeVue> employes = new ArrayList<>();
@@ -351,7 +412,7 @@ class RapportPageModelBuilderTest {
                         List.of(),
                         List.of(),
                         List.of(equipe),
-                        true
+                        avecDetailEquipe
                 );
 
         SyntheseGlobaleVue synthese =
