@@ -54,6 +54,12 @@ final class RapportPageModelBuilder {
     /** Rangée de cartes KPI équipe (marge 4 + carte 36 + padding/bordures). */
     private static final double KPI_EQUIPE_HAUTEUR = 52;
 
+    /** Titre de chapitre chantier (16pt + padding + filet) puis rangée de cartes KPI chantier (même hauteur que
+     * celle de l'équipe) : l'espace qu'ils occupent en tête de la page d'un chantier sans détail par équipe, que la
+     * section « reste » doit déduire de sa 1re page (voir {@link #construire}). */
+    private static final double TITRE_CHAPITRE_HAUTEUR = 24;
+    private static final double ENTETE_CHANTIER_HAUTEUR = TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR;
+
     /** Titre « Détails » (marge 8 + 12pt). */
     private static final double DETAILS_TITRE_HAUTEUR = 24;
 
@@ -100,9 +106,19 @@ final class RapportPageModelBuilder {
         List<ChantierBiVue> chantiers = vue.chantiers();
         for (int index = 0; index < chantiers.size(); index++) {
             ChantierBiVue chantier = chantiers.get(index);
-            ajouterPageChantier(pages, chantier, index);
-            for (EquipeBiVue equipe : chantier.equipes()) {
-                ajouterPagesEquipe(pages, chantier, equipe);
+            List<PageModel.Bloc> enteteChantier = blocsChantier(chantier, index);
+            List<EquipeBiVue> equipes = chantier.equipes();
+            int premiereEquipeSeule = 0;
+            if (!chantier.avecDetailEquipe() && !equipes.isEmpty()) {
+                // Pas de graphique par équipe : la section « reste » suit directement les cartes KPI du chantier,
+                // sur la même page, au lieu de laisser le bas de cette page vide.
+                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, ENTETE_CHANTIER_HAUTEUR);
+                premiereEquipeSeule = 1;
+            } else {
+                pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
+            }
+            for (EquipeBiVue equipe : equipes.subList(premiereEquipeSeule, equipes.size())) {
+                ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0);
             }
         }
 
@@ -158,7 +174,9 @@ final class RapportPageModelBuilder {
         return tranches;
     }
 
-    private void ajouterPageChantier(List<PageEnConstruction> pages, ChantierBiVue chantier, int index) {
+    /** Titre de chapitre, cartes KPI et — seulement si le détail par équipe est demandé — graphique de répartition
+     * par équipe : le contenu de tête d'un chantier. */
+    private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int index) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre(chapitreChantier(index, chantier)));
         blocs.add(new PageModel.BlocKpi("chantier", List.of(
@@ -171,10 +189,13 @@ final class RapportPageModelBuilder {
             blocs.add(new PageModel.BlocTitreSection("Répartition par équipe"));
             blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe()));
         }
-        pages.add(new PageEnConstruction(niveauTexteChantier(chantier), blocs));
+        return blocs;
     }
 
-    private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe) {
+    /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du
+     * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete} */
+    private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe,
+                                    List<PageModel.Bloc> blocsEnTete, double hauteurEnTete) {
         String niveau = niveauTexteEquipe(chantier, equipe);
         List<LigneEmployeVue> employes = equipe.employes();
         int total = employes.size();
@@ -188,7 +209,7 @@ final class RapportPageModelBuilder {
         double enteteDetails = DETAILS_TITRE_HAUTEUR + TABLEAU_ENTETE_HAUTEUR;
 
         // Place restante sur la 1re page, une fois titre + KPI + récap posés
-        double resteApresRecap = utile - EQUIPE_TITRE_HAUTEUR - KPI_EQUIPE_HAUTEUR - hauteurRecap;
+        double resteApresRecap = utile - hauteurEnTete - EQUIPE_TITRE_HAUTEUR - KPI_EQUIPE_HAUTEUR - hauteurRecap;
         int capPremiere = (int) ((resteApresRecap - enteteDetails) / LIGNE_HAUTEUR);
         boolean detailsSurPremierePage = capPremiere >= MIN_LIGNES_PREMIERE_PAGE;
 
@@ -203,6 +224,7 @@ final class RapportPageModelBuilder {
             List<PageModel.Bloc> blocs = new ArrayList<>();
             int capacite;
             if (premierePage) {
+                blocs.addAll(blocsEnTete);
                 blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
                 blocs.add(cartesKpiEquipe(equipe));
                 blocs.add(new PageModel.BlocRecap(equipe.repartitionFonction(), equipe.materiel(), titreMateriel));
