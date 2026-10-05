@@ -121,7 +121,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
-                repartitionChantiers(agregatChantier),
+                repartitionChantiers(agregatChantier, courant),
                 versRepartition(agregatFonction),
                 evolutions.global()
         );
@@ -341,11 +341,26 @@ class PaieBiReportBuilder {
 
     /** TOUS les chantiers, du plus gros au plus petit — {@code agregats} est déjà trié par montant décroissant
      * (voir {@link #agreger}). Ni plafond ni regroupement « Autres » (décision du 2026-10-03) : quand ils sont
-     * nombreux, c'est {@link RapportPageModelBuilder} qui répartit le graphique sur plusieurs pages. */
-    private List<RepartitionBean> repartitionChantiers(List<Agregat> agregats) {
+     * nombreux, c'est {@link RapportPageModelBuilder} qui répartit le graphique sur plusieurs pages.
+     *
+     * <p>Chaque barre porte le <b>nom</b> du chantier ({@code Chantier.nom}), jamais son code, quand il est renseigné ;
+     * le code reste le libellé de repli (demande de direction, 2026-10-05). {@code agregats} reste indexé par code (il
+     * sert au filtrage des sections) : seul le libellé du graphique est substitué, ici. */
+    private List<RepartitionBean> repartitionChantiers(List<Agregat> agregats, List<Paie> lignes) {
         return agregats.stream()
-                .map(a -> new RepartitionBean(a.cle(), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
+                .map(a -> new RepartitionBean(libelleGraphiqueChantier(a.cle(), lignes), a.effectif(), a.montant(), a.stc(), a.stcMontant()))
                 .toList();
+    }
+
+    /** Le nom du chantier, ou son code quand le nom est vide : toutes les lignes d'un même {@code code} partagent la
+     * même entité {@code Chantier}, la première suffit. */
+    private String libelleGraphiqueChantier(String code, List<Paie> lignes) {
+        String nom = lignes.stream()
+                .filter(p -> codeChantier(p).equals(code))
+                .findFirst()
+                .map(p -> p.getChantier().getNom())
+                .orElse(null);
+        return nom != null && !nom.isBlank() ? nom.strip() : code;
     }
 
     /** Plafonne un graphique de la synthèse globale aux {@value #MAX_BARRES_GRAPHIQUE} plus grosses
