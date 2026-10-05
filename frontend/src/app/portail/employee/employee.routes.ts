@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { permissionGuard } from '../../core/auth/guards/auth.guard';
+import { unsavedChangesGuard } from '../../shared/forms/unsaved-changes.guard';
 
 export const EMPLOYEE_ROUTES: Routes = [
   {
@@ -12,6 +13,7 @@ export const EMPLOYEE_ROUTES: Routes = [
   {
     path: 'new',
     canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
     data: { permission: 'EMPLOYEE_WRITE' },
     loadComponent: () => import('./form/employee-form.component').then((m) => m.EmployeeFormComponent)
   },
@@ -24,6 +26,7 @@ export const EMPLOYEE_ROUTES: Routes = [
   {
     path: ':id/edit',
     canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
     data: { permission: 'EMPLOYEE_WRITE' },
     loadComponent: () => import('./form/employee-form.component').then((m) => m.EmployeeFormComponent)
   }

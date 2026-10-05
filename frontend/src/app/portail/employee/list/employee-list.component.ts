@@ -4,9 +4,10 @@ import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService, MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
@@ -44,6 +45,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
     TagModule,
     ConfirmDialogModule,
     DialogModule,
+    SplitButtonModule,
     LazySelectComponent
   ],
   providers: [ConfirmationService],
@@ -93,6 +95,19 @@ export class EmployeeListComponent implements OnInit {
   importResult: EmployeeImportResult | null = null;
   showImportResultDialog = false;
   downloadingTemplate = false;
+
+  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
+  readonly menuImport: MenuItem[] = [
+    {
+      label: 'Télécharger le modèle Excel',
+      icon: 'pi pi-file-excel',
+      command: () => {
+        if (!this.downloadingTemplate) {
+          this.onDownloadTemplate();
+        }
+      }
+    }
+  ];
 
   readonly statutOptions = STATUT_OPTIONS;
 

@@ -1,16 +1,16 @@
 @if (chantier) {
-  <div class="chantier-detail">
-    <div class="chantier-detail__header">
+  <div class="chantier-detail app-page app-page--narrow">
+    <a routerLink="/chantiers" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Chantiers</a>
+    <div class="app-page__header">
       <h1>{{ chantier.code }}</h1>
-      <div class="chantier-detail__header-actions">
+      <div class="app-page__actions">
         @if (canWrite()) {
           <a [routerLink]="['/chantiers', chantier.id, 'edit']" class="p-button">Modifier</a>
         }
-        <a routerLink="/chantiers" class="p-button p-button-outlined">Retour à la liste</a>
       </div>
     </div>
 
-    <dl class="chantier-detail__grid">
+    <dl class="app-detail">
       <div>
         <dt>Désignation</dt>
         <dd>{{ chantier.designation }}</dd>

@@ -1,43 +1,42 @@
 <p-confirmDialog></p-confirmDialog>
 
-<div class="chantier-list">
-  <div class="chantier-list__header">
+<div class="chantier-list app-page">
+  <div class="app-page__header">
     <h1>Chantiers</h1>
-    <div class="chantier-list__header-actions">
-      @if (canSync()) {
-        <button
-          pButton
-          type="button"
-          icon="pi pi-refresh"
-          label="Synchroniser maintenant"
-          class="p-button-outlined"
-          [loading]="syncing"
-          (click)="onSynchroniser()"
-        ></button>
-      }
-      @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
-      }
-    </div>
   </div>
 
-  <form [formGroup]="filterForm" class="chantier-list__filters" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="code" placeholder="Code" />
-    <input pInputText type="text" formControlName="designation" placeholder="Désignation" />
+  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
+    <input pInputText type="text" formControlName="code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
+    <input pInputText type="text" formControlName="designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
 
     <p-dropdown
       formControlName="actif"
       [options]="actifOptions"
       optionLabel="label"
       optionValue="value"
-      placeholder="Statut"
+      ariaLabel="Statut" placeholder="Statut"
       [showClear]="true"
     ></p-dropdown>
 
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
   </form>
 
-  <app-column-chooser [state]="columns"></app-column-chooser>
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      @if (!loading) {
+        {{ totalRecords }} chantier{{ totalRecords > 1 ? 's' : '' }}
+      }
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+      @if (canSync()) {
+        <button pButton type="button" icon="pi pi-refresh" label="Synchroniser maintenant" class="p-button-outlined" [loading]="syncing" (click)="onSynchroniser()"></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+      }
+    </div>
+  </div>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -65,7 +64,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -97,9 +96,9 @@
           </td>
         }
         <td class="chantier-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" (click)="onView(chantier)"></button>
+          <button pButton type="button" icon="pi pi-eye" class="p-button-text" [attr.aria-label]="'Voir le chantier ' + chantier.code" (click)="onView(chantier)"></button>
           @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" (click)="onEdit(chantier)"></button>
+            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier le chantier ' + chantier.code" (click)="onEdit(chantier)"></button>
           }
           @if (canDelete()) {
             <button
@@ -108,7 +107,7 @@
               icon="pi pi-trash"
               class="p-button-text p-button-danger"
               [loading]="deletingId === chantier.id"
-              (click)="onDelete(chantier)"
+              [attr.aria-label]="'Supprimer le chantier ' + chantier.code" (click)="onDelete(chantier)"
             ></button>
           }
         </td>

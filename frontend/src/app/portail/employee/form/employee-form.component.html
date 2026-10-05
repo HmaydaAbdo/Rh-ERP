@@ -1,28 +1,28 @@
-<div class="employee-form">
-  <div class="employee-form__header">
+<div class="employee-form app-page app-page--narrow">
+  <a routerLink="/employees" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Employés</a>
+  <div class="app-page__header">
     <h1>{{ isEditMode ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
-    <a routerLink="/employees" class="p-button p-button-outlined">Retour à la liste</a>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="employee-form__grid">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
-      <label for="nomPrenom">Nom &amp; prénom *</label>
-      <input pInputText id="nomPrenom" type="text" formControlName="nomPrenom" />
+      <label for="nomPrenom">Nom &amp; prénom <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText autocomplete="off" id="nomPrenom" type="text" formControlName="nomPrenom" />
       @if (form.controls.nomPrenom.invalid && form.controls.nomPrenom.touched) {
-        <small class="field-error">Le nom et prénom sont obligatoires.</small>
+        <small class="field-error" role="alert">Le nom et prénom sont obligatoires.</small>
       }
     </div>
 
     <div class="field">
-      <label for="cin">CIN *</label>
-      <input pInputText id="cin" type="text" formControlName="cin" />
+      <label for="cin">CIN <span class="field__req" aria-hidden="true">*</span></label>
+      <input pInputText spellcheck="false" autocomplete="off" id="cin" type="text" formControlName="cin" />
       @if (form.controls.cin.invalid && form.controls.cin.touched) {
-        <small class="field-error">Le CIN est obligatoire.</small>
+        <small class="field-error" role="alert">Le CIN est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="dateNaissance">Date de naissance *</label>
+      <label for="dateNaissance">Date de naissance <span class="field__req" aria-hidden="true">*</span></label>
       <p-calendar
         inputId="dateNaissance"
         formControlName="dateNaissance"
@@ -30,12 +30,12 @@
         [showIcon]="true"
       ></p-calendar>
       @if (form.controls.dateNaissance.invalid && form.controls.dateNaissance.touched) {
-        <small class="field-error">La date de naissance est obligatoire.</small>
+        <small class="field-error" role="alert">La date de naissance est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="dateEmbauche">Date d'embauche *</label>
+      <label for="dateEmbauche">Date d'embauche <span class="field__req" aria-hidden="true">*</span></label>
       <p-calendar
         inputId="dateEmbauche"
         formControlName="dateEmbauche"
@@ -43,43 +43,43 @@
         [showIcon]="true"
       ></p-calendar>
       @if (form.controls.dateEmbauche.invalid && form.controls.dateEmbauche.touched) {
-        <small class="field-error">La date d'embauche est obligatoire.</small>
+        <small class="field-error" role="alert">La date d'embauche est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="fonctionId">Fonction *</label>
+      <label for="fonctionId">Fonction <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
-        inputId="fonctionId"
+        ariaLabel="Fonction" inputId="fonctionId"
         formControlName="fonctionId"
         [source]="functionReferenceService"
         optionLabel="libelle"
         placeholder="Sélectionner une fonction"
       ></app-lazy-select>
       @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
-        <small class="field-error">La fonction est obligatoire.</small>
+        <small class="field-error" role="alert">La fonction est obligatoire.</small>
       }
     </div>
 
     <div class="field">
-      <label for="chantierId">Chantier *</label>
+      <label for="chantierId">Chantier <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
-        inputId="chantierId"
+        ariaLabel="Chantier" inputId="chantierId"
         formControlName="chantierId"
         [source]="chantierReferenceService"
         optionLabel="code"
         placeholder="Sélectionner un chantier"
       ></app-lazy-select>
       @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
-        <small class="field-error">Le chantier est obligatoire.</small>
+        <small class="field-error" role="alert">Le chantier est obligatoire.</small>
       }
     </div>
 
     @if (isEditMode) {
       <div class="field">
-        <label for="statut">Statut *</label>
+        <label for="statut">Statut <span class="field__req" aria-hidden="true">*</span></label>
         <p-dropdown
-          inputId="statut"
+          ariaLabel="Statut" inputId="statut"
           formControlName="statut"
           [options]="statutOptions"
           optionLabel="label"
@@ -88,7 +88,8 @@
       </div>
     }
 
-    <div class="employee-form__actions">
+    <div class="app-form__actions">
+      <a routerLink="/employees" class="p-button p-button-text">Annuler</a>
       <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
     </div>
   </form>

@@ -1,14 +1,20 @@
 @if (fonction) {
-  <div class="function-detail">
-    <div class="function-detail__header">
+  <div class="function-detail app-page app-page--narrow">
+    <a routerLink="/functions" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Fonctions</a>
+    <div class="app-page__header">
       <h1>{{ fonction.libelle }}</h1>
-      <div class="function-detail__header-actions">
+      <div class="app-page__actions">
         @if (canWrite()) {
           <a [routerLink]="['/functions', fonction.id, 'edit']" class="p-button">Modifier</a>
         }
-        <a routerLink="/functions" class="p-button p-button-outlined">Retour à la liste</a>
       </div>
     </div>
 
+    <dl class="app-detail">
+      <div>
+        <dt>Libellé</dt>
+        <dd>{{ fonction.libelle }}</dd>
+      </div>
+    </dl>
   </div>
 }

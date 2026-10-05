@@ -1,28 +1,54 @@
-<div class="journal">
-  <div class="journal__header">
+<div class="journal app-page">
+  <div class="app-page__header">
     <h1>Journal d’audit</h1>
   </div>
 
-  <form [formGroup]="filterForm" class="journal__filters">
-    <label class="journal__date">
+  <form [formGroup]="filterForm" class="app-toolbar">
+    <label class="app-toolbar__date">
       Du
       <input pInputText type="date" formControlName="dateDebut" />
     </label>
-    <label class="journal__date">
+    <label class="app-toolbar__date">
       Au
       <input pInputText type="date" formControlName="dateFin" />
     </label>
-    <input pInputText type="text" formControlName="utilisateur" placeholder="Utilisateur" />
-    <p-dropdown formControlName="categorie" [options]="categorieOptions" optionLabel="label" optionValue="value" placeholder="Catégorie" [showClear]="true"></p-dropdown>
-    <p-dropdown formControlName="action" [options]="actionOptions" optionLabel="label" optionValue="value" placeholder="Action" [showClear]="true" [filter]="true"></p-dropdown>
-    <p-dropdown formControlName="resultat" [options]="resultatOptions" optionLabel="label" optionValue="value" placeholder="Résultat" [showClear]="true"></p-dropdown>
-    <p-dropdown formControlName="entiteType" [options]="entiteOptions" optionLabel="label" optionValue="value" placeholder="Entité" [showClear]="true"></p-dropdown>
-    <input pInputText type="text" formControlName="requestId" placeholder="Identifiant de requête" />
+    <input pInputText type="text" formControlName="utilisateur" aria-label="Utilisateur" autocomplete="off" placeholder="Utilisateur" />
+    <p-dropdown formControlName="categorie" [options]="categorieOptions" optionLabel="label" optionValue="value" ariaLabel="Catégorie" placeholder="Catégorie" [showClear]="true"></p-dropdown>
+    <p-dropdown formControlName="action" [options]="actionOptions" optionLabel="label" optionValue="value" ariaLabel="Action" placeholder="Action" [showClear]="true" [filter]="true"></p-dropdown>
+    <button
+      pButton
+      type="button"
+      icon="pi pi-sliders-h"
+      class="p-button-outlined app-toolbar__plus"
+      aria-controls="journal-filtres-avances"
+      [attr.aria-expanded]="avancesVisibles()"
+      (click)="basculerPlus()"
+    >
+      <span class="p-button-label">Plus de filtres</span>@if (nombreAvances() > 0) {
+        <span class="app-toolbar__badge">{{ nombreAvances() }}</span>
+      }
+    </button>
 
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
+
+    @if (avancesVisibles()) {
+      <div id="journal-filtres-avances" class="app-toolbar__more">
+        <p-dropdown formControlName="resultat" [options]="resultatOptions" optionLabel="label" optionValue="value" ariaLabel="Résultat" placeholder="Résultat" [showClear]="true"></p-dropdown>
+        <p-dropdown formControlName="entiteType" [options]="entiteOptions" optionLabel="label" optionValue="value" ariaLabel="Entité" placeholder="Entité" [showClear]="true"></p-dropdown>
+        <input pInputText type="text" formControlName="requestId" aria-label="Identifiant de requête" autocomplete="off" spellcheck="false" placeholder="Identifiant de requête" />
+      </div>
+    }
   </form>
 
-  <app-column-chooser [state]="columns"></app-column-chooser>
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      {{ totalRecords }} entrée{{ totalRecords > 1 ? 's' : '' }}
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+
+    </div>
+  </div>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -52,7 +78,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 

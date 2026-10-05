@@ -40,11 +40,13 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   @Input() multiple = false;
   @Input() optionLabel = 'label';
   @Input() dataKey = 'id';
-  @Input() placeholder = 'Sélectionner...';
-  @Input() filterPlaceholder = 'Rechercher...';
+  @Input() placeholder = 'Sélectionner…';
+  @Input() filterPlaceholder = 'Rechercher…';
   @Input() pageSize = 30;
   @Input() virtualScrollItemSize = 36;
   @Input() showClear = true;
+  /** Identifiant du champ interactif : le `<label for>` d'un formulaire s'y accroche. */
+  @Input() inputId: string | null = null;
   /** Nom accessible du champ quand son placeholder disparaît (valeur choisie) — utile dans une barre d'outils sans libellé visible. */
   @Input() ariaLabel: string | null = null;
   /** Sélection multiple compacte, sur une seule ligne : la valeur choisie s'affiche seule, puis ce texte à partir de deux

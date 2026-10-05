@@ -16,27 +16,34 @@
   }
 </p-dialog>
 
-<div class="user-list">
-  <div class="user-list__header">
+<div class="user-list app-page">
+  <div class="app-page__header">
     <h1>Utilisateurs</h1>
-    <button pButton type="button" icon="pi pi-plus" label="Nouvel utilisateur" routerLink="/admin/users/new"></button>
   </div>
 
-  <form [formGroup]="filterForm" class="user-list__filters" (ngSubmit)="$event.preventDefault()">
-    <input pInputText type="text" formControlName="username" placeholder="Username" />
-    <input pInputText type="text" formControlName="email" placeholder="Email" />
+  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="$event.preventDefault()">
+    <input pInputText type="text" formControlName="username" aria-label="Username" autocomplete="off" spellcheck="false" placeholder="Username" />
+    <input pInputText type="text" formControlName="email" aria-label="Email" autocomplete="off" spellcheck="false" placeholder="Email" />
     <p-dropdown
       formControlName="actif"
       [options]="actifOptions"
       optionLabel="label"
       optionValue="value"
-      placeholder="Statut"
+      ariaLabel="Statut" placeholder="Statut"
       [showClear]="true"
     ></p-dropdown>
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-outlined" (click)="onResetFilters()"></button>
+    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
   </form>
 
-  <app-column-chooser [state]="columns"></app-column-chooser>
+  <div class="app-table-bar">
+    <p class="app-table-bar__total" role="status">
+      {{ total(dt) }} utilisateur{{ total(dt) > 1 ? 's' : '' }}
+    </p>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
+      <button pButton type="button" icon="pi pi-plus" label="Nouvel utilisateur" routerLink="/admin/users/new"></button>
+    </div>
+  </div>
 
   <p-table
     styleClass="app-table p-datatable-gridlines p-datatable-sm"
@@ -62,7 +69,7 @@
             {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
           </th>
         }
-        <th></th>
+        <th><span class="app-lecteur">Actions</span></th>
       </tr>
     </ng-template>
 
@@ -89,14 +96,14 @@
           </td>
         }
         <td class="user-list__actions">
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" pTooltip="Modifier" (click)="onEdit(user)"></button>
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" pTooltip="Modifier" [attr.aria-label]="'Modifier ' + user.username" (click)="onEdit(user)"></button>
           <button
             pButton
             type="button"
             icon="pi pi-key"
             class="p-button-text"
             pTooltip="Réinitialiser le mot de passe"
-            (click)="onOpenReset(user)"
+            [attr.aria-label]="'Réinitialiser le mot de passe de ' + user.username" (click)="onOpenReset(user)"
           ></button>
         </td>
       </tr>
