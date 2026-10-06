@@ -305,57 +305,35 @@ html, body {
     margin-top: 4pt;
 }
 
-.kpi-carte .detail {
-    margin-top: 2pt;
-    font-size: 6.5pt;
-    line-height: 7.5pt;
-    color: #595959;
+.kpi-carte .valeur + .valeur {
+    margin-top: 1pt;
 }
 
 .kpi-carte .label,
-.kpi-carte .valeur,
-.kpi-carte .detail {
+.kpi-carte .valeur {
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
-/* Niveau global (5 cartes, 150x50, ecart 10pt) */
-.kpi-row.global .kpi-carte {
-    width: 150pt;
-    height: 50pt;
-    margin-right: 10pt;
-}
-
-.kpi-row.global .kpi-carte.derniere {
-    margin-right: 0;
-}
-
-.kpi-row.global .valeur {
-    font-size: 11pt;
-    line-height: 12.5pt;
-}
-
-/* Niveau chantier / equipe (4 cartes, 192x36, ecart 8pt) */
-.kpi-row.chantier .kpi-carte,
-.kpi-row.equipe .kpi-carte {
-    width: 192pt;
-    height: 36pt;
+/* Toutes les cartes ont la même largeur à tous les niveaux (jusqu'à 7 par rangée : 7 x 107 + 6 x 8 = 797 pt, juste
+   sous les 802 pt utiles — jamais exactement 802, sinon openhtmltopdf peut faire passer un flottant à la ligne). La
+   hauteur est posée en style par PaieReportHtmlBuilder : celle de la carte la plus haute de la rangée. */
+.kpi-carte {
+    width: 107pt;
+    height: 66pt;
     margin-right: 8pt;
 }
 
-.kpi-row.chantier .kpi-carte.derniere,
-.kpi-row.equipe .kpi-carte.derniere {
+.kpi-carte.derniere {
     margin-right: 0;
 }
 
-.kpi-row.chantier .valeur.compte,
-.kpi-row.equipe .valeur.compte {
+.kpi-carte .valeur.compte {
     font-size: 12pt;
     line-height: 13.5pt;
 }
 
-.kpi-row.chantier .valeur.montant,
-.kpi-row.equipe .valeur.montant {
+.kpi-carte .valeur.montant {
     font-size: 10pt;
     line-height: 11.5pt;
 }
