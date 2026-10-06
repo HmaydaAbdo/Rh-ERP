@@ -126,7 +126,7 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │                                 `montantMoisPrecedent` (carte KPI "MASSE MOIS
 │                                 PRECEDENT"), `repartitionFonction` (tableau récap) et `materiel`
 │                                 (squelette parc matériel, vide sauf C168/CH/OP).
-├── PaieReportNumberFormat.java   Formatage des nombres (montants, quantités, variations)
+├── PaieReportNumberFormat.java   Formatage des nombres (montants, quantités)
 │                                 et chiffres romains (numérotation des chapitres)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page
                                   Paie) + `equipesParChantier` (même forme et même sélection que
@@ -394,7 +394,7 @@ pagination) pour un appel API direct.
 | **Fait** | `Paie` — grain = 1 employé × 1 période (contrainte d'unicité `employee_id + periode` : `COUNT(*)` est toujours un effectif exact, jamais de double comptage). |
 | **Dimensions** | Chantier (obligatoire sur `Paie`), Fonction (obligatoire — sert à trier le tableau employé ET alimente le tableau récap Fonction/Effectif/STC de chaque section, voir « Lignes de résumé et tableau récap »), Équipe (optionnelle → `Sans équipe`), Employé, Période (mois analysé + mois précédent). |
 | **Mesures de base** | Masse réelle de paie = `SUM(salaireTotal)` (**jamais** `salaireMensuel` — voir ci-dessous) ; Effectif = `COUNT(*)` ; STC / sortie = `COUNT` des lignes où `ObservationStc.estStcOuSortie`, calculé **par chantier** et **par section** (indicateur, jamais une liste globale — voir « Catalogue de KPI »). |
-| **Mesures calculées** | Variation de la masse (absolue en DH et en %), variation de l'effectif (en personnes), masse moyenne par employé. |
+| **Mesures calculées** | Masse moyenne par employé. Aucune variation (absolue ou %) n'est affichée : le montant du mois précédent figure dans sa propre carte. |
 | **Historique** | Chaque bulletin `Paie` est un instantané figé de chantier/fonction/équipe pour son mois — le rapport agrège donc les valeurs *stockées sur `Paie`*, jamais l'affectation actuelle de `Employee` (qui peut avoir changé depuis). La comparaison au mois précédent respecte le même principe. |
 
 **Pourquoi `salaireTotal` et pas `salaireMensuel`** : `salaireMensuel` est une composante du
@@ -405,8 +405,8 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 
 | KPI | Formule | Grain | Comparaison mois précédent |
 |---|---|---|---|
-| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — carte « Masse mois précédent » et carte « Évolution » (Δ en DH et en %, voir « Null-handling ») aux trois niveaux |
-| Effectif | `COUNT(*)` | Global / chantier / section | Oui — Δ en personnes, sur la carte « Évolution » (jamais ambigu, 0 est une valeur légitime) |
+| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — montant du mois précédent affiché tel quel (carte « Masse mois précédent ») aux trois niveaux, sans variation (voir « Null-handling ») |
+| Effectif | `COUNT(*)` | Global / chantier / section | Non — l'effectif du mois précédent n'est pas affiché |
 | Masse moyenne par employé | masse ÷ effectif | Global / chantier / section | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
 | Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
@@ -426,8 +426,7 @@ montrer le même montant). La dimension Fonction n'a plus d'écran dédié au ni
 - **Aucune ligne** le mois précédent pour le périmètre → la comparaison est explicitement
   indisponible (valeur précédente `null` : le PDF garde le libellé et laisse la valeur vide) — jamais un `0 DH` trompeur.
 - **Des lignes existent mais leur somme vaut zéro** (cas réel, distinct du cas précédent) → le montant précédent
-  s'affiche (`0,00 DH`) et la variation absolue reste calculable ; la variation % est omise (division par zéro
-  évitée), voir `PaieReportNumberFormat.variationPourcent`/`variationAbsolue`.
+  s'affiche : `0,00 DH`.
 - Cette distinction est la même que celle déjà en place côté Excel (`INTROUVABLE` vs `0`,
   `PaiePerimetreService.totalSalairesOuNull`) — réutilisée à l'identique, pas réinventée. La ligne
   "TOTAL GENERAL MOIS PRECEDENT" collée au bas de chaque tableau employé du PDF (voir plus bas)
@@ -521,8 +520,8 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    temps qu'il construit chaque page (voir « Numérotation des chapitres et des pages » : plus de
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
-3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 7 cartes KPI, chacune avec son indicateur (voir
-   « Cartes KPI ») : masse salariale, masse mois précédent, évolution, effectif, masse moyenne/employé, nombre de
+3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 6 cartes KPI, chacune avec son indicateur (voir
+   « Cartes KPI ») : masse salariale, masse mois précédent, effectif, masse moyenne/employé, nombre de
    chantiers, STC/sorties — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
    à 4 séries (masse/effectif/STC en personnes/STC en DH), qui montre **TOUS les chantiers**. Au-delà de 16
    chantiers, il continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir
@@ -545,12 +544,12 @@ graphique titré « Répartition par équipe »
 (le cas échéant), suivie d'une ou plusieurs pages par section équipe. Cette page suit la même
 hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
 
-1. **6 cartes KPI**, chacune avec son indicateur (voir « Cartes KPI ») : Masse salariale, Masse mois précédent,
-   Évolution, Effectif, Masse moyenne / employé, STC / sorties.
+1. **5 cartes KPI**, chacune avec son indicateur (voir « Cartes KPI ») : Masse salariale, Masse mois précédent,
+   Effectif, Masse moyenne / employé, STC / sorties.
 2. **"Répartition par équipe"** (renommé depuis "Équipes de chantier X" le 2026-09-29 — le chantier
    est déjà identifié par le titre de chapitre et le bandeau récurrent), SUR LA MÊME PAGE,
    **uniquement si au moins une équipe de ce chantier a été sélectionnée** pour un détail séparé
-   (`ChantierBiVue.avecDetailEquipe`) — sinon la page se limite aux 6 cartes KPI. Quand affiché : UN
+   (`ChantierBiVue.avecDetailEquipe`) — sinon la page se limite aux 5 cartes KPI. Quand affiché : UN
    SEUL graphique à barres groupées (masse/effectif/STC en personnes/STC en DH,
    `ChantierBiVue.repartitionEquipe` — TOUJOURS la distribution complète de toutes les équipes
    réelles du chantier, même si seule une partie a sa propre section ci-dessous) — **SEUL, sans
@@ -661,7 +660,7 @@ Liberation Serif embarquée, majorée de 3 % pour rester du côté prudent) :
   les suivantes sur les pages suivantes sous le titre « Répartition par fonction (suite) » ; « Détails » démarre
   sous la dernière tranche si au moins 3 lignes y tiennent (`MIN_LIGNES_PREMIERE_PAGE`), sinon sur la page suivante.
 - **Cartes KPI** : les cartes d'une rangée ont la hauteur de la plus haute (`blocKpi`, `BlocKpi.hauteurCarte`,
-  appliquée en `style="height"` par `PaieReportHtmlBuilder`) — 66 pt minimum, à tous les niveaux.
+  appliquée en `style="height"` par `PaieReportHtmlBuilder`) — 54 pt minimum, à tous les niveaux.
 - **Titres** : `hauteurTitreChapitre`/`hauteurTitreEquipe` ajoutent un interligne par ligne en plus.
 - **Graphiques** : le libellé d'une ligne passe sur plusieurs lignes dans la colonne (`lignesLibelle`), sa ligne est
   plus haute (`hauteurMinimaleLigne`, 19 pt minimum) et la répartition sur plusieurs pages de « Répartition par
@@ -678,7 +677,7 @@ Les interlignes (`line-height`) sont fixés dans rapport.css et recopiés dans l
 ### Cartes KPI
 
 **Mêmes cartes aux trois niveaux** (demande de direction, 2026-10-06) : chaque indicateur a sa propre carte, toutes de
-même largeur (107 pt) et de même hauteur (66 pt, ou celle de la plus haute de la rangée si un texte passe sur plus de
+même largeur (126 pt) et de même hauteur (54 pt, ou celle de la plus haute de la rangée si un texte passe sur plus de
 lignes — jamais de chevauchement, voir « Retour à la ligne des cellules »). Rubrique « Indicateurs clés » au-dessus de
 la rangée, dans cet ordre :
 
@@ -686,13 +685,13 @@ la rangée, dans cet ordre :
 |---|---|---|---|---|
 | Masse salariale | `SUM(salaireTotal)` du périmètre | oui | oui | oui |
 | Masse mois précédent | même somme le mois précédent — libellé gardé, valeur vide si introuvable | oui | oui | oui |
-| Évolution | ligne 1 : écart de masse en DH et en % (`+81 828,47 DH (+24,0 %)`) ; ligne 2 : écart d'effectif en personnes (`+3 personnes`) ; vide si pas de mois précédent | oui | oui | oui |
 | Effectif | nombre de bulletins | oui | oui | oui |
 | Masse moyenne / employé | masse ÷ effectif | oui | oui | oui |
 | Chantiers | nombre de chantiers | oui | — | — |
 | STC / sorties | nombre de lignes STC ou sorties | oui | oui | oui |
 
-Les valeurs sont construites dans `RapportPageModelBuilder.cartesKpi` à partir de `KpiMontantVue`/`KpiEffectifVue`
+Pas de carte « Évolution » ni de pourcentage : retirés à la demande de la direction (2026-10-06). Les valeurs sont
+construites dans `RapportPageModelBuilder.cartesKpi` à partir de `KpiMontantVue`/`KpiEffectifVue`
 (ensemble : `SyntheseGlobaleVue`, chantier : `ChantierBiVue`, équipe : `EquipeBiVue.masse`/`.effectif`). Une section
 « reste » de chantier sans détail par équipe ne répète pas ses cartes : elles sont déjà celles du chantier (voir
 « Chantier sans détail par équipe »). Les cartes sont dans l'en-tête plutôt que des lignes au bas du tableau

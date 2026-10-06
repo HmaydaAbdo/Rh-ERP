@@ -305,22 +305,18 @@ html, body {
     margin-top: 4pt;
 }
 
-.kpi-carte .valeur + .valeur {
-    margin-top: 1pt;
-}
-
 .kpi-carte .label,
 .kpi-carte .valeur {
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
-/* Toutes les cartes ont la même largeur à tous les niveaux (jusqu'à 7 par rangée : 7 x 107 + 6 x 8 = 797 pt, juste
+/* Toutes les cartes ont la même largeur à tous les niveaux (jusqu'à 6 par rangée : 6 x 126 + 5 x 8 = 796 pt, juste
    sous les 802 pt utiles — jamais exactement 802, sinon openhtmltopdf peut faire passer un flottant à la ligne). La
    hauteur est posée en style par PaieReportHtmlBuilder : celle de la carte la plus haute de la rangée. */
 .kpi-carte {
-    width: 107pt;
-    height: 66pt;
+    width: 126pt;
+    height: 54pt;
     margin-right: 8pt;
 }
 

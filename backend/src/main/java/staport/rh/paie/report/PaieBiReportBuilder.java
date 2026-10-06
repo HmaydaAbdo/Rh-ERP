@@ -511,9 +511,7 @@ class PaieBiReportBuilder {
     private KpiMontantVue kpiMontant(BigDecimal actuel, BigDecimal precedent) {
         return new KpiMontantVue(
                 PaieReportNumberFormat.montant(actuel),
-                PaieReportNumberFormat.montantOuNull(precedent),
-                PaieReportNumberFormat.variationAbsolue(actuel, precedent),
-                PaieReportNumberFormat.variationPourcent(actuel, precedent));
+                PaieReportNumberFormat.montantOuNull(precedent));
     }
 
     private KpiEffectifVue kpiEffectif(int actuel, int precedent) {

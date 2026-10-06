@@ -183,9 +183,7 @@ final class PaieReportHtmlBuilder {
                 carteEl.addClass("derniere");
             }
             carteEl.appendElement("div").addClass("label").text(carte.label());
-            for (String valeur : carte.valeurs()) {
-                carteEl.appendElement("div").addClass("valeur").addClass(carte.classeValeur()).text(valeur);
-            }
+            carteEl.appendElement("div").addClass("valeur").addClass(carte.classeValeur()).text(carte.valeur());
         }
     }
 
