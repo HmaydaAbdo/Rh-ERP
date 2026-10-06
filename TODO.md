@@ -23,6 +23,23 @@ Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, respon
 
 ---
 
+## Vues Cartes et Analytique des autres domaines (squelettes créés, 2026-10-06)
+
+Seule la Paie a ses trois vues (Tabulaire, Cartes, Analytique) sous une coque commune (`portail/paie/vues/`, sélecteur de vue,
+actions dans l'en-tête). Pour **Employés, Chantiers, Fonctions et Équipes**, seul le tabulaire existe ; les composants des deux
+autres vues ont été créés **vides** (un message « disponible prochainement »), sans route ni onglet :
+
+- `employee/cartes`, `employee/analytique` (`EmployeeCartesComponent`, `EmployeeAnalytiqueComponent`)
+- `chantier/cartes`, `chantier/analytique`
+- `function/cartes`, `function/analytique`
+- `equipe/cartes`, `equipe/analytique`
+
+À faire, domaine par domaine : concevoir et coder le contenu de chaque vue (avec ses tests) ; ajouter une coque commune sur le
+modèle de `PaieVuesComponent` (titre, onglets de vue au même niveau que les actions déjà dans l'en-tête, filtres) ; déclarer les routes
+`cartes` et `analytique` dans `<domaine>.routes.ts` avec la permission de lecture ; documenter dans `docs/<domaine>/README.md`.
+
+---
+
 ## Prochaine tâche — Qualité des données (une seule tâche, tous les domaines)
 
 **Règles voulues (2026-10-03)** : dans **tous** les domaines, **tous les champs sont obligatoires** et
