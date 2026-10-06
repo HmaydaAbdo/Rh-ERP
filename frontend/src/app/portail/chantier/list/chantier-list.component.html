@@ -3,6 +3,14 @@
 <div class="chantier-list app-page">
   <div class="app-page__header">
     <h1>Chantiers</h1>
+    <div class="app-page__actions app-page__actions--liste">
+      @if (canSync()) {
+        <button pButton type="button" icon="pi pi-refresh" label="Synchroniser maintenant" class="p-button-outlined" [loading]="syncing" (click)="onSynchroniser()"></button>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+      }
+    </div>
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
@@ -29,12 +37,6 @@
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-      @if (canSync()) {
-        <button pButton type="button" icon="pi pi-refresh" label="Synchroniser maintenant" class="p-button-outlined" [loading]="syncing" (click)="onSynchroniser()"></button>
-      }
-      @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
-      }
     </div>
   </div>
 

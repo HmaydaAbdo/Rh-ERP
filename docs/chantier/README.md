@@ -175,7 +175,7 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/chantiers` | `ChantierListComponent` | Tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtres en temps réel (code, désignation, statut), suppression, bouton « Synchroniser maintenant » |
+| `/chantiers` | `ChantierListComponent` | Tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtres en temps réel (code, désignation, statut), suppression, bouton « Synchroniser maintenant » (dans l'en-tête, à droite du titre) |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
 | `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |

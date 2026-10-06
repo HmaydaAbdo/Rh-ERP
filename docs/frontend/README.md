@@ -75,9 +75,12 @@ Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_token
 ### Mise en page des écrans de liste
 
 Tous les écrans de liste (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, et le tabulaire de la Paie)
-ont **la même structure** : titre, ligne de filtres à plat, barre du tableau (total à gauche ; outils à droite — Colonnes,
-action secondaire, puis l'action principale en bleu plein), tableau. Employés et Fonctions regroupent « Importer » et le
-téléchargement du modèle Excel dans un seul bouton fractionné. Classes : `app-page`, `app-toolbar`, `app-table-bar`
+ont **la même structure** : titre, ligne de filtres à plat, barre du tableau, tableau. Pour **Employés, Chantiers, Fonctions,
+Équipes et la Paie**, les **actions** (secondaire, puis l'action principale en bleu plein) sont **dans l'en-tête, à droite du
+titre** (`app-page__actions app-page__actions--liste` ; à la Paie, au niveau du titre et des onglets de vue, les mêmes dans les
+trois vues) et la barre du tableau ne porte que le total à gauche et le choix des colonnes à droite. Employés et Fonctions
+regroupent « Importer » et le téléchargement du modèle Excel dans un seul bouton fractionné. Utilisateurs, Rôles et Journal
+gardent leurs outils dans la barre du tableau. Classes : `app-page`, `app-toolbar`, `app-table-bar`
 (`src/styles/_page.scss`, voir `conventions/design-system.md`). Le total est celui du serveur (listes paginées) ou des lignes
 affichées après filtre (Utilisateurs, Rôles). Un nouvel écran de liste reprend ces classes dès sa création.
 

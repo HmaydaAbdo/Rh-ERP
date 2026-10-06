@@ -3,6 +3,11 @@
 <div class="equipe-list app-page">
   <div class="app-page__header">
     <h1>Équipes</h1>
+    <div class="app-page__actions app-page__actions--liste">
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouvelle équipe" routerLink="/equipes/new"></button>
+      }
+    </div>
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
@@ -20,9 +25,6 @@
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-      @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouvelle équipe" routerLink="/equipes/new"></button>
-      }
     </div>
   </div>
 
