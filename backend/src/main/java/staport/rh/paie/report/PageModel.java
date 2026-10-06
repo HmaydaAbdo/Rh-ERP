@@ -26,11 +26,10 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocTitreEquipe(String texte) implements Bloc {
     }
 
-    /** Une rangée de cartes KPI — {@code niveauClasse} = "global"/"chantier"/"equipe" (voir
-     * rapport.css pour la taille/l'écart associés). {@code hauteurCarte} (pt) : hauteur commune des cartes de la
-     * rangée, celle de la carte dont le texte passe sur le plus de lignes (voir
-     * {@link RapportPageModelBuilder#blocKpi}). */
-    record BlocKpi(String niveauClasse, List<CarteKpi> cartes, double hauteurCarte) implements Bloc {
+    /** Une rangée de cartes KPI, toutes de même largeur et de même hauteur à tous les niveaux du rapport.
+     * {@code hauteurCarte} (pt) : hauteur commune des cartes de la rangée, celle de la carte dont le texte passe sur
+     * le plus de lignes (voir {@link RapportPageModelBuilder#blocKpi}). */
+    record BlocKpi(List<CarteKpi> cartes, double hauteurCarte) implements Bloc {
     }
 
     /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}). {@code echelle} est l'ensemble des
