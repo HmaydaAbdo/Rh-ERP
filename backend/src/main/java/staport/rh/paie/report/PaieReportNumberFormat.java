@@ -43,32 +43,6 @@ final class PaieReportNumberFormat {
         return valeur == null ? null : MONTANT.format(valeur);
     }
 
-    /** Variation en pourcentage, signée — {@code null} si le calcul n'a pas de sens (pas de mois précédent, ou total
-     * précédent nul : une division par un total précédent nul produirait une variation % trompeuse). */
-    static String variationPourcent(BigDecimal actuel, BigDecimal precedent) {
-        if (actuel == null || precedent == null || precedent.compareTo(BigDecimal.ZERO) == 0) {
-            return null;
-        }
-        BigDecimal variation = actuel.subtract(precedent)
-                .divide(precedent, 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100));
-        return avecSigne(POURCENTAGE.format(variation) + " %", variation.signum());
-    }
-
-    /** Variation en valeur absolue (montant), signée — {@code null} si pas de mois précédent disponible (distinct
-     * d'une variation nulle, réellement calculée à partir de deux montants). */
-    static String variationAbsolue(BigDecimal actuel, BigDecimal precedent) {
-        if (actuel == null || precedent == null) {
-            return null;
-        }
-        BigDecimal variation = actuel.subtract(precedent);
-        return avecSigne(MONTANT.format(variation), variation.signum());
-    }
-
-    private static String avecSigne(String valeurFormatee, int signe) {
-        return (signe > 0 ? "+" : "") + valeurFormatee;
-    }
-
     private static final int[] VALEURS_ROMAINES = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
     private static final String[] SYMBOLES_ROMAINS = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
 

@@ -13,9 +13,8 @@ import java.util.List;
  * chevauchent volontairement, voir {@code docs/report/rapport-v2.md}).
  *
  * <p>{@code effectif}, {@code masse}, {@code masseMoyenneParEmploye} et {@code stc} : les indicateurs de CETTE
- * section, les mêmes qu'aux niveaux global et chantier — {@code masse} et {@code effectif} portent aussi leur mois
- * précédent (même périmètre équipe/reste) et son écart, {@code null} si aucune donnée, voir
- * {@link KpiMontantVue}. {@code
+ * section, les mêmes qu'aux niveaux global et chantier — {@code masse} porte aussi son mois précédent (même
+ * périmètre équipe/reste), {@code null} si aucune donnée, voir {@link KpiMontantVue}. {@code
  * repartitionFonction} : effectif et STC de CETTE section par fonction — nouveau tableau récap
  * (demande explicite de direction, 2026-09-28), imprimé via un sous-rapport (nombre de fonctions
  * variable, voir recap-fonction.jrxml), jamais un graphique (redondant avec celui du chantier).

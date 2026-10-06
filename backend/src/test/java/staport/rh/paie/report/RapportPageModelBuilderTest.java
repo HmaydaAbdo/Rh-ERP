@@ -36,8 +36,8 @@ class RapportPageModelBuilderTest {
 
     private static final double TITRE_CHAPITRE_HAUTEUR = 24;
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
-    private static final double KPI_EQUIPE_HAUTEUR = 82;
-    private static final double KPI_CARTE_HAUTEUR = 66;
+    private static final double KPI_EQUIPE_HAUTEUR = 70;
+    private static final double KPI_CARTE_HAUTEUR = 54;
     private static final double DETAILS_TITRE_HAUTEUR = 24;
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
@@ -272,7 +272,7 @@ class RapportPageModelBuilderTest {
                         .as("total=%d, recap=%d : ni titre ni cartes KPI de section répétés", total, lignesRecapMax)
                         .noneMatch(b -> b instanceof PageModel.BlocTitreEquipe);
                 assertThat(((PageModel.BlocKpi) premiere.get(1)).cartes().stream().map(CarteKpi::label))
-                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "ÉVOLUTION", "EFFECTIF",
+                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF",
                                 "MASSE MOYENNE / EMPLOYÉ", "STC / SORTIES");
 
                 int lignes = 0;
@@ -377,8 +377,8 @@ class RapportPageModelBuilderTest {
                 new CarteKpi("MASSE SALARIALE", "280 000,00 DH", "montant")));
         PageModel.BlocKpi longue = builder.blocKpi(List.of(
                 new CarteKpi("EFFECTIF", "56", "compte"),
-                new CarteKpi("ÉVOLUTION", List.of("+12 345 678 901,00 DH (+123,4 %)", "+120 personnes",
-                        "une troisième ligne", "et une quatrième ligne de valeur"), "montant")));
+                new CarteKpi("MASSE SALARIALE", "12 345 678 901 234 567 890,00 DH et encore du texte qui passe à la ligne",
+                        "montant")));
 
         assertThat(courte.hauteurCarte()).isEqualTo(KPI_CARTE_HAUTEUR);
         assertThat(longue.hauteurCarte()).isGreaterThan(KPI_CARTE_HAUTEUR);
@@ -390,13 +390,13 @@ class RapportPageModelBuilderTest {
 
         List<PageModel> pages = builder.construire(vueAvecUneEquipe(5, 1, false));
 
-        // Aux 3 niveaux (global, chantier, section), la carte reste avec une valeur vide — et l'évolution aussi
+        // Aux 3 niveaux (global, chantier, section), la carte reste avec une valeur vide
         List<CarteKpi> moisPrecedent = pages.stream()
                 .flatMap(p -> cartesKpi(p).stream())
-                .filter(c -> c.label().equals("MASSE MOIS PRECEDENT") || c.label().equals("ÉVOLUTION"))
+                .filter(c -> c.label().equals("MASSE MOIS PRECEDENT"))
                 .toList();
-        assertThat(moisPrecedent).hasSize(6);
-        assertThat(moisPrecedent).allSatisfy(c -> assertThat(c.valeurs()).containsExactly(""));
+        assertThat(moisPrecedent).hasSize(3);
+        assertThat(moisPrecedent).allSatisfy(c -> assertThat(c.valeur()).isEmpty());
     }
 
     private List<CarteKpi> cartesKpi(PageModel page) {
@@ -479,8 +479,6 @@ class RapportPageModelBuilderTest {
         KpiMontantVue masse =
                 new KpiMontantVue(
                         "10 000,00",
-                        null,
-                        null,
                         null
                 );
 
