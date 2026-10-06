@@ -36,8 +36,8 @@ class RapportPageModelBuilderTest {
 
     private static final double TITRE_CHAPITRE_HAUTEUR = 24;
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
-    private static final double KPI_EQUIPE_HAUTEUR = 52;
-    private static final double KPI_CARTE_HAUTEUR = 36;
+    private static final double KPI_EQUIPE_HAUTEUR = 82;
+    private static final double KPI_CARTE_HAUTEUR = 66;
     private static final double DETAILS_TITRE_HAUTEUR = 24;
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
@@ -272,8 +272,8 @@ class RapportPageModelBuilderTest {
                         .as("total=%d, recap=%d : ni titre ni cartes KPI de section répétés", total, lignesRecapMax)
                         .noneMatch(b -> b instanceof PageModel.BlocTitreEquipe);
                 assertThat(((PageModel.BlocKpi) premiere.get(1)).cartes().stream().map(CarteKpi::label))
-                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF", "STC / SORTIES",
-                                "MASSE MOYENNE / EMPLOYÉ");
+                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "ÉVOLUTION", "EFFECTIF",
+                                "MASSE MOYENNE / EMPLOYÉ", "STC / SORTIES");
 
                 int lignes = 0;
                 for (int p = 1; p < pages.size(); p++) {
@@ -372,18 +372,16 @@ class RapportPageModelBuilderTest {
     @Test
     void blocKpi_agrandiLesCartesQuandLeTextePasseALaLigne() {
 
-        PageModel.BlocKpi courte = builder.blocKpi("chantier", List.of(
+        PageModel.BlocKpi courte = builder.blocKpi(List.of(
                 new CarteKpi("EFFECTIF", "56", "compte"),
                 new CarteKpi("MASSE SALARIALE", "280 000,00 DH", "montant")));
-        PageModel.BlocKpi longue = builder.blocKpi("chantier", List.of(
+        PageModel.BlocKpi longue = builder.blocKpi(List.of(
                 new CarteKpi("EFFECTIF", "56", "compte"),
-                new CarteKpi("MASSE SALARIALE", "280 000,00 DH  (aucune donnée mois précédent)", "montant")));
-        PageModel.BlocKpi globale = builder.blocKpi("global", List.of(
-                new CarteKpi("MASSE", "280 000,00 DH", null, "Mois précédent :")));
+                new CarteKpi("ÉVOLUTION", List.of("+12 345 678 901,00 DH (+123,4 %)", "+120 personnes",
+                        "une troisième ligne", "et une quatrième ligne de valeur"), "montant")));
 
         assertThat(courte.hauteurCarte()).isEqualTo(KPI_CARTE_HAUTEUR);
         assertThat(longue.hauteurCarte()).isGreaterThan(KPI_CARTE_HAUTEUR);
-        assertThat(globale.hauteurCarte()).isEqualTo(50);
     }
 
     /** Mois précédent introuvable : le libellé reste, la valeur est vide (jamais le texte « INTROUVABLE »). */
@@ -392,15 +390,13 @@ class RapportPageModelBuilderTest {
 
         List<PageModel> pages = builder.construire(vueAvecUneEquipe(5, 1, false));
 
-        CarteKpi masseGlobale = cartesKpi(pages.get(0)).get(0);
-        assertThat(masseGlobale.detail()).isEqualTo("Mois précédent :");
-
-        CarteKpi masseMoisPrecedent = pages.stream()
+        // Aux 3 niveaux (global, chantier, section), la carte reste avec une valeur vide — et l'évolution aussi
+        List<CarteKpi> moisPrecedent = pages.stream()
                 .flatMap(p -> cartesKpi(p).stream())
-                .filter(c -> c.label().equals("MASSE MOIS PRECEDENT"))
-                .findFirst()
-                .orElseThrow();
-        assertThat(masseMoisPrecedent.valeur()).isEmpty();
+                .filter(c -> c.label().equals("MASSE MOIS PRECEDENT") || c.label().equals("ÉVOLUTION"))
+                .toList();
+        assertThat(moisPrecedent).hasSize(6);
+        assertThat(moisPrecedent).allSatisfy(c -> assertThat(c.valeurs()).containsExactly(""));
     }
 
     private List<CarteKpi> cartesKpi(PageModel page) {
@@ -480,24 +476,11 @@ class RapportPageModelBuilderTest {
                 )
                         : List.of();
 
-        EquipeBiVue equipe =
-                new EquipeBiVue(
-                        "EQ",
-                        "ÉQUIPE : TEST",
-                        "TEST",
-                        totalEmployes,
-                        "10 000,00",
-                        "100,0 %",
-                        0,
-                        null,
-                        repartitionFonction,
-                        materiel,
-                        employes
-                );
-
         KpiMontantVue masse =
                 new KpiMontantVue(
                         "10 000,00",
+                        null,
+                        null,
                         null
                 );
 
@@ -506,6 +489,20 @@ class RapportPageModelBuilderTest {
                         totalEmployes,
                         0,
                         "+" + totalEmployes
+                );
+
+        EquipeBiVue equipe =
+                new EquipeBiVue(
+                        "EQ",
+                        "ÉQUIPE : TEST",
+                        "TEST",
+                        effectif,
+                        masse,
+                        "1 000,00",
+                        0,
+                        repartitionFonction,
+                        materiel,
+                        employes
                 );
 
         ChantierBiVue chantier =

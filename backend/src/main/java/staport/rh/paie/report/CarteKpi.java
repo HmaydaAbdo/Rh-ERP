@@ -1,16 +1,15 @@
 package staport.rh.paie.report;
 
-/** Une carte KPI (label + valeur) — utilisée aux 3 niveaux du rapport (global/chantier/équipe, voir
- * {@link RapportPageModelBuilder}) et traduite en HTML par {@link PaieReportHtmlBuilder}.
- * {@code classeValeur} optionnel ("compte"/"montant", pilote la taille de police en CSS —
- * {@code null} pour la taille par défaut du niveau global, voir rapport.css). Type de données pur,
- * jamais un élément jsoup — {@link RapportPageModelBuilder} ne dépend d'aucune API HTML/PDF. */
-record CarteKpi(String label, String valeur, String classeValeur, String detail) {
-    CarteKpi(String label, String valeur, String classeValeur) {
-        this(label, valeur, classeValeur, null);
-    }
+import java.util.List;
 
-    static CarteKpi de(String label, String valeur) {
-        return new CarteKpi(label, valeur, null, null);
+/** Une carte KPI (label + une ou plusieurs lignes de valeur) — utilisée aux 3 niveaux du rapport (global/chantier/
+ * équipe, voir {@link RapportPageModelBuilder}) et traduite en HTML par {@link PaieReportHtmlBuilder}. Chaque ligne
+ * de {@code valeurs} passe à la ligne si elle dépasse la largeur de la carte. {@code classeValeur} ("compte" ou
+ * "montant") pilote la taille de police des valeurs en CSS (voir rapport.css). Type de données pur, jamais un
+ * élément jsoup — {@link RapportPageModelBuilder} ne dépend d'aucune API HTML/PDF. */
+record CarteKpi(String label, List<String> valeurs, String classeValeur) {
+
+    CarteKpi(String label, String valeur, String classeValeur) {
+        this(label, List.of(valeur), classeValeur);
     }
 }

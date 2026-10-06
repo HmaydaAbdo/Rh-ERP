@@ -42,7 +42,7 @@ final class RapportChartSvgBuilder {
     private static final double MARGE_VERTICALE_RANGEE = 4;
     /** Hauteur minimale d'une ligne : celle que garantit la pagination de {@link RapportPageModelBuilder} (au plus 16 lignes
      * par page dans {@value #HAUTEUR_TOTALE_CHART} pt). Une ligne dont le libellé occupe plusieurs lignes est plus haute. */
-    static final double HAUTEUR_RANGEE_MIN = 20;
+    static final double HAUTEUR_RANGEE_MIN = 19;
     /** Largeur des 4 colonnes de valeurs (Masse, Effectif, STC personnes, STC DH), dans l'ordre des séries. */
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
     /** Espace entre la fin des barres et la première colonne de valeurs. */
