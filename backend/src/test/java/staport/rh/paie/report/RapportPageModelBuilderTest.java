@@ -37,6 +37,7 @@ class RapportPageModelBuilderTest {
     private static final double TITRE_CHAPITRE_HAUTEUR = 24;
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
     private static final double KPI_EQUIPE_HAUTEUR = 52;
+    private static final double KPI_CARTE_HAUTEUR = 36;
     private static final double DETAILS_TITRE_HAUTEUR = 24;
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
@@ -46,8 +47,7 @@ class RapportPageModelBuilderTest {
 
     /**
      * Balaie un large éventail de tailles de section (1 à 120 employés) croisé avec 0 à 16 lignes
-     * de récap (voir la même borne dans l'ancien test JasperReports, plus grand cas réel observé :
-     * 14 fonctions distinctes) et vérifie, pour chaque combinaison :
+     * de récap — au-delà de ce qui tient sur une page, le récap est découpé sur plusieurs pages — et vérifie, pour chaque combinaison :
      *
      * <ol>
      *     <li>tous les employés apparaissent EXACTEMENT une fois, sur une seule page ;</li>
@@ -64,7 +64,7 @@ class RapportPageModelBuilderTest {
         for (int total = 1; total <= 120; total++) {
 
             for (int lignesRecapMax = 0;
-                 lignesRecapMax <= Math.min(16, total);
+                 lignesRecapMax <= Math.min(60, total);
                  lignesRecapMax++) {
 
                 RapportBiVue vue = vueAvecUneEquipe(total, lignesRecapMax, false);
@@ -85,6 +85,7 @@ class RapportPageModelBuilderTest {
                         .isNotEmpty();
 
                 int lignesComptees = 0;
+                int lignesRecapVues = 0;
                 boolean premierePageVue = false;
 
                 for (int p = 0; p < pagesEquipe.size(); p++) {
@@ -134,12 +135,13 @@ class RapportPageModelBuilderTest {
                                 hauteur += TABLEAU_ENTETE_HAUTEUR;
                             }
 
-                        } else if (bloc instanceof PageModel.BlocRecap) {
+                        } else if (bloc instanceof PageModel.BlocRecap r) {
 
                             avecRecap = true;
+                            lignesRecapVues += r.repartitionFonction().size();
 
                             hauteur += RECAP_BASE_HAUTEUR
-                                    + RECAP_LIGNE_HAUTEUR * lignesRecapMax;
+                                    + RECAP_LIGNE_HAUTEUR * r.repartitionFonction().size();
                         }
                     }
 
@@ -200,6 +202,11 @@ class RapportPageModelBuilderTest {
                                 lignesRecapMax
                         )
                         .isTrue();
+
+                assertThat(lignesRecapVues)
+                        .as("total=%d, lignesRecapMax=%d : chaque fonction du récap apparaît exactement une fois",
+                                total, lignesRecapMax)
+                        .isEqualTo(lignesRecapMax);
 
                 assertThat(lignesComptees)
                         .as(
@@ -276,8 +283,8 @@ class RapportPageModelBuilderTest {
                         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
                             lignes += b.lignes().size();
                             hauteur += b.lignes().size() * LIGNE_HAUTEUR + (b.avecEnTeteColonnes() ? TABLEAU_ENTETE_HAUTEUR : 0);
-                        } else if (bloc instanceof PageModel.BlocRecap) {
-                            hauteur += RECAP_BASE_HAUTEUR + RECAP_LIGNE_HAUTEUR * lignesRecapMax;
+                        } else if (bloc instanceof PageModel.BlocRecap r) {
+                            hauteur += RECAP_BASE_HAUTEUR + RECAP_LIGNE_HAUTEUR * r.repartitionFonction().size();
                         }
                     }
                     assertThat(hauteur)
@@ -308,6 +315,74 @@ class RapportPageModelBuilderTest {
             assertThat(pages.get(i).totalPages())
                     .isEqualTo(pages.size());
         }
+    }
+
+    /** Récap trop long pour la page : il continue sur la page suivante (titre « (suite) ») au lieu de déborder sous
+     * le pied de page, et le parc matériel reste avec la 1re tranche. */
+    @Test
+    void construire_recapTropLong_continueSurLaPageSuivante() {
+
+        List<PageModel> pages = builder.construire(vueAvecUneEquipe(10, 45, true));
+
+        List<PageModel.BlocRecap> recaps = pages.stream()
+                .flatMap(p -> p.blocs().stream())
+                .filter(PageModel.BlocRecap.class::isInstance)
+                .map(PageModel.BlocRecap.class::cast)
+                .toList();
+
+        assertThat(recaps).hasSizeGreaterThan(1);
+        assertThat(recaps.get(0).suite()).isFalse();
+        assertThat(recaps.get(0).materiel()).isNotEmpty();
+        assertThat(recaps.subList(1, recaps.size())).allSatisfy(r -> {
+            assertThat(r.suite()).isTrue();
+            assertThat(r.materiel()).isEmpty();
+        });
+        assertThat(recaps.stream().mapToInt(r -> r.repartitionFonction().size()).sum()).isEqualTo(45);
+    }
+
+    /** Une cellule dont le texte dépasse sa largeur passe à la ligne : la ligne grandit, donc moins de lignes tiennent
+     * par page — et tous les employés restent affichés exactement une fois. */
+    @Test
+    void construire_celluleTropLongue_agrandiLaLigneEtLaPagination() {
+
+        String observationLongue = "Observation très longue qui ne tient pas sur une seule ligne de la colonne Obs du tableau";
+
+        List<PageModel> courtes = builder.construire(vueAvecUneEquipe(80, 3, false, true, ""));
+        List<PageModel> longues = builder.construire(vueAvecUneEquipe(80, 3, false, true, observationLongue));
+
+        assertThat(longues.size()).isGreaterThan(courtes.size());
+        assertThat(lignesEmployes(longues)).isEqualTo(80);
+        assertThat(longues.stream().flatMap(p -> p.blocs().stream())
+                .filter(PageModel.BlocTableauEmployes.class::isInstance)
+                .map(PageModel.BlocTableauEmployes.class::cast)
+                .mapToInt(b -> b.lignes().size()))
+                .allMatch(n -> n <= 19);
+    }
+
+    private int lignesEmployes(List<PageModel> pages) {
+        return pages.stream().flatMap(p -> p.blocs().stream())
+                .filter(PageModel.BlocTableauEmployes.class::isInstance)
+                .map(PageModel.BlocTableauEmployes.class::cast)
+                .mapToInt(b -> b.lignes().size())
+                .sum();
+    }
+
+    /** Une carte KPI dont le texte passe à la ligne agrandit toute la rangée ; sinon elle garde sa hauteur de base. */
+    @Test
+    void blocKpi_agrandiLesCartesQuandLeTextePasseALaLigne() {
+
+        PageModel.BlocKpi courte = builder.blocKpi("chantier", List.of(
+                new CarteKpi("EFFECTIF", "56", "compte"),
+                new CarteKpi("MASSE SALARIALE", "280 000,00 DH", "montant")));
+        PageModel.BlocKpi longue = builder.blocKpi("chantier", List.of(
+                new CarteKpi("EFFECTIF", "56", "compte"),
+                new CarteKpi("MASSE SALARIALE", "280 000,00 DH  (aucune donnée mois précédent)", "montant")));
+        PageModel.BlocKpi globale = builder.blocKpi("global", List.of(
+                new CarteKpi("MASSE", "280 000,00 DH", null, "Mois précédent :")));
+
+        assertThat(courte.hauteurCarte()).isEqualTo(KPI_CARTE_HAUTEUR);
+        assertThat(longue.hauteurCarte()).isGreaterThan(KPI_CARTE_HAUTEUR);
+        assertThat(globale.hauteurCarte()).isEqualTo(50);
     }
 
     /** Mois précédent introuvable : le libellé reste, la valeur est vide (jamais le texte « INTROUVABLE »). */
@@ -349,6 +424,16 @@ class RapportPageModelBuilderTest {
             boolean avecMateriel,
             boolean avecDetailEquipe
     ) {
+        return vueAvecUneEquipe(totalEmployes, lignesRecapMax, avecMateriel, avecDetailEquipe, "");
+    }
+
+    private RapportBiVue vueAvecUneEquipe(
+            int totalEmployes,
+            int lignesRecapMax,
+            boolean avecMateriel,
+            boolean avecDetailEquipe,
+            String observation
+    ) {
 
         List<LigneEmployeVue> employes = new ArrayList<>();
 
@@ -366,7 +451,7 @@ class RapportPageModelBuilderTest {
                             "-",
                             "-",
                             "5 000,00",
-                            "",
+                            observation,
                             ""
                     )
             );

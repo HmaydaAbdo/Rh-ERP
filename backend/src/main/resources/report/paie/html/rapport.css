@@ -98,13 +98,19 @@ html, body {
     margin-top: 13pt;
     font-size: 9pt;
     font-weight: bold;
-    white-space: nowrap;
+    line-height: 11pt;
     overflow: hidden;
 }
 
-.page-header .bloc.b1 { margin-left: 12pt; width: 190pt; }
-.page-header .bloc.b2 { margin-left: 10pt; width: 160pt; }
-.page-header .bloc.bloc-niveau { margin-left: 10pt; width: 316pt; }
+.page-header .bloc.b1 { margin-left: 12pt; width: 118pt; }
+.page-header .bloc.b2 { margin-left: 10pt; width: 112pt; }
+.page-header .bloc.bloc-niveau { margin-left: 10pt; width: 436pt; }
+
+/* Le bandeau fait 40 pt de haut : un niveau qui passe sur plusieurs lignes remonte (classe posée par
+   PaieReportHtmlBuilder d'après le nombre de lignes à 9 pt) et, au-delà de 3 lignes, passe en corps 7. */
+.page-header .bloc.bloc-niveau.lignes-2 { margin-top: 8pt; }
+.page-header .bloc.bloc-niveau.lignes-3 { margin-top: 3pt; }
+.page-header .bloc.bloc-niveau.lignes-4 { margin-top: 3pt; font-size: 7pt; line-height: 8.5pt; }
 
 .page-header .filet {
     position: absolute;
@@ -131,9 +137,9 @@ html, body {
 .page-footer .niveau {
     float: left;
     width: 600pt;
-    margin-top: 5pt;
+    margin-top: 3pt;
     font-size: 8.5pt;
-    white-space: nowrap;
+    line-height: 8.5pt;
     overflow: hidden;
 }
 
@@ -242,8 +248,12 @@ html, body {
 
 /* ================================ TITRES DE CHAPITRE / SECTION ================================ */
 
+/* Les interlignes des titres et des cartes KPI sont fixés ici pour que RapportPageModelBuilder (qui pagine avant
+   tout rendu) puisse prévoir leur hauteur quand le texte passe à la ligne — garder ses constantes INTERLIGNE_*
+   synchronisées. */
 .titre-chapitre {
     font-size: 16pt;
+    line-height: 20pt;
     font-weight: bold;
     padding-bottom: 3pt;
     border-bottom: 1pt solid #000000;
@@ -263,6 +273,7 @@ html, body {
 
 .titre-equipe {
     font-size: 12pt;
+    line-height: 15pt;
     font-weight: bold;
     padding: 2pt 0 2pt 4pt;
     border-bottom: 1pt solid #000000;
@@ -283,6 +294,7 @@ html, body {
 
 .kpi-carte .label {
     font-size: 7.5pt;
+    line-height: 8.5pt;
     font-weight: bold;
     color: #595959;
     text-transform: uppercase;
@@ -296,8 +308,15 @@ html, body {
 .kpi-carte .detail {
     margin-top: 2pt;
     font-size: 6.5pt;
+    line-height: 7.5pt;
     color: #595959;
-    white-space: nowrap;
+}
+
+.kpi-carte .label,
+.kpi-carte .valeur,
+.kpi-carte .detail {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Niveau global (5 cartes, 150x50, ecart 10pt) */
@@ -313,6 +332,7 @@ html, body {
 
 .kpi-row.global .valeur {
     font-size: 11pt;
+    line-height: 12.5pt;
 }
 
 /* Niveau chantier / equipe (4 cartes, 192x36, ecart 8pt) */
@@ -331,11 +351,13 @@ html, body {
 .kpi-row.chantier .valeur.compte,
 .kpi-row.equipe .valeur.compte {
     font-size: 12pt;
+    line-height: 13.5pt;
 }
 
 .kpi-row.chantier .valeur.montant,
 .kpi-row.equipe .valeur.montant {
     font-size: 10pt;
+    line-height: 11.5pt;
 }
 
 /* ================================ TABLEAU EMPLOYÉ ================================ */
@@ -353,11 +375,24 @@ table.employes td {
     height: 16pt;
     font-size: 10.5pt;
     font-weight: normal;
-    white-space: nowrap;
-    overflow: hidden;
     padding: 0 3pt;
     text-align: left;
     vertical-align: middle;
+}
+
+table.employes th {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Une cellule de données dont le texte dépasse sa largeur passe à la ligne (la ligne grandit) au lieu d'être
+   tronquée. Les interlignes sont fixés ici pour que RapportPageModelBuilder (qui pagine avant tout rendu) puisse
+   prévoir la hauteur de chaque ligne — garder RapportPageModelBuilder.INTERLIGNE_* synchronisés. */
+table.employes td {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 12pt;
 }
 
 table.employes th {
@@ -381,7 +416,7 @@ table.employes col.obs { width: 90pt; }
 table.employes col.equipe { width: 72pt; }
 table.employes.sans-equipe col.nom-prenom { width: 192pt; }
 
-table.employes td.fonction { font-size: 8pt; }
+table.employes td.fonction { font-size: 8pt; line-height: 9.5pt; }
 table.employes td.cin,
 table.employes td.jours-p,
 table.employes td.jours-jro,
@@ -391,7 +426,7 @@ table.employes td.salaire-ro,
 table.employes td.salaire-rd,
 table.employes td.total { text-align: right; padding-right: 3pt; }
 table.employes td.total { font-weight: bold; }
-table.employes td.equipe { font-size: 9pt; }
+table.employes td.equipe { font-size: 9pt; line-height: 10.5pt; }
 
 /* ================================ TABLEAUX RÉCAP (pied de section équipe) ================================ */
 
@@ -428,6 +463,15 @@ table.recap td {
     font-size: 9pt;
     padding: 0 4pt;
     vertical-align: middle;
+}
+
+/* Même principe que table.employes td : le texte long passe à la ligne, interligne fixe prévu par
+   RapportPageModelBuilder. */
+table.recap td {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 11pt;
 }
 
 table.recap th {
