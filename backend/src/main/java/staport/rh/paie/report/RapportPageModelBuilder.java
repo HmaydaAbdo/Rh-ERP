@@ -528,8 +528,15 @@ final class RapportPageModelBuilder {
      * reconduit à l'identique depuis l'ancien {@code PaieReportPdfService}. */
     private String masseLigne(KpiMontantVue masse) {
         String variation = variationLibelle(masse);
+        String courante = insecable(masse.valeurCourante() + " DH");
         return variation == null
-                ? masse.valeurCourante() + " DH  (aucune donnée mois précédent)"
-                : masse.valeurCourante() + " DH  (" + variation + ")";
+                ? courante + " (aucune donnée mois précédent)"
+                : courante + " (" + insecable(variation) + ")";
+    }
+
+    /** Remplace les espaces par des espaces insécables : un montant, son « DH » et une variation « (-17,9 %) »
+     * restent d'un seul tenant, le retour à la ligne se fait entre eux (voir {@link RapportMesureTexte}). */
+    private String insecable(String texte) {
+        return texte.replace(' ', ' ');
     }
 }
