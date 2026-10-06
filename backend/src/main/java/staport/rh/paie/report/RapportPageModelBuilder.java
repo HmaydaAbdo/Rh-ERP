@@ -60,10 +60,10 @@ final class RapportPageModelBuilder {
     private static final double INTERLIGNE_TITRE_CHAPITRE = 20;
 
     /** Rangée de cartes KPI : rubrique « Indicateurs clés » + marge (16), puis des cartes toutes de même taille à
-     * tous les niveaux (jusqu'à 7 par rangée) : au moins 66 pt de haut — plus hautes si un texte passe sur plus de
+     * tous les niveaux (jusqu'à 6 par rangée) : au moins 54 pt de haut — plus hautes si un texte passe sur plus de
      * lignes (voir {@link #blocKpi}). */
     private static final double KPI_TITRE_HAUTEUR = 16;
-    private static final double KPI_CARTE_HAUTEUR = 66;
+    private static final double KPI_CARTE_HAUTEUR = 54;
 
     /** Hauteur des cartes pour laquelle {@code RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART} a été dimensionnée, au niveau
      * global puis chantier : le graphique cède la place que des cartes plus hautes prennent au-dessus de lui. */
@@ -72,13 +72,12 @@ final class RapportPageModelBuilder {
 
     /** Cartes KPI (rapport.css {@code .kpi-carte}) : largeur de la carte, marges intérieures + filets (16 + 1),
      * corps/interligne du libellé, espaces entre les lignes et marges haute + basse de la carte. */
-    private static final double KPI_LARGEUR_CARTE = 107;
+    private static final double KPI_LARGEUR_CARTE = 126;
     private static final double KPI_MARGES_HORIZONTALES = 17;
     private static final double KPI_MARGES_VERTICALES = 10;
     private static final double KPI_CORPS_LIBELLE = 7.5;
     private static final double KPI_INTERLIGNE_LIBELLE = 8.5;
     private static final double KPI_ESPACE_VALEUR = 4;
-    private static final double KPI_ESPACE_ENTRE_VALEURS = 1;
 
     /** Titre « Détails » (marge 8 + 12pt). */
     private static final double DETAILS_TITRE_HAUTEUR = 24;
@@ -324,24 +323,21 @@ final class RapportPageModelBuilder {
             double besoin = KPI_MARGES_VERTICALES
                     + KPI_INTERLIGNE_LIBELLE * RapportMesureTexte.lignes(
                             carte.label().toUpperCase(java.util.Locale.ROOT), largeurTexte, KPI_CORPS_LIBELLE, true)
-                    + KPI_ESPACE_VALEUR + KPI_ESPACE_ENTRE_VALEURS * (carte.valeurs().size() - 1);
-            for (String valeur : carte.valeurs()) {
-                besoin += interligneValeur * RapportMesureTexte.lignes(valeur, largeurTexte, corpsValeur, true);
-            }
+                    + KPI_ESPACE_VALEUR
+                    + interligneValeur * RapportMesureTexte.lignes(carte.valeur(), largeurTexte, corpsValeur, true);
             hauteur = Math.max(hauteur, Math.ceil(besoin));
         }
         return new PageModel.BlocKpi(cartes, hauteur);
     }
 
     /** Les cartes d'un niveau — les mêmes à tous les niveaux, chacune avec son propre indicateur : masse salariale,
-     * masse du mois précédent, évolution (masse en DH et en %, effectif en personnes), effectif, masse moyenne par
-     * employé, nombre de chantiers (niveau global seulement : {@code nombreChantiers} non {@code null}) et STC. */
+     * masse du mois précédent, effectif, masse moyenne par employé, nombre de chantiers (niveau global seulement :
+     * {@code nombreChantiers} non {@code null}) et STC. */
     private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiEffectifVue effectif, String masseMoyenne, int stc,
                                       Integer nombreChantiers) {
         List<CarteKpi> cartes = new ArrayList<>();
         cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant"));
         cartes.add(new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(masse.valeurPrecedente()).strip(), "montant"));
-        cartes.add(new CarteKpi("ÉVOLUTION", evolution(masse, effectif), "montant"));
         cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.effectifCourant()), "compte"));
         cartes.add(new CarteKpi("MASSE MOYENNE / EMPLOYÉ", masseMoyenne + " DH", "montant"));
         if (nombreChantiers != null) {
@@ -349,26 +345,6 @@ final class RapportPageModelBuilder {
         }
         cartes.add(new CarteKpi("STC / SORTIES", String.valueOf(stc), "compte"));
         return cartes;
-    }
-
-    /** Évolution par rapport au mois précédent : la masse en DH et en %, puis l'effectif en personnes — une seule ligne
-     * vide quand il n'y a pas de mois précédent (le libellé de la carte reste). Le pourcentage manque si le montant
-     * précédent est nul. */
-    private List<String> evolution(KpiMontantVue masse, KpiEffectifVue effectif) {
-        if (masse.valeurPrecedente() == null) {
-            return List.of("");
-        }
-        String montant = masse.variationAbsolue() + " DH"
-                + (masse.variationPourcent() == null ? "" : " (" + insecable(masse.variationPourcent()) + ")");
-        int ecart = effectif.effectifCourant() - effectif.effectifPrecedent();
-        String personnes = (ecart > 0 ? "+" : "") + ecart + (Math.abs(ecart) > 1 ? " personnes" : " personne");
-        return List.of(montant, personnes);
-    }
-
-    /** Remplace les espaces par des espaces insécables : une variation « (-17,9 %) » reste d'un seul tenant, le retour
-     * à la ligne se fait avant elle (voir {@link RapportMesureTexte}). */
-    private String insecable(String texte) {
-        return texte.replace(' ', '\u00A0');
     }
 
     /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du

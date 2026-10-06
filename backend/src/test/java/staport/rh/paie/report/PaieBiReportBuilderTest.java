@@ -144,29 +144,6 @@ class PaieBiReportBuilderTest {
         assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000,00");
         assertThat(vue.synthese().effectif().effectifCourant()).isEqualTo(2);
         assertThat(vue.synthese().effectif().effectifPrecedent()).isEqualTo(1);
-        assertThat(vue.synthese().masse().variationAbsolue()).isEqualTo("+4 000,00");
-        assertThat(vue.synthese().masse().variationPourcent()).isEqualTo("+100,0 %");
-    }
-
-    /** L'évolution de chaque niveau tient dans sa propre carte : masse en DH et en %, puis effectif en personnes. */
-    @Test
-    void construire_laCarteEvolutionDonneLEcartDeMasseEtDEffectifAuxTroisNiveaux() {
-        Paie c059EquipeA = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "5000");
-        Paie c059SansEquipe = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", null, "3000");
-        Paie precedent = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "4000");
-        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
-                List.of(c059EquipeA, c059SansEquipe), List.of(precedent));
-
-        List<List<String>> evolutions = new RapportPageModelBuilder().construire(vue).stream()
-                .flatMap(page -> page.blocs().stream())
-                .filter(PageModel.BlocKpi.class::isInstance)
-                .map(PageModel.BlocKpi.class::cast)
-                .map(kpi -> kpi.cartes().stream().filter(c -> c.label().equals("ÉVOLUTION")).findFirst().orElseThrow().valeurs())
-                .toList();
-
-        // global, chantier, section « reste » : mêmes cartes, le chantier n'ayant ici que cette section
-        assertThat(evolutions).first().isEqualTo(List.of("+4\u00A0000,00 DH (+100,0\u00A0%)", "+1 personne"));
-        assertThat(evolutions).hasSizeGreaterThanOrEqualTo(2);
     }
 
     @Test
@@ -291,8 +268,6 @@ class PaieBiReportBuilderTest {
 
         assertThat(vue.synthese().masse().valeurPrecedente()).isNull();
         assertThat(vue.chantiers().get(0).equipes().get(0).masse().valeurPrecedente()).isNull();
-        assertThat(vue.synthese().masse().variationAbsolue()).isNull();
-        assertThat(vue.synthese().masse().variationPourcent()).isNull();
     }
 
     @Test
