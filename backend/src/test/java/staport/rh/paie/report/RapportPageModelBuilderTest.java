@@ -310,6 +310,31 @@ class RapportPageModelBuilderTest {
         }
     }
 
+    /** Mois précédent introuvable : le libellé reste, la valeur est vide (jamais le texte « INTROUVABLE »). */
+    @Test
+    void construire_moisPrecedentIntrouvable_gardeLeLibelleSansValeur() {
+
+        List<PageModel> pages = builder.construire(vueAvecUneEquipe(5, 1, false));
+
+        CarteKpi masseGlobale = cartesKpi(pages.get(0)).get(0);
+        assertThat(masseGlobale.detail()).isEqualTo("Mois précédent :");
+
+        CarteKpi masseMoisPrecedent = pages.stream()
+                .flatMap(p -> cartesKpi(p).stream())
+                .filter(c -> c.label().equals("MASSE MOIS PRECEDENT"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(masseMoisPrecedent.valeur()).isEmpty();
+    }
+
+    private List<CarteKpi> cartesKpi(PageModel page) {
+        return page.blocs().stream()
+                .filter(PageModel.BlocKpi.class::isInstance)
+                .map(PageModel.BlocKpi.class::cast)
+                .flatMap(b -> b.cartes().stream())
+                .toList();
+    }
+
     private RapportBiVue vueAvecUneEquipe(
             int totalEmployes,
             int lignesRecapMax,
@@ -378,7 +403,7 @@ class RapportPageModelBuilderTest {
                         "10 000,00",
                         "100,0 %",
                         0,
-                        "INTROUVABLE",
+                        null,
                         repartitionFonction,
                         materiel,
                         employes
@@ -387,7 +412,7 @@ class RapportPageModelBuilderTest {
         KpiMontantVue masse =
                 new KpiMontantVue(
                         "10 000,00",
-                        "INTROUVABLE",
+                        null,
                         null,
                         null,
                         PaieReportNumberFormat.Tendance.NON_DISPONIBLE

@@ -111,13 +111,14 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │   LigneEmployeVue / RepartitionBean / MaterielLigneVue  Vue-modèle (records, sauf RepartitionBean/
 │                                 MaterielLigneVue — classes à getters historiques, conservées telles
 │                                 quelles), aucune logique métier — TOUTE valeur affichable y est déjà
-│                                 une String pré-formatée non nulle (sentinel "INTROUVABLE"/"-"),
-│                                 sauf RepartitionBean.montant/stcMontant (BigDecimal potentiellement
-│                                 null, consommé uniquement par RapportChartSvgBuilder — voir son
+│                                 une String pré-formatée non nulle ("-" si inconnue), sauf le
+│                                 montant du mois précédent (`null` si introuvable : le libellé reste
+│                                 affiché, sans valeur) et RepartitionBean.montant/stcMontant (BigDecimal
+│                                 potentiellement null, consommé uniquement par RapportChartSvgBuilder — voir son
 │                                 Javadoc pour le null-check dédié). `ChantierBiVue.avecDetailEquipe` :
 │                                 `true` dès qu'au moins une équipe du chantier a été sélectionnée
 │                                 manuellement. `EquipeBiVue` porte, en plus du détail employé,
-│                                 `montantMoisPrecedentOuIntrouvable` (carte KPI "MASSE MOIS
+│                                 `montantMoisPrecedent` (carte KPI "MASSE MOIS
 │                                 PRECEDENT"), `repartitionFonction` (tableau récap) et `materiel`
 │                                 (squelette parc matériel, vide sauf C168/CH/OP).
 ├── PaieReportNumberFormat.java   Formatage des nombres, variations, tendances (HAUSSE/BAISSE/STABLE)
@@ -419,7 +420,7 @@ montrer le même montant). La dimension Fonction n'a plus d'écran dédié au ni
 ### Null-handling (comparaison mois précédent)
 
 - **Aucune ligne** le mois précédent pour le périmètre → la comparaison est explicitement
-  indisponible (`Tendance.NON_DISPONIBLE`, valeur précédente affichée `INTROUVABLE`, aucune
+  indisponible (`Tendance.NON_DISPONIBLE`, valeur précédente `null` : le PDF garde le libellé et laisse la valeur vide, aucune
   variation calculée) — jamais un `0 DH` ou un `+∞ %` trompeur.
 - **Des lignes existent mais leur somme vaut zéro** (cas réel, distinct du cas précédent) → la
   variation absolue reste calculable, la variation % est explicitement `null` (division par zéro
@@ -518,7 +519,7 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
 3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 5 cartes KPI — la carte Masse affiche aussi
-   le montant du mois précédent (ou `INTROUVABLE`) ; masse réelle, effectif, masse moyenne/employé,
+   le montant du mois précédent (libellé seul, valeur vide, si introuvable) ; masse réelle, effectif, masse moyenne/employé,
    nombre de chantiers, STC/sorties — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
    à 4 séries (masse/effectif/STC en personnes/STC en DH), qui montre **TOUS les chantiers**. Au-delà de 16
    chantiers, il continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir
@@ -639,7 +640,7 @@ employé perdu).
 
 En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "reste") : titre, rubrique
 « Indicateurs clés », puis 4 cartes KPI — Effectif, STC/sorties, Masse (`EquipeBiVue.masse`, part du chantier), **Masse mois
-précédent** (`EquipeBiVue.montantMoisPrecedentOuIntrouvable`, `INTROUVABLE` si aucune donnée, même
+précédent** (`EquipeBiVue.montantMoisPrecedent`, libellé gardé et valeur vide si aucune donnée, même
 règle que « Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque
 chantier. Ces 2 derniers indicateurs sont des cartes à hauteur FIXE dans l'en-tête plutôt que des
 lignes au bas du tableau (héritage d'une décision JasperReports du 2026-09-29 qui reste valide ici :

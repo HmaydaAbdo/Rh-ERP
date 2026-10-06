@@ -281,7 +281,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(masseEquipe),
                 PaieReportNumberFormat.part(masseEquipe, masseChantier),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
-                PaieReportNumberFormat.montantOuIntrouvable(masseEquipePrecedente),
+                PaieReportNumberFormat.montantOuNull(masseEquipePrecedente),
                 repartitionFonctionSimple(agregatFonctionEquipe),
                 materiel,
                 employes);
@@ -505,7 +505,7 @@ class PaieBiReportBuilder {
     private KpiMontantVue kpiMontant(BigDecimal actuel, BigDecimal precedent) {
         return new KpiMontantVue(
                 PaieReportNumberFormat.montant(actuel),
-                PaieReportNumberFormat.montantOuIntrouvable(precedent),
+                PaieReportNumberFormat.montantOuNull(precedent),
                 PaieReportNumberFormat.variationAbsolue(actuel, precedent),
                 PaieReportNumberFormat.variationPourcent(actuel, precedent),
                 PaieReportNumberFormat.tendance(actuel, precedent));

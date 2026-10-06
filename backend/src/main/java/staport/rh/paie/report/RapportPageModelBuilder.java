@@ -134,12 +134,9 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
-        String massePrecedente = synthese.masse().valeurPrecedente() == null
-                ? "INTROUVABLE"
-                : synthese.masse().valeurPrecedente() + " DH";
         blocs.add(new PageModel.BlocKpi("global", List.of(
                 new CarteKpi("MASSE", synthese.masse().valeurCourante() + " DH", null,
-                        "Mois précédent : " + massePrecedente),
+                        "Mois précédent :" + montantAvecDevise(synthese.masse().valeurPrecedente())),
                 CarteKpi.de("EFFECTIF", String.valueOf(synthese.effectif().effectifCourant())),
                 CarteKpi.de("MASSE MOYENNE / EMPLOYÉ", synthese.masseMoyenneParEmploye() + " DH"),
                 CarteKpi.de("CHANTIERS", String.valueOf(synthese.nombreChantiers())),
@@ -252,15 +249,18 @@ final class RapportPageModelBuilder {
     }
 
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
-        String masseMoisPrecedent = "INTROUVABLE".equals(equipe.montantMoisPrecedentOuIntrouvable())
-                ? "INTROUVABLE"
-                : equipe.montantMoisPrecedentOuIntrouvable() + " DH";
         return new PageModel.BlocKpi("equipe", List.of(
                 new CarteKpi("EFFECTIF", String.valueOf(equipe.effectif()), "compte"),
                 new CarteKpi("STC / SORTIES", String.valueOf(equipe.stc()), "compte"),
                 new CarteKpi("MASSE", equipe.masse() + " DH (" + equipe.partChantierPourcent() + ")", "montant"),
-                new CarteKpi("MASSE MOIS PRECEDENT", masseMoisPrecedent, "montant")
+                new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(equipe.montantMoisPrecedent()).strip(), "montant")
         ));
+    }
+
+    /** {@code " <montant> DH"} (espace de tête inclus, pour la concaténation après un libellé), ou chaîne vide
+     * quand le montant du mois précédent est introuvable — le libellé reste affiché, sans valeur. */
+    private String montantAvecDevise(String montant) {
+        return montant == null ? "" : " " + montant + " DH";
     }
 
     /** "&lt;identifiant&gt;" seul si la section est le "reste" du chantier (sentinel :

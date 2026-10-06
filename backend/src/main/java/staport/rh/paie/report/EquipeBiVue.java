@@ -13,9 +13,9 @@ import java.util.List;
  * chevauchent volontairement, voir {@code docs/report/rapport-v2.md}).
  *
  * <p>{@code stc} : STC/sorties de CETTE section (même indicateur qu'aux niveaux global et chantier).
- * {@code montantMoisPrecedentOuIntrouvable} : masse de CETTE section le mois précédent (même
- * périmètre équipe/reste), "INTROUVABLE" si aucune donnée — alimente la ligne "TOTAL GENERAL MOIS
- * PRECEDENT" collée au bas du tableau employé (voir rapport.jrxml, GroupEquipe). {@code
+ * {@code montantMoisPrecedent} : masse de CETTE section le mois précédent (même
+ * périmètre équipe/reste), {@code null} si aucune donnée — alimente la carte KPI "MASSE MOIS
+ * PRECEDENT" (affichée sans valeur quand il est {@code null}). {@code
  * repartitionFonction} : effectif et STC de CETTE section par fonction — nouveau tableau récap
  * (demande explicite de direction, 2026-09-28), imprimé via un sous-rapport (nombre de fonctions
  * variable, voir recap-fonction.jrxml), jamais un graphique (redondant avec celui du chantier).
@@ -37,7 +37,7 @@ record EquipeBiVue(
         String masse,
         String partChantierPourcent,
         int stc,
-        String montantMoisPrecedentOuIntrouvable,
+        String montantMoisPrecedent,
         List<RepartitionBean> repartitionFonction,
         List<MaterielLigneVue> materiel,
         List<LigneEmployeVue> employes
