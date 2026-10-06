@@ -27,18 +27,22 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     }
 
     /** Une rangée de cartes KPI — {@code niveauClasse} = "global"/"chantier"/"equipe" (voir
-     * rapport.css pour la taille/l'écart associés). */
-    record BlocKpi(String niveauClasse, List<CarteKpi> cartes) implements Bloc {
+     * rapport.css pour la taille/l'écart associés). {@code hauteurCarte} (pt) : hauteur commune des cartes de la
+     * rangée, celle de la carte dont le texte passe sur le plus de lignes (voir
+     * {@link RapportPageModelBuilder#blocKpi}). */
+    record BlocKpi(String niveauClasse, List<CarteKpi> cartes, double hauteurCarte) implements Bloc {
     }
 
     /** Graphique en barres groupées (voir {@link RapportChartSvgBuilder}). {@code echelle} est l'ensemble des
      * lignes qui servent à calculer la longueur des barres : quand un même graphique est réparti sur plusieurs
      * pages, chaque page ne porte que ses {@code donnees} mais toutes partagent l'échelle de l'ensemble, pour que
-     * les barres restent comparables d'une page à l'autre. */
-    record BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle) implements Bloc {
+     * les barres restent comparables d'une page à l'autre. {@code hauteurMax} (pt) : hauteur totale que le
+     * graphique ne doit pas dépasser — réduite quand les blocs au-dessus (titre, cartes KPI) occupent plus de place
+     * que prévu parce que leur texte passe à la ligne. */
+    record BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax) implements Bloc {
 
-        BlocGraphique(List<RepartitionBean> donnees) {
-            this(donnees, donnees);
+        BlocGraphique(List<RepartitionBean> donnees, double hauteurMax) {
+            this(donnees, donnees, hauteurMax);
         }
     }
 
@@ -50,11 +54,12 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
                                boolean avecColonneEquipe) implements Bloc {
     }
 
-    /** Pied de section équipe — tableau récap Fonction/Effectif/STC (toujours) + squelette parc
-     * matériel (uniquement si {@code titreMateriel} non {@code null}, voir
-     * {@code MaterielChantierCatalogue}). Toujours seul sur sa page OU précédé d'au moins 1 ligne
-     * employé — jamais orphelin en haut d'une page vide au-dessus (voir
-     * {@link RapportPageModelBuilder#ajouterPagesEquipe}). */
-    record BlocRecap(List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel, String titreMateriel) implements Bloc {
+    /** Récap de section équipe — tableau Fonction/Effectif/STC (toujours) + squelette parc matériel
+     * (uniquement si {@code titreMateriel} non {@code null}, voir {@code MaterielChantierCatalogue}). Quand la
+     * section compte trop de fonctions pour tenir sur la page, le tableau est découpé : {@code suite} est vrai
+     * pour les tranches reprises sur les pages suivantes (titre « (suite) », sans parc matériel). Voir
+     * {@link RapportPageModelBuilder#ajouterPagesEquipe}. */
+    record BlocRecap(List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel, String titreMateriel,
+                     boolean suite) implements Bloc {
     }
 }
