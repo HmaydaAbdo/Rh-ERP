@@ -75,7 +75,8 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 ├── RapportPageModelBuilder.java  Moteur de PAGINATION — pur Java, aucune dépendance HTML/PDF,
 │                                 entièrement testable sans rendu (RapportPageModelBuilderTest).
 │                                 Parcourt RapportBiVue et décide, par arithmétique (largeurs de
-│                                 colonnes et hauteur de ligne FIXES, connues d'avance), exactement
+│                                 colonnes fixes ; hauteur de chaque ligne estimée d'après son texte,
+│                                 voir « Retour à la ligne des cellules »), exactement
 │                                 quel contenu va sur quelle page — voir « Pagination : contrôle
 │                                 100% Java » pour pourquoi ce choix plutôt que de laisser le moteur
 │                                 de rendu déborder naturellement (leçon de l'ancien pipeline
@@ -96,6 +97,10 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │                                 « Visualisations »), remplace PaieReportGroupedChartCustomizer/
 │                                 JFreeChart (retirés avec JasperReports). Même logique de
 │                                 normalisation par série (voir plus bas).
+├── RapportMesureTexte.java       Découpe un texte en lignes pour une largeur donnée (police
+│                                 Liberation Serif embarquée) — sert à prévoir la hauteur des
+│                                 cellules qui passent à la ligne, voir « Retour à la ligne des
+│                                 cellules ».
 ├── RapportRessourcesStatiques.java  Charge une seule fois (constructeur) les polices/CSS/logo,
 │                                 partagés entre PaieReportHtmlBuilder et PaieReportHtmlPdfService
 │                                 sans dépendance circulaire entre les deux.
@@ -488,8 +493,8 @@ section "reste" via `equipe.nom().equals(chantier.code())`), jamais affiché tel
 **Exception : le graphique « Répartition par chantier »** (synthèse globale) porte le **nom seul** du chantier (`Chantier.nom`),
 sans son code, quand il est renseigné ; le **code** reste le libellé de repli (nom vide ou absent) — demande de direction,
 2026-10-05 (`PaieBiReportBuilder.repartitionChantiers`). Seul le libellé de la barre change : l'agrégat reste indexé par
-code (filtrage des sections). Un nom trop long pour la colonne des libellés (jusqu'à 255 caractères) est coupé par
-« … » (`RapportChartSvgBuilder.libelleAffiche`, environ 30 caractères) au lieu de déborder de la page. Deux chantiers qui
+code (filtrage des sections). Un nom trop long pour la colonne des libellés (jusqu'à 255 caractères) passe sur plusieurs lignes
+(`RapportChartSvgBuilder.lignesLibelle`) au lieu d'être coupé ou de déborder de la page. Deux chantiers qui
 porteraient le même nom auraient deux barres de même libellé : le nom n'est pas unique, contrairement au code.
 
 ### Anti-duplication du détail employé
@@ -510,7 +515,7 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    `docs/report/rapport-v2.md`).
 2. **Bandeau récurrent** (`.page-header`, construit une seule fois par `PaieReportHtmlBuilder` et
    répété sur chaque page de contenu — jamais sur la page de garde) : 3 blocs sur une seule ligne
-   chacun, séparés par de fins filets verticaux — Ressources Humaines / Mois-Année / **Niveau**. Le
+   chacun, séparés par de fins filets verticaux — Ressources Humaines / `Paie <Mois> <Année>` (ex. « Paie Septembre 2026 ») / **Niveau**. Le
    bloc **Niveau** est `GLOBAL` pour la page de synthèse, `CHANTIER : <identifiant> · ÉQUIPE : <nom>`
    pour une section équipe détaillée (voir « Identifiant chantier (nom + code) » pour la forme de
    `<identifiant>`), ou **`CHANTIER : <identifiant>` seul** (sans « · ÉQUIPE ») pour la section
@@ -597,10 +602,11 @@ rendu n'a plus aucune décision de pagination à prendre, seulement de la mise e
 taille fixe (la partie la mieux supportée et la moins risquée d'un moteur CSS).
 
 Pourquoi c'est sûr et pas du sur-ingénierie : le tableau employé a des colonnes de largeur FIXE et
-une hauteur de ligne FIXE (16pt, `table.employes td` dans rapport.css) — sa pagination est de
-l'arithmétique, pas de la composition typographique ouverte. Puisque la hauteur de ligne est choisie
-et fixée par nous-mêmes en CSS (jamais rétro-ingénierée depuis le comportement d'un moteur tiers,
-contrairement à l'ancien `LIGNE_HAUTEUR` JasperReports), cette constante est fiable par construction.
+une hauteur de ligne MINIMALE fixe (16pt, `table.employes td` dans rapport.css) — sa pagination est de
+l'arithmétique, pas de la composition typographique ouverte. Les interlignes sont choisis et fixés par
+nous-mêmes en CSS (jamais rétro-ingénierés depuis le comportement d'un moteur tiers, contrairement à
+l'ancien `LIGNE_HAUTEUR` JasperReports) ; une cellule dont le texte passe à la ligne agrandit sa ligne d'un
+nombre de lignes que `RapportMesureTexte` prévoit (voir « Retour à la ligne des cellules »).
 
 **La règle qui a causé le plus de bugs sous JasperReports — le pied récapitulatif d'une section ne
 doit jamais apparaître seul en haut d'une page sans aucune ligne employé au-dessus — devient une
@@ -614,7 +620,7 @@ en comparant sa hauteur DÉCLARÉE à l'espace restant, jamais sa hauteur réell
 l'historique Git pour le détail complet de cette saga, `docs/report/README.md` avant le 2026-09-29)
 qui n'a plus lieu d'être : une page est un bloc HTML à taille fixe (`overflow: hidden`), calculée
 directement à partir de constantes que nous choisissons (`PAGE_BODY_HAUTEUR`, `LIGNE_HAUTEUR`,
-`RECAP_BASE_HAUTEUR`/`RECAP_LIGNE_HAUTEUR`), avec une marge de sécurité (`MARGE_SECURITE`) absorbant
+`RECAP_BASE_HAUTEUR`/`RECAP_LIGNE_HAUTEUR`, interlignes `INTERLIGNE_*`), avec une marge de sécurité (`MARGE_SECURITE`) absorbant
 un éventuel écart d'arrondi entre cette arithmétique et le rendu CSS réel — jamais pour contourner un
 bug de moteur.
 
@@ -631,10 +637,44 @@ blanche et de ligne perdue.
 équipe ») : la page du chantier n'a que le chapitre et ses cartes KPI, et le reste de la page serait vide. La
 section « reste » (titre, KPI, récap, détail des employés) démarre donc **directement sous les cartes KPI du
 chantier, sur la même page** : `RapportPageModelBuilder` déduit la hauteur de l'en-tête chantier
-(`ENTETE_CHANTIER_HAUTEUR`) de la capacité de cette 1re page, et la suite de la pagination est inchangée. Avec un
+(`hauteurEnteteChantier` : titre de chapitre + cartes KPI, tels qu'ils sont réellement hauts) de la capacité de cette 1re page, et la suite de la pagination est inchangée. Avec un
 détail par équipe, le chantier garde sa page propre (chapitre, KPI, graphique) et chaque équipe la sienne.
 Couvert par `RapportPageModelBuilderTest` (1 à 120 employés × 0 à 16 lignes de récap : rien ne déborde, aucun
 employé perdu).
+
+### Retour à la ligne des cellules
+
+**Règle (demande de direction, 2026-10-06) : dans tout le rapport, le contenu d'une cellule qui dépasse l'espace
+alloué passe à la ligne suivante — rien n'est tronqué, rien n'est caché.** Concerne les cellules du tableau
+employé et des récaps (fonction, parc matériel), les cartes KPI (libellé, valeur, détail), les titres de chapitre
+et d'équipe, les blocs du bandeau et du pied de page, et les libellés des graphiques. Un mot plus large que sa
+cellule est coupé n'importe où (`word-wrap: break-word`).
+
+Conséquence : la hauteur d'une ligne n'est plus fixe, or `RapportPageModelBuilder` pagine AVANT tout rendu. Il
+prévoit donc la hauteur de chaque ligne avec `RapportMesureTexte` (largeur du texte mesurée dans la police
+Liberation Serif embarquée, majorée de 3 % pour rester du côté prudent) :
+
+- **Tableau employé** : `hauteurLigneEmploye` = la plus haute de ses cellules (`nombre de lignes × interligne`, au moins
+  16 pt) ; les colonnes (largeur, corps, interligne) sont recopiées de rapport.css dans `colonnesEmploye`. Les lignes
+  tiennent sur une page tant que leur hauteur cumulée tient (`lignesQuiTiennent`), plus un nombre fixe de lignes.
+- **Récap par fonction / parc matériel** : même principe (`hauteurLigneRecap`, `hauteurRecap`). Un récap trop long
+  pour la page est coupé en tranches (`decouperRecap`) : la 1re tranche, avec le parc matériel, sous les cartes KPI,
+  les suivantes sur les pages suivantes sous le titre « Répartition par fonction (suite) » ; « Détails » démarre
+  sous la dernière tranche si au moins 3 lignes y tiennent (`MIN_LIGNES_PREMIERE_PAGE`), sinon sur la page suivante.
+- **Cartes KPI** : les cartes d'une rangée ont la hauteur de la plus haute (`blocKpi`, `BlocKpi.hauteurCarte`,
+  appliquée en `style="height"` par `PaieReportHtmlBuilder`) — 36 pt minimum (chantier, équipe), 50 pt (global).
+- **Titres** : `hauteurTitreChapitre`/`hauteurTitreEquipe` ajoutent un interligne par ligne en plus.
+- **Graphiques** : le libellé d'une ligne passe sur plusieurs lignes dans la colonne (`lignesLibelle`), sa ligne est
+  plus haute (`hauteurMinimaleLigne`, 20 pt minimum) et la répartition sur plusieurs pages de « Répartition par
+  chantier » tient compte de ces hauteurs (`repartirParPages`). Le graphique reçoit `BlocGraphique.hauteurMax`,
+  réduite de ce que le titre ou les cartes KPI au-dessus prennent en plus.
+- **Bandeau** (40 pt) : le bloc « niveau » (436 pt de large) remonte quand son texte occupe 2 ou 3 lignes et passe en
+  corps 7 au-delà (classes `lignes-N`). Le pied de page tient 2 lignes.
+
+Les interlignes (`line-height`) sont fixés dans rapport.css et recopiés dans les constantes `INTERLIGNE_*` /
+`KPI_*` de `RapportPageModelBuilder` : les modifier d'un côté impose de les modifier de l'autre. Couvert par
+`RapportPageModelBuilderTest` (cellule trop longue, récap trop long, cartes KPI), `RapportChartSvgBuilderTest`
+(libellé sur plusieurs lignes) et `PaieReportHtmlPdfServiceTest`.
 
 ### Cartes KPI de section et tableau récap
 
@@ -642,9 +682,9 @@ En-tête de CHAQUE section, quelle que soit la section (équipe détaillée ou "
 « Indicateurs clés », puis 4 cartes KPI — Effectif, STC/sorties, Masse (`EquipeBiVue.masse`, part du chantier), **Masse mois
 précédent** (`EquipeBiVue.montantMoisPrecedent`, libellé gardé et valeur vide si aucune donnée, même
 règle que « Null-handling ») — même style que les cartes de « I — Vue d'ensemble » et de chaque
-chantier. Ces 2 derniers indicateurs sont des cartes à hauteur FIXE dans l'en-tête plutôt que des
-lignes au bas du tableau (héritage d'une décision JasperReports du 2026-09-29 qui reste valide ici :
-un indicateur à hauteur fixe ne peut structurellement jamais se retrouver orphelin en haut de page).
+chantier. Ces 2 derniers indicateurs sont des cartes dans l'en-tête plutôt que des lignes au bas du
+tableau (héritage d'une décision JasperReports du 2026-09-29 qui reste valide ici : un indicateur dans l'en-tête,
+de hauteur connue avant la pagination, ne peut structurellement jamais se retrouver orphelin en haut de page).
 
 Collé directement au bas de CHAQUE tableau employé, quand il tient (voir « Pagination : contrôle
 100 % Java » ci-dessus) :
@@ -687,7 +727,7 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
   les 802 pt de largeur utile de la page. Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs
   `width`/`height` du SVG et dimensionne le dessin d'après son `viewBox`, en px (1 px = 0,75 pt) : sans cet
   agrandissement, le graphique n'occupait que les trois quarts de la largeur (corrigé le 2026-10-03, test de
-  non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus long libellé
+  non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus large des libellés, déjà passés à la ligne
   (48 à 200 pt), les 4 colonnes de valeurs prennent 292 pt à droite (`LARGEUR_COLONNES`) et la barre la plus
   longue de chaque série occupe tout l'espace restant entre les deux. La hauteur totale (en-tête des colonnes,
   lignes, légende) est plafonnée à 361 pt (`HAUTEUR_TOTALE_CHART`) pour tenir sous le bandeau, le titre de
@@ -815,6 +855,7 @@ de temps de génération par rapport à l'ancien double remplissage.
 | `RapportPageModelBuilder` | Pagination pure Java (voir « Pagination : contrôle 100 % Java ») — testée isolément (`RapportPageModelBuilderTest`), aucun rendu |
 | `PaieReportHtmlBuilder` | Construction du DOM (jsoup pur) à partir des `PageModel` déjà résolus |
 | `RapportChartSvgBuilder` | Graphiques en SVG (voir « Visualisations ») |
+| `RapportMesureTexte` | Découpe d'un texte en lignes pour une largeur donnée — prévoit la hauteur des cellules qui passent à la ligne (voir « Retour à la ligne des cellules ») |
 | `RapportRessourcesStatiques` | Chargement unique des polices/CSS/logo |
 | `PaieReportHtmlPdfService` | Orchestration + rendu PDF final (un seul appel openhtmltopdf) — testée de bout en bout par `PaieReportHtmlPdfServiceTest`, y compris un test de non-régression dédié à l'échappement (charge hostile dans une observation) |
 | `PaieExportWizardComponent` (frontend) | Assistant d'export UNIQUE en étapes, PDF ou Excel, une seule sélection d'équipes pour les deux formats |

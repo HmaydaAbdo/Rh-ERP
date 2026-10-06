@@ -123,7 +123,8 @@ class PaieReportHtmlPdfServiceTest {
         // échappée (jsoup Element.text(...)) puis simplement imprimée telle quelle, jamais
         // interprétée comme balise par le parseur XML strict d'openhtmltopdf (ce qui, avec l'ancien
         // pipeline non échappé, cassait entièrement la génération — SAXParseException).
-        assertThat(texte).contains(chargeHostile);
+        // (la cellule passe à la ligne : on compare sans les retours à la ligne insérés par le renvoi au mot)
+        assertThat(texte.replaceAll("\\s+", "")).contains(chargeHostile.replaceAll("\\s+", ""));
     }
 
     private Paie paie(String nomPrenom, String cin, String fonctionLibelle, String chantierCode,

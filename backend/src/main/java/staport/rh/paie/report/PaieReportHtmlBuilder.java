@@ -46,6 +46,9 @@ final class PaieReportHtmlBuilder {
         this.chartSvgBuilder = chartSvgBuilder;
     }
 
+    /** Largeur (pt) du bloc « niveau » du bandeau, voir rapport.css {@code .page-header .bloc.bloc-niveau}. */
+    private static final double LARGEUR_NIVEAU_ENTETE = 436;
+
     /** Construit le document complet : page de garde puis une page par {@link PageModel}. */
     Document construireDocument(String moisLibelle, String anneeLibelle, String periodeLibelle, List<PageModel> pages) {
         Document doc = documentVide();
@@ -67,13 +70,13 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocTitreEquipe b) {
             corps.appendElement("div").addClass("titre-equipe").text(b.texte());
         } else if (bloc instanceof PageModel.BlocKpi b) {
-            ajouterCartesKpi(corps, b.niveauClasse(), b.cartes());
+            ajouterCartesKpi(corps, b.niveauClasse(), b.cartes(), b.hauteurCarte());
         } else if (bloc instanceof PageModel.BlocGraphique b) {
-            chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle());
+            chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
             ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {
-            ajouterRecap(corps, b.repartitionFonction(), b.materiel(), b.titreMateriel());
+            ajouterRecap(corps, b.repartitionFonction(), b.materiel(), b.titreMateriel(), b.suite());
         } else {
             throw new IllegalStateException("Type de bloc de page non géré : " + bloc.getClass());
         }
@@ -151,9 +154,11 @@ final class PaieReportHtmlBuilder {
         entete.appendElement("div").addClass("separateur").addClass("s1");
         entete.appendElement("div").addClass("bloc").addClass("b1").text("Ressources Humaines");
         entete.appendElement("div").addClass("separateur").addClass("s2");
-        entete.appendElement("div").addClass("bloc").addClass("b2").text(periodeLibelle);
+        entete.appendElement("div").addClass("bloc").addClass("b2").text("Paie " + periodeLibelle);
         entete.appendElement("div").addClass("separateur").addClass("s3");
-        entete.appendElement("div").addClass("bloc").addClass("bloc-niveau").text(niveauTexte);
+        int lignesNiveau = RapportMesureTexte.lignes(niveauTexte, LARGEUR_NIVEAU_ENTETE, 9, true);
+        entete.appendElement("div").addClass("bloc").addClass("bloc-niveau")
+                .addClass("lignes-" + Math.min(lignesNiveau, 4)).text(niveauTexte);
         entete.appendElement("div").addClass("filet");
     }
 
@@ -165,13 +170,15 @@ final class PaieReportHtmlBuilder {
 
     /** Une rangée de cartes KPI — {@code niveauClasse} pilote la taille/l'écart CSS ("global",
      * "chantier" ou "equipe", voir rapport.css) ; {@code classeValeur} de chaque carte pilote la
-     * taille de police de sa valeur ("compte" ou "montant", voir rapport.css). */
-    private void ajouterCartesKpi(Element pageBody, String niveauClasse, List<CarteKpi> cartes) {
+     * taille de police de sa valeur ("compte" ou "montant", voir rapport.css) ; {@code hauteurCarte} est la hauteur
+     * commune des cartes de la rangée (voir {@link PageModel.BlocKpi}). */
+    private void ajouterCartesKpi(Element pageBody, String niveauClasse, List<CarteKpi> cartes, double hauteurCarte) {
         pageBody.appendElement("div").addClass("titre-indicateurs").text("Indicateurs clés");
         Element ligne = pageBody.appendElement("div").addClass("kpi-row").addClass(niveauClasse);
         for (int i = 0; i < cartes.size(); i++) {
             CarteKpi carte = cartes.get(i);
-            Element carteEl = ligne.appendElement("div").addClass("kpi-carte");
+            Element carteEl = ligne.appendElement("div").addClass("kpi-carte")
+                    .attr("style", "height: " + hauteurCarte + "pt");
             if (i == cartes.size() - 1) {
                 carteEl.addClass("derniere");
             }
@@ -252,14 +259,15 @@ final class PaieReportHtmlBuilder {
 
     /** Pied de section — tableau récap Fonction/Effectif/STC (toujours) + squelette parc matériel
      * (uniquement si {@code titreMateriel} non {@code null}, voir {@code MaterielChantierCatalogue}). */
-    private void ajouterRecap(Element corps, List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel, String titreMateriel) {
+    private void ajouterRecap(Element corps, List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel,
+                              String titreMateriel, boolean suite) {
         Element ligne = corps.appendElement("div").addClass("recap-row");
 
         Element blocFonction = ligne.appendElement("div").addClass("recap-bloc");
         if (titreMateriel == null) {
             blocFonction.addClass("derniere");
         }
-        blocFonction.appendElement("div").addClass("titre-recap").text("Répartition par fonction");
+        blocFonction.appendElement("div").addClass("titre-recap").text(suite ? "Répartition par fonction (suite)" : "Répartition par fonction");
         Element tableFonction = blocFonction.appendElement("table").addClass("recap").addClass("fonction");
         tableFonction.appendElement("col").addClass("libelle");
         tableFonction.appendElement("col").addClass("effectif");
