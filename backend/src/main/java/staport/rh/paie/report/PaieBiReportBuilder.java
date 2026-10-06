@@ -182,16 +182,16 @@ class PaieBiReportBuilder {
                     .forEach(nom -> equipes.add(equipeVue(
                             nom, titreEquipe(nom, libellesEquipes), libellesEquipes.getOrDefault(nom, nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
-                            masseChantier, materiel(code, nom, nombresMateriel), false)));
+                            materiel(code, nom, nombresMateriel), false)));
             List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
             if (!reste.isEmpty()) {
                 List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
-                equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, masseChantier, List.of(), true));
+                equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, List.of(), true));
             }
         } else {
             // Aucune équipe sélectionnée pour ce chantier : une seule section réunissant tous ses
             // employés, sans graphique de répartition par équipe (voir rapport.jrxml, GroupChantier).
-            equipes.add(equipeVue(code, titreChantier, code, lignesChantier, lignesChantierPrecedent, masseChantier, List.of(), true));
+            equipes.add(equipeVue(code, titreChantier, code, lignesChantier, lignesChantierPrecedent, List.of(), true));
         }
 
         return new ChantierBiVue(
@@ -200,7 +200,7 @@ class PaieBiReportBuilder {
                 titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
-                PaieReportNumberFormat.montant(masseChantier.divide(BigDecimal.valueOf(lignesChantier.size()), 2, RoundingMode.HALF_UP)),
+                masseMoyenne(masseChantier, lignesChantier.size()),
                 stc,
                 versRepartitionEquipe(agregatEquipe, libellesEquipes),
                 evolutions.pourChantier(code),
@@ -249,8 +249,15 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
+    /** Masse moyenne par employé, formatée ("-" sans employé). */
+    private String masseMoyenne(BigDecimal masse, int effectif) {
+        return effectif == 0
+                ? "-"
+                : PaieReportNumberFormat.montant(masse.divide(BigDecimal.valueOf(effectif), 2, RoundingMode.HALF_UP));
+    }
+
     private EquipeBiVue equipeVue(String nom, String titre, String libelleAffiche, List<Paie> lignesEquipe,
-                                   List<Paie> lignesEquipePrecedent, BigDecimal masseChantier,
+                                   List<Paie> lignesEquipePrecedent,
                                    List<MaterielLigneVue> materiel, boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
@@ -277,11 +284,10 @@ class PaieBiReportBuilder {
                 nom,
                 titre,
                 libelleAffiche,
-                lignesEquipe.size(),
-                PaieReportNumberFormat.montant(masseEquipe),
-                PaieReportNumberFormat.part(masseEquipe, masseChantier),
+                kpiEffectif(lignesEquipe.size(), lignesEquipePrecedent.size()),
+                kpiMontant(masseEquipe, masseEquipePrecedente),
+                masseMoyenne(masseEquipe, lignesEquipe.size()),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
-                PaieReportNumberFormat.montantOuNull(masseEquipePrecedente),
                 repartitionFonctionSimple(agregatFonctionEquipe),
                 materiel,
                 employes);
@@ -507,8 +513,7 @@ class PaieBiReportBuilder {
                 PaieReportNumberFormat.montant(actuel),
                 PaieReportNumberFormat.montantOuNull(precedent),
                 PaieReportNumberFormat.variationAbsolue(actuel, precedent),
-                PaieReportNumberFormat.variationPourcent(actuel, precedent),
-                PaieReportNumberFormat.tendance(actuel, precedent));
+                PaieReportNumberFormat.variationPourcent(actuel, precedent));
     }
 
     private KpiEffectifVue kpiEffectif(int actuel, int precedent) {

@@ -70,7 +70,7 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocTitreEquipe b) {
             corps.appendElement("div").addClass("titre-equipe").text(b.texte());
         } else if (bloc instanceof PageModel.BlocKpi b) {
-            ajouterCartesKpi(corps, b.niveauClasse(), b.cartes(), b.hauteurCarte());
+            ajouterCartesKpi(corps, b.cartes(), b.hauteurCarte());
         } else if (bloc instanceof PageModel.BlocGraphique b) {
             chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
@@ -172,9 +172,9 @@ final class PaieReportHtmlBuilder {
      * "chantier" ou "equipe", voir rapport.css) ; {@code classeValeur} de chaque carte pilote la
      * taille de police de sa valeur ("compte" ou "montant", voir rapport.css) ; {@code hauteurCarte} est la hauteur
      * commune des cartes de la rangée (voir {@link PageModel.BlocKpi}). */
-    private void ajouterCartesKpi(Element pageBody, String niveauClasse, List<CarteKpi> cartes, double hauteurCarte) {
+    private void ajouterCartesKpi(Element pageBody, List<CarteKpi> cartes, double hauteurCarte) {
         pageBody.appendElement("div").addClass("titre-indicateurs").text("Indicateurs clés");
-        Element ligne = pageBody.appendElement("div").addClass("kpi-row").addClass(niveauClasse);
+        Element ligne = pageBody.appendElement("div").addClass("kpi-row");
         for (int i = 0; i < cartes.size(); i++) {
             CarteKpi carte = cartes.get(i);
             Element carteEl = ligne.appendElement("div").addClass("kpi-carte")
@@ -183,13 +183,8 @@ final class PaieReportHtmlBuilder {
                 carteEl.addClass("derniere");
             }
             carteEl.appendElement("div").addClass("label").text(carte.label());
-            Element valeur = carteEl.appendElement("div").addClass("valeur");
-            if (carte.classeValeur() != null) {
-                valeur.addClass(carte.classeValeur());
-            }
-            valeur.text(carte.valeur());
-            if (carte.detail() != null) {
-                carteEl.appendElement("div").addClass("detail").text(carte.detail());
+            for (String valeur : carte.valeurs()) {
+                carteEl.appendElement("div").addClass("valeur").addClass(carte.classeValeur()).text(valeur);
             }
         }
     }
