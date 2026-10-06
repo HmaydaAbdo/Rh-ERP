@@ -21,11 +21,23 @@
       font-weight: 600;
     }
 
-    // Téléphone : le titre au-dessus, les trois onglets se partagent la largeur
+    // Les actions à droite, au niveau du titre et des onglets, sans toucher au filet qui porte les onglets
+    app-paie-actions {
+      margin-left: auto;
+      align-self: center;
+      padding-bottom: var(--space-xs);
+    }
+
+    // Téléphone : le titre au-dessus, les trois onglets se partagent la largeur, puis les actions
     @include bp.phone {
       flex-direction: column;
       align-items: stretch;
       gap: 0;
+
+      app-paie-actions {
+        margin-left: 0;
+        align-self: stretch;
+      }
     }
   }
 

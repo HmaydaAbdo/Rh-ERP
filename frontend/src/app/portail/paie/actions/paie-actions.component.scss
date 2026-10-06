@@ -1,0 +1,38 @@
+// Fenêtres d'import de la paie : les boutons de l'en-tête sont ceux de `app-page__actions` (voir `_forms.scss`).
+.paie-actions__dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+
+  label {
+    font-weight: 500;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+}
+
+.paie-actions__dialog-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-md);
+}
+
+.paie-actions__import-table-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: var(--space-md);
+}
+
+.paie-actions__import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+  }
+}

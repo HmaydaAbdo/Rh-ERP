@@ -49,6 +49,32 @@
   }
 }
 
+// En-tête d'un écran de liste : les actions à droite du titre, du moins au plus important (l'action principale en dernier) —
+// au niveau des onglets de vue quand l'écran en a (la paie). Le choix des colonnes reste dans la barre du tableau.
+.app-page__actions--liste {
+  justify-content: flex-end;
+
+  // Téléphone : sous le titre, les actions se partagent la largeur, la dernière (principale) en pleine largeur
+  @include bp.phone {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :last-child {
+      grid-column: 1 / -1;
+    }
+
+    .p-splitbutton {
+      display: flex;
+      width: 100%;
+    }
+
+    .p-splitbutton .p-splitbutton-defaultbutton {
+      flex: 1;
+    }
+  }
+}
+
 // ---- Formulaire ----
 .app-form__grid {
   display: grid;

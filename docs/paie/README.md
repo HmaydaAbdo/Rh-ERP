@@ -293,24 +293,26 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
 Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **coque commune**, `PaieVuesComponent`
-(`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **réinitialise les filtres** en changeant de vue) et la
-**barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
+(`vues/`) : le titre, le sélecteur de vue (`PaieVueSwitcherComponent`, qui **réinitialise les filtres** en changeant de vue), les
+**actions** (`PaieActionsComponent`, `actions/`) et la **barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
 (`/paie/new`, `/paie/:id`…) n'en font pas partie.
 
 ### Barre de filtres commune
 
 **Mise en page de l'écran (identique dans les trois vues).** L'en-tête porte le titre **Paie** et, sur la même ligne, les trois
-**onglets de vue** soulignés (Tabulaire, Cartes, Analytique) posés sur un filet ; dessous, la **barre de filtres** ; dessous, le
-contenu de la vue. Dans le tabulaire, une **barre du tableau** porte le total (« 972 bulletins ») à gauche et, à droite, les
-outils du moins au plus important : **Colonnes**, **Exporter**, **Importer** (bouton fractionné dont le menu propose le
-**modèle Excel**, le fichier que l'import attend) et **Nouveau bulletin** (bouton plein).
+**onglets de vue** soulignés (Tabulaire, Cartes, Analytique) posés sur un filet, puis, **à droite, au même niveau**, les trois
+**actions** du moins au plus important : **Exporter**, **Importer** (bouton fractionné dont le menu propose le **modèle Excel**,
+le fichier que l'import attend) et **Nouveau bulletin** (bouton plein) — les mêmes dans les trois vues, chacun avec sa permission
+(`PAIE_EXPORT`, `PAIE_IMPORT`, `PAIE_WRITE`). Dessous, la **barre de filtres** ; dessous, le contenu de la vue. Dans le tabulaire,
+une **barre du tableau** porte le total (« 972 bulletins ») à gauche et l'outil **Colonnes** à droite. Un import réussi (ou
+partiel) **recrée la vue affichée** (`PaieVuesComponent.rafraichirVue`) : elle recharge ses données et les mois de la barre.
 
 `PaieFiltresComponent` (`filtres/`) est **la même barre dans les trois vues, sur une seule ligne et entièrement visible dès
 l'arrivée** — aucun bouton « Filtres » à ouvrir. Contrôles de même hauteur (`--control-height`), posés à plat sur la page : le
 mois (groupe `‹ Août 2026 › ✕` : flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un
 panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), les
 sélecteurs **chantiers, équipes et fonctions** (sélecteur générique multiple, recherche serveur, mode compact : la valeur seule
-quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante. **Sur téléphone**, la barre tient sur deux lignes — le mois (pleine largeur), puis la recherche, « Filtres (n) » et « Effacer » (icône seule) — et le CIN et les trois sélecteurs se déplient sous le bouton « Filtres » (n = nombre de ces filtres actifs) ; les onglets de vue se partagent la largeur et la barre du tableau se range en grille (Colonnes et Exporter côte à côte, Importer et Nouveau bulletin pleine largeur).
+quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante. **Sur téléphone**, la barre tient sur deux lignes — le mois (pleine largeur), puis la recherche, « Filtres (n) » et « Effacer » (icône seule) — et le CIN et les trois sélecteurs se déplient sous le bouton « Filtres » (n = nombre de ces filtres actifs) ; les onglets de vue se partagent la largeur et les actions se rangent en grille sous eux (Exporter et Importer côte à côte, Nouveau bulletin pleine largeur).
 En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, un **fil de
 navigation** s'ajoute sous la barre : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus
 « Remonter ».
