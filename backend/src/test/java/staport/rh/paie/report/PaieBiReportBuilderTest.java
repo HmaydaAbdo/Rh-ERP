@@ -142,7 +142,6 @@ class PaieBiReportBuilderTest {
 
         assertThat(vue.synthese().masse().valeurCourante()).isEqualTo("8 000,00");
         assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000,00");
-        assertThat(vue.synthese().masse().tendance()).isEqualTo(PaieReportNumberFormat.Tendance.HAUSSE);
         assertThat(vue.synthese().effectif().effectifCourant()).isEqualTo(2);
         assertThat(vue.synthese().effectif().effectifPrecedent()).isEqualTo(1);
     }
@@ -262,13 +261,11 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void construireDepuis_neDevraitPasCalculerDePourcentageQuandLeMoisPrecedentEstIndisponible() {
+    void construireDepuis_devraitLaisserLeMoisPrecedentVideQuandIlEstIndisponible() {
         Paie ligne = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "5000");
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(ligne), List.of());
 
-        assertThat(vue.synthese().masse().tendance()).isEqualTo(PaieReportNumberFormat.Tendance.NON_DISPONIBLE);
-        assertThat(vue.synthese().masse().variationPourcent()).isNull();
         assertThat(vue.synthese().masse().valeurPrecedente()).isNull();
         assertThat(vue.chantiers().get(0).equipes().get(0).montantMoisPrecedent()).isNull();
     }

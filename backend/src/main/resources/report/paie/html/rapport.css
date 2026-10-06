@@ -335,10 +335,17 @@ html, body {
     line-height: 12.5pt;
 }
 
-/* Niveau chantier / equipe (4 cartes, 192x36, ecart 8pt) */
-.kpi-row.chantier .kpi-carte,
+/* Niveau chantier (5 cartes, 154x36, ecart 8pt) et equipe (4 cartes, 192x36, ecart 8pt) */
+.kpi-row.chantier .kpi-carte {
+    width: 154pt;
+}
+
 .kpi-row.equipe .kpi-carte {
     width: 192pt;
+}
+
+.kpi-row.chantier .kpi-carte,
+.kpi-row.equipe .kpi-carte {
     height: 36pt;
     margin-right: 8pt;
 }
