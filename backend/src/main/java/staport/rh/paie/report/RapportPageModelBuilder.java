@@ -68,7 +68,8 @@ final class RapportPageModelBuilder {
     /** Cartes KPI (rapport.css {@code .kpi-carte}) : largeur de la carte, marges intérieures + filets (16 + 1),
      * corps/interligne du libellé, de la valeur (selon le niveau et sa classe) et du détail, espaces entre ces
      * lignes et marges haute + basse de la carte. */
-    private static final double KPI_LARGEUR_CARTE = 192;
+    private static final double KPI_LARGEUR_CARTE_EQUIPE = 192;
+    private static final double KPI_LARGEUR_CARTE_CHANTIER = 154;
     private static final double KPI_LARGEUR_CARTE_GLOBALE = 150;
     private static final double KPI_MARGES_HORIZONTALES = 17;
     private static final double KPI_MARGES_VERTICALES = 10;
@@ -177,15 +178,15 @@ final class RapportPageModelBuilder {
             List<EquipeBiVue> equipes = chantier.equipes();
             int premiereEquipeSeule = 0;
             if (!chantier.avecDetailEquipe() && !equipes.isEmpty()) {
-                // Pas de graphique par équipe : la section « reste » suit directement les cartes KPI du chantier,
-                // sur la même page, au lieu de laisser le bas de cette page vide.
-                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, hauteurEnteteChantier(enteteChantier));
+                // Pas de graphique par équipe : la section « reste » est le chantier entier. Elle suit directement les
+                // cartes KPI du chantier, sur la même page, sans répéter son titre ni ses indicateurs.
+                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, hauteurEnteteChantier(enteteChantier), true);
                 premiereEquipeSeule = 1;
             } else {
                 pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
             }
             for (EquipeBiVue equipe : equipes.subList(premiereEquipeSeule, equipes.size())) {
-                ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0);
+                ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0, false);
             }
         }
 
@@ -276,10 +277,11 @@ final class RapportPageModelBuilder {
         String chapitre = chapitreChantier(index, chantier);
         blocs.add(new PageModel.BlocTitreChapitre(chapitre));
         PageModel.BlocKpi kpi = blocKpi("chantier", List.of(
-                new CarteKpi("MASSE SALARIALE", masseLigne(chantier.masse()), "montant"),
+                new CarteKpi("MASSE SALARIALE", chantier.masse().valeurCourante() + " DH", "montant"),
+                new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(chantier.masse().valeurPrecedente()).strip(), "montant"),
                 new CarteKpi("EFFECTIF", String.valueOf(chantier.effectif().effectifCourant()), "compte"),
-                new CarteKpi("COÛT MOYEN / EMPLOYÉ", chantier.masseMoyenneParEmploye() + " DH", "compte"),
-                new CarteKpi("STC / SORTIES", String.valueOf(chantier.stc()), "compte")
+                new CarteKpi("STC / SORTIES", String.valueOf(chantier.stc()), "compte"),
+                new CarteKpi("MASSE MOYENNE / EMPLOYÉ", chantier.masseMoyenneParEmploye() + " DH", "montant")
         ));
         blocs.add(kpi);
         if (chantier.avecDetailEquipe()) {
@@ -324,7 +326,9 @@ final class RapportPageModelBuilder {
      * base du niveau) : le texte d'une carte qui dépasse sa largeur passe à la ligne, il n'est jamais tronqué. */
     PageModel.BlocKpi blocKpi(String niveauClasse, List<CarteKpi> cartes) {
         boolean global = "global".equals(niveauClasse);
-        double largeurTexte = (global ? KPI_LARGEUR_CARTE_GLOBALE : KPI_LARGEUR_CARTE) - KPI_MARGES_HORIZONTALES;
+        double largeurCarte = global ? KPI_LARGEUR_CARTE_GLOBALE
+                : "chantier".equals(niveauClasse) ? KPI_LARGEUR_CARTE_CHANTIER : KPI_LARGEUR_CARTE_EQUIPE;
+        double largeurTexte = largeurCarte - KPI_MARGES_HORIZONTALES;
         double hauteur = global ? KPI_CARTE_HAUTEUR_GLOBALE : KPI_CARTE_HAUTEUR;
         for (CarteKpi carte : cartes) {
             boolean montant = "montant".equals(carte.classeValeur());
@@ -345,7 +349,10 @@ final class RapportPageModelBuilder {
     }
 
     /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du
-     * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete}.
+     * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete}
+     * @param fusionneeAuChantier vrai pour la section « reste » d'un chantier sans détail par équipe : elle couvre tout
+     * le chantier, dont le titre et les cartes KPI sont déjà dans {@code blocsEnTete} — elle ne répète ni son titre ni
+     * ses indicateurs et commence directement par le récap.
      *
      * <p>Les lignes des tableaux n'ont pas une hauteur fixe (un texte trop long passe à la ligne, voir
      * {@link #hauteurLigneEmploye}) : tout est découpé d'après la hauteur cumulée des lignes. Le récap par fonction
@@ -353,7 +360,7 @@ final class RapportPageModelBuilder {
      * remplit la 1re page, les suivantes (« suite ») les pages suivantes. Le tableau « Détails » démarre sous la
      * dernière tranche si assez de lignes y tiennent, sinon sur la page suivante. */
     private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe,
-                                    List<PageModel.Bloc> blocsEnTete, double hauteurEnTete) {
+                                    List<PageModel.Bloc> blocsEnTete, double hauteurEnTete, boolean fusionneeAuChantier) {
         String niveau = niveauTexteEquipe(chantier, equipe);
         List<LigneEmployeVue> employes = equipe.employes();
         int total = employes.size();
@@ -363,8 +370,9 @@ final class RapportPageModelBuilder {
         double utile = PAGE_BODY_HAUTEUR - MARGE_SECURITE;
         double enteteDetails = DETAILS_TITRE_HAUTEUR + TABLEAU_ENTETE_HAUTEUR;
 
-        PageModel.BlocKpi kpiEquipe = cartesKpiEquipe(equipe);
-        double hauteurTetePremierePage = hauteurEnTete + hauteurTitreEquipe(equipe.titre()) + hauteurKpi(kpiEquipe);
+        PageModel.BlocKpi kpiEquipe = fusionneeAuChantier ? null : cartesKpiEquipe(equipe);
+        double hauteurTetePremierePage = hauteurEnTete
+                + (fusionneeAuChantier ? 0 : hauteurTitreEquipe(equipe.titre()) + hauteurKpi(kpiEquipe));
         List<List<RepartitionBean>> tranchesRecap = decouperRecap(
                 equipe.repartitionFonction(),
                 utile - hauteurTetePremierePage - RECAP_BASE_HAUTEUR,
@@ -375,8 +383,10 @@ final class RapportPageModelBuilder {
             List<PageModel.Bloc> blocs = new ArrayList<>();
             if (premiere) {
                 blocs.addAll(blocsEnTete);
-                blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
-                blocs.add(kpiEquipe);
+                if (!fusionneeAuChantier) {
+                    blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
+                    blocs.add(kpiEquipe);
+                }
             }
             List<RepartitionBean> tranche = tranchesRecap.get(i);
             List<MaterielLigneVue> materiel = premiere ? equipe.materiel() : List.of();
@@ -512,31 +522,5 @@ final class RapportPageModelBuilder {
 
     private String chapitreChantier(int index, ChantierBiVue chantier) {
         return PaieReportNumberFormat.romain(CHAPITRES_FIXES + index + 1) + " — " + chantier.titre();
-    }
-
-    /** {@code null} (aucune comparaison) quand la tendance est NON_DISPONIBLE — jamais affiché dans
-     * ce cas. Reconduit à l'identique depuis l'ancien {@code PaieReportPdfService}. */
-    private String variationLibelle(KpiMontantVue masse) {
-        if (masse.tendance() == PaieReportNumberFormat.Tendance.NON_DISPONIBLE) {
-            return null;
-        }
-        String pourcent = masse.variationPourcent() != null ? " (" + masse.variationPourcent() + ")" : " (% non calculable)";
-        return masse.variationAbsolue() + " DH" + pourcent;
-    }
-
-    /** Ligne compacte masse + comparaison pour la carte KPI "MASSE SALARIALE" d'un chantier —
-     * reconduit à l'identique depuis l'ancien {@code PaieReportPdfService}. */
-    private String masseLigne(KpiMontantVue masse) {
-        String variation = variationLibelle(masse);
-        String courante = insecable(masse.valeurCourante() + " DH");
-        return variation == null
-                ? courante + " (aucune donnée mois précédent)"
-                : courante + " (" + insecable(variation) + ")";
-    }
-
-    /** Remplace les espaces par des espaces insécables : un montant, son « DH » et une variation « (-17,9 %) »
-     * restent d'un seul tenant, le retour à la ligne se fait entre eux (voir {@link RapportMesureTexte}). */
-    private String insecable(String texte) {
-        return texte.replace(' ', ' ');
     }
 }
