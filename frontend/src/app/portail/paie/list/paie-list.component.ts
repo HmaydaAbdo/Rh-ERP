@@ -1,32 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
-import { CalendarModule } from 'primeng/calendar';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
-import { SplitButtonModule } from 'primeng/splitbutton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
-import { Paie, PaieImportResult } from '../models/paie.model';
+import { Paie } from '../models/paie.model';
 import { PaieFiltres, lireFiltres, versCriteres } from '../filtres/paie-filtres';
 import { PaieService } from '../services/paie.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
-
-function toPeriodeString(date: Date | null): string | undefined {
-  if (!date) {
-    return undefined;
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
 
 @Component({
   selector: 'app-paie-list',
@@ -34,15 +21,9 @@ function toPeriodeString(date: Date | null): string | undefined {
   imports: [
     CommonModule,
     ColumnChooserComponent,
-    ReactiveFormsModule,
-    RouterLink,
     TableModule,
     ButtonModule,
-    CalendarModule,
-    ConfirmDialogModule,
-    DialogModule,
-    SplitButtonModule,
-    PaieExportWizardComponent
+    ConfirmDialogModule
   ],
   providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
@@ -73,20 +54,11 @@ export class PaieListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
   canWrite(): boolean {
     return this.authService.hasPermission('PAIE_WRITE');
-  }
-
-  canImport(): boolean {
-    return this.authService.hasPermission('PAIE_IMPORT');
-  }
-
-  canExport(): boolean {
-    return this.authService.hasPermission('PAIE_EXPORT');
   }
 
   canDelete(): boolean {
@@ -103,31 +75,6 @@ export class PaieListComponent implements OnInit {
 
   /** Première ligne de la page affichée, liée au tableau pour qu'un changement de filtres le ramène à la première page. */
   first = 0;
-
-  showImportDialog = false;
-  importing = false;
-  importResult: PaieImportResult | null = null;
-  showImportResultDialog = false;
-  downloadingTemplate = false;
-
-  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
-  readonly menuImport: MenuItem[] = [
-    {
-      label: 'Télécharger le modèle Excel',
-      icon: 'pi pi-file-excel',
-      command: () => {
-        if (!this.downloadingTemplate) {
-          this.onDownloadTemplate();
-        }
-      }
-    }
-  ];
-
-  readonly importForm = this.fb.group({
-    periode: [null as Date | null]
-  });
-
-  showExportDialog = false;
 
   private lastPage = 0;
   private lastSize = 10;
@@ -185,66 +132,6 @@ export class PaieListComponent implements OnInit {
       rejectLabel: 'Annuler',
       accept: () => this.deletePaie(paie)
     });
-  }
-
-  onOpenImportDialog(): void {
-    this.importForm.reset();
-    this.showImportDialog = true;
-  }
-
-  onDownloadTemplate(): void {
-    this.downloadingTemplate = true;
-    this.paieService
-      .telechargerModele()
-      .pipe(finalize(() => (this.downloadingTemplate = false)))
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = 'Modele_Import_Paie.xlsx';
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      });
-  }
-
-  onImportFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    const periode = toPeriodeString(this.importForm.controls.periode.value);
-    input.value = '';
-    if (!file || !periode) {
-      return;
-    }
-
-    this.importing = true;
-    this.paieService
-      .importer(file, periode)
-      .pipe(finalize(() => (this.importing = false)))
-      .subscribe({
-        next: (result) => {
-          this.showImportDialog = false;
-          this.importResult = result;
-          this.showImportResultDialog = true;
-          const fonctionsCreeesDetail = result.fonctionsCreees.length > 0
-            ? ` — ${result.fonctionsCreees.length} fonction(s) créée(s) : ${result.fonctionsCreees.join(', ')}`
-            : '';
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Import terminé',
-            detail: `${result.crees} créé(s) sur ${result.totalLignes} ligne(s)${fonctionsCreeesDetail}`,
-            life: 8000
-          });
-          this.fetchPage();
-        },
-        error: (err: HttpErrorResponse) => {
-          const result = err.error as PaieImportResult | null;
-          if (result && Array.isArray(result.lignesIgnorees)) {
-            this.showImportDialog = false;
-            this.importResult = result;
-            this.showImportResultDialog = true;
-          }
-        }
-      });
   }
 
   private deletePaie(paie: Paie): void {

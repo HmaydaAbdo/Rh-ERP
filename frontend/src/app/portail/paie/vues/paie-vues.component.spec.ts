@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { AUCUN_FILTRE } from '../filtres/paie-filtres';
@@ -45,6 +46,7 @@ describe('PaieVuesComponent', () => {
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        MessageService,
         { provide: PaieService, useValue: service }
       ]
     });
@@ -103,6 +105,31 @@ describe('PaieVuesComponent', () => {
 
     await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
     expect(composant.cartes()).toBeTrue();
+  });
+
+  it("porte les actions dans l'en-tête, avec le titre et les onglets, dans chaque vue", async () => {
+    for (const url of ['/paie', '/paie/cartes', '/paie/analytique']) {
+      await harness.navigateByUrl(url, PaieVuesComponent);
+
+      const entete = (harness.routeNativeElement as HTMLElement).querySelector('.paie-vues__header');
+      expect(entete?.querySelector('app-paie-actions')).withContext(url).not.toBeNull();
+      expect(entete?.querySelector('app-paie-vue-switcher')).withContext(url).not.toBeNull();
+    }
+  });
+
+  it('recrée la vue affichée après un import, et recharge les mois', async () => {
+    const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
+    const appels = service.listerPeriodes.calls.count();
+
+    composant.rafraichirVue();
+    expect(composant.vueAffichee()).toBeFalse();
+    harness.fixture.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('router-outlet')).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    harness.fixture.detectChanges();
+
+    expect(composant.vueAffichee()).toBeTrue();
+    expect(service.listerPeriodes.calls.count()).toBeGreaterThan(appels);
   });
 
   it('réinitialise les filtres quand on change de vue par le sélecteur', async () => {

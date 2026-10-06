@@ -123,9 +123,10 @@ des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni 
 | Classe | Rôle |
 |---|---|
 | `app-page` | La carte de l'écran (fond, rayon, ombre, marge) |
-| `app-page__header` | Le titre de l'écran (`<h1>`) |
+| `app-page__header` | Le titre de l'écran (`<h1>`) et, à droite, ses actions |
+| `app-page__header` + `app-page__actions app-page__actions--liste` | Les actions d'un écran de liste (Importer, Synchroniser, Exporter, puis l'action principale « Nouveau … » en dernier), à droite du titre ; en une grille sur téléphone. Les écrans qui ont des onglets de vue (la paie) les posent au même niveau que les onglets |
 | `app-toolbar` | Les filtres : une ligne de contrôles de même hauteur (`--control-height`), à plat sur la page ; deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » à droite ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
-| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils à droite (`app-table-bar__tools`) |
+| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils à droite (`app-table-bar__tools`) — pour les écrans dont les actions sont dans l'en-tête, seulement le choix des colonnes |
 | `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
 
 Formulaires et consultations (`src/styles/_forms.scss`) :

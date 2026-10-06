@@ -2,6 +2,7 @@
   <div class="paie-vues__header">
     <h1>Paie</h1>
     <app-paie-vue-switcher></app-paie-vue-switcher>
+    <app-paie-actions class="paie-vues__actions" (importe)="rafraichirVue()"></app-paie-actions>
   </div>
 
   <app-paie-filtres
@@ -12,5 +13,7 @@
     (valueChange)="appliquer($event)"
   ></app-paie-filtres>
 
-  <router-outlet (activate)="surActivation()"></router-outlet>
+  @if (vueAffichee()) {
+    <router-outlet (activate)="surActivation()"></router-outlet>
+  }
 </div>
