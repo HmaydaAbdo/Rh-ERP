@@ -34,24 +34,29 @@ final class RapportChartSvgBuilder {
     /** Largeur de la colonne des libellés : estimée d'après le plus long libellé (police 9,5 pt gras), bornée. */
     private static final double LARGEUR_LABEL_MIN = 48;
     private static final double LARGEUR_LABEL_MAX = 200;
-    private static final double LARGEUR_PAR_CARACTERE = 6.2;
-    /** Nombre de caractères que la colonne des libellés peut contenir à sa largeur maximale : un nom de chantier plus long
-     * (jusqu'à 255 caractères) est coupé avec « … » plutôt que de déborder hors de la page. */
-    private static final int LONGUEUR_LIBELLE_MAX = (int) ((LARGEUR_LABEL_MAX - 12) / LARGEUR_PAR_CARACTERE);
+    /** Corps, interligne et marges (6 pt de chaque côté) du libellé d'une ligne : un nom de chantier plus long que la
+     * colonne (jusqu'à 255 caractères) passe sur plusieurs lignes au lieu d'être coupé. */
+    private static final double TAILLE_LIBELLE = 9.5;
+    private static final double INTERLIGNE_LIBELLE = 11;
+    private static final double MARGES_LIBELLE = 12;
+    private static final double MARGE_VERTICALE_RANGEE = 4;
+    /** Hauteur minimale d'une ligne : celle que garantit la pagination de {@link RapportPageModelBuilder} (au plus 16 lignes
+     * par page dans {@value #HAUTEUR_TOTALE_CHART} pt). Une ligne dont le libellé occupe plusieurs lignes est plus haute. */
+    static final double HAUTEUR_RANGEE_MIN = 20;
     /** Largeur des 4 colonnes de valeurs (Masse, Effectif, STC personnes, STC DH), dans l'ordre des séries. */
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
     /** Espace entre la fin des barres et la première colonne de valeurs. */
     private static final double ECART_AVANT_COLONNES = 12;
     /** Hauteur totale maximale du graphique (en-tête des colonnes, lignes et légende comprises), en pt : il doit
      * tenir sous le bandeau, le titre de chapitre et les cartes KPI d'une page paysage A4 (corps de page de 495 pt). */
-    private static final double HAUTEUR_TOTALE_CHART = 361;
+    static final double HAUTEUR_TOTALE_CHART = 361;
     /** Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs {@code width}/{@code height} du SVG et
      * dimensionne le dessin d'après son {@code viewBox}, exprimé en px (1 px = 0,75 pt) : le repère de dessin
      * ci-dessous est en pt, il est donc agrandi de 4/3 pour occuper TOUTE la largeur utile de la page (802 pt) —
      * sans cela, le graphique n'en occupait que les trois quarts. */
     private static final double PX_PAR_PT = 4.0 / 3;
-    private static final double HAUTEUR_ENTETE = 14;
-    private static final double HAUTEUR_LEGENDE = 24;
+    static final double HAUTEUR_ENTETE = 14;
+    static final double HAUTEUR_LEGENDE = 24;
     private static final double HAUTEUR_CATEGORIE_MAX = 40;
     /** Part de la hauteur d'une ligne occupée par ses 4 barres ; le reste est l'espace blanc entre deux lignes. */
     private static final double PART_BARRES_PAR_CATEGORIE = 0.72;
@@ -76,6 +81,11 @@ final class RapportChartSvgBuilder {
     /** {@code echelle} : lignes dont les maxima fixent la longueur des barres (un graphique réparti sur plusieurs
      * pages passe ici l'ensemble des lignes, pour que les barres restent comparables d'une page à l'autre). */
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle) {
+        ajouterGraphique(corps, donnees, echelle, HAUTEUR_TOTALE_CHART);
+    }
+
+    /** {@code hauteurMax} : hauteur totale que le graphique ne doit pas dépasser (voir {@link PageModel.BlocGraphique}). */
+    void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax) {
         Element container = corps.appendElement("div").addClass("chart-container");
         if (donnees.isEmpty()) {
             return;
@@ -93,11 +103,18 @@ final class RapportChartSvgBuilder {
         for (double largeur : LARGEUR_COLONNES) {
             largeurColonnes += largeur;
         }
-        double largeurLabel = largeurColonneLibelles(donnees);
+        List<List<String>> libellesParLigne = donnees.stream().map(ligne -> lignesLibelle(ligne.getLibelle())).toList();
+        double largeurLabel = largeurColonneLibelles(libellesParLigne);
         double largeurPlot = LARGEUR_TOTALE - largeurLabel - ECART_AVANT_COLONNES - largeurColonnes;
-        double hauteurCategorie = Math.min(HAUTEUR_CATEGORIE_MAX,
-                (HAUTEUR_TOTALE_CHART - HAUTEUR_ENTETE - HAUTEUR_LEGENDE) / donnees.size());
-        double hauteurPlot = hauteurCategorie * donnees.size();
+        double hauteurDisponible = hauteurMax - HAUTEUR_ENTETE - HAUTEUR_LEGENDE;
+        double hauteurCategorie = Math.min(HAUTEUR_CATEGORIE_MAX, hauteurDisponible / donnees.size());
+        double[] hauteursLignes = hauteursLignes(libellesParLigne, hauteurCategorie);
+        if (somme(hauteursLignes) > hauteurDisponible) {
+            // Libellés sur plusieurs lignes : on retombe sur la hauteur minimale, que la pagination garantit
+            hauteurCategorie = HAUTEUR_RANGEE_MIN;
+            hauteursLignes = hauteursLignes(libellesParLigne, hauteurCategorie);
+        }
+        double hauteurPlot = somme(hauteursLignes);
         double hauteurSvg = HAUTEUR_ENTETE + hauteurPlot + HAUTEUR_LEGENDE;
 
         Element svg = container.appendElement("svg")
@@ -124,11 +141,15 @@ final class RapportChartSvgBuilder {
                 .attr("x2", format(largeurLabel)).attr("y2", format(HAUTEUR_ENTETE + hauteurPlot))
                 .attr("stroke", "#9CA3AF").attr("stroke-width", "0.6");
 
+        double yLigne = HAUTEUR_ENTETE;
         for (int i = 0; i < donnees.size(); i++) {
             RepartitionBean ligne = donnees.get(i);
-            double yLigne = HAUTEUR_ENTETE + i * hauteurCategorie;
-            double yCentre = yLigne + hauteurCategorie / 2;
-            double yGroupe = yLigne + (hauteurCategorie - groupeHauteur) / 2;
+            double hauteurLigne = hauteursLignes[i];
+            if (i > 0) {
+                yLigne += hauteursLignes[i - 1];
+            }
+            double yCentre = yLigne + hauteurLigne / 2;
+            double yGroupe = yLigne + (hauteurLigne - groupeHauteur) / 2;
 
             if (i > 0) {
                 dessin.appendElement("line")
@@ -137,14 +158,17 @@ final class RapportChartSvgBuilder {
                         .attr("stroke", "#E5E7EB").attr("stroke-width", "0.5");
             }
 
-            dessin.appendElement("text")
-                    .attr("x", format(largeurLabel - 6))
-                    .attr("y", format(yCentre))
-                    .attr("text-anchor", "end")
-                    .attr("dominant-baseline", "middle")
-                    .attr("font-size", "9.5")
-                    .attr("font-weight", "bold")
-                    .text(libelleAffiche(ligne.getLibelle()));
+            List<String> lignesLibelle = libellesParLigne.get(i);
+            for (int k = 0; k < lignesLibelle.size(); k++) {
+                dessin.appendElement("text")
+                        .attr("x", format(largeurLabel - MARGES_LIBELLE / 2))
+                        .attr("y", format(yCentre + (k - (lignesLibelle.size() - 1) / 2.0) * INTERLIGNE_LIBELLE))
+                        .attr("text-anchor", "end")
+                        .attr("dominant-baseline", "middle")
+                        .attr("font-size", format(TAILLE_LIBELLE))
+                        .attr("font-weight", "bold")
+                        .text(lignesLibelle.get(k));
+            }
 
             double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(), valeurMontant(ligne.getStcMontant())};
             String[] libelles = {
@@ -201,18 +225,39 @@ final class RapportChartSvgBuilder {
         }
     }
 
-    /** Le libellé tel qu'il est écrit : jamais {@code null}, coupé à {@link #LONGUEUR_LIBELLE_MAX} caractères et terminé
-     * par « … » s'il est plus long. */
-    static String libelleAffiche(String libelle) {
-        if (libelle == null) {
-            return "";
-        }
-        return libelle.length() <= LONGUEUR_LIBELLE_MAX ? libelle : libelle.substring(0, LONGUEUR_LIBELLE_MAX - 1).stripTrailing() + "…";
+    /** Les lignes du libellé une fois passé à la ligne dans la colonne des libellés, à sa largeur maximale : une colonne
+     * plus étroite (tous les libellés tiennent alors sur une ligne) donne le même découpage. Jamais vide. */
+    static List<String> lignesLibelle(String libelle) {
+        return RapportMesureTexte.decouper(libelle, LARGEUR_LABEL_MAX - MARGES_LIBELLE, TAILLE_LIBELLE, true);
     }
 
-    private double largeurColonneLibelles(List<RepartitionBean> donnees) {
-        int plusLong = donnees.stream().mapToInt(ligne -> libelleAffiche(ligne.getLibelle()).length()).max().orElse(0);
-        return Math.max(LARGEUR_LABEL_MIN, Math.min(LARGEUR_LABEL_MAX, plusLong * LARGEUR_PAR_CARACTERE + 12));
+    /** Hauteur minimale de la ligne d'un graphique pour ce libellé (utilisée par la pagination de
+     * {@link RapportPageModelBuilder}). */
+    static double hauteurMinimaleLigne(String libelle) {
+        return hauteurLigne(lignesLibelle(libelle).size(), HAUTEUR_RANGEE_MIN);
+    }
+
+    private static double hauteurLigne(int lignesLibelle, double hauteurBase) {
+        return Math.max(hauteurBase, lignesLibelle * INTERLIGNE_LIBELLE + MARGE_VERTICALE_RANGEE);
+    }
+
+    private double[] hauteursLignes(List<List<String>> libellesParLigne, double hauteurBase) {
+        return libellesParLigne.stream().mapToDouble(lignes -> hauteurLigne(lignes.size(), hauteurBase)).toArray();
+    }
+
+    private double somme(double[] valeurs) {
+        double total = 0;
+        for (double valeur : valeurs) {
+            total += valeur;
+        }
+        return total;
+    }
+
+    /** Largeur de la colonne des libellés : celle du plus large des libellés déjà découpés, bornée. */
+    private double largeurColonneLibelles(List<List<String>> libellesParLigne) {
+        double plusLarge = libellesParLigne.stream().flatMap(List::stream)
+                .mapToDouble(ligne -> RapportMesureTexte.largeur(ligne, TAILLE_LIBELLE, true)).max().orElse(0);
+        return Math.max(LARGEUR_LABEL_MIN, Math.min(LARGEUR_LABEL_MAX, plusLarge + MARGES_LIBELLE));
     }
 
     private void ajouterLegende(Element svg, double y, double xDepart) {

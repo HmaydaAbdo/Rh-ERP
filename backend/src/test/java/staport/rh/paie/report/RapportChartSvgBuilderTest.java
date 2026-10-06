@@ -85,18 +85,18 @@ class RapportChartSvgBuilderTest {
         assertThat(doc.select("svg")).isEmpty();
     }
 
-    /** Un nom de chantier peut compter jusqu'à 255 caractères : il est coupé avec « … » au lieu de déborder de la page. */
+    /** Un nom de chantier peut compter jusqu'à 255 caractères : il passe sur plusieurs lignes, sans rien perdre. */
     @Test
-    void ajouterGraphique_doitCouperUnLibelleTropLongAvecDesPointsDeSuspension() {
+    void ajouterGraphique_doitFaireDescendreUnLibelleTropLongSurPlusieursLignes() {
         String nomTresLong = "AVENUE MY ABD ELLAH MARRAKECH - TRAVAUX D'ASSAINISSEMENT ET DE VOIRIE DE LA ZONE INDUSTRIELLE";
         Document doc = Document.createShell("");
         Element corps = doc.body().appendElement("div");
 
         builder.ajouterGraphique(corps, List.of(new RepartitionBean(nomTresLong, 74, new BigDecimal("444000.00"), 0, BigDecimal.ZERO)));
 
-        String libelle = doc.select("text").stream().map(Element::text).filter(t -> t.startsWith("AVENUE")).findFirst().orElseThrow();
-        assertThat(libelle).endsWith("…").hasSizeLessThan(nomTresLong.length());
-        assertThat(libelle.length()).isLessThanOrEqualTo(30);
+        List<String> lignes = doc.select("text[font-size=9.5]").stream().map(Element::text).toList();
+        assertThat(lignes).hasSizeGreaterThan(1);
+        assertThat(String.join(" ", lignes)).isEqualTo(nomTresLong).doesNotContain("…");
     }
 
     @Test

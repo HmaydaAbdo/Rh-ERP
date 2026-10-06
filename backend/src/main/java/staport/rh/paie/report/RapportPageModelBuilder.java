@@ -5,6 +5,7 @@ import staport.rh.paie.reporting.MaterielChantierCatalogue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Découpe la vue-modèle du rapport ({@link RapportBiVue}, construite par {@link PaieBiReportBuilder},
@@ -48,17 +49,35 @@ final class RapportPageModelBuilder {
      * padding de {@code .page}) - 40 (bandeau) - 20 (pied) = 495. */
     private static final double PAGE_BODY_HAUTEUR = 495;
 
-    /** Titre de section équipe (12pt + padding + filet). */
+    /** Largeur utile d'une page (rapport.css {@code .page}) et titres : un titre de section équipe (12pt + padding +
+     * filet, 4 pt de marge à gauche) et un titre de chapitre (16pt + padding + filet) font 20 et 24 pt sur une ligne ;
+     * chaque ligne de plus ajoute son interligne (rapport.css {@code line-height}). */
+    private static final double LARGEUR_PAGE = 802;
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
-
-    /** Rangée de cartes KPI équipe (marge 4 + carte 36 + padding/bordures). */
-    private static final double KPI_EQUIPE_HAUTEUR = 52;
-
-    /** Titre de chapitre chantier (16pt + padding + filet) puis rangée de cartes KPI chantier (même hauteur que
-     * celle de l'équipe) : l'espace qu'ils occupent en tête de la page d'un chantier sans détail par équipe, que la
-     * section « reste » doit déduire de sa 1re page (voir {@link #construire}). */
+    private static final double INTERLIGNE_TITRE_EQUIPE = 15;
+    private static final double LARGEUR_TITRE_EQUIPE = LARGEUR_PAGE - 4;
     private static final double TITRE_CHAPITRE_HAUTEUR = 24;
-    private static final double ENTETE_CHANTIER_HAUTEUR = TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR;
+    private static final double INTERLIGNE_TITRE_CHAPITRE = 20;
+
+    /** Rangée de cartes KPI : rubrique « Indicateurs clés » + marge (16), puis des cartes d'au moins 36 pt (chantier,
+     * équipe) ou 50 pt (global) — plus hautes quand un texte passe à la ligne (voir {@link #blocKpi}). */
+    private static final double KPI_TITRE_HAUTEUR = 16;
+    private static final double KPI_CARTE_HAUTEUR = 36;
+    private static final double KPI_CARTE_HAUTEUR_GLOBALE = 50;
+
+    /** Cartes KPI (rapport.css {@code .kpi-carte}) : largeur de la carte, marges intérieures + filets (16 + 1),
+     * corps/interligne du libellé, de la valeur (selon le niveau et sa classe) et du détail, espaces entre ces
+     * lignes et marges haute + basse de la carte. */
+    private static final double KPI_LARGEUR_CARTE = 192;
+    private static final double KPI_LARGEUR_CARTE_GLOBALE = 150;
+    private static final double KPI_MARGES_HORIZONTALES = 17;
+    private static final double KPI_MARGES_VERTICALES = 10;
+    private static final double KPI_CORPS_LIBELLE = 7.5;
+    private static final double KPI_INTERLIGNE_LIBELLE = 8.5;
+    private static final double KPI_ESPACE_VALEUR = 4;
+    private static final double KPI_CORPS_DETAIL = 6.5;
+    private static final double KPI_INTERLIGNE_DETAIL = 7.5;
+    private static final double KPI_ESPACE_DETAIL = 2;
 
     /** Titre « Détails » (marge 8 + 12pt). */
     private static final double DETAILS_TITRE_HAUTEUR = 24;
@@ -69,8 +88,56 @@ final class RapportPageModelBuilder {
     /** Si moins de lignes que ça tiennent sous le récap, « Détails » démarre sur la page suivante. */
     private static final int MIN_LIGNES_PREMIERE_PAGE = 3;
 
-    /** Hauteur d'une ligne du tableau employé (voir {@code table.employes td/th} dans rapport.css). */
+    /** Hauteur minimale d'une ligne du tableau employé (voir {@code table.employes td/th} dans rapport.css) : une
+     * cellule dont le texte passe à la ligne agrandit sa ligne (voir {@link #hauteurLigneEmploye}). */
     private static final double LIGNE_HAUTEUR = 16;
+
+    /** Interlignes des cellules du tableau employé et des récaps — à garder synchronisés avec {@code line-height}
+     * dans rapport.css. {@code BORDURES_LIGNE} : épaisseur des filets (0,5 pt de part et d'autre) ajoutée au texte. */
+    private static final double INTERLIGNE_EMPLOYE = 12;
+    private static final double INTERLIGNE_EMPLOYE_FONCTION = 9.5;
+    private static final double INTERLIGNE_EMPLOYE_EQUIPE = 10.5;
+    private static final double INTERLIGNE_RECAP = 11;
+    private static final double BORDURES_LIGNE = 1;
+
+    /** Marge intérieure horizontale d'une cellule (3 pt de chaque côté pour le tableau employé, 4 pt pour les
+     * récaps) + filets : la largeur disponible pour le texte est celle de la colonne moins ces valeurs. */
+    private static final double MARGES_CELLULE_EMPLOYE = 7;
+    private static final double MARGES_CELLULE_RECAP = 9;
+
+    /** Colonnes du tableau employé : largeur (CSS {@code table.employes col.*}), corps de police, interligne,
+     * graisse et valeur affichée. Même ordre que dans {@code PaieReportHtmlBuilder.ajouterTableauEmployes}. */
+    private record ColonneEmploye(double largeur, double taille, double interligne, boolean gras,
+                                  Function<LigneEmployeVue, String> valeur) {
+    }
+
+    private static List<ColonneEmploye> colonnesEmploye(boolean avecColonneEquipe) {
+        List<ColonneEmploye> colonnes = new ArrayList<>(List.of(
+                new ColonneEmploye(avecColonneEquipe ? 120 : 192, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::nomPrenom),
+                new ColonneEmploye(100, 8, INTERLIGNE_EMPLOYE_FONCTION, false, LigneEmployeVue::fonction),
+                new ColonneEmploye(65, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::cin),
+                new ColonneEmploye(35, 10.5, INTERLIGNE_EMPLOYE, false, l -> String.valueOf(l.joursTravailles())),
+                new ColonneEmploye(40, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::joursRecuperationOuvrable),
+                new ColonneEmploye(40, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::joursRecuperationDimanche),
+                new ColonneEmploye(65, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::salaireMensuel),
+                new ColonneEmploye(55, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::primeRoulageOrdinaire),
+                new ColonneEmploye(55, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::primeRoulageDimanche),
+                new ColonneEmploye(65, 10.5, INTERLIGNE_EMPLOYE, true, LigneEmployeVue::salaireTotal),
+                new ColonneEmploye(90, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::observation)));
+        if (avecColonneEquipe) {
+            colonnes.add(new ColonneEmploye(72, 9, INTERLIGNE_EMPLOYE_EQUIPE, false, LigneEmployeVue::equipeReelle));
+        }
+        return colonnes;
+    }
+
+    private static final List<ColonneEmploye> COLONNES_AVEC_EQUIPE = colonnesEmploye(true);
+    private static final List<ColonneEmploye> COLONNES_SANS_EQUIPE = colonnesEmploye(false);
+
+    /** Colonne « Fonction » du récap (CSS {@code table.recap.fonction col.libelle}) et colonne libellé du parc
+     * matériel ({@code table.recap.materiel col.libelle}), corps 9 pt. */
+    private static final double LARGEUR_LIBELLE_FONCTION = 160;
+    private static final double LARGEUR_LIBELLE_MATERIEL = 180;
+    private static final double CORPS_RECAP = 9;
 
     /** Hauteur fixe du pied de section AVANT la 1re ligne de récap (titre "Répartition par
      * fonction" + en-tête du tableau récap — voir {@code .recap-bloc}/{@code table.recap} dans
@@ -112,7 +179,7 @@ final class RapportPageModelBuilder {
             if (!chantier.avecDetailEquipe() && !equipes.isEmpty()) {
                 // Pas de graphique par équipe : la section « reste » suit directement les cartes KPI du chantier,
                 // sur la même page, au lieu de laisser le bas de cette page vide.
-                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, ENTETE_CHANTIER_HAUTEUR);
+                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, hauteurEnteteChantier(enteteChantier));
                 premiereEquipeSeule = 1;
             } else {
                 pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
@@ -134,63 +201,157 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
-        blocs.add(new PageModel.BlocKpi("global", List.of(
+        PageModel.BlocKpi kpi = blocKpi("global", List.of(
                 new CarteKpi("MASSE", synthese.masse().valeurCourante() + " DH", null,
                         "Mois précédent :" + montantAvecDevise(synthese.masse().valeurPrecedente())),
                 CarteKpi.de("EFFECTIF", String.valueOf(synthese.effectif().effectifCourant())),
                 CarteKpi.de("MASSE MOYENNE / EMPLOYÉ", synthese.masseMoyenneParEmploye() + " DH"),
                 CarteKpi.de("CHANTIERS", String.valueOf(synthese.nombreChantiers())),
                 CarteKpi.de("STC / SORTIES", String.valueOf(synthese.stc()))
-        )));
+        ));
+        blocs.add(kpi);
+        // Le graphique cède la place que des cartes plus hautes que prévu prennent au-dessus de lui
+        double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART
+                - (kpi.hauteurCarte() - KPI_CARTE_HAUTEUR_GLOBALE);
         List<RepartitionBean> tous = synthese.repartitionChantier();
-        List<List<RepartitionBean>> tranches = repartirParPages(tous);
+        List<List<RepartitionBean>> tranches = repartirParPages(tous, hauteurMaxGraphique);
         blocs.add(new PageModel.BlocTitreSection("Répartition par chantier"));
-        blocs.add(new PageModel.BlocGraphique(tranches.get(0), tous));
+        blocs.add(new PageModel.BlocGraphique(tranches.get(0), tous, hauteurMaxGraphique));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
 
         for (List<RepartitionBean> suite : tranches.subList(1, tranches.size())) {
             List<PageModel.Bloc> blocsSuite = new ArrayList<>();
             blocsSuite.add(new PageModel.BlocTitreSection("Répartition par chantier (suite)"));
-            blocsSuite.add(new PageModel.BlocGraphique(suite, tous));
+            blocsSuite.add(new PageModel.BlocGraphique(suite, tous, hauteurMaxGraphique));
             pages.add(new PageEnConstruction("GLOBAL", blocsSuite));
         }
     }
 
-    /** Répartit les chantiers (déjà triés par masse décroissante) en tranches de taille presque égale, d'au plus
-     * {@value #MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE} chacune — jamais une page presque vide à la fin. Toujours au
-     * moins une tranche. */
-    private List<List<RepartitionBean>> repartirParPages(List<RepartitionBean> chantiers) {
-        int nombrePages = Math.max(1, (chantiers.size() + MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE - 1) / MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE);
-        List<List<RepartitionBean>> tranches = new ArrayList<>();
+    /** Répartit les chantiers (déjà triés par masse décroissante) en tranches de taille presque égale — au plus
+     * {@value #MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE} chacune, et dont les lignes (plus hautes quand un nom passe sur
+     * plusieurs lignes) tiennent dans {@code hauteurMax} — jamais une page presque vide à la fin. Toujours au moins
+     * une tranche. */
+    private List<List<RepartitionBean>> repartirParPages(List<RepartitionBean> chantiers, double hauteurMax) {
+        double disponible = hauteurMax - RapportChartSvgBuilder.HAUTEUR_ENTETE - RapportChartSvgBuilder.HAUTEUR_LEGENDE;
+
+        // Tranches pleines, remplies dans l'ordre : donnent le nombre minimal de pages
+        List<List<RepartitionBean>> remplies = new ArrayList<>();
         int debut = 0;
+        do {
+            double cumul = 0;
+            int fin = debut;
+            while (fin < chantiers.size() && fin - debut < MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE) {
+                cumul += RapportChartSvgBuilder.hauteurMinimaleLigne(chantiers.get(fin).getLibelle());
+                if (cumul > disponible && fin > debut) {
+                    break;
+                }
+                fin++;
+            }
+            remplies.add(chantiers.subList(debut, fin));
+            debut = fin;
+        } while (debut < chantiers.size());
+
+        // Même nombre de pages, à parts presque égales, si chacune tient
+        int nombrePages = remplies.size();
+        List<List<RepartitionBean>> egales = new ArrayList<>();
+        debut = 0;
         for (int page = 0; page < nombrePages; page++) {
             int taille = chantiers.size() / nombrePages + (page < chantiers.size() % nombrePages ? 1 : 0);
-            tranches.add(chantiers.subList(debut, debut + taille));
+            List<RepartitionBean> tranche = chantiers.subList(debut, debut + taille);
+            double cumul = tranche.stream()
+                    .mapToDouble(c -> RapportChartSvgBuilder.hauteurMinimaleLigne(c.getLibelle())).sum();
+            if (cumul > disponible && tranche.size() > 1) {
+                return remplies;
+            }
+            egales.add(tranche);
             debut += taille;
         }
-        return tranches;
+        return egales;
     }
 
     /** Titre de chapitre, cartes KPI et — seulement si le détail par équipe est demandé — graphique de répartition
      * par équipe : le contenu de tête d'un chantier. */
     private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int index) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
-        blocs.add(new PageModel.BlocTitreChapitre(chapitreChantier(index, chantier)));
-        blocs.add(new PageModel.BlocKpi("chantier", List.of(
+        String chapitre = chapitreChantier(index, chantier);
+        blocs.add(new PageModel.BlocTitreChapitre(chapitre));
+        PageModel.BlocKpi kpi = blocKpi("chantier", List.of(
                 new CarteKpi("MASSE SALARIALE", masseLigne(chantier.masse()), "montant"),
                 new CarteKpi("EFFECTIF", String.valueOf(chantier.effectif().effectifCourant()), "compte"),
                 new CarteKpi("COÛT MOYEN / EMPLOYÉ", chantier.masseMoyenneParEmploye() + " DH", "compte"),
                 new CarteKpi("STC / SORTIES", String.valueOf(chantier.stc()), "compte")
-        )));
+        ));
+        blocs.add(kpi);
         if (chantier.avecDetailEquipe()) {
+            // Le graphique cède la place que le titre ou les cartes prennent en plus au-dessus de lui
+            double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART
+                    - (hauteurTitreChapitre(chapitre) - TITRE_CHAPITRE_HAUTEUR)
+                    - (kpi.hauteurCarte() - KPI_CARTE_HAUTEUR);
             blocs.add(new PageModel.BlocTitreSection("Répartition par équipe"));
-            blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe()));
+            blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe(), hauteurMaxGraphique));
         }
         return blocs;
     }
 
+    /** Hauteur des blocs de tête d'un chantier (titre de chapitre + cartes KPI) posés avant la section « reste ». */
+    private double hauteurEnteteChantier(List<PageModel.Bloc> blocs) {
+        double hauteur = 0;
+        for (PageModel.Bloc bloc : blocs) {
+            if (bloc instanceof PageModel.BlocTitreChapitre titre) {
+                hauteur += hauteurTitreChapitre(titre.texte());
+            } else if (bloc instanceof PageModel.BlocKpi kpi) {
+                hauteur += hauteurKpi(kpi);
+            }
+        }
+        return hauteur;
+    }
+
+    private double hauteurTitreChapitre(String texte) {
+        return TITRE_CHAPITRE_HAUTEUR
+                + (RapportMesureTexte.lignes(texte, LARGEUR_PAGE, 16, true) - 1) * INTERLIGNE_TITRE_CHAPITRE;
+    }
+
+    private double hauteurTitreEquipe(String texte) {
+        return EQUIPE_TITRE_HAUTEUR
+                + (RapportMesureTexte.lignes(texte, LARGEUR_TITRE_EQUIPE, 12, true) - 1) * INTERLIGNE_TITRE_EQUIPE;
+    }
+
+    private double hauteurKpi(PageModel.BlocKpi kpi) {
+        return KPI_TITRE_HAUTEUR + kpi.hauteurCarte();
+    }
+
+    /** Rangée de cartes KPI dont la hauteur commune est celle de la carte la plus haute (au moins la hauteur de
+     * base du niveau) : le texte d'une carte qui dépasse sa largeur passe à la ligne, il n'est jamais tronqué. */
+    PageModel.BlocKpi blocKpi(String niveauClasse, List<CarteKpi> cartes) {
+        boolean global = "global".equals(niveauClasse);
+        double largeurTexte = (global ? KPI_LARGEUR_CARTE_GLOBALE : KPI_LARGEUR_CARTE) - KPI_MARGES_HORIZONTALES;
+        double hauteur = global ? KPI_CARTE_HAUTEUR_GLOBALE : KPI_CARTE_HAUTEUR;
+        for (CarteKpi carte : cartes) {
+            boolean montant = "montant".equals(carte.classeValeur());
+            double corpsValeur = global ? 11 : montant ? 10 : 12;
+            double interligneValeur = global ? 12.5 : montant ? 11.5 : 13.5;
+            double besoin = KPI_MARGES_VERTICALES
+                    + KPI_INTERLIGNE_LIBELLE * RapportMesureTexte.lignes(
+                            carte.label().toUpperCase(java.util.Locale.ROOT), largeurTexte, KPI_CORPS_LIBELLE, true)
+                    + KPI_ESPACE_VALEUR
+                    + interligneValeur * RapportMesureTexte.lignes(carte.valeur(), largeurTexte, corpsValeur, true);
+            if (carte.detail() != null) {
+                besoin += KPI_ESPACE_DETAIL + KPI_INTERLIGNE_DETAIL
+                        * RapportMesureTexte.lignes(carte.detail(), largeurTexte, KPI_CORPS_DETAIL, false);
+            }
+            hauteur = Math.max(hauteur, Math.ceil(besoin));
+        }
+        return new PageModel.BlocKpi(niveauClasse, cartes, hauteur);
+    }
+
     /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du
-     * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete} */
+     * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete}.
+     *
+     * <p>Les lignes des tableaux n'ont pas une hauteur fixe (un texte trop long passe à la ligne, voir
+     * {@link #hauteurLigneEmploye}) : tout est découpé d'après la hauteur cumulée des lignes. Le récap par fonction
+     * est coupé en tranches quand il ne tient pas sous les cartes KPI : la 1re tranche (avec le parc matériel)
+     * remplit la 1re page, les suivantes (« suite ») les pages suivantes. Le tableau « Détails » démarre sous la
+     * dernière tranche si assez de lignes y tiennent, sinon sur la page suivante. */
     private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe,
                                     List<PageModel.Bloc> blocsEnTete, double hauteurEnTete) {
         String niveau = niveauTexteEquipe(chantier, equipe);
@@ -199,57 +360,129 @@ final class RapportPageModelBuilder {
         boolean avecColonneEquipe = equipe.nom().equals(chantier.code());
         String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
 
-        int lignesRecapMax = Math.max(equipe.repartitionFonction().size(), equipe.materiel().size());
-        double hauteurRecap = RECAP_BASE_HAUTEUR + RECAP_LIGNE_HAUTEUR * lignesRecapMax;
-
         double utile = PAGE_BODY_HAUTEUR - MARGE_SECURITE;
         double enteteDetails = DETAILS_TITRE_HAUTEUR + TABLEAU_ENTETE_HAUTEUR;
 
-        // Place restante sur la 1re page, une fois titre + KPI + récap posés
-        double resteApresRecap = utile - hauteurEnTete - EQUIPE_TITRE_HAUTEUR - KPI_EQUIPE_HAUTEUR - hauteurRecap;
-        int capPremiere = (int) ((resteApresRecap - enteteDetails) / LIGNE_HAUTEUR);
-        boolean detailsSurPremierePage = capPremiere >= MIN_LIGNES_PREMIERE_PAGE;
+        PageModel.BlocKpi kpiEquipe = cartesKpiEquipe(equipe);
+        double hauteurTetePremierePage = hauteurEnTete + hauteurTitreEquipe(equipe.titre()) + hauteurKpi(kpiEquipe);
+        List<List<RepartitionBean>> tranchesRecap = decouperRecap(
+                equipe.repartitionFonction(),
+                utile - hauteurTetePremierePage - RECAP_BASE_HAUTEUR,
+                utile - RECAP_BASE_HAUTEUR);
 
-        int capDetailsSeul = (int) ((utile - enteteDetails) / LIGNE_HAUTEUR);   // page qui démarre « Détails »
-        int capContinuation = (int) (utile / LIGNE_HAUTEUR);                     // pages suivantes (sans en-tête)
-
-        int position = 0;
-        boolean premierePage = true;
-        boolean detailsAFaire = true;
-
-        while (true) {
+        for (int i = 0; i < tranchesRecap.size(); i++) {
+            boolean premiere = i == 0;
             List<PageModel.Bloc> blocs = new ArrayList<>();
-            int capacite;
-            if (premierePage) {
+            if (premiere) {
                 blocs.addAll(blocsEnTete);
                 blocs.add(new PageModel.BlocTitreEquipe(equipe.titre()));
-                blocs.add(cartesKpiEquipe(equipe));
-                blocs.add(new PageModel.BlocRecap(equipe.repartitionFonction(), equipe.materiel(), titreMateriel));
-                capacite = detailsSurPremierePage ? capPremiere : 0;
-            } else {
-                capacite = detailsAFaire ? capDetailsSeul : capContinuation;
+                blocs.add(kpiEquipe);
+            }
+            List<RepartitionBean> tranche = tranchesRecap.get(i);
+            List<MaterielLigneVue> materiel = premiere ? equipe.materiel() : List.of();
+            blocs.add(new PageModel.BlocRecap(tranche, materiel, premiere ? titreMateriel : null, !premiere));
+
+            if (i < tranchesRecap.size() - 1) {
+                pages.add(new PageEnConstruction(niveau, blocs));
+                continue;
             }
 
-            if (capacite > 0 && position < total) {
+            // Dernière page du récap : « Détails » la suit si assez de lignes y tiennent
+            double utilise = (premiere ? hauteurTetePremierePage : 0) + hauteurRecap(tranche, materiel);
+            int position = lignesQuiTiennent(employes, 0, utile - utilise - enteteDetails, avecColonneEquipe);
+            if (position < Math.min(MIN_LIGNES_PREMIERE_PAGE, total)) {
+                position = 0;
+            }
+            if (position > 0) {
+                blocs.add(new PageModel.BlocTitreSection("Détails"));
+                blocs.add(new PageModel.BlocTableauEmployes(employes.subList(0, position), true, avecColonneEquipe));
+            }
+            pages.add(new PageEnConstruction(niveau, blocs));
+
+            boolean detailsAFaire = position == 0;
+            while (position < total) {
+                List<PageModel.Bloc> blocsSuite = new ArrayList<>();
+                double disponible = detailsAFaire ? utile - enteteDetails : utile;   // « Détails » ouvre la page, ou suite
                 if (detailsAFaire) {
-                    blocs.add(new PageModel.BlocTitreSection("Détails"));
+                    blocsSuite.add(new PageModel.BlocTitreSection("Détails"));
                 }
-                int fin = Math.min(position + capacite, total);
-                blocs.add(new PageModel.BlocTableauEmployes(employes.subList(position, fin), detailsAFaire, avecColonneEquipe));
+                int fin = position + Math.max(1, lignesQuiTiennent(employes, position, disponible, avecColonneEquipe));
+                blocsSuite.add(new PageModel.BlocTableauEmployes(employes.subList(position, fin), detailsAFaire, avecColonneEquipe));
                 position = fin;
                 detailsAFaire = false;
-            }
-
-            pages.add(new PageEnConstruction(niveau, blocs));
-            premierePage = false;
-            if (position >= total) {
-                break;
+                pages.add(new PageEnConstruction(niveau, blocsSuite));
             }
         }
     }
 
+    /** Nombre de lignes employé, à partir de {@code debut}, qui tiennent dans {@code hauteurDisponible} (0 si la
+     * 1re ne tient pas). */
+    private int lignesQuiTiennent(List<LigneEmployeVue> employes, int debut, double hauteurDisponible,
+                                  boolean avecColonneEquipe) {
+        double cumul = 0;
+        int nombre = 0;
+        for (int i = debut; i < employes.size(); i++) {
+            cumul += hauteurLigneEmploye(employes.get(i), avecColonneEquipe);
+            if (cumul > hauteurDisponible) {
+                break;
+            }
+            nombre++;
+        }
+        return nombre;
+    }
+
+    /** Hauteur d'une ligne du tableau employé : celle de sa cellule la plus haute (au moins {@value #LIGNE_HAUTEUR}). */
+    private double hauteurLigneEmploye(LigneEmployeVue ligne, boolean avecColonneEquipe) {
+        double hauteur = LIGNE_HAUTEUR;
+        for (ColonneEmploye colonne : avecColonneEquipe ? COLONNES_AVEC_EQUIPE : COLONNES_SANS_EQUIPE) {
+            int lignes = RapportMesureTexte.lignes(colonne.valeur().apply(ligne),
+                    colonne.largeur() - MARGES_CELLULE_EMPLOYE, colonne.taille(), colonne.gras());
+            hauteur = Math.max(hauteur, lignes * colonne.interligne() + BORDURES_LIGNE);
+        }
+        return hauteur;
+    }
+
+    /** Hauteur d'une ligne de récap (fonction ou parc matériel) d'après son libellé. */
+    private double hauteurLigneRecap(String libelle, double largeurColonne) {
+        int lignes = RapportMesureTexte.lignes(libelle, largeurColonne - MARGES_CELLULE_RECAP, CORPS_RECAP, false);
+        return Math.max(RECAP_LIGNE_HAUTEUR, lignes * INTERLIGNE_RECAP + BORDURES_LIGNE);
+    }
+
+    /** Hauteur du bloc récap : titre + en-tête, puis le plus haut des deux tableaux côte à côte. */
+    private double hauteurRecap(List<RepartitionBean> fonctions, List<MaterielLigneVue> materiel) {
+        double hauteurFonctions = fonctions.stream()
+                .mapToDouble(f -> hauteurLigneRecap(f.getLibelle(), LARGEUR_LIBELLE_FONCTION)).sum();
+        double hauteurMateriel = materiel.stream()
+                .mapToDouble(m -> hauteurLigneRecap(m.getLibelle(), LARGEUR_LIBELLE_MATERIEL)).sum();
+        return RECAP_BASE_HAUTEUR + Math.max(hauteurFonctions, hauteurMateriel);
+    }
+
+    /** Découpe le récap par fonction : la 1re tranche tient sous les cartes KPI ({@code hauteurPremiere}), les
+     * suivantes remplissent une page chacune ({@code hauteurSuite}) ; au moins une ligne par tranche. Toujours au
+     * moins une tranche (éventuellement vide : le tableau garde alors son en-tête). */
+    private List<List<RepartitionBean>> decouperRecap(List<RepartitionBean> lignes, double hauteurPremiere, double hauteurSuite) {
+        List<List<RepartitionBean>> tranches = new ArrayList<>();
+        int debut = 0;
+        double disponible = hauteurPremiere;
+        do {
+            double cumul = 0;
+            int fin = debut;
+            while (fin < lignes.size()) {
+                cumul += hauteurLigneRecap(lignes.get(fin).getLibelle(), LARGEUR_LIBELLE_FONCTION);
+                if (cumul > disponible && fin > debut) {
+                    break;
+                }
+                fin++;
+            }
+            tranches.add(lignes.subList(debut, fin));
+            debut = fin;
+            disponible = hauteurSuite;
+        } while (debut < lignes.size());
+        return tranches;
+    }
+
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
-        return new PageModel.BlocKpi("equipe", List.of(
+        return blocKpi("equipe", List.of(
                 new CarteKpi("EFFECTIF", String.valueOf(equipe.effectif()), "compte"),
                 new CarteKpi("STC / SORTIES", String.valueOf(equipe.stc()), "compte"),
                 new CarteKpi("MASSE", equipe.masse() + " DH (" + equipe.partChantierPourcent() + ")", "montant"),
