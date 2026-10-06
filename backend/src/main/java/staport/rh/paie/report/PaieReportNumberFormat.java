@@ -37,9 +37,10 @@ final class PaieReportNumberFormat {
         return ENTIER.format(valeur);
     }
 
-    /** "INTROUVABLE" si aucune paie n'existe sur ce périmètre le mois précédent. */
-    static String montantOuIntrouvable(BigDecimal valeur) {
-        return valeur == null ? "INTROUVABLE" : MONTANT.format(valeur);
+    /** {@code null} si aucune paie n'existe sur ce périmètre le mois précédent (le rapport affiche alors
+     * le libellé sans valeur). */
+    static String montantOuNull(BigDecimal valeur) {
+        return valeur == null ? null : MONTANT.format(valeur);
     }
 
     /** {@code null} si le calcul n'a pas de sens (pas de mois précédent, ou total précédent nul —

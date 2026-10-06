@@ -269,7 +269,8 @@ class PaieBiReportBuilderTest {
 
         assertThat(vue.synthese().masse().tendance()).isEqualTo(PaieReportNumberFormat.Tendance.NON_DISPONIBLE);
         assertThat(vue.synthese().masse().variationPourcent()).isNull();
-        assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("INTROUVABLE");
+        assertThat(vue.synthese().masse().valeurPrecedente()).isNull();
+        assertThat(vue.chantiers().get(0).equipes().get(0).montantMoisPrecedent()).isNull();
     }
 
     @Test
