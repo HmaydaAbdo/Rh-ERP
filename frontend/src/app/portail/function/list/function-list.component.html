@@ -36,6 +36,23 @@
 <div class="function-list app-page">
   <div class="app-page__header">
     <h1>Fonctions</h1>
+    <div class="app-page__actions app-page__actions--liste">
+      @if (canImport()) {
+        <p-splitButton
+          [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
+          label="Importer"
+          icon="pi pi-upload"
+          [model]="menuImport"
+          [outlined]="true"
+          appendTo="body"
+          [disabled]="importing"
+          (onClick)="onTriggerImport()"
+        ></p-splitButton>
+      }
+      @if (canWrite()) {
+        <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
+      }
+    </div>
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
@@ -52,21 +69,6 @@
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-      @if (canImport()) {
-        <p-splitButton
-          [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
-          label="Importer"
-          icon="pi pi-upload"
-          [model]="menuImport"
-          [outlined]="true"
-          appendTo="body"
-          [disabled]="importing"
-          (onClick)="onTriggerImport()"
-        ></p-splitButton>
-      }
-      @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
-      }
     </div>
   </div>
 
