@@ -221,13 +221,15 @@ html, body {
 
 .cover .signature .nom {
     font-size: 13pt;
+    line-height: 15pt;
     font-weight: bold;
     margin-top: 2pt;
+    height: 30pt;              /* 2 lignes : aligne les filets même si un nom long passe à la ligne */
 }
 
 .cover .signature .filet {
     border-bottom: 0.75pt solid #000000;
-    margin-top: 49pt;
+    margin-top: 34pt;
 }
 
 .cover .signature .legende {
