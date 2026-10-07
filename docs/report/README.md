@@ -690,6 +690,12 @@ la rangée, dans cet ordre :
 | Chantiers | nombre de chantiers | oui | — | — |
 | STC / sorties | nombre de lignes STC ou sorties | oui | oui | oui |
 
+**Une masse salariale est toujours arrondie à l'unité** (au plus proche, 0,5 vers le haut, sans décimales : `1 182 402 DH`) —
+cartes « Masse salariale » et « Masse mois précédent » aux trois niveaux, colonnes « Masse » et « STC DH » des graphiques
+(`PaieReportNumberFormat.masse`, demande de direction, 2026-10-07). Les montants individuels du tableau employé et la masse
+moyenne par employé gardent leurs deux décimales ; l'export Excel n'est pas concerné. Les masses arrondies d'un chantier et de
+ses équipes peuvent donc différer d'une unité de leur somme.
+
 Pas de carte « Évolution » ni de pourcentage : retirés à la demande de la direction (2026-10-06). Les valeurs sont
 construites dans `RapportPageModelBuilder.cartesKpi` à partir de `KpiMontantVue`/`KpiEffectifVue`
 (ensemble : `SyntheseGlobaleVue`, chantier : `ChantierBiVue`, équipe : `EquipeBiVue.masse`/`.effectif`). Une section

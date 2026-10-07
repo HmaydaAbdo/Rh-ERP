@@ -9,6 +9,7 @@ import java.util.Locale;
 final class PaieReportNumberFormat {
 
     private static final DecimalFormat MONTANT;
+    private static final DecimalFormat MASSE;
     private static final DecimalFormat ENTIER;
     private static final DecimalFormat QUANTITE;
     private static final DecimalFormat POURCENTAGE;
@@ -17,6 +18,8 @@ final class PaieReportNumberFormat {
         DecimalFormatSymbols symboles = DecimalFormatSymbols.getInstance(Locale.FRANCE);
         symboles.setGroupingSeparator('\u00A0');
         MONTANT = new DecimalFormat("#,##0.00", symboles);
+        MASSE = new DecimalFormat("#,##0", symboles);
+        MASSE.setRoundingMode(RoundingMode.HALF_UP);
         ENTIER = new DecimalFormat("#,##0", symboles);
         QUANTITE = new DecimalFormat("#,##0.##", symboles);
         POURCENTAGE = new DecimalFormat("0.0", symboles);
@@ -37,10 +40,15 @@ final class PaieReportNumberFormat {
         return ENTIER.format(valeur);
     }
 
-    /** {@code null} si aucune paie n'existe sur ce périmètre le mois précédent (le rapport affiche alors
-     * le libellé sans valeur). */
-    static String montantOuNull(BigDecimal valeur) {
-        return valeur == null ? null : MONTANT.format(valeur);
+    /** Une masse salariale, toujours arrondie à l'unité (au plus proche, 0,5 vers le haut), sans décimales. */
+    static String masse(BigDecimal valeur) {
+        return MASSE.format(valeur);
+    }
+
+    /** Comme {@link #masse}, {@code null} si aucune paie n'existe sur ce périmètre le mois précédent (le rapport affiche
+     * alors le libellé sans valeur). */
+    static String masseOuNull(BigDecimal valeur) {
+        return valeur == null ? null : MASSE.format(valeur);
     }
 
     private static final int[] VALEURS_ROMAINES = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
