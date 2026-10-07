@@ -293,7 +293,7 @@ final class RapportChartSvgBuilder {
     }
 
     private String libelleMontant(BigDecimal montant) {
-        return montant == null ? null : PaieReportNumberFormat.montant(montant) + " DH";
+        return montant == null ? null : PaieReportNumberFormat.masse(montant) + " DH";
     }
 
     /** Une valeur nulle ou absente s'affiche « – » : une colonne vide serait ambiguë. */

@@ -140,10 +140,24 @@ class PaieBiReportBuilderTest {
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
                 List.of(c059EquipeA, c059SansEquipe), List.of(precedent));
 
-        assertThat(vue.synthese().masse().valeurCourante()).isEqualTo("8 000,00");
-        assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000,00");
+        assertThat(vue.synthese().masse().valeurCourante()).isEqualTo("8 000");
+        assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000");
         assertThat(vue.synthese().effectif().effectifCourant()).isEqualTo(2);
         assertThat(vue.synthese().effectif().effectifPrecedent()).isEqualTo(1);
+    }
+
+    /** Une masse salariale est toujours arrondie à l'unité (0,5 vers le haut), sans décimales — jamais « 1 001,50 ». */
+    @Test
+    void construireDepuis_devraitArrondirLaMasseSalarialeALUnite() {
+        Paie courant = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "1000.50");
+        Paie precedent = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "999.49");
+
+        RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(courant), List.of(precedent));
+
+        assertThat(vue.synthese().masse().valeurCourante()).isEqualTo("1\u00A0001");
+        assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("999");
+        assertThat(vue.chantiers().get(0).masse().valeurCourante()).isEqualTo("1\u00A0001");
+        assertThat(vue.chantiers().get(0).equipes().get(0).masse().valeurCourante()).isEqualTo("1\u00A0001");
     }
 
     @Test
