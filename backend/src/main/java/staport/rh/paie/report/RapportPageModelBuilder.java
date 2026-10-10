@@ -165,15 +165,24 @@ final class RapportPageModelBuilder {
     private record PageEnConstruction(String niveauTexte, List<PageModel.Bloc> blocs) {
     }
 
+    /** Rapport complet : vue d'ensemble, puis un chapitre par chantier. */
     List<PageModel> construire(RapportBiVue vue) {
+        return construire(vue, false);
+    }
+
+    /** @param sansVueEnsemble vrai : pas de page de vue d'ensemble, les chantiers sont numérotés à partir de I */
+    List<PageModel> construire(RapportBiVue vue, boolean sansVueEnsemble) {
         List<PageEnConstruction> pages = new ArrayList<>();
 
-        ajouterPageGlobale(pages, vue.synthese());
+        if (!sansVueEnsemble) {
+            ajouterPageGlobale(pages, vue.synthese());
+        }
+        int chapitresFixes = sansVueEnsemble ? 0 : CHAPITRES_FIXES;
 
         List<ChantierBiVue> chantiers = vue.chantiers();
         for (int index = 0; index < chantiers.size(); index++) {
             ChantierBiVue chantier = chantiers.get(index);
-            List<PageModel.Bloc> enteteChantier = blocsChantier(chantier, index);
+            List<PageModel.Bloc> enteteChantier = blocsChantier(chantier, chapitresFixes + index);
             List<EquipeBiVue> equipes = chantier.equipes();
             int premiereEquipeSeule = 0;
             if (!chantier.avecDetailEquipe() && !equipes.isEmpty()) {
@@ -265,9 +274,9 @@ final class RapportPageModelBuilder {
 
     /** Titre de chapitre, cartes KPI et — seulement si le détail par équipe est demandé — graphique de répartition
      * par équipe : le contenu de tête d'un chantier. */
-    private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int index) {
+    private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int rang) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
-        String chapitre = chapitreChantier(index, chantier);
+        String chapitre = chapitreChantier(rang, chantier);
         blocs.add(new PageModel.BlocTitreChapitre(chapitre));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
                 chantier.masseMoyenneParEmploye(), chantier.stc(), null));
@@ -514,7 +523,8 @@ final class RapportPageModelBuilder {
         return "CHANTIER : " + chantier.identifiant();
     }
 
-    private String chapitreChantier(int index, ChantierBiVue chantier) {
-        return PaieReportNumberFormat.romain(CHAPITRES_FIXES + index + 1) + " — " + chantier.titre();
+    /** @param rang rang du chapitre à partir de 0, chapitres fixes compris (0 : chapitre I) */
+    private String chapitreChantier(int rang, ChantierBiVue chantier) {
+        return PaieReportNumberFormat.romain(rang + 1) + " — " + chantier.titre();
     }
 }

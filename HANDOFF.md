@@ -34,7 +34,8 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
   graphique Chart.js, catalogue `/catalogue` (développement). Tous les écrans (fonctions, équipes, chantiers, employés, utilisateurs,
   rôles, audit, paie) migrés ; `lazy-select`, `column-chooser`, `month-picker` réécrits.
 - Bundle initial ~555 kB (780 avant), CSS global 25 kB (268 avant). Tailwind 4 câblé (utilitaires seulement, `tailwind.css`).
-- Tests : **178 tests Vitest** dans Chromium réel (sans Zone.js) ; **30 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
+- Assistant d'export de la paie découpé (coque + `PaieExportStore` + un composant par étape) : plus de dépassement de budget de style. Nouvelle étape **Marché** (PDF) : rapport limité à un chantier, case « Sans vue d'ensemble » ; backend : `PaieReportPdfRequestDto.sansVueEnsemble`, chapitres renumérotés à partir de I.
+- Tests : **186 tests Vitest** dans Chromium réel (sans Zone.js) ; **31 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
   téléphone). Axe a fait corriger : repère `<main>`, toast en `div`, séparateur de colonne, contrastes. Bogue corrigé : notification
   « Erreur » affichée à un visiteur sans session (`auth/refresh` désormais silencieux).
 - Chaîne d'approvisionnement : `npm audit` 0 vulnérabilité haute (hors Karma, pair optionnel inutilisé), licences contrôlées
@@ -43,14 +44,13 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
 
 ## Écarts ouverts (voir aussi TODO.md)
 
-1. **Budget de style de l'assistant d'export** (~15,7 ko pour 8 ko) : découpage en composants d'étape à valider (décision d'architecture).
-2. **Tests du kit et des écrans** : le kit n'a que les E2E du catalogue ; Employé, Chantier, Équipe, Utilisateurs, Rôles n'ont pas de tests de
+1. **Tests du kit et des écrans** : le kit n'a que les E2E du catalogue ; Employé, Chantier, Équipe, Utilisateurs, Rôles n'ont pas de tests de
    composants dédiés.
-3. **Formulaires** : Reactive Forms typés conservés (le standard demande les Signal Forms pour les nouveaux formulaires) — migration à décider.
-4. **Backend** : contrôle de conformité par domaine non fait (RBAC par domaine, audit, secrets, logs/métriques, erreurs).
-5. **Production PG17 → PG18** : non exécutée ; à planifier avec sauvegarde, répétition, fenêtre de maintenance, retour arrière.
-6. **Standards** : repinner une version suivante du snapshot Staport quand elle existe ; limite de débit sur `/auth/*` (audit sécurité n° 6).
-7. Dépendances de développement : Karma subsiste comme pair optionnel de `@angular/build` (jamais exécuté, 4 alertes npm exclues par `--omit=optional`).
+2. **Formulaires** : Reactive Forms typés conservés (le standard demande les Signal Forms pour les nouveaux formulaires) — migration à décider.
+3. **Backend** : contrôle de conformité par domaine non fait (RBAC par domaine, audit, secrets, logs/métriques, erreurs).
+4. **Production PG17 → PG18** : non exécutée ; à planifier avec sauvegarde, répétition, fenêtre de maintenance, retour arrière.
+5. **Standards** : repinner une version suivante du snapshot Staport quand elle existe ; limite de débit sur `/auth/*` (audit sécurité n° 6).
+6. Dépendances de développement : Karma subsiste comme pair optionnel de `@angular/build` (jamais exécuté, 4 alertes npm exclues par `--omit=optional`).
 
 ## Commandes de reprise et validation
 

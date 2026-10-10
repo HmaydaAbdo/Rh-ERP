@@ -132,7 +132,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Les chantiers du mois, avec leurs équipes, sur le périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
-| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search`, voir `docs/report/README.md` | 200, 404 |
+| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search` + `sansVueEnsemble` (retire le chapitre « Vue d'ensemble »), voir `docs/report/README.md` | 200, 404 |
 
 `PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
 `fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe` (`id`, `code`, `libelle`, ou `null`),

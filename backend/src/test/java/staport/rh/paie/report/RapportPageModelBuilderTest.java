@@ -246,6 +246,34 @@ class RapportPageModelBuilderTest {
     }
 
     /**
+     * Rapport limité à un marché (demande de direction, 2026-10-10) : sans vue d'ensemble, aucune page « GLOBAL » ; le
+     * premier chantier est le chapitre I (et non II), et le contenu du chantier est inchangé.
+     */
+    @Test
+    void construire_sansVueEnsembleLeRapportCommenceParLePremierChantierNumeroteI() {
+
+        RapportBiVue vue = vueAvecUneEquipe(5, 2, false);
+
+        List<PageModel> complet = builder.construire(vue);
+        List<PageModel> sansEnsemble = builder.construire(vue, true);
+
+        assertThat(sansEnsemble).noneMatch(page -> "GLOBAL".equals(page.niveauTexte()));
+        assertThat(sansEnsemble).hasSize(complet.size() - 1);
+        assertThat(sansEnsemble.get(0).blocs())
+                .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
+                .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
+                .singleElement()
+                .asString().startsWith("I — ");
+        assertThat(complet.get(1).blocs())
+                .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
+                .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
+                .singleElement()
+                .asString().startsWith("II — ");
+        assertThat(sansEnsemble.get(0).numeroPage()).isEqualTo(1);
+        assertThat(sansEnsemble.get(sansEnsemble.size() - 1).totalPages()).isEqualTo(sansEnsemble.size());
+    }
+
+    /**
      * Sans détail par équipe (donc sans graphique « Répartition par équipe »), la section « reste » suit
      * directement les cartes KPI du chantier sur la même page, sans répéter son titre ni ses indicateurs : aucune page
      * ne porte le seul chapitre chantier, et rien ne déborde, quelle que soit la taille de la section.

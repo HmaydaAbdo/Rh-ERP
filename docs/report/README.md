@@ -155,9 +155,11 @@ Frontend (`frontend/src/app/portail/paie/`) :
 
 ```text
 export/
-└── PaieExportWizardComponent    Assistant d'export UNIQUE (bouton "Exporter") en étapes guidées : mois,
-                                  format PDF/Excel, équipes, parc matériel, génération. La même sélection
-                                  d'équipes pour les deux formats (voir « Assistant d'export »).
+├── PaieExportWizardComponent    Assistant d'export UNIQUE (bouton "Exporter") : coque (fenêtre, bandeau d'étapes, pied,
+│                                  écrans de génération). Fournit PaieExportStore.
+├── paie-export.store.ts         État et logique de l'assistant (mois, format, marché, équipes, matériel, génération)
+└── etapes/                      Un composant par étape : periode, format, marche (PDF), equipes, materiel, recap
+                                  (voir « Assistant d'export »). La même sélection d'équipes pour les deux formats.
 
 list/
 └── PaieListComponent            Porte le bouton "Exporter", ouvre le dialog ci-dessus.
@@ -217,9 +219,10 @@ mouvement dans son système.
 |---|---|
 | **1. Mois** | Un seul champ : sélecteur de mois partagé (`app-month-picker`, flèches d'année et 12 tuiles). Les mois **sans paie sont grisés** et non sélectionnables ; le dernier mois disponible est présélectionné. Dès qu'un mois est choisi, une carte annonce son contenu avec des compteurs animés (bulletins, chantiers, masse salariale, STC / sorties). Sans aucune paie : message « Aucune paie enregistrée ». Source : `GET /paie/periodes` (chargée une fois à l'ouverture, donc sans attente) |
 | **2. Format** | Deux cartes : Rapport PDF (synthèse pour la direction) et Classeur Excel (détail ligne par ligne), avec aperçu animé |
-| **3. Équipes** (facultative) | Chantiers du mois triés par masse, avec recherche. **Cliquer sur la ligne d'un chantier déplie ses équipes** (un badge « n / N équipes » signale ceux dont au moins une équipe est cochée ; un chantier sans équipe ne se déplie pas) : **aucune équipe n'est cochée d'office** : l'utilisateur choisit explicitement les équipes (une par une, ou « Toutes » / « Aucune » par chantier). Il n'y a volontairement **pas de sélection globale des chantiers** : tous les chantiers figurent de toute façon dans l'export, déplier un chantier ne sert qu'à choisir ses équipes, chantier par chantier. En Excel, une icône œil barré par équipe la **retire de la feuille du chantier** (elle garde sa propre feuille). Un chantier sans équipe ne peut pas être détaillé. Source : `GET /paie/chantiers` |
-| **4. Matériel** (conditionnelle) | Voir ci-dessous |
-| **5. Export** | Récapitulatif (chaque ligne a un lien « Modifier » qui ramène à son étape) et nom du fichier ; « Générer » lance l'appel, avec une barre d'attente **sans pourcentage** (le backend ne notifie pas son avancement), puis un écran de fin avec « Télécharger à nouveau » et « Nouvel export ». Les erreurs du backend (corps JSON en `Blob`) sont relues et affichées |
+| **3. Marché** (PDF seulement, facultative) | Limite le rapport à **un seul chantier** (marché), choisi parmi ceux du mois (recherche par code ou libellé) ; par défaut « Tous les chantiers » (rapport complet). La case **« Sans vue d'ensemble »** retire le chapitre « I — Vue d'ensemble » : elle est cochée d'office dès qu'un marché est choisi (la vue d'ensemble d'un seul chantier répéterait son propre chapitre) et décochée en revenant à « Tous les chantiers » ; l'utilisateur peut la changer dans les deux cas. Choisir un marché fait oublier les équipes détaillées des autres chantiers ; en Excel l'étape n'existe pas et le choix est ignoré (retrouvé au retour en PDF). Envoie `chantierId` et `sansVueEnsemble` (voir « Rapport sans vue d'ensemble ») |
+| **4. Équipes** (facultative) | Chantiers du mois triés par masse, avec recherche. **Cliquer sur la ligne d'un chantier déplie ses équipes** (un badge « n / N équipes » signale ceux dont au moins une équipe est cochée ; un chantier sans équipe ne se déplie pas) : **aucune équipe n'est cochée d'office** : l'utilisateur choisit explicitement les équipes (une par une, ou « Toutes » / « Aucune » par chantier). Il n'y a volontairement **pas de sélection globale des chantiers** : tous les chantiers figurent de toute façon dans l'export, déplier un chantier ne sert qu'à choisir ses équipes, chantier par chantier. En Excel, une icône œil barré par équipe la **retire de la feuille du chantier** (elle garde sa propre feuille). Un chantier sans équipe ne peut pas être détaillé. En PDF avec un marché choisi, seul ce chantier est proposé. Source : `GET /paie/chantiers` |
+| **5. Matériel** (conditionnelle) | Voir ci-dessous |
+| **6. Export** | Récapitulatif (chaque ligne a un lien « Modifier » qui ramène à son étape) et nom du fichier ; « Générer » lance l'appel, avec une barre d'attente **sans pourcentage** (le backend ne notifie pas son avancement), puis un écran de fin avec « Télécharger à nouveau » et « Nouvel export ». Les erreurs du backend (corps JSON en `Blob`) sont relues et affichées |
 
 ### Étape « Matériel »
 
@@ -245,7 +248,10 @@ Seuls les nombres des tableaux réellement imprimés et non « laissés vides »
 
 `paie-export-wizard.component.spec.ts` (mois présélectionné, refus sans mois valide, chargement des chantiers,
 équipes cochées, apparition de l'étape matériel, contenu des requêtes PDF et Excel, nombres invalides,
-mémorisation), `month-picker.component.spec.ts` (mois grisés, émission `aaaa-MM`, bornes d'année),
+mémorisation ; étape marché : présente en PDF seulement, rapport complet sans marché, marché = `chantierId` + vue d'ensemble retirée
+modifiable, équipes des autres chantiers oubliées, retour à « Tous », marché ignoré en Excel, recherche, changement de mois),
+`RapportPageModelBuilderTest` et `PaieReportHtmlPdfServiceTest` (rapport sans vue d'ensemble : aucune page GLOBAL, premier chantier
+numéroté I, PDF valide plus court), `month-picker.component.spec.ts` (mois grisés, émission `aaaa-MM`, bornes d'année),
 `PaieServiceTest` (routes de lecture), `PaieExportServiceTest` et `PaieBiReportBuilderTest` (nombres du parc
 matériel dans l'Excel et le PDF). Voir `docs/testing.md`.
 
@@ -381,11 +387,18 @@ masse/l'effectif (chantier, équipe) ? et pour chaque chantier, que se passe-t-i
 ### Périmètre et filtres
 
 L'assistant unifié (`PaieExportWizardComponent`, voir « Assistant d'export ») pilote : la
-période et la sélection d'équipes à détailler par chantier (`equipesParChantier`). Les autres
-filtres (nom & prénom, CIN, fonction, chantier) **ne sont pas exposés par ce dialog** : le rapport
-porte toujours sur l'ensemble des chantiers/employés de la période. Le backend
-(`PaieReportPdfRequestDto`) garde ces champs optionnels (même forme que `PaieSearchCriteria`, sans
-pagination) pour un appel API direct.
+période, le **marché** (`chantierId`, facultatif : un seul chantier), `sansVueEnsemble` et la sélection d'équipes à détailler par
+chantier (`equipesParChantier`). Les autres filtres (nom & prénom, CIN, fonction) **ne sont pas exposés par ce dialog** : le
+rapport porte sur l'ensemble des employés du périmètre. Le backend (`PaieReportPdfRequestDto`) garde ces champs optionnels
+(même forme que `PaieSearchCriteria`, sans pagination) pour un appel API direct.
+
+### Rapport sans vue d'ensemble (2026-10-10)
+
+`sansVueEnsemble` (booléen, faux par défaut) retire le chapitre « I — Vue d'ensemble » (indicateurs globaux et répartition par
+chantier) : aucune page de niveau `GLOBAL`, le premier chantier devient le chapitre **I** (au lieu de II), la pagination et le total de
+pages se calculent sans elle. Indépendant de `chantierId` : avec un marché (`chantierId`), les indicateurs portent sur ce seul chantier ;
+sans lui, tous les chantiers sont gardés. La page de garde est inchangée ; le journal d'audit du rapport consigne `sansVueEnsemble` dans
+son périmètre (avec `chantierId`). `RapportPageModelBuilder.construire(vue, sansVueEnsemble)`.
 
 ### Modèle analytique
 

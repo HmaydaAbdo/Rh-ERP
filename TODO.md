@@ -12,12 +12,10 @@
 Le socle `v0.1.1` est épinglé dans `conventions/staport/` ; l'ADR et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
-Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (178) et E2E Playwright + axe (30),
+Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (186) et E2E Playwright + axe (31),
 audit npm sans vulnérabilité haute, licences contrôlées et SBOM en CI. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md).
 Restent à faire :
 
-- **Frontend — budget de style de l'assistant d'export** (`paie-export-wizard.component.scss`, ~15,7 ko pour un budget de 8 ko) :
-  découper l'assistant en composants d'étape (mois, format, équipes, matériel, récapitulatif) ; décision d'architecture à valider ;
 - **Frontend — tests du kit** : `ui/select`, `ui/table`, `ui/dialog`, `ui/menu` et les champs n'ont que les E2E du catalogue ; ajouter des
   tests de composants (états, clavier, valeur du `ControlValueAccessor`) ; ajouter des tests de composants pour les listes et
   formulaires Employé, Chantier, Équipe, Utilisateurs et Rôles (aujourd'hui : E2E de Fonction et Paie seulement) ;
@@ -43,7 +41,7 @@ Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, respon
   Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
 - **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
   (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
-- **Poids du bundle/CSS** : bundle initial ~555 kB (sous le budget de 800 kB) ; seul le style de l'assistant d'export dépasse son budget (voir ci-dessus).
+- **Poids du bundle/CSS** : bundle initial ~555 kB (sous le budget de 800 kB) ; plus aucun dépassement de budget (assistant d'export découpé en étapes).
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
 - **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
   `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.

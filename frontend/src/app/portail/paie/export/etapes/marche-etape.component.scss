@@ -1,0 +1,77 @@
+@use 'breakpoints' as bp;
+@use 'commun' as *;
+
+.export-wizard {
+  &__marches {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    max-height: 17rem;
+    margin-top: var(--space-sm);
+    overflow-y: auto;
+  }
+
+  &__marche {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: border-color var(--duration-fast), background-color var(--duration-fast);
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    &--choisi {
+      border-color: var(--color-primary);
+      background: $accent-doux;
+
+      // Le texte atténué reste lisible sur le fond teinté du choix
+      .export-wizard__meta {
+        color: var(--color-text);
+      }
+    }
+
+    input {
+      flex: none;
+      accent-color: var(--color-primary);
+    }
+
+    > span {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+  }
+
+  &__option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+
+    small {
+      display: block;
+      margin-top: 2px;
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+    }
+
+    input {
+      margin-top: 0.15rem;
+    }
+  }
+}

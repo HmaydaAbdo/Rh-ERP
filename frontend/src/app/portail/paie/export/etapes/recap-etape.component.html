@@ -1,0 +1,16 @@
+<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <p class="export-wizard__consigne">Vérifiez votre choix avant de générer.</p>
+  <div class="export-wizard__recap">
+    <div><stp-icon name="calendar" /><span>Période</span><strong class="export-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · {{ store.resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
+    <div><stp-icon name="file" /><span>Format</span><strong>{{ store.format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="store.allerA('format')">Modifier</button></div>
+      @if (store.format() === 'PDF') {
+        <div><stp-icon name="building" /><span>Marché</span><strong>{{ store.texteMarche() }}</strong><button type="button" (click)="store.allerA('marche')">Modifier</button></div>
+        <div><stp-icon name="layout-grid" /><span>Vue d'ensemble</span><strong>{{ store.texteVueEnsemble() }}</strong><button type="button" (click)="store.allerA('marche')">Modifier</button></div>
+      }
+    <div><stp-icon name="users" /><span>Détail par équipe</span><strong>{{ store.texteDetail() }}</strong><button type="button" (click)="store.allerA('equipes')">Modifier</button></div>
+    @for (t of store.tableauxConcernes(); track t.titre) {
+      <div><stp-icon name="truck" /><span>{{ t.titre }} ({{ t.chantierCode }})</span><strong>{{ store.texteMateriel(t) }}</strong><button type="button" (click)="store.allerA('materiel')">Modifier</button></div>
+    }
+  </div>
+  <p class="export-wizard__fichier"><stp-icon name="download" /> Nom du fichier : <code>{{ store.nomFichier() }}</code></p>
+</section>

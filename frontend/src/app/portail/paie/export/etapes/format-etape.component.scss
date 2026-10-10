@@ -1,0 +1,88 @@
+@use 'breakpoints' as bp;
+@use 'commun' as *;
+
+.export-wizard {
+  // ---- Format ----
+  &__formats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+  }
+
+  &__format {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--duration-base), background var(--duration-base), transform var(--duration-fast);
+    &:hover {
+      border-color: var(--color-primary);
+    }
+    em {
+      font-size: 0.8125rem;
+      font-style: normal;
+      color: var(--color-text-muted);
+    }
+    ul {
+      margin: var(--space-sm) 0 0;
+      padding-left: 1.1rem;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+    &--choisi {
+      border-color: var(--color-primary);
+      outline: 1.5px solid var(--color-primary);
+      background: $accent-doux;
+    }
+  }
+
+  &__apercu {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    height: 3.5rem;
+    margin-bottom: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    span {
+      display: block;
+      height: 6px;
+      border-radius: 2px;
+      background: var(--color-border);
+      transform-origin: left;
+      transition: transform var(--duration-slower) var(--ease-out), background var(--duration-slow);
+    }
+    &--pdf span {
+      transform: scaleX(0.2);
+    }
+    &--excel {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+      span {
+        height: auto;
+        border-radius: 1px;
+      }
+    }
+  }
+
+  &__format--choisi &__apercu--pdf span {
+    background: var(--color-primary);
+    &:nth-child(1) { transform: scaleX(0.92); }
+    &:nth-child(2) { transform: scaleX(0.64); }
+    &:nth-child(3) { transform: scaleX(0.78); }
+    &:nth-child(4) { transform: scaleX(0.4); }
+  }
+
+  &__format--choisi &__apercu--excel span:nth-child(odd) {
+    background: color-mix(in srgb, var(--color-primary) 70%, transparent);
+  }
+}

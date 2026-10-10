@@ -74,6 +74,22 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
     }
 
+    /** Rapport d'un seul marché, sans vue d'ensemble : un PDF valide, plus court que le rapport complet (une page de moins). */
+    @Test
+    void generer_sansVueEnsembleProduitUnPdfValideSansLaPageGlobale() {
+        Paie c059 = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);
+        @SuppressWarnings("unchecked")
+        List<Paie> courant = List.of(c059);
+        when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of(), courant, List.of());
+
+        byte[] complet = service.generer(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE);
+        byte[] sansEnsemble = service.generer(YearMonth.of(2026, 9),
+                new PaieReportPdfRequestDto("2026-09", null, null, null, null, null, null, true));
+
+        assertThat(new String(sansEnsemble, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertThat(sansEnsemble.length).isLessThan(complet.length);
+    }
+
     /** Exerce le chemin le plus à risque du gabarit (chantier avec équipe détaillée sélectionnée,
      * section "reste", tableaux récap Fonction/Effectif/STC et parc matériel C168/CH/OP). */
     @Test

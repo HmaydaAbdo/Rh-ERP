@@ -1,0 +1,93 @@
+<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <p class="export-wizard__consigne">
+    @if (store.format() === 'PDF') {
+      Un chantier détaillé reçoit un graphique par équipe et une section par équipe choisie.
+    } @else {
+      Chaque équipe choisie reçoit sa propre feuille, en plus de la feuille du chantier.
+    }
+  </p>
+  <input
+    type="search"
+    class="export-wizard__recherche"
+    placeholder="Rechercher un chantier"
+    aria-label="Rechercher un chantier"
+    [value]="store.recherche()"
+    (input)="store.rechercher($any($event.target).value)"
+  />
+  @if (store.chantiersEnCours()) {
+    <p class="export-wizard__legende">Chargement des chantiers…</p>
+  }
+  <div class="export-wizard__chantiers">
+    @for (c of store.chantiersFiltres(); track c.code) {
+      <div class="export-wizard__chantier" [class.export-wizard__chantier--actif]="store.estDetaille(c.code)">
+        <button
+          type="button"
+          class="export-wizard__chantier-tete"
+          [attr.aria-expanded]="store.estOuvert(c.code)"
+          [disabled]="c.equipes.length === 0"
+          (click)="store.basculerOuverture(c)"
+        >
+          <span>
+            <span class="export-wizard__code">{{ c.code }}</span>
+            <span class="export-wizard__meta">
+              {{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés ·
+              {{ c.equipes.length > 0 ? c.equipes.length + ' équipes' : 'aucune équipe' }}
+            </span>
+          </span>
+          <span class="export-wizard__chantier-etat">
+            @if (store.estDetaille(c.code)) {
+              <span class="export-wizard__badge">{{ store.equipesChoisies(c.code).length }} / {{ c.equipes.length }} équipes</span>
+            }
+            @if (c.equipes.length > 0) {
+              <stp-icon name="chevron-down" [class.export-wizard__chevron--ouvert]="store.estOuvert(c.code)" />
+            }
+          </span>
+        </button>
+        <div class="export-wizard__deplie" [class.export-wizard__deplie--ouvert]="store.estOuvert(c.code)">
+          <div>
+            <div class="export-wizard__equipes">
+              <div class="export-wizard__equipes-tete">
+                <span>Équipes à détailler</span>
+                <span>
+                  <button type="button" (click)="store.toutesLesEquipes(c, true)">Toutes</button>
+                  <button type="button" (click)="store.toutesLesEquipes(c, false)">Aucune</button>
+                </span>
+              </div>
+              <div class="export-wizard__pastilles">
+                @for (e of c.equipes; track e.code) {
+                  <span class="export-wizard__equipe" [class.export-wizard__equipe--choisie]="store.equipesChoisies(c.code).includes(e.code)">
+                    <button type="button" (click)="store.basculerEquipe(c.code, e.code)" [attr.aria-pressed]="store.equipesChoisies(c.code).includes(e.code)">
+                      {{ e.libelle }}<small>{{ e.effectif }}</small>
+                    </button>
+                    @if (store.format() === 'EXCEL' && store.equipesChoisies(c.code).includes(e.code)) {
+                      <button
+                        type="button"
+                        class="export-wizard__retrait"
+                        [class.export-wizard__retrait--actif]="store.estRetiree(c.code, e.code)"
+                        [attr.aria-pressed]="store.estRetiree(c.code, e.code)"
+                        [attr.aria-label]="'Retirer ' + e.libelle + ' de la feuille du chantier'"
+                        title="Retirer cette équipe de la feuille du chantier"
+                        (click)="store.basculerRetrait(c.code, e.code)"
+                      >
+                        <stp-icon name="eye-off" />
+                      </button>
+                    }
+                  </span>
+                }
+              </div>
+              @if (store.format() === 'EXCEL') {
+                <p class="export-wizard__legende">
+                  L'icône œil barré retire l'équipe de la feuille du chantier : elle garde sa propre feuille.
+                </p>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      @if (!store.chantiersEnCours()) {
+        <p class="export-wizard__legende">Aucun chantier ne correspond à cette recherche.</p>
+      }
+    }
+  </div>
+</section>

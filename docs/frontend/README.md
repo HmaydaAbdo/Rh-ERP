@@ -116,8 +116,7 @@ Contrôles de la revue finale (voir `conventions/design-system.md`, section « A
 éléments parcourus ; lien d'évitement ; boutons d'icône nommés ; champs étiquetés ; formulaires qui annoncent leurs erreurs, mettent
 le focus sur la première et demandent confirmation avant d'être quittés modifiés (`shared/forms/`). Nombres et dates en `fr-FR`.
 Ces contrôles sont rejoués à chaque intégration par les tests E2E (`frontend/e2e/`, axe en thème clair et sombre, parcours au clavier). Le build
-de production (bundle initial ~555 kB) n'émet qu'un avertissement : le style de l'assistant d'export dépasse son budget de 8 kB
-(voir « Assistant d'export de la paie »).
+de production (bundle initial ~555 kB) n'émet aucun avertissement de budget.
 
 ### Titres d'onglet
 
@@ -330,13 +329,14 @@ renvoie `value` et `totalRecords`) ou mode mémoire (tri et pagination faits par
 
 ## Assistant d'export de la paie
 
-`portail/paie/export/paie-export-wizard.component.*` : dialogue en étapes guidées (mois, format, équipes, matériel
-conditionnel, génération) piloté par des signaux ; les étapes sont une liste calculée (l'étape matériel n'y figure
-que si un tableau sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
+`portail/paie/export/` : dialogue en étapes guidées (mois, format, marché en PDF, équipes, matériel conditionnel, génération). La coque
+(`paie-export-wizard.component.*`) porte la fenêtre, le bandeau et le pied ; `paie-export.store.ts` porte l'état (signaux) et la logique ;
+chaque étape est un composant de `etapes/`. Les étapes sont une liste calculée (marché seulement en PDF, matériel seulement si un tableau
+sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
 
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
-des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko, **encore au-dessus de l'avertissement**). Écart ouvert, suivi dans
-[TODO.md](../../TODO.md) : découper l'assistant en composants d'étape plutôt que de relever encore le budget.
+des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko avant le 2026-10-10). **Résolu** : l'assistant est découpé en une coque, un store (`paie-export.store.ts`, fourni par la coque) et
+un composant par étape (`etapes/`, styles partagés dans `etapes/_commun.scss`) ; aucun composant ne dépasse le budget.
 
 ## Formulaires, notifications et erreurs
 
