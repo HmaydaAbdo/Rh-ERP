@@ -1,13 +1,13 @@
 <div class="employee-form app-page app-page--narrow">
-  <a routerLink="/employees" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Employés</a>
+  <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
   <div class="app-page__header">
-    <h1>{{ isEditMode ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
+    <h1>{{ isEditMode() ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
       <label for="nomPrenom">Nom &amp; prénom <span class="field__req" aria-hidden="true">*</span></label>
-      <input pInputText autocomplete="off" id="nomPrenom" type="text" formControlName="nomPrenom" />
+      <input class="stp-input" autocomplete="off" id="nomPrenom" type="text" formControlName="nomPrenom" />
       @if (form.controls.nomPrenom.invalid && form.controls.nomPrenom.touched) {
         <small class="field-error" role="alert">Le nom et prénom sont obligatoires.</small>
       }
@@ -15,7 +15,7 @@
 
     <div class="field">
       <label for="cin">CIN <span class="field__req" aria-hidden="true">*</span></label>
-      <input pInputText spellcheck="false" autocomplete="off" id="cin" type="text" formControlName="cin" />
+      <input class="stp-input" spellcheck="false" autocomplete="off" id="cin" type="text" formControlName="cin" />
       @if (form.controls.cin.invalid && form.controls.cin.touched) {
         <small class="field-error" role="alert">Le CIN est obligatoire.</small>
       }
@@ -23,12 +23,7 @@
 
     <div class="field">
       <label for="dateNaissance">Date de naissance <span class="field__req" aria-hidden="true">*</span></label>
-      <p-calendar
-        inputId="dateNaissance"
-        formControlName="dateNaissance"
-        dateFormat="dd/mm/yy"
-        [showIcon]="true"
-      ></p-calendar>
+      <stp-date-input inputId="dateNaissance" formControlName="dateNaissance" />
       @if (form.controls.dateNaissance.invalid && form.controls.dateNaissance.touched) {
         <small class="field-error" role="alert">La date de naissance est obligatoire.</small>
       }
@@ -36,12 +31,7 @@
 
     <div class="field">
       <label for="dateEmbauche">Date d'embauche <span class="field__req" aria-hidden="true">*</span></label>
-      <p-calendar
-        inputId="dateEmbauche"
-        formControlName="dateEmbauche"
-        dateFormat="dd/mm/yy"
-        [showIcon]="true"
-      ></p-calendar>
+      <stp-date-input inputId="dateEmbauche" formControlName="dateEmbauche" />
       @if (form.controls.dateEmbauche.invalid && form.controls.dateEmbauche.touched) {
         <small class="field-error" role="alert">La date d'embauche est obligatoire.</small>
       }
@@ -75,22 +65,16 @@
       }
     </div>
 
-    @if (isEditMode) {
+    @if (isEditMode()) {
       <div class="field">
         <label for="statut">Statut <span class="field__req" aria-hidden="true">*</span></label>
-        <p-dropdown
-          ariaLabel="Statut" inputId="statut"
-          formControlName="statut"
-          [options]="statutOptions"
-          optionLabel="label"
-          optionValue="value"
-        ></p-dropdown>
+        <stp-select ariaLabel="Statut" inputId="statut" formControlName="statut" [options]="statutOptions"></stp-select>
       </div>
     }
 
     <div class="app-form__actions">
-      <a routerLink="/employees" class="p-button p-button-text">Annuler</a>
-      <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+      <a stp-button variant="text" routerLink="/employees">Annuler</a>
+      <button stp-button type="submit" [loading]="saving()" [disabled]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
 </div>

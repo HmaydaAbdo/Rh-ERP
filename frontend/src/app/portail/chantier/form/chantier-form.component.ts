@@ -1,15 +1,14 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
-import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
-import { ChantierService } from '../services/chantier.service';
+import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
+import { ChantierService } from '../services/chantier.service';
 
 const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Actif', value: true },
@@ -18,38 +17,37 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 
 @Component({
   selector: 'app-chantier-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, IconComponent, SelectComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chantier-form.component.html'
 })
-export class ChantierFormComponent implements OnInit {
+export class ChantierFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly chantierService = inject(ChantierService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
-  readonly actifOptions = ACTIF_OPTIONS;
+  protected readonly actifOptions = ACTIF_OPTIONS;
 
-  chantierId: number | null = null;
-  saving = false;
+  private readonly chantierId = signal<number | null>(null);
+  protected readonly saving = signal(false);
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.group({
     code: ['', [Validators.required, Validators.maxLength(100)]],
     designation: ['', [Validators.required, Validators.maxLength(500)]],
     nom: ['', Validators.maxLength(255)],
     actif: [true, Validators.required]
   });
 
-  get isEditMode(): boolean {
-    return this.chantierId !== null;
-  }
+  protected readonly isEditMode = computed(() => this.chantierId() !== null);
 
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
-      this.chantierId = Number(idParam);
-      this.chantierService.getById(this.chantierId).subscribe((chantier) => {
+      const id = Number(idParam);
+      this.chantierId.set(id);
+      this.chantierService.getById(id).subscribe((chantier) => {
         this.form.patchValue({
           code: chantier.code,
           designation: chantier.designation,
@@ -60,7 +58,7 @@ export class ChantierFormComponent implements OnInit {
     }
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
@@ -70,18 +68,18 @@ export class ChantierFormComponent implements OnInit {
     const raw = this.form.getRawValue();
     const dto = { code: raw.code!, designation: raw.designation!, nom: raw.nom || null };
 
-    this.saving = true;
+    this.saving.set(true);
 
-    const request$ = this.isEditMode
-      ? this.chantierService.update(this.chantierId!, { ...dto, actif: raw.actif! })
+    const request$ = this.isEditMode()
+      ? this.chantierService.update(this.chantierId()!, { ...dto, actif: raw.actif! })
       : this.chantierService.create(dto);
 
     request$
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe((chantier) => {
         this.messageService.add({
           severity: 'success',
-          summary: this.isEditMode ? 'Chantier modifié' : 'Chantier créé',
+          summary: this.isEditMode() ? 'Chantier modifié' : 'Chantier créé',
           life: 4000
         });
         this.form.markAsPristine();

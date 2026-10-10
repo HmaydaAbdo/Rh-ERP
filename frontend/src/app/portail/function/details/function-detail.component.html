@@ -1,11 +1,11 @@
-@if (fonction) {
+@if (fonction(); as fonction) {
   <div class="function-detail app-page app-page--narrow">
-    <a routerLink="/functions" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Fonctions</a>
+    <a routerLink="/functions" class="app-back"><stp-icon name="arrow-left" /> Fonctions</a>
     <div class="app-page__header">
       <h1>{{ fonction.libelle }}</h1>
       <div class="app-page__actions">
         @if (canWrite()) {
-          <a [routerLink]="['/functions', fonction.id, 'edit']" class="p-button">Modifier</a>
+          <a stp-button [routerLink]="['/functions', fonction.id, 'edit']">Modifier</a>
         }
       </div>
     </div>

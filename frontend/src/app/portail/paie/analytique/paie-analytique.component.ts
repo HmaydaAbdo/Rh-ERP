@@ -1,27 +1,18 @@
-import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { ChartData, ChartOptions } from 'chart.js';
-import { ChartModule } from 'primeng/chart';
-import { EMPTY, catchError, filter, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, filter, switchMap, tap } from 'rxjs';
 
 import { ThemeService } from '../../../core/theme/theme.service';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
-import { PaieFiltres, lireFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
+import { ChartComponent } from '../../../shared/ui/chart/chart.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
 import { PaieAnalytique, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import {
-  MesureGraphique,
-  animationGraphique,
-  couleurMesure,
-  grille,
-  infobulle,
-  jeton,
-  libelleMesure,
-  police
-} from './paie-chart-theme';
+import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police } from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 /** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories, aucune n'est omise. */
@@ -65,12 +56,12 @@ function hauteurPourLignes(lignes: number): number {
  */
 @Component({
   selector: 'app-paie-analytique',
-  standalone: true,
-  imports: [CommonModule, ChartModule, CountUpDirective],
+  imports: [CountUpDirective, ChartComponent, IconComponent],
   templateUrl: './paie-analytique.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './paie-analytique.component.scss'
 })
-export class PaieAnalytiqueComponent implements OnInit {
+export class PaieAnalytiqueComponent {
   private readonly paieService = inject(PaieService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -288,7 +279,7 @@ export class PaieAnalytiqueComponent implements OnInit {
     return [ligne('Bulletins sans équipe', donnees.qualite.sansEquipe), ligne('Bulletins sans observation', donnees.qualite.sansObservation)];
   });
 
-  ngOnInit(): void {
+  constructor() {
     this.paieService.listerPeriodes().subscribe((periodes) => {
       this.periodes.set(periodes.map((p) => p.periode));
       this.periodesChargees.set(true);
@@ -319,22 +310,22 @@ export class PaieAnalytiqueComponent implements OnInit {
     this.tableaux.update((etat) => ({ ...etat, [graphique]: !etat[graphique] }));
   }
 
-  /** Le périmètre devient l'URL : c'est elle qui relance l'analyse (voir `ngOnInit`). */
+  /** Le périmètre devient l'URL : c'est elle qui relance l'analyse (voir le constructeur). */
   appliquer(filtres: PaieFiltres): void {
     void this.router.navigate([], { relativeTo: this.route, replaceUrl: true, queryParams: versParametres(filtres) });
   }
 
   /** Clic sur une barre du graphique des chantiers : l'analyse se resserre sur ce chantier. */
-  surBarreChantier(evenement: { element?: { index?: number } }): void {
-    const chantier = this.chantiersTries()[evenement.element?.index ?? -1];
+  surBarreChantier(evenement: { index?: number }): void {
+    const chantier = this.chantiersTries()[evenement.index ?? -1];
     if (chantier) {
       this.appliquer({ ...this.filtres(), chantierIds: [chantier.id] });
     }
   }
 
   /** Clic sur une barre du graphique des fonctions : l'analyse se resserre sur cette fonction. */
-  surBarreFonction(evenement: { element?: { index?: number } }): void {
-    const fonction = this.fonctionsTriees()[evenement.element?.index ?? -1];
+  surBarreFonction(evenement: { index?: number }): void {
+    const fonction = this.fonctionsTriees()[evenement.index ?? -1];
     if (fonction) {
       this.appliquer({ ...this.filtres(), fonctionIds: [fonction.id] });
     }

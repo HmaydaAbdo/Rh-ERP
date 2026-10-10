@@ -1,14 +1,14 @@
-@if (employee) {
+@if (employee(); as employee) {
   <div class="employee-detail app-page app-page--narrow">
-    <a routerLink="/employees" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Employés</a>
+    <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
     <div class="app-page__header">
       <h1>{{ employee.nomPrenom }}</h1>
       <div class="app-page__actions">
         @if (canViewHistory()) {
-          <button pButton type="button" icon="pi pi-history" label="Historique" class="p-button-outlined" (click)="historiqueOuvert = true"></button>
+          <button stp-button variant="secondary" icon="history" type="button" (click)="historiqueOuvert.set(true)">Historique</button>
         }
         @if (canWrite()) {
-          <a [routerLink]="['/employees', employee.id, 'edit']" class="p-button">Modifier</a>
+          <a stp-button [routerLink]="['/employees', employee.id, 'edit']">Modifier</a>
         }
       </div>
     </div>
@@ -21,10 +21,7 @@
       <div>
         <dt>Statut</dt>
         <dd>
-          <p-tag
-            [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'"
-            [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"
-          ></p-tag>
+          <stp-badge [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
         </dd>
       </div>
       <div>
@@ -47,10 +44,12 @@
   </div>
 }
 
-@if (employee && canViewHistory()) {
-  <p-dialog header="Historique de l’employé" [(visible)]="historiqueOuvert" [modal]="true" [style]="{ width: '50rem' }" [draggable]="false">
-    @if (historiqueOuvert) {
-      <app-audit-historique entite="Employee" [id]="employee.id"></app-audit-historique>
-    }
-  </p-dialog>
+@if (employee(); as employee) {
+  @if (canViewHistory()) {
+    <stp-dialog header="Historique de l’employé" width="50rem" [(open)]="historiqueOuvert">
+      @if (historiqueOuvert()) {
+        <app-audit-historique entite="Employee" [id]="employee.id"></app-audit-historique>
+      }
+    </stp-dialog>
+  }
 }

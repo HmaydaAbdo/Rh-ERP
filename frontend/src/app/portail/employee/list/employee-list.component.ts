@@ -1,27 +1,27 @@
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService, MenuItem } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
-import { SplitButtonModule } from 'primeng/splitbutton';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { DatePipe } from '@angular/common';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
+import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Employee, EmployeeImportResult, EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
   { label: 'Actif', value: 'ACTIF' },
@@ -32,28 +32,27 @@ const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-employee-list',
-  standalone: true,
   imports: [
-    CommonModule,
     ColumnChooserComponent,
-    ReactiveFormsModule,
     RouterLink,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    DropdownModule,
-    TagModule,
-    ConfirmDialogModule,
-    DialogModule,
-    SplitButtonModule,
-    LazySelectComponent
+    LazySelectComponent,
+    ButtonComponent,
+    BadgeComponent,
+    SelectComponent,
+    DialogComponent,
+    SplitButtonComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective,
+    DatePipe,
+    ReactiveFormsModule
   ],
-  providers: [ConfirmationService],
   templateUrl: './employee-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './employee-list.component.scss'
 })
-export class EmployeeListComponent implements OnInit {
-  readonly columns = new ColumnState([
+export class EmployeeListComponent {
+  protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom' },
     { field: 'cin', header: 'CIN' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
@@ -61,57 +60,49 @@ export class EmployeeListComponent implements OnInit {
     { field: 'dateEmbauche', header: "Date d'embauche" },
     { field: 'statut', header: 'Statut' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly employeeService = inject(EmployeeService);
-  readonly functionReferenceService = inject(FunctionReferenceService);
-  readonly chantierReferenceService = inject(ChantierReferenceService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  protected readonly functionReferenceService = inject(FunctionReferenceService);
+  protected readonly chantierReferenceService = inject(ChantierReferenceService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
-  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('EMPLOYEE_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
 
-  canImport(): boolean {
-    return this.authService.hasPermission('EMPLOYEE_IMPORT');
-  }
+  protected readonly canImport = computed(() => this.authService.hasPermission('EMPLOYEE_IMPORT'));
 
-  canDelete(): boolean {
-    return this.authService.hasPermission('EMPLOYEE_DELETE');
-  }
+  protected readonly canDelete = computed(() => this.authService.hasPermission('EMPLOYEE_DELETE'));
 
-  employees: Employee[] = [];
-  totalRecords = 0;
-  loading = false;
-  deletingId: number | null = null;
-  importing = false;
-  importResult: EmployeeImportResult | null = null;
-  showImportResultDialog = false;
-  downloadingTemplate = false;
+  protected readonly employees = signal<Employee[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly deletingId = signal<number | null>(null);
+  protected readonly importing = signal(false);
+  protected readonly importResult = signal<EmployeeImportResult | null>(null);
+  protected readonly showImportResultDialog = signal(false);
+  protected readonly downloadingTemplate = signal(false);
 
   /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
-  readonly menuImport: MenuItem[] = [
+  protected readonly menuImport: MenuAction[] = [
     {
       label: 'Télécharger le modèle Excel',
-      icon: 'pi pi-file-excel',
+      icon: 'file-spreadsheet',
       command: () => {
-        if (!this.downloadingTemplate) {
+        if (!this.downloadingTemplate()) {
           this.onDownloadTemplate();
         }
       }
     }
   ];
 
-  readonly statutOptions = STATUT_OPTIONS;
+  protected readonly statutOptions = STATUT_OPTIONS;
 
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     nomPrenom: [''],
     cin: [''],
     fonctionIds: [[] as number[]],
@@ -123,66 +114,62 @@ export class EmployeeListComponent implements OnInit {
   private lastSize = 10;
   private lastSort = 'nomPrenom,asc';
 
-  ngOnInit(): void {
+  constructor() {
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(inject(DestroyRef))
       )
       .subscribe(() => this.onSearch());
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
-  onView(employee: Employee): void {
+  protected onView(employee: Employee): void {
     this.router.navigate(['/employees', employee.id]);
   }
 
-  onEdit(employee: Employee): void {
+  protected onEdit(employee: Employee): void {
     this.router.navigate(['/employees', employee.id, 'edit']);
   }
 
-  onDelete(employee: Employee): void {
+  protected onDelete(employee: Employee): void {
     this.confirmationService.confirm({
       header: 'Supprimer cet employé',
       message: `Confirmez-vous la suppression de ${employee.nomPrenom} ? Un employé qui a des bulletins de paie ou un compte utilisateur ne peut pas être supprimé : passez-le à INACTIF pour conserver son historique.`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteEmployee(employee)
     });
   }
 
-  onTriggerImport(): void {
-    this.fileInput.nativeElement.click();
+  protected onTriggerImport(): void {
+    this.fileInput().nativeElement.click();
   }
 
-  onDownloadTemplate(): void {
-    this.downloadingTemplate = true;
+  protected onDownloadTemplate(): void {
+    this.downloadingTemplate.set(true);
     this.employeeService
       .telechargerModele()
-      .pipe(finalize(() => (this.downloadingTemplate = false)))
+      .pipe(finalize(() => this.downloadingTemplate.set(false)))
       .subscribe((blob) => {
         const url = window.URL.createObjectURL(blob);
         const lien = document.createElement('a');
@@ -193,7 +180,7 @@ export class EmployeeListComponent implements OnInit {
       });
   }
 
-  onFileSelected(event: Event): void {
+  protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
@@ -201,14 +188,14 @@ export class EmployeeListComponent implements OnInit {
       return;
     }
 
-    this.importing = true;
+    this.importing.set(true);
     this.employeeService
       .importer(file)
-      .pipe(finalize(() => (this.importing = false)))
+      .pipe(finalize(() => this.importing.set(false)))
       .subscribe({
         next: (result) => {
-          this.importResult = result;
-          this.showImportResultDialog = true;
+          this.importResult.set(result);
+          this.showImportResultDialog.set(true);
           this.messageService.add({
             severity: 'success',
             summary: 'Import terminé',
@@ -220,18 +207,18 @@ export class EmployeeListComponent implements OnInit {
         error: (err: HttpErrorResponse) => {
           const result = err.error as EmployeeImportResult | null;
           if (result && Array.isArray(result.lignesIgnorees)) {
-            this.importResult = result;
-            this.showImportResultDialog = true;
+            this.importResult.set(result);
+            this.showImportResultDialog.set(true);
           }
         }
       });
   }
 
   private deleteEmployee(employee: Employee): void {
-    this.deletingId = employee.id;
+    this.deletingId.set(employee.id);
     this.employeeService
       .delete(employee.id)
-      .pipe(finalize(() => (this.deletingId = null)))
+      .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Employé supprimé', life: 4000 });
         this.fetchPage();
@@ -239,7 +226,7 @@ export class EmployeeListComponent implements OnInit {
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
     const criteria = this.filterForm.getRawValue();
 
     this.employeeService
@@ -253,10 +240,10 @@ export class EmployeeListComponent implements OnInit {
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
       )
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
-        this.employees = result.content;
-        this.totalRecords = result.page.totalElements;
+        this.employees.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
       });
   }
 }

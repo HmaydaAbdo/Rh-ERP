@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { libelleChamp } from '../audit-format';
 import { AuditChamp } from '../models/audit.model';
@@ -9,12 +9,12 @@ import { AuditChamp } from '../models/audit.model';
  */
 @Component({
   selector: 'app-audit-champs',
-  standalone: true,
   templateUrl: './audit-champs.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './audit-champs.component.scss'
 })
 export class AuditChampsComponent {
-  @Input({ required: true }) champs: AuditChamp[] = [];
+  readonly champs = input.required<AuditChamp[]>();
 
-  readonly libelleChamp = libelleChamp;
+  protected readonly libelleChamp = libelleChamp;
 }

@@ -19,9 +19,9 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 | Composant | Techno |
 |---|---|
 | Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (JWT), MapStruct |
-| Base de données | PostgreSQL 17 (extension [pgvector](https://github.com/pgvector/pgvector), activée en anticipation d'un usage futur — voir `conventions/deployment.md`) |
+| Base de données | PostgreSQL 18 + pgvector (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
 | Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`docs/data-model.md`](docs/data-model.md) |
-| Frontend | Angular 17, [PrimeNG](https://primeng.org/) |
+| Frontend | Angular 22.2.2, migration de PrimeNG 17 vers Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport en cours |
 | Imports / exports | Apache POI (Excel), jsoup + openhtmltopdf + Batik (rapport PDF) |
 | Documentation API | springdoc-openapi (Swagger UI) |
 | Conteneurisation | Docker Compose de production (images publiées, pas de build local) — nginx inner sert le frontend et relaie les appels API au backend, voir [`docs/deployment.md`](docs/deployment.md) |
@@ -101,7 +101,7 @@ docker compose down -v       # supprime aussi les données PostgreSQL
 
 ```
 backend/      API Spring Boot (staport.rh.<domaine> : auth, chantier, employee, equipe, function, paie, common)
-frontend/     Application Angular (PrimeNG), nginx.conf (nginx inner de production)
+frontend/     Application Angular (migration vers Angular Aria/CDK + composants Staport), nginx.conf (nginx de production)
 conventions/  Conventions du projet — source de vérité, génériques et réutilisables entre projets
 docs/         Documentation propre à ce projet : architecture, modèle de données, domaines, RBAC, déploiement
 .github/workflows/  CI (tests + build + publication des images Docker)

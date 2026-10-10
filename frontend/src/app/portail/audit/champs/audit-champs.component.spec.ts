@@ -7,7 +7,7 @@ describe('AuditChampsComponent', () => {
   let fixture: ComponentFixture<AuditChampsComponent>;
 
   function afficher(champs: AuditChamp[]): HTMLElement {
-    fixture.componentInstance.champs = champs;
+    fixture.componentRef.setInput('champs', champs);
     fixture.detectChanges();
     return fixture.nativeElement;
   }

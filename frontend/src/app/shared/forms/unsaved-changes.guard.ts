@@ -1,8 +1,9 @@
 import { inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { CanDeactivateFn } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
 import { Observable } from 'rxjs';
+
+import { ConfirmDialogService } from '@shared/feedback/feedback.service';
 
 /** Un écran de formulaire que le guard sait protéger : il expose son `FormGroup`. */
 export interface FormulaireProtege {
@@ -18,20 +19,17 @@ export const unsavedChangesGuard: CanDeactivateFn<FormulaireProtege> = (composan
   if (!composant.form.dirty) {
     return true;
   }
-  const confirmation = inject(ConfirmationService);
+  const confirmation = inject(ConfirmDialogService);
   return new Observable<boolean>((abonne) => {
     const repondre = (reponse: boolean): void => {
       abonne.next(reponse);
       abonne.complete();
     };
     confirmation.confirm({
-      key: 'sortie',
       header: 'Quitter sans enregistrer ?',
       message: 'Les modifications de ce formulaire seront perdues.',
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Quitter',
       rejectLabel: 'Rester',
-      acceptButtonStyleClass: 'p-button-danger',
       accept: () => repondre(true),
       reject: () => repondre(false)
     });

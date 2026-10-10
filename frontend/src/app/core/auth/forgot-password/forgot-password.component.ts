@@ -1,27 +1,26 @@
-import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { finalize } from 'rxjs';
 
+import { PasswordRecoveryService } from '../services/password-recovery.service';
+
 @Component({
-  selector: 'app-forgot-password',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
-  templateUrl: './forgot-password.component.html',
-  styleUrl: '../login/login.component.scss'
+    selector: 'app-forgot-password',
+    imports: [ReactiveFormsModule, RouterLink],
+    templateUrl: './forgot-password.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styleUrl: '../login/login.component.scss'
 })
 export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
+  private readonly passwordRecovery = inject(PasswordRecoveryService);
 
-  submitting = false;
-  submitted = false;
+  readonly submitting = signal(false);
+  readonly submitted = signal(false);
 
-  readonly form = this.fb.group({
+  readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]]
   });
 
@@ -31,10 +30,10 @@ export class ForgotPasswordComponent {
       return;
     }
 
-    this.submitting = true;
-    this.http
-      .post('auth/forgot-password', { email: this.form.getRawValue().email })
-      .pipe(finalize(() => (this.submitting = false)))
-      .subscribe(() => (this.submitted = true));
+    this.submitting.set(true);
+    this.passwordRecovery
+      .requestReset(this.form.getRawValue().email)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe(() => this.submitted.set(true));
   }
 }

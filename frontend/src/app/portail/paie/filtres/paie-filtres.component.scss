@@ -22,13 +22,13 @@
     background: var(--color-surface);
     overflow: hidden;
 
-    .p-button {
+    .stp-button {
       height: 100%;
       border-radius: 0;
       font-size: var(--text-sm);
     }
 
-    .p-button-icon-only {
+    .stp-button--icon-only {
       width: 2rem;
       padding: 0;
     }
@@ -39,10 +39,6 @@
     justify-content: center;
     border-inline: 1px solid var(--color-border) !important;
 
-    // Majuscule initiale seulement (« Août 2026 », « Tous les mois ») : `capitalize` mettrait une majuscule à chaque mot
-    ::ng-deep .p-button-label::first-letter {
-      text-transform: uppercase;
-    }
   }
 
   &__capitale {
@@ -60,6 +56,16 @@
 
     input {
       width: 100%;
+      padding-inline-start: 2.25rem;
+    }
+
+    stp-icon {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 0.75rem;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      pointer-events: none;
     }
   }
 
@@ -78,17 +84,6 @@
     max-width: 14rem;
     min-width: 0;
 
-    ::ng-deep .p-multiselect {
-      width: 100%;
-      height: var(--control-height);
-      font-size: var(--control-font-size);
-    }
-
-    ::ng-deep .p-multiselect-label {
-      display: flex;
-      align-items: center;
-      padding-block: 0;
-    }
   }
 
   &__effacer {
@@ -125,7 +120,7 @@
     &__periode {
       flex: 1 1 100%;
 
-      .p-button-icon-only {
+      .stp-button--icon-only {
         width: 2.75rem;
       }
     }
@@ -172,7 +167,7 @@
       order: 3;
       margin-left: 0;
 
-      ::ng-deep .p-button-label {
+      .paie-filtres__effacer-libelle {
         display: none;
       }
     }
@@ -196,7 +191,7 @@
     font-size: var(--text-sm);
     color: var(--color-text-muted);
 
-    i {
+    stp-icon {
       font-size: var(--text-xs);
     }
   }

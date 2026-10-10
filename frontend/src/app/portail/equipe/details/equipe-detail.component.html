@@ -1,11 +1,11 @@
-@if (equipe) {
+@if (equipe(); as equipe) {
   <div class="equipe-detail app-page app-page--narrow">
-    <a routerLink="/equipes" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Équipes</a>
+    <a routerLink="/equipes" class="app-back"><stp-icon name="arrow-left" /> Équipes</a>
     <div class="app-page__header">
       <h1>{{ equipe.libelle }}</h1>
       <div class="app-page__actions">
         @if (canWrite()) {
-          <a [routerLink]="['/equipes', equipe.id, 'edit']" class="p-button">Modifier</a>
+          <a stp-button [routerLink]="['/equipes', equipe.id, 'edit']">Modifier</a>
         }
       </div>
     </div>

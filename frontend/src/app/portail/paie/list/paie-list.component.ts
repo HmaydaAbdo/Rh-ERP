@@ -1,36 +1,34 @@
-import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { Paie } from '../models/paie.model';
-import { PaieFiltres, lireFiltres, versCriteres } from '../filtres/paie-filtres';
-import { PaieService } from '../services/paie.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
+import { Paie } from '../models/paie.model';
+import { PaieService } from '../services/paie.service';
 
 @Component({
   selector: 'app-paie-list',
-  standalone: true,
   imports: [
-    CommonModule,
     ColumnChooserComponent,
-    TableModule,
-    ButtonModule,
-    ConfirmDialogModule
+    DecimalPipe,
+    ButtonComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective
   ],
-  providers: [ConfirmationService],
   templateUrl: './paie-list.component.html',
-  styleUrl: './paie-list.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PaieListComponent implements OnInit {
-  readonly columns = new ColumnState([
+export class PaieListComponent {
+  protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom', sortField: 'employee.nomPrenom', cellClass: 'font-semibold' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'cin', header: 'CIN', sortField: 'employee.cin' },
@@ -46,41 +44,35 @@ export class PaieListComponent implements OnInit {
     { field: 'equipe', header: 'Équipe', sortField: 'equipe.code', align: 'text-center' },
     { field: 'periode', header: 'Période', align: 'text-center' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly paieService = inject(PaieService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('PAIE_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
 
-  canDelete(): boolean {
-    return this.authService.hasPermission('PAIE_DELETE');
-  }
+  protected readonly canDelete = computed(() => this.authService.hasPermission('PAIE_DELETE'));
 
-  paies: Paie[] = [];
-  totalRecords = 0;
-  loading = false;
-  deletingId: number | null = null;
+  protected readonly paies = signal<Paie[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly deletingId = signal<number | null>(null);
 
   /** Filtres de la barre commune, lus dans l'URL (voir `filtres/paie-filtres.ts`). */
   private filtres: PaieFiltres = lireFiltres(this.route.snapshot.queryParamMap);
 
   /** Première ligne de la page affichée, liée au tableau pour qu'un changement de filtres le ramène à la première page. */
-  first = 0;
+  protected readonly first = signal(0);
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'periode,desc';
 
-  ngOnInit(): void {
+  constructor() {
     // La première émission est celle de l'URL déjà lue ci-dessus : le premier chargement vient du tableau (`onLazyLoad`).
     this.route.queryParamMap
       .pipe(
@@ -95,39 +87,33 @@ export class PaieListComponent implements OnInit {
       });
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.first = event.first ?? 0;
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
-    this.first = 0;
+    this.first.set(0);
     this.fetchPage();
   }
 
-  onView(paie: Paie): void {
+  protected onView(paie: Paie): void {
     this.router.navigate(['/paie', paie.id]);
   }
 
-  onEdit(paie: Paie): void {
+  protected onEdit(paie: Paie): void {
     this.router.navigate(['/paie', paie.id, 'edit']);
   }
 
-  onDelete(paie: Paie): void {
+  protected onDelete(paie: Paie): void {
     this.confirmationService.confirm({
       header: 'Supprimer ce bulletin',
       message: `Confirmez-vous la suppression du bulletin de ${paie.employee.nomPrenom} (${paie.periode}) ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deletePaie(paie)
@@ -135,10 +121,10 @@ export class PaieListComponent implements OnInit {
   }
 
   private deletePaie(paie: Paie): void {
-    this.deletingId = paie.id;
+    this.deletingId.set(paie.id);
     this.paieService
       .delete(paie.id)
-      .pipe(finalize(() => (this.deletingId = null)))
+      .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Bulletin supprimé', life: 4000 });
         this.fetchPage();
@@ -146,14 +132,14 @@ export class PaieListComponent implements OnInit {
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
 
     this.paieService
       .search(versCriteres(this.filtres), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
-        this.paies = result.content;
-        this.totalRecords = result.page.totalElements;
+        this.paies.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
       });
   }
 }

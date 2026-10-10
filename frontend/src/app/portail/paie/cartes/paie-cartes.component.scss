@@ -180,21 +180,6 @@
     }
   }
 
-  // ---- Lignes du tableau : apparition en cascade ----
-  &__tableau ::ng-deep .p-datatable-tbody > tr {
-    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
-
-    @for $rang from 1 through 10 {
-      &:nth-child(#{$rang}) {
-        animation-delay: #{$rang * 40}ms;
-      }
-    }
-  }
-
-  &__tableau ::ng-deep tr.paie-cartes__ligne--cliquable {
-    cursor: pointer;
-  }
-
   &__valeur {
     font-variant-numeric: tabular-nums;
   }
@@ -203,8 +188,7 @@
     &__carte,
     &__tuile,
     &__scene,
-    &__jauge span,
-    &__tableau ::ng-deep .p-datatable-tbody > tr {
+    &__jauge span {
       animation: none;
     }
   }

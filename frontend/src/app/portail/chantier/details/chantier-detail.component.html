@@ -1,11 +1,11 @@
-@if (chantier) {
+@if (chantier(); as chantier) {
   <div class="chantier-detail app-page app-page--narrow">
-    <a routerLink="/chantiers" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Chantiers</a>
+    <a routerLink="/chantiers" class="app-back"><stp-icon name="arrow-left" /> Chantiers</a>
     <div class="app-page__header">
       <h1>{{ chantier.code }}</h1>
       <div class="app-page__actions">
         @if (canWrite()) {
-          <a [routerLink]="['/chantiers', chantier.id, 'edit']" class="p-button">Modifier</a>
+          <a stp-button [routerLink]="['/chantiers', chantier.id, 'edit']">Modifier</a>
         }
       </div>
     </div>
@@ -22,16 +22,16 @@
       <div>
         <dt>Statut</dt>
         <dd>
-          <p-tag [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></p-tag>
+          <stp-badge [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></stp-badge>
         </dd>
       </div>
       <div>
         <dt>Source</dt>
         <dd>
           @if (chantier.sourceErp) {
-            <p-tag value="ERP" severity="info"></p-tag>
+            <stp-badge value="ERP" severity="info"></stp-badge>
           } @else {
-            <p-tag value="Manuel" severity="secondary"></p-tag>
+            <stp-badge value="Manuel" severity="neutral"></stp-badge>
           }
         </dd>
       </div>

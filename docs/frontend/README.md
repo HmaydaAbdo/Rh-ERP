@@ -12,7 +12,8 @@
 | | |
 |---|---|
 | Emplacement | `frontend/` (code dans `frontend/src/app/`) |
-| Technologies | Angular 17 (composants standalone, signaux), PrimeNG 17, PrimeIcons, RxJS, Chart.js (graphiques de la vue Analytique de la paie, via `p-chart`), SCSS |
+| Technologies cibles | Angular 22.2.2, standalone, Signals, zoneless, Tailwind CSS 4, Angular Aria/CDK, Lucide Angular; AG Grid Community uniquement pour les grilles avancées |
+| État actuel | Angular 22.2.2; mode zoneless par défaut; 175 tests passent. Les retours utilisateur partagés utilisent Signals et CDK A11y. Zone.js et des composants PrimeNG restent à migrer. Voir [HANDOFF.md](../../HANDOFF.md) |
 | Rendu | Application monopage (SPA) ; routes chargées à la demande (lazy loading) par domaine |
 | Tests | Jasmine + Karma (voir [../testing.md](../testing.md)) |
 | Production | Image nginx qui sert les fichiers statiques et relaie l'API (`frontend/nginx.conf`, voir [../deployment.md](../deployment.md)) |
@@ -21,12 +22,14 @@
 
 ```bash
 cd frontend
-npm install
+npm ci                                      # Node 24.15.0, version verrouillée par .nvmrc
 npm start                                   # http://localhost:4200, proxy API vers http://localhost:8080
 npm run build                               # build de production dans dist/
 npx ng test --watch=false --browsers=ChromeHeadless
-npm run theme:generate                      # régénère src/styles/primeng-theme.css (après une mise à jour de PrimeNG)
 ```
+
+Ne pas employer `--force` ou `legacy-peer-deps` pour masquer les incompatibilités. Le lockfile conserve un écart
+PrimeNG 17/Angular 22; la dépendance doit être retirée après migration des composants restants. Ne pas masquer ses conflits de pairs avec `--force` ou `legacy-peer-deps`.
 
 Le proxy de développement (`frontend/proxy.conf.js`) relaie `/employees`, `/functions`, `/chantiers`,
 `/equipes`, `/paie`, `/auth`, `/users`, `/roles`, `/permissions` vers `BACKEND_URL` (défaut
@@ -46,7 +49,7 @@ src/app/
 │   ├── auth/                Connexion, mot de passe oublié/réinitialisé, accès refusé, AuthService,
 │   │                        guards (authGuard, permissionGuard, homeGuard), intercepteur d'authentification
 │   ├── interceptors/        Intercepteur d'erreurs (notification du message de l'API)
-│   ├── i18n/                primeng-fr.ts : textes français des composants PrimeNG (calendrier…)
+│   ├── i18n/                traductions françaises des composants tiers (à adapter au jeu de widgets retenu)
 │   ├── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil ; PageTitleStrategy : titre de l'onglet (« Employés · Staport RH »)
 │   └── theme/               ThemeService : thème clair / sombre (attribut data-theme sur <html>)
 ├── portail/                 Un dossier par domaine, comme côté backend
@@ -69,8 +72,9 @@ src/app/
 
 Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_tokens.scss` (jetons exposés en variables CSS —
 `--color-primary`, `--space-md`, `--font-sans`, … — pour les deux thèmes), `_tables.scss` (style unique des tableaux) et
-`primeng-theme.css` (thème PrimeNG **généré** par `npm run theme:generate`, lisant les jetons). Aucune valeur de design n'est
-écrite en dur dans un composant. Règles : `conventions/design-system.md`.
+les styles de composants. Tailwind 4, Angular Aria/CDK et Lucide Angular sont les choix cibles. Le thème PrimeNG actuel
+correspond encore à la version 17 et sera supprimé avec la bibliothèque. Aucune valeur de design ne doit être écrite en dur.
+Règles : `conventions/design-system.md`.
 
 ### Mise en page des écrans de liste
 
@@ -104,11 +108,11 @@ chargement, appui sur un bouton), durées et courbe en jetons, supprimé par `pr
 ### Accessibilité et qualité
 
 Contrôles de la revue finale (voir `conventions/design-system.md`, section « Accessibilité ») : axe-core ne trouve aucune violation
-(WCAG 2.1 A/AA et bonnes pratiques) sur les écrans principaux dans les deux thèmes ; le focus clavier est visible sur tous les
+(WCAG 2.2 A/AA et bonnes pratiques) sur les écrans principaux dans les deux thèmes ; le focus clavier est visible sur tous les
 éléments parcourus ; lien d'évitement ; boutons d'icône nommés ; champs étiquetés ; formulaires qui annoncent leurs erreurs, mettent
 le focus sur la première et demandent confirmation avant d'être quittés modifiés (`shared/forms/`). Nombres et dates en `fr-FR`.
-Poids : ~167 ko transférés au chargement initial (le budget d'avertissement porte sur la taille brute, relevé à 800 ko) ; le thème
-PrimeNG généré (258 ko bruts, 25 ko transférés) est le premier poste, graphiques et assistant d'export sont chargés à la demande.
+Le build Angular 22 a signalé un dépassement du budget initial de 15,62 kB et du budget SCSS de 7,60 kB pour l'assistant
+d'export. Ces dépassements restent ouverts : optimiser le chargement et les styles sans relever les budgets.
 
 ### Titres d'onglet
 
@@ -208,6 +212,9 @@ Détail : [../auth/README.md](../auth/README.md).
 
 ### Sélecteur à chargement différé (`app-lazy-select`)
 
+> État : le composant existant est encore adossé à PrimeNG 17. Le remplacer par le composant Staport basé sur Angular
+> Aria/CDK; la description ci-dessous documente son contrat fonctionnel à conserver pendant cette migration.
+
 Un seul composant pour **toute** liste déroulante adossée à des données serveur. Il encapsule le sélecteur simple
 (`p-dropdown`) et multiple (`p-multiSelect`) de PrimeNG derrière un `ControlValueAccessor` : la valeur exposée au
 formulaire est un **identifiant** (ou un tableau d'identifiants), jamais l'objet.
@@ -248,7 +255,11 @@ d'un import). Utilisé par l'assistant d'export de la paie (voir `docs/report/RE
 Directive qui affiche un nombre en l'animant depuis sa valeur précédente, au format `fr-FR` ; supprimée si
 l'utilisateur a demandé moins de mouvement dans son système.
 
-### Tableaux (`p-table`) et choix des colonnes
+### Tableaux (migration PrimeNG → Staport) et choix des colonnes
+
+> Les écrans actuels utilisent encore `p-table` de PrimeNG 17. C'est la description de l'implémentation héritée, pas une
+> recommandation pour les nouvelles pages. La cible est le composant accessible Staport basé sur HTML/Aria/CDK; AG Grid
+> Community ne s'ajoute que pour une grille avancée avec besoin mesuré.
 
 Tous les tableaux de données — **sans exception** — offrent :
 
@@ -300,9 +311,8 @@ en sous-composants plutôt que de la relever encore.
 
 - **Formulaires réactifs uniquement** (`FormBuilder`) ; validation affichée sous le champ une fois touché ; les
   champs obligatoires portent une astérisque.
-- Les messages de succès sont des notifications (`MessageService`) ; les erreurs HTTP sont affichées
-  automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API.
-- Les suppressions demandent une **confirmation** (`ConfirmationService`).
+- Les messages de succès passent par `NotificationService`; les erreurs HTTP sont publiées automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API. L'hôte partagé présente ces notifications avec rôles ARIA et fermeture manuelle.
+- Les suppressions et sorties de formulaire modifié passent par `ConfirmDialogService`; son dialogue modal utilise CDK A11y (piège de focus, Échap, focus initial) et le design system Staport.
 - Les imports Excel affichent un résumé puis, en cas de rejet, le détail de chaque ligne en cause avec sa raison
   (voir [../imports.md](../imports.md)).
 
@@ -321,8 +331,8 @@ autorisés, pas de NgRx).
    modification) et les enregistrer dans `app.routes.ts` (avec `authGuard`).
 3. Ajouter l'entrée à `NAV_ITEMS`.
 4. Conditionner chaque bouton d'action par sa permission (`canWrite()`…).
-5. Pour un écran de liste : classes `app-page`, `app-toolbar` et `app-table-bar` (voir ci-dessus). Pour un tableau : `styleClass="app-table p-datatable-gridlines p-datatable-sm"`, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination, filtres en temps
-   réel.
-6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select`.
+5. Pour un écran de liste : classes `app-page`, `app-toolbar` et `app-table-bar` (voir ci-dessus). Construire le tableau avec le
+   composant Staport/Aria, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination et filtres en temps réel.
+6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select` construit sur Aria/CDK.
 7. Ajouter le préfixe d'API à `proxy.conf.js` et `nginx.conf`.
 8. Mettre à jour [../rbac/](../rbac/README.md) et la documentation du domaine.

@@ -1,0 +1,131 @@
+<div class="stp-table" [class.stp-table--loading]="loading()">
+  <div class="stp-table__scroll" role="region" tabindex="0" [attr.aria-label]="label()" [attr.aria-busy]="loading()">
+    <table>
+      <thead>
+        <tr>
+          @for (col of columns(); track col.field) {
+            <th
+              scope="col"
+              [id]="headerId(col)"
+              [class]="col.align ?? ''"
+              [class.stp-table__th--target]="dropTarget() === col.field"
+              [attr.aria-sort]="ariaSort(col)"
+              [style.width.px]="widths()[col.field] ?? null"
+              [style.min-width.px]="widths()[col.field] ?? null"
+              [attr.draggable]="reorderable() ? 'true' : null"
+              (dragstart)="onDragStart($event, col)"
+              (dragover)="onDragOver($event, col)"
+              (drop)="onDrop($event, col)"
+              (dragend)="onDragEnd()"
+            >
+              <button
+                type="button"
+                class="stp-table__sort"
+                (click)="sortBy(col)"
+                (keydown.alt.arrowleft)="moveWithKeyboard($event, col, -1)"
+                (keydown.alt.arrowright)="moveWithKeyboard($event, col, 1)"
+              >
+                {{ col.header }}
+                <stp-icon
+                  class="stp-table__sort-icon"
+                  [class.stp-table__sort-icon--active]="ariaSort(col) !== 'none'"
+                  [name]="ariaSort(col) === 'ascending' ? 'arrow-up' : ariaSort(col) === 'descending' ? 'arrow-down' : 'arrow-up-down'"
+                />
+              </button>
+              @if (resizable()) {
+                <span
+                  class="stp-table__resizer"
+                  role="separator"
+                  aria-orientation="vertical"
+                  tabindex="0"
+                  [attr.aria-label]="'Largeur de la colonne ' + col.header"
+                  draggable="false"
+                  (pointerdown)="startResize($event, col)"
+                  (keydown)="resizeWithKeyboard($event, col)"
+                ></span>
+              }
+            </th>
+          }
+          @if (showActions()) {
+            <th scope="col"><span class="app-lecteur">Actions</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayed(); track $index) {
+          <tr
+            [class.stp-table__row--clickable]="isClickable(row)"
+            [attr.tabindex]="isClickable(row) ? 0 : null"
+            [attr.title]="rowTitle()?.(row) ?? null"
+            (click)="onRowClick(row)"
+            (keydown.enter)="onRowClick(row)"
+          >
+            @for (col of columns(); track col.field) {
+              <td [class]="((col.align ?? '') + ' ' + (col.cellClass ?? '')).trim()">
+                @if (cell(); as cellDef) {
+                  <ng-container [ngTemplateOutlet]="cellDef.template" [ngTemplateOutletContext]="{ $implicit: row, col: col }" />
+                }
+              </td>
+            }
+            @if (showActions()) {
+              @let actionsDef = rowActions()!;
+              <td class="stp-table__actions">
+                <ng-container [ngTemplateOutlet]="actionsDef.template" [ngTemplateOutletContext]="{ $implicit: row }" />
+              </td>
+            }
+          </tr>
+        } @empty {
+          @if (!loading()) {
+            <tr>
+              <td class="stp-table__empty" [attr.colspan]="columnCount()">{{ emptyMessage() }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+      @if (footer(); as footerDef) {
+        <tfoot>
+          <tr>
+            @for (col of columns(); track col.field) {
+              <td [class]="((col.align ?? '') + ' font-bold').trim()">
+                <ng-container [ngTemplateOutlet]="footerDef.template" [ngTemplateOutletContext]="{ col: col }" />
+              </td>
+            }
+            @if (showActions()) {
+              <td></td>
+            }
+          </tr>
+        </tfoot>
+      }
+    </table>
+    @if (loading()) {
+      <div class="stp-table__loader" role="status">
+        <stp-icon name="loader-circle" class="stp-spin" size="1.5rem" />
+        <span class="app-lecteur">Chargement…</span>
+      </div>
+    }
+  </div>
+
+  <nav class="stp-table__paginator" aria-label="Pagination">
+    <p class="stp-table__report" role="status">
+      @if (total() > 0) {
+        {{ first() + 1 }} - {{ lastRow() }} sur {{ total() }} — page {{ currentPage() }}/{{ pageCount() }}
+      } @else {
+        0 résultat
+      }
+    </p>
+    <div class="stp-table__pager">
+      <button stp-button variant="text" iconOnly icon="chevrons-left" aria-label="Première page" [disabled]="currentPage() === 1" (click)="goToPage(1)"></button>
+      <button stp-button variant="text" iconOnly icon="chevron-left" aria-label="Page précédente" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)"></button>
+      <button stp-button variant="text" iconOnly icon="chevron-right" aria-label="Page suivante" [disabled]="currentPage() === pageCount()" (click)="goToPage(currentPage() + 1)"></button>
+      <button stp-button variant="text" iconOnly icon="chevrons-right" aria-label="Dernière page" [disabled]="currentPage() === pageCount()" (click)="goToPage(pageCount())"></button>
+      <label class="stp-table__rows">
+        <span class="app-lecteur">Lignes par page</span>
+        <select [value]="rows()" (change)="changeRows(rowsFromSelect($event))">
+          @for (option of rowsPerPageOptions(); track option) {
+            <option [value]="option" [selected]="option === rows()">{{ option }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  </nav>
+</div>

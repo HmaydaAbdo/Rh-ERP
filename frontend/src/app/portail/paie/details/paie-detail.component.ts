@@ -1,40 +1,37 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 import { Paie } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
-import { AuthService } from '../../../core/auth/services/auth.service';
-import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 
 @Component({
   selector: 'app-paie-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, DialogModule, AuditHistoriqueComponent],
+  imports: [RouterLink, AuditHistoriqueComponent, DecimalPipe, IconComponent, ButtonComponent, DialogComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './paie-detail.component.html'
 })
-export class PaieDetailComponent implements OnInit {
+export class PaieDetailComponent {
   private readonly authService = inject(AuthService);
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('PAIE_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
 
-  canViewHistory(): boolean {
-    return this.authService.hasPermission('AUDIT_READ');
-  }
+  protected readonly canViewHistory = computed(() => this.authService.hasPermission('AUDIT_READ'));
 
-  historiqueOuvert = false;
+  protected readonly historiqueOuvert = signal(false);
 
   private readonly route = inject(ActivatedRoute);
   private readonly paieService = inject(PaieService);
 
-  paie: Paie | null = null;
+  protected readonly paie = signal<Paie | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.paieService.getById(id).subscribe((paie) => (this.paie = paie));
+    this.paieService.getById(id).subscribe((paie) => this.paie.set(paie));
   }
 }

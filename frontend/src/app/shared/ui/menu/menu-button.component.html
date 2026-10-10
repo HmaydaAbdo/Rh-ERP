@@ -1,0 +1,30 @@
+<div class="stp-menu">
+  <button
+    stp-button
+    type="button"
+    ngMenuTrigger
+    [menu]="menu"
+    [variant]="variant()"
+    [icon]="icon()"
+    [iconOnly]="!label()"
+    [disabled]="disabled()"
+    [class.stp-button--join-previous]="joinPrevious()"
+    [attr.aria-label]="ariaLabel()"
+  >
+    @if (label()) {
+      {{ label() }}
+    }
+  </button>
+  <div ngMenu #menu="ngMenu" class="stp-menu__panel" (itemSelected)="select($event)">
+    <ng-template ngMenuContent>
+      @for (action of items(); track action.label) {
+        <div ngMenuItem class="stp-menu__item" [value]="action" [disabled]="action.disabled ?? false" [searchTerm]="action.label">
+          @if (action.icon) {
+            <stp-icon [name]="action.icon" />
+          }
+          {{ action.label }}
+        </div>
+      }
+    </ng-template>
+  </div>
+</div>
