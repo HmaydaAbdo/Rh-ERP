@@ -5,7 +5,7 @@
 # et conventions/deployment.md) — ce Dockerfile n'a pas de variante développement (pas de bind
 # mount, pas de node_modules en volume, conformément à l'architecture de production demandée).
 
-FROM node:20-alpine AS build
+FROM node:24.15-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
