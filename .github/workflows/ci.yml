@@ -131,7 +131,7 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      # Sécurité de la chaîne d'approvisionnement : vulnérabilités hautes (hors pairs optionnels non utilisés, ex. Karma), licences
+      # Sécurité de la chaîne d'approvisionnement : aucune vulnérabilité (niveau moyen et au-dessus), licences
       # autorisées, et SBOM CycloneDX conservé comme artefact.
       - name: Audit dependencies and licences
         working-directory: frontend
