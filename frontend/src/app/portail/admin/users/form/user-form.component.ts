@@ -1,63 +1,51 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputSwitchModule } from 'primeng/inputswitch';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { PasswordModule } from 'primeng/password';
 import { finalize, forkJoin, switchMap } from 'rxjs';
 
 import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
+import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { PasswordInputComponent } from '../../../../shared/ui/password-input/password-input.component';
+import { SelectComponent, SelectOption } from '../../../../shared/ui/select/select.component';
 import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
 import { PermissionSummary, Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
-import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 
 @Component({
   selector: 'app-user-form',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    FormsModule,
-    RouterLink,
-    ButtonModule,
-    InputTextModule,
-    PasswordModule,
-    MultiSelectModule,
-    InputSwitchModule,
-    LazySelectComponent,
-    CheckboxModule
-  ],
+  imports: [ReactiveFormsModule, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, PasswordInputComponent, SelectComponent],
   templateUrl: './user-form.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './user-form.component.scss'
 })
-export class UserFormComponent implements OnInit {
+export class UserFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UserService);
   private readonly roleService = inject(RoleService);
-  readonly employeeReferenceService = inject(EmployeeReferenceService);
+  protected readonly employeeReferenceService = inject(EmployeeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
-  userId: number | null = null;
-  saving = false;
-  loading = true;
-  allRoles: Role[] = [];
+  private readonly userId = signal<number | null>(null);
+  protected readonly isEditMode = computed(() => this.userId() !== null);
+  protected readonly saving = signal(false);
+  protected readonly loading = signal(true);
+  private readonly allRoles = signal<Role[]>([]);
+  protected readonly roleOptions = computed<SelectOption<number>[]>(() => this.allRoles().map((role) => ({ label: role.nom, value: role.id })));
 
+  protected readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
   /** Permissions déniables = union des permissions des rôles actuellement sélectionnés. */
-  readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
-  deniablePermissions: PermissionSummary[] = [];
-  deniedPermissionIds = new Set<number>();
+  protected readonly deniablePermissions = signal<PermissionSummary[]>([]);
+  private readonly deniedPermissionIds = signal(new Set<number>());
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
     email: ['', [Validators.required, Validators.email]],
     motDePasse: [''],
@@ -66,62 +54,56 @@ export class UserFormComponent implements OnInit {
     roleIds: [[] as number[]]
   });
 
-  get isEditMode(): boolean {
-    return this.userId !== null;
-  }
-
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
-    this.userId = idParam ? Number(idParam) : null;
+    this.userId.set(idParam ? Number(idParam) : null);
 
-    if (!this.isEditMode) {
+    this.form.controls.roleIds.valueChanges.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((roleIds) => this.recomputeDeniablePermissions(roleIds ?? []));
+
+    const roles$ = this.roleService.findAll();
+    const id = this.userId();
+
+    if (id === null) {
       this.form.controls.motDePasse.addValidators([Validators.required, motDePasseConforme]);
+      roles$.pipe(finalize(() => this.loading.set(false))).subscribe((roles) => this.allRoles.set(roles));
     } else {
       // Le username n'est pas modifiable après création (UserUpdateRequestDto ne le porte pas).
       this.form.controls.username.disable();
-    }
-
-    const roles$ = this.roleService.findAll();
-
-    if (this.isEditMode) {
-      forkJoin([roles$, this.userService.findById(this.userId!)])
-        .pipe(finalize(() => (this.loading = false)))
+      forkJoin([roles$, this.userService.findById(id)])
+        .pipe(finalize(() => this.loading.set(false)))
         .subscribe(([roles, user]) => {
-          this.allRoles = roles;
-          const roleIds = user.roles.map((r) => r.id);
+          this.allRoles.set(roles);
+          this.deniedPermissionIds.set(new Set(user.permissionsRefusees.map((p) => p.id)));
           this.form.patchValue({
             username: user.username,
             email: user.email,
             actif: user.actif,
             employeeId: user.employee?.id ?? null,
-            roleIds
+            roleIds: user.roles.map((r) => r.id)
           });
-          this.deniedPermissionIds = new Set(user.permissionsRefusees.map((p) => p.id));
-          this.recomputeDeniablePermissions(roleIds);
         });
-    } else {
-      roles$.pipe(finalize(() => (this.loading = false))).subscribe((roles) => (this.allRoles = roles));
     }
   }
 
-  onRolesChange(roleIds: number[]): void {
-    this.recomputeDeniablePermissions(roleIds);
+  protected isDenied(permission: PermissionSummary): boolean {
+    return this.deniedPermissionIds().has(permission.id);
   }
 
-  isDenied(permission: PermissionSummary): boolean {
-    return this.deniedPermissionIds.has(permission.id);
-  }
-
-  toggleDenied(permission: PermissionSummary, denied: boolean): void {
+  protected onToggleDenied(permission: PermissionSummary, event: Event): void {
+    const denied = (event.target as HTMLInputElement).checked;
     this.form.markAsDirty();
-    if (denied) {
-      this.deniedPermissionIds.add(permission.id);
-    } else {
-      this.deniedPermissionIds.delete(permission.id);
-    }
+    this.deniedPermissionIds.update((current) => {
+      const next = new Set(current);
+      if (denied) {
+        next.add(permission.id);
+      } else {
+        next.delete(permission.id);
+      }
+      return next;
+    });
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
@@ -129,21 +111,20 @@ export class UserFormComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
-    this.saving = true;
+    const id = this.userId();
+    this.saving.set(true);
 
-    if (this.isEditMode) {
+    if (id !== null) {
       this.userService
-        .update(this.userId!, {
+        .update(id, {
           email: raw.email!,
           actif: raw.actif!,
           employeeId: raw.employeeId,
           roleIds: raw.roleIds!
         })
         .pipe(
-          switchMap(() =>
-            this.userService.updateDeniedPermissions(this.userId!, { permissionIds: Array.from(this.deniedPermissionIds) })
-          ),
-          finalize(() => (this.saving = false))
+          switchMap(() => this.userService.updateDeniedPermissions(id, { permissionIds: Array.from(this.deniedPermissionIds()) })),
+          finalize(() => this.saving.set(false))
         )
         .subscribe(() => {
           this.messageService.add({ severity: 'success', summary: 'Utilisateur modifié', life: 4000 });
@@ -159,7 +140,7 @@ export class UserFormComponent implements OnInit {
           employeeId: raw.employeeId,
           roleIds: raw.roleIds!
         })
-        .pipe(finalize(() => (this.saving = false)))
+        .pipe(finalize(() => this.saving.set(false)))
         .subscribe(() => {
           this.messageService.add({ severity: 'success', summary: 'Utilisateur créé', life: 4000 });
           this.form.markAsPristine();
@@ -171,7 +152,7 @@ export class UserFormComponent implements OnInit {
   private recomputeDeniablePermissions(roleIds: number[]): void {
     const roleIdSet = new Set(roleIds);
     const parCode = new Map<string, PermissionSummary>();
-    for (const role of this.allRoles) {
+    for (const role of this.allRoles()) {
       if (!roleIdSet.has(role.id)) {
         continue;
       }
@@ -179,13 +160,10 @@ export class UserFormComponent implements OnInit {
         parCode.set(permission.code, permission);
       }
     }
-    this.deniablePermissions = Array.from(parCode.values()).sort((a, b) => a.code.localeCompare(b.code));
+    const deniables = Array.from(parCode.values()).sort((a, b) => a.code.localeCompare(b.code));
+    this.deniablePermissions.set(deniables);
 
-    const validIds = new Set(this.deniablePermissions.map((p) => p.id));
-    for (const id of Array.from(this.deniedPermissionIds)) {
-      if (!validIds.has(id)) {
-        this.deniedPermissionIds.delete(id);
-      }
-    }
+    const validIds = new Set(deniables.map((p) => p.id));
+    this.deniedPermissionIds.update((current) => new Set(Array.from(current).filter((id) => validIds.has(id))));
   }
 }

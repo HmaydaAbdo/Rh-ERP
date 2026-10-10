@@ -1,59 +1,48 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
   selector: 'app-equipe-list',
-  standalone: true,
-  imports: [CommonModule, ColumnChooserComponent, ReactiveFormsModule, RouterLink, TableModule, ButtonModule, InputTextModule, ConfirmDialogModule],
-  providers: [ConfirmationService],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, ColumnChooserComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './equipe-list.component.html',
-  styleUrl: './equipe-list.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EquipeListComponent implements OnInit {
+export class EquipeListComponent {
   readonly columns = new ColumnState([
     { field: 'code', header: 'Code' },
     { field: 'libelle', header: 'Libellé' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly equipeService = inject(EquipeService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('EQUIPE_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('EQUIPE_WRITE'));
+  protected readonly canDelete = computed(() => this.authService.hasPermission('EQUIPE_DELETE'));
 
-  canDelete(): boolean {
-    return this.authService.hasPermission('EQUIPE_DELETE');
-  }
+  protected readonly equipes = signal<Equipe[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly deletingId = signal<number | null>(null);
 
-  equipes: Equipe[] = [];
-  totalRecords = 0;
-  loading = false;
-  deletingId: number | null = null;
-
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     code: [''],
     libelle: ['']
   });
@@ -62,51 +51,47 @@ export class EquipeListComponent implements OnInit {
   private lastSize = 10;
   private lastSort = 'code,asc';
 
-  ngOnInit(): void {
+  constructor() {
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(inject(DestroyRef))
       )
       .subscribe(() => this.onSearch());
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
-  onView(equipe: Equipe): void {
+  protected onView(equipe: Equipe): void {
     this.router.navigate(['/equipes', equipe.id]);
   }
 
-  onEdit(equipe: Equipe): void {
+  protected onEdit(equipe: Equipe): void {
     this.router.navigate(['/equipes', equipe.id, 'edit']);
   }
 
-  onDelete(equipe: Equipe): void {
+  protected onDelete(equipe: Equipe): void {
     this.confirmationService.confirm({
       header: 'Supprimer cette équipe',
       message: `Confirmez-vous la suppression de ${equipe.code} ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteEquipe(equipe)
@@ -114,10 +99,10 @@ export class EquipeListComponent implements OnInit {
   }
 
   private deleteEquipe(equipe: Equipe): void {
-    this.deletingId = equipe.id;
+    this.deletingId.set(equipe.id);
     this.equipeService
       .delete(equipe.id)
-      .pipe(finalize(() => (this.deletingId = null)))
+      .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Équipe supprimée', life: 4000 });
         this.fetchPage();
@@ -125,7 +110,7 @@ export class EquipeListComponent implements OnInit {
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
     const criteria = this.filterForm.getRawValue();
 
     this.equipeService
@@ -136,10 +121,10 @@ export class EquipeListComponent implements OnInit {
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
       )
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
-        this.equipes = result.content;
-        this.totalRecords = result.page.totalElements;
+        this.equipes.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
       });
   }
 }

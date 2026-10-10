@@ -7,6 +7,26 @@
 
 ---
 
+## Adoption du socle Staport dans ERP-RH
+
+Le socle `v0.1.1` est épinglé dans `conventions/staport/` ; l'ADR et les skills IA métier sont dans
+`docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
+la migration PostgreSQL 18 est validée en local le 2026-10-10. Angular est migré à 22.2.2 et Node 24.15.0
+est épinglé. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md). Restent à faire :
+
+- mettre à jour les conventions Staport vers la version suivante et repinner le snapshot central ;
+- migrer toutes les vues de PrimeNG vers Angular Aria/CDK, Tailwind 4, Lucide et composants Staport; supprimer PrimeIcons et Zone.js;
+- moderniser le runner de tests, compléter les tests unitaires/composants et ajouter des parcours E2E navigateur pour
+  connexion, permissions et paie ; voir les limites actuelles dans `docs/testing.md` ;
+- planifier puis exécuter la migration du serveur de production PG17→PG18 : répétition sur sauvegarde,
+  fenêtre de maintenance, restauration logique dans un volume neuf, contrôles et conservation du volume
+  PG17 comme retour arrière ; suivre [la procédure](docs/deployment.md#migration-majeure-pg17--pg18-en-production) ;
+- ensuite instrumenter le catalogue de KPI existant puis cadrer un premier outil MCP RH en lecture
+  seule avant d'étendre l'IA.
+
+Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
+et procédure de retour arrière propres à cette étape.
+
 ## Refonte visuelle (en cours, phase par phase — voir `DESIGN.md` et `conventions/design-system.md`)
 
 Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). Revue finale faite (phase 7). Points déjà identifiés :
@@ -15,8 +35,8 @@ Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, respon
   Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
 - **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
   (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
-- **Poids du CSS** : le thème PrimeNG généré embarque tous les composants (258 ko bruts) ; l'élaguer aux composants utilisés
-  réduirait le chargement initial.
+- **Poids du bundle/CSS** : le build Angular 22 dépasse l'avertissement initial de 15,62 kB et le style de l'assistant d'export
+  dépasse l'avertissement de 7,60 kB ; optimiser avant clôture, sans relever les seuils.
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
 - **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
   `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.
@@ -85,7 +105,7 @@ demandent une décision avant correction :
 
 ## Audit de sécurité — points à traiter (revue du 2026-10-04)
 
-Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; **restent le n° 6 (limite de débit) et le n° 7 (Angular 17, reporté)**.
+Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; **restent le n° 6 (limite de débit) et le n° 7 (audit actuel des dépendances frontend)**.
 Vérifié et conforme : toutes les routes Paie portent une permission (`EndpointSecurityTest` la verrouille, nouvelles routes
 comprises) ; les filtres d'agrégation passent par des paramètres liés (pas d'injection) ; la suppression en groupe exige un mois,
 revérifie le nombre confirmé (`409` sinon) et ne supprime que les bulletins qu'elle a chargés ; aucun HTML construit côté
@@ -94,7 +114,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
 | 6 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export ni la suppression en groupe (voir « Anomalies ») | Limitation de débit sur `/auth/*` et sur les routes coûteuses |
-| 7 | Faible | **9 avis de dépendances, tous sur Angular 17** (XSS i18n, hydratation, attributs SVG), antérieurs aux vues Paie ; l'application n'utilise ni l'i18n ni le rendu serveur. `chart.js` n'apparaît dans aucun avis | Planifier une montée de version d'Angular et de PrimeNG |
+| 7 | À trier | **19 vulnérabilités de sévérité élevée signalées par `npm audit`** lors de la montée Angular 22; le rapport complet doit être examiné et chaque paquet transitive mis à jour ou justifié. Aucun `npm audit fix --force` sans revue | Traiter l'audit paquet par paquet et conserver un rapport dans la CI |
 
 ---
 

@@ -32,7 +32,7 @@
               <span class="paie-cartes__detail">{{ carte.resume.nombreBulletins }} bulletins · {{ carte.resume.nombreChantiers }} chantiers</span>
               @if (carte.variation !== null) {
                 <span class="paie-cartes__detail">
-                  <i class="pi" [ngClass]="carte.variation >= 0 ? 'pi-arrow-up-right' : 'pi-arrow-down-right'" aria-hidden="true"></i>
+                  <stp-icon [name]="carte.variation >= 0 ? 'arrow-up-right' : 'arrow-down-right'" />
                   {{ formaterVariation(carte.variation) }} vs mois précédent
                 </span>
               }
@@ -41,15 +41,7 @@
               }
             </a>
             @if (canPurge()) {
-              <button
-                pButton
-                type="button"
-                icon="pi pi-trash"
-                class="p-button-text p-button-danger p-button-sm paie-cartes__supprimer"
-                [attr.aria-label]="'Supprimer les bulletins de ' + libellePeriode(carte.resume.periode)"
-                title="Supprimer les bulletins de ce mois"
-                (click)="demanderSuppressionMois(carte)"
-              ></button>
+              <button stp-button variant="danger-text" icon="trash-2" iconOnly class="paie-cartes__supprimer" type="button" [attr.aria-label]="'Supprimer les bulletins de ' + libellePeriode(carte.resume.periode)" title="Supprimer les bulletins de ce mois" (click)="demanderSuppressionMois(carte)"></button>
             }
             </div>
           }
@@ -90,15 +82,7 @@
                 <span class="paie-cartes__detail">{{ formaterPart(carte.part) }} de la masse du mois</span>
               </a>
               @if (canPurge()) {
-                <button
-                  pButton
-                  type="button"
-                  icon="pi pi-trash"
-                  class="p-button-text p-button-danger p-button-sm paie-cartes__supprimer"
-                  [attr.aria-label]="'Supprimer les bulletins du chantier ' + carte.chantier.code"
-                  title="Supprimer les bulletins de ce chantier"
-                  (click)="demanderSuppressionChantier(carte.chantier)"
-                ></button>
+                <button stp-button variant="danger-text" icon="trash-2" iconOnly class="paie-cartes__supprimer" type="button" [attr.aria-label]="'Supprimer les bulletins du chantier ' + carte.chantier.code" title="Supprimer les bulletins de ce chantier" (click)="demanderSuppressionChantier(carte.chantier)"></button>
               }
               </div>
             }
@@ -135,15 +119,8 @@
               </div>
 
               <div class="app-toolbar">
-                <input pInputText type="text" [formControl]="rechercheEquipe" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
-                <button
-                  pButton
-                  type="button"
-                  icon="pi pi-times"
-                  label="Réinitialiser"
-                  class="p-button-text app-toolbar__clear"
-                  (click)="rechercheEquipe.setValue('')"
-                ></button>
+                <input class="stp-input" type="text" [formControl]="rechercheEquipe" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
+                <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="rechercheEquipe.setValue('')">Réinitialiser</button>
               </div>
 
               <div class="app-table-bar">
@@ -151,128 +128,76 @@
                 <div class="app-table-bar__tools">
                   <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
                   @if (canPurge()) {
-                    <button
-                      pButton
-                      type="button"
-                      icon="pi pi-trash"
-                      label="Supprimer ce chantier"
-                      class="p-button-outlined p-button-danger"
-                      (click)="demanderSuppressionChantier(c)"
-                    ></button>
+                    <button stp-button variant="danger" icon="trash-2" type="button" (click)="demanderSuppressionChantier(c)">Supprimer ce chantier</button>
                   }
                 </div>
               </div>
 
               <div class="paie-cartes__tableau">
-                <p-table
-                  [value]="lignesEquipes()"
-                  [globalFilterFields]="['code', 'libelle']"
-                  [paginator]="true"
-                  [rows]="10"
-                  [rowsPerPageOptions]="rowsPerPage"
-                  [showCurrentPageReport]="true"
-                  [currentPageReportTemplate]="pageReport"
+                <stp-table
+                  label="Équipes du chantier"
+                  emptyMessage="Aucune équipe ne correspond à cette recherche."
+                  [value]="equipesAffichees()"
                   [columns]="columns.visible"
-                  [resizableColumns]="true"
-                  columnResizeMode="expand"
-                  [reorderableColumns]="true"
-                  (onColReorder)="columns.onReorder($event.columns)"
-                  dataKey="code"
-                  styleClass="app-table p-datatable-gridlines p-datatable-sm"
+                  [rowActionsVisible]="canPurge()"
+                  [rowClickable]="ligneCliquable"
+                  [rowTitle]="titreLigne"
+                  (rowClick)="ouvrirBulletins($event)"
+                  (columnsReorder)="columns.onReorder($event)"
                 >
-                  <ng-template pTemplate="header">
-                    <tr>
-                      @for (col of columns.visible; track col.field) {
-                        <th [pSortableColumn]="col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
-                          {{ col.header }} <p-sortIcon [field]="col.field"></p-sortIcon>
-                        </th>
+                  <ng-template stpCell let-ligne let-col="col">
+                    @switch (col.field) {
+                      @case ('code') {
+                        {{ ligne.code }}
                       }
-                      @if (canPurge()) {
-                        <th><span class="app-lecteur">Actions</span></th>
+                      @case ('libelle') {
+                        {{ ligne.libelle }}
                       }
-                    </tr>
+                      @case ('effectif') {
+                        {{ ligne.effectif }}
+                      }
+                      @case ('masse') {
+                        {{ formaterMontant(ligne.masse) }}
+                      }
+                      @case ('part') {
+                        {{ formaterPart(ligne.part) }}
+                      }
+                    }
                   </ng-template>
 
-                  <ng-template pTemplate="body" let-ligne>
-                    <tr
-                      [class.paie-cartes__ligne--cliquable]="ligne.equipeId !== null"
-                      [attr.tabindex]="ligne.equipeId !== null ? 0 : null"
-                      [attr.title]="ligne.equipeId !== null ? 'Voir les bulletins de cette équipe' : null"
-                      (click)="ouvrirBulletins(ligne)"
-                      (keydown.enter)="ouvrirBulletins(ligne)"
-                    >
-                      @for (col of columns.visible; track col.field) {
-                        <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
-                          @switch (col.field) {
-                            @case ('code') {
-                              {{ ligne.code }}
-                            }
-                            @case ('libelle') {
-                              {{ ligne.libelle }}
-                            }
-                            @case ('effectif') {
-                              {{ ligne.effectif }}
-                            }
-                            @case ('masse') {
-                              {{ formaterMontant(ligne.masse) }}
-                            }
-                            @case ('part') {
-                              {{ formaterPart(ligne.part) }}
-                            }
-                          }
-                        </td>
-                      }
-                      @if (canPurge()) {
-                        <td class="text-center">
-                          @if (ligne.equipeId !== null) {
-                            <button
-                              pButton
-                              type="button"
-                              icon="pi pi-trash"
-                              class="p-button-text p-button-danger p-button-sm"
-                              [attr.aria-label]="'Supprimer les bulletins de l\'équipe ' + ligne.code"
-                              title="Supprimer les bulletins de cette équipe"
-                              (click)="$event.stopPropagation(); demanderSuppressionEquipe(ligne)"
-                              (keydown.enter)="$event.stopPropagation()"
-                            ></button>
-                          }
-                        </td>
-                      }
-                    </tr>
+                  <ng-template stpRowActions let-ligne>
+                    @if (ligne.equipeId !== null) {
+                      <button
+                        stp-button
+                        variant="danger-text"
+                        icon="trash-2"
+                        iconOnly
+                        type="button"
+                        [attr.aria-label]="'Supprimer les bulletins de l’équipe ' + ligne.code"
+                        title="Supprimer les bulletins de cette équipe"
+                        (click)="$event.stopPropagation(); demanderSuppressionEquipe(ligne)"
+                        (keydown.enter)="$event.stopPropagation()"
+                      ></button>
+                    }
                   </ng-template>
 
-                  <ng-template pTemplate="footer">
-                    <tr>
-                      @for (col of columns.visible; track col.field) {
-                        <td [ngClass]="[col.align ?? '', 'font-bold']">
-                          @switch (col.field) {
-                            @case ('code') {
-                              Total
-                            }
-                            @case ('effectif') {
-                              {{ effectifTotalEquipes() }}
-                            }
-                            @case ('masse') {
-                              {{ formaterMontant(masseTotaleEquipes()) }}
-                            }
-                            @case ('part') {
-                              {{ formaterPart(100) }}
-                            }
-                          }
-                        </td>
+                  <ng-template stpFooter let-col="col">
+                    @switch (col.field) {
+                      @case ('code') {
+                        Total
                       }
-                      @if (canPurge()) {
-                        <td></td>
+                      @case ('effectif') {
+                        {{ effectifTotalEquipes() }}
                       }
-                    </tr>
+                      @case ('masse') {
+                        {{ formaterMontant(masseTotaleEquipes()) }}
+                      }
+                      @case ('part') {
+                        {{ formaterPart(100) }}
+                      }
+                    }
                   </ng-template>
-
-                  <ng-template pTemplate="emptymessage">
-                    <tr>
-                      <td [attr.colspan]="columns.visible.length + (canPurge() ? 1 : 0)" class="text-center">Aucune équipe ne correspond à cette recherche.</td>
-                    </tr>
-                  </ng-template>
-                </p-table>
+                </stp-table>
               </div>
             </div>
           }
@@ -282,13 +207,12 @@
   }
 </div>
 
-<p-dialog
+<stp-dialog
   header="Supprimer des bulletins"
-  [visible]="suppression() !== null"
-  (visibleChange)="$event || annulerSuppression()"
-  [modal]="true"
+  width="34rem"
+  [open]="suppression() !== null"
   [closable]="!suppressionEnCours()"
-  [style]="{ width: '34rem' }"
+  (openChange)="$event || annulerSuppression()"
 >
   @if (suppression(); as s) {
     <p class="paie-cartes__suppression-titre">
@@ -301,7 +225,7 @@
       }
     </ul>
     <p class="paie-cartes__suppression-alerte">
-      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <stp-icon name="triangle-alert" />
       Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
       réimporté depuis son fichier Excel.
     </p>
@@ -310,7 +234,7 @@
     </label>
     <input
       id="confirmation-suppression"
-      pInputText
+      class="stp-input"
       type="text"
       inputmode="numeric"
       autocomplete="off"
@@ -318,17 +242,8 @@
       (keydown.enter)="confirmerSuppression()"
     />
   }
-  <ng-template pTemplate="footer">
-    <button pButton type="button" label="Annuler" class="p-button-text" [disabled]="suppressionEnCours()" (click)="annulerSuppression()"></button>
-    <button
-      pButton
-      type="button"
-      icon="pi pi-trash"
-      label="Supprimer"
-      class="p-button-danger"
-      [disabled]="!confirmationValide()"
-      [loading]="suppressionEnCours()"
-      (click)="confirmerSuppression()"
-    ></button>
-  </ng-template>
-</p-dialog>
+  <div stpDialogFooter>
+    <button stp-button variant="text" type="button" [disabled]="suppressionEnCours()" (click)="annulerSuppression()">Annuler</button>
+    <button stp-button variant="danger" icon="trash-2" type="button" [disabled]="!confirmationValide()" [loading]="suppressionEnCours()" (click)="confirmerSuppression()">Supprimer</button>
+  </div>
+</stp-dialog>

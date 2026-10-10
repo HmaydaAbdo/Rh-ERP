@@ -1,32 +1,28 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { Function } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
-import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
   selector: 'app-function-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule],
+  imports: [RouterLink, ButtonComponent, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './function-detail.component.html'
 })
-export class FunctionDetailComponent implements OnInit {
-  private readonly authService = inject(AuthService);
-
-  canWrite(): boolean {
-    return this.authService.hasPermission('FUNCTION_WRITE');
-  }
-
+export class FunctionDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly functionService = inject(FunctionService);
 
-  fonction: Function | null = null;
+  private readonly authService = inject(AuthService);
+  protected readonly canWrite = computed(() => this.authService.hasPermission('FUNCTION_WRITE'));
+  protected readonly fonction = signal<Function | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.functionService.getById(id).subscribe((fonction) => (this.fonction = fonction));
+    this.functionService.getById(id).subscribe((fonction) => this.fonction.set(fonction));
   }
 }

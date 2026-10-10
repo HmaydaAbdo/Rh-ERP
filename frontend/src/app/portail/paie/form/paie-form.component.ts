@@ -1,23 +1,21 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { CalendarModule } from 'primeng/calendar';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
-import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
-import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
-import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { PaieService } from '../services/paie.service';
+import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
+import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
+import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
+import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
+import { PaieService } from '../services/paie.service';
 
 function toPeriodeString(date: Date | null): string | undefined {
   if (!date) {
@@ -33,37 +31,26 @@ function fromPeriodeString(periode: string): Date {
 
 @Component({
   selector: 'app-paie-form',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    ButtonModule,
-    InputTextModule,
-    InputNumberModule,
-    CalendarModule,
-    DropdownModule,
-    MessageModule,
-    LazySelectComponent
-  ],
+  imports: [ReactiveFormsModule, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, MessageComponent, NumberInputComponent, MonthInputComponent],
   templateUrl: './paie-form.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './paie-form.component.scss'
 })
-export class PaieFormComponent implements OnInit {
+export class PaieFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly paieService = inject(PaieService);
-  readonly employeeReferenceService = inject(EmployeeReferenceService);
-  readonly functionReferenceService = inject(FunctionReferenceService);
-  readonly chantierReferenceService = inject(ChantierReferenceService);
-  readonly equipeReferenceService = inject(EquipeReferenceService);
+  protected readonly employeeReferenceService = inject(EmployeeReferenceService);
+  protected readonly functionReferenceService = inject(FunctionReferenceService);
+  protected readonly chantierReferenceService = inject(ChantierReferenceService);
+  protected readonly equipeReferenceService = inject(EquipeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
-  paieId: number | null = null;
-  saving = false;
+  private readonly paieId = signal<number | null>(null);
+  protected readonly saving = signal(false);
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.group({
     employeeId: [null as number | null, Validators.required],
     periode: [null as Date | null, Validators.required],
     fonctionId: [null as number | null, Validators.required],
@@ -79,20 +66,17 @@ export class PaieFormComponent implements OnInit {
     observation: ['']
   });
 
-  get isEditMode(): boolean {
-    return this.paieId !== null;
-  }
+  protected readonly isEditMode = computed(() => this.paieId() !== null);
 
-
-
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
-      this.paieId = Number(idParam);
+      const id = Number(idParam);
+      this.paieId.set(id);
       this.form.controls.employeeId.disable();
       this.form.controls.periode.disable();
 
-      this.paieService.getById(this.paieId).subscribe((paie) => {
+      this.paieService.getById(id).subscribe((paie) => {
         this.form.patchValue({
           employeeId: paie.employee.id,
           periode: fromPeriodeString(paie.periode),
@@ -112,7 +96,7 @@ export class PaieFormComponent implements OnInit {
     }
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
@@ -134,10 +118,10 @@ export class PaieFormComponent implements OnInit {
       observation: raw.observation || null
     };
 
-    this.saving = true;
+    this.saving.set(true);
 
-    const request$ = this.isEditMode
-      ? this.paieService.update(this.paieId!, dto)
+    const request$ = this.isEditMode()
+      ? this.paieService.update(this.paieId()!, dto)
       : this.paieService.create({
           ...dto,
           employeeId: raw.employeeId!,
@@ -145,11 +129,11 @@ export class PaieFormComponent implements OnInit {
         });
 
     request$
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe((paie) => {
         this.messageService.add({
           severity: 'success',
-          summary: this.isEditMode ? 'Bulletin modifié' : 'Bulletin créé',
+          summary: this.isEditMode() ? 'Bulletin modifié' : 'Bulletin créé',
           life: 4000
         });
         this.form.markAsPristine();

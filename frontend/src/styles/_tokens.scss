@@ -1,10 +1,8 @@
 // Design tokens de Staport RH — source unique de toute valeur de design (voir conventions/design-system.md).
 //
-// Trois couches :
+// Deux couches :
 //   1. primitives   — l'échelle de bleus de la marque (le bleu du logo est --brand-700) ; ne changent jamais de thème ;
 //   2. sémantiques  — ce que les composants utilisent (--color-*, --table-*, --chart-*, …) ; redéfinies pour le thème sombre ;
-//   3. pont PrimeNG — --pn-surface-* et --pn-primary-* : le thème PrimeNG (primeng-theme.css, généré par
-//                     `npm run theme:generate`) ne contient plus aucune couleur écrite en dur, il lit ces variables.
 //
 // Le thème est porté par `data-theme="light|dark"` sur <html> (voir core/theme/theme.service.ts, et le script d'index.html qui
 // le pose avant le premier affichage). Sans attribut, le thème clair s'applique.
@@ -200,30 +198,6 @@
   --table-row-alt-bg: var(--neutral-50);
   --table-row-hover-bg: var(--neutral-100);
 
-  // ---- 3. Pont PrimeNG ----
-  --pn-surface-0: var(--neutral-0);
-  --pn-surface-50: var(--neutral-50);
-  --pn-surface-100: var(--neutral-100);
-  --pn-surface-200: var(--neutral-200);
-  --pn-surface-300: var(--neutral-300);
-  --pn-surface-400: var(--neutral-400);
-  --pn-surface-500: var(--neutral-500);
-  --pn-surface-600: var(--neutral-600);
-  --pn-surface-700: var(--neutral-700);
-  --pn-surface-800: var(--neutral-800);
-  --pn-surface-900: var(--neutral-900);
-  --pn-surface-950: var(--neutral-950);
-  --pn-primary-50: var(--primary-50);
-  --pn-primary-100: var(--primary-100);
-  --pn-primary-200: var(--primary-200);
-  --pn-primary-300: var(--primary-300);
-  --pn-primary-400: var(--primary-400);
-  --pn-primary-500: var(--primary-500);
-  --pn-primary-600: var(--primary-600);
-  --pn-primary-700: var(--primary-700);
-  --pn-primary-800: var(--primary-800);
-  --pn-primary-900: var(--primary-900);
-  --pn-primary-950: var(--primary-950);
 }
 
 :root[data-theme='dark'] {

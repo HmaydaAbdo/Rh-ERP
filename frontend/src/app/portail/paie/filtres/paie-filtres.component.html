@@ -1,74 +1,64 @@
 <form [formGroup]="formulaire" class="paie-filtres" aria-label="Filtres de la paie">
   <div class="paie-filtres__periode" role="group" aria-label="Mois">
+    <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois plus ancien" [disabled]="!plusAncien()" (click)="choisir(plusAncien())"></button>
     <button
-      pButton
+      stp-button
+      variant="text"
+      icon="calendar"
+      class="paie-filtres__mois"
       type="button"
-      icon="pi pi-chevron-left"
-      class="p-button-text"
-      aria-label="Mois plus ancien"
-      [disabled]="!plusAncien()"
-      (click)="choisir(plusAncien())"
-    ></button>
-    <button
-      pButton
-      type="button"
-      icon="pi pi-calendar"
-      class="p-button-text paie-filtres__mois"
-      [label]="libelle()"
+      cdkOverlayOrigin
+      #origine="cdkOverlayOrigin"
       aria-label="Choisir le mois"
-      (click)="panneauMois.toggle($event)"
-    ></button>
-    <button
-      pButton
-      type="button"
-      icon="pi pi-chevron-right"
-      class="p-button-text"
-      aria-label="Mois plus récent"
-      [disabled]="!plusRecent()"
-      (click)="choisir(plusRecent())"
-    ></button>
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="panneauMoisOuvert()"
+      (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
+    >
+      <span class="paie-filtres__capitale">{{ libelle() }}</span>
+    </button>
+    <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois plus récent" [disabled]="!plusRecent()" (click)="choisir(plusRecent())"></button>
     @if (periode() && !moisObligatoire()) {
-      <button
-        pButton
-        type="button"
-        icon="pi pi-times"
-        class="p-button-text"
-        aria-label="Tous les mois"
-        title="Tous les mois"
-        (click)="choisir(null)"
-      ></button>
+      <button stp-button variant="text" icon="x" iconOnly type="button" aria-label="Tous les mois" title="Tous les mois" (click)="choisir(null)"></button>
     }
-    <p-overlayPanel #panneauMois appendTo="body">
-      <app-month-picker
-        [value]="periode()"
-        [disponibles]="disponibles()"
-        (valueChange)="choisir($event); panneauMois.hide()"
-      ></app-month-picker>
-    </p-overlayPanel>
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="origine"
+      [cdkConnectedOverlayOpen]="panneauMoisOuvert()"
+      [cdkConnectedOverlayPositions]="positions"
+      (overlayOutsideClick)="panneauMoisOuvert.set(false)"
+      (overlayKeydown)="surToucheMois($event)"
+      (detach)="panneauMoisOuvert.set(false)"
+    >
+      <div class="stp-popover" role="dialog" aria-label="Choisir un mois">
+        <app-month-picker [value]="periode()" [disponibles]="disponibles()" (valueChange)="choisir($event); panneauMoisOuvert.set(false)"></app-month-picker>
+      </div>
+    </ng-template>
   </div>
 
-  <span class="p-input-icon-left paie-filtres__champ">
-    <i class="pi pi-search" aria-hidden="true"></i>
-    <input pInputText type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
+  <span class="paie-filtres__champ">
+    <stp-icon name="search" />
+    <input class="stp-input" type="text" formControlName="nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
   </span>
   <button
-    pButton
+    stp-button
+    variant="secondary"
     type="button"
-    class="p-button-outlined paie-filtres__bascule"
+    class="paie-filtres__bascule"
     aria-controls="paie-filtres-secondaires"
     [attr.aria-expanded]="secondairesOuverts()"
     (click)="basculerSecondaires()"
   >
-    Filtres@if (nombreSecondaires() > 0) {
+    Filtres
+    @if (nombreSecondaires() > 0) {
       <span class="paie-filtres__badge">{{ nombreSecondaires() }}</span>
     }
-    <i class="pi" [class.pi-chevron-down]="!secondairesOuverts()" [class.pi-chevron-up]="secondairesOuverts()" aria-hidden="true"></i>
+    <stp-icon [name]="secondairesOuverts() ? 'chevron-up' : 'chevron-down'" />
   </button>
 
   <div id="paie-filtres-secondaires" class="paie-filtres__secondaires" [class.paie-filtres__secondaires--ouvert]="secondairesOuverts()">
-    <input pInputText type="text" formControlName="cin" class="paie-filtres__cin" placeholder="CIN" aria-label="CIN" />
+    <input type="text" formControlName="cin" class="stp-input paie-filtres__cin" placeholder="CIN" aria-label="CIN" />
 
-    @if (peutChoisirChantiers) {
+    @if (peutChoisirChantiers()) {
       @for (source of sourcesChantiers(); track source) {
         <app-lazy-select
           class="paie-filtres__selecteur"
@@ -83,7 +73,7 @@
         ></app-lazy-select>
       }
     }
-    @if (peutChoisirEquipes) {
+    @if (peutChoisirEquipes()) {
       @for (source of sourcesEquipes(); track source) {
         <app-lazy-select
           class="paie-filtres__selecteur"
@@ -98,7 +88,7 @@
         ></app-lazy-select>
       }
     }
-    @if (peutChoisirFonctions) {
+    @if (peutChoisirFonctions()) {
       <app-lazy-select
         class="paie-filtres__selecteur"
         formControlName="fonctionIds"
@@ -112,16 +102,7 @@
     }
   </div>
 
-  <button
-    pButton
-    type="button"
-    icon="pi pi-times"
-    label="Effacer"
-    aria-label="Effacer les filtres"
-    class="p-button-text paie-filtres__effacer"
-    [disabled]="!aDesFiltres()"
-    (click)="reinitialiser()"
-  ></button>
+  <button stp-button variant="text" icon="x" class="paie-filtres__effacer" type="button" aria-label="Effacer les filtres" [disabled]="!aDesFiltres()" (click)="reinitialiser()"><span class="paie-filtres__effacer-libelle">Effacer</span></button>
 </form>
 
 @if (fil()) {
@@ -131,7 +112,7 @@
         Tous les mois
       </button>
       @if (periode()) {
-        <i class="pi pi-angle-right" aria-hidden="true"></i>
+        <stp-icon name="chevron-right" />
         <button
           type="button"
           class="paie-filtres__segment"
@@ -142,12 +123,12 @@
         </button>
       }
       @if (periode() && chantierOuvert(); as chantier) {
-        <i class="pi pi-angle-right" aria-hidden="true"></i>
+        <stp-icon name="chevron-right" />
         <span class="paie-filtres__segment paie-filtres__segment--courant">{{ chantier }}</span>
       }
     </nav>
     @if (periode()) {
-      <button pButton type="button" icon="pi pi-arrow-up" label="Remonter" class="p-button-text" (click)="remonter()"></button>
+      <button stp-button variant="text" icon="arrow-up" type="button" (click)="remonter()">Remonter</button>
     }
   </div>
 }

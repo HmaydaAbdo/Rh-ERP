@@ -3,16 +3,27 @@
 > Conventions Angular applicables à tout le frontend. Document générique et réutilisable d'un
 > projet à l'autre — aucun nom de domaine métier propre à un projet particulier n'y figure.
 
-## Technologies
+## Technologies et version
 
-Le frontend est développé avec :
+Le socle Staport suit la dernière version majeure **stable** d'Angular validée dans la version épinglée du standard. Au 10 octobre 2026, la cible ERP-RH est Angular **22.2.2**. Angular, Angular CDK/Aria, Node.js et TypeScript doivent respecter leurs matrices de compatibilité officielles et les plages de pairs; les versions doivent être verrouillées dans le lockfile.
 
-* Angular 17+
-* Standalone Components
-* PrimeNG
-* RxJS
+* Angular standalone, lazy-loaded, Signals pour l'état réactif et détection zoneless (zoneless est le défaut d'Angular 21+; ne pas réactiver Zone.js par provider).
+* Angular Aria/CDK comme primitives accessibles et fondation des composants Staport, sans dépendance à une suite commerciale de widgets.
+* Tailwind CSS 4 pour les utilitaires, SCSS/CSS pour les composants et jetons de design.
+* Lucide Angular pour les icônes. PrimeNG, PrimeIcons et PrimeFlex ne sont pas utilisés.
+* Signal Forms pour les nouveaux formulaires; Reactive Forms typés restent supportés pendant la migration des formulaires existants. RxJS reste le format HTTP et flux.
 
-Toute nouvelle fonctionnalité doit respecter cette stack.
+Les composants partagés composent Aria/CDK avec le langage visuel Staport; utiliser des éléments HTML natifs lorsque l'interaction est simple. Ne jamais ajouter PrimeNG, PrimeIcons ou PrimeFlex. Toute évolution de ce choix est une décision d'architecture et exige une revue des coûts, licences, accessibilité, zoneless, bundle et maintenance.
+
+## Workflow Angular
+
+1. Vérifier la dernière version stable et les matrices officielles Angular/Node/TypeScript/RxJS; épingler Node dans `.nvmrc`, `engines` et CI.
+2. Mettre à jour une version majeure à la fois avec `ng update`, examiner chaque migration générée et garder les paquets Angular alignés.
+3. Examiner peer dependencies et licences de chaque dépendance directe ou transitive. Préférer les API Angular natives, Aria/CDK et composants Staport.
+4. Pour chaque étape, exécuter installation reproductible (`npm ci`), lint/typecheck, tests unitaires/composants, build de production et tests E2E. Ne pas masquer une incompatibilité avec `--force`, `legacy-peer-deps` ou une augmentation arbitraire des budgets.
+5. Examiner notes de version et dépréciations; valider navigation, accessibilité, thèmes, responsive, performances et bundle sur les parcours concernés.
+
+Une migration n'est terminée que lorsque le lockfile est reproductible sans contournement, que la CI utilise Node supporté, que la licence est confirmée et que les validations sont vertes.
 
 ---
 
@@ -38,10 +49,27 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 
 # Composants
 
-* Tous les composants sont Standalone.
+* Tous les composants, directives et pipes applicatifs sont standalone; ne pas créer de NgModule métier.
 * Un composant possède une seule responsabilité.
 * Les composants contiennent uniquement la logique de présentation.
 * Toute logique métier appartient à un Service.
+* Conserver le défaut OnPush de la version Angular cible et expliciter `ChangeDetectionStrategy.OnPush` quand cela rend l'intention lisible. Importer seulement les directives/composants Aria/CDK nécessaires.
+* Les composants métier restent dans leur domaine; les composants Staport partagés exposent une API explicite et cohérente.
+
+### Signals et état réactif
+
+* Utiliser `signal()` pour l'état local modifiable et `computed()` pour les valeurs dérivées. Réserver `effect()` à la synchronisation avec un effet externe, pas à la copie d'un signal vers un autre.
+* Exposer un état en lecture seule lorsque sa mutation doit rester privée. Utiliser Signals pour l'état consommé par le template et les API Signal stables de la version ciblée.
+* Les Observables restent le format des API HTTP, événements continus et orchestration d'annulation/retry. Convertir avec `toSignal()` à la frontière lorsque le template consomme le flux comme état; ne pas conserver en parallèle le même état dans un Observable et un Signal.
+* Utiliser `resource()` / `httpResource()` pour des lectures déclaratives pilotées par Signals lorsque l'annulation et l'état `loading/error/value` simplifient réellement le parcours. Les Resources sont réservées aux lectures, jamais aux mutations.
+* Ne jamais compter sur Zone.js pour actualiser un champ ordinaire depuis une souscription. Utiliser Signals, `AsyncPipe`, événements Angular ou une API de détection documentée.
+* Utiliser `takeUntilDestroyed()` pour les souscriptions liées au cycle de vie; toute souscription manuelle doit avoir une durée de vie explicite.
+
+### Zoneless
+
+* Angular 21+ est zoneless par défaut : ne pas fournir `provideZoneChangeDetection()`. Retirer Zone.js des dépendances, polyfills et tests. Toute exception d'un adaptateur tiers est isolée, documentée et testée.
+* Vérifier les mises à jour après HTTP, Reactive Forms, navigation/guards, dialogs, notifications, timers et événements des composants tiers sans Zone.js.
+* Le socle doit compiler et exécuter tests/build sans Zone.js. Tester les notifications de rendu asynchrones, et ne pas ajouter une dépendance Zone comme correctif.
 
 ---
 
@@ -77,7 +105,7 @@ Un composant ne fait jamais d'appel HTTP directement.
 
 # Reactive Forms
 
-Utiliser exclusivement Reactive Forms.
+Utiliser Signal Forms pour tout nouveau formulaire; l'API est stable depuis Angular 22. Pour convertir un formulaire Reactive Forms existant, préserver ses règles de validation et tests. Ne jamais mélanger Signal Forms et Reactive Forms dans un même formulaire. Les formulaires Reactive Forms existants restent typés et sont migrés au rythme des écrans concernés.
 
 Interdictions :
 
@@ -143,26 +171,25 @@ ce composant plutôt que d'implémenter sa propre pagination/recherche.
 
 # Tableaux
 
-Tout tableau de données utilise `p-table` de PrimeNG avec les fonctionnalités suivantes, **sans
-exception** — le tableau d'une nouvelle page les reprend dès sa création :
+Tout tableau de données utilise un composant Staport accessible bâti sur HTML natif et Aria/CDK. Pour une grille très dense
+ou nécessitant virtualisation avancée, AG Grid Community peut être chargé à la demande après validation du contrat, de la
+licence et du bénéfice mesuré. Toute grille respecte les exigences suivantes :
 
-* **Tri** : toute colonne de données est triable (`pSortableColumn` + `<p-sortIcon>`) ; seules les
+* **Tri** : toute colonne de données est triable au clavier et à la souris ; seules les
   colonnes d'actions ne le sont pas.
 * **Redimensionnement** (`[resizableColumns]="true"`, `columnResizeMode="expand"`,
   `pResizableColumn`), **réordonnancement** par glisser-déposer (`[reorderableColumns]="true"`,
   `pReorderableColumn`) et **choix des colonnes visibles** (composant partagé
   `app-column-chooser`).
-* **Pagination** avec total : `[paginator]`, `[rowsPerPageOptions]="rowsPerPage"`,
-  `[showCurrentPageReport]="true"` et `[currentPageReportTemplate]="pageReport"`.
+* **Pagination** avec total lisible, page courante, options de taille et navigation accessible.
 * **Filtres en temps réel** (délai de saisie de 300 ms) : aucun bouton « Rechercher », seul un bouton
   « Réinitialiser » reste dans la barre de filtres.
 
 ## Style unique
 
-Tous les tableaux ont **le même style**, défini une seule fois dans la feuille de style globale
+Tous les tableaux ont **le même style**, défini une seule fois dans le design system Staport
 (`styles/_tables.scss`, couleurs dans les tokens `--table-*` de `_tokens.scss`) : lignes compactes, grille
-visible, en-têtes en majuscules sur fond clair, alternance de lignes, survol, paginateur compact. Chaque
-`p-table` reçoit `styleClass="app-table p-datatable-gridlines p-datatable-sm"`. Les classes d'alignement
+visible, en-têtes en majuscules sur fond clair, alternance de lignes, survol, paginateur compact. Les classes d'alignement
 (`text-center`, `text-right`) et de graisse (`font-semibold`, `font-bold`) utilisées par `TableColumn.align` et
 `cellClass` y sont définies. **Aucun écran ne redéfinit ces règles** : toute évolution du style se fait dans
 `_tables.scss`, pour tous les tableaux à la fois.
@@ -184,8 +211,8 @@ colonne par `@switch (col.field)` ; la table reçoit `[columns]="columns.visible
 en dur dans l'ordre d'origine : le réordonnancement ne déplacerait alors que l'en-tête. Le
 `colspan` du message « aucun résultat » vaut `columns.visible.length + 1` (colonne d'actions).
 
-Un en-tête **groupé** sur plusieurs lignes (`colspan`/`rowspan`) est à proscrire : PrimeNG ne permet
-ni de réordonner ni de masquer proprement des colonnes dans un en-tête groupé.
+Un en-tête **groupé** sur plusieurs lignes (`colspan`/`rowspan`) est à proscrire sauf besoin métier documenté et validation
+accessibilité des en-têtes associés.
 
 ## Tri
 
@@ -195,8 +222,7 @@ ni de réordonner ni de masquer proprement des colonnes dans un en-tête groupé
   provoque une erreur 500). Une relation facultative (clé étrangère nullable) ne doit pas faire
   disparaître les lignes sans valeur du résultat trié.
 * Tableau non paginé côté serveur (liste complète en mémoire, ex. rôles, utilisateurs) : tri,
-  pagination et filtres sont faits côté client par `p-table` (`#dt` + `table.filter(valeur, champ,
-  'contains')` à chaque changement du formulaire de filtres) ; `sortField` peut cibler un nombre
+  pagination et filtres sont faits côté client par le composant Staport ; `sortField` peut cibler un nombre
   d'éléments (ex. `permissions.length`).
 * Une nouvelle colonne s'ajoute toujours avec son tri, dans le même changement.
 
@@ -368,15 +394,25 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 
 ---
 
+# Qualité et tests
+
+* Angular CLI Vitest (`@angular/build:unit-test`) est le runner unitaire par défaut. Les nouveaux tests ne dépendent pas de Jasmine, Karma ou Zone.js; les suites existantes migrent vers Vitest avec des fake timers natifs.
+* Tests de composants sous DOM simulé pour états, clavier, Signals, formulaires et erreurs; utiliser les harness Angular/CDK lorsqu'ils existent plutôt que tester les classes CSS internes.
+* Les tests d'intégration vérifient router, guards, intercepteurs, services HTTP et contrats avec le serveur; employer des fixtures représentatives et des assertions sur les statuts/permissions.
+* Les E2E utilisent Playwright dans les principaux navigateurs ciblés, avec des parcours auth, autorisation par domaine, CRUD critique, paie et exports. Les jeux de données sont isolés et réinitialisables.
+* Exécuter axe-core dans les E2E sur les parcours représentatifs; vérifier manuellement clavier, lecteur d'écran, contraste, zoom, mobile, thèmes et reduced-motion avant livraison.
+* CI exécute `npm ci`, lint, typecheck, tests unitaires, build production, E2E critiques et vérifications de dépendances/licences. Mesurer couverture et budgets; ne pas cacher un échec en relevant la limite.
+
+---
+
 # Principes
 
 * Architecture par domaine métier.
 * Composants Standalone.
 * inject() uniquement.
-* Reactive Forms pour tout formulaire soumis.
+* Signal Forms pour tout nouveau formulaire; Reactive Forms typés durant la migration des écrans existants.
 * Nouveau Control Flow Angular uniquement.
-* RxJS pour les flux asynchrones, Signals pour l'état synchrone simple — jamais les deux pour la
-  même donnée.
+* Zoneless par défaut, Signals pour l'état UI, RxJS pour HTTP/flux et `resource()` seulement pour les lectures.
 * Les Services centralisent les appels HTTP.
 * Les composants restent centrés sur la présentation.
 * Tout tableau de données offre tri, redimensionnement, réordonnancement, choix des colonnes, pagination avec total et filtres en temps réel.

@@ -1,0 +1,146 @@
+// Boutons et pastilles Staport (composants `ui/button` et `ui/badge`). Tout vient des jetons : aucun écran ne redéfinit ces règles.
+.stp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: var(--control-height);
+  padding: 0 var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--control-font-size);
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-contrast);
+
+    &:hover:not(:disabled):not([aria-disabled='true']) {
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+    }
+  }
+
+  &--secondary {
+    background: transparent;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+
+    &:hover:not(:disabled):not([aria-disabled='true']) {
+      background: var(--color-primary-soft);
+    }
+  }
+
+  &--text {
+    background: transparent;
+    color: var(--color-primary);
+
+    &:hover:not(:disabled):not([aria-disabled='true']) {
+      background: var(--color-primary-soft);
+    }
+  }
+
+  &--danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: var(--color-danger-contrast);
+
+    &:hover:not(:disabled):not([aria-disabled='true']) {
+      background: color-mix(in srgb, var(--color-danger) 88%, black);
+    }
+  }
+
+  &--danger-text {
+    background: transparent;
+    color: var(--color-danger);
+
+    &:hover:not(:disabled):not([aria-disabled='true']) {
+      background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+    }
+  }
+
+  // Icône seule : carré de la hauteur d'un contrôle
+  &--icon-only {
+    width: var(--control-height);
+    padding: 0;
+  }
+}
+
+// Bouton scindé : l'action principale et le déclencheur de menu se touchent
+.stp-split-button {
+  display: inline-flex;
+}
+
+.stp-button--join-next {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  border-inline-end-width: 0;
+}
+
+.stp-button--join-previous {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+// Indicateur de chargement
+.stp-spin {
+  animation: stp-spin 0.9s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes stp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ---- Pastilles de statut ----
+.stp-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  &--neutral {
+    background: var(--neutral-100);
+    color: var(--neutral-700);
+  }
+
+  &--info {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  &--success {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
+  }
+
+  &--danger {
+    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    color: var(--color-danger);
+  }
+}

@@ -9,7 +9,7 @@
 ## Vue d'ensemble
 
 ```text
-Navigateur ── Angular 17 (PrimeNG) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 17
+Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 18
                     │                                   │
                     │                                   ├── Flyway (schéma, migrations V1…V15, droits du compte applicatif)
                     │                                   ├── Hibernate Envers + journal d'audit (qui, quoi, quand, avant / après)
@@ -23,11 +23,16 @@ Navigateur ── Angular 17 (PrimeNG) ──HTTP/JSON──▶ Spring Boot 4 (A
 | Brique | Choix |
 |---|---|
 | Backend | Java 21 (JDK de build et d'exécution), Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (resource server JWT), MapStruct, springdoc-openapi |
-| Base | PostgreSQL 17 avec l'extension pgvector (activée par anticipation, aucune colonne vectorielle aujourd'hui) |
+| Base | PostgreSQL 18.6 avec pgvector ; usage vectoriel uniquement lorsqu'un cas RAG sera validé |
 | Migrations | Flyway ; Hibernate en `ddl-auto: validate` (il vérifie le schéma, ne le modifie jamais) |
-| Frontend | Angular 17, composants standalone, signaux, PrimeNG 17, formulaires réactifs |
+| Frontend | Angular 17 en migration vers 22 ; cible standalone, Signals, Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport |
 | Tests | JUnit 5 + Mockito + AssertJ (backend), Jasmine/Karma (frontend) — voir [testing.md](testing.md) |
 | Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](deployment.md) |
+
+**État des environnements au 2026-10-10 :** le Docker local est sur PostgreSQL 18.6 avec les données
+migrées depuis PG17 ; le serveur de production reste sur PostgreSQL 17 jusqu'à l'exécution de la
+procédure contrôlée décrite dans [deployment.md](deployment.md). Le Compose de la branche ne doit donc
+pas encore être déployé tel quel en production.
 
 ---
 

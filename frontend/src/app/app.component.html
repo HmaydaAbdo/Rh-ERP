@@ -1,5 +1,4 @@
-<p-toast></p-toast>
-<p-confirmDialog key="sortie"></p-confirmDialog>
+<app-feedback-viewport />
 
 @if (isAuthenticated()) {
   <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
@@ -13,7 +12,7 @@
         [attr.aria-label]="menuOuvert() ? 'Fermer le menu' : 'Ouvrir le menu'"
         (click)="basculerMenu()"
       >
-        <i class="pi" [class.pi-bars]="!menuOuvert()" [class.pi-times]="menuOuvert()" aria-hidden="true"></i>
+        @if (menuOuvert()) { <svg lucideX aria-hidden="true"></svg> } @else { <svg lucideMenu aria-hidden="true"></svg> }
       </button>
       <img class="app-topbar__logo" src="assets/brand/monogramme.svg" alt="" width="28" height="28" />
       <span class="app-topbar__titre" translate="no">{{ title }}</span>
@@ -32,11 +31,18 @@
             routerLinkActive="active"
             class="app-sidebar__link"
             (click)="fermerMenu()"
-            pTooltip="{{ item.label }}"
-            tooltipPosition="right"
-            [showDelay]="300"
+            [attr.title]="item.label"
           >
-            <i [class]="item.icon" aria-hidden="true"></i>
+            @switch (item.icon) {
+              @case ('wallet') { <svg lucideWallet aria-hidden="true"></svg> }
+              @case ('users') { <svg lucideUsers aria-hidden="true"></svg> }
+              @case ('building') { <svg lucideBuilding aria-hidden="true"></svg> }
+              @case ('briefcase') { <svg lucideBriefcase aria-hidden="true"></svg> }
+              @case ('network') { <svg lucideNetwork aria-hidden="true"></svg> }
+              @case ('user-cog') { <svg lucideUserCog aria-hidden="true"></svg> }
+              @case ('shield') { <svg lucideShield aria-hidden="true"></svg> }
+              @case ('history') { <svg lucideHistory aria-hidden="true"></svg> }
+            }
             <span class="app-sidebar__label">{{ item.label }}</span>
           </a>
         }
@@ -50,21 +56,19 @@
           type="button"
           class="app-sidebar__action"
           [attr.aria-label]="theme.theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'"
-          [pTooltip]="theme.theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
-          tooltipPosition="right"
+          [attr.title]="theme.theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
           (click)="theme.basculer()"
         >
-          <i class="pi" [class.pi-moon]="theme.theme() === 'light'" [class.pi-sun]="theme.theme() === 'dark'" aria-hidden="true"></i>
+          @if (theme.theme() === 'light') { <svg lucideMoon aria-hidden="true"></svg> } @else { <svg lucideSun aria-hidden="true"></svg> }
         </button>
         <button
           type="button"
           class="app-sidebar__action"
           aria-label="Se déconnecter"
-          pTooltip="Se déconnecter"
-          tooltipPosition="right"
+          title="Se déconnecter"
           (click)="onLogout()"
         >
-          <i class="pi pi-sign-out" aria-hidden="true"></i>
+          <svg lucideLogOut aria-hidden="true"></svg>
         </button>
       </div>
     </aside>

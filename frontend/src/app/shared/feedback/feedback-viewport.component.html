@@ -1,0 +1,32 @@
+<section class="feedback-stack" aria-label="Notifications" aria-live="polite" aria-relevant="additions removals">
+  @for (notification of notifications(); track notification.id) {
+    <article class="feedback-toast" [class]="'feedback-toast feedback-toast--' + notification.severity"
+      [attr.role]="notification.severity === 'error' ? 'alert' : 'status'">
+      <div class="feedback-toast__content">
+        <strong>{{ notification.summary }}</strong>
+        @if (notification.detail) { <p>{{ notification.detail }}</p> }
+      </div>
+      <button type="button" class="feedback-toast__dismiss" aria-label="Fermer la notification" (click)="dismiss(notification.id)">×</button>
+    </article>
+  }
+</section>
+
+@if (confirmation.request(); as request) {
+  <div class="feedback-dialog-backdrop" (click)="$event.stopPropagation()">
+    <section class="feedback-dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-dialog-title"
+      aria-describedby="feedback-dialog-message" cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+      (keydown.escape)="handleEscape($event)">
+      <div class="feedback-dialog__mark" aria-hidden="true">!</div>
+      <h2 id="feedback-dialog-title">{{ request.header }}</h2>
+      <p id="feedback-dialog-message">{{ request.message }}</p>
+      <footer>
+        <button type="button" class="feedback-button feedback-button--secondary" (click)="confirmation.reject()">
+          {{ request.rejectLabel ?? 'Annuler' }}
+        </button>
+        <button type="button" cdkFocusInitial class="feedback-button feedback-button--danger" (click)="confirmation.accept()">
+          {{ request.acceptLabel ?? 'Confirmer' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

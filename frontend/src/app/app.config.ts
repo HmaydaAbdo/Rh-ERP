@@ -1,10 +1,8 @@
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { APP_INITIALIZER, ApplicationConfig, LOCALE_ID, inject } from '@angular/core';
-import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { TitleStrategy, provideRouter } from '@angular/router';
-import { MessageService, ConfirmationService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
@@ -30,10 +28,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'fr-FR' },
     provideRouter(routes),
     { provide: TitleStrategy, useClass: PageTitleStrategy },
-    provideAnimations(),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-    { provide: APP_INITIALIZER, useFactory: initializeAuth, multi: true },
-    MessageService,
-    ConfirmationService
+    provideHttpClient(withXhr(), withInterceptors([authInterceptor, errorInterceptor])),
+    { provide: APP_INITIALIZER, useFactory: initializeAuth, multi: true }
   ]
 };

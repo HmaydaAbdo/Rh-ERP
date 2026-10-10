@@ -3,34 +3,35 @@
     <img class="auth-card__logo" src="assets/brand/logo-staport.png" alt="Staport" width="160" height="81" />
     <h1>Connexion</h1>
 
-    @if (errorMessage) {
-      <div class="auth-card__error">{{ errorMessage }}</div>
+    @if (errorMessage(); as message) {
+      <div class="auth-card__error" role="alert">{{ message }}</div>
     }
 
     <div class="field">
       <label for="username">Nom d'utilisateur</label>
-      <input pInputText id="username" type="text" formControlName="username" autocomplete="username" />
+      <input id="username" type="text" formControlName="username" autocomplete="username" [attr.aria-invalid]="form.controls.username.invalid && form.controls.username.touched" aria-describedby="username-error" />
       @if (form.controls.username.invalid && form.controls.username.touched) {
-        <small class="field-error">Champ obligatoire.</small>
+        <small id="username-error" class="field-error">Champ obligatoire.</small>
       }
     </div>
 
     <div class="field">
       <label for="password">Mot de passe</label>
-      <p-password
-        inputId="password"
-        formControlName="password"
-        [feedback]="false"
-        [toggleMask]="true"
-        autocomplete="current-password"
-        styleClass="auth-card__password"
-      ></p-password>
+      <div class="auth-card__password">
+        <input id="password" [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="form.controls.password.invalid && form.controls.password.touched" aria-describedby="password-error" />
+        <button type="button" class="auth-card__password-toggle" [attr.aria-pressed]="passwordVisible()" aria-controls="password" (click)="togglePasswordVisibility()">
+          {{ passwordVisible() ? 'Masquer' : 'Afficher' }}
+          <span class="visually-hidden">le mot de passe</span>
+        </button>
+      </div>
       @if (form.controls.password.invalid && form.controls.password.touched) {
-        <small class="field-error">Champ obligatoire.</small>
+        <small id="password-error" class="field-error">Champ obligatoire.</small>
       }
     </div>
 
-    <button pButton type="submit" label="Se connecter" [loading]="submitting" [disabled]="submitting" class="auth-card__submit"></button>
+    <button type="submit" [disabled]="submitting()" class="auth-card__submit">
+      @if (submitting()) { Connexion en cours… } @else { Se connecter }
+    </button>
 
     <a routerLink="/forgot-password" class="auth-card__forgot">Mot de passe oublié ?</a>
   </form>

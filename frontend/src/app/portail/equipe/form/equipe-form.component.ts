@@ -1,76 +1,67 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
 import { finalize } from 'rxjs';
 
-import { EquipeService } from '../services/equipe.service';
+import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { EquipeService } from '../services/equipe.service';
 
 @Component({
   selector: 'app-equipe-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './equipe-form.component.html'
 })
-export class EquipeFormComponent implements OnInit {
+export class EquipeFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly equipeService = inject(EquipeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
-  equipeId: number | null = null;
-  saving = false;
+  private readonly equipeId = signal<number | null>(null);
+  protected readonly saving = signal(false);
+  protected readonly isEditMode = computed(() => this.equipeId() !== null);
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.maxLength(50)]],
     libelle: ['', [Validators.required, Validators.maxLength(100)]]
   });
 
-  get isEditMode(): boolean {
-    return this.equipeId !== null;
-  }
-
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
-      this.equipeId = Number(idParam);
-      this.equipeService.getById(this.equipeId).subscribe((equipe) => {
-        this.form.patchValue({ code: equipe.code, libelle: equipe.libelle });
-      });
+      const id = Number(idParam);
+      this.equipeId.set(id);
+      this.equipeService.getById(id).subscribe((equipe) => this.form.patchValue({ code: equipe.code, libelle: equipe.libelle }));
     }
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
       return;
     }
 
-    const raw = this.form.getRawValue();
-    const dto = { code: raw.code!, libelle: raw.libelle! };
+    const dto = this.form.getRawValue();
+    const id = this.equipeId();
 
-    this.saving = true;
+    this.saving.set(true);
 
-    const request$ = this.isEditMode
-      ? this.equipeService.update(this.equipeId!, dto)
-      : this.equipeService.create(dto);
+    const request$ = id !== null ? this.equipeService.update(id, dto) : this.equipeService.create(dto);
 
-    request$
-      .pipe(finalize(() => (this.saving = false)))
-      .subscribe((equipe) => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.isEditMode ? 'Équipe modifiée' : 'Équipe créée',
-          life: 4000
-        });
-        this.form.markAsPristine();
-        this.router.navigate(['/equipes', equipe.id]);
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe((equipe) => {
+      this.messageService.add({
+        severity: 'success',
+        summary: id !== null ? 'Équipe modifiée' : 'Équipe créée',
+        life: 4000
       });
+      this.form.markAsPristine();
+      this.router.navigate(['/equipes', equipe.id]);
+    });
   }
 }

@@ -21,13 +21,17 @@ npx ng test --watch=false --browsers=ChromeHeadless
 npx ng build --configuration production      # vérifie que le bundle de production compile
 ```
 
-La CI utilise un PostgreSQL de service (`pgvector/pgvector:pg17`), des variables d'environnement factices
+La CI utilise un PostgreSQL de service (`pgvector/pgvector:pg18`), des variables d'environnement factices
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en
 environnement sans écran.
 
 ---
 
-## Backend (252 tests)
+## Backend (261 tests)
+
+Dernière validation locale propre : 261 tests réussis, sans échec ni erreur, sous Java 21 et
+PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-10. Cette validation utilise une base jetable séparée
+des données migrées.
 
 JUnit 5, Mockito, AssertJ, ArchUnit. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
 simulées, sans base de données. `PaieApplicationTests` et **les tests d'intégration de l'audit** démarrent l'application
@@ -68,17 +72,20 @@ toujours par identifiant, jamais par comptage global, car la base est partagée.
 
 ---
 
-## Frontend (154 tests)
+## Frontend (175 tests)
 
-Jasmine + Karma, Chrome headless.
+Jasmine + Karma, Chrome Headless 154. Karma builder émet un avertissement de dépréciation Angular; la migration Vitest est planifiée dans [HANDOFF.md](../HANDOFF.md).
 
 | Fichier | Ce qu'il vérifie |
 |---|---|
 | `app.component.spec.ts` | Lien d'évitement qui met le focus sur le contenu, nom du produit protégé de la traduction, création de l'application, titre, pas de barre latérale sans connexion, barre latérale avec connexion |
+| `core/auth/login/login.component.spec.ts` | Validation sans requête, visibilité du mot de passe, navigation après succès, annonce d'erreur 401 |
 | `core/theme/theme.service.spec.ts` | Thème : appliqué sur `<html>`, choix mémorisé prioritaire sur la préférence du système, valeur invalide ignorée, bascule mémorisée, transition de couleurs à la bascule puis retirée, aucune au premier affichage |
 | `core/navigation/page-title.strategy.spec.ts` | Titre de l'onglet : « Employés · Staport RH », titre de la section gardé pour ses écrans enfants, « Staport RH » seul sans titre |
 | `shared/forms/unsaved-changes.guard.spec.ts` | Garde de formulaire : formulaire intact quitté sans question, confirmation demandée quand il est modifié (rester / quitter), plus de question une fois enregistré |
 | `shared/forms/focus-first-error.spec.ts` | Focus sur le premier champ invalide, sur le champ interactif d'un champ composé, aucun effet sans erreur |
+| `shared/feedback/feedback.service.spec.ts` | Notifications : publication, fermeture manuelle et expiration ; confirmations : acceptation/refus, fermeture et callbacks |
+| `shared/feedback/feedback-viewport.component.spec.ts` | Notification d'erreur annoncée et fermable ; dialogue d'alerte modal, contenu accessible et fermeture clavier avec Échap |
 | `shared/components/month-picker/month-picker.component.spec.ts` | Mois indisponibles grisés et non sélectionnables, émission au format `aaaa-MM`, bornes de navigation d'année, tous les mois autorisés sans liste |
 | `portail/paie/export/paie-export-wizard.component.spec.ts` | Assistant d'export : dernier mois présélectionné, refus sans mois valide, chargement des chantiers, aucune équipe cochée d'office à l'activation d'un chantier, apparition de l'étape matériel (seulement C168 avec CH/OP), contenu des requêtes PDF et Excel, nombres invalides, colonne laissée vide, mémorisation des nombres |
 | `portail/paie/cartes/paie-cartes.component.spec.ts` | Vue Cartes : mois sans chargement de chantiers, variation comparée au seul mois contigu, part des chantiers, recherche, ligne « Sans équipe » déduite (et absente sans bulletin sans équipe), clic sur une équipe vers la liste filtrée (rien pour « Sans équipe »), mois déjà chargé non rappelé, mois ou chantier introuvable, sens de la descente |
@@ -93,6 +100,8 @@ Jasmine + Karma, Chrome headless.
 | `portail/audit/journal/journal.component.spec.ts` | Journal : première page de la plus récente à la plus ancienne, recherche en temps réel après un délai (retour en première page), bornes de dates, ouverture d'une entrée (contexte, périmètre, modifications paginées), « toutes les entrées de cette requête », cible d'une ligne |
 | `portail/audit/historique/audit-historique.component.spec.ts`, `champs/audit-champs.component.spec.ts`, `audit-format.spec.ts` | Historique d'un enregistrement (versions, chargement des plus anciennes, vide), avant / après et éléments ajoutés / retirés, libellés des actions et des champs |
 | `core/auth/guards/auth.guard.spec.ts` | `homeGuard` : premier écran autorisé, `/acces-refuse` sans aucune permission (**pas de boucle**), `/login` sans connexion ; `permissionGuard` : accès avec la permission, `/acces-refuse` sans |
+
+La suite locale a passé **175 tests** dans Chrome Headless 154 le 2026-10-10. Le composant de retour utilisateur partagé utilise Signals et CDK A11y. La suite reste sur Jasmine/Karma (migration Vitest à faire) et plusieurs écrans PrimeNG produisent encore des avertissements Angular `NG01354`/`NG0956`.
 
 La barre de filtres ne propose que les sélecteurs dont l'utilisateur a la permission de lecture
 (`paie-filtres.component.spec.ts`). Le reste de l'interface (écrans, formulaires, tableaux) n'a **pas** de test automatisé : il est vérifié à la main

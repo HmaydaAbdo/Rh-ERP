@@ -1,65 +1,49 @@
 <div class="app-page__actions app-page__actions--liste">
   @if (canExport()) {
-    <button pButton type="button" icon="pi pi-download" label="Exporter" class="p-button-outlined" (click)="showExportDialog = true"></button>
+    <button stp-button variant="secondary" icon="download" type="button" (click)="showExportDialog.set(true)">Exporter</button>
   }
   @if (canImport()) {
-    <p-splitButton
-      [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
-      label="Importer"
-      icon="pi pi-upload"
-      [model]="menuImport"
-      [outlined]="true"
-      appendTo="body"
-      (onClick)="onOpenImportDialog()"
-    ></p-splitButton>
+    <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" (clicked)="onOpenImportDialog()"></stp-split-button>
   }
   @if (canWrite()) {
-    <button pButton type="button" icon="pi pi-plus" label="Nouveau bulletin" routerLink="/paie/new"></button>
+    <button stp-button icon="plus" type="button" routerLink="/paie/new">Nouveau bulletin</button>
   }
 </div>
 
-<p-dialog header="Importer des bulletins de paie" [(visible)]="showImportDialog" [modal]="true" [style]="{ width: '480px' }">
+<stp-dialog header="Importer des bulletins de paie" width="480px" [(open)]="showImportDialog">
   <form [formGroup]="importForm">
     <div class="paie-actions__dialog-field">
       <label for="importPeriode">Période <span class="field__req" aria-hidden="true">*</span></label>
-      <p-calendar
-        inputId="importPeriode"
-        formControlName="periode"
-        view="month"
-        dateFormat="mm/yy"
-        [showIcon]="true"
-        appendTo="body"
-        placeholder="Sélectionner un mois"
-      ></p-calendar>
+      <stp-month-input inputId="importPeriode" formControlName="periode" placeholder="Sélectionner un mois" />
     </div>
     <p class="paie-actions__dialog-hint">Le fichier s'applique à tout le mois sélectionné — la période n'est pas une colonne du fichier.</p>
     <input
       type="file"
       accept=".xlsx"
-      [disabled]="!importForm.controls.periode.value || importing"
+      [disabled]="!importForm.controls.periode.value || importing()"
       (change)="onImportFileSelected($event)"
     />
   </form>
-</p-dialog>
+</stp-dialog>
 
 <app-paie-export-wizard [(visible)]="showExportDialog"></app-paie-export-wizard>
 
-<p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '640px' }">
-  @if (importResult) {
+<stp-dialog header="Résultat de l'import" width="640px" [(open)]="showImportResultDialog">
+  @if (importResult(); as result) {
     <p>
-      Période <strong>{{ importResult.periode }}</strong> —
-      <strong>{{ importResult.totalLignes }}</strong> ligne(s) traitée(s) —
-      <strong>{{ importResult.crees }}</strong> créé(s),
-      <strong>{{ importResult.ignores }}</strong> ignoré(s).
+      Période <strong>{{ result.periode }}</strong> —
+      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
+      <strong>{{ result.crees }}</strong> créé(s),
+      <strong>{{ result.ignores }}</strong> ignoré(s).
     </p>
 
-    @if (importResult.fonctionsCreees.length > 0) {
+    @if (result.fonctionsCreees.length > 0) {
       <p class="paie-actions__dialog-hint">
-        Fonction(s) créée(s) automatiquement : <strong>{{ importResult.fonctionsCreees.join(', ') }}</strong>
+        Fonction(s) créée(s) automatiquement : <strong>{{ result.fonctionsCreees.join(', ') }}</strong>
       </p>
     }
 
-    @if (importResult.lignesIgnorees.length > 0) {
+    @if (result.lignesIgnorees.length > 0) {
       <div class="paie-actions__import-table-scroll">
         <table class="paie-actions__import-table">
           <thead>
@@ -71,7 +55,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (ligne of importResult.lignesIgnorees; track ligne.numeroLigne) {
+            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
               <tr>
                 <td>{{ ligne.numeroLigne }}</td>
                 <td>{{ ligne.cin }}</td>
@@ -84,4 +68,4 @@
       </div>
     }
   }
-</p-dialog>
+</stp-dialog>

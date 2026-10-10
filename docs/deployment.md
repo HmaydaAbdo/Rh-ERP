@@ -23,7 +23,7 @@ NGINX INNER (conteneur "frontend", voir frontend/nginx.conf)
    └── proxy_pass interne, réseau Docker "web-net" ──▶ BACKEND (Spring Boot, conteneur "backend")
                                                               │
                                                               ▼
-                                                    POSTGRESQL 17 + pgvector
+                                                    POSTGRESQL 18 + pgvector
                                                     (réseau Docker "db-net")
 ```
 
@@ -134,7 +134,49 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
 
 Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub.
 Pour re-déployer une nouvelle version : `docker compose pull && docker compose up -d` (met à jour
-les conteneurs dont l'image a changé, sans toucher au volume `postgres_data`).
+les conteneurs dont l'image a changé, sans toucher au volume `postgres_data_v18`). Sur la machine de
+développement, la migration logique de PG17 vers PG18 a été répétée et contrôlée le 2026-10-10 ;
+l'ancien volume `erp-rh_postgres_data` reste conservé. **Cette validation locale ne migre pas la
+production. Ne déploie pas le Compose PG18 en production avant d'avoir exécuté la procédure ci-dessous** :
+le nom de volume a changé, donc le nouveau conteneur utiliserait un volume vide si aucune restauration
+n'y était faite. Ne jamais lancer `docker compose down -v`.
+
+### Migration majeure PG17 → PG18 en production
+
+La migration se fait par export/restauration logique : un volume PostgreSQL 17 ne peut pas être
+réutilisé directement par PostgreSQL 18. Prévoir une fenêtre de maintenance et garder les écritures
+suspendues jusqu'à la décision de réouverture.
+
+1. **Inventorier la production** : relever le projet Compose, les noms exacts des conteneurs et des
+   volumes, la version du serveur, celle de pgvector, la dernière migration Flyway et les nombres de
+   lignes des tables métier. Les noms de volumes dépendent du nom de projet Compose : ne pas supposer
+   que celui de la machine de développement s'applique.
+2. **Sauvegarder PG17 hors du volume** : réaliser un dump logique complet incluant les rôles et bases,
+   le transférer vers un stockage distinct du serveur et vérifier son empreinte. Conserver aussi une
+   sauvegarde restaurable selon la procédure d'exploitation. Le volume seul n'est pas une sauvegarde.
+3. **Répéter avant la fenêtre** : restaurer cette sauvegarde dans un PostgreSQL 18 isolé avec pgvector,
+   puis vérifier les extensions, les rôles, Flyway, les nombres de lignes et le démarrage de l'application.
+   Ne pas exposer les mots de passe de production dans les commandes, le shell partagé ou les journaux.
+4. **Arrêter les écritures** : activer la maintenance, arrêter les services backend et tout autre client
+   qui écrit en base, puis produire le dump final PG17. Garder le conteneur PG17 et son volume présents.
+5. **Restaurer dans le nouveau volume PG18** : démarrer un conteneur PG18 temporaire sur un port local
+   différent, monté sur le volume cible `postgres_data_v18` et initialisé avec un compte de migration
+   distinct des rôles exportés. Restaurer le dump logique (rôles, droits, extensions et bases), puis
+   contrôler que la dernière migration Flyway est `V15`, que les tables attendues et leurs données sont
+   présentes, et que pgvector est disponible. Garder backend et trafic public arrêtés.
+6. **Basculer Compose** : arrêter proprement le conteneur temporaire PG18, puis lancer le service
+   `postgres` du Compose publié avec l'image PG18. Vérifier qu'il remonte le même volume cible et qu'il
+   devient `healthy`. Démarrer backend seul, vérifier les logs, l'Actuator, l'authentification et les
+   permissions ; démarrer le frontend et retirer la maintenance seulement après validation.
+7. **Retour arrière** : avant la réouverture, en cas d'échec, arrêter PG18 et remettre l'ancien Compose
+   PG17 avec son volume d'origine. Le volume PG17 n'est jamais supprimé. Après réouverture et nouvelles
+   écritures sur PG18, un simple retour à PG17 perdrait ces écritures : il faut d'abord les réconcilier
+   par une migration inverse contrôlée. Conserver les deux volumes jusqu'à validation métier et
+   sauvegarde PG18 restaurable.
+
+État au 2026-10-10 : migration locale PG17→PG18 vérifiée (PostgreSQL 18.6, pgvector 0.8.7, Flyway V15,
+28 tables ; nombres de lignes identiques), tests backend propres passés sur PG18. **Migration du serveur
+de production à planifier/exécuter séparément**.
 
 ---
 

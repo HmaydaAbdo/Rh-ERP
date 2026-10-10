@@ -1,27 +1,28 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 
 /** Sélecteur de vue du module Paie, en onglets : chaque vue est une route lazy de `/paie` (voir `paie.routes.ts`), ce composant
  * ne fait que les relier — sans reporter les paramètres d'URL : changer de vue réinitialise les filtres. */
 @Component({
   selector: 'app-paie-vue-switcher',
-  standalone: true,
-  imports: [RouterLink, RouterLinkActive],
-  template: `
+  imports: [RouterLink, RouterLinkActive, IconComponent],
+    template: `
     <nav class="vue-switcher" aria-label="Vue de la paie">
       <a routerLink="/paie" routerLinkActive="vue-switcher__lien--active" [routerLinkActiveOptions]="{ exact: true }" class="vue-switcher__lien">
-        <i class="pi pi-table" aria-hidden="true"></i> Tabulaire
+        <stp-icon name="table" /> Tabulaire
       </a>
       <a routerLink="/paie/cartes" routerLinkActive="vue-switcher__lien--active" class="vue-switcher__lien">
-        <i class="pi pi-th-large" aria-hidden="true"></i> Cartes
+        <stp-icon name="layout-grid" /> Cartes
       </a>
       <a routerLink="/paie/analytique" routerLinkActive="vue-switcher__lien--active" class="vue-switcher__lien">
-        <i class="pi pi-chart-bar" aria-hidden="true"></i> Analytique
+        <stp-icon name="chart-column" /> Analytique
       </a>
     </nav>
   `,
-  styles: [
-    `
+    changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
       .vue-switcher {
         display: flex;
         gap: var(--space-xs);
@@ -61,7 +62,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         border-bottom-color: var(--color-primary);
         font-weight: 600;
       }
-    `
-  ]
+  `
 })
 export class PaieVueSwitcherComponent {}
