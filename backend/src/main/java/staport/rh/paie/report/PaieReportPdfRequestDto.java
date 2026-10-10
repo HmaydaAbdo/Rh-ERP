@@ -27,7 +27,7 @@ import java.util.Map;
  *
  * <p>{@code sansVueEnsemble} : retire le chapitre « Vue d'ensemble » (indicateurs globaux et répartition par
  * chantier) — le rapport commence alors directement par le premier chantier, numéroté I (demande de direction,
- * 2026-10-10 : rapport limité au seul marché choisi avec {@code chantierId}, pour lequel la vue d'ensemble est
+ * 2026-10-10 : rapport limité au seul chantier choisi avec {@code chantierId}, pour lequel la vue d'ensemble est
  * redondante). Absent, nul ou faux : rapport complet, comme avant (le champ est un {@code Boolean} nullable : un corps JSON
  * historique sans ce champ reste valide).
  */

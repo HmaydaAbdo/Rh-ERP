@@ -246,7 +246,7 @@ class RapportPageModelBuilderTest {
     }
 
     /**
-     * Rapport limité à un marché (demande de direction, 2026-10-10) : sans vue d'ensemble, aucune page « GLOBAL » ; le
+     * Rapport limité à un chantier (demande de direction, 2026-10-10) : sans vue d'ensemble, aucune page « GLOBAL » ; le
      * premier chantier est le chapitre I (et non II), et le contenu du chantier est inchangé.
      */
     @Test

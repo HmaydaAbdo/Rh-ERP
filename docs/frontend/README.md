@@ -329,9 +329,9 @@ renvoie `value` et `totalRecords`) ou mode mémoire (tri et pagination faits par
 
 ## Assistant d'export de la paie
 
-`portail/paie/export/` : dialogue en étapes guidées (mois, format, marché en PDF, équipes, matériel conditionnel, génération). La coque
+`portail/paie/export/` : dialogue en étapes guidées (mois, format, chantier en PDF, équipes, matériel conditionnel, génération). La coque
 (`paie-export-wizard.component.*`) porte la fenêtre, le bandeau et le pied ; `paie-export.store.ts` porte l'état (signaux) et la logique ;
-chaque étape est un composant de `etapes/`. Les étapes sont une liste calculée (marché seulement en PDF, matériel seulement si un tableau
+chaque étape est un composant de `etapes/`. Les étapes sont une liste calculée (chantier seulement en PDF, matériel seulement si un tableau
 sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
 
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé

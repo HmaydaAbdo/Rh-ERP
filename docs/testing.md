@@ -118,7 +118,7 @@ enregistrés). Le contrat réel avec le backend reste couvert par les tests d'in
 | `auth.spec.ts` | Connexion accessible, redirection sans session, connexion puis premier écran autorisé, identifiants refusés |
 | `permissions.spec.ts` | Lecteur sans actions d'écriture/suppression, gestionnaire avec, accès refusé sans permission de lecture, menu filtré, liste accessible (axe) |
 | `fonctions.spec.ts` | Création et fiche, libellé obligatoire sans appel API, suppression confirmée, annulation par Échap, recherche et tri, confirmation avant de quitter un formulaire modifié |
-| `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), export PDF limité à un marché sans vue d'ensemble (étape marché, récapitulatif, requête envoyée), menu d'import au clavier, fiche d'un bulletin |
+| `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), export PDF limité à un chantier sans vue d'ensemble (étape chantier, récapitulatif, requête envoyée), menu d'import au clavier, fiche d'un bulletin |
 | `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
 | `responsive.spec.ts` | Téléphone : pas de défilement horizontal, menu en tiroir, cibles tactiles ≥ 44 px |
 

@@ -8,13 +8,13 @@ import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
 export type Format = 'PDF' | 'EXCEL';
-export type EtapeId = 'periode' | 'format' | 'marche' | 'equipes' | 'materiel' | 'recap';
+export type EtapeId = 'periode' | 'format' | 'chantier' | 'equipes' | 'materiel' | 'recap';
 export type Etat = 'saisie' | 'generation' | 'termine';
 
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
   format: 'Format',
-  marche: 'Marché',
+  chantier: 'Chantier',
   equipes: 'Équipes',
   materiel: 'Matériel',
   recap: 'Export'
@@ -22,7 +22,7 @@ const LIBELLES_ETAPES: Record<EtapeId, string> = {
 const SOUS_TITRES: Record<EtapeId, string> = {
   periode: 'Choisissez le mois à exporter',
   format: 'Choisissez le format du fichier',
-  marche: 'Un seul marché, ou tous les chantiers',
+  chantier: 'Un seul chantier, ou tous',
   equipes: 'Étape facultative',
   materiel: 'Nombre de camions et d\'engins du chantier',
   recap: 'Dernière vérification'
@@ -33,7 +33,7 @@ const CLE_MATERIEL_MEMORISE = 'paie.export.materiel';
 
 /**
  * État et logique de l'assistant d'export de la paie (voir `PaieExportWizardComponent`) : fourni par l'assistant, injecté
- * par lui et par chacune de ses étapes — aucune étape n'a d'état propre au-delà de son affichage. Mois, format, marché
+ * par lui et par chacune de ses étapes — aucune étape n'a d'état propre au-delà de son affichage. Mois, format, chantier
  * (PDF), équipes à détailler, parc matériel, génération du fichier.
  */
 @Injectable()
@@ -59,9 +59,9 @@ export class PaieExportStore {
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
   readonly chantiersEnCours = signal(false);
   readonly recherche = signal('');
-  /** Rapport PDF limité à un marché : code du chantier choisi, ou `null` pour tous les chantiers. Sans effet en Excel. */
-  readonly marche = signal<string | null>(null);
-  readonly rechercheMarche = signal('');
+  /** Rapport PDF limité à un chantier : code du chantier choisi, ou `null` pour tous les chantiers. Sans effet en Excel. */
+  readonly chantierChoisi = signal<string | null>(null);
+  readonly rechercheChantier = signal('');
   /** Retire le chapitre « Vue d'ensemble » du PDF (voir `PaieReportPdfRequestDto.sansVueEnsemble`). */
   readonly sansVueEnsemble = signal(false);
   /** Chantiers dont la liste d'équipes est dépliée (simple état d'affichage). */
@@ -86,26 +86,26 @@ export class PaieExportStore {
     this.tableauxMateriel().filter((t) => this.detail()[t.chantierCode]?.includes(t.equipeCode))
   );
 
-  /** Le marché n'existe qu'en PDF ; en Excel le choix éventuel est ignoré (et conservé si l'on revient au PDF). */
-  readonly marcheEffectif = computed(() => (this.format() === 'PDF' ? this.marche() : null));
-  readonly chantierMarche = computed(() => this.chantiers().find((c) => c.code === this.marcheEffectif()) ?? null);
+  /** Le chantier unique n'existe qu'en PDF ; en Excel le choix éventuel est ignoré (et conservé si l'on revient au PDF). */
+  readonly chantierEffectif = computed(() => (this.format() === 'PDF' ? this.chantierChoisi() : null));
+  readonly chantierRapport = computed(() => this.chantiers().find((c) => c.code === this.chantierEffectif()) ?? null);
 
-  /** Les chantiers que l'étape équipes propose : celui du marché seul, ou tous. */
+  /** Les chantiers que l'étape équipes propose : celui du chantier choisi seul, ou tous. */
   readonly chantiersPourEquipes = computed(() => {
-    const code = this.marcheEffectif();
+    const code = this.chantierEffectif();
     return code ? this.chantiers().filter((c) => c.code === code) : this.chantiers();
   });
 
-  /** Les marchés proposés, filtrés par la recherche de l'étape marché. */
-  readonly marchesFiltres = computed(() => {
-    const terme = this.rechercheMarche().trim().toLowerCase();
+  /** Les chantiers proposés, filtrés par la recherche de l'étape chantier. */
+  readonly chantiersProposes = computed(() => {
+    const terme = this.rechercheChantier().trim().toLowerCase();
     return this.chantiers().filter((c) => !terme || c.code.toLowerCase().includes(terme) || (c.libelle ?? '').toLowerCase().includes(terme));
   });
 
   readonly etapes = computed<EtapeId[]>(() => {
     const ids: EtapeId[] = ['periode', 'format'];
     if (this.format() === 'PDF') {
-      ids.push('marche');
+      ids.push('chantier');
     }
     ids.push('equipes');
     if (this.tableauxConcernes().length > 0) {
@@ -137,7 +137,7 @@ export class PaieExportStore {
     this.periode.set(periode);
     this.erreur.set(null);
     this.chantiers.set([]);
-    this.marche.set(null);
+    this.chantierChoisi.set(null);
     this.sansVueEnsemble.set(false);
     this.ouverts.set([]);
     this.detail.set({});
@@ -146,25 +146,25 @@ export class PaieExportStore {
 
   choisirFormat(format: Format): void {
     this.format.set(format);
-    const code = this.marcheEffectif();
+    const code = this.chantierEffectif();
     if (code) {
-      this.limiterAuMarche(code);
+      this.limiterAuChantier(code);
     }
   }
 
-  // ---- Étape marché (PDF) ----
+  // ---- Étape chantier (PDF) ----
 
-  rechercherMarche(valeur: string): void {
-    this.rechercheMarche.set(valeur);
+  rechercherChantier(valeur: string): void {
+    this.rechercheChantier.set(valeur);
   }
 
-  /** Choisit le marché du rapport (`null` : tous les chantiers). Un seul marché rend la vue d'ensemble redondante : elle est
+  /** Choisit le chantier du rapport (`null` : tous les chantiers). Un seul chantier rend la vue d'ensemble redondante : elle est
    * alors proposée retirée — l'utilisateur garde la main (case « Sans vue d'ensemble »). */
-  choisirMarche(code: string | null): void {
-    this.marche.set(code);
+  choisirChantier(code: string | null): void {
+    this.chantierChoisi.set(code);
     this.sansVueEnsemble.set(code !== null);
     if (code) {
-      this.limiterAuMarche(code);
+      this.limiterAuChantier(code);
     }
   }
 
@@ -172,15 +172,15 @@ export class PaieExportStore {
     this.sansVueEnsemble.set(!this.sansVueEnsemble());
   }
 
-  /** Les équipes à détailler ne concernent que le marché choisi : celles des autres chantiers sont oubliées. */
-  private limiterAuMarche(code: string): void {
+  /** Les équipes à détailler ne concernent que le chantier choisi : celles des autres chantiers sont oubliées. */
+  private limiterAuChantier(code: string): void {
     const garder = <T>(valeurs: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(valeurs).filter(([chantier]) => chantier === code));
     this.detail.set(garder(this.detail()));
     this.retirees.set(garder(this.retirees()));
   }
 
-  texteMarche(): string {
-    const chantier = this.chantierMarche();
+  texteChantier(): string {
+    const chantier = this.chantierRapport();
     return chantier ? `${chantier.code}${chantier.libelle ? ' — ' + chantier.libelle : ''}` : 'Tous les chantiers';
   }
 
@@ -467,7 +467,7 @@ export class PaieExportStore {
   private requetePdf(periode: string, equipesParChantier: Record<string, string[]>, materiel: Record<string, number> | null): PaieRapportPdfRequest {
     return {
       periode,
-      chantierId: this.chantierMarche()?.id ?? null,
+      chantierId: this.chantierRapport()?.id ?? null,
       sansVueEnsemble: this.sansVueEnsemble(),
       equipesParChantier: Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
       materiel
@@ -512,8 +512,8 @@ export class PaieExportStore {
     this.format.set('PDF');
     this.chantiers.set([]);
     this.recherche.set('');
-    this.rechercheMarche.set('');
-    this.marche.set(null);
+    this.rechercheChantier.set('');
+    this.chantierChoisi.set(null);
     this.sansVueEnsemble.set(false);
     this.ouverts.set([]);
     this.detail.set({});

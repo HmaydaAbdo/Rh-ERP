@@ -2,7 +2,7 @@
 @use 'commun' as *;
 
 .export-wizard {
-  &__marches {
+  &__choix {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -11,7 +11,7 @@
     overflow-y: auto;
   }
 
-  &__marche {
+  &__choix-item {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
