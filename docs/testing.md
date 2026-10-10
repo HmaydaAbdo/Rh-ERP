@@ -74,7 +74,7 @@ toujours par identifiant, jamais par comptage global, car la base est partagée.
 
 ---
 
-## Frontend (186 tests unitaires et composants, 31 parcours E2E)
+## Frontend (653 tests unitaires et composants, 39 parcours E2E)
 
 Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** (Playwright ; `CHROME_BIN` pour réutiliser un Chrome installé), sans Zone.js : les minuteries se pilotent avec `vi.useFakeTimers()`, les doublures avec `vi.fn()`. Les membres de composant utilisés par le gabarit sont `protected` ; un test y accède par `composant['membre']`. Couches : unités (services, utilitaires, gardes, intercepteurs), composants (rendu, clavier, signaux, formulaires, erreurs), E2E (voir plus bas).
 
@@ -105,7 +105,26 @@ Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** 
 
 `core/interceptors/error.interceptor.spec.ts` couvre en plus la notification d'erreur d'API et le silence de `auth/refresh` (restauration de session).
 
-La suite a passé **186 tests** le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
+### Couverture complète par famille (2026-10-10)
+
+Chaque composant, directive, service, intercepteur et utilitaire du frontend a son fichier de test voisin (`*.spec.ts`). Les tests d'écran agissent comme l'utilisateur
+(saisie par événements `input`, soumission du `<form>`, clic) plutôt que sur l'état interne ; les aides communes sont dans `shared/testing/` (`formulaire.ts` : `saisir`,
+`soumettre` ; `http.ts` : `preparerHttp`, `requete` ; `ecrans.ts` : `fournirPermissions`, `fournirRoute`) et `shared/forms/signal-forms.config.ts` (`fournirSignalForms`, mêmes classes
+`ng-invalid` / `ng-touched` que l'application).
+
+| Famille | Fichiers | Ce qu'ils vérifient |
+|---|---|---|
+| Kit — actions et affichage | `ui/button`, `ui/badge`, `ui/message`, `ui/icon`, `ui/field-error`, `ui/dialog`, `ui/menu/*`, `ui/chart`, `ui/catalogue` | Variantes, icône seule, **bouton en chargement qui bloque aussi les `(click)` du parent** ; sévérités et rôles ARIA ; message d'erreur de champ (affiché une fois touché) ; dialogue modal (titre, Échap, bouton Fermer, pas de fermeture par le fond, piège de focus, tiroir, non fermable) ; menu et bouton scindé (ouverture, actions, action désactivée) ; graphique (création, recréation à la mise à jour, clic sur une donnée, destruction) |
+| Kit — champs (`FormValueControl`) | `ui/select`, `ui/number-input`, `ui/password-input`, `ui/date-input`, `ui/month-input`, `components/lazy-select`, `components/column-chooser` | Valeur écrite et lue par Signal Forms, saisie, touché à la sortie du champ, désactivation et focus par le formulaire, `id` absent plutôt que `id="null"` ; sélecteur : simple/multiple, filtre sans accents, **un clic ouvre la liste filtrable**, **les valeurs choisies hors de la page affichée sont conservées**, effacement, défilement infini ; nombre : format français, bornes (**un minimum seul suffit**), décimales ; mois : sélecteur flottant, Échap ; sélecteur différé : première page de 30, recherche serveur après 300 ms, résolution des libellés, pages suivantes ; choix des colonnes : au moins une colonne |
+| Kit — tableau | `ui/table` | Rendu par gabarits, tri en mémoire (texte sans accents, nombres, chemins imbriqués, valeurs absentes), pagination en mémoire et serveur (événements `lazyLoad`), lignes cliquables au clavier, colonne d'actions masquée, pied, largeur au clavier, réordonnancement (Alt + flèche, glisser-déposer) |
+| Utilitaires | `text/recherche`, `table/table-columns`, `paie/paie-format`, `paie/analytique/paie-chart-theme`, `core/navigation/nav-items`, `forms/soumission`, `forms/filtres`, `validators/mot-de-passe` | Normalisation, état des colonnes (visibilité et ordre), formats français, jetons de design, menu unique par permission, promesse d'enregistrement sans rejet, relance de recherche sans doublon ni requête initiale, règle de mot de passe |
+| Services HTTP | `*/services/*.service.spec.ts`, `shared/reference-data/reference-services.spec.ts`, `core/auth/services/*`, `core/auth/interceptors/auth.interceptor.spec.ts` | Contrat avec l'API : méthode, URL, corps, paramètres de page et de tri, fichiers en multipart, réponses binaires ; session (jeton en mémoire seulement, un seul rafraîchissement partagé, 401 rejoué, purge à l'échec) ; sources des sélecteurs (critères, tri, libellé de l'employé) |
+| Fiches de consultation | `*/details/*.spec.ts`, `core/auth/access-denied` | Chargement par l'adresse, valeurs affichées, « Modifier » et « Historique » selon les permissions, historique chargé à l'ouverture |
+| Listes | `function`, `chantier`, `equipe`, `employee`, `admin/roles`, `admin/users` `/list/*.spec.ts` | Première page et tri par défaut, nombre au singulier/pluriel, actions selon les permissions, recherche après délai, filtres multiples, réinitialisation, suppression confirmée (refus sans effet), import Excel, synchronisation ERP, rôle d'administration non supprimable, réinitialisation du mot de passe |
+| Formulaires | `*/form/*.spec.ts`, `core/auth/*/*.spec.ts` | Champs obligatoires signalés (message de la règle), focus sur le premier invalide, longueurs maximales, création et modification (corps envoyé, notification, navigation), formulaire remis à l'état intact après enregistrement, refus du serveur sans perte de saisie, champs verrouillés (employé et période d'un bulletin, identifiant d'utilisateur, rôle protégé), permissions refusables recalculées |
+| Assistant d'export | `paie/export/etapes/*.spec.ts`, `paie-export-wizard.component.spec.ts`, `paie-vue-switcher` | Une spec par étape (mois, format, chantier, équipes, matériel, récapitulatif) montée avec le vrai `PaieExportStore` (`etapes.testing.ts`), puis l'assistant entier |
+
+La suite a passé **653 tests** (91 fichiers) le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
 
 ### Tests E2E (Playwright + axe)
 
@@ -119,7 +138,8 @@ enregistrés). Le contrat réel avec le backend reste couvert par les tests d'in
 | `permissions.spec.ts` | Lecteur sans actions d'écriture/suppression, gestionnaire avec, accès refusé sans permission de lecture, menu filtré, liste accessible (axe) |
 | `fonctions.spec.ts` | Création et fiche, libellé obligatoire sans appel API, suppression confirmée, annulation par Échap, recherche et tri, confirmation avant de quitter un formulaire modifié |
 | `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), export PDF limité à un chantier sans vue d'ensemble (étape chantier, récapitulatif, requête envoyée), menu d'import au clavier, fiche d'un bulletin |
-| `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
+| `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, clic qui ouvre un sélecteur filtrable, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
+| `formulaires.spec.ts` | Signal Forms dans un vrai navigateur : employé (six champs obligatoires signalés, focus, axe ; création avec dates et sélecteurs à la souris ; confirmation en quittant un formulaire modifié), bulletin (montants au format français, mois choisi dans le sélecteur, montant négatif ramené à zéro), utilisateur (règle du mot de passe, affichage du mot de passe, axe), rôle (cocher un domaine) |
 | `responsive.spec.ts` | Téléphone : pas de défilement horizontal, menu en tiroir, cibles tactiles ≥ 44 px |
 
 Ajouter un parcours : le programmer avec `mockApi(page, utilisateur, routes)` ; une route d'API non simulée répond `404` et fait échouer le test de façon visible. Le CI les rejoue (`npm run e2e`) après le build.

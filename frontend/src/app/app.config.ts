@@ -2,7 +2,6 @@ import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { APP_INITIALIZER, ApplicationConfig, LOCALE_ID, inject } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
-import { provideSignalFormsConfig } from '@angular/forms/signals';
 import { TitleStrategy, provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -11,6 +10,7 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 import { AuthService } from './core/auth/services/auth.service';
 import { PageTitleStrategy } from './core/navigation/page-title.strategy';
+import { fournirSignalForms } from './shared/forms/signal-forms.config';
 
 registerLocaleData(localeFr);
 
@@ -31,12 +31,6 @@ export const appConfig: ApplicationConfig = {
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     provideHttpClient(withXhr(), withInterceptors([authInterceptor, errorInterceptor])),
     { provide: APP_INITIALIZER, useFactory: initializeAuth, multi: true },
-    // Les styles de champ invalide/touché (`_forms.scss`, `ui/select`) s'accrochent à ces classes.
-    provideSignalFormsConfig({
-      classes: {
-        'ng-invalid': (champ) => champ.state().invalid(),
-        'ng-touched': (champ) => champ.state().touched()
-      }
-    })
+    fournirSignalForms()
   ]
 };

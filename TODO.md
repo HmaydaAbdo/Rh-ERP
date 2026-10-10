@@ -12,13 +12,10 @@
 Le socle `v0.1.1` est épinglé dans `conventions/staport/` ; l'ADR et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
-Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (186) et E2E Playwright + axe (31),
-audit npm sans vulnérabilité haute, licences contrôlées et SBOM en CI. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md).
+Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (653, couverture complète) et E2E Playwright + axe (39),
+audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md).
 Restent à faire :
 
-- **Frontend — tests du kit** : `ui/select`, `ui/table`, `ui/dialog`, `ui/menu` et les champs n'ont que les E2E du catalogue ; ajouter des
-  tests de composants (états, clavier, valeur du `ControlValueAccessor`) ; ajouter des tests de composants pour les listes et
-  formulaires Employé, Chantier, Équipe, Utilisateurs et Rôles (aujourd'hui : E2E de Fonction et Paie seulement) ;
 - **Backend** : contrôle de conformité par domaine (RBAC par domaine, audit métier, secrets/configuration, logs et métriques, erreurs) ;
   rapport d'écarts à produire avant tout changement ;
 - mettre à jour les conventions Staport vers la version suivante et repinner le snapshot central ;

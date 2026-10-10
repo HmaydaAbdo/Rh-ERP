@@ -10,8 +10,8 @@ import { distinctUntilChanged, skip } from 'rxjs';
 export function surChangementDesFiltres<T>(filtres: Signal<T>, action: () => void): void {
   toObservable(filtres)
     .pipe(
-      skip(1),
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      skip(1),
       takeUntilDestroyed()
     )
     .subscribe(action);

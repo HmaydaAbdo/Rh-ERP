@@ -19,7 +19,7 @@ const SPACES = /[\s  ]/g;
       type="text"
       inputmode="decimal"
       autocomplete="off"
-      [id]="inputId()"
+      [attr.id]="inputId()"
       [disabled]="disabled()"
       [attr.aria-label]="ariaLabel()"
       (focus)="onFocus()"
@@ -103,7 +103,8 @@ export class NumberInputComponent implements FormValueControl<number | null> {
     }
     const min = this.min();
     const max = this.max();
-    return Math.min(max ?? value, Math.max(min ?? value, value));
+    const auMoins = min === undefined ? value : Math.max(min, value);
+    return max === undefined ? auMoins : Math.min(max, auMoins);
   }
 
   private render(): void {

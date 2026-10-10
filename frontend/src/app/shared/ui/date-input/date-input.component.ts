@@ -22,7 +22,7 @@ function fromIso(iso: string): Date | null {
       #field
       class="stp-input"
       type="date"
-      [id]="inputId()"
+      [attr.id]="inputId()"
       [attr.aria-label]="ariaLabel()"
       [disabled]="disabled()"
       [value]="text()"

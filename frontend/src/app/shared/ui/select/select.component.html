@@ -6,7 +6,7 @@
     class="stp-select__input"
     type="text"
     autocomplete="off"
-    [id]="inputId()"
+    [attr.id]="inputId()"
     [class.stp-select__input--static]="!filterable()"
     [attr.inputmode]="filterable() ? null : 'none'"
     [disabled]="disabled()"

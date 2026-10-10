@@ -124,9 +124,18 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     this.field()?.nativeElement.focus(options);
   }
 
-  /** Sans filtre, le champ est un simple bouton déroulant : un clic ouvre/ferme (le combobox Aria ne le fait que hors saisie). */
+  /**
+   * Un clic ouvre la liste. Sans filtre, le champ est un simple bouton déroulant : le clic ouvre et referme. Avec filtre, il
+   * ouvre seulement (le combobox Aria n'ouvre que sur une frappe ou une flèche) : se refermer à chaque clic gênerait le placement
+   * du curseur dans la saisie ; Échap, le choix d'une option ou un clic à l'extérieur ferment.
+   */
   protected toggle(): void {
-    if (!this.filterable() && !this.disabled()) {
+    if (this.disabled()) {
+      return;
+    }
+    if (this.filterable()) {
+      this.expanded.set(true);
+    } else {
       this.expanded.update((open) => !open);
     }
   }
@@ -148,7 +157,12 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
 
   protected onSelection(values: V[]): void {
     if (this.multiple()) {
-      this.commit(values);
+      // Le listbox ne connaît que les options affichées : une valeur déjà choisie qui n'y figure pas (autre page d'une source
+      // distante, ou écartée par le filtre) lui échappe et ne doit pas être perdue pour autant.
+      const affichees = new Set(this.shown().map((option) => option.value));
+      const avant = this.selected();
+      const conservees = avant.filter((value) => !affichees.has(value) || values.includes(value));
+      this.commit([...conservees, ...values.filter((value) => !avant.includes(value))]);
       return;
     }
     // En simple, le listbox garde la valeur précédente cochée : on retient la dernière choisie.
