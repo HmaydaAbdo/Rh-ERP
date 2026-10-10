@@ -70,22 +70,8 @@ html.theme-transition *::after {
 }
 
 // ---- Un appui : le bouton s'enfonce légèrement, ce qui confirme que le clic a été pris en compte ----
-.p-button {
-  transition:
-    background-color var(--duration-fast),
-    color var(--duration-fast),
-    border-color var(--duration-fast),
-    box-shadow var(--duration-fast),
-    transform var(--duration-fast) var(--ease-out);
-
-  &:not(:disabled):active {
-    transform: scale(0.98);
-  }
-}
-
-// ---- Une ligne de tableau survolée : le fond change sans à-coup ----
-.app-table .p-datatable-tbody > tr {
-  transition: background-color var(--duration-fast);
+.stp-button:not(:disabled):not([aria-disabled='true']):active {
+  transform: scale(0.98);
 }
 
 // ---- Moins de mouvement : plus d'animation ni de transition perceptible, le contenu apparaît d'emblée ----

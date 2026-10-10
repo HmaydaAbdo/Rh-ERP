@@ -1,20 +1,19 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Chantier } from '../models/chantier.model';
 import { ChantierService } from '../services/chantier.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Actif', value: true },
@@ -24,32 +23,29 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-    selector: 'app-chantier-list',
-    imports: [
-        CommonModule,
-        ColumnChooserComponent,
-        ReactiveFormsModule,
-        RouterLink,
-        TableModule,
-        ButtonModule,
-        InputTextModule,
-        DropdownModule,
-        TagModule,
-    ],
-    templateUrl: './chantier-list.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './chantier-list.component.scss'
+  selector: 'app-chantier-list',
+  imports: [
+    ColumnChooserComponent,
+    RouterLink,
+    ButtonComponent,
+    BadgeComponent,
+    SelectComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective,
+    ReactiveFormsModule
+  ],
+  templateUrl: './chantier-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ChantierListComponent implements OnInit {
-  readonly columns = new ColumnState([
+export class ChantierListComponent {
+  protected readonly columns = new ColumnState([
     { field: 'code', header: 'Code' },
     { field: 'nom', header: 'Nom' },
-    { field: 'designation', header: 'Désignation', cellClass: 'chantier-list__designation' },
+    { field: 'designation', header: 'Désignation', cellClass: 'text-truncate' },
     { field: 'sourceErp', header: 'Source' },
     { field: 'actif', header: 'Statut' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly chantierService = inject(ChantierService);
   private readonly confirmationService = inject(ConfirmDialogService);
@@ -58,27 +54,21 @@ export class ChantierListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('CHANTIER_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('CHANTIER_WRITE'));
 
-  canSync(): boolean {
-    return this.authService.hasPermission('CHANTIER_SYNC');
-  }
+  protected readonly canSync = computed(() => this.authService.hasPermission('CHANTIER_SYNC'));
 
-  canDelete(): boolean {
-    return this.authService.hasPermission('CHANTIER_DELETE');
-  }
+  protected readonly canDelete = computed(() => this.authService.hasPermission('CHANTIER_DELETE'));
 
-  chantiers: Chantier[] = [];
-  totalRecords = 0;
-  loading = false;
-  deletingId: number | null = null;
-  syncing = false;
+  protected readonly chantiers = signal<Chantier[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly deletingId = signal<number | null>(null);
+  protected readonly syncing = signal(false);
 
-  readonly actifOptions = ACTIF_OPTIONS;
+  protected readonly actifOptions = ACTIF_OPTIONS;
 
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     code: [''],
     designation: [''],
     actif: [null as boolean | null]
@@ -88,47 +78,44 @@ export class ChantierListComponent implements OnInit {
   private lastSize = 10;
   private lastSort = 'code,asc';
 
-  ngOnInit(): void {
+  constructor() {
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(inject(DestroyRef))
       )
       .subscribe(() => this.onSearch());
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
-  onView(chantier: Chantier): void {
+  protected onView(chantier: Chantier): void {
     this.router.navigate(['/chantiers', chantier.id]);
   }
 
-  onEdit(chantier: Chantier): void {
+  protected onEdit(chantier: Chantier): void {
     this.router.navigate(['/chantiers', chantier.id, 'edit']);
   }
 
-  onDelete(chantier: Chantier): void {
+  protected onDelete(chantier: Chantier): void {
     this.confirmationService.confirm({
       header: 'Supprimer ce chantier',
       message: `Confirmez-vous la suppression de ${chantier.code} ?`,
@@ -138,11 +125,11 @@ export class ChantierListComponent implements OnInit {
     });
   }
 
-  onSynchroniser(): void {
-    this.syncing = true;
+  protected onSynchroniser(): void {
+    this.syncing.set(true);
     this.chantierService
       .synchroniser()
-      .pipe(finalize(() => (this.syncing = false)))
+      .pipe(finalize(() => this.syncing.set(false)))
       .subscribe((result) => {
         this.messageService.add({
           severity: 'success',
@@ -155,10 +142,10 @@ export class ChantierListComponent implements OnInit {
   }
 
   private deleteChantier(chantier: Chantier): void {
-    this.deletingId = chantier.id;
+    this.deletingId.set(chantier.id);
     this.chantierService
       .delete(chantier.id)
-      .pipe(finalize(() => (this.deletingId = null)))
+      .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Chantier supprimé', life: 4000 });
         this.fetchPage();
@@ -166,7 +153,7 @@ export class ChantierListComponent implements OnInit {
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
     const criteria = this.filterForm.getRawValue();
 
     this.chantierService
@@ -178,10 +165,10 @@ export class ChantierListComponent implements OnInit {
         },
         { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
       )
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
-        this.chantiers = result.content;
-        this.totalRecords = result.page.totalElements;
+        this.chantiers.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
       });
   }
 }

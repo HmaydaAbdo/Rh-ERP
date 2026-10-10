@@ -4,34 +4,27 @@
     <h1>Chantiers</h1>
     <div class="app-page__actions app-page__actions--liste">
       @if (canSync()) {
-        <button pButton type="button" icon="pi pi-refresh" label="Synchroniser maintenant" class="p-button-outlined" [loading]="syncing" (click)="onSynchroniser()"></button>
+        <button stp-button variant="secondary" icon="refresh-cw" type="button" [loading]="syncing()" (click)="onSynchroniser()">Synchroniser maintenant</button>
       }
       @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouveau chantier" routerLink="/chantiers/new"></button>
+        <button stp-button icon="plus" type="button" routerLink="/chantiers/new">Nouveau chantier</button>
       }
     </div>
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
-    <input pInputText type="text" formControlName="designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
+    <input class="stp-input" type="text" formControlName="code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
+    <input class="stp-input" type="text" formControlName="designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
 
-    <p-dropdown
-      formControlName="actif"
-      [options]="actifOptions"
-      optionLabel="label"
-      optionValue="value"
-      ariaLabel="Statut" placeholder="Statut"
-      [showClear]="true"
-    ></p-dropdown>
+    <stp-select formControlName="actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
 
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
+    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
   </form>
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading) {
-        {{ totalRecords }} chantier{{ totalRecords > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} chantier{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
     <div class="app-table-bar__tools">
@@ -39,86 +32,49 @@
     </div>
   </div>
 
-  <p-table
-    styleClass="app-table p-datatable-gridlines p-datatable-sm"
-    [value]="chantiers"
+  <stp-table
+    label="Liste : Chantiers"
+    emptyMessage="Aucun chantier ne correspond à ces critères."
     [lazy]="true"
-    (onLazyLoad)="onLazyLoad($event)"
-    [paginator]="true"
-    [rows]="10"
-    [totalRecords]="totalRecords"
-    [loading]="loading"
-    [rowsPerPageOptions]="rowsPerPage"
-    [showCurrentPageReport]="true"
-    [currentPageReportTemplate]="pageReport"
+    [value]="chantiers()"
+    [totalRecords]="totalRecords()"
+    [loading]="loading()"
     [columns]="columns.visible"
-    [resizableColumns]="true"
-    columnResizeMode="expand"
-    [reorderableColumns]="true"
-    (onColReorder)="columns.onReorder($event.columns)"
-    dataKey="id"
+    (lazyLoad)="onLazyLoad($event)"
+    (columnsReorder)="columns.onReorder($event)"
   >
-    <ng-template pTemplate="header">
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
-            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
-          </th>
+    <ng-template stpCell let-chantier let-col="col">
+      @switch (col.field) {
+        @case ('code') {
+          {{ chantier.code }}
         }
-        <th><span class="app-lecteur">Actions</span></th>
-      </tr>
+        @case ('nom') {
+          {{ chantier.nom || '-' }}
+        }
+        @case ('designation') {
+          {{ chantier.designation }}
+        }
+        @case ('sourceErp') {
+          @if (chantier.sourceErp) {
+            <stp-badge value="ERP" severity="info"></stp-badge>
+          } @else {
+            <stp-badge value="Manuel" severity="neutral"></stp-badge>
+          }
+        }
+        @case ('actif') {
+          <stp-badge [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></stp-badge>
+        }
+      }
     </ng-template>
 
-    <ng-template pTemplate="body" let-chantier>
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
-            @switch (col.field) {
-              @case ('code') {
-                {{ chantier.code }}
-              }
-              @case ('nom') {
-                {{ chantier.nom || '-' }}
-              }
-              @case ('designation') {
-                {{ chantier.designation }}
-              }
-              @case ('sourceErp') {
-                @if (chantier.sourceErp) {
-                  <p-tag value="ERP" severity="info"></p-tag>
-                } @else {
-                  <p-tag value="Manuel" severity="secondary"></p-tag>
-                }
-              }
-              @case ('actif') {
-                <p-tag [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></p-tag>
-              }
-            }
-          </td>
-        }
-        <td class="chantier-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" [attr.aria-label]="'Voir le chantier ' + chantier.code" (click)="onView(chantier)"></button>
-          @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier le chantier ' + chantier.code" (click)="onEdit(chantier)"></button>
-          }
-          @if (canDelete()) {
-            <button
-              pButton
-              type="button"
-              icon="pi pi-trash"
-              class="p-button-text p-button-danger"
-              [loading]="deletingId === chantier.id"
-              [attr.aria-label]="'Supprimer le chantier ' + chantier.code" (click)="onDelete(chantier)"
-            ></button>
-          }
-        </td>
-      </tr>
+    <ng-template stpRowActions let-chantier>
+      <button stp-button variant="text" icon="eye" iconOnly type="button" [attr.aria-label]="'Voir le chantier ' + chantier.code" (click)="onView(chantier)"></button>
+      @if (canWrite()) {
+        <button stp-button variant="text" icon="pencil" iconOnly type="button" [attr.aria-label]="'Modifier le chantier ' + chantier.code" (click)="onEdit(chantier)"></button>
+      }
+      @if (canDelete()) {
+        <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === chantier.id" [attr.aria-label]="'Supprimer le chantier ' + chantier.code" (click)="onDelete(chantier)"></button>
+      }
     </ng-template>
-
-    <ng-template pTemplate="emptymessage">
-      <tr>
-        <td [attr.colspan]="columns.visible.length + 1">Aucun chantier ne correspond à ces critères.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+  </stp-table>
 </div>

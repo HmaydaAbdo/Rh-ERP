@@ -1,8 +1,19 @@
+import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { authGuard, homeGuard } from './core/auth/guards/auth.guard';
 
 export const routes: Routes = [
+  // Catalogue des composants partagés : développement seulement, jamais dans le build de production.
+  ...(isDevMode()
+    ? [
+        {
+          path: 'catalogue',
+          title: 'Catalogue',
+          loadComponent: () => import('./shared/ui/catalogue/catalogue.component').then((m) => m.CatalogueComponent)
+        }
+      ]
+    : []),
   { path: '', pathMatch: 'full', canActivate: [homeGuard], children: [] },
   {
     path: 'acces-refuse',

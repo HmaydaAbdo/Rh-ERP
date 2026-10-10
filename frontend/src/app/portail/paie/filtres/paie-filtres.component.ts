@@ -1,21 +1,21 @@
-import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, linkedSignal, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
+import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { BehaviorSubject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { LazySelectInMemorySource } from '../../../shared/components/lazy-select/lazy-select-in-memory.source';
-import { LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { MonthPickerComponent } from '../../../shared/components/month-picker/month-picker.component';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReference } from '../../../shared/reference-data/equipe-reference.model';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { PaieChantierPeriode } from '../models/paie.model';
 import { libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
@@ -38,72 +38,57 @@ const DEBOUNCE_FILTRES_MS = 300;
  * mettre dans l'URL).
  */
 @Component({
-    selector: 'app-paie-filtres',
-    imports: [ReactiveFormsModule, ButtonModule, InputTextModule, OverlayPanelModule, MonthPickerComponent, LazySelectComponent],
-    templateUrl: './paie-filtres.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './paie-filtres.component.scss'
+  selector: 'app-paie-filtres',
+  imports: [ReactiveFormsModule, CdkConnectedOverlay, CdkOverlayOrigin, MonthPickerComponent, LazySelectComponent, IconComponent, ButtonComponent],
+  templateUrl: './paie-filtres.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './paie-filtres.component.scss'
 })
-export class PaieFiltresComponent implements OnInit {
+export class PaieFiltresComponent {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
 
-  readonly chantierReferenceService = inject(ChantierReferenceService);
-  readonly functionReferenceService = inject(FunctionReferenceService);
-  readonly equipeReferenceService = inject(EquipeReferenceService);
+  protected readonly chantierReferenceService = inject(ChantierReferenceService);
+  protected readonly functionReferenceService = inject(FunctionReferenceService);
+  protected readonly equipeReferenceService = inject(EquipeReferenceService);
 
   /** Un sélecteur appelle la route de recherche de son référentiel : sans la permission de lecture correspondante, il
    * recevrait un refus (403) à chaque ouverture — il n'est donc pas proposé (conventions/security.md, « Journal de sécurité »). */
-  get peutChoisirChantiers(): boolean {
-    return this.authService.hasPermission('CHANTIER_READ');
-  }
+  protected readonly peutChoisirChantiers = computed(() => this.authService.hasPermission('CHANTIER_READ'));
+  protected readonly peutChoisirEquipes = computed(() => this.authService.hasPermission('EQUIPE_READ'));
+  protected readonly peutChoisirFonctions = computed(() => this.authService.hasPermission('FUNCTION_READ'));
 
-  get peutChoisirEquipes(): boolean {
-    return this.authService.hasPermission('EQUIPE_READ');
-  }
+  /** Mois qui contiennent de la paie, du plus récent au plus ancien. */
+  readonly periodes = input<string[]>([]);
+  /** Vrai en analytique : un mois est indispensable, on ne propose donc pas de l'effacer. */
+  readonly moisRequis = input(false);
+  /** Vrai dans les Cartes : affiche le fil de navigation sous la barre. */
+  readonly avecFil = input(false);
+  /** Les filtres affichés : ils viennent de la page (l'URL), le composant les émet à chaque changement (`valueChange`). */
+  readonly value = input<PaieFiltres>(AUCUN_FILTRE);
+  readonly valueChange = output<PaieFiltres>();
 
-  get peutChoisirFonctions(): boolean {
-    return this.authService.hasPermission('FUNCTION_READ');
-  }
-
-  readonly disponibles = signal<string[]>([]);
-  readonly courant = signal<PaieFiltres>(AUCUN_FILTRE);
-  readonly fil = signal(false);
+  protected readonly disponibles = computed(() => this.periodes());
+  protected readonly moisObligatoire = computed(() => this.moisRequis());
+  protected readonly fil = computed(() => this.avecFil());
+  /** Les filtres courants : ceux de la page, tant que l'utilisateur n'en a pas changé un. */
+  protected readonly courant = linkedSignal<PaieFiltres>(() => this.value());
+  protected readonly panneauMoisOuvert = signal(false);
+  protected readonly positions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 }
+  ];
   /** Téléphone : le CIN et les trois sélecteurs se replient derrière le bouton « Filtres » ; ailleurs la barre est toujours entière. */
-  readonly secondairesOuverts = signal(false);
-  readonly moisObligatoire = signal(false);
+  protected readonly secondairesOuverts = signal(false);
 
   /** Les chantiers du mois choisi, avec leurs équipes : de quoi restreindre les choix de la cascade. */
   private readonly chantiersDuMois = signal<PaieChantierPeriode[]>([]);
   private readonly periodeSuivie = new BehaviorSubject<string | null>(null);
   private readonly cacheChantiersDuMois = new Map<string, PaieChantierPeriode[]>();
 
-  /** Mois qui contiennent de la paie, du plus récent au plus ancien. */
-  @Input() set periodes(periodes: string[]) {
-    this.disponibles.set(periodes);
-  }
-
-  /** Vrai en analytique : un mois est indispensable, on ne propose donc pas de l'effacer. */
-  @Input() set moisRequis(requis: boolean) {
-    this.moisObligatoire.set(requis);
-  }
-
-  /** Vrai dans les Cartes : affiche le fil de navigation sous la barre. */
-  @Input() set avecFil(avec: boolean) {
-    this.fil.set(avec);
-  }
-
-  @Input() set value(filtres: PaieFiltres) {
-    this.courant.set(filtres);
-    this.periodeSuivie.next(filtres.periode);
-    this.synchroniserFormulaire(filtres);
-  }
-
-  @Output() readonly valueChange = new EventEmitter<PaieFiltres>();
-
-  readonly formulaire = this.fb.group({
+  protected readonly formulaire = this.fb.group({
     nomPrenom: [''],
     cin: [''],
     chantierIds: [[] as number[]],
@@ -111,24 +96,24 @@ export class PaieFiltresComponent implements OnInit {
     equipeIds: [[] as number[]]
   });
 
-  readonly periode = computed(() => this.courant().periode);
-  readonly libelle = computed(() => libellePeriode(this.periode()) || (this.moisObligatoire() ? 'Choisir un mois' : 'Tous les mois'));
-  readonly plusRecent = computed(() => this.voisin(-1));
-  readonly plusAncien = computed(() => this.voisin(1));
+  protected readonly periode = computed(() => this.courant().periode);
+  protected readonly libelle = computed(() => libellePeriode(this.periode()) || (this.moisObligatoire() ? 'Choisir un mois' : 'Tous les mois'));
+  protected readonly plusRecent = computed(() => this.voisin(-1));
+  protected readonly plusAncien = computed(() => this.voisin(1));
 
-  readonly aDesFiltres = computed(() => {
+  protected readonly aDesFiltres = computed(() => {
     const f = this.courant();
     return this.periode() !== null || f.chantierIds.length + f.equipeIds.length + f.fonctionIds.length > 0 || this.nomOuCinSaisi(f);
   });
 
   /** Filtres du panneau replié (CIN, chantiers, équipes, fonctions) : le « n » du bouton « Filtres ». */
-  readonly nombreSecondaires = computed(() => {
+  protected readonly nombreSecondaires = computed(() => {
     const f = this.courant();
     return (f.cin.trim() ? 1 : 0) + (f.chantierIds.length > 0 ? 1 : 0) + (f.equipeIds.length > 0 ? 1 : 0) + (f.fonctionIds.length > 0 ? 1 : 0);
   });
 
   /** Chantier du fil de navigation (niveau 3 des Cartes), nommé d'après les chantiers du mois. */
-  readonly chantierOuvert = computed(() => {
+  protected readonly chantierOuvert = computed(() => {
     const ids = this.courant().chantierIds;
     if (ids.length !== 1) {
       return null;
@@ -138,7 +123,7 @@ export class PaieFiltresComponent implements OnInit {
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
-  readonly sourcesChantiers = computed<LazySelectSource<ChantierReference>[]>(() => {
+  protected readonly sourcesChantiers = computed<LazySelectSource<ChantierReference>[]>(() => {
     const chantiers = this.chantiersDuMois();
     if (!this.periode() || chantiers.length === 0) {
       return [this.chantierReferenceService];
@@ -149,7 +134,7 @@ export class PaieFiltresComponent implements OnInit {
     return [new LazySelectInMemorySource(liste, (c) => `${c.code} ${c.designation}`, this.chantierReferenceService)];
   });
 
-  readonly sourcesEquipes = computed<LazySelectSource<EquipeReference>[]>(() => {
+  protected readonly sourcesEquipes = computed<LazySelectSource<EquipeReference>[]>(() => {
     const { periode, chantierIds } = this.courant();
     const chantiers = this.chantiersDuMois();
     if (!periode || chantierIds.length === 0 || chantiers.length === 0) {
@@ -166,7 +151,15 @@ export class PaieFiltresComponent implements OnInit {
     return [new LazySelectInMemorySource(liste, (e) => `${e.code} ${e.libelle}`, this.equipeReferenceService)];
   });
 
-  ngOnInit(): void {
+  constructor() {
+    effect(() => {
+      const filtres = this.value();
+      untracked(() => {
+        this.periodeSuivie.next(filtres.periode);
+        this.synchroniserFormulaire(filtres);
+      });
+    });
+
     this.formulaire.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.courant.set(this.depuisFormulaire()));
     this.formulaire.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRES_MS), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.emettre());
 
@@ -180,28 +173,34 @@ export class PaieFiltresComponent implements OnInit {
   }
 
   /** Choisit un mois ; `null` revient à « tous les mois ». Les choix qui dépendaient de l'ancien mois restent : on les voit. */
-  choisir(periode: string | null): void {
+  protected choisir(periode: string | null): void {
     this.emettreFiltres({ ...this.courant(), periode });
   }
 
-  basculerSecondaires(): void {
+  protected basculerSecondaires(): void {
     this.secondairesOuverts.update((ouverts) => !ouverts);
   }
 
   /** Fil de navigation (Cartes) : revient au niveau demandé, 1 = tous les mois, 2 = chantiers du mois. */
-  allerAuNiveau(niveau: 1 | 2): void {
+  protected allerAuNiveau(niveau: 1 | 2): void {
     const f = this.courant();
     this.emettreFiltres(niveau === 1 ? { ...f, periode: null, chantierIds: [] } : { ...f, chantierIds: [] });
   }
 
   /** Un pas en arrière dans le fil de navigation : d'abord le chantier, puis le mois. */
-  remonter(): void {
+  protected remonter(): void {
     const f = this.courant();
     this.emettreFiltres(f.chantierIds.length > 0 ? { ...f, chantierIds: [] } : { ...f, periode: null });
   }
 
-  reinitialiser(): void {
+  protected reinitialiser(): void {
     this.emettreFiltres({ ...AUCUN_FILTRE, periode: this.moisObligatoire() ? this.periode() : null });
+  }
+
+  protected surToucheMois(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.panneauMoisOuvert.set(false);
+    }
   }
 
   private chargerChantiersDuMois(periode: string | null) {

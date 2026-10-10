@@ -1,48 +1,43 @@
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, OnInit, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
-import { MenuItem } from 'primeng/api';
-import { DialogModule } from 'primeng/dialog';
-import { SplitButtonModule } from 'primeng/splitbutton';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
+import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Function, FunctionImportResult } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-    selector: 'app-function-list',
-    imports: [
-        CommonModule,
-        ColumnChooserComponent,
-        ReactiveFormsModule,
-        RouterLink,
-        TableModule,
-        ButtonModule,
-        InputTextModule,
-        DialogModule,
-        SplitButtonModule
-    ],
-    templateUrl: './function-list.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './function-list.component.scss'
+  selector: 'app-function-list',
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    ButtonComponent,
+    ColumnChooserComponent,
+    DialogComponent,
+    SplitButtonComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective
+  ],
+  templateUrl: './function-list.component.html',
+  styleUrl: './function-list.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FunctionListComponent implements OnInit {
-  readonly columns = new ColumnState([
-    { field: 'libelle', header: 'Libellé' }
-  ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
+export class FunctionListComponent {
+  readonly columns = new ColumnState([{ field: 'libelle', header: 'Libellé' }]);
 
   private readonly functionService = inject(FunctionService);
   private readonly confirmationService = inject(ConfirmDialogService);
@@ -51,43 +46,35 @@ export class FunctionListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
-  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('FUNCTION_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('FUNCTION_WRITE'));
+  protected readonly canImport = computed(() => this.authService.hasPermission('FUNCTION_IMPORT'));
+  protected readonly canDelete = computed(() => this.authService.hasPermission('FUNCTION_DELETE'));
 
-  canImport(): boolean {
-    return this.authService.hasPermission('FUNCTION_IMPORT');
-  }
-
-  canDelete(): boolean {
-    return this.authService.hasPermission('FUNCTION_DELETE');
-  }
-
-  functions: Function[] = [];
-  totalRecords = 0;
-  loading = false;
-  deletingId: number | null = null;
-  importing = false;
-  importResult: FunctionImportResult | null = null;
-  showImportResultDialog = false;
-  downloadingTemplate = false;
+  protected readonly functions = signal<Function[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly deletingId = signal<number | null>(null);
+  protected readonly importing = signal(false);
+  protected readonly importResult = signal<FunctionImportResult | null>(null);
+  protected readonly showImportResultDialog = signal(false);
+  protected readonly downloadingTemplate = signal(false);
 
   /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
-  readonly menuImport: MenuItem[] = [
+  protected readonly menuImport: MenuAction[] = [
     {
       label: 'Télécharger le modèle Excel',
-      icon: 'pi pi-file-excel',
+      icon: 'file-spreadsheet',
       command: () => {
-        if (!this.downloadingTemplate) {
+        if (!this.downloadingTemplate()) {
           this.onDownloadTemplate();
         }
       }
     }
   ];
 
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     libelle: ['']
   });
 
@@ -95,47 +82,44 @@ export class FunctionListComponent implements OnInit {
   private lastSize = 10;
   private lastSort = 'libelle,asc';
 
-  ngOnInit(): void {
+  constructor() {
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(inject(DestroyRef))
       )
       .subscribe(() => this.onSearch());
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
-  onView(fonction: Function): void {
+  protected onView(fonction: Function): void {
     this.router.navigate(['/functions', fonction.id]);
   }
 
-  onEdit(fonction: Function): void {
+  protected onEdit(fonction: Function): void {
     this.router.navigate(['/functions', fonction.id, 'edit']);
   }
 
-  onDelete(fonction: Function): void {
+  protected onDelete(fonction: Function): void {
     this.confirmationService.confirm({
       header: 'Supprimer cette fonction',
       message: `Confirmez-vous la suppression de ${fonction.libelle} ?`,
@@ -145,26 +129,11 @@ export class FunctionListComponent implements OnInit {
     });
   }
 
-  onTriggerImport(): void {
-    this.fileInput.nativeElement.click();
+  protected onTriggerImport(): void {
+    this.fileInput().nativeElement.click();
   }
 
-  onDownloadTemplate(): void {
-    this.downloadingTemplate = true;
-    this.functionService
-      .telechargerModele()
-      .pipe(finalize(() => (this.downloadingTemplate = false)))
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = 'Modele_Import_Fonctions.xlsx';
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      });
-  }
-
-  onFileSelected(event: Event): void {
+  protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
@@ -172,14 +141,14 @@ export class FunctionListComponent implements OnInit {
       return;
     }
 
-    this.importing = true;
+    this.importing.set(true);
     this.functionService
       .importer(file)
-      .pipe(finalize(() => (this.importing = false)))
+      .pipe(finalize(() => this.importing.set(false)))
       .subscribe({
         next: (result) => {
-          this.importResult = result;
-          this.showImportResultDialog = true;
+          this.importResult.set(result);
+          this.showImportResultDialog.set(true);
           this.messageService.add({
             severity: 'success',
             summary: 'Import terminé',
@@ -191,18 +160,33 @@ export class FunctionListComponent implements OnInit {
         error: (err: HttpErrorResponse) => {
           const result = err.error as FunctionImportResult | null;
           if (result && Array.isArray(result.lignesIgnorees)) {
-            this.importResult = result;
-            this.showImportResultDialog = true;
+            this.importResult.set(result);
+            this.showImportResultDialog.set(true);
           }
         }
       });
   }
 
+  private onDownloadTemplate(): void {
+    this.downloadingTemplate.set(true);
+    this.functionService
+      .telechargerModele()
+      .pipe(finalize(() => this.downloadingTemplate.set(false)))
+      .subscribe((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const lien = document.createElement('a');
+        lien.href = url;
+        lien.download = 'Modele_Import_Fonctions.xlsx';
+        lien.click();
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
   private deleteFunction(fonction: Function): void {
-    this.deletingId = fonction.id;
+    this.deletingId.set(fonction.id);
     this.functionService
       .delete(fonction.id)
-      .pipe(finalize(() => (this.deletingId = null)))
+      .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Fonction supprimée', life: 4000 });
         this.fetchPage();
@@ -210,20 +194,15 @@ export class FunctionListComponent implements OnInit {
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
     const criteria = this.filterForm.getRawValue();
 
     this.functionService
-      .search(
-        {
-          libelle: criteria.libelle || undefined
-        },
-        { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
-      )
-      .pipe(finalize(() => (this.loading = false)))
+      .search({ libelle: criteria.libelle || undefined }, { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
-        this.functions = result.content;
-        this.totalRecords = result.page.totalElements;
+        this.functions.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
       });
   }
 }

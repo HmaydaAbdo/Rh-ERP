@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
@@ -55,7 +54,7 @@ describe('JournalComponent', () => {
     service.getById.and.returnValue(of(ENTREE));
     service.details.and.returnValue(of(page([CHANGEMENT])));
     TestBed.configureTestingModule({
-      imports: [JournalComponent, NoopAnimationsModule],
+      imports: [JournalComponent],
       providers: [{ provide: AuditService, useValue: service }]
     });
     fixture = TestBed.createComponent(JournalComponent);
@@ -64,19 +63,19 @@ describe('JournalComponent', () => {
   });
 
   it('charge la première page, de la plus récente à la plus ancienne', () => {
-    composant.onLazyLoad({ first: 0, rows: 10 });
+    composant['onLazyLoad']({ first: 0, rows: 10, sortField: null, sortOrder: 1 });
 
     expect(service.search.calls.mostRecent().args[1]).toEqual({ page: 0, size: 10, sort: 'horodatage,desc' });
     expect(Object.values(service.search.calls.mostRecent().args[0]).every((v) => v === undefined)).toBeTrue();
-    expect(composant.lignes).toEqual([LIGNE]);
-    expect(composant.totalRecords).toBe(1);
+    expect(composant['lignes']()).toEqual([LIGNE]);
+    expect(composant['totalRecords']()).toBe(1);
   });
 
   it('cherche en temps réel après un court délai, sans bouton « Rechercher », en revenant à la première page', fakeAsync(() => {
-    composant.onLazyLoad({ first: 20, rows: 10 });
+    composant['onLazyLoad']({ first: 20, rows: 10, sortField: null, sortOrder: 1 });
     service.search.calls.reset();
 
-    composant.filterForm.patchValue({ utilisateur: 'ali', categorie: 'SECURITE', action: 'ACCES_REFUSE' });
+    composant['filterForm'].patchValue({ utilisateur: 'ali', categorie: 'SECURITE', action: 'ACCES_REFUSE' });
     tick(300);
 
     expect(service.search).toHaveBeenCalledTimes(1);
@@ -94,7 +93,7 @@ describe('JournalComponent', () => {
   }));
 
   it('borne la recherche par date du premier instant du jour de début au dernier du jour de fin', fakeAsync(() => {
-    composant.filterForm.patchValue({ dateDebut: '2026-08-01', dateFin: '2026-08-31' });
+    composant['filterForm'].patchValue({ dateDebut: '2026-08-01', dateFin: '2026-08-31' });
     tick(300);
 
     const criteres = service.search.calls.mostRecent().args[0];
@@ -103,42 +102,42 @@ describe('JournalComponent', () => {
   }));
 
   it('ouvre une entrée avec son contexte, son périmètre et la première page de ses modifications', () => {
-    composant.onOuvrir(LIGNE);
+    composant['onOuvrir'](LIGNE);
 
     expect(service.getById).toHaveBeenCalledWith(5);
     expect(service.details).toHaveBeenCalledWith(5, { page: 0, size: 10 });
-    expect(composant.panneauOuvert).toBeTrue();
-    expect(composant.entree?.adresseIp).toBe('10.0.0.7');
-    expect(composant.perimetreEntrees()).toEqual([
+    expect(composant['panneauOuvert']()).toBeTrue();
+    expect(composant['entree']()?.adresseIp).toBe('10.0.0.7');
+    expect(composant['perimetreEntrees']()).toEqual([
       ['periode', '2026-08'],
       ['nombreConfirme', '972']
     ]);
-    expect(composant.changements).toEqual([CHANGEMENT]);
+    expect(composant['changements']()).toEqual([CHANGEMENT]);
   });
 
   it('pagine les modifications d’une opération volumineuse', () => {
     service.details.and.returnValue(of(page([CHANGEMENT], 25)));
-    composant.onOuvrir(LIGNE);
+    composant['onOuvrir'](LIGNE);
 
-    expect(composant.nombrePagesChangements()).toBe(3);
-    composant.changementsSuivants();
+    expect(composant['nombrePagesChangements']()).toBe(3);
+    composant['changementsSuivants']();
 
     expect(service.details).toHaveBeenCalledWith(5, { page: 1, size: 10 });
   });
 
   it('remplace les filtres par l’identifiant de requête pour relier les entrées d’une même action', () => {
-    composant.filterForm.patchValue({ utilisateur: 'ali' }, { emitEvent: false });
+    composant['filterForm'].patchValue({ utilisateur: 'ali' }, { emitEvent: false });
 
-    composant.onVoirLaRequete('req-1');
+    composant['onVoirLaRequete']('req-1');
 
     expect(service.search.calls.mostRecent().args[0].requestId).toBe('req-1');
     expect(service.search.calls.mostRecent().args[0].utilisateur).toBeUndefined();
-    expect(composant.panneauOuvert).toBeFalse();
+    expect(composant['panneauOuvert']()).toBeFalse();
   });
 
   it('désigne la cible d’une ligne par son entité et son numéro', () => {
-    expect(composant.cible({ entiteType: 'Paie', entiteId: 7 })).toBe('Bulletin de paie n° 7');
-    expect(composant.cible({ entiteType: 'Paie', entiteId: null })).toBe('Bulletin de paie');
-    expect(composant.cible({ entiteType: null, entiteId: null })).toBe('');
+    expect(composant['cible']({ entiteType: 'Paie', entiteId: 7 })).toBe('Bulletin de paie n° 7');
+    expect(composant['cible']({ entiteType: 'Paie', entiteId: null })).toBe('Bulletin de paie');
+    expect(composant['cible']({ entiteType: null, entiteId: null })).toBe('');
   });
 });

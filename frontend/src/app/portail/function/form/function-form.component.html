@@ -1,21 +1,21 @@
 <div class="function-form app-page app-page--narrow">
-  <a routerLink="/functions" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Fonctions</a>
+  <a routerLink="/functions" class="app-back"><stp-icon name="arrow-left" /> Fonctions</a>
   <div class="app-page__header">
-    <h1>{{ isEditMode ? 'Modifier la fonction' : 'Nouvelle fonction' }}</h1>
+    <h1>{{ isEditMode() ? 'Modifier la fonction' : 'Nouvelle fonction' }}</h1>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
     <div class="field">
       <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
-      <input pInputText autocomplete="off" id="libelle" type="text" formControlName="libelle" />
+      <input class="stp-input" autocomplete="off" id="libelle" type="text" formControlName="libelle" />
       @if (form.controls.libelle.invalid && form.controls.libelle.touched) {
         <small class="field-error" role="alert">Le libellé est obligatoire.</small>
       }
     </div>
 
     <div class="app-form__actions">
-      <a routerLink="/functions" class="p-button p-button-text">Annuler</a>
-      <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+      <a stp-button variant="text" routerLink="/functions">Annuler</a>
+      <button stp-button type="submit" [loading]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
 </div>

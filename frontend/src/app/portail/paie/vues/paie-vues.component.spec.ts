@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/feedback/feedback.service';
@@ -32,7 +31,7 @@ describe('PaieVuesComponent', () => {
     service.rechercherChantiers.and.returnValue(of([]));
 
     TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule],
+      imports: [],
       providers: [
         provideRouter([
           {
@@ -57,14 +56,14 @@ describe('PaieVuesComponent', () => {
   it('lit les filtres dans l\'URL et charge les mois disponibles pour la barre', async () => {
     const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-07&nom=ali&chantierIds=3', PaieVuesComponent);
 
-    expect(composant.filtres()).toEqual({ ...AUCUN_FILTRE, periode: '2026-07', nomPrenom: 'ali', chantierIds: [3] });
-    expect(composant.periodes()).toEqual(['2026-08', '2026-07']);
+    expect(composant['filtres']()).toEqual({ ...AUCUN_FILTRE, periode: '2026-07', nomPrenom: 'ali', chantierIds: [3] });
+    expect(composant['periodes']()).toEqual(['2026-08', '2026-07']);
   });
 
   it('écrit les filtres de la barre dans l\'URL de la vue courante, sans en changer', async () => {
     const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-07', PaieVuesComponent);
 
-    composant.appliquer({ ...AUCUN_FILTRE, periode: '2026-08', cin: 'AB1', equipeIds: [2, 5] });
+    composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-08', cin: 'AB1', equipeIds: [2, 5] });
     await harness.fixture.whenStable();
 
     const url = TestBed.inject(Router).url;
@@ -77,7 +76,7 @@ describe('PaieVuesComponent', () => {
   it('retire de l\'URL un filtre vidé', async () => {
     const composant = await harness.navigateByUrl('/paie?cin=AB1&periode=2026-08', PaieVuesComponent);
 
-    composant.appliquer({ ...AUCUN_FILTRE, periode: '2026-08' });
+    composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-08' });
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/paie?periode=2026-08');
@@ -94,18 +93,18 @@ describe('PaieVuesComponent', () => {
 
   it('rend le mois indispensable en analytique seulement', async () => {
     const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
-    expect(composant.moisRequis()).toBeFalse();
+    expect(composant['moisRequis']()).toBeFalse();
 
     await harness.navigateByUrl('/paie/analytique', PaieVuesComponent);
-    expect(composant.moisRequis()).toBeTrue();
+    expect(composant['moisRequis']()).toBeTrue();
   });
 
   it('ajoute le fil de navigation à la barre dans les cartes seulement', async () => {
     const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
-    expect(composant.cartes()).toBeFalse();
+    expect(composant['cartes']()).toBeFalse();
 
     await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
-    expect(composant.cartes()).toBeTrue();
+    expect(composant['cartes']()).toBeTrue();
   });
 
   it("porte les actions dans l'en-tête, avec le titre et les onglets, dans chaque vue", async () => {
@@ -122,14 +121,14 @@ describe('PaieVuesComponent', () => {
     const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
     const appels = service.listerPeriodes.calls.count();
 
-    composant.rafraichirVue();
-    expect(composant.vueAffichee()).toBeFalse();
+    composant['rafraichirVue']();
+    expect(composant['vueAffichee']()).toBeFalse();
     harness.fixture.detectChanges();
     expect(harness.routeNativeElement?.querySelector('router-outlet')).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 10));
     harness.fixture.detectChanges();
 
-    expect(composant.vueAffichee()).toBeTrue();
+    expect(composant['vueAffichee']()).toBeTrue();
     expect(service.listerPeriodes.calls.count()).toBeGreaterThan(appels);
   });
 
@@ -140,6 +139,6 @@ describe('PaieVuesComponent', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/paie/cartes');
-    expect(composant.filtres()).toEqual(AUCUN_FILTRE);
+    expect(composant['filtres']()).toEqual(AUCUN_FILTRE);
   });
 });

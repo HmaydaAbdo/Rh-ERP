@@ -1,20 +1,19 @@
-
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { CalendarModule } from 'primeng/calendar';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
-import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeStatut } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
-import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
   { label: 'Actif', value: 'ACTIF' },
@@ -34,26 +33,26 @@ function fromIsoDate(isoDate: string): Date {
 }
 
 @Component({
-    selector: 'app-employee-form',
-    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule, LazySelectComponent],
-    changeDetection: ChangeDetectionStrategy.Eager,
-    templateUrl: './employee-form.component.html'
+  selector: 'app-employee-form',
+  imports: [ReactiveFormsModule, RouterLink, LazySelectComponent, ButtonComponent, IconComponent, SelectComponent, DateInputComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './employee-form.component.html'
 })
-export class EmployeeFormComponent implements OnInit {
+export class EmployeeFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
-  readonly functionReferenceService = inject(FunctionReferenceService);
-  readonly chantierReferenceService = inject(ChantierReferenceService);
+  protected readonly functionReferenceService = inject(FunctionReferenceService);
+  protected readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
 
-  readonly statutOptions = STATUT_OPTIONS;
+  protected readonly statutOptions = STATUT_OPTIONS;
 
-  employeeId: number | null = null;
-  saving = false;
+  private readonly employeeId = signal<number | null>(null);
+  protected readonly saving = signal(false);
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.group({
     nomPrenom: ['', [Validators.required, Validators.maxLength(150)]],
     cin: ['', [Validators.required, Validators.maxLength(30)]],
     dateNaissance: [null as Date | null, Validators.required],
@@ -63,15 +62,14 @@ export class EmployeeFormComponent implements OnInit {
     statut: ['ACTIF' as EmployeeStatut, Validators.required]
   });
 
-  get isEditMode(): boolean {
-    return this.employeeId !== null;
-  }
+  protected readonly isEditMode = computed(() => this.employeeId() !== null);
 
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
-      this.employeeId = Number(idParam);
-      this.employeeService.getById(this.employeeId).subscribe((employee) => {
+      const id = Number(idParam);
+      this.employeeId.set(id);
+      this.employeeService.getById(id).subscribe((employee) => {
         this.form.patchValue({
           nomPrenom: employee.nomPrenom,
           cin: employee.cin,
@@ -85,7 +83,7 @@ export class EmployeeFormComponent implements OnInit {
     }
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
@@ -102,18 +100,18 @@ export class EmployeeFormComponent implements OnInit {
       chantierId: raw.chantierId!
     };
 
-    this.saving = true;
+    this.saving.set(true);
 
-    const request$ = this.isEditMode
-      ? this.employeeService.update(this.employeeId!, { ...dto, statut: raw.statut! })
+    const request$ = this.isEditMode()
+      ? this.employeeService.update(this.employeeId()!, { ...dto, statut: raw.statut! })
       : this.employeeService.create(dto);
 
     request$
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe((employee) => {
         this.messageService.add({
           severity: 'success',
-          summary: this.isEditMode ? 'Employé modifié' : 'Employé créé',
+          summary: this.isEditMode() ? 'Employé modifié' : 'Employé créé',
           life: 4000
         });
         this.form.markAsPristine();

@@ -34,8 +34,8 @@ describe('AuditHistoriqueComponent', () => {
       providers: [{ provide: AuditService, useValue: service }]
     });
     fixture = TestBed.createComponent(AuditHistoriqueComponent);
-    fixture.componentInstance.entite = 'Paie';
-    fixture.componentInstance.id = 42;
+    fixture.componentRef.setInput('entite', 'Paie');
+    fixture.componentRef.setInput('id', 42);
   });
 
   it('charge les versions de l’enregistrement et les affiche de la plus récente à la plus ancienne', () => {
@@ -52,14 +52,14 @@ describe('AuditHistoriqueComponent', () => {
   it('propose les versions plus anciennes tant qu’il en reste, et les ajoute à la suite', () => {
     service.historique.and.returnValues(of(page([version(9, 'MODIFICATION')], 2, 0)), of(page([version(3, 'AJOUT')], 2, 1)));
     fixture.detectChanges();
-    expect(fixture.componentInstance.resteAcharger()).toBeTrue();
+    expect(fixture.componentInstance['resteAcharger']()).toBeTrue();
 
-    fixture.componentInstance.plus();
+    fixture.componentInstance['plus']();
     fixture.detectChanges();
 
     expect(service.historique.calls.mostRecent().args[2]).toEqual({ page: 1, size: 10 });
-    expect(fixture.componentInstance.versions().length).toBe(2);
-    expect(fixture.componentInstance.resteAcharger()).toBeFalse();
+    expect(fixture.componentInstance['versions']().length).toBe(2);
+    expect(fixture.componentInstance['resteAcharger']()).toBeFalse();
   });
 
   it('dit qu’aucune version n’est enregistrée quand l’historique est vide', () => {

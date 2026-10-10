@@ -1,23 +1,23 @@
-import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, ViewChild, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { NotificationService } from '@shared/feedback/feedback.service';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { Table, TableModule } from 'primeng/table';
-import { EMPTY, Observable, Subject, debounceTime, finalize, merge, switchMap, tap } from 'rxjs';
+import { debounceTime, EMPTY, finalize, merge, Observable, Subject, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
-import { PaieFiltres, lireFiltres, versCriteres } from '../filtres/paie-filtres';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { contient } from '../../../shared/text/recherche';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { TableCellDirective, TableComponent, TableFooterDirective, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
 import { PaieChantierPeriode, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode, periodePrecedente } from '../paie-format';
 import { PaieService } from '../services/paie.service';
+import { NotificationService } from '@shared/feedback/feedback.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 const DELAI_CASCADE_MS = 50;
@@ -70,13 +70,25 @@ interface Suppression {
  * **supprimer d'un coup** les bulletins qu'elle compte, après une confirmation qui demande de retaper leur nombre.
  */
 @Component({
-    selector: 'app-paie-cartes',
-    imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TableModule, ColumnChooserComponent, CountUpDirective],
-    templateUrl: './paie-cartes.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './paie-cartes.component.scss'
+  selector: 'app-paie-cartes',
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    ColumnChooserComponent,
+    CountUpDirective,
+    IconComponent,
+    ButtonComponent,
+    DialogComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective,
+    TableFooterDirective
+  ],
+  templateUrl: './paie-cartes.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './paie-cartes.component.scss'
 })
-export class PaieCartesComponent implements OnInit {
+export class PaieCartesComponent {
   private readonly paieService = inject(PaieService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -91,10 +103,6 @@ export class PaieCartesComponent implements OnInit {
     { field: 'masse', header: 'Masse (DH)', align: 'text-right', cellClass: 'font-bold' },
     { field: 'part', header: 'Part du chantier', align: 'text-right' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
-
-  @ViewChild(Table) private table?: Table;
 
   readonly filtres = signal<PaieFiltres>(lireFiltres(this.route.snapshot.queryParamMap));
   /** Sens du dernier changement de niveau : oriente le glissement de l'animation (vers l'avant en descendant). */
@@ -104,6 +112,7 @@ export class PaieCartesComponent implements OnInit {
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
 
   readonly rechercheEquipe = new FormControl('', { nonNullable: true });
+  private readonly termeEquipe = signal('');
 
   readonly suppression = signal<Suppression | null>(null);
   readonly suppressionEnCours = signal(false);
@@ -179,6 +188,9 @@ export class PaieCartesComponent implements OnInit {
     return lignes;
   });
 
+  /** Les équipes dont le code ou le libellé contient la recherche (insensible à la casse et aux accents). */
+  readonly equipesAffichees = computed(() => this.lignesEquipes().filter((ligne) => contient(ligne.code, this.termeEquipe()) || contient(ligne.libelle, this.termeEquipe())));
+
   /** Aucun mois (niveau 1) ou aucun chantier (niveaux 2 et 3) ne correspond aux filtres. */
   readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1 ? this.periodes().length === 0 : this.chantiers().length === 0));
   readonly chantierIntrouvable = computed(() => this.niveau() === 3 && !this.chargement() && !this.aucunResultat() && this.chantier() === null);
@@ -188,7 +200,7 @@ export class PaieCartesComponent implements OnInit {
   readonly formaterVariation = formaterVariation;
   readonly formaterPart = formaterPart;
 
-  ngOnInit(): void {
+  constructor() {
     const parametres$ = this.route.queryParamMap.pipe(
       tap((params) => {
         const niveauPrecedent = this.niveau();
@@ -208,8 +220,12 @@ export class PaieCartesComponent implements OnInit {
 
     this.rechercheEquipe.valueChanges
       .pipe(debounceTime(DEBOUNCE_RECHERCHE_MS), takeUntilDestroyed(this.destroyRef))
-      .subscribe((terme) => this.table?.filterGlobal(terme, 'contains'));
+      .subscribe((terme) => this.termeEquipe.set(terme));
   }
+
+  /** Seule une équipe réelle s'ouvre : « Sans équipe » n'a pas d'identifiant, l'API ne sait pas filtrer sur son absence. */
+  readonly ligneCliquable = (ligne: LigneEquipe): boolean => ligne.equipeId !== null;
+  readonly titreLigne = (ligne: LigneEquipe): string | null => (ligne.equipeId !== null ? 'Voir les bulletins de cette équipe' : null);
 
   /** Clic (ou Entrée) sur une équipe : ouvre la vue tabulaire avec les mêmes filtres, plus cette équipe. Les bulletins sans
    * équipe ne s'ouvrent pas : l'API ne sait pas filtrer sur l'absence d'équipe. */

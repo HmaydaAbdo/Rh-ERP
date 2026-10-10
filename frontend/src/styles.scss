@@ -1,10 +1,9 @@
 @use 'styles/tokens';
-@use 'styles/tables';
+@use 'styles/buttons';
 @use 'styles/page';
 @use 'styles/forms';
 @use 'styles/overlays';
 @use 'styles/motion';
-@use 'styles/status';
 
 html,
 body {
@@ -13,11 +12,6 @@ body {
   background: var(--color-canvas);
   color: var(--color-text);
   font-family: var(--font-sans);
-}
-
-// Un lien stylé en bouton (`<a class="p-button">`) ne se souligne pas
-a.p-button {
-  text-decoration: none;
 }
 
 // Anneau de focus clavier unique, aux couleurs de la marque

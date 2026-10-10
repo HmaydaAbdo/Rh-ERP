@@ -18,11 +18,7 @@
                 <strong><span [appCountUp]="tuile.valeur"></span>@if (tuile.suffixe) { {{ tuile.suffixe }} }</strong>
                 @if (tuile.variation; as variation) {
                   <span class="paie-analytique__variation">
-                    <i
-                      class="pi"
-                      [ngClass]="variation.startsWith('+') ? 'pi-arrow-up-right' : variation.startsWith('-') ? 'pi-arrow-down-right' : 'pi-minus'"
-                      aria-hidden="true"
-                    ></i>
+                    <stp-icon [name]="variation.startsWith('+') ? 'arrow-up-right' : variation.startsWith('-') ? 'arrow-down-right' : 'minus'" />
                     {{ variation }} vs mois précédent
                   </span>
                 } @else {
@@ -49,7 +45,7 @@
               <div
                 class="paie-analytique__graphique"
               >
-                <p-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" height="100%"></p-chart>
+                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" ></stp-chart>
               </div>
               <button
                 type="button"
@@ -57,7 +53,7 @@
                 [attr.aria-expanded]="tableaux().evolution"
                 (click)="basculerTableau('evolution')"
               >
-                <i class="pi pi-table" aria-hidden="true"></i>
+                <stp-icon name="table" />
                 {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().evolution) {
@@ -79,7 +75,7 @@
               <h2>Répartition des totaux</h2>
               <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH), tous les bulletins du mois.</p>
               <div class="paie-analytique__graphique">
-                <p-chart ariaLabel="Nombre de bulletins par tranche de total ; le détail est dans le tableau des données." type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" height="100%"></p-chart>
+                <stp-chart ariaLabel="Nombre de bulletins par tranche de total ; le détail est dans le tableau des données." type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" ></stp-chart>
               </div>
               <button
                 type="button"
@@ -87,7 +83,7 @@
                 [attr.aria-expanded]="tableaux().tranches"
                 (click)="basculerTableau('tranches')"
               >
-                <i class="pi pi-table" aria-hidden="true"></i>
+                <stp-icon name="table" />
                 {{ tableaux().tranches ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().tranches) {
@@ -123,13 +119,13 @@
                   class="paie-analytique__graphique"
                   [style.height.rem]="hauteurChantiers()"
                 >
-                  <p-chart [ariaLabel]="'Répartition par chantier : ' + libelleMesure(mesureChantiers()) + ', ' + chantiersTries().length + ' chantiers ; le détail est dans le tableau des données.'"
+                  <stp-chart [ariaLabel]="'Répartition par chantier : ' + libelleMesure(mesureChantiers()) + ', ' + chantiersTries().length + ' chantiers ; le détail est dans le tableau des données.'"
                     type="bar"
                     [data]="graphiqueChantiers().data"
                     [options]="graphiqueChantiers().options"
-                    height="100%"
-                    (onDataSelect)="surBarreChantier($event)"
-                  ></p-chart>
+                    
+                    (dataSelect)="surBarreChantier($event)"
+                  ></stp-chart>
                 </div>
               </div>
               <button
@@ -138,7 +134,7 @@
                 [attr.aria-expanded]="tableaux().chantiers"
                 (click)="basculerTableau('chantiers')"
               >
-                <i class="pi pi-table" aria-hidden="true"></i>
+                <stp-icon name="table" />
                 {{ tableaux().chantiers ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().chantiers) {
@@ -179,13 +175,13 @@
                   class="paie-analytique__graphique"
                   [style.height.rem]="hauteurFonctions()"
                 >
-                  <p-chart [ariaLabel]="'Répartition par fonction : ' + libelleMesure(mesureFonctions()) + ', ' + fonctionsTriees().length + ' fonctions ; le détail est dans le tableau des données.'"
+                  <stp-chart [ariaLabel]="'Répartition par fonction : ' + libelleMesure(mesureFonctions()) + ', ' + fonctionsTriees().length + ' fonctions ; le détail est dans le tableau des données.'"
                     type="bar"
                     [data]="graphiqueFonctions().data"
                     [options]="graphiqueFonctions().options"
-                    height="100%"
-                    (onDataSelect)="surBarreFonction($event)"
-                  ></p-chart>
+                    
+                    (dataSelect)="surBarreFonction($event)"
+                  ></stp-chart>
                 </div>
               </div>
               <button
@@ -194,7 +190,7 @@
                 [attr.aria-expanded]="tableaux().fonctions"
                 (click)="basculerTableau('fonctions')"
               >
-                <i class="pi pi-table" aria-hidden="true"></i>
+                <stp-icon name="table" />
                 {{ tableaux().fonctions ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().fonctions) {

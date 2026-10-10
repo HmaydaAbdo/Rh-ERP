@@ -16,8 +16,8 @@ describe('MonthPickerComponent', () => {
   });
 
   it('grise les mois qui ne sont pas disponibles et ne les rend pas sélectionnables', () => {
-    composant.value = '2026-08';
-    composant.disponibles = ['2026-07', '2026-08'];
+    fixture.componentRef.setInput('value', '2026-08');
+    fixture.componentRef.setInput('disponibles', ['2026-07', '2026-08']);
     fixture.detectChanges();
 
     const desactivees = tuiles().filter((tuile) => tuile.disabled).length;
@@ -30,8 +30,8 @@ describe('MonthPickerComponent', () => {
   });
 
   it('émet la période au format aaaa-MM quand on choisit un mois disponible', () => {
-    composant.value = '2026-08';
-    composant.disponibles = ['2026-07', '2026-08'];
+    fixture.componentRef.setInput('value', '2026-08');
+    fixture.componentRef.setInput('disponibles', ['2026-07', '2026-08']);
     fixture.detectChanges();
 
     const emis: string[] = [];
@@ -44,8 +44,8 @@ describe('MonthPickerComponent', () => {
   });
 
   it("limite la navigation aux années qui contiennent des mois disponibles", () => {
-    composant.value = '2026-08';
-    composant.disponibles = ['2025-12', '2026-08'];
+    fixture.componentRef.setInput('value', '2026-08');
+    fixture.componentRef.setInput('disponibles', ['2025-12', '2026-08']);
     fixture.detectChanges();
 
     expect(composant.annee()).toBe(2026);
@@ -58,8 +58,8 @@ describe('MonthPickerComponent', () => {
   });
 
   it('autorise tous les mois quand aucune liste de mois disponibles n\'est fournie', () => {
-    composant.value = '2026-08';
-    composant.disponibles = null;
+    fixture.componentRef.setInput('value', '2026-08');
+    fixture.componentRef.setInput('disponibles', null);
     fixture.detectChanges();
 
     expect(tuiles().every((tuile) => !tuile.disabled)).toBeTrue();

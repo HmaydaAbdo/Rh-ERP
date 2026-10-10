@@ -1,16 +1,16 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Output, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { NotificationService } from '@shared/feedback/feedback.service';
-import { MenuItem } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
-import { CalendarModule } from 'primeng/calendar';
-import { DialogModule } from 'primeng/dialog';
-import { SplitButtonModule } from 'primeng/splitbutton';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
+import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
+import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
 import { PaieImportResult } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -28,75 +28,59 @@ function toPeriodeString(date: Date | null): string | undefined {
  * Chaque bouton n'apparaît qu'avec sa permission. Un import réussi (ou partiel) prévient la page par `importe`, qui recharge la vue.
  */
 @Component({
-    selector: 'app-paie-actions',
-    imports: [
-        ReactiveFormsModule,
-        RouterLink,
-        ButtonModule,
-        CalendarModule,
-        DialogModule,
-        SplitButtonModule,
-        PaieExportWizardComponent
-    ],
-    templateUrl: './paie-actions.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './paie-actions.component.scss'
+  selector: 'app-paie-actions',
+  imports: [ReactiveFormsModule, RouterLink, PaieExportWizardComponent, ButtonComponent, DialogComponent, SplitButtonComponent, MonthInputComponent],
+  templateUrl: './paie-actions.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './paie-actions.component.scss'
 })
 export class PaieActionsComponent {
   /** Des bulletins ont été importés : la vue affichée doit se recharger. */
-  @Output() readonly importe = new EventEmitter<void>();
+  readonly importe = output<void>();
 
   private readonly paieService = inject(PaieService);
   private readonly messageService = inject(NotificationService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('PAIE_WRITE');
-  }
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
+  protected readonly canImport = computed(() => this.authService.hasPermission('PAIE_IMPORT'));
+  protected readonly canExport = computed(() => this.authService.hasPermission('PAIE_EXPORT'));
 
-  canImport(): boolean {
-    return this.authService.hasPermission('PAIE_IMPORT');
-  }
-
-  canExport(): boolean {
-    return this.authService.hasPermission('PAIE_EXPORT');
-  }
-
-  showImportDialog = false;
-  importing = false;
-  importResult: PaieImportResult | null = null;
-  showImportResultDialog = false;
-  downloadingTemplate = false;
-  showExportDialog = false;
+  protected readonly showImportDialog = signal(false);
+  protected readonly importing = signal(false);
+  protected readonly importResult = signal<PaieImportResult | null>(null);
+  protected readonly showImportResultDialog = signal(false);
+  protected readonly downloadingTemplate = signal(false);
+  protected readonly showExportDialog = signal(false);
 
   /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
-  readonly menuImport: MenuItem[] = [
+  protected readonly menuImport: MenuAction[] = [
     {
       label: 'Télécharger le modèle Excel',
-      icon: 'pi pi-file-excel',
+      icon: 'file-spreadsheet',
       command: () => {
-        if (!this.downloadingTemplate) {
+        if (!this.downloadingTemplate()) {
           this.onDownloadTemplate();
         }
       }
     }
   ];
 
-  readonly importForm = this.fb.group({
+  protected readonly importForm = this.fb.group({
     periode: [null as Date | null]
   });
 
-  onOpenImportDialog(): void {
+  protected onOpenImportDialog(): void {
     this.importForm.reset();
-    this.showImportDialog = true;
+    this.showImportDialog.set(true);
   }
 
-  onDownloadTemplate(): void {
-    this.downloadingTemplate = true;
+  protected onDownloadTemplate(): void {
+    this.downloadingTemplate.set(true);
     this.paieService
       .telechargerModele()
-      .pipe(finalize(() => (this.downloadingTemplate = false)))
+      .pipe(finalize(() => this.downloadingTemplate.set(false)))
       .subscribe((blob) => {
         const url = window.URL.createObjectURL(blob);
         const lien = document.createElement('a');
@@ -107,7 +91,7 @@ export class PaieActionsComponent {
       });
   }
 
-  onImportFileSelected(event: Event): void {
+  protected onImportFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     const periode = toPeriodeString(this.importForm.controls.periode.value);
@@ -116,18 +100,17 @@ export class PaieActionsComponent {
       return;
     }
 
-    this.importing = true;
+    this.importing.set(true);
     this.paieService
       .importer(file, periode)
-      .pipe(finalize(() => (this.importing = false)))
+      .pipe(finalize(() => this.importing.set(false)))
       .subscribe({
         next: (result) => {
-          this.showImportDialog = false;
-          this.importResult = result;
-          this.showImportResultDialog = true;
-          const fonctionsCreeesDetail = result.fonctionsCreees.length > 0
-            ? ` — ${result.fonctionsCreees.length} fonction(s) créée(s) : ${result.fonctionsCreees.join(', ')}`
-            : '';
+          this.showImportDialog.set(false);
+          this.importResult.set(result);
+          this.showImportResultDialog.set(true);
+          const fonctionsCreeesDetail =
+            result.fonctionsCreees.length > 0 ? ` — ${result.fonctionsCreees.length} fonction(s) créée(s) : ${result.fonctionsCreees.join(', ')}` : '';
           this.messageService.add({
             severity: 'success',
             summary: 'Import terminé',
@@ -139,9 +122,9 @@ export class PaieActionsComponent {
         error: (err: HttpErrorResponse) => {
           const result = err.error as PaieImportResult | null;
           if (result && Array.isArray(result.lignesIgnorees)) {
-            this.showImportDialog = false;
-            this.importResult = result;
-            this.showImportResultDialog = true;
+            this.showImportDialog.set(false);
+            this.importResult.set(result);
+            this.showImportResultDialog.set(true);
           }
         }
       });

@@ -1,14 +1,14 @@
 <div class="role-form app-page app-page--narrow">
-  <a routerLink="/admin/roles" class="app-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Rôles</a>
+  <a routerLink="/admin/roles" class="app-back"><stp-icon name="arrow-left" /> Rôles</a>
   <div class="app-page__header">
-    <h1>{{ isEditMode ? 'Modifier le rôle' : 'Nouveau rôle' }}</h1>
+    <h1>{{ isEditMode() ? 'Modifier le rôle' : 'Nouveau rôle' }}</h1>
   </div>
 
-  @if (!loading) {
+  @if (!loading()) {
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
       <div class="field">
         <label for="nom">Nom <span class="field__req" aria-hidden="true">*</span></label>
-        <input pInputText autocomplete="off" id="nom" type="text" formControlName="nom" />
+        <input class="stp-input" autocomplete="off" id="nom" type="text" formControlName="nom" />
         @if (form.controls.nom.invalid && form.controls.nom.touched) {
           <small class="field-error" role="alert">Le nom est obligatoire.</small>
         }
@@ -16,41 +16,41 @@
 
       <div class="field">
         <label for="description">Description</label>
-        <input pInputText autocomplete="off" id="description" type="text" formControlName="description" />
+        <input class="stp-input" autocomplete="off" id="description" type="text" formControlName="description" />
       </div>
 
       <div class="app-form__wide role-form__permissions">
         <div class="app-form__section"><h2>Permissions</h2></div>
-        @if (protege) {
+        @if (protege()) {
           <p class="role-form__protege">
             Rôle d’administration : son nom et ses permissions sont verrouillés (le retirer ou l’amputer laisserait le système sans
             administrateur). Seule sa description peut être modifiée.
           </p>
         }
-        @for (group of permissionGroups; track group.domaine) {
+        @for (group of permissionGroups(); track group.domaine) {
           <div class="role-form__group">
             <div class="role-form__group-header">
-              <p-checkbox
-                [binary]="true"
-                [ariaLabel]="'Tout sélectionner : ' + group.domaine"
-                [ngModel]="isGroupFullySelected(group)"
-                [ngModelOptions]="{ standalone: true }"
-                [disabled]="protege"
-                (onChange)="toggleGroup(group, $event.checked)"
-              ></p-checkbox>
+              <input
+                type="checkbox"
+                class="stp-checkbox"
+                [attr.aria-label]="'Tout sélectionner : ' + group.domaine"
+                [checked]="isGroupFullySelected(group)"
+                [disabled]="protege()"
+                (change)="onToggleGroup(group, $event)"
+              />
               <strong>{{ group.domaine }}</strong>
             </div>
             <div class="role-form__group-items">
               @for (permission of group.permissions; track permission.id) {
                 <label class="role-form__permission">
-                  <p-checkbox
-                    [binary]="true"
-                    [ariaLabel]="permission.code"
-                    [ngModel]="isChecked(permission)"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="protege"
-                    (onChange)="toggle(permission, $event.checked)"
-                  ></p-checkbox>
+                  <input
+                    type="checkbox"
+                    class="stp-checkbox"
+                    [attr.aria-label]="permission.code"
+                    [checked]="isChecked(permission)"
+                    [disabled]="protege()"
+                    (change)="onToggle(permission, $event)"
+                  />
                   <span class="role-form__code">{{ permission.code }}</span>
                   <small>{{ permission.description }}</small>
                 </label>
@@ -61,8 +61,8 @@
       </div>
 
       <div class="app-form__actions">
-        <a routerLink="/admin/roles" class="p-button p-button-text">Annuler</a>
-        <button pButton type="submit" [label]="isEditMode ? 'Enregistrer' : 'Créer'" [loading]="saving" [disabled]="saving"></button>
+        <a stp-button variant="text" routerLink="/admin/roles">Annuler</a>
+        <button stp-button type="submit" [loading]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
       </div>
     </form>
   }

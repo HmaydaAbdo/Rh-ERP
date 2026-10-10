@@ -1,15 +1,14 @@
-
 <input #fileInput type="file" accept=".xlsx" class="function-list__hidden-input" (change)="onFileSelected($event)" />
 
-<p-dialog header="Résultat de l'import" [(visible)]="showImportResultDialog" [modal]="true" [style]="{ width: '520px' }">
-  @if (importResult) {
+<stp-dialog header="Résultat de l'import" width="520px" [(open)]="showImportResultDialog">
+  @if (importResult(); as result) {
     <p>
-      <strong>{{ importResult.totalLignes }}</strong> ligne(s) traitée(s) —
-      <strong>{{ importResult.crees }}</strong> créée(s),
-      <strong>{{ importResult.ignores }}</strong> ignorée(s).
+      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
+      <strong>{{ result.crees }}</strong> créée(s),
+      <strong>{{ result.ignores }}</strong> ignorée(s).
     </p>
 
-    @if (importResult.lignesIgnorees.length > 0) {
+    @if (result.lignesIgnorees.length > 0) {
       <table class="function-list__import-table">
         <thead>
           <tr>
@@ -19,7 +18,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (ligne of importResult.lignesIgnorees; track ligne.numeroLigne) {
+          @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
             <tr>
               <td>{{ ligne.numeroLigne }}</td>
               <td>{{ ligne.libelle }}</td>
@@ -30,40 +29,38 @@
       </table>
     }
   }
-</p-dialog>
+</stp-dialog>
 
 <div class="function-list app-page">
   <div class="app-page__header">
     <h1>Fonctions</h1>
     <div class="app-page__actions app-page__actions--liste">
       @if (canImport()) {
-        <p-splitButton
-          [menuButtonProps]="{ ariaLabel: 'Autres actions d’import' }"
+        <stp-split-button
           label="Importer"
-          icon="pi pi-upload"
-          [model]="menuImport"
-          [outlined]="true"
-          appendTo="body"
-          [disabled]="importing"
-          (onClick)="onTriggerImport()"
-        ></p-splitButton>
+          icon="upload"
+          moreLabel="Autres actions d’import"
+          [items]="menuImport"
+          [disabled]="importing()"
+          (clicked)="onTriggerImport()"
+        />
       }
       @if (canWrite()) {
-        <button pButton type="button" icon="pi pi-plus" label="Nouvelle fonction" routerLink="/functions/new"></button>
+        <a stp-button icon="plus" routerLink="/functions/new">Nouvelle fonction</a>
       }
     </div>
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
-    <input pInputText type="text" formControlName="libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
+    <input class="stp-input" type="text" formControlName="libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
 
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
+    <button stp-button variant="text" type="button" icon="x" class="app-toolbar__clear" (click)="onResetFilters()">Réinitialiser</button>
   </form>
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading) {
-        {{ totalRecords }} fonction{{ totalRecords > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} fonction{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
     <div class="app-table-bar__tools">
@@ -71,70 +68,42 @@
     </div>
   </div>
 
-  <p-table
-    styleClass="app-table p-datatable-gridlines p-datatable-sm"
-    [value]="functions"
+  <stp-table
+    label="Liste des fonctions"
+    emptyMessage="Aucune fonction ne correspond à ces critères."
     [lazy]="true"
-    (onLazyLoad)="onLazyLoad($event)"
-    [paginator]="true"
-    [rows]="10"
-    [totalRecords]="totalRecords"
-    [loading]="loading"
-    [rowsPerPageOptions]="rowsPerPage"
-    [showCurrentPageReport]="true"
-    [currentPageReportTemplate]="pageReport"
+    [value]="functions()"
+    [totalRecords]="totalRecords()"
+    [loading]="loading()"
     [columns]="columns.visible"
-    [resizableColumns]="true"
-    columnResizeMode="expand"
-    [reorderableColumns]="true"
-    (onColReorder)="columns.onReorder($event.columns)"
-    dataKey="id"
+    (lazyLoad)="onLazyLoad($event)"
+    (columnsReorder)="columns.onReorder($event)"
   >
-    <ng-template pTemplate="header">
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
-            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
-          </th>
-        }
-        <th><span class="app-lecteur">Actions</span></th>
-      </tr>
+    <ng-template stpCell let-fonction let-col="col">
+@switch (col.field) {
+  @case ('libelle') {
+    {{ fonction.libelle }}
+  }
+}
     </ng-template>
 
-    <ng-template pTemplate="body" let-fonction>
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
-            @switch (col.field) {
-              @case ('libelle') {
-                {{ fonction.libelle }}
-              }
-            }
-          </td>
-        }
-        <td class="function-list__actions">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text" [attr.aria-label]="'Voir la fonction ' + fonction.libelle" (click)="onView(fonction)"></button>
-          @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier la fonction ' + fonction.libelle" (click)="onEdit(fonction)"></button>
-          }
-          @if (canDelete()) {
-            <button
-              pButton
-              type="button"
-              icon="pi pi-trash"
-              class="p-button-text p-button-danger"
-              [loading]="deletingId === fonction.id"
-              [attr.aria-label]="'Supprimer la fonction ' + fonction.libelle" (click)="onDelete(fonction)"
-            ></button>
-          }
-        </td>
-      </tr>
+    <ng-template stpRowActions let-fonction>
+  <button stp-button variant="text" iconOnly icon="eye" type="button" [attr.aria-label]="'Voir la fonction ' + fonction.libelle" (click)="onView(fonction)"></button>
+  @if (canWrite()) {
+    <button stp-button variant="text" iconOnly icon="pencil" type="button" [attr.aria-label]="'Modifier la fonction ' + fonction.libelle" (click)="onEdit(fonction)"></button>
+  }
+  @if (canDelete()) {
+    <button
+      stp-button
+      variant="danger-text"
+      iconOnly
+      icon="trash-2"
+      type="button"
+      [loading]="deletingId() === fonction.id"
+      [attr.aria-label]="'Supprimer la fonction ' + fonction.libelle"
+      (click)="onDelete(fonction)"
+    ></button>
+  }
     </ng-template>
-
-    <ng-template pTemplate="emptymessage">
-      <tr>
-        <td [attr.colspan]="columns.visible.length + 1">Aucune fonction ne correspond à ces critères.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+  </stp-table>
 </div>

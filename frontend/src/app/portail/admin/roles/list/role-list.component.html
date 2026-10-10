@@ -5,86 +5,46 @@
   </div>
 
   <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="$event.preventDefault()">
-    <input pInputText type="text" formControlName="nom" aria-label="Nom" autocomplete="off" spellcheck="false" placeholder="Nom" />
-    <input pInputText type="text" formControlName="description" aria-label="Description" autocomplete="off" placeholder="Description" />
-    <button pButton type="button" icon="pi pi-times" label="Réinitialiser" class="p-button-text app-toolbar__clear" (click)="onResetFilters()"></button>
+    <input class="stp-input" type="text" formControlName="nom" aria-label="Nom" autocomplete="off" spellcheck="false" placeholder="Nom" />
+    <input class="stp-input" type="text" formControlName="description" aria-label="Description" autocomplete="off" placeholder="Description" />
+    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
   </form>
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      {{ total(dt) }} rôle{{ total(dt) > 1 ? 's' : '' }}
+      {{ filtres().length }} rôle{{ filtres().length > 1 ? 's' : '' }}
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-      <button pButton type="button" icon="pi pi-plus" label="Nouveau rôle" routerLink="/admin/roles/new"></button>
+      <button stp-button icon="plus" type="button" routerLink="/admin/roles/new">Nouveau rôle</button>
     </div>
   </div>
 
-  <p-table
-    styleClass="app-table p-datatable-gridlines p-datatable-sm"
-    #dt
-    [value]="roles"
-    [loading]="loading"
-    [paginator]="true"
-    [rows]="10"
-    [rowsPerPageOptions]="rowsPerPage"
-    [showCurrentPageReport]="true"
-    [currentPageReportTemplate]="pageReport"
+  <stp-table
+    label="Liste : Rôles"
+    emptyMessage="Aucun rôle."
+    [value]="filtres()"
+    [loading]="loading()"
     [columns]="columns.visible"
-    [resizableColumns]="true"
-    columnResizeMode="expand"
-    [reorderableColumns]="true"
-    (onColReorder)="columns.onReorder($event.columns)"
-    dataKey="id"
+    (columnsReorder)="columns.onReorder($event)"
   >
-    <ng-template pTemplate="header">
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
-            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
-          </th>
+    <ng-template stpCell let-role let-col="col">
+      @switch (col.field) {
+        @case ('nom') {
+          {{ role.nom }}
         }
-        <th><span class="app-lecteur">Actions</span></th>
-      </tr>
+        @case ('description') {
+          {{ role.description || '—' }}
+        }
+        @case ('permissions') {
+          <stp-badge [value]="role.permissions.length + ' permission(s)'" severity="info"></stp-badge>
+        }
+      }
     </ng-template>
 
-    <ng-template pTemplate="body" let-role>
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
-            @switch (col.field) {
-              @case ('nom') {
-                {{ role.nom }}
-              }
-              @case ('description') {
-                {{ role.description || '—' }}
-              }
-              @case ('permissions') {
-                <p-tag [value]="role.permissions.length + ' permission(s)'" severity="info"></p-tag>
-              }
-            }
-          </td>
-        }
-        <td class="role-list__actions">
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text" [attr.aria-label]="'Modifier le rôle ' + role.nom" (click)="onEdit(role)"></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            class="p-button-text p-button-danger"
-            [loading]="deletingId === role.id"
-            [disabled]="role.protege"
-            [title]="role.protege ? 'Rôle d’administration : non supprimable' : ''"
-            [attr.aria-label]="'Supprimer le rôle ' + role.nom" (click)="onDelete(role)"
-          ></button>
-        </td>
-      </tr>
+    <ng-template stpRowActions let-role>
+      <button stp-button variant="text" icon="pencil" iconOnly type="button" [attr.aria-label]="'Modifier le rôle ' + role.nom" (click)="onEdit(role)"></button>
+      <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === role.id" [disabled]="role.protege" [title]="role.protege ? 'Rôle d’administration : non supprimable' : ''" [attr.aria-label]="'Supprimer le rôle ' + role.nom" (click)="onDelete(role)"></button>
     </ng-template>
-
-    <ng-template pTemplate="emptymessage">
-      <tr>
-        <td [attr.colspan]="columns.visible.length + 1">Aucun rôle.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+  </stp-table>
 </div>

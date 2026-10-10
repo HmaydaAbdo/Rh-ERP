@@ -111,7 +111,7 @@ describe('PaieAnalytiqueComponent', () => {
   it('filtre sur le chantier d\'une barre cliquée', async () => {
     const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    composant.surBarreChantier({ element: { index: 1 } });
+    composant.surBarreChantier({ index: 1 });
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toContain('chantierIds=9');
@@ -282,7 +282,7 @@ describe('PaieAnalytiqueComponent', () => {
     const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
     // La plus grosse masse est affichée en premier : l'index 0 désigne « GRANDE ».
-    composant.surBarreFonction({ element: { index: 0 } });
+    composant.surBarreFonction({ index: 0 });
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toContain('fonctionIds=8');

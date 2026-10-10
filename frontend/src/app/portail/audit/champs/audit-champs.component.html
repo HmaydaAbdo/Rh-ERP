@@ -1,4 +1,4 @@
-@if (champs.length === 0) {
+@if (champs().length === 0) {
   <p class="audit-champs__vide">Aucun changement.</p>
 } @else {
   <table class="audit-champs">
@@ -10,7 +10,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (champ of champs; track champ.champ) {
+      @for (champ of champs(); track champ.champ) {
         <tr>
           <th scope="row">{{ libelleChamp(champ.champ) }}</th>
           @if (champ.ajoutes || champ.retires) {

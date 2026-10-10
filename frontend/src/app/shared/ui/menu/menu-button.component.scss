@@ -1,0 +1,44 @@
+.stp-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+// Le menu Aria reste dans le DOM ; l'attribut `data-visible` dit s'il est ouvert.
+.stp-menu__panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-end: 0;
+  z-index: 20;
+  min-width: 14rem;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+
+  &:not([data-visible='true']) {
+    display: none;
+  }
+}
+
+.stp-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:hover,
+  &[data-active='true'] {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  &[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
