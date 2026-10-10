@@ -164,15 +164,9 @@ test.describe('Formulaires (Signal Forms)', () => {
     await page.goto('/admin/roles/new');
     await expect(page.getByRole('heading', { name: 'Nouveau rôle' })).toBeVisible();
 
-    {
-      const c = page.getByRole('checkbox', { name: 'Tout sélectionner : PAIE', exact: true });
-      const b1 = await c.boundingBox();
-      await page.waitForTimeout(300);
-      const b2 = await c.boundingBox();
-      const info = await c.evaluate((el) => ({ disabled: (el as HTMLInputElement).disabled, anim: document.getAnimations().length, vis: getComputedStyle(el).visibility, disp: getComputedStyle(el).display, rm: matchMedia('(prefers-reduced-motion: reduce)').matches, y: window.scrollY }));
-      console.log('DIAG ' + JSON.stringify({ b1, b2, info, visible: await c.isVisible(), enabled: await c.isEnabled() }));
-    }
-    await page.getByRole('checkbox', { name: 'Tout sélectionner : PAIE', exact: true }).check();
+    const groupe = page.getByRole('checkbox', { name: 'Tout sélectionner : PAIE', exact: true });
+    await groupe.click();
+    console.log('DIAG2 groupe=' + (await groupe.isChecked()) + ' write=' + (await page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true }).isChecked()) + ' read=' + (await page.getByRole('checkbox', { name: 'PAIE_READ', exact: true }).isChecked()));
     await expect(page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'EMPLOYEE_READ', exact: true })).not.toBeChecked();
     await page.locator('#nom').fill('Comptable');
