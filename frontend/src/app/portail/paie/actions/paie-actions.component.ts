@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MenuItem, MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
@@ -27,26 +28,26 @@ function toPeriodeString(date: Date | null): string | undefined {
  * Chaque bouton n'apparaît qu'avec sa permission. Un import réussi (ou partiel) prévient la page par `importe`, qui recharge la vue.
  */
 @Component({
-  selector: 'app-paie-actions',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    ButtonModule,
-    CalendarModule,
-    DialogModule,
-    SplitButtonModule,
-    PaieExportWizardComponent
-  ],
-  templateUrl: './paie-actions.component.html',
-  styleUrl: './paie-actions.component.scss'
+    selector: 'app-paie-actions',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        ButtonModule,
+        CalendarModule,
+        DialogModule,
+        SplitButtonModule,
+        PaieExportWizardComponent
+    ],
+    templateUrl: './paie-actions.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-actions.component.scss'
 })
 export class PaieActionsComponent {
   /** Des bulletins ont été importés : la vue affichée doit se recharger. */
   @Output() readonly importe = new EventEmitter<void>();
 
   private readonly paieService = inject(PaieService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 

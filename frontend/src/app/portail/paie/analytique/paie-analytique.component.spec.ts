@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -51,7 +51,7 @@ describe('PaieAnalytiqueComponent', () => {
       imports: [NoopAnimationsModule],
       providers: [
         provideRouter([{ path: 'paie/analytique', component: PaieAnalytiqueComponent }]),
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
         { provide: PaieService, useValue: service }
       ]
@@ -61,6 +61,9 @@ describe('PaieAnalytiqueComponent', () => {
 
   it('ouvre le mois le plus récent quand l\'URL n\'en porte pas', async () => {
     await ouvrir('/paie/analytique');
+    // Angular 21 schedules the follow-up navigation triggered by ngOnInit separately from the
+    // initial RouterTestingHarness navigation. Wait until that query-param navigation settles.
+    await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
     expect(service.analyser).toHaveBeenCalledTimes(1);

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DropdownModule } from 'primeng/dropdown';
@@ -33,21 +33,21 @@ const TAILLE_PAGE_DETAIL = 10;
  * son périmètre, puis — chargé à l'ouverture seulement, par pages — ce qu'elle a changé, champ par champ.
  */
 @Component({
-  selector: 'app-journal',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    ButtonModule,
-    DropdownModule,
-    InputTextModule,
-    SidebarModule,
-    TableModule,
-    ColumnChooserComponent,
-    AuditChampsComponent
-  ],
-  templateUrl: './journal.component.html',
-  styleUrl: './journal.component.scss'
+    selector: 'app-journal',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        ButtonModule,
+        DropdownModule,
+        InputTextModule,
+        SidebarModule,
+        TableModule,
+        ColumnChooserComponent,
+        AuditChampsComponent
+    ],
+    templateUrl: './journal.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './journal.component.scss'
 })
 export class JournalComponent implements OnInit {
   readonly columns = new ColumnState([

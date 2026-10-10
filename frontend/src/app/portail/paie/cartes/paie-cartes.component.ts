@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, ViewChild, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -70,11 +70,11 @@ interface Suppression {
  * **supprimer d'un coup** les bulletins qu'elle compte, après une confirmation qui demande de retaper leur nombre.
  */
 @Component({
-  selector: 'app-paie-cartes',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TableModule, ColumnChooserComponent, CountUpDirective],
-  templateUrl: './paie-cartes.component.html',
-  styleUrl: './paie-cartes.component.scss'
+    selector: 'app-paie-cartes',
+    imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TableModule, ColumnChooserComponent, CountUpDirective],
+    templateUrl: './paie-cartes.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-cartes.component.scss'
 })
 export class PaieCartesComponent implements OnInit {
   private readonly paieService = inject(PaieService);
@@ -82,7 +82,7 @@ export class PaieCartesComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   readonly columns = new ColumnState([
     { field: 'code', header: 'Équipe', cellClass: 'font-semibold' },

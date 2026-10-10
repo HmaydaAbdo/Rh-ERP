@@ -1,10 +1,10 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
@@ -24,9 +24,9 @@ describe('PaieListComponent — filtres de la barre commune', () => {
       imports: [NoopAnimationsModule],
       providers: [
         provideRouter([{ path: 'paie', component: PaieListComponent }]),
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
-        MessageService,
+        NotificationService,
         { provide: PaieService, useValue: service }
       ]
     });

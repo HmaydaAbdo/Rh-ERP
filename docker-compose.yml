@@ -1,5 +1,5 @@
 # Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers le
-# backend), Spring Boot (backend), PostgreSQL 17 + pgvector. Nginx outer (TLS, point d'entrée
+# backend), Spring Boot (backend), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
 # public) est géré séparément sur le serveur de déploiement, hors de ce fichier — voir
 # docs/deployment.md pour l'architecture complète et conventions/deployment.md pour le pattern
 # générique.
@@ -14,7 +14,7 @@
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -24,7 +24,9 @@ services:
       # Persistance des données — voir docs/deployment.md pour la stratégie de backup (distincte
       # de ce volume, qui ne protège que contre l'arrêt/la recréation du conteneur, pas contre la
       # perte du volume lui-même).
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 stocke ses données dans un sous-répertoire de ce point de montage ; voir
+      # docs/deployment.md pour la migration majeure et le volume PG17 conservé.
+      - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
     ports:
@@ -105,7 +107,7 @@ services:
       retries: 3
 
 volumes:
-  postgres_data:
+  postgres_data_v18:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas

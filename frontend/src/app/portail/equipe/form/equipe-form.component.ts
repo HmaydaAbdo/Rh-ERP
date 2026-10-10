@@ -1,27 +1,27 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize } from 'rxjs';
 
 import { EquipeService } from '../services/equipe.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 
 @Component({
-  selector: 'app-equipe-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
-  templateUrl: './equipe-form.component.html'
+    selector: 'app-equipe-form',
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './equipe-form.component.html'
 })
 export class EquipeFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly equipeService = inject(EquipeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   equipeId: number | null = null;
   saving = false;

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -10,10 +10,10 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 
 @Component({
-  selector: 'app-paie-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, DialogModule, AuditHistoriqueComponent],
-  templateUrl: './paie-detail.component.html'
+    selector: 'app-paie-detail',
+    imports: [CommonModule, RouterLink, ButtonModule, DialogModule, AuditHistoriqueComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './paie-detail.component.html'
 })
 export class PaieDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

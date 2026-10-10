@@ -1,12 +1,12 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
@@ -34,10 +34,10 @@ function fromIsoDate(isoDate: string): Date {
 }
 
 @Component({
-  selector: 'app-employee-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule, LazySelectComponent],
-  templateUrl: './employee-form.component.html'
+    selector: 'app-employee-form',
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CalendarModule, DropdownModule, LazySelectComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './employee-form.component.html'
 })
 export class EmployeeFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -46,7 +46,7 @@ export class EmployeeFormComponent implements OnInit {
   readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   readonly statutOptions = STATUT_OPTIONS;
 

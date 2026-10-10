@@ -1,4 +1,4 @@
-import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -38,11 +38,11 @@ const DEBOUNCE_FILTRES_MS = 300;
  * mettre dans l'URL).
  */
 @Component({
-  selector: 'app-paie-filtres',
-  standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, OverlayPanelModule, MonthPickerComponent, LazySelectComponent],
-  templateUrl: './paie-filtres.component.html',
-  styleUrl: './paie-filtres.component.scss'
+    selector: 'app-paie-filtres',
+    imports: [ReactiveFormsModule, ButtonModule, InputTextModule, OverlayPanelModule, MonthPickerComponent, LazySelectComponent],
+    templateUrl: './paie-filtres.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-filtres.component.scss'
 })
 export class PaieFiltresComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

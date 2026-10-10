@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -64,11 +64,11 @@ function hauteurPourLignes(lignes: number): number {
  * Aucun calcul métier ici : tout vient de `POST /paie/analytique` (voir docs/paie/README.md, « Vue Analytique »).
  */
 @Component({
-  selector: 'app-paie-analytique',
-  standalone: true,
-  imports: [CommonModule, ChartModule, CountUpDirective],
-  templateUrl: './paie-analytique.component.html',
-  styleUrl: './paie-analytique.component.scss'
+    selector: 'app-paie-analytique',
+    imports: [CommonModule, ChartModule, CountUpDirective],
+    templateUrl: './paie-analytique.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-analytique.component.scss'
 })
 export class PaieAnalytiqueComponent implements OnInit {
   private readonly paieService = inject(PaieService);

@@ -1,21 +1,18 @@
-import { CommonModule } from '@angular/common';
+
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
 @Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+    selector: 'app-login',
+    imports: [ReactiveFormsModule, RouterLink],
+    templateUrl: './login.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styleUrl: './login.component.scss'
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
@@ -23,8 +20,9 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  submitting = false;
-  errorMessage: string | null = null;
+  readonly submitting = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly passwordVisible = signal(false);
 
   constructor() {
     // Un utilisateur déjà connecté (session restaurée via le cookie Refresh Token) n'a rien à
@@ -34,10 +32,14 @@ export class LoginComponent {
     }
   }
 
-  readonly form = this.fb.group({
+  readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
     password: ['', Validators.required]
   });
+
+  togglePasswordVisibility(): void {
+    this.passwordVisible.update((visible) => !visible);
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {
@@ -45,20 +47,20 @@ export class LoginComponent {
       return;
     }
 
-    this.errorMessage = null;
-    this.submitting = true;
+    this.errorMessage.set(null);
+    this.submitting.set(true);
     const { username, password } = this.form.getRawValue();
 
     this.authService
-      .login(username!, password!)
-      .pipe(finalize(() => (this.submitting = false)))
+      .login(username, password)
+      .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: () => {
           const redirect = this.route.snapshot.queryParamMap.get('redirect') ?? '/';
           this.router.navigateByUrl(redirect);
         },
         error: (err: HttpErrorResponse) => {
-          this.errorMessage = err.status === 401 ? 'Identifiants invalides.' : 'Une erreur est survenue.';
+          this.errorMessage.set(err.status === 401 ? 'Identifiants invalides.' : 'Une erreur est survenue.');
         }
       });
   }

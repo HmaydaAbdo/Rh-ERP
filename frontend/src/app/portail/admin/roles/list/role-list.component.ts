@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, inject } from '@angular/core';
+import { Component, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
 import { Table, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { finalize } from 'rxjs';
@@ -19,17 +18,16 @@ import { debounceTime } from 'rxjs';
 const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
-  selector: 'app-role-list',
-  standalone: true,
-  imports: [ColumnChooserComponent, ReactiveFormsModule, InputTextModule, CommonModule, RouterLink, TableModule, ButtonModule, ConfirmDialogModule, TagModule],
-  providers: [ConfirmationService],
-  templateUrl: './role-list.component.html',
-  styleUrl: './role-list.component.scss'
+    selector: 'app-role-list',
+    imports: [ColumnChooserComponent, ReactiveFormsModule, InputTextModule, CommonModule, RouterLink, TableModule, ButtonModule, TagModule],
+    templateUrl: './role-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './role-list.component.scss'
 })
 export class RoleListComponent {
   private readonly roleService = inject(RoleService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
 
   roles: Role[] = [];
@@ -73,7 +71,6 @@ export class RoleListComponent {
     this.confirmationService.confirm({
       header: 'Supprimer ce rôle',
       message: `Confirmez-vous la suppression du rôle ${role.nom} ? Un rôle encore attribué à des comptes ne peut pas être supprimé : retirez-le d’abord de ces comptes.`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteRole(role)

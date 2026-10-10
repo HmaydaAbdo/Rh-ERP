@@ -32,7 +32,10 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
-1. conventions/architecture.md
+0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards de la version
+   épinglée dans `conventions/staport/v<version>/` (architecture, PostgreSQL/Flyway/pgvector, RBAC,
+   audit, tests, Angular, design system, agents/skills/MCP/RAG/BI).
+1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
 4. conventions/jpa.md
@@ -50,12 +53,19 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
 authentification, permissions (RBAC), frontend, tests, configuration, déploiement. Avant de modifier un domaine,
-lire son README dans `docs/<domaine>/` et son fichier `docs/rbac/<domaine>.md`.
+lire son README dans `docs/<domaine>/`, son skill dans `docs/<domaine>/skills/SKILL.md` s'il existe, et son fichier
+`docs/rbac/<domaine>.md` s'il existe. Une skill aide l'agent à appliquer le contexte documenté ; elle ne remplace
+pas ces sources et ne confère aucun droit applicatif.
 
 En cas de conflit entre plusieurs conventions :
 
-- `architecture.md` fait foi pour toutes les décisions d'architecture ;
-- les autres documents complètent cette architecture dans leur domaine.
+- le socle Staport épinglé fixe les exigences communes minimales, particulièrement sécurité, audit
+  et confidentialité ;
+- les conventions ERP-RH précisent l'implémentation et les règles du projet ; elles peuvent
+  renforcer le socle, pas en affaiblir les exigences ;
+- `architecture.md` ERP-RH fait foi pour les choix d'architecture propres au projet ; toute
+  contradiction entre les deux niveaux est résolue par un ADR et une mise à jour des documents avant
+  le changement concerné.
 
 
 # Décisions d'architecture

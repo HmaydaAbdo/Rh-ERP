@@ -1,11 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize, forkJoin } from 'rxjs';
 
 import { PermissionSummary } from '../../models/admin.model';
@@ -18,18 +18,18 @@ interface PermissionGroup {
 }
 
 @Component({
-  selector: 'app-role-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule],
-  templateUrl: './role-form.component.html',
-  styleUrl: './role-form.component.scss'
+    selector: 'app-role-form',
+    imports: [ReactiveFormsModule, FormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule],
+    templateUrl: './role-form.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './role-form.component.scss'
 })
 export class RoleFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly roleService = inject(RoleService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   roleId: number | null = null;
   saving = false;

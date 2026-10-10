@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -8,7 +8,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
@@ -32,10 +32,8 @@ function fromPeriodeString(periode: string): Date {
 }
 
 @Component({
-  selector: 'app-paie-form',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-paie-form',
+    imports: [
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
@@ -45,9 +43,10 @@ function fromPeriodeString(periode: string): Date {
     DropdownModule,
     MessageModule,
     LazySelectComponent
-  ],
-  templateUrl: './paie-form.component.html',
-  styleUrl: './paie-form.component.scss'
+],
+    templateUrl: './paie-form.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-form.component.scss'
 })
 export class PaieFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -58,7 +57,7 @@ export class PaieFormComponent implements OnInit {
   readonly equipeReferenceService = inject(EquipeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   paieId: number | null = null;
   saving = false;

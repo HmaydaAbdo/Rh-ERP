@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService, MenuItem } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
+import { MenuItem } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { InputTextModule } from 'primeng/inputtext';
@@ -21,23 +21,21 @@ import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../sh
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-  selector: 'app-function-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ColumnChooserComponent,
-    ReactiveFormsModule,
-    RouterLink,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    ConfirmDialogModule,
-    DialogModule,
-    SplitButtonModule
-  ],
-  providers: [ConfirmationService],
-  templateUrl: './function-list.component.html',
-  styleUrl: './function-list.component.scss'
+    selector: 'app-function-list',
+    imports: [
+        CommonModule,
+        ColumnChooserComponent,
+        ReactiveFormsModule,
+        RouterLink,
+        TableModule,
+        ButtonModule,
+        InputTextModule,
+        DialogModule,
+        SplitButtonModule
+    ],
+    templateUrl: './function-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './function-list.component.scss'
 })
 export class FunctionListComponent implements OnInit {
   readonly columns = new ColumnState([
@@ -47,8 +45,8 @@ export class FunctionListComponent implements OnInit {
   readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly functionService = inject(FunctionService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
@@ -141,7 +139,6 @@ export class FunctionListComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Supprimer cette fonction',
       message: `Confirmez-vous la suppression de ${fonction.libelle} ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteFunction(fonction)

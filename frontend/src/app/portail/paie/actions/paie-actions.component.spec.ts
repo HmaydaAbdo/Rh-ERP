@@ -1,9 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -46,9 +46,9 @@ describe('PaieActionsComponent', () => {
       imports: [NoopAnimationsModule],
       providers: [
         provideRouter([]),
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
-        MessageService,
+        NotificationService,
         { provide: PaieService, useValue: service },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions.includes(code) } }
       ]

@@ -1,12 +1,12 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PasswordModule } from 'primeng/password';
 import { finalize, forkJoin, switchMap } from 'rxjs';
@@ -20,10 +20,8 @@ import { UserService } from '../../services/user.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 
 @Component({
-  selector: 'app-user-form',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-user-form',
+    imports: [
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
@@ -34,9 +32,10 @@ import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-er
     InputSwitchModule,
     LazySelectComponent,
     CheckboxModule
-  ],
-  templateUrl: './user-form.component.html',
-  styleUrl: './user-form.component.scss'
+],
+    templateUrl: './user-form.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './user-form.component.scss'
 })
 export class UserFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -45,7 +44,7 @@ export class UserFormComponent implements OnInit {
   readonly employeeReferenceService = inject(EmployeeReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   userId: number | null = null;
   saving = false;

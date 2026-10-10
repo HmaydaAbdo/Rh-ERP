@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { CurrentUser } from './core/auth/models/auth.model';
@@ -23,8 +23,8 @@ describe('AppComponent', () => {
         imports: [AppComponent],
         providers: [
           provideRouter([]),
-          MessageService,
-          ConfirmationService,
+          NotificationService,
+          ConfirmDialogService,
           { provide: AuthService, useValue: buildAuthServiceStub(null) }
         ]
       }).compileComponents();
@@ -65,8 +65,8 @@ describe('AppComponent', () => {
         imports: [AppComponent],
         providers: [
           provideRouter([]),
-          MessageService,
-          ConfirmationService,
+          NotificationService,
+          ConfirmDialogService,
           { provide: AuthService, useValue: buildAuthServiceStub(user) }
         ]
       }).compileComponents();

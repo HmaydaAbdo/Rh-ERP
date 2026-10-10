@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 import { libelleChamp } from '../audit-format';
 import { AuditChamp } from '../models/audit.model';
@@ -11,6 +11,7 @@ import { AuditChamp } from '../models/audit.model';
   selector: 'app-audit-champs',
   standalone: true,
   templateUrl: './audit-champs.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './audit-champs.component.scss'
 })
 export class AuditChampsComponent {
