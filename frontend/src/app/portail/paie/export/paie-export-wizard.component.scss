@@ -69,7 +69,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     .export-wizard__etape--faite & {
       background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
       border-color: var(--color-success);
-      color: var(--color-success);
+      color: color-mix(in srgb, var(--color-success) 62%, var(--color-text));
     }
   }
 
@@ -159,10 +159,10 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     &--ok {
       background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
       border-color: var(--color-success);
-      color: var(--color-success);
+      color: color-mix(in srgb, var(--color-success) 62%, var(--color-text));
 
       strong {
-        color: var(--color-success);
+        color: color-mix(in srgb, var(--color-success) 62%, var(--color-text));
       }
     }
 

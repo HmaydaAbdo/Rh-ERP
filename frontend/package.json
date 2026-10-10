@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromiumHeadless",
-    "test:watch": "ng test"
+    "test:watch": "ng test",
+    "e2e": "playwright test"
   },
   "private": true,
   "engines": {

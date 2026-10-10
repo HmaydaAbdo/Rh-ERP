@@ -27,7 +27,7 @@ test.describe('Connexion', () => {
     });
     await page.goto('/login');
 
-    await page.getByLabel('Nom d’utilisateur').fill('rh');
+    await page.getByLabel(/Nom d.utilisateur/).fill('rh');
     await page.getByLabel('Mot de passe', { exact: true }).fill('Secret-123');
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
@@ -44,7 +44,7 @@ test.describe('Connexion', () => {
     });
     await page.goto('/login');
 
-    await page.getByLabel('Nom d’utilisateur').fill('rh');
+    await page.getByLabel(/Nom d.utilisateur/).fill('rh');
     await page.getByLabel('Mot de passe', { exact: true }).fill('mauvais');
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
