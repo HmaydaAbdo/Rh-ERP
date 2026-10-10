@@ -37,6 +37,12 @@ test.describe('Catalogue des composants', () => {
     await expect(page.getByRole('listbox')).toHaveCount(0);
   });
 
+  test('un clic sur le sélecteur filtrable ouvre la liste', async ({ page }) => {
+    await page.getByRole('combobox', { name: 'Recherche' }).click();
+
+    await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(4);
+  });
+
   test('le sélecteur filtrable cherche sans tenir compte des accents', async ({ page }) => {
     const champ = page.getByRole('combobox', { name: 'Recherche' });
     await champ.click();

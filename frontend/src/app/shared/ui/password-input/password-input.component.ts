@@ -14,7 +14,7 @@ import { IconComponent } from '../icon/icon.component';
         #field
         class="stp-input"
         [type]="visible() ? 'text' : 'password'"
-        [id]="inputId()"
+        [attr.id]="inputId()"
         [attr.autocomplete]="autocomplete()"
         [attr.aria-label]="ariaLabel()"
         [disabled]="disabled()"

@@ -30,7 +30,7 @@ function toPeriod(date: Date): string {
       cdkOverlayOrigin
       #origin="cdkOverlayOrigin"
       aria-haspopup="dialog"
-      [id]="inputId()"
+      [attr.id]="inputId()"
       [attr.aria-expanded]="open()"
       [attr.aria-label]="ariaLabel()"
       [disabled]="disabled()"

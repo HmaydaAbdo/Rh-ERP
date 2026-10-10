@@ -45,3 +45,6 @@ Thumbs.db
 /test-results/
 /playwright-report/
 sbom-frontend.cdx.json
+
+# Captures d échec des tests Vitest (navigateur)
+.vitest/

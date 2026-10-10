@@ -35,7 +35,8 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
   rôles, audit, paie) migrés ; `lazy-select`, `column-chooser`, `month-picker` réécrits.
 - Bundle initial ~555 kB (780 avant), CSS global 25 kB (268 avant). Tailwind 4 câblé (utilitaires seulement, `tailwind.css`).
 - Assistant d'export de la paie découpé (coque + `PaieExportStore` + un composant par étape) : plus de dépassement de budget de style. Nouvelle étape **Chantier** (PDF) : rapport limité à un chantier, case « Sans vue d'ensemble » ; backend : `PaieReportPdfRequestDto.sansVueEnsemble`, chapitres renumérotés à partir de I.
-- Tests : **186 tests Vitest** dans Chromium réel (sans Zone.js) ; **31 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
+- Formulaires : **Signal Forms partout** (écrans, filtres de liste, authentification) ; champs du kit en `FormValueControl` ; plus de Reactive Forms.
+- Tests : **653 tests Vitest** (91 fichiers : kit, services, écrans, formulaires, étapes de l'assistant — chaque composant a son spec) dans Chromium réel (sans Zone.js) ; **39 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
   téléphone). Axe a fait corriger : repère `<main>`, toast en `div`, séparateur de colonne, contrastes. Bogue corrigé : notification
   « Erreur » affichée à un visiteur sans session (`auth/refresh` désormais silencieux).
 - Chaîne d'approvisionnement : `npm audit` 0 vulnérabilité (tous niveaux, aucune exception : Karma n'est plus dans le verrou), licences contrôlées
@@ -44,11 +45,10 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
 
 ## Écarts ouverts (voir aussi TODO.md)
 
-1. **Tests du kit et des écrans** : le kit n'a que les E2E du catalogue ; Employé, Chantier, Équipe, Utilisateurs, Rôles n'ont pas de tests de
-   composants dédiés.
-3. **Backend** : contrôle de conformité par domaine non fait (RBAC par domaine, audit, secrets, logs/métriques, erreurs).
-4. **Production PG17 → PG18** : non exécutée ; à planifier avec sauvegarde, répétition, fenêtre de maintenance, retour arrière.
-5. **Standards** : repinner une version suivante du snapshot Staport quand elle existe ; limite de débit sur `/auth/*` (audit sécurité n° 6).
+1. **Squelettes non routés** : huit composants `*-cartes` / `*-analytique` (employé, chantier, fonction, équipe) ne sont que des textes « à venir » ; à développer ou à supprimer (voir TODO.md, « Vues Cartes et Analytique des autres domaines »).
+2. **Backend** : contrôle de conformité par domaine non fait (RBAC par domaine, audit, secrets, logs/métriques, erreurs).
+3. **Production PG17 → PG18** : non exécutée ; à planifier avec sauvegarde, répétition, fenêtre de maintenance, retour arrière.
+4. **Standards** : repinner une version suivante du snapshot Staport quand elle existe ; limite de débit sur `/auth/*` (audit sécurité n° 6).
 
 ## Commandes de reprise et validation
 

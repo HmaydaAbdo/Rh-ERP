@@ -221,11 +221,11 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | Composant | Rôle | Base |
 |---|---|---|
 | `stp-icon` | Icône Lucide décorative ; jeu d'icônes dans `ui/icon/icons.ts` (ajouter une icône = l'y ajouter) | `@lucide/angular` |
-| `button[stp-button]` / `a[stp-button]` | Bouton natif ; `variant` (primary, secondary, text, danger, danger-text), `icon`, `iconOnly`, `loading` | HTML natif |
+| `button[stp-button]` / `a[stp-button]` | Bouton natif ; `variant` (primary, secondary, text, danger, danger-text), `icon`, `iconOnly`, `loading` (arrête aussi les `(click)` posés par le parent) | HTML natif |
 | `stp-badge` | Pastille de statut (success, warning, danger, info, neutral), contraste calculé par thème | |
 | `stp-dialog` | Dialogue modal ou tiroir (`placement="end"`) : piège de focus, Échap, `closable`, panneau en overlay | CDK Overlay + A11y |
 | `stp-menu-button`, `stp-split-button` | Menu d'actions (`role="menu"`, flèches, Échap) ; bouton scindé | Angular Aria `menu` |
-| `stp-select` | Liste déroulante simple/multiple, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` | Aria `combobox` + `listbox` |
+| `stp-select` | Liste déroulante simple/multiple, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` ; un clic l'ouvre (avec filtre, il n'ouvre que : il ne referme pas) ; en multiple, les valeurs choisies qui ne figurent pas dans les options affichées sont conservées | Aria `combobox` + `listbox` |
 | `stp-table` | Tableau natif : tri, pagination serveur ou mémoire, redimensionnement/réordonnancement clavier, pied, ligne cliquable | HTML natif |
 | `stp-number-input` | Nombre au format `fr-FR`, bornes, décimales | |
 | `stp-password-input` | Mot de passe avec afficher/masquer (`aria-pressed`) | |
