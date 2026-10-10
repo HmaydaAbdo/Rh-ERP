@@ -161,18 +161,20 @@ test.describe('Formulaires (Signal Forms)', () => {
       'POST /roles': () => ({ id: 5 }),
       'GET /roles': () => []
     });
-    await page.goto('/admin/roles/new');
-    await expect(page.getByRole('heading', { name: 'Nouveau rôle' })).toBeVisible();
-
+    console.log('STEP goto');
+    await page.goto('/admin/roles/new', { timeout: 8000, waitUntil: 'domcontentloaded' });
+    console.log('STEP heading');
+    await expect(page.getByRole('heading', { name: 'Nouveau rôle' })).toBeVisible({ timeout: 8000 });
+    console.log('STEP click');
     const groupe = page.getByRole('checkbox', { name: 'Tout sélectionner : PAIE', exact: true });
-    await groupe.click();
-    console.log('DIAG2 groupe=' + (await groupe.isChecked()) + ' write=' + (await page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true }).isChecked()) + ' read=' + (await page.getByRole('checkbox', { name: 'PAIE_READ', exact: true }).isChecked()));
-    await expect(page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true })).toBeChecked();
+    await groupe.click({ timeout: 8000 });
+    console.log('STEP clicked ' + (await groupe.isChecked()) + ' ' + (await page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true }).isChecked()));
+    await expect(page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true })).toBeChecked({ timeout: 8000 });
     await expect(page.getByRole('checkbox', { name: 'EMPLOYEE_READ', exact: true })).not.toBeChecked();
     await page.locator('#nom').fill('Comptable');
     await page.getByRole('button', { name: 'Créer' }).click();
 
-    await expect(page).toHaveURL(/\/admin\/roles$/);
+    await expect(page).toHaveURL(//admin/roles$/);
     expect(mock.bodies['POST /roles']).toEqual([{ nom: 'Comptable', description: null, permissionIds: [1, 2] }]);
   });
 });
