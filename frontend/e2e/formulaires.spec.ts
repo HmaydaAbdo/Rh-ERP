@@ -162,11 +162,12 @@ test.describe('Formulaires (Signal Forms)', () => {
       'GET /roles': () => []
     });
     await page.goto('/admin/roles/new');
+    await expect(page.getByRole('heading', { name: 'Nouveau rôle' })).toBeVisible();
 
-    await page.getByLabel('Tout sélectionner : PAIE').check();
-    await expect(page.getByLabel('PAIE_WRITE')).toBeChecked();
-    await expect(page.getByLabel('EMPLOYEE_READ')).not.toBeChecked();
-    await page.getByLabel('Nom').fill('Comptable');
+    await page.getByRole('checkbox', { name: 'Tout sélectionner : PAIE', exact: true }).check();
+    await expect(page.getByRole('checkbox', { name: 'PAIE_WRITE', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'EMPLOYEE_READ', exact: true })).not.toBeChecked();
+    await page.locator('#nom').fill('Comptable');
     await page.getByRole('button', { name: 'Créer' }).click();
 
     await expect(page).toHaveURL(/\/admin\/roles$/);
