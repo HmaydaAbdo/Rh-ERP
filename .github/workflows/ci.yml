@@ -131,6 +131,21 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
+      # Sécurité de la chaîne d'approvisionnement : vulnérabilités hautes (hors pairs optionnels non utilisés, ex. Karma), licences
+      # autorisées, et SBOM CycloneDX conservé comme artefact.
+      - name: Audit dependencies and licences
+        working-directory: frontend
+        run: |
+          npm run audit:deps
+          npm run audit:licences
+          npm sbom --omit=dev --sbom-format cyclonedx > sbom-frontend.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-frontend
+          path: frontend/sbom-frontend.cdx.json
+
       - name: Run frontend tests
         working-directory: frontend
         run: npm test
