@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { saisir, soumettre } from '../../../shared/testing/formulaire';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 import { ResetPasswordComponent } from './reset-password.component';
 
@@ -46,8 +47,8 @@ describe('ResetPasswordComponent', () => {
     it('applique le changement puis retourne à la connexion', async () => {
         await createComponent('reset-token');
         recovery.resetPassword.mockReturnValue(of(undefined));
-        component.form.controls.nouveauMotDePasse.setValue('motdepasse123');
-        component.onSubmit();
+        saisir(fixture.nativeElement, '#nouveauMotDePasse', 'motdepasse123');
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
 
         expect(recovery.resetPassword).toHaveBeenCalledWith('reset-token', 'motdepasse123');
@@ -57,8 +58,8 @@ describe('ResetPasswordComponent', () => {
     it('annonce au formulaire un jeton expiré ou déjà utilisé', async () => {
         await createComponent('stale-token');
         recovery.resetPassword.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
-        component.form.controls.nouveauMotDePasse.setValue('motdepasse123');
-        component.onSubmit();
+        saisir(fixture.nativeElement, '#nouveauMotDePasse', 'motdepasse123');
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
 
         expect(component.errorMessage()).toBe('Ce lien est invalide, expiré ou déjà utilisé.');

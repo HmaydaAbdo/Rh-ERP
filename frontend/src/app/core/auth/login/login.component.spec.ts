@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { saisir, soumettre } from '../../../shared/testing/formulaire';
 import { AuthService } from '../services/auth.service';
 import { LoginResponse } from '../models/auth.model';
 import { LoginComponent } from './login.component';
@@ -44,7 +45,7 @@ describe('LoginComponent', () => {
     });
 
     it('affiche les erreurs de validation sans appeler l’API', async () => {
-        component.onSubmit();
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
         fixture.detectChanges();
 
@@ -66,20 +67,22 @@ describe('LoginComponent', () => {
 
     it('navigue vers la destination demandée après authentification', async () => {
         auth.login.mockReturnValue(of({} as LoginResponse));
-        component.form.setValue({ username: 'agent', password: 'secret' });
-        component.onSubmit();
+        saisir(fixture.nativeElement, '#username', 'agent');
+        saisir(fixture.nativeElement, '#password', 'secret');
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
         fixture.detectChanges();
 
         expect(auth.login).toHaveBeenCalledWith('agent', 'secret');
         expect(router.navigateByUrl).toHaveBeenCalledWith('/paie');
-        expect(component.submitting()).toBe(false);
+        expect(component.form().submitting()).toBe(false);
     });
 
     it('annonce des identifiants invalides après une réponse 401', async () => {
         auth.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
-        component.form.setValue({ username: 'agent', password: 'incorrect' });
-        component.onSubmit();
+        saisir(fixture.nativeElement, '#username', 'agent');
+        saisir(fixture.nativeElement, '#password', 'incorrect');
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
         fixture.detectChanges();
 

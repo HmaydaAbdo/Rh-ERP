@@ -19,8 +19,6 @@ Restent à faire :
 - **Frontend — tests du kit** : `ui/select`, `ui/table`, `ui/dialog`, `ui/menu` et les champs n'ont que les E2E du catalogue ; ajouter des
   tests de composants (états, clavier, valeur du `ControlValueAccessor`) ; ajouter des tests de composants pour les listes et
   formulaires Employé, Chantier, Équipe, Utilisateurs et Rôles (aujourd'hui : E2E de Fonction et Paie seulement) ;
-- **Frontend — formulaires** : le standard Staport demande les Signal Forms pour tout nouveau formulaire ; les formulaires existants
-  restent en Reactive Forms typés (écart toléré par `conventions/frontend.md`), migration à décider écran par écran ;
 - **Backend** : contrôle de conformité par domaine (RBAC par domaine, audit métier, secrets/configuration, logs et métriques, erreurs) ;
   rapport d'écarts à produire avant tout changement ;
 - mettre à jour les conventions Staport vers la version suivante et repinner le snapshot central ;
@@ -118,7 +116,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
 | 6 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export ni la suppression en groupe (voir « Anomalies ») | Limitation de débit sur `/auth/*` et sur les routes coûteuses |
-| 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité haute (les 4 restantes sont Karma, pair optionnel inutilisé de `@angular/build`, exclu par `--omit=optional`) ; `audit:deps`, `audit:licences` et SBOM CycloneDX en CI | — |
+| 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité, tous niveaux (Karma, pair optionnel inutilisé de `@angular/build`, sorti du verrou : plus d'exception, `audit:deps` échoue dès le niveau moyen) ; `audit:licences` et SBOM CycloneDX en CI | — |
 
 ---
 

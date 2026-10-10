@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 
 import { ColumnState } from '../../table/table-columns';
 import { BadgeComponent } from '../badge/badge.component';
@@ -24,7 +24,7 @@ interface Ligne {
 @Component({
   selector: 'app-catalogue',
   imports: [
-    ReactiveFormsModule,
+    FormField,
     BadgeComponent,
     ButtonComponent,
     DialogComponent,
@@ -55,9 +55,8 @@ export class CatalogueComponent {
     { label: 'Barrage Souss', value: 4 }
   ];
 
-  protected readonly simple = new FormControl<number | null>(2);
-  protected readonly multiple = new FormControl<number[]>([1, 3], { nonNullable: true });
-  protected readonly recherche = new FormControl<number | null>(null);
+  protected readonly valeurs = signal<{ simple: number | null; multiple: number[]; recherche: number | null }>({ simple: 2, multiple: [1, 3], recherche: null });
+  protected readonly formulaire = form(this.valeurs);
 
   protected readonly columns = new ColumnState([
     { field: 'nom', header: 'Nom' },

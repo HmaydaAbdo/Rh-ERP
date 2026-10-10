@@ -5,18 +5,16 @@
   </div>
 
   @if (!loading()) {
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
+    <form [formRoot]="form" class="app-form__grid">
       <div class="field">
         <label for="nom">Nom <span class="field__req" aria-hidden="true">*</span></label>
-        <input class="stp-input" autocomplete="off" id="nom" type="text" formControlName="nom" />
-        @if (form.controls.nom.invalid && form.controls.nom.touched) {
-          <small class="field-error" role="alert">Le nom est obligatoire.</small>
-        }
+        <input class="stp-input" autocomplete="off" id="nom" type="text" [formField]="form.nom" />
+        <stp-field-error [field]="form.nom" />
       </div>
 
       <div class="field">
         <label for="description">Description</label>
-        <input class="stp-input" autocomplete="off" id="description" type="text" formControlName="description" />
+        <input class="stp-input" autocomplete="off" id="description" type="text" [formField]="form.description" />
       </div>
 
       <div class="app-form__wide role-form__permissions">
@@ -62,7 +60,7 @@
 
       <div class="app-form__actions">
         <a stp-button variant="text" routerLink="/admin/roles">Annuler</a>
-        <button stp-button type="submit" [loading]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
+        <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
       </div>
     </form>
   }

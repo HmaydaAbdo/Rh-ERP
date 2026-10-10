@@ -1,15 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 import { DatePipe } from '@angular/common';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ColumnState } from '../../../shared/table/table-columns';
@@ -30,6 +30,14 @@ const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
+const filtresVides = () => ({
+  nomPrenom: '',
+  cin: '',
+  fonctionIds: [] as number[],
+  chantierIds: [] as number[],
+  statut: null as EmployeeStatut | null
+});
+
 @Component({
   selector: 'app-employee-list',
   imports: [
@@ -45,7 +53,8 @@ const DEBOUNCE_RECHERCHE_MS = 300;
     TableCellDirective,
     TableRowActionsDirective,
     DatePipe,
-    ReactiveFormsModule
+    FormField,
+    FormRoot
   ],
   templateUrl: './employee-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,7 +76,6 @@ export class EmployeeListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
@@ -102,12 +110,10 @@ export class EmployeeListComponent {
 
   protected readonly statutOptions = STATUT_OPTIONS;
 
-  protected readonly filterForm = this.fb.group({
-    nomPrenom: [''],
-    cin: [''],
-    fonctionIds: [[] as number[]],
-    chantierIds: [[] as number[]],
-    statut: [null as EmployeeStatut | null]
+  protected readonly filtres = signal(filtresVides());
+  protected readonly filterForm = form(this.filtres, (chemin) => {
+    debounce(chemin.nomPrenom, DEBOUNCE_RECHERCHE_MS);
+    debounce(chemin.cin, DEBOUNCE_RECHERCHE_MS);
   });
 
   private lastPage = 0;
@@ -115,13 +121,7 @@ export class EmployeeListComponent {
   private lastSort = 'nomPrenom,asc';
 
   constructor() {
-    this.filterForm.valueChanges
-      .pipe(
-        debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        takeUntilDestroyed(inject(DestroyRef))
-      )
-      .subscribe(() => this.onSearch());
+    surChangementDesFiltres(this.filtres, () => this.onSearch());
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
@@ -139,8 +139,7 @@ export class EmployeeListComponent {
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.onSearch();
+    this.filterForm().reset(filtresVides());
   }
 
   protected onView(employee: Employee): void {
@@ -227,7 +226,7 @@ export class EmployeeListComponent {
 
   private fetchPage(): void {
     this.loading.set(true);
-    const criteria = this.filterForm.getRawValue();
+    const criteria = this.filtres();
 
     this.employeeService
       .search(

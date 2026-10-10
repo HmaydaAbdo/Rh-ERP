@@ -12,6 +12,10 @@ const channel = process.env['CI'] ? undefined : 'chrome';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // Le serveur de développement compile les écrans à la demande : peu de navigateurs à la fois et des attentes un peu plus larges
+  // évitent des échecs dus à sa seule lenteur, pas à l'application.
+  workers: process.env['CI'] ? undefined : 4,
+  expect: { timeout: 10_000 },
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
   reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : 'list',

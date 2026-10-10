@@ -1,35 +1,39 @@
-
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, ChangeDetectionStrategy, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, lastValueFrom, map, of } from 'rxjs';
 
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../shared/validators/mot-de-passe.validator';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 
 @Component({
     selector: 'app-reset-password',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [FormField, FormRoot, RouterLink, FieldErrorComponent],
     templateUrl: './reset-password.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: '../login/login.component.scss'
 })
 export class ResetPasswordComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
   private readonly passwordRecovery = inject(PasswordRecoveryService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly regle = REGLE_MOT_DE_PASSE;
   readonly token = signal<string | null>(null);
-  readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly passwordVisible = signal(false);
 
-  readonly form = this.fb.nonNullable.group({
-    nouveauMotDePasse: ['', [Validators.required, motDePasseConforme]]
-  });
+  private readonly modele = signal({ nouveauMotDePasse: '' });
+  readonly form = form(
+    this.modele,
+    (chemin) => {
+      required(chemin.nouveauMotDePasse, { message: REGLE_MOT_DE_PASSE });
+      motDePasseConforme(chemin.nouveauMotDePasse);
+    },
+    { submission: { action: () => this.reinitialiser(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
   ngOnInit(): void {
     this.token.set(this.route.snapshot.queryParamMap.get('token'));
@@ -42,25 +46,24 @@ export class ResetPasswordComponent implements OnInit {
     this.passwordVisible.update((visible) => !visible);
   }
 
-  onSubmit(): void {
+  private async reinitialiser(): Promise<void> {
     const token = this.token();
-    if (this.form.invalid || !token) {
-      this.form.markAllAsTouched();
+    if (!token) {
       return;
     }
 
     this.errorMessage.set(null);
-    this.submitting.set(true);
-    this.passwordRecovery
-      .resetPassword(token, this.form.getRawValue().nouveauMotDePasse)
-      .pipe(finalize(() => this.submitting.set(false)))
-      .subscribe({
-        next: () => this.router.navigate(['/login']),
-        error: (err: HttpErrorResponse) => {
-          this.errorMessage.set(
-            err.status === 400 ? 'Ce lien est invalide, expiré ou déjà utilisé.' : 'Une erreur est survenue.'
-          );
-        }
-      });
+    const reussi = await lastValueFrom(
+      this.passwordRecovery.resetPassword(token, this.modele().nouveauMotDePasse).pipe(
+        map(() => true),
+        catchError((err: HttpErrorResponse) => {
+          this.errorMessage.set(err.status === 400 ? 'Ce lien est invalide, expiré ou déjà utilisé.' : 'Une erreur est survenue.');
+          return of(false);
+        })
+      )
+    );
+    if (reussi) {
+      this.router.navigate(['/login']);
+    }
   }
 }

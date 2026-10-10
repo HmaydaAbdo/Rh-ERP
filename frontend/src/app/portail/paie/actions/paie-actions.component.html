@@ -11,16 +11,16 @@
 </div>
 
 <stp-dialog header="Importer des bulletins de paie" width="480px" [(open)]="showImportDialog">
-  <form [formGroup]="importForm">
+  <form [formRoot]="importForm">
     <div class="paie-actions__dialog-field">
       <label for="importPeriode">Période <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-month-input inputId="importPeriode" formControlName="periode" placeholder="Sélectionner un mois" />
+      <stp-month-input inputId="importPeriode" [formField]="importForm.periode" placeholder="Sélectionner un mois" />
     </div>
     <p class="paie-actions__dialog-hint">Le fichier s'applique à tout le mois sélectionné — la période n'est pas une colonne du fichier.</p>
     <input
       type="file"
       accept=".xlsx"
-      [disabled]="!importForm.controls.periode.value || importing()"
+      [disabled]="!importForm.periode().value() || importing()"
       (change)="onImportFileSelected($event)"
     />
   </form>

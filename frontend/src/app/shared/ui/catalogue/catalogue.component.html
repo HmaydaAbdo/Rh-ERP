@@ -31,14 +31,14 @@
   <h2 class="mb-2 text-base font-semibold">Champs</h2>
   <div class="flex flex-wrap items-center gap-2">
     <input class="stp-input w-60" aria-label="Texte" placeholder="Texte"  />
-    <div class="w-60"><stp-select ariaLabel="Chantier" placeholder="Chantier" [options]="options" [formControl]="simple" /></div>
+    <div class="w-60"><stp-select ariaLabel="Chantier" placeholder="Chantier" [options]="options" [formField]="formulaire.simple" /></div>
     <div class="w-60">
-      <stp-select ariaLabel="Chantiers" placeholder="Chantiers" [multiple]="true" summaryLabel="{0} chantiers" [options]="options" [formControl]="multiple" />
+      <stp-select ariaLabel="Chantiers" placeholder="Chantiers" [multiple]="true" summaryLabel="{0} chantiers" [options]="options" [formField]="formulaire.multiple" />
     </div>
     <div class="w-60">
-      <stp-select ariaLabel="Recherche" placeholder="Rechercher un chantier" [filterable]="true" [options]="options" [formControl]="recherche" />
+      <stp-select ariaLabel="Recherche" placeholder="Rechercher un chantier" [filterable]="true" [options]="options" [formField]="formulaire.recherche" />
     </div>
-    <span role="status">Valeurs : {{ simple.value }} / {{ multiple.value }} / {{ recherche.value }}</span>
+    <span role="status">Valeurs : {{ valeurs().simple }} / {{ valeurs().multiple }} / {{ valeurs().recherche }}</span>
   </div>
 </section>
 

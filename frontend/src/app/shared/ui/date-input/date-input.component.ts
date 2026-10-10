@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, forwardRef, input, signal } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, input, model, output, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 
 function toIso(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -17,9 +17,9 @@ function fromIso(iso: string): Date | null {
 @Component({
   selector: 'stp-date-input',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => DateInputComponent), multi: true }],
   template: `
     <input
+      #field
       class="stp-input"
       type="date"
       [id]="inputId()"
@@ -27,7 +27,7 @@ function fromIso(iso: string): Date | null {
       [disabled]="disabled()"
       [value]="text()"
       (input)="onInput($event)"
-      (blur)="onTouched()"
+      (blur)="touch.emit()"
     />
   `,
   styles: `
@@ -36,35 +36,26 @@ function fromIso(iso: string): Date | null {
     }
   `
 })
-export class DateInputComponent implements ControlValueAccessor {
+export class DateInputComponent implements FormValueControl<Date | null> {
+  readonly value = model<Date | null>(null);
+  readonly disabled = input(false);
+  readonly touch = output<void>();
   readonly inputId = input<string | null>(null);
   readonly ariaLabel = input<string | null>(null);
 
-  protected readonly text = signal('');
-  protected readonly disabled = signal(false);
+  protected readonly text = computed(() => {
+    const value = this.value();
+    return value ? toIso(value) : '';
+  });
+  private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
 
-  private onChange: (value: Date | null) => void = () => {};
-  protected onTouched: () => void = () => {};
+  /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
+  focus(options?: FocusOptions): void {
+    this.field()?.nativeElement.focus(options);
+  }
 
   protected onInput(event: Event): void {
     const iso = (event.target as HTMLInputElement).value;
-    this.text.set(iso);
-    this.onChange(iso ? fromIso(iso) : null);
-  }
-
-  writeValue(value: Date | null): void {
-    this.text.set(value ? toIso(value) : '');
-  }
-
-  registerOnChange(fn: (value: Date | null) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    this.value.set(iso ? fromIso(iso) : null);
   }
 }

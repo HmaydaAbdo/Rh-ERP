@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { disabled, form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
+import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
+import { FieldErrorComponent } from '../../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PermissionSummary } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
@@ -17,13 +19,12 @@ interface PermissionGroup {
 
 @Component({
   selector: 'app-role-form',
-  imports: [ReactiveFormsModule, RouterLink, IconComponent, ButtonComponent],
+  imports: [FormField, FormRoot, RouterLink, IconComponent, ButtonComponent, FieldErrorComponent],
   templateUrl: './role-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './role-form.component.scss'
 })
 export class RoleFormComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly roleService = inject(RoleService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -31,17 +32,22 @@ export class RoleFormComponent {
 
   private readonly roleId = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.roleId() !== null);
-  protected readonly saving = signal(false);
   protected readonly loading = signal(true);
   protected readonly permissionGroups = signal<PermissionGroup[]>([]);
   private readonly selectedPermissionIds = signal(new Set<number>());
   /** Rôle d'administration : seule sa description se modifie, le serveur refuse le reste. */
   protected readonly protege = signal(false);
 
-  protected readonly form = this.fb.group({
-    nom: ['', [Validators.required, Validators.maxLength(50)]],
-    description: ['']
-  });
+  private readonly modele = signal({ nom: '', description: '' });
+  protected readonly form = form(
+    this.modele,
+    (chemin) => {
+      disabled(chemin.nom, () => this.protege());
+      required(chemin.nom, { message: 'Le nom est obligatoire.' });
+      maxLength(chemin.nom, 50, { message: 'Le nom ne dépasse pas 50 caractères.' });
+    },
+    { submission: { action: () => this.enregistrer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -56,11 +62,8 @@ export class RoleFormComponent {
         .subscribe(([permissions, role]) => {
           this.buildGroups(permissions);
           this.selectedPermissionIds.set(new Set(role.permissions.map((p) => p.id)));
-          this.form.patchValue({ nom: role.nom, description: role.description ?? '' });
+          this.modele.set({ nom: role.nom, description: role.description ?? '' });
           this.protege.set(role.protege);
-          if (role.protege) {
-            this.form.controls.nom.disable();
-          }
         });
     } else {
       permissions$.pipe(finalize(() => this.loading.set(false))).subscribe((permissions) => this.buildGroups(permissions));
@@ -83,37 +86,30 @@ export class RoleFormComponent {
     return group.permissions.every((p) => this.selectedPermissionIds().has(p.id));
   }
 
-  protected onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      focaliserPremiereErreur();
-      return;
-    }
-
-    const raw = this.form.getRawValue();
+  private async enregistrer(): Promise<void> {
+    const saisie = this.modele();
     const dto = {
-      nom: raw.nom!,
-      description: raw.description || null,
+      nom: saisie.nom,
+      description: saisie.description || null,
       permissionIds: Array.from(this.selectedPermissionIds())
     };
-
     const id = this.roleId();
-    this.saving.set(true);
-    const request$ = id !== null ? this.roleService.update(id, dto) : this.roleService.create(dto);
 
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe(() => {
-      this.messageService.add({
-        severity: 'success',
-        summary: id !== null ? 'Rôle modifié' : 'Rôle créé',
-        life: 4000
-      });
-      this.form.markAsPristine();
-      this.router.navigate(['/admin/roles']);
+    const role = await attendreEnregistrement(id !== null ? this.roleService.update(id, dto) : this.roleService.create(dto));
+    if (!role) {
+      return;
+    }
+    this.messageService.add({
+      severity: 'success',
+      summary: id !== null ? 'Rôle modifié' : 'Rôle créé',
+      life: 4000
     });
+    this.form().reset();
+    this.router.navigate(['/admin/roles']);
   }
 
   private toggle(permissions: PermissionSummary[], checked: boolean): void {
-    this.form.markAsDirty();
+    this.form().markAsDirty();
     if (this.protege()) {
       return;
     }

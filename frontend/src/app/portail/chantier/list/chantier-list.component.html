@@ -12,11 +12,11 @@
     </div>
   </div>
 
-  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
-    <input class="stp-input" type="text" formControlName="code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
-    <input class="stp-input" type="text" formControlName="designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
+  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
+    <input class="stp-input" type="text" [formField]="filterForm.code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
+    <input class="stp-input" type="text" [formField]="filterForm.designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
 
-    <stp-select formControlName="actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
+    <stp-select [formField]="filterForm.actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
 
     <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
   </form>

@@ -4,77 +4,65 @@
     <h1>{{ isEditMode() ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
+  <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="nomPrenom">Nom &amp; prénom <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="nomPrenom" type="text" formControlName="nomPrenom" />
-      @if (form.controls.nomPrenom.invalid && form.controls.nomPrenom.touched) {
-        <small class="field-error" role="alert">Le nom et prénom sont obligatoires.</small>
-      }
+      <input class="stp-input" autocomplete="off" id="nomPrenom" type="text" [formField]="form.nomPrenom" />
+      <stp-field-error [field]="form.nomPrenom" />
     </div>
 
     <div class="field">
       <label for="cin">CIN <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" spellcheck="false" autocomplete="off" id="cin" type="text" formControlName="cin" />
-      @if (form.controls.cin.invalid && form.controls.cin.touched) {
-        <small class="field-error" role="alert">Le CIN est obligatoire.</small>
-      }
+      <input class="stp-input" spellcheck="false" autocomplete="off" id="cin" type="text" [formField]="form.cin" />
+      <stp-field-error [field]="form.cin" />
     </div>
 
     <div class="field">
       <label for="dateNaissance">Date de naissance <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-date-input inputId="dateNaissance" formControlName="dateNaissance" />
-      @if (form.controls.dateNaissance.invalid && form.controls.dateNaissance.touched) {
-        <small class="field-error" role="alert">La date de naissance est obligatoire.</small>
-      }
+      <stp-date-input inputId="dateNaissance" [formField]="form.dateNaissance" />
+      <stp-field-error [field]="form.dateNaissance" />
     </div>
 
     <div class="field">
       <label for="dateEmbauche">Date d'embauche <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-date-input inputId="dateEmbauche" formControlName="dateEmbauche" />
-      @if (form.controls.dateEmbauche.invalid && form.controls.dateEmbauche.touched) {
-        <small class="field-error" role="alert">La date d'embauche est obligatoire.</small>
-      }
+      <stp-date-input inputId="dateEmbauche" [formField]="form.dateEmbauche" />
+      <stp-field-error [field]="form.dateEmbauche" />
     </div>
 
     <div class="field">
       <label for="fonctionId">Fonction <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
         ariaLabel="Fonction" inputId="fonctionId"
-        formControlName="fonctionId"
+        [formField]="form.fonctionId"
         [source]="functionReferenceService"
         optionLabel="libelle"
         placeholder="Sélectionner une fonction"
       ></app-lazy-select>
-      @if (form.controls.fonctionId.invalid && form.controls.fonctionId.touched) {
-        <small class="field-error" role="alert">La fonction est obligatoire.</small>
-      }
+      <stp-field-error [field]="form.fonctionId" />
     </div>
 
     <div class="field">
       <label for="chantierId">Chantier <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
         ariaLabel="Chantier" inputId="chantierId"
-        formControlName="chantierId"
+        [formField]="form.chantierId"
         [source]="chantierReferenceService"
         optionLabel="code"
         placeholder="Sélectionner un chantier"
       ></app-lazy-select>
-      @if (form.controls.chantierId.invalid && form.controls.chantierId.touched) {
-        <small class="field-error" role="alert">Le chantier est obligatoire.</small>
-      }
+      <stp-field-error [field]="form.chantierId" />
     </div>
 
     @if (isEditMode()) {
       <div class="field">
         <label for="statut">Statut <span class="field__req" aria-hidden="true">*</span></label>
-        <stp-select ariaLabel="Statut" inputId="statut" formControlName="statut" [options]="statutOptions"></stp-select>
+        <stp-select ariaLabel="Statut" inputId="statut" [formField]="form.statut" [options]="statutOptions"></stp-select>
       </div>
     }
 
     <div class="app-form__actions">
       <a stp-button variant="text" routerLink="/employees">Annuler</a>
-      <button stp-button type="submit" [loading]="saving()" [disabled]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
+      <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
 </div>

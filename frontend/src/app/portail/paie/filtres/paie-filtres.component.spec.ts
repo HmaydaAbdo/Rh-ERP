@@ -122,14 +122,41 @@ describe('PaieFiltresComponent', () => {
     });
 
     describe('saisies et effacement', () => {
-        it('émet après un court délai, une seule fois pour une rafale de frappes', () => {
-          vi.useFakeTimers();
-            composant['formulaire'].controls.nomPrenom.setValue('a');
-            composant['formulaire'].controls.nomPrenom.setValue('al');
-            composant['formulaire'].controls.cin.setValue('AB');
-            vi.advanceTimersByTime(300);
+        it('émet une seule fois pour une rafale de modifications', () => {
+            composant['formulaire'].nomPrenom().value.set('a');
+            composant['formulaire'].nomPrenom().value.set('al');
+            composant['formulaire'].cin().value.set('AB');
+            TestBed.tick();
 
             expect(emis).toEqual([{ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'al', cin: 'AB', chantierIds: [3] }]);
+        });
+
+        it('retarde la frappe dans un champ texte jusqu’à la fin de la saisie', async () => {
+            vi.useFakeTimers();
+            const champ = fixture.nativeElement.querySelector('input[aria-label="Nom et prénom"]') as HTMLInputElement;
+
+            champ.value = 'ali';
+            champ.dispatchEvent(new Event('input'));
+            TestBed.tick();
+            expect(emis).toEqual([]);
+
+            await vi.advanceTimersByTimeAsync(300);
+            TestBed.tick();
+            expect(emis).toEqual([{ ...AUCUN_FILTRE, periode: '2026-08', nomPrenom: 'ali', chantierIds: [3] }]);
+        });
+
+        it('émet aussitôt le choix d’un sélecteur', () => {
+            composant['formulaire'].fonctionIds().value.set([7]);
+            TestBed.tick();
+
+            expect(emis).toEqual([{ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3], fonctionIds: [7] }]);
+        });
+
+        it('ne ré-émet pas des filtres que la page vient de lui donner', () => {
+            afficher({ ...AUCUN_FILTRE, periode: '2026-09', nomPrenom: 'ali' });
+            TestBed.tick();
+
+            expect(emis).toEqual([]);
         });
 
         it('efface tout, mois compris, sauf quand le mois est indispensable', () => {
@@ -145,7 +172,7 @@ describe('PaieFiltresComponent', () => {
 
         it('considère un texte d\'espaces comme aucun filtre', () => {
             afficher(AUCUN_FILTRE);
-            composant['formulaire'].controls.nomPrenom.setValue('   ');
+            composant['formulaire'].nomPrenom().value.set('   ');
 
             expect(composant['aDesFiltres']()).toBe(false);
         });
@@ -195,7 +222,7 @@ describe('PaieFiltresComponent', () => {
     describe('sélecteurs toujours visibles, selon les permissions', () => {
         function colonnes(): string[] {
             fixture.detectChanges();
-            return Array.from(fixture.nativeElement.querySelectorAll('app-lazy-select')).map((e: unknown) => (e as HTMLElement).getAttribute('formcontrolname') ?? '');
+            return Array.from(fixture.nativeElement.querySelectorAll('app-lazy-select')).map((e: unknown) => (e as HTMLElement).getAttribute('arialabel') ?? '');
         }
 
         it("affiche les trois sélecteurs dès l'arrivée, sans rien à ouvrir", () => {
@@ -203,13 +230,13 @@ describe('PaieFiltresComponent', () => {
         });
 
         it('propose les trois sélecteurs à qui peut lire les trois référentiels', () => {
-            expect(colonnes()).toEqual(['chantierIds', 'equipeIds', 'fonctionIds']);
+            expect(colonnes()).toEqual(['Chantiers', 'Équipes', 'Fonctions']);
         });
 
         it('ne propose pas un sélecteur dont la route de recherche refuserait l’accès (403)', () => {
             permissions.set(['EQUIPE_READ']);
 
-            expect(colonnes()).toEqual(['equipeIds']);
+            expect(colonnes()).toEqual(['Équipes']);
         });
 
         it('ne propose aucun sélecteur sans aucune de ces permissions', () => {

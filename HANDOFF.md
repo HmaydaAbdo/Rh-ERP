@@ -38,7 +38,7 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
 - Tests : **186 tests Vitest** dans Chromium réel (sans Zone.js) ; **31 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
   téléphone). Axe a fait corriger : repère `<main>`, toast en `div`, séparateur de colonne, contrastes. Bogue corrigé : notification
   « Erreur » affichée à un visiteur sans session (`auth/refresh` désormais silencieux).
-- Chaîne d'approvisionnement : `npm audit` 0 vulnérabilité haute (hors Karma, pair optionnel inutilisé), licences contrôlées
+- Chaîne d'approvisionnement : `npm audit` 0 vulnérabilité (tous niveaux, aucune exception : Karma n'est plus dans le verrou), licences contrôlées
   (`audit:licences`), SBOM CycloneDX en artefact CI.
 - CI : Dockerfile frontend en Node 24.15 ; tests via `npm test` ; E2E via `npm run e2e`.
 
@@ -46,11 +46,9 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
 
 1. **Tests du kit et des écrans** : le kit n'a que les E2E du catalogue ; Employé, Chantier, Équipe, Utilisateurs, Rôles n'ont pas de tests de
    composants dédiés.
-2. **Formulaires** : Reactive Forms typés conservés (le standard demande les Signal Forms pour les nouveaux formulaires) — migration à décider.
 3. **Backend** : contrôle de conformité par domaine non fait (RBAC par domaine, audit, secrets, logs/métriques, erreurs).
 4. **Production PG17 → PG18** : non exécutée ; à planifier avec sauvegarde, répétition, fenêtre de maintenance, retour arrière.
 5. **Standards** : repinner une version suivante du snapshot Staport quand elle existe ; limite de débit sur `/auth/*` (audit sécurité n° 6).
-6. Dépendances de développement : Karma subsiste comme pair optionnel de `@angular/build` (jamais exécuté, 4 alertes npm exclues par `--omit=optional`).
 
 ## Commandes de reprise et validation
 

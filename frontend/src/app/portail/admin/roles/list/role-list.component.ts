@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { debounceTime, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
 import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
@@ -18,7 +17,7 @@ const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
   selector: 'app-role-list',
-  imports: [ColumnChooserComponent, ReactiveFormsModule, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [ColumnChooserComponent, FormField, FormRoot, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './role-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -27,7 +26,6 @@ export class RoleListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
 
   protected readonly roles = signal<Role[]>([]);
   protected readonly loading = signal(false);
@@ -40,12 +38,11 @@ export class RoleListComponent {
   ]);
 
   /** Filtres en temps réel : appliqués côté client sur la liste complète déjà chargée (liste non paginée côté serveur). */
-  protected readonly filterForm = this.fb.group({
-    nom: [''],
-    description: ['']
-  });
-
   private readonly criteres = signal({ nom: '', description: '' });
+  protected readonly filterForm = form(this.criteres, (chemin) => {
+    debounce(chemin.nom, DEBOUNCE_FILTRE_MS);
+    debounce(chemin.description, DEBOUNCE_FILTRE_MS);
+  });
 
   protected readonly filtres = computed(() => {
     const { nom, description } = this.criteres();
@@ -53,14 +50,11 @@ export class RoleListComponent {
   });
 
   constructor() {
-    this.filterForm.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRE_MS), takeUntilDestroyed(inject(DestroyRef))).subscribe((value) => {
-      this.criteres.set({ nom: value.nom ?? '', description: value.description ?? '' });
-    });
     this.fetch();
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm().reset({ nom: '', description: '' });
   }
 
   protected onEdit(role: Role): void {

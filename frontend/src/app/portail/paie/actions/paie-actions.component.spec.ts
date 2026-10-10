@@ -82,7 +82,7 @@ describe('PaieActionsComponent', () => {
         const composant = await creer(['PAIE_IMPORT']);
         const importe = vi.fn().mockName('importe');
         composant.importe.subscribe(importe);
-        composant['importForm'].controls.periode.setValue(new Date(2026, 7, 1));
+        composant['importForm'].periode().value.set(new Date(2026, 7, 1));
 
         const fichier = new File(['x'], 'paie.xlsx');
         composant['onImportFileSelected']({ target: { files: [fichier], value: 'paie.xlsx' } } as unknown as Event);

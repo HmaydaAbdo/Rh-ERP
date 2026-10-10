@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { saisir, soumettre } from '../../../shared/testing/formulaire';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 import { ForgotPasswordComponent } from './forgot-password.component';
 
@@ -27,17 +28,20 @@ describe('ForgotPasswordComponent', () => {
         fixture.detectChanges();
     });
 
-    it('refuse une adresse invalide avant l’appel de service', () => {
-        component.form.controls.email.setValue('pas-un-email');
-        component.onSubmit();
+    it('refuse une adresse invalide avant l’appel de service', async () => {
+        saisir(fixture.nativeElement, '#email', 'pas-un-email');
+        soumettre(fixture.nativeElement);
+        await fixture.whenStable();
+        fixture.detectChanges();
 
         expect(recovery.requestReset).not.toHaveBeenCalled();
-        expect(component.form.controls.email.touched).toBe(true);
+        expect(component.form.email().touched()).toBe(true);
+        expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Email invalide.');
     });
 
     it('demande une réinitialisation et affiche la confirmation neutre', async () => {
-        component.form.controls.email.setValue('employe@example.com');
-        component.onSubmit();
+        saisir(fixture.nativeElement, '#email', 'employe@example.com');
+        soumettre(fixture.nativeElement);
         await fixture.whenStable();
         fixture.detectChanges();
 

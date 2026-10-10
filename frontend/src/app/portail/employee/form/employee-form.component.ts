@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
+import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeStatut } from '../models/employee.model';
@@ -32,14 +33,23 @@ function fromIsoDate(isoDate: string): Date {
   return new Date(year, month - 1, day);
 }
 
+interface EmployeeSaisie {
+  nomPrenom: string;
+  cin: string;
+  dateNaissance: Date | null;
+  dateEmbauche: Date | null;
+  fonctionId: number | null;
+  chantierId: number | null;
+  statut: EmployeeStatut;
+}
+
 @Component({
   selector: 'app-employee-form',
-  imports: [ReactiveFormsModule, RouterLink, LazySelectComponent, ButtonComponent, IconComponent, SelectComponent, DateInputComponent],
+  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent, DateInputComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-form.component.html'
 })
 export class EmployeeFormComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
   protected readonly functionReferenceService = inject(FunctionReferenceService);
   protected readonly chantierReferenceService = inject(ChantierReferenceService);
@@ -50,19 +60,31 @@ export class EmployeeFormComponent {
   protected readonly statutOptions = STATUT_OPTIONS;
 
   private readonly employeeId = signal<number | null>(null);
-  protected readonly saving = signal(false);
-
-  protected readonly form = this.fb.group({
-    nomPrenom: ['', [Validators.required, Validators.maxLength(150)]],
-    cin: ['', [Validators.required, Validators.maxLength(30)]],
-    dateNaissance: [null as Date | null, Validators.required],
-    dateEmbauche: [null as Date | null, Validators.required],
-    fonctionId: [null as number | null, Validators.required],
-    chantierId: [null as number | null, Validators.required],
-    statut: ['ACTIF' as EmployeeStatut, Validators.required]
-  });
-
   protected readonly isEditMode = computed(() => this.employeeId() !== null);
+
+  private readonly modele = signal<EmployeeSaisie>({
+    nomPrenom: '',
+    cin: '',
+    dateNaissance: null,
+    dateEmbauche: null,
+    fonctionId: null,
+    chantierId: null,
+    statut: 'ACTIF'
+  });
+  protected readonly form = form(
+    this.modele,
+    (chemin) => {
+      required(chemin.nomPrenom, { message: 'Le nom et prénom sont obligatoires.' });
+      maxLength(chemin.nomPrenom, 150, { message: 'Le nom et prénom ne dépassent pas 150 caractères.' });
+      required(chemin.cin, { message: 'Le CIN est obligatoire.' });
+      maxLength(chemin.cin, 30, { message: 'Le CIN ne dépasse pas 30 caractères.' });
+      required(chemin.dateNaissance, { message: 'La date de naissance est obligatoire.' });
+      required(chemin.dateEmbauche, { message: "La date d'embauche est obligatoire." });
+      required(chemin.fonctionId, { message: 'La fonction est obligatoire.' });
+      required(chemin.chantierId, { message: 'Le chantier est obligatoire.' });
+    },
+    { submission: { action: () => this.enregistrer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -70,7 +92,7 @@ export class EmployeeFormComponent {
       const id = Number(idParam);
       this.employeeId.set(id);
       this.employeeService.getById(id).subscribe((employee) => {
-        this.form.patchValue({
+        this.modele.set({
           nomPrenom: employee.nomPrenom,
           cin: employee.cin,
           dateNaissance: fromIsoDate(employee.dateNaissance),
@@ -83,39 +105,30 @@ export class EmployeeFormComponent {
     }
   }
 
-  protected onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      focaliserPremiereErreur();
+  private async enregistrer(): Promise<void> {
+    const saisie = this.modele();
+    const dto = {
+      nomPrenom: saisie.nomPrenom,
+      cin: saisie.cin,
+      dateNaissance: toIsoDate(saisie.dateNaissance!),
+      dateEmbauche: toIsoDate(saisie.dateEmbauche!),
+      fonctionId: saisie.fonctionId!,
+      chantierId: saisie.chantierId!
+    };
+    const id = this.employeeId();
+
+    const employee = await attendreEnregistrement(
+      id !== null ? this.employeeService.update(id, { ...dto, statut: saisie.statut }) : this.employeeService.create(dto)
+    );
+    if (!employee) {
       return;
     }
-
-    const raw = this.form.getRawValue();
-    const dto = {
-      nomPrenom: raw.nomPrenom!,
-      cin: raw.cin!,
-      dateNaissance: toIsoDate(raw.dateNaissance!),
-      dateEmbauche: toIsoDate(raw.dateEmbauche!),
-      fonctionId: raw.fonctionId!,
-      chantierId: raw.chantierId!
-    };
-
-    this.saving.set(true);
-
-    const request$ = this.isEditMode()
-      ? this.employeeService.update(this.employeeId()!, { ...dto, statut: raw.statut! })
-      : this.employeeService.create(dto);
-
-    request$
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe((employee) => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.isEditMode() ? 'Employé modifié' : 'Employé créé',
-          life: 4000
-        });
-        this.form.markAsPristine();
-        this.router.navigate(['/employees', employee.id]);
-      });
+    this.messageService.add({
+      severity: 'success',
+      summary: id !== null ? 'Employé modifié' : 'Employé créé',
+      life: 4000
+    });
+    this.form().reset();
+    this.router.navigate(['/employees', employee.id]);
   }
 }

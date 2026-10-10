@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
 
 import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { ChantierService } from '../services/chantier.service';
@@ -17,12 +18,11 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 
 @Component({
   selector: 'app-chantier-form',
-  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, IconComponent, SelectComponent],
+  imports: [FormField, FormRoot, RouterLink, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chantier-form.component.html'
 })
 export class ChantierFormComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly chantierService = inject(ChantierService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -31,16 +31,20 @@ export class ChantierFormComponent {
   protected readonly actifOptions = ACTIF_OPTIONS;
 
   private readonly chantierId = signal<number | null>(null);
-  protected readonly saving = signal(false);
-
-  protected readonly form = this.fb.group({
-    code: ['', [Validators.required, Validators.maxLength(100)]],
-    designation: ['', [Validators.required, Validators.maxLength(500)]],
-    nom: ['', Validators.maxLength(255)],
-    actif: [true, Validators.required]
-  });
-
   protected readonly isEditMode = computed(() => this.chantierId() !== null);
+
+  private readonly modele = signal({ code: '', designation: '', nom: '', actif: true });
+  protected readonly form = form(
+    this.modele,
+    (chemin) => {
+      required(chemin.code, { message: 'Le code est obligatoire.' });
+      maxLength(chemin.code, 100, { message: 'Le code ne dépasse pas 100 caractères.' });
+      required(chemin.designation, { message: 'La désignation est obligatoire.' });
+      maxLength(chemin.designation, 500, { message: 'La désignation ne dépasse pas 500 caractères.' });
+      maxLength(chemin.nom, 255, { message: 'Le nom ne dépasse pas 255 caractères.' });
+    },
+    { submission: { action: () => this.enregistrer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -48,42 +52,28 @@ export class ChantierFormComponent {
       const id = Number(idParam);
       this.chantierId.set(id);
       this.chantierService.getById(id).subscribe((chantier) => {
-        this.form.patchValue({
-          code: chantier.code,
-          designation: chantier.designation,
-          nom: chantier.nom,
-          actif: chantier.actif
-        });
+        this.modele.set({ code: chantier.code, designation: chantier.designation, nom: chantier.nom ?? '', actif: chantier.actif });
       });
     }
   }
 
-  protected onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      focaliserPremiereErreur();
+  private async enregistrer(): Promise<void> {
+    const saisie = this.modele();
+    const dto = { code: saisie.code, designation: saisie.designation, nom: saisie.nom || null };
+    const id = this.chantierId();
+
+    const chantier = await attendreEnregistrement(
+      id !== null ? this.chantierService.update(id, { ...dto, actif: saisie.actif }) : this.chantierService.create(dto)
+    );
+    if (!chantier) {
       return;
     }
-
-    const raw = this.form.getRawValue();
-    const dto = { code: raw.code!, designation: raw.designation!, nom: raw.nom || null };
-
-    this.saving.set(true);
-
-    const request$ = this.isEditMode()
-      ? this.chantierService.update(this.chantierId()!, { ...dto, actif: raw.actif! })
-      : this.chantierService.create(dto);
-
-    request$
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe((chantier) => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.isEditMode() ? 'Chantier modifié' : 'Chantier créé',
-          life: 4000
-        });
-        this.form.markAsPristine();
-        this.router.navigate(['/chantiers', chantier.id]);
-      });
+    this.messageService.add({
+      severity: 'success',
+      summary: id !== null ? 'Chantier modifié' : 'Chantier créé',
+      life: 4000
+    });
+    this.form().reset();
+    this.router.navigate(['/chantiers', chantier.id]);
   }
 }

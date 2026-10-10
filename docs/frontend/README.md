@@ -244,7 +244,7 @@ ne fait pas de saisie prédictive.
 ### Sélecteur à chargement différé (`app-lazy-select`)
 
 Un seul composant pour **toute** liste déroulante adossée à des données serveur. Il pilote `stp-select` (Angular Aria combobox +
-listbox, panneau en overlay CDK) derrière un `ControlValueAccessor` : la valeur exposée au formulaire est un **identifiant**
+listbox, panneau en overlay CDK) : contrôle de Signal Forms (`FormValueControl`, lié par `[formField]`), dont la valeur est un **identifiant**
 (ou un tableau d'identifiants), jamais l'objet.
 
 | Entrée | Rôle |
@@ -340,10 +340,12 @@ un composant par étape (`etapes/`, styles partagés dans `etapes/_commun.scss`)
 
 ## Formulaires, notifications et erreurs
 
-- **Formulaires réactifs typés** (`FormBuilder`) ; validation affichée sous le champ une fois touché ; les champs obligatoires
-  portent une astérisque. Les champs du kit (`stp-select`, `stp-number-input`, `stp-date-input`, `stp-month-input`, `stp-password-input`,
-  `app-lazy-select`) sont des `ControlValueAccessor`. Écart au standard Staport (Signal Forms pour tout nouveau formulaire) :
-  les formulaires existants restent en Reactive Forms, migration à décider écran par écran (voir [TODO.md](../../TODO.md)).
+- **Signal Forms** pour tous les formulaires (2026-10-10) : modèle `signal` typé, `form(modele, schema, { submission })`, `<form [formRoot]>`,
+  `[formField]` sur les champs, `<stp-field-error>` pour le message sous le champ (une fois touché) ; les champs obligatoires portent une
+  astérisque. Les champs du kit (`stp-select`, `stp-number-input`, `stp-date-input`, `stp-month-input`, `stp-password-input`,
+  `app-lazy-select`) sont des `FormValueControl` (`value = model()`, `disabled`, `touch`, `focus()`). Règles dans le schéma, soumission
+  par `submission.action` (`form().submitting()` pour le bouton, `focaliserPremiereErreur` si invalide), `form().reset()` après
+  enregistrement. Filtres de liste : `debounce` sur les champs texte et `surChangementDesFiltres`. Voir `conventions/frontend.md`, « Formulaires ».
 - Les messages de succès passent par `NotificationService`; les erreurs HTTP sont publiées automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API (sauf la restauration de session au démarrage, `auth/refresh`, silencieuse : un visiteur sans session n'a pas d'erreur à voir). L'hôte partagé présente ces notifications avec rôles ARIA et fermeture manuelle.
 - Les suppressions et sorties de formulaire modifié passent par `ConfirmDialogService`; son dialogue modal utilise CDK A11y (piège de focus, Échap, focus initial) et le design system Staport.
 - Les imports Excel affichent un résumé puis, en cas de rejet, le détail de chaque ligne en cause avec sa raison

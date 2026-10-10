@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, linkedSignal, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
-import { BehaviorSubject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { LazySelectInMemorySource } from '../../../shared/components/lazy-select/lazy-select-in-memory.source';
@@ -19,7 +19,7 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { PaieChantierPeriode } from '../models/paie.model';
 import { libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import { AUCUN_FILTRE, PaieFiltres } from './paie-filtres';
+import { AUCUN_FILTRE, memesFiltres, PaieFiltres } from './paie-filtres';
 
 const DEBOUNCE_FILTRES_MS = 300;
 
@@ -39,13 +39,12 @@ const DEBOUNCE_FILTRES_MS = 300;
  */
 @Component({
   selector: 'app-paie-filtres',
-  imports: [ReactiveFormsModule, CdkConnectedOverlay, CdkOverlayOrigin, MonthPickerComponent, LazySelectComponent, IconComponent, ButtonComponent],
+  imports: [FormField, FormRoot, CdkConnectedOverlay, CdkOverlayOrigin, MonthPickerComponent, LazySelectComponent, IconComponent, ButtonComponent],
   templateUrl: './paie-filtres.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './paie-filtres.component.scss'
 })
 export class PaieFiltresComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
@@ -87,13 +86,13 @@ export class PaieFiltresComponent {
   private readonly chantiersDuMois = signal<PaieChantierPeriode[]>([]);
   private readonly periodeSuivie = new BehaviorSubject<string | null>(null);
   private readonly cacheChantiersDuMois = new Map<string, PaieChantierPeriode[]>();
+  /** Les derniers filtres émis : un changement des filtres courants identique à celui-ci n'est pas à ré-émettre. */
+  private dernierEmis: PaieFiltres = AUCUN_FILTRE;
 
-  protected readonly formulaire = this.fb.group({
-    nomPrenom: [''],
-    cin: [''],
-    chantierIds: [[] as number[]],
-    fonctionIds: [[] as number[]],
-    equipeIds: [[] as number[]]
+  /** Le formulaire édite directement les filtres courants : une saisie de texte n'y arrive qu'après un court délai. */
+  protected readonly formulaire = form(this.courant, (chemin) => {
+    debounce(chemin.nomPrenom, DEBOUNCE_FILTRES_MS);
+    debounce(chemin.cin, DEBOUNCE_FILTRES_MS);
   });
 
   protected readonly periode = computed(() => this.courant().periode);
@@ -155,13 +154,20 @@ export class PaieFiltresComponent {
     effect(() => {
       const filtres = this.value();
       untracked(() => {
+        this.dernierEmis = filtres;
         this.periodeSuivie.next(filtres.periode);
-        this.synchroniserFormulaire(filtres);
       });
     });
 
-    this.formulaire.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.courant.set(this.depuisFormulaire()));
-    this.formulaire.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRES_MS), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.emettre());
+    // Un champ modifié par l'utilisateur change les filtres courants : la page en est prévenue.
+    effect(() => {
+      const filtres = this.courant();
+      untracked(() => {
+        if (!memesFiltres(filtres, this.dernierEmis) && !memesFiltres(filtres, this.value())) {
+          this.emettreFiltres(filtres);
+        }
+      });
+    });
 
     this.periodeSuivie
       .pipe(
@@ -228,48 +234,9 @@ export class PaieFiltresComponent {
     return Boolean(filtres.nomPrenom.trim()) || Boolean(filtres.cin.trim());
   }
 
-  /** Ne touche pas au formulaire quand il montre déjà ces valeurs : chaque réécriture relance la résolution des libellés choisis. */
-  private synchroniserFormulaire(filtres: PaieFiltres): void {
-    const actuel = this.formulaire.getRawValue();
-    const memes =
-      actuel.nomPrenom === filtres.nomPrenom &&
-      actuel.cin === filtres.cin &&
-      JSON.stringify(actuel.chantierIds) === JSON.stringify(filtres.chantierIds) &&
-      JSON.stringify(actuel.fonctionIds) === JSON.stringify(filtres.fonctionIds) &&
-      JSON.stringify(actuel.equipeIds) === JSON.stringify(filtres.equipeIds);
-    if (!memes) {
-      this.formulaire.patchValue(
-        {
-          nomPrenom: filtres.nomPrenom,
-          cin: filtres.cin,
-          chantierIds: filtres.chantierIds,
-          fonctionIds: filtres.fonctionIds,
-          equipeIds: filtres.equipeIds
-        },
-        { emitEvent: false }
-      );
-    }
-  }
-
-  private depuisFormulaire(): PaieFiltres {
-    const valeur = this.formulaire.getRawValue();
-    return {
-      periode: this.periode(),
-      nomPrenom: valeur.nomPrenom ?? '',
-      cin: valeur.cin ?? '',
-      chantierIds: valeur.chantierIds ?? [],
-      fonctionIds: valeur.fonctionIds ?? [],
-      equipeIds: valeur.equipeIds ?? []
-    };
-  }
-
-  private emettre(): void {
-    this.emettreFiltres(this.depuisFormulaire());
-  }
-
   private emettreFiltres(filtres: PaieFiltres): void {
+    this.dernierEmis = filtres;
     this.courant.set(filtres);
-    this.synchroniserFormulaire(filtres);
     this.valueChange.emit(filtres);
   }
 }

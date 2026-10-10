@@ -51,8 +51,8 @@
     </div>
   </div>
 
-  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
-    <input class="stp-input" type="text" formControlName="libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
+  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
+    <input class="stp-input" type="text" [formField]="filterForm.libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
 
     <button stp-button variant="text" type="button" icon="x" class="app-toolbar__clear" (click)="onResetFilters()">Réinitialiser</button>
   </form>

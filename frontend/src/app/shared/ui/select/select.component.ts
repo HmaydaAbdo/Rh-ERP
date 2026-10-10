@@ -1,8 +1,8 @@
 import { Combobox, ComboboxPopup, ComboboxWidget } from '@angular/aria/combobox';
 import { Listbox, Option } from '@angular/aria/listbox';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, forwardRef, inject, input, output, signal, untracked } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, model, output, signal, untracked, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 
 import { normaliser } from '../../text/recherche';
 import { IconComponent } from '../icon/icon.component';
@@ -26,7 +26,7 @@ const LOAD_MORE_THRESHOLD = 48;
  * Angular Aria (`combobox` + `listbox` : rôles ARIA, flèches, Début/Fin, saisie, Échap) et l'overlay du CDK (le panneau n'est
  * jamais rogné par un dialogue ou un conteneur défilant).
  *
- * `ControlValueAccessor` : la valeur est `V | null` (simple) ou `V[]` (`multiple`), jamais l'objet d'option.
+ * Contrôle de Signal Forms (`FormValueControl`) : la valeur est `V | null` (simple) ou `V[]` (`multiple`), jamais l'objet d'option.
  *
  * Source distante (voir `LazySelectComponent`) : `externalFilter` laisse le parent filtrer (le composant n'émet que
  * `filterChange`), `loadMore` demande la page suivante quand la liste est défilée jusqu'en bas, `selectedOptions` fournit les
@@ -37,10 +37,13 @@ const LOAD_MORE_THRESHOLD = 48;
   imports: [Combobox, ComboboxPopup, ComboboxWidget, Listbox, Option, CdkConnectedOverlay, CdkOverlayOrigin, IconComponent],
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => SelectComponent), multi: true }]
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SelectComponent<V = unknown> implements ControlValueAccessor {
+export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
+  readonly value = model<unknown>(null);
+  readonly disabled = input(false);
+  /** Émis quand l'utilisateur quitte le champ (le formulaire le marque « touché »). */
+  readonly touch = output<void>();
   readonly options = input<SelectOption<V>[]>([]);
   readonly selectedOptions = input<SelectOption<V>[]>([]);
   readonly multiple = input(false);
@@ -61,15 +64,19 @@ export class SelectComponent<V = unknown> implements ControlValueAccessor {
 
   protected readonly expanded = signal(false);
   protected readonly term = signal('');
-  protected readonly disabled = signal(false);
-  protected readonly selected = signal<V[]>([]);
+  protected readonly selected = computed<V[]>(() => {
+    const value = this.value();
+    if (value === null || value === undefined) {
+      return [];
+    }
+    return Array.isArray(value) ? (value as V[]) : [value as V];
+  });
   protected readonly known = signal(new Map<V, string>());
   protected readonly positions = POSITIONS;
   protected readonly minWidth = signal(0);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private onChange: (value: unknown) => void = () => {};
-  private onTouched: () => void = () => {};
+  private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
 
   protected readonly shown = computed(() => {
     const term = normaliser(this.term().trim());
@@ -110,6 +117,11 @@ export class SelectComponent<V = unknown> implements ControlValueAccessor {
         this.term.set('');
       }
     });
+  }
+
+  /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
+  focus(options?: FocusOptions): void {
+    this.field()?.nativeElement.focus(options);
   }
 
   /** Sans filtre, le champ est un simple bouton déroulant : un clic ouvre/ferme (le combobox Aria ne le fait que hors saisie). */
@@ -162,38 +174,17 @@ export class SelectComponent<V = unknown> implements ControlValueAccessor {
   protected onOutsideClick(event: MouseEvent): void {
     if (!this.host.nativeElement.contains(event.target as Node)) {
       this.expanded.set(false);
-      this.onTouched();
+      this.touch.emit();
     }
   }
 
   protected onBlur(): void {
     if (!this.expanded()) {
-      this.onTouched();
+      this.touch.emit();
     }
   }
 
   private commit(values: V[]): void {
-    this.selected.set(values);
-    this.onChange(this.multiple() ? values : (values[0] ?? null));
-  }
-
-  writeValue(value: unknown): void {
-    if (value === null || value === undefined) {
-      this.selected.set([]);
-    } else {
-      this.selected.set(Array.isArray(value) ? (value as V[]) : [value as V]);
-    }
-  }
-
-  registerOnChange(fn: (value: unknown) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    this.value.set(this.multiple() ? values : (values[0] ?? null));
   }
 }

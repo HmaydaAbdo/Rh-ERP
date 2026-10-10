@@ -78,13 +78,12 @@ describe('JournalComponent', () => {
         expect(composant['totalRecords']()).toBe(1);
     });
 
-    it('cherche en temps réel après un court délai, sans bouton « Rechercher », en revenant à la première page', () => {
-      vi.useFakeTimers();
+    it('cherche en temps réel, sans bouton « Rechercher », en revenant à la première page', () => {
         composant['onLazyLoad']({ first: 20, rows: 10, sortField: null, sortOrder: 1 });
         service.search.mockClear();
 
-        composant['filterForm'].patchValue({ utilisateur: 'ali', categorie: 'SECURITE', action: 'ACCES_REFUSE' });
-        vi.advanceTimersByTime(300);
+        composant['filtres'].update((f) => ({ ...f, utilisateur: 'ali', categorie: 'SECURITE', action: 'ACCES_REFUSE' }));
+        TestBed.tick();
 
         expect(service.search).toHaveBeenCalledTimes(1);
         expect(vi.mocked(service.search).mock.lastCall![0]).toEqual({
@@ -100,10 +99,24 @@ describe('JournalComponent', () => {
         expect(vi.mocked(service.search).mock.lastCall![1].page).toBe(0);
     });
 
+    it('retarde la frappe dans un champ texte jusqu’à la fin de la saisie', async () => {
+        vi.useFakeTimers();
+        service.search.mockClear();
+        const champ = fixture.nativeElement.querySelector('input[aria-label="Utilisateur"]') as HTMLInputElement;
+
+        champ.value = 'ali';
+        champ.dispatchEvent(new Event('input'));
+        TestBed.tick();
+        expect(service.search).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(300);
+        TestBed.tick();
+        expect(vi.mocked(service.search).mock.lastCall![0].utilisateur).toBe('ali');
+    });
+
     it('borne la recherche par date du premier instant du jour de début au dernier du jour de fin', () => {
-      vi.useFakeTimers();
-        composant['filterForm'].patchValue({ dateDebut: '2026-08-01', dateFin: '2026-08-31' });
-        vi.advanceTimersByTime(300);
+        composant['filtres'].update((f) => ({ ...f, dateDebut: '2026-08-01', dateFin: '2026-08-31' }));
+        TestBed.tick();
 
         const criteres = vi.mocked(service.search).mock.lastCall![0];
         expect(new Date(criteres.dateDebut as string).getTime()).toBe(new Date('2026-08-01T00:00:00').getTime());
@@ -135,9 +148,11 @@ describe('JournalComponent', () => {
     });
 
     it('remplace les filtres par l’identifiant de requête pour relier les entrées d’une même action', () => {
-        composant['filterForm'].patchValue({ utilisateur: 'ali' }, { emitEvent: false });
+        composant['filtres'].update((f) => ({ ...f, utilisateur: 'ali' }));
+        TestBed.tick();
 
         composant['onVoirLaRequete']('req-1');
+        TestBed.tick();
 
         expect(vi.mocked(service.search).mock.lastCall![0].requestId).toBe('req-1');
         expect(vi.mocked(service.search).mock.lastCall![0].utilisateur).toBeUndefined();

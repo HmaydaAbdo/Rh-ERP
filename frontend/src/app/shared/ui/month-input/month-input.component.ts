@@ -1,6 +1,6 @@
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, signal } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 
 import { MonthPickerComponent } from '../../components/month-picker/month-picker.component';
 import { IconComponent } from '../icon/icon.component';
@@ -22,9 +22,9 @@ function toPeriod(date: Date): string {
   selector: 'stp-month-input',
   imports: [CdkConnectedOverlay, CdkOverlayOrigin, IconComponent, MonthPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => MonthInputComponent), multi: true }],
   template: `
     <button
+      #trigger
       type="button"
       class="stp-input stp-month__trigger"
       cdkOverlayOrigin
@@ -72,15 +72,17 @@ function toPeriod(date: Date): string {
     }
   `
 })
-export class MonthInputComponent implements ControlValueAccessor {
+export class MonthInputComponent implements FormValueControl<Date | null> {
+  readonly value = model<Date | null>(null);
+  readonly disabled = input(false);
+  readonly touch = output<void>();
   readonly inputId = input<string | null>(null);
   readonly ariaLabel = input<string | null>(null);
   readonly placeholder = input('Sélectionner un mois');
 
   protected readonly open = signal(false);
-  protected readonly disabled = signal(false);
-  protected readonly value = signal<Date | null>(null);
   protected readonly positions = POSITIONS;
+  private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
 
   protected readonly period = computed(() => (this.value() ? toPeriod(this.value()!) : null));
   protected readonly label = computed(() => {
@@ -88,20 +90,20 @@ export class MonthInputComponent implements ControlValueAccessor {
     return value ? `${String(value.getMonth() + 1).padStart(2, '0')}/${value.getFullYear()}` : '';
   });
 
-  private onChange: (value: Date | null) => void = () => {};
-  private onTouched: () => void = () => {};
+  /** Donne le focus au bouton (premier champ invalide d'un formulaire refusé). */
+  focus(options?: FocusOptions): void {
+    this.trigger()?.nativeElement.focus(options);
+  }
 
   protected choose(period: string): void {
     const [year, month] = period.split('-').map(Number);
-    const date = new Date(year, month - 1, 1);
-    this.value.set(date);
-    this.onChange(date);
+    this.value.set(new Date(year, month - 1, 1));
     this.close();
   }
 
   protected close(): void {
     this.open.set(false);
-    this.onTouched();
+    this.touch.emit();
   }
 
   protected onKeydown(event: KeyboardEvent): void {
@@ -111,19 +113,4 @@ export class MonthInputComponent implements ControlValueAccessor {
     }
   }
 
-  writeValue(value: Date | null): void {
-    this.value.set(value ?? null);
-  }
-
-  registerOnChange(fn: (value: Date | null) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
-  }
 }

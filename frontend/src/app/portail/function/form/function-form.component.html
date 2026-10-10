@@ -4,18 +4,16 @@
     <h1>{{ isEditMode() ? 'Modifier la fonction' : 'Nouvelle fonction' }}</h1>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
+  <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="libelle" type="text" formControlName="libelle" />
-      @if (form.controls.libelle.invalid && form.controls.libelle.touched) {
-        <small class="field-error" role="alert">Le libellé est obligatoire.</small>
-      }
+      <input class="stp-input" autocomplete="off" id="libelle" type="text" [formField]="form.libelle" />
+      <stp-field-error [field]="form.libelle" />
     </div>
 
     <div class="app-form__actions">
       <a stp-button variant="text" routerLink="/functions">Annuler</a>
-      <button stp-button type="submit" [loading]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
+      <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
 </div>
