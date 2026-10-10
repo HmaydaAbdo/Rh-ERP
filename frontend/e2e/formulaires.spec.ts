@@ -174,7 +174,7 @@ test.describe('Formulaires (Signal Forms)', () => {
     await page.locator('#nom').fill('Comptable');
     await page.getByRole('button', { name: 'Créer' }).click();
 
-    await expect(page).toHaveURL(//admin/roles$/);
+    await expect(page).toHaveURL(/\/admin\/roles$/);
     expect(mock.bodies['POST /roles']).toEqual([{ nom: 'Comptable', description: null, permissionIds: [1, 2] }]);
   });
 });
