@@ -9,7 +9,7 @@
     "test": "ng test --watch=false --browsers=ChromiumHeadless",
     "test:watch": "ng test",
     "e2e": "playwright test",
-    "audit:deps": "npm audit --omit=optional --audit-level=high",
+    "audit:deps": "npm audit --audit-level=moderate",
     "audit:licences": "license-checker-rseidelsohn --production --summary --excludePrivatePackages --onlyAllow \"MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;OFL-1.1;BlueOak-1.0.0;CC0-1.0\""
   },
   "private": true,
