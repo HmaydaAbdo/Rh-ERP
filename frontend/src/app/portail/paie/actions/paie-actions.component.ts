@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { form, FormField, FormRoot } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -29,7 +29,7 @@ function toPeriodeString(date: Date | null): string | undefined {
  */
 @Component({
   selector: 'app-paie-actions',
-  imports: [ReactiveFormsModule, RouterLink, PaieExportWizardComponent, ButtonComponent, DialogComponent, SplitButtonComponent, MonthInputComponent],
+  imports: [FormField, FormRoot, RouterLink, PaieExportWizardComponent, ButtonComponent, DialogComponent, SplitButtonComponent, MonthInputComponent],
   templateUrl: './paie-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './paie-actions.component.scss'
@@ -41,7 +41,6 @@ export class PaieActionsComponent {
   private readonly paieService = inject(PaieService);
   private readonly messageService = inject(NotificationService);
   private readonly authService = inject(AuthService);
-  private readonly fb = inject(FormBuilder);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
   protected readonly canImport = computed(() => this.authService.hasPermission('PAIE_IMPORT'));
@@ -67,12 +66,11 @@ export class PaieActionsComponent {
     }
   ];
 
-  protected readonly importForm = this.fb.group({
-    periode: [null as Date | null]
-  });
+  private readonly saisieImport = signal<{ periode: Date | null }>({ periode: null });
+  protected readonly importForm = form(this.saisieImport);
 
   protected onOpenImportDialog(): void {
-    this.importForm.reset();
+    this.importForm().reset({ periode: null });
     this.showImportDialog.set(true);
   }
 
@@ -94,7 +92,7 @@ export class PaieActionsComponent {
   protected onImportFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    const periode = toPeriodeString(this.importForm.controls.periode.value);
+    const periode = toPeriodeString(this.saisieImport().periode);
     input.value = '';
     if (!file || !periode) {
       return;

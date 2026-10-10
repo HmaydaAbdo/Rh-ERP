@@ -1,6 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, input, linkedSignal } from '@angular/core';
 
 import { ColumnState } from '../../table/table-columns';
 import { SelectComponent, SelectOption } from '../../ui/select/select.component';
@@ -9,14 +7,15 @@ import { SelectComponent, SelectOption } from '../../ui/select/select.component'
  * visible, une sélection vide est ignorée et le champ resynchronisé (voir `ColumnState.setSelected`). */
 @Component({
   selector: 'app-column-chooser',
-  imports: [ReactiveFormsModule, SelectComponent],
+  imports: [SelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <stp-select
       [multiple]="true"
       [clearable]="false"
       [options]="options()"
-      [formControl]="control"
+      [value]="selection()"
+      (valueChange)="choisir($event)"
       [summaryFrom]="1"
       summaryLabel="Colonnes ({0})"
       placeholder="Colonnes"
@@ -44,17 +43,16 @@ import { SelectComponent, SelectOption } from '../../ui/select/select.component'
 export class ColumnChooserComponent {
   readonly state = input.required<ColumnState>();
 
-  protected readonly control = new FormControl<string[]>([], { nonNullable: true });
+  protected readonly selection = linkedSignal<string[]>(() => [...this.state().selectedFields]);
 
   protected options(): SelectOption<string>[] {
     return this.state().all.map((column) => ({ label: column.header, value: column.field }));
   }
 
-  constructor() {
-    effect(() => this.control.setValue([...this.state().selectedFields], { emitEvent: false }));
-    this.control.valueChanges.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((fields) => {
-      this.state().setSelected(fields);
-      this.control.setValue([...this.state().selectedFields], { emitEvent: false });
-    });
+  /** La sélection retenue (jamais vide) est reportée dans le champ, qui se resynchronise si la sienne a été ignorée. */
+  protected choisir(valeur: unknown): void {
+    const fields = valeur as string[];
+    this.state().setSelected(fields);
+    this.selection.set([...this.state().selectedFields]);
   }
 }

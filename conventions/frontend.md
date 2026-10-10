@@ -11,7 +11,7 @@ Le socle Staport suit la dernière version majeure **stable** d'Angular validée
 * Angular Aria/CDK comme primitives accessibles et fondation des composants Staport, sans dépendance à une suite commerciale de widgets.
 * Tailwind CSS 4 pour les utilitaires, SCSS/CSS pour les composants et jetons de design.
 * Lucide Angular pour les icônes. PrimeNG, PrimeIcons et PrimeFlex ne sont pas utilisés.
-* Signal Forms pour les nouveaux formulaires; Reactive Forms typés restent supportés pendant la migration des formulaires existants. RxJS reste le format HTTP et flux.
+* Signal Forms (`@angular/forms/signals`) pour tous les formulaires et champs de saisie ; Reactive Forms et `ngModel` ne sont plus utilisés. RxJS reste le format HTTP et flux.
 
 Les composants partagés composent Aria/CDK avec le langage visuel Staport; utiliser des éléments HTML natifs lorsque l'interaction est simple. Ne jamais ajouter PrimeNG, PrimeIcons ou PrimeFlex. Toute évolution de ce choix est une décision d'architecture et exige une revue des coûts, licences, accessibilité, zoneless, bundle et maintenance.
 
@@ -68,7 +68,7 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 ### Zoneless
 
 * Angular 21+ est zoneless par défaut : ne pas fournir `provideZoneChangeDetection()`. Retirer Zone.js des dépendances, polyfills et tests. Toute exception d'un adaptateur tiers est isolée, documentée et testée.
-* Vérifier les mises à jour après HTTP, Reactive Forms, navigation/guards, dialogs, notifications, timers et événements des composants tiers sans Zone.js.
+* Vérifier les mises à jour après HTTP, formulaires, navigation/guards, dialogs, notifications, timers et événements des composants tiers sans Zone.js.
 * Le socle doit compiler et exécuter tests/build sans Zone.js. Tester les notifications de rendu asynchrones, et ne pas ajouter une dépendance Zone comme correctif.
 
 ---
@@ -103,17 +103,21 @@ Un composant ne fait jamais d'appel HTTP directement.
 
 ---
 
-# Reactive Forms
+# Formulaires (Signal Forms)
 
-Utiliser Signal Forms pour tout nouveau formulaire; l'API est stable depuis Angular 22. Pour convertir un formulaire Reactive Forms existant, préserver ses règles de validation et tests. Ne jamais mélanger Signal Forms et Reactive Forms dans un même formulaire. Les formulaires Reactive Forms existants restent typés et sont migrés au rythme des écrans concernés.
+Tous les formulaires, y compris les barres de filtres et les champs isolés (recherche, confirmation), utilisent Signal Forms (`form()`, `FormField`, `FormRoot`) ; l'API est stable depuis Angular 22. Reactive Forms (`FormBuilder`, `FormGroup`, `formControlName`) et Template Driven Forms (`ngModel`) sont interdits.
+
+* **Modèle** : un `signal` typé porte les valeurs ; `form(modele, schema, { submission })` en dérive les champs. Les règles de validation sont dans le schéma (`required`, `maxLength`, `min`, `email`, `validate`, `disabled`), chacune avec son `message` : le message affiché est celui de la règle. Une règle métier réutilisable est une fonction de schéma (ex. `motDePasseConforme(chemin)`).
+* **Gabarit** : `<form [formRoot]="form">` (soumission sans rechargement, `novalidate`), `[formField]="form.champ"` sur un champ natif ou un contrôle du kit, `<stp-field-error [field]="form.champ" />` pour le message sous le champ (annoncé, affiché une fois le champ touché ou le formulaire soumis).
+* **Soumission** : l'action est déclarée dans `submission` (`action`, et `onInvalid: focaliserPremiereErreur`). Elle marque tous les champs touchés, ne s'exécute que si le formulaire est valide et fournit `form().submitting()` pour le bouton (plus de signal `saving` à la main). Une requête HTTP s'attend avec `attendreEnregistrement` : une erreur HTTP, déjà notifiée par `errorInterceptor`, laisse le formulaire affiché.
+* **État** : charger un enregistrement = `modele.set(...)` (le formulaire reste intact) ; enregistrer = `form().reset()` avant de naviguer, de sorte que `unsavedChangesGuard` (qui lit `form().dirty()`) ne pose pas de question.
+* **Filtres de liste** : le modèle des filtres est un signal ; `debounce(chemin.champ, 300)` retarde les champs texte, `surChangementDesFiltres(filtres, () => this.onSearch())` relance la recherche (sauf à l'initialisation) ; « Réinitialiser » = `form().reset(valeursVides())`.
+* **Contrôles du kit** : un champ du kit est un `FormValueControl` (`value = model()`, `disabled = input()`, `touch = output()`, `focus()`), jamais un `ControlValueAccessor`. Ses bornes (`min`, `max`) viennent des règles du schéma.
 
 Interdictions :
 
-* ngModel sur un formulaire (Template Driven Forms)
-
-`ngModel` reste acceptable ponctuellement pour un contrôle isolé hors d'un `FormGroup` (ex. une
-case à cocher pilotant un état local simple, sans validation ni soumission) — mais dès qu'un champ
-fait partie d'un formulaire soumis, il passe par Reactive Forms.
+* `ngModel` et Reactive Forms ;
+* mélanger un champ Signal Forms et un champ à l'état propre dans un même formulaire.
 
 ---
 
@@ -162,7 +166,7 @@ défilement horizontal — ne jamais contourner cette règle dans un écran, cor
 ## Composant partagé
 
 Le composant partagé encapsule le composant de sélection simple et le composant de sélection
-multiple de la librairie UI derrière un seul point d'entrée (`ControlValueAccessor`) — la valeur
+multiple de la librairie UI derrière un seul point d'entrée (`FormValueControl`, lié par `[formField]`) — la valeur
 exposée au formulaire hôte reste un identifiant (ou un tableau d'identifiants), jamais l'objet
 complet, pour ne rien changer aux DTO existants. Toute nouvelle liste déroulante du projet réutilise
 ce composant plutôt que d'implémenter sa propre pagination/recherche.
@@ -410,7 +414,7 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 * Architecture par domaine métier.
 * Composants Standalone.
 * inject() uniquement.
-* Signal Forms pour tout nouveau formulaire; Reactive Forms typés durant la migration des écrans existants.
+* Signal Forms pour tous les formulaires.
 * Nouveau Control Flow Angular uniquement.
 * Zoneless par défaut, Signals pour l'état UI, RxJS pour HTTP/flux et `resource()` seulement pour les lectures.
 * Les Services centralisent les appels HTTP.

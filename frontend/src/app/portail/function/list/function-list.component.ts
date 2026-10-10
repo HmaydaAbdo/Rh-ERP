@@ -1,13 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
@@ -19,10 +19,13 @@ import { FunctionService } from '../services/function.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
+const filtresVides = () => ({ libelle: '' });
+
 @Component({
   selector: 'app-function-list',
   imports: [
-    ReactiveFormsModule,
+    FormField,
+    FormRoot,
     RouterLink,
     ButtonComponent,
     ColumnChooserComponent,
@@ -43,7 +46,6 @@ export class FunctionListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
@@ -74,22 +76,15 @@ export class FunctionListComponent {
     }
   ];
 
-  protected readonly filterForm = this.fb.group({
-    libelle: ['']
-  });
+  protected readonly filtres = signal(filtresVides());
+  protected readonly filterForm = form(this.filtres, (chemin) => debounce(chemin.libelle, DEBOUNCE_RECHERCHE_MS));
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'libelle,asc';
 
   constructor() {
-    this.filterForm.valueChanges
-      .pipe(
-        debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        takeUntilDestroyed(inject(DestroyRef))
-      )
-      .subscribe(() => this.onSearch());
+    surChangementDesFiltres(this.filtres, () => this.onSearch());
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
@@ -107,8 +102,7 @@ export class FunctionListComponent {
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.onSearch();
+    this.filterForm().reset(filtresVides());
   }
 
   protected onView(fonction: Function): void {
@@ -195,7 +189,7 @@ export class FunctionListComponent {
 
   private fetchPage(): void {
     this.loading.set(true);
-    const criteria = this.filterForm.getRawValue();
+    const criteria = this.filtres();
 
     this.functionService
       .search({ libelle: criteria.libelle || undefined }, { page: this.lastPage, size: this.lastSize, sort: this.lastSort })

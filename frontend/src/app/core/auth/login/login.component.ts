@@ -1,28 +1,37 @@
-
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, lastValueFrom, map, of } from 'rxjs';
 
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { AuthService } from '../services/auth.service';
 
 @Component({
     selector: 'app-login',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [FormField, FormRoot, RouterLink, FieldErrorComponent],
     templateUrl: './login.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly passwordVisible = signal(false);
+
+  private readonly modele = signal({ username: '', password: '' });
+  readonly form = form(
+    this.modele,
+    (chemin) => {
+      required(chemin.username, { message: 'Champ obligatoire.' });
+      required(chemin.password, { message: 'Champ obligatoire.' });
+    },
+    { submission: { action: () => this.connecter(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
   constructor() {
     // Un utilisateur déjà connecté (session restaurée via le cookie Refresh Token) n'a rien à
@@ -32,36 +41,25 @@ export class LoginComponent {
     }
   }
 
-  readonly form = this.fb.nonNullable.group({
-    username: ['', Validators.required],
-    password: ['', Validators.required]
-  });
-
   togglePasswordVisibility(): void {
     this.passwordVisible.update((visible) => !visible);
   }
 
-  onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
+  private async connecter(): Promise<void> {
     this.errorMessage.set(null);
-    this.submitting.set(true);
-    const { username, password } = this.form.getRawValue();
+    const { username, password } = this.modele();
 
-    this.authService
-      .login(username, password)
-      .pipe(finalize(() => this.submitting.set(false)))
-      .subscribe({
-        next: () => {
-          const redirect = this.route.snapshot.queryParamMap.get('redirect') ?? '/';
-          this.router.navigateByUrl(redirect);
-        },
-        error: (err: HttpErrorResponse) => {
+    const connecte = await lastValueFrom(
+      this.authService.login(username, password).pipe(
+        map(() => true),
+        catchError((err: HttpErrorResponse) => {
           this.errorMessage.set(err.status === 401 ? 'Identifiants invalides.' : 'Une erreur est survenue.');
-        }
-      });
+          return of(false);
+        })
+      )
+    );
+    if (connecte) {
+      this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('redirect') ?? '/');
+    }
   }
 }

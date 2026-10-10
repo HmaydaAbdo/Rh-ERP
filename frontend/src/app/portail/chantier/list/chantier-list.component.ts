@@ -1,12 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
@@ -22,6 +22,8 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
+const filtresVides = () => ({ code: '', designation: '', actif: null as boolean | null });
+
 @Component({
   selector: 'app-chantier-list',
   imports: [
@@ -33,7 +35,8 @@ const DEBOUNCE_RECHERCHE_MS = 300;
     TableComponent,
     TableCellDirective,
     TableRowActionsDirective,
-    ReactiveFormsModule
+    FormField,
+    FormRoot
   ],
   templateUrl: './chantier-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,7 +54,6 @@ export class ChantierListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('CHANTIER_WRITE'));
@@ -68,10 +70,10 @@ export class ChantierListComponent {
 
   protected readonly actifOptions = ACTIF_OPTIONS;
 
-  protected readonly filterForm = this.fb.group({
-    code: [''],
-    designation: [''],
-    actif: [null as boolean | null]
+  protected readonly filtres = signal(filtresVides());
+  protected readonly filterForm = form(this.filtres, (chemin) => {
+    debounce(chemin.code, DEBOUNCE_RECHERCHE_MS);
+    debounce(chemin.designation, DEBOUNCE_RECHERCHE_MS);
   });
 
   private lastPage = 0;
@@ -79,13 +81,7 @@ export class ChantierListComponent {
   private lastSort = 'code,asc';
 
   constructor() {
-    this.filterForm.valueChanges
-      .pipe(
-        debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        takeUntilDestroyed(inject(DestroyRef))
-      )
-      .subscribe(() => this.onSearch());
+    surChangementDesFiltres(this.filtres, () => this.onSearch());
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
@@ -103,8 +99,7 @@ export class ChantierListComponent {
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.onSearch();
+    this.filterForm().reset(filtresVides());
   }
 
   protected onView(chantier: Chantier): void {
@@ -154,7 +149,7 @@ export class ChantierListComponent {
 
   private fetchPage(): void {
     this.loading.set(true);
-    const criteria = this.filterForm.getRawValue();
+    const criteria = this.filtres();
 
     this.chantierService
       .search(

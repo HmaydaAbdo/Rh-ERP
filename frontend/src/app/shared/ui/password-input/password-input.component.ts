@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, forwardRef, input, signal } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 
 import { IconComponent } from '../icon/icon.component';
 
@@ -8,10 +8,10 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'stp-password-input',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => PasswordInputComponent), multi: true }],
   template: `
     <div class="stp-password">
       <input
+        #field
         class="stp-input"
         [type]="visible() ? 'text' : 'password'"
         [id]="inputId()"
@@ -20,7 +20,7 @@ import { IconComponent } from '../icon/icon.component';
         [disabled]="disabled()"
         [value]="value()"
         (input)="onInput($event)"
-        (blur)="onTouched()"
+        (blur)="touch.emit()"
       />
       <button
         type="button"
@@ -69,37 +69,23 @@ import { IconComponent } from '../icon/icon.component';
     }
   `
 })
-export class PasswordInputComponent implements ControlValueAccessor {
+export class PasswordInputComponent implements FormValueControl<string> {
+  readonly value = model('');
+  readonly disabled = input(false);
+  readonly touch = output<void>();
   readonly inputId = input<string | null>(null);
   readonly ariaLabel = input<string | null>(null);
   readonly autocomplete = input<string | null>(null);
 
   protected readonly visible = signal(false);
-  protected readonly value = signal('');
-  protected readonly disabled = signal(false);
+  private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
 
-  private onChange: (value: string) => void = () => {};
-  protected onTouched: () => void = () => {};
+  /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
+  focus(options?: FocusOptions): void {
+    this.field()?.nativeElement.focus(options);
+  }
 
   protected onInput(event: Event): void {
-    const text = (event.target as HTMLInputElement).value;
-    this.value.set(text);
-    this.onChange(text);
-  }
-
-  writeValue(value: string | null): void {
-    this.value.set(value ?? '');
-  }
-
-  registerOnChange(fn: (value: string) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    this.value.set((event.target as HTMLInputElement).value);
   }
 }

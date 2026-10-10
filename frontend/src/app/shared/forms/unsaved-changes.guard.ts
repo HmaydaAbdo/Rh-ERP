@@ -1,22 +1,22 @@
 import { inject } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+import { FieldTree } from '@angular/forms/signals';
 import { CanDeactivateFn } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { ConfirmDialogService } from '@shared/feedback/feedback.service';
 
-/** Un écran de formulaire que le guard sait protéger : il expose son `FormGroup`. */
+/** Un écran de formulaire que le guard sait protéger : il expose son formulaire (Signal Forms). */
 export interface FormulaireProtege {
-  readonly form: FormGroup;
+  readonly form: FieldTree<unknown>;
 }
 
 /**
  * Quitter un formulaire modifié demande confirmation : sans elle, un clic sur un lien du menu ou « Annuler » perd en silence
  * la saisie (un bulletin de paie compte une dizaine de champs). Un formulaire enregistré est remis à l'état « intact »
- * (`markAsPristine`) avant de naviguer : aucune question n'est posée après un enregistrement réussi.
+ * (`reset()`) avant de naviguer : aucune question n'est posée après un enregistrement réussi.
  */
 export const unsavedChangesGuard: CanDeactivateFn<FormulaireProtege> = (composant) => {
-  if (!composant.form.dirty) {
+  if (!composant.form().dirty()) {
     return true;
   }
   const confirmation = inject(ConfirmDialogService);

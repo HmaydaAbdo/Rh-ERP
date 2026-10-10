@@ -1,6 +1,7 @@
 import type { MockedObject } from "vitest";
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { FormControl, FormGroup } from '@angular/forms';
+import { form } from '@angular/forms/signals';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { ConfirmDialogService } from '@shared/feedback/feedback.service';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
@@ -11,11 +12,11 @@ describe('unsavedChangesGuard', () => {
     let confirmation: MockedObject<ConfirmDialogService>;
 
     function ecran(modifie: boolean): FormulaireProtege {
-        const form = new FormGroup({ nom: new FormControl('') });
+        const formulaire = TestBed.runInInjectionContext(() => form(signal({ nom: '' })));
         if (modifie) {
-            form.markAsDirty();
+            formulaire().markAsDirty();
         }
-        return { form };
+        return { form: formulaire };
     }
 
     function garder(composant: FormulaireProtege): boolean | Observable<boolean> {
@@ -52,7 +53,7 @@ describe('unsavedChangesGuard', () => {
 
     it('ne pose plus de question une fois le formulaire enregistré (remis à l\'état intact)', () => {
         const composant = ecran(true);
-        composant.form.markAsPristine();
+        composant.form().reset();
 
         expect(garder(composant)).toBe(true);
     });

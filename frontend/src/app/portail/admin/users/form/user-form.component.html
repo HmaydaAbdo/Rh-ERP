@@ -5,37 +5,31 @@
   </div>
 
   @if (!loading()) {
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
+    <form [formRoot]="form" class="app-form__grid">
       <div class="field">
         <label for="username">Username <span class="field__req" aria-hidden="true">*</span></label>
-        <input class="stp-input" spellcheck="false" id="username" type="text" formControlName="username" autocomplete="username" />
-        @if (form.controls.username.invalid && form.controls.username.touched) {
-          <small class="field-error" role="alert">3 à 50 caractères.</small>
-        }
+        <input class="stp-input" spellcheck="false" id="username" type="text" [formField]="form.username" autocomplete="username" />
+        <stp-field-error [field]="form.username" />
       </div>
 
       <div class="field">
         <label for="email">Email <span class="field__req" aria-hidden="true">*</span></label>
-        <input class="stp-input" spellcheck="false" id="email" type="email" formControlName="email" autocomplete="email" />
-        @if (form.controls.email.invalid && form.controls.email.touched) {
-          <small class="field-error" role="alert">Email invalide.</small>
-        }
+        <input class="stp-input" spellcheck="false" id="email" type="email" [formField]="form.email" autocomplete="email" />
+        <stp-field-error [field]="form.email" />
       </div>
 
       @if (!isEditMode()) {
         <div class="field">
           <label for="motDePasse">Mot de passe <span class="field__req" aria-hidden="true">*</span></label>
-          <stp-password-input inputId="motDePasse" formControlName="motDePasse" autocomplete="new-password" />
-          @if (form.controls.motDePasse.invalid && form.controls.motDePasse.touched) {
-            <small class="field-error" role="alert">{{ regleMotDePasse }}</small>
-          }
+          <stp-password-input inputId="motDePasse" [formField]="form.motDePasse" autocomplete="new-password" />
+          <stp-field-error [field]="form.motDePasse" />
         </div>
       }
 
       @if (isEditMode()) {
         <div class="field field--inline">
           <label for="actif">Compte actif</label>
-          <input type="checkbox" role="switch" class="stp-switch" id="actif" formControlName="actif" />
+          <input type="checkbox" role="switch" class="stp-switch" id="actif" [formField]="form.actif" />
         </div>
       }
 
@@ -43,7 +37,7 @@
         <label for="employeeId">Employé lié (optionnel)</label>
         <app-lazy-select
           ariaLabel="Employé lié (optionnel)" inputId="employeeId"
-          formControlName="employeeId"
+          [formField]="form.employeeId"
           [source]="employeeReferenceService"
           optionLabel="displayLabel"
           placeholder="Rechercher un employé par nom ou CIN"
@@ -56,7 +50,7 @@
         <stp-select
           ariaLabel="Rôles"
           inputId="roleIds"
-          formControlName="roleIds"
+          [formField]="form.roleIds"
           [multiple]="true"
           [options]="roleOptions()"
           placeholder="Sélectionner des rôles"
@@ -88,7 +82,7 @@
 
       <div class="app-form__actions">
         <a stp-button variant="text" routerLink="/admin/users">Annuler</a>
-        <button stp-button type="submit" [loading]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
+        <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
       </div>
     </form>
   }

@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
+import { finalize } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
@@ -16,6 +16,17 @@ import { AuditService } from '../services/audit.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 const TAILLE_PAGE_DETAIL = 10;
+
+const filtresVides = () => ({
+  dateDebut: '',
+  dateFin: '',
+  utilisateur: '',
+  categorie: null as CategorieAudit | null,
+  action: null as string | null,
+  resultat: null as ResultatAudit | null,
+  entiteType: null as string | null,
+  requestId: ''
+});
 
 /**
  * Journal d'audit : toutes les opérations, tous les événements de sécurité et toutes les sorties de données, filtrables en
@@ -32,7 +43,8 @@ const TAILLE_PAGE_DETAIL = 10;
     TableComponent,
     TableCellDirective,
     TableRowActionsDirective,
-    ReactiveFormsModule,
+    FormField,
+    FormRoot,
     DialogComponent
   ],
   templateUrl: './journal.component.html',
@@ -65,21 +77,15 @@ export class JournalComponent {
   protected readonly libelleOrigine = (origine: AuditLigne['origine']): string => LIBELLES_ORIGINES[origine];
 
   private readonly auditService = inject(AuditService);
-  private readonly fb = inject(FormBuilder);
 
   protected readonly lignes = signal<AuditLigne[]>([]);
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
 
-  protected readonly filterForm = this.fb.group({
-    dateDebut: [''],
-    dateFin: [''],
-    utilisateur: [''],
-    categorie: [null as CategorieAudit | null],
-    action: [null as string | null],
-    resultat: [null as ResultatAudit | null],
-    entiteType: [null as string | null],
-    requestId: ['']
+  protected readonly filtres = signal(filtresVides());
+  protected readonly filterForm = form(this.filtres, (chemin) => {
+    debounce(chemin.utilisateur, DEBOUNCE_RECHERCHE_MS);
+    debounce(chemin.requestId, DEBOUNCE_RECHERCHE_MS);
   });
 
   /** « Plus de filtres » : résultat, entité et identifiant de requête, les moins utilisés. Le panneau reste ouvert tant qu'un
@@ -99,18 +105,12 @@ export class JournalComponent {
   private lastSort = 'horodatage,desc';
 
   constructor() {
-    this.filterForm.valueChanges
-      .pipe(
-        debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        takeUntilDestroyed(inject(DestroyRef))
-      )
-      .subscribe(() => this.onSearch());
+    surChangementDesFiltres(this.filtres, () => this.onSearch());
   }
 
   /** Nombre de filtres actifs du panneau « Plus de filtres ». */
   nombreAvances(): number {
-    const f = this.filterForm.getRawValue();
+    const f = this.filtres();
     return [f.resultat, f.entiteType, f.requestId].filter((valeur) => Boolean(valeur)).length;
   }
 
@@ -137,8 +137,7 @@ export class JournalComponent {
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.onSearch();
+    this.filterForm().reset(filtresVides());
   }
 
   /** Ouvre une entrée dans le panneau : son contexte d'abord, puis la première page de ses modifications. */
@@ -170,10 +169,8 @@ export class JournalComponent {
 
   /** Remplace les filtres par « toutes les entrées de cette requête » : relie les événements d'une même action. */
   protected onVoirLaRequete(requestId: string): void {
-    this.filterForm.reset(undefined, { emitEvent: false });
-    this.filterForm.patchValue({ requestId }, { emitEvent: false });
+    this.filterForm().reset({ ...filtresVides(), requestId });
     this.panneauOuvert.set(false);
-    this.onSearch();
   }
 
   perimetreEntrees(): [string, string][] {
@@ -215,7 +212,7 @@ export class JournalComponent {
   }
 
   private criteres(): AuditCriteres {
-    const f = this.filterForm.getRawValue();
+    const f = this.filtres();
     return {
       dateDebut: f.dateDebut ? new Date(`${f.dateDebut}T00:00:00`).toISOString() : undefined,
       dateFin: f.dateFin ? new Date(`${f.dateFin}T23:59:59.999`).toISOString() : undefined,

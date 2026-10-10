@@ -196,8 +196,9 @@ violation** est la barre à tenir.
   interactif, jamais supprimé sans équivalent ; une zone qui défile (graphique, tableau) est atteignable au clavier
   (`tabindex="0"`, `role="region"`, libellé) ; le menu latéral ne s'ouvre au clavier que sur `:focus-visible`, pas après un clic.
 * **Formulaires** : un message d'erreur est annoncé (`role="alert"`) ; une soumission refusée met le focus sur le premier champ
-  invalide (`focaliserPremiereErreur`) ; quitter un formulaire modifié demande confirmation (`unsavedChangesGuard`, boîte
-  « Quitter sans enregistrer ? ») et un formulaire enregistré est remis à l'état intact avant de naviguer ; les champs hors
+  invalide (`focaliserPremiereErreur`, par `focusBoundControl` de Signal Forms) ; quitter un formulaire modifié demande confirmation
+  (`unsavedChangesGuard`, boîte « Quitter sans enregistrer ? ») et un formulaire enregistré est remis à l'état intact (`reset()`) avant de
+  naviguer ; les champs hors
   authentification ont `autocomplete="off"`, et `spellcheck="false"` quand ils portent un code (CIN, code, identifiant).
 * **Langue et formats** : `lang="fr"`, locale `fr-FR` (nombres « 5 500,00 », dates), textes UI en français ; les noms de marque
   portent `translate="no"` ; les points de suspension sont typographiques (`…`).

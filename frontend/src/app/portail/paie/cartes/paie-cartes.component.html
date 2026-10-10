@@ -119,8 +119,8 @@
               </div>
 
               <div class="app-toolbar">
-                <input class="stp-input" type="text" [formControl]="rechercheEquipe" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
-                <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="rechercheEquipe.setValue('')">Réinitialiser</button>
+                <input class="stp-input" type="text" [formField]="rechercheForm.terme" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
+                <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="reinitialiserRecherche()">Réinitialiser</button>
               </div>
 
               <div class="app-table-bar">
@@ -238,7 +238,7 @@
       type="text"
       inputmode="numeric"
       autocomplete="off"
-      [formControl]="confirmation"
+      [formField]="confirmationForm.nombre"
       (keydown.enter)="confirmerSuppression()"
     />
   }

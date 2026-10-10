@@ -1,39 +1,43 @@
-
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { email, form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, lastValueFrom, map, of } from 'rxjs';
 
+import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
+import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 
 @Component({
     selector: 'app-forgot-password',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [FormField, FormRoot, RouterLink, FieldErrorComponent],
     templateUrl: './forgot-password.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: '../login/login.component.scss'
 })
 export class ForgotPasswordComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly passwordRecovery = inject(PasswordRecoveryService);
 
-  readonly submitting = signal(false);
   readonly submitted = signal(false);
 
-  readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
-  });
+  private readonly modele = signal({ email: '' });
+  readonly form = form(
+    this.modele,
+    (chemin) => {
+      required(chemin.email, { message: 'Email invalide.' });
+      email(chemin.email, { message: 'Email invalide.' });
+    },
+    { submission: { action: () => this.envoyer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
+  );
 
-  onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
+  private async envoyer(): Promise<void> {
+    const envoye = await lastValueFrom(
+      this.passwordRecovery.requestReset(this.modele().email).pipe(
+        map(() => true),
+        catchError(() => of(false))
+      )
+    );
+    if (envoye) {
+      this.submitted.set(true);
     }
-
-    this.submitting.set(true);
-    this.passwordRecovery
-      .requestReset(this.form.getRawValue().email)
-      .pipe(finalize(() => this.submitting.set(false)))
-      .subscribe(() => this.submitted.set(true));
   }
 }

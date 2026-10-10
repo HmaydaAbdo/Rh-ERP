@@ -49,12 +49,12 @@
     </div>
   </div>
 
-  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="onSearch()">
-    <input class="stp-input" type="text" formControlName="nomPrenom" aria-label="Nom &amp; prénom" autocomplete="off" placeholder="Nom &amp; prénom" />
-    <input class="stp-input" type="text" formControlName="cin" aria-label="CIN" autocomplete="off" spellcheck="false" placeholder="CIN" />
+  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
+    <input class="stp-input" type="text" [formField]="filterForm.nomPrenom" aria-label="Nom &amp; prénom" autocomplete="off" placeholder="Nom &amp; prénom" />
+    <input class="stp-input" type="text" [formField]="filterForm.cin" aria-label="CIN" autocomplete="off" spellcheck="false" placeholder="CIN" />
 
     <app-lazy-select
-      formControlName="fonctionIds"
+      [formField]="filterForm.fonctionIds"
       [multiple]="true"
       [source]="functionReferenceService"
       optionLabel="libelle"
@@ -62,14 +62,14 @@
     ></app-lazy-select>
 
     <app-lazy-select
-      formControlName="chantierIds"
+      [formField]="filterForm.chantierIds"
       [multiple]="true"
       [source]="chantierReferenceService"
       optionLabel="code"
       ariaLabel="Chantier" placeholder="Chantier"
     ></app-lazy-select>
 
-    <stp-select formControlName="statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
+    <stp-select [formField]="filterForm.statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
 
     <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
   </form>

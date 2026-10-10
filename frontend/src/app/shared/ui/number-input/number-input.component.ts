@@ -1,5 +1,5 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, forwardRef, input, signal, viewChild } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { afterNextRender, ChangeDetectionStrategy, Component, effect, ElementRef, input, model, output, untracked, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 
 /** Espaces (normaux, insécables, fines insécables) qu'un format français place entre les milliers. */
 const SPACES = /[\s  ]/g;
@@ -12,7 +12,6 @@ const SPACES = /[\s  ]/g;
 @Component({
   selector: 'stp-number-input',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => NumberInputComponent), multi: true }],
   template: `
     <input
       #field
@@ -38,43 +37,55 @@ const SPACES = /[\s  ]/g;
     }
   `
 })
-export class NumberInputComponent implements ControlValueAccessor {
+export class NumberInputComponent implements FormValueControl<number | null> {
+  readonly value = model<number | null>(null);
+  readonly disabled = input(false);
+  readonly touch = output<void>();
   readonly inputId = input<string | null>(null);
   readonly ariaLabel = input<string | null>(null);
-  readonly min = input<number | null>(null);
-  readonly max = input<number | null>(null);
+  readonly min = input<number | undefined>(undefined);
+  readonly max = input<number | undefined>(undefined);
   readonly minFractionDigits = input(0);
   readonly maxFractionDigits = input<number | null>(null);
 
-  protected readonly disabled = signal(false);
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
-
-  private value: number | null = null;
-  private onChange: (value: number | null) => void = () => {};
-  private onTouched: () => void = () => {};
+  /** Pendant la saisie, le texte du champ est celui de l'utilisateur : une valeur qu'il vient lui-même de produire ne le réécrit pas. */
+  private editing = false;
 
   constructor() {
-    // La valeur écrite avant la création du champ (valeur initiale du formulaire) s'affiche dès qu'il existe.
+    // La valeur initiale du formulaire s'affiche dès que le champ existe ; ensuite, toute valeur écrite hors saisie (chargement,
+    // remise à zéro) se reformate.
     afterNextRender(() => this.render());
+    effect(() => {
+      this.value();
+      untracked(() => {
+        if (!this.editing) {
+          this.render();
+        }
+      });
+    });
+  }
+
+  /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
+  focus(options?: FocusOptions): void {
+    this.field()?.nativeElement.focus(options);
   }
 
   protected onFocus(): void {
-    this.field()!.nativeElement.value = this.value === null ? '' : String(this.value).replace('.', ',');
+    this.editing = true;
+    const value = this.value();
+    this.field()!.nativeElement.value = value === null ? '' : String(value).replace('.', ',');
   }
 
   protected onInput(): void {
-    this.value = this.parse(this.field()!.nativeElement.value);
-    this.onChange(this.value);
+    this.value.set(this.parse(this.field()!.nativeElement.value));
   }
 
   protected onBlur(): void {
-    const bounded = this.bound(this.value);
-    if (bounded !== this.value) {
-      this.value = bounded;
-      this.onChange(bounded);
-    }
+    this.editing = false;
+    this.value.set(this.bound(this.value()));
     this.render();
-    this.onTouched();
+    this.touch.emit();
   }
 
   private parse(text: string): number | null {
@@ -103,24 +114,8 @@ export class NumberInputComponent implements ControlValueAccessor {
     });
     const field = this.field()?.nativeElement;
     if (field) {
-      field.value = this.value === null ? '' : formatter.format(this.value);
+      const value = this.value();
+      field.value = value === null ? '' : formatter.format(value);
     }
-  }
-
-  writeValue(value: number | null): void {
-    this.value = value ?? null;
-    this.render();
-  }
-
-  registerOnChange(fn: (value: number | null) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
   }
 }

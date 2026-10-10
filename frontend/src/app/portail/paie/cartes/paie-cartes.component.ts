@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { debounce, form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { debounceTime, EMPTY, finalize, merge, Observable, Subject, switchMap, tap } from 'rxjs';
+import { EMPTY, finalize, merge, Observable, Subject, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
@@ -72,7 +72,7 @@ interface Suppression {
 @Component({
   selector: 'app-paie-cartes',
   imports: [
-    ReactiveFormsModule,
+    FormField,
     RouterLink,
     ColumnChooserComponent,
     CountUpDirective,
@@ -111,17 +111,17 @@ export class PaieCartesComponent {
   readonly periodes = signal<PaiePeriodeResume[]>([]);
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
 
-  readonly rechercheEquipe = new FormControl('', { nonNullable: true });
-  private readonly termeEquipe = signal('');
+  private readonly saisieRecherche = signal({ terme: '' });
+  readonly rechercheForm = form(this.saisieRecherche, (chemin) => debounce(chemin.terme, DEBOUNCE_RECHERCHE_MS));
 
   readonly suppression = signal<Suppression | null>(null);
   readonly suppressionEnCours = signal(false);
-  readonly confirmation = new FormControl('', { nonNullable: true });
-  private readonly confirmationSaisie = signal('');
+  private readonly saisieConfirmation = signal({ nombre: '' });
+  readonly confirmationForm = form(this.saisieConfirmation);
   /** La suppression n'est possible qu'une fois son nombre de bulletins retapé à l'identique. */
   readonly confirmationValide = computed(() => {
     const suppression = this.suppression();
-    return suppression !== null && this.confirmationSaisie().trim() === String(suppression.nombre);
+    return suppression !== null && this.saisieConfirmation().nombre.trim() === String(suppression.nombre);
   });
 
   /** Demande de rechargement du niveau affiché (après une suppression), sans changement d'URL. */
@@ -189,7 +189,7 @@ export class PaieCartesComponent {
   });
 
   /** Les équipes dont le code ou le libellé contient la recherche (insensible à la casse et aux accents). */
-  readonly equipesAffichees = computed(() => this.lignesEquipes().filter((ligne) => contient(ligne.code, this.termeEquipe()) || contient(ligne.libelle, this.termeEquipe())));
+  readonly equipesAffichees = computed(() => this.lignesEquipes().filter((ligne) => contient(ligne.code, this.saisieRecherche().terme) || contient(ligne.libelle, this.saisieRecherche().terme)));
 
   /** Aucun mois (niveau 1) ou aucun chantier (niveaux 2 et 3) ne correspond aux filtres. */
   readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1 ? this.periodes().length === 0 : this.chantiers().length === 0));
@@ -206,7 +206,7 @@ export class PaieCartesComponent {
         const niveauPrecedent = this.niveau();
         this.filtres.set(lireFiltres(params));
         this.sens.set(this.niveau() >= niveauPrecedent ? 'avant' : 'arriere');
-        this.rechercheEquipe.setValue('', { emitEvent: false });
+        this.reinitialiserRecherche();
       })
     );
     merge(parametres$, this.rechargement)
@@ -216,11 +216,10 @@ export class PaieCartesComponent {
       )
       .subscribe();
 
-    this.confirmation.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((saisie) => this.confirmationSaisie.set(saisie));
+  }
 
-    this.rechercheEquipe.valueChanges
-      .pipe(debounceTime(DEBOUNCE_RECHERCHE_MS), takeUntilDestroyed(this.destroyRef))
-      .subscribe((terme) => this.termeEquipe.set(terme));
+  reinitialiserRecherche(): void {
+    this.rechercheForm().reset({ terme: '' });
   }
 
   /** Seule une équipe réelle s'ouvre : « Sans équipe » n'a pas d'identifiant, l'API ne sait pas filtrer sur son absence. */
@@ -278,7 +277,7 @@ export class PaieCartesComponent {
   annulerSuppression(): void {
     if (!this.suppressionEnCours()) {
       this.suppression.set(null);
-      this.confirmation.setValue('');
+      this.viderConfirmation();
     }
   }
 
@@ -300,7 +299,7 @@ export class PaieCartesComponent {
             life: 6000
           });
           this.suppression.set(null);
-          this.confirmation.setValue('');
+          this.viderConfirmation();
           this.apresSuppression(suppression);
         }
       });
@@ -319,8 +318,12 @@ export class PaieCartesComponent {
     return this.lignesEquipes().reduce((somme, l) => somme + l.masse, 0);
   }
 
+  private viderConfirmation(): void {
+    this.confirmationForm().reset({ nombre: '' });
+  }
+
   private demander(cible: string, criteres: PaieSearchCriteria, nombre: number, remonterApres: boolean): void {
-    this.confirmation.setValue('');
+    this.viderConfirmation();
     this.suppression.set({ cible, criteres, nombre, filtres: this.decrireFiltres(criteres), remonterApres });
   }
 

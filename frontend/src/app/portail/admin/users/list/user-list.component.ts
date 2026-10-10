@@ -1,16 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { debounce, form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { debounceTime, finalize } from 'rxjs';
+import { finalize, map } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { ColumnState } from '../../../../shared/table/table-columns';
 import { contient } from '../../../../shared/text/recherche';
 import { BadgeComponent } from '../../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../../shared/ui/dialog/dialog.component';
+import { FieldErrorComponent } from '../../../../shared/ui/field-error/field-error.component';
 import { PasswordInputComponent } from '../../../../shared/ui/password-input/password-input.component';
 import { SelectComponent } from '../../../../shared/ui/select/select.component';
 import { TableCellDirective, TableComponent, TableRowActionsDirective } from '../../../../shared/ui/table/table.component';
@@ -24,7 +25,9 @@ const DEBOUNCE_FILTRE_MS = 300;
   selector: 'app-user-list',
   imports: [
     ColumnChooserComponent,
-    ReactiveFormsModule,
+    FormField,
+    FormRoot,
+    FieldErrorComponent,
     RouterLink,
     ButtonComponent,
     BadgeComponent,
@@ -43,19 +46,21 @@ export class UserListComponent {
   private readonly userService = inject(UserService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
 
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly loading = signal(false);
 
   protected readonly showResetDialog = signal(false);
   protected readonly resetDialogUser = signal<AdminUser | null>(null);
-  protected readonly resetting = signal(false);
-  protected readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
-
-  protected readonly resetForm = this.fb.nonNullable.group({
-    nouveauMotDePasse: ['', [Validators.required, motDePasseConforme]]
-  });
+  private readonly saisieReset = signal({ nouveauMotDePasse: '' });
+  protected readonly resetForm = form(
+    this.saisieReset,
+    (chemin) => {
+      required(chemin.nouveauMotDePasse, { message: REGLE_MOT_DE_PASSE });
+      motDePasseConforme(chemin.nouveauMotDePasse);
+    },
+    { submission: { action: () => this.confirmerReset() } }
+  );
 
   protected readonly columns = new ColumnState([
     { field: 'username', header: 'Username' },
@@ -70,13 +75,11 @@ export class UserListComponent {
   ];
 
   /** Filtres en temps réel : appliqués côté client sur la liste complète déjà chargée (liste non paginée côté serveur). */
-  protected readonly filterForm = this.fb.group({
-    username: [''],
-    email: [''],
-    actif: [null as boolean | null]
-  });
-
   private readonly criteres = signal<{ username: string; email: string; actif: boolean | null }>({ username: '', email: '', actif: null });
+  protected readonly filterForm = form(this.criteres, (chemin) => {
+    debounce(chemin.username, DEBOUNCE_FILTRE_MS);
+    debounce(chemin.email, DEBOUNCE_FILTRE_MS);
+  });
 
   protected readonly filtres = computed(() => {
     const { username, email, actif } = this.criteres();
@@ -84,14 +87,11 @@ export class UserListComponent {
   });
 
   constructor() {
-    this.filterForm.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRE_MS), takeUntilDestroyed(inject(DestroyRef))).subscribe((value) => {
-      this.criteres.set({ username: value.username ?? '', email: value.email ?? '', actif: value.actif ?? null });
-    });
     this.fetch();
   }
 
   protected onResetFilters(): void {
-    this.filterForm.reset();
+    this.filterForm().reset({ username: '', email: '', actif: null });
   }
 
   protected onEdit(user: AdminUser): void {
@@ -100,7 +100,7 @@ export class UserListComponent {
 
   protected onOpenReset(user: AdminUser): void {
     this.resetDialogUser.set(user);
-    this.resetForm.reset();
+    this.resetForm().reset({ nouveauMotDePasse: '' });
     this.showResetDialog.set(true);
   }
 
@@ -109,21 +109,19 @@ export class UserListComponent {
     this.resetDialogUser.set(null);
   }
 
-  protected onConfirmReset(): void {
+  private async confirmerReset(): Promise<void> {
     const user = this.resetDialogUser();
-    if (this.resetForm.invalid || !user) {
-      this.resetForm.markAllAsTouched();
+    if (!user) {
       return;
     }
 
-    this.resetting.set(true);
-    this.userService
-      .resetPassword(user.id, { nouveauMotDePasse: this.resetForm.getRawValue().nouveauMotDePasse })
-      .pipe(finalize(() => this.resetting.set(false)))
-      .subscribe(() => {
-        this.messageService.add({ severity: 'success', summary: 'Mot de passe réinitialisé', life: 4000 });
-        this.onCloseReset();
-      });
+    const reinitialise = await attendreEnregistrement(
+      this.userService.resetPassword(user.id, { nouveauMotDePasse: this.saisieReset().nouveauMotDePasse }).pipe(map(() => true))
+    );
+    if (reinitialise) {
+      this.messageService.add({ severity: 'success', summary: 'Mot de passe réinitialisé', life: 4000 });
+      this.onCloseReset();
+    }
   }
 
   private fetch(): void {

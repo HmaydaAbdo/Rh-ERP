@@ -4,27 +4,23 @@
     <h1>{{ isEditMode() ? "Modifier l'équipe" : 'Nouvelle équipe' }}</h1>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="app-form__grid">
+  <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="code">Code <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" formControlName="code" />
+      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" [formField]="form.code" />
       <small>Enregistré en majuscules — c'est le code utilisé par l'import Excel de la paie.</small>
-      @if (form.controls.code.invalid && form.controls.code.touched) {
-        <small class="field-error" role="alert">Le code est obligatoire.</small>
-      }
+      <stp-field-error [field]="form.code" />
     </div>
 
     <div class="field">
       <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="libelle" type="text" formControlName="libelle" />
-      @if (form.controls.libelle.invalid && form.controls.libelle.touched) {
-        <small class="field-error" role="alert">Le libellé est obligatoire.</small>
-      }
+      <input class="stp-input" autocomplete="off" id="libelle" type="text" [formField]="form.libelle" />
+      <stp-field-error [field]="form.libelle" />
     </div>
 
     <div class="app-form__actions">
       <a stp-button variant="text" routerLink="/equipes">Annuler</a>
-      <button stp-button type="submit" [loading]="saving()" [disabled]="saving()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
+      <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
 </div>

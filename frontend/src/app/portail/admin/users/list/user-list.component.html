@@ -1,12 +1,10 @@
 <stp-dialog header="Réinitialiser le mot de passe" width="420px" [(open)]="showResetDialog" (closed)="onCloseReset()">
   @if (resetDialogUser(); as user) {
-    <form [formGroup]="resetForm" (ngSubmit)="onConfirmReset()" class="user-list__reset-form">
+    <form [formRoot]="resetForm" class="user-list__reset-form">
       <p>Nouveau mot de passe pour <strong>{{ user.username }}</strong> :</p>
-      <stp-password-input formControlName="nouveauMotDePasse" />
-      @if (resetForm.controls.nouveauMotDePasse.invalid && resetForm.controls.nouveauMotDePasse.touched) {
-        <small class="field-error">{{ regleMotDePasse }}</small>
-      }
-      <button stp-button type="submit" [loading]="resetting()">Réinitialiser</button>
+      <stp-password-input [formField]="resetForm.nouveauMotDePasse" />
+      <stp-field-error [field]="resetForm.nouveauMotDePasse" />
+      <button stp-button type="submit" [loading]="resetForm().submitting()">Réinitialiser</button>
     </form>
   }
 </stp-dialog>
@@ -16,10 +14,10 @@
     <h1>Utilisateurs</h1>
   </div>
 
-  <form [formGroup]="filterForm" class="app-toolbar" (ngSubmit)="$event.preventDefault()">
-    <input class="stp-input" type="text" formControlName="username" aria-label="Username" autocomplete="off" spellcheck="false" placeholder="Username" />
-    <input class="stp-input" type="text" formControlName="email" aria-label="Email" autocomplete="off" spellcheck="false" placeholder="Email" />
-    <stp-select formControlName="actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
+  <form [formRoot]="filterForm" class="app-toolbar">
+    <input class="stp-input" type="text" [formField]="filterForm.username" aria-label="Username" autocomplete="off" spellcheck="false" placeholder="Username" />
+    <input class="stp-input" type="text" [formField]="filterForm.email" aria-label="Email" autocomplete="off" spellcheck="false" placeholder="Email" />
+    <stp-select [formField]="filterForm.actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
     <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
   </form>
 

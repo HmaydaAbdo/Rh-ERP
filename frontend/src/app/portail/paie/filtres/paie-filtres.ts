@@ -20,6 +20,11 @@ export const AUCUN_FILTRE: PaieFiltres = { periode: null, nomPrenom: '', cin: ''
 
 const FORMAT_PERIODE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
+/** Deux jeux de filtres de même contenu (les tableaux sont comparés par valeur, pas par référence). */
+export function memesFiltres(a: PaieFiltres, b: PaieFiltres): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /** Les filtres d'une URL ; une valeur invalide (mois mal formé, identifiant non entier ou négatif) est ignorée. */
 export function lireFiltres(params: ParamMap): PaieFiltres {
   const periode = params.get('periode') ?? '';

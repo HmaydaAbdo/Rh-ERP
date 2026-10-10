@@ -237,10 +237,10 @@ describe('PaieCartesComponent', () => {
             composant.demanderSuppressionMois(composant.cartesMois()[1]);
             expect(composant.confirmationValide()).toBe(false);
 
-            composant.confirmation.setValue('96');
+            composant.confirmationForm.nombre().value.set('96');
             expect(composant.confirmationValide()).toBe(false);
 
-            composant.confirmation.setValue(' 969 ');
+            composant.confirmationForm.nombre().value.set(' 969 ');
             expect(composant.confirmationValide()).toBe(true);
         });
 
@@ -257,7 +257,7 @@ describe('PaieCartesComponent', () => {
             service.supprimerGroupe.mockReturnValue(of({ supprimes: 969 }));
             const composant = await ouvrir('/paie/cartes');
             composant.demanderSuppressionMois(composant.cartesMois()[1]);
-            composant.confirmation.setValue('969');
+            composant.confirmationForm.nombre().value.set('969');
             service.rechercherPeriodes.mockClear();
 
             composant.confirmerSuppression();
@@ -278,7 +278,7 @@ describe('PaieCartesComponent', () => {
             service.supprimerGroupe.mockReturnValue(of({ supprimes: 148 }));
             const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
             composant.demanderSuppressionChantier(composant.chantier()!);
-            composant.confirmation.setValue('148');
+            composant.confirmationForm.nombre().value.set('148');
 
             composant.confirmerSuppression();
             await harness.fixture.whenStable();
@@ -294,7 +294,7 @@ describe('PaieCartesComponent', () => {
             composant.annulerSuppression();
 
             expect(composant.suppression()).toBeNull();
-            expect(composant.confirmation.value).toBe('');
+            expect(composant.confirmationForm.nombre().value()).toBe('');
             expect(service.supprimerGroupe).not.toHaveBeenCalled();
         });
     });

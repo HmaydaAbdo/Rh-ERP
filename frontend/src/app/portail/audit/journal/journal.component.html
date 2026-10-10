@@ -3,18 +3,18 @@
     <h1>Journal d’audit</h1>
   </div>
 
-  <form [formGroup]="filterForm" class="app-toolbar">
+  <form [formRoot]="filterForm" class="app-toolbar">
     <label class="app-toolbar__date">
       Du
-      <input class="stp-input" type="date" formControlName="dateDebut" />
+      <input class="stp-input" type="date" [formField]="filterForm.dateDebut" />
     </label>
     <label class="app-toolbar__date">
       Au
-      <input class="stp-input" type="date" formControlName="dateFin" />
+      <input class="stp-input" type="date" [formField]="filterForm.dateFin" />
     </label>
-    <input class="stp-input" type="text" formControlName="utilisateur" aria-label="Utilisateur" autocomplete="off" placeholder="Utilisateur" />
-    <stp-select formControlName="categorie" [options]="categorieOptions" ariaLabel="Catégorie" placeholder="Catégorie"></stp-select>
-    <stp-select formControlName="action" [options]="actionOptions" ariaLabel="Action" placeholder="Action" [filterable]="true"></stp-select>
+    <input class="stp-input" type="text" [formField]="filterForm.utilisateur" aria-label="Utilisateur" autocomplete="off" placeholder="Utilisateur" />
+    <stp-select [formField]="filterForm.categorie" [options]="categorieOptions" ariaLabel="Catégorie" placeholder="Catégorie"></stp-select>
+    <stp-select [formField]="filterForm.action" [options]="actionOptions" ariaLabel="Action" placeholder="Action" [filterable]="true"></stp-select>
     <button
       stp-button
       variant="secondary"
@@ -34,9 +34,9 @@
 
     @if (avancesVisibles()) {
       <div id="journal-filtres-avances" class="app-toolbar__more">
-        <stp-select formControlName="resultat" [options]="resultatOptions" ariaLabel="Résultat" placeholder="Résultat"></stp-select>
-        <stp-select formControlName="entiteType" [options]="entiteOptions" ariaLabel="Entité" placeholder="Entité"></stp-select>
-        <input class="stp-input" type="text" formControlName="requestId" aria-label="Identifiant de requête" autocomplete="off" spellcheck="false" placeholder="Identifiant de requête" />
+        <stp-select [formField]="filterForm.resultat" [options]="resultatOptions" ariaLabel="Résultat" placeholder="Résultat"></stp-select>
+        <stp-select [formField]="filterForm.entiteType" [options]="entiteOptions" ariaLabel="Entité" placeholder="Entité"></stp-select>
+        <input class="stp-input" type="text" [formField]="filterForm.requestId" aria-label="Identifiant de requête" autocomplete="off" spellcheck="false" placeholder="Identifiant de requête" />
       </div>
     }
   </form>
