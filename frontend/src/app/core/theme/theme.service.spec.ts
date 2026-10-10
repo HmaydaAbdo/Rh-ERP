@@ -1,70 +1,73 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
 import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
-  const racine = document.documentElement;
+  afterEach(() => vi.useRealTimers());
 
-  beforeEach(() => {
-    localStorage.removeItem('staport-theme');
-    racine.removeAttribute('data-theme');
-    racine.classList.remove('theme-transition');
-  });
+    const racine = document.documentElement;
 
-  afterEach(() => {
-    localStorage.removeItem('staport-theme');
-    racine.removeAttribute('data-theme');
-    racine.classList.remove('theme-transition');
-  });
+    beforeEach(() => {
+        localStorage.removeItem('staport-theme');
+        racine.removeAttribute('data-theme');
+        racine.classList.remove('theme-transition');
+    });
 
-  function creer(): ThemeService {
-    TestBed.resetTestingModule();
-    return TestBed.inject(ThemeService);
-  }
+    afterEach(() => {
+        localStorage.removeItem('staport-theme');
+        racine.removeAttribute('data-theme');
+        racine.classList.remove('theme-transition');
+    });
 
-  it('applique le thème sur <html>', () => {
-    const service = creer();
+    function creer(): ThemeService {
+        TestBed.resetTestingModule();
+        return TestBed.inject(ThemeService);
+    }
 
-    expect(racine.getAttribute('data-theme')).toBe(service.theme());
-  });
+    it('applique le thème sur <html>', () => {
+        const service = creer();
 
-  it('reprend le choix mémorisé plutôt que la préférence du système', () => {
-    localStorage.setItem('staport-theme', 'dark');
+        expect(racine.getAttribute('data-theme')).toBe(service.theme());
+    });
 
-    expect(creer().theme()).toBe('dark');
-  });
+    it('reprend le choix mémorisé plutôt que la préférence du système', () => {
+        localStorage.setItem('staport-theme', 'dark');
 
-  it('ignore une valeur mémorisée invalide', () => {
-    localStorage.setItem('staport-theme', 'violet');
+        expect(creer().theme()).toBe('dark');
+    });
 
-    expect(['light', 'dark']).toContain(creer().theme());
-  });
+    it('ignore une valeur mémorisée invalide', () => {
+        localStorage.setItem('staport-theme', 'violet');
 
-  it('bascule, applique et mémorise le choix', () => {
-    localStorage.setItem('staport-theme', 'light');
-    const service = creer();
+        expect(['light', 'dark']).toContain(creer().theme());
+    });
 
-    service.basculer();
+    it('bascule, applique et mémorise le choix', () => {
+        localStorage.setItem('staport-theme', 'light');
+        const service = creer();
 
-    expect(service.theme()).toBe('dark');
-    expect(racine.getAttribute('data-theme')).toBe('dark');
-    expect(localStorage.getItem('staport-theme')).toBe('dark');
-  });
+        service.basculer();
 
-  it('fait glisser les couleurs à la bascule, puis retire la classe de transition', fakeAsync(() => {
-    localStorage.setItem('staport-theme', 'light');
-    const service = creer();
+        expect(service.theme()).toBe('dark');
+        expect(racine.getAttribute('data-theme')).toBe('dark');
+        expect(localStorage.getItem('staport-theme')).toBe('dark');
+    });
 
-    service.basculer();
-    expect(racine.classList.contains('theme-transition')).toBeTrue();
+    it('fait glisser les couleurs à la bascule, puis retire la classe de transition', () => {
+        vi.useFakeTimers();
+        localStorage.setItem('staport-theme', 'light');
+        const service = creer();
 
-    tick(300);
-    expect(racine.classList.contains('theme-transition')).toBeFalse();
-  }));
+        service.basculer();
+        expect(racine.classList.contains('theme-transition')).toBe(true);
 
-  it('ne joue aucune transition au premier affichage', () => {
-    creer();
+        vi.advanceTimersByTime(300);
+        expect(racine.classList.contains('theme-transition')).toBe(false);
+    });
 
-    expect(racine.classList.contains('theme-transition')).toBeFalse();
-  });
+    it('ne joue aucune transition au premier affichage', () => {
+        creer();
+
+        expect(racine.classList.contains('theme-transition')).toBe(false);
+    });
 });

@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -13,303 +14,286 @@ import { PaieService } from '../services/paie.service';
 import { PaieAnalytiqueComponent } from './paie-analytique.component';
 
 const PERIODES: PaiePeriodeResume[] = [
-  { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1 },
-  { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0 }
+    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1 },
+    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0 }
 ];
 
 function donnees(surcharge: Partial<PaieAnalytique> = {}): PaieAnalytique {
-  return {
-    periode: '2026-08',
-    kpis: { masse: 40000, effectif: 10, coutMoyen: 4000, nombreChantiers: 2, stc: 1 },
-    moisPrecedent: { masse: 32000, effectif: 8, coutMoyen: 4000, nombreChantiers: 2, stc: 0 },
-    parChantier: [
-      { id: 7, code: 'C168', libelle: 'Nador', masse: 30000, effectif: 7, stc: 1 },
-      { id: 9, code: 'C196', libelle: null, masse: 10000, effectif: 3, stc: 0 }
-    ],
-    parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10 }],
-    tranches: [{ min: 0, max: 5000, effectif: 6 }, { min: 5000, max: null, effectif: 4 }],
-    evolution: [{ periode: '2026-07', masse: 32000, effectif: 8 }, { periode: '2026-08', masse: 40000, effectif: 10 }],
-    qualite: { sansEquipe: 4, sansObservation: 5 },
-    ...surcharge
-  };
+    return {
+        periode: '2026-08',
+        kpis: { masse: 40000, effectif: 10, coutMoyen: 4000, nombreChantiers: 2, stc: 1 },
+        moisPrecedent: { masse: 32000, effectif: 8, coutMoyen: 4000, nombreChantiers: 2, stc: 0 },
+        parChantier: [
+            { id: 7, code: 'C168', libelle: 'Nador', masse: 30000, effectif: 7, stc: 1 },
+            { id: 9, code: 'C196', libelle: null, masse: 10000, effectif: 3, stc: 0 }
+        ],
+        parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10 }],
+        tranches: [{ min: 0, max: 5000, effectif: 6 }, { min: 5000, max: null, effectif: 4 }],
+        evolution: [{ periode: '2026-07', masse: 32000, effectif: 8 }, { periode: '2026-08', masse: 40000, effectif: 10 }],
+        qualite: { sansEquipe: 4, sansObservation: 5 },
+        ...surcharge
+    };
 }
 
 describe('PaieAnalytiqueComponent', () => {
-  let service: jasmine.SpyObj<PaieService>;
-  let harness: RouterTestingHarness;
+    let service: MockedObject<PaieService>;
+    let harness: RouterTestingHarness;
 
-  async function ouvrir(url: string): Promise<PaieAnalytiqueComponent> {
-    return harness.navigateByUrl(url, PaieAnalytiqueComponent);
-  }
+    async function ouvrir(url: string): Promise<PaieAnalytiqueComponent> {
+        return harness.navigateByUrl(url, PaieAnalytiqueComponent);
+    }
 
-  beforeEach(async () => {
-    service = jasmine.createSpyObj<PaieService>('PaieService', ['listerPeriodes', 'analyser']);
-    service.listerPeriodes.and.returnValue(of(PERIODES));
-    service.analyser.and.returnValue(of(donnees()));
+    beforeEach(async () => {
+        service = {
+            listerPeriodes: vi.fn().mockName("PaieService.listerPeriodes"),
+            analyser: vi.fn().mockName("PaieService.analyser")
+        } as unknown as MockedObject<PaieService>;
+        service.listerPeriodes.mockReturnValue(of(PERIODES));
+        service.analyser.mockReturnValue(of(donnees()));
 
-    TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule],
-      providers: [
-        provideRouter([{ path: 'paie/analytique', component: PaieAnalytiqueComponent }]),
-        provideHttpClient(withXhr()),
-        provideHttpClientTesting(),
-        { provide: PaieService, useValue: service }
-      ]
+        TestBed.configureTestingModule({
+            imports: [NoopAnimationsModule],
+            providers: [
+                provideRouter([{ path: 'paie/analytique', component: PaieAnalytiqueComponent }]),
+                provideHttpClient(withXhr()),
+                provideHttpClientTesting(),
+                { provide: PaieService, useValue: service }
+            ]
+        });
+        harness = await RouterTestingHarness.create();
     });
-    harness = await RouterTestingHarness.create();
-  });
 
-  it('ouvre le mois le plus récent quand l\'URL n\'en porte pas', async () => {
-    await ouvrir('/paie/analytique');
-    // Angular 21 schedules the follow-up navigation triggered by ngOnInit separately from the
-    // initial RouterTestingHarness navigation. Wait until that query-param navigation settles.
-    await harness.fixture.whenStable();
+    it('ouvre le mois le plus récent quand l\'URL n\'en porte pas', async () => {
+        await ouvrir('/paie/analytique');
+        // Angular 21 schedules the follow-up navigation triggered by ngOnInit separately from the
+        // initial RouterTestingHarness navigation. Wait until that query-param navigation settles.
+        await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toContain('periode=2026-08');
-    expect(service.analyser).toHaveBeenCalledTimes(1);
-    expect(service.analyser.calls.mostRecent().args[0].periode).toBe('2026-08');
-  });
+        expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+        expect(service.analyser).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(service.analyser).mock.lastCall![0].periode).toBe('2026-08');
+    });
 
-  it('transmet le mois et les filtres de l\'URL, sans valeur invalide', async () => {
-    await ouvrir('/paie/analytique?periode=2026-07&nom=ali&cin=AB1&chantierIds=7,x&fonctionIds=3&equipeIds=');
+    it('transmet le mois et les filtres de l\'URL, sans valeur invalide', async () => {
+        await ouvrir('/paie/analytique?periode=2026-07&nom=ali&cin=AB1&chantierIds=7,x&fonctionIds=3&equipeIds=');
 
-    expect(service.analyser).toHaveBeenCalledOnceWith(
-      jasmine.objectContaining({ periode: '2026-07', nomPrenom: 'ali', cin: 'AB1', chantierIds: [7], fonctionIds: [3], equipeIds: undefined })
-    );
-  });
+        expect(service.analyser).toHaveBeenCalledTimes(1);
 
-  it('compare chaque indicateur au mois précédent', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(service.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07', nomPrenom: 'ali', cin: 'AB1', chantierIds: [7], fonctionIds: [3], equipeIds: undefined }));
+    });
 
-    const [masse, bulletins, coutMoyen, stc, chantiers] = composant.tuiles();
-    expect(masse.variation).toBe('+25,0 %');
-    expect(bulletins.variation).toBe('+2');
-    expect(coutMoyen.variation).toBe('0,0 %');
-    expect(stc.variation).toBe('+1');
-    expect(chantiers.variation).toBe('0');
-  });
+    it('compare chaque indicateur au mois précédent', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('ne compare rien quand le mois précédent n\'a pas de bulletin sur le périmètre', async () => {
-    service.analyser.and.returnValue(of(donnees({ moisPrecedent: null })));
+        const [masse, bulletins, coutMoyen, stc, chantiers] = composant.tuiles();
+        expect(masse.variation).toBe('+25,0 %');
+        expect(bulletins.variation).toBe('+2');
+        expect(coutMoyen.variation).toBe('0,0 %');
+        expect(stc.variation).toBe('+1');
+        expect(chantiers.variation).toBe('0');
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    it('ne compare rien quand le mois précédent n\'a pas de bulletin sur le périmètre', async () => {
+        service.analyser.mockReturnValue(of(donnees({ moisPrecedent: null })));
 
-    expect(composant.tuiles().every((t) => t.variation === null)).toBeTrue();
-  });
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('ne divise pas par un mois précédent nul', async () => {
-    service.analyser.and.returnValue(
-      of(donnees({ moisPrecedent: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 } }))
-    );
+        expect(composant.tuiles().every((t) => t.variation === null)).toBe(true);
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    it('ne divise pas par un mois précédent nul', async () => {
+        service.analyser.mockReturnValue(of(donnees({ moisPrecedent: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 } })));
 
-    expect(composant.tuiles()[0].variation).toBeNull();
-    expect(composant.tuiles()[1].variation).toBe('+10');
-  });
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('filtre sur le chantier d\'une barre cliquée', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(composant.tuiles()[0].variation).toBeNull();
+        expect(composant.tuiles()[1].variation).toBe('+10');
+    });
 
-    composant.surBarreChantier({ index: 1 });
-    await harness.fixture.whenStable();
+    it('filtre sur le chantier d\'une barre cliquée', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    expect(TestBed.inject(Router).url).toContain('chantierIds=9');
-    expect(service.analyser.calls.mostRecent().args[0].chantierIds).toEqual([9]);
-  });
+        composant.surBarreChantier({ index: 1 });
+        await harness.fixture.whenStable();
 
-  it('ignore un clic hors des barres', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
-    const appels = service.analyser.calls.count();
+        expect(TestBed.inject(Router).url).toContain('chantierIds=9');
+        expect(vi.mocked(service.analyser).mock.lastCall![0].chantierIds).toEqual([9]);
+    });
 
-    composant.surBarreChantier({});
+    it('ignore un clic hors des barres', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        const appels = vi.mocked(service.analyser).mock.calls.length;
 
-    expect(service.analyser.calls.count()).toBe(appels);
-  });
+        composant.surBarreChantier({});
 
-  it('retire un filtre de l\'URL quand sa sélection est vidée', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7');
+        expect(vi.mocked(service.analyser).mock.calls.length).toBe(appels);
+    });
 
-    expect(TestBed.inject(Router).url).toContain('chantierIds=7');
+    it('retire un filtre de l\'URL quand sa sélection est vidée', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7');
 
-    composant.appliquer({ ...AUCUN_FILTRE, periode: '2026-08' });
-    await harness.fixture.whenStable();
+        expect(TestBed.inject(Router).url).toContain('chantierIds=7');
 
-    expect(TestBed.inject(Router).url).not.toContain('chantierIds');
-  });
+        composant.appliquer({ ...AUCUN_FILTRE, periode: '2026-08' });
+        await harness.fixture.whenStable();
 
-  it('montre toute l\'évolution, même avec un seul mois, et met en évidence le mois analysé', async () => {
-    service.analyser.and.returnValue(of(donnees({ evolution: [{ periode: '2026-08', masse: 40000, effectif: 10 }] })));
+        expect(TestBed.inject(Router).url).not.toContain('chantierIds');
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    it('montre toute l\'évolution, même avec un seul mois, et met en évidence le mois analysé', async () => {
+        service.analyser.mockReturnValue(of(donnees({ evolution: [{ periode: '2026-08', masse: 40000, effectif: 10 }] })));
 
-    expect(composant.graphiqueEvolution().data.labels).toEqual(['août 2026']);
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    service.analyser.and.returnValue(
-      of(donnees({ evolution: ['2024-01', '2026-07', '2026-08', '2026-09'].map((periode) => ({ periode, masse: 1, effectif: 1 })) }))
-    );
-    await ouvrir('/paie/analytique?periode=2026-08&nom=a');
-    expect(composant.graphiqueEvolution().data.labels?.length).toBe(4);
-    expect(composant.graphiqueEvolution().data.datasets[0].pointRadius).toEqual([4, 4, 8, 4]);
-  });
+        expect(composant.graphiqueEvolution().data.labels).toEqual(['août 2026']);
 
-  it("trace l'évolution d'une seule mesure sur un seul axe, jamais deux échelles dans un graphique", async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        service.analyser.mockReturnValue(of(donnees({ evolution: ['2024-01', '2026-07', '2026-08', '2026-09'].map((periode) => ({ periode, masse: 1, effectif: 1 })) })));
+        await ouvrir('/paie/analytique?periode=2026-08&nom=a');
+        expect(composant.graphiqueEvolution().data.labels?.length).toBe(4);
+        expect(composant.graphiqueEvolution().data.datasets[0].pointRadius).toEqual([4, 4, 8, 4]);
+    });
 
-    const evolution = composant.graphiqueEvolution();
-    expect(evolution.data.datasets.length).toBe(1);
-    expect(evolution.data.datasets[0].data).toEqual([32000, 40000]);
-    expect(Object.keys(evolution.options.scales ?? {})).toEqual(['x', 'y']);
+    it("trace l'évolution d'une seule mesure sur un seul axe, jamais deux échelles dans un graphique", async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    composant.mesureEvolution.set('effectif');
+        const evolution = composant.graphiqueEvolution();
+        expect(evolution.data.datasets.length).toBe(1);
+        expect(evolution.data.datasets[0].data).toEqual([32000, 40000]);
+        expect(Object.keys(evolution.options.scales ?? {})).toEqual(['x', 'y']);
 
-    expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([8, 10]);
-    expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('Bulletins');
-  });
+        composant.mesureEvolution.set('effectif');
 
-  it('colore chaque mesure de la même façon dans tous les graphiques (la couleur suit la mesure, pas le rang)', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([8, 10]);
+        expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('Bulletins');
+    });
 
-    const masse = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
-    expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(masse);
-    expect(composant.graphiqueEvolution().data.datasets[0].borderColor).toBe(masse);
+    it('colore chaque mesure de la même façon dans tous les graphiques (la couleur suit la mesure, pas le rang)', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    composant.mesureChantiers.set('effectif');
-    composant.mesureFonctions.set('effectif');
+        const masse = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
+        expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(masse);
+        expect(composant.graphiqueEvolution().data.datasets[0].borderColor).toBe(masse);
 
-    const bulletins = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
-    expect(bulletins).not.toBe(masse);
-    expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(bulletins);
-    expect(composant.graphiqueTranches().data.datasets[0].backgroundColor).toBe(bulletins);
-  });
+        composant.mesureChantiers.set('effectif');
+        composant.mesureFonctions.set('effectif');
 
-  it('se redessine quand le thème change : les couleurs sont relues dans les jetons', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
-    const racine = document.documentElement;
-    racine.style.setProperty('--chart-1', '#111111');
-    const theme = TestBed.inject(ThemeService);
-    const avant = composant.graphiqueChantiers();
+        const bulletins = composant.graphiqueChantiers().data.datasets[0].backgroundColor;
+        expect(bulletins).not.toBe(masse);
+        expect(composant.graphiqueFonctions().data.datasets[0].backgroundColor).toBe(bulletins);
+        expect(composant.graphiqueTranches().data.datasets[0].backgroundColor).toBe(bulletins);
+    });
 
-    theme.basculer();
-    const apres = composant.graphiqueChantiers();
+    it('se redessine quand le thème change : les couleurs sont relues dans les jetons', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        const racine = document.documentElement;
+        racine.style.setProperty('--chart-1', '#111111');
+        const theme = TestBed.inject(ThemeService);
+        const avant = composant.graphiqueChantiers();
 
-    expect(apres).not.toBe(avant);
-    expect(apres.data.datasets[0].backgroundColor).toBe('#111111');
-    racine.style.removeProperty('--chart-1');
-    localStorage.removeItem('staport-theme');
-  });
+        theme.basculer();
+        const apres = composant.graphiqueChantiers();
 
-  it("replie le tableau des données de chaque graphique, et l'ouvre à la demande", async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
-    expect(composant.tableaux().chantiers).toBeFalse();
+        expect(apres).not.toBe(avant);
+        expect(apres.data.datasets[0].backgroundColor).toBe('#111111');
+        racine.style.removeProperty('--chart-1');
+        localStorage.removeItem('staport-theme');
+    });
 
-    composant.basculerTableau('chantiers');
-    expect(composant.tableaux().chantiers).toBeTrue();
-    expect(composant.tableaux().fonctions).toBeFalse();
+    it("replie le tableau des données de chaque graphique, et l'ouvre à la demande", async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(composant.tableaux().chantiers).toBe(false);
 
-    composant.basculerTableau('chantiers');
-    expect(composant.tableaux().chantiers).toBeFalse();
-  });
+        composant.basculerTableau('chantiers');
+        expect(composant.tableaux().chantiers).toBe(true);
+        expect(composant.tableaux().fonctions).toBe(false);
 
-  it("expose les tranches et l'évolution sous forme de lignes de tableau", async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        composant.basculerTableau('chantiers');
+        expect(composant.tableaux().chantiers).toBe(false);
+    });
 
-    // `Intl` sépare les milliers par une espace insécable fine : on compare après normalisation des espaces.
-    const tranches = composant.lignesTranches().map((l) => ({ ...l, tranche: l.tranche.replace(/\s/g, ' ') }));
-    expect(tranches).toEqual([{ tranche: '0 – 5 000', effectif: 6 }, { tranche: '≥ 5 000', effectif: 4 }]);
-    expect(composant.lignesEvolution().map((l) => l.effectif)).toEqual([8, 10]);
-  });
+    it("expose les tranches et l'évolution sous forme de lignes de tableau", async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
-    service.analyser.and.returnValue(
-      of(
-        donnees({
-          parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0 })),
-          parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
-        })
-      )
-    );
+        // `Intl` sépare les milliers par une espace insécable fine : on compare après normalisation des espaces.
+        const tranches = composant.lignesTranches().map((l) => ({ ...l, tranche: l.tranche.replace(/\s/g, ' ') }));
+        expect(tranches).toEqual([{ tranche: '0 – 5 000', effectif: 6 }, { tranche: '≥ 5 000', effectif: 4 }]);
+        expect(composant.lignesEvolution().map((l) => l.effectif)).toEqual([8, 10]);
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
+        service.analyser.mockReturnValue(of(donnees({
+            parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0 })),
+            parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
+        })));
 
-    expect(composant.graphiqueChantiers().data.labels?.length).toBe(40);
-    expect(composant.graphiqueFonctions().data.labels?.length).toBe(114);
-    expect(composant.graphiqueFonctions().data.labels).not.toContain('Autres');
-  });
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('agrandit les graphiques avec le nombre de catégories pour que chaque ligne reste lisible', async () => {
-    service.analyser.and.returnValue(
-      of(donnees({ parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `F${i}`, masse: 1, effectif: 1 })) }))
-    );
+        expect(composant.graphiqueChantiers().data.labels?.length).toBe(40);
+        expect(composant.graphiqueFonctions().data.labels?.length).toBe(114);
+        expect(composant.graphiqueFonctions().data.labels).not.toContain('Autres');
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+    it('agrandit les graphiques avec le nombre de catégories pour que chaque ligne reste lisible', async () => {
+        service.analyser.mockReturnValue(of(donnees({ parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `F${i}`, masse: 1, effectif: 1 })) })));
 
-    expect(composant.hauteurFonctions()).toBeGreaterThan(composant.hauteurChantiers());
-    expect(composant.hauteurChantiers()).toBeGreaterThanOrEqual(12);
-  });
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('trie les barres selon la mesure choisie, sans en perdre', async () => {
-    service.analyser.and.returnValue(
-      of(
-        donnees({
-          parChantier: [
-            { id: 1, code: 'A', libelle: null, masse: 900, effectif: 1, stc: 0 },
-            { id: 2, code: 'B', libelle: null, masse: 100, effectif: 9, stc: 0 }
-          ]
-        })
-      )
-    );
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
-    expect(composant.chantiersTries().map((c) => c.code)).toEqual(['A', 'B']);
+        expect(composant.hauteurFonctions()).toBeGreaterThan(composant.hauteurChantiers());
+        expect(composant.hauteurChantiers()).toBeGreaterThanOrEqual(12);
+    });
 
-    composant.mesureChantiers.set('effectif');
+    it('trie les barres selon la mesure choisie, sans en perdre', async () => {
+        service.analyser.mockReturnValue(of(donnees({
+            parChantier: [
+                { id: 1, code: 'A', libelle: null, masse: 900, effectif: 1, stc: 0 },
+                { id: 2, code: 'B', libelle: null, masse: 100, effectif: 9, stc: 0 }
+            ]
+        })));
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(composant.chantiersTries().map((c) => c.code)).toEqual(['A', 'B']);
 
-    expect(composant.chantiersTries().map((c) => c.code)).toEqual(['B', 'A']);
-    expect(composant.graphiqueChantiers().data.datasets[0].data).toEqual([9, 1]);
-  });
+        composant.mesureChantiers.set('effectif');
 
-  it('filtre sur la fonction d\'une barre cliquée, dans l\'ordre affiché', async () => {
-    service.analyser.and.returnValue(
-      of(
-        donnees({
-          parFonction: [
-            { id: 4, libelle: 'PETITE', masse: 10, effectif: 1 },
-            { id: 8, libelle: 'GRANDE', masse: 900, effectif: 1 }
-          ]
-        })
-      )
-    );
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(composant.chantiersTries().map((c) => c.code)).toEqual(['B', 'A']);
+        expect(composant.graphiqueChantiers().data.datasets[0].data).toEqual([9, 1]);
+    });
 
-    // La plus grosse masse est affichée en premier : l'index 0 désigne « GRANDE ».
-    composant.surBarreFonction({ index: 0 });
-    await harness.fixture.whenStable();
+    it('filtre sur la fonction d\'une barre cliquée, dans l\'ordre affiché', async () => {
+        service.analyser.mockReturnValue(of(donnees({
+            parFonction: [
+                { id: 4, libelle: 'PETITE', masse: 10, effectif: 1 },
+                { id: 8, libelle: 'GRANDE', masse: 900, effectif: 1 }
+            ]
+        })));
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-    expect(TestBed.inject(Router).url).toContain('fonctionIds=8');
-  });
+        // La plus grosse masse est affichée en premier : l'index 0 désigne « GRANDE ».
+        composant.surBarreFonction({ index: 0 });
+        await harness.fixture.whenStable();
 
-  it('calcule la part des bulletins sans équipe et sans observation', async () => {
-    const composant = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(TestBed.inject(Router).url).toContain('fonctionIds=8');
+    });
 
-    expect(composant.qualite().map((l) => [l.nombre, l.part])).toEqual([[4, 40], [5, 50]]);
-  });
+    it('calcule la part des bulletins sans équipe et sans observation', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
-  it('signale un périmètre sans bulletin', async () => {
-    service.analyser.and.returnValue(
-      of(donnees({ kpis: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 }, moisPrecedent: null, parChantier: [] }))
-    );
+        expect(composant.qualite().map((l) => [l.nombre, l.part])).toEqual([[4, 40], [5, 50]]);
+    });
 
-    const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=1');
+    it('signale un périmètre sans bulletin', async () => {
+        service.analyser.mockReturnValue(of(donnees({ kpis: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 }, moisPrecedent: null, parChantier: [] })));
 
-    expect(composant.vide()).toBeTrue();
-  });
+        const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=1');
 
-  it('signale l\'absence de toute paie sans lancer d\'analyse', async () => {
-    service.listerPeriodes.and.returnValue(of([]));
+        expect(composant.vide()).toBe(true);
+    });
 
-    const composant = await ouvrir('/paie/analytique');
+    it('signale l\'absence de toute paie sans lancer d\'analyse', async () => {
+        service.listerPeriodes.mockReturnValue(of([]));
 
-    expect(composant.aucunePaie()).toBeTrue();
-    expect(service.analyser).not.toHaveBeenCalled();
-  });
+        const composant = await ouvrir('/paie/analytique');
+
+        expect(composant.aucunePaie()).toBe(true);
+        expect(service.analyser).not.toHaveBeenCalled();
+    });
 });
