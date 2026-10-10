@@ -113,8 +113,8 @@ forme de marque est le monogramme « S » à pointe triangulaire (favicon, menu)
 
 ## Components
 
-- **Tableau** (`app-table`) : lignes compactes, grille visible, alternance de lignes, survol, en-tête sur fond neutre ; un seul
-  style pour tous les tableaux (`_tables.scss`).
+- **Tableau** (`stp-table`) : lignes compactes, grille visible, alternance de lignes, survol, en-tête sur fond neutre ; un seul
+  style pour tous les tableaux (`ui/table/table.component.scss`).
 - **En-tête de page** : titre et onglets de vue soulignés sur une ligne, posés sur un filet ; l'onglet actif porte le trait de marque.
 - **Barre de filtres** (Paie) : une seule ligne à plat de contrôles de même hauteur (`--control-height` 2,25 rem) — mois, nom,
   CIN, chantiers / équipes / fonctions en mode compact — toujours visibles ; fil de navigation dans les Cartes.
@@ -141,4 +141,4 @@ squelette de chargement, appui d'un bouton (2 %), tracé d'un graphique (600 ms)
 - Utiliser les jetons sémantiques (`--color-*`), jamais une primitive `--brand-*` dans un composant.
 - Vérifier chaque écran dans les deux thèmes ; contraste ≥ 4,5:1 pour le texte.
 - Ne pas décorer un écran de travail : pas de dégradé, pas d'animation qui n'explique pas un changement d'état.
-- Ne pas modifier `primeng-theme.css` à la main : il est généré (`npm run theme:generate`).
+- Un composant partagé vit dans `src/app/shared/ui/` (kit Staport) et se montre dans le catalogue (`/catalogue`).

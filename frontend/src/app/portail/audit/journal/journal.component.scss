@@ -1,16 +1,4 @@
 .journal {
-  &__actions {
-    display: flex;
-    gap: var(--space-xs);
-  }
-
-  &__motif {
-    max-width: 18rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   &__resultat {
     font-weight: 600;
 
@@ -21,11 +9,6 @@
     &--echec {
       color: var(--color-danger);
     }
-  }
-
-  &__panneau-titre {
-    margin: 0;
-    font-size: 1.125rem;
   }
 
   &__contexte {

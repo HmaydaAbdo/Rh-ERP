@@ -3,12 +3,6 @@
     margin-right: var(--space-xs);
   }
 
-  &__actions {
-    display: flex;
-    gap: var(--space-xs);
-    justify-content: flex-end;
-  }
-
   &__reset-form {
     display: flex;
     flex-direction: column;

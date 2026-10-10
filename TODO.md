@@ -11,13 +11,21 @@
 
 Le socle `v0.1.1` est épinglé dans `conventions/staport/` ; l'ADR et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
-la migration PostgreSQL 18 est validée en local le 2026-10-10. Angular est migré à 22.2.2 et Node 24.15.0
-est épinglé. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md). Restent à faire :
+la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
+Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (178) et E2E Playwright + axe (30),
+audit npm sans vulnérabilité haute, licences contrôlées et SBOM en CI. Voir le handoff détaillé dans [HANDOFF.md](HANDOFF.md).
+Restent à faire :
 
+- **Frontend — budget de style de l'assistant d'export** (`paie-export-wizard.component.scss`, ~15,7 ko pour un budget de 8 ko) :
+  découper l'assistant en composants d'étape (mois, format, équipes, matériel, récapitulatif) ; décision d'architecture à valider ;
+- **Frontend — tests du kit** : `ui/select`, `ui/table`, `ui/dialog`, `ui/menu` et les champs n'ont que les E2E du catalogue ; ajouter des
+  tests de composants (états, clavier, valeur du `ControlValueAccessor`) ; ajouter des tests de composants pour les listes et
+  formulaires Employé, Chantier, Équipe, Utilisateurs et Rôles (aujourd'hui : E2E de Fonction et Paie seulement) ;
+- **Frontend — formulaires** : le standard Staport demande les Signal Forms pour tout nouveau formulaire ; les formulaires existants
+  restent en Reactive Forms typés (écart toléré par `conventions/frontend.md`), migration à décider écran par écran ;
+- **Backend** : contrôle de conformité par domaine (RBAC par domaine, audit métier, secrets/configuration, logs et métriques, erreurs) ;
+  rapport d'écarts à produire avant tout changement ;
 - mettre à jour les conventions Staport vers la version suivante et repinner le snapshot central ;
-- migrer toutes les vues de PrimeNG vers Angular Aria/CDK, Tailwind 4, Lucide et composants Staport; supprimer PrimeIcons et Zone.js;
-- moderniser le runner de tests, compléter les tests unitaires/composants et ajouter des parcours E2E navigateur pour
-  connexion, permissions et paie ; voir les limites actuelles dans `docs/testing.md` ;
 - planifier puis exécuter la migration du serveur de production PG17→PG18 : répétition sur sauvegarde,
   fenêtre de maintenance, restauration logique dans un volume neuf, contrôles et conservation du volume
   PG17 comme retour arrière ; suivre [la procédure](docs/deployment.md#migration-majeure-pg17--pg18-en-production) ;
@@ -35,8 +43,7 @@ Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, respon
   Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
 - **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
   (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
-- **Poids du bundle/CSS** : le build Angular 22 dépasse l'avertissement initial de 15,62 kB et le style de l'assistant d'export
-  dépasse l'avertissement de 7,60 kB ; optimiser avant clôture, sans relever les seuils.
+- **Poids du bundle/CSS** : bundle initial ~555 kB (sous le budget de 800 kB) ; seul le style de l'assistant d'export dépasse son budget (voir ci-dessus).
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
 - **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
   `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.
@@ -98,14 +105,13 @@ demandent une décision avant correction :
 - **Pas de limitation des tentatives** de connexion ni de demandes de réinitialisation (force brute).
 - **Métriques** : les compteurs de synchronisation sont enregistrés dans Micrometer mais aucun export
   (Prometheus) n'est configuré, alors que `/actuator/prometheus` est autorisé par la configuration de sécurité.
-- **Tests frontend** : les écrans Paie (liste, cartes, analytique, filtres, export) et Audit sont testés ; restent sans test les écrans
-  Employé, Fonction, Chantier, Équipe, Utilisateurs, Rôles et l'authentification (connexion, mot de passe oublié).
+- **Tests frontend** : voir « Frontend — tests du kit » ci-dessus.
 
 ---
 
 ## Audit de sécurité — points à traiter (revue du 2026-10-04)
 
-Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; **restent le n° 6 (limite de débit) et le n° 7 (audit actuel des dépendances frontend)**.
+Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; **reste le n° 6 (limite de débit)**.
 Vérifié et conforme : toutes les routes Paie portent une permission (`EndpointSecurityTest` la verrouille, nouvelles routes
 comprises) ; les filtres d'agrégation passent par des paramètres liés (pas d'injection) ; la suppression en groupe exige un mois,
 revérifie le nombre confirmé (`409` sinon) et ne supprime que les bulletins qu'elle a chargés ; aucun HTML construit côté
@@ -114,7 +120,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
 | 6 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export ni la suppression en groupe (voir « Anomalies ») | Limitation de débit sur `/auth/*` et sur les routes coûteuses |
-| 7 | À trier | **19 vulnérabilités de sévérité élevée signalées par `npm audit`** lors de la montée Angular 22; le rapport complet doit être examiné et chaque paquet transitive mis à jour ou justifié. Aucun `npm audit fix --force` sans revue | Traiter l'audit paquet par paquet et conserver un rapport dans la CI |
+| 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité haute (les 4 restantes sont Karma, pair optionnel inutilisé de `@angular/build`, exclu par `--omit=optional`) ; `audit:deps`, `audit:licences` et SBOM CycloneDX en CI | — |
 
 ---
 

@@ -396,7 +396,7 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 
 # Qualité et tests
 
-* Angular CLI Vitest (`@angular/build:unit-test`) est le runner unitaire par défaut. Les nouveaux tests ne dépendent pas de Jasmine, Karma ou Zone.js; les suites existantes migrent vers Vitest avec des fake timers natifs.
+* Angular CLI Vitest (`@angular/build:unit-test`) est le runner unitaire par défaut. Les nouveaux tests ne dépendent pas de Jasmine, Karma ou Zone.js; les suites existantes ont migré vers Vitest avec des fake timers natifs (ERP-RH, 2026-10-10 ; E2E Playwright + axe dans `frontend/e2e/`).
 * Tests de composants sous DOM simulé pour états, clavier, Signals, formulaires et erreurs; utiliser les harness Angular/CDK lorsqu'ils existent plutôt que tester les classes CSS internes.
 * Les tests d'intégration vérifient router, guards, intercepteurs, services HTTP et contrats avec le serveur; employer des fixtures représentatives et des assertions sur les statuts/permissions.
 * Les E2E utilisent Playwright dans les principaux navigateurs ciblés, avec des parcours auth, autorisation par domaine, CRUD critique, paie et exports. Les jeux de données sont isolés et réinitialisables.

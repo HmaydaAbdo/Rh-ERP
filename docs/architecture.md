@@ -26,7 +26,7 @@ Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (A
 | Base | PostgreSQL 18.6 avec pgvector ; usage vectoriel uniquement lorsqu'un cas RAG sera validé |
 | Migrations | Flyway ; Hibernate en `ddl-auto: validate` (il vérifie le schéma, ne le modifie jamais) |
 | Frontend | Angular 17 en migration vers 22 ; cible standalone, Signals, Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport |
-| Tests | JUnit 5 + Mockito + AssertJ (backend), Jasmine/Karma (frontend) — voir [testing.md](testing.md) |
+| Tests | JUnit 5 + Mockito + AssertJ (backend), Vitest + Playwright/axe (frontend) — voir [testing.md](testing.md) |
 | Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](deployment.md) |
 
 **État des environnements au 2026-10-10 :** le Docker local est sur PostgreSQL 18.6 avec les données

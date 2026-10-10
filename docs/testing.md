@@ -17,7 +17,9 @@ cd backend
 
 # Frontend
 cd frontend
-npx ng test --watch=false --browsers=ChromeHeadless
+npm test                                      # unités et composants : Vitest dans Chromium (CHROME_BIN si Chrome n'est pas détecté)
+npm run e2e                                   # parcours E2E Playwright (API simulée) avec axe
+npm run audit:deps && npm run audit:licences  # chaîne d'approvisionnement
 npx ng build --configuration production      # vérifie que le bundle de production compile
 ```
 
@@ -72,9 +74,9 @@ toujours par identifiant, jamais par comptage global, car la base est partagée.
 
 ---
 
-## Frontend (175 tests)
+## Frontend (178 tests unitaires et composants, 30 parcours E2E)
 
-Jasmine + Karma, Chrome Headless 154. Karma builder émet un avertissement de dépréciation Angular; la migration Vitest est planifiée dans [HANDOFF.md](../HANDOFF.md).
+Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** (Playwright ; `CHROME_BIN` pour réutiliser un Chrome installé), sans Zone.js : les minuteries se pilotent avec `vi.useFakeTimers()`, les doublures avec `vi.fn()`. Les membres de composant utilisés par le gabarit sont `protected` ; un test y accède par `composant['membre']`. Couches : unités (services, utilitaires, gardes, intercepteurs), composants (rendu, clavier, signaux, formulaires, erreurs), E2E (voir plus bas).
 
 | Fichier | Ce qu'il vérifie |
 |---|---|
@@ -101,12 +103,26 @@ Jasmine + Karma, Chrome Headless 154. Karma builder émet un avertissement de d�
 | `portail/audit/historique/audit-historique.component.spec.ts`, `champs/audit-champs.component.spec.ts`, `audit-format.spec.ts` | Historique d'un enregistrement (versions, chargement des plus anciennes, vide), avant / après et éléments ajoutés / retirés, libellés des actions et des champs |
 | `core/auth/guards/auth.guard.spec.ts` | `homeGuard` : premier écran autorisé, `/acces-refuse` sans aucune permission (**pas de boucle**), `/login` sans connexion ; `permissionGuard` : accès avec la permission, `/acces-refuse` sans |
 
-La suite locale a passé **175 tests** dans Chrome Headless 154 le 2026-10-10. Le composant de retour utilisateur partagé utilise Signals et CDK A11y. La suite reste sur Jasmine/Karma (migration Vitest à faire) et plusieurs écrans PrimeNG produisent encore des avertissements Angular `NG01354`/`NG0956`.
+`core/interceptors/error.interceptor.spec.ts` couvre en plus la notification d'erreur d'API et le silence de `auth/refresh` (restauration de session).
 
-La barre de filtres ne propose que les sélecteurs dont l'utilisateur a la permission de lecture
-(`paie-filtres.component.spec.ts`). Le reste de l'interface (écrans, formulaires, tableaux) n'a **pas** de test automatisé : il est vérifié à la main
-dans le navigateur. C'est une limite connue. L'assistant d'export a, lui, été vérifié de bout en bout (backend sur une copie
-de la base, génération réelle du PDF et de l'Excel, nombres du parc matériel relus dans les fichiers).
+La suite a passé **178 tests** le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
+
+### Tests E2E (Playwright + axe)
+
+`frontend/e2e/` : navigateur réel contre une **API simulée** (`e2e/support/api-mock.ts`, routes `METHODE /chemin` → JSON, appels et corps
+enregistrés). Le contrat réel avec le backend reste couvert par les tests d'intégration Spring. Animations réduites
+(`reducedMotion`) pour des mesures de contraste stables. Projets : `chromium` (bureau) et `mobile` (Pixel 7).
+
+| Fichier | Parcours |
+|---|---|
+| `auth.spec.ts` | Connexion accessible, redirection sans session, connexion puis premier écran autorisé, identifiants refusés |
+| `permissions.spec.ts` | Lecteur sans actions d'écriture/suppression, gestionnaire avec, accès refusé sans permission de lecture, menu filtré, liste accessible (axe) |
+| `fonctions.spec.ts` | Création et fiche, libellé obligatoire sans appel API, suppression confirmée, annulation par Échap, recherche et tri, confirmation avant de quitter un formulaire modifié |
+| `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), menu d'import au clavier, fiche d'un bulletin |
+| `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
+| `responsive.spec.ts` | Téléphone : pas de défilement horizontal, menu en tiroir, cibles tactiles ≥ 44 px |
+
+Ajouter un parcours : le programmer avec `mockApi(page, utilisateur, routes)` ; une route d'API non simulée répond `404` et fait échouer le test de façon visible. Le CI les rejoue (`npm run e2e`) après le build.
 
 ---
 

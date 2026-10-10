@@ -414,7 +414,7 @@ mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas d
 métier : la largeur est celle qui couvre le plus gros total du périmètre en 6 tranches, arrondie à 500 DH au-dessus, donc des
 bornes lisibles qui suivent les données.
 
-**Graphiques** : Chart.js via `p-chart` de PrimeNG (dépendance `chart.js`, chargée à la demande avec la page). Chart.js dessine
+**Graphiques** : Chart.js via `stp-chart` du kit Staport (dépendance `chart.js`, chargée à la demande à la création du premier graphique). Chart.js dessine
 dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles viennent des jetons, lus à l'exécution
 (`paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
 couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
@@ -439,8 +439,8 @@ section Tableaux) propose : tri sur chaque colonne, redimensionnement, réordonn
 glisser-déposer, sélecteur de colonnes visibles et pagination avec total de lignes. L'en-tête est sur
 **une seule ligne** (Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO,
 Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé à deux lignes (« Nbre Jrs »,
-« SALAIRE ») a été abandonné car PrimeNG ne permet pas de réordonner ni de masquer des colonnes dans un
-en-tête groupé (décision du 2026-10-03).
+« SALAIRE ») a été abandonné car un en-tête groupé ne se réordonne ni ne se masque par colonne
+(décision du 2026-10-03).
 
 Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Paie », permission `PAIE_READ`). Les boutons
 de création, modification, suppression, import et export sont conditionnés par `PAIE_WRITE`, `PAIE_DELETE` (un bulletin), `PAIE_PURGE` (suppression en groupe),
