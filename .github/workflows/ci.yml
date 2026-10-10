@@ -126,9 +126,14 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # Vitest (runner Angular) dans un vrai Chromium : le navigateur est installé par Playwright.
+      - name: Install Chromium for tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
       - name: Run frontend tests
         working-directory: frontend
-        run: npx ng test --watch=false --browsers=ChromeHeadless
+        run: npm test
 
       - name: Build (verifies the production bundle compiles)
         working-directory: frontend
