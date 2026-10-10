@@ -1,4 +1,4 @@
-/** Colonne de données d'un tableau PrimeNG — `field` identifie la colonne (rendu du corps, choix des
+/** Colonne de données d'un tableau (`ui/table`) — `field` identifie la colonne (rendu du corps, choix des
  * colonnes visibles), `sortField` est le chemin de propriété transmis au tri (par défaut `field`, ex.
  * `chantier.code` pour une relation, voir `conventions/frontend.md`, section Tableaux). */
 export interface TableColumn {
@@ -14,14 +14,11 @@ export interface TableColumn {
 /** Choix du nombre de lignes par page, commun à tous les tableaux paginés. */
 export const TABLE_ROWS_PER_PAGE = [10, 20, 50, 100];
 
-/** Résumé de pagination commun à tous les tableaux (total de lignes compris). */
-export const TABLE_PAGE_REPORT = '{first} - {last} sur {totalRecords} — page {currentPage}/{totalPages}';
-
 /**
  * État des colonnes d'un tableau : ordre (réordonnancement par glisser-déposer) et visibilité
- * (sélecteur de colonnes). `visible` est le tableau à lier à `[columns]` de `p-table` et à parcourir
- * dans l'en-tête et le corps — PrimeNG le réordonne en place, `onReorder` reporte alors le nouvel ordre
- * dans l'ordre complet pour qu'il survive à un masquage/affichage de colonne.
+ * (sélecteur de colonnes). `visible` est le tableau à lier à `[columns]` de `stp-table` (qui le parcourt pour l'en-tête et le
+ * corps) ; `onReorder` (branché sur `columnsReorder`) reporte le nouvel ordre dans l'ordre complet pour qu'il survive à un
+ * masquage/affichage de colonne.
  */
 export class ColumnState {
   readonly all: TableColumn[];

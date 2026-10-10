@@ -1,43 +1,43 @@
-import { CommonModule } from '@angular/common';
-import { Component, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { NotificationService } from '@shared/feedback/feedback.service';
-import { PasswordModule } from 'primeng/password';
-import { Table, TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { TooltipModule } from 'primeng/tooltip';
-import { finalize } from 'rxjs';
+import { debounceTime, finalize } from 'rxjs';
 
+import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
+import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ColumnState } from '../../../../shared/table/table-columns';
+import { contient } from '../../../../shared/text/recherche';
+import { BadgeComponent } from '../../../../shared/ui/badge/badge.component';
+import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../../shared/ui/dialog/dialog.component';
+import { PasswordInputComponent } from '../../../../shared/ui/password-input/password-input.component';
+import { SelectComponent } from '../../../../shared/ui/select/select.component';
+import { TableCellDirective, TableComponent, TableRowActionsDirective } from '../../../../shared/ui/table/table.component';
+import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
 import { AdminUser } from '../../models/admin.model';
 import { UserService } from '../../services/user.service';
-import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../../shared/table/table-columns';
-import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
-import { debounceTime } from 'rxjs';
 
 const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
-    selector: 'app-user-list',
-    imports: [ColumnChooserComponent, InputTextModule, DropdownModule,
-        CommonModule,
-        ReactiveFormsModule,
-        RouterLink,
-        TableModule,
-        ButtonModule,
-        TagModule,
-        DialogModule,
-        PasswordModule,
-        TooltipModule
-    ],
-    templateUrl: './user-list.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './user-list.component.scss'
+  selector: 'app-user-list',
+  imports: [
+    ColumnChooserComponent,
+    ReactiveFormsModule,
+    RouterLink,
+    ButtonComponent,
+    BadgeComponent,
+    SelectComponent,
+    DialogComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective,
+    PasswordInputComponent
+  ],
+  templateUrl: './user-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './user-list.component.scss'
 })
 export class UserListComponent {
   private readonly userService = inject(UserService);
@@ -45,79 +45,81 @@ export class UserListComponent {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 
-  users: AdminUser[] = [];
-  loading = false;
+  protected readonly users = signal<AdminUser[]>([]);
+  protected readonly loading = signal(false);
 
-  showResetDialog = false;
-  resetDialogUser: AdminUser | null = null;
-  resetting = false;
-  readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
+  protected readonly showResetDialog = signal(false);
+  protected readonly resetDialogUser = signal<AdminUser | null>(null);
+  protected readonly resetting = signal(false);
+  protected readonly regleMotDePasse = REGLE_MOT_DE_PASSE;
 
-  readonly resetForm = this.fb.group({
+  protected readonly resetForm = this.fb.nonNullable.group({
     nouveauMotDePasse: ['', [Validators.required, motDePasseConforme]]
   });
 
-  readonly columns = new ColumnState([
+  protected readonly columns = new ColumnState([
     { field: 'username', header: 'Username' },
     { field: 'email', header: 'Email' },
     { field: 'roles', header: 'Rôles', sortField: 'roles.length' },
     { field: 'actif', header: 'Statut' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
-  @ViewChild('dt') private table?: Table;
-
-  readonly actifOptions = [
+  protected readonly actifOptions = [
     { label: 'Actif', value: true },
     { label: 'Inactif', value: false }
   ];
 
   /** Filtres en temps réel : appliqués côté client sur la liste complète déjà chargée (liste non paginée côté serveur). */
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     username: [''],
     email: [''],
     actif: [null as boolean | null]
   });
 
+  private readonly criteres = signal<{ username: string; email: string; actif: boolean | null }>({ username: '', email: '', actif: null });
+
+  protected readonly filtres = computed(() => {
+    const { username, email, actif } = this.criteres();
+    return this.users().filter((user) => contient(user.username, username) && contient(user.email, email) && (actif === null || user.actif === actif));
+  });
+
   constructor() {
-    this.filterForm.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRE_MS)).subscribe((value) => {
-      this.table?.filter(value.username ?? '', 'username', 'contains');
-      this.table?.filter(value.email ?? '', 'email', 'contains');
-      this.table?.filter(value.actif ?? null, 'actif', 'equals');
+    this.filterForm.valueChanges.pipe(debounceTime(DEBOUNCE_FILTRE_MS), takeUntilDestroyed(inject(DestroyRef))).subscribe((value) => {
+      this.criteres.set({ username: value.username ?? '', email: value.email ?? '', actif: value.actif ?? null });
     });
     this.fetch();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset();
   }
 
-  onEdit(user: AdminUser): void {
+  protected onEdit(user: AdminUser): void {
     this.router.navigate(['/admin/users', user.id, 'edit']);
   }
 
-  onOpenReset(user: AdminUser): void {
-    this.resetDialogUser = user;
+  protected onOpenReset(user: AdminUser): void {
+    this.resetDialogUser.set(user);
     this.resetForm.reset();
-    this.showResetDialog = true;
+    this.showResetDialog.set(true);
   }
 
-  onCloseReset(): void {
-    this.showResetDialog = false;
-    this.resetDialogUser = null;
+  protected onCloseReset(): void {
+    this.showResetDialog.set(false);
+    this.resetDialogUser.set(null);
   }
 
-  onConfirmReset(): void {
-    if (this.resetForm.invalid || !this.resetDialogUser) {
+  protected onConfirmReset(): void {
+    const user = this.resetDialogUser();
+    if (this.resetForm.invalid || !user) {
       this.resetForm.markAllAsTouched();
       return;
     }
 
-    this.resetting = true;
+    this.resetting.set(true);
     this.userService
-      .resetPassword(this.resetDialogUser.id, { nouveauMotDePasse: this.resetForm.getRawValue().nouveauMotDePasse! })
-      .pipe(finalize(() => (this.resetting = false)))
+      .resetPassword(user.id, { nouveauMotDePasse: this.resetForm.getRawValue().nouveauMotDePasse })
+      .pipe(finalize(() => this.resetting.set(false)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Mot de passe réinitialisé', life: 4000 });
         this.onCloseReset();
@@ -125,15 +127,10 @@ export class UserListComponent {
   }
 
   private fetch(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.userService
       .findAll()
-      .pipe(finalize(() => (this.loading = false)))
-      .subscribe((users) => (this.users = users));
-  }
-
-  /** Nombre de lignes affichées : la liste complète est en mémoire, le tableau la filtre côté client. */
-  total(table: Table): number {
-    return table.filteredValue?.length ?? this.users.length;
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe((users) => this.users.set(users));
   }
 }

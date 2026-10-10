@@ -1,7 +1,6 @@
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/feedback/feedback.service';
@@ -21,7 +20,6 @@ describe('PaieListComponent — filtres de la barre commune', () => {
     service.search.and.returnValue(of({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } } as Page<Paie>));
 
     TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule],
       providers: [
         provideRouter([{ path: 'paie', component: PaieListComponent }]),
         provideHttpClient(withXhr()),
@@ -74,14 +72,14 @@ describe('PaieListComponent — filtres de la barre commune', () => {
 
   it('relance la recherche, première page, quand les filtres de l\'URL changent', async () => {
     const composant = await harness.navigateByUrl('/paie', PaieListComponent);
-    composant.first = 30;
+    composant['first'].set(30);
 
     await harness.navigateByUrl('/paie?cin=AB1', PaieListComponent);
 
     expect(service.search).toHaveBeenCalledTimes(2);
     expect(service.search.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ cin: 'AB1' }));
     expect(service.search.calls.mostRecent().args[1].page).toBe(0);
-    expect(composant.first).toBe(0);
+    expect(composant['first']()).toBe(0);
   });
 
   it('ne relance rien quand l\'URL change sans changer les filtres', async () => {

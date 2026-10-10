@@ -1,5 +1,6 @@
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 
-import { Component, EventEmitter, Input, Output, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { IconComponent } from '../../ui/icon/icon.component';
 
 const LIBELLES_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const NB_ANNEES_SANS_LIMITE = 10;
@@ -19,33 +20,28 @@ interface Tuile {
  * `null` autorise tous les mois (ex. choisir la période d'un import).
  */
 @Component({
-    selector: 'app-month-picker',
-    imports: [],
-    templateUrl: './month-picker.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './month-picker.component.scss'
+  selector: 'app-month-picker',
+  imports: [IconComponent],
+  templateUrl: './month-picker.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './month-picker.component.scss'
 })
 export class MonthPickerComponent {
-  private readonly valeurSignal = signal<string | null>(null);
-  private readonly disponiblesSignal = signal<string[] | null>(null);
-  readonly annee = signal(new Date().getFullYear());
+  readonly value = input<string | null>(null);
+  readonly disponibles = input<string[] | null>(null);
+  readonly valueChange = output<string>();
 
-  @Input() set value(valeur: string | null) {
-    this.valeurSignal.set(valeur);
-    if (valeur) {
-      this.annee.set(Number(valeur.slice(0, 4)));
-    }
-  }
-
-  @Input() set disponibles(periodes: string[] | null) {
-    this.disponiblesSignal.set(periodes);
-  }
-
-  @Output() readonly valueChange = new EventEmitter<string>();
+  /** Le mois choisi s'affiche tout de suite, avant même que le parent ne répercute la valeur. */
+  private readonly choisi = linkedSignal(() => this.value());
+  /** L'année affichée suit la valeur ; sans valeur, elle garde celle que l'on parcourait. */
+  readonly annee = linkedSignal<string | null, number>({
+    source: () => this.value(),
+    computation: (valeur, precedente) => (valeur ? Number(valeur.slice(0, 4)) : (precedente?.value ?? new Date().getFullYear()))
+  });
 
   /** Première et dernière année navigables. */
   private readonly bornes = computed(() => {
-    const periodes = this.disponiblesSignal();
+    const periodes = this.disponibles();
     if (periodes && periodes.length > 0) {
       const annees = periodes.map((periode) => Number(periode.slice(0, 4)));
       return { min: Math.min(...annees), max: Math.max(...annees) };
@@ -59,7 +55,7 @@ export class MonthPickerComponent {
 
   readonly tuiles = computed<Tuile[]>(() => {
     const annee = this.annee();
-    const disponibles = this.disponiblesSignal();
+    const disponibles = this.disponibles();
     return LIBELLES_COURTS.map((libelle, index) => {
       const periode = `${annee}-${String(index + 1).padStart(2, '0')}`;
       return {
@@ -67,7 +63,7 @@ export class MonthPickerComponent {
         libelle,
         periode,
         disponible: disponibles === null || disponibles.includes(periode),
-        selectionnee: this.valeurSignal() === periode
+        selectionnee: this.choisi() === periode
       };
     });
   });
@@ -81,7 +77,7 @@ export class MonthPickerComponent {
 
   choisir(tuile: Tuile): void {
     if (tuile.disponible) {
-      this.valeurSignal.set(tuile.periode);
+      this.choisi.set(tuile.periode);
       this.valueChange.emit(tuile.periode);
     }
   }

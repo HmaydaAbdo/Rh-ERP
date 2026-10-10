@@ -35,9 +35,7 @@
               "@fontsource/ibm-plex-sans/latin-700.css",
               "@fontsource/ibm-plex-mono/latin-400.css",
               "@fontsource/ibm-plex-mono/latin-500.css",
-              "src/styles/primeng-theme.css",
-              "node_modules/primeng/resources/primeng.min.css",
-              "node_modules/primeicons/primeicons.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
               "src/styles.scss"
             ],
             "scripts": [],

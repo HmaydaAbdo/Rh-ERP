@@ -1,0 +1,67 @@
+<div class="stp-select" cdkOverlayOrigin #origin="cdkOverlayOrigin" [class.stp-select--disabled]="disabled()">
+  <input
+    ngCombobox
+    #combobox="ngCombobox"
+    class="stp-select__input"
+    type="text"
+    autocomplete="off"
+    [id]="inputId()"
+    [class.stp-select__input--static]="!filterable()"
+    [attr.inputmode]="filterable() ? null : 'none'"
+    [disabled]="disabled()"
+    [placeholder]="expanded() && filterable() ? filterPlaceholder() : placeholder()"
+    [attr.aria-label]="ariaLabel()"
+    [value]="text()"
+    [(expanded)]="expanded"
+    (valueChange)="onType($event)"
+    (click)="toggle()"
+    (beforeinput)="onBeforeInput($event)"
+    (blur)="onBlur()"
+  />
+  @if (loading()) {
+    <stp-icon class="stp-select__icon stp-spin" name="loader-circle" />
+  } @else {
+    <stp-icon class="stp-select__icon" name="chevron-down" />
+  }
+  @if (canClear()) {
+    <button type="button" class="stp-select__clear" aria-label="Effacer la sélection" (click)="clear($event)">
+      <stp-icon name="x" />
+    </button>
+  }
+
+  <ng-template ngComboboxPopup [combobox]="combobox" popupType="listbox">
+    <ng-template
+      [cdkConnectedOverlay]="{ origin, usePopover: 'inline' }"
+      [cdkConnectedOverlayOpen]="true"
+      [cdkConnectedOverlayPositions]="positions"
+      [cdkConnectedOverlayMinWidth]="minWidth()"
+      (overlayOutsideClick)="onOutsideClick($event)"
+    >
+      <ul
+        ngComboboxWidget
+        ngListbox
+        #listbox="ngListbox"
+        class="stp-select__panel"
+        focusMode="activedescendant"
+        selectionMode="explicit"
+        [multi]="multiple()"
+        [value]="selected()"
+        [attr.aria-label]="ariaLabel()"
+        [activeDescendant]="listbox.activeDescendant()"
+        (valueChange)="onSelection($event)"
+        (scroll)="onScroll($event)"
+      >
+        @for (option of shown(); track option.value) {
+          <li ngOption class="stp-select__option" [value]="option.value" [label]="option.label">
+            <span class="stp-select__option-label">{{ option.label }}</span>
+            @if (multiple()) {
+              <stp-icon class="stp-select__check" name="check" />
+            }
+          </li>
+        } @empty {
+          <li class="stp-select__empty" role="presentation">{{ loading() ? 'Chargement…' : 'Aucun résultat' }}</li>
+        }
+      </ul>
+    </ng-template>
+  </ng-template>
+</div>

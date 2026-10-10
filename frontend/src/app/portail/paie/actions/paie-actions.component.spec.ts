@@ -1,7 +1,6 @@
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
@@ -43,7 +42,6 @@ describe('PaieActionsComponent', () => {
     service.rechercherChantiers.and.returnValue(of([]));
 
     TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule],
       providers: [
         provideRouter([]),
         provideHttpClient(withXhr()),
@@ -78,21 +76,21 @@ describe('PaieActionsComponent', () => {
     const composant = await creer(['PAIE_IMPORT']);
     const importe = jasmine.createSpy('importe');
     composant.importe.subscribe(importe);
-    composant.importForm.controls.periode.setValue(new Date(2026, 7, 1));
+    composant['importForm'].controls.periode.setValue(new Date(2026, 7, 1));
 
     const fichier = new File(['x'], 'paie.xlsx');
-    composant.onImportFileSelected({ target: { files: [fichier], value: 'paie.xlsx' } } as unknown as Event);
+    composant['onImportFileSelected']({ target: { files: [fichier], value: 'paie.xlsx' } } as unknown as Event);
 
     expect(service.importer).toHaveBeenCalledWith(fichier, '2026-08');
     expect(importe).toHaveBeenCalledTimes(1);
-    expect(composant.showImportResultDialog).toBeTrue();
-    expect(composant.showImportDialog).toBeFalse();
+    expect(composant['showImportResultDialog']()).toBeTrue();
+    expect(composant['showImportDialog']()).toBeFalse();
   });
 
   it('ne lance aucun import sans mois choisi', async () => {
     const composant = await creer(['PAIE_IMPORT']);
 
-    composant.onImportFileSelected({ target: { files: [new File(['x'], 'paie.xlsx')], value: '' } } as unknown as Event);
+    composant['onImportFileSelected']({ target: { files: [new File(['x'], 'paie.xlsx')], value: '' } } as unknown as Event);
 
     expect(service.importer).not.toHaveBeenCalled();
   });

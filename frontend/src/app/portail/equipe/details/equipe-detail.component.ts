@@ -1,31 +1,28 @@
-
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
 
 @Component({
-    selector: 'app-equipe-detail',
-    imports: [RouterLink, ButtonModule],
-    changeDetection: ChangeDetectionStrategy.Eager,
-    templateUrl: './equipe-detail.component.html'
+  selector: 'app-equipe-detail',
+  imports: [RouterLink, ButtonComponent, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './equipe-detail.component.html'
 })
-export class EquipeDetailComponent implements OnInit {
+export class EquipeDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly equipeService = inject(EquipeService);
   private readonly authService = inject(AuthService);
 
-  equipe: Equipe | null = null;
+  protected readonly equipe = signal<Equipe | null>(null);
+  protected readonly canWrite = computed(() => this.authService.hasPermission('EQUIPE_WRITE'));
 
-  canWrite(): boolean {
-    return this.authService.hasPermission('EQUIPE_WRITE');
-  }
-
-  ngOnInit(): void {
+  constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.equipeService.getById(id).subscribe((equipe) => (this.equipe = equipe));
+    this.equipeService.getById(id).subscribe((equipe) => this.equipe.set(equipe));
   }
 }

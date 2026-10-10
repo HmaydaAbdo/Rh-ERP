@@ -1,25 +1,15 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
-import { SidebarModule } from 'primeng/sidebar';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
-import {
-  ACTIONS_AUDIT,
-  ENTITES_AUDITEES,
-  LIBELLES_CATEGORIES,
-  LIBELLES_ORIGINES,
-  LIBELLES_RESULTATS,
-  formaterHorodatage,
-  libelleAction,
-  libelleEntite
-} from '../audit-format';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { ACTIONS_AUDIT, ENTITES_AUDITEES, formaterHorodatage, libelleAction, libelleEntite, LIBELLES_CATEGORIES, LIBELLES_ORIGINES, LIBELLES_RESULTATS } from '../audit-format';
 import { AuditChampsComponent } from '../champs/audit-champs.component';
 import { AuditChangement, AuditCriteres, AuditEntree, AuditLigne, CategorieAudit, ResultatAudit } from '../models/audit.model';
 import { AuditService } from '../services/audit.service';
@@ -33,24 +23,24 @@ const TAILLE_PAGE_DETAIL = 10;
  * son périmètre, puis — chargé à l'ouverture seulement, par pages — ce qu'elle a changé, champ par champ.
  */
 @Component({
-    selector: 'app-journal',
-    imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        ButtonModule,
-        DropdownModule,
-        InputTextModule,
-        SidebarModule,
-        TableModule,
-        ColumnChooserComponent,
-        AuditChampsComponent
-    ],
-    templateUrl: './journal.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './journal.component.scss'
+  selector: 'app-journal',
+  imports: [
+    ColumnChooserComponent,
+    AuditChampsComponent,
+    ButtonComponent,
+    SelectComponent,
+    TableComponent,
+    TableCellDirective,
+    TableRowActionsDirective,
+    ReactiveFormsModule,
+    DialogComponent
+  ],
+  templateUrl: './journal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './journal.component.scss'
 })
-export class JournalComponent implements OnInit {
-  readonly columns = new ColumnState([
+export class JournalComponent {
+  protected readonly columns = new ColumnState([
     { field: 'horodatage', header: 'Date' },
     { field: 'categorie', header: 'Catégorie' },
     { field: 'action', header: 'Action' },
@@ -59,31 +49,29 @@ export class JournalComponent implements OnInit {
     { field: 'origine', header: 'Origine' },
     { field: 'cible', header: 'Cible', sortField: 'entiteType' },
     { field: 'nombreElements', header: 'Éléments', align: 'text-right' },
-    { field: 'motif', header: 'Motif', cellClass: 'journal__motif' }
+    { field: 'motif', header: 'Motif', cellClass: 'text-truncate' }
   ]);
-  readonly rowsPerPage = TABLE_ROWS_PER_PAGE;
-  readonly pageReport = TABLE_PAGE_REPORT;
 
-  readonly categorieOptions = (Object.keys(LIBELLES_CATEGORIES) as CategorieAudit[]).map((value) => ({ value, label: LIBELLES_CATEGORIES[value] }));
-  readonly resultatOptions = (Object.keys(LIBELLES_RESULTATS) as ResultatAudit[]).map((value) => ({ value, label: LIBELLES_RESULTATS[value] }));
-  readonly actionOptions = ACTIONS_AUDIT.map((a) => ({ value: a.code, label: a.libelle }));
-  readonly entiteOptions = ENTITES_AUDITEES.map((e) => ({ value: e.code, label: e.libelle }));
+  protected readonly categorieOptions = (Object.keys(LIBELLES_CATEGORIES) as CategorieAudit[]).map((value) => ({ value, label: LIBELLES_CATEGORIES[value] }));
+  protected readonly resultatOptions = (Object.keys(LIBELLES_RESULTATS) as ResultatAudit[]).map((value) => ({ value, label: LIBELLES_RESULTATS[value] }));
+  protected readonly actionOptions = ACTIONS_AUDIT.map((a) => ({ value: a.code, label: a.libelle }));
+  protected readonly entiteOptions = ENTITES_AUDITEES.map((e) => ({ value: e.code, label: e.libelle }));
 
-  readonly formaterHorodatage = formaterHorodatage;
-  readonly libelleAction = libelleAction;
-  readonly libelleEntite = libelleEntite;
-  readonly libelleCategorie = (categorie: CategorieAudit): string => LIBELLES_CATEGORIES[categorie];
-  readonly libelleResultat = (resultat: ResultatAudit): string => LIBELLES_RESULTATS[resultat];
-  readonly libelleOrigine = (origine: AuditLigne['origine']): string => LIBELLES_ORIGINES[origine];
+  protected readonly formaterHorodatage = formaterHorodatage;
+  protected readonly libelleAction = libelleAction;
+  protected readonly libelleEntite = libelleEntite;
+  protected readonly libelleCategorie = (categorie: CategorieAudit): string => LIBELLES_CATEGORIES[categorie];
+  protected readonly libelleResultat = (resultat: ResultatAudit): string => LIBELLES_RESULTATS[resultat];
+  protected readonly libelleOrigine = (origine: AuditLigne['origine']): string => LIBELLES_ORIGINES[origine];
 
   private readonly auditService = inject(AuditService);
   private readonly fb = inject(FormBuilder);
 
-  lignes: AuditLigne[] = [];
-  totalRecords = 0;
-  loading = false;
+  protected readonly lignes = signal<AuditLigne[]>([]);
+  protected readonly totalRecords = signal(0);
+  protected readonly loading = signal(false);
 
-  readonly filterForm = this.fb.group({
+  protected readonly filterForm = this.fb.group({
     dateDebut: [''],
     dateFin: [''],
     utilisateur: [''],
@@ -96,25 +84,26 @@ export class JournalComponent implements OnInit {
 
   /** « Plus de filtres » : résultat, entité et identifiant de requête, les moins utilisés. Le panneau reste ouvert tant qu'un
    * de ces filtres est actif (ex. après « Voir toutes les entrées de cette requête »). */
-  plusOuverts = false;
+  protected readonly plusOuverts = signal(false);
 
   /** Panneau latéral : l'entrée ouverte et ce qu'elle a changé. */
-  panneauOuvert = false;
-  entree: AuditEntree | null = null;
-  changements: AuditChangement[] = [];
-  totalChangements = 0;
-  pageChangements = 0;
-  chargementDetail = false;
+  protected readonly panneauOuvert = signal(false);
+  protected readonly entree = signal<AuditEntree | null>(null);
+  protected readonly changements = signal<AuditChangement[]>([]);
+  protected readonly totalChangements = signal(0);
+  protected readonly pageChangements = signal(0);
+  protected readonly chargementDetail = signal(false);
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'horodatage,desc';
 
-  ngOnInit(): void {
+  constructor() {
     this.filterForm.valueChanges
       .pipe(
         debounceTime(DEBOUNCE_RECHERCHE_MS),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        takeUntilDestroyed(inject(DestroyRef))
       )
       .subscribe(() => this.onSearch());
   }
@@ -126,73 +115,69 @@ export class JournalComponent implements OnInit {
   }
 
   avancesVisibles(): boolean {
-    return this.plusOuverts || this.nombreAvances() > 0;
+    return this.plusOuverts() || this.nombreAvances() > 0;
   }
 
   basculerPlus(): void {
-    this.plusOuverts = !this.avancesVisibles();
+    this.plusOuverts.set(!this.avancesVisibles());
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const size = event.rows ?? this.lastSize;
-    const page = size > 0 ? Math.floor((event.first ?? 0) / size) : 0;
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    const sort = sortField ? `${sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
-
-    this.lastPage = page;
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
-    this.lastSort = sort;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
 
     this.fetchPage();
   }
 
-  onSearch(): void {
+  protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
   }
 
-  onResetFilters(): void {
+  protected onResetFilters(): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.onSearch();
   }
 
   /** Ouvre une entrée dans le panneau : son contexte d'abord, puis la première page de ses modifications. */
-  onOuvrir(ligne: AuditLigne): void {
-    this.panneauOuvert = true;
-    this.entree = null;
-    this.changements = [];
-    this.totalChangements = 0;
-    this.pageChangements = 0;
+  protected onOuvrir(ligne: AuditLigne): void {
+    this.panneauOuvert.set(true);
+    this.entree.set(null);
+    this.changements.set([]);
+    this.totalChangements.set(0);
+    this.pageChangements.set(0);
     this.auditService.getById(ligne.id).subscribe((entree) => {
-      this.entree = entree;
+      this.entree.set(entree);
       this.chargerChangements();
     });
   }
 
   changementsSuivants(): void {
-    this.pageChangements += 1;
+    this.pageChangements.update((page) => page + 1);
     this.chargerChangements();
   }
 
   changementsPrecedents(): void {
-    this.pageChangements -= 1;
+    this.pageChangements.update((page) => page - 1);
     this.chargerChangements();
   }
 
   nombrePagesChangements(): number {
-    return Math.max(1, Math.ceil(this.totalChangements / TAILLE_PAGE_DETAIL));
+    return Math.max(1, Math.ceil(this.totalChangements() / TAILLE_PAGE_DETAIL));
   }
 
   /** Remplace les filtres par « toutes les entrées de cette requête » : relie les événements d'une même action. */
-  onVoirLaRequete(requestId: string): void {
+  protected onVoirLaRequete(requestId: string): void {
     this.filterForm.reset(undefined, { emitEvent: false });
     this.filterForm.patchValue({ requestId }, { emitEvent: false });
-    this.panneauOuvert = false;
+    this.panneauOuvert.set(false);
     this.onSearch();
   }
 
   perimetreEntrees(): [string, string][] {
-    const perimetre = this.entree?.perimetre;
+    const perimetre = this.entree()?.perimetre;
     if (!perimetre) {
       return [];
     }
@@ -204,27 +189,28 @@ export class JournalComponent implements OnInit {
   }
 
   private chargerChangements(): void {
-    if (!this.entree) {
+    const entree = this.entree();
+    if (!entree) {
       return;
     }
-    this.chargementDetail = true;
+    this.chargementDetail.set(true);
     this.auditService
-      .details(this.entree.id, { page: this.pageChangements, size: TAILLE_PAGE_DETAIL })
-      .pipe(finalize(() => (this.chargementDetail = false)))
+      .details(entree.id, { page: this.pageChangements(), size: TAILLE_PAGE_DETAIL })
+      .pipe(finalize(() => this.chargementDetail.set(false)))
       .subscribe((resultat) => {
-        this.changements = resultat.content;
-        this.totalChangements = resultat.page.totalElements;
+        this.changements.set(resultat.content);
+        this.totalChangements.set(resultat.page.totalElements);
       });
   }
 
   private fetchPage(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.auditService
       .search(this.criteres(), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe((resultat) => {
-        this.lignes = resultat.content;
-        this.totalRecords = resultat.page.totalElements;
+        this.lignes.set(resultat.content);
+        this.totalRecords.set(resultat.page.totalElements);
       });
   }
 

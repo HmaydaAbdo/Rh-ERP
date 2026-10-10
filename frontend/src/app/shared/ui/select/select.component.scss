@@ -1,0 +1,130 @@
+:host {
+  display: block;
+}
+
+.stp-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.stp-select__input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 calc(var(--space-md) * 2 + 1rem) 0 var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--control-font-size);
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:not(.stp-select__input--static) {
+    cursor: text;
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  &:focus-visible {
+    border-color: var(--color-primary);
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+:host(.ng-invalid.ng-touched) .stp-select__input {
+  border-color: var(--color-danger);
+}
+
+.stp-select__icon {
+  position: absolute;
+  inset-inline-end: var(--space-md);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.stp-select__clear {
+  position: absolute;
+  inset-inline-end: calc(var(--space-md) + 1.5rem);
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--neutral-100);
+    color: var(--color-text);
+  }
+}
+
+// ---- Panneau (rendu dans l'overlay du CDK ; le gabarit reste celui du composant, l'encapsulation s'applique) ----
+.stp-select__panel {
+  min-width: var(--select-panel-min-width);
+  max-width: min(var(--select-panel-max-width), 95vw);
+  max-height: 18rem;
+  margin: 0;
+  padding: var(--space-xs);
+  list-style: none;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.stp-select__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 2.25rem;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--control-font-size);
+  cursor: pointer;
+
+  &[data-active='true'],
+  &:hover {
+    background: var(--color-primary-soft);
+  }
+
+  &[aria-selected='true'] {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .stp-select__check {
+    visibility: hidden;
+  }
+
+  &[aria-selected='true'] .stp-select__check {
+    visibility: visible;
+  }
+}
+
+.stp-select__option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stp-select__empty {
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

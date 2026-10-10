@@ -1,13 +1,13 @@
 @use 'breakpoints' as bp;
 
-// Mise en page unique des écrans de liste, définie une seule fois comme le style des tableaux (`_tables.scss`) : aucun écran ne
+// Mise en page unique des écrans de liste, définie une seule fois comme le style des tableaux (`ui/table/table.component.scss`) : aucun écran ne
 // redéfinit ces règles (voir conventions/design-system.md, section « Mise en page des écrans »).
 //
 //   <div class="… app-page">
 //     <div class="app-page__header"><h1>Titre</h1></div>
 //     <form class="app-toolbar">           filtres, une ligne de contrôles de même hauteur
 //     <div class="app-table-bar">          total à gauche, outils à droite (du moins au plus important)
-//     <p-table …>
+//     <stp-table …>
 
 .app-page {
   padding: var(--space-lg);
@@ -43,10 +43,8 @@
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
 
-  > input.p-inputtext,
-  > .p-inputwrapper,
-  > p-dropdown,
-  > p-multiselect,
+  > input.stp-input,
+  > stp-select,
   > app-lazy-select,
   > label {
     flex: 1 1 10rem;
@@ -54,24 +52,11 @@
     min-width: 0;
   }
 
-  .p-inputtext,
-  .p-dropdown,
-  .p-multiselect,
-  .p-button {
+  .stp-input,
+  .stp-select__input,
+  .stp-button {
     height: var(--control-height);
     font-size: var(--control-font-size);
-  }
-
-  .p-dropdown,
-  .p-multiselect {
-    width: 100%;
-  }
-
-  .p-dropdown .p-dropdown-label,
-  .p-multiselect .p-multiselect-label {
-    display: flex;
-    align-items: center;
-    padding-block: 0;
   }
 
   // Un champ précédé d'un petit libellé sur la même ligne (« Du », « Au »)
@@ -90,11 +75,6 @@
 
   .app-toolbar__clear {
     margin-left: auto;
-  }
-
-  // « Plus de filtres » : l'icône est séparée du texte (le contenu projeté n'a pas la marge d'un libellé PrimeNG)
-  .app-toolbar__plus .p-button-icon {
-    margin-right: var(--space-sm);
   }
 
   // Compteur de filtres actifs d'un bouton « Plus de filtres » ou « Filtres »
@@ -129,10 +109,8 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    > input.p-inputtext,
-    > .p-inputwrapper,
-    > p-dropdown,
-    > p-multiselect,
+    > input.stp-input,
+    > stp-select,
     > app-lazy-select,
     > label {
       max-width: none;
@@ -184,9 +162,7 @@
   justify-content: flex-end;
   gap: var(--space-sm);
 
-  .p-button,
-  .p-splitbutton .p-button {
-    height: var(--control-height);
+  .stp-button {
     font-size: var(--text-sm);
   }
 
@@ -200,8 +176,7 @@
       display: flex;
       min-width: 0;
 
-      p-multiselect,
-      .p-multiselect {
+      stp-select {
         width: 100%;
       }
     }
@@ -210,12 +185,12 @@
       grid-column: 1 / -1;
     }
 
-    .p-splitbutton {
+    .stp-split-button {
       display: flex;
       width: 100%;
     }
 
-    .p-splitbutton .p-splitbutton-defaultbutton {
+    .stp-split-button .stp-button--join-next {
       flex: 1;
     }
   }

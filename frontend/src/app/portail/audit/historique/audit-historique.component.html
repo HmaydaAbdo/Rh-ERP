@@ -17,5 +17,5 @@
 </ol>
 
 @if (resteAcharger()) {
-  <button pButton type="button" class="p-button-outlined" label="Versions plus anciennes" [loading]="chargement()" (click)="plus()"></button>
+  <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="plus()">Versions plus anciennes</button>
 }

@@ -2,8 +2,8 @@
 <div class="paie-list">
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading) {
-        {{ totalRecords }} bulletin{{ totalRecords > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} bulletin{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
 
@@ -12,110 +12,73 @@
     </div>
   </div>
 
-  <p-table
-    [value]="paies"
+  <stp-table
+    label="Liste des bulletins de paie"
+    emptyMessage="Aucun bulletin ne correspond à ces critères."
     [lazy]="true"
-    (onLazyLoad)="onLazyLoad($event)"
-    [loading]="loading"
-    [paginator]="true"
-    [first]="first"
-    [rows]="10"
-    [totalRecords]="totalRecords"
-    [rowsPerPageOptions]="rowsPerPage"
-    [showCurrentPageReport]="true"
-    [currentPageReportTemplate]="pageReport"
+    [value]="paies()"
+    [totalRecords]="totalRecords()"
+    [loading]="loading()"
     [columns]="columns.visible"
-    [resizableColumns]="true"
-    columnResizeMode="expand"
-    [reorderableColumns]="true"
-    (onColReorder)="columns.onReorder($event.columns)"
-    dataKey="id"
-    styleClass="app-table p-datatable-gridlines p-datatable-sm"
+    [(first)]="first"
+    (lazyLoad)="onLazyLoad($event)"
+    (columnsReorder)="columns.onReorder($event)"
   >
-    <ng-template pTemplate="header">
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <th [pSortableColumn]="col.sortField ?? col.field" pResizableColumn pReorderableColumn [ngClass]="col.align">
-            {{ col.header }} <p-sortIcon [field]="col.sortField ?? col.field"></p-sortIcon>
-          </th>
+    <ng-template stpCell let-paie let-col="col">
+      @switch (col.field) {
+        @case ('nomPrenom') {
+          {{ paie.employee?.nomPrenom || '-' }}
         }
-        <th><span class="app-lecteur">Actions</span></th>
-      </tr>
+        @case ('fonction') {
+          {{ paie.fonction?.libelle || '-' }}
+        }
+        @case ('cin') {
+          {{ paie.employee?.cin || '-' }}
+        }
+        @case ('nombreJoursTravailles') {
+          {{ paie.nombreJoursTravailles ?? '-' }}
+        }
+        @case ('joursRecuperationOuvrable') {
+          {{ paie.joursRecuperationOuvrable ?? '-' }}
+        }
+        @case ('joursRecuperationDimanche') {
+          {{ paie.joursRecuperationDimanche ?? '-' }}
+        }
+        @case ('salaireMensuel') {
+          {{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
+        }
+        @case ('primeRoulageOrdinaire') {
+          {{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}
+        }
+        @case ('primeRoulageDimanche') {
+          {{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}
+        }
+        @case ('salaireTotal') {
+          {{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}
+        }
+        @case ('observation') {
+          {{ paie.observation || '-' }}
+        }
+        @case ('chantier') {
+          {{ paie.chantier?.code || '-' }}
+        }
+        @case ('equipe') {
+          {{ paie.equipe?.code || '-' }}
+        }
+        @case ('periode') {
+          {{ paie.periode }}
+        }
+      }
     </ng-template>
 
-    <ng-template pTemplate="body" let-paie>
-      <tr>
-        @for (col of columns.visible; track col.field) {
-          <td [ngClass]="[col.align ?? '', col.cellClass ?? '']">
-            @switch (col.field) {
-              @case ('nomPrenom') {
-                {{ paie.employee?.nomPrenom || '-' }}
-              }
-              @case ('fonction') {
-                {{ paie.fonction?.libelle || '-' }}
-              }
-              @case ('cin') {
-                {{ paie.employee?.cin || '-' }}
-              }
-              @case ('nombreJoursTravailles') {
-                {{ paie.nombreJoursTravailles ?? '-' }}
-              }
-              @case ('joursRecuperationOuvrable') {
-                {{ paie.joursRecuperationOuvrable ?? '-' }}
-              }
-              @case ('joursRecuperationDimanche') {
-                {{ paie.joursRecuperationDimanche ?? '-' }}
-              }
-              @case ('salaireMensuel') {
-                {{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
-              }
-              @case ('primeRoulageOrdinaire') {
-                {{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}
-              }
-              @case ('primeRoulageDimanche') {
-                {{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}
-              }
-              @case ('salaireTotal') {
-                {{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}
-              }
-              @case ('observation') {
-                {{ paie.observation || '-' }}
-              }
-              @case ('chantier') {
-                {{ paie.chantier?.code || '-' }}
-              }
-              @case ('equipe') {
-                {{ paie.equipe?.code || '-' }}
-              }
-              @case ('periode') {
-                {{ paie.periode }}
-              }
-            }
-          </td>
-        }
-        <td class="paie-list__actions text-center">
-          <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm" [attr.aria-label]="'Voir le bulletin de ' + paie.employee.nomPrenom" (click)="onView(paie)"></button>
-          @if (canWrite()) {
-            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" [attr.aria-label]="'Modifier le bulletin de ' + paie.employee.nomPrenom" (click)="onEdit(paie)"></button>
-          }
-          @if (canDelete()) {
-            <button
-              pButton
-              type="button"
-              icon="pi pi-trash"
-              class="p-button-text p-button-danger p-button-sm"
-              [loading]="deletingId === paie.id"
-              [attr.aria-label]="'Supprimer le bulletin de ' + paie.employee.nomPrenom" (click)="onDelete(paie)"
-            ></button>
-          }
-        </td>
-      </tr>
+    <ng-template stpRowActions let-paie>
+      <button stp-button variant="text" icon="eye" iconOnly type="button" [attr.aria-label]="'Voir le bulletin de ' + paie.employee.nomPrenom" (click)="onView(paie)"></button>
+      @if (canWrite()) {
+        <button stp-button variant="text" icon="pencil" iconOnly type="button" [attr.aria-label]="'Modifier le bulletin de ' + paie.employee.nomPrenom" (click)="onEdit(paie)"></button>
+      }
+      @if (canDelete()) {
+        <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === paie.id" [attr.aria-label]="'Supprimer le bulletin de ' + paie.employee.nomPrenom" (click)="onDelete(paie)"></button>
+      }
     </ng-template>
-
-    <ng-template pTemplate="emptymessage">
-      <tr>
-        <td colspan="14" class="text-center">Aucun bulletin ne correspond à ces critères.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+  </stp-table>
 </div>

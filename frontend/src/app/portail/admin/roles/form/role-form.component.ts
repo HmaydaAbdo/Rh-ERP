@@ -1,16 +1,14 @@
-
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize, forkJoin } from 'rxjs';
 
+import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
+import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PermissionSummary } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
-import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 
 interface PermissionGroup {
   domaine: string;
@@ -18,86 +16,74 @@ interface PermissionGroup {
 }
 
 @Component({
-    selector: 'app-role-form',
-    imports: [ReactiveFormsModule, FormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule],
-    templateUrl: './role-form.component.html',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styleUrl: './role-form.component.scss'
+  selector: 'app-role-form',
+  imports: [ReactiveFormsModule, RouterLink, IconComponent, ButtonComponent],
+  templateUrl: './role-form.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './role-form.component.scss'
 })
-export class RoleFormComponent implements OnInit {
+export class RoleFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly roleService = inject(RoleService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
 
-  roleId: number | null = null;
-  saving = false;
-  loading = true;
-  permissionGroups: PermissionGroup[] = [];
-  selectedPermissionIds = new Set<number>();
+  private readonly roleId = signal<number | null>(null);
+  protected readonly isEditMode = computed(() => this.roleId() !== null);
+  protected readonly saving = signal(false);
+  protected readonly loading = signal(true);
+  protected readonly permissionGroups = signal<PermissionGroup[]>([]);
+  private readonly selectedPermissionIds = signal(new Set<number>());
   /** Rôle d'administration : seule sa description se modifie, le serveur refuse le reste. */
-  protege = false;
+  protected readonly protege = signal(false);
 
-  readonly form = this.fb.group({
+  protected readonly form = this.fb.group({
     nom: ['', [Validators.required, Validators.maxLength(50)]],
     description: ['']
   });
 
-  get isEditMode(): boolean {
-    return this.roleId !== null;
-  }
-
-  ngOnInit(): void {
+  constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
-    this.roleId = idParam ? Number(idParam) : null;
+    const id = idParam ? Number(idParam) : null;
+    this.roleId.set(id);
 
     const permissions$ = this.roleService.findAllPermissions();
 
-    if (this.isEditMode) {
-      forkJoin([permissions$, this.roleService.findById(this.roleId!)])
-        .pipe(finalize(() => (this.loading = false)))
+    if (id !== null) {
+      forkJoin([permissions$, this.roleService.findById(id)])
+        .pipe(finalize(() => this.loading.set(false)))
         .subscribe(([permissions, role]) => {
           this.buildGroups(permissions);
-          this.selectedPermissionIds = new Set(role.permissions.map((p) => p.id));
+          this.selectedPermissionIds.set(new Set(role.permissions.map((p) => p.id)));
           this.form.patchValue({ nom: role.nom, description: role.description ?? '' });
-          this.protege = role.protege;
-          if (this.protege) {
+          this.protege.set(role.protege);
+          if (role.protege) {
             this.form.controls.nom.disable();
           }
         });
     } else {
-      permissions$.pipe(finalize(() => (this.loading = false))).subscribe((permissions) => this.buildGroups(permissions));
+      permissions$.pipe(finalize(() => this.loading.set(false))).subscribe((permissions) => this.buildGroups(permissions));
     }
   }
 
-  isChecked(permission: PermissionSummary): boolean {
-    return this.selectedPermissionIds.has(permission.id);
+  protected isChecked(permission: PermissionSummary): boolean {
+    return this.selectedPermissionIds().has(permission.id);
   }
 
-  toggle(permission: PermissionSummary, checked: boolean): void {
-    this.form.markAsDirty();
-    if (this.protege) {
-      return;
-    }
-    if (checked) {
-      this.selectedPermissionIds.add(permission.id);
-    } else {
-      this.selectedPermissionIds.delete(permission.id);
-    }
+  protected onToggle(permission: PermissionSummary, event: Event): void {
+    this.toggle([permission], (event.target as HTMLInputElement).checked);
   }
 
-  toggleGroup(group: PermissionGroup, checked: boolean): void {
-    for (const permission of group.permissions) {
-      this.toggle(permission, checked);
-    }
+  protected onToggleGroup(group: PermissionGroup, event: Event): void {
+    this.toggle(group.permissions, (event.target as HTMLInputElement).checked);
   }
 
-  isGroupFullySelected(group: PermissionGroup): boolean {
-    return group.permissions.every((p) => this.selectedPermissionIds.has(p.id));
+  protected isGroupFullySelected(group: PermissionGroup): boolean {
+    return group.permissions.every((p) => this.selectedPermissionIds().has(p.id));
   }
 
-  onSubmit(): void {
+  protected onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       focaliserPremiereErreur();
@@ -108,23 +94,40 @@ export class RoleFormComponent implements OnInit {
     const dto = {
       nom: raw.nom!,
       description: raw.description || null,
-      permissionIds: Array.from(this.selectedPermissionIds)
+      permissionIds: Array.from(this.selectedPermissionIds())
     };
 
-    this.saving = true;
-    const request$ = this.isEditMode ? this.roleService.update(this.roleId!, dto) : this.roleService.create(dto);
+    const id = this.roleId();
+    this.saving.set(true);
+    const request$ = id !== null ? this.roleService.update(id, dto) : this.roleService.create(dto);
 
-    request$
-      .pipe(finalize(() => (this.saving = false)))
-      .subscribe(() => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.isEditMode ? 'Rôle modifié' : 'Rôle créé',
-          life: 4000
-        });
-        this.form.markAsPristine();
-        this.router.navigate(['/admin/roles']);
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe(() => {
+      this.messageService.add({
+        severity: 'success',
+        summary: id !== null ? 'Rôle modifié' : 'Rôle créé',
+        life: 4000
       });
+      this.form.markAsPristine();
+      this.router.navigate(['/admin/roles']);
+    });
+  }
+
+  private toggle(permissions: PermissionSummary[], checked: boolean): void {
+    this.form.markAsDirty();
+    if (this.protege()) {
+      return;
+    }
+    this.selectedPermissionIds.update((current) => {
+      const next = new Set(current);
+      for (const permission of permissions) {
+        if (checked) {
+          next.add(permission.id);
+        } else {
+          next.delete(permission.id);
+        }
+      }
+      return next;
+    });
   }
 
   private buildGroups(permissions: PermissionSummary[]): void {
@@ -136,8 +139,10 @@ export class RoleFormComponent implements OnInit {
       }
       parDomaine.get(domaine)!.push(permission);
     }
-    this.permissionGroups = Array.from(parDomaine.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([domaine, perms]) => ({ domaine, permissions: perms }));
+    this.permissionGroups.set(
+      Array.from(parDomaine.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([domaine, perms]) => ({ domaine, permissions: perms }))
+    );
   }
 }

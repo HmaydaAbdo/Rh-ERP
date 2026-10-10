@@ -1,22 +1,16 @@
-
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { NotificationService } from '@shared/feedback/feedback.service';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal, untracked } from '@angular/core';
 import { finalize } from 'rxjs';
 
 import { MonthPickerComponent } from '../../../shared/components/month-picker/month-picker.component';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
-import {
-  PaieChantierPeriode,
-  PaieExportRequest,
-  PaieMaterielTableau,
-  PaiePeriodeResume,
-  PaieRapportPdfRequest
-} from '../models/paie.model';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
 import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
+import { NotificationService } from '@shared/feedback/feedback.service';
 
 type Format = 'PDF' | 'EXCEL';
 type EtapeId = 'periode' | 'format' | 'equipes' | 'materiel' | 'recap';
@@ -47,18 +41,23 @@ const CLE_MATERIEL_MEMORISE = 'paie.export.materiel';
  * PDF/Excel ») ; l'exclusion de la feuille du chantier ne concerne que l'Excel.
  */
 @Component({
-    selector: 'app-paie-export-wizard',
-    imports: [DialogModule, ButtonModule, MonthPickerComponent, CountUpDirective],
+  selector: 'app-paie-export-wizard',
+    imports: [
+    MonthPickerComponent,
+    CountUpDirective,
+    IconComponent,
+    ButtonComponent,
+    DialogComponent
+  ],
     templateUrl: './paie-export-wizard.component.html',
     changeDetection: ChangeDetectionStrategy.Eager,
     styleUrl: './paie-export-wizard.component.scss'
 })
-export class PaieExportWizardComponent implements OnChanges {
+export class PaieExportWizardComponent {
   private readonly paieService = inject(PaieService);
   private readonly messageService = inject(NotificationService);
 
-  @Input() visible = false;
-  @Output() readonly visibleChange = new EventEmitter<boolean>();
+  readonly visible = model(false);
 
   readonly etape = signal<EtapeId>('periode');
   readonly sens = signal<'avant' | 'arriere'>('avant');
@@ -120,18 +119,20 @@ export class PaieExportWizardComponent implements OnChanges {
   readonly libelleEtapes = LIBELLES_ETAPES;
   readonly nombreMax = NOMBRE_MAX_MATERIEL;
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['visible'] && this.visible) {
-      this.ouvrir();
-    }
+  constructor() {
+    // À chaque ouverture (visible passe à vrai), l'assistant repart d'un état neuf.
+    effect(() => {
+      if (this.visible()) {
+        untracked(() => this.ouvrir());
+      }
+    });
   }
 
   setVisible(valeur: boolean): void {
     if (!valeur && this.etat() === 'generation') {
       return;
     }
-    this.visible = valeur;
-    this.visibleChange.emit(valeur);
+    this.visible.set(valeur);
   }
 
   sousTitre(): string {

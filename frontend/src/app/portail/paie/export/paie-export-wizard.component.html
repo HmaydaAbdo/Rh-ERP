@@ -1,13 +1,4 @@
-<p-dialog
-  header="Exporter la paie"
-  [visible]="visible"
-  (visibleChange)="setVisible($event)"
-  [modal]="true"
-  [draggable]="false"
-  [closable]="etat() !== 'generation'"
-  [style]="{ width: '680px' }"
-  styleClass="export-wizard-dialog"
->
+<stp-dialog header="Exporter la paie" width="680px" [open]="visible()" [closable]="etat() !== 'generation'" (openChange)="setVisible($event)">
   <div class="export-wizard">
     <p class="export-wizard__sous-titre">{{ sousTitre() }}</p>
 
@@ -23,7 +14,7 @@
         >
           <span class="export-wizard__pastille">
             @if (i < indexEtape() || etat() === 'termine') {
-              <i class="pi pi-check" aria-hidden="true"></i>
+              <stp-icon name="check" />
             } @else {
               {{ i + 1 }}
             }
@@ -43,7 +34,7 @@
             <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
               @if (periodes().length === 0 && !periodesEnCours()) {
                 <div class="export-wizard__carte export-wizard__carte--attention">
-                  <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  <stp-icon name="triangle-alert" />
                   <div>
                     <strong>Aucune paie enregistrée</strong>
                     <p>Importez ou saisissez des bulletins avant d'exporter.</p>
@@ -54,7 +45,7 @@
                 <p class="export-wizard__legende">Seuls les mois qui contiennent des bulletins sont proposés.</p>
                 @if (resume(); as r) {
                   <div class="export-wizard__carte export-wizard__carte--ok" role="status">
-                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <stp-icon name="circle-check" />
                     <div>
                       <strong class="export-wizard__majuscule">{{ libellePeriode(periode()) }} contient de la paie</strong>
                       <dl class="export-wizard__chiffres">
@@ -76,7 +67,7 @@
               <div class="export-wizard__formats">
                 <button type="button" class="export-wizard__format" [class.export-wizard__format--choisi]="format() === 'PDF'" (click)="choisirFormat('PDF')">
                   <span class="export-wizard__apercu export-wizard__apercu--pdf"><span></span><span></span><span></span><span></span></span>
-                  <strong><i class="pi pi-file-pdf" aria-hidden="true"></i> Rapport PDF</strong>
+                  <strong><stp-icon name="file-text" /> Rapport PDF</strong>
                   <em>Synthèse pour la direction</em>
                   <ul>
                     <li>Indicateurs et graphiques</li>
@@ -90,7 +81,7 @@
                       <span></span>
                     }
                   </span>
-                  <strong><i class="pi pi-file-excel" aria-hidden="true"></i> Classeur Excel</strong>
+                  <strong><stp-icon name="file-spreadsheet" /> Classeur Excel</strong>
                   <em>Détail ligne par ligne</em>
                   <ul>
                     <li>Feuille globale et par chantier</li>
@@ -144,7 +135,7 @@
                           <span class="export-wizard__badge">{{ equipesChoisies(c.code).length }} / {{ c.equipes.length }} équipes</span>
                         }
                         @if (c.equipes.length > 0) {
-                          <i class="pi pi-chevron-down" [class.export-wizard__chevron--ouvert]="estOuvert(c.code)" aria-hidden="true"></i>
+                          <stp-icon name="chevron-down" [class.export-wizard__chevron--ouvert]="estOuvert(c.code)" />
                         }
                       </span>
                     </button>
@@ -174,7 +165,7 @@
                                     title="Retirer cette équipe de la feuille du chantier"
                                     (click)="basculerRetrait(c.code, e.code)"
                                   >
-                                    <i class="pi pi-eye-slash" aria-hidden="true"></i>
+                                    <stp-icon name="eye-off" />
                                   </button>
                                 }
                               </span>
@@ -201,7 +192,7 @@
           @case ('materiel') {
             <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
               <div class="export-wizard__contexte">
-                <i class="pi pi-truck" aria-hidden="true"></i>
+                <stp-icon name="truck" />
                 <span>
                   <strong>Chantier {{ tableauxConcernes()[0].chantierCode }}</strong> — les nombres s'impriment dans la colonne « Nbre » du
                   tableau de chaque équipe.
@@ -231,7 +222,7 @@
                       <div class="export-wizard__ligne" [class.export-wizard__ligne--remplie]="nombre(libelle) !== null">
                         <label [for]="'mat-' + libelle">{{ libelle }}</label>
                         <div class="export-wizard__compteur">
-                          <button type="button" [attr.aria-label]="'Diminuer ' + libelle" (click)="ajuster(libelle, -1)"><i class="pi pi-minus" aria-hidden="true"></i></button>
+                          <button type="button" [attr.aria-label]="'Diminuer ' + libelle" (click)="ajuster(libelle, -1)"><stp-icon name="minus" /></button>
                           <input
                             [id]="'mat-' + libelle"
                             class="export-wizard__materiel-champ"
@@ -245,7 +236,7 @@
                             (input)="saisirNombre(libelle, $any($event.target).value)"
                             (keydown.enter)="entreeSuivante($event)"
                           />
-                          <button type="button" [attr.aria-label]="'Augmenter ' + libelle" (click)="ajuster(libelle, 1)"><i class="pi pi-plus" aria-hidden="true"></i></button>
+                          <button type="button" [attr.aria-label]="'Augmenter ' + libelle" (click)="ajuster(libelle, 1)"><stp-icon name="plus" /></button>
                         </div>
                       </div>
                     }
@@ -265,14 +256,14 @@
             <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
               <p class="export-wizard__consigne">Vérifiez votre choix avant de générer.</p>
               <div class="export-wizard__recap">
-                <div><i class="pi pi-calendar" aria-hidden="true"></i><span>Période</span><strong class="export-wizard__majuscule">{{ libellePeriode(periode()) }} · {{ resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="allerA('periode')">Modifier</button></div>
-                <div><i class="pi pi-file" aria-hidden="true"></i><span>Format</span><strong>{{ format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="allerA('format')">Modifier</button></div>
-                <div><i class="pi pi-users" aria-hidden="true"></i><span>Détail par équipe</span><strong>{{ texteDetail() }}</strong><button type="button" (click)="allerA('equipes')">Modifier</button></div>
+                <div><stp-icon name="calendar" /><span>Période</span><strong class="export-wizard__majuscule">{{ libellePeriode(periode()) }} · {{ resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="allerA('periode')">Modifier</button></div>
+                <div><stp-icon name="file" /><span>Format</span><strong>{{ format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="allerA('format')">Modifier</button></div>
+                <div><stp-icon name="users" /><span>Détail par équipe</span><strong>{{ texteDetail() }}</strong><button type="button" (click)="allerA('equipes')">Modifier</button></div>
                 @for (t of tableauxConcernes(); track t.titre) {
-                  <div><i class="pi pi-truck" aria-hidden="true"></i><span>{{ t.titre }} ({{ t.chantierCode }})</span><strong>{{ texteMateriel(t) }}</strong><button type="button" (click)="allerA('materiel')">Modifier</button></div>
+                  <div><stp-icon name="truck" /><span>{{ t.titre }} ({{ t.chantierCode }})</span><strong>{{ texteMateriel(t) }}</strong><button type="button" (click)="allerA('materiel')">Modifier</button></div>
                 }
               </div>
-              <p class="export-wizard__fichier"><i class="pi pi-download" aria-hidden="true"></i> Nom du fichier : <code>{{ nomFichier() }}</code></p>
+              <p class="export-wizard__fichier"><stp-icon name="download" /> Nom du fichier : <code>{{ nomFichier() }}</code></p>
             </section>
           }
         }
@@ -280,7 +271,7 @@
 
       @if (etat() === 'generation') {
         <section class="export-wizard__panneau export-wizard__generation" role="status">
-          <i class="pi pi-spin pi-cog" aria-hidden="true"></i>
+          <stp-icon name="settings" class="stp-spin" size="2rem" />
           <strong>Génération en cours</strong>
           <p>Selon le nombre de chantiers, cela prend quelques secondes. Le téléchargement démarre dès que le fichier est prêt.</p>
           <span class="export-wizard__indetermine"><span></span></span>
@@ -293,8 +284,8 @@
           <strong>Fichier prêt</strong>
           <p>{{ dernierEnregistre()?.nom }}</p>
           <div class="export-wizard__boutons-fin">
-            <button pButton type="button" class="p-button-outlined" label="Télécharger à nouveau" icon="pi pi-download" (click)="retelecharger()"></button>
-            <button pButton type="button" class="p-button-text" label="Nouvel export" (click)="nouvelExport()"></button>
+            <button stp-button variant="secondary" icon="download" type="button" (click)="retelecharger()">Télécharger à nouveau</button>
+            <button stp-button variant="text" type="button" (click)="nouvelExport()">Nouvel export</button>
           </div>
         </section>
       }
@@ -302,22 +293,14 @@
 
     @if (etat() !== 'termine') {
       <footer class="export-wizard__pied">
-        <button pButton type="button" class="p-button-text" label="Retour" icon="pi pi-arrow-left" (click)="precedent()" [style.visibility]="indexEtape() > 0 && etat() === 'saisie' ? 'visible' : 'hidden'"></button>
+        <button stp-button variant="text" icon="arrow-left" type="button" (click)="precedent()" [style.visibility]="indexEtape() > 0 && etat() === 'saisie' ? 'visible' : 'hidden'">Retour</button>
         <span class="export-wizard__indice">
           @if (etape() === 'equipes' && etat() === 'saisie') {
             Vous pouvez continuer sans rien choisir
           }
         </span>
-        <button
-          pButton
-          type="button"
-          [label]="etape() === 'recap' ? (format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer'"
-          [icon]="etape() === 'recap' ? 'pi pi-download' : 'pi pi-arrow-right'"
-          iconPos="right"
-          [loading]="etat() === 'generation'"
-          (click)="suivant()"
-        ></button>
+        <button stp-button type="button" [icon]="etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="etat() === 'generation'" (click)="suivant()">{{ etape() === 'recap' ? (format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>
       </footer>
     }
   </div>
-</p-dialog>
+</stp-dialog>

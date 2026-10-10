@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
@@ -51,13 +50,13 @@ describe('PaieExportWizardComponent', () => {
     service.exporter.and.returnValue(of(new Blob(['xlsx'])));
 
     TestBed.configureTestingModule({
-      imports: [PaieExportWizardComponent, NoopAnimationsModule],
+      imports: [PaieExportWizardComponent],
       providers: [{ provide: PaieService, useValue: service }, NotificationService]
     });
     fixture = TestBed.createComponent(PaieExportWizardComponent);
     composant = fixture.componentInstance;
-    composant.visible = true;
-    composant.ngOnChanges({ visible: { currentValue: true, previousValue: false, firstChange: true, isFirstChange: () => true } });
+    composant.visible.set(true);
+    fixture.detectChanges();
     spyOn(composant as unknown as { telecharger: () => void }, 'telecharger');
   });
 

@@ -1,60 +1,60 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { ColumnState } from '../../table/table-columns';
+import { SelectComponent, SelectOption } from '../../ui/select/select.component';
 
-/** Sélecteur des colonnes visibles d'un tableau (voir `conventions/frontend.md`, section Tableaux).
- * `[ngModel]` ci-dessous n'est pas un formulaire Template Driven : c'est le moyen de piloter le
- * `p-multiSelect` de PrimeNG depuis un composant de présentation réutilisable, comme dans
- * `LazySelectComponent`. */
+/** Sélecteur des colonnes visibles d'un tableau (voir `conventions/frontend.md`, section Tableaux) : au moins une colonne reste
+ * visible, une sélection vide est ignorée et le champ resynchronisé (voir `ColumnState.setSelected`). */
 @Component({
-    selector: 'app-column-chooser',
-    imports: [FormsModule, MultiSelectModule],
-    template: `
-    <p-multiSelect
-      [options]="state.all"
-      optionLabel="header"
-      optionValue="field"
-      [ngModel]="state.selectedFields"
-      (ngModelChange)="state.setSelected($event)"
-      [ngModelOptions]="{ standalone: true }"
-      [maxSelectedLabels]="0"
-      selectedItemsLabel="Colonnes ({0})"
+  selector: 'app-column-chooser',
+  imports: [ReactiveFormsModule, SelectComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <stp-select
+      [multiple]="true"
+      [clearable]="false"
+      [options]="options()"
+      [formControl]="control"
+      [summaryFrom]="1"
+      summaryLabel="Colonnes ({0})"
       placeholder="Colonnes"
       ariaLabel="Choisir les colonnes visibles"
-      [showHeader]="true"
-      appendTo="body"
-    ></p-multiSelect>
+    />
   `,
-    changeDetection: ChangeDetectionStrategy.Eager,
-    styles: [
-        `
-      :host {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: var(--space-sm);
-      }
+  styles: `
+    :host {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: var(--space-sm);
+    }
 
-      /* Posé dans une barre d'outils (classe \`en-ligne\`) : à la hauteur des autres contrôles, sans marge propre. */
-      :host(.en-ligne) {
-        display: inline-flex;
-        margin-bottom: 0;
-      }
+    /* Posé dans une barre d'outils (classe \`en-ligne\`) : sans marge propre. */
+    :host(.en-ligne) {
+      display: inline-flex;
+      margin-bottom: 0;
+    }
 
-      :host(.en-ligne) ::ng-deep .p-multiselect {
-        height: var(--control-height);
-        font-size: var(--text-sm);
-      }
-
-      :host(.en-ligne) ::ng-deep .p-multiselect-label {
-        display: flex;
-        align-items: center;
-        padding-block: 0;
-      }
-    `
-    ]
+    stp-select {
+      min-width: 9rem;
+    }
+  `
 })
 export class ColumnChooserComponent {
-  @Input({ required: true }) state!: ColumnState;
+  readonly state = input.required<ColumnState>();
+
+  protected readonly control = new FormControl<string[]>([], { nonNullable: true });
+
+  protected options(): SelectOption<string>[] {
+    return this.state().all.map((column) => ({ label: column.header, value: column.field }));
+  }
+
+  constructor() {
+    effect(() => this.control.setValue([...this.state().selectedFields], { emitEvent: false }));
+    this.control.valueChanges.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((fields) => {
+      this.state().setSelected(fields);
+      this.control.setValue([...this.state().selectedFields], { emitEvent: false });
+    });
+  }
 }
