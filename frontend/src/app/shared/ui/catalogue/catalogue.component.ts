@@ -37,23 +37,7 @@ interface Ligne {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './catalogue.component.html',
-  styles: `
-    :host {
-      display: block;
-      padding: var(--space-lg);
-    }
-
-    section {
-      margin-bottom: var(--space-xl);
-    }
-
-    .rangee {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-  `
+  host: { class: 'block p-6' }
 })
 export class CatalogueComponent {
   protected readonly dialogOpen = signal(false);
