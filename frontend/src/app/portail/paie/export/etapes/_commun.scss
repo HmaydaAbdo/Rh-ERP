@@ -1,0 +1,82 @@
+// Styles partagés par les étapes de l'assistant d'export (panneau animé, consigne, légende, erreur, champs de recherche, codes de chantier).
+// Chaque étape les inclut par `@use 'commun' as *;` : une feuille de composant ne voit pas celles de ses voisines.
+$accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+
+.export-wizard {
+  &__panneau {
+    animation: export-wizard-avant var(--duration-slow);
+    &--arriere {
+      animation-name: export-wizard-arriere;
+    }
+  }
+
+  &__consigne {
+    margin: 0 0 var(--space-md);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  &__legende {
+    margin: var(--space-sm) 0 0;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  &__erreur {
+    min-height: 1.1rem;
+    margin: var(--space-sm) 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-danger);
+  }
+
+  // ---- Équipes ----
+  &__recherche {
+    width: 100%;
+    margin-bottom: var(--space-sm);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+  }
+
+  &__code {
+    font-weight: 600;
+  }
+
+  &__meta {
+    margin-left: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+}
+
+@keyframes export-wizard-avant {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes export-wizard-arriere {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .export-wizard * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

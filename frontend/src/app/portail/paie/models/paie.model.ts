@@ -219,6 +219,8 @@ export interface PaieRapportPdfRequest {
   cin?: string | null;
   fonctionId?: number | null;
   chantierId?: number | null;
+  /** Retire le chapitre « Vue d'ensemble » : le rapport commence par le premier chantier (marché). */
+  sansVueEnsemble?: boolean;
   equipesParChantier?: Record<string, string[]> | null;
   /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
   materiel?: Record<string, number> | null;

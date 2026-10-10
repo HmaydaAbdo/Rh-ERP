@@ -21,6 +21,9 @@ public class PerimetreRapportPdfPaie implements PerimetreAudit {
             if (requete.chantierId() != null) {
                 perimetre.put("chantierId", requete.chantierId());
             }
+            if (requete.vueEnsembleRetiree()) {
+                perimetre.put("sansVueEnsemble", true);
+            }
             if (requete.fonctionId() != null) {
                 perimetre.put("fonctionId", requete.fonctionId());
             }

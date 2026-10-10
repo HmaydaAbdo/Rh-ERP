@@ -112,4 +112,30 @@ test.describe('Paie', () => {
     await expect(page).toHaveURL(/\/paie\/11$/);
     await expect(page.getByRole('heading', { name: /ALAMI Karim/ })).toBeVisible();
   });
+
+  test('exporte un PDF limité à un marché, sans vue d’ensemble', async ({ page }) => {
+    const mock = await mockApi(page, { username: 'paie', permissions: DROITS }, { ...routes(), 'POST /paie/report/pdf': () => ({}) });
+    await page.goto('/paie');
+
+    await page.getByRole('button', { name: 'Exporter' }).click();
+    const dialogue = page.getByRole('dialog', { name: 'Exporter la paie' });
+    await dialogue.getByRole('button', { name: 'Continuer' }).click(); // mois
+    await dialogue.getByRole('button', { name: 'Continuer' }).click(); // format PDF (par défaut)
+
+    await expect(dialogue.getByRole('radiogroup', { name: 'Marché du rapport' })).toBeVisible();
+    const accessibilite = await new AxeBuilder({ page }).include('[role=dialog]').analyze();
+    expect(accessibilite.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+
+    await dialogue.getByRole('radio', { name: /C168/ }).check();
+    await expect(dialogue.getByRole('checkbox', { name: /Sans vue d.ensemble/ })).toBeChecked();
+    await dialogue.getByRole('button', { name: 'Continuer' }).click(); // équipes : le marché seul
+    await expect(dialogue.getByText('C168', { exact: true })).toBeVisible();
+    await dialogue.getByRole('button', { name: 'Continuer' }).click(); // récapitulatif
+
+    await expect(dialogue.getByText('C168 — Nador')).toBeVisible();
+    await expect(dialogue.getByText(/Retirée/)).toBeVisible();
+    await dialogue.getByRole('button', { name: 'Générer le PDF' }).click();
+
+    await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierId: 3, sansVueEnsemble: true });
+  });
 });

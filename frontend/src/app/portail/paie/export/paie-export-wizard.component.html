@@ -1,275 +1,57 @@
-<stp-dialog header="Exporter la paie" width="680px" [open]="visible()" [closable]="etat() !== 'generation'" (openChange)="setVisible($event)">
+<stp-dialog header="Exporter la paie" width="680px" [open]="visible()" [closable]="store.etat() !== 'generation'" (openChange)="setVisible($event)">
   <div class="export-wizard">
-    <p class="export-wizard__sous-titre">{{ sousTitre() }}</p>
+    <p class="export-wizard__sous-titre">{{ store.sousTitre() }}</p>
 
     <nav class="export-wizard__etapes" aria-label="Étapes de l'export">
-      @for (id of etapes(); track id; let i = $index) {
+      @for (id of store.etapes(); track id; let i = $index) {
         <button
           type="button"
           class="export-wizard__etape"
-          [class.export-wizard__etape--active]="id === etape() && etat() !== 'termine'"
-          [class.export-wizard__etape--faite]="i < indexEtape() || etat() === 'termine'"
-          [attr.aria-current]="id === etape() ? 'step' : null"
-          (click)="allerA(id)"
+          [class.export-wizard__etape--active]="id === store.etape() && store.etat() !== 'termine'"
+          [class.export-wizard__etape--faite]="i < store.indexEtape() || store.etat() === 'termine'"
+          [attr.aria-current]="id === store.etape() ? 'step' : null"
+          (click)="store.allerA(id)"
         >
           <span class="export-wizard__pastille">
-            @if (i < indexEtape() || etat() === 'termine') {
+            @if (i < store.indexEtape() || store.etat() === 'termine') {
               <stp-icon name="check" />
             } @else {
               {{ i + 1 }}
             }
           </span>
-          <span class="export-wizard__libelle">{{ libelleEtapes[id] }}</span>
+          <span class="export-wizard__libelle">{{ store.libelleEtapes[id] }}</span>
         </button>
-        @if (i < etapes().length - 1) {
-          <span class="export-wizard__trait" [class.export-wizard__trait--plein]="i < indexEtape() || etat() === 'termine'"><span></span></span>
+        @if (i < store.etapes().length - 1) {
+          <span class="export-wizard__trait" [class.export-wizard__trait--plein]="i < store.indexEtape() || store.etat() === 'termine'"><span></span></span>
         }
       }
     </nav>
 
     <div class="export-wizard__corps">
-      @if (etat() === 'saisie') {
-        @switch (etape()) {
+      @if (store.etat() === 'saisie') {
+        @switch (store.etape()) {
           @case ('periode') {
-            <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
-              @if (periodes().length === 0 && !periodesEnCours()) {
-                <div class="export-wizard__carte export-wizard__carte--attention">
-                  <stp-icon name="triangle-alert" />
-                  <div>
-                    <strong>Aucune paie enregistrée</strong>
-                    <p>Importez ou saisissez des bulletins avant d'exporter.</p>
-                  </div>
-                </div>
-              } @else {
-                <app-month-picker [value]="periode()" [disponibles]="disponibles()" (valueChange)="choisirPeriode($event)"></app-month-picker>
-                <p class="export-wizard__legende">Seuls les mois qui contiennent des bulletins sont proposés.</p>
-                @if (resume(); as r) {
-                  <div class="export-wizard__carte export-wizard__carte--ok" role="status">
-                    <stp-icon name="circle-check" />
-                    <div>
-                      <strong class="export-wizard__majuscule">{{ libellePeriode(periode()) }} contient de la paie</strong>
-                      <dl class="export-wizard__chiffres">
-                        <div><dt>bulletins</dt><dd [appCountUp]="r.nombreBulletins"></dd></div>
-                        <div><dt>chantiers</dt><dd [appCountUp]="r.nombreChantiers"></dd></div>
-                        <div><dt>masse salariale</dt><dd>{{ formaterMontant(r.masse) }} DH</dd></div>
-                        <div><dt>STC / sorties</dt><dd [appCountUp]="r.stc"></dd></div>
-                      </dl>
-                    </div>
-                  </div>
-                }
-              }
-              <p class="export-wizard__erreur" role="alert">{{ erreur() }}</p>
-            </section>
+            <app-paie-export-etape-periode />
           }
-
           @case ('format') {
-            <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
-              <div class="export-wizard__formats">
-                <button type="button" class="export-wizard__format" [class.export-wizard__format--choisi]="format() === 'PDF'" (click)="choisirFormat('PDF')">
-                  <span class="export-wizard__apercu export-wizard__apercu--pdf"><span></span><span></span><span></span><span></span></span>
-                  <strong><stp-icon name="file-text" /> Rapport PDF</strong>
-                  <em>Synthèse pour la direction</em>
-                  <ul>
-                    <li>Indicateurs et graphiques</li>
-                    <li>Une section par chantier</li>
-                    <li>Comparaison au mois précédent</li>
-                  </ul>
-                </button>
-                <button type="button" class="export-wizard__format" [class.export-wizard__format--choisi]="format() === 'EXCEL'" (click)="choisirFormat('EXCEL')">
-                  <span class="export-wizard__apercu export-wizard__apercu--excel">
-                    @for (n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; track n) {
-                      <span></span>
-                    }
-                  </span>
-                  <strong><stp-icon name="file-spreadsheet" /> Classeur Excel</strong>
-                  <em>Détail ligne par ligne</em>
-                  <ul>
-                    <li>Feuille globale et par chantier</li>
-                    <li>Feuilles par équipe</li>
-                    <li>Totaux et sorties STC</li>
-                  </ul>
-                </button>
-              </div>
-            </section>
+            <app-paie-export-etape-format />
           }
-
+          @case ('marche') {
+            <app-paie-export-etape-marche />
+          }
           @case ('equipes') {
-            <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
-              <p class="export-wizard__consigne">
-                @if (format() === 'PDF') {
-                  Un chantier détaillé reçoit un graphique par équipe et une section par équipe choisie.
-                } @else {
-                  Chaque équipe choisie reçoit sa propre feuille, en plus de la feuille du chantier.
-                }
-              </p>
-              <input
-                type="search"
-                class="export-wizard__recherche"
-                placeholder="Rechercher un chantier"
-                aria-label="Rechercher un chantier"
-                [value]="recherche()"
-                (input)="rechercher($any($event.target).value)"
-              />
-              @if (chantiersEnCours()) {
-                <p class="export-wizard__legende">Chargement des chantiers…</p>
-              }
-              <div class="export-wizard__chantiers">
-                @for (c of chantiersFiltres(); track c.code) {
-                  <div class="export-wizard__chantier" [class.export-wizard__chantier--actif]="estDetaille(c.code)">
-                    <button
-                      type="button"
-                      class="export-wizard__chantier-tete"
-                      [attr.aria-expanded]="estOuvert(c.code)"
-                      [disabled]="c.equipes.length === 0"
-                      (click)="basculerOuverture(c)"
-                    >
-                      <span>
-                        <span class="export-wizard__code">{{ c.code }}</span>
-                        <span class="export-wizard__meta">
-                          {{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés ·
-                          {{ c.equipes.length > 0 ? c.equipes.length + ' équipes' : 'aucune équipe' }}
-                        </span>
-                      </span>
-                      <span class="export-wizard__chantier-etat">
-                        @if (estDetaille(c.code)) {
-                          <span class="export-wizard__badge">{{ equipesChoisies(c.code).length }} / {{ c.equipes.length }} équipes</span>
-                        }
-                        @if (c.equipes.length > 0) {
-                          <stp-icon name="chevron-down" [class.export-wizard__chevron--ouvert]="estOuvert(c.code)" />
-                        }
-                      </span>
-                    </button>
-                    <div class="export-wizard__deplie" [class.export-wizard__deplie--ouvert]="estOuvert(c.code)">
-                      <div>
-                        <div class="export-wizard__equipes">
-                          <div class="export-wizard__equipes-tete">
-                            <span>Équipes à détailler</span>
-                            <span>
-                              <button type="button" (click)="toutesLesEquipes(c, true)">Toutes</button>
-                              <button type="button" (click)="toutesLesEquipes(c, false)">Aucune</button>
-                            </span>
-                          </div>
-                          <div class="export-wizard__pastilles">
-                            @for (e of c.equipes; track e.code) {
-                              <span class="export-wizard__equipe" [class.export-wizard__equipe--choisie]="equipesChoisies(c.code).includes(e.code)">
-                                <button type="button" (click)="basculerEquipe(c.code, e.code)" [attr.aria-pressed]="equipesChoisies(c.code).includes(e.code)">
-                                  {{ e.libelle }}<small>{{ e.effectif }}</small>
-                                </button>
-                                @if (format() === 'EXCEL' && equipesChoisies(c.code).includes(e.code)) {
-                                  <button
-                                    type="button"
-                                    class="export-wizard__retrait"
-                                    [class.export-wizard__retrait--actif]="estRetiree(c.code, e.code)"
-                                    [attr.aria-pressed]="estRetiree(c.code, e.code)"
-                                    [attr.aria-label]="'Retirer ' + e.libelle + ' de la feuille du chantier'"
-                                    title="Retirer cette équipe de la feuille du chantier"
-                                    (click)="basculerRetrait(c.code, e.code)"
-                                  >
-                                    <stp-icon name="eye-off" />
-                                  </button>
-                                }
-                              </span>
-                            }
-                          </div>
-                          @if (format() === 'EXCEL') {
-                            <p class="export-wizard__legende">
-                              L'icône œil barré retire l'équipe de la feuille du chantier : elle garde sa propre feuille.
-                            </p>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                } @empty {
-                  @if (!chantiersEnCours()) {
-                    <p class="export-wizard__legende">Aucun chantier ne correspond à cette recherche.</p>
-                  }
-                }
-              </div>
-            </section>
+            <app-paie-export-etape-equipes />
           }
-
           @case ('materiel') {
-            <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
-              <div class="export-wizard__contexte">
-                <stp-icon name="truck" />
-                <span>
-                  <strong>Chantier {{ tableauxConcernes()[0].chantierCode }}</strong> — les nombres s'impriment dans la colonne « Nbre » du
-                  tableau de chaque équipe.
-                </span>
-              </div>
-              <div class="export-wizard__tableaux">
-                @for (t of tableauxConcernes(); track t.titre) {
-                  <div class="export-wizard__tableau" [class.export-wizard__tableau--complet]="!estVide(t) && renseignees(t) === t.libelles.length" [class.export-wizard__tableau--vide]="estVide(t)">
-                    <div class="export-wizard__tableau-tete">
-                      <h4>{{ t.titre }}</h4>
-                      <button
-                        type="button"
-                        class="export-wizard__interrupteur export-wizard__interrupteur--petit"
-                        [class.export-wizard__interrupteur--actif]="estVide(t)"
-                        role="switch"
-                        [attr.aria-checked]="estVide(t)"
-                        [attr.aria-label]="'Laisser la colonne ' + t.titre + ' vide'"
-                        (click)="basculerVide(t)"
-                      ></button>
-                    </div>
-                    <p class="export-wizard__legende">Équipe {{ t.equipeCode }} · laisser vide pour remplir au stylo</p>
-                    <div class="export-wizard__progression">
-                      <span>{{ estVide(t) ? 'Laissé vide' : renseignees(t) + ' sur ' + t.libelles.length + ' renseignées' }}</span>
-                      <span class="export-wizard__barre"><span [style.transform]="'scaleX(' + (estVide(t) ? 0 : renseignees(t) / t.libelles.length) + ')'"></span></span>
-                    </div>
-                    @for (libelle of t.libelles; track libelle) {
-                      <div class="export-wizard__ligne" [class.export-wizard__ligne--remplie]="nombre(libelle) !== null">
-                        <label [for]="'mat-' + libelle">{{ libelle }}</label>
-                        <div class="export-wizard__compteur">
-                          <button type="button" [attr.aria-label]="'Diminuer ' + libelle" (click)="ajuster(libelle, -1)"><stp-icon name="minus" /></button>
-                          <input
-                            [id]="'mat-' + libelle"
-                            class="export-wizard__materiel-champ"
-                            type="number"
-                            min="0"
-                            [max]="nombreMax"
-                            step="1"
-                            inputmode="numeric"
-                            placeholder="–"
-                            [value]="nombre(libelle) ?? ''"
-                            (input)="saisirNombre(libelle, $any($event.target).value)"
-                            (keydown.enter)="entreeSuivante($event)"
-                          />
-                          <button type="button" [attr.aria-label]="'Augmenter ' + libelle" (click)="ajuster(libelle, 1)"><stp-icon name="plus" /></button>
-                        </div>
-                      </div>
-                    }
-                    <div class="export-wizard__tableau-pied">
-                      <span>Total <strong [appCountUp]="total(t)"></strong></span>
-                      <button type="button" class="export-wizard__lien" (click)="mettreZeroAuxVides(t)">Mettre 0 aux lignes vides</button>
-                    </div>
-                  </div>
-                }
-              </div>
-              <p class="export-wizard__legende">Une ligne laissée vide s'imprime vide. Un 0 s'imprime 0. Les derniers nombres saisis sont rappelés au prochain export.</p>
-              <p class="export-wizard__erreur" role="alert">{{ erreur() }}</p>
-            </section>
+            <app-paie-export-etape-materiel />
           }
-
           @case ('recap') {
-            <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="sens() === 'arriere'">
-              <p class="export-wizard__consigne">Vérifiez votre choix avant de générer.</p>
-              <div class="export-wizard__recap">
-                <div><stp-icon name="calendar" /><span>Période</span><strong class="export-wizard__majuscule">{{ libellePeriode(periode()) }} · {{ resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="allerA('periode')">Modifier</button></div>
-                <div><stp-icon name="file" /><span>Format</span><strong>{{ format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="allerA('format')">Modifier</button></div>
-                <div><stp-icon name="users" /><span>Détail par équipe</span><strong>{{ texteDetail() }}</strong><button type="button" (click)="allerA('equipes')">Modifier</button></div>
-                @for (t of tableauxConcernes(); track t.titre) {
-                  <div><stp-icon name="truck" /><span>{{ t.titre }} ({{ t.chantierCode }})</span><strong>{{ texteMateriel(t) }}</strong><button type="button" (click)="allerA('materiel')">Modifier</button></div>
-                }
-              </div>
-              <p class="export-wizard__fichier"><stp-icon name="download" /> Nom du fichier : <code>{{ nomFichier() }}</code></p>
-            </section>
+            <app-paie-export-etape-recap />
           }
         }
       }
 
-      @if (etat() === 'generation') {
+      @if (store.etat() === 'generation') {
         <section class="export-wizard__panneau export-wizard__generation" role="status">
           <stp-icon name="settings" class="stp-spin" size="2rem" />
           <strong>Génération en cours</strong>
@@ -278,28 +60,28 @@
         </section>
       }
 
-      @if (etat() === 'termine') {
+      @if (store.etat() === 'termine') {
         <section class="export-wizard__panneau export-wizard__termine" role="status">
           <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" /><path d="M20 33l8 8 16-17" /></svg>
           <strong>Fichier prêt</strong>
-          <p>{{ dernierEnregistre()?.nom }}</p>
+          <p>{{ store.dernierEnregistre()?.nom }}</p>
           <div class="export-wizard__boutons-fin">
-            <button stp-button variant="secondary" icon="download" type="button" (click)="retelecharger()">Télécharger à nouveau</button>
-            <button stp-button variant="text" type="button" (click)="nouvelExport()">Nouvel export</button>
+            <button stp-button variant="secondary" icon="download" type="button" (click)="store.retelecharger()">Télécharger à nouveau</button>
+            <button stp-button variant="text" type="button" (click)="store.nouvelExport()">Nouvel export</button>
           </div>
         </section>
       }
     </div>
 
-    @if (etat() !== 'termine') {
+    @if (store.etat() !== 'termine') {
       <footer class="export-wizard__pied">
-        <button stp-button variant="text" icon="arrow-left" type="button" (click)="precedent()" [style.visibility]="indexEtape() > 0 && etat() === 'saisie' ? 'visible' : 'hidden'">Retour</button>
+        <button stp-button variant="text" icon="arrow-left" type="button" (click)="store.precedent()" [style.visibility]="store.indexEtape() > 0 && store.etat() === 'saisie' ? 'visible' : 'hidden'">Retour</button>
         <span class="export-wizard__indice">
-          @if (etape() === 'equipes' && etat() === 'saisie') {
+          @if (store.etape() === 'equipes' && store.etat() === 'saisie') {
             Vous pouvez continuer sans rien choisir
           }
         </span>
-        <button stp-button type="button" [icon]="etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="etat() === 'generation'" (click)="suivant()">{{ etape() === 'recap' ? (format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>
+        <button stp-button type="button" [icon]="store.etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="store.etat() === 'generation'" (click)="store.suivant()">{{ store.etape() === 'recap' ? (store.format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>
       </footer>
     }
   </div>

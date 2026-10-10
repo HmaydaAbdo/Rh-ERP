@@ -1,0 +1,28 @@
+<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <div class="export-wizard__formats">
+    <button type="button" class="export-wizard__format" [class.export-wizard__format--choisi]="store.format() === 'PDF'" (click)="store.choisirFormat('PDF')">
+      <span class="export-wizard__apercu export-wizard__apercu--pdf"><span></span><span></span><span></span><span></span></span>
+      <strong><stp-icon name="file-text" /> Rapport PDF</strong>
+      <em>Synthèse pour la direction</em>
+      <ul>
+        <li>Indicateurs et graphiques</li>
+        <li>Une section par chantier</li>
+        <li>Comparaison au mois précédent</li>
+      </ul>
+    </button>
+    <button type="button" class="export-wizard__format" [class.export-wizard__format--choisi]="store.format() === 'EXCEL'" (click)="store.choisirFormat('EXCEL')">
+      <span class="export-wizard__apercu export-wizard__apercu--excel">
+        @for (n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; track n) {
+          <span></span>
+        }
+      </span>
+      <strong><stp-icon name="file-spreadsheet" /> Classeur Excel</strong>
+      <em>Détail ligne par ligne</em>
+      <ul>
+        <li>Feuille globale et par chantier</li>
+        <li>Feuilles par équipe</li>
+        <li>Totaux et sorties STC</li>
+      </ul>
+    </button>
+  </div>
+</section>

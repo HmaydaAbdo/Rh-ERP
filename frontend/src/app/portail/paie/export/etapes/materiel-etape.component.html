@@ -1,0 +1,60 @@
+<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <div class="export-wizard__contexte">
+    <stp-icon name="truck" />
+    <span>
+      <strong>Chantier {{ store.tableauxConcernes()[0].chantierCode }}</strong> — les nombres s'impriment dans la colonne « Nbre » du
+      tableau de chaque équipe.
+    </span>
+  </div>
+  <div class="export-wizard__tableaux">
+    @for (t of store.tableauxConcernes(); track t.titre) {
+      <div class="export-wizard__tableau" [class.export-wizard__tableau--complet]="!store.estVide(t) && store.renseignees(t) === t.libelles.length" [class.export-wizard__tableau--vide]="store.estVide(t)">
+        <div class="export-wizard__tableau-tete">
+          <h4>{{ t.titre }}</h4>
+          <button
+            type="button"
+            class="export-wizard__interrupteur export-wizard__interrupteur--petit"
+            [class.export-wizard__interrupteur--actif]="store.estVide(t)"
+            role="switch"
+            [attr.aria-checked]="store.estVide(t)"
+            [attr.aria-label]="'Laisser la colonne ' + t.titre + ' vide'"
+            (click)="store.basculerVide(t)"
+          ></button>
+        </div>
+        <p class="export-wizard__legende">Équipe {{ t.equipeCode }} · laisser vide pour remplir au stylo</p>
+        <div class="export-wizard__progression">
+          <span>{{ store.estVide(t) ? 'Laissé vide' : store.renseignees(t) + ' sur ' + t.libelles.length + ' renseignées' }}</span>
+          <span class="export-wizard__barre"><span [style.transform]="'scaleX(' + (store.estVide(t) ? 0 : store.renseignees(t) / t.libelles.length) + ')'"></span></span>
+        </div>
+        @for (libelle of t.libelles; track libelle) {
+          <div class="export-wizard__ligne" [class.export-wizard__ligne--remplie]="store.nombre(libelle) !== null">
+            <label [for]="'mat-' + libelle">{{ libelle }}</label>
+            <div class="export-wizard__compteur">
+              <button type="button" [attr.aria-label]="'Diminuer ' + libelle" (click)="store.ajuster(libelle, -1)"><stp-icon name="minus" /></button>
+              <input
+                [id]="'mat-' + libelle"
+                class="export-wizard__materiel-champ"
+                type="number"
+                min="0"
+                [max]="store.nombreMax"
+                step="1"
+                inputmode="numeric"
+                placeholder="–"
+                [value]="store.nombre(libelle) ?? ''"
+                (input)="store.saisirNombre(libelle, $any($event.target).value)"
+                (keydown.enter)="store.entreeSuivante($event)"
+              />
+              <button type="button" [attr.aria-label]="'Augmenter ' + libelle" (click)="store.ajuster(libelle, 1)"><stp-icon name="plus" /></button>
+            </div>
+          </div>
+        }
+        <div class="export-wizard__tableau-pied">
+          <span>Total <strong [appCountUp]="store.total(t)"></strong></span>
+          <button type="button" class="export-wizard__lien" (click)="store.mettreZeroAuxVides(t)">Mettre 0 aux lignes vides</button>
+        </div>
+      </div>
+    }
+  </div>
+  <p class="export-wizard__legende">Une ligne laissée vide s'imprime vide. Un 0 s'imprime 0. Les derniers nombres saisis sont rappelés au prochain export.</p>
+  <p class="export-wizard__erreur" role="alert">{{ store.erreur() }}</p>
+</section>

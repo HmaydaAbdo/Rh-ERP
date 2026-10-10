@@ -1,0 +1,59 @@
+@use 'breakpoints' as bp;
+@use 'commun' as *;
+
+.export-wizard {
+  // ---- Récapitulatif ----
+  &__recap {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    > div {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: 0.65rem var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.8125rem;
+      animation: export-wizard-avant var(--duration-slow) backwards;
+      &:last-child {
+        border-bottom: none;
+      }
+      @for $i from 1 through 6 {
+        &:nth-child(#{$i}) {
+          animation-delay: #{$i * 70}ms;
+        }
+      }
+    }
+    i {
+      color: var(--color-text-muted);
+    }
+    span {
+      width: 8rem;
+      flex: none;
+      color: var(--color-text-muted);
+    }
+    strong {
+      flex: 1;
+      font-weight: 500;
+    }
+    button {
+      border: none;
+      background: none;
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+  }
+
+  &__fichier {
+    margin: var(--space-md) 0 0;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    code {
+      color: var(--color-text);
+    }
+  }
+
+  &__majuscule::first-letter {
+    text-transform: uppercase;
+  }
+}

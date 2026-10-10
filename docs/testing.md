@@ -74,7 +74,7 @@ toujours par identifiant, jamais par comptage global, car la base est partagée.
 
 ---
 
-## Frontend (178 tests unitaires et composants, 30 parcours E2E)
+## Frontend (186 tests unitaires et composants, 31 parcours E2E)
 
 Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** (Playwright ; `CHROME_BIN` pour réutiliser un Chrome installé), sans Zone.js : les minuteries se pilotent avec `vi.useFakeTimers()`, les doublures avec `vi.fn()`. Les membres de composant utilisés par le gabarit sont `protected` ; un test y accède par `composant['membre']`. Couches : unités (services, utilitaires, gardes, intercepteurs), composants (rendu, clavier, signaux, formulaires, erreurs), E2E (voir plus bas).
 
@@ -105,7 +105,7 @@ Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** 
 
 `core/interceptors/error.interceptor.spec.ts` couvre en plus la notification d'erreur d'API et le silence de `auth/refresh` (restauration de session).
 
-La suite a passé **178 tests** le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
+La suite a passé **186 tests** le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
 
 ### Tests E2E (Playwright + axe)
 
@@ -118,7 +118,7 @@ enregistrés). Le contrat réel avec le backend reste couvert par les tests d'in
 | `auth.spec.ts` | Connexion accessible, redirection sans session, connexion puis premier écran autorisé, identifiants refusés |
 | `permissions.spec.ts` | Lecteur sans actions d'écriture/suppression, gestionnaire avec, accès refusé sans permission de lecture, menu filtré, liste accessible (axe) |
 | `fonctions.spec.ts` | Création et fiche, libellé obligatoire sans appel API, suppression confirmée, annulation par Échap, recherche et tri, confirmation avant de quitter un formulaire modifié |
-| `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), menu d'import au clavier, fiche d'un bulletin |
+| `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), export PDF limité à un marché sans vue d'ensemble (étape marché, récapitulatif, requête envoyée), menu d'import au clavier, fiche d'un bulletin |
 | `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
 | `responsive.spec.ts` | Téléphone : pas de défilement horizontal, menu en tiroir, cibles tactiles ≥ 44 px |
 

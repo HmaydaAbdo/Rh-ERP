@@ -59,7 +59,7 @@ public class PaieReportHtmlPdfService {
     @AuditableAction(action = "PAIE_RAPPORT_PDF", categorie = CategorieAudit.ACCES, perimetre = PerimetreRapportPdfPaie.class)
     public byte[] generer(YearMonth periode, PaieReportPdfRequestDto requete) {
         RapportBiVue vue = biReportBuilder.construire(periode, requete);
-        java.util.List<PageModel> pages = pageModelBuilder.construire(vue);
+        java.util.List<PageModel> pages = pageModelBuilder.construire(vue, requete.vueEnsembleRetiree());
         String mois = moisLibelle(periode);
         String annee = String.valueOf(periode.getYear());
         Document doc = htmlBuilder.construireDocument(mois, annee, vue.periodeLibelle(), pages);
