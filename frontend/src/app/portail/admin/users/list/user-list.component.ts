@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, inject } from '@angular/core';
+import { Component, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { PasswordModule } from 'primeng/password';
 import { Table, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -23,25 +23,25 @@ import { debounceTime } from 'rxjs';
 const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
-  selector: 'app-user-list',
-  standalone: true,
-  imports: [ColumnChooserComponent, InputTextModule, DropdownModule, 
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    TableModule,
-    ButtonModule,
-    TagModule,
-    DialogModule,
-    PasswordModule,
-    TooltipModule
-  ],
-  templateUrl: './user-list.component.html',
-  styleUrl: './user-list.component.scss'
+    selector: 'app-user-list',
+    imports: [ColumnChooserComponent, InputTextModule, DropdownModule,
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        TableModule,
+        ButtonModule,
+        TagModule,
+        DialogModule,
+        PasswordModule,
+        TooltipModule
+    ],
+    templateUrl: './user-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './user-list.component.scss'
 })
 export class UserListComponent {
   private readonly userService = inject(UserService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 

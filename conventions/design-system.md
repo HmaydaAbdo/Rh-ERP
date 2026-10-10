@@ -42,19 +42,23 @@ les couleurs de statut (`--color-success`, `--color-warning`, `--color-danger`) 
 
 ---
 
-# Thème de la librairie de composants
+# Bibliothèques UI et thème
 
-Le thème PrimeNG est **généré**, jamais modifié à la main : `npm run theme:generate` (`scripts/generate-primeng-theme.mjs`)
-reprend le thème Aura de la librairie et remplace chaque couleur de marque ou de surface écrite en dur par une variable de
-la couche « pont ». Le fichier produit (`src/styles/primeng-theme.css`) est versionné ; il se régénère après chaque
-mise à jour de PrimeNG. Résultat : la couleur de marque et le thème sombre viennent **uniquement** des jetons, sans seconde
-feuille ni bascule de fichier.
+Les jetons Staport et les composants propres à Staport sont la source visuelle. Angular Aria/CDK fournit les primitives
+d'interaction accessibles; Tailwind CSS 4 fournit les utilitaires reliés aux jetons; Lucide Angular fournit les icônes.
+Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés.
 
-Limite connue : les couleurs de **statut** de la librairie (vert, rouge, orange, jaune, cyan, violet) restent celles d'Aura,
-identiques dans les deux thèmes.
+Utiliser les composants Angular Aria et CDK comme primitives accessibles et construire les composants Staport par-dessus,
+avec HTML natif dès que l'interaction est simple. Le système de design est porté par les jetons Staport, Tailwind CSS 4,
+SCSS/CSS des composants et Lucide Angular; il ne dépend pas du style visuel d'un fournisseur de widgets.
 
-Un correctif de style d'un composant de la librairie se fait dans une feuille du projet (jamais dans le fichier généré),
-avec `::ng-deep` borné par `:host` pour ne pas fuir hors du composant.
+Valider au clavier, lecteur d'écran, focus, contraste, français, comportement zoneless et performance chaque composant
+partagé. AG Grid Community n'est utilisé que pour une grille avancée lorsqu'un besoin mesuré le justifie; il est encapsulé
+et chargé à la demande. PrimeNG, PrimeIcons et PrimeFlex sont exclus du socle pour éviter la licence PrimeNG 22, limiter le
+verrouillage fournisseur et garder la maîtrise du langage visuel.
+
+Tout contournement CSS des composants tiers doit être local, stable et documenté; éviter `::ng-deep`, sélecteurs internes
+non contractuels et règles globales qui fuient dans les autres domaines.
 
 ---
 
@@ -144,8 +148,8 @@ Formulaires et consultations (`src/styles/_forms.scss`) :
 
 Fenêtres (`src/styles/_overlays.scss`) : toutes les fenêtres de dialogue ont le même rayon, les mêmes marges et un pied
 séparé ; les **confirmations de suppression** sont étroites (30 rem), avec « Annuler » discret et « Supprimer » en rouge
-(`--color-danger`) ; le sélecteur de fichier natif prend l'allure d'un bouton secondaire. Les textes des composants PrimeNG
-(mois et jours du calendrier, messages vides) sont en français (`core/i18n/primeng-fr.ts`).
+(`--color-danger`) ; le sélecteur de fichier natif prend l'allure d'un bouton secondaire. Les textes des composants Staport,
+calendriers et messages vides sont en français.
 
 **Ordre des outils, du moins au plus important** : choix des colonnes (`app-column-chooser` avec la classe `en-ligne`), actions
 secondaires (Exporter, Importer — bouton fractionné dont le menu porte le modèle de fichier, Synchroniser), puis l'**action
@@ -178,11 +182,11 @@ horizontalement, à l'intérieur de sa carte.
 
 # Accessibilité
 
-Vérifiée automatiquement (axe-core, WCAG 2.1 A/AA et bonnes pratiques) dans les deux thèmes sur les écrans principaux : **aucune
+Vérifiée automatiquement (axe-core, WCAG 2.2 A/AA et bonnes pratiques) dans les deux thèmes sur les écrans principaux : **aucune
 violation** est la barre à tenir.
 
 * **Contraste** : texte d'au moins 4,5:1 dans les deux thèmes (3:1 pour les grands textes et les contrôles). Les pastilles d'état
-  (`p-tag`) tirent leurs couleurs des jetons de statut (`styles/_status.scss`), jamais du thème de la librairie ; un état n'est
+  tirent leurs couleurs des jetons de statut (`styles/_status.scss`) ; un état n'est
   jamais porté par la seule couleur (la pastille dit « Actif », « Inactif »).
 * **Noms accessibles** : tout bouton d'icône a un `aria-label` précis (« Modifier AABIDDI MOHAMED », pas « Modifier ») ; tout champ
   a un `<label for>` ou un `aria-label` (un champ de barre de filtres, qui n'a que son placeholder, porte `aria-label`) ; une
@@ -195,7 +199,7 @@ violation** est la barre à tenir.
   invalide (`focaliserPremiereErreur`) ; quitter un formulaire modifié demande confirmation (`unsavedChangesGuard`, boîte
   « Quitter sans enregistrer ? ») et un formulaire enregistré est remis à l'état intact avant de naviguer ; les champs hors
   authentification ont `autocomplete="off"`, et `spellcheck="false"` quand ils portent un code (CIN, code, identifiant).
-* **Langue et formats** : `lang="fr"`, locale `fr-FR` (nombres « 5 500,00 », dates), textes PrimeNG français ; les noms de marque
+* **Langue et formats** : `lang="fr"`, locale `fr-FR` (nombres « 5 500,00 », dates), textes UI en français ; les noms de marque
   portent `translate="no"` ; les points de suspension sont typographiques (`…`).
 * **Tactile et écrans à encoche** : `touch-action: manipulation`, pas de halo de toucher, `overscroll-behavior: contain` sur les
   panneaux défilants, `viewport-fit=cover` et `env(safe-area-inset-*)` sur la barre du haut et le pied de formulaire.

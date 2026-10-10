@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -11,10 +11,10 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 
 @Component({
-  selector: 'app-employee-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, TagModule, DialogModule, AuditHistoriqueComponent],
-  templateUrl: './employee-detail.component.html'
+    selector: 'app-employee-detail',
+    imports: [CommonModule, RouterLink, ButtonModule, TagModule, DialogModule, AuditHistoriqueComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './employee-detail.component.html'
 })
 export class EmployeeDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

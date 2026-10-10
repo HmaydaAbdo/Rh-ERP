@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
@@ -25,23 +24,21 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-  selector: 'app-chantier-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ColumnChooserComponent,
-    ReactiveFormsModule,
-    RouterLink,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    DropdownModule,
-    TagModule,
-    ConfirmDialogModule
-  ],
-  providers: [ConfirmationService],
-  templateUrl: './chantier-list.component.html',
-  styleUrl: './chantier-list.component.scss'
+    selector: 'app-chantier-list',
+    imports: [
+        CommonModule,
+        ColumnChooserComponent,
+        ReactiveFormsModule,
+        RouterLink,
+        TableModule,
+        ButtonModule,
+        InputTextModule,
+        DropdownModule,
+        TagModule,
+    ],
+    templateUrl: './chantier-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './chantier-list.component.scss'
 })
 export class ChantierListComponent implements OnInit {
   readonly columns = new ColumnState([
@@ -55,8 +52,8 @@ export class ChantierListComponent implements OnInit {
   readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly chantierService = inject(ChantierService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
@@ -135,7 +132,6 @@ export class ChantierListComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Supprimer ce chantier',
       message: `Confirmez-vous la suppression de ${chantier.code} ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteChantier(chantier)

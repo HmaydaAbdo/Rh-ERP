@@ -1,11 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { finalize } from 'rxjs';
 
 import { ChantierService } from '../services/chantier.service';
@@ -17,17 +17,17 @@ const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
 ];
 
 @Component({
-  selector: 'app-chantier-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule],
-  templateUrl: './chantier-form.component.html'
+    selector: 'app-chantier-form',
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, DropdownModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './chantier-form.component.html'
 })
 export class ChantierFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly chantierService = inject(ChantierService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   readonly actifOptions = ACTIF_OPTIONS;
 

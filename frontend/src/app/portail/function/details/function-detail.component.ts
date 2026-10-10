@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 
@@ -8,10 +8,10 @@ import { FunctionService } from '../services/function.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
-  selector: 'app-function-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule],
-  templateUrl: './function-detail.component.html'
+    selector: 'app-function-detail',
+    imports: [RouterLink, ButtonModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './function-detail.component.html'
 })
 export class FunctionDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

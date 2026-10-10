@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
@@ -16,18 +15,16 @@ import { ColumnChooserComponent } from '../../../shared/components/column-choose
 import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../shared/table/table-columns';
 
 @Component({
-  selector: 'app-paie-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ColumnChooserComponent,
-    TableModule,
-    ButtonModule,
-    ConfirmDialogModule
-  ],
-  providers: [ConfirmationService],
-  templateUrl: './paie-list.component.html',
-  styleUrl: './paie-list.component.scss'
+    selector: 'app-paie-list',
+    imports: [
+        CommonModule,
+        ColumnChooserComponent,
+        TableModule,
+        ButtonModule,
+    ],
+    templateUrl: './paie-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-list.component.scss'
 })
 export class PaieListComponent implements OnInit {
   readonly columns = new ColumnState([
@@ -50,8 +47,8 @@ export class PaieListComponent implements OnInit {
   readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly paieService = inject(PaieService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
@@ -127,7 +124,6 @@ export class PaieListComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Supprimer ce bulletin',
       message: `Confirmez-vous la suppression du bulletin de ${paie.employee.nomPrenom} (${paie.periode}) ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deletePaie(paie)

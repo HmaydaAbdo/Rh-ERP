@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+
+import { Component, EventEmitter, Input, Output, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 
 const LIBELLES_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const NB_ANNEES_SANS_LIMITE = 10;
@@ -19,11 +19,11 @@ interface Tuile {
  * `null` autorise tous les mois (ex. choisir la période d'un import).
  */
 @Component({
-  selector: 'app-month-picker',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './month-picker.component.html',
-  styleUrl: './month-picker.component.scss'
+    selector: 'app-month-picker',
+    imports: [],
+    templateUrl: './month-picker.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './month-picker.component.scss'
 })
 export class MonthPickerComponent {
   private readonly valeurSignal = signal<string | null>(null);

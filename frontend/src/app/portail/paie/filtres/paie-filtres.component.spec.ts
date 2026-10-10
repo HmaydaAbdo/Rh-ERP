@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -45,7 +45,7 @@ describe('PaieFiltresComponent', () => {
     TestBed.configureTestingModule({
       imports: [PaieFiltresComponent, NoopAnimationsModule],
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
         { provide: PaieService, useValue: service },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions.includes(code) } }

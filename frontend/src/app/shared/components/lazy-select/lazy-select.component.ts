@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit, forwardRef } from '@angular/core';
+
+import { Component, Input, OnInit, forwardRef, ChangeDetectionStrategy } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
 import { MultiSelectModule } from 'primeng/multiselect';
@@ -28,12 +28,12 @@ import { LazySelectSource } from './lazy-select.model';
  * jamais sur la plomberie interne d'un composant de présentation réutilisable.
  */
 @Component({
-  selector: 'app-lazy-select',
-  standalone: true,
-  imports: [CommonModule, FormsModule, DropdownModule, MultiSelectModule],
-  templateUrl: './lazy-select.component.html',
-  styleUrl: './lazy-select.component.scss',
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => LazySelectComponent), multi: true }]
+    selector: 'app-lazy-select',
+    imports: [FormsModule, DropdownModule, MultiSelectModule],
+    templateUrl: './lazy-select.component.html',
+    styleUrl: './lazy-select.component.scss',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => LazySelectComponent), multi: true }]
 })
 export class LazySelectComponent<T extends object = Record<string, unknown>> implements OnInit, ControlValueAccessor {
   @Input({ required: true }) source!: LazySelectSource<T>;

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { PaieChantierPeriode, PaieMaterielTableau, PaiePeriodeResume } from '../models/paie.model';
@@ -52,7 +52,7 @@ describe('PaieExportWizardComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [PaieExportWizardComponent, NoopAnimationsModule],
-      providers: [{ provide: PaieService, useValue: service }, MessageService]
+      providers: [{ provide: PaieService, useValue: service }, NotificationService]
     });
     fixture = TestBed.createComponent(PaieExportWizardComponent);
     composant = fixture.componentInstance;

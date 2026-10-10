@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -9,10 +9,10 @@ import { ChantierService } from '../services/chantier.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
-  selector: 'app-chantier-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, TagModule],
-  templateUrl: './chantier-detail.component.html'
+    selector: 'app-chantier-detail',
+    imports: [RouterLink, ButtonModule, TagModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    templateUrl: './chantier-detail.component.html'
 })
 export class ChantierDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);

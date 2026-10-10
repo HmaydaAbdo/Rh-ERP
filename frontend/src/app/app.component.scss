@@ -71,11 +71,10 @@
     white-space: nowrap;
     transition: background-color var(--duration-fast), color var(--duration-fast);
 
-    i {
+    svg {
       flex-shrink: 0;
       width: 1.5rem;
-      text-align: center;
-      font-size: 1.0625rem;
+      height: 1.5rem;
     }
 
     &:hover {
@@ -144,6 +143,8 @@
     cursor: pointer;
     transition: background-color var(--duration-fast), color var(--duration-fast);
 
+    svg { width: 1.125rem; height: 1.125rem; }
+
     &:hover {
       background: var(--color-sidebar-hover-bg);
       color: var(--color-sidebar-active-text);
@@ -186,8 +187,9 @@
       border-radius: var(--radius-md);
       background: transparent;
       color: inherit;
-      font-size: 1.25rem;
       cursor: pointer;
+
+      svg { width: 1.25rem; height: 1.25rem; }
     }
 
     &__logo {

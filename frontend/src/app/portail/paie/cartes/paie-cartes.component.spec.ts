@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -33,7 +33,7 @@ const CHANTIERS: PaieChantierPeriode[] = [
 
 describe('PaieCartesComponent', () => {
   let service: jasmine.SpyObj<PaieService>;
-  let messages: jasmine.SpyObj<MessageService>;
+  let messages: jasmine.SpyObj<NotificationService>;
   let harness: RouterTestingHarness;
   let autorise: (permission: string) => boolean;
 
@@ -46,7 +46,7 @@ describe('PaieCartesComponent', () => {
     harness = undefined as unknown as RouterTestingHarness;
     autorise = () => true;
     service = jasmine.createSpyObj<PaieService>('PaieService', ['rechercherPeriodes', 'rechercherChantiers', 'supprimerGroupe']);
-    messages = jasmine.createSpyObj<MessageService>('MessageService', ['add']);
+    messages = jasmine.createSpyObj<NotificationService>('NotificationService', ['add']);
     service.rechercherPeriodes.and.returnValue(of(PERIODES));
     service.rechercherChantiers.and.returnValue(of(CHANTIERS));
     service.supprimerGroupe.and.returnValue(of({ supprimes: 0 }));
@@ -56,7 +56,7 @@ describe('PaieCartesComponent', () => {
       providers: [
         provideRouter([{ path: 'paie/cartes', component: PaieCartesComponent }]),
         { provide: PaieService, useValue: service },
-        { provide: MessageService, useValue: messages },
+        { provide: NotificationService, useValue: messages },
         { provide: AuthService, useValue: { hasPermission: (permission: string) => autorise(permission) } }
       ]
     });

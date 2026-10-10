@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { finalize } from 'rxjs';
 
@@ -15,11 +15,11 @@ const TAILLE_PAGE = 10;
  * la permission d'audit.
  */
 @Component({
-  selector: 'app-audit-historique',
-  standalone: true,
-  imports: [ButtonModule, AuditChampsComponent],
-  templateUrl: './audit-historique.component.html',
-  styleUrl: './audit-historique.component.scss'
+    selector: 'app-audit-historique',
+    imports: [ButtonModule, AuditChampsComponent],
+    templateUrl: './audit-historique.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './audit-historique.component.scss'
 })
 export class AuditHistoriqueComponent implements OnInit {
   private readonly auditService = inject(AuditService);

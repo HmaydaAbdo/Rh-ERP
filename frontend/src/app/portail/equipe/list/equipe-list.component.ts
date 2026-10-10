@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
@@ -18,12 +17,11 @@ import { ColumnState, TABLE_PAGE_REPORT, TABLE_ROWS_PER_PAGE } from '../../../sh
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-  selector: 'app-equipe-list',
-  standalone: true,
-  imports: [CommonModule, ColumnChooserComponent, ReactiveFormsModule, RouterLink, TableModule, ButtonModule, InputTextModule, ConfirmDialogModule],
-  providers: [ConfirmationService],
-  templateUrl: './equipe-list.component.html',
-  styleUrl: './equipe-list.component.scss'
+    selector: 'app-equipe-list',
+    imports: [CommonModule, ColumnChooserComponent, ReactiveFormsModule, RouterLink, TableModule, ButtonModule, InputTextModule],
+    templateUrl: './equipe-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './equipe-list.component.scss'
 })
 export class EquipeListComponent implements OnInit {
   readonly columns = new ColumnState([
@@ -34,8 +32,8 @@ export class EquipeListComponent implements OnInit {
   readonly pageReport = TABLE_PAGE_REPORT;
 
   private readonly equipeService = inject(EquipeService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
@@ -106,7 +104,6 @@ export class EquipeListComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Supprimer cette équipe',
       message: `Confirmez-vous la suppression de ${equipe.code} ?`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteEquipe(equipe)

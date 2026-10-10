@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 
@@ -17,11 +17,11 @@ import { PaieVueSwitcherComponent } from '../vue-switcher/paie-vue-switcher.comp
  * départ. Les écrans de saisie (`/paie/new`, `/paie/:id`…) ne passent pas par lui.
  */
 @Component({
-  selector: 'app-paie-vues',
-  standalone: true,
-  imports: [RouterOutlet, PaieVueSwitcherComponent, PaieActionsComponent, PaieFiltresComponent],
-  templateUrl: './paie-vues.component.html',
-  styleUrl: './paie-vues.component.scss'
+    selector: 'app-paie-vues',
+    imports: [RouterOutlet, PaieVueSwitcherComponent, PaieActionsComponent, PaieFiltresComponent],
+    templateUrl: './paie-vues.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-vues.component.scss'
 })
 export class PaieVuesComponent {
   private readonly paieService = inject(PaieService);

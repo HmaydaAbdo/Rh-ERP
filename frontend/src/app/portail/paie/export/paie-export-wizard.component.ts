@@ -1,7 +1,7 @@
-import { CommonModule } from '@angular/common';
+
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
-import { MessageService } from 'primeng/api';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { finalize } from 'rxjs';
@@ -47,15 +47,15 @@ const CLE_MATERIEL_MEMORISE = 'paie.export.materiel';
  * PDF/Excel ») ; l'exclusion de la feuille du chantier ne concerne que l'Excel.
  */
 @Component({
-  selector: 'app-paie-export-wizard',
-  standalone: true,
-  imports: [CommonModule, DialogModule, ButtonModule, MonthPickerComponent, CountUpDirective],
-  templateUrl: './paie-export-wizard.component.html',
-  styleUrl: './paie-export-wizard.component.scss'
+    selector: 'app-paie-export-wizard',
+    imports: [DialogModule, ButtonModule, MonthPickerComponent, CountUpDirective],
+    templateUrl: './paie-export-wizard.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './paie-export-wizard.component.scss'
 })
 export class PaieExportWizardComponent implements OnChanges {
   private readonly paieService = inject(PaieService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(NotificationService);
 
   @Input() visible = false;
   @Output() readonly visibleChange = new EventEmitter<boolean>();

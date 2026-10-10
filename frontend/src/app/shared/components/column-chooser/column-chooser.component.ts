@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 
@@ -9,10 +9,9 @@ import { ColumnState } from '../../table/table-columns';
  * `p-multiSelect` de PrimeNG depuis un composant de présentation réutilisable, comme dans
  * `LazySelectComponent`. */
 @Component({
-  selector: 'app-column-chooser',
-  standalone: true,
-  imports: [FormsModule, MultiSelectModule],
-  template: `
+    selector: 'app-column-chooser',
+    imports: [FormsModule, MultiSelectModule],
+    template: `
     <p-multiSelect
       [options]="state.all"
       optionLabel="header"
@@ -28,8 +27,9 @@ import { ColumnState } from '../../table/table-columns';
       appendTo="body"
     ></p-multiSelect>
   `,
-  styles: [
-    `
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styles: [
+        `
       :host {
         display: flex;
         justify-content: flex-end;
@@ -53,7 +53,7 @@ import { ColumnState } from '../../table/table-columns';
         padding-block: 0;
       }
     `
-  ]
+    ]
 })
 export class ColumnChooserComponent {
   @Input({ required: true }) state!: ColumnState;

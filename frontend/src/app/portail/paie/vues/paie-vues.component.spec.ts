@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { MessageService } from 'primeng/api';
+import { NotificationService } from '@shared/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { AUCUN_FILTRE } from '../filtres/paie-filtres';
@@ -13,7 +13,8 @@ import { PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 import { PaieVuesComponent } from './paie-vues.component';
 
-@Component({ standalone: true, template: 'vue' })
+@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.Eager,
+ template: 'vue' })
 class VueFactice {}
 
 const PERIODES: PaiePeriodeResume[] = [
@@ -44,9 +45,9 @@ describe('PaieVuesComponent', () => {
             ]
           }
         ]),
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
-        MessageService,
+        NotificationService,
         { provide: PaieService, useValue: service }
       ]
     });

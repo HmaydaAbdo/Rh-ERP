@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmationService, MessageService, MenuItem } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
+import { MenuItem } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { DropdownModule } from 'primeng/dropdown';
@@ -31,26 +31,24 @@ const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 @Component({
-  selector: 'app-employee-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ColumnChooserComponent,
-    ReactiveFormsModule,
-    RouterLink,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    DropdownModule,
-    TagModule,
-    ConfirmDialogModule,
-    DialogModule,
-    SplitButtonModule,
-    LazySelectComponent
-  ],
-  providers: [ConfirmationService],
-  templateUrl: './employee-list.component.html',
-  styleUrl: './employee-list.component.scss'
+    selector: 'app-employee-list',
+    imports: [
+        CommonModule,
+        ColumnChooserComponent,
+        ReactiveFormsModule,
+        RouterLink,
+        TableModule,
+        ButtonModule,
+        InputTextModule,
+        DropdownModule,
+        TagModule,
+        DialogModule,
+        SplitButtonModule,
+        LazySelectComponent
+    ],
+    templateUrl: './employee-list.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    styleUrl: './employee-list.component.scss'
 })
 export class EmployeeListComponent implements OnInit {
   readonly columns = new ColumnState([
@@ -67,8 +65,8 @@ export class EmployeeListComponent implements OnInit {
   private readonly employeeService = inject(EmployeeService);
   readonly functionReferenceService = inject(FunctionReferenceService);
   readonly chantierReferenceService = inject(ChantierReferenceService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
@@ -167,7 +165,6 @@ export class EmployeeListComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Supprimer cet employé',
       message: `Confirmez-vous la suppression de ${employee.nomPrenom} ? Un employé qui a des bulletins de paie ou un compte utilisateur ne peut pas être supprimé : passez-le à INACTIF pour conserver son historique.`,
-      icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteEmployee(employee)

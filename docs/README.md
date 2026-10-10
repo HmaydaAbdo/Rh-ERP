@@ -9,6 +9,11 @@
 
 ## Par où commencer
 
+Les conventions partagées Staport et leur version consommée sont indexées dans
+[`conventions/staport/README.md`](../conventions/staport/README.md) ; version épinglée :
+[`STAPORT_STANDARDS_VERSION`](../STAPORT_STANDARDS_VERSION). Les conventions ci-dessous décrivent
+les détails et décisions propres à ERP-RH.
+
 | Je veux… | Document |
 |---|---|
 | Comprendre l'ensemble (modules, dépendances, flux d'une requête) | [architecture.md](architecture.md) |
@@ -21,6 +26,7 @@
 | Lancer ou écrire des tests | [testing.md](testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
+| Comprendre l'adoption du socle Staport et la trajectoire ERP-RH | [adr/0001-adoption-socle-staport.md](adr/0001-adoption-socle-staport.md) |
 
 ---
 
@@ -31,14 +37,14 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 
 | Domaine | Rôle | Documentation | Permissions |
 |---|---|---|---|
-| **Fonction** | Référentiel des fonctions occupées | [function/README.md](function/README.md) | [rbac/function.md](rbac/function.md) |
-| **Chantier** | Référentiel des chantiers, ajout automatique depuis l'ERP | [chantier/README.md](chantier/README.md) | [rbac/chantier.md](rbac/chantier.md) |
-| **Équipe** | Référentiel des équipes de travail | [equipe/README.md](equipe/README.md) | [rbac/equipe.md](rbac/equipe.md) |
-| **Employé** | Fiche d'identité, affectation fonction/chantier | [employee/README.md](employee/README.md) | [rbac/employee.md](rbac/employee.md) |
-| **Paie** | Bulletins mensuels (saisie, import, export) | [paie/README.md](paie/README.md) | [rbac/paie.md](rbac/paie.md) |
-| **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [report/README.md](report/README.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
-| **Auth** | Comptes, rôles, permissions, sessions | [auth/README.md](auth/README.md) | [rbac/auth.md](rbac/auth.md) |
-| **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [audit/README.md](audit/README.md) | [rbac/audit.md](rbac/audit.md) |
+| **Fonction** | Référentiel des fonctions occupées | [README](function/README.md) · [skill IA](function/skills/SKILL.md) | [rbac/function.md](rbac/function.md) |
+| **Chantier** | Référentiel des chantiers, ajout automatique depuis l'ERP | [README](chantier/README.md) · [skill IA](chantier/skills/SKILL.md) | [rbac/chantier.md](rbac/chantier.md) |
+| **Équipe** | Référentiel des équipes de travail | [README](equipe/README.md) · [skill IA](equipe/skills/SKILL.md) | [rbac/equipe.md](rbac/equipe.md) |
+| **Employé** | Fiche d'identité, affectation fonction/chantier | [README](employee/README.md) · [skill IA](employee/skills/SKILL.md) | [rbac/employee.md](rbac/employee.md) |
+| **Paie** | Bulletins mensuels (saisie, import, export) | [README](paie/README.md) · [skill IA](paie/skills/SKILL.md) | [rbac/paie.md](rbac/paie.md) |
+| **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
+| **Auth** | Comptes, rôles, permissions, sessions | [README](auth/README.md) · [skill IA](auth/skills/SKILL.md) | [rbac/auth.md](rbac/auth.md) |
+| **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [README](audit/README.md) · [skill IA](audit/skills/SKILL.md) | [rbac/audit.md](rbac/audit.md) |
 
 Journal des décisions du rapport PDF (ce qui a été retiré et pourquoi) :
 [report/rapport-v2.md](report/rapport-v2.md).

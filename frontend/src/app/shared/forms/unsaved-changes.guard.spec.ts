@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogService } from '@shared/feedback/feedback.service';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
 
 import { FormulaireProtege, unsavedChangesGuard } from './unsaved-changes.guard';
 
 describe('unsavedChangesGuard', () => {
-  let confirmation: jasmine.SpyObj<ConfirmationService>;
+  let confirmation: jasmine.SpyObj<ConfirmDialogService>;
 
   function ecran(modifie: boolean): FormulaireProtege {
     const form = new FormGroup({ nom: new FormControl('') });
@@ -24,8 +24,8 @@ describe('unsavedChangesGuard', () => {
   }
 
   beforeEach(() => {
-    confirmation = jasmine.createSpyObj<ConfirmationService>('ConfirmationService', ['confirm']);
-    TestBed.configureTestingModule({ providers: [{ provide: ConfirmationService, useValue: confirmation }] });
+    confirmation = jasmine.createSpyObj<ConfirmDialogService>('ConfirmDialogService', ['confirm']);
+    TestBed.configureTestingModule({ providers: [{ provide: ConfirmDialogService, useValue: confirmation }] });
   });
 
   it('laisse partir sans question un formulaire intact', () => {
@@ -40,7 +40,9 @@ describe('unsavedChangesGuard', () => {
 
     expect(isObservable(reponse)).toBeTrue();
     expect(await firstValueFrom(reponse as Observable<boolean>)).toBeTrue();
-    expect(confirmation.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ key: 'sortie', acceptLabel: 'Quitter', rejectLabel: 'Rester' }));
+    expect(confirmation.confirm).toHaveBeenCalledWith(
+      jasmine.objectContaining({ header: 'Quitter sans enregistrer ?', acceptLabel: 'Quitter', rejectLabel: 'Rester' })
+    );
   });
 
   it('retient l\'utilisateur sur son formulaire quand il choisit de rester', async () => {
