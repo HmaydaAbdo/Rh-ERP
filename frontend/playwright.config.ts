@@ -19,7 +19,9 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
     locale: 'fr-FR',
-    timezoneId: 'Africa/Casablanca'
+    timezoneId: 'Africa/Casablanca',
+    // Animations d'entrée neutralisées : les mesures de contraste (axe) et les clics ne dépendent pas d'un fondu en cours
+    contextOptions: { reducedMotion: 'reduce' }
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], channel }, testIgnore: /responsive\.spec\.ts/ },

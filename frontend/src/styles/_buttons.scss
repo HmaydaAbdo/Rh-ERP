@@ -114,6 +114,13 @@
 }
 
 // ---- Pastilles de statut ----
+// Fond = le statut dilué dans la surface ; texte = le statut mêlé au texte courant, donc plus foncé en thème clair et plus clair
+// en thème sombre : le contraste suit le thème. L'état n'est jamais porté par la seule couleur : la pastille le dit en toutes lettres.
+@mixin pastille($couleur) {
+  background: color-mix(in srgb, #{$couleur} 16%, var(--color-surface));
+  color: color-mix(in srgb, #{$couleur} 62%, var(--color-text));
+}
+
 .stp-badge {
   display: inline-flex;
   align-items: center;
@@ -130,17 +137,18 @@
   }
 
   &--info {
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
+    @include pastille(var(--color-primary));
   }
 
   &--success {
-    background: color-mix(in srgb, var(--color-success) 14%, transparent);
-    color: var(--color-success);
+    @include pastille(var(--color-success));
+  }
+
+  &--warning {
+    @include pastille(var(--color-warning));
   }
 
   &--danger {
-    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-    color: var(--color-danger);
+    @include pastille(var(--color-danger));
   }
 }

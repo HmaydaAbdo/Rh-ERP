@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-export type BadgeSeverity = 'success' | 'danger' | 'info' | 'neutral';
+export type BadgeSeverity = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 /** Pastille de statut (Actif / Inactif, source, nombre de permissions…) : le sens est dans le texte, la couleur le renforce. */
 @Component({

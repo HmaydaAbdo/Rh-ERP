@@ -5,6 +5,7 @@
         <tr>
           @for (col of columns(); track col.field) {
             <th
+              #th
               scope="col"
               [id]="headerId(col)"
               [class]="col.align ?? ''"
@@ -37,6 +38,9 @@
                   class="stp-table__resizer"
                   role="separator"
                   aria-orientation="vertical"
+                  aria-valuemin="60"
+                  aria-valuemax="2000"
+                  [attr.aria-valuenow]="widths()[col.field] ?? th.offsetWidth"
                   tabindex="0"
                   [attr.aria-label]="'Largeur de la colonne ' + col.header"
                   draggable="false"

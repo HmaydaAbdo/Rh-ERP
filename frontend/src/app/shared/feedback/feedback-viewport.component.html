@@ -1,13 +1,13 @@
 <section class="feedback-stack" aria-label="Notifications" aria-live="polite" aria-relevant="additions removals">
   @for (notification of notifications(); track notification.id) {
-    <article class="feedback-toast" [class]="'feedback-toast feedback-toast--' + notification.severity"
+    <div class="feedback-toast" [class]="'feedback-toast feedback-toast--' + notification.severity"
       [attr.role]="notification.severity === 'error' ? 'alert' : 'status'">
       <div class="feedback-toast__content">
         <strong>{{ notification.summary }}</strong>
         @if (notification.detail) { <p>{{ notification.detail }}</p> }
       </div>
       <button type="button" class="feedback-toast__dismiss" aria-label="Fermer la notification" (click)="dismiss(notification.id)">×</button>
-    </article>
+    </div>
   }
 </section>
 

@@ -139,6 +139,11 @@ jobs:
         working-directory: frontend
         run: npx ng build --configuration production
 
+      # Parcours E2E (connexion, permissions, fonctions, paie, composants, téléphone) contre une API simulée, avec axe.
+      - name: Run frontend E2E tests
+        working-directory: frontend
+        run: npm run e2e
+
       - name: Determine image tags
         if: github.event_name == 'push'
         id: tags
