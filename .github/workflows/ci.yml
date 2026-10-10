@@ -159,6 +159,17 @@ jobs:
         working-directory: frontend
         run: npm run e2e
 
+      # Traces et rapport des parcours en échec, pour comprendre un échec propre au CI sans le rejouer.
+      - name: Upload E2E report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
       - name: Determine image tags
         if: github.event_name == 'push'
         id: tags
