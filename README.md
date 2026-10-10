@@ -21,7 +21,7 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 | Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (JWT), MapStruct |
 | Base de données | PostgreSQL 18 + pgvector (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
 | Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`docs/data-model.md`](docs/data-model.md) |
-| Frontend | Angular 22.2.2, migration de PrimeNG 17 vers Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport en cours |
+| Frontend | Angular 22.2.2 (standalone, OnPush, Signals, zoneless), kit Staport sur Angular Aria/CDK, Lucide, Tailwind CSS 4 ; tests Vitest et E2E Playwright |
 | Imports / exports | Apache POI (Excel), jsoup + openhtmltopdf + Batik (rapport PDF) |
 | Documentation API | springdoc-openapi (Swagger UI) |
 | Conteneurisation | Docker Compose de production (images publiées, pas de build local) — nginx inner sert le frontend et relaie les appels API au backend, voir [`docs/deployment.md`](docs/deployment.md) |
@@ -56,7 +56,8 @@ Frontend sur http://localhost:4200, backend (API ; Swagger UI sur `/swagger-ui.h
 
 ```bash
 cd backend && ./mvnw test                                           # nécessite PostgreSQL (docker compose up -d postgres)
-cd frontend && npx ng test --watch=false --browsers=ChromeHeadless  # tests frontend
+cd frontend && npm test                                             # tests frontend (Vitest)
+cd frontend && npm run e2e                                          # parcours E2E (Playwright)
 cd frontend && npx ng build --configuration production              # le bundle de production compile
 ```
 

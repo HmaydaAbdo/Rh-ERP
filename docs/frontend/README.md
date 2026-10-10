@@ -12,10 +12,10 @@
 | | |
 |---|---|
 | Emplacement | `frontend/` (code dans `frontend/src/app/`) |
-| Technologies cibles | Angular 22.2.2, standalone, Signals, zoneless, Tailwind CSS 4, Angular Aria/CDK, Lucide Angular; AG Grid Community uniquement pour les grilles avancées |
-| État actuel | Angular 22.2.2; mode zoneless par défaut; 175 tests passent. Les retours utilisateur partagés utilisent Signals et CDK A11y. Zone.js et des composants PrimeNG restent à migrer. Voir [HANDOFF.md](../../HANDOFF.md) |
+| Technologies | Angular 22.2.2, standalone, composants `OnPush`, Signals, zoneless (Zone.js retiré), Angular Aria + CDK, Lucide Angular, Tailwind CSS 4 (utilitaires), Chart.js (graphiques, chargé à la demande). AG Grid Community n'est pas utilisé : il n'est réservé qu'à une grille avancée au besoin mesuré |
+| Kit de composants | `src/app/shared/ui/` (« kit Staport ») : voir [Kit Staport](#kit-staport) |
 | Rendu | Application monopage (SPA) ; routes chargées à la demande (lazy loading) par domaine |
-| Tests | Jasmine + Karma (voir [../testing.md](../testing.md)) |
+| Tests | Vitest (runner Angular `@angular/build:unit-test`, Chromium réel) pour les unités et composants ; Playwright + axe pour les parcours E2E (voir [../testing.md](../testing.md)) |
 | Production | Image nginx qui sert les fichiers statiques et relaie l'API (`frontend/nginx.conf`, voir [../deployment.md](../deployment.md)) |
 
 ### Commandes
@@ -25,11 +25,13 @@ cd frontend
 npm ci                                      # Node 24.15.0, version verrouillée par .nvmrc
 npm start                                   # http://localhost:4200, proxy API vers http://localhost:8080
 npm run build                               # build de production dans dist/
-npx ng test --watch=false --browsers=ChromeHeadless
+npm test                                     # tests unitaires et composants (Vitest, Chromium headless ; CHROME_BIN si Chrome n'est pas détecté)
+npm run e2e                                  # parcours E2E Playwright contre une API simulée (serveur de dev sur le port 4300)
+npm run audit:deps                           # npm audit (vulnérabilités hautes, hors pairs optionnels)
+npm run audit:licences                       # licences des dépendances livrées
 ```
 
-Ne pas employer `--force` ou `legacy-peer-deps` pour masquer les incompatibilités. Le lockfile conserve un écart
-PrimeNG 17/Angular 22; la dépendance doit être retirée après migration des composants restants. Ne pas masquer ses conflits de pairs avec `--force` ou `legacy-peer-deps`.
+Ne pas employer `--force` ou `legacy-peer-deps` pour masquer les incompatibilités : `npm ci` doit passer sans option.
 
 Le proxy de développement (`frontend/proxy.conf.js`) relaie `/employees`, `/functions`, `/chantiers`,
 `/equipes`, `/paie`, `/auth`, `/users`, `/roles`, `/permissions` vers `BACKEND_URL` (défaut
@@ -49,7 +51,6 @@ src/app/
 │   ├── auth/                Connexion, mot de passe oublié/réinitialisé, accès refusé, AuthService,
 │   │                        guards (authGuard, permissionGuard, homeGuard), intercepteur d'authentification
 │   ├── interceptors/        Intercepteur d'erreurs (notification du message de l'API)
-│   ├── i18n/                traductions françaises des composants tiers (à adapter au jeu de widgets retenu)
 │   ├── navigation/          nav-items.ts : source unique du menu et de l'écran d'accueil ; PageTitleStrategy : titre de l'onglet (« Employés · Staport RH »)
 │   └── theme/               ThemeService : thème clair / sombre (attribut data-theme sur <html>)
 ├── portail/                 Un dossier par domaine, comme côté backend
@@ -60,10 +61,13 @@ src/app/
 │   │       └── services/             Appels HTTP du domaine
 │   └── admin/               Utilisateurs et Rôles (users/, roles/, services/, models/)
 └── shared/
+    ├── ui/                  Kit Staport (icon, button, badge, dialog, menu, select, table, champs, message, chart, catalogue)
+    ├── feedback/            Notifications et confirmations (Signals + CDK A11y)
     ├── components/
-    │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé
+    │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé (sur `ui/select`)
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
     │   └── column-chooser/  Choix des colonnes visibles d'un tableau
+    ├── text/recherche.ts    Comparaison sans casse ni accents (filtres côté client, filtre des sélecteurs)
     ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
     ├── models/page.model.ts Forme d'une page du serveur : `content` et `page` (size, number, totalElements, totalPages)
     ├── reference-data/      Adaptateurs de sélecteur par domaine (fonction, chantier, équipe, employé)
@@ -71,10 +75,10 @@ src/app/
 ```
 
 Les styles globaux et les **tokens de design** sont dans `src/styles/` : `_tokens.scss` (jetons exposés en variables CSS —
-`--color-primary`, `--space-md`, `--font-sans`, … — pour les deux thèmes), `_tables.scss` (style unique des tableaux) et
-les styles de composants. Tailwind 4, Angular Aria/CDK et Lucide Angular sont les choix cibles. Le thème PrimeNG actuel
-correspond encore à la version 17 et sera supprimé avec la bibliothèque. Aucune valeur de design ne doit être écrite en dur.
-Règles : `conventions/design-system.md`.
+`--color-primary`, `--space-md`, `--font-sans`, … — pour les deux thèmes), `_buttons.scss` (boutons et pastilles), `_forms.scss`,
+`_page.scss`, `_overlays.scss`, `_motion.scss`, `tailwind.css` (utilitaires Tailwind 4 sans preflight, noms de couleurs/rayons/ombres
+alignés sur les jetons) ; le style des tableaux est dans `ui/table/table.component.scss` et celui de chaque composant avec lui.
+Aucune valeur de design ne doit être écrite en dur. Règles : `conventions/design-system.md`.
 
 ### Mise en page des écrans de liste
 
@@ -95,8 +99,8 @@ au-dessus du titre ; formulaire en grille de champs (libellé en gras, astérisq
 et message sous un champ invalide) ; le formulaire d'un bulletin est découpé en **Affectation**, **Jours** et **Rémunération** ;
 pied « Annuler » + action principale (collé au bas de l'écran sur téléphone). Une consultation (`app-detail`) affiche
 étiquette / valeur ; ses actions sont **Historique** (si `AUDIT_READ`) puis **Modifier** (si `*_WRITE`). Les fenêtres
-(`_overlays.scss`) ont un style unique ; les confirmations de suppression sont étroites, « Supprimer » en rouge. Les textes
-PrimeNG (calendrier, messages) sont en français (`core/i18n/primeng-fr.ts`).
+(`ui/dialog`) ont un style unique ; les confirmations de suppression sont étroites, « Supprimer » en rouge. Dates et nombres
+sont en français : `stp-date-input` s'appuie sur le champ date natif du navigateur, `stp-number-input` formate en `fr-FR`.
 
 ### Graphiques et mouvement
 
@@ -111,8 +115,9 @@ Contrôles de la revue finale (voir `conventions/design-system.md`, section « A
 (WCAG 2.2 A/AA et bonnes pratiques) sur les écrans principaux dans les deux thèmes ; le focus clavier est visible sur tous les
 éléments parcourus ; lien d'évitement ; boutons d'icône nommés ; champs étiquetés ; formulaires qui annoncent leurs erreurs, mettent
 le focus sur la première et demandent confirmation avant d'être quittés modifiés (`shared/forms/`). Nombres et dates en `fr-FR`.
-Le build Angular 22 a signalé un dépassement du budget initial de 15,62 kB et du budget SCSS de 7,60 kB pour l'assistant
-d'export. Ces dépassements restent ouverts : optimiser le chargement et les styles sans relever les budgets.
+Ces contrôles sont rejoués à chaque intégration par les tests E2E (`frontend/e2e/`, axe en thème clair et sombre, parcours au clavier). Le build
+de production (bundle initial ~555 kB) n'émet qu'un avertissement : le style de l'assistant d'export dépasse son budget de 8 kB
+(voir « Assistant d'export de la paie »).
 
 ### Titres d'onglet
 
@@ -208,16 +213,40 @@ Détail : [../auth/README.md](../auth/README.md).
 
 ---
 
+## Kit Staport
+
+`src/app/shared/ui/` : composants standalone, `OnPush`, Signals, construits sur Angular Aria/CDK et les jetons (aucune bibliothèque de
+widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalogue** (`/catalogue`, route de développement seulement,
+`app.routes.ts`) les montre dans leurs états et sert aux tests E2E d'accessibilité.
+
+| Composant | Rôle | Base |
+|---|---|---|
+| `stp-icon` | Icône Lucide décorative ; jeu d'icônes dans `ui/icon/icons.ts` (ajouter une icône = l'y ajouter) | `@lucide/angular` |
+| `button[stp-button]` / `a[stp-button]` | Bouton natif ; `variant` (primary, secondary, text, danger, danger-text), `icon`, `iconOnly`, `loading` | HTML natif |
+| `stp-badge` | Pastille de statut (success, warning, danger, info, neutral), contraste calculé par thème | |
+| `stp-dialog` | Dialogue modal ou tiroir (`placement="end"`) : piège de focus, Échap, `closable`, panneau en overlay | CDK Overlay + A11y |
+| `stp-menu-button`, `stp-split-button` | Menu d'actions (`role="menu"`, flèches, Échap) ; bouton scindé | Angular Aria `menu` |
+| `stp-select` | Liste déroulante simple/multiple, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` | Aria `combobox` + `listbox` |
+| `stp-table` | Tableau natif : tri, pagination serveur ou mémoire, redimensionnement/réordonnancement clavier, pied, ligne cliquable | HTML natif |
+| `stp-number-input` | Nombre au format `fr-FR`, bornes, décimales | |
+| `stp-password-input` | Mot de passe avec afficher/masquer (`aria-pressed`) | |
+| `stp-date-input`, `stp-month-input` | Date (champ natif) et mois (sélecteur de mois en popover) ; valeur `Date` | natif / CDK Overlay |
+| `stp-message` | Message permanent dans la page | |
+| `stp-chart` | Graphique Chart.js (`role="img"`), recréé quand type/données/options changent ; `dataSelect` au clic | Chart.js |
+
+Clavier du sélecteur : ouverture par clic ou **Flèche bas**, navigation aux flèches, **Entrée** coche/choisit, **Échap** ferme ;
+la frappe filtre (sélecteurs filtrables). Conséquence de l'implémentation sur Angular Aria : sans filtre, la frappe de lettres
+ne fait pas de saisie prédictive.
+
+---
+
 ## Composants partagés
 
 ### Sélecteur à chargement différé (`app-lazy-select`)
 
-> État : le composant existant est encore adossé à PrimeNG 17. Le remplacer par le composant Staport basé sur Angular
-> Aria/CDK; la description ci-dessous documente son contrat fonctionnel à conserver pendant cette migration.
-
-Un seul composant pour **toute** liste déroulante adossée à des données serveur. Il encapsule le sélecteur simple
-(`p-dropdown`) et multiple (`p-multiSelect`) de PrimeNG derrière un `ControlValueAccessor` : la valeur exposée au
-formulaire est un **identifiant** (ou un tableau d'identifiants), jamais l'objet.
+Un seul composant pour **toute** liste déroulante adossée à des données serveur. Il pilote `stp-select` (Angular Aria combobox +
+listbox, panneau en overlay CDK) derrière un `ControlValueAccessor` : la valeur exposée au formulaire est un **identifiant**
+(ou un tableau d'identifiants), jamais l'objet.
 
 | Entrée | Rôle |
 |---|---|
@@ -225,12 +254,11 @@ formulaire est un **identifiant** (ou un tableau d'identifiants), jamais l'objet
 | `multiple` | Sélection multiple (filtres de liste) ou simple (relation unique d'un formulaire) |
 | `optionLabel`, `dataKey` | Libellé affiché (défaut `label`) et clé (défaut `id`) |
 | `pageSize` | Taille d'une page (défaut 30) |
-| `appendTo` | `"body"` obligatoire dans un conteneur à débordement contraint (ex. un dialogue) |
 | `placeholder`, `filterPlaceholder`, `showClear` | Textes et bouton d'effacement |
 | `summaryLabel` | Mode compact d'un filtre multiple, sur une ligne : la valeur choisie seule, puis ce texte à partir de deux (`{0} chantiers`) au lieu de pastilles |
 | `ariaLabel` | Nom accessible du champ quand son placeholder disparaît (barre d'outils sans libellé visible) |
 
-Comportement : recherche **côté serveur** à la frappe (délai de saisie), options chargées **page par page**,
+Comportement : recherche **côté serveur** à la frappe (délai de saisie), options chargées **page par page** au défilement,
 et `fetchById` pour afficher la valeur déjà choisie en modification avant même que sa page soit chargée. Le
 panneau d'options a une **largeur minimale** (`--select-panel-min-width: 22rem`, maximale 40 rem) pour que les
 libellés longs ne soient pas tronqués.
@@ -255,29 +283,28 @@ d'un import). Utilisé par l'assistant d'export de la paie (voir `docs/report/RE
 Directive qui affiche un nombre en l'animant depuis sa valeur précédente, au format `fr-FR` ; supprimée si
 l'utilisateur a demandé moins de mouvement dans son système.
 
-### Tableaux (migration PrimeNG → Staport) et choix des colonnes
+### Tableaux (`stp-table`) et choix des colonnes
 
-> Les écrans actuels utilisent encore `p-table` de PrimeNG 17. C'est la description de l'implémentation héritée, pas une
-> recommandation pour les nouvelles pages. La cible est le composant accessible Staport basé sur HTML/Aria/CDK; AG Grid
-> Community ne s'ajoute que pour une grille avancée avec besoin mesuré.
+Tableau HTML natif (`table`, `th scope="col"`, `aria-sort`, région défilante nommée et focusable). AG Grid Community ne s'ajoute que
+pour une grille avancée avec besoin mesuré.
 
 Tous les tableaux de données — **sans exception** — offrent :
 
 | Fonction | Détail |
 |---|---|
 | Tri | Sur chaque colonne de données (pas sur la colonne d'actions) ; `sortField` donne le chemin transmis au backend (ex. `chantier.code`) |
-| Redimensionnement | Glisser le bord d'un en-tête |
-| Réordonnancement | Glisser-déposer un en-tête ; l'ordre est reporté sur le corps du tableau |
+| Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite |
+| Réordonnancement | Glisser-déposer un en-tête, ou **Alt + flèche** sur son bouton de tri ; l'ordre est reporté sur le corps du tableau |
 | Colonnes visibles | `app-column-chooser` ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
 | Pagination | 10 / 20 / 50 / 100 lignes, avec « 1 - 20 sur 134 — page 1/7 » |
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
-**Style unique** : tous les tableaux partagent la classe `app-table` (`src/styles/_tables.scss`, tokens `--table-*`
-dans `_tokens.scss`) ; aucun écran ne définit son propre style de tableau.
+**Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `_tokens.scss`) ; aucun écran ne définit
+son propre style de tableau. Une cellule à texte long porte `cellClass: 'text-truncate'`.
 
 Les colonnes sont déclarées une seule fois (`TableColumn`, regroupées dans un `ColumnState`, voir
 `shared/table/table-columns.ts`) ; l'en-tête et le corps parcourent `columns.visible`. Un en-tête groupé sur
-plusieurs lignes est proscrit (PrimeNG ne sait ni réordonner ni masquer ses colonnes). Ajouter une colonne =
+plusieurs lignes est proscrit (il ne se réordonne ni ne se masque). Ajouter une colonne =
 l'ajouter à la liste avec son tri, dans le même changement. L'état (ordre, visibilité) n'est **pas** mémorisé
 entre deux visites.
 
@@ -295,6 +322,10 @@ entre deux visites.
 Pour les tableaux paginés côté serveur, un chemin de tri invalide provoque une erreur `500` : chaque `sortField`
 est testé contre le backend.
 
+Contrat du composant : `[lazy]="true"` (le tableau émet `lazyLoad` à l'initialisation puis à chaque page/tri/taille, le parent charge et
+renvoie `value` et `totalRecords`) ou mode mémoire (tri et pagination faits par le tableau) ; gabarits `stpCell` (cellule),
+`stpRowActions` (colonne d'actions), `stpFooter` (totaux) ; `rowClickable` + `rowClick` pour une ligne cliquable (Entrée au clavier).
+
 ---
 
 ## Assistant d'export de la paie
@@ -304,21 +335,23 @@ conditionnel, génération) piloté par des signaux ; les étapes sont une liste
 que si un tableau sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
 
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
-des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15 ko). Si un autre composant approche la limite, le découper
-en sous-composants plutôt que de la relever encore.
+des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko, **encore au-dessus de l'avertissement**). Écart ouvert, suivi dans
+[TODO.md](../../TODO.md) : découper l'assistant en composants d'étape plutôt que de relever encore le budget.
 
 ## Formulaires, notifications et erreurs
 
-- **Formulaires réactifs uniquement** (`FormBuilder`) ; validation affichée sous le champ une fois touché ; les
-  champs obligatoires portent une astérisque.
-- Les messages de succès passent par `NotificationService`; les erreurs HTTP sont publiées automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API. L'hôte partagé présente ces notifications avec rôles ARIA et fermeture manuelle.
+- **Formulaires réactifs typés** (`FormBuilder`) ; validation affichée sous le champ une fois touché ; les champs obligatoires
+  portent une astérisque. Les champs du kit (`stp-select`, `stp-number-input`, `stp-date-input`, `stp-month-input`, `stp-password-input`,
+  `app-lazy-select`) sont des `ControlValueAccessor`. Écart au standard Staport (Signal Forms pour tout nouveau formulaire) :
+  les formulaires existants restent en Reactive Forms, migration à décider écran par écran (voir [TODO.md](../../TODO.md)).
+- Les messages de succès passent par `NotificationService`; les erreurs HTTP sont publiées automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API (sauf la restauration de session au démarrage, `auth/refresh`, silencieuse : un visiteur sans session n'a pas d'erreur à voir). L'hôte partagé présente ces notifications avec rôles ARIA et fermeture manuelle.
 - Les suppressions et sorties de formulaire modifié passent par `ConfirmDialogService`; son dialogue modal utilise CDK A11y (piège de focus, Échap, focus initial) et le design system Staport.
 - Les imports Excel affichent un résumé puis, en cas de rejet, le détail de chaque ligne en cause avec sa raison
   (voir [../imports.md](../imports.md)).
 
 ## Gestion de l'état
 
-L'état local d'un composant est porté par des **signaux** ou des propriétés ; l'état global se limite à la session
+L'état local d'un composant est porté par des **signaux** (tous les composants sont `OnPush`) ; l'état global se limite à la session
 (`AuthService`). Aucune bibliothèque de gestion d'état (décision du 2026-10-03 : les signaux Angular sont
 autorisés, pas de NgRx).
 
@@ -331,8 +364,8 @@ autorisés, pas de NgRx).
    modification) et les enregistrer dans `app.routes.ts` (avec `authGuard`).
 3. Ajouter l'entrée à `NAV_ITEMS`.
 4. Conditionner chaque bouton d'action par sa permission (`canWrite()`…).
-5. Pour un écran de liste : classes `app-page`, `app-toolbar` et `app-table-bar` (voir ci-dessus). Construire le tableau avec le
-   composant Staport/Aria, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination et filtres en temps réel.
-6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select` construit sur Aria/CDK.
+5. Pour un écran de liste : classes `app-page`, `app-toolbar` et `app-table-bar` (voir ci-dessus). Construire le tableau avec
+   `stp-table`, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination et filtres en temps réel.
+6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select` (sur `stp-select`).
 7. Ajouter le préfixe d'API à `proxy.conf.js` et `nginx.conf`.
 8. Mettre à jour [../rbac/](../rbac/README.md) et la documentation du domaine.

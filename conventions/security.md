@@ -208,7 +208,7 @@ doit vérifier la **permission effective** de l'utilisateur courant, jamais un r
 
 ```html
 @if (authService.hasPermission('<DOMAINE>_DELETE')) {
-  <button pButton icon="pi pi-trash" (click)="deleteItem(item)"></button>
+  <button stp-button variant="danger-text" icon="trash-2" iconOnly aria-label="Supprimer" (click)="deleteItem(item)"></button>
 }
 ```
 

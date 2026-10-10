@@ -10,8 +10,7 @@
 
 ERP-RH possède déjà PostgreSQL + Flyway, un RBAC dynamique par domaine, Envers et un journal
 d'audit. La normalisation doit préserver ces règles métier et rendre le socle commun réutilisable
-par G-Banque et les futurs projets. Le frontend actuel est Angular 17 / PrimeNG ; l'application
-contient des usages PrimeNG nombreux, donc une bascule UI globale augmenterait fortement le risque.
+par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (migré le 2026-10-10 vers Angular 22 et le kit Staport sur Angular Aria/CDK : aucun usage PrimeNG ne subsiste).
 
 ## Décisions
 

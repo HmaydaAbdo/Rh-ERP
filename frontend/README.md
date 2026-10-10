@@ -1,6 +1,6 @@
 # Frontend — rh-erp
 
-Application Angular 17 (composants standalone, signaux) avec PrimeNG 17. La documentation complète
+Application Angular 22 (composants standalone `OnPush`, signaux, zoneless) avec le kit Staport (Angular Aria/CDK, Lucide, Tailwind 4). La documentation complète
 (structure, routes et permissions, session, composants partagés, tableaux) est dans
 [`docs/frontend/README.md`](../docs/frontend/README.md) ; les règles d'écriture sont dans
 [`conventions/frontend.md`](../conventions/frontend.md).
@@ -12,7 +12,8 @@ npm install
 npm start                                                  # http://localhost:4200 — proxy API vers http://localhost:8080
 npm run build                                              # build dans dist/
 npx ng build --configuration production                    # build de production (utilisé par la CI)
-npx ng test --watch=false --browsers=ChromeHeadless        # tests unitaires (Karma + Jasmine)
+npm test                                                   # tests unitaires et composants (Vitest, Chromium)
+npm run e2e                                                # parcours E2E Playwright (API simulée)
 ```
 
 Le backend doit tourner pour que l'application fonctionne (voir le [README racine](../README.md)). Le proxy de

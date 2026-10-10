@@ -43,7 +43,7 @@ outil RH généraliste.
 
 ## Capabilities and Constraints
 
-- Stack imposée par `conventions/frontend.md` : Angular 17 (composants standalone, signaux), PrimeNG 17, RxJS, SCSS,
+- Stack imposée par `conventions/frontend.md` : Angular 22 (composants standalone, signaux, zoneless), Angular Aria/CDK, Lucide, Tailwind 4, RxJS, SCSS,
   Chart.js. Toute valeur de design vient de `src/styles/_tokens.scss` (jamais en dur dans un composant).
 - Un redesign garde **toutes** les fonctions, routes, permissions, champs de formulaire et comportements : seuls
   l'apparence, la mise en page, la réactivité, le mouvement et la friction d'usage changent.
