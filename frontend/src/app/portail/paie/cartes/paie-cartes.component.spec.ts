@@ -1,6 +1,5 @@
 import type { MockedObject } from "vitest";
 import { TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/feedback/feedback.service';
@@ -59,7 +58,6 @@ describe('PaieCartesComponent', () => {
         service.supprimerGroupe.mockReturnValue(of({ supprimes: 0 }));
 
         TestBed.configureTestingModule({
-            imports: [NoopAnimationsModule],
             providers: [
                 provideRouter([{ path: 'paie/cartes', component: PaieCartesComponent }]),
                 { provide: PaieService, useValue: service },
