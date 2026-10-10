@@ -5,14 +5,14 @@ import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { PaieExportEtapeEquipesComponent } from './etapes/equipes-etape.component';
 import { PaieExportEtapeFormatComponent } from './etapes/format-etape.component';
-import { PaieExportEtapeMarcheComponent } from './etapes/marche-etape.component';
+import { PaieExportEtapeChantierComponent } from './etapes/chantier-etape.component';
 import { PaieExportEtapeMaterielComponent } from './etapes/materiel-etape.component';
 import { PaieExportEtapePeriodeComponent } from './etapes/periode-etape.component';
 import { PaieExportEtapeRecapComponent } from './etapes/recap-etape.component';
 import { PaieExportStore } from './paie-export.store';
 
 /**
- * Assistant d'export de la paie — PDF ou Excel — en étapes guidées : mois (contrôlé dès le choix), format, marché (PDF :
+ * Assistant d'export de la paie — PDF ou Excel — en étapes guidées : mois (contrôlé dès le choix), format, chantier (PDF :
  * limiter le rapport à un chantier, avec ou sans vue d'ensemble), équipes à détailler (facultatif), parc matériel
  * (seulement si un tableau matériel sera imprimé) puis récapitulatif et génération. Une seule sélection d'équipes sert les
  * deux formats (voir docs/report/README.md, « Export unifié PDF/Excel ») ; l'exclusion de la feuille du chantier ne concerne
@@ -29,7 +29,7 @@ import { PaieExportStore } from './paie-export.store';
     IconComponent,
     PaieExportEtapePeriodeComponent,
     PaieExportEtapeFormatComponent,
-    PaieExportEtapeMarcheComponent,
+    PaieExportEtapeChantierComponent,
     PaieExportEtapeEquipesComponent,
     PaieExportEtapeMaterielComponent,
     PaieExportEtapeRecapComponent

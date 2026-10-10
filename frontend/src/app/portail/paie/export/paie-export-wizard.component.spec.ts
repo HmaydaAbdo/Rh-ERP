@@ -146,7 +146,7 @@ describe('PaieExportWizardComponent', () => {
 
         store.basculerEquipe('C168', 'CH');
         store.basculerEquipe('C168', 'OP');
-        expect(store.etapes()).toEqual(['periode', 'format', 'marche', 'equipes', 'materiel', 'recap']);
+        expect(store.etapes()).toEqual(['periode', 'format', 'chantier', 'equipes', 'materiel', 'recap']);
 
         store.basculerEquipe('C168', 'CH');
         store.basculerEquipe('C168', 'OP');
@@ -216,16 +216,16 @@ describe('PaieExportWizardComponent', () => {
         expect(JSON.parse(localStorage.getItem('paie.export.materiel') ?? '{}')['CAMION CITERNE']).toBe(7);
     });
 
-    describe('étape « marché » (PDF)', () => {
-        it("propose l'étape marché en PDF seulement, entre le format et les équipes", () => {
-            expect(store.etapes()).toEqual(['periode', 'format', 'marche', 'equipes', 'recap']);
+    describe('étape « chantier » (PDF)', () => {
+        it("propose l'étape chantier en PDF seulement, entre le format et les équipes", () => {
+            expect(store.etapes()).toEqual(['periode', 'format', 'chantier', 'equipes', 'recap']);
 
             store.choisirFormat('EXCEL');
 
             expect(store.etapes()).toEqual(['periode', 'format', 'equipes', 'recap']);
         });
 
-        it('sans marché : rapport complet, tous les chantiers, vue d’ensemble incluse', () => {
+        it('sans chantier choisi : rapport complet, tous les chantiers, vue d’ensemble incluse', () => {
             store.suivant();
             store.etape.set('recap');
             store.suivant();
@@ -233,14 +233,14 @@ describe('PaieExportWizardComponent', () => {
             const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
             expect(requete.chantierId).toBeNull();
             expect(requete.sansVueEnsemble).toBe(false);
-            expect(store.texteMarche()).toBe('Tous les chantiers');
+            expect(store.texteChantier()).toBe('Tous les chantiers');
         });
 
-        it('un marché limite le rapport à ce chantier et retire la vue d’ensemble, qu’on peut remettre', () => {
+        it('un chantier choisi limite le rapport à ce chantier et retire la vue d’ensemble, qu’on peut remettre', () => {
             store.suivant();
-            store.choisirMarche('C196');
+            store.choisirChantier('C196');
 
-            expect(store.chantierMarche()?.id).toBe(2);
+            expect(store.chantierRapport()?.id).toBe(2);
             expect(store.sansVueEnsemble()).toBe(true);
             expect(store.chantiersPourEquipes().map((c) => c.code)).toEqual(['C196']);
 
@@ -251,16 +251,16 @@ describe('PaieExportWizardComponent', () => {
             const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
             expect(requete.chantierId).toBe(2);
             expect(requete.sansVueEnsemble).toBe(false);
-            expect(store.texteMarche()).toBe('C196 — Marrakech');
+            expect(store.texteChantier()).toBe('C196 — Marrakech');
         });
 
-        it('oublie les équipes des autres chantiers quand un marché est choisi (et le matériel qui en dépendait)', () => {
+        it('oublie les équipes des autres chantiers quand un chantier est choisi (et le matériel qui en dépendait)', () => {
             store.suivant();
             store.basculerEquipe('C168', 'CH');
             store.basculerEquipe('C196', 'CH');
             expect(store.etapes()).toContain('materiel');
 
-            store.choisirMarche('C196');
+            store.choisirChantier('C196');
 
             expect(store.equipesChoisies('C168')).toEqual([]);
             expect(store.equipesChoisies('C196')).toEqual(['CH']);
@@ -269,42 +269,42 @@ describe('PaieExportWizardComponent', () => {
 
         it('retourner à « Tous les chantiers » remet la vue d’ensemble', () => {
             store.suivant();
-            store.choisirMarche('C168');
-            store.choisirMarche(null);
+            store.choisirChantier('C168');
+            store.choisirChantier(null);
 
-            expect(store.marche()).toBeNull();
+            expect(store.chantierChoisi()).toBeNull();
             expect(store.sansVueEnsemble()).toBe(false);
         });
 
-        it('ignore le marché en Excel (aucun chantier ni vue d’ensemble dans la requête) mais le retrouve au retour en PDF', () => {
+        it('ignore le chantier choisi en Excel (aucun chantier ni vue d’ensemble dans la requête) mais le retrouve au retour en PDF', () => {
             store.suivant();
-            store.choisirMarche('C196');
+            store.choisirChantier('C196');
             store.choisirFormat('EXCEL');
 
-            expect(store.marcheEffectif()).toBeNull();
+            expect(store.chantierEffectif()).toBeNull();
             expect(store.chantiersPourEquipes().length).toBe(2);
             store.etape.set('recap');
             store.suivant();
             expect(vi.mocked(service.exporter).mock.lastCall![0].chantiers).toBeNull();
 
             store.choisirFormat('PDF');
-            expect(store.marcheEffectif()).toBe('C196');
+            expect(store.chantierEffectif()).toBe('C196');
         });
 
-        it('filtre les marchés proposés par code ou libellé', () => {
+        it('filtre les chantiers proposés par code ou libellé', () => {
             store.suivant();
-            store.rechercherMarche('marra');
+            store.rechercherChantier('marra');
 
-            expect(store.marchesFiltres().map((c) => c.code)).toEqual(['C196']);
+            expect(store.chantiersProposes().map((c) => c.code)).toEqual(['C196']);
         });
 
-        it('changer de mois oublie le marché choisi', () => {
+        it('changer de mois oublie le chantier choisi', () => {
             store.suivant();
-            store.choisirMarche('C196');
+            store.choisirChantier('C196');
 
             store.choisirPeriode('2026-08');
 
-            expect(store.marche()).toBeNull();
+            expect(store.chantierChoisi()).toBeNull();
             expect(store.sansVueEnsemble()).toBe(false);
         });
     });

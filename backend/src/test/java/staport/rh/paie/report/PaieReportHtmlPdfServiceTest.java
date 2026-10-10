@@ -74,7 +74,7 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
     }
 
-    /** Rapport d'un seul marché, sans vue d'ensemble : un PDF valide, plus court que le rapport complet (une page de moins). */
+    /** Rapport d'un seul chantier, sans vue d'ensemble : un PDF valide, plus court que le rapport complet (une page de moins). */
     @Test
     void generer_sansVueEnsembleProduitUnPdfValideSansLaPageGlobale() {
         Paie c059 = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);

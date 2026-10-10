@@ -34,7 +34,7 @@ doit rester vert : backend (JDK 21, PostgreSQL 18), frontend (tests Vitest, audi
   graphique Chart.js, catalogue `/catalogue` (développement). Tous les écrans (fonctions, équipes, chantiers, employés, utilisateurs,
   rôles, audit, paie) migrés ; `lazy-select`, `column-chooser`, `month-picker` réécrits.
 - Bundle initial ~555 kB (780 avant), CSS global 25 kB (268 avant). Tailwind 4 câblé (utilitaires seulement, `tailwind.css`).
-- Assistant d'export de la paie découpé (coque + `PaieExportStore` + un composant par étape) : plus de dépassement de budget de style. Nouvelle étape **Marché** (PDF) : rapport limité à un chantier, case « Sans vue d'ensemble » ; backend : `PaieReportPdfRequestDto.sansVueEnsemble`, chapitres renumérotés à partir de I.
+- Assistant d'export de la paie découpé (coque + `PaieExportStore` + un composant par étape) : plus de dépassement de budget de style. Nouvelle étape **Chantier** (PDF) : rapport limité à un chantier, case « Sans vue d'ensemble » ; backend : `PaieReportPdfRequestDto.sansVueEnsemble`, chapitres renumérotés à partir de I.
 - Tests : **186 tests Vitest** dans Chromium réel (sans Zone.js) ; **31 parcours E2E Playwright + axe** (API simulée, thèmes clair/sombre,
   téléphone). Axe a fait corriger : repère `<main>`, toast en `div`, séparateur de colonne, contrastes. Bogue corrigé : notification
   « Erreur » affichée à un visiteur sans session (`auth/refresh` désormais silencieux).

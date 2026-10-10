@@ -1,27 +1,27 @@
 <section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
-  <p class="export-wizard__consigne">Limitez le rapport à un seul marché (chantier), ou gardez tous les chantiers.</p>
+  <p class="export-wizard__consigne">Limitez le rapport à un seul chantier, ou gardez tous les chantiers.</p>
   <input
     type="search"
     class="export-wizard__recherche"
     placeholder="Rechercher un chantier"
     aria-label="Rechercher un chantier"
-    [value]="store.rechercheMarche()"
-    (input)="store.rechercherMarche($any($event.target).value)"
+    [value]="store.rechercheChantier()"
+    (input)="store.rechercherChantier($any($event.target).value)"
   />
   @if (store.chantiersEnCours()) {
     <p class="export-wizard__legende">Chargement des chantiers…</p>
   }
-  <div class="export-wizard__marches" role="radiogroup" aria-label="Marché du rapport">
-    <label class="export-wizard__marche" [class.export-wizard__marche--choisi]="store.marche() === null">
-      <input type="radio" name="marche" [checked]="store.marche() === null" (change)="store.choisirMarche(null)" />
+  <div class="export-wizard__choix" role="radiogroup" aria-label="Chantier du rapport">
+    <label class="export-wizard__choix-item" [class.export-wizard__choix-item--choisi]="store.chantierChoisi() === null">
+      <input type="radio" name="chantier" [checked]="store.chantierChoisi() === null" (change)="store.choisirChantier(null)" />
       <span>
         <span class="export-wizard__code">Tous les chantiers</span>
         <span class="export-wizard__meta">Rapport complet : un chapitre par chantier</span>
       </span>
     </label>
-    @for (c of store.marchesFiltres(); track c.code) {
-      <label class="export-wizard__marche" [class.export-wizard__marche--choisi]="store.marche() === c.code">
-        <input type="radio" name="marche" [checked]="store.marche() === c.code" (change)="store.choisirMarche(c.code)" />
+    @for (c of store.chantiersProposes(); track c.code) {
+      <label class="export-wizard__choix-item" [class.export-wizard__choix-item--choisi]="store.chantierChoisi() === c.code">
+        <input type="radio" name="chantier" [checked]="store.chantierChoisi() === c.code" (change)="store.choisirChantier(c.code)" />
         <span>
           <span class="export-wizard__code">{{ c.code }}</span>
           <span class="export-wizard__meta">{{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés</span>

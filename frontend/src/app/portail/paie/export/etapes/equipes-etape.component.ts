@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PaieExportStore } from '../paie-export.store';
 
-/** Étape « Équipes » : chantiers (ceux du marché choisi en PDF) dont on détaille des équipes, avec leur retrait de la feuille du chantier en Excel. */
+/** Étape « Équipes » : chantiers (celui du chantier choisi en PDF) dont on détaille des équipes, avec leur retrait de la feuille du chantier en Excel. */
 @Component({
   selector: 'app-paie-export-etape-equipes',
   imports: [IconComponent],
