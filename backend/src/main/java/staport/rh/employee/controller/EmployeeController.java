@@ -69,7 +69,7 @@ public class EmployeeController {
     @Operation(summary = "Rechercher des employés")
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     public ResponseEntity<Page<EmployeeResponseDto>> rechercher(
-            @RequestBody(required = false) EmployeeSearchCriteria criteria,
+            @Valid @RequestBody(required = false) EmployeeSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(employeeService.search(criteria, pageable));
     }

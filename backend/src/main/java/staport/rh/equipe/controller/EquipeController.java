@@ -69,7 +69,7 @@ public class EquipeController {
     @Operation(summary = "Rechercher des équipes")
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
     public ResponseEntity<Page<EquipeResponseDto>> rechercher(
-            @RequestBody(required = false) EquipeSearchCriteria criteria,
+            @Valid @RequestBody(required = false) EquipeSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(equipeService.search(criteria, pageable));
     }

@@ -1,5 +1,6 @@
 package staport.rh.employee.dtos.request;
 
+import jakarta.validation.constraints.Size;
 import staport.rh.employee.entities.EmployeeStatut;
 
 import java.util.List;
@@ -9,10 +10,10 @@ import java.util.List;
  * cardinalité réelle est un multiselect, jamais une sélection unique). {@code null} ou vide = pas de
  * filtre sur cette dimension, jamais interprété comme "aucun résultat". */
 public record EmployeeSearchCriteria(
-        String nomPrenom,
-        String cin,
-        List<Long> fonctionIds,
-        List<Long> chantierIds,
+        @Size(max = 150) String nomPrenom,
+        @Size(max = 30) String cin,
+        @Size(max = 500) List<Long> fonctionIds,
+        @Size(max = 500) List<Long> chantierIds,
         EmployeeStatut statut
 ) {
 }

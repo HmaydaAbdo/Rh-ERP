@@ -69,7 +69,7 @@ public class ChantierController {
     @Operation(summary = "Rechercher des chantiers")
     @PreAuthorize("hasAuthority('CHANTIER_READ')")
     public ResponseEntity<Page<ChantierResponseDto>> rechercher(
-            @RequestBody(required = false) ChantierSearchCriteria criteria,
+            @Valid @RequestBody(required = false) ChantierSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(chantierService.search(criteria, pageable));
     }
