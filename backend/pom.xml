@@ -291,6 +291,12 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- PostgreSQL 18 + pgvector réel pour les tests d'intégration (version gérée par Spring Boot). -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<!-- Tests d'architecture de l'audit (toute entité auditée, aucune écriture en masse...) : voir
 		     conventions/audit.md, « Garde-fous automatiques ». -->
 		<dependency>

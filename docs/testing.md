@@ -9,9 +9,8 @@
 ## Lancer les tests
 
 ```bash
-# Backend — nécessite un PostgreSQL accessible (docker compose up -d postgres) et les variables de backend/.env
-# (dont DB_MIGRATION_USER / DB_MIGRATION_PASSWORD). Les tests d'intégration écrivent dans la base : en local, utiliser une
-# base jetable plutôt que celle qui contient des données réelles.
+# Backend — Docker doit tourner : les tests d'intégration démarrent leur propre PostgreSQL jetable (Testcontainers) et ne
+# touchent jamais la base de développement. Les autres variables (JWT_SECRET, SMTP_*…) viennent de backend/.env.
 cd backend
 ./mvnw test
 
@@ -23,7 +22,7 @@ npm run audit:deps && npm run audit:licences  # chaîne d'approvisionnement
 npx ng build --configuration production      # vérifie que le bundle de production compile
 ```
 
-La CI utilise un PostgreSQL de service (`pgvector/pgvector:pg18`), des variables d'environnement factices
+Les tests d'intégration démarrent eux-mêmes un PostgreSQL 18 + pgvector jetable avec **Testcontainers** (`staport.rh.support.PostgresPartage`, une seule fois pour toute la JVM, à la première classe `@SpringBootTest`) : **Docker doit tourner**, mais aucune base ni variable `DB_*` n'est à préparer, en local comme en CI. La CI utilise des variables d'environnement factices
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en
 environnement sans écran.
 
@@ -39,8 +38,8 @@ des données migrées.
 
 JUnit 5, Mockito, AssertJ, ArchUnit. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
 simulées, sans base de données. `PaieApplicationTests` et **les tests d'intégration de l'audit** démarrent l'application
-complète sur un vrai PostgreSQL (les instantanés Envers, les transactions et les droits ne se simulent pas) ; ils filtrent
-toujours par identifiant, jamais par comptage global, car la base est partagée.
+complète sur un vrai PostgreSQL 18 + pgvector (Testcontainers ; les instantanés Envers, les transactions et les droits ne se simulent pas) ; ils filtrent
+toujours par identifiant, jamais par comptage global, car le conteneur est partagé par toutes les classes de test.
 
 | Zone | Classes de test | Ce qu'elles vérifient |
 |---|---|---|

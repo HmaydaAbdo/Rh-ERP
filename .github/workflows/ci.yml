@@ -15,21 +15,6 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: pgvector/pgvector:pg18
-        env:
-          POSTGRES_DB: ci_test
-          POSTGRES_USER: ci_test
-          POSTGRES_PASSWORD: ci_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U ci_test -d ci_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       - uses: actions/checkout@v7
 
@@ -58,14 +43,9 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -B test
+        # Pas de variables DB_* : les tests d'intégration démarrent leur propre PostgreSQL 18 + pgvector (Testcontainers, Docker
+        # est présent sur le runner) et publient ses coordonnées eux-mêmes.
         env:
-          DB_HOST: localhost
-          DB_PORT: "5432"
-          DB_NAME: ci_test
-          DB_USER: ci_test
-          DB_PASSWORD: ci_test
-          DB_MIGRATION_USER: ci_test
-          DB_MIGRATION_PASSWORD: ci_test
           CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
           JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
           FRONTEND_URL: http://localhost:4200

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,8 +50,9 @@ public class UserController {
 
     @PostMapping
     @Operation(summary = "Créer un utilisateur")
+    @ApiResponse(responseCode = "201")
     public ResponseEntity<UserResponseDto> create(@Valid @RequestBody UserCreateRequestDto dto) {
-        return ResponseEntity.ok(userService.create(dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(dto));
     }
 
     @PutMapping("/{id}")

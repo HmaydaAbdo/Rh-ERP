@@ -111,7 +111,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
 | 6 | Traité | Limite de débit sur la connexion, la réinitialisation, le renouvellement de session et les traitements coûteux (nginx inner, `429`, 2026-10-11) | Reste possible : verrouillage temporaire de compte après échecs répétés |
-| 8 | Ouverte | Écarts du contrôle de conformité du backend qui attendent une décision (G1 à G10) : [docs/conformite/README.md](docs/conformite/README.md) | Trancher puis traiter, G1 (limite de débit, ci-dessus) en premier |
+| 8 | Ouverte | Écarts du contrôle de conformité du backend qui attendent une décision (G3 paramètres administrables, G5 listes non paginées, G6 extension vector) ou une vérification sur le serveur (G10) : [docs/conformite/README.md](docs/conformite/README.md) | Trancher G3, G5, G6 ; vérifier G10 |
 | 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité, tous niveaux (Karma, pair optionnel inutilisé de `@angular/build`, sorti du verrou : plus d'exception, `audit:deps` échoue dès le niveau moyen) ; `audit:licences` et SBOM CycloneDX en CI | — |
 
 ---
