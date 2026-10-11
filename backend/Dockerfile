@@ -6,7 +6,7 @@
 
 # Images de base épinglées par empreinte (reproductibilité, conventions/deployment.md) : la balise dit la version suivie,
 # l'empreinte ce qui est réellement tiré. Dependabot propose la mise à jour des deux ensemble.
-FROM eclipse-temurin:21-jdk@sha256:3e3c176ffed168beb42c607be9bc1639b466cf00261a0fb04425562c9d0c5c2b AS build
+FROM eclipse-temurin:25-jdk@sha256:8c0a84ea11c8f6ed52600fc19f1040121f2a162998e9f50a5faebbbad9172dcc AS build
 WORKDIR /app
 
 COPY .mvn/ .mvn/
@@ -16,7 +16,7 @@ RUN chmod +x mvnw && ./mvnw -q dependency:go-offline
 COPY src/ src/
 RUN ./mvnw -q package -DskipTests
 
-FROM eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+FROM eclipse-temurin:25-jre@sha256:fcd7fd7b387f94bb2ac461478a7436ad8e349924c374ea8313919624dceae636
 WORKDIR /app
 
 # Le processus ne tourne jamais en root : compte système dédié, sans shell ni répertoire personnel.
