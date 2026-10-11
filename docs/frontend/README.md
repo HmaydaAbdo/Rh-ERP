@@ -142,6 +142,10 @@ nouveau reprend ces règles dès sa création.
 | Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère minéral chaud sur l'écran actif. Sur grand écran, il reste réduit aux icônes (4,5 rem) ; les libellés sont accessibles en infobulle et au clavier, le panneau se déploie au survol ou au focus clavier puis se replie à la sortie. Sur **téléphone et tablette compacte**, il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
 | Authentification | Connexion, mot de passe oublié et réinitialisation partagent un formulaire centré sur tout le canevas, même si une session est active, posé sur la photographie locale `src/assets/auth/staport-login-atlas.png` générée pour Staport RH. Un voile sombre conserve le contraste ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
 
+Le shell de navigation s'affiche ou se masque selon la session et la route d'authentification, mais l'application conserve un seul
+`router-outlet` monté. Cela garde stables les contrôles accessibles à popup (sélecteurs, comboboxes) pendant la transition entre
+la connexion et un écran protégé.
+
 ---
 
 ## Routes et permissions
