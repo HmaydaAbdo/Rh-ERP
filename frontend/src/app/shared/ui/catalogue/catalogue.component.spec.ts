@@ -20,10 +20,10 @@ describe('CatalogueComponent', () => {
     expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual(['Boutons', 'Pastilles', 'Champs', 'Dialogue', 'Tableau (mode mémoire)']);
   });
 
-  it('place le contenu dans un repère principal (accessibilité)', () => {
+  it('laisse le repère principal à la coque applicative', () => {
     const { page } = afficher();
 
-    expect(page.querySelector('main')).not.toBeNull();
+    expect(page.querySelector('main')).toBeNull();
   });
 
   it('montre les sélecteurs avec leur valeur de départ, reliée à Signal Forms', () => {
