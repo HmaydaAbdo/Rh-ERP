@@ -83,12 +83,26 @@ server:
   forward-headers-strategy: native
 
 logging:
+  # text (défaut : lisible en développement) ou json (production : une ligne JSON par événement, via un appender asynchrone) —
+  # voir logback-spring.xml. docker-compose.yml positionne LOGGING_FORMAT=json (liaison souple de logging.format).
+  format: text
   pattern:
     # Chaque ligne de log porte l'identifiant de requête et l'utilisateur (MdcRequestFilter, conventions/logging.md) : le même
     # identifiant relie une entrée du journal d'audit, ses révisions et les logs techniques de la requête.
     level: "%5p [%X{requestId:-}] [%X{userId:-}]"
 
 management:
+  endpoints:
+    web:
+      exposure:
+        # Santé (HEALTHCHECK Docker) et métriques pour le scraping Prometheus : les deux sont publics (aucune donnée sensible,
+        # conventions/security.md) mais ne sont joignables que depuis le serveur — nginx inner ne relaie que /actuator/health.
+        # Tout autre endpoint de supervision reste non exposé.
+        include: health,prometheus
+  metrics:
+    tags:
+      # Distingue cette application dans un Prometheus partagé.
+      application: ${spring.application.name}
   health:
     # Sans ceci, /actuator/health (utilisé par le HEALTHCHECK Docker et depends_on:
     # condition: service_healthy — voir docker-compose.yml) passe à DOWN dès que le serveur SMTP

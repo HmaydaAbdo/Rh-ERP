@@ -134,10 +134,10 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 |---|---|
 | Swagger UI | `/swagger-ui.html` et spécification `/v3/api-docs`, **éteints par défaut** (donc en production) ; allumés en développement par `SPRINGDOC_API_DOCS_ENABLED` / `SPRINGDOC_SWAGGER_UI_ENABLED`, et publics alors. Éteints, leurs routes exigent un jeton comme le reste |
 | Santé | `/actuator/health` (public — utilisé par les healthchecks Docker) ; l'état du serveur SMTP n'y est volontairement pas inclus |
-| Autres endpoints Actuator | Non exposés par défaut (seul `health` l'est) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
-| Métriques Prometheus | Non configurées : aucune dépendance d'export Prometheus et aucune exposition (`/actuator/prometheus` est autorisé par la règle de sécurité mais n'existe pas) |
-| Métriques métier | Compteurs et durée de la synchronisation des chantiers, enregistrés dans Micrometer mais pas encore exportés (voir [chantier/README.md](chantier/README.md)) |
-| Logs | SLF4J ; un journal par création/modification/suppression et par import ; jamais de donnée sensible (voir `conventions/logging.md`) |
+| Autres endpoints Actuator | Non exposés (seuls `health` et `prometheus` le sont, `management.endpoints.web.exposure.include`) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
+| Métriques Prometheus | `/actuator/prometheus` (registre `micrometer-registry-prometheus`), public comme la santé (aucune donnée sensible) mais **joignable depuis le serveur seulement** : nginx inner ne relaie que `/actuator/health`, le port du backend est lié à `127.0.0.1`. Chaque série porte le tag `application` |
+| Métriques métier | Compteurs et durée de la synchronisation des chantiers, exportés avec les autres métriques (voir [chantier/README.md](chantier/README.md)) |
+| Logs | SLF4J ; un journal par création/modification/suppression et par import ; jamais de donnée sensible (voir `conventions/logging.md`). Format : texte en développement ; **JSON asynchrone en production** (`LOGGING_FORMAT=json`, posé par `docker-compose.yml` ; `logback-spring.xml`, `logstash-logback-encoder`), `requestId` et `userId` dans chaque ligne |
 
 ---
 

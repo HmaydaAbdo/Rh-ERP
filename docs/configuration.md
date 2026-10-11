@@ -34,6 +34,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Identifiants SMTP (vides si le serveur n'exige pas d'authentification) | |
 | `SMTP_AUTH`, `SMTP_STARTTLS` | `true`/`false` | `false` en local |
 | `MAIL_FROM` | Adresse expéditrice des courriels | `noreply@staport-rh.local` |
+| `LOGGING_FORMAT` | **Facultative** (réglage `logging.format`) : `json` pour des journaux en JSON asynchrones (une ligne par événement), `text` (défaut) pour le format lisible. Le Compose de production la positionne à `json` | `text` en local |
 | `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED` | **Facultatives** : `true` allume la documentation d'API (Swagger UI) — développement seulement. Absentes, elle est éteinte (réglage `springdoc.*` de `application.yml`) ; le Compose de production ne les transmet pas | `true` en local |
 
 Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,

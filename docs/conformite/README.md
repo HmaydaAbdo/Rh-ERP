@@ -35,6 +35,7 @@
 | C5 | **Critères de recherche sans borne** : chaînes et listes d'identifiants de taille libre, corps non validé | `@Size` alignés sur les colonnes filtrées (listes : 500 identifiants au plus), `@Valid` sur tous les corps de critères, y compris celui de la suppression en groupe ; `EmployeeControllerTest` vérifie le `400` |
 | C6 | Aucune règle exécutable pour les conventions d'architecture, de journalisation, de JPA et de documentation d'API | `ArchitectureConventionsTest` (14 règles) |
 | C7 | **Aucune limite de débit** (G1) | `limit_req` dans nginx inner (`429`) : connexion 20/min, réinitialisation 5/min, session 120/min, `POST` coûteux 30/min, par adresse de client réel ; essayé sur un nginx réel. Convention ajoutée à `conventions/security.md`. Le verrouillage de compte reste possible plus tard |
+| C8 | **Métriques et journaux** (G4) : `/actuator/prometheus` était ouvert par la sécurité mais n'existait pas ; journaux en texte | Registre Prometheus + exposition de `health` et `prometheus` seulement (tag `application`) ; journaux JSON asynchrones en production (`LOGGING_FORMAT=json`, `logstash-logback-encoder`) ; `SupervisionTest` |
 
 ---
 
@@ -46,7 +47,6 @@ Ils sont suivis dans [TODO.md](../../TODO.md). Pour chacun : le constat, puis le
 |---|---|---|---|
 | G2 | Basse | **Demande de réinitialisation synchrone** : l'envoi du courriel allonge la réponse pour une adresse connue, ce qui la distingue d'une adresse inconnue | Envoi asynchrone après la réponse |
 | G3 | Basse | **Valeurs de fonctionnement en dur** : durées des jetons, longueur du mot de passe, expressions cron, tranche de pas | Variables d'environnement (`conventions/configuration.md`) ou paramètres administrables en base |
-| G4 | Moyenne | **Métriques** : Micrometer sans registre Prometheus alors que `/actuator/prometheus` est ouvert par la configuration de sécurité ; journaux en texte, pas en JSON ni asynchrones | Ajouter le registre et protéger la route, ou retirer la route ouverte ; format de journal JSON |
 | G5 | Basse | **Listes non paginées** : `GET /users` et `GET /roles` ; statuts `201` des créations à aligner route par route | Pagination et statuts alignés (change le contrat avec le frontend) |
 | G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise encore | La garder (socle Staport) ou la créer à la première table concernée |
 | G7 | Moyenne | **Image Docker** : exécution non confinée à un utilisateur sans privilèges, images non épinglées par empreinte | Utilisateur dédié, empreinte de l'image de base |
