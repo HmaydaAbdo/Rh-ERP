@@ -17,7 +17,7 @@ COPY . .
 RUN npx ng build --configuration production
 
 # nginx « unprivileged » : le processus ne tourne jamais en root, il écoute donc sur 8080 (un port < 1024 exigerait root).
-FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:15c994d10d6d78658721c3bcafff14cb281fba2a4bdf9d5ba92c416a472516e3
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b9241c6e7b8e9a862f129d8d4199ab64b10390949a78bdd5603379b32c844083
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
