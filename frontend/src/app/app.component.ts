@@ -74,6 +74,7 @@ export class AppComponent {
     ),
     { initialValue: estRouteAuthentification(this.router.url) }
   );
+  readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
 
   readonly navItems = computed(() =>
     NAV_ITEMS.filter((item) => this.authService.hasPermission(item.permission))

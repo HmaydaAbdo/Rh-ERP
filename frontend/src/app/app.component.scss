@@ -184,6 +184,15 @@
   }
 }
 
+// Un seul outlet reste monté pendant la connexion : Angular Aria peut donc nettoyer les contrôles sans détruire
+// une ancienne arborescence de route au moment où la coque devient visible.
+.app-shell--auth .app-content {
+  min-height: 100vh;
+  min-height: 100svh;
+  margin-left: 0;
+  padding: 0;
+}
+
 // ---- Navigation compacte : le menu devient un tiroir ouvert par la barre du haut ----
 @include bp.compact-nav {
   .app-topbar {

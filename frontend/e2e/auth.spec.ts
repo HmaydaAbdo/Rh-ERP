@@ -4,11 +4,11 @@ import { expect, test } from '@playwright/test';
 import { mockApi, page as pageDe, utilisateur } from './support/api-mock';
 
 test.describe('Connexion', () => {
-  test('affiche la page de connexion sans violation d’accessibilité', async ({ page }) => {
+  test('affiche l’accueil de connexion sans violation d’accessibilité', async ({ page }) => {
     await mockApi(page, null);
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(resultats.violations).toEqual([]);
   });
