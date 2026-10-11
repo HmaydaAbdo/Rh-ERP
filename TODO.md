@@ -49,6 +49,7 @@ Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, respon
 - **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
   (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
 - **Poids du bundle/CSS** : bundle initial ~555 kB (sous le budget de 800 kB) ; plus aucun dépassement de budget (assistant d'export découpé en étapes).
+- **Contraste élevé** : vérifier et compléter le support des préférences système et de `forced-colors` dans l'application, puis l'ajouter aux contrôles visuels automatisés et manuels.
 - **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
 - **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
   `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.

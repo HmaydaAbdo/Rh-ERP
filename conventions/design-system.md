@@ -1,33 +1,71 @@
 # Design System
 
-> Conventions de design applicables à tout le frontend : jetons, thèmes clair et sombre, typographie, mouvement,
-> thème de la librairie de composants. Complète `frontend.md` (section « Design System »), qui pose la règle générale :
-> aucune valeur de design écrite en dur. Document générique — l'identité propre à un projet (couleur de marque, logo)
-> est décrite dans la documentation du projet (`docs/frontend/`).
+> Conventions de design applicables à tout le frontend : identité visuelle, jetons, thèmes, typographie, mouvement,
+> composants, visualisations et accessibilité. Complète `frontend.md` (section « Design System »), qui pose la règle
+> générale : aucune valeur de design écrite en dur. L'identité Staport constitue le fil visuel commun ; les détails
+> propres à une application (logo d'écran, parcours, composants métier) sont décrits dans sa documentation.
 
 ---
 
 # Source unique : les jetons
 
-Toute valeur de design (couleur, espacement, rayon, ombre, taille de texte, durée) est un **jeton** défini dans
-`src/styles/_tokens.scss` et lu par `var(--…)`. Un composant n'écrit jamais d'hexadécimal, de `rgba()` de couleur,
-d'ombre ou de durée en dur ; si un jeton manque, on l'ajoute — **avec sa valeur dans les deux thèmes**.
+Toute valeur de design (couleur, espacement, rayon, ombre, taille de texte, durée) est un **jeton** défini par la source
+de tokens de l'application et consommé via les variables correspondantes (`var(--…)` sur le Web). Un composant n'écrit
+jamais d'hexadécimal, de couleur `rgba()`, d'ombre ou de durée en dur ; si un jeton manque, on l'ajoute à cette source.
 
 Les jetons forment trois couches :
 
 | Couche | Rôle | Exemples |
 |---|---|---|
 | **Primitives** | L'échelle de couleurs de la marque ; identique dans les deux thèmes | `--brand-50` … `--brand-950` |
-| **Sémantiques** | Ce que les composants utilisent ; redéfinies pour le thème sombre | `--color-surface`, `--color-text`, `--color-primary`, `--table-*`, `--chart-*`, `--shadow-*` |
-| **Pont de la librairie** | Les variables que lit le thème de la librairie de composants | `--pn-surface-*`, `--pn-primary-*` |
+| **Sémantiques** | Intention indépendante du composant ; adaptées au thème | surface, texte, action, statut, focus, graphiques |
+| **Composants** | Décisions répétées propres à un composant ou une famille cohérente | hauteur de contrôle, rayon de dialogue, élévation de menu |
 
-Un composant utilise les jetons **sémantiques**, jamais une primitive (`--brand-*`) : c'est ce qui lui permet de suivre le thème.
-Le bleu d'action (`--color-primary`) sert à l'action et à la position (bouton principal, lien, ligne active, focus) ;
-les couleurs de statut (`--color-success`, `--color-warning`, `--color-danger`) ne se confondent jamais avec la marque.
+Un composant utilise les jetons sémantiques ou de composant, jamais une primitive de marque (`--brand-*`) : c'est ce qui
+lui permet de suivre le thème et de changer d'identité sans réécriture. Les variables d'une bibliothèque sont générées
+ou mappées depuis les tokens Staport ; elles ne deviennent pas une source de vérité concurrente. La couleur d'action sert
+aux actions et à leur repérage ; les couleurs de statut restent distinctes de la marque.
+
+Tout nouveau jeton est défini pour chaque thème applicable dans le même changement. Ne pas créer une valeur par composant
+lorsqu'un jeton sémantique existant exprime déjà l'intention.
+
+---
+
+# Identité visuelle Staport
+
+L'interface traduit l'identité Staport en une expérience **précise, immersive et premium**, adaptée à des outils de
+travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
+alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface ; son motif directionnel peut
+servir de repère visuel discret dans les transitions, les états d'accueil ou les vues de synthèse.
+
+Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
+à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Les accents lumineux sont
+réservés aux actions, sélections et informations qui méritent l'attention. Éviter le néon généralisé, le glassmorphism
+systématique, les dégradés décoratifs et les effets qui éloignent l'interface de l'identité Staport.
+Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
+le logo ne garantit pas à lui seul un contraste suffisant pour les usages d'interface.
+
+Le rendu premium repose sur le soin apporté à la typographie, aux espacements, aux états de composants et à la stabilité
+visuelle, pas sur l'ajout d'effets. Les écrans denses gardent des niveaux de lecture évidents. Chaque écran conserve une
+action principale identifiable et un parcours métier compréhensible sans animation.
+
+Pour les fonctions assistées par IA, distinguer clairement la suggestion de l'action confirmée. Une réponse fondée sur
+des données expose le contexte ou les sources disponibles ; les appels d'outils et les actions avec effet de bord sont
+visibles et confirmés selon le risque. L'assistance complète le parcours métier et ne le remplace pas.
+
+Quand le produit comporte un espace analytique ou une assistance intelligente, privilégier une vue de travail adaptée
+au rôle, une recherche globale, des indicateurs accompagnés de leur période et de leur définition, ainsi que des anomalies
+expliquées avec leur source. Un panneau d'assistance reste contextuel et secondaire. Les prédictions sont présentées comme
+des estimations avec leur contexte, jamais comme des certitudes.
 
 ---
 
 # Thèmes clair et sombre
+
+Les applications proposent au minimum un thème clair et un thème sombre. Elles suivent la préférence système jusqu'au
+choix explicite de l'utilisateur ; ce choix est appliqué avant le premier affichage et conservé localement. Le contraste
+élevé complète ces thèmes en respectant les préférences système et les couleurs `forced-colors` : il ne demande pas une
+troisième palette de marque qui dupliquerait les thèmes.
 
 * Le thème est porté par l'attribut `data-theme="light|dark"` sur `<html>` ; **un seul** jeu de jetons par thème, redéfini
   sous `:root[data-theme='dark']` (et, sans attribut, sous `prefers-color-scheme: dark`).
@@ -38,7 +76,7 @@ les couleurs de statut (`--color-success`, `--color-warning`, `--color-danger`) 
   il relit les jetons au changement de `ThemeService.theme()`.
 * Un élément monochrome sombre (le logo) passe en blanc en thème sombre par un filtre CSS
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
-* Tout écran se vérifie dans **les deux thèmes** avant d'être livré.
+* Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
 
 ---
 
@@ -52,10 +90,13 @@ Utiliser les composants Angular Aria et CDK comme primitives accessibles et cons
 avec HTML natif dès que l'interaction est simple. Le système de design est porté par les jetons Staport, Tailwind CSS 4,
 SCSS/CSS des composants et Lucide Angular; il ne dépend pas du style visuel d'un fournisseur de widgets.
 
-Valider au clavier, lecteur d'écran, focus, contraste, français, comportement zoneless et performance chaque composant
-partagé. AG Grid Community n'est utilisé que pour une grille avancée lorsqu'un besoin mesuré le justifie; il est encapsulé
-et chargé à la demande. PrimeNG, PrimeIcons et PrimeFlex sont exclus du socle pour éviter la licence PrimeNG 22, limiter le
-verrouillage fournisseur et garder la maîtrise du langage visuel.
+Chaque composant partagé définit les états qui s'appliquent parmi : repos, survol, focus-visible, actif, désactivé,
+chargement et erreur, ainsi que ses variantes de densité si elles sont utiles. Ces états restent perceptibles sans dépendre
+uniquement de la couleur. Valider au clavier, lecteur d'écran, focus, contraste, français, comportement zoneless et
+performance chaque composant partagé.
+AG Grid Community n'est utilisé que pour une grille avancée lorsqu'un besoin mesuré le justifie ; il est encapsulé
+et chargé à la demande. PrimeNG, PrimeIcons et PrimeFlex sont exclus du socle pour limiter le verrouillage fournisseur et
+garder la maîtrise du langage visuel.
 
 Tout contournement CSS des composants tiers doit être local, stable et documenté; éviter `::ng-deep`, sélecteurs internes
 non contractuels et règles globales qui fuient dans les autres domaines.
@@ -97,12 +138,17 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
   recalcule autour de lui.
 * **`prefers-reduced-motion`** : la feuille de mouvement neutralise toute animation et transition (durée quasi nulle) ; un
   mouvement propre à une bibliothèque (Chart.js) est coupé par le code (`mouvementReduit()`).
+* Les animations élaborées sont réservées aux transitions ou récits de données qui apportent une information. Elles ne
+  bloquent pas l'action et ne déplacent pas le contenu ; vérifier leur fluidité sur les appareils visés et les supprimer
+  si leur durée ou leur coût nuit au travail.
 
 ---
 
 # Graphiques
 
 Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`paie-chart-theme.ts`) et lit les jetons.
+Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
+son interprétation.
 
 * **Une mesure, un axe.** Jamais deux échelles dans un même graphique (masse et bulletins ne sont pas comparables) : on
   propose un choix de mesure ou deux graphiques.
@@ -114,8 +160,8 @@ Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc comm
   couleur de la carte ; grille discrète, jamais de cadre ; pas de légende pour une série unique (le titre la nomme).
 * **Thème** : un graphique dépend de `ThemeService.theme()` pour être redessiné à la bascule ; il lit police, textes, grille
   et infobulle dans les jetons.
-* **Accessibilité** : un tableau de données déplié à la demande et un `aria-label` par graphique ; une infobulle au survol de
-  toute la ligne ou de toute la colonne, pas seulement de la barre ; le texte n'a jamais la couleur de la série.
+* **Accessibilité** : un tableau de données déplié à la demande, un nom accessible et une interaction clavier ; une infobulle
+  au survol de toute la ligne ou de toute la colonne, pas seulement de la barre ; le texte n'a jamais la couleur de la série.
 
 ---
 
@@ -182,10 +228,11 @@ horizontalement, à l'intérieur de sa carte.
 
 # Accessibilité
 
-Vérifiée automatiquement (axe-core, WCAG 2.2 A/AA et bonnes pratiques) dans les deux thèmes sur les écrans principaux : **aucune
-violation** est la barre à tenir.
+Vérifiée automatiquement (axe-core, WCAG 2.2 niveau AA et bonnes pratiques) dans les thèmes clair et sombre, et manuellement avec
+contraste élevé et navigation clavier : **aucune violation** est la barre à tenir.
 
-* **Contraste** : texte d'au moins 4,5:1 dans les deux thèmes (3:1 pour les grands textes et les contrôles). Les pastilles d'état
+* **Contraste** : texte d'au moins 4,5:1 (3:1 pour les grands textes) ; composants d'interface et éléments graphiques
+  nécessaires à la compréhension d'au moins 3:1 avec les couleurs adjacentes. Les pastilles d'état
   tirent leurs couleurs des jetons de statut (`styles/_status.scss`) ; un état n'est
   jamais porté par la seule couleur (la pastille dit « Actif », « Inactif »).
 * **Noms accessibles** : tout bouton d'icône a un `aria-label` précis (« Modifier AABIDDI MOHAMED », pas « Modifier ») ; tout champ
@@ -215,4 +262,5 @@ violation** est la barre à tenir.
 * Un jeton ajouté est défini dans les deux thèmes dans le même changement.
 * Le thème de la librairie est généré ; on ne le modifie pas à la main.
 * Polices embarquées, chiffres tabulaires pour les montants.
-* Le mouvement sert la compréhension et respecte `prefers-reduced-motion`.
+* Le contraste élevé et `forced-colors` restent utilisables ; l'état n'est jamais indiqué par la couleur seule.
+* Le mouvement sert la compréhension, reste fluide et respecte `prefers-reduced-motion`.

@@ -13,8 +13,6 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
 
 - Angular 22.1.x, Signals pour l'état réactif, Signal Forms pour les nouveaux formulaires adaptés,
   Angular Aria/CDK pour les primitives accessibles.
-- Fondations UI proposées : design system Staport personnalisé, Tailwind CSS 4, Lucide Angular ;
-  aucune librairie de composants complète ne dicte la marque.
 - Chaque application garde ses skills métier dans ses propres domaines. Le dossier `domains/` du
   squelette est intentionnellement vide.
 - Tests de la règle unitaire aux parcours end-to-end, avec couverture des contrats, autorisations,
@@ -24,7 +22,7 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
 
 1. `AGENTS.md` ou `CLAUDE.md` — consignes d'entrée pour l'agent.
 2. `standards/testing.md`.
-3. `standards/angular.md`, puis `standards/design-system.md`.
+3. `standards/angular.md`. Le design system consolidé est défini dans `conventions/design-system.md`.
 4. `standards/agents-skills-mcp-rag.md`.
 5. `profiles/README.md` puis les documents métier locaux du dépôt consommateur.
 
