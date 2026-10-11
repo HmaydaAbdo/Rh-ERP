@@ -7,8 +7,8 @@
 
 ## Principe fondamental
 
-Le schéma est géré **exclusivement** par des migrations Flyway versionnées
-(`backend/src/main/resources/db/migration/`). `spring.jpa.hibernate.ddl-auto` est fixé à
+Le schéma est géré **exclusivement** par des migrations Flyway versionnées, dans le dossier de
+migrations configuré par le projet. `spring.jpa.hibernate.ddl-auto` est fixé à
 `validate` : Hibernate compare les entités JPA au schéma réel au démarrage et **échoue** s'il y a
 la moindre divergence, mais ne modifie jamais la base.
 
@@ -21,11 +21,26 @@ qu'en dérive silencieuse.
 
 Voir `conventions/deployment.md` pour la façon dont Flyway s'exécute (Docker Compose, local, tests).
 
+PostgreSQL est le moteur relationnel de référence. Chaque projet verrouille une version prise en
+charge dans sa configuration de build et de déploiement, puis teste avec la même version majeure
+que celle qui sera déployée. La convention ne fixe pas un numéro de version commun à toutes les
+applications.
+
+Utiliser un type décimal exact pour les quantités monétaires ou les mesures décimales qui exigent
+une précision déterministe ; ne pas représenter ces valeurs par des nombres flottants. Stocker les
+instants dans un type avec fuseau horaire en UTC et convertir vers l'heure locale uniquement pour
+l'affichage. Préciser les précisions, échelles et unités dans le modèle et les contraintes.
+
+Les migrations se vérifient sur PostgreSQL réel, pas uniquement sur H2 ou des repositories mockés :
+tester une base vierge, une mise à niveau depuis la version de schéma prise en charge et la
+validation du mapping ORM. Toute évolution doit préserver les données existantes ou décrire un
+backfill sûr et sa stratégie de déploiement.
+
 ---
 
 ## Ajouter une migration
 
-1. Créer un fichier dans `backend/src/main/resources/db/migration/`, nommé
+1. Créer un fichier dans le dossier Flyway du projet, nommé
    `V<n>__description_en_minuscules_avec_underscores.sql`, où `<n>` est le numéro de version
    suivant, strictement supérieur au dernier existant (voir les fichiers déjà présents pour
    connaître le dernier numéro utilisé).
@@ -85,9 +100,9 @@ UPDATE xxx SET nouvelle_colonne = 'TEMP-' || id WHERE nouvelle_colonne IS NULL;
 ALTER TABLE xxx ALTER COLUMN nouvelle_colonne SET NOT NULL;
 ```
 
-Le backfill (`UPDATE`) doit produire une valeur réellement correcte métier si elle existe, ou être
-signalé comme un point à clarifier avec l'utilisateur si aucune valeur par défaut n'a de sens
-(ne jamais inventer une règle métier — voir `CLAUDE.md`, section « En cas de doute »).
+Le backfill (`UPDATE`) doit produire une valeur réellement correcte métier si elle existe. Si aucune
+valeur par défaut n'a de sens, clarifier la règle avec le responsable métier avant d'écrire la
+migration ; ne jamais inventer une valeur métier.
 
 ### Colonne renommée
 
@@ -123,85 +138,45 @@ Si des doublons existent, la résolution (fusion, suppression, renommage) est un
 
 ## Tables auditées
 
-Une entité auditée (`conventions/audit.md`) a une table d'audit `<table>_aud` (Envers) : `id`, `rev`, `revtype`, puis
-les colonnes auditées. Elle suit ces règles, que `ddl-auto: validate` et les tests d'architecture font respecter :
-
-- **Même migration que la table** : une entité auditée sans table d'audit fait échouer le démarrage.
-- **Colonnes nullables** (hors `id`, `rev`, `revtype`) : une ancienne version, ou un instantané de suppression, n'a pas
-  forcément de valeur. Clé primaire (`id`, `rev`) — (`rev`, `<id1>`, `<id2>`) pour une table de liaison — et un index
-  sur `rev`.
-- **Aucune clé étrangère vers une table métier** : une ligne d'historique doit survivre à la suppression de ce qu'elle
-  décrit. Seule la clé vers `audit_revision` existe.
-- **Une colonne d'audit n'est jamais supprimée ni renommée** : elle documente ce que la donnée a été. Entité dont une
-  colonne est renommée : ajouter la nouvelle colonne à la table d'audit, y recopier l'ancienne, **conserver** l'ancienne.
-  Entité dont une colonne est supprimée : la colonne d'audit reste (elle sera simplement vide pour les nouvelles versions).
-- **Aucune cascade SQL** (`ON DELETE CASCADE`) sur une table auditée, liaisons comprises : une cascade supprime des
-  lignes sans passer par Hibernate, donc sans trace. Utiliser `ON DELETE RESTRICT` ; c'est au service de refuser
-  proprement (`409`) une suppression qui laisserait des dépendants.
-- **Aucune écriture en masse** (`deleteAllInBatch`, `@Modifying`, SQL natif d'écriture) sur une entité auditée — voir
-  `conventions/jpa.md`.
-- Un secret (hash de mot de passe, jeton) n'a pas de colonne d'audit : il est `@NotAudited`.
+Les tables d'audit et leurs relations suivent les règles de `conventions/audit.md`. La table métier
+et sa structure d'audit sont créées ou modifiées dans la même migration Flyway. Les contraintes
+spécifiques aux colonnes d'historique, aux suppressions et aux migrations qui modifient des lignes
+auditées sont définies dans cette convention d'audit.
 
 ---
 
 ## Migrations qui modifient des données auditées
 
-Une migration Flyway écrit en SQL, hors JPA : Envers ne la voit pas. Toute migration qui **insère, modifie ou supprime
-des lignes d'une table auditée** (backfill, correction, fusion de doublons, seed d'une nouvelle permission) écrit **dans le
-même fichier** — donc de façon atomique avec la modification — sa révision, ses lignes d'audit et son entrée de journal.
-
-Gabarit (SQL PostgreSQL, un bloc par migration) :
-
-```sql
-DO $$
-DECLARE
-    v_rev BIGINT;
-    v_nb  INTEGER;
-BEGIN
-    -- 1. La révision : une par migration, d'origine MIGRATION.
-    INSERT INTO audit_revision (horodatage, utilisateur_id, utilisateur_nom, origine, request_id, adresse_ip)
-    VALUES (now(), NULL, 'Système', 'MIGRATION', gen_random_uuid()::text, NULL)
-    RETURNING id INTO v_rev;
-
-    -- 2. Chaque modification, en reprenant les lignes touchées (RETURNING) dans la table d'audit :
-    --    revtype 0 = ajout (état après), 1 = modification (état après), 2 = suppression (état avant).
-    WITH touchees AS (
-        UPDATE <table> SET <colonne> = <valeur> WHERE <condition> RETURNING *
-    )
-    INSERT INTO <table>_aud (id, rev, revtype, <colonnes auditées>)
-    SELECT id, v_rev, 1, <colonnes auditées> FROM touchees;
-    GET DIAGNOSTICS v_nb = ROW_COUNT;
-
-    -- 3. Les types d'entités touchés : le nom Hibernate de l'entité (nom complet de la classe).
-    INSERT INTO audit_revision_entite (revision_id, entite) VALUES (v_rev, '<package.Entite>');
-
-    -- 4. L'entrée du journal.
-    INSERT INTO audit_journal (horodatage, categorie, action, type_operation, resultat, utilisateur_nom, origine,
-                               request_id, nombre_elements, perimetre, revision_id)
-    SELECT now(), 'OPERATION', '<ENTITE>_<VERBE>', 'UPDATE', 'SUCCES', 'Système', 'MIGRATION',
-           request_id, v_nb, '{"migration": "V<n>__<description>"}'::jsonb, id
-    FROM audit_revision WHERE id = v_rev;
-END $$;
-```
-
-- Une **suppression** relève l'état *avant* : `WITH supprimees AS (DELETE FROM <table> WHERE … RETURNING *) INSERT INTO
-  <table>_aud … SELECT id, v_rev, 2, … FROM supprimees`.
-- Une table de liaison s'audite de la même façon (`INSERT INTO <liaison>_aud (rev, revtype, <id1>, <id2>)`).
-- Une migration qui ne touche **aucune** table auditée (schéma seul, table non auditée) n'a rien de tel à écrire.
-- La **première** mise en place de l'audit sur une base existante écrit, de la même façon, une révision d'état initial
-  (tous les enregistrements, `revtype` 0) : sans elle, la première modification d'une donnée existante n'aurait pas
-  d'« avant ».
-- Le gabarit s'applique **aussi aux migrations d'un projet qui reprend ces conventions** : relire toute migration de
-  données à la revue, avec la même exigence que pour une migration de schéma.
+Une migration Flyway qui modifie des lignes auditées doit écrire leurs instantanés et l'entrée de
+journal de façon atomique avec ces changements. Appliquer le gabarit de `conventions/audit.md` ; une
+migration de schéma seule n'ajoute pas de lignes d'audit.
 
 ---
 
 ## Droits PostgreSQL — deux comptes
 
-Flyway s'exécute avec le **compte propriétaire** du schéma ; l'application, avec un **compte applicatif** distinct qui
-n'a que `SELECT, INSERT` sur les tables d'audit (`conventions/audit.md`, « Intégrité », et
-`conventions/deployment.md`). Les droits sont recalculés par un rappel Flyway `afterMigrate.sql`, idempotent, qui
-s'applique donc aussi aux tables créées plus tard : **aucune migration n'accorde de droit à la main**.
+Séparer le compte de migration du compte d'exécution lorsqu'un audit exige que l'application ne
+puisse pas réécrire son historique. Les privilèges et leur vérification sont définis dans
+`conventions/audit.md` ; leur création et leur application au déploiement sont décrites dans
+`conventions/deployment.md`.
+
+---
+
+## pgvector et données vectorielles
+
+`pgvector` est une capacité facultative : sa disponibilité ne justifie pas de vectoriser des données.
+L'activer uniquement pour un cas d'usage autorisé et validé, sur une base et un environnement qui
+la prennent en charge.
+
+* Gérer l'extension et son schéma par les migrations ou les opérations de base de données autorisées.
+  Ne pas laisser le démarrage applicatif créer ou modifier automatiquement le schéma vectoriel.
+* Garder les vecteurs dans un espace logique dérivé du modèle métier, avec provenance, version de
+  source, date d'indexation et règles d'accès explicites. Vérifier les permissions avant de restituer
+  un résultat de recherche.
+* Documenter dans un ADR le modèle d'embedding, les dimensions, la distance, l'index et les seuils
+  retenus. Un changement incompatible de modèle ou de dimensions requiert une réindexation planifiée.
+* Définir la fraîcheur, la réindexation, la rétention, la suppression et la sauvegarde des vecteurs
+  avec le cycle de vie des sources. Isoler les corpus contenant des données sensibles.
 
 ---
 
@@ -241,7 +216,7 @@ documentation officielle PostgreSQL (`SELECT * FROM pg_get_keywords()`).
 
 ## Résumé
 
-* Le schéma vit uniquement dans `backend/src/main/resources/db/migration/` — jamais généré
+* Le schéma vit uniquement dans les migrations Flyway configurées du projet — jamais généré
   automatiquement.
 * `ddl-auto=validate` : toute divergence entité/schéma fait échouer le démarrage, par conception.
 * Un fichier de migration déjà appliqué n'est jamais modifié ni renuméroté — toujours une nouvelle

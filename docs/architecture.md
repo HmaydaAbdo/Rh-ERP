@@ -122,6 +122,7 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 | Élément | Détail |
 |---|---|
 | Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](chantier/README.md) |
+| Sauvegarde PostgreSQL | Service Docker dédié : exécution quotidienne à 02:00 UTC, rétention locale de 30 jours dans `./backups/` ; restauration et copie hors hôte à organiser. Voir [deployment.md](deployment.md) |
 | Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](auth/README.md) |
 | Vérification de l'intégrité de l'audit | Au démarrage, signale si le compte de la base peut modifier une table d'audit. Voir [audit/README.md](audit/README.md) |
 | Courriel | Envoi du lien « mot de passe oublié » (SMTP) |
@@ -137,7 +138,7 @@ une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entit
 | Autres endpoints Actuator | Non exposés (seuls `health` et `prometheus` le sont, `management.endpoints.web.exposure.include`) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
 | Métriques Prometheus | `/actuator/prometheus` (registre `micrometer-registry-prometheus`), public comme la santé (aucune donnée sensible) mais **joignable depuis le serveur seulement** : nginx inner ne relaie que `/actuator/health`, le port du backend est lié à `127.0.0.1`. Chaque série porte le tag `application` |
 | Métriques métier | Compteurs et durée de la synchronisation des chantiers, exportés avec les autres métriques (voir [chantier/README.md](chantier/README.md)) |
-| Logs | SLF4J ; un journal par création/modification/suppression et par import ; jamais de donnée sensible (voir `conventions/logging.md`). Format : texte en développement ; **JSON asynchrone en production** (`LOGGING_FORMAT=json`, posé par `docker-compose.yml` ; `logback-spring.xml`, `logstash-logback-encoder`), `requestId` et `userId` dans chaque ligne |
+| Logs | SLF4J ; jamais de donnée sensible (voir `conventions/logging.md`). Format : texte en développement ; **JSON en production** (`LOGGING_FORMAT=json`) ; les événements sortent en temps réel sur la console et sont archivés chaque jour, compressés et gardés 30 jours UTC dans `./logs/`, à côté de `docker-compose.yml`. `requestId` et `userId` figurent dans chaque ligne |
 
 ---
 
@@ -168,6 +169,6 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 
 ## Limites connues
 
-Voir [../TODO.md](../TODO.md) : domaine Pointage non construit, backup
-PostgreSQL non implémenté, déploiement continu manuel, qualité des données (champs obligatoires et
+Voir [../TODO.md](../TODO.md) : domaine Pointage non construit, sauvegarde hors hôte et tests périodiques
+de restauration à organiser, déploiement continu manuel, qualité des données (champs obligatoires et
 doublons) à traiter en une tâche dédiée.

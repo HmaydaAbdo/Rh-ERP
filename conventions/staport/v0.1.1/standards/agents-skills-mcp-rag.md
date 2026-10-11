@@ -14,8 +14,7 @@
 ## Skills et agents de développement
 
 Un agent déclare sa mission, ses limites et les skills qu'il peut utiliser. Rôles partagés dans
-`agents/` : backend Spring, Angular/design system, sécurité/audit et plateforme données/IA. Chaque
-agent reste consultatif et n'a pas de privilège applicatif implicite.
+`agents/` : backend Spring, Angular/design system, sécurité/audit et plateforme données/IA.
 
 Les procédures communes résident dans `skills/shared/`. Chaque projet crée ses skills de module
 dans son propre domaine (`domains/<domaine>/skills/<nom>/SKILL.md`) avec contexte métier vérifié,

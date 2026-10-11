@@ -16,13 +16,36 @@
 
 # Strategy
 
-À utiliser lorsque plusieurs algorithmes réalisent la même opération.
+Utiliser une stratégie lorsque plusieurs implémentations encapsulent des variantes d'une même
+opération et que ce besoin d'extension est réel. Chaque stratégie reste dans le module propriétaire
+de son comportement.
 
-lorsqu'une Strategy rend le code plus extensible.
+### Registre de handlers
 
-Exemple retenu : le **périmètre d'audit** d'une opération de masse (`PerimetreAudit`, `conventions/audit.md`) — une
-classe par opération (import, suppression en groupe, export), dans son module, pour que ni le service métier ni
-l'aspect d'audit ne contiennent de logique de description.
+Lorsqu'une opération transverse est déclenchée par un point d'entrée générique mais varie selon le
+module concerné, utiliser une stratégie par module et les réunir dans un registre plutôt qu'un
+`switch` central.
+
+```java
+public interface XxxHandler {
+    ModuleSource source();
+    Result handle(Long id, Request request);
+}
+```
+
+* Chaque module concerné fournit son handler dans son propre package.
+* Le service générique collecte les handlers au démarrage et route vers celui associé à la source.
+* Le service générique ne connaît ni les entités ni les repositories des autres modules.
+* L'ajout d'une source se fait par un nouveau handler, sans modifier le répartiteur générique.
+
+N'utiliser ce registre que si plusieurs implémentations réelles existent ou sont prévues par le
+besoin validé. Pour un seul cas, une classe simple reste préférable.
+
+Quand un enregistrement générique référence une source appartenant à un module et que le besoin
+impose de synchroniser les deux, ce registre peut router vers un handler de synchronisation.
+Ne synchroniser que les champs réellement partagés. L'absence de handler signifie que la source
+n'exige pas cette synchronisation. Le comportement face à un enregistrement dans un état terminal
+est défini explicitement par le domaine concerné.
 
 ---
 

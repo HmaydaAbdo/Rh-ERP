@@ -21,7 +21,9 @@ WORKDIR /app
 
 # Le processus ne tourne jamais en root : compte système dédié, sans shell ni répertoire personnel.
 RUN groupadd --system --gid 10001 appuser \
-    && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin appuser
+    && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/logs \
+    && chown appuser:appuser /app/logs
 
 COPY --from=build --chown=appuser:appuser /app/target/*.jar app.jar
 USER appuser

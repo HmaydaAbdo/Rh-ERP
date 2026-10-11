@@ -1,124 +1,79 @@
-# JPA & Persistence
+# JPA et persistance
 
-> Conventions Hibernate/JPA applicables à toutes les entités et repositories.
+> Profil Java/JPA. Les migrations restent la source de vérité du schéma (`conventions/database.md`).
 
 ## Entités
 
-* Toutes les entités utilisent `@Entity` et `@Table`.
-* Définir explicitement le nom de la table.
-* Utiliser `@Column` dès qu'une contrainte ou un nom personnalisé est nécessaire.
-* Les identifiants utilisent la stratégie définie par le projet.
-* Ne jamais exposer une entité directement via une API.
-* Les contraintes de persistance (`nullable`, `length`, `unique`) sont déclarées avec les annotations JPA.
-* Les validations métier sont portées par les DTOs, pas par les entités, sauf lorsqu'elles garantissent l'intégrité des données quel que soit le point d'entrée.
+* Utiliser une entité pour le modèle de persistance, jamais comme contrat d'API. Mapper les
+  colonnes et tables explicitement lorsqu'un nom, un type ou une contrainte doit être stable.
+* Déclarer les contraintes de persistance qui protègent l'intégrité des données. Les écrire aussi
+  dans la migration correspondante ; les annotations JPA ne créent ni ne modifient le schéma.
+* Garder les invariants métier dans le domaine. Valider les entrées à la frontière de l'API et
+  répéter les contraintes nécessaires au niveau persistance lorsqu'elles doivent s'appliquer à tous
+  les chemins d'écriture.
+* Utiliser la stratégie d'identifiants définie par le projet et compatible avec ses migrations.
 
----
+## Relations
 
-# Relations
+* Préférer le chargement paresseux (`LAZY`) pour les associations ; le déclarer explicitement pour
+  les relations dont la valeur par défaut JPA est `EAGER`. N'utiliser `EAGER` qu'avec une raison
+  documentée et des mesures montrant que ce chargement convient aux cas d'usage.
+* Définir clairement le côté propriétaire et le côté inverse (`mappedBy`) d'une relation.
+* Limiter les cascades aux opérations réellement propagées par le cycle de vie du parent. Réserver
+  `CascadeType.ALL` et `orphanRemoval` aux relations de composition où l'enfant ne peut pas exister
+  indépendamment.
+* Initialiser les collections et ne jamais les laisser à `null`.
+* Les suppressions en cascade au niveau SQL et JPA doivent respecter les invariants du domaine et
+  les exigences d'audit (`conventions/audit.md`, `conventions/database.md`).
 
-* `FetchType.LAZY` par défaut.
-* Ne jamais utiliser `FetchType.EAGER` sans justification.
-* Toujours préciser le `mappedBy` côté inverse.
-* Limiter `CascadeType.ALL` aux véritables relations de composition.
-* Utiliser `orphanRemoval = true` uniquement lorsqu'un enfant ne peut pas exister sans son parent.
-* Initialiser les collections avec une implémentation vide (`ArrayList`, `HashSet`, etc.).
-* Ne jamais laisser une collection à `null`.
+## Repositories et requêtes
 
----
+* Les repositories accèdent aux données et n'implémentent pas de décisions métier.
+* Dans Spring Data JPA, utiliser `JpaRepository` pour les opérations usuelles. Utiliser une
+  `Specification` ou un mécanisme de requête équivalent lorsque plusieurs filtres optionnels doivent
+  être combinés ; une requête dérivée simple convient pour un critère fixe.
+* Charger seulement les relations requises par le cas d'usage avec une projection, un fetch dédié
+  ou `@EntityGraph`. Ne pas charger des relations uniquement pour sérialiser une entité dans une
+  réponse API.
+* Désactiver Open Session in View (`spring.jpa.open-in-view=false`) afin que les accès aux données
+  restent explicites dans les frontières de service.
+* Paginer ou borner les listes volumineuses. Choisir `Page`, `Slice` ou un curseur selon que le
+  nombre total est réellement nécessaire.
 
-# Repository
+## Transactions
 
-* Hériter de `JpaRepository`.
-* Ajouter `JpaSpecificationExecutor` pour les listes filtrables.
-* Utiliser `@EntityGraph` pour charger les relations nécessaires à la sérialisation.
-* Ne jamais utiliser `spring.jpa.open-in-view`.
-* Ne jamais implémenter de logique métier dans un Repository.
+* Placer les frontières transactionnelles au niveau des opérations applicatives ou métier qui
+  doivent être cohérentes. Regrouper dans une transaction les écritures qui forment une seule
+  opération métier.
+* Utiliser une transaction en lecture seule lorsque le framework et le cas d'usage en bénéficient.
+* Ne pas garder une transaction ouverte pendant une interaction utilisateur, un appel réseau ou une
+  attente longue. Définir explicitement la cohérence requise pour les opérations qui traversent des
+  systèmes externes.
 
----
+## Écritures en masse et audit
 
-# Specifications
+Les écritures SQL/JPQL en masse contournent le cycle de vie des entités et peuvent contourner
+l'audit. Sur une entité auditée, ne pas utiliser de suppression/mise à jour en masse (`@Modifying`,
+SQL natif, `deleteAllInBatch` ou équivalent) ; charger et traiter les entités selon la convention
+d'audit. Les contraintes d'audit et de suppression sont détaillées dans `conventions/audit.md`.
 
-* Toute liste filtrable utilise une Specification.
-* Convention :
+## Index et performances
 
-```java
-XSpecification.searchByCriteria(XSearchCriteria)
-```
+Les migrations Flyway définissent le schéma et ses index. Une annotation `@Index` peut documenter
+le mapping, mais ne remplace pas la migration. Ajouter un index lorsqu'il est justifié par une
+contrainte ou par les requêtes réellement exécutées ; examiner leur fréquence, leur sélectivité et
+le plan d'exécution. Indexer les clés étrangères lorsque les jointures, suppressions ou mises à
+jour associées le justifient.
 
-* Tout nouveau filtre ajouté à une Specification doit être accompagné des index nécessaires.
+* Éviter les requêtes N+1 par des projections, fetch ciblés ou `@EntityGraph` adaptés au cas d'usage.
+* Concevoir les index composites selon l'ordre et la combinaison des filtres observés.
+* Ne pas ajouter un index pour chaque filtre ou champ sans bénéfice mesuré : les index ont un coût
+  d'écriture, de stockage et de maintenance.
+* Utiliser les types décimaux exacts pour les montants et ne pas employer `float` ou `double` pour
+  l'arithmétique financière. En Java, utiliser `BigDecimal`, comparer avec `compareTo()` et définir
+  explicitement le `RoundingMode` des divisions.
 
----
+## Évolution
 
-# Écritures en masse
-
-* **Aucune écriture en masse sur une entité auditée** (`conventions/audit.md`) : ni `deleteAllInBatch`,
-  `deleteInBatch`, `deleteAll()` sans argument, ni requête `@Modifying` (`UPDATE` / `DELETE` JPQL), ni SQL natif
-  d'écriture. Ces écritures partent directement en base : Hibernate n'émet aucun événement, donc Envers ne voit rien.
-* Supprimer ou modifier un groupe se fait **entité par entité** (`repository.deleteAll(entites)` avec les entités
-  chargées) ; le regroupement JDBC (`hibernate.jdbc.batch_size`) garde un coût raisonnable.
-* Aucune cascade SQL (`ON DELETE CASCADE`) sur une table auditée (`conventions/database.md`) ; `CascadeType` JPA
-  seulement pour une vraie composition (voir « Relations »).
-
----
-
-# Transactions
-
-* `@Transactional` sur les opérations d'écriture.
-* `@Transactional(readOnly = true)` sur les lectures transactionnelles.
-* Une opération métier multi-étapes doit être atomique.
-* Une transaction ne doit jamais contenir d'interaction utilisateur ni d'attente inutile.
-
----
-
-# Index
-
-Déclarer les index directement sur l'entité.
-
-```java
-@Table(
-    indexes = {
-        @Index(name = "idx_table_colonne", columnList = "colonne")
-    }
-)
-```
-
-Toujours indexer :
-
-* les clés étrangères (`*_id`) ;
-* les statuts et enums fréquemment filtrés ;
-* les colonnes de date utilisées dans les recherches ou tris ;
-* les colonnes utilisées régulièrement dans les `WHERE` ou `ORDER BY`.
-
-Créer un index composite lorsque plusieurs colonnes sont systématiquement filtrées ensemble.
-
-Ne pas indexer les champs texte libre rarement recherchés.
-
----
-
-# Performance
-
-* Éviter les requêtes N+1.
-* Utiliser `@EntityGraph` plutôt que `FetchType.EAGER`.
-* Toujours paginer les listes volumineuses.
-* Ne charger que les relations réellement nécessaires.
-* Ajouter les index dans le même changement que le nouveau filtre.
-
----
-
-# BigDecimal
-
-* Utiliser exclusivement `BigDecimal` pour les montants.
-* Ne jamais utiliser `double` ou `float`.
-* Comparer avec `compareTo()`, jamais avec `equals()`.
-* Toujours préciser un `RoundingMode` lors des divisions.
-
----
-
-# Principes
-
-* Les entités représentent uniquement le modèle de persistance.
-* Les DTOs représentent le contrat de l'API.
-* Les Repositories accèdent aux données.
-* Les Services implémentent la logique métier.
-* Les performances et la cohérence des données priment sur la simplicité d'écriture des requêtes.
-* Toute évolution d'une entité, d'une relation ou d'une Specification doit préserver ces conventions.
+Toute évolution d'entité, relation ou requête persistante est accompagnée de sa migration, de tests
+sur le moteur relationnel cible et d'une vérification des contraintes et performances concernées.

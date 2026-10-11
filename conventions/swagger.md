@@ -1,206 +1,52 @@
-# Swagger / OpenAPI
-
-> Conventions de documentation API applicables à tous les controllers.
-
-## Principes
-
-* Toute API publique est documentée.
-* La documentation OpenAPI est maintenue dans le même changement que le code.
-* Une seule configuration OpenAPI existe pour toute l'application.
-* Les annotations doivent améliorer la compréhension de l'API, jamais dupliquer le code.
-
----
-
-# Controller
-
-Chaque controller documente son API avec les annotations OpenAPI.
-
----
-
-# @Tag
-
-* Obligatoire sur chaque Controller.
-* `name` : nom court du module.
-* `description` : une phrase décrivant le rôle métier.
-
-Exemple :
-
-```java
-@Tag(
-    name = "Xxx",
-    description = "Gestion des Xxx"
-)
-```
-
----
-
-# @Operation
-
-* Obligatoire sur chaque endpoint.
-* `summary` : maximum 8 mots.
-* `description` : uniquement si le comportement n'est pas évident.
-
----
-
-# @ApiResponse
-
-Documenter uniquement les codes non générés automatiquement.
-
-Typiquement :
-
-* `201`
-* `204`
-* `400`
-* `404`
-* `409`
-* `429`
-
-Ne jamais documenter `200 OK`.
-
----
-
-# @Parameter
-
-Utiliser uniquement pour :
-
-* les filtres ;
-* la pagination ;
-* les paramètres dont le nom n'est pas suffisamment explicite.
-
-Ne pas documenter les `@PathVariable` simples.
-
----
-
-# @RequestBody
-
-Toute méthode recevant un corps de requête documente explicitement son payload lorsque cela améliore la compréhension de l'API.
-
-Ne pas ajouter de description inutile.
-
----
-
-# DTO
-
-Documenter uniquement les champs non évidents avec `@Schema`.
-
-Exemples :
-
-* enum ;
-* format particulier ;
-* règle métier spécifique.
-
-Ne pas répéter les contraintes déjà exprimées par Bean Validation.
-
-Ne jamais annoter les entités JPA avec des annotations OpenAPI.
-
-Seuls les DTO exposés par l'API sont documentés.
-
----
-
-# Contenu des réponses
-
-Utiliser `@Content` lorsque la réponse diffère du comportement standard de Springdoc.
-
-Typiquement :
-
-* erreurs métier ;
-* téléchargement de fichiers ;
-* upload de fichiers ;
-* réponse vide (`204`) ;
-* format de média particulier.
-
----
-
-# Fichiers
-
-Les endpoints manipulant des fichiers documentent explicitement :
-
-* le type de contenu attendu ;
-* le type de fichier ;
-* le type de réponse.
-
----
-
-# Exemples
-
-Ajouter des exemples (`example`) uniquement lorsqu'ils facilitent réellement la compréhension de l'API.
-
-Ne pas maintenir de nombreux exemples susceptibles de devenir incohérents avec le code.
-
----
-
-# Sécurité
-
-Les controllers protégés utilisent :
-
-```java
-@SecurityRequirement(name = "bearerAuth")
-```
-
-* Déclarer l'annotation au niveau de la classe.
-* Ne pas la répéter sur chaque méthode.
-
----
-
-# Configuration
-
-Une seule classe configure OpenAPI :
-
-```text
-OpenApiConfig
-```
-
-Elle déclare :
-
-* le `SecurityScheme` ;
-* `bearerAuth`.
-
-Ne jamais redéfinir cette configuration ailleurs.
-
----
-
-# Swagger UI
-
-Les endpoints suivants ne sont accessibles sans authentification **que lorsque Swagger est activé** :
-
-```text
-/swagger-ui.html
-/swagger-ui/**
-/v3/api-docs/**
-```
-
-Le bouton **Authorize** de Swagger gère l'authentification JWT.
-
-**Éteint par défaut.** `application.yml` fixe `springdoc.api-docs.enabled` et `springdoc.swagger-ui.enabled` à `false` : la
-liste de toutes les routes n'a pas à être lisible sans connexion, et un oubli de configuration doit laisser Swagger éteint,
-pas allumé. Le développement l'allume par variables d'environnement (`SPRINGDOC_API_DOCS_ENABLED=true`,
-`SPRINGDOC_SWAGGER_UI_ENABLED=true`) ; la production ne les définit jamais.
-
-La chaîne de sécurité n'ouvre ces routes que si la documentation est allumée (même propriété) ; éteinte, elles exigent un
-jeton comme toute autre route. Le reverse proxy de production ne les relaie pas.
-
----
-
-# Périmètre
-
-Les annotations OpenAPI sont utilisées uniquement sur :
-
-* Controllers ;
-* DTOs.
-
-Ne jamais documenter avec OpenAPI :
-
-* Services ;
-* Repositories ;
-* Entities ;
-* Filters ;
-* Aspects ;
-* Configuration métier.
-
----
-
-# Revue de code
-
-Toute modification d'un endpoint implique la mise à jour de sa documentation OpenAPI dans le même changement.
-
-Une API dont la documentation est incomplète est considérée comme inachevée.
+# Documentation des API avec OpenAPI
+
+Cette convention s'applique aux API HTTP décrites par OpenAPI, indépendamment du langage et du
+framework. Chaque application documente l'outil utilisé pour produire, valider et publier son
+contrat.
+
+## Contrat API
+
+* Documenter toute API destinée à des consommateurs humains ou logiciels. La spécification décrit
+  le comportement réellement offert et évolue dans le même changement que l'API.
+* Maintenir une source de vérité cohérente : annotations, fichier de spécification ou génération à
+  partir du code. Éviter de maintenir manuellement plusieurs descriptions concurrentes.
+* Organiser les opérations par ressource ou domaine et donner aux opérations un résumé bref. Ajouter
+  une description lorsque les règles, effets ou limites ne sont pas évidents.
+* Documenter les paramètres, filtres, valeurs par défaut, limites de pagination, formats, contraintes
+  et préconditions nécessaires à l'appel. Ne pas répéter dans la description une contrainte déjà
+  clairement exprimée par le schéma.
+* Décrire les réponses de succès et les erreurs significatives, leur structure, les cas où elles
+  surviennent et les éventuels codes de reprise. Ne pas annoncer un statut qu'une opération ne
+  renvoie pas.
+* Les exemples restent réalistes, synthétiques et synchronisés avec le contrat. Éviter les exemples
+  volumineux ou qui contiennent des données de personnes réelles.
+
+## Schémas et données exposées
+
+* Décrire les modèles d'entrée et de sortie exposés par l'API, pas les modèles de stockage internes.
+  Une entité persistée n'est pas automatiquement un schéma de contrat.
+* Documenter les champs dont le format, la sémantique ou les contraintes peuvent prêter à confusion.
+  Ne pas dupliquer mécaniquement les validations si elles sont déjà visibles dans le schéma.
+* Ne jamais inclure dans le contrat des propriétés internes, des secrets, des champs non autorisés
+  ou des valeurs réelles issues de la production.
+* Pour les transferts de fichiers, décrire le type de contenu, les formats acceptés et produits, les
+  limites applicables et le comportement d'erreur.
+
+## Sécurité de la documentation
+
+* Décrire le mécanisme de sécurité réellement choisi par l'application et l'appliquer aux opérations
+  concernées dans la spécification. Ne pas supposer que toute API utilise un jeton particulier.
+* Les descriptions OpenAPI ne remplacent jamais l'authentification, l'autorisation par permission,
+  la validation serveur ou le contrôle du périmètre de ressource.
+* La documentation interactive et les endpoints de spécification sont désactivés ou protégés dans
+  les environnements où leur exposition n'est pas nécessaire. Chaque application documente les
+  environnements où ils sont disponibles et leurs contrôles d'accès.
+* N'ajouter à la liste des routes publiques que les chemins strictement nécessaires au chargement
+  de la spécification ou de l'interface. Leur disponibilité ne rend pas les API décrites publiques.
+
+## Vérification
+
+Toute modification d'une route, d'un paramètre, d'un schéma, d'une réponse ou d'une règle de sécurité
+met à jour le contrat dans le même changement. La CI valide la syntaxe OpenAPI et, si un contrat
+existant est publié, détecte les changements incompatibles selon la politique de versionnement de
+l'application.

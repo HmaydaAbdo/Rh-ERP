@@ -1,5 +1,18 @@
 # Déploiement — architecture réelle de rh-erp
 
+## Journaux et répertoires locaux
+
+Le backend émet ses journaux sur la sortie console (consultables en temps réel avec
+`docker compose logs --follow backend`) et écrit les archives quotidiennes compressées dans
+`./logs/`, à côté de `docker-compose.yml`. Les archives utilisent UTC et sont conservées 30 jours.
+Le dossier est monté depuis l'hôte et exclu de Git. Avant le premier démarrage sur un hôte Linux,
+le créer avec des droits d'écriture pour l'UID/GID 10001 du conteneur, par exemple :
+
+```sh
+install -d -o 10001 -g 10001 -m 0750 logs
+install -d -o 70 -g 70 -m 0700 backups
+```
+
 > Ce document décrit l'architecture de déploiement **concrète** de ce projet. Pour le pattern
 > générique réutilisable (Docker Compose + Flyway, sans détail propre à rh-erp), voir
 > `conventions/deployment.md`. Pour les conventions de sécurité (JWT/RBAC, secrets), voir
@@ -200,34 +213,51 @@ Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 
 ---
 
-## Backup PostgreSQL — préparé, pas encore implémenté
+## Sauvegarde PostgreSQL
 
-Le volume Docker `postgres_data` assure la persistance des données face à un redémarrage/une
+Le volume Docker `postgres_data_v18` assure la persistance des données face à un redémarrage/une
 recréation de conteneur — **ce n'est pas un backup** : il ne protège pas contre une suppression du
 volume, une corruption, ou une erreur humaine (ex. `DELETE` sans `WHERE`). Un vrai backup, distinct
-du volume et stockable hors du serveur, reste à implémenter.
+du volume, est exécuté par le service Compose `backup`.
 
-### Approche prévue
+Les archives PostgreSQL complètes sont créées chaque jour à `02:00 UTC` et conservées 30 jours. Si
+le service démarre sans archive datant de moins de 24 heures, il en crée une immédiatement ; un
+échec est retenté chaque heure.
+Le service place `rh-erp-<horodatage-UTC>.tar.gz` dans `./backups/`, à côté de
+`docker-compose.yml`. Chaque archive contient le dump PostgreSQL au format custom, les rôles sans
+leurs mots de passe et les sommes SHA-256 des deux fichiers. Le dump custom est validé avec
+`pg_restore --list` avant publication de l'archive. Les permissions sont restreintes au compte
+`postgres` du conteneur (UID/GID 70) ; sur un hôte Linux, préparer le dossier avec la commande
+indiquée en tête de ce document avant le démarrage.
 
-Un service dédié, séparé de `postgres`/`backend`/`frontend` (pour ne pas complexifier le Compose de
-production tant que le besoin réel — fréquence, rétention, destination — n'est pas confirmé) :
+`BACKUP_TIME_UTC` et `BACKUP_RETENTION_DAYS` sont configurables dans `.env` ; les valeurs par défaut
+sont `02:00` et `30`. La sauvegarde est stockée sans chiffrement, conformément au choix confirmé
+pour ce déploiement local. Les archives contiennent des données personnelles et salariales : toute
+personne ou processus pouvant lire `./backups/` peut lire ces données. Ne pas synchroniser le
+dossier vers un stockage partagé non contrôlé. Le répertoire est exclu de Git.
 
-- `pg_dump` planifié (fréquence configurable, ex. variable d'environnement `BACKUP_CRON`).
-- Rétention configurable (`BACKUP_RETENTION_DAYS`) — purge des dumps plus anciens que N jours.
-- Upload vers un stockage externe compatible S3 (`BACKUP_S3_BUCKET`, `BACKUP_S3_ENDPOINT`,
-  identifiants dédiés — jamais les identifiants PostgreSQL eux-mêmes) — ou tout autre emplacement
-  hors serveur selon l'infrastructure réellement disponible.
-- Options déjà évaluées : un conteneur dédié tout-en-un (ex. `prodrigestivill/postgres-backup-local`
-  couplé à un `rclone` pour l'upload distant), ou un script `pg_dump` + upload exécuté par un cron
-  externe au Compose (sur le serveur, ou une Action GitHub planifiée avec accès réseau au serveur).
-  Choix à trancher au moment de l'implémentation, selon l'infrastructure de stockage externe
-  réellement disponible (aucune n'est encore choisie).
+### Vérifier et restaurer
 
-### Ce qui reste à décider avant implémentation
+Vérifier les exécutions récentes avec `docker compose logs backup` et l'existence d'une archive
+datée de moins de 24 heures dans `backups/`. Pour vérifier les sommes et préparer une restauration
+isolée :
 
-- Fréquence et rétention réelles souhaitées.
-- Destination du stockage externe (S3, autre serveur, service tiers...).
-- Qui déclenche la restauration en cas d'incident, et comment (procédure à documenter ici une fois
-  le backup en place).
+```sh
+mkdir -m 0700 restore-check
+tar -xzf backups/rh-erp-<horodatage-UTC>.tar.gz -C restore-check
+cd restore-check
+sha256sum -c SHA256SUMS
+pg_restore --list database.dump
+```
+
+Pour une restauration, utiliser une instance PostgreSQL isolée et vide, créée avec un compte
+administrateur temporaire distinct des rôles sauvegardés. Restaurer `globals.sql`, créer la base
+`POSTGRES_DB` puis restaurer `database.dump` avec `pg_restore`. Les mots de passe des rôles ne sont
+pas inclus : les rétablir depuis la configuration de secrets avant de connecter l'application.
+Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
+avant tout retour au service. Ne jamais tester sur le seul volume de production.
+
+Cette sauvegarde locale ne protège pas contre la perte ou la compromission de l'hôte. Une copie
+indépendante hors du serveur et des exercices de restauration restent à organiser ; voir `TODO.md`.
 
 Voir `TODO.md` pour le suivi.

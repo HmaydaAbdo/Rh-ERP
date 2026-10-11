@@ -10,7 +10,7 @@ description: Use when changing audit events, Envers history, audit access, reten
 - [README Audit](../README.md)
 - [Permissions d'audit](../../rbac/audit.md)
 - [Modèle de données](../../data-model.md)
-- `conventions/audit.md`, `conventions/database.md` et le standard `standards/audit.md`
+- `conventions/audit.md` et `conventions/database.md`
 
 ## Garde-fous
 

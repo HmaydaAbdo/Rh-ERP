@@ -32,23 +32,25 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
-0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards de la version
-   épinglée dans `conventions/staport/v<version>/` (architecture, PostgreSQL/Flyway/pgvector, RBAC,
-   audit, tests, Angular, design system, agents/skills/MCP/RAG/BI).
+0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards encore présents
+   dans la version épinglée sous `conventions/staport/v<version>/` (tests, Angular, design system,
+   agents/skills/MCP/RAG/BI). Les règles d'architecture, base de données, sécurité/RBAC et audit
+   consolidées sont définies dans les conventions à la racine.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
 4. conventions/jpa.md
 5. conventions/database.md
 6. conventions/deployment.md
-7. conventions/security.md
-8. conventions/audit.md
-9. conventions/logging.md
-10. conventions/swagger.md
-11. conventions/metrics.md
-12. conventions/performance.md
-13. conventions/frontend.md
-14. conventions/design-system.md
+7. conventions/backup.md
+8. conventions/security.md
+9. conventions/audit.md
+10. conventions/logging.md
+11. conventions/swagger.md
+12. conventions/metrics.md
+13. conventions/performance.md
+14. conventions/frontend.md
+15. conventions/design-system.md
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
@@ -59,10 +61,10 @@ pas ces sources et ne confère aucun droit applicatif.
 
 En cas de conflit entre plusieurs conventions :
 
-- le socle Staport épinglé fixe les exigences communes minimales, particulièrement sécurité, audit
-  et confidentialité ;
-- les conventions ERP-RH précisent l'implémentation et les règles du projet ; elles peuvent
-  renforcer le socle, pas en affaiblir les exigences ;
+- le socle Staport épinglé fixe les exigences communes minimales des standards encore présents ;
+- les conventions à la racine définissent les règles communes d'architecture, de sécurité, d'audit
+  et de persistance ; la documentation du projet précise les choix d'implémentation sans affaiblir
+  ces règles ;
 - `architecture.md` ERP-RH fait foi pour les choix d'architecture propres au projet ; toute
   contradiction entre les deux niveaux est résolue par un ADR et une mise à jour des documents avant
   le changement concerné.

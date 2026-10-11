@@ -47,9 +47,10 @@ l'application). Le compte applicatif est créé tout seul par Flyway s'il n'exis
 | Variable | Rôle |
 |---|---|
 | `DOCKERHUB_USERNAME` | Compte Docker Hub qui publie les images |
-| `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG` | Version des images (`latest` par défaut) |
+| `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG`, `BACKUP_IMAGE_TAG` | Version des images (`latest` par défaut) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL et son compte **propriétaire** (migrations) |
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |
+| `BACKUP_TIME_UTC`, `BACKUP_RETENTION_DAYS` | Heure quotidienne UTC (`02:00`) et conservation des archives (`30` jours) ; le service de backup utilise le compte propriétaire PostgreSQL pour dumper la base et les rôles |
 | `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Ports publiés, **liés à `127.0.0.1`** (jamais exposés à Internet) |
 | `CHANTIER_SYNC_BASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM` | Transmises telles quelles au backend |
 

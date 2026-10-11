@@ -1,291 +1,138 @@
-# Déploiement — Docker Compose, PostgreSQL, Nginx inner/outer, CI
+# Déploiement et exploitation avec Docker
 
-> Pattern de référence pour développer et déployer un projet Spring Boot + Angular avec
-> PostgreSQL, réutilisable d'un projet à l'autre. La liste réelle des services, ports, images et
-> variables d'un projet donné vit dans son propre `docker-compose.yml`/`.env.example` et sa propre
-> documentation (`docs/deployment.md`), pas ici.
+> Les processus applicatifs et leurs dépendances gérées par le projet s'exécutent dans des
+> conteneurs Docker en développement, en test et en production. Les services externes consommés par
+> API restent des intégrations externes, pas des composants à copier dans le Compose.
 
----
+## Compose par environnement
 
-## Deux Compose possibles, jamais mélangés
+Docker Compose est l'interface commune pour construire, démarrer et arrêter les services du projet.
+Un même modèle Compose peut être complété par des profils ou des fichiers d'override pour les
+différences entre développement, test et production ; garder ces différences explicites et
+vérifiables.
 
-- **Compose de production** : un seul fichier, uniquement des `image:` déjà publiées sur un
-  registre (Docker Hub ou équivalent) — **jamais de `build:`**, jamais de bind mount du code
-  source, jamais de volume `node_modules`. Les images sont construites et publiées par la CI (voir
-  plus bas), le Compose ne fait que les consommer.
-- **Développement local** : pas de Compose dédié — lancer le backend et/ou le frontend directement
-  sur la machine (`./mvnw spring-boot:run`, `ng serve`) pendant que `docker compose up -d postgres`
-  fournit uniquement la base de données. Un cycle de développement actif (rechargement à chaud,
-  débogueur attaché) est toujours plus rapide qu'un conteneur reconstruit à chaque changement — ne
-  jamais concevoir le Compose de production pour servir aussi de confort de développement.
+* En développement, le code peut être monté ou synchronisé dans le conteneur pour le rechargement
+  rapide, mais le processus de l'application s'exécute dans son conteneur.
+* En CI, les tests et leurs dépendances s'exécutent dans des conteneurs reproductibles.
+* En production, exécuter des images construites et testées par la CI. Ne pas monter le code source
+  depuis l'hôte ni compiler l'application sur le serveur de production.
+* Ne pas mélanger par inadvertance les montages, ports de développement et valeurs de débogage avec
+  la configuration de production.
 
-Ne jamais faire cohabiter les deux logiques (bind mount + image publiée, ou `build:` + `image:`)
-dans un même fichier.
+Commandes usuelles depuis le répertoire de Compose :
 
----
-
-## Stack de référence
-
-| Service | Rôle | Image |
-|---|---|---|
-| `postgres` | Base de données | `postgres:<version>` (ou `pgvector/pgvector:pg<version>` si des embeddings/recherche vectorielle sont nécessaires — n'activer l'extension que si un besoin réel existe, jamais par anticipation, `conventions/architecture.md`) |
-| `backend` | API Spring Boot | `<registre>/<projet>-backend:<tag>` — buildée par la CI depuis `backend/Dockerfile` |
-| `frontend` | Nginx inner servant le build Angular | `<registre>/<projet>-frontend:<tag>` — buildée par la CI depuis `frontend/Dockerfile` (multi-stage Node → Nginx) |
-
-Fichier d'orchestration : `docker-compose.yml` à la racine du dépôt. Toutes les valeurs (identifiants,
-ports, noms d'image, tags) viennent de `.env` à la racine — jamais en dur dans le Compose
-(`conventions/configuration.md`).
-
----
-
-## Pattern Nginx inner / Nginx outer
-
-Pour un déploiement partagé (plusieurs applications sur le même serveur, chacune sous son propre
-sous-chemin) :
-
-```
-Internet
-   │
-   ▼
-NGINX OUTER (hors du dépôt applicatif — géré au niveau du serveur, partagé entre applications)
-   │  proxy_pass vers 127.0.0.1:<port publié>, sub_filter pour réécrire <base href>
-   ▼
-NGINX INNER (conteneur "frontend" de CE projet)
-   │
-   ├── fichiers statiques du build frontend — servis directement, cache long terme
-   └── proxy_pass interne (réseau Docker) vers le backend de CE projet
+```sh
+docker compose up --build
+docker compose down
+docker compose -f compose.yaml -f compose.production.yaml up -d
 ```
 
-- **Nginx outer** vit sur le serveur, en dehors de tout dépôt applicatif — il route chaque
-  application vers son propre sous-chemin (`/<projet>/`) et son propre port publié en loopback.
-  L'ajouter à sa configuration reste une action manuelle sur le serveur (chaque projet documente,
-  dans son propre `docs/deployment.md`, le bloc à y ajouter).
-- **Nginx inner** appartient au dépôt applicatif (`frontend/nginx.conf`) — sert les fichiers
-  statiques du build ET relaie en interne les appels API vers le backend du même projet, sur le
-  réseau Docker (jamais via un port publié). C'est lui qui gère la distinction "route front-end vs
-  appel API" décrite ci-dessous — nginx outer n'a besoin de connaître qu'un seul port par
-  application.
-- **Sous-chemin + `sub_filter`** : quand une application est servie sous `/<projet>/` plutôt qu'à la
-  racine d'un domaine, le build frontend reste générique (`<base href="/">`) — c'est nginx outer qui
-  réécrit dynamiquement `<base href="/">` → `<base href="/<projet>/">` dans la réponse HTML
-  (`sub_filter`), pas un rebuild avec `--base-href`. Le routeur Angular lit le `<base href>` au
-  runtime, et les assets compilés par Angular CLI sont déjà relatifs à ce `<base href>` (pas de
-  chemin absolu en dur) — aucune configuration supplémentaire nécessaire côté frontend.
+## Images et conteneurs
 
-### Ports — toujours liés à `127.0.0.1`
+* Utiliser des images minimales, maintenues et épinglées. Une mise à jour d'image est testée avant
+  déploiement ; éviter `latest` comme référence de production. Les artefacts applicatifs sont
+  identifiables par une version immuable ou le digest de l'image.
+* Construire les images applicatives de façon reproductible, avec des étapes de build séparées de
+  l'image d'exécution lorsque cela convient à la pile technique.
+* Exécuter les processus sans privilèges root. Ne pas utiliser `privileged` ou ajouter des
+  capacités système sans nécessité documentée. Réduire les paquets, ports, fichiers et permissions
+  accessibles au conteneur.
+* Conserver les données persistantes hors du système de fichiers éphémère du conteneur : volume
+  nommé, stockage persistant ou service de données géré, selon l'architecture du projet.
+* Déclarer uniquement les services nécessaires : application, stockage, traitements asynchrones,
+  proxy d'entrée ou outils locaux. Le nombre et les noms des services sont propres au projet.
 
-Tout port publié par le Compose de production (`ports: - "127.0.0.1:${PORT}:<port interne>"`) est
-lié à la boucle locale, jamais à `0.0.0.0` — accessible uniquement depuis le serveur lui-même (nginx
-outer, ou un accès direct pour l'administration/le backup), jamais depuis l'extérieur. C'est ce
-binding, pas un pare-feu externe, qui garantit qu'un service n'est pas exposé à Internet.
+## Configuration et secrets
 
-### Désambiguïser route Angular et appel API dans nginx inner
+Fournir la configuration par les mécanismes de l'environnement Docker et appliquer
+`conventions/configuration.md` : valeurs typées et validées, source faisant autorité, secrets séparés
+de la configuration ordinaire.
 
-Quand un préfixe existe à la fois comme route Angular (une page) et comme préfixe d'API
-(`GET /xxx`, `POST /xxx/search`...), la même requête HTTP doit soit servir la page (rechargement de
-navigateur), soit être relayée au backend (appel `HttpClient`), selon son origine — distinguer les
-deux via l'en-tête `Accept` (une navigation envoie `Accept: text/html`, `HttpClient` ne l'envoie
-jamais) :
+* Ne jamais inscrire un secret dans une image, un Dockerfile, un fichier Compose versionné, les
+  arguments de build ou les journaux.
+* En production, fournir les secrets au moyen du gestionnaire de secrets de la plateforme ou d'un
+  mécanisme Docker sûr adapté au mode de déploiement. Ne pas passer un secret comme variable
+  d'environnement lorsque le mécanisme de secrets est disponible.
+* Les fichiers de secrets de développement sont locaux, exclus du dépôt et remplacés par des
+  valeurs de test sans privilège en CI.
+* Un fichier d'exemple peut documenter les noms et formats attendus, mais ne contient que des valeurs
+  fictives. Les contrôles requis échouent au démarrage si leur configuration manque ou est invalide.
 
-```nginx
-location ~ ^/(xxx|yyy)(/|$) {
-    if ($http_accept ~* "text/html") {
-        rewrite ^ /__spa_fallback last;   # jamais "break" : "break" laisse le proxy_pass
-                                            # du même bloc s'exécuter quand même sur l'URI réécrite.
-    }
-    proxy_pass http://backend;
-}
+## Réseaux et exposition
 
-location = /__spa_fallback {
-    internal;
-    try_files /index.html =404;
-}
-```
+* N'exposer que le point d'entrée nécessaire aux utilisateurs ou aux opérations. Ne pas publier
+  directement les bases de données, files de messages ou services internes sur une interface réseau
+  publique.
+* Relier les services uniquement aux réseaux dont ils ont besoin. Le contrôle d'accès réseau de
+  l'hôte ou du cloud complète cette segmentation ; il ne la remplace pas.
+* Lorsqu'un port doit être accessible uniquement depuis l'hôte, le lier à l'interface de boucle
+  locale. Documenter tout port ouvert à un autre réseau et sa protection.
+* Si un proxy transmet des en-têtes d'identité ou d'adresse client, le backend ne fait confiance
+  qu'aux proxys explicitement identifiés. Rejeter ou ignorer ces en-têtes lorsqu'ils viennent d'une
+  source non fiable.
+* Le chiffrement TLS est terminé au point d'entrée de confiance défini par le déploiement. Les
+  communications entre réseaux ou services sensibles utilisent le niveau de chiffrement exigé par
+  leur risque.
 
-Utiliser une regex ancrée sur le segment de chemin (`^/xxx(/|$)`), jamais un préfixe simple
-(`location /xxx`) — un préfixe nu capture aussi par erreur toute ressource sans rapport comme
-`/xxxYYY`.
+## Démarrage, santé et arrêt
 
----
+Chaque service définit une vérification de santé qui reflète sa capacité utile à traiter le travail,
+sans dépendre inutilement d'une intégration secondaire non critique. Les services dépendants attendent
+la disponibilité requise ; les processus applicatifs réessaient proprement leurs connexions après un
+démarrage ou une interruption du service amont. `depends_on` et un healthcheck peuvent séquencer le
+démarrage Compose, mais ne remplacent pas la résilience à l'exécution.
 
-## Démarrage (production)
+Définir des politiques d'arrêt et de redémarrage adaptées. Le processus doit libérer proprement ses
+ressources, terminer ou interrompre les travaux selon la règle du domaine et éviter de traiter deux
+fois une opération non idempotente.
 
-```bash
-cp .env.example .env   # une seule fois, puis renseigner de vraies valeurs
-docker compose pull    # récupère les images publiées par la CI
-docker compose up -d
-```
+## Base de données et migrations
 
-Re-déployer une nouvelle version : `docker compose pull && docker compose up -d` (ne recrée que les
-conteneurs dont l'image a changé, ne touche jamais au volume de données).
+* Exécuter les migrations Flyway dans le cadre du déploiement, avant que la nouvelle version ne
+  dépende du schéma modifié. Garantir qu'une seule tâche de migration opère à la fois. Toute
+  migration est testée sur le moteur relationnel cible selon `conventions/database.md`.
+* Le compte de migration est distinct du compte d'exécution lorsque le modèle de sécurité ou d'audit
+  l'exige. Le compte applicatif suit le moindre privilège ; les droits d'audit sont définis dans
+  `conventions/audit.md`.
+* Pour un déploiement progressif, garder temporairement le schéma compatible avec la version
+  précédente : ajouter, migrer les données, basculer le code, puis retirer les anciennes structures
+  dans une migration ultérieure. Documenter le retour arrière si une migration peut rendre les
+  données incompatibles.
+* Les images applicatives et migrations gardent les mêmes versions entre test, staging et
+  production ; seules les configurations propres à l'environnement changent.
 
-### Démarrage (développement local)
+## CI, publication et déploiement
 
-```bash
-docker compose up -d postgres
-cd backend && ./mvnw spring-boot:run     # ou équivalent
-cd frontend && ng serve                   # proxy vers le backend local, voir proxy.conf.js
-```
+La CI exécute les contrôles et tests pertinents, puis construit les images Docker à partir du commit
+à livrer. Les images validées sont publiées dans un registre et promues entre environnements par
+leur identifiant immuable ; ne pas reconstruire une image différente pour la production.
 
-### Tests
+* Ne jamais publier d'image de production depuis un changement non approuvé ou un contexte qui peut
+  exposer des identifiants du registre.
+* Analyser les dépendances et les images selon le risque, produire un inventaire logiciel si le
+  projet ou son environnement l'exige, et traiter les vulnérabilités selon une politique documentée.
+* Séparer la construction de l'image de son déploiement. Après déploiement, vérifier la santé et les
+  indicateurs attendus ; arrêter ou revenir à la dernière version saine si les critères de réussite
+  ne sont pas atteints.
+* Documenter les opérations manuelles, l'identité autorisée à les exécuter et les critères de retour
+  arrière dans la documentation de déploiement du projet.
 
-Les tests qui chargent le contexte applicatif complet ont besoin d'une base de données réelle et
-accessible (les tests unitaires avec repositories mockés n'en ont pas besoin) — démarrer
-`docker compose up -d postgres` avant de les lancer si ce n'est pas déjà fait. En CI, un service de
-base de données dédié au job (ex. `services:` GitHub Actions) remplace ce besoin.
+## Sauvegarde et reprise
 
----
+Avant la production, définir pour chaque donnée persistante les objectifs de perte de données et de
+reprise, la fréquence et la rétention des sauvegardes, leur destination et leur responsable.
+Conserver les sauvegardes indépendamment des conteneurs et volumes opérationnels, limiter leur
+accès, puis tester régulièrement une restauration. Un volume Docker persistant ne constitue pas à
+lui seul une sauvegarde. Appliquer `conventions/backup.md` et documenter les chemins locaux et la
+copie externe dans la procédure du projet.
 
-## Migrations — Flyway
+Les fichiers d'exploitation locaux, notamment `logs/` et `backups/`, sont placés à côté du fichier
+Compose, exclus du contrôle de version et montés explicitement dans les conteneurs qui en ont besoin.
+Les permissions hôte doivent permettre l'écriture par l'UID/GID non privilégié du processus du
+conteneur.
 
-Le schéma est géré exclusivement par Flyway (`backend/src/main/resources/db/migration/`), jamais
-par Hibernate : `spring.jpa.hibernate.ddl-auto` est fixé à `validate` (voir
-`conventions/database.md` pour le détail des conventions de migration). Flyway s'exécute
-automatiquement au démarrage de l'application, avant l'initialisation de Hibernate.
+## Intégration de code
 
----
-
-## Deux comptes PostgreSQL — l'application ne réécrit pas l'audit
-
-Pour qu'un audit (`conventions/audit.md`) soit opposable, l'application ne doit pas pouvoir modifier son propre
-historique : deux comptes, jamais un seul.
-
-| Compte | Utilisé par | Droits |
-|---|---|---|
-| **Propriétaire** du schéma (`DB_MIGRATION_USER`) | Flyway, au démarrage, seulement | Tous (il crée les tables) |
-| **Applicatif** (`DB_USER`) | L'application, à l'exécution | `SELECT, INSERT, UPDATE, DELETE` sur les tables métier ; **`SELECT, INSERT` seulement** sur les tables d'audit ; lecture seule sur l'historique Flyway |
-
-* Les droits sont recalculés après chaque migration par un rappel Flyway `afterMigrate.sql` (idempotent) : un rappel
-  plutôt qu'une migration, pour couvrir aussi les tables créées plus tard. Il ne fait rien quand les deux comptes sont
-  identiques (développement, CI).
-* Le compte applicatif est créé par ce même rappel quand il n'existe pas (le mot de passe vient de l'environnement,
-  jamais d'un fichier versionné) — aucune étape manuelle au déploiement.
-* Les deux paires d'identifiants sont des variables d'environnement obligatoires (`conventions/configuration.md`) ;
-  en développement et en CI, elles peuvent désigner le même compte.
-* L'application vérifie au démarrage que son compte ne peut pas modifier une table d'audit et le signale sinon.
-* **Mise en place sur une base existante** : procédure documentée dans le `docs/deployment.md` du projet, essayée
-  d'abord sur une copie de la base, avec retour arrière possible (revenir au compte unique).
-* Un test d'intégration prouve que le compte applicatif ne peut ni modifier, ni supprimer, ni vider une table d'audit.
-
----
-
-## Adresse IP du client
-
-L'audit enregistre l'adresse IP du client réel. Derrière un ou plusieurs reverse-proxys (nginx outer, puis inner),
-l'adresse vue par l'application est celle du dernier proxy : chaque proxy doit transmettre `X-Forwarded-For`
-(`$proxy_add_x_forwarded_for`, qui **ajoute** l'adresse reçue plutôt que de la remplacer — un client ne peut donc pas
-usurper l'adresse enregistrée), et l'application doit honorer cet en-tête **uniquement de ses proxys de confiance**
-(configuration du serveur embarqué, `server.forward-headers-strategy`). Le backend n'est joignable que par ses
-proxys (réseau Docker interne, port publié en loopback seulement — voir « Ports »).
-
----
-
-## Healthchecks
-
-Chaque service définit un healthcheck adapté :
-
-| Service | Vérification |
-|---|---|
-| Base de données | `pg_isready` (ou équivalent du moteur utilisé) |
-| Backend | Un endpoint de santé applicatif (ex. Spring Boot Actuator `/actuator/health`) — attention aux indicateurs de santé automatiques qui dépendent d'un service externe non critique (ex. un indicateur de santé mail qui dépend de la disponibilité du serveur SMTP) : désactiver ceux dont l'indisponibilité ne doit pas sortir le service de la rotation, sans quoi une panne d'un composant secondaire fait échouer le healthcheck de toute l'application. |
-| Frontend (nginx inner) | Un endpoint dédié (ex. `/health` retournant `200`) qui ne dépend d'aucune ressource externe — jamais un endpoint qui transite par le backend. |
-
-`depends_on: condition: service_healthy` séquence le démarrage (base → backend → frontend) —
-sans ça, un service peut démarrer avant que sa dépendance soit réellement prête à répondre.
-
----
-
-## Réseaux Docker — segmentation explicite
-
-Séparer les services par réseau selon qui a besoin de parler à qui, plutôt qu'un unique réseau par
-défaut partagé par tout le monde :
-
-- Base de données : joignable uniquement par le backend.
-- Backend : joignable par le frontend (proxy interne) et la base de données — jamais publié
-  directement (voir « Ports » ci-dessus).
-- Frontend : seul service dont le port est destiné à être atteint depuis l'extérieur du réseau
-  Docker (par nginx outer).
-
-Cette segmentation garantit qu'un frontend compromis ne peut pas atteindre directement la base de
-données, même sans dépendre du filtrage réseau externe au serveur.
-
----
-
-## Images Docker : non-root, épinglées
-
-* Aucun processus de production ne tourne en root : le backend s'exécute sous un compte système dédié (`USER` dans le `Dockerfile`), le frontend sur l'image `nginx-unprivileged` (écoute sur 8080, fichier de PID et répertoires temporaires dans `/tmp`).
-* Les images de base sont épinglées par empreinte (`image:tag@sha256:…`) : la balise dit la version suivie, l'empreinte ce qui est réellement tiré. Dependabot propose la mise à jour des deux ensemble.
-* Un healthcheck sur `localhost` peut résoudre l'IPv6 (`::1`) alors que nginx n'écoute qu'en IPv4 : utiliser `127.0.0.1`.
-
----
-
-## CI — build et publication des images
-
-À chaque push sur la branche principale : tests, puis build + publication des images sur le
-registre, taguées avec le SHA du commit (traçabilité exacte) et `latest` (dernière version de la
-branche principale) — un tag de version supplémentaire sur un tag Git (`v*`) si une release est
-publiée. Sur une pull request, seuls les tests tournent — jamais de publication d'image depuis une
-PR (évite d'exposer les identifiants du registre à du code non encore revu).
-
-La CI du backend produit aussi le rapport de couverture (JaCoCo) et le SBOM CycloneDX, puis analyse les dépendances (OSV-Scanner) : une vulnérabilité connue fait échouer le job (exception motivée et datée dans `backend/osv-scanner.toml`). Celle du frontend fait `npm audit`, la vérification des licences et le SBOM npm.
-
-Le déploiement (CD — appliquer la nouvelle image sur le serveur) reste une étape séparée, à ne
-mettre en place qu'une fois le besoin confirmé (`docker compose pull && up -d` manuel au minimum,
-automatisation ensuite si nécessaire).
-
----
-
-## Git — une seule branche vit sur le remote
-
-`main` est la seule branche destinée à rester sur le remote. Une branche de travail (feature,
-correctif) est créée pour une pull request, puis **supprimée dès qu'elle est mergée** — jamais
-laissée trainer une fois son contenu absorbé par `main`. Ce n'est pas une question d'ordre : la
-production tourne sur des images Docker construites par la CI à chaque push sur `main` (voir
-« CI » ci-dessus), donc toute branche encore vivante après son merge n'est plus qu'une ambiguïté
-sans utilité (elle ne représente rien qui ne soit pas déjà dans `main`) et un risque de confusion
-lors d'un futur travail (relancer un travail dessus reviendrait à empiler du nouveau code sur de
-l'historique déjà mergé — voir la procédure de redémarrage depuis `main` documentée pour ce cas).
-
-En pratique :
-- Une branche fusionnée est supprimée dans la foulée (sur GitHub, l'option « Delete branch »
-  proposée juste après le merge, ou `git push origin --delete <branche>`).
-- Si une pull request est fermée sans être mergée, sa branche est supprimée de la même façon —
-  rien ne justifie de la garder.
-- Reprendre un travail après le merge de sa pull request repart toujours de `main` à jour (jamais
-  d'empilement sur une branche dont le contenu est déjà mergé).
-
----
-
-## Variables d'environnement
-
-| Variable | Portée | Description |
-|---|---|---|
-| Identifiants base de données | `.env` racine, service base de données | Repris tels quels par le service backend |
-| Nom d'utilisateur/organisation du registre d'images, tags | `.env` racine | Détermine quelle image chaque service tire (`<registre>/<projet>-backend:<tag>`) |
-| Ports publiés sur l'hôte | `.env` racine | Un par service publié, toujours lié à `127.0.0.1` (voir plus haut) |
-| Endpoints externes obligatoires du projet | `.env` racine (Docker) ou `backend/.env` (local) | Toute intégration externe requise par le projet — voir sa propre documentation |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `backend/.env` (développement local hors Docker uniquement) | Connexion à la base — en Docker, ces valeurs sont injectées directement par `docker-compose.yml` |
-
-Aucune de ces variables n'a de valeur par défaut dans la configuration applicative
-(`conventions/configuration.md`) — l'application refuse de démarrer si l'une d'elles manque.
-
----
-
-## Backup — à prévoir, jamais improvisé dans le Compose de production
-
-Un volume de données persistant protège contre le redémarrage/la recréation d'un conteneur — ce
-n'est **pas** un backup, et ne protège ni d'une suppression du volume, ni d'une corruption, ni d'une
-erreur humaine. Un vrai backup (indépendant du volume, stockable hors du serveur, fréquence et
-rétention configurables) doit être prévu, mais seulement une fois le besoin réel confirmé (fréquence,
-rétention, destination) — ne pas ajouter un service de backup au Compose de production par
-anticipation (`conventions/architecture.md`) ; documenter le plan (voir le `docs/deployment.md` du
-projet concerné) en attendant.
-
----
-
-## Ce qui n'existe pas forcément
-
-- Un secrets manager dédié — `.env` convient à de nombreux projets ; à revoir si l'infrastructure de
-  déploiement en offre un plus robuste (`conventions/security.md`).
-- CD automatisé — voir « CI » ci-dessus.
-- Backup implémenté — voir ci-dessus.
+`main` contient les changements intégrés. Les changements passent par une pull request et les
+branches distantes de travail sont supprimées après leur fusion ; un travail repris après fusion
+repart de `main` à jour. La CI valide le commit avant la publication de son image.
