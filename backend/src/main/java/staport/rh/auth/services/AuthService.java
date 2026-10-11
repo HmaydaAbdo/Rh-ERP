@@ -39,7 +39,6 @@ public class AuthService implements IAuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    public static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(30);
     private static final Duration RESET_TOKEN_TTL = Duration.ofHours(1);
 
     private final UtilisateurRepository utilisateurRepository;
@@ -52,6 +51,8 @@ public class AuthService implements IAuthService {
     private final UserMapper userMapper;
     private final EmailService emailService;
     private final ApplicationEventPublisher evenements;
+    /** Empreinte d'un mot de passe que personne ne connaît : comparée quand le compte n'existe pas (voir {@link #login}). */
+    private final String empreinteFactice;
 
     public AuthService(UtilisateurRepository utilisateurRepository, RefreshTokenRepository refreshTokenRepository,
                         ResetPasswordTokenRepository resetPasswordTokenRepository, PasswordEncoder passwordEncoder,
@@ -68,6 +69,7 @@ public class AuthService implements IAuthService {
         this.userMapper = userMapper;
         this.emailService = emailService;
         this.evenements = evenements;
+        this.empreinteFactice = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     @Override
@@ -75,16 +77,21 @@ public class AuthService implements IAuthService {
     public Connexion login(String username, String motDePasse) {
         Optional<Utilisateur> trouve = utilisateurRepository.findByUsername(username);
         if (trouve.isEmpty()) {
+            // Même travail de hachage que pour un compte existant : sans lui, la rapidité de la réponse révélerait qu'un
+            // identifiant n'existe pas (conventions/security.md, « Principes »).
+            passwordEncoder.matches(motDePasse, empreinteFactice);
             // L'identifiant saisi n'est pas conservé : il peut être un mot de passe tapé au mauvais endroit.
             evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, null, null, "COMPTE_INCONNU"));
             throw new InvalidCredentialsException();
         }
         Utilisateur utilisateur = trouve.get();
 
+        // Le mot de passe est toujours vérifié, même pour un compte inactif : la durée de la réponse ne distingue pas les cas.
+        boolean motDePasseValide = passwordEncoder.matches(motDePasse, utilisateur.getMotDePasseHash());
         if (!utilisateur.isActif()) {
             refuserConnexion(utilisateur, "COMPTE_INACTIF");
         }
-        if (!passwordEncoder.matches(motDePasse, utilisateur.getMotDePasseHash())) {
+        if (!motDePasseValide) {
             refuserConnexion(utilisateur, "IDENTIFIANTS_INVALIDES");
         }
 

@@ -41,6 +41,6 @@ public class EmailService {
                 """.formatted(lien));
 
         mailSender.send(message);
-        log.info("Email de réinitialisation envoyé à {}", email);
+        log.info("Email de réinitialisation envoyé");
     }
 }

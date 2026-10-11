@@ -1,5 +1,8 @@
 package staport.rh.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +24,7 @@ import java.util.List;
 
 /** Gestion des rôles et du catalogue de permissions — réservé à ROLE_MANAGE. */
 @RestController
+@Tag(name = "Rôles", description = "Rôles administrables et catalogue des permissions")
 @PreAuthorize("hasAuthority('ROLE_MANAGE')")
 public class RoleController {
 
@@ -31,32 +35,39 @@ public class RoleController {
     }
 
     @GetMapping("/roles")
+    @Operation(summary = "Lister les rôles")
     public ResponseEntity<List<RoleResponseDto>> findAll() {
         return ResponseEntity.ok(roleService.findAll());
     }
 
     @GetMapping("/roles/{id}")
+    @Operation(summary = "Lire un rôle")
     public ResponseEntity<RoleResponseDto> findById(@PathVariable Long id) {
         return ResponseEntity.ok(roleService.findById(id));
     }
 
     @PostMapping("/roles")
+    @Operation(summary = "Créer un rôle")
     public ResponseEntity<RoleResponseDto> create(@Valid @RequestBody RoleCreateRequestDto dto) {
         return ResponseEntity.ok(roleService.create(dto));
     }
 
     @PutMapping("/roles/{id}")
+    @Operation(summary = "Modifier un rôle", description = "Le rôle d'administration n'est ni renommable ni amputable de permissions.")
     public ResponseEntity<RoleResponseDto> update(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequestDto dto) {
         return ResponseEntity.ok(roleService.update(id, dto));
     }
 
     @DeleteMapping("/roles/{id}")
+    @Operation(summary = "Supprimer un rôle")
+    @ApiResponse(responseCode = "409", description = "Rôle encore attribué à des comptes, ou rôle d'administration")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/permissions")
+    @Operation(summary = "Lister le catalogue des permissions")
     public ResponseEntity<List<PermissionResponseDto>> findAllPermissions() {
         return ResponseEntity.ok(roleService.findAllPermissions());
     }
