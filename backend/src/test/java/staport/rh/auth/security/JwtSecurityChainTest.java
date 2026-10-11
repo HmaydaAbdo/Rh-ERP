@@ -28,7 +28,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -41,7 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtService.class})
 @TestPropertySource(properties = {
         "security.jwt.secret=dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMTIzNDU2Nzg5MA==",
-        "spring.application.name=paie-test"
+        "spring.application.name=paie-test",
+        "security.cors.allowed-origins=http://localhost:4200"
 })
 class JwtSecurityChainTest {
 
@@ -82,6 +85,25 @@ class JwtSecurityChainTest {
     @Test
     void sansTokenLaRequeteEstRefuseeEn401() throws Exception {
         mockMvc.perform(get("/equipes/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void prevolDepuisUneOrigineAutoriseeRetourneLesEntetesCors() throws Exception {
+        mockMvc.perform(options("/equipes/1")
+                        .header("Origin", "http://localhost:4200")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:4200"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void prevolDepuisUneOrigineNonAutoriseeEstRefuse() throws Exception {
+        mockMvc.perform(options("/equipes/1")
+                        .header("Origin", "https://evil.example")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }
 
     @Test

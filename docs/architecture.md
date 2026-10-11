@@ -11,7 +11,7 @@
 ```text
 Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 18
                     │                                   │
-                    │                                   ├── Flyway (schéma, migrations V1…V15, droits du compte applicatif)
+                    │                                   ├── Flyway (schéma, migrations V1…V21, droits du compte applicatif)
                     │                                   ├── Hibernate Envers + journal d'audit (qui, quoi, quand, avant / après)
                     │                                   ├── Apache POI (imports/exports Excel)
                     │                                   ├── jsoup + openhtmltopdf + Batik (rapport PDF)
@@ -25,7 +25,7 @@ Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (A
 | Backend | Java 21 (JDK de build et d'exécution), Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (resource server JWT), MapStruct, springdoc-openapi |
 | Base | PostgreSQL 18.6 avec pgvector ; usage vectoriel uniquement lorsqu'un cas RAG sera validé |
 | Migrations | Flyway ; Hibernate en `ddl-auto: validate` (il vérifie le schéma, ne le modifie jamais) |
-| Frontend | Angular 17 en migration vers 22 ; cible standalone, Signals, Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport |
+| Frontend | Angular 22.2.2 standalone, Signals, Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport |
 | Tests | JUnit 5 + Mockito + AssertJ (backend), Vitest + Playwright/axe (frontend) — voir [testing.md](testing.md) |
 | Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](deployment.md) |
 
@@ -167,7 +167,7 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 | Jeton d'accès en mémoire, jeton de rafraîchissement en cookie `httpOnly` | Le jeton d'accès n'est jamais volable par du JavaScript injecté |
 | Imports Excel atomiques et en ajout seul | Un fichier invalide ne laisse rien d'à moitié importé ; aucune modification silencieuse par fichier |
 | Rapport PDF en HTML + openhtmltopdf, graphiques SVG | Pagination entièrement pilotée en Java (voir [report/README.md](report/README.md)) |
-| CORS ouvert à toute origine | Décision du 2026-09-23, risque borné par `SameSite=Lax` (voir [deployment.md](deployment.md)) |
+| CORS restreint par environnement | `CORS_ALLOWED_ORIGINS` fournit des origines explicites sans wildcard ni chemin (voir [deployment.md](deployment.md)) |
 | Paie non calculée | Le total est repris tel que saisi ou importé (décision du 2026-10-03) |
 | Audit : Envers + journal unique + événements de sécurité + garde-fous | Envers seul a des angles morts (écritures en masse, cascades SQL, migrations, événements sans donnée modifiée) ; chacun est fermé et prouvé par un test — voir [audit/README.md](audit/README.md) |
 | Aspect d'audit à l'intérieur de la transaction (ordre explicite) | L'entrée d'une opération réussie est validée ou annulée avec ses données ; un échec est tracé à part |

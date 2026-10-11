@@ -8,6 +8,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const PORT = 4300;
 const channel = process.env['CI'] ? undefined : 'chrome';
+const fullStack = !!process.env['E2E_FULL_STACK'];
 
 export default defineConfig({
   testDir: './e2e',
@@ -28,7 +29,7 @@ export default defineConfig({
     contextOptions: { reducedMotion: 'reduce' }
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel }, testIgnore: /responsive\.spec\.ts/ },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel }, testIgnore: fullStack ? /responsive\.spec\.ts/ : /(?:responsive|full-stack)\.spec\.ts/ },
     { name: 'mobile', use: { ...devices['Pixel 7'], channel }, testMatch: /responsive\.spec\.ts/ }
   ],
   webServer: {

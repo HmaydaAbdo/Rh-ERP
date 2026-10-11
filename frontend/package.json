@@ -7,6 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromiumHeadless",
+    "test:coverage": "ng test --watch=false --browsers=ChromiumHeadless --coverage",
     "test:watch": "ng test",
     "e2e": "playwright test",
     "audit:deps": "npm audit --audit-level=moderate",
@@ -28,6 +29,7 @@
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@lucide/angular": "^1.54.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "chart.js": "^4.5.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

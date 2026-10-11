@@ -244,8 +244,9 @@ Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
 - **CSRF désactivé** : tous les endpoints métier s'authentifient par l'en-tête `Authorization`, qu'un site tiers
   ne peut pas positionner. Seuls `/auth/refresh` et `/auth/logout` lisent le cookie ; le pire cas d'un CSRF y
   est une déconnexion forcée.
-- **CORS ouvert à toute origine** avec cookies autorisés (décision du 2026-09-23) : risque borné par
-  `SameSite=Lax`. Voir [../deployment.md](../deployment.md).
+- **CORS restreint par environnement** : `CORS_ALLOWED_ORIGINS` contient uniquement les origines
+  `http(s)` autorisées, sans wildcard ni chemin ; les credentials ne sont renvoyés que pour ces origines.
+  Voir [../deployment.md](../deployment.md) et [../configuration.md](../configuration.md).
 - Chemins publics : `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`,
   `/actuator/health`, et Swagger **seulement en développement** (éteint par défaut, voir [../configuration.md](../configuration.md)). Tout le reste exige un jeton valide.
 

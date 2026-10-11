@@ -22,15 +22,15 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Comprendre l'authentification, les comptes et les rôles | [auth/README.md](auth/README.md) |
 | Savoir qui a le droit de faire quoi (catalogue des permissions) | [rbac/README.md](rbac/README.md) |
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
-| Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
+| Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · [couverture par domaine](testing/domain-coverage.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
-| Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |
+| Connaître l'état de conformité du backend et de l'exploitation (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) · [matrice](conformite/matrice.md) · [journal du contrôle](conformite/controle-2026-10-11.md) · [applicabilité IA/MCP/RAG](conformite/applicabilite.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
 | Reprendre l'audit exhaustif de conformité | [handoff/conformite-totale.md](handoff/conformite-totale.md) |
 | Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |
-| Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) |
+| Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) · [ADR 0003 — CORS explicite](adr/0003-cors-origines-explicites.md) |
 
 ---
 

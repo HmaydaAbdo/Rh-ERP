@@ -28,7 +28,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Import({SecurityConfig.class, JwtService.class})
 @TestPropertySource(properties = {
         "security.jwt.secret=dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMTIzNDU2Nzg5MA==",
-        "spring.application.name=paie-test"
+        "spring.application.name=paie-test",
+        "security.cors.allowed-origins=http://localhost:4200"
 })
 class DocumentationApiSecurityTest {
 
