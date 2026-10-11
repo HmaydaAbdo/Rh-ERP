@@ -33,9 +33,9 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 # Ordre de lecture
 
 0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards encore présents
-   dans la version épinglée sous `conventions/staport/v<version>/` (Angular et
-   agents/skills/MCP/RAG/BI). Les règles de design system, d'architecture, de base de données,
-   de sécurité/RBAC et d'audit consolidées sont définies dans les conventions à la racine.
+   dans la version épinglée sous `conventions/staport/v<version>/` (agents/skills/MCP/RAG/BI).
+   Les conventions frontend, design system, architecture, base de données, sécurité/RBAC et audit
+   consolidées sont définies dans les conventions à la racine.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md

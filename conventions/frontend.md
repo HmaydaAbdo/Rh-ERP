@@ -105,10 +105,11 @@ private readonly xxxService = inject(XxxService);
 Les Services :
 
 * centralisent les appels HTTP ;
-* portent la logique applicative côté frontend ;
+* portent l'orchestration et l'état applicatif côté frontend ;
 * sont l'unique accès au backend.
 
-Un composant ne fait jamais d'appel HTTP directement.
+Un composant ne fait jamais d'appel HTTP directement. Le frontend peut valider une saisie pour guider
+l'utilisateur, mais les règles métier faisant autorité et leur validation restent côté backend.
 
 ---
 
@@ -292,6 +293,19 @@ Ne jamais importer directement une page dans les routes.
 
 ---
 
+# Performance des écrans
+
+* Contrôler la taille du bundle et charger les routes et composants coûteux à la demande ; justifier une dépendance par
+  son bénéfice mesuré.
+* Pour les grands jeux de données, utiliser la pagination et, si le volume ou les mesures le justifient, la virtualisation ;
+  préserver la navigation clavier et les noms accessibles.
+* Lorsqu'une nouvelle lecture remplace une ancienne (recherche, filtres ou changement d'écran), annuler ou ignorer la
+  réponse devenue obsolète. Ne pas annuler silencieusement une mutation déjà engagée côté serveur.
+* Garder les calculs coûteux hors des templates ; dériver l'état avec les API réactives Angular adaptées et mesurer
+  avant d'ajouter une mémorisation ou une abstraction.
+
+---
+
 # Gestion des erreurs
 
 Toutes les erreurs HTTP sont gérées par l'intercepteur global.
@@ -335,6 +349,9 @@ ou non) et un guard de permission générique paramétré par les données de ro
 ```ts
 { path: 'xxx', canActivate: [permissionGuard], data: { permission: 'XXX_MANAGE' } }
 ```
+
+Un guard améliore la navigation et l'expérience utilisateur ; il ne constitue jamais une frontière
+de sécurité. Le backend vérifie la permission sur chaque opération (voir `conventions/security.md`).
 
 Les éléments de navigation et boutons sensibles (ex. suppression) se conditionnent de la même façon
 au niveau du template :
