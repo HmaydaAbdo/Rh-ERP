@@ -111,7 +111,7 @@ non contractuels et règles globales qui fuient dans les autres domaines.
   ni d'appel à un service externe, l'application doit fonctionner sans accès à Internet.
 * Les **chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sont obligatoires partout où l'on compare des montants
   (tableaux, tuiles de synthèse).
-* Tailles : uniquement l'échelle des jetons (`--text-xs` à `--text-xl`).
+* Tailles : uniquement l'échelle des jetons (`--text-xs` à `--text-xl`), plus `--text-display` pour une accroche d'accueil courte.
 
 ---
 

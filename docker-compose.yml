@@ -60,6 +60,8 @@ services:
 
   backup:
     image: ${DOCKERHUB_USERNAME}/erp-rh-backup:${BACKUP_IMAGE_TAG:-latest}
+    # Optionnel en local ; activer explicitement en production avec --profile backup.
+    profiles: ["backup"]
     restart: unless-stopped
     depends_on:
       postgres:
@@ -79,6 +81,10 @@ services:
         target: /backups
         bind:
           create_host_path: false
+    # L'image postgres déclare /var/lib/postgresql comme VOLUME ; ce service ne stocke rien ici.
+    # tmpfs évite la création d'un volume anonyme à chaque nouveau conteneur backup.
+    tmpfs:
+      - /var/lib/postgresql
     networks:
       - db-net
 

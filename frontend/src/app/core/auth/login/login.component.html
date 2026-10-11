@@ -1,34 +1,62 @@
 <main class="auth-page">
-  <form [formRoot]="form" class="auth-card">
-    <img class="auth-card__logo" src="assets/brand/logo-staport.png" alt="Staport" width="160" height="81" />
-    <h1>Connexion</h1>
-
-    @if (errorMessage(); as message) {
-      <div class="auth-card__error" role="alert">{{ message }}</div>
-    }
-
-    <div class="field">
-      <label for="username">Nom d'utilisateur</label>
-      <input id="username" type="text" [formField]="form.username" autocomplete="username" [attr.aria-invalid]="form.username().invalid() && form.username().touched()" aria-describedby="username-error" />
-      <stp-field-error [field]="form.username" id="username-error" />
+  <section class="auth-story" aria-label="Présentation de Staport RH">
+    <div class="auth-story__brand">
+      <img class="auth-story__logo" src="assets/brand/logo-staport.png" alt="Staport" width="160" height="81" />
+      <span>RH</span>
     </div>
 
-    <div class="field">
-      <label for="password">Mot de passe</label>
-      <div class="auth-card__password">
-        <input id="password" [type]="passwordVisible() ? 'text' : 'password'" [formField]="form.password" autocomplete="current-password" [attr.aria-invalid]="form.password().invalid() && form.password().touched()" aria-describedby="password-error" />
-        <button type="button" class="auth-card__password-toggle" [attr.aria-pressed]="passwordVisible()" aria-controls="password" (click)="togglePasswordVisibility()">
-          {{ passwordVisible() ? 'Masquer' : 'Afficher' }}
-          <span class="visually-hidden">le mot de passe</span>
-        </button>
+    <div class="auth-story__message">
+      <p class="auth-story__context">Gestion du personnel et de la paie</p>
+      <h2>Le personnel au cœur de chaque chantier.</h2>
+      <p class="auth-story__description">
+        Retrouvez les équipes, leurs affectations et la paie de Staport dans un espace unique.
+      </p>
+    </div>
+
+    <svg class="auth-story__contours" viewBox="0 0 800 600" fill="none" aria-hidden="true" focusable="false">
+      <path d="M-40 520 C160 400 280 560 460 440 S720 300 860 380" />
+      <path d="M-40 470 C160 350 280 510 460 390 S720 250 860 330" />
+      <path d="M-40 420 C160 300 280 460 460 340 S720 200 860 280" />
+      <path d="M-40 370 C160 250 280 410 460 290 S720 150 860 230" />
+      <path d="M-40 320 C160 200 280 360 460 240 S720 100 860 180" />
+      <path d="M-40 570 C160 450 280 610 460 490 S720 350 860 430" />
+    </svg>
+  </section>
+
+  <section class="auth-panel" aria-labelledby="connexion-titre">
+    <form [formRoot]="form" class="auth-card">
+      <div class="auth-card__intro">
+        <h1 id="connexion-titre">Connexion</h1>
+        <p>Connectez-vous à votre espace de travail.</p>
       </div>
-      <stp-field-error [field]="form.password" id="password-error" />
-    </div>
 
-    <button type="submit" [disabled]="form().submitting()" class="auth-card__submit">
-      @if (form().submitting()) { Connexion en cours… } @else { Se connecter }
-    </button>
+      @if (errorMessage(); as message) {
+        <div class="auth-card__error" role="alert">{{ message }}</div>
+      }
 
-    <a routerLink="/forgot-password" class="auth-card__forgot">Mot de passe oublié ?</a>
-  </form>
+      <div class="field">
+        <label for="username">Nom d'utilisateur</label>
+        <input id="username" type="text" [formField]="form.username" autocomplete="username" [attr.aria-invalid]="form.username().invalid() && form.username().touched()" aria-describedby="username-error" />
+        <stp-field-error [field]="form.username" id="username-error" />
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <div class="auth-card__password">
+          <input id="password" [type]="passwordVisible() ? 'text' : 'password'" [formField]="form.password" autocomplete="current-password" [attr.aria-invalid]="form.password().invalid() && form.password().touched()" aria-describedby="password-error" />
+          <button type="button" class="auth-card__password-toggle" [attr.aria-pressed]="passwordVisible()" aria-controls="password" (click)="togglePasswordVisibility()">
+            {{ passwordVisible() ? 'Masquer' : 'Afficher' }}
+            <span class="visually-hidden">le mot de passe</span>
+          </button>
+        </div>
+        <stp-field-error [field]="form.password" id="password-error" />
+      </div>
+
+      <button type="submit" [disabled]="form().submitting()" class="auth-card__submit">
+        @if (form().submitting()) { Connexion en cours… } @else { Se connecter }
+      </button>
+
+      <a routerLink="/forgot-password" class="auth-card__forgot">Mot de passe oublié ?</a>
+    </form>
+  </section>
 </main>

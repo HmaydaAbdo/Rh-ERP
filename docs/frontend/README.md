@@ -137,10 +137,10 @@ nouveau reprend ces règles dès sa création.
 |---|---|
 | Couleur de marque | Le bleu marine du logo, `#084478` (`--brand-700`, `--color-primary` en thème clair), décliné en échelle `--brand-50` … `--brand-950` ; en thème sombre le bleu d'action s'éclaircit (`#5b9be0`) |
 | Logo | `src/assets/brand/logo-staport.png` (logo existant de Staport, repris du rapport PDF) sur les écrans de connexion ; en thème sombre, il passe en blanc par un filtre CSS. Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon et menu latéral) — dessin provisoire, à remplacer par une version vectorielle du logo |
-| Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne |
+| Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; jeton `--text-display` réservé à l'accroche d'accueil |
 | Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage |
 | Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère bleu clair sur l'écran actif. Replié à 64 px, il s'ouvre au survol ; sur **téléphone et tablette tactile** il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
-| Connexion | Fond bleu profond à courbes de niveau en filigrane (SVG intégré à la feuille de style), sans photo |
+| Connexion | Écran en deux panneaux : courbes topographiques SVG et présentation Staport sur fond marine, formulaire sans carte imbriquée sur surface claire ; sur tablette et téléphone, la présentation devient un bandeau au-dessus du formulaire. Aucun visuel distant. |
 
 ---
 

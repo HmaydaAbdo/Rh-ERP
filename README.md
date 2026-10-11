@@ -71,18 +71,19 @@ Détail de ce qui est testé : [`docs/testing.md`](docs/testing.md).
 cp .env.example .env
 # renseigner DOCKERHUB_USERNAME + toutes les valeurs (voir .env.example) ; COOKIE_SECURE=true,
 # FRONTEND_URL en HTTPS réel pour une vraie mise en production.
-docker compose pull    # récupère les images publiées par la CI
-docker compose up -d
+docker compose --profile backup pull    # récupère les images publiées par la CI, backup compris
+docker compose --profile backup up -d   # active aussi le service de sauvegarde
 ```
 
 Sans image déjà publiée sur Docker Hub (ex. avant le premier run de la CI, ou pour tester la stack
 de production localement sans dépendre d'un registre), construire et tagger les images soi-même
-avant `docker compose up -d` — `docker compose pull` échouera sinon :
+avant `docker compose --profile backup up -d` — `docker compose pull` échouera sinon :
 
 ```bash
 docker build -t $DOCKERHUB_USERNAME/erp-rh-backend:$BACKEND_IMAGE_TAG ./backend
 docker build -t $DOCKERHUB_USERNAME/erp-rh-frontend:$FRONTEND_IMAGE_TAG ./frontend
-docker compose up -d
+docker build -t $DOCKERHUB_USERNAME/erp-rh-backup:$BACKUP_IMAGE_TAG ./backup
+docker compose --profile backup up -d
 ```
 
 Tous les ports publiés sont liés à `127.0.0.1` (jamais exposés directement à Internet, voir
@@ -180,5 +181,6 @@ la première fois, puis changer le mot de passe via l'UI.
 - Prochaine tâche : qualité des données (tous champs obligatoires, aucun doublon). Voir [TODO.md](TODO.md).
 
 L'architecture de déploiement (Docker Compose de production, nginx inner/outer, CI) est en place —
-voir [`docs/deployment.md`](docs/deployment.md). Le backup PostgreSQL reste à implémenter avant une
-vraie mise en production (voir ce même document et [TODO.md](TODO.md)).
+voir [`docs/deployment.md`](docs/deployment.md). Le service de backup PostgreSQL est activé explicitement
+avec le profil Compose `backup` en production. Les éléments qui restent à préparer pour la mise en
+production sont suivis dans ce même document et dans [TODO.md](TODO.md).

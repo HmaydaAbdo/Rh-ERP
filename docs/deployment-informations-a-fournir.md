@@ -15,8 +15,8 @@ Aucune modification de la configuration nginx outer ne doit être proposée avan
 ## CD
 
 La stratégie envisagée reste à valider : déploiement sur les tags `v*` après réussite de la CI,
-connexion SSH depuis GitHub Actions et vérification de santé après `docker compose pull` puis
-`docker compose up -d`. Pour préparer la mise en œuvre, confirmer les paramètres d'exploitation du
+connexion SSH depuis GitHub Actions et vérification de santé après `docker compose --profile backup pull`
+puis `docker compose --profile backup up -d`. Pour préparer la mise en œuvre, confirmer les paramètres d'exploitation du
 serveur et les secrets GitHub Actions à créer. Ne jamais inscrire les valeurs secrètes dans ce
 fichier ou dans le dépôt.
 

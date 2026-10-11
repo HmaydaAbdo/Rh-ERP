@@ -127,8 +127,8 @@ limité en pratique.
 
 ```bash
 cp .env.example .env   # une seule fois, puis renseigner de vraies valeurs (voir .env.example)
-docker compose pull    # récupère les images publiées par la CI (voir .github/workflows/ci.yml)
-docker compose up -d
+docker compose --profile backup pull    # récupère les images publiées par la CI (voir .github/workflows/ci.yml)
+docker compose --profile backup up -d   # le profil active le service de sauvegarde
 ```
 
 ### Deux comptes PostgreSQL
@@ -138,7 +138,7 @@ d'audit ; le **propriétaire** (`POSTGRES_USER`) ne sert qu'à Flyway. Au démar
 n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manuelle**.
 
 - **Bascule** : ajouter `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` dans `.env` (voir `.env.example`), puis
-  `docker compose pull && docker compose up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
+  `docker compose --profile backup pull && docker compose --profile backup up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
   applicatif ne peut pas modifier les tables d'audit ». À essayer d'abord sur une copie de la base.
 - **Retour arrière** : retirer ces deux variables ; le compte propriétaire sert de nouveau à tout (l'application signale
   alors, au démarrage, que l'intégrité de l'audit n'est pas garantie).
@@ -151,7 +151,7 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
 
 Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub. L'image
 `erp-rh-postgres` est construite depuis `database/Dockerfile` (PostgreSQL 18 + pgvector + pgAudit).
-Pour re-déployer une nouvelle version : `docker compose pull && docker compose up -d` (met à jour
+Pour re-déployer une nouvelle version : `docker compose --profile backup pull && docker compose --profile backup up -d` (met à jour
 les conteneurs dont l'image a changé, sans toucher au volume `postgres_data_v18`). Sur la machine de
 développement, la migration logique de PG17 vers PG18 a été répétée et contrôlée le 2026-10-10 ;
 l'ancien volume `erp-rh_postgres_data` reste conservé. **Cette validation locale ne migre pas la
@@ -219,7 +219,7 @@ une PR).
 
 **Chaîne d'approvisionnement** : la CI du backend génère un SBOM CycloneDX (`./mvnw cyclonedx:makeBom`, artefact `sbom-backend`), l'analyse avec OSV-Scanner (échec à la première vulnérabilité connue ; exceptions motivées dans `backend/osv-scanner.toml`) et conserve le rapport de couverture JaCoCo (artefact `backend-coverage`). Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour Maven, npm, Docker (balise et empreinte) et GitHub Actions. Les images sont non-root et épinglées par empreinte (voir [../conventions/deployment.md](../conventions/deployment.md)) : le conteneur frontend écoute sur **8080** (le Compose publie `127.0.0.1:${FRONTEND_PORT}` vers ce port ; nginx outer n'est pas concerné).
 
-**CD non traité** — le déploiement (`docker compose pull && up -d` sur le serveur) reste manuel
+**CD non traité** — le déploiement (`docker compose --profile backup pull && docker compose --profile backup up -d` sur le serveur) reste manuel
 pour l'instant. Proposition à valider : déployer sur un tag `v*` uniquement après réussite de la CI,
 par SSH depuis GitHub Actions, puis vérifier la santé des services. Les secrets SSH et les paramètres
 du serveur seraient configurés dans GitHub Actions, jamais dans le dépôt. Cette mise en production
@@ -241,6 +241,10 @@ recréation de conteneur — **ce n'est pas un backup** : il ne protège pas con
 volume, une corruption, ou une erreur humaine (ex. `DELETE` sans `WHERE`). Un vrai backup, distinct
 du volume, est exécuté par le service Compose `backup`.
 
+Le service `backup` utilise le profil Compose `backup` : les démarrages locaux habituels ne lancent
+pas le planificateur ni le conteneur à partir duquel Docker créait un volume PostgreSQL anonyme inutile.
+En production, les commandes de démarrage et de mise à jour activent explicitement ce profil.
+
 Les archives PostgreSQL complètes sont créées chaque jour à `02:00 UTC` et conservées 30 jours. Si
 le service démarre sans archive datant de moins de 24 heures, il en crée une immédiatement ; un
 échec est retenté chaque heure.
@@ -249,7 +253,8 @@ Le service place `rh-erp-<horodatage-UTC>.tar.gz` dans `./backups/`, à côté d
 leurs mots de passe et les sommes SHA-256 des deux fichiers. Le dump custom est validé avec
 `pg_restore --list` avant publication de l'archive. Les permissions sont restreintes au compte
 `postgres` du conteneur (UID/GID 70) ; sur un hôte Linux, préparer le dossier avec la commande
-indiquée en tête de ce document avant le démarrage.
+indiquée en tête de ce document avant le démarrage. Le conteneur applique `umask 077` à chaque archive ;
+il ne change pas les permissions du bind mount, car les partages Windows/NTFS ne garantissent pas `chmod` POSIX.
 
 `BACKUP_TIME_UTC` et `BACKUP_RETENTION_DAYS` sont configurables dans `.env` ; les valeurs par défaut
 sont `02:00` et `30`. La sauvegarde est stockée sans chiffrement, conformément au choix confirmé

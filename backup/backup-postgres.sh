@@ -24,7 +24,7 @@ pg_dump --format=custom --file="$workdir/database.dump" "$PGDATABASE"
 pg_restore --list "$workdir/database.dump" >/dev/null
 (cd "$workdir" && sha256sum globals.sql database.dump > SHA256SUMS)
 tar -czf "$temporary_archive" -C "$workdir" globals.sql database.dump SHA256SUMS
-chmod 0600 "$temporary_archive"
+# umask 077 protège déjà l'archive à sa création, y compris sur les bind mounts sans chmod POSIX.
 mv "$temporary_archive" "$final_archive"
 
 cutoff=$(date -u -d "$BACKUP_RETENTION_DAYS days ago" +%s)
