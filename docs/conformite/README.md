@@ -38,6 +38,7 @@
 | C8 | **Métriques et journaux** (G4) : `/actuator/prometheus` était ouvert par la sécurité mais n'existait pas ; journaux en texte | Registre Prometheus + exposition de `health` et `prometheus` seulement (tag `application`) ; journaux JSON asynchrones en production (`LOGGING_FORMAT=json`, `logstash-logback-encoder`) ; `SupervisionTest` |
 | C9 | **Images Docker** (G7) : exécution en root, images de base non épinglées, healthcheck frontend fragile | Backend sous un compte dédié, frontend sur `nginx-unprivileged` (8080), bases épinglées par empreinte ; essayé : les deux images construites et lancées ensemble (non-root, santé, JSON, `429`) |
 | C10 | **Chaîne d'approvisionnement Maven** (G8) : aucune analyse, aucun SBOM, aucune couverture. **L'analyse a révélé 26 vulnérabilités connues** (3 critiques, 15 hautes) : Tomcat 11.0.24 (contournement d'authentification DIGEST, contrôle d'accès et FORM), Jackson (dénis de service), jsoup 1.18.1, Batik 1.14 (SSRF, exécution de code), Xalan 2.7.2 | Versions relevées : Tomcat 11.0.26, Jackson 2.21.7 / 3.1.7, jsoup 1.23.2, Batik 1.19, Xalan retiré (devenu inutile). CI : SBOM CycloneDX, OSV-Scanner (échec si vulnérabilité), JaCoCo (87 % des lignes, 73 % des branches), Dependabot. Suite complète verte (284) |
+| C11 | **Demande de réinitialisation synchrone** (G2) : l'envoi du courriel allongeait la réponse pour une adresse connue | `EmailService.envoyerLienReinitialisation` en `@Async` (`AsyncConfig`), échec journalisé sans être renvoyé ; `EmailServiceTest` |
 
 ---
 
@@ -47,7 +48,6 @@ Ils sont suivis dans [TODO.md](../../TODO.md). Pour chacun : le constat, puis le
 
 | # | Gravité | Constat | Options à trancher |
 |---|---|---|---|
-| G2 | Basse | **Demande de réinitialisation synchrone** : l'envoi du courriel allonge la réponse pour une adresse connue, ce qui la distingue d'une adresse inconnue | Envoi asynchrone après la réponse |
 | G3 | Basse | **Valeurs de fonctionnement en dur** : durées des jetons, longueur du mot de passe, expressions cron, tranche de pas | Variables d'environnement (`conventions/configuration.md`) ou paramètres administrables en base |
 | G5 | Basse | **Listes non paginées** : `GET /users` et `GET /roles` ; statuts `201` des créations à aligner route par route | Pagination et statuts alignés (change le contrat avec le frontend) |
 | G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise encore | La garder (socle Staport) ou la créer à la première table concernée |
