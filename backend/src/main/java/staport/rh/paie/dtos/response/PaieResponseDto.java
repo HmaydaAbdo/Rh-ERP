@@ -5,6 +5,7 @@ import java.time.YearMonth;
 
 public record PaieResponseDto(
         Long id,
+        Long version,
         EmployeeSummaryDto employee,
         YearMonth periode,
         FunctionSummaryDto fonction,

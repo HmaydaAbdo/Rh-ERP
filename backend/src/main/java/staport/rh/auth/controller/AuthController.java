@@ -72,9 +72,7 @@ public class AuthController {
     @Operation(summary = "Fermer la session")
     @ApiResponse(responseCode = "204", description = "Session fermée, cookie effacé")
     public ResponseEntity<Void> logout(@CookieValue(name = COOKIE_NAME, required = false) String refreshToken) {
-        if (refreshToken != null) {
-            authService.logout(refreshToken);
-        }
+        authService.logout(refreshToken);
         ResponseCookie expiredCookie = ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(cookieSecure)

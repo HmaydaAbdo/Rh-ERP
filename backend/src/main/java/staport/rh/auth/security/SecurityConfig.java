@@ -25,6 +25,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import staport.rh.common.logging.MdcRequestFilter;
+import staport.rh.audit.events.AuditAuthenticationEntryPoint;
+import staport.rh.audit.metrics.AuditMetrics;
+import staport.rh.audit.services.AuditJournalWriter;
+import tools.jackson.databind.json.JsonMapper;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
@@ -126,7 +130,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuditJournalWriter ecrivainAudit,
+                                                   AuditMetrics metriquesAudit, JsonMapper jsonMapper) throws Exception {
+        AuditAuthenticationEntryPoint pointEntreeAudit = new AuditAuthenticationEntryPoint(
+                ecrivainAudit, metriquesAudit, jsonMapper);
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -142,7 +149,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/actuator/**").hasAuthority("SYSTEM_ADMIN");
                     auth.anyRequest().authenticated();
                 })
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(pointEntreeAudit))
                 .oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> resourceServer) -> resourceServer
+                        .authenticationEntryPoint(pointEntreeAudit)
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 // Identifiant de requête et utilisateur dans le MDC, dès que l'authentification est faite : les contrôles
                 // d'accès qui suivent (et leurs refus) portent déjà l'identifiant (conventions/logging.md).

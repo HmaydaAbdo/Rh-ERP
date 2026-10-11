@@ -11,6 +11,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.Audited;
 import staport.rh.employee.entities.Employee;
@@ -31,6 +32,10 @@ public class Utilisateur {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
@@ -73,6 +78,10 @@ public class Utilisateur {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public void setId(Long id) {

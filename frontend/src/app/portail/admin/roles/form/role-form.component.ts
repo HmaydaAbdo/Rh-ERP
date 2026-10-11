@@ -31,6 +31,7 @@ export class RoleFormComponent {
   private readonly messageService = inject(NotificationService);
 
   private readonly roleId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.roleId() !== null);
   protected readonly loading = signal(true);
   protected readonly permissionGroups = signal<PermissionGroup[]>([]);
@@ -64,6 +65,7 @@ export class RoleFormComponent {
           this.selectedPermissionIds.set(new Set(role.permissions.map((p) => p.id)));
           this.modele.set({ nom: role.nom, description: role.description ?? '' });
           this.protege.set(role.protege);
+          this.version.set(role.version);
         });
     } else {
       permissions$.pipe(finalize(() => this.loading.set(false))).subscribe((permissions) => this.buildGroups(permissions));
@@ -95,7 +97,7 @@ export class RoleFormComponent {
     };
     const id = this.roleId();
 
-    const role = await attendreEnregistrement(id !== null ? this.roleService.update(id, dto) : this.roleService.create(dto));
+    const role = await attendreEnregistrement(id !== null ? this.roleService.update(id, { ...dto, version: this.version()! }) : this.roleService.create(dto));
     if (!role) {
       return;
     }

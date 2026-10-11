@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 public record EmployeeResponseDto(
         Long id,
+        Long version,
         String nomPrenom,
         String cin,
         LocalDate dateNaissance,

@@ -12,6 +12,7 @@ import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
@@ -72,6 +73,7 @@ public class EmployeeService implements IEmployeeService {
     @AuditableAction(action = "EMPLOYE_MODIFICATION", type = TypeOperation.UPDATE, entite = Employee.class)
     public EmployeeResponseDto update(Long id, EmployeeUpdateRequestDto dto) {
         Employee entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
         repository.findByCinIgnoreCase(dto.cin())
                 .filter(existing -> !existing.getId().equals(id))
@@ -83,7 +85,7 @@ public class EmployeeService implements IEmployeeService {
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
 
-        Employee updated = repository.save(entity);
+        Employee updated = repository.saveAndFlush(entity);
         log.info("Employé mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }

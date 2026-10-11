@@ -28,6 +28,7 @@ public interface PaieMapper {
     @Mapping(target = "fonction", ignore = true)
     @Mapping(target = "chantier", ignore = true)
     @Mapping(target = "equipe", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void updateEntityFromDto(PaieUpdateRequestDto dto, @MappingTarget Paie entity);
 
     PaieResponseDto toDto(Paie entity);

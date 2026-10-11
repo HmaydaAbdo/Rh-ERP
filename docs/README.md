@@ -24,6 +24,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
 | Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
+| Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |

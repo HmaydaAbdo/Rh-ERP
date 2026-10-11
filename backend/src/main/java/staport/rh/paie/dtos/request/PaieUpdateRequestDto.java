@@ -14,6 +14,9 @@ import java.math.BigDecimal;
  */
 public record PaieUpdateRequestDto(
         @NotNull
+        Long version,
+
+        @NotNull
         Long fonctionId,
 
         @NotNull

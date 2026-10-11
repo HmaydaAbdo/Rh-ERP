@@ -12,6 +12,11 @@
 -- et l'application le signale au démarrage (VerificationIntegriteAudit). Sinon, le compte applicatif est créé s'il
 -- n'existe pas — son mot de passe vient de l'environnement (variable DB_PASSWORD), jamais d'un fichier versionné ; il ne
 -- doit donc pas contenir d'apostrophe (il est inséré tel quel entre apostrophes par Flyway).
+-- Cette callback Flyway injecte le secret applicatif dans le bloc qui crée le rôle. Conserver la trace pgAudit de
+-- l'opération (classe, commande, objet, acteur), mais masquer le texte SQL pour ce seul bloc afin de ne pas journaliser
+-- le secret substitué par Flyway. Les classes restent actives ; le réglage est restauré après le bloc.
+SET pgaudit.log_statement = off;
+
 DO $$
 DECLARE
     v_app   TEXT := '${app_user}';
@@ -41,3 +46,5 @@ BEGIN
 
     EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON flyway_schema_history FROM %I', v_app);
 END $$;
+
+RESET pgaudit.log_statement;

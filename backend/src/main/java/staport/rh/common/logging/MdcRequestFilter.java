@@ -8,6 +8,9 @@ import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.filter.OncePerRequestFilter;
 import staport.rh.audit.context.ResolveurContexteAudit;
 
@@ -41,9 +44,19 @@ public class MdcRequestFilter extends OncePerRequestFilter {
             MDC.put(MDC_USER_ID, userId.toString());
         }
         reponse.setHeader(EN_TETE_REQUEST_ID, requestId);
+        RequestAttributes attributsPrecedents = RequestContextHolder.getRequestAttributes();
+        ServletRequestAttributes attributsRequete = null;
+        if (attributsPrecedents == null) {
+            attributsRequete = new ServletRequestAttributes(requete, reponse);
+            RequestContextHolder.setRequestAttributes(attributsRequete);
+        }
         try {
             chaine.doFilter(requete, reponse);
         } finally {
+            if (attributsRequete != null) {
+                attributsRequete.requestCompleted();
+                RequestContextHolder.resetRequestAttributes();
+            }
             MDC.remove(ResolveurContexteAudit.MDC_REQUEST_ID);
             MDC.remove(MDC_USER_ID);
         }

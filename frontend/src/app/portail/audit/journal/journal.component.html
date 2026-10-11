@@ -161,6 +161,12 @@
       }
     </dl>
 
+    @if (canRestore() && restaurationPossible()) {
+      <button stp-button variant="secondary" icon="refresh-cw" type="button" (click)="demanderRestauration()">
+        Restaurer ce groupe
+      </button>
+    }
+
     @if (perimetreEntrees().length > 0) {
       <h3>Périmètre</h3>
       <dl class="journal__contexte">

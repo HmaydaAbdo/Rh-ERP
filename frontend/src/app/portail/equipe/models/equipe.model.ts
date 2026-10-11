@@ -2,6 +2,7 @@ export interface Equipe {
   id: number;
   code: string;
   libelle: string;
+  version: number;
 }
 
 export interface EquipeCreateRequest {
@@ -9,7 +10,9 @@ export interface EquipeCreateRequest {
   libelle: string;
 }
 
-export type EquipeUpdateRequest = EquipeCreateRequest;
+export interface EquipeUpdateRequest extends EquipeCreateRequest {
+  version: number;
+}
 
 export interface EquipeSearchCriteria {
   code?: string;

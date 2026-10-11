@@ -19,7 +19,7 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 | Composant | Techno |
 |---|---|
 | Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (JWT), MapStruct |
-| Base de données | PostgreSQL 18 + pgvector (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
+| Base de données | PostgreSQL 18 + pgvector + pgAudit (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
 | Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`docs/data-model.md`](docs/data-model.md) |
 | Frontend | Angular 22.2.2 (standalone, OnPush, Signals, zoneless), kit Staport sur Angular Aria/CDK, Lucide, Tailwind CSS 4 ; tests Vitest et E2E Playwright |
 | Imports / exports | Apache POI (Excel), jsoup + openhtmltopdf + Batik (rapport PDF) |
@@ -175,7 +175,7 @@ la première fois, puis changer le mot de passe via l'UI.
 
 ## État du projet
 
-- L'audit (Hibernate Envers + journal unique + événements de sécurité) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options non retenues (restauration d'un groupe supprimé, conservation, journal des consultations) sont dans [TODO.md](TODO.md).
+- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options restantes et leurs déclencheurs sont dans [TODO.md](TODO.md).
 - Domaine Pointage non construit. Voir [TODO.md](TODO.md).
 - Prochaine tâche : qualité des données (tous champs obligatoires, aucun doublon). Voir [TODO.md](TODO.md).
 

@@ -17,12 +17,9 @@ audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
 Restent à faire :
 
 - **Conformité totale de l'application** : auditer chaque convention sur backend, frontend, tests,
-  sécurité/audit, BI/IA, performances, Docker Compose, proxy, CI et exploitation ; établir une
+  sécurité, BI/IA, performances, Docker Compose, proxy, CI et exploitation ; établir une
   matrice de preuves, corriger les écarts autorisés et faire valider les décisions nécessaires.
-  Voir le [handoff](docs/handoff/conformite-totale.md).
-- planifier puis exécuter la migration du serveur de production PG17→PG18 : répétition sur sauvegarde,
-  fenêtre de maintenance, restauration logique dans un volume neuf, contrôles et conservation du volume
-  PG17 comme retour arrière ; suivre [la procédure](docs/deployment.md#migration-majeure-pg17--pg18-en-production) ;
+  Voir aussi le [handoff](docs/handoff/conformite-totale.md).
 - ensuite instrumenter le catalogue de KPI existant puis cadrer un premier outil MCP RH en lecture
   seule avant d'étendre l'IA.
 
@@ -114,37 +111,32 @@ demandent une décision avant correction :
 
 ---
 
-## Audit de sécurité — points à traiter (revue du 2026-10-04)
-
-Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; le n° 6 (limite de débit) est traité.
-Vérifié et conforme : toutes les routes Paie portent une permission (`EndpointSecurityTest` la verrouille, nouvelles routes
-comprises) ; les filtres d'agrégation passent par des paramètres liés (pas d'injection) ; la suppression en groupe exige un mois,
-revérifie le nombre confirmé (`409` sinon) et ne supprime que les bulletins qu'elle a chargés ; aucun HTML construit côté
-interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
-
-| # | Gravité | Constat | Correction proposée |
-|---|---|---|---|
-| 6 | Traité | Limite de débit sur la connexion, la réinitialisation, le renouvellement de session et les traitements coûteux (nginx inner, `429`, 2026-10-11) | Reste possible : verrouillage temporaire de compte après échecs répétés |
-| 8 | Ouverte | Écarts du contrôle de conformité du backend qui attendent une décision (G3 paramètres administrables, G5 listes non paginées, G6 extension vector) ou une vérification sur le serveur (G10) : [docs/conformite/README.md](docs/conformite/README.md) | Trancher G3, G5, G6 ; vérifier G10 |
-| 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité, tous niveaux (Karma, pair optionnel inutilisé de `@angular/build`, sorti du verrou : plus d'exception, `audit:deps` échoue dès le niveau moyen) ; `audit:licences` et SBOM CycloneDX en CI | — |
-
 ---
 
-## À part — gros chantiers et déploiement (à reprendre plus tard)
+## Travail côté serveur
 
-### Audit — options non retenues, à déclencher si le besoin apparaît
-L'audit est en place (voir [docs/audit/README.md](docs/audit/README.md)). Décisions RH du 2026-10-04 : tout est conservé sans
-purge, `AUDIT_READ` réservée à `SYSTEM_ADMIN`, consultations non journalisées, pas de preuve d'intégrité opposable. Ce qui n'est
-**pas** fait, et le déclencheur :
+À traiter en premier lors de la prochaine intervention sur l'hôte de production. Toutes les opérations
+ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la [procédure détaillée](docs/deployment.md#migration-majeure-pg17--pg18-en-production).
 
-| Option | Déclencheur |
-|---|---|
-| **Restaurer un groupe supprimé depuis l'audit** (le contenu de chaque bulletin est conservé ; il manque l'outil, avec contrôle des conflits employé × mois et une action auditée) | Première suppression par erreur, ou demande RH |
-| **Durée de conservation et purge** par catégorie (opérations, sécurité, accès) | Exigence légale (loi 09-08) ou volumétrie |
-| **Journal des consultations** (qui a regardé quels salaires) | Besoin exprimé par la direction |
-| **Preuve d'intégrité** (chaînage par empreintes, ancrage externe) | Exigence légale ou contentieux |
-| **`pgaudit`** pour tracer les interventions SQL directes d'un administrateur de la base | Besoin de couvrir la limite assumée de l'audit |
-| **Verrou optimiste** (`@Version`) sur le bulletin : deux personnes qui modifient le même bulletin peuvent s'écraser (l'audit le rend visible, ne l'empêche pas) | Premier écrasement constaté |
+1. **Migration PostgreSQL 17→18** : obtenir l'accès SSH, inventorier la production et répéter la
+   restauration logique sur le serveur à partir d'une sauvegarde stockée sur ce même serveur, hors du
+   volume PostgreSQL. Pendant la fenêtre de maintenance, créer/restaurer le volume PG18, démarrer
+   Flyway jusqu'à V20 (V16–V20 sont en attente si la production est actuellement en V15), contrôler
+   données, rôles, extensions, permissions et application, puis conserver intact le volume PG17
+   comme retour arrière.
+2. **Activer et vérifier pgAudit en production** pour la seule base ERP-RH, avec toutes les classes
+   d'instructions (`all`, y compris `ROLE`), puis confirmer que les événements apparaissent dans les
+   journaux PostgreSQL. Cela fait partie de la bascule PG18.
+3. **Nginx outer** : le serveur en possède déjà un. Obtenir l'exemple de configuration de l'utilisateur,
+   puis s'aligner dessus ; ne pas remplacer ni modifier sa configuration avant cette revue. Voir
+   [les informations à fournir](docs/deployment-informations-a-fournir.md).
+4. **CD** : après accès SSH, décider si le déploiement doit être automatisé sur tag `v*` après réussite
+   de la CI, puis préparer et valider cette chaîne. Ne pas déployer en production avant la migration
+   PG17→PG18.
+5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
+   prévu pour l'instant. Les dumps quotidiens restent sur le serveur.
+
+## À part — gros chantiers (à reprendre plus tard)
 
 ### Domaines restants
 - **Pointage** : à construire, en passant par les façades `IEmployeeService` (et probablement
@@ -155,13 +147,3 @@ purge, `AUDIT_READ` réservée à `SYSTEM_ADMIN`, consultations non journalisée
 - **Statuts provisoire / validé** pour Pointage et Paie (décision du 2026-09-22) : provisoire (éditable)
   puis validé (figé) ; un mois ne peut être saisi que si le précédent est validé (progression
   séquentielle). Machine à états et validation d'enchaînement à concevoir le moment venu.
-
-### Déploiement
-- **Backup PostgreSQL hors hôte** : les dumps locaux quotidiens (rétention 30 jours) sont en place ;
-  choisir une destination indépendante du serveur et planifier des exercices périodiques de
-  restauration (`docs/deployment.md`).
-- **CD** : le déploiement (`docker compose pull && up -d` en SSH) reste manuel. À ajouter en fin de CI
-  (ex. `appleboy/ssh-action`, secrets GitHub : clé SSH + hôte) ; à trancher : déploiement automatique à
-  chaque push sur `main` ou seulement sur un tag `v*`.
-- **Nginx outer** : l'ajout du bloc `location /rh-erp/` (snippet dans `docs/deployment.md`) reste une
-  action manuelle sur le serveur, hors de ce dépôt.

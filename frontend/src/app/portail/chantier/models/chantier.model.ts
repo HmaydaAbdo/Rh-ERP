@@ -8,6 +8,7 @@ export interface Chantier {
   nom: string | null;
   sourceErp: boolean;
   actif: boolean;
+  version: number;
 }
 
 export interface ChantierCreateRequest {
@@ -18,6 +19,7 @@ export interface ChantierCreateRequest {
 
 export interface ChantierUpdateRequest extends ChantierCreateRequest {
   actif: boolean;
+  version: number;
 }
 
 export interface ChantierSearchCriteria {

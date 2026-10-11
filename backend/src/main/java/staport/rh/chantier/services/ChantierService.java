@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
@@ -53,6 +54,7 @@ public class ChantierService implements IChantierService {
     @AuditableAction(action = "CHANTIER_MODIFICATION", type = TypeOperation.UPDATE, entite = Chantier.class)
     public ChantierResponseDto update(Long id, ChantierUpdateRequestDto dto) {
         Chantier entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
         repository.findByCodeIgnoreCase(dto.code())
                 .filter(existing -> !existing.getId().equals(id))
@@ -61,7 +63,7 @@ public class ChantierService implements IChantierService {
                 });
 
         mapper.updateEntityFromDto(dto, entity);
-        Chantier updated = repository.save(entity);
+        Chantier updated = repository.saveAndFlush(entity);
         log.info("Chantier mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }

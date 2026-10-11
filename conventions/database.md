@@ -32,6 +32,18 @@ déploiement. Si une extension telle que pgvector est utilisée, verrouiller ég
 confirmer sa disponibilité chez le fournisseur de production ; les tests d'intégration utilisent
 les mêmes majeures PostgreSQL et versions d'extension que la cible.
 
+### Mise à niveau d'une majeure PostgreSQL en production
+
+Une mise à niveau de majeure ne réutilise jamais directement le volume de données de l'ancienne
+version. Préparer et répéter une migration logique sur PostgreSQL cible, avec les mêmes extensions,
+rôles, droits et versions applicatives que la production. Avant la fenêtre de maintenance, vérifier
+la restauration d'une sauvegarde ; pendant la bascule, suspendre les écritures, produire le dump
+final, restaurer dans un volume neuf et exécuter les migrations Flyway manquantes jusqu'à la version
+du dépôt. Contrôler les données, les extensions, les droits et le démarrage applicatif avant de
+rouvrir le trafic. Garder l'ancien volume intact comme retour arrière ; après reprise des écritures
+sur la nouvelle majeure, un retour arrière exige une réconciliation des nouvelles écritures. Voir
+`conventions/deployment.md` et la procédure propre au projet dans `docs/deployment.md`.
+
 Utiliser un type décimal exact pour les quantités monétaires ou les mesures décimales qui exigent
 une précision déterministe ; ne pas représenter ces valeurs par des nombres flottants. Stocker les
 instants dans un type avec fuseau horaire en UTC et convertir vers l'heure locale uniquement pour

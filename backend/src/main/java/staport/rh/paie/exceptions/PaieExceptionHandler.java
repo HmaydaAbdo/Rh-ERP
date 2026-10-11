@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import staport.rh.common.dtos.ErrorResponseDto;
+import staport.rh.audit.exceptions.AuditEntryNotRestaurableException;
+import staport.rh.audit.exceptions.AuditEntryNotFoundException;
 import staport.rh.paie.controller.PaieController;
 import staport.rh.paie.export.PaieExportController;
 import staport.rh.paie.imports.PaieImportController;
@@ -36,6 +38,21 @@ public class PaieExceptionHandler {
     @ExceptionHandler(PaieGroupeModifieException.class)
     public ResponseEntity<ErrorResponseDto> handleGroupeModifie(PaieGroupeModifieException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PaieGroupeRestaurationConflictException.class)
+    public ResponseEntity<ErrorResponseDto> handleGroupeRestaurationConflict(PaieGroupeRestaurationConflictException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AuditEntryNotRestaurableException.class)
+    public ResponseEntity<ErrorResponseDto> handleAuditEntryNotRestaurable(AuditEntryNotRestaurableException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AuditEntryNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleAuditEntryNotFound(AuditEntryNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidReferenceException.class)

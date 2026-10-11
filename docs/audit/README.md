@@ -16,7 +16,7 @@ lignes supprimées est conservé).
 | Couche | Contenu | Alimentée par |
 |---|---|---|
 | **Instantanés** (Hibernate Envers) | Chaque version de chaque ligne des entités métier et de sécurité : tables `<table>_aud`, révisions `audit_revision` | Automatiquement, à chaque écriture JPA |
-| **Journal** (`audit_journal`) | Une entrée par opération (`OPERATION`), événement de sécurité (`SECURITE`) ou sortie de données (`ACCES`) : action, auteur, origine, périmètre, résultat | `@AuditableAction` (aspect `GenericAuditAspect`) et événements de sécurité |
+| **Journal** (`audit_journal`) | Une entrée par opération (`OPERATION`), événement de sécurité (`SECURITE`) ou accès (`ACCES`) : action, auteur, origine, périmètre, résultat | `@AuditableAction` (aspect `GenericAuditAspect`), événements de sécurité et `AuditLectureResponseAdvice` pour les lectures et écritures HTTP |
 | **Garde-fous** | Tests d'architecture (CI), deux comptes PostgreSQL, vérification au démarrage | — |
 
 ### Ce qui est audité
@@ -26,7 +26,7 @@ lignes supprimées est conservé).
 | Bulletin de paie, employé, fonction, chantier, équipe | Oui | Relations stockées par identifiant |
 | Compte utilisateur | Oui, **sauf le hash du mot de passe** | Inclut `actif`, l'employé lié, les rôles et les permissions refusées |
 | Rôle, permission | Oui | Les liaisons rôle ↔ permission, compte ↔ rôle et compte ↔ permission refusée ont leur table `_aud` |
-| Jeton de rafraîchissement, jeton de réinitialisation | **Non** | Secrets à courte vie : leur vie est tracée par les événements de sécurité |
+| Jeton de rafraîchissement, jeton de réinitialisation | **Non** | Secrets exclus des instantanés ; émission, renouvellement, refus, révocation, déconnexion et réinitialisation sont tracés par événements de sécurité sans enregistrer les jetons |
 
 L'historique des données antérieures à la mise en place de l'audit commence par une **révision d'état initial**
 (migration `V14`, origine `MIGRATION`, entrée `AUDIT_ETAT_INITIAL`) : la première modification d'une donnée existante a
@@ -87,8 +87,10 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 |---|---|---|---|
 | Paie | `PAIE_CREATION`, `PAIE_MODIFICATION`, `PAIE_SUPPRESSION` | `OPERATION` | — |
 | Paie | `PAIE_SUPPRESSION_GROUPE` | `OPERATION` | Critères du groupe (mois, chantiers, équipes, fonctions, filtres de texte), nombre confirmé ; nombre supprimé. **Chaque bulletin** est supprimé entité par entité : tout leur contenu est dans la révision |
+| Paie | `PAIE_RESTAURATION_GROUPE` | `OPERATION` | Identifiant de l'entrée source et nombre recréé ; les données restaurées sont dans la révision des nouveaux bulletins |
 | Paie | `PAIE_IMPORT` | `OPERATION` | Nom, taille et **empreinte SHA-256** du fichier (jamais son contenu), mois, lignes, fonctions créées ; `ECHEC` si des lignes sont rejetées |
 | Paie | `PAIE_EXPORT_EXCEL`, `PAIE_RAPPORT_PDF` | `ACCES` | Mois, format, chantiers / filtres demandés — aucun contenu |
+| API métier | `LECTURE_METIER` | `ACCES` | Chaque réponse HTTP métier réussie ou en erreur de lecture : modèle de route, méthode, statut HTTP, nombre d'éléments ; période valide si fournie en paramètre. Aucun corps, montant, filtre nominatif, identifiant d'URL ou paramètre libre n'est copié |
 | Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` | `OPERATION` | Import : le fichier |
 | Fonction | `FONCTION_CREATION`, `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`, `FONCTION_IMPORT` | `OPERATION` | Import : le fichier |
 | Chantier | `CHANTIER_CREATION`, `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`, `CHANTIER_SYNCHRONISATION` | `OPERATION` | Synchronisation : reçus, déjà présents, ignorés ; créés |
@@ -102,16 +104,21 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Événement | Données conservées |
 |---|---|
 | `CONNEXION_REUSSIE` | Compte, IP, navigateur |
-| `CONNEXION_ECHOUEE` | Motif (`IDENTIFIANTS_INVALIDES`, `COMPTE_INACTIF` — à la connexion comme au renouvellement de session —, `COMPTE_INCONNU`) ; le compte **seulement s'il existe** (un identifiant inconnu peut être un mot de passe tapé au mauvais endroit) |
-| `DECONNEXION` | Compte |
+| `CONNEXION_ECHOUEE` | Motif (`IDENTIFIANTS_INVALIDES`, `COMPTE_INACTIF`, `COMPTE_INCONNU`) ; le compte **seulement s'il existe** (un identifiant inconnu peut être un mot de passe tapé au mauvais endroit) |
+| `SESSION_RENOUVELEE` | Compte ; aucune donnée du jeton |
+| `SESSION_RENOUVELLEMENT_REFUSE` | Compte s'il est connu et motif catégorisé (`JETON_INCONNU`, `JETON_EXPIRE`, `COMPTE_INACTIF`) |
+| `SESSIONS_REVOQUEES` | Compte acteur, identifiant du compte cible et nombre de sessions révoquées |
+| `DECONNEXION` | Compte s'il est identifié ; sinon tentative sans session valide |
 | `JETON_REUTILISE` | Compte, nombre de sessions révoquées — signe d'un vol de jeton |
+| `ACCES_ANONYME_REFUSE` | Méthode, statut `401` et identifiant de requête ; aucun token ni corps de requête |
 | `MOT_DE_PASSE_OUBLIE` | À chaque demande : le compte seulement s'il existe, **jamais l'adresse saisie** ; IP (repère les rafales) |
 | `MOT_DE_PASSE_REINITIALISE` | Compte (par lien de courriel) |
 | `MOT_DE_PASSE_REINITIALISE_PAR_ADMIN` | L'administrateur (acteur), le compte visé et le nombre de sessions coupées (détail) |
 | `ACCES_REFUSE` | Compte, méthode et route refusées — **tous les `403`**, qu'ils viennent d'un `@PreAuthorize` ou de la chaîne de filtres (Spring Security publie un événement de refus unique, `EcouteurEvenementsSecurite`) |
 
-Jamais de mot de passe, de jeton ni de contenu de fichier. Les renouvellements de session réussis et les jetons expirés ne
-sont pas journalisés (bruit). La réponse HTTP ne change pas selon le motif : seul le journal le connaît.
+Jamais de mot de passe, de jeton ni de contenu de fichier. Les renouvellements de session réussis, les refus sur jeton
+inconnu ou expiré, les réutilisations d'un jeton révoqué, les révocations groupées, les déconnexions et les changements de
+mot de passe sont tracés sans conserver les secrets. La réponse HTTP ne change pas selon le motif : seul le journal le connaît.
 
 ---
 
@@ -123,6 +130,12 @@ sont pas journalisés (bruit). La réponse HTTP ne change pas selon le motif : s
 | `GET /logs/{id}` | `AUDIT_READ` | Une entrée avec son contexte complet et son périmètre |
 | `GET /logs/{id}/details` | `AUDIT_READ` | Ce que l'opération a changé, champ par champ, **paginé** (une suppression de 1 000 bulletins = 1 000 éléments) |
 | `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` | Toutes les versions d'un enregistrement (`paie`, `employee`, `function`, `chantier`, `equipe`, `utilisateur`, `role`), de la plus récente à la plus ancienne |
+
+Le journal reste non modifiable. La restauration d'un groupe n'altère pas l'entrée source : le bouton visible sur une suppression
+de groupe réussie appelle `POST /paie/restauration/{idEntreeAudit}` (`PAIE_RESTORE`). L'audit fournit à Paie les instantanés
+Envers ; Paie vérifie les références et les conflits employé × mois, puis recrée le groupe dans une transaction avec de nouveaux
+identifiants. Un conflit rejette tout le groupe (`409`). L'opération `PAIE_RESTAURATION_GROUPE` trace son succès ou son échec et
+référence l'entrée d'audit source sans recopier les données salariales dans son périmètre.
 
 Aucune route ne modifie ni ne supprime le journal. Les différences sont calculées à la demande (`EnversDiffService`) :
 ajout → valeurs après ; modification → comparaison avec la version précédente ; suppression → valeurs avant ; relations →
@@ -149,9 +162,29 @@ sont stockés en UTC et affichés à l'heure de Casablanca.
 - **Preuve** : `AuditIntegriteTest` démarre l'application *comme en production* (Flyway propriétaire, application avec le
   compte restreint) : les opérations métier et la suppression en groupe fonctionnent, et `UPDATE`, `DELETE`, `TRUNCATE`,
   `ALTER` sur les tables d'audit sont refusés par PostgreSQL.
-- **Limite assumée** : une modification faite directement en base par le détenteur du compte propriétaire n'est pas
-  capturée par l'application. Elle est réservée aux administrateurs de la base ; l'extension `pgaudit` la tracerait si le
-  besoin apparaissait (voir `TODO.md`).
+- **Chaîne locale** (`V19`) : chaque entrée de `audit_journal` porte le SHA-256 de son contenu et le hash précédent ; le
+  chaînage existant est initialisé par migration, puis un trigger sérialise les ajouts. La chaîne est vérifiée au démarrage
+  et une fois par jour ; une rupture produit une erreur et la jauge `rh.audit.chaine.invalide`. Elle détecte une altération
+  incohérente, mais ne résiste pas à un superutilisateur qui réécrit les données et recalcule toute la chaîne : aucun ancrage
+  externe n'est configuré.
+- **SQL PostgreSQL direct dans la base ERP-RH uniquement** (`pgAudit`, `V20`) : l'image PostgreSQL 18 du projet précharge l'extension ; en production,
+  `PGAUDIT_ENABLED=true` crée l'extension et active toutes les classes `all`, y compris `ROLE` (création/modification/
+  suppression de rôles et changements de privilèges). Aucune classe pgAudit n'est exclue. `log_parameter=off` évite de
+  recopier les valeurs de paramètres préparés. pgAudit remplace le texte après le mot-clé `PASSWORD` par `<REDACTED>` dans
+  les commandes directes `CREATE ROLE` et `ALTER ROLE`. Sa propre documentation précise que cette protection ne couvre pas
+  tous les cas : `afterMigrate.sql` masque donc le texte SQL uniquement pendant son bloc Flyway qui reçoit le secret, tout
+  en conservant les événements de classe, commande et objet ; le réglage est rétabli ensuite. Aucun secret brut ne doit être
+  ajouté à une migration ou à une commande SQL sans avoir confirmé sa redaction effective. Le réglage est au niveau
+  de la base ERP-RH, pas du cluster : les commandes exécutées dans une autre base ne sont pas couvertes.
+  **Validation locale (2026-10-11)** : l'image `database/Dockerfile` a été construite ; PostgreSQL 18.6 démarre avec
+  pgAudit préchargé, `CREATE EXTENSION pgaudit` réussit et une requête de contrôle produit une ligne `AUDIT: SESSION`.
+  Cette preuve ne remplace pas l'activation et le contrôle sur le serveur de production.
+  Les journaux CSV
+  sont écrits dans le volume PostgreSQL sans rotation avec purge ; ils restent sur le serveur et sont exposés au risque de
+  perte de ce volume. L'activation reste à vérifier sur le serveur après accès SSH.
+- **Limite de confiance** : une modification faite directement en base par le détenteur du compte propriétaire n'est pas
+  capturée par l'application. pgAudit est préparé pour tracer le SQL direct après migration de production vers PostgreSQL 18 ;
+  un superutilisateur peut toutefois modifier la configuration ou réécrire les journaux locaux.
 
 ---
 
@@ -247,16 +280,49 @@ d'audit par an.
 
 | Sujet | Décision |
 |---|---|
-| Durée de conservation | **Tout est conservé**, aucune purge |
+| Durée de conservation | **Conservation à vie, sans purge**, pour `OPERATION`, `SECURITE` et `ACCES`, y compris les adresses IP, les consultations de salaires et les instantanés Envers (décision RH du 2026-10-11) |
 | Qui lit le journal | **`SYSTEM_ADMIN` seulement** à l'installation ; `AUDIT_READ` administrable depuis l'écran Rôles |
-| Consultations de salaires | **Non journalisées** ; seuls les exports le sont |
-| Preuve d'intégrité opposable (chaînage, ancrage externe) | **Non** : la séparation des comptes PostgreSQL suffit |
-| Restauration d'un groupe supprimé | Pas d'outil pour l'instant : le contenu est conservé (`revtype = 2`) ; voir `TODO.md` |
+| Lectures métier | **Toutes journalisées** au niveau HTTP par `AuditLectureResponseAdvice`, tous domaines confondus ; les écritures sont journalisées par `@AuditableAction`, les événements de sécurité et le repli HTTP global |
+| Chaîne d'intégrité locale | **Oui** depuis `V19` ; aucun ancrage externe, donc pas de preuve opposable face à un superutilisateur PostgreSQL |
+| `pgAudit` pour le SQL direct et les requêtes de base ERP-RH | Toutes les classes sont configurées dans `V20` ; activation de production à effectuer avec la bascule PG18 |
+| Restauration d'un groupe supprimé | Mise en œuvre : instantanés conservés par Envers, recréation avec nouveaux identifiants, contrôle atomique des conflits, permission `PAIE_RESTORE`, journalisation de l'action |
 | Suppression d'un rôle | Refusée s'il est attribué ; `SYSTEM_ADMIN` protégé (réversible) |
 
 Données personnelles (loi 09-08) : l'audit contient des noms, des CIN, des salaires et des adresses IP — accès restreint à
-`AUDIT_READ`, minimisation (voir « Événements de sécurité »), aucune route d'export du journal. L'historique de paie est tenu
-au titre d'une obligation de l'employeur, ce qui justifie sa conservation.
+`AUDIT_READ`, minimisation (voir « Événements de sécurité »), aucune route d'export du journal. La durée de conservation est
+à vie et aucune purge n'est effectuée, conformément à la décision de la RH.
+
+### Portée des consultations métier
+
+`AuditLectureResponseAdvice` journalise avant la sérialisation les réponses 2xx, redirections et erreurs de toute route HTTP gérée par
+Spring MVC en `GET` ou `HEAD`, ainsi que les recherches et exports `POST` protégés par une permission `*_READ`, `*_MANAGE`
+ou `*_EXPORT`. Les routes Actuator et Swagger/OpenAPI ne sont plus filtrées par l'advice. Cela couvre les lectures
+déclenchées depuis l'interface et celles appelées directement sur l'API. L'événement garde le modèle de route (sans
+valeur d'identifiant), la méthode HTTP, le statut, le nombre d'éléments renvoyés et, si disponible, une période au format
+`aaaa-MM`. Les corps de réponse, montants, corps de requête, filtres nom/CIN et paramètres libres ne sont pas recopiés.
+L'écriture du journal est fermée pour la réponse : si elle échoue, le corps n'est pas servi.
+
+### Portée et limites explicites
+
+Toute écriture HTTP non déjà tracée en détail par `@AuditableAction` reçoit une trace globale de repli, succès comme échec,
+qui conserve route, méthode et statut sans recopier le corps. Les tentatives rejetées avant l'appel d'un service annoté
+(validation HTTP, corps invalide ou route de mutation rejetée par MVC) produisent une entrée `ECHEC` de repli. Les refus `401`
+émis par Spring Security avant MVC produisent aussi un événement `ACCES_ANONYME_REFUSE` avec un identifiant de requête,
+la méthode et la route demandée dont les identifiants numériques/UUID sont masqués.
+Les actions déjà
+tracées par `@AuditableAction` ou un événement de sécurité portent un marqueur de requête pour éviter les doublons. La
+lecture publique de `/auth/password-policy` est incluse dans `ACCES`. Les exports et rapports déjà tracés par
+`@AuditableAction` gardent leurs événements détaillés et ne reçoivent pas un second événement `LECTURE_METIER`.
+
+Les appels SQL internes à un cas d'usage ne créent pas chacun une entrée métier distincte ; pgAudit les conserve dans les
+journaux de la base ERP-RH, sans identité HTTP, request ID ni périmètre fonctionnel. Les requêtes non HTTP traitées par des
+composants Spring qui ne passent pas par Spring MVC ne reçoivent pas de trace générique d'accès ; les écritures métier
+internes restent couvertes lorsqu'elles passent par les services audités, et toute instruction SQL dans la base ERP-RH est
+tracée techniquement par pgAudit. Les ressources statiques servies directement par le serveur web, les réponses servies
+depuis un cache/navigateur sans appel backend, les requêtes arrêtées avant le backend et les accès aux fichiers, volumes
+ou console du serveur ne sont pas des opérations HTTP/SQL vues par ces mécanismes. Les commandes SQL dans les autres bases
+du même cluster sont hors du périmètre pgAudit choisi. L'empreinte locale ne protège pas contre un superutilisateur qui
+réécrit puis recalcule les empreintes.
 
 ---
 

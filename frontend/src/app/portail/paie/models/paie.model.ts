@@ -58,6 +58,7 @@ export interface PaieMaterielTableau {
 
 export interface Paie {
   id: number;
+  version: number;
   employee: PaieEmployeeSummary;
   periode: string;
   fonction: PaieFunctionSummary;
@@ -90,6 +91,7 @@ export interface PaieCreateRequest {
 }
 
 export interface PaieUpdateRequest {
+  version: number;
   fonctionId: number;
   chantierId: number;
   equipeId?: number | null;
@@ -170,6 +172,10 @@ export interface PaieSuppressionGroupeRequest {
 
 export interface PaieSuppression {
   supprimes: number;
+}
+
+export interface PaieRestauration {
+  restaures: number;
 }
 
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';

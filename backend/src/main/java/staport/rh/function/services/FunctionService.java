@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
 import staport.rh.function.dtos.request.FunctionSearchCriteria;
 import staport.rh.function.dtos.request.FunctionUpdateRequestDto;
@@ -53,6 +54,7 @@ public class FunctionService implements IFunctionService {
     @AuditableAction(action = "FONCTION_MODIFICATION", type = TypeOperation.UPDATE, entite = Function.class)
     public FunctionResponseDto update(Long id, FunctionUpdateRequestDto dto) {
         Function entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
         repository.findByLibelleIgnoreCase(dto.libelle())
                 .filter(existing -> !existing.getId().equals(id))
@@ -61,7 +63,7 @@ public class FunctionService implements IFunctionService {
                 });
 
         mapper.updateEntityFromDto(dto, entity);
-        Function updated = repository.save(entity);
+        Function updated = repository.saveAndFlush(entity);
         log.info("Fonction mise à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }

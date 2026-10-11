@@ -27,6 +27,7 @@ spring:
       org.hibernate.envers.revision_field_name: rev
       org.hibernate.envers.revision_type_field_name: revtype
       org.hibernate.envers.store_data_at_delete: true
+      org.hibernate.envers.do_not_audit_optimistic_locking_field: true
       # Écritures regroupées : un import ou une suppression de ~1 000 lignes écrit autant de lignes d'audit,
       # envoyées par lots plutôt qu'une par une.
       hibernate.jdbc.batch_size: 50
@@ -44,6 +45,7 @@ spring:
     placeholders:
       app_user: ${DB_USER}
       app_password: ${DB_PASSWORD}
+      pgaudit_enabled: ${PGAUDIT_ENABLED:false}
 
   servlet:
     multipart:

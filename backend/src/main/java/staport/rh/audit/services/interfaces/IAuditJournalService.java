@@ -7,6 +7,9 @@ import staport.rh.audit.dtos.response.AuditChangementDto;
 import staport.rh.audit.dtos.response.AuditJournalDto;
 import staport.rh.audit.dtos.response.AuditJournalLigneDto;
 import staport.rh.audit.dtos.response.AuditVersionDto;
+import staport.rh.audit.dtos.response.PaieRestaurationInstantane;
+
+import java.util.List;
 
 /** Façade de consultation du journal d'audit — lecture seule : aucune méthode ne modifie ni ne supprime une entrée. */
 public interface IAuditJournalService {
@@ -20,4 +23,7 @@ public interface IAuditJournalService {
 
     /** Toutes les versions d'un enregistrement ({@code entite} : nom d'une entité auditée, ex. {@code paie}). */
     Page<AuditVersionDto> historique(String entite, Long id, Pageable pageable);
+
+    /** Instantanés des bulletins supprimés par une suppression en groupe réussie, destinés au domaine Paie. */
+    List<PaieRestaurationInstantane> instantanesPaiePourRestauration(Long idEntree);
 }

@@ -60,8 +60,11 @@ accès SSH direct pour l'administration/le backup), jamais depuis l'extérieur.
 
 ## Intégration à nginx outer
 
-Nginx outer est géré séparément (partagé avec d'autres applications sur le même serveur) — l'ajout
-du bloc ci-dessous reste une action manuelle sur le serveur, pas automatisée par ce dépôt. Pattern
+Nginx outer existe déjà sur le serveur et est géré séparément (partagé avec d'autres applications).
+Avant de recommander ou modifier un bloc pour rh-erp, comparer l'exemple de configuration fourni
+par l'exploitant avec le pattern ci-dessous. Les informations à fournir sont suivies dans
+[`deployment-informations-a-fournir.md`](deployment-informations-a-fournir.md). Toute modification
+du nginx outer reste une action manuelle sur le serveur, pas automatisée par ce dépôt. Pattern
 repris de celui déjà utilisé pour les autres applications du serveur (sous-chemin dédié +
 `sub_filter` pour réécrire `<base href>`), simplifié à un seul bloc puisque nginx inner gère déjà
 lui-même la distinction page Angular / appel API :
@@ -146,7 +149,8 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
   (`$proxy_add_x_forwarded_for`), nginx inner le relaie, et Tomcat l'honore des seuls proxys internes
   (`server.forward-headers-strategy: native`) : un client ne peut pas usurper l'adresse enregistrée.
 
-Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub.
+Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub. L'image
+`erp-rh-postgres` est construite depuis `database/Dockerfile` (PostgreSQL 18 + pgvector + pgAudit).
 Pour re-déployer une nouvelle version : `docker compose pull && docker compose up -d` (met à jour
 les conteneurs dont l'image a changé, sans toucher au volume `postgres_data_v18`). Sur la machine de
 développement, la migration logique de PG17 vers PG18 a été répétée et contrôlée le 2026-10-10 ;
@@ -166,38 +170,49 @@ suspendues jusqu'à la décision de réouverture.
    lignes des tables métier. Les noms de volumes dépendent du nom de projet Compose : ne pas supposer
    que celui de la machine de développement s'applique.
 2. **Sauvegarder PG17 hors du volume** : réaliser un dump logique complet incluant les rôles et bases,
-   le transférer vers un stockage distinct du serveur et vérifier son empreinte. Conserver aussi une
-   sauvegarde restaurable selon la procédure d'exploitation. Le volume seul n'est pas une sauvegarde.
-3. **Répéter avant la fenêtre** : restaurer cette sauvegarde dans un PostgreSQL 18 isolé avec pgvector,
-   puis vérifier les extensions, les rôles, Flyway, les nombres de lignes et le démarrage de l'application.
+   le conserver sur le serveur dans le répertoire de sauvegarde configuré, hors du volume PostgreSQL,
+   puis vérifier son empreinte et sa restaurabilité. Le volume seul n'est pas une sauvegarde ; aucun
+   transfert hors du serveur n'est prévu dans ce chantier.
+3. **Répéter avant la fenêtre** : restaurer cette sauvegarde dans l'image PostgreSQL 18 ERP-RH (pgvector + pgAudit),
+   puis vérifier les extensions, les rôles, les migrations Flyway en attente jusqu'à V20, les nombres
+   de lignes et le démarrage de l'application. Les migrations ajoutées après la validation locale
+   PG18 (V16 à V20) doivent être rejouées et validées sur cette restauration avant la bascule de production.
    Ne pas exposer les mots de passe de production dans les commandes, le shell partagé ou les journaux.
 4. **Arrêter les écritures** : activer la maintenance, arrêter les services backend et tout autre client
    qui écrit en base, puis produire le dump final PG17. Garder le conteneur PG17 et son volume présents.
 5. **Restaurer dans le nouveau volume PG18** : démarrer un conteneur PG18 temporaire sur un port local
    différent, monté sur le volume cible `postgres_data_v18` et initialisé avec un compte de migration
    distinct des rôles exportés. Restaurer le dump logique (rôles, droits, extensions et bases), puis
-   contrôler que la dernière migration Flyway est `V15`, que les tables attendues et leurs données sont
+   inventorier la dernière version Flyway déjà appliquée puis appliquer les migrations manquantes
+   jusqu'à V20 avec `PGAUDIT_ENABLED=true`. Contrôler que les tables attendues et leurs données sont
    présentes, et que pgvector est disponible. Garder backend et trafic public arrêtés.
 6. **Basculer Compose** : arrêter proprement le conteneur temporaire PG18, puis lancer le service
-   `postgres` du Compose publié avec l'image PG18. Vérifier qu'il remonte le même volume cible et qu'il
+   `postgres` du Compose publié avec l'image ERP-RH PG18. Vérifier qu'il remonte le même volume cible et qu'il
    devient `healthy`. Démarrer backend seul, vérifier les logs, l'Actuator, l'authentification et les
-   permissions ; démarrer le frontend et retirer la maintenance seulement après validation.
+   permissions, `shared_preload_libraries=pgaudit`, l'extension `pgaudit`, le réglage `pgaudit.log=all`
+   sur la seule base ERP-RH et la présence de traces de contrôle, y compris les événements `ROLE` ; démarrer le frontend
+   et retirer la maintenance seulement après validation.
 7. **Retour arrière** : avant la réouverture, en cas d'échec, arrêter PG18 et remettre l'ancien Compose
    PG17 avec son volume d'origine. Le volume PG17 n'est jamais supprimé. Après réouverture et nouvelles
    écritures sur PG18, un simple retour à PG17 perdrait ces écritures : il faut d'abord les réconcilier
    par une migration inverse contrôlée. Conserver les deux volumes jusqu'à validation métier et
    sauvegarde PG18 restaurable.
 
-État au 2026-10-10 : migration locale PG17→PG18 vérifiée (PostgreSQL 18.6, pgvector 0.8.7, Flyway V15,
+État au 2026-10-10 : migration locale PG17→PG18 vérifiée (PostgreSQL 18.6, pgvector 0.8.7, Flyway V15 à cette date,
 28 tables ; nombres de lignes identiques), tests backend propres passés sur PG18. **Migration du serveur
-de production à planifier/exécuter séparément**.
+de production à planifier/exécuter séparément**. Les migrations V16 à V20 sont postérieures à cette
+validation et doivent être rejouées sur une restauration de production PG17 avant la bascule.
+
+Validation locale pgAudit au 2026-10-11 : l'image PostgreSQL ERP-RH se construit ; PostgreSQL 18.6 charge l'extension,
+`CREATE EXTENSION pgaudit` réussit et une requête de contrôle apparaît dans les logs `AUDIT: SESSION`. L'activation
+de la base de production reste à vérifier après la migration PG17→PG18 et l'obtention de l'accès SSH.
 
 ---
 
 ## CI/CD — état actuel
 
 **CI en place** (`.github/workflows/ci.yml`) : à chaque push sur `main`, tests backend (contre un
-PostgreSQL jetable démarré par Testcontainers) et frontend, puis build + push des images vers Docker Hub
+PostgreSQL jetable démarré par Testcontainers) et frontend, puis build + push des images PostgreSQL 18 (pgvector + pgAudit), backend, frontend
 (tags `<git-sha>` et `latest`, plus le tag de version sur un push de tag `v*`). Sur une pull
 request, seuls les tests tournent (pas de push d'image, pas d'exposition des secrets Docker Hub à
 une PR).
@@ -205,8 +220,14 @@ une PR).
 **Chaîne d'approvisionnement** : la CI du backend génère un SBOM CycloneDX (`./mvnw cyclonedx:makeBom`, artefact `sbom-backend`), l'analyse avec OSV-Scanner (échec à la première vulnérabilité connue ; exceptions motivées dans `backend/osv-scanner.toml`) et conserve le rapport de couverture JaCoCo (artefact `backend-coverage`). Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour Maven, npm, Docker (balise et empreinte) et GitHub Actions. Les images sont non-root et épinglées par empreinte (voir [../conventions/deployment.md](../conventions/deployment.md)) : le conteneur frontend écoute sur **8080** (le Compose publie `127.0.0.1:${FRONTEND_PORT}` vers ce port ; nginx outer n'est pas concerné).
 
 **CD non traité** — le déploiement (`docker compose pull && up -d` sur le serveur) reste manuel
-pour l'instant. À prévoir séparément (ex. déclenchement SSH depuis la CI, ou `watchtower`/
-webhook côté serveur) une fois le besoin confirmé.
+pour l'instant. Proposition à valider : déployer sur un tag `v*` uniquement après réussite de la CI,
+par SSH depuis GitHub Actions, puis vérifier la santé des services. Les secrets SSH et les paramètres
+du serveur seraient configurés dans GitHub Actions, jamais dans le dépôt. Cette mise en production
+doit attendre la migration PG17→PG18 décrite plus haut ; le Compose actuel démarre PostgreSQL 18 et
+un volume distinct. Aucune livraison ne doit être déclenchée sur la production avant cette migration.
+Après l'accès SSH, la première bascule doit définir le tag PostgreSQL à déployer et vérifier l'activation pgAudit
+par Flyway (`PGAUDIT_ENABLED=true`) ainsi que les droits applicatifs. L'image DB conserve les fichiers CSV sans purge
+dans le volume PostgreSQL ; surveiller l'espace disque du serveur.
 
 Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (token d'accès Docker Hub, pas le mot de passe du compte).
@@ -257,7 +278,8 @@ pas inclus : les rétablir depuis la configuration de secrets avant de connecter
 Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
 avant tout retour au service. Ne jamais tester sur le seul volume de production.
 
-Cette sauvegarde locale ne protège pas contre la perte ou la compromission de l'hôte. Une copie
-indépendante hors du serveur et des exercices de restauration restent à organiser ; voir `TODO.md`.
+Par décision du 2026-10-11, les sauvegardes restent sur le serveur pour l'instant ; aucune copie
+indépendante hors hôte ni exercice de restauration hors hôte n'est planifié. Cette sauvegarde locale
+ne protège pas contre la perte ou la compromission de l'hôte. Voir `TODO.md`.
 
 Voir `TODO.md` pour le suivi.

@@ -27,11 +27,9 @@ public class PerimetreRapportPdfPaie implements PerimetreAudit {
             if (requete.fonctionId() != null) {
                 perimetre.put("fonctionId", requete.fonctionId());
             }
-            if (requete.nomPrenom() != null && !requete.nomPrenom().isBlank()) {
-                perimetre.put("nomPrenom", requete.nomPrenom());
-            }
-            if (requete.cin() != null && !requete.cin().isBlank()) {
-                perimetre.put("cin", requete.cin());
+            if ((requete.nomPrenom() != null && !requete.nomPrenom().isBlank())
+                    || (requete.cin() != null && !requete.cin().isBlank())) {
+                perimetre.put("filtreEmployeNominatif", true);
             }
         }
         return DescriptionPerimetre.de(perimetre, null);

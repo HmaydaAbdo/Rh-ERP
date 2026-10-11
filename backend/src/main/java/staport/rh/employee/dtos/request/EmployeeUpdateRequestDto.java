@@ -9,6 +9,9 @@ import staport.rh.employee.entities.EmployeeStatut;
 import java.time.LocalDate;
 
 public record EmployeeUpdateRequestDto(
+        @NotNull
+        Long version,
+
         @NotBlank
         @Size(max = 150)
         String nomPrenom,

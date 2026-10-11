@@ -75,6 +75,7 @@ export class PaieFormComponent {
   private readonly messageService = inject(NotificationService);
 
   private readonly paieId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.paieId() !== null);
 
   private readonly modele = signal<PaieSaisie>({
@@ -127,6 +128,7 @@ export class PaieFormComponent {
       this.paieId.set(id);
 
       this.paieService.getById(id).subscribe((paie) => {
+        this.version.set(paie.version);
         this.modele.set({
           employeeId: paie.employee.id,
           periode: fromPeriodeString(paie.periode),
@@ -165,7 +167,7 @@ export class PaieFormComponent {
 
     const paie = await attendreEnregistrement(
       id !== null
-        ? this.paieService.update(id, dto)
+        ? this.paieService.update(id, { ...dto, version: this.version()! })
         : this.paieService.create({ ...dto, employeeId: saisie.employeeId!, periode: toPeriodeString(saisie.periode)! })
     );
     if (!paie) {

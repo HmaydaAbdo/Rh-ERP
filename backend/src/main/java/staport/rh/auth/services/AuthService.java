@@ -115,7 +115,12 @@ public class AuthService implements IAuthService {
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public Connexion refresh(String refreshTokenBrut) {
         RefreshToken existant = refreshTokenRepository.findByTokenHash(tokenHasher.hasher(refreshTokenBrut))
-                .orElseThrow(InvalidRefreshTokenException::new);
+                .orElse(null);
+        if (existant == null) {
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.SESSION_RENOUVELLEMENT_REFUSE,
+                    null, null, "JETON_INCONNU"));
+            throw new InvalidRefreshTokenException();
+        }
 
         if (existant.isRevoque()) {
             List<RefreshToken> famille = refreshTokenRepository.findAllByFamilleAndRevoqueFalse(existant.getFamille());
@@ -128,6 +133,8 @@ public class AuthService implements IAuthService {
             throw new InvalidRefreshTokenException();
         }
         if (existant.getExpireLe().isBefore(Instant.now())) {
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.SESSION_RENOUVELLEMENT_REFUSE,
+                    existant.getUtilisateur().getId(), existant.getUtilisateur().getUsername(), "JETON_EXPIRE"));
             throw new InvalidRefreshTokenException();
         }
 
@@ -137,24 +144,34 @@ public class AuthService implements IAuthService {
         // Une session ne survit pas à la désactivation du compte, quelle que soit la façon dont il a été désactivé.
         Utilisateur proprietaire = existant.getUtilisateur();
         if (!proprietaire.isActif()) {
-            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, proprietaire.getId(),
-                    proprietaire.getUsername(), "COMPTE_INACTIF"));
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.SESSION_RENOUVELLEMENT_REFUSE,
+                    proprietaire.getId(), proprietaire.getUsername(), "COMPTE_INACTIF"));
             throw new InvalidRefreshTokenException();
         }
 
-        return emettreConnexion(proprietaire, existant.getFamille());
+        Connexion connexion = emettreConnexion(proprietaire, existant.getFamille());
+        evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.SESSION_RENOUVELEE, proprietaire.getId(),
+                proprietaire.getUsername()));
+        return connexion;
     }
 
     @Override
     @Transactional
     public void logout(String refreshTokenBrut) {
-        refreshTokenRepository.findByTokenHash(tokenHasher.hasher(refreshTokenBrut))
-                .ifPresent(token -> {
-                    token.setRevoque(true);
-                    refreshTokenRepository.save(token);
-                    evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.DECONNEXION, token.getUtilisateur().getId(),
-                            token.getUtilisateur().getUsername()));
-                });
+        if (refreshTokenBrut == null || refreshTokenBrut.isBlank()) {
+            evenements.publishEvent(EvenementSecurite.de(ActionSecurite.DECONNEXION));
+            return;
+        }
+        RefreshToken token = refreshTokenRepository.findByTokenHash(tokenHasher.hasher(refreshTokenBrut)).orElse(null);
+        if (token == null) {
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.DECONNEXION,
+                    null, null, "SESSION_INCONNUE"));
+            return;
+        }
+        token.setRevoque(true);
+        refreshTokenRepository.save(token);
+        evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.DECONNEXION, token.getUtilisateur().getId(),
+                token.getUtilisateur().getUsername()));
     }
 
     @Override
@@ -210,6 +227,10 @@ public class AuthService implements IAuthService {
         List<RefreshToken> actifs = refreshTokenRepository.findAllByUtilisateur_IdAndRevoqueFalse(utilisateurId);
         actifs.forEach(token -> token.setRevoque(true));
         refreshTokenRepository.saveAll(actifs);
+        if (!actifs.isEmpty()) {
+            evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.SESSIONS_REVOQUEES, null, null,
+                    Map.of("utilisateurCibleId", utilisateurId, "nombre", actifs.size())));
+        }
         return actifs.size();
     }
 

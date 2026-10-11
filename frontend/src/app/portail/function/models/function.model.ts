@@ -1,6 +1,7 @@
 export interface Function {
   id: number;
   libelle: string;
+  version: number;
 }
 
 export interface FunctionCreateRequest {
@@ -8,6 +9,7 @@ export interface FunctionCreateRequest {
 }
 
 export interface FunctionUpdateRequest extends FunctionCreateRequest {
+  version: number;
 }
 
 export interface FunctionSearchCriteria {

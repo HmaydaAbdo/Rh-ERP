@@ -44,6 +44,10 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
 
     boolean existsByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
 
+    @Query("SELECT p.employee.id FROM Paie p WHERE p.periode = :periode AND p.employee.id IN :employeeIds")
+    Set<Long> findEmployeeIdsByPeriodeAndEmployees(@Param("periode") YearMonth periode,
+                                                   @Param("employeeIds") Set<Long> employeeIds);
+
     /** Employés qui ont déjà un bulletin pour cette période — l'import ne modifie jamais un bulletin
      * existant (modification depuis l'écran Paie uniquement). */
     @Query("SELECT p.employee.id FROM Paie p WHERE p.periode = :periode")

@@ -23,6 +23,7 @@ export class FunctionFormComponent {
   private readonly messageService = inject(NotificationService);
 
   private readonly functionId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.functionId() !== null);
 
   private readonly modele = signal({ libelle: '' });
@@ -40,7 +41,10 @@ export class FunctionFormComponent {
     if (idParam) {
       const id = Number(idParam);
       this.functionId.set(id);
-      this.functionService.getById(id).subscribe((fonction) => this.modele.set({ libelle: fonction.libelle }));
+      this.functionService.getById(id).subscribe((fonction) => {
+        this.version.set(fonction.version);
+        this.modele.set({ libelle: fonction.libelle });
+      });
     }
   }
 
@@ -48,7 +52,7 @@ export class FunctionFormComponent {
     const dto = { libelle: this.modele().libelle };
     const id = this.functionId();
 
-    const fonction = await attendreEnregistrement(id !== null ? this.functionService.update(id, dto) : this.functionService.create(dto));
+    const fonction = await attendreEnregistrement(id !== null ? this.functionService.update(id, { ...dto, version: this.version()! }) : this.functionService.create(dto));
     if (!fonction) {
       return;
     }

@@ -28,6 +28,10 @@ les tests unitaires, les intégrations avec Testcontainers et les tests de contr
   répéter les contraintes nécessaires au niveau persistance lorsqu'elles doivent s'appliquer à tous
   les chemins d'écriture.
 * Utiliser la stratégie d'identifiants définie par le projet et compatible avec ses migrations.
+* Pour toute entité persistée modifiable, utiliser `@Version` et une colonne `version` déclarée par migration. Exposer
+  cette version dans les réponses de lecture et exiger que le client la renvoie lors d'une modification ; ne jamais
+  la fixer ni l'incrémenter dans le code métier. Une version périmée renvoie `409 Conflict` et ne remplace aucune
+  donnée. Ne pas versionner les instantanés append-only ou les journaux immuables ; documenter toute autre exception.
 
 ## Relations
 

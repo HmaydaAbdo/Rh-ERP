@@ -31,6 +31,7 @@ export class ChantierFormComponent {
   protected readonly actifOptions = ACTIF_OPTIONS;
 
   private readonly chantierId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.chantierId() !== null);
 
   private readonly modele = signal({ code: '', designation: '', nom: '', actif: true });
@@ -52,6 +53,7 @@ export class ChantierFormComponent {
       const id = Number(idParam);
       this.chantierId.set(id);
       this.chantierService.getById(id).subscribe((chantier) => {
+        this.version.set(chantier.version);
         this.modele.set({ code: chantier.code, designation: chantier.designation, nom: chantier.nom ?? '', actif: chantier.actif });
       });
     }
@@ -63,7 +65,7 @@ export class ChantierFormComponent {
     const id = this.chantierId();
 
     const chantier = await attendreEnregistrement(
-      id !== null ? this.chantierService.update(id, { ...dto, actif: saisie.actif }) : this.chantierService.create(dto)
+      id !== null ? this.chantierService.update(id, { ...dto, actif: saisie.actif, version: this.version()! }) : this.chantierService.create(dto)
     );
     if (!chantier) {
       return;

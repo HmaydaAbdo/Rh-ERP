@@ -6,6 +6,6 @@ public enum CategorieAudit {
     OPERATION,
     /** Événement de sécurité : connexion, refus d'accès, jeton réutilisé, mot de passe… */
     SECURITE,
-    /** Sortie de données : export, rapport. */
+    /** Consultation métier ou sortie de données : lecture API, export, rapport. */
     ACCES
 }

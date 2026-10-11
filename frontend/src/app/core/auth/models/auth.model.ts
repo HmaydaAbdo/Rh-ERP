@@ -5,6 +5,7 @@ export interface RoleSummary {
 
 export interface PermissionSummary {
   id: number;
+  version: number;
   code: string;
   description: string;
 }
@@ -17,6 +18,7 @@ export interface EmployeeSummary {
 
 export interface CurrentUser {
   id: number;
+  version: number;
   username: string;
   email: string;
   actif: boolean;

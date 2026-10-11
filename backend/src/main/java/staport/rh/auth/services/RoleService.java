@@ -10,6 +10,7 @@ import staport.rh.auth.specifications.RoleSpecification;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.auth.dtos.request.RoleCreateRequestDto;
 import staport.rh.auth.dtos.request.RoleUpdateRequestDto;
 import staport.rh.auth.dtos.response.PermissionResponseDto;
@@ -86,6 +87,7 @@ public class RoleService implements IRoleService {
     @AuditableAction(action = "ROLE_MODIFICATION", type = TypeOperation.UPDATE, entite = Role.class)
     public RoleResponseDto update(Long id, RoleUpdateRequestDto dto) {
         Role role = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), role.getVersion());
         Set<Permission> permissions = resolvePermissions(dto.permissionIds());
         if (RolesSysteme.SYSTEM_ADMIN.equals(role.getNom())) {
             garantirAdministrationIntacte(role, dto.nom(), permissions);
@@ -102,7 +104,7 @@ public class RoleService implements IRoleService {
         role.setDescription(dto.description());
         role.setPermissions(permissions);
 
-        Role updated = roleRepository.save(role);
+        Role updated = roleRepository.saveAndFlush(role);
         log.info("Rôle mis à jour : id={}, nom={}", updated.getId(), updated.getNom());
         return mapper.toDto(updated);
     }

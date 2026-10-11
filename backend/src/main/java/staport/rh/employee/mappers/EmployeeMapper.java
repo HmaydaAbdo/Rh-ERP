@@ -21,6 +21,7 @@ public interface EmployeeMapper {
 
     @Mapping(target = "fonction", ignore = true)
     @Mapping(target = "chantier", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void updateEntityFromDto(EmployeeUpdateRequestDto dto, @MappingTarget Employee entity);
 
     EmployeeResponseDto toDto(Employee entity);
