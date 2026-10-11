@@ -12,10 +12,10 @@
   color-scheme: dark;
 
   // Neutres : bleu-gris très sombre, de la même teinte que la marque
-  --neutral-0: #101f33;
-  --neutral-50: #0a1523;
-  --neutral-100: #17283f;
-  --neutral-200: #24384f;
+  --neutral-0: #111f30;
+  --neutral-50: #091521;
+  --neutral-100: #152639;
+  --neutral-200: #26394d;
   --neutral-300: #34495f;
   --neutral-400: #6f86a0;
   --neutral-500: #93a7be;
@@ -41,8 +41,11 @@
 
   --color-canvas: var(--neutral-50);
   --color-sidebar-bg: #07101c;
+  --color-sidebar-bg-bottom: #091521;
+  --color-sidebar-glow: rgba(79, 141, 203, 0.12);
   --color-sidebar-text: #8fa6c2;
   --color-sidebar-active-bg: rgba(130, 178, 224, 0.14);
+  --color-sidebar-accent: #d6a36f;
   --color-success: #3fb873;
   --color-warning: #f0a53a;
   --color-danger: #f2706b;
@@ -58,9 +61,10 @@
   --chart-7: #9085e9;
   --chart-8: #e66767;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.48);
+  --shadow-sidebar: 0 12px 36px rgba(0, 0, 0, 0.16);
 }
 
 :root {
@@ -80,12 +84,12 @@
   --brand-950: #031a2e;
 
   // ---- 2. Sémantiques (thème clair) ----
-  // Neutres : gris-bleu de la teinte de la marque, jamais de gris pur
-  --neutral-0: #ffffff;
-  --neutral-50: #f4f7fb;
-  --neutral-100: #eaf0f7;
-  --neutral-200: #dce4ee;
-  --neutral-300: #c3d0df;
+  // Neutres : ivoire minéral et gris-bleu, pour adoucir les grandes surfaces sans perdre le contraste.
+  --neutral-0: #fffefa;
+  --neutral-50: #f3f4f1;
+  --neutral-100: #e9eeec;
+  --neutral-200: #d9e1df;
+  --neutral-300: #becbc9;
   --neutral-400: #8499b0;
   --neutral-500: #5b6e85;
   --neutral-600: #3f5167;
@@ -113,6 +117,11 @@
   --color-primary-contrast: #ffffff;
   --color-focus: color-mix(in srgb, var(--primary-500) 35%, transparent);
 
+  // Accent minéral chaud : repères rares inspirés des chantiers, toujours secondaire au bleu Staport.
+  --brand-copper-300: #d9ae82;
+  --brand-copper-400: #c88e5c;
+  --color-brand-accent: var(--brand-copper-400);
+
   --color-canvas: var(--neutral-50);
   --color-surface: var(--neutral-0);
   --color-surface-alt: var(--neutral-50);
@@ -122,14 +131,40 @@
   --color-text-muted: var(--neutral-500);
   --color-overlay: rgba(3, 26, 46, 0.5);
 
+  // Atmosphère des écrans d'authentification : nuit marine et lumière minérale, sans dépendance à un visuel distant.
+  --auth-canvas-deep: #06131f;
+  --auth-canvas: #0d2638;
+  --auth-surface: rgba(10, 28, 43, 0.84);
+  --auth-border: rgba(213, 231, 244, 0.18);
+  --auth-border-hover: rgba(213, 231, 244, 0.34);
+  --auth-field: rgba(3, 16, 27, 0.56);
+  --auth-field-focus: rgba(3, 16, 27, 0.78);
+  --auth-field-border: rgba(189, 211, 229, 0.26);
+  --auth-text: #f5f8fb;
+  --auth-muted: #b1c2d1;
+  --auth-accent: #a9d0ef;
+  --auth-action: var(--brand-400);
+  --auth-on-accent: #061827;
+  --auth-shadow: 0 2rem 6rem rgb(0 0 0 / 30%), inset 0 1px 0 rgb(255 255 255 / 5%);
+  --auth-button-shadow: 0 0.5rem 1.5rem rgba(79, 141, 203, 0.24);
+  --auth-button-shadow-hover: 0 0.75rem 2rem rgba(79, 141, 203, 0.32);
+  --auth-backdrop-blur: 1.5rem;
+  --auth-glow: rgba(60, 130, 175, 0.2);
+  --auth-warm-glow: rgba(188, 129, 75, 0.11);
+  --auth-contour: rgba(213, 231, 244, 0.055);
+  --auth-orbit: rgba(213, 231, 244, 0.08);
+  --auth-danger: #ffd4d1;
+
   // Menu latéral : bleu très foncé dans les deux thèmes
   --color-sidebar-bg: var(--brand-900);
+  --color-sidebar-bg-bottom: var(--brand-950);
+  --color-sidebar-glow: rgba(217, 174, 130, 0.1);
   --color-sidebar-text: #b7cbe3;
   --color-sidebar-active-bg: rgba(255, 255, 255, 0.12);
   --color-sidebar-active-text: #ffffff;
   --color-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
   --color-sidebar-border: rgba(255, 255, 255, 0.1);
-  --color-sidebar-accent: var(--brand-300);
+  --color-sidebar-accent: var(--brand-copper-400);
 
   // Le statut ne se confond jamais avec la marque
   --color-success: #15803d;
@@ -151,6 +186,7 @@
   --shadow-sm: 0 1px 2px rgba(3, 26, 46, 0.06);
   --shadow-md: 0 2px 8px rgba(3, 26, 46, 0.08);
   --shadow-lg: 0 12px 32px rgba(3, 26, 46, 0.16);
+  --shadow-sidebar: 0 12px 36px rgba(3, 26, 46, 0.18);
 
   // ---- Typographie ----
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -161,17 +197,22 @@
   --text-md: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.75rem;
+  --text-page-title: clamp(1.5rem, 1.25rem + 0.6vw, 1.875rem);
   --text-display: clamp(2rem, 4vw, 3.5rem);
 
   // Hauteur commune des contrôles d'une barre d'outils (champ, bouton, sélecteur)
   --control-height: 2.25rem;
   --control-font-size: var(--text-sm);
+  --control-height-touch: 2.75rem;
+  --control-font-size-touch: 1rem;
 
   // ---- Mouvement ----
   --duration-fast: 150ms;
   --duration-base: 220ms;
   --duration-slow: 400ms;
   --duration-slower: 700ms;
+  --duration-slowest: 1200ms;
+  --duration-skeleton: 1400ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 

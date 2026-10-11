@@ -10,10 +10,25 @@
 //     <stp-table …>
 
 .app-page {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
   padding: var(--space-lg);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
+
+  &::before {
+    position: absolute;
+    top: -1px;
+    right: var(--space-lg);
+    left: var(--space-lg);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-brand-accent) 58%, transparent), transparent);
+    content: '';
+    pointer-events: none;
+  }
 
   @include bp.phone {
     padding: var(--space-md);
@@ -26,12 +41,15 @@
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
 
   h1 {
     margin: 0;
-    font-size: var(--text-lg);
+    font-size: var(--text-page-title);
     font-weight: 600;
+    line-height: 1.15;
   }
 }
 
@@ -41,7 +59,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
 
   > input.stp-input,
   > stp-select,
@@ -152,7 +174,7 @@
   font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
-  color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
 .app-table-bar__tools {

@@ -2,16 +2,19 @@
 
 :host {
   display: block;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
-// Une seule ligne de contrôles de même hauteur, posée à plat sur la page (pas de cadre) : mois, recherche, trois sélecteurs.
-// Sous la largeur disponible, la ligne passe à la suivante au lieu de déborder.
+// Surface secondaire qui regroupe les filtres de toutes les vues Paie.
 .paie-filtres {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
 
   &__periode {
     display: inline-flex;
@@ -117,6 +120,8 @@
 
   // ---- Téléphone : mois, recherche et « Filtres » sur deux lignes ; le reste se déplie ----
   @include bp.phone {
+    padding: var(--space-sm);
+
     &__periode {
       flex: 1 1 100%;
 

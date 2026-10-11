@@ -18,7 +18,7 @@
     margin: 0 0 var(--space-lg);
 
     dt {
-      font-size: 0.75rem;
+      font-size: var(--text-xs);
       text-transform: uppercase;
       color: var(--color-text-muted);
     }
@@ -37,7 +37,7 @@
 
     h4 {
       margin: 0 0 var(--space-sm);
-      font-size: 0.9375rem;
+      font-size: var(--text-base);
     }
   }
 

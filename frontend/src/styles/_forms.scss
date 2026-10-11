@@ -11,10 +11,12 @@
 
 .app-page--narrow {
   max-width: 760px;
+  margin-inline: auto;
 }
 
 .app-page--wide {
   max-width: 1000px;
+  margin-inline: auto;
 }
 
 // Retour à la liste : un lien discret au-dessus du titre, pas un bouton

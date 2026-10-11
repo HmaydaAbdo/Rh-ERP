@@ -1,158 +1,172 @@
 @use 'breakpoints' as bp;
 
 .auth-page {
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(24rem, 0.88fr);
-  min-height: 100vh;
-  min-height: 100svh;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.auth-story {
   position: relative;
   isolation: isolate;
-  display: flex;
-  min-height: 100vh;
-  min-height: 100svh;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--space-xl);
-  overflow: hidden;
-  padding: var(--space-xl);
-  background: var(--color-sidebar-bg);
-  color: var(--color-sidebar-active-text);
-
-  &__brand,
-  &__message {
-    position: relative;
-    z-index: 1;
-  }
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    width: fit-content;
-    font-size: var(--text-lg);
-    font-weight: 600;
-  }
-
-  &__logo {
-    display: block;
-    width: 8rem;
-    height: auto;
-    filter: brightness(0) invert(1);
-  }
-
-  &__message {
-    max-width: 42rem;
-    margin-block: auto;
-    padding-block: var(--space-xl);
-  }
-
-  &__context {
-    margin: 0 0 var(--space-md);
-    color: var(--color-sidebar-text);
-    font-size: var(--text-base);
-    font-weight: 500;
-  }
-
-  h2 {
-    max-width: 12ch;
-    margin: 0;
-    font-size: var(--text-display);
-    font-weight: 600;
-    line-height: 1.08;
-    text-wrap: balance;
-  }
-
-  &__description {
-    max-width: 38ch;
-    margin: var(--space-lg) 0 0;
-    color: var(--color-sidebar-text);
-    font-size: var(--text-md);
-    line-height: 1.7;
-  }
-
-  &__contours {
-    position: absolute;
-    z-index: 0;
-    right: -12%;
-    bottom: -8%;
-    width: min(100%, 52rem);
-    height: 68%;
-    color: var(--color-sidebar-active-text);
-    opacity: 0.13;
-    pointer-events: none;
-
-    path {
-      stroke: currentColor;
-      stroke-width: 1.2;
-    }
-  }
-}
-
-.auth-panel {
   display: grid;
   place-items: center;
-  min-width: 0;
-  padding: var(--space-xl) var(--space-lg);
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  padding: var(--space-xl);
+  background:
+    radial-gradient(ellipse 42rem 34rem at 12% 92%, var(--auth-glow), transparent 72%),
+    radial-gradient(ellipse 34rem 42rem at 88% 10%, var(--auth-warm-glow), transparent 70%),
+    linear-gradient(132deg, var(--auth-canvas-deep), var(--auth-canvas) 54%, var(--auth-canvas-deep));
+  color: var(--auth-text);
+  color-scheme: dark;
+
+  &::before {
+    position: absolute;
+    z-index: -1;
+    inset: -48%;
+    background: repeating-radial-gradient(
+      ellipse at 52% 50%,
+      transparent 0 7.25rem,
+      var(--auth-contour) 7.3rem 7.36rem,
+      transparent 7.42rem 10.5rem
+    );
+    transform: rotate(-18deg) scaleX(1.2);
+    mask-image: linear-gradient(118deg, transparent 12%, #000 45%, transparent 86%);
+    content: '';
+    pointer-events: none;
+  }
+
+  &::after {
+    position: absolute;
+    z-index: -1;
+    top: 50%;
+    left: 50%;
+    width: min(68vw, 54rem);
+    aspect-ratio: 1;
+    border: 1px solid var(--auth-orbit);
+    border-radius: 50%;
+    box-shadow: inset 0 0 7rem var(--auth-glow), 0 0 8rem var(--auth-glow);
+    transform: translate(8%, -62%);
+    content: '';
+    pointer-events: none;
+  }
 }
 
 .auth-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: var(--space-lg);
-  width: 100%;
-  max-width: 26rem;
+  width: min(100%, 29rem);
   margin: 0;
+  padding: var(--space-xl);
+  border: 1px solid var(--auth-border);
+  border-radius: var(--radius-lg);
+  background: var(--auth-surface);
+  box-shadow: var(--auth-shadow);
+  backdrop-filter: blur(var(--auth-backdrop-blur));
+  animation: auth-card-arrive var(--duration-slow) var(--ease-out) both;
+
+  &__form {
+    display: grid;
+    gap: var(--space-lg);
+  }
 
   &__intro {
     display: grid;
-    gap: var(--space-xs);
-  }
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xs);
 
-  h1 {
-    margin: 0;
-    font-size: var(--text-xl);
-    font-weight: 600;
-  }
+    h1 {
+      margin: 0;
+      color: var(--auth-text);
+      font-size: var(--text-xl);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.1;
+      text-wrap: balance;
+    }
 
-  &__intro p {
-    margin: 0;
-    color: var(--color-text-muted);
+    p:last-child {
+      max-width: 38ch;
+      margin: 0;
+      color: var(--auth-muted);
+      font-size: var(--text-base);
+      line-height: 1.55;
+    }
   }
 
   &__error {
     padding: var(--space-sm) var(--space-md);
-    background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-    color: var(--color-danger);
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+    color: var(--auth-danger);
+    font-size: var(--text-base);
   }
 
   &__submit {
-    width: 100%;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    min-height: var(--control-height);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--color-primary);
-    color: var(--color-primary-contrast);
+    width: 100%;
+    min-height: 3rem;
+    margin-top: var(--space-xs);
+    padding: 0 var(--space-md);
+    border: 1px solid var(--auth-action);
+    border-radius: var(--radius-md);
+    background: var(--auth-action);
+    box-shadow: var(--auth-button-shadow);
+    color: var(--auth-on-accent);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
 
-    &:hover:not(:disabled) { background: var(--color-primary-hover); }
-    &:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
-    &:disabled { cursor: wait; opacity: .7; }
+    &:hover:not(:disabled) {
+      border-color: var(--auth-accent);
+      background: var(--auth-accent);
+      box-shadow: var(--auth-button-shadow-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--auth-text);
+      outline-offset: 3px;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
   }
 
   &__forgot {
-    text-align: center;
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-self: center;
+    min-height: 2.75rem;
+    padding-inline: var(--space-sm);
+    color: var(--auth-accent);
+    font-size: var(--text-sm);
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    text-underline-offset: 0.25em;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out), text-decoration-color var(--duration-fast) var(--ease-out);
+
+    &:hover {
+      color: var(--auth-text);
+      text-decoration-color: currentColor;
+    }
+
+    &:focus-visible {
+      border-radius: var(--radius-sm);
+      outline: 2px solid var(--auth-accent);
+      outline-offset: 2px;
+    }
   }
 }
 
@@ -160,18 +174,28 @@
   position: relative;
   display: flex;
 
-  input { width: 100%; padding-right: 5.5rem; }
+  input {
+    width: 100%;
+    padding-inline-end: 5.5rem;
+  }
 }
 
 .auth-card__password-toggle {
   position: absolute;
   inset-block: 0;
   inset-inline-end: var(--space-sm);
+  padding-inline: var(--space-xs);
   border: 0;
   background: transparent;
-  color: var(--color-primary);
+  color: var(--auth-accent);
   font: inherit;
   cursor: pointer;
+
+  &:focus-visible {
+    border-radius: var(--radius-sm);
+    outline: 2px solid var(--auth-accent);
+    outline-offset: 1px;
+  }
 }
 
 .field {
@@ -181,111 +205,41 @@
   gap: var(--space-xs);
 
   label {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
+    color: var(--auth-muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
   }
 
   input {
-    min-height: var(--control-height);
-    padding: 0 var(--space-sm);
-    border: 1px solid var(--color-border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    color: var(--color-text);
+    width: 100%;
+    min-height: 3rem;
+    padding: 0 var(--space-md);
+    border: 1px solid var(--auth-field-border);
+    border-radius: var(--radius-md);
+    background: var(--auth-field);
+    color: var(--auth-text);
     font: inherit;
+    transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 
-    &:focus-visible { border-color: var(--color-primary); outline: 3px solid var(--color-focus); outline-offset: 1px; }
-    &[aria-invalid='true'] { border-color: var(--color-danger); }
+    &:hover:not(:focus-visible) {
+      border-color: var(--auth-border-hover);
+    }
+
+    &:focus-visible {
+      border-color: var(--auth-accent);
+      outline: 2px solid var(--auth-focus);
+      outline-offset: 1px;
+      background: var(--auth-field-focus);
+    }
+
+    &[aria-invalid='true'] {
+      border-color: var(--color-danger);
+    }
   }
 }
 
 .field-error {
-  color: var(--color-danger);
-}
-
-@include bp.tablet-down {
-  .auth-page {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-story {
-    min-height: 0;
-    gap: var(--space-md);
-    padding: var(--space-lg);
-
-    &__message {
-      max-width: 46rem;
-      margin: 0;
-      padding-block: var(--space-md);
-    }
-
-    h2 {
-      max-width: 18ch;
-      font-size: var(--text-xl);
-      line-height: 1.2;
-    }
-
-    &__description {
-      margin-top: var(--space-sm);
-      font-size: var(--text-base);
-      line-height: 1.5;
-    }
-
-    &__contours {
-      right: -18%;
-      bottom: -35%;
-      width: 90%;
-      height: 120%;
-    }
-  }
-
-  .auth-panel {
-    min-height: 24rem;
-    padding: var(--space-xl) var(--space-lg);
-  }
-}
-
-@media (forced-colors: active) {
-  .auth-story {
-    background: CanvasText;
-    color: Canvas;
-    border-block-end: 1px solid CanvasText;
-  }
-
-  .auth-panel {
-    background: Canvas;
-    color: CanvasText;
-  }
-
-  .auth-story__contours {
-    display: none;
-  }
-
-  .auth-story__context,
-  .auth-story__description {
-    color: Canvas;
-  }
-
-  .auth-card__password-toggle,
-  .auth-card__forgot {
-    color: LinkText;
-  }
-
-  .auth-card__submit {
-    border: 1px solid ButtonText;
-    background: ButtonFace;
-    color: ButtonText;
-  }
-
-  .field input {
-    border-color: ButtonText;
-    background: Field;
-    color: FieldText;
-
-    &:focus-visible {
-      outline-color: Highlight;
-    }
-  }
+  color: var(--auth-danger);
 }
 
 .visually-hidden {
@@ -298,4 +252,92 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@keyframes auth-card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-sm)) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@include bp.phone {
+  .auth-page {
+    padding: var(--space-md);
+  }
+
+  .auth-page::after {
+    width: 112vw;
+    transform: translate(-35%, -48%);
+  }
+
+  .auth-card {
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+  }
+}
+
+@media (max-height: 42rem) and (min-width: 48rem) {
+  .auth-page {
+    padding-block: var(--space-md);
+  }
+
+  .auth-card {
+    gap: var(--space-md);
+    padding-block: var(--space-lg);
+  }
+}
+
+@media (forced-colors: active) {
+  .auth-page {
+    background: Canvas;
+    color: CanvasText;
+    color-scheme: light;
+
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
+
+  .auth-card {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    color: CanvasText;
+    backdrop-filter: none;
+
+    &__intro h1,
+    &__intro p:last-child,
+    &__eyebrow,
+    &__forgot,
+    &__password-toggle {
+      color: CanvasText;
+    }
+
+    &__submit {
+      border: 1px solid ButtonText;
+      background: ButtonFace;
+      color: ButtonText;
+      box-shadow: none;
+    }
+  }
+
+  .field {
+    label,
+    input {
+      border-color: FieldText;
+      background: Field;
+      color: FieldText;
+    }
+
+    input:focus-visible {
+      outline-color: Highlight;
+    }
+  }
 }

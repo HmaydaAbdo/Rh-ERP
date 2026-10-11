@@ -46,7 +46,7 @@ html.theme-transition *::after {
     var(--color-surface-alt) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-balayage 1.4s var(--ease-in-out) infinite;
+  animation: skeleton-balayage var(--duration-skeleton) var(--ease-in-out) infinite;
 }
 
 @keyframes skeleton-balayage {

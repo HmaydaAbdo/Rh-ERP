@@ -4,12 +4,24 @@
   }
 
   @if (aucunePaie()) {
-    <p class="paie-analytique__message">Aucune paie enregistrée.</p>
+    <div class="paie-analytique__etat-vide" role="status">
+      <span class="paie-analytique__icone-vide"><stp-icon name="chart-column" size="1.5rem" /></span>
+      <div>
+        <h2 class="paie-analytique__titre-vide">Aucun bulletin à analyser</h2>
+        <p class="paie-analytique__message">Les indicateurs apparaîtront dès qu’une paie sera enregistrée.</p>
+      </div>
+    </div>
   } @else {
     @if (donnees(); as d) {
       <div class="paie-analytique__contenu" [class.paie-analytique__contenu--chargement]="chargement()">
         @if (vide()) {
-          <p class="paie-analytique__message">Aucun bulletin pour {{ libellePeriode(d.periode) }} avec cette sélection.</p>
+          <div class="paie-analytique__etat-vide" role="status">
+            <span class="paie-analytique__icone-vide"><stp-icon name="chart-column" size="1.5rem" /></span>
+            <div>
+              <h2 class="paie-analytique__titre-vide">Périmètre sans bulletin</h2>
+              <p class="paie-analytique__message">Aucun bulletin pour {{ libellePeriode(d.periode) }} avec cette sélection.</p>
+            </div>
+          </div>
         } @else {
           <div class="paie-analytique__tuiles">
             @for (tuile of tuiles(); track tuile.libelle; let i = $index) {

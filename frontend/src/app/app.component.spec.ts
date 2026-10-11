@@ -86,11 +86,11 @@ describe('AppComponent', () => {
       expect(document.activeElement?.id).toBe('contenu');
     });
 
-    it('protège le nom du produit de la traduction automatique', () => {
+    it('protège le nom du produit de la traduction automatique dans la barre compacte', () => {
       const fixture = TestBed.createComponent(AppComponent);
       fixture.detectChanges();
 
-      expect((fixture.nativeElement as HTMLElement).querySelector('.app-sidebar__brand [translate="no"]')).not.toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.app-topbar__titre[translate="no"]')).not.toBeNull();
     });
 
     it('should render the sidebar brand', () => {
