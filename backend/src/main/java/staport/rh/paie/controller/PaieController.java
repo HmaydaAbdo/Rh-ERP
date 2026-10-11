@@ -28,6 +28,7 @@ import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.dtos.response.PaieRestaurationDto;
 import staport.rh.paie.dtos.response.PaieSuppressionDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
@@ -106,6 +107,15 @@ public class PaieController {
     @PreAuthorize("hasAuthority('PAIE_PURGE')")
     public ResponseEntity<PaieSuppressionDto> supprimerGroupe(@Valid @RequestBody PaieSuppressionGroupeRequestDto requete) {
         return ResponseEntity.ok(new PaieSuppressionDto(paieService.deleteGroupe(requete.criteres(), requete.nombreAttendu())));
+    }
+
+    @PostMapping("/restauration/{idEntreeAudit}")
+    @Operation(summary = "Restaurer atomiquement un groupe depuis son entrée de suppression dans l'audit")
+    @ApiResponse(responseCode = "409", description = "Un bulletin employé/mois existe déjà ou une référence est absente ; rien n'est restauré")
+    @PreAuthorize("hasAuthority('PAIE_RESTORE')")
+    public ResponseEntity<PaieRestaurationDto> restaurerGroupe(@PathVariable Long idEntreeAudit) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new PaieRestaurationDto(paieService.restaurerGroupeDepuisAudit(idEntreeAudit)));
     }
 
     @GetMapping("/periodes")

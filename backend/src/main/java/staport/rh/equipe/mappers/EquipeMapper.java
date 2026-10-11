@@ -1,6 +1,7 @@
 package staport.rh.equipe.mappers;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import staport.rh.equipe.dtos.request.EquipeCreateRequestDto;
 import staport.rh.equipe.dtos.request.EquipeUpdateRequestDto;
@@ -12,6 +13,7 @@ public interface EquipeMapper {
 
     Equipe toEntity(EquipeCreateRequestDto dto);
 
+    @Mapping(target = "version", ignore = true)
     void updateEntityFromDto(EquipeUpdateRequestDto dto, @MappingTarget Equipe entity);
 
     EquipeResponseDto toDto(Equipe entity);

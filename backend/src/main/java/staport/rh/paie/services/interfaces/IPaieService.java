@@ -36,6 +36,9 @@ public interface IPaieService {
      */
     long deleteGroupe(PaieSearchCriteria criteres, long nombreAttendu);
 
+    /** Recrée un groupe depuis les instantanés d'une entrée de suppression du journal d'audit. */
+    long restaurerGroupeDepuisAudit(Long idEntreeAudit);
+
     /** Mois qui contiennent de la paie, du plus récent au plus ancien, avec leur contenu résumé — alimente le sélecteur de
      * mois de l'assistant d'export et la vue Cartes (voir docs/paie/README.md). {@code criteres} filtre les bulletins
      * comptés (son mois est ignoré : on liste justement les mois) ; {@code null} = toute la paie. */

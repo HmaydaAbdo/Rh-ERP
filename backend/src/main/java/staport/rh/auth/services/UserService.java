@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.audit.events.ActionSecurite;
 import staport.rh.audit.events.EvenementSecurite;
 import staport.rh.auth.dtos.request.AdminResetPasswordRequestDto;
@@ -125,6 +126,7 @@ public class UserService implements IUserService {
     @AuditableAction(action = "UTILISATEUR_MODIFICATION", type = TypeOperation.UPDATE, entite = Utilisateur.class)
     public UserResponseDto update(Long id, UserUpdateRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), utilisateur.getVersion());
 
         repository.findByEmail(dto.email())
                 .filter(existing -> !existing.getId().equals(id))
@@ -139,7 +141,7 @@ public class UserService implements IUserService {
         utilisateur.setEmployee(resolveEmployeeReference(dto.employeeId()));
         utilisateur.setRoles(resolveRoles(dto.roleIds()));
 
-        Utilisateur updated = repository.save(utilisateur);
+        Utilisateur updated = repository.saveAndFlush(utilisateur);
         if (desactive) {
             int sessions = authService.revoquerSessions(id);
             log.info("Compte désactivé : utilisateurId={}, sessions coupées={}", id, sessions);
@@ -153,8 +155,9 @@ public class UserService implements IUserService {
     @AuditableAction(action = "UTILISATEUR_PERMISSIONS_REFUSEES", type = TypeOperation.UPDATE, entite = Utilisateur.class)
     public UserResponseDto updateDeniedPermissions(Long id, DenyPermissionsRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), utilisateur.getVersion());
         utilisateur.setPermissionsRefusees(resolvePermissions(dto.permissionIds()));
-        Utilisateur updated = repository.save(utilisateur);
+        Utilisateur updated = repository.saveAndFlush(utilisateur);
         log.info("Deny overrides mis à jour : utilisateurId={}, permissions={}", id, dto.permissionIds().size());
         return toDto(updated);
     }

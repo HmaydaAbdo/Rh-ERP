@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.parametre.dtos.request.ParametreUpdateRequestDto;
 import staport.rh.parametre.dtos.response.ParametreResponseDto;
@@ -56,10 +57,11 @@ public class ParametreService implements IParametreService {
     @AuditableAction(action = "PARAMETRE_MODIFICATION", type = TypeOperation.UPDATE, entite = Parametre.class)
     public ParametreResponseDto update(Long id, ParametreUpdateRequestDto dto) {
         Parametre parametre = repository.findById(id).orElseThrow(() -> new ParametreNotFoundException(id));
+        VersionOptimiste.verifier(dto.version(), parametre.getVersion());
         CleParametre cle = CleParametre.depuisCode(parametre.getCle())
                 .orElseThrow(() -> new IllegalStateException("Clé de paramètre inconnue du catalogue : " + parametre.getCle()));
         parametre.setValeur(cle.normaliser(dto.valeur()));
-        Parametre enregistre = repository.save(parametre);
+        Parametre enregistre = repository.saveAndFlush(parametre);
         invaliderApresValidation();
         log.info("Paramètre modifié : id={}, cle={}", enregistre.getId(), cle.code());
         return mapper.toDto(enregistre, cle);

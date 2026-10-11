@@ -41,6 +41,9 @@
 | C11 | **Demande de réinitialisation synchrone** (G2) : l'envoi du courriel allongeait la réponse pour une adresse connue | `EmailService.envoyerLienReinitialisation` en `@Async` (`AsyncConfig`), échec journalisé sans être renvoyé ; `EmailServiceTest` |
 | C12 | **Tests sur PostgreSQL** (G9) : conteneur de service en CI et base préparée à la main en local (partagée, donc exposée aux données réelles) | Testcontainers (`pgvector/pgvector:pg18`, un conteneur par exécution, démarré à la première classe `@SpringBootTest`) ; le service PostgreSQL et les variables `DB_*` disparaissent de la CI ; suite complète (287) verte sans aucune variable de base |
 | C13 | **Création d'un utilisateur ou d'un rôle répondait `200`** (les autres domaines répondent `201`) | `POST /users` et `POST /roles` répondent `201 Created` (documenté dans Swagger) ; le frontend accepte tout `2xx` |
+| C14 | **G3 — Paramètres de fonctionnement codés en dur** | Migration `V16`, catalogue typé et borné dans `CleParametre`, écran d'administration, permissions dédiées et journalisation des changements ; tests backend et frontend dans le module Paramètres |
+| C15 | **G5 — Listes utilisateurs et rôles non paginées** | Les listes passent par `POST /users/search` et `/roles/search`, avec pagination serveur et permissions `USER_MANAGE` / `ROLE_MANAGE` ; les routes de liste entière n'existent plus |
+| C16 | **G6 — Extension `vector` activée sans usage actuel** | Exception confirmée le 2026-10-11 : le propriétaire souhaite conserver pgvector pour de futurs embeddings ; aucune migration de suppression prévue |
 
 ---
 
@@ -50,14 +53,10 @@ Ils sont suivis dans [TODO.md](../../TODO.md).
 
 | # | Gravité | Constat | Proposition / options |
 |---|---|---|---|
-| G3 | Moyenne | **Valeurs de fonctionnement en dur** : durée du jeton d'accès (15 min), du jeton de rafraîchissement (30 jours), du lien de réinitialisation (1 h), longueur minimale du mot de passe (10), tranche de l'analytique de paie (500). `conventions/configuration.md` demande qu'une valeur métier susceptible d'évoluer (délais, seuils, durées, tentatives) soit **réglable par un administrateur dans l'interface**, jamais dans le code ni dans `application.yml` | Nouveau chantier : table de paramètres, écran d'administration, permission dédiée, audit et documentation RBAC — c'est un choix d'architecture, donc à valider avant de le coder. Alternative : constater que ces cinq valeurs sont des paramètres techniques stables et les laisser (écart assumé) |
-| G5 | Basse | `GET /users` et `GET /roles` renvoient la liste entière, sans pagination | **Écart assumé proposé** : routes réservées à `USER_MANAGE` / `ROLE_MANAGE`, quelques dizaines de lignes, et les sélecteurs de l'interface (rôles d'un compte) ont besoin de la liste complète ; paginer changerait le contrat et trois écrans sans gain de sécurité |
-| G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise (`conventions/database.md` et `conventions/deployment.md` demandent de ne l'activer qu'à un besoin réel) | **Écart assumé proposé** : activation décidée par le propriétaire dans `V1` (déjà appliquée en production : la modifier casse la somme de contrôle Flyway) ; la retirer demanderait une `V16` `DROP EXTENSION` et modifierait la procédure de migration PG17 → PG18, qui contrôle la présence de pgvector |
-| G10 | À vérifier | **Production** : confirmer qu'elle utilise bien les deux comptes PostgreSQL (migration / application) | Sur le serveur : `docker compose logs backend | grep "Intégrité de l'audit"` — « NON garantie » signifie un seul compte (voir [../deployment.md](../deployment.md), « Deux comptes PostgreSQL »). Aucune action sur la production sans sauvegarde et répétition |
+| G10 | À vérifier en production | Le dépôt prépare le compte applicatif distinct, la chaîne locale d'intégrité et pgAudit. Le serveur est encore en PostgreSQL 17 ; ces contrôles seront faits pendant la migration vers PostgreSQL 18. | Après accès SSH, vérifier le message d'intégrité, `shared_preload_libraries`, l'extension et les journaux pgAudit selon [../deployment.md](../deployment.md). Aucun accès SSH disponible dans cette session |
 
 ---
 
 ## Suite
 
-1. Décider G3, G5, G6 et vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).
-2. Migration de la production PostgreSQL 17 → 18 : voir [../deployment.md](../deployment.md) (répétition sur une sauvegarde avant tout).
+1. G3 et G5 sont corrigés (C14 et C15). G6 est conservé par décision du propriétaire (C16) ; vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).

@@ -13,6 +13,7 @@
 | `POST /paie/search` | `PAIE_READ` |
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | `POST /paie/suppression` | `PAIE_PURGE` (un mois, un chantier ou une équipe d'un coup : permission distincte de `PAIE_DELETE`) |
+| `POST /paie/restauration/{idEntreeAudit}` | `PAIE_RESTORE` (restauration atomique depuis une suppression de groupe auditée) |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/periodes` | `PAIE_READ` |
@@ -42,6 +43,7 @@
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
 | Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_PURGE` — `canPurge()` |
+| Action « Restaurer ce groupe » dans le détail d'une suppression de groupe du journal d'audit | `PAIE_RESTORE` — distincte de `AUDIT_READ` |
 | Bouton « Historique » (détail d'un bulletin) | `AUDIT_READ` — `canViewHistory()` |
 | Colonnes Chantiers / Équipes / Fonctions du panneau de filtres | `CHANTIER_READ` / `EQUIPE_READ` / `FUNCTION_READ` |
 
@@ -51,3 +53,5 @@
 `V4__seed_permissions_et_roles.sql`) **et `PAIE_PURGE`** (`V15__permission_paie_purge.sql`, attribuée à `SYSTEM_ADMIN` et à
 chaque rôle qui détenait `PAIE_DELETE`, pour ne rien retirer aux comptes existants). Pour séparer les pouvoirs, retirer
 `PAIE_PURGE` des rôles qui ne doivent supprimer qu'un bulletin à la fois — administrable via `/admin/roles`.
+`PAIE_RESTORE` est attribuée à `SYSTEM_ADMIN` seul par `V17__permission_paie_restore.sql` ; elle peut ensuite être accordée
+depuis `/admin/roles`. `AUDIT_READ` ne donne jamais le droit de restaurer.

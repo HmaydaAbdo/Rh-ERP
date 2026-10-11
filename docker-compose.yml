@@ -14,7 +14,25 @@
 
 services:
   postgres:
-    image: pgvector/pgvector:pg18
+    image: ${DOCKERHUB_USERNAME}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:-latest}
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pgaudit
+      - -c
+      - logging_collector=on
+      - -c
+      - log_destination=csvlog
+      - -c
+      - log_directory=/var/lib/postgresql
+      - -c
+      - log_filename=postgresql-%Y-%m-%d_%H%M%S.csv
+      - -c
+      - log_rotation_age=1d
+      - -c
+      - log_rotation_size=0
+      - -c
+      - log_truncate_on_rotation=off
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -71,6 +89,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      PGAUDIT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}

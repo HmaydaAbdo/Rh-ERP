@@ -43,6 +43,7 @@ export class UserFormComponent {
   private readonly messageService = inject(NotificationService);
 
   private readonly userId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.userId() !== null);
   protected readonly loading = signal(true);
   private readonly allRoles = signal<Role[]>([]);
@@ -101,6 +102,7 @@ export class UserFormComponent {
       forkJoin([roles$, this.userService.findById(id)])
         .pipe(finalize(() => this.loading.set(false)))
         .subscribe(([roles, user]) => {
+          this.version.set(user.version);
           this.allRoles.set(roles);
           this.deniedPermissionIds.set(new Set(user.permissionsRefusees.map((p) => p.id)));
           this.modele.set({
@@ -140,8 +142,8 @@ export class UserFormComponent {
     const requete$ =
       id !== null
         ? this.userService
-            .update(id, { email: saisie.email, actif: saisie.actif, employeeId: saisie.employeeId, roleIds: saisie.roleIds })
-            .pipe(switchMap(() => this.userService.updateDeniedPermissions(id, { permissionIds: Array.from(this.deniedPermissionIds()) })))
+            .update(id, { version: this.version()!, email: saisie.email, actif: saisie.actif, employeeId: saisie.employeeId, roleIds: saisie.roleIds })
+            .pipe(switchMap((user) => this.userService.updateDeniedPermissions(id, { version: user.version, permissionIds: Array.from(this.deniedPermissionIds()) })))
         : this.userService.create({
             username: saisie.username,
             email: saisie.email,

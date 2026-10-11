@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Set;
 
 public record UserUpdateRequestDto(
+        @NotNull Long version,
         @NotBlank @Email String email,
         boolean actif,
         Long employeeId,

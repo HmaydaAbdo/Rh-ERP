@@ -17,6 +17,7 @@ import staport.rh.audit.entities.AuditJournalEntry;
 import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.audit.metrics.AuditMetrics;
 import staport.rh.audit.services.AuditJournalWriter;
+import staport.rh.audit.web.AuditRequeteHttpAttributes;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.LinkedHashMap;
@@ -51,6 +52,7 @@ public class EcouteurEvenementsSecurite {
 
     @EventListener
     public void surEvenement(EvenementSecurite evenement) {
+        marquerRequeteCommeAuditee();
         ContexteAudit contexte = ResolveurContexteAudit.courant();
         Long utilisateurId = evenement.utilisateurId() != null ? evenement.utilisateurId() : contexte.utilisateurId();
         String utilisateurNom = evenement.utilisateurNom() != null ? evenement.utilisateurNom() : contexte.utilisateurNom();
@@ -68,6 +70,7 @@ public class EcouteurEvenementsSecurite {
         RequestAttributes attributs = RequestContextHolder.getRequestAttributes();
         if (attributs instanceof ServletRequestAttributes servlet) {
             HttpServletRequest requete = servlet.getRequest();
+            requete.setAttribute(AuditRequeteHttpAttributes.ACTION_AUDITEE, Boolean.TRUE);
             details.put("methode", requete.getMethod());
             details.put("route", requete.getRequestURI());
         }
@@ -92,6 +95,13 @@ public class EcouteurEvenementsSecurite {
         } catch (RuntimeException impossible) {
             metriques.ecritureEnEchec(CategorieAudit.SECURITE.name());
             log.error("Événement de sécurité impossible à écrire : action={}", action, impossible);
+        }
+    }
+
+    private static void marquerRequeteCommeAuditee() {
+        RequestAttributes attributs = RequestContextHolder.getRequestAttributes();
+        if (attributs instanceof ServletRequestAttributes servlet) {
+            servlet.getRequest().setAttribute(AuditRequeteHttpAttributes.ACTION_AUDITEE, Boolean.TRUE);
         }
     }
 }

@@ -8,6 +8,9 @@ import org.hibernate.envers.AuditReaderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -24,6 +27,7 @@ import staport.rh.audit.metrics.AuditMetrics;
 import staport.rh.audit.perimetre.DescriptionPerimetre;
 import staport.rh.audit.perimetre.PerimetreAudit;
 import staport.rh.audit.services.AuditJournalWriter;
+import staport.rh.audit.web.AuditRequeteHttpAttributes;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -71,11 +75,19 @@ public class GenericAuditAspect {
         if (ACTION_EN_COURS.get() != null) {
             return point.proceed();
         }
+        marquerRequeteCommeAuditee();
         ACTION_EN_COURS.set(Boolean.TRUE);
         try {
             return executer(point, action);
         } finally {
             ACTION_EN_COURS.remove();
+        }
+    }
+
+    private static void marquerRequeteCommeAuditee() {
+        RequestAttributes attributs = RequestContextHolder.getRequestAttributes();
+        if (attributs instanceof ServletRequestAttributes servlet) {
+            servlet.getRequest().setAttribute(AuditRequeteHttpAttributes.ACTION_AUDITEE, Boolean.TRUE);
         }
     }
 

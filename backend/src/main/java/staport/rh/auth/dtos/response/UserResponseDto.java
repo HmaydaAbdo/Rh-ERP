@@ -4,6 +4,7 @@ import java.util.Set;
 
 public record UserResponseDto(
         Long id,
+        Long version,
         String username,
         String email,
         boolean actif,

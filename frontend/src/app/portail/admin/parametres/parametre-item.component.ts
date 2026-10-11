@@ -78,7 +78,7 @@ export class ParametreItemComponent implements OnInit {
 
   private async enregistrer(): Promise<void> {
     const parametre = this.parametre();
-    const resultat = await attendreEnregistrement(this.parametreService.update(parametre.id, { valeur: this.saisie().valeur }));
+    const resultat = await attendreEnregistrement(this.parametreService.update(parametre.id, { version: parametre.version, valeur: this.saisie().valeur }));
     if (resultat) {
       this.saisie.set({ valeur: resultat.valeur });
       this.form().reset();

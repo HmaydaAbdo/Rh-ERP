@@ -23,6 +23,7 @@ export class EquipeFormComponent {
   private readonly messageService = inject(NotificationService);
 
   private readonly equipeId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.equipeId() !== null);
 
   private readonly modele = signal({ code: '', libelle: '' });
@@ -42,7 +43,10 @@ export class EquipeFormComponent {
     if (idParam) {
       const id = Number(idParam);
       this.equipeId.set(id);
-      this.equipeService.getById(id).subscribe((equipe) => this.modele.set({ code: equipe.code, libelle: equipe.libelle }));
+      this.equipeService.getById(id).subscribe((equipe) => {
+        this.version.set(equipe.version);
+        this.modele.set({ code: equipe.code, libelle: equipe.libelle });
+      });
     }
   }
 
@@ -50,7 +54,7 @@ export class EquipeFormComponent {
     const dto = this.modele();
     const id = this.equipeId();
 
-    const equipe = await attendreEnregistrement(id !== null ? this.equipeService.update(id, dto) : this.equipeService.create(dto));
+    const equipe = await attendreEnregistrement(id !== null ? this.equipeService.update(id, { ...dto, version: this.version()! }) : this.equipeService.create(dto));
     if (!equipe) {
       return;
     }

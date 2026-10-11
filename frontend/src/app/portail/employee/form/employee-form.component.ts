@@ -60,6 +60,7 @@ export class EmployeeFormComponent {
   protected readonly statutOptions = STATUT_OPTIONS;
 
   private readonly employeeId = signal<number | null>(null);
+  private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.employeeId() !== null);
 
   private readonly modele = signal<EmployeeSaisie>({
@@ -92,6 +93,7 @@ export class EmployeeFormComponent {
       const id = Number(idParam);
       this.employeeId.set(id);
       this.employeeService.getById(id).subscribe((employee) => {
+        this.version.set(employee.version);
         this.modele.set({
           nomPrenom: employee.nomPrenom,
           cin: employee.cin,
@@ -118,7 +120,7 @@ export class EmployeeFormComponent {
     const id = this.employeeId();
 
     const employee = await attendreEnregistrement(
-      id !== null ? this.employeeService.update(id, { ...dto, statut: saisie.statut }) : this.employeeService.create(dto)
+      id !== null ? this.employeeService.update(id, { ...dto, statut: saisie.statut, version: this.version()! }) : this.employeeService.create(dto)
     );
     if (!employee) {
       return;

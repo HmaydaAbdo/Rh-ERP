@@ -84,7 +84,7 @@ public class AuditJournalEntry {
     @Column(name = "nombre_elements", updatable = false)
     private Integer nombreElements;
 
-    /** Description d'une opération de masse (JSON) : mois, critères, nom et empreinte d'un fichier… */
+    /** Description JSON d'un accès ou d'une opération : route, mois, critères non nominatifs, nom et empreinte d'un fichier… */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "perimetre", updatable = false)
     private String perimetre;

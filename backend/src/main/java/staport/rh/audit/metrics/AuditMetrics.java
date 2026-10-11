@@ -14,10 +14,12 @@ public class AuditMetrics {
 
     private final MeterRegistry registre;
     private final AtomicInteger integriteCompromise = new AtomicInteger();
+    private final AtomicInteger chaineInvalide = new AtomicInteger();
 
     public AuditMetrics(MeterRegistry registre) {
         this.registre = registre;
         registre.gauge("rh.audit.integrite.compromise", integriteCompromise);
+        registre.gauge("rh.audit.chaine.invalide", chaineInvalide);
     }
 
     /** Une entrée du journal n'a pas pu s'écrire (la catégorie dit si l'opération a été bloquée ou non). */
@@ -33,5 +35,10 @@ public class AuditMetrics {
     /** Vaut 1 quand le compte applicatif peut modifier une table d'audit, 0 sinon. */
     public void integriteCompromise(boolean compromise) {
         integriteCompromise.set(compromise ? 1 : 0);
+    }
+
+    /** Vaut 1 quand la vérification du chaînage local échoue. */
+    public void chaineInvalide(boolean invalide) {
+        chaineInvalide.set(invalide ? 1 : 0);
     }
 }

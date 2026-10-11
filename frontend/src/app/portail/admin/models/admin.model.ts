@@ -11,6 +11,7 @@ export interface UserCreateRequest {
 }
 
 export interface UserUpdateRequest {
+  version: number;
   email: string;
   actif: boolean;
   employeeId: number | null;
@@ -18,6 +19,7 @@ export interface UserUpdateRequest {
 }
 
 export interface DenyPermissionsRequest {
+  version: number;
   permissionIds: number[];
 }
 
@@ -27,6 +29,7 @@ export interface AdminResetPasswordRequest {
 
 export interface Role {
   id: number;
+  version: number;
   nom: string;
   description: string | null;
   permissions: PermissionSummary[];
@@ -54,6 +57,7 @@ export interface RoleCreateRequest {
 }
 
 export interface RoleUpdateRequest {
+  version: number;
   nom: string;
   description: string | null;
   permissionIds: number[];

@@ -1,6 +1,7 @@
 package staport.rh.paie.services;
 
 import jakarta.persistence.EntityManager;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -9,8 +10,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.paie.audit.PerimetreSuppressionGroupePaie;
+import staport.rh.paie.audit.PerimetreRestaurationGroupePaie;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
+import staport.rh.audit.dtos.response.PaieRestaurationInstantane;
+import staport.rh.audit.services.interfaces.IAuditJournalService;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
@@ -32,6 +37,7 @@ import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.exceptions.InvalidReferenceException;
 import staport.rh.paie.exceptions.PaieAlreadyExistsException;
 import staport.rh.paie.exceptions.PaieGroupeModifieException;
+import staport.rh.paie.exceptions.PaieGroupeRestaurationConflictException;
 import staport.rh.paie.exceptions.PaieNotFoundException;
 import staport.rh.paie.mappers.PaieMapper;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
@@ -45,9 +51,12 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class PaieService implements IPaieService {
@@ -61,6 +70,7 @@ public class PaieService implements IPaieService {
     private final IChantierService chantierService;
     private final IEquipeService equipeService;
     private final EntityManager entityManager;
+    private final IAuditJournalService auditJournalService;
 
     public PaieService(PaieRepository repository,
                         PaieMapper mapper,
@@ -68,7 +78,8 @@ public class PaieService implements IPaieService {
                         IFunctionService functionService,
                         IChantierService chantierService,
                         IEquipeService equipeService,
-                        EntityManager entityManager) {
+                        EntityManager entityManager,
+                        IAuditJournalService auditJournalService) {
         this.repository = repository;
         this.mapper = mapper;
         this.employeeService = employeeService;
@@ -76,6 +87,7 @@ public class PaieService implements IPaieService {
         this.chantierService = chantierService;
         this.equipeService = equipeService;
         this.entityManager = entityManager;
+        this.auditJournalService = auditJournalService;
     }
 
     @Override
@@ -105,13 +117,14 @@ public class PaieService implements IPaieService {
     @AuditableAction(action = "PAIE_MODIFICATION", type = TypeOperation.UPDATE, entite = Paie.class)
     public PaieResponseDto update(Long id, PaieUpdateRequestDto dto) {
         Paie entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
         mapper.updateEntityFromDto(dto, entity);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
         entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
-        Paie updated = repository.save(entity);
+        Paie updated = repository.saveAndFlush(entity);
         log.info("Bulletin de paie mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
@@ -158,6 +171,65 @@ public class PaieService implements IPaieService {
         repository.deleteAll(groupe);
         log.info("Groupe de bulletins de paie supprimé : periode={}, nombre={}", criteres.periode(), groupe.size());
         return groupe.size();
+    }
+
+    @Override
+    @Transactional
+    @AuditableAction(action = "PAIE_RESTAURATION_GROUPE", type = TypeOperation.CREATE, entite = Paie.class,
+            perimetre = PerimetreRestaurationGroupePaie.class)
+    public long restaurerGroupeDepuisAudit(Long idEntreeAudit) {
+        List<PaieRestaurationInstantane> instantanes = auditJournalService.instantanesPaiePourRestauration(idEntreeAudit);
+        verifierConflitsRestauration(instantanes);
+
+        List<Paie> bulletins = instantanes.stream().map(this::depuisInstantane).toList();
+        try {
+            repository.saveAll(bulletins);
+            entityManager.flush();
+        } catch (DataIntegrityViolationException conflitConcurrent) {
+            throw new PaieGroupeRestaurationConflictException(1);
+        }
+        log.info("Groupe de bulletins restauré : entreeAuditSourceId={}, nombre={}", idEntreeAudit, bulletins.size());
+        return bulletins.size();
+    }
+
+    private void verifierConflitsRestauration(List<PaieRestaurationInstantane> instantanes) {
+        Map<YearMonth, Set<Long>> employesParPeriode = instantanes.stream()
+                .collect(Collectors.groupingBy(PaieRestaurationInstantane::periode,
+                        Collectors.mapping(PaieRestaurationInstantane::employeeId, Collectors.toSet())));
+        int conflits = 0;
+        for (Map.Entry<YearMonth, Set<Long>> groupe : employesParPeriode.entrySet()) {
+            conflits += repository.findEmployeeIdsByPeriodeAndEmployees(groupe.getKey(), groupe.getValue()).size();
+        }
+        Set<String> couples = new HashSet<>();
+        for (PaieRestaurationInstantane instantane : instantanes) {
+            if (!couples.add(instantane.employeeId() + "|" + instantane.periode())) {
+                conflits++;
+            }
+            if (!employeeService.existsById(instantane.employeeId())
+                    || !functionService.existsById(instantane.fonctionId())
+                    || !chantierService.existsById(instantane.chantierId())
+                    || (instantane.equipeId() != null && !equipeService.existsById(instantane.equipeId()))) {
+                conflits++;
+            }
+        }
+        if (conflits > 0) {
+            throw new PaieGroupeRestaurationConflictException(conflits);
+        }
+    }
+
+    private Paie depuisInstantane(PaieRestaurationInstantane instantane) {
+        PaieCreateRequestDto dto = new PaieCreateRequestDto(instantane.employeeId(), instantane.periode(),
+                instantane.fonctionId(), instantane.chantierId(), instantane.equipeId(),
+                instantane.nombreJoursTravailles(), instantane.joursRecuperationOuvrable(),
+                instantane.joursRecuperationDimanche(), instantane.salaireMensuel(),
+                instantane.primeRoulageOrdinaire(), instantane.primeRoulageDimanche(),
+                instantane.salaireTotal(), instantane.observation());
+        Paie paie = mapper.toEntity(dto);
+        paie.setEmployee(entityManager.getReference(Employee.class, instantane.employeeId()));
+        paie.setFonction(resolveFonctionReference(instantane.fonctionId()));
+        paie.setChantier(resolveChantierReference(instantane.chantierId()));
+        paie.setEquipe(resolveEquipeReference(instantane.equipeId()));
+        return paie;
     }
 
     @Override

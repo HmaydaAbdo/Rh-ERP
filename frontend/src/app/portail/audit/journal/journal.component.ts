@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 
@@ -13,6 +13,9 @@ import { ACTIONS_AUDIT, ENTITES_AUDITEES, formaterHorodatage, libelleAction, lib
 import { AuditChampsComponent } from '../champs/audit-champs.component';
 import { AuditChangement, AuditCriteres, AuditEntree, AuditLigne, CategorieAudit, ResultatAudit } from '../models/audit.model';
 import { AuditService } from '../services/audit.service';
+import { AuthService } from '../../../core/auth/services/auth.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { PaieService } from '../../paie/services/paie.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 const TAILLE_PAGE_DETAIL = 10;
@@ -77,6 +80,20 @@ export class JournalComponent {
   protected readonly libelleOrigine = (origine: AuditLigne['origine']): string => LIBELLES_ORIGINES[origine];
 
   private readonly auditService = inject(AuditService);
+  private readonly authService = inject(AuthService);
+  private readonly paieService = inject(PaieService);
+  private readonly confirmationService = inject(ConfirmDialogService);
+  private readonly notificationService = inject(NotificationService);
+  protected readonly canRestore = computed(() => this.authService.hasPermission('PAIE_RESTORE'));
+  protected readonly restaurationPossible = computed(() => {
+    const entree = this.entree();
+    return entree?.action === 'PAIE_SUPPRESSION_GROUPE'
+      && entree.categorie === 'OPERATION'
+      && entree.resultat === 'SUCCES'
+      && entree.typeOperation === 'DELETE'
+      && entree.entiteType === 'Paie'
+      && (entree.nombreElements ?? 0) > 0;
+  });
 
   protected readonly lignes = signal<AuditLigne[]>([]);
   protected readonly totalRecords = signal(0);
@@ -171,6 +188,27 @@ export class JournalComponent {
   protected onVoirLaRequete(requestId: string): void {
     this.filterForm().reset({ ...filtresVides(), requestId });
     this.panneauOuvert.set(false);
+  }
+
+  protected demanderRestauration(): void {
+    const entree = this.entree();
+    if (!entree || !this.canRestore() || !this.restaurationPossible()) {
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Restaurer ce groupe de bulletins ?',
+      message: `${entree.nombreElements} bulletin(s) seront recréés avec de nouveaux identifiants. Si un bulletin existe déjà pour un employé et ce mois, toute la restauration sera refusée.`,
+      acceptLabel: 'Restaurer',
+      rejectLabel: 'Annuler',
+      accept: () => this.paieService.restaurerDepuisAudit(entree.id).subscribe((resultat) => {
+        this.notificationService.add({
+          severity: 'success',
+          summary: 'Bulletins restaurés',
+          detail: `${resultat.restaures} bulletin(s) recréé(s) depuis cette entrée d’audit.`,
+          life: 6000
+        });
+      })
+    });
   }
 
   perimetreEntrees(): [string, string][] {

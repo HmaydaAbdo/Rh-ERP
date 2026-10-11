@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.common.VersionOptimiste;
 import staport.rh.equipe.dtos.request.EquipeCreateRequestDto;
 import staport.rh.equipe.dtos.request.EquipeSearchCriteria;
 import staport.rh.equipe.dtos.request.EquipeUpdateRequestDto;
@@ -57,6 +58,7 @@ public class EquipeService implements IEquipeService {
     @AuditableAction(action = "EQUIPE_MODIFICATION", type = TypeOperation.UPDATE, entite = Equipe.class)
     public EquipeResponseDto update(Long id, EquipeUpdateRequestDto dto) {
         Equipe entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
         String code = normaliserCode(dto.code());
         String libelle = dto.libelle().trim();
         verifierUnicite(id, code, libelle);
@@ -64,7 +66,7 @@ public class EquipeService implements IEquipeService {
         mapper.updateEntityFromDto(dto, entity);
         entity.setCode(code);
         entity.setLibelle(libelle);
-        Equipe updated = repository.save(entity);
+        Equipe updated = repository.saveAndFlush(entity);
         log.info("Équipe mise à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }

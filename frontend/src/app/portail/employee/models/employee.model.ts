@@ -12,6 +12,7 @@ export interface Employee {
   fonction: Pick<FunctionReference, 'id' | 'libelle'>;
   chantier: Pick<ChantierReference, 'id' | 'code'>;
   statut: EmployeeStatut;
+  version: number;
 }
 
 export interface EmployeeCreateRequest {
@@ -25,6 +26,7 @@ export interface EmployeeCreateRequest {
 
 export interface EmployeeUpdateRequest extends EmployeeCreateRequest {
   statut: EmployeeStatut;
+  version: number;
 }
 
 export interface EmployeeSearchCriteria {

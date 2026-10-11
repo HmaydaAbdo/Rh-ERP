@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import staport.rh.audit.metrics.AuditMetrics;
@@ -50,6 +51,17 @@ public class VerificationIntegriteAudit implements ApplicationRunner {
                     + "Normal en développement avec un seul compte PostgreSQL ; en production, utiliser deux comptes "
                     + "(DB_MIGRATION_USER pour Flyway, DB_USER pour l'application — conventions/deployment.md).",
                     modifiables.size(), modifiables);
+        }
+        verifierChaine();
+    }
+
+    @Scheduled(fixedDelayString = "${audit.integrite.chaine-delai-ms:86400000}")
+    public void verifierChaine() {
+        Boolean valide = jdbc.queryForObject("SELECT audit_journal_chaine_valide()", Boolean.class);
+        boolean invalide = !Boolean.TRUE.equals(valide);
+        metriques.chaineInvalide(invalide);
+        if (invalide) {
+            log.error("Intégrité de la chaîne locale du journal d'audit compromise");
         }
     }
 }

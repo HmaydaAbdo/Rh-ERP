@@ -47,7 +47,7 @@ frontend du même nom (`frontend/src/app/portail/<domaine>/`).
 | Chantier | `chantier` | `chantier` | — (source externe : ERP) |
 | Équipe | `equipe` | `equipe` | — |
 | Employé | `employee` | `employe` | Fonction, Chantier |
-| Paie | `paie` | `paie` | Employé, Fonction, Chantier, Équipe |
+| Paie | `paie` | `paie` | Employé, Fonction, Chantier, Équipe, Audit (instantanés de restauration, lecture seule) |
 | Auth | `auth` | `utilisateur`, `role`, `permission`, `role_permission`, `utilisateur_role`, `utilisateur_permission_refusee`, `refresh_token`, `reset_password_token` | Employé |
 | Commun | `common` | — | Gestionnaire d'erreurs global, `ErrorResponseDto`, configuration OpenAPI et planification |
 
@@ -59,6 +59,7 @@ flowchart LR
   Fonction --> Paie
   Chantier --> Paie
   Equipe[Équipe] --> Paie
+  Paie -.instantanés Envers, lecture seule.-> Audit
   Employe -.lien optionnel.-> Auth
 ```
 
@@ -66,6 +67,10 @@ Une flèche signifie « utilise la façade de service de ». **Aucun domaine n'u
 autre** (`conventions/architecture.md`, « Encapsulation des domaines ») : un domaine qui doit référencer
 une entité d'un autre appelle `existsById` sur sa façade, puis attache l'entité par référence JPA
 (`EntityManager.getReference`) sans la charger.
+
+Pour restaurer un groupe supprimé, Paie demande à la façade `IAuditJournalService` les instantanés Envers d'une entrée de
+suppression réussie. L'audit ne dépend pas du service Paie pour cette lecture et ne réalise aucune écriture métier ; la
+restauration, ses invariants et son audit restent dans Paie.
 
 ### Structure d'un module
 

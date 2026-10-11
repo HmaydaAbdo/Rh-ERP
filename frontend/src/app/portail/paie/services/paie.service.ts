@@ -14,6 +14,7 @@ import {
   PaiePeriodeResume,
   PaieSearchCriteria,
   PaieSuppression,
+  PaieRestauration,
   PaieSuppressionGroupeRequest,
   PaieUpdateRequest,
   PaieRapportPdfRequest
@@ -58,6 +59,11 @@ export class PaieService {
   /** Supprime d'un coup un groupe de bulletins ; refusé (409) si son nombre n'est plus celui confirmé. */
   supprimerGroupe(requete: PaieSuppressionGroupeRequest): Observable<PaieSuppression> {
     return this.http.post<PaieSuppression>(`${this.baseUrl}/suppression`, requete);
+  }
+
+  /** Restaure un groupe supprimé depuis son entrée d'audit ; tout le groupe est refusé en cas de conflit. */
+  restaurerDepuisAudit(idEntreeAudit: number): Observable<PaieRestauration> {
+    return this.http.post<PaieRestauration>(`${this.baseUrl}/restauration/${idEntreeAudit}`, {});
   }
 
   importer(file: File, periode: string): Observable<PaieImportResult> {

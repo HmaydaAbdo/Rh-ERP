@@ -10,7 +10,7 @@ import staport.rh.parametre.entities.Parametre;
 public class ParametreMapper {
 
     public ParametreResponseDto toDto(Parametre parametre, CleParametre cle) {
-        return new ParametreResponseDto(parametre.getId(), cle.code(), cle.libelle(), cle.description(), cle.type(),
+        return new ParametreResponseDto(parametre.getId(), parametre.getVersion(), cle.code(), cle.libelle(), cle.description(), cle.type(),
                 cle.unite(), cle.minimum(), cle.maximum(), parametre.getValeur());
     }
 }

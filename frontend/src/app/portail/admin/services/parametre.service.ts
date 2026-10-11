@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 export interface Parametre {
   id: number;
+  version: number;
   cle: string;
   libelle: string;
   description: string;
@@ -15,6 +16,7 @@ export interface Parametre {
 }
 
 export interface ParametreUpdateRequest {
+  version: number;
   valeur: string;
 }
 

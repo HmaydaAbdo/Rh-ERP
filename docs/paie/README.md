@@ -475,5 +475,7 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   dédiée du TODO.
 - **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
 - Audité (voir [../audit/README.md](../audit/README.md)) : création, modification, suppression (unitaire ou en groupe, **bulletin par
-  bulletin**), import et exports Excel / PDF. L'historique d'un bulletin s'ouvre depuis son détail (bouton **Historique**,
-  permission `AUDIT_READ`). Aucune restauration automatique d'un groupe supprimé pour l'instant (voir `TODO.md`).
+  bulletin**), restauration, import et exports Excel / PDF. Dans le détail d'une suppression de groupe réussie, `SYSTEM_ADMIN`
+  peut restaurer le groupe avec `PAIE_RESTORE`. Les bulletins sont recréés avec de nouveaux identifiants ; si un employé a déjà
+  un bulletin pour le même mois, toute la restauration est refusée en `409` et rien n'est écrit. L'historique d'un bulletin
+  s'ouvre depuis son détail (bouton **Historique**, permission `AUDIT_READ`).

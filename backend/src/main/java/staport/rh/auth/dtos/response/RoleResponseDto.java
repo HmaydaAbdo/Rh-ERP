@@ -4,6 +4,7 @@ import java.util.Set;
 
 public record RoleResponseDto(
         Long id,
+        Long version,
         String nom,
         String description,
         Set<PermissionResponseDto> permissions,
