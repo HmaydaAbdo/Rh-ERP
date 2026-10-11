@@ -83,7 +83,7 @@ jobs:
 
       # Couverture des tests (JaCoCo, générée par la phase test) : rapport HTML conservé comme artefact.
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: backend/target/site/jacoco
@@ -101,7 +101,7 @@ jobs:
         run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml -L /src/target/bom.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-backend
           path: backend/target/bom.json
@@ -166,7 +166,7 @@ jobs:
           npm sbom --omit=dev --sbom-format cyclonedx > sbom-frontend.cdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-frontend
           path: frontend/sbom-frontend.cdx.json
@@ -187,7 +187,7 @@ jobs:
       # Traces et rapport des parcours en échec, pour comprendre un échec propre au CI sans le rejouer.
       - name: Upload E2E report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-report
           path: |
