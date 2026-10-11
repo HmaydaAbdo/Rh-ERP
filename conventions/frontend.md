@@ -5,7 +5,7 @@
 
 ## Technologies et version
 
-Le socle Staport suit la dernière version majeure **stable** d'Angular validée dans la version épinglée du standard. Au 10 octobre 2026, la cible ERP-RH est Angular **22.2.2**. Angular, Angular CDK/Aria, Node.js et TypeScript doivent respecter leurs matrices de compatibilité officielles et les plages de pairs; les versions doivent être verrouillées dans le lockfile.
+Utiliser la version majeure stable la plus récente et prise en charge d'Angular, avec son dernier correctif compatible. Dès qu'une nouvelle majeure stable paraît, planifier sa mise à niveau et progresser sans conserver durablement une majeure ancienne. Si une incompatibilité réelle impose un report, documenter le blocage, son responsable et sa date de réexamen. Vérifier les matrices officielles et les dépendances peer entre Angular, CLI, Node.js, TypeScript, RxJS et les bibliothèques UI. Verrouiller les versions dans le lockfile et le runtime CI ; ne pas utiliser de versions alpha, bêta, candidates ou snapshots en production.
 
 * Angular standalone, lazy-loaded, Signals pour l'état réactif et détection zoneless (zoneless est le défaut d'Angular 21+; ne pas réactiver Zone.js par provider).
 * Angular Aria/CDK comme primitives accessibles et fondation des composants Staport, sans dépendance à une suite commerciale de widgets.
@@ -17,13 +17,13 @@ Les composants partagés composent Aria/CDK avec le langage visuel Staport; util
 
 ## Workflow Angular
 
-1. Vérifier la dernière version stable et les matrices officielles Angular/Node/TypeScript/RxJS; épingler Node dans `.nvmrc`, `engines` et CI.
-2. Mettre à jour une version majeure à la fois avec `ng update`, examiner chaque migration générée et garder les paquets Angular alignés.
+1. Vérifier la version majeure stable la plus récente prise en charge et les matrices officielles Angular/Node/TypeScript/RxJS ; fixer le runtime dans la configuration du projet et de la CI.
+2. Mettre à jour une version majeure à la fois avec l'outil de migration officiel, examiner chaque migration générée et garder les paquets du framework alignés. Ne pas mêler à une mise à niveau une réécriture globale des composants ou des formulaires.
 3. Examiner peer dependencies et licences de chaque dépendance directe ou transitive. Préférer les API Angular natives, Aria/CDK et composants Staport.
-4. Pour chaque étape, exécuter installation reproductible (`npm ci`), lint/typecheck, tests unitaires/composants, build de production et tests E2E. Ne pas masquer une incompatibilité avec `--force`, `legacy-peer-deps` ou une augmentation arbitraire des budgets.
+4. Pour chaque étape, exécuter l'installation reproductible, lint/typecheck, tests unitaires/composants, build de production et tests E2E. Ne pas masquer une incompatibilité par une résolution forcée ou une augmentation arbitraire des budgets.
 5. Examiner notes de version et dépréciations; valider navigation, accessibilité, thèmes, responsive, performances et bundle sur les parcours concernés.
 
-Une migration n'est terminée que lorsque le lockfile est reproductible sans contournement, que la CI utilise Node supporté, que la licence est confirmée et que les validations sont vertes.
+Une migration n'est terminée que lorsque les dépendances sont reproductibles sans contournement, le runtime reste supporté, les licences sont confirmées et les validations sont vertes.
 
 ---
 
@@ -53,12 +53,15 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 * Un composant possède une seule responsabilité.
 * Les composants contiennent uniquement la logique de présentation.
 * Toute logique métier appartient à un Service.
+* Activer le mode strict TypeScript et conserver des types explicites aux frontières des API et bibliothèques ; ne pas contourner les erreurs de types par `any` ou des assertions injustifiées.
+* Utiliser les templates sémantiques et le control flow Angular (`@if`, `@for`, `@switch`) ; ne pas créer de logique métier complexe dans les templates.
 * Conserver le défaut OnPush de la version Angular cible et expliciter `ChangeDetectionStrategy.OnPush` quand cela rend l'intention lisible. Importer seulement les directives/composants Aria/CDK nécessaires.
 * Les composants métier restent dans leur domaine; les composants Staport partagés exposent une API explicite et cohérente.
 
 ### Signals et état réactif
 
 * Utiliser `signal()` pour l'état local modifiable et `computed()` pour les valeurs dérivées. Réserver `effect()` à la synchronisation avec un effet externe, pas à la copie d'un signal vers un autre.
+* Utiliser `linkedSignal()` seulement lorsqu'un état dérivé doit rester modifiable par l'utilisateur tout en suivant une nouvelle valeur source ; préférer `computed()` pour un état strictement dérivé.
 * Exposer un état en lecture seule lorsque sa mutation doit rester privée. Utiliser Signals pour l'état consommé par le template et les API Signal stables de la version ciblée.
 * Les Observables restent le format des API HTTP, événements continus et orchestration d'annulation/retry. Convertir avec `toSignal()` à la frontière lorsque le template consomme le flux comme état; ne pas conserver en parallèle le même état dans un Observable et un Signal.
 * Utiliser `resource()` / `httpResource()` pour des lectures déclaratives pilotées par Signals lorsque l'annulation et l'état `loading/error/value` simplifient réellement le parcours. Les Resources sont réservées aux lectures, jamais aux mutations.
@@ -70,6 +73,12 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 * Angular 21+ est zoneless par défaut : ne pas fournir `provideZoneChangeDetection()`. Retirer Zone.js des dépendances, polyfills et tests. Toute exception d'un adaptateur tiers est isolée, documentée et testée.
 * Vérifier les mises à jour après HTTP, formulaires, navigation/guards, dialogs, notifications, timers et événements des composants tiers sans Zone.js.
 * Le socle doit compiler et exécuter tests/build sans Zone.js. Tester les notifications de rendu asynchrones, et ne pas ajouter une dépendance Zone comme correctif.
+
+### Formulaires
+
+Signal Forms est le standard pour tous les formulaires. Utiliser les schémas typés pour centraliser validation,
+état des champs et soumission ; les contrôles partagés implémentent les interfaces Signal Forms adaptées. Ne pas
+introduire Reactive Forms ou les formulaires pilotés par template (`ngModel`) dans un formulaire applicatif.
 
 ---
 
@@ -342,6 +351,10 @@ Toute nouvelle fonctionnalité définit explicitement ses autorisations.
 
 Ne jamais construire du HTML contenant une donnée utilisateur.
 
+Pour une interface agentique, consommer les événements par un client de protocole typé. L'interface ne rend que
+des composants Angular connus : une réponse de modèle ne devient jamais HTML, template, script ou style exécutable.
+Afficher clairement l'état de l'agent, les sources utilisées et les actions demandant confirmation.
+
 Interdiction :
 
 ```ts
@@ -400,12 +413,11 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 
 # Qualité et tests
 
-* Angular CLI Vitest (`@angular/build:unit-test`) est le runner unitaire par défaut. Les nouveaux tests ne dépendent pas de Jasmine, Karma ou Zone.js; les suites existantes ont migré vers Vitest avec des fake timers natifs (ERP-RH, 2026-10-10 ; E2E Playwright + axe dans `frontend/e2e/`).
-* Tests de composants sous DOM simulé pour états, clavier, Signals, formulaires et erreurs; utiliser les harness Angular/CDK lorsqu'ils existent plutôt que tester les classes CSS internes.
-* Les tests d'intégration vérifient router, guards, intercepteurs, services HTTP et contrats avec le serveur; employer des fixtures représentatives et des assertions sur les statuts/permissions.
-* Les E2E utilisent Playwright dans les principaux navigateurs ciblés, avec des parcours auth, autorisation par domaine, CRUD critique, paie et exports. Les jeux de données sont isolés et réinitialisables.
-* Exécuter axe-core dans les E2E sur les parcours représentatifs; vérifier manuellement clavier, lecteur d'écran, contraste, zoom, mobile, thèmes et reduced-motion avant livraison.
-* CI exécute `npm ci`, lint, typecheck, tests unitaires, build production, E2E critiques et vérifications de dépendances/licences. Mesurer couverture et budgets; ne pas cacher un échec en relevant la limite.
+* Appliquer les couches et portes de [`testing.md`](testing.md) aux unités, composants, contrats, parcours navigateur et flux full stack pertinents.
+* Les tests de composants vérifient états, clavier, Signals, formulaires et erreurs ; utiliser les harness Angular/CDK lorsqu'ils existent plutôt que tester les classes CSS internes.
+* Les tests d'intégration vérifient router, guards, intercepteurs, services HTTP et contrats avec le serveur ; employer des fixtures représentatives et des assertions sur statuts et permissions.
+* Les parcours E2E couvrent les navigateurs et tailles d'écran pris en charge, les autorisations, les parcours métier critiques, ainsi que les états accessibles et les erreurs.
+* Automatiser les contrôles d'accessibilité possibles et vérifier clavier, lecteur d'écran, contraste, zoom, mobile, thèmes et reduced-motion selon la portée du changement.
 
 ---
 
@@ -422,6 +434,7 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 * Tout tableau de données offre tri, redimensionnement, réordonnancement, choix des colonnes, pagination avec total et filtres en temps réel.
 * Les erreurs HTTP sont gérées de manière centralisée.
 * Toute nouvelle route est chargée en Lazy Loading.
+* Utiliser la version stable la plus récente et garder le framework à jour ; aligner ses outils et dépendances compatibles.
 * Tout sélecteur recherche et charge ses options par page depuis le backend via le composant
   partagé — sélection multiple pour un filtre de liste ou une relation many-to-many, sélection
   simple pour une relation unique d'un enregistrement.
@@ -431,3 +444,11 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 * Toute fonctionnalité est documentée.
 * Aucun code mort ne doit être conservé.
 * Toute nouvelle fonctionnalité CRUD doit fournir une expérience utilisateur complète : liste paginée et triable, recherche, filtres si disponibles, création, consultation, modification, suppression (si autorisée), validations, gestion des erreurs, états de chargement et messages de succès.
+
+## Références Angular
+
+- [Versions, cadence et politique de support](https://angular.dev/reference/releases)
+- [Compatibilité Angular, Node.js, TypeScript et RxJS](https://angular.dev/reference/versions)
+- [Guide officiel de mise à jour](https://angular.dev/update-guide)
+- [Signals et état dérivé avec `linkedSignal`](https://angular.dev/guide/signals)
+- [Signal Forms](https://angular.dev/guide/forms/signals/overview)
