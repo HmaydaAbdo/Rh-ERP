@@ -184,7 +184,7 @@ de production à planifier/exécuter séparément**.
 ## CI/CD — état actuel
 
 **CI en place** (`.github/workflows/ci.yml`) : à chaque push sur `main`, tests backend (contre un
-PostgreSQL de service GitHub Actions) et frontend, puis build + push des images vers Docker Hub
+PostgreSQL jetable démarré par Testcontainers) et frontend, puis build + push des images vers Docker Hub
 (tags `<git-sha>` et `latest`, plus le tag de version sur un push de tag `v*`). Sur une pull
 request, seuls les tests tournent (pas de push d'image, pas d'exposition des secrets Docker Hub à
 une PR).

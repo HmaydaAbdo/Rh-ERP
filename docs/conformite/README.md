@@ -24,7 +24,7 @@
 
 ---
 
-## Écarts corrigés dans ce lot
+## Écarts corrigés (2026-10-11)
 
 | # | Écart | Correction |
 |---|---|---|
@@ -39,25 +39,26 @@
 | C9 | **Images Docker** (G7) : exécution en root, images de base non épinglées, healthcheck frontend fragile | Backend sous un compte dédié, frontend sur `nginx-unprivileged` (8080), bases épinglées par empreinte ; essayé : les deux images construites et lancées ensemble (non-root, santé, JSON, `429`) |
 | C10 | **Chaîne d'approvisionnement Maven** (G8) : aucune analyse, aucun SBOM, aucune couverture. **L'analyse a révélé 26 vulnérabilités connues** (3 critiques, 15 hautes) : Tomcat 11.0.24 (contournement d'authentification DIGEST, contrôle d'accès et FORM), Jackson (dénis de service), jsoup 1.18.1, Batik 1.14 (SSRF, exécution de code), Xalan 2.7.2 | Versions relevées : Tomcat 11.0.26, Jackson 2.21.7 / 3.1.7, jsoup 1.23.2, Batik 1.19, Xalan retiré (devenu inutile). CI : SBOM CycloneDX, OSV-Scanner (échec si vulnérabilité), JaCoCo (87 % des lignes, 73 % des branches), Dependabot. Suite complète verte (284) |
 | C11 | **Demande de réinitialisation synchrone** (G2) : l'envoi du courriel allongeait la réponse pour une adresse connue | `EmailService.envoyerLienReinitialisation` en `@Async` (`AsyncConfig`), échec journalisé sans être renvoyé ; `EmailServiceTest` |
+| C12 | **Tests sur PostgreSQL** (G9) : conteneur de service en CI et base préparée à la main en local (partagée, donc exposée aux données réelles) | Testcontainers (`pgvector/pgvector:pg18`, un conteneur par exécution, démarré à la première classe `@SpringBootTest`) ; le service PostgreSQL et les variables `DB_*` disparaissent de la CI ; suite complète (287) verte sans aucune variable de base |
+| C13 | **Création d'un utilisateur ou d'un rôle répondait `200`** (les autres domaines répondent `201`) | `POST /users` et `POST /roles` répondent `201 Created` (documenté dans Swagger) ; le frontend accepte tout `2xx` |
 
 ---
 
 ## Écarts ouverts — décision requise
 
-Ils sont suivis dans [TODO.md](../../TODO.md). Pour chacun : le constat, puis les options.
+Ils sont suivis dans [TODO.md](../../TODO.md).
 
-| # | Gravité | Constat | Options à trancher |
+| # | Gravité | Constat | Proposition / options |
 |---|---|---|---|
-| G3 | Basse | **Valeurs de fonctionnement en dur** : durées des jetons, longueur du mot de passe, expressions cron, tranche de pas | Variables d'environnement (`conventions/configuration.md`) ou paramètres administrables en base |
-| G5 | Basse | **Listes non paginées** : `GET /users` et `GET /roles` ; statuts `201` des créations à aligner route par route | Pagination et statuts alignés (change le contrat avec le frontend) |
-| G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise encore | La garder (socle Staport) ou la créer à la première table concernée |
-| G9 | Basse | **Tests sur PostgreSQL** : la CI utilise un conteneur de service, pas Testcontainers | Garder le service CI ou passer à Testcontainers (exécution locale sans base préparée) |
-| G10 | À vérifier | **Production** : confirmer que le déploiement utilise bien les deux comptes PostgreSQL (migration / application) comme la CI et `afterMigrate.sql` | Vérification côté serveur, à faire avec le propriétaire (aucune action sur la production sans sauvegarde et répétition) |
+| G3 | Moyenne | **Valeurs de fonctionnement en dur** : durée du jeton d'accès (15 min), du jeton de rafraîchissement (30 jours), du lien de réinitialisation (1 h), longueur minimale du mot de passe (10), tranche de l'analytique de paie (500). `conventions/configuration.md` demande qu'une valeur métier susceptible d'évoluer (délais, seuils, durées, tentatives) soit **réglable par un administrateur dans l'interface**, jamais dans le code ni dans `application.yml` | Nouveau chantier : table de paramètres, écran d'administration, permission dédiée, audit et documentation RBAC — c'est un choix d'architecture, donc à valider avant de le coder. Alternative : constater que ces cinq valeurs sont des paramètres techniques stables et les laisser (écart assumé) |
+| G5 | Basse | `GET /users` et `GET /roles` renvoient la liste entière, sans pagination | **Écart assumé proposé** : routes réservées à `USER_MANAGE` / `ROLE_MANAGE`, quelques dizaines de lignes, et les sélecteurs de l'interface (rôles d'un compte) ont besoin de la liste complète ; paginer changerait le contrat et trois écrans sans gain de sécurité |
+| G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise (le socle Staport et `conventions/deployment.md` demandent de ne l'activer qu'à un besoin réel) | **Écart assumé proposé** : activation décidée par le propriétaire dans `V1` (déjà appliquée en production : la modifier casse la somme de contrôle Flyway) ; la retirer demanderait une `V16` `DROP EXTENSION` et modifierait la procédure de migration PG17 → PG18, qui contrôle la présence de pgvector |
+| G10 | À vérifier | **Production** : confirmer qu'elle utilise bien les deux comptes PostgreSQL (migration / application) | Sur le serveur : `docker compose logs backend | grep "Intégrité de l'audit"` — « NON garantie » signifie un seul compte (voir [../deployment.md](../deployment.md), « Deux comptes PostgreSQL »). Aucune action sur la production sans sauvegarde et répétition |
 
 ---
 
 ## Suite
 
-1. Décider G1 à G10 (ordre proposé : G1, G4, G8, G7, puis le reste).
+1. Décider G3, G5, G6 et vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).
 2. Migration de la production PostgreSQL 17 → 18 : voir [../deployment.md](../deployment.md) (répétition sur une sauvegarde avant tout).
 3. Mettre à jour l'épinglage du socle Staport quand une version plus récente que v0.1.1 paraît.
