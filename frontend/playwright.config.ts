@@ -33,7 +33,7 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'], channel }, testMatch: /responsive\.spec\.ts/ }
   ],
   webServer: {
-    command: `npx ng serve --port ${PORT}`,
+    command: `npx ng serve --port ${PORT}${fullStack ? ' --proxy-config proxy.conf.js' : ''}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env['CI'],
     timeout: 180_000
