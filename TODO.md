@@ -143,8 +143,9 @@ purge, `AUDIT_READ` réservée à `SYSTEM_ADMIN`, consultations non journalisée
   séquentielle). Machine à états et validation d'enchaînement à concevoir le moment venu.
 
 ### Déploiement
-- **Backup PostgreSQL** : préparé mais pas implémenté (`docs/deployment.md`) — fréquence, rétention et
-  destination externe à décider.
+- **Backup PostgreSQL hors hôte** : les dumps locaux quotidiens (rétention 30 jours) sont en place ;
+  choisir une destination indépendante du serveur et planifier des exercices périodiques de
+  restauration (`docs/deployment.md`).
 - **CD** : le déploiement (`docker compose pull && up -d` en SSH) reste manuel. À ajouter en fin de CI
   (ex. `appleboy/ssh-action`, secrets GitHub : clé SSH + hôte) ; à trancher : déploiement automatique à
   chaque push sur `main` ou seulement sur un tag `v*`.

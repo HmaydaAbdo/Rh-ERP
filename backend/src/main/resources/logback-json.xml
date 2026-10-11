@@ -1,18 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Format de production : JSON (logstash-logback-encoder) derrière un appender asynchrone. L'exception est écrite avec sa
-     trace complète (champ stack_trace). discardingThreshold=0 : aucun événement n'est abandonné quand la file se remplit
-     (l'appelant attend plutôt que de perdre un log d'audit ou de sécurité). -->
+<!-- Format de production : JSON sur la console et dans des archives quotidiennes compressées. -->
 <included>
-    <appender name="SORTIE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeContext>false</includeContext>
             <customFields>{"application":"${APPLICATION}"}</customFields>
         </encoder>
     </appender>
+
+    <appender name="FICHIER_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/application.json</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/archive/application.%d{yyyy-MM-dd, UTC}.json.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <customFields>{"application":"${APPLICATION}"}</customFields>
+        </encoder>
+    </appender>
+
     <appender name="SORTIE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>2048</queueSize>
         <discardingThreshold>0</discardingThreshold>
         <neverBlock>false</neverBlock>
-        <appender-ref ref="SORTIE_JSON"/>
+        <appender-ref ref="CONSOLE_JSON"/>
+    </appender>
+
+    <appender name="FICHIER_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>false</neverBlock>
+        <appender-ref ref="FICHIER_JSON"/>
     </appender>
 </included>

@@ -85,5 +85,6 @@ Desktop.ini
 # --- Logs et fichiers temporaires ----------------------------------------
 *.log
 logs/
+backups/
 *.tmp
 *.bak

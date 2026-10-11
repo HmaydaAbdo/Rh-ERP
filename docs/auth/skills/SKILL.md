@@ -10,7 +10,7 @@ description: Use when changing authentication, sessions, accounts, roles, permis
 - [README Auth](../README.md)
 - [Permissions Auth](../../rbac/auth.md) et [catalogue RBAC](../../rbac/README.md)
 - [README Audit](../../audit/README.md)
-- `conventions/security.md` et le standard `standards/rbac-domain.md`
+- `conventions/security.md`
 
 ## Garde-fous
 

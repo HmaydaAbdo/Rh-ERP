@@ -1,168 +1,75 @@
 # Performance
 
-> Conventions de performance applicables à tout le projet.
+La performance se conçoit à partir des usages et des volumes attendus, puis se vérifie par des
+mesures reproductibles. Chaque application documente ses objectifs de latence, de débit, de capacité
+et les profils de charge pertinents.
 
 ## Principes
 
-* La performance fait partie de la conception de l'application.
-* Toute nouvelle fonctionnalité doit être conçue pour rester performante à mesure que les données augmentent.
-* Corriger un problème de performance est préférable dès sa détection plutôt qu'après la mise en production.
+* Définir des objectifs de service proportionnés à l'usage : latence, débit, disponibilité et
+  ressources. Distinguer les parcours interactifs des traitements asynchrones ou batch.
+* Éviter les traitements et transferts non bornés. Limiter les pages, recherches, exports, fichiers,
+  résultats d'outils et opérations de masse selon le besoin.
+* Charger et transmettre uniquement les données nécessaires. Préférer les filtres, tris et
+  agrégations exécutés près du stockage aux traitements en mémoire de grands ensembles.
+* Éviter les accès répétés dans une boucle ; regrouper ou précharger les opérations lorsque cela
+  réduit réellement les allers-retours sans créer un résultat démesuré.
+* Une optimisation est guidée par un goulot d'étranglement mesuré ou un risque crédible de dépassement
+  des objectifs. Garder le code lisible et vérifier que l'optimisation améliore le cas visé.
 
----
+## Stockage et accès aux données
 
-# Base de données
+* Examiner le plan d'accès et le volume lu/écrit pour les requêtes coûteuses. Ajouter un index selon
+  les filtres, jointures, tris, contraintes et mesures observés ; vérifier son coût en écriture et en
+  stockage.
+* Éviter les requêtes répétées, les chargements implicites et les accès N+1. Charger les relations
+  adaptées à l'opération plutôt que d'élargir globalement tous les chargements.
+* Paginer les collections dont le volume peut croître. Fixer des bornes, éviter les offsets profonds
+  si le stockage offre une pagination par curseur mieux adaptée, et exposer un contrat de page stable.
+* Définir explicitement les tris permis et les filtres disponibles. Ne jamais interpoler librement
+  un nom de colonne ou une expression fournie par un appelant.
+* Éviter le tri, le filtrage et l'agrégation de grandes collections en mémoire quand le stockage peut
+  effectuer ces opérations plus efficacement.
 
-## Requêtes
+Les règles propres à un ORM, à un moteur de stockage ou à la pagination sont dans la convention
+technologique correspondante, notamment `conventions/jpa.md` et `conventions/database.md`.
 
-* Toujours récupérer uniquement les données nécessaires.
-* Éviter les requêtes inutiles.
-* Éviter les appels répétés à la base dans une boucle.
-* Préférer une requête optimisée à plusieurs petites requêtes.
+## Services et intégrations
 
----
+* Définir des délais d'attente pour les appels externes, avec des limites compatibles avec le
+  parcours utilisateur et le budget global de la requête.
+* Ne pas lancer des requêtes réseau ou stockage en série dans une boucle si un appel groupé ou un
+  traitement asynchrone est adapté.
+* Utiliser retries, concurrence, parallélisme et cache seulement avec des limites, une politique
+  d'invalidation et un comportement de dégradation définis. Les retries ne doivent pas amplifier une
+  panne ; les commandes rejouées doivent être sûres ou idempotentes.
+* Les caches ne remplacent pas la source de vérité. Définir la fraîcheur, l'invalidation et les
+  frontières d'autorisation pour toute donnée mise en cache.
 
-## Pagination
+## Interfaces et API
 
-* Toute liste pouvant contenir un grand volume de données doit être paginée.
-* Ne jamais retourner une liste complète lorsque le volume peut devenir important.
-* Toute pagination doit également supporter le tri (`sorting`) et le filtrage (`filtering`).
-* **Le JSON d'une page est un DTO stable**, jamais la sérialisation brute de `PageImpl` (Spring Data n'en garantit pas la
-  structure et avertit à chaque réponse) : `@EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)` sur la classe
-  d'application. La page est alors `{ "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }` ; le
-  frontend modélise cette forme (`Page<T>`) et ne lit jamais `PageImpl`.
+* Les réponses ne contiennent que les champs nécessaires. Définir des limites sur les corps, les
+  collections, les fichiers et les temps de calcul.
+* Éviter les appels redondants et les double-soumissions. Les opérations longues peuvent être
+  asynchrones si leur statut, leurs limites et leur reprise sont documentés.
+* Charger les vues ou modules à la demande lorsque cela réduit réellement le coût initial sans nuire
+  aux parcours principaux.
 
----
+## Mesure et vérification
 
-## Tri
+Combiner les outils adaptés : métriques pour les séries temporelles, traces pour la latence de bout
+en bout, logs pour le contexte d'événement, profils et plans d'exécution pour localiser le coût. Les
+métriques suivent `conventions/metrics.md` ; les traces et logs ne doivent pas exposer de données
+confidentielles.
 
-* Les tris sont réalisés en base de données.
-* Ne jamais trier une grande collection en mémoire lorsqu'elle peut être triée par la base.
+Avant une optimisation ou une mise en production significative :
 
----
+* mesurer un scénario représentatif avec un jeu synthétique et des volumes réalistes ;
+* contrôler latence de bout en bout et percentiles pertinents, débit, erreurs et consommation de
+  ressources ;
+* vérifier les cas de charge élevée, les limites et le comportement lorsque les dépendances
+  ralentissent ou échouent ;
+* comparer au point de référence et conserver le résultat utile à la décision.
 
-## Filtrage
-
-* Les filtres sont réalisés via les Specifications.
-* Ne jamais charger toutes les données pour filtrer ensuite en mémoire.
-
----
-
-# Index
-
-* Toute colonne utilisée fréquemment dans un `WHERE`, `JOIN` ou `ORDER BY` doit être indexée.
-* Les index sont déclarés dans les entités via `@Table(indexes = ...)`.
-* Lorsqu'un nouveau filtre est ajouté, vérifier si un index est nécessaire dans le même changement.
-
----
-
-# JPA
-
-## Fetch
-
-* `FetchType.LAZY` par défaut.
-* Ne jamais utiliser `FetchType.EAGER` sans justification.
-
----
-
-## EntityGraph
-
-* Utiliser `@EntityGraph` pour charger uniquement les relations nécessaires.
-* Préférer `@EntityGraph` à `EAGER`.
-
----
-
-## N+1
-
-* Toute requête doit être vérifiée afin d'éviter le problème N+1.
-* Si un N+1 est identifié, le corriger avant la fin de la tâche.
-
----
-
-# Services
-
-* Éviter les traitements inutiles.
-* Éviter les appels répétés au même Service avec les mêmes paramètres dans une même opération.
-* Factoriser les traitements communs.
-
----
-
-# Boucles
-
-Ne jamais :
-
-* effectuer un appel HTTP dans une boucle ;
-* effectuer une requête SQL dans une boucle ;
-* recalculer plusieurs fois une même valeur.
-
-Privilégier :
-
-* le préchargement ;
-* le regroupement des traitements ;
-* les opérations batch.
-
----
-
-# Collections
-
-* Utiliser la collection adaptée (`List`, `Set`, `Map`).
-* Éviter les parcours multiples lorsqu'un seul suffit.
-* Préférer une recherche par `Map` lorsqu'un accès par clé est fréquent.
-
----
-
-# Calculs
-
-* Ne jamais recalculer une valeur identique plusieurs fois dans une même opération.
-* Extraire le résultat dans une variable lorsque cela améliore les performances ou la lisibilité.
-
----
-
-# Frontend
-
-* Toutes les listes utilisent la pagination.
-* Toutes les listes supportent le tri.
-* Toutes les listes supportent le filtrage lorsque pertinent.
-* Utiliser le Lazy Loading Angular pour les pages.
-* Éviter les appels HTTP redondants.
-* Désactiver les actions pendant les appels mutateurs pour éviter les doubles soumissions.
-
----
-
-# API
-
-* Les endpoints de liste sont paginés.
-* Les réponses doivent contenir uniquement les données nécessaires.
-* Les DTO ne transportent jamais de données inutilisées par l'interface.
-
----
-
-# Monitoring
-
-Les métriques Micrometer permettent de mesurer les performances métier.
-
-Selon le module, utiliser :
-
-* `Gauge` pour les valeurs instantanées ;
-* `Counter` pour les opérations ;
-* `Timer` pour mesurer la durée des traitements.
-
----
-
-# Optimisation
-
-Avant toute optimisation :
-
-* identifier le véritable goulot d'étranglement ;
-* mesurer l'impact attendu.
-
-Ne jamais complexifier le code sans bénéfice mesurable.
-
----
-
-# Principes
-
-* Toujours privilégier une bonne conception avant une optimisation prématurée.
-* La lisibilité ne doit pas être sacrifiée pour une optimisation marginale.
-* Toute nouvelle fonctionnalité doit rester scalable.
-* Une fonctionnalité performante doit le rester lorsque le volume de données augmente.
-* Les optimisations doivent être réalisées dans le respect des conventions d'architecture du projet.
+Les tests de charge, profils et objectifs chiffrés sont définis par l'application en fonction de son
+usage et de son risque.

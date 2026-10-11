@@ -1,11 +1,78 @@
 # Architecture
 
-> Conventions d'architecture backend applicables à tous les modules. Ce document est générique et
-> réutilisable d'un projet à l'autre — il ne doit contenir aucun nom de domaine métier, de module
-> ou de règle propre à un projet particulier. Les décisions et exemples concrets d'un projet donné
-> vivent dans sa propre documentation (`docs/`), jamais ici.
+> Principes d'architecture applicables aux applications, indépendamment de leur domaine métier.
+> Les choix propres à une application ne sont documentés ici que s'ils sont réutilisables et
+> compatibles avec ce socle.
+
+## Monolithe modulaire
+
+Commencer par un monolithe modulaire. Chaque domaine possède ses règles métier, ses commandes, ses
+repositories et ses modèles de lecture. Une extraction en service indépendant demande un besoin
+mesuré (déploiement indépendant, isolation, charge, équipe ou frontière de sécurité), un ADR et une
+stratégie de données et d'API. Ne pas transformer une frontière de package en microservice par
+anticipation.
+
+```text
+application/
+  domains/<domaine>/          métier et tests du domaine
+  platform/                   identité, autorisation, audit, observabilité
+  integrations/               adaptateurs vers des systèmes externes
+```
+
+L'arborescence exacte suit le framework choisi si les frontières de domaine restent vérifiables.
+
+## Propriété des données et intégrations
+
+* Chaque domaine est propriétaire de son modèle et de son stockage logique. Aucun domaine ne lit
+  directement le repository d'un autre ; il passe par une façade publique, un contrat ou un
+  événement explicite.
+* Chaque application et chaque environnement gardent leurs propres données et migrations. Une
+  technologie de stockage partagée n'implique ni schéma partagé ni transaction distribuée.
+* Tout appel à un système externe passe par un port ou un adaptateur. Ses délais d'attente, limites,
+  erreurs et règles de reprise sont explicités.
+
+## IA, agents et analytique
+
+* Les règles métier et les indicateurs restent la source de vérité dans leurs domaines propriétaires.
+  Un modèle, un index de recherche ou un tableau de bord ne les redéfinit pas.
+* Un agent ou un orchestrateur accède aux données et aux actions par des API ou des outils explicites
+  et autorisés. Il n'accède jamais directement aux bases transactionnelles.
+* Une skill décrit une procédure ou un contexte de travail ; elle n'accorde aucun droit d'accès.
+  Chaque outil vérifie l'identité et l'autorisation au moment de l'appel.
+* Les embeddings et index RAG sont des projections dérivées des sources. Ils gardent leur provenance,
+  leurs règles d'accès et leur cycle de fraîcheur/suppression alignés sur les sources ; ils ne
+  remplacent pas ces dernières.
+* Chaque indicateur BI a une définition détenue par le domaine : formule, unité, période, filtres,
+  provenance et autorisation. Les rapports et agents réutilisent la même définition.
+* Commencer par des projections analytiques bornées. Introduire une plateforme ou un entrepôt
+  analytique séparé seulement si les besoins de volume, d'historisation, de fraîcheur ou de
+  croisement de domaines le justifient.
+
+### Orchestration en graphe
+
+Un moteur de workflow en graphe (par exemple LangGraph) est pertinent si le processus requiert un
+état explicite, des branches, des reprises, des étapes parallèles ou une validation humaine. Un
+enchaînement linéaire reste un service ou un workflow simple. Le graphe orchestre les appels ; il
+n'accorde aucun droit. Chaque action reste autorisée et bornée au moment de son exécution.
+
+### Graphe de connaissances
+
+Un graphe de connaissances ou une base orientée graphe n'est introduit que si les relations et les
+requêtes multi-sauts apportent un besoin mesuré. Les données métier demeurent détenues par leurs
+domaines ; le graphe est une projection dérivée avec provenance, fraîcheur, contrôle d'accès et
+cycle de mise à jour/suppression définis. Il ne devient pas une seconde source de vérité.
+
+## Décisions d'architecture
+
+Documenter une décision structurante dans `docs/adr/NNNN-titre.md` avec le contexte, la décision,
+les options, les conséquences et le statut. Un changement de stockage, d'identité ou de protocole
+transverse requiert un plan de migration et de retour arrière avant son déploiement.
 
 ## Architecture d'un module
+
+Les règles de couches ci-dessous définissent le profil backend Java/Spring. Elles précisent le
+socle modulaire sans imposer ces choix à une application qui utilise un autre framework ; les
+principes de frontières et de propriété des données restent communs.
 
 Chaque domaine métier suit la même structure :
 
@@ -122,77 +189,20 @@ ModuleBRepository
 
 ---
 
-# Pattern : registre de handlers pour éviter les branchements centraux
+# Suppression et états du cycle de vie
 
-Lorsqu'une opération transverse (validation, synchronisation, annulation, export...) doit être
-implémentée différemment par plusieurs modules, mais déclenchée par un seul point d'entrée
-générique, préférer un **registre de handlers** à un `switch`/`if-chain` central.
+Un état terminal (par exemple validé, clôturé ou payé) n'interdit pas automatiquement la
+suppression. Le domaine définit cette règle à partir des invariants métier et des effets produits
+par l'enregistrement.
 
-### Problème que ce pattern résout
-
-Un service générique qui fait `switch (source) { case A -> ...; case B -> ...; }` doit être modifié
-à chaque ajout d'une nouvelle source — il connaît la logique de tous les modules qu'il ne devrait
-pas connaître, et grossit indéfiniment.
-
-### Structure
-
-```java
-public interface XxxHandler {
-    ModuleSource source();      // identifie le module géré par cette implémentation
-    Result handle(Long id, Request request);
-}
-```
-
-* Chaque module implémentant l'opération fournit un `@Component implements XxxHandler` dans son
-  propre package — jamais dans le module générique.
-* Le service générique collecte automatiquement toutes les implémentations (injection Spring d'une
-  `List<XxxHandler>` ou d'une `Map<ModuleSource, XxxHandler>` construite au démarrage) et route vers
-  la bonne, sans connaître leur logique interne.
-* Ajouter une nouvelle source ne modifie jamais le service générique — seulement une nouvelle
-  implémentation du handler dans le module concerné.
-
-### Ce que le module générique ne doit jamais contenir
-
-* Un repository ou une entité d'un autre module.
-* De la logique métier propre à un module particulier.
-* Un `switch`/`if-chain` sur l'identifiant de source pour dispatcher — c'est le rôle du registre.
-
----
-
-# Pattern : synchronisation entre deux enregistrements liés
-
-Lorsqu'un enregistrement générique (ex. une écriture, une transaction, un événement) référence une
-entité source d'un module métier, toute modification de l'un des deux doit être propagée à l'autre
-pour éviter toute divergence. Utiliser le même registre de handlers que ci-dessus (un handler de
-synchronisation par module source) plutôt qu'un branchement central.
-
-* Seuls les champs réellement partagés entre les deux structures sont synchronisés — les champs
-  propres à l'enregistrement générique (ex. une ventilation comptable) n'ont pas d'équivalent à
-  synchroniser.
-* Un handler de synchronisation absent pour une source donnée n'est pas une erreur : cela signifie
-  que cette source n'a pas d'entité à tenir synchronisée.
-* Une entité source dans un état terminal (verrouillée, déjà validée définitivement) doit rejeter ou
-  ignorer la synchronisation selon la règle métier du module — à définir explicitement, jamais
-  supposer un comportement.
-
----
-
-# Règle générale : un enregistrement dans un état terminal n'est jamais supprimable directement
-
-Si une entité passe par un cycle de vie avec un état terminal (ex. validé, clôturé, payé) une fois
-que cet état a produit des effets ailleurs dans le système (écriture comptable, notification,
-export déjà transmis...), la suppression directe de cette entité doit être bloquée dès qu'elle a
-atteint cet état — la supprimer casserait la cohérence avec ce qui en dépend déjà.
-
-* Le Service métier vérifie l'état avant tout appel `repository.delete(...)` et lève une exception
-  métier explicite sinon.
-* Le endpoint `DELETE` reste par ailleurs soumis aux règles d'autorisation habituelles
-  (`conventions/security.md`) — les deux contrôles sont indépendants et cumulatifs.
-* Côté frontend, désactiver l'action de suppression dans cet état en plus de la conditionner aux
-  permissions — ne jamais se reposer uniquement sur le rejet backend pour l'UX.
-* L'absence de cette garde dans du code existant n'est pas la preuve d'une exception voulue — c'est
-  probablement un oubli. Par défaut, l'appliquer ; si un module doit vraiment y déroger, confirmer
-  explicitement la règle métier avant de la documenter comme une exception assumée.
+* Si supprimer l'enregistrement compromet l'historique, une référence ou un effet déjà produit,
+  le service métier bloque la suppression directe et applique uniquement le parcours de correction
+  ou d'annulation défini par le domaine.
+* Si aucun invariant ne l'interdit, la suppression suit la politique métier et l'autorisation
+  habituelles ; l'état terminal seul ne constitue pas une interdiction.
+* Le backend fait respecter la règle. Le frontend reflète le même état pour guider l'utilisateur,
+  sans remplacer le contrôle serveur.
+* Le domaine documente le cycle de vie, les transitions permises et les tests qui vérifient la règle.
 
 ---
 

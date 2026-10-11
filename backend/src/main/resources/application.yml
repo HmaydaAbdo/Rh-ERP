@@ -83,9 +83,11 @@ server:
   forward-headers-strategy: native
 
 logging:
-  # text (défaut : lisible en développement) ou json (production : une ligne JSON par événement, via un appender asynchrone) —
-  # voir logback-spring.xml. docker-compose.yml positionne LOGGING_FORMAT=json (liaison souple de logging.format).
+  # text (défaut) ou json (production). Dans les deux cas, les événements vont en console et dans
+  # des archives journalières gardées 30 jours. Voir logback-spring.xml.
   format: text
+  file:
+    path: ${LOGGING_FILE_PATH:logs}
   pattern:
     # Chaque ligne de log porte l'identifiant de requête et l'utilisateur (MdcRequestFilter, conventions/logging.md) : le même
     # identifiant relie une entrée du journal d'audit, ses révisions et les logs techniques de la requête.

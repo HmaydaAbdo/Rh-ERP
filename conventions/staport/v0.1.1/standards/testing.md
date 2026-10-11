@@ -17,11 +17,11 @@ de sécurité/permission possède aussi un test négatif.
 
 ## Obligations de réalisation
 
-- Tests de base de données sur le moteur ciblé (PostgreSQL), pas seulement H2 ou mocks. Démarrer sur
-  schéma vierge, exécuter toutes les migrations et vérifier une mise à niveau depuis le baseline
-  supporté. Tester pgvector sur une image/version compatible avec production.
-- Tests RBAC couvrent refus non authentifié, authentifié sans permission, permission effective,
-  deny individuel, route et bouton UI, tenant/périmètre si le projet l'utilise.
+- Tester pgvector sur une image/version compatible avec la production lorsque cette extension est
+  activée. Les tests PostgreSQL, migrations vierges et mises à niveau sont définis dans
+  `conventions/database.md`.
+- Tests d'autorisation couvrent les accès anonyme, authentifié sans permission et avec permission,
+  les routes et actions UI, ainsi que le périmètre métier si le projet l'utilise.
 - Tests audit vérifient intégrité transactionnelle et droits du compte applicatif. Fixtures
   synthétiques uniquement ; aucun dataset personnel/financier réel.
 - E2E pilotés par noms accessibles, rôle et libellés ; pas de temporisations arbitraires ou

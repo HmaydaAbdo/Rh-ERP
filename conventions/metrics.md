@@ -1,196 +1,61 @@
-# Metrics
-
-> Conventions Micrometer applicables à tous les modules.
-
-# Principes
-
-* Les métriques mesurent le comportement de l'application, pas la logique métier.
-* Toute nouvelle métrique doit apporter une information exploitable.
-* Ne jamais créer plusieurs métriques pour mesurer la même chose.
-
----
-
-# Organisation
-
-Les métriques d'un domaine sont regroupées dans :
-
-```text
-module/
-├── metrics/
-│   └── XxxMetrics.java
-├── service/
-└── ...
-```
-
-* `XxxMetrics` est un `@Component`.
-* `MeterRegistry` est injecté dans cette classe.
-* Les Services utilisent `XxxMetrics` pour enregistrer les métriques.
-
----
-
-# Convention de nommage
-
-Toutes les métriques suivent la convention :
-
-```text
-<application>.<module>.<objet>.<mesure>
-```
-
-`<application>` est un préfixe court et stable identifiant l'application (défini une fois par
-projet). Exemples (à adapter au domaine réel du projet) :
-
-```text
-<app>.<module>.actifs.count
-<app>.<module>.echeances.j7.count
-<app>.batch.<nom-du-batch>.operations.success
-<app>.batch.<nom-du-batch>.operations.failure
-<app>.batch.<nom-du-batch>.duration
-```
-
-Conventions :
-
-* minuscules uniquement ;
-* séparateur `.` ;
-* noms stables ;
-* noms explicites.
-
----
-
-# Gauge
-
-Utiliser un `Gauge` pour mesurer une valeur instantanée.
-
-Exemples :
-
-* nombre d'enregistrements actifs d'un type donné ;
-* nombre d'éléments dans un état intermédiaire (en cours, en attente...) ;
-* nombre d'échéances à venir.
-
-Règles :
-
-* enregistré une seule fois ;
-* alimenté par un `Supplier<Number>` ;
-* ne jamais incrémenter ou décrémenter un Gauge manuellement.
-
----
-
-# Counter
-
-Utiliser un `Counter` pour compter des événements.
-
-Exemples :
-
-* création d'une entité ;
-* suppression ;
-* synchronisation réussie ;
-* synchronisation échouée.
-
-Règles :
-
-* un Counter ne diminue jamais ;
-* incrémenter uniquement après l'opération concernée.
-
----
-
-# Timer
-
-Utiliser un `Timer` pour mesurer la durée d'une opération.
-
-Exemples :
-
-* batch ;
-* traitement métier long ;
-* appel externe.
-
-Utiliser :
-
-* `Timer.record(...)`
-* ou `Timer.start()` / `stop()`.
-
----
-
-# Où enregistrer les métriques
-
-## Gauge
-
-Créer les Gauges au démarrage du bean.
-
-Le `Supplier` est interrogé automatiquement par Prometheus.
-
----
-
-## Counter
-
-Incrémenter le Counter dans le Service après une opération réussie ou échouée.
-
----
-
-## Timer
-
-Mesurer la durée directement autour de l'opération métier.
-
----
-
-# Modules concernés
-
-Ajouter des métriques métier pour les modules ayant un état métier significatif — c'est-à-dire un
-cycle de vie, un volume qui varie dans le temps, ou un besoin de supervision opérationnelle.
-
-Exemples de mesures pertinentes selon le type de module :
-
-* **Module avec statuts métier** (ex. un cycle de vie brouillon → validé → clôturé) : répartition
-  par statut, nombre dans chaque état.
-* **Module avec échéances/délais** : nombre d'éléments approchant une échéance (J-7, J-30...).
-* **Batch/synchronisation périodique** : nombre de succès, nombre d'échecs, durée d'exécution.
-* **Module avec sous-catégories métier** (ex. plusieurs types d'un même objet) : créations par
-  type, transitions d'état par type.
-
----
-
-# Modules exclus
-
-Les modules CRUD sans état métier particulier n'ajoutent pas de métriques métier — un référentiel
-simple (créer/lire/modifier/supprimer, sans cycle de vie ni volumétrie à surveiller) n'a pas besoin
-de métriques dédiées. Les métriques HTTP automatiques de Micrometer sont suffisantes.
-
----
-
-# Tags
-
-Utiliser uniquement des tags ayant une cardinalité faible.
-
-Exemples :
-
-* statut ;
-* type ;
-* module/source ;
-* environnement.
-
-Ne jamais utiliser comme tag :
-
-* id ;
-* username ;
-* email ;
-* numéro de compte ;
-* UUID ;
-* timestamp.
-
----
-
-# Bonnes pratiques
-
-* Une métrique mesure une seule chose.
-* Réutiliser une métrique existante lorsqu'elle répond déjà au besoin.
-* Les noms de métriques sont stables dans le temps.
-* Supprimer les métriques devenues inutiles.
-* Éviter les métriques jamais consultées.
-* Éviter les tags inutiles.
-
----
-
-# Principes
-
-* Toute métrique doit avoir un objectif de supervision.
-* Les métriques doivent rester simples et cohérentes.
-* Les métriques métier complètent les métriques HTTP automatiques de Micrometer.
-* Les tableaux de bord et les alertes doivent pouvoir s'appuyer directement sur les métriques exposées.
+# Métriques
+
+Cette convention définit les principes de mesure opérationnelle. Chaque application documente sa
+bibliothèque de télémétrie, son exposition, son stockage, ses tableaux de bord et ses alertes.
+
+## Choix des mesures
+
+Une métrique doit répondre à une question d'exploitation ou de fiabilité : disponibilité,
+fréquence, durée, saturation, erreurs ou volume d'un traitement. Avant d'en ajouter une, vérifier
+qu'une mesure existante ne répond pas déjà au besoin. Éviter les métriques redondantes ou jamais
+consultées.
+
+Les métriques métier opérationnelles peuvent indiquer le volume d'un traitement ou la répartition
+d'états utiles au suivi. Elles ne remplacent pas la définition de référence d'un indicateur BI ni
+les événements d'audit.
+
+## Types de mesures
+
+* Un **compteur** mesure le nombre cumulé d'événements et ne décroît pas pendant la durée de vie de
+  la série. Mesurer les succès et les échecs avec des dimensions explicites si cela aide à agir.
+* Une **jauge** mesure une valeur instantanée, telle qu'une profondeur de file ou un nombre courant
+  d'éléments. Sa valeur peut monter ou descendre ; ne pas l'utiliser comme un compteur cumulatif.
+* Une **distribution** (histogramme ou mécanisme équivalent) mesure la durée, la taille ou une autre
+  valeur observée, pour en analyser les quantiles et les seuils. Préciser l'unité et choisir les
+  bornes selon les usages de supervision.
+
+Enregistrer la mesure au point où son résultat est connu et éviter les doubles incréments ou les
+durées qui incluent un travail sans rapport avec l'opération mesurée.
+
+## Nommage et dimensions
+
+Les noms sont stables, explicites, cohérents avec la plateforme choisie et indiquent l'unité lorsque
+la convention de cette plateforme le prévoit. Documenter pour chaque mesure sa signification, son
+type, son unité, ses dimensions et le signal attendu.
+
+Les dimensions (labels/tags) ont un ensemble de valeurs borné. Ne jamais utiliser comme dimension
+un identifiant d'enregistrement, un identifiant utilisateur, une adresse e-mail, un jeton, une
+requête brute, un horodatage ou une valeur libre : leur forte cardinalité augmente les coûts et peut
+exposer des données sensibles.
+
+Choisir des dimensions utiles à une décision opérationnelle, par exemple le service, le résultat,
+une catégorie stable ou l'environnement. Ne pas dupliquer dans les dimensions une information déjà
+portée par les ressources de télémétrie.
+
+## Collecte et alertes
+
+* Exposer ou transmettre les métriques par un mécanisme contrôlé et documenté. Protéger les points
+  de collecte contre l'accès public lorsqu'ils révèlent des informations opérationnelles.
+* Définir les tableaux de bord et alertes à partir d'un symptôme exploitable, avec un seuil,
+  une durée, un responsable et une action attendue. Éviter les alertes sans procédure de réponse.
+* Limiter le coût et le volume des mesures. Vérifier régulièrement leur cardinalité, leur fraîcheur,
+  leurs erreurs de collecte et leur utilité.
+* Ne pas y placer de données personnelles, de contenu de requête ou de secrets. Pour un événement
+  ponctuel nécessitant du contexte, utiliser les logs ; pour prouver une action métier, utiliser
+  l'audit.
+
+## Vérification
+
+Lors de l'ajout d'une mesure, vérifier son unité, son type, ses dimensions, son comportement en cas
+d'échec et sa visibilité dans l'environnement cible. S'assurer qu'une charge ou une forte diversité
+de valeurs ne fait pas croître sans borne le nombre de séries.
