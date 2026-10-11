@@ -25,7 +25,7 @@ parcours complets limités aux flux représentatifs. Aucun niveau ne remplace le
 | Contrat API | Requêtes/réponses, codes d'erreur, pagination, schémas et compatibilité consommateur-producteur | Toute modification d'API ou de contrat interservice |
 | Unitaire frontend | Fonctions, stores, services, guards, interceptors, validateurs et transformations | Toute logique frontend ajoutée ou modifiée |
 | Composant frontend | Rendu, actions, formulaires, clavier, focus, chargement, vide, erreur, refus et responsive | Tout composant, écran ou interaction touché |
-| E2E navigateur | Parcours utilisateur, permissions visibles, navigation et états accessibles | Chaque flux critique et chaque fonctionnalité visible qui traverse plusieurs écrans |
+| E2E navigateur | Parcours utilisateur pilotés par rôles et libellés accessibles, permissions visibles, navigation et états accessibles | Chaque flux critique et chaque fonctionnalité visible qui traverse plusieurs écrans |
 | Full stack | Navigateur ou client réel → frontend → API réelle → base réelle et audit attendu | Chaque domaine métier et chaque flux transverse représentatif avant fusion |
 | Non fonctionnel | Accessibilité, sécurité, charge, résilience, limites et observabilité | Selon risque ; sécurité et accessibilité sur les parcours qui les exposent |
 
@@ -68,7 +68,7 @@ module modifié.
 | Endpoint ou permission | Contrat HTTP, authentification, absence de permission, permission requise et portée métier ; tests frontend correspondants |
 | Écran ou formulaire | Specs du composant et de ses actions ; validation, erreurs serveur, accessibilité clavier et permission ; E2E si le flux traverse des étapes |
 | Import/export ou synchronisation | Fichier valide, invalide, partiel, doublon, limites, atomicité, audit et résultat observable |
-| Audit ou journal | Présence et cohérence, transaction/rollback, absence de secrets et contrôle d'accès à la consultation |
+| Audit ou journal | Présence et cohérence, intégrité transactionnelle/rollback, privilèges minimaux du compte applicatif, absence de secrets et contrôle d'accès à la consultation |
 | Appel externe/adaptateur | Contrat, délais, erreurs, reprise/idempotence et données reçues/sorties ; aucun réseau réel dans la suite rapide |
 | IA, RAG, MCP ou BI | Jeu de régression versionné ; permissions, provenance/citations, filtres, bornes, refus sûr, absence de fuite, exactitude, latence et coût |
 | Dépendance ou configuration | Démarrage et parcours qui utilisent le composant, compatibilité de version et configuration absente/invalide |
