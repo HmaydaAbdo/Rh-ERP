@@ -31,7 +31,8 @@ parcours complets limités aux flux représentatifs. Aucun niveau ne remplace le
 
 Un test d'intégration peut utiliser des doubles pour les services externes hors périmètre, mais ne remplace pas
 l'intégration réelle de la frontière examinée. Les tests de base utilisent le moteur et les extensions compatibles
-avec la production. Les tests full stack n'utilisent pas de faux backend ni de base simulée.
+avec la production ; lorsque pgvector est activé, ils utilisent une image/version compatible avec celle déployée.
+Les tests full stack n'utilisent pas de faux backend ni de base simulée.
 
 ## Socle obligatoire pour chaque domaine
 
@@ -69,7 +70,7 @@ module modifié.
 | Import/export ou synchronisation | Fichier valide, invalide, partiel, doublon, limites, atomicité, audit et résultat observable |
 | Audit ou journal | Présence et cohérence, transaction/rollback, absence de secrets et contrôle d'accès à la consultation |
 | Appel externe/adaptateur | Contrat, délais, erreurs, reprise/idempotence et données reçues/sorties ; aucun réseau réel dans la suite rapide |
-| IA, RAG, MCP ou BI | Jeu de régression déterministe versionné ; permissions, provenance/citations, filtres, bornes, refus sûr et absence de fuite |
+| IA, RAG, MCP ou BI | Jeu de régression versionné ; permissions, provenance/citations, filtres, bornes, refus sûr, absence de fuite, exactitude, latence et coût |
 | Dépendance ou configuration | Démarrage et parcours qui utilisent le composant, compatibilité de version et configuration absente/invalide |
 
 ## Portes de qualité et CI
@@ -112,6 +113,24 @@ automatique illimitée ou un mock qui retire la frontière testée.
   observables, noms accessibles et contrats stables.
 - Conserver les rapports de résultats et de couverture en CI avec une durée adaptée ; ne jamais y publier de
   secrets ou de données réelles.
+
+## MCP, IA et BI
+
+Pour une intégration MCP, les tests de contrat et d'intégration vérifient le schéma valide et invalide,
+l'identité appelante, les permissions effectives, les limites et la pagination des résultats,
+l'idempotence, les délais et reprises, ainsi que les tentatives d'injection. Un échec de validation,
+d'identité ou d'autorisation reste un refus ; il ne retombe jamais sur un accès permissif. La suite
+rapide peut simuler les outils externes, mais exerce le vrai contrat et les règles de sécurité.
+
+Pour un agent ou un modèle, séparer les assertions déterministes (permissions, format, provenance,
+refus, absence de fuite) de l'évaluation probabiliste de la qualité. Versionner les prompts, modèles,
+outils et jeux de régression anonymisés. Suivre la réussite des tâches, l'ancrage des réponses dans
+les sources, les refus sûrs, les fuites, la latence et le coût ; toute modification de prompt, modèle,
+outil ou index met à jour le jeu et relance les évaluations pertinentes.
+
+Pour la BI, valider chaque indicateur de référence contre des données synthétiques attendues : formule,
+unité, période, fuseau horaire, arrondis, filtres, permissions et absence de doublon. Les métriques
+opérationnelles ne remplacent pas ces tests de définition métier.
 
 ## Fin de tâche
 

@@ -15,13 +15,11 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
   Angular Aria/CDK pour les primitives accessibles.
 - Chaque application garde ses skills métier dans ses propres domaines. Le dossier `domains/` du
   squelette est intentionnellement vide.
-- Tests de la règle unitaire aux parcours end-to-end, avec couverture des contrats, autorisations,
-  migrations, MCP, BI et évaluations IA.
 
 ## Lire dans cet ordre
 
 1. `AGENTS.md` ou `CLAUDE.md` — consignes d'entrée pour l'agent.
-2. `standards/testing.md`.
+2. `conventions/testing.md` — stratégie de tests consolidée.
 3. `standards/angular.md`. Le design system consolidé est défini dans `conventions/design-system.md`.
 4. `standards/agents-skills-mcp-rag.md`.
 5. `profiles/README.md` puis les documents métier locaux du dépôt consommateur.
