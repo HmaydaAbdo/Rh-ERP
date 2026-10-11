@@ -32,9 +32,10 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
-0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards de la version
-   épinglée dans `conventions/staport/v<version>/` (architecture, PostgreSQL/Flyway/pgvector, RBAC,
-   audit, Angular, agents/skills/MCP/RAG/BI).
+0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards encore présents
+   dans la version épinglée sous `conventions/staport/v<version>/` (agents/skills/MCP/RAG/BI).
+   Les conventions frontend, design system, architecture, base de données, sécurité/RBAC et audit
+   consolidées sont définies dans les conventions à la racine.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md

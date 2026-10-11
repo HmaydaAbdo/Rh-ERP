@@ -3,7 +3,6 @@
 Profils retenus pour les applications Staport :
 
 - `spring-boot.md` — Spring Boot 4.x, Java, Spring AI/MCP et compatibilité des starters.
-- `angular.md` — Angular 22.x, Node/TypeScript/RxJS, Signals et bibliothèques compatibles.
 - `postgresql.md` — PostgreSQL 18, Flyway, extension pgvector selon besoin.
 
 Ce dossier consigne les versions vérifiées et leur matrice de compatibilité. Le socle donne les

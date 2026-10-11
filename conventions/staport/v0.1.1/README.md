@@ -11,8 +11,6 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
 
 ## Décisions déjà retenues
 
-- Angular 22.1.x, Signals pour l'état réactif, Signal Forms pour les nouveaux formulaires adaptés,
-  Angular Aria/CDK pour les primitives accessibles.
 - Chaque application garde ses skills métier dans ses propres domaines. Le dossier `domains/` du
   squelette est intentionnellement vide.
 
@@ -20,7 +18,8 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
 
 1. `AGENTS.md` ou `CLAUDE.md` — consignes d'entrée pour l'agent.
 2. `conventions/testing.md` — stratégie de tests consolidée.
-3. `standards/angular.md`. Le design system consolidé est défini dans `conventions/design-system.md`.
+3. `conventions/frontend.md` — convention Angular consolidée. Le design system est défini dans
+   `conventions/design-system.md`.
 4. `standards/agents-skills-mcp-rag.md`.
 5. `profiles/README.md` puis les documents métier locaux du dépôt consommateur.
 
@@ -61,7 +60,6 @@ L'adoption des conventions se fait par changements relus dans chaque projet ; el
 
 ## Références vérifiées le 2026-10-10
 
-- [Angular releases](https://angular.dev/reference/releases) · [Signal Forms](https://angular.dev/guide/forms/signals/overview)
 - [Spring Boot versions](https://docs.spring.io/spring-boot/spring-projects.html)
 - [PostgreSQL version support](https://www.postgresql.org/support/versioning/)
 - [Spring AI PGvector store](https://docs.spring.io/spring-ai/reference/api/vectordbs/pgvector.html)
