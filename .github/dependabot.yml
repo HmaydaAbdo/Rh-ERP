@@ -1,0 +1,36 @@
+# Mises à jour de dépendances (conventions/security.md, chaîne d'approvisionnement) : une proposition groupée par semaine et
+# par écosystème, y compris les images Docker (la balise et l'empreinte) et les actions GitHub. Les alertes de sécurité
+# (Dependabot alerts) se règlent dans les paramètres du dépôt, pas ici.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      maven:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

@@ -27,6 +27,8 @@ La CI utilise un PostgreSQL de service (`pgvector/pgvector:pg18`), des variables
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en
 environnement sans écran.
 
+Le backend mesure sa couverture avec JaCoCo : `./mvnw test` écrit le rapport dans `backend/target/site/jacoco/index.html` (2026-10-11 : 87 % des lignes, 73 % des branches ; la CI le conserve comme artefact). La CI génère aussi le SBOM et analyse les dépendances (voir [deployment.md](deployment.md)).
+
 ---
 
 ## Backend (261 tests)
