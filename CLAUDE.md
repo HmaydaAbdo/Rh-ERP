@@ -44,14 +44,15 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 8. conventions/security.md
 9. conventions/audit.md
 10. `conventions/agents-ia.md`
-11. `conventions/mcp.md`
-12. `conventions/rag.md`
-13. conventions/logging.md
-14. conventions/swagger.md
-15. conventions/metrics.md
-16. conventions/performance.md
-17. conventions/frontend.md
-18. conventions/design-system.md
+11. `conventions/agent-ui.md`
+12. `conventions/mcp.md`
+13. `conventions/rag.md`
+14. conventions/logging.md
+15. conventions/swagger.md
+16. conventions/metrics.md
+17. conventions/performance.md
+18. conventions/frontend.md
+19. conventions/design-system.md
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,

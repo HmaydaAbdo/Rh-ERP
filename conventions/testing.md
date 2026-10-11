@@ -10,6 +10,8 @@ Cette convention définit la stratégie commune, quel que soit le langage ou le 
 fixtures et écarts constatés propres à ERP-RH sont décrits dans [`docs/testing.md`](../docs/testing.md). Les exigences
 spécifiques aux outils MCP et au RAG sont précisées dans [`mcp.md`](mcp.md) et [`rag.md`](rag.md) ; les contrôles
 d'accès, d'audit et de confidentialité sont définis dans [`security.md`](security.md) et [`audit.md`](audit.md).
+Les interfaces AG-UI/A2UI et les événements de mascotte suivent aussi les contrats de
+[`agent-ui.md`](agent-ui.md).
 
 ## Stratégie par couches
 
