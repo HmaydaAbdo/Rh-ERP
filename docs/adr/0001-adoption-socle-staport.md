@@ -14,8 +14,10 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 
 ## Décisions
 
-1. Le dépôt `staport-standards` est la source canonique ; ERP-RH épingle une copie versionnée et
-   relisible dans `conventions/staport/v0.1.1/`. Les règles métier et permissions restent locales.
+1. Pour ERP-RH, les fichiers de `conventions/` à la racine sont la source de vérité normative.
+   Le snapshot épinglé sous `conventions/staport/v0.1.1/` est un inventaire temporaire des éléments
+   Staport restant à examiner : chaque point fusionné est retiré du snapshot après vérification.
+   Les règles métier et permissions restent locales à l'application.
 2. PostgreSQL + Flyway, RBAC dynamique par domaine et modèle d'audit ERP-RH sont les références
    communes. Chaque application garde sa propre base et son propre historique de migration.
 3. La cible UI est Angular 22 stable (baseline vérifiée au 2026-10-10 : 22.2.2), Signals/Signal Forms
@@ -25,10 +27,13 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 4. Les skills métier restent dans le domaine de chaque application. Dans ERP-RH, elles indexent les
    README et RBAC existants ; elles ne dupliquent pas les règles et ne donnent aucune autorisation.
    Le squelette commun conserve son dossier `domains/` vide.
-5. Spring AI appartient à l'application pour les besoins métier locaux. Un futur orchestrateur
-   central LangGraph consomme des outils MCP authentifiés ; il n'accède pas directement aux bases.
-   Deep Agents n'est retenu qu'avec un workflow long qui le justifie. Les mesures BI conservent une
-   définition unique dans les services/projections du domaine.
+5. Pour les applications Spring Boot, Spring AI est le choix IA par défaut ; LangChain4j peut être
+   retenu si un besoin vérifié le justifie et si le choix est documenté. Chaque application qui
+   fournit des capacités aux agents les expose au moyen d'outils MCP authentifiés, reliés à ses
+   propres cas d'usage métier. Une IA globale d'entreprise est une étape ultérieure, après la
+   conformité des applications connectées ; elle consommera leurs outils MCP et n'accédera pas à
+   leurs bases. Un graphe d'orchestration ou un composant Python n'est retenu que si un besoin le
+   justifie. Les mesures BI conservent une définition unique dans les services/projections du domaine.
 6. La stratégie de test couvre les niveaux statique, unitaire, composant, intégration PostgreSQL,
    contrat, E2E et non-fonctionnel selon le risque ; les accès, migrations, exports et futurs outils
    IA ont des tests négatifs pertinents.
@@ -43,7 +48,8 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 | 3 — Composants | Remplacer progressivement les dépendances de présentation et leurs tests | Aucun écran migré ne dépend de PrimeFlex/PrimeIcons ; pas de bascule globale non testée |
 | 4 — Qualité | Ajouter une suite E2E ciblée et couvrir les trous identifiés par `docs/testing.md` | Parcours login, permissions et paie critiques exécutables en CI |
 | 5 — Base | PG17 local migré logiquement vers un nouveau volume PG18 ; PostgreSQL de production reste à migrer | PG18 local validé sous tests ; procédure documentée ; production migrée avec maintien du volume PG17 |
-| 6 — BI/IA | Cataloguer les KPI actuels ; choisir un premier cas IA/MCP en lecture seule | Autorisation par utilisateur, audit, citations, tests d'évaluation et limites mesurables |
+| 6 — BI/IA applicative | Cataloguer les KPI ; choisir un cas IA/MCP propre à ERP-RH | Autorisation par utilisateur, audit, citations, tests d'évaluation et limites mesurables |
+| 7 — IA d'entreprise (cible) | Après les applications connectées, orchestrer leurs outils MCP dans une application dédiée | Aucun accès direct aux bases ; autorisations conservées par chaque application ; audit et évaluation transverses |
 
 ## Contraintes et points à vérifier
 

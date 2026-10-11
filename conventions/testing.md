@@ -7,9 +7,9 @@ chaque changement transverse et chaque correction de bug. Une modification n'est
 sont écrits ou mis à jour, passent localement et sont exécutés par les contrôles requis de la CI.
 
 Cette convention définit la stratégie commune, quel que soit le langage ou le framework. Les commandes, outils,
-fixtures et écarts constatés propres à ERP-RH sont décrits dans [`docs/testing.md`](../docs/testing.md).
-Le standard Staport épinglé dans `conventions/staport/` fixe les exigences complémentaires de sécurité, audit,
-IA, BI et confidentialité.
+fixtures et écarts constatés propres à ERP-RH sont décrits dans [`docs/testing.md`](../docs/testing.md). Les exigences
+spécifiques aux outils MCP et au RAG sont précisées dans [`mcp.md`](mcp.md) et [`rag.md`](rag.md) ; les contrôles
+d'accès, d'audit et de confidentialité sont définis dans [`security.md`](security.md) et [`audit.md`](audit.md).
 
 ## Stratégie par couches
 

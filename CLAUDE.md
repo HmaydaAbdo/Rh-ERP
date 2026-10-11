@@ -32,10 +32,11 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
-0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards encore présents
-   dans la version épinglée sous `conventions/staport/v<version>/` (agents/skills/MCP/RAG/BI).
-   Les conventions frontend, design system, architecture, base de données, sécurité/RBAC et audit
-   consolidées sont définies dans les conventions à la racine.
+0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les profils et skills techniques encore présents dans la
+   version épinglée sous `conventions/staport/v<version>/`. Les règles déjà centralisées dans
+   `conventions/` à la racine font foi ; agents/IA, MCP, RAG et BI sont définis dans
+   `conventions/agents-ia.md`, `conventions/mcp.md`, `conventions/rag.md`,
+   `conventions/architecture.md`, `conventions/metrics.md` et `conventions/testing.md`.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
@@ -45,12 +46,15 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 7. conventions/deployment.md
 8. conventions/security.md
 9. conventions/audit.md
-10. conventions/logging.md
-11. conventions/swagger.md
-12. conventions/metrics.md
-13. conventions/performance.md
-14. conventions/frontend.md
-15. conventions/design-system.md
+10. `conventions/agents-ia.md`
+11. `conventions/mcp.md`
+12. `conventions/rag.md`
+13. conventions/logging.md
+14. conventions/swagger.md
+15. conventions/metrics.md
+16. conventions/performance.md
+17. conventions/frontend.md
+18. conventions/design-system.md
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
@@ -61,10 +65,10 @@ pas ces sources et ne confère aucun droit applicatif.
 
 En cas de conflit entre plusieurs conventions :
 
-- le socle Staport épinglé fixe les exigences communes minimales, particulièrement sécurité, audit
-  et confidentialité ;
-- les conventions ERP-RH précisent l'implémentation et les règles du projet ; elles peuvent
-  renforcer le socle, pas en affaiblir les exigences ;
+- pour un sujet déjà centralisé, les conventions à la racine sont la source de vérité ; le snapshot
+  Staport épinglé reste applicable aux seuls sujets encore à examiner et centraliser ;
+- les conventions à la racine précisent l'implémentation et les règles du projet ; elles ne peuvent
+  pas affaiblir les exigences de sécurité, d'audit ou de confidentialité ;
 - `architecture.md` ERP-RH fait foi pour les choix d'architecture propres au projet ; toute
   contradiction entre les deux niveaux est résolue par un ADR et une mise à jour des documents avant
   le changement concerné.
