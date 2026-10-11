@@ -28,6 +28,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `CHANTIER_SYNC_BASE_URL` | URL de l'ERP qui liste les chantiers | `http://staport.dyndns.org/webServiceBS/getChantiers` |
 | `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum** | `openssl rand -base64 32` |
 | `FRONTEND_URL` | URL **publique complète** de l'application ; sert à construire le lien du courriel « mot de passe oublié » | `http://localhost:4200`, `https://<domaine>/rh-erp` |
+| `CORS_ALLOWED_ORIGINS` | Origines navigateur autorisées par CORS, séparées par des virgules ; schéma+hôte+port uniquement, sans chemin ni wildcard | `http://localhost:4200` ; `https://<domaine>` en production |
 | `COOKIE_SECURE` | `true` pour tout accès HTTPS (production) ; `false` seulement en HTTP direct | `false` en local, `true` en production |
 | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Compte `SYSTEM_ADMIN` créé au premier démarrage s'il n'en existe aucun | |
 | `SMTP_HOST`, `SMTP_PORT` | Serveur de courriel | `localhost`, `1025` (Mailpit) |
@@ -35,6 +36,8 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `SMTP_AUTH`, `SMTP_STARTTLS` | `true`/`false` | `false` en local |
 | `MAIL_FROM` | Adresse expéditrice des courriels | `noreply@staport-rh.local` |
 | `LOGGING_FORMAT` | **Facultative** (réglage `logging.format`) : `json` pour des journaux en JSON asynchrones (une ligne par événement), `text` (défaut) pour le format lisible. Le Compose de production la positionne à `json` | `text` en local |
+| `LOGGING_FILE_PATH` | **Facultative** : répertoire des journaux archivés ; le Compose de production utilise `/app/logs` monté sur `./logs` | `logs` en local |
+| `PGAUDIT_ENABLED` | **Facultative** hors production ; transmet à la migration le contrôle d'activation pgAudit attendu. Le Compose de production la force à `true` | `false` en CI, `true` en production |
 | `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED` | **Facultatives** : `true` allume la documentation d'API (Swagger UI) — développement seulement. Absentes, elle est éteinte (réglage `springdoc.*` de `application.yml`) ; le Compose de production ne les transmet pas | `true` en local |
 
 Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,
@@ -52,7 +55,7 @@ l'application). Le compte applicatif est créé tout seul par Flyway s'il n'exis
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |
 | `BACKUP_TIME_UTC`, `BACKUP_RETENTION_DAYS` | Heure quotidienne UTC (`02:00`) et conservation des archives (`30` jours) ; le service de backup utilise le compte propriétaire PostgreSQL pour dumper la base et les rôles |
 | `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Ports publiés, **liés à `127.0.0.1`** (jamais exposés à Internet) |
-| `CHANTIER_SYNC_BASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM` | Transmises telles quelles au backend |
+| `CHANTIER_SYNC_BASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM` | Transmises telles quelles au backend |
 
 Variable du frontend (développement) : `BACKEND_URL` (défaut `http://localhost:8080`), lue par
 `frontend/proxy.conf.js`.

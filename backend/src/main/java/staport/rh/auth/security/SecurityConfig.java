@@ -31,9 +31,11 @@ import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import tools.jackson.databind.json.JsonMapper;
 
 import javax.crypto.spec.SecretKeySpec;
+import java.net.URI;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,11 +57,14 @@ public class SecurityConfig {
 
     private final String jwtSecret;
     private final boolean documentationApiActive;
+    private final List<String> allowedCorsOrigins;
 
     public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret,
-                          @Value("${springdoc.api-docs.enabled}") boolean documentationApiActive) {
+                          @Value("${springdoc.api-docs.enabled}") boolean documentationApiActive,
+                          @Value("${security.cors.allowed-origins}") String allowedCorsOrigins) {
         this.jwtSecret = jwtSecret;
         this.documentationApiActive = documentationApiActive;
+        this.allowedCorsOrigins = validateCorsOrigins(allowedCorsOrigins);
     }
 
     @Bean
@@ -105,20 +110,11 @@ public class SecurityConfig {
         return converter;
     }
 
-    /**
-     * Décision (HMAYDA, 2026-09-23) : CORS ouvert à toute origine. Spring refuse la valeur littérale
-     * {@code "*"} pour {@code allowedOrigins} dès lors que {@code allowCredentials} est actif
-     * (interdit par la spec CORS) — {@code allowedOriginPatterns("*")} est la façon dont Spring
-     * satisfait cette contrainte : il réfléchit l'{@code Origin} de la requête au lieu d'émettre un
-     * {@code *} littéral. Risque accepté en connaissance de cause pour {@code /auth/refresh} et
-     * {@code /auth/logout} (seuls endpoints lus depuis le cookie Refresh Token) : très atténué en
-     * pratique par {@code SameSite=Lax} sur ce cookie (voir {@code AuthController}), qui empêche déjà
-     * son envoi sur une requête cross-origin déclenchée par du JS tiers.
-     */
+    /** Origines navigateur explicites, fournies par l'environnement de déploiement. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOrigins(allowedCorsOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of(MdcRequestFilter.EN_TETE_REQUEST_ID));
@@ -127,6 +123,37 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private static List<String> validateCorsOrigins(String rawOrigins) {
+        if (rawOrigins == null || rawOrigins.isBlank()) {
+            throw new IllegalArgumentException("CORS_ALLOWED_ORIGINS doit contenir au moins une origine");
+        }
+        List<String> normalized = Stream.of(rawOrigins.split(",", -1))
+                .map(String::trim)
+                .toList();
+        if (normalized.isEmpty() || normalized.stream().anyMatch(String::isEmpty)) {
+            throw new IllegalArgumentException("CORS_ALLOWED_ORIGINS doit contenir au moins une origine");
+        }
+        for (String origin : normalized) {
+            URI uri;
+            try {
+                uri = URI.create(origin);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Origine CORS invalide : " + origin, e);
+            }
+            String scheme = uri.getScheme();
+            if ((scheme == null || !(scheme.toLowerCase(Locale.ROOT).equals("http")
+                    || scheme.toLowerCase(Locale.ROOT).equals("https")))
+                    || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null
+                    || (uri.getPath() != null && !uri.getPath().isEmpty())
+                    || uri.getPort() > 65535
+                    || origin.contains("*")) {
+                throw new IllegalArgumentException("Origine CORS invalide (schéma+hôte+port attendus) : " + origin);
+            }
+        }
+        return List.copyOf(normalized);
     }
 
     @Bean

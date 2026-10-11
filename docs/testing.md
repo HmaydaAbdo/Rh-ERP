@@ -26,11 +26,43 @@ npm run audit:deps && npm run audit:licences  # chaîne d'approvisionnement
 npx ng build --configuration production      # vérifie que le bundle de production compile
 ```
 
+### Windows — contrôles locaux de conformité
+
+Le dépôt attend Node 24.15+ et Java 21. Depuis PowerShell, utiliser les runtimes installés puis
+exécuter les portes dans cet ordre :
+
+```powershell
+Set-Location C:\Users\Hp\Desktop\Badia\erp-rh\frontend
+$node = 'C:\Users\Hp\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
+& $node node_modules\@angular\cli\bin\ng.js build
+& $node node_modules\@angular\cli\bin\ng.js test --watch=false --browsers=ChromiumHeadless --coverage
+
+Set-Location ..\backend
+$env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
+.\mvnw.cmd -B test
+```
+
+Si Maven signale un verrou `.m2` inaccessible alors qu'aucun Maven/Java ne tourne, supprimer les
+verrous de cache puis relancer :
+
+```powershell
+Get-Process java,mvn -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item "$env:USERPROFILE\.m2\repository\.locks\*.lock" -Force
+.\mvnw.cmd -B test
+```
+
+La migration de production PG17→PG18 ne se valide pas avec Maven : elle reste une opération
+d'exploitation décrite dans [deployment.md](deployment.md) et suivie dans `TODO.md`.
+
 Les tests d'intégration démarrent eux-mêmes un PostgreSQL 18 + pgvector jetable avec **Testcontainers** (`staport.rh.support.PostgresPartage`, une seule fois pour toute la JVM, à la première classe `@SpringBootTest`) : **Docker doit tourner**, mais aucune base ni variable `DB_*` n'est à préparer, en local comme en CI. La CI utilise des variables d'environnement factices
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en
 environnement sans écran.
 
 Le backend mesure sa couverture avec JaCoCo : `./mvnw test` écrit le rapport dans `backend/target/site/jacoco/index.html` (2026-10-11 : 87 % des lignes, 73 % des branches ; la CI le conserve comme artefact). La CI génère aussi le SBOM et analyse les dépendances (voir [deployment.md](deployment.md)).
+
+Les seuils bloquants par domaine et la correspondance domaine → parcours → commande sont publiés dans
+[domain-coverage.md](testing/domain-coverage.md). Le script `scripts/check-domain-coverage.mjs` est
+exécuté après les tests backend et publie le rapport JaCoCo par domaine.
 
 ---
 
@@ -47,9 +79,10 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 
 | Zone | Classes de test | Ce qu'elles vérifient |
 |---|---|---|
-| Démarrage | `PaieApplicationTests` | L'application démarre sur une **base vide** : toute la chaîne de migrations V1 → V16 est rejouée et validée contre les entités (`ddl-auto: validate`) |
+| Démarrage | `PaieApplicationTests` | L'application démarre sur une **base vide** : toute la chaîne de migrations V1 → V21 est rejouée et validée contre les entités (`ddl-auto: validate`) |
 | Sécurité des endpoints | `EndpointSecurityTest` | Découvre automatiquement tous les `@RestController` (sauf `AuthController`) : chaque endpoint déclare une permission, la **refuse** sans elle, l'**accepte** avec elle, refuse une autre permission du même domaine, et correspond à la **table de référence** (45 endpoints) |
 | Chaîne JWT | `JwtSecurityChainTest` | De vrais jetons signés : `401` sans jeton, avec un jeton invalide ou signé avec un autre secret ; `403` sans la permission, même avec un rôle d'administrateur ; `200` avec ; une page est sérialisée par un DTO stable (`content` + `page`) ; une requête mal formée est un `400`, pas un `500` |
+| Configuration CORS | `SecurityConfigCorsTest`, `JwtSecurityChainTest` | Origines explicites validées au démarrage, pré-vol autorisé avec credentials et pré-vol d'une origine inconnue refusé |
 | Documentation d'API | `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest` | Swagger éteint (défaut, production) : ses routes exigent un jeton (`401`) ; allumé (développement) : publiques, le reste de l'API reste protégé |
 | Conventions d'architecture | `ArchitectureConventionsTest` | 14 règles ArchUnit sur `staport.rh` : un contrôleur n'atteint ni repository ni entité ; mapper et repository sans logique ; entités indépendantes de l'API ; DTO en `record` ; frontières entre domaines (façade seulement) ; injection par constructeur ; pas de sortie standard ; logger `log` privé statique final, absent des contrôleurs ; table explicite et aucune relation `EAGER` ; `@Tag` sur chaque contrôleur et `@Operation` sur chaque route |
 | Permissions effectives | `EffectivePermissionResolverTest` | Union des rôles moins les refus individuels |
@@ -143,12 +176,17 @@ enregistrés). Le contrat réel avec le backend reste couvert par les tests d'in
 | `auth.spec.ts` | Connexion accessible, redirection sans session, connexion puis premier écran autorisé, identifiants refusés |
 | `permissions.spec.ts` | Lecteur sans actions d'écriture/suppression, gestionnaire avec, accès refusé sans permission de lecture, menu filtré, liste accessible (axe) |
 | `fonctions.spec.ts` | Création et fiche, libellé obligatoire sans appel API, suppression confirmée, annulation par Échap, recherche et tri, confirmation avant de quitter un formulaire modifié |
+| `domaines.spec.ts` | Parcours navigateur des listes Employés, Chantiers, Équipes et des écrans Utilisateurs, Rôles, Paramètres |
 | `paie.spec.ts` | Liste et trois vues (axe), filtres de l'URL transmis à la recherche, navigation entre vues, assistant d'export (axe dans le dialogue, Échap), export PDF limité à un chantier sans vue d'ensemble (étape chantier, récapitulatif, requête envoyée), menu d'import au clavier, fiche d'un bulletin |
 | `catalogue.spec.ts` | Axe en thème clair et sombre sur tous les composants du kit ; sélecteur au clavier, clic qui ouvre un sélecteur filtrable, filtre sans accents, dialogue (piège de focus, Échap, focus rendu), tableau (tri, pagination, réordonnancement Alt + flèche) |
 | `formulaires.spec.ts` | Signal Forms dans un vrai navigateur : employé (six champs obligatoires signalés, focus, axe ; création avec dates et sélecteurs à la souris ; confirmation en quittant un formulaire modifié), bulletin (montants au format français, mois choisi dans le sélecteur, montant négatif ramené à zéro), utilisateur (règle du mot de passe, affichage du mot de passe, axe), rôle (cocher un domaine) |
 | `responsive.spec.ts` | Téléphone : pas de défilement horizontal, menu en tiroir, cibles tactiles ≥ 44 px |
 
 Ajouter un parcours : le programmer avec `mockApi(page, utilisateur, routes)` ; une route d'API non simulée répond `404` et fait échouer le test de façon visible. Le CI les rejoue (`npm run e2e`) après le build.
+
+Le job CI `full-stack` rejoue `frontend/e2e/full-stack.spec.ts` avec un navigateur réel, le frontend Angular,
+l'API Spring Boot et PostgreSQL 18 + pgvector. Le compte d'administration synthétique est créé par le bootstrap
+de l'application et le parcours visite chaque domaine, y compris l'administration et l'audit.
 
 ---
 
@@ -166,10 +204,6 @@ Ajouter un parcours : le programmer avec `mockApi(page, utilisateur, routes)` ; 
 
 ## Ce qui n'est pas testé automatiquement
 
-- Les écrans Angular Employé, Fonction, Chantier, Équipe, Utilisateurs, Rôles et l'authentification (les écrans Paie et Audit, les guards et la coque de l'application le sont).
-- Un parcours full stack avec frontend réel, API Spring réelle et PostgreSQL réel : les E2E Playwright simulent
-  actuellement l'API, et les tests backend Testcontainers ne démarrent pas le frontend. La convention impose
-  d'ajouter ce niveau par domaine et avant fusion des changements concernés.
 - Le rendu visuel du rapport PDF : vérifié à la main (les tests contrôlent la structure et les nombres, pas
   l'apparence).
 - La synchronisation avec l'ERP réel (le client HTTP est simulé).

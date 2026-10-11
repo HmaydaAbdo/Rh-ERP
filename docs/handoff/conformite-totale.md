@@ -51,6 +51,15 @@ parcours d'authentification/RBAC et audit, les domaines métier, les écrans/tes
 configuration et les services Docker/CI. Produire la matrice avant d'entreprendre un refactoring
 large.
 
+## Passe active du 2026-10-11
+
+La matrice courante est [`docs/conformite/matrice.md`](../conformite/matrice.md), le journal des
+commandes est [`docs/conformite/controle-2026-10-11.md`](../conformite/controle-2026-10-11.md).
+La décision CORS a été validée : les origines sont désormais explicites par environnement et
+documentées dans l'[ADR 0003](../adr/0003-cors-origines-explicites.md). Les contrôles Maven et
+Angular restent à rejouer dans une session où leurs verrous/outils sont disponibles ; la bascule
+PG17→PG18, pgAudit de production et la sauvegarde hors hôte restent des contrôles d'exploitation.
+
 ## Critères de sortie
 
 - Chaque exigence applicable a une preuve ou une dérogation explicitement approuvée.

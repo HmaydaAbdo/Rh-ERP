@@ -128,6 +128,7 @@ security:
     secret: ${JWT_SECRET}
   cors:
     frontend-url: ${FRONTEND_URL}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
   cookie:
     # true en toute configuration servie en HTTPS ; peut être mis à false uniquement pour un accès
     # direct au backend en HTTP pur (hors du proxy de dev Angular, qui rend déjà tout same-origin).

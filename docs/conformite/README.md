@@ -1,9 +1,15 @@
-# Contrôle de conformité du backend (2026-10-11)
+# Contrôle de conformité ERP-RH (2026-10-11)
 
-> Contrôle du backend contre les conventions de référence applicables (`conventions/*.md`).
+> Contrôle initial du backend contre les conventions de référence applicables (`conventions/*.md`).
 > Méthode : lecture du code et de la configuration, puis règles exécutables (`ArchitectureConventionsTest`) pour que
 > les écarts corrigés ne reviennent pas. Les écarts qui engagent un choix d'architecture ou de fonctionnement sont
 > listés **sans être corrigés** : ils attendent une décision (voir « Écarts ouverts »).
+
+---
+
+La matrice exhaustive, qui étend ce contrôle au frontend, aux tests, à Docker, à la CI et à
+l'exploitation, est dans [matrice.md](matrice.md). Elle constitue le registre courant de l'audit ;
+les tableaux ci-dessous décrivent uniquement les vérifications backend déjà documentées.
 
 ---
 
@@ -19,7 +25,7 @@
 | Audit | Trois couches (Envers, journal d'actions, événements de sécurité) ; toute entité auditée ou exclue explicitement ; aucune écriture en masse | `AuditArchitectureTest` |
 | RBAC | Chaque route déclare une permission ; refus, acceptation et table de référence vérifiés | `EndpointSecurityTest`, `JwtSecurityChainTest` |
 | Sessions | Jeton d'accès court, jeton de rafraîchissement opaque à rotation et révocation de famille, cookie `httpOnly` | `AuthServiceTest` |
-| Base | Flyway V1 → V15, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
+| Base | Flyway V1 → V21, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
 | Documentation d'API | Swagger éteint par défaut ; ses routes exigent un jeton quand il est éteint | `DocumentationApiSecurityTest` |
 
 ---
@@ -37,13 +43,14 @@
 | C7 | **Aucune limite de débit** (G1) | `limit_req` dans nginx inner (`429`) : connexion 20/min, réinitialisation 5/min, session 120/min, `POST` coûteux 30/min, par adresse de client réel ; essayé sur un nginx réel. Convention ajoutée à `conventions/security.md`. Le verrouillage de compte reste possible plus tard |
 | C8 | **Métriques et journaux** (G4) : `/actuator/prometheus` était ouvert par la sécurité mais n'existait pas ; journaux en texte | Registre Prometheus + exposition de `health` et `prometheus` seulement (tag `application`) ; journaux JSON asynchrones en production (`LOGGING_FORMAT=json`, `logstash-logback-encoder`) ; `SupervisionTest` |
 | C9 | **Images Docker** (G7) : exécution en root, images de base non épinglées, healthcheck frontend fragile | Backend sous un compte dédié, frontend sur `nginx-unprivileged` (8080), bases épinglées par empreinte ; essayé : les deux images construites et lancées ensemble (non-root, santé, JSON, `429`) |
-| C10 | **Chaîne d'approvisionnement Maven** (G8) : aucune analyse, aucun SBOM, aucune couverture. **L'analyse a révélé 26 vulnérabilités connues** (3 critiques, 15 hautes) : Tomcat 11.0.24 (contournement d'authentification DIGEST, contrôle d'accès et FORM), Jackson (dénis de service), jsoup 1.18.1, Batik 1.14 (SSRF, exécution de code), Xalan 2.7.2 | Versions relevées : Tomcat 11.0.26, Jackson 2.21.7 / 3.1.7, jsoup 1.23.2, Batik 1.19, Xalan retiré (devenu inutile). CI : SBOM CycloneDX, OSV-Scanner (échec si vulnérabilité), JaCoCo (87 % des lignes, 73 % des branches), Dependabot. Suite complète verte (284) |
+| C10 | **Chaîne d'approvisionnement Maven** (G8) : aucune analyse, aucun SBOM, aucune couverture. **L'analyse a révélé 26 vulnérabilités connues** (3 critiques, 15 hautes) : Tomcat 11.0.24 (contournement d'authentification DIGEST, contrôle d'accès et FORM), Jackson (dénis de service), jsoup 1.18.1, Batik 1.14 (SSRF, exécution de code), Xalan 2.7.2 | Versions relevées : Tomcat 11.0.26, Jackson 2.21.7 / 3.1.7, jsoup 1.23.2, Batik 1.19, Xalan retiré (devenu inutile). CI : SBOM CycloneDX, OSV-Scanner (échec si vulnérabilité), JaCoCo (87 % des lignes, 73 % des branches), Dependabot. Suite backend documentée : 304 tests |
 | C11 | **Demande de réinitialisation synchrone** (G2) : l'envoi du courriel allongeait la réponse pour une adresse connue | `EmailService.envoyerLienReinitialisation` en `@Async` (`AsyncConfig`), échec journalisé sans être renvoyé ; `EmailServiceTest` |
-| C12 | **Tests sur PostgreSQL** (G9) : conteneur de service en CI et base préparée à la main en local (partagée, donc exposée aux données réelles) | Testcontainers (`pgvector/pgvector:pg18`, un conteneur par exécution, démarré à la première classe `@SpringBootTest`) ; le service PostgreSQL et les variables `DB_*` disparaissent de la CI ; suite complète (287) verte sans aucune variable de base |
+| C12 | **Tests sur PostgreSQL** (G9) : conteneur de service en CI et base préparée à la main en local (partagée, donc exposée aux données réelles) | Testcontainers (`pgvector/pgvector:pg18`, un conteneur par exécution, démarré à la première classe `@SpringBootTest`) ; le service PostgreSQL et les variables `DB_*` disparaissent de la CI ; suite backend documentée : 304 tests |
 | C13 | **Création d'un utilisateur ou d'un rôle répondait `200`** (les autres domaines répondent `201`) | `POST /users` et `POST /roles` répondent `201 Created` (documenté dans Swagger) ; le frontend accepte tout `2xx` |
 | C14 | **G3 — Paramètres de fonctionnement codés en dur** | Migration `V16`, catalogue typé et borné dans `CleParametre`, écran d'administration, permissions dédiées et journalisation des changements ; tests backend et frontend dans le module Paramètres |
 | C15 | **G5 — Listes utilisateurs et rôles non paginées** | Les listes passent par `POST /users/search` et `/roles/search`, avec pagination serveur et permissions `USER_MANAGE` / `ROLE_MANAGE` ; les routes de liste entière n'existent plus |
 | C16 | **G6 — Extension `vector` activée sans usage actuel** | Exception confirmée le 2026-10-11 : le propriétaire souhaite conserver pgvector pour de futurs embeddings ; aucune migration de suppression prévue |
+| C17 | **G11 — CORS trop permissif** : toutes les origines étaient réfléchies avec des credentials | `CORS_ALLOWED_ORIGINS` est validé au démarrage et appliqué comme liste d'origines explicites ; tests de pré-vol autorisé/refusé et [ADR 0003](../adr/0003-cors-origines-explicites.md) |
 
 ---
 
@@ -59,4 +66,4 @@ Ils sont suivis dans [TODO.md](../../TODO.md).
 
 ## Suite
 
-1. G3 et G5 sont corrigés (C14 et C15). G6 est conservé par décision du propriétaire (C16) ; vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).
+1. G3, G5 et G11 sont corrigés (C14, C15 et C17). G6 est conservé par décision du propriétaire (C16) ; vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).

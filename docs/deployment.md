@@ -106,20 +106,18 @@ le navigateur rejette le cookie.
 Remplacer `${FRONTEND_PORT}` par la valeur réelle configurée dans `.env` sur le serveur, et
 `/rh-erp/` par le sous-chemin réellement choisi.
 
-`FRONTEND_URL` (dans `.env`) n'est **plus** utilisé pour CORS (voir plus bas) — uniquement pour
-construire le lien de réinitialisation de mot de passe envoyé par email (`EmailService`). Il doit
-donc correspondre à l'URL publique complète résultante (ex. `https://<domaine>/rh-erp`) pour que ce
-lien soit valide, même si ça n'a plus d'incidence sur les appels API.
+`FRONTEND_URL` (dans `.env`) sert à construire le lien de réinitialisation de mot de passe envoyé
+par email (`EmailService`). Il doit correspondre à l'URL publique complète résultante (ex.
+`https://<domaine>/rh-erp`) pour que ce lien soit valide. `CORS_ALLOWED_ORIGINS` porte séparément
+les origines navigateur autorisées (sans chemin), car une URL d'application peut inclure un sous-chemin.
 
 ### CORS
 
-**Décision (HMAYDA, 2026-09-23)** : CORS ouvert à toute origine
-(`SecurityConfig.corsConfigurationSource`, `allowedOriginPatterns("*")`), plutôt que restreint à
-`FRONTEND_URL` comme auparavant. Risque accepté en connaissance de cause : `/auth/refresh` et
-`/auth/logout` restent les seuls endpoints lus depuis un cookie (Refresh Token), mais ce cookie est
-`SameSite=Lax` (voir `AuthController`), ce qui empêche déjà son envoi sur une requête cross-origin
-déclenchée par du JavaScript tiers — le risque résiduel d'ouvrir le CORS en plus de ça est donc
-limité en pratique.
+`SecurityConfig` lit `CORS_ALLOWED_ORIGINS` et refuse le démarrage si une valeur est vide, contient
+un wildcard ou n'est pas une origine `http(s)://hôte[:port]`. Chaque environnement déclare sa propre
+liste : l'environnement local contient `http://localhost:4200` ; la production contient l'origine
+publique réelle, par exemple `https://<domaine>`, sans le sous-chemin `/rh-erp`. Les credentials restent
+activés uniquement pour ces origines explicites.
 
 ---
 

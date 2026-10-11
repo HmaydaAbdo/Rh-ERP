@@ -69,6 +69,11 @@ jobs:
       - name: Install fonts for AWT/SVG chart rendering
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core
 
+      - name: Set up Node for coverage gate
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.15.0"
+
       - name: Run backend tests
         working-directory: backend
         # mvnw doit être exécutable — le bit d'exécution a été perdu une première fois lors d'un
@@ -83,6 +88,7 @@ jobs:
           CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
           JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
           FRONTEND_URL: http://localhost:4200
+          CORS_ALLOWED_ORIGINS: http://localhost:4200
           COOKIE_SECURE: "false"
           ADMIN_USERNAME: ci-admin
           ADMIN_EMAIL: ci-admin@example.invalid
@@ -94,6 +100,9 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+
+      - name: Enforce backend coverage by domain
+        run: node scripts/check-domain-coverage.mjs backend/target/site/jacoco/jacoco.xml
 
       # Couverture des tests (JaCoCo, générée par la phase test) : rapport HTML conservé comme artefact.
       - name: Upload coverage report
@@ -187,7 +196,14 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Upload frontend coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          retention-days: 14
 
       - name: Build (verifies the production bundle compiles)
         working-directory: frontend
@@ -270,3 +286,77 @@ jobs:
           context: backup
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.tags.outputs.tags }}
+
+  full-stack:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_DB: staport_rh
+          POSTGRES_USER: staport
+          POSTGRES_PASSWORD: staport-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U staport -d staport_rh"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.15.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build backend
+        working-directory: backend
+        run: chmod +x mvnw && ./mvnw -B -DskipTests package
+      - name: Start backend against PostgreSQL
+        working-directory: backend
+        run: |
+          nohup java -jar target/*.jar > "$RUNNER_TEMP/erp-rh-backend.log" 2>&1 &
+          for i in {1..60}; do curl --fail --silent http://localhost:8080/actuator/health && exit 0; sleep 2; done
+          cat "$RUNNER_TEMP/erp-rh-backend.log"
+          exit 1
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: staport_rh
+          DB_USER: staport
+          DB_PASSWORD: staport-test-password
+          DB_MIGRATION_USER: staport
+          DB_MIGRATION_PASSWORD: staport-test-password
+          PGAUDIT_ENABLED: "false"
+          CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
+          JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
+          FRONTEND_URL: http://localhost:4300
+          CORS_ALLOWED_ORIGINS: http://localhost:4300
+          COOKIE_SECURE: "false"
+          ADMIN_USERNAME: ci-admin
+          ADMIN_EMAIL: ci-admin@example.invalid
+          ADMIN_PASSWORD: ci-admin-password
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+          SMTP_USERNAME: ""
+          SMTP_PASSWORD: ""
+          SMTP_AUTH: "false"
+          SMTP_STARTTLS: "false"
+          MAIL_FROM: noreply@example.invalid
+      - name: Install frontend and browser
+        working-directory: frontend
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Run full-stack browser gate
+        working-directory: frontend
+        run: npx playwright test e2e/full-stack.spec.ts
+        env:
+          E2E_FULL_STACK: "1"
+          ADMIN_USERNAME: ci-admin
+          ADMIN_PASSWORD: ci-admin-password
+          BACKEND_URL: http://localhost:8080

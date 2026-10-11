@@ -7,7 +7,7 @@
 
 ---
 
-## Suivi de conformité et d’exploitation ERP-RH
+## Évolutions IA et KPI
 
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
@@ -16,27 +16,15 @@ Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retiré
 audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
 Restent à faire :
 
-- **Conformité totale de l'application** : auditer chaque convention sur backend, frontend, tests,
-  sécurité, BI/IA, performances, Docker Compose, proxy, CI et exploitation ; établir une
-  matrice de preuves, corriger les écarts autorisés et faire valider les décisions nécessaires.
-  Voir aussi le [handoff](docs/handoff/conformite-totale.md).
 - ensuite instrumenter le catalogue de KPI existant puis cadrer un premier outil MCP RH en lecture
   seule avant d'étendre l'IA.
 
+Le contrôle local de conformité est documenté dans [la matrice de preuves](docs/conformite/matrice.md)
+et [le journal de contrôle](docs/conformite/controle-2026-10-11.md). Les validations d'exploitation
+restent regroupées ci-dessous dans **Travail côté serveur**.
+
 Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
 et procédure de retour arrière propres à cette étape.
-
-## Mettre la couverture de tests au niveau obligatoire par domaine
-
-La stratégie obligatoire est définie dans `conventions/testing.md`. La CI actuelle exécute les tests
-unitaires/intégration backend et frontend, le build de production et des E2E avec API simulée, mais ne
-fait pas encore tourner le frontend, l'API et PostgreSQL ensemble. Les E2E frontend des écrans Employé,
-Fonction, Chantier, Équipe, Utilisateurs, Rôles et authentification manquent aussi (voir `docs/testing.md`).
-
-- Ajouter une porte full stack reproductible en CI (navigateur, frontend, API et PostgreSQL réels) avec au
-  moins un parcours de référence pour chaque domaine et les flux transverses.
-- Ajouter les parcours navigateur manquants, puis garder une correspondance domaine → cas → commande CI à jour.
-- Rendre explicites les portes bloquantes par type de changement et publier les rapports de couverture par domaine.
 
 ## Vues Cartes et Analytique des autres domaines (squelettes créés, 2026-10-06)
 
