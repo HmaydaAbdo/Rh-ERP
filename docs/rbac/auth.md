@@ -11,6 +11,7 @@
 | `POST /auth/refresh` | Lit le Refresh Token depuis le cookie httpOnly ; la réutilisation d'un token déjà consommé révoque toute sa famille (voir ci-dessous) |
 | `POST /auth/forgot-password` | Répond toujours `202`, que l'email existe ou non |
 | `POST /auth/reset-password` | Consomme un token à usage unique |
+| `GET /auth/password-policy` | Renvoie la longueur minimale utilisée par le formulaire public de réinitialisation |
 
 ## Endpoints authentifiés (utilisateur connecté, sans permission spécifique)
 
@@ -23,12 +24,12 @@
 
 | Endpoint | Permission (`@PreAuthorize`) |
 |---|---|
-| `GET /users`, `GET /users/{id}` | `USER_MANAGE` |
+| `POST /users/search`, `GET /users/{id}` | `USER_MANAGE` |
 | `POST /users` | `USER_MANAGE` |
 | `PUT /users/{id}` | `USER_MANAGE` |
 | `PUT /users/{id}/permissions-refusees` | `USER_MANAGE` |
 | `POST /users/{id}/reset-password` | `USER_MANAGE` |
-| `GET /roles`, `GET /roles/{id}` | `ROLE_MANAGE` |
+| `POST /roles/search`, `GET /roles/{id}` | `ROLE_MANAGE` |
 | `POST /roles` | `ROLE_MANAGE` |
 | `PUT /roles/{id}` | `ROLE_MANAGE` |
 | `DELETE /roles/{id}` | `ROLE_MANAGE` |
@@ -44,6 +45,7 @@
 | Lien sidebar "Rôles" | `authService.hasPermission('ROLE_MANAGE')` |
 | Routes `/admin/users/**` | `permissionGuard`, `data: { permission: 'USER_MANAGE' }` |
 | Routes `/admin/roles/**` | `permissionGuard`, `data: { permission: 'ROLE_MANAGE' }` |
+| Route `/admin/parametres` | `permissionGuard`, `data: { permission: 'PARAMETRE_READ' }` |
 | Confirmation de suppression d'un rôle | Le message dit qu'un rôle attribué n'est pas supprimable ; le refus `409` du serveur s'affiche par l'intercepteur global |
 | Section "Permissions refusées" (formulaire utilisateur) | Visible uniquement en édition, limitée aux permissions accordées par les rôles actuellement sélectionnés |
 

@@ -1,0 +1,20 @@
+<div class="parametre-list app-page">
+  <div class="app-page__header">
+    <div>
+      <h1>Paramètres</h1>
+      <p>Valeurs de fonctionnement de l’application.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p role="status">Chargement des paramètres…</p>
+  } @else if (parametres().length === 0) {
+    <p role="status">Aucun paramètre disponible.</p>
+  } @else {
+    <div class="parametre-list__items">
+      @for (parametre of parametres(); track parametre.id) {
+        <app-parametre-item [parametre]="parametre" [editable]="canWrite()" (saved)="onSaved($event)" />
+      }
+    </div>
+  }
+</div>

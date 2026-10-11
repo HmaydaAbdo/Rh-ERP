@@ -45,6 +45,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 | **Paie** | Bulletins mensuels (saisie, import, export) | [README](paie/README.md) · [skill IA](paie/skills/SKILL.md) | [rbac/paie.md](rbac/paie.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
 | **Auth** | Comptes, rôles, permissions, sessions | [README](auth/README.md) · [skill IA](auth/skills/SKILL.md) | [rbac/auth.md](rbac/auth.md) |
+| **Paramètres** | Valeurs de fonctionnement administrables | [README](parametre/README.md) | [rbac/parametre.md](rbac/parametre.md) |
 | **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [README](audit/README.md) · [skill IA](audit/skills/SKILL.md) | [rbac/audit.md](rbac/audit.md) |
 
 Journal des décisions du rapport PDF (ce qui a été retiré et pourquoi) :

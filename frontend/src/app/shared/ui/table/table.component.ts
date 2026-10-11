@@ -142,6 +142,9 @@ export class TableComponent<T extends object> {
   }
 
   protected sortBy(column: TableColumn): void {
+    if (column.sortable === false) {
+      return;
+    }
     const key = this.sortKey(column);
     if (this.sortField() === key) {
       this.sortOrder.set(this.sortOrder() === 1 ? -1 : 1);

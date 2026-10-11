@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
+import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
 import { AdminUser } from '../../models/admin.model';
 import { UserService } from '../../services/user.service';
 import { UserListComponent } from './user-list.component';
@@ -23,7 +24,7 @@ const UTILISATEURS = [utilisateur(1, 'admin', true, ['SYSTEM_ADMIN']), utilisate
 
 describe('UserListComponent', () => {
   let fixture: ComponentFixture<UserListComponent>;
-  let service: { findAll: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
+  let service: { search: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement;
@@ -31,8 +32,15 @@ describe('UserListComponent', () => {
   const dialogue = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 
   async function afficher(): Promise<void> {
-    service = { findAll: vi.fn().mockReturnValue(of(UTILISATEURS)), resetPassword: vi.fn().mockReturnValue(of(undefined)) };
-    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: UserService, useValue: service }] });
+    service = {
+      search: vi.fn((criteres: { username?: string; email?: string; actif?: boolean }) => {
+        const resultat = UTILISATEURS.filter((u) => (!criteres.username || u.username.toLowerCase().includes(criteres.username.toLowerCase())) && (!criteres.email || u.email.toLowerCase().includes(criteres.email.toLowerCase())) && (criteres.actif === undefined || u.actif === criteres.actif));
+        return of({ content: resultat, page: { size: 10, number: 0, totalElements: resultat.length, totalPages: 1 } });
+      }),
+      resetPassword: vi.fn().mockReturnValue(of(undefined))
+    };
+    const politique = { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' };
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: UserService, useValue: service }, { provide: PolitiqueMotDePasseService, useValue: politique }] });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(UserListComponent);
     fixture.detectChanges();
@@ -57,7 +65,7 @@ describe('UserListComponent', () => {
     document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove());
   });
 
-  it('charge tous les utilisateurs et affiche identifiant, email, rôles et statut', async () => {
+  it('charge la première page et affiche identifiant, email, rôles et statut', async () => {
     await afficher();
 
     expect(noms()).toEqual(['admin', 'rh.fatima', 'ancien']);
@@ -69,18 +77,20 @@ describe('UserListComponent', () => {
   });
 
   describe('filtres', () => {
-    it('filtre par identifiant ou par email après un court délai', async () => {
+  it('envoie les filtres identifiant et email au serveur après un court délai', async () => {
       await afficher();
       vi.useFakeTimers();
 
       saisir(racine(), 'input[aria-label="Username"]', 'RH');
       await filtrer();
       expect(noms()).toEqual(['rh.fatima']);
+      expect(service.search).toHaveBeenLastCalledWith({ username: 'RH', email: undefined, actif: undefined }, { page: 0, size: 10, sort: 'username,asc' });
 
       saisir(racine(), 'input[aria-label="Username"]', '');
       saisir(racine(), 'input[aria-label="Email"]', 'ancien@');
       await filtrer();
       expect(noms()).toEqual(['ancien']);
+      expect(service.search).toHaveBeenLastCalledWith({ username: undefined, email: 'ancien@', actif: undefined }, { page: 0, size: 10, sort: 'username,asc' });
     });
 
     it('filtre par statut immédiatement', async () => {

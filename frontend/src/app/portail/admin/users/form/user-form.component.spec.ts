@@ -7,6 +7,7 @@ import { fournirSignalForms } from '../../../../shared/forms/signal-forms.config
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
 import { fournirRoute } from '../../../../shared/testing/ecrans';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
+import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
 import { AdminUser, PermissionSummary, Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
@@ -62,7 +63,8 @@ describe('UserFormComponent', () => {
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
         { provide: UserService, useValue: users },
-        { provide: RoleService, useValue: { findAll: () => of(ROLES) } },
+        { provide: RoleService, useValue: { findEvery: () => of(ROLES) } },
+        { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } },
         { provide: EmployeeReferenceService, useValue: EMPLOYES }
       ]
     });

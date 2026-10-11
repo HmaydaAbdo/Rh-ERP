@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { disabled, form, FormField, required } from '@angular/forms/signals';
 
+import { PolitiqueMotDePasseService } from '../../validators/politique-mot-de-passe.service';
 import { motDePasseConforme } from '../../validators/mot-de-passe.validator';
 import { PasswordInputComponent } from './password-input.component';
 
@@ -25,6 +26,10 @@ describe('PasswordInputComponent', () => {
   let hote: MotDePasseTestComponent;
   const champ = () => fixture.nativeElement.querySelector('input') as HTMLInputElement;
   const bascule = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [{ provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } }] });
+  });
 
   async function afficher(configurer?: (h: MotDePasseTestComponent) => void): Promise<void> {
     fixture = TestBed.createComponent(MotDePasseTestComponent);

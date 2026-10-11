@@ -4,7 +4,7 @@
     <h1>Rôles</h1>
   </div>
 
-  <form [formRoot]="filterForm" class="app-toolbar">
+  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
     <input class="stp-input" type="text" [formField]="filterForm.nom" aria-label="Nom" autocomplete="off" spellcheck="false" placeholder="Nom" />
     <input class="stp-input" type="text" [formField]="filterForm.description" aria-label="Description" autocomplete="off" placeholder="Description" />
     <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
@@ -12,7 +12,9 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      {{ filtres().length }} rôle{{ filtres().length > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} rôle{{ totalRecords() > 1 ? 's' : '' }}
+      }
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
@@ -22,10 +24,14 @@
 
   <stp-table
     label="Liste : Rôles"
-    emptyMessage="Aucun rôle."
-    [value]="filtres()"
+    emptyMessage="Aucun rôle ne correspond à ces critères."
+    [lazy]="true"
+    [value]="roles()"
+    [totalRecords]="totalRecords()"
     [loading]="loading()"
     [columns]="columns.visible"
+    [(first)]="first"
+    (lazyLoad)="onLazyLoad($event)"
     (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-role let-col="col">

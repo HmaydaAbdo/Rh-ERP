@@ -6,7 +6,8 @@ import { catchError, lastValueFrom, map, of } from 'rxjs';
 
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
-import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../shared/validators/mot-de-passe.validator';
+import { motDePasseConforme } from '../../../shared/validators/mot-de-passe.validator';
+import { PolitiqueMotDePasseService } from '../../../shared/validators/politique-mot-de-passe.service';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 
 @Component({
@@ -18,6 +19,7 @@ import { PasswordRecoveryService } from '../services/password-recovery.service';
 })
 export class ResetPasswordComponent implements OnInit {
   private readonly passwordRecovery = inject(PasswordRecoveryService);
+  private readonly politique = inject(PolitiqueMotDePasseService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -29,7 +31,7 @@ export class ResetPasswordComponent implements OnInit {
   readonly form = form(
     this.modele,
     (chemin) => {
-      required(chemin.nouveauMotDePasse, { message: REGLE_MOT_DE_PASSE });
+      required(chemin.nouveauMotDePasse, { message: () => this.politique.regle() });
       motDePasseConforme(chemin.nouveauMotDePasse);
     },
     { submission: { action: () => this.reinitialiser(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }

@@ -57,6 +57,7 @@ Détail et règles métier : [function](function/README.md), [chantier](chantier
 | `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
 | `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille` (identifiant de session, voir [auth/README.md](auth/README.md)) |
 | `reset_password_token` | Lien « mot de passe oublié » **haché**, `expire_le`, `utilise` |
+| `parametre` | Catalogue de valeurs de fonctionnement administrables, clé fixe et valeur unique ; détails dans [parametre/README.md](parametre/README.md) |
 
 Détail : [auth/README.md](auth/README.md).
 
@@ -71,7 +72,7 @@ Détail : [auth/README.md](auth/README.md).
 |---|---|
 | `audit_revision` | Une ligne par transaction qui modifie des données auditées : `horodatage` (`TIMESTAMPTZ`), `utilisateur_id` (**sans clé étrangère** : l'historique survit au compte), `utilisateur_nom` (figé), `origine` (`API`, `TACHE_PLANIFIEE`, `DEMARRAGE`, `MIGRATION`, `INCONNUE`), `request_id`, `adresse_ip` |
 | `audit_revision_entite` | Types d'entités modifiés par chaque révision (clé `(revision_id, entite)`) |
-| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `paie_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
+| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `paie_aud`, `parametre_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
 | `audit_journal` | Le journal unique : `categorie` (`OPERATION`, `SECURITE`, `ACCES`), `action`, `type_operation`, `resultat` (`SUCCES`, `ECHEC`), identité et contexte, cible (`entite_type`, `entite_id`), `nombre_elements`, `perimetre` (`JSONB`), `motif`, `revision_id` (→ `audit_revision`). Index sur l'horodatage, l'utilisateur, la catégorie et l'action, la cible, l'identifiant de requête et la révision |
 
 Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMigrate.sql` ci-dessous et

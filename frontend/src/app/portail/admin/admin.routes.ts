@@ -5,6 +5,13 @@ import { unsavedChangesGuard } from '../../shared/forms/unsaved-changes.guard';
 
 export const ADMIN_ROUTES: Routes = [
   {
+    path: 'parametres',
+    title: 'Paramètres',
+    canActivate: [permissionGuard],
+    data: { permission: 'PARAMETRE_READ' },
+    loadComponent: () => import('./parametres/parametre-list.component').then((m) => m.ParametreListComponent)
+  },
+  {
     path: 'users',
     title: 'Utilisateurs',
     canActivate: [permissionGuard],

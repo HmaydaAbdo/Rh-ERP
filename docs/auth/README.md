@@ -15,7 +15,7 @@
 | Backend | `backend/src/main/java/staport/rh/auth/` |
 | Frontend | `frontend/src/app/core/auth/` (connexion, session, guards) et `frontend/src/app/portail/admin/` (écrans Utilisateurs et Rôles) |
 | Tables | `utilisateur`, `role`, `permission`, `role_permission`, `utilisateur_role`, `utilisateur_permission_refusee`, `refresh_token`, `reset_password_token` |
-| Endpoints | `/auth/*`, `/users`, `/roles`, `/permissions` |
+| Endpoints | `/auth/*`, `/users`, `/roles`, `/permissions`, `/parametres` |
 
 ```text
 auth/
@@ -77,7 +77,7 @@ l'audit (`UserService.creerAdminInitial`, appelé seulement quand `adminExiste()
 | | Jeton d'accès | Jeton de rafraîchissement |
 |---|---|---|
 | Nature | JWT signé HS256 | Chaîne aléatoire opaque de 256 bits |
-| Durée | **15 minutes** | **30 jours** |
+| Durée initiale | **15 minutes** (réglable) | **12 heures** (réglable) |
 | Contenu | `sub` (username), `uid`, `permissions`, `roles`, `iss`, `iat`, `exp` | Rien : une clé vers une ligne de `refresh_token` |
 | Stockage côté client | **En mémoire** (jamais `localStorage`) : perdu au rechargement de la page | Cookie `refresh_token`, `httpOnly`, `SameSite=Lax`, chemin `/auth`, `Secure` selon `COOKIE_SECURE` |
 | Stockage côté serveur | Aucun (stateless) | Haché SHA-256 en base, jamais en clair |
@@ -112,7 +112,7 @@ Un jeton présenté par un **compte désactivé** est refusé (`401`) et consomm
 ### Mot de passe oublié
 
 1. `POST /auth/forgot-password {email}` répond **toujours `202`**, que le compte existe ou non (on ne révèle
-   jamais l'existence d'un compte). Si le compte existe, un jeton à usage unique (valable **1 heure**, haché en
+   jamais l'existence d'un compte). Si le compte existe, un jeton à usage unique (valable **60 minutes par défaut**, durée réglable, haché en
    base) est envoyé par courriel : lien `<FRONTEND_URL>/reset-password?token=…`.
 2. `POST /auth/reset-password {token, nouveauMotDePasse}` : change le mot de passe, marque le jeton utilisé et
    **révoque tous les jetons de rafraîchissement actifs** de l'utilisateur. Un jeton déjà utilisé, expiré ou
@@ -123,7 +123,7 @@ Un jeton présenté par un **compte désactivé** est refusé (`401`) et consomm
 
 ### Mots de passe
 
-BCrypt. Règle unique (`PolitiqueMotDePasse`, décision du 2026-10-04) : **10 caractères minimum** (100 au plus), **au moins une lettre
+BCrypt. Règle (`PolitiqueMotDePasse`) : longueur minimale réglable (**10 caractères par défaut**, de 8 à 100 ; 100 au plus), **au moins une lettre
 et un chiffre**, **différent de l'identifiant** (casse ignorée). Elle s'applique à la création d'un compte et aux deux
 réinitialisations (par lien, par un administrateur) ; un mot de passe refusé répond `400` avec la règle, jamais la valeur, et ne
 brûle pas le lien de réinitialisation. Les mots de passe existants ne changent pas. Le mot de passe du compte d'amorçage vient de
@@ -134,13 +134,13 @@ saisie ; le serveur reste l'autorité.
 
 | Élément | Révocable avant expiration ? |
 |---|---|
-| Jeton d'accès | **Non** : valable jusqu'à ses 15 minutes, même si le compte est désactivé ou ses permissions modifiées |
+| Jeton d'accès | **Non** : valable jusqu'à son expiration (15 minutes par défaut, durée réglable), même si le compte est désactivé ou ses permissions modifiées |
 | Jeton de rafraîchissement | Oui : déconnexion, réinitialisation du mot de passe (par courriel **ou par un administrateur**), **désactivation du compte**, détection de vol — `AuthService.revoquerSessions` coupe toutes les sessions d'un compte |
 
 **Conséquence** : un changement de rôle ou de refus individuel ne prend effet qu'au prochain rafraîchissement
-de l'utilisateur concerné (au plus 15 minutes). Le frontend relit ses permissions à chaque rafraîchissement.
+de l'utilisateur concerné (au plus la durée réglée du jeton d'accès). Le frontend relit ses permissions à chaque rafraîchissement.
 De même, un compte désactivé ou dont le mot de passe vient d'être réinitialisé **perd ses sessions tout de suite, sauf
-le jeton d'accès déjà émis, qui reste valable 15 minutes au plus** (risque assumé : le révoquer exigerait une lecture en
+le jeton d'accès déjà émis, qui reste valable jusqu'à son expiration** (risque assumé : le révoquer exigerait une lecture en
 base à chaque requête).
 
 ---
@@ -201,16 +201,21 @@ Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `
 | `GET` | `/auth/me` | Profil et permissions effectives de l'utilisateur courant | Authentifié |
 | `POST` | `/auth/forgot-password` | Demande de lien de réinitialisation (toujours `202`) | Public |
 | `POST` | `/auth/reset-password` | Réinitialisation avec le jeton du courriel | Public |
-| `GET` | `/users`, `/users/{id}` | Lister, consulter | `USER_MANAGE` |
+| `GET` | `/auth/password-policy` | Lire la longueur minimale du mot de passe | Public |
+| `POST` | `/users/search` | Rechercher avec filtres et pagination serveur | `USER_MANAGE` |
+| `GET` | `/users/{id}` | Consulter | `USER_MANAGE` |
 | `POST` | `/users` | Créer | `USER_MANAGE` |
 | `PUT` | `/users/{id}` | Modifier (email, actif, employé lié, rôles) | `USER_MANAGE` |
 | `PUT` | `/users/{id}/permissions-refusees` | Remplacer les refus individuels | `USER_MANAGE` |
 | `POST` | `/users/{id}/reset-password` | Réinitialiser le mot de passe | `USER_MANAGE` |
-| `GET` | `/roles`, `/roles/{id}` | Lister, consulter | `ROLE_MANAGE` |
+| `POST` | `/roles/search` | Rechercher avec filtres et pagination serveur | `ROLE_MANAGE` |
+| `GET` | `/roles/{id}` | Consulter | `ROLE_MANAGE` |
 | `POST` | `/roles` | Créer | `ROLE_MANAGE` |
 | `PUT` | `/roles/{id}` | Modifier | `ROLE_MANAGE` |
 | `DELETE` | `/roles/{id}` | Supprimer | `ROLE_MANAGE` |
 | `GET` | `/permissions` | Catalogue des permissions | `ROLE_MANAGE` |
+| `GET` | `/parametres` | Lire les valeurs de fonctionnement | `PARAMETRE_READ` |
+| `PUT` | `/parametres/{id}` | Modifier une valeur de fonctionnement | `PARAMETRE_WRITE` |
 
 Codes d'erreur : `401` identifiants ou jeton invalides, `400` validation / jeton de réinitialisation invalide /
 référence inconnue, `404` utilisateur ou rôle inexistant, `409` username, email ou nom de rôle déjà pris.

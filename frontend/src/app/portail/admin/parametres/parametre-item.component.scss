@@ -1,0 +1,49 @@
+.parametre-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 25rem);
+  align-items: start;
+  gap: var(--space-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  &__description {
+    h2 {
+      margin: 0 0 var(--space-xs);
+      font-size: var(--text-md);
+    }
+
+    p {
+      margin: 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+  }
+
+  &__form {
+    display: flex;
+    align-items: end;
+    gap: var(--space-sm);
+
+    .field {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__hint {
+    display: block;
+    margin-top: var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  @media (max-width: 48rem) {
+    grid-template-columns: minmax(0, 1fr);
+
+    &__form {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+}

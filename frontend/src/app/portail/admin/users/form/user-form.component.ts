@@ -92,7 +92,7 @@ export class UserFormComponent {
       untracked(() => this.deniedPermissionIds.update((courant) => new Set(Array.from(courant).filter((id) => deniables.has(id)))));
     });
 
-    const roles$ = this.roleService.findAll();
+    const roles$ = this.roleService.findEvery();
     const id = this.userId();
 
     if (id === null) {

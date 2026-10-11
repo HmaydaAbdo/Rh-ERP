@@ -5,6 +5,8 @@ export interface TableColumn {
   field: string;
   header: string;
   sortField?: string;
+  /** `false` : colonne qui ne se trie pas (valeur calculée que le serveur ne sait pas trier) ; vrai par défaut. */
+  sortable?: boolean;
   /** Classes appliquées à l'en-tête ET aux cellules de la colonne (ex. `text-center`, `text-right`). */
   align?: string;
   /** Classes appliquées aux seules cellules de la colonne (ex. troncature d'un texte long). */

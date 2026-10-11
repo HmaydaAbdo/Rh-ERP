@@ -70,9 +70,10 @@ Variable du frontend (développement) : `BACKEND_URL` (défaut `http://localhost
 | `spring.jpa.properties.hibernate.jdbc.batch_size`, `order_inserts`, `order_updates` | `50`, `true`, `true` | Écritures regroupées : un import ou une suppression de 1 000 lignes écrit autant de lignes d'audit en quelques requêtes |
 | `server.forward-headers-strategy` | `native` | L'adresse IP enregistrée par l'audit est celle du client réel (`X-Forwarded-For` posé par nginx, honoré des proxys internes) |
 | `spring.flyway.user` / `password` / `placeholders` | `DB_MIGRATION_*` ; `app_user`, `app_password` ← `DB_USER`, `DB_PASSWORD` | Flyway s'exécute avec le propriétaire ; `afterMigrate.sql` reçoit le compte applicatif à créer et à restreindre |
-| `chantier.sync.cron` | `0 0 23 * * *` | Synchronisation quotidienne à 23 h (fuseau du serveur) |
 | `management.health.mail.enabled` | `false` | Une panne SMTP ne doit pas faire passer l'application en `DOWN` |
-| Durée du jeton d'accès / de rafraîchissement | 15 minutes / 30 jours | Constantes du code (`JwtService`, `AuthService`) |
+
+Les valeurs métier réglables (durées des jetons, mot de passe, analytique de paie et planification de la synchronisation)
+sont gérées dans la table `parametre` et dans l'écran Paramètres ; voir [docs/parametre/README.md](parametre/README.md).
 
 ---
 
