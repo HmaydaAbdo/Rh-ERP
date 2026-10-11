@@ -26,6 +26,7 @@ import staport.rh.auth.security.PolitiqueMotDePasse;
 import staport.rh.auth.security.TokenHasher;
 import staport.rh.auth.services.interfaces.IAuthService;
 
+import staport.rh.parametre.services.interfaces.IParametreService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -39,8 +40,6 @@ public class AuthService implements IAuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    private static final Duration RESET_TOKEN_TTL = Duration.ofHours(1);
-
     private final UtilisateurRepository utilisateurRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
@@ -51,6 +50,8 @@ public class AuthService implements IAuthService {
     private final UserMapper userMapper;
     private final EmailService emailService;
     private final ApplicationEventPublisher evenements;
+    private final IParametreService parametres;
+    private final PolitiqueMotDePasse politiqueMotDePasse;
     /** Empreinte d'un mot de passe que personne ne connaît : comparée quand le compte n'existe pas (voir {@link #login}). */
     private final String empreinteFactice;
 
@@ -58,7 +59,8 @@ public class AuthService implements IAuthService {
                         ResetPasswordTokenRepository resetPasswordTokenRepository, PasswordEncoder passwordEncoder,
                         JwtService jwtService, TokenHasher tokenHasher, EffectivePermissionResolver permissionResolver,
                         UserMapper userMapper, EmailService emailService,
-                        ApplicationEventPublisher evenements) {
+                        ApplicationEventPublisher evenements, IParametreService parametres,
+                        PolitiqueMotDePasse politiqueMotDePasse) {
         this.utilisateurRepository = utilisateurRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.resetPasswordTokenRepository = resetPasswordTokenRepository;
@@ -69,6 +71,8 @@ public class AuthService implements IAuthService {
         this.userMapper = userMapper;
         this.emailService = emailService;
         this.evenements = evenements;
+        this.parametres = parametres;
+        this.politiqueMotDePasse = politiqueMotDePasse;
         this.empreinteFactice = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -167,10 +171,10 @@ public class AuthService implements IAuthService {
             ResetPasswordToken token = new ResetPasswordToken();
             token.setUtilisateur(utilisateur);
             token.setTokenHash(tokenHasher.hasher(tokenBrut));
-            token.setExpireLe(Instant.now().plus(RESET_TOKEN_TTL));
+            token.setExpireLe(Instant.now().plus(parametres.dureeLienReinitialisation()));
             resetPasswordTokenRepository.save(token);
 
-            emailService.envoyerLienReinitialisation(utilisateur.getEmail(), tokenBrut);
+            emailService.envoyerLienReinitialisation(utilisateur.getEmail(), tokenBrut, parametres.dureeLienReinitialisation());
         });
         // Réponse identique que l'email existe ou non — ne jamais révéler si un compte existe.
     }
@@ -187,7 +191,7 @@ public class AuthService implements IAuthService {
 
         Utilisateur utilisateur = token.getUtilisateur();
         // Avant de consommer le lien : un mot de passe refusé ne brûle pas le lien, l'utilisateur peut resaisir.
-        PolitiqueMotDePasse.exiger(nouveauMotDePasse, utilisateur.getUsername());
+        politiqueMotDePasse.exiger(nouveauMotDePasse, utilisateur.getUsername());
         utilisateur.setMotDePasseHash(passwordEncoder.encode(nouveauMotDePasse));
         utilisateurRepository.save(utilisateur);
 
@@ -215,6 +219,11 @@ public class AuthService implements IAuthService {
         throw new InvalidCredentialsException();
     }
 
+    @Override
+    public int longueurMinimaleMotDePasse() {
+        return politiqueMotDePasse.longueurMin();
+    }
+
     private Connexion emettreConnexion(Utilisateur utilisateur, String famille) {
         Set<String> permissions = permissionResolver.resolve(utilisateur);
         Set<String> roles = permissionResolver.roleNames(utilisateur);
@@ -225,10 +234,11 @@ public class AuthService implements IAuthService {
         refreshToken.setUtilisateur(utilisateur);
         refreshToken.setFamille(famille);
         refreshToken.setTokenHash(tokenHasher.hasher(refreshTokenBrut));
-        refreshToken.setExpireLe(Instant.now().plus(REFRESH_TOKEN_TTL));
+        Duration dureeSession = parametres.dureeJetonSession();
+        refreshToken.setExpireLe(Instant.now().plus(dureeSession));
         refreshTokenRepository.save(refreshToken);
 
         LoginResponseDto reponse = new LoginResponseDto(accessToken, userMapper.toDto(utilisateur, permissions));
-        return new Connexion(reponse, refreshTokenBrut);
+        return new Connexion(reponse, refreshTokenBrut, dureeSession);
     }
 }

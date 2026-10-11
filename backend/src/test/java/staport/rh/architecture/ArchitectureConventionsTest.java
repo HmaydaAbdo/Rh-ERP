@@ -51,7 +51,7 @@ class ArchitectureConventionsTest {
             .importPackages("staport.rh");
 
     /** Les domaines métier et techniques : un package racine chacun (conventions/architecture.md, « Organisation des packages »). */
-    private static final List<String> DOMAINES = List.of("audit", "auth", "chantier", "employee", "equipe", "function", "paie");
+    private static final List<String> DOMAINES = List.of("audit", "auth", "chantier", "employee", "equipe", "function", "paie", "parametre");
 
     private static final DescribedPredicate<JavaClass> UN_CONTROLLEUR = DescribedPredicate.describe(
             "contrôleur REST", classe -> classe.isAnnotatedWith(RestController.class));

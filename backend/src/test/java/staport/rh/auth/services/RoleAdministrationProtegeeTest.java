@@ -3,7 +3,9 @@ package staport.rh.auth.services;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import staport.rh.audit.support.AuditIntegrationTestBase;
+import org.springframework.data.domain.Pageable;
 import staport.rh.auth.dtos.request.RoleCreateRequestDto;
+import staport.rh.auth.dtos.request.RoleSearchCriteria;
 import staport.rh.auth.dtos.request.RoleUpdateRequestDto;
 import staport.rh.auth.dtos.response.PermissionResponseDto;
 import staport.rh.auth.dtos.response.RoleResponseDto;
@@ -27,7 +29,7 @@ class RoleAdministrationProtegeeTest extends AuditIntegrationTestBase {
     private IRoleService roleService;
 
     private RoleResponseDto admin() {
-        return roleService.findAll().stream().filter(r -> r.nom().equals("SYSTEM_ADMIN")).findFirst().orElseThrow();
+        return roleService.search(new RoleSearchCriteria("SYSTEM_ADMIN", null), Pageable.unpaged()).getContent().stream().filter(r -> r.nom().equals("SYSTEM_ADMIN")).findFirst().orElseThrow();
     }
 
     private static Set<Long> ids(RoleResponseDto role) {

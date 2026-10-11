@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,8 @@ import staport.rh.auth.entities.Utilisateur;
 import staport.rh.equipe.controller.EquipeController;
 import staport.rh.equipe.dtos.response.EquipeResponseDto;
 import staport.rh.equipe.services.interfaces.IEquipeService;
+import staport.rh.parametre.services.interfaces.IParametreService;
+import staport.rh.support.ParametresDeTest;
 
 import java.util.List;
 import java.util.Set;
@@ -44,6 +47,12 @@ class JwtSecurityChainTest {
     @TestConfiguration
     @EnableWebSecurity
     static class ActivationSecurite {
+
+        /** Le service de jeton lit sa durée dans les paramètres ; la tranche web n'a pas la base. */
+        @Bean
+        IParametreService parametres() {
+            return ParametresDeTest.parDefaut();
+        }
     }
 
     @Autowired
@@ -75,7 +84,7 @@ class JwtSecurityChainTest {
 
     @Test
     void unTokenSigneAvecUnAutreSecretEstRefuseEn401() throws Exception {
-        JwtService autre = new JwtService("YXV0cmUtc2VjcmV0LWF1dHJlLXNlY3JldC1hdXRyZS1zZWNyZXQtMDAwMDAwMDA=", "paie-test");
+        JwtService autre = new JwtService("YXV0cmUtc2VjcmV0LWF1dHJlLXNlY3JldC1hdXRyZS1zZWNyZXQtMDAwMDAwMDA=", "paie-test", ParametresDeTest.parDefaut());
         Utilisateur utilisateur = new Utilisateur();
         utilisateur.setId(1L);
         utilisateur.setUsername("pirate");

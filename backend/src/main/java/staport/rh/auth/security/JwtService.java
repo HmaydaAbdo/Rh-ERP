@@ -9,9 +9,9 @@ import com.nimbusds.jwt.SignedJWT;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import staport.rh.auth.entities.Utilisateur;
+import staport.rh.parametre.services.interfaces.IParametreService;
 
 import javax.crypto.spec.SecretKeySpec;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
@@ -26,19 +26,20 @@ import java.util.Set;
 @Service
 public class JwtService {
 
-    public static final Duration ACCESS_TOKEN_TTL = Duration.ofMinutes(15);
-
     private static final String CLAIM_PERMISSIONS = "permissions";
     private static final String CLAIM_ROLES = "roles";
     private static final String CLAIM_USER_ID = "uid";
 
     private final SecretKeySpec signingKey;
     private final String issuer;
+    private final IParametreService parametres;
 
     public JwtService(@Value("${security.jwt.secret}") String base64Secret,
-                       @Value("${spring.application.name}") String issuer) {
+                       @Value("${spring.application.name}") String issuer,
+                       IParametreService parametres) {
         this.signingKey = new SecretKeySpec(Base64.getDecoder().decode(base64Secret), "HmacSHA256");
         this.issuer = issuer;
+        this.parametres = parametres;
     }
 
     public String genererAccessToken(Utilisateur utilisateur, Set<String> permissions, Set<String> roles) {
@@ -47,7 +48,7 @@ public class JwtService {
                 .subject(utilisateur.getUsername())
                 .issuer(issuer)
                 .issueTime(Date.from(maintenant))
-                .expirationTime(Date.from(maintenant.plus(ACCESS_TOKEN_TTL)))
+                .expirationTime(Date.from(maintenant.plus(parametres.dureeJetonAcces())))
                 .claim(CLAIM_USER_ID, utilisateur.getId())
                 .claim(CLAIM_PERMISSIONS, List.copyOf(permissions))
                 .claim(CLAIM_ROLES, List.copyOf(roles))

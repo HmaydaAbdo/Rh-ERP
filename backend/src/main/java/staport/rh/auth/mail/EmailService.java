@@ -9,6 +9,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+
 @Service
 public class EmailService {
 
@@ -32,7 +34,7 @@ public class EmailService {
      * révélerait que l'adresse correspond à un compte.
      */
     @Async
-    public void envoyerLienReinitialisation(String email, String token) {
+    public void envoyerLienReinitialisation(String email, String token, Duration validite) {
         String lien = frontendUrl + "/reset-password?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
@@ -42,11 +44,11 @@ public class EmailService {
         message.setText("""
                 Une demande de réinitialisation de mot de passe a été effectuée pour ce compte.
 
-                Ce lien est valable 1 heure et ne peut être utilisé qu'une seule fois :
+                Ce lien est valable %s et ne peut être utilisé qu'une seule fois :
                 %s
 
                 Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-                """.formatted(lien));
+                """.formatted(libelleDuree(validite), lien));
 
         try {
             mailSender.send(message);
@@ -54,5 +56,15 @@ public class EmailService {
         } catch (MailException e) {
             log.warn("Échec de l'envoi de l'email de réinitialisation", e);
         }
+    }
+
+    /** « 1 heure », « 2 heures » ou « 45 minutes » : la durée telle qu'un lecteur la dirait. */
+    static String libelleDuree(Duration duree) {
+        long minutes = duree.toMinutes();
+        if (minutes >= 60 && minutes % 60 == 0) {
+            long heures = minutes / 60;
+            return heures + (heures == 1 ? " heure" : " heures");
+        }
+        return minutes + (minutes == 1 ? " minute" : " minutes");
     }
 }

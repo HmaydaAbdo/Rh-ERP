@@ -114,7 +114,8 @@ management:
 chantier:
   sync:
     base-url: ${CHANTIER_SYNC_BASE_URL}
-    cron: "0 0 23 * * *"
+    # La planification quotidienne n'est pas ici : c'est le paramètre « Planification de la synchronisation des chantiers »
+    # (écran Paramètres, conventions/configuration.md).
 
 security:
   jwt:

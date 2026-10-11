@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
@@ -30,6 +32,8 @@ import staport.rh.auth.mappers.UserMapper;
 import staport.rh.auth.repositories.PermissionRepository;
 import staport.rh.auth.repositories.RoleRepository;
 import staport.rh.auth.repositories.UtilisateurRepository;
+import staport.rh.auth.dtos.request.UserSearchCriteria;
+import staport.rh.auth.specifications.UserSpecification;
 import staport.rh.auth.security.EffectivePermissionResolver;
 import staport.rh.auth.security.PolitiqueMotDePasse;
 import staport.rh.auth.services.interfaces.IAuthService;
@@ -58,12 +62,14 @@ public class UserService implements IUserService {
     private final EntityManager entityManager;
     private final ApplicationEventPublisher evenements;
     private final IAuthService authService;
+    private final PolitiqueMotDePasse politiqueMotDePasse;
 
     public UserService(UtilisateurRepository repository, RoleRepository roleRepository,
                         PermissionRepository permissionRepository, IEmployeeService employeeService,
                         UserMapper mapper, EffectivePermissionResolver permissionResolver,
                         PasswordEncoder passwordEncoder, EntityManager entityManager,
-                        ApplicationEventPublisher evenements, IAuthService authService) {
+                        ApplicationEventPublisher evenements, IAuthService authService,
+                        PolitiqueMotDePasse politiqueMotDePasse) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
@@ -74,12 +80,13 @@ public class UserService implements IUserService {
         this.entityManager = entityManager;
         this.evenements = evenements;
         this.authService = authService;
+        this.politiqueMotDePasse = politiqueMotDePasse;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponseDto> findAll() {
-        return repository.findAll().stream().map(this::toDto).toList();
+    public Page<UserResponseDto> search(UserSearchCriteria criteria, Pageable pageable) {
+        return repository.findAll(UserSpecification.searchByCriteria(criteria), pageable).map(this::toDto);
     }
 
     @Override
@@ -92,7 +99,7 @@ public class UserService implements IUserService {
     @Transactional
     @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public UserResponseDto create(UserCreateRequestDto dto) {
-        PolitiqueMotDePasse.exiger(dto.motDePasse(), dto.username());
+        politiqueMotDePasse.exiger(dto.motDePasse(), dto.username());
         if (repository.existsByUsername(dto.username())) {
             throw new UsernameAlreadyExistsException(dto.username());
         }
@@ -156,7 +163,7 @@ public class UserService implements IUserService {
     @Transactional
     public void adminResetPassword(Long id, AdminResetPasswordRequestDto dto) {
         Utilisateur utilisateur = getEntityById(id);
-        PolitiqueMotDePasse.exiger(dto.nouveauMotDePasse(), utilisateur.getUsername());
+        politiqueMotDePasse.exiger(dto.nouveauMotDePasse(), utilisateur.getUsername());
         utilisateur.setMotDePasseHash(passwordEncoder.encode(dto.nouveauMotDePasse()));
         repository.save(utilisateur);
         // Comme la réinitialisation par lien : l'ancien mot de passe est peut-être celui que l'on cherche à écarter.

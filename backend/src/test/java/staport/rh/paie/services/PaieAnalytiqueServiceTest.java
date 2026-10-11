@@ -1,11 +1,13 @@
 package staport.rh.paie.services;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import staport.rh.parametre.services.interfaces.IParametreService;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Tranche;
@@ -38,8 +40,16 @@ class PaieAnalytiqueServiceTest {
     @Mock
     private PaieRepository repository;
 
+    @Mock
+    private IParametreService parametres;
+
     @InjectMocks
     private PaieAnalytiqueService service;
+
+    @BeforeEach
+    void pasDeDepart() {
+        lenient().when(parametres.pasTrancheAnalytique()).thenReturn(new BigDecimal("500"));
+    }
 
     @Test
     void analyser_devraitRenvoyerUnTableauVideSansInterrogerLeResteQuandLeMoisNaAucunBulletin() {
@@ -128,6 +138,21 @@ class PaieAnalytiqueServiceTest {
         assertThat(tranches.get(1).min()).isEqualByComparingTo("1000");
         assertThat(tranches.get(1).max()).isEqualByComparingTo("2000");
         assertThat(tranches.get(5).max()).isNull();
+    }
+
+    @Test
+    void analyser_devraitArrondirLaLargeurDesTranchesAuPasDuParametre() {
+        when(parametres.pasTrancheAnalytique()).thenReturn(new BigDecimal("2000"));
+        when(repository.resumerKpi(any(), any())).thenReturn(kpi(4, "10200", 1, 0, 0, 0));
+        // Plus gros total 3 600 : 3 600 / 6 = 600, arrondi au pas de 2 000 supérieur (et jamais moins que le pas) = tranches de 2 000.
+        when(repository.listerTotaux(any(), any())).thenReturn(
+                List.of(new BigDecimal("1000"), new BigDecimal("2500"), new BigDecimal("3100"), new BigDecimal("3600")));
+
+        List<Tranche> tranches = service.analyser(criteres(AOUT, null, null, null)).tranches();
+
+        assertThat(tranches).extracting(Tranche::effectif).containsExactly(1L, 3L, 0L, 0L, 0L, 0L);
+        assertThat(tranches.get(1).min()).isEqualByComparingTo("2000");
+        assertThat(tranches.get(1).max()).isEqualByComparingTo("4000");
     }
 
     @Test
