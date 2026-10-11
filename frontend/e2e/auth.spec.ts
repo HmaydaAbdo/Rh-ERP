@@ -51,4 +51,47 @@ test.describe('Connexion', () => {
     await expect(page.getByRole('alert').first()).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
   });
+
+  test('centre la récupération du mot de passe sur ordinateur et téléphone', async ({ page }) => {
+    await mockApi(page, null, { 'POST /auth/forgot-password': () => null });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/forgot-password');
+
+    await expect(page.getByRole('heading', { name: 'Mot de passe oublié' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Retour à la connexion' })).toBeVisible();
+    await expect(page.getByText(/Staport|Espace privé|Fonctionnalités|Paie et ressources humaines/i)).toHaveCount(0);
+
+    for (const viewport of [{ width: 1280, height: 720 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      const carte = await page.locator('.auth-card').boundingBox();
+      expect(carte).not.toBeNull();
+      expect(Math.abs(carte!.x + carte!.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+      expect(Math.abs(carte!.y + carte!.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    }
+
+    const accessibilite = await new AxeBuilder({ page }).analyze();
+    expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
+  });
+
+  test('centre le nouveau mot de passe et reste lisible en couleurs forcées', async ({ page }) => {
+    await mockApi(page, null);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/reset-password?token=preview');
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    await expect(page.getByRole('heading', { name: 'Nouveau mot de passe' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Nouveau mot de passe' })).toBeVisible();
+    const carte = await page.locator('.auth-card').boundingBox();
+    expect(carte).not.toBeNull();
+    expect(Math.abs(carte!.x + carte!.width / 2 - 640)).toBeLessThanOrEqual(1);
+    expect(Math.abs(carte!.y + carte!.height / 2 - 360)).toBeLessThanOrEqual(1);
+
+    await page.emulateMedia({ forcedColors: 'active' });
+    expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);
+    expect(await page.locator('.auth-page').evaluate((element) => getComputedStyle(element).backgroundImage)).toBe('none');
+
+    const accessibilite = await new AxeBuilder({ page }).analyze();
+    expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
+  });
 });
