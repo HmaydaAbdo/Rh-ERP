@@ -16,8 +16,10 @@ Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retiré
 audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
 Restent à faire :
 
-- **Backend** : contrôle de conformité par domaine (RBAC par domaine, audit métier, secrets/configuration, logs et métriques, erreurs) ;
-  rapport d'écarts à produire avant tout changement ;
+- **Conformité totale de l'application** : auditer chaque convention sur backend, frontend, tests,
+  sécurité/audit, BI/IA, performances, Docker Compose, proxy, CI et exploitation ; établir une
+  matrice de preuves, corriger les écarts autorisés et faire valider les décisions nécessaires.
+  Voir le [handoff](docs/handoff/conformite-totale.md).
 - planifier puis exécuter la migration du serveur de production PG17→PG18 : répétition sur sauvegarde,
   fenêtre de maintenance, restauration logique dans un volume neuf, contrôles et conservation du volume
   PG17 comme retour arrière ; suivre [la procédure](docs/deployment.md#migration-majeure-pg17--pg18-en-production) ;
