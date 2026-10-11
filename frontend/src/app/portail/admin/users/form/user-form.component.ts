@@ -27,6 +27,12 @@ interface UserSaisie {
   roleIds: number[];
 }
 
+interface PermissionGroup {
+  domaine: string;
+  autorisees: PermissionSummary[];
+  nonAutorisees: PermissionSummary[];
+}
+
 @Component({
   selector: 'app-user-form',
   imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent, SelectComponent],
@@ -83,6 +89,24 @@ export class UserFormComponent {
     return Array.from(parCode.values()).sort((a, b) => a.code.localeCompare(b.code));
   });
 
+  protected readonly permissionGroups = computed<PermissionGroup[]>(() => {
+    const parDomaine = new Map<string, PermissionSummary[]>();
+    for (const permission of this.deniablePermissions()) {
+      const domaine = permission.code.split('_')[0];
+      const permissions = parDomaine.get(domaine) ?? [];
+      permissions.push(permission);
+      parDomaine.set(domaine, permissions);
+    }
+
+    return Array.from(parDomaine.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([domaine, permissions]) => ({
+        domaine,
+        autorisees: permissions.filter((permission) => !this.isDenied(permission)),
+        nonAutorisees: permissions.filter((permission) => this.isDenied(permission))
+      }));
+  });
+
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     this.userId.set(idParam ? Number(idParam) : null);
@@ -121,15 +145,15 @@ export class UserFormComponent {
     return this.deniedPermissionIds().has(permission.id);
   }
 
-  protected onToggleDenied(permission: PermissionSummary, event: Event): void {
-    const denied = (event.target as HTMLInputElement).checked;
+  protected onTogglePermission(permission: PermissionSummary, event: Event): void {
+    const autorisee = (event.target as HTMLInputElement).checked;
     this.form().markAsDirty();
     this.deniedPermissionIds.update((current) => {
       const next = new Set(current);
-      if (denied) {
-        next.add(permission.id);
-      } else {
+      if (autorisee) {
         next.delete(permission.id);
+      } else {
+        next.add(permission.id);
       }
       return next;
     });

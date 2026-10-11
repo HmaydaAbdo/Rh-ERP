@@ -95,6 +95,8 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Paie | `PAIE_IMPORT` | `OPERATION` | Nom, taille et **empreinte SHA-256** du fichier (jamais son contenu), mois, lignes, fonctions créées ; `ECHEC` si des lignes sont rejetées |
 | Paie | `PAIE_EXPORT_EXCEL`, `PAIE_RAPPORT_PDF` | `ACCES` | Mois, format, chantiers / filtres demandés — aucun contenu |
 | API métier | `LECTURE_METIER` | `ACCES` | Chaque réponse HTTP métier réussie ou en erreur de lecture : modèle de route, méthode, statut HTTP, nombre d'éléments ; période valide si fournie en paramètre. Aucun corps, montant, filtre nominatif, identifiant d'URL ou paramètre libre n'est copié |
+| API métier | `ECRITURE_HTTP_SANS_TRACE_METIER`, `TENTATIVE_ECRITURE_HTTP_REJETEE` | `OPERATION` | Garde-fou pour une écriture HTTP sans annotation métier ; méthode, route et statut, sans corps |
+| API sécurité | `TENTATIVE_HTTP_REJETEE` | `SECURITE` | Écriture HTTP d’authentification rejetée ; méthode, route et statut, sans secret |
 | Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` | `OPERATION` | Import : le fichier |
 | Fonction | `FONCTION_CREATION`, `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`, `FONCTION_IMPORT` | `OPERATION` | Import : le fichier |
 | Chantier | `CHANTIER_CREATION`, `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`, `CHANTIER_SYNCHRONISATION` | `OPERATION` | Synchronisation : reçus, déjà présents, ignorés ; créés |
@@ -102,6 +104,7 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Comptes | `UTILISATEUR_CREATION` (y compris l'administrateur du démarrage), `UTILISATEUR_MODIFICATION`, `UTILISATEUR_PERMISSIONS_REFUSEES` | `OPERATION` | — |
 | Rôles et permissions | `ROLE_CREATION`, `ROLE_MODIFICATION`, `ROLE_SUPPRESSION` ; `PERMISSION_CREATION` (écrite par une migration qui ajoute une permission, origine `MIGRATION` — première : `V15`) | `OPERATION` | Migration : la permission et le nombre de rôles qui la reçoivent |
 | Audit | `AUDIT_ETAT_INITIAL` | `OPERATION` | Nombre de lignes enregistrées par table |
+| Paramètres | `PARAMETRE_MODIFICATION` | `OPERATION` | — |
 
 ### Événements de sécurité (`SECURITE`)
 

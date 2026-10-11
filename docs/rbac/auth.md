@@ -47,7 +47,7 @@
 | Routes `/admin/roles/**` | `permissionGuard`, `data: { permission: 'ROLE_MANAGE' }` |
 | Route `/admin/parametres` | `permissionGuard`, `data: { permission: 'PARAMETRE_READ' }` |
 | Confirmation de suppression d'un rôle | Le message dit qu'un rôle attribué n'est pas supprimable ; le refus `409` du serveur s'affiche par l'intercepteur global |
-| Section "Permissions refusées" (formulaire utilisateur) | Visible uniquement en édition, limitée aux permissions accordées par les rôles actuellement sélectionnés |
+| Section « Permissions de l’utilisateur » (formulaire utilisateur) | Visible uniquement en édition ; permissions des rôles sélectionnés regroupées par domaine, réparties entre « Autorisées » et « Non autorisées » ; une permission décochée reste un refus individuel (« deny override ») |
 
 ## Rôles disposant de ces permissions (seed initial)
 
