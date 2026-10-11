@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import staport.rh.auth.dtos.request.ForgotPasswordRequestDto;
 import staport.rh.auth.dtos.request.LoginRequestDto;
 import staport.rh.auth.dtos.request.ResetPasswordRequestDto;
+import staport.rh.auth.dtos.response.PolitiqueMotDePasseDto;
 import staport.rh.auth.dtos.response.LoginResponseDto;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.exceptions.InvalidRefreshTokenException;
@@ -101,6 +102,12 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/auth/password-policy")
+    @Operation(summary = "Lire la règle des mots de passe", description = "Publique : l'écran de réinitialisation, ouvert sans session, en a besoin.")
+    public ResponseEntity<PolitiqueMotDePasseDto> politiqueMotDePasse() {
+        return ResponseEntity.ok(new PolitiqueMotDePasseDto(authService.longueurMinimaleMotDePasse()));
+    }
+
     @GetMapping("/auth/me")
     @Operation(summary = "Lire le compte connecté")
     public ResponseEntity<UserResponseDto> me(@AuthenticationPrincipal Jwt jwt) {
@@ -114,7 +121,7 @@ public class AuthController {
                 .secure(cookieSecure)
                 .sameSite("Lax")
                 .path(COOKIE_PATH)
-                .maxAge(IAuthService.REFRESH_TOKEN_TTL)
+                .maxAge(connexion.dureeSession())
                 .build();
         return ResponseEntity.status(HttpStatus.OK)
                 .header("Set-Cookie", cookie.toString())

@@ -1,6 +1,10 @@
 package staport.rh.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import staport.rh.auth.dtos.request.UserSearchCriteria;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,10 +40,11 @@ public class UserController {
         this.userService = userService;
     }
 
-    @GetMapping
-    @Operation(summary = "Lister les utilisateurs")
-    public ResponseEntity<List<UserResponseDto>> findAll() {
-        return ResponseEntity.ok(userService.findAll());
+    @PostMapping("/search")
+    @Operation(summary = "Rechercher des utilisateurs", description = "Pagination serveur ; tri sur username, email ou actif.")
+    public ResponseEntity<Page<UserResponseDto>> search(@Valid @RequestBody(required = false) UserSearchCriteria criteria,
+                                                         @PageableDefault(size = 20, sort = "username") Pageable pageable) {
+        return ResponseEntity.ok(userService.search(criteria, pageable));
     }
 
     @GetMapping("/{id}")

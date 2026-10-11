@@ -1,6 +1,10 @@
 package staport.rh.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import staport.rh.auth.dtos.request.RoleSearchCriteria;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,10 +39,11 @@ public class RoleController {
         this.roleService = roleService;
     }
 
-    @GetMapping("/roles")
-    @Operation(summary = "Lister les rôles")
-    public ResponseEntity<List<RoleResponseDto>> findAll() {
-        return ResponseEntity.ok(roleService.findAll());
+    @PostMapping("/roles/search")
+    @Operation(summary = "Rechercher des rôles", description = "Pagination serveur ; tri sur nom ou description.")
+    public ResponseEntity<Page<RoleResponseDto>> search(@Valid @RequestBody(required = false) RoleSearchCriteria criteria,
+                                                         @PageableDefault(size = 20, sort = "nom") Pageable pageable) {
+        return ResponseEntity.ok(roleService.search(criteria, pageable));
     }
 
     @GetMapping("/roles/{id}")

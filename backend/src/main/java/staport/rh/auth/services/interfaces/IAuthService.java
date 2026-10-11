@@ -11,10 +11,11 @@ import java.time.Duration;
  */
 public interface IAuthService {
 
-    /** Durée de vie du Refresh Token : celle de sa ligne en base et celle de son cookie (source unique). */
-    Duration REFRESH_TOKEN_TTL = Duration.ofDays(30);
-
-    record Connexion(LoginResponseDto reponse, String refreshTokenBrut) {
+    /**
+     * Le résultat d'une connexion ou d'un renouvellement : la réponse JSON, le Refresh Token brut et sa durée de vie — celle de sa
+     * ligne en base, que le cookie reprend (une seule source : le paramètre « Durée de la session »).
+     */
+    record Connexion(LoginResponseDto reponse, String refreshTokenBrut, Duration dureeSession) {
     }
 
     Connexion login(String username, String motDePasse);
@@ -29,7 +30,10 @@ public interface IAuthService {
 
     /**
      * Coupe toutes les sessions d'un compte : ses jetons de rafraîchissement actifs sont révoqués, il devra se reconnecter
-     * (son jeton d'accès en cours reste valable jusqu'à son expiration, 15 minutes au plus). Rend le nombre de sessions coupées.
+     * (son jeton d'accès en cours reste valable jusqu'à son expiration : sa durée est un paramètre). Rend le nombre de sessions coupées.
      */
     int revoquerSessions(Long utilisateurId);
+
+    /** Longueur minimale d'un mot de passe : la règle que l'interface rappelle avant l'envoi. */
+    int longueurMinimaleMotDePasse();
 }

@@ -15,6 +15,7 @@ import staport.rh.paie.repositories.PaieKpiProjection;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
 
+import staport.rh.parametre.services.interfaces.IParametreService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
@@ -25,13 +26,13 @@ import java.util.stream.IntStream;
 public class PaieAnalytiqueService implements IPaieAnalytiqueService {
 
     private static final int NOMBRE_TRANCHES = 6;
-    /** Largeur minimale d'une tranche, et pas d'arrondi de sa largeur (en DH) : des bornes lisibles (500, 1 000, 1 500…). */
-    private static final BigDecimal PAS_TRANCHE = new BigDecimal("500");
 
     private final PaieRepository repository;
+    private final IParametreService parametres;
 
-    public PaieAnalytiqueService(PaieRepository repository) {
+    public PaieAnalytiqueService(PaieRepository repository, IParametreService parametres) {
         this.repository = repository;
+        this.parametres = parametres;
     }
 
     @Override
@@ -81,13 +82,15 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
      * celle qui couvre le plus gros total en {@value #NOMBRE_TRANCHES} tranches, arrondie au pas supérieur : les bornes
      * restent lisibles et suivent la réalité du périmètre, sans seuils métier inventés.
      */
-    private static List<Tranche> repartirParTranche(List<BigDecimal> totaux) {
+    private List<Tranche> repartirParTranche(List<BigDecimal> totaux) {
+        // Largeur minimale d'une tranche, et pas d'arrondi de sa largeur (en DH) : le paramètre « Pas des tranches ».
+        BigDecimal pasTranche = parametres.pasTrancheAnalytique();
         BigDecimal plusGrand = totaux.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
         BigDecimal largeur = plusGrand
                 .divide(BigDecimal.valueOf(NOMBRE_TRANCHES), 0, RoundingMode.CEILING)
-                .divide(PAS_TRANCHE, 0, RoundingMode.CEILING)
-                .multiply(PAS_TRANCHE)
-                .max(PAS_TRANCHE);
+                .divide(pasTranche, 0, RoundingMode.CEILING)
+                .multiply(pasTranche)
+                .max(pasTranche);
 
         long[] effectifs = new long[NOMBRE_TRANCHES];
         for (BigDecimal total : totaux) {

@@ -24,9 +24,12 @@ import staport.rh.auth.repositories.ResetPasswordTokenRepository;
 import staport.rh.auth.repositories.UtilisateurRepository;
 import staport.rh.auth.security.EffectivePermissionResolver;
 import staport.rh.auth.security.JwtService;
+import staport.rh.auth.security.PolitiqueMotDePasse;
+import staport.rh.support.ParametresDeTest;
 import staport.rh.auth.security.TokenHasher;
 import staport.rh.auth.services.interfaces.IAuthService;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -71,7 +74,8 @@ class AuthServiceTest {
     void setUp() {
         when(passwordEncoder.encode(any())).thenReturn("empreinte-factice");
         authService = new AuthService(utilisateurRepository, refreshTokenRepository, resetPasswordTokenRepository,
-                passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService, evenements);
+                passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService, evenements,
+                ParametresDeTest.parDefaut(), new PolitiqueMotDePasse(ParametresDeTest.parDefaut()));
 
         utilisateur = new Utilisateur();
         utilisateur.setId(1L);
@@ -101,6 +105,7 @@ class AuthServiceTest {
 
         assertThat(connexion.refreshTokenBrut()).isEqualTo("refresh-brut");
         assertThat(connexion.reponse().accessToken()).isEqualTo("access-token");
+        assertThat(connexion.dureeSession()).as("le cookie reprend la durée du paramètre").isEqualTo(Duration.ofHours(12));
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
@@ -302,7 +307,7 @@ class AuthServiceTest {
 
         authService.demanderReinitialisationMotDePasse("inconnu@x.com");
 
-        verify(emailService, never()).envoyerLienReinitialisation(any(), any());
+        verify(emailService, never()).envoyerLienReinitialisation(any(), any(), any());
         verify(resetPasswordTokenRepository, never()).save(any());
     }
 
@@ -314,7 +319,7 @@ class AuthServiceTest {
 
         authService.demanderReinitialisationMotDePasse("hmayda@staport.ma");
 
-        verify(emailService).envoyerLienReinitialisation("hmayda@staport.ma", "reset-brut");
+        verify(emailService).envoyerLienReinitialisation("hmayda@staport.ma", "reset-brut", Duration.ofHours(1));
         verify(resetPasswordTokenRepository).save(any(ResetPasswordToken.class));
     }
 

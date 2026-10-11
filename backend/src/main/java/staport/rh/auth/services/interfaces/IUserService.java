@@ -6,11 +6,15 @@ import staport.rh.auth.dtos.request.UserCreateRequestDto;
 import staport.rh.auth.dtos.request.UserUpdateRequestDto;
 import staport.rh.auth.dtos.response.UserResponseDto;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import staport.rh.auth.dtos.request.UserSearchCriteria;
+
 import java.util.List;
 
 public interface IUserService {
 
-    List<UserResponseDto> findAll();
+    Page<UserResponseDto> search(UserSearchCriteria criteria, Pageable pageable);
 
     UserResponseDto findById(Long id);
 

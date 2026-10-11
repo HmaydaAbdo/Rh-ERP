@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.test.context.TestPropertySource;
@@ -11,6 +12,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import staport.rh.equipe.controller.EquipeController;
 import staport.rh.equipe.services.interfaces.IEquipeService;
+import staport.rh.parametre.services.interfaces.IParametreService;
+import staport.rh.support.ParametresDeTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,6 +33,12 @@ class DocumentationApiSecurityTest {
     @TestConfiguration
     @EnableWebSecurity
     static class ActivationSecurite {
+
+        /** Le service de jeton lit sa durée dans les paramètres ; la tranche web n'a pas la base. */
+        @Bean
+        IParametreService parametres() {
+            return ParametresDeTest.parDefaut();
+        }
     }
 
     @Autowired

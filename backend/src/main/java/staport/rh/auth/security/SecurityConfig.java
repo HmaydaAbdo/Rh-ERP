@@ -133,6 +133,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/auth/password-policy").permitAll();
                     auth.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll();
                     // Publique seulement quand la documentation est allumée (développement) ; sinon ces routes ne sont rien.
                     if (documentationApiActive) {

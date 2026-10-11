@@ -21,12 +21,14 @@ import staport.rh.auth.security.JwtService;
 import staport.rh.auth.services.interfaces.IAuthService;
 import staport.rh.auth.services.interfaces.IUserService;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -236,7 +238,7 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
         assertThat(demandes.get(1).get("utilisateur_id")).as("compte inconnu : aucun compte désigné").isNull();
         assertThat(demandes.get(1).get("utilisateur_nom")).isEqualTo("Anonyme");
         assertThat(demandes.toString()).as("jamais l'adresse saisie").doesNotContain("personne-").doesNotContain("@exemple.test");
-        verify(emailService).envoyerLienReinitialisation(anyString(), anyString());
+        verify(emailService).envoyerLienReinitialisation(anyString(), anyString(), any(Duration.class));
     }
 
     @Test
@@ -253,7 +255,7 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
         AuthentificationDeTest.deconnecter();
         authService.demanderReinitialisationMotDePasse(compte.email());
         ArgumentCaptor<String> jeton = ArgumentCaptor.forClass(String.class);
-        verify(emailService).envoyerLienReinitialisation(anyString(), jeton.capture());
+        verify(emailService).envoyerLienReinitialisation(anyString(), jeton.capture(), any(Duration.class));
         long repereLien = dernierId();
         authService.reinitialiserMotDePasse(jeton.getValue(), "encore-un-autre-3");
 

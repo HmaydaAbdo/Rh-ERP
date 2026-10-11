@@ -2,7 +2,11 @@ package staport.rh.auth.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import staport.rh.auth.dtos.request.RoleSearchCriteria;
+import staport.rh.auth.specifications.RoleSpecification;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
@@ -49,8 +53,8 @@ public class RoleService implements IRoleService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RoleResponseDto> findAll() {
-        return roleRepository.findAllByOrderByNomAsc().stream().map(mapper::toDto).toList();
+    public Page<RoleResponseDto> search(RoleSearchCriteria criteria, Pageable pageable) {
+        return roleRepository.findAll(RoleSpecification.searchByCriteria(criteria), pageable).map(mapper::toDto);
     }
 
     @Override
