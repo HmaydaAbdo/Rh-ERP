@@ -34,6 +34,7 @@
 | C4 | **Durée du jeton de rafraîchissement en deux endroits** (30 jours dans le service et dans le cookie) | Source unique : `IAuthService.REFRESH_TOKEN_TTL` |
 | C5 | **Critères de recherche sans borne** : chaînes et listes d'identifiants de taille libre, corps non validé | `@Size` alignés sur les colonnes filtrées (listes : 500 identifiants au plus), `@Valid` sur tous les corps de critères, y compris celui de la suppression en groupe ; `EmployeeControllerTest` vérifie le `400` |
 | C6 | Aucune règle exécutable pour les conventions d'architecture, de journalisation, de JPA et de documentation d'API | `ArchitectureConventionsTest` (14 règles) |
+| C7 | **Aucune limite de débit** (G1) | `limit_req` dans nginx inner (`429`) : connexion 20/min, réinitialisation 5/min, session 120/min, `POST` coûteux 30/min, par adresse de client réel ; essayé sur un nginx réel. Convention ajoutée à `conventions/security.md`. Le verrouillage de compte reste possible plus tard |
 
 ---
 
@@ -43,7 +44,6 @@ Ils sont suivis dans [TODO.md](../../TODO.md). Pour chacun : le constat, puis le
 
 | # | Gravité | Constat | Options à trancher |
 |---|---|---|---|
-| G1 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export, la suppression en groupe (déjà noté n° 6, revue du 2026-10-04) | Limite au niveau nginx (`limit_req`, sans code) · limite applicative · verrouillage temporaire de compte réglable par l'administrateur |
 | G2 | Basse | **Demande de réinitialisation synchrone** : l'envoi du courriel allonge la réponse pour une adresse connue, ce qui la distingue d'une adresse inconnue | Envoi asynchrone après la réponse |
 | G3 | Basse | **Valeurs de fonctionnement en dur** : durées des jetons, longueur du mot de passe, expressions cron, tranche de pas | Variables d'environnement (`conventions/configuration.md`) ou paramètres administrables en base |
 | G4 | Moyenne | **Métriques** : Micrometer sans registre Prometheus alors que `/actuator/prometheus` est ouvert par la configuration de sécurité ; journaux en texte, pas en JSON ni asynchrones | Ajouter le registre et protéger la route, ou retirer la route ouverte ; format de journal JSON |

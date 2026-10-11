@@ -279,6 +279,19 @@ déni de service trivial.
 
 ---
 
+# Limite de débit
+
+Les routes qui permettent d'essayer des mots de passe, d'envoyer un courriel ou de lancer un traitement coûteux sont limitées **par adresse de client réel**, au niveau du reverse-proxy interne (nginx inner : `limit_req`, réponse `429`), sans code applicatif :
+
+* connexion, demande et consommation d'un lien de réinitialisation, renouvellement de session : une limite par famille de route ;
+* traitements coûteux (export, rapport, imports, synchronisation, suppression en groupe) : une limite sur les seules écritures (`POST`) — une navigation vers la page du même nom n'est jamais refusée ;
+* l'adresse vient de `X-Forwarded-For`, honoré des seuls réseaux privés (le reverse-proxy externe est sur le même serveur) ; sans cela, tous les utilisateurs partageraient la limite de la passerelle ;
+* les valeurs tiennent compte de plusieurs personnes derrière une même adresse d'entreprise (rafale), et se règlent dans `frontend/nginx.conf`.
+
+Le verrouillage temporaire d'un compte après des échecs répétés n'est pas en place (voir `docs/auth/README.md`).
+
+---
+
 # Actuator / endpoints de supervision
 
 * Les endpoints de simple healthcheck (ex. `/actuator/health`) et de métriques destinées au
