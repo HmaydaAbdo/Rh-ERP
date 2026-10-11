@@ -128,6 +128,7 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
   alors, au démarrage, que l'intégrité de l'audit n'est pas garantie).
 - **Restauration d'une sauvegarde** : l'audit est dans la même base ; il revient au même instant que les données. À noter
   dans le registre d'exploitation (voir [audit/README.md](audit/README.md)).
+- **Limite de débit** : nginx inner limite, par adresse de client réel, la connexion (20 par minute, rafale de 10), la demande et la consommation d'un lien de réinitialisation (5 par minute), le renouvellement de session (120 par minute) et les `POST` coûteux — export, rapport PDF, imports, synchronisation des chantiers, suppression en groupe (30 par minute). Au-delà : `429`. L'adresse vient de `X-Forwarded-For` (posé par nginx outer), accepté des seuls réseaux privés (`set_real_ip_from`) ; si nginx outer cessait de le poser, la limite deviendrait commune à tous les utilisateurs. Les valeurs sont dans `frontend/nginx.conf`.
 - **Adresse IP** : l'audit enregistre l'adresse du client réel. Le bloc nginx outer ci-dessus pose `X-Forwarded-For`
   (`$proxy_add_x_forwarded_for`), nginx inner le relaie, et Tomcat l'honore des seuls proxys internes
   (`server.forward-headers-strategy: native`) : un client ne peut pas usurper l'adresse enregistrée.

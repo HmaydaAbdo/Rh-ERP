@@ -104,7 +104,7 @@ demandent une décision avant correction :
 
 ## Audit de sécurité — points à traiter (revue du 2026-10-04)
 
-Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; **reste le n° 6 (limite de débit)**.
+Revue faite après l'ajout des trois vues Paie, de la barre de contexte et de la suppression en groupe. Les points traités sont retirés de ce tableau (leur trace : `docs/` et git) ; le n° 6 (limite de débit) est traité.
 Vérifié et conforme : toutes les routes Paie portent une permission (`EndpointSecurityTest` la verrouille, nouvelles routes
 comprises) ; les filtres d'agrégation passent par des paramètres liés (pas d'injection) ; la suppression en groupe exige un mois,
 revérifie le nombre confirmé (`409` sinon) et ne supprime que les bulletins qu'elle a chargés ; aucun HTML construit côté
@@ -112,7 +112,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
-| 6 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export ni la suppression en groupe (voir « Anomalies ») | Limitation de débit sur `/auth/*` et sur les routes coûteuses |
+| 6 | Traité | Limite de débit sur la connexion, la réinitialisation, le renouvellement de session et les traitements coûteux (nginx inner, `429`, 2026-10-11) | Reste possible : verrouillage temporaire de compte après échecs répétés |
 | 8 | Ouverte | Écarts du contrôle de conformité du backend qui attendent une décision (G1 à G10) : [docs/conformite/README.md](docs/conformite/README.md) | Trancher puis traiter, G1 (limite de débit, ci-dessus) en premier |
 | 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité, tous niveaux (Karma, pair optionnel inutilisé de `@angular/build`, sorti du verrou : plus d'exception, `audit:deps` échoue dès le niveau moyen) ; `audit:licences` et SBOM CycloneDX en CI | — |
 

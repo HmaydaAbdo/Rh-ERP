@@ -258,6 +258,6 @@ JWT complète ; `AuthServiceTest` couvre connexion, rotation, vol de jeton et r�
 
 À trancher et corriger — suivies dans [TODO.md](../../TODO.md) :
 
-- **Pas de limitation du nombre de tentatives** de connexion ni de demandes de réinitialisation.
+- **Pas de verrouillage de compte** après des échecs répétés. Les essais sont bornés par adresse de client par nginx inner (connexion : 20 par minute ; réinitialisation : 5 par minute ; réponse `429`), voir [../deployment.md](../deployment.md).
 - La connexion fait toujours le même travail de hachage (identifiant inconnu, compte inactif, mot de passe faux) : la durée de la réponse ne révèle pas si un compte existe. La demande de réinitialisation envoie encore le courriel dans la requête (voir [../conformite/README.md](../conformite/README.md), G2).
 - Les connexions, refus d'accès, changements de droits et de mots de passe sont journalisés (voir [../audit/README.md](../audit/README.md)).
