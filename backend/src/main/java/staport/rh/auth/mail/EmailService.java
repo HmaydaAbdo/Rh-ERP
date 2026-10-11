@@ -3,8 +3,10 @@ package staport.rh.auth.mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +26,12 @@ public class EmailService {
         this.frontendUrl = frontendUrl;
     }
 
+    /**
+     * Envoie le lien de réinitialisation sans bloquer l'appelant : la demande répond aussi vite que le compte existe ou non
+     * (conventions/security.md, « Mot de passe oublié »). Un échec d'envoi est journalisé, jamais renvoyé à l'appelant — il
+     * révélerait que l'adresse correspond à un compte.
+     */
+    @Async
     public void envoyerLienReinitialisation(String email, String token) {
         String lien = frontendUrl + "/reset-password?token=" + token;
 
@@ -40,7 +48,11 @@ public class EmailService {
                 Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
                 """.formatted(lien));
 
-        mailSender.send(message);
-        log.info("Email de réinitialisation envoyé");
+        try {
+            mailSender.send(message);
+            log.info("Email de réinitialisation envoyé");
+        } catch (MailException e) {
+            log.warn("Échec de l'envoi de l'email de réinitialisation", e);
+        }
     }
 }
