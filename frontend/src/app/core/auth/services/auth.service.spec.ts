@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 function connexion(permissions: string[], jeton = 'jeton-1'): LoginResponse {
   return {
     accessToken: jeton,
-    utilisateur: { id: 1, username: 'rh', email: 'rh@staport.ma', actif: true, employee: null, roles: [], permissionsRefusees: [], permissionsEffectives: permissions }
+    utilisateur: { id: 1, version: 0, username: 'rh', email: 'rh@staport.ma', actif: true, employee: null, roles: [], permissionsRefusees: [], permissionsEffectives: permissions }
   };
 }
 

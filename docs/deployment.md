@@ -174,9 +174,9 @@ suspendues jusqu'à la décision de réouverture.
    puis vérifier son empreinte et sa restaurabilité. Le volume seul n'est pas une sauvegarde ; aucun
    transfert hors du serveur n'est prévu dans ce chantier.
 3. **Répéter avant la fenêtre** : restaurer cette sauvegarde dans l'image PostgreSQL 18 ERP-RH (pgvector + pgAudit),
-   puis vérifier les extensions, les rôles, les migrations Flyway en attente jusqu'à V20, les nombres
+   puis vérifier les extensions, les rôles, les migrations Flyway en attente jusqu'à V21, les nombres
    de lignes et le démarrage de l'application. Les migrations ajoutées après la validation locale
-   PG18 (V16 à V20) doivent être rejouées et validées sur cette restauration avant la bascule de production.
+   PG18 (V16 à V21) doivent être rejouées et validées sur cette restauration avant la bascule de production.
    Ne pas exposer les mots de passe de production dans les commandes, le shell partagé ou les journaux.
 4. **Arrêter les écritures** : activer la maintenance, arrêter les services backend et tout autre client
    qui écrit en base, puis produire le dump final PG17. Garder le conteneur PG17 et son volume présents.
@@ -184,7 +184,7 @@ suspendues jusqu'à la décision de réouverture.
    différent, monté sur le volume cible `postgres_data_v18` et initialisé avec un compte de migration
    distinct des rôles exportés. Restaurer le dump logique (rôles, droits, extensions et bases), puis
    inventorier la dernière version Flyway déjà appliquée puis appliquer les migrations manquantes
-   jusqu'à V20 avec `PGAUDIT_ENABLED=true`. Contrôler que les tables attendues et leurs données sont
+   jusqu'à V21 avec `PGAUDIT_ENABLED=true`. Contrôler que les tables attendues et leurs données sont
    présentes, et que pgvector est disponible. Garder backend et trafic public arrêtés.
 6. **Basculer Compose** : arrêter proprement le conteneur temporaire PG18, puis lancer le service
    `postgres` du Compose publié avec l'image ERP-RH PG18. Vérifier qu'il remonte le même volume cible et qu'il
@@ -200,7 +200,7 @@ suspendues jusqu'à la décision de réouverture.
 
 État au 2026-10-10 : migration locale PG17→PG18 vérifiée (PostgreSQL 18.6, pgvector 0.8.7, Flyway V15 à cette date,
 28 tables ; nombres de lignes identiques), tests backend propres passés sur PG18. **Migration du serveur
-de production à planifier/exécuter séparément**. Les migrations V16 à V20 sont postérieures à cette
+de production à planifier/exécuter séparément**. Les migrations V16 à V21 sont postérieures à cette
 validation et doivent être rejouées sur une restauration de production PG17 avant la bascule.
 
 Validation locale pgAudit au 2026-10-11 : l'image PostgreSQL ERP-RH se construit ; PostgreSQL 18.6 charge l'extension,

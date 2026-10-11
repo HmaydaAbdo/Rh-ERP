@@ -27,7 +27,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import staport.rh.common.logging.MdcRequestFilter;
 import staport.rh.audit.events.AuditAuthenticationEntryPoint;
 import staport.rh.audit.metrics.AuditMetrics;
-import staport.rh.audit.services.AuditJournalWriter;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import tools.jackson.databind.json.JsonMapper;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -130,7 +130,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuditJournalWriter ecrivainAudit,
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, IAuditJournalWriter ecrivainAudit,
                                                    AuditMetrics metriquesAudit, JsonMapper jsonMapper) throws Exception {
         AuditAuthenticationEntryPoint pointEntreeAudit = new AuditAuthenticationEntryPoint(
                 ecrivainAudit, metriquesAudit, jsonMapper);

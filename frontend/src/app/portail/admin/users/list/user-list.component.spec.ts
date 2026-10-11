@@ -11,6 +11,7 @@ import { UserListComponent } from './user-list.component';
 
 const utilisateur = (id: number, username: string, actif: boolean, roles: string[]): AdminUser => ({
   id,
+  version: 0,
   username,
   email: `${username}@staport.ma`,
   actif,

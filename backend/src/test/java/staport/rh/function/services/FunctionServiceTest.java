@@ -2,6 +2,7 @@ package staport.rh.function.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -42,6 +43,7 @@ class FunctionServiceTest {
     void setUp() {
         entity = new Function();
         entity.setId(1L);
+        ReflectionTestUtils.setField(entity, "version", 0L);
         entity.setLibelle("CHEF CHANTIER");
     }
 
@@ -51,7 +53,7 @@ class FunctionServiceTest {
         when(repository.existsByLibelleIgnoreCase("CHEF CHANTIER")).thenReturn(false);
         when(mapper.toEntity(dto)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new FunctionResponseDto(1L, "CHEF CHANTIER"));
+        when(mapper.toDto(entity)).thenReturn(new FunctionResponseDto(1L, 0L, "CHEF CHANTIER"));
 
         FunctionResponseDto result = functionService.create(dto);
 
@@ -84,7 +86,7 @@ class FunctionServiceTest {
         autre.setId(2L);
         autre.setLibelle("MACON");
 
-        FunctionUpdateRequestDto dto = new FunctionUpdateRequestDto("MACON");
+        FunctionUpdateRequestDto dto = new FunctionUpdateRequestDto(0L, "MACON");
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
         when(repository.findByLibelleIgnoreCase("MACON")).thenReturn(Optional.of(autre));
 

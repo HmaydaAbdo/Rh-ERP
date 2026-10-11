@@ -7,6 +7,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import staport.rh.audit.context.ContexteAudit;
 import staport.rh.audit.entities.AuditJournalEntry;
 import staport.rh.audit.repositories.AuditJournalRepository;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 
 /**
  * Seul point d'écriture du journal d'audit. Deux modes (conventions/audit.md, « Transaction ») :
@@ -17,7 +18,7 @@ import staport.rh.audit.repositories.AuditJournalRepository;
  * </ul>
  */
 @Component
-public class AuditJournalWriter {
+public class AuditJournalWriter implements IAuditJournalWriter {
 
     private final AuditJournalRepository repository;
     private final TransactionTemplate dansLaTransaction;
@@ -46,15 +47,18 @@ public class AuditJournalWriter {
      * une violation de contrainte soit traduite en {@code DataIntegrityViolationException}, comme elle l'était au
      * commit : les gestionnaires d'exceptions des modules (« fonction utilisée », par exemple) en dépendent.
      */
+    @Override
     public void flush() {
         repository.flush();
     }
 
     /** Rejoint la transaction en cours (ou en ouvre une s'il n'y en a pas). */
+    @Override
     public void ecrire(AuditJournalEntry entree) {
         dansLaTransaction.executeWithoutResult(statut -> repository.save(entree));
     }
 
+    @Override
     public void ecrireSeparement(AuditJournalEntry entree) {
         dansUneNouvelleTransaction.executeWithoutResult(statut -> repository.save(entree));
     }

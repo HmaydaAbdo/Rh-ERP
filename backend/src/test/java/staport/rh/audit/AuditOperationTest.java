@@ -63,7 +63,7 @@ class AuditOperationTest extends AuditIntegrationTestBase {
     }
 
     private PaieUpdateRequestDto modificationBulletin(Referentiel ref, String observation) {
-        return new PaieUpdateRequestDto(ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
+        return new PaieUpdateRequestDto(0L, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
                 new BigDecimal("3000.00"), null, null, new BigDecimal("3000.00"), observation);
     }
 
@@ -100,7 +100,7 @@ class AuditOperationTest extends AuditIntegrationTestBase {
     @Test
     void une_modification_sans_changement_laisse_une_entree_et_une_revision_vide() {
         FunctionResponseDto fonction = functionService.create(new FunctionCreateRequestDto("F-" + Long.toHexString(System.nanoTime())));
-        functionService.update(fonction.id(), new FunctionUpdateRequestDto(fonction.libelle()));
+        functionService.update(fonction.id(), new FunctionUpdateRequestDto(0L, fonction.libelle()));
 
         Map<String, Object> entree = uneEntree("FONCTION_MODIFICATION", fonction.id());
 
@@ -216,17 +216,17 @@ class AuditOperationTest extends AuditIntegrationTestBase {
         assertThat(lignesAud("utilisateur_role_aud", revisionDe(creationCompte), (short) 0)).isEqualTo(1);
 
         // Désactivation : « actif » avant / après, et retrait du rôle.
-        userService.update(compte.id(), new UserUpdateRequestDto(compte.email(), false, null, Set.of()));
+        UserResponseDto desactive = userService.update(compte.id(), new UserUpdateRequestDto(compte.version(), compte.email(), false, null, Set.of()));
         Map<String, Object> modification = uneEntree("UTILISATEUR_MODIFICATION", compte.id());
         long revision = revisionDe(modification);
         assertThat(jdbc.queryForObject("SELECT actif FROM utilisateur_aud WHERE id = ? AND rev = ?", Boolean.class, compte.id(), revision)).isFalse();
         assertThat(lignesAud("utilisateur_role_aud", revision, (short) 2)).isEqualTo(1);
 
-        userService.updateDeniedPermissions(compte.id(), new DenyPermissionsRequestDto(Set.of(permissionId)));
+        userService.updateDeniedPermissions(compte.id(), new DenyPermissionsRequestDto(desactive.version(), Set.of(permissionId)));
         Map<String, Object> refus = uneEntree("UTILISATEUR_PERMISSIONS_REFUSEES", compte.id());
         assertThat(lignesAud("utilisateur_permission_refusee_aud", revisionDe(refus), (short) 0)).isEqualTo(1);
 
-        roleService.update(role.id(), new RoleUpdateRequestDto("R-" + s, "décrit autrement", Set.of()));
+        roleService.update(role.id(), new RoleUpdateRequestDto(role.version(), "R-" + s, "décrit autrement", Set.of()));
         Map<String, Object> modificationRole = uneEntree("ROLE_MODIFICATION", role.id());
         assertThat(lignesAud("role_permission_aud", revisionDe(modificationRole), (short) 2)).isEqualTo(1);
 

@@ -27,6 +27,7 @@ const referentiel = <T extends { id: number }>(items: T[]) => ({
 
 const EMPLOYE: Employee = {
   id: 9,
+  version: 0,
   nomPrenom: 'Ali Alaoui',
   cin: 'AB123',
   dateNaissance: '1990-03-07',
@@ -193,6 +194,7 @@ describe('EmployeeFormComponent', () => {
       await envoyer();
 
       expect(service.update).toHaveBeenCalledWith(9, {
+        version: 0,
         nomPrenom: 'Ali Alaoui',
         cin: 'AB999',
         dateNaissance: '1990-03-07',

@@ -18,6 +18,7 @@ const referentiel = (libelle: (id: number) => object) => ({ fetchPage: () => of(
 
 const BULLETIN: Paie = {
   id: 8,
+  version: 0,
   employee: { id: 9, nomPrenom: 'Ali Alaoui', cin: 'AB123' },
   periode: '2026-08',
   fonction: { id: 1, libelle: 'MACON' },
@@ -237,6 +238,7 @@ describe('PaieFormComponent', () => {
       await envoyer();
 
       expect(service.update).toHaveBeenCalledWith(8, {
+        version: 0,
         fonctionId: 1,
         chantierId: 2,
         equipeId: 3,

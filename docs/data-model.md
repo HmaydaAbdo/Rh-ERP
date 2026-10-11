@@ -52,7 +52,7 @@ Détail et règles métier : [function](function/README.md), [chantier](chantier
 | `permission` | Catalogue **fixe** des permissions (une ligne par domaine × action), alimenté par migration, jamais modifié depuis l'interface. Code unique, `version` |
 | `role` | Rôles administrables via l'interface. Nom unique, `version` |
 | `role_permission` | Association rôle ↔ permission (`ON DELETE RESTRICT` des deux côtés depuis `V13` : Hibernate retire d'abord les liaisons d'un rôle supprimé, ce que l'audit voit) |
-| `utilisateur` | Compte de connexion : `username` et `email` uniques, `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version` |
+| `utilisateur` | Compte de connexion : `username` et `email` uniques, `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
 | `utilisateur_role` | Association utilisateur ↔ rôle (`ON DELETE RESTRICT` depuis `V13`) |
 | `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
 | `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille`, `version` (identifiant de session, voir [auth/README.md](auth/README.md)) |
@@ -157,6 +157,10 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V15` | Permission `PAIE_PURGE` (suppression en groupe), attribuée à `SYSTEM_ADMIN` et aux rôles qui ont `PAIE_DELETE` ; écrit sa révision d'audit (premier usage du gabarit de migration auditée) |
 | `V16` | Paramètres de fonctionnement administrables et permissions `PARAMETRE_READ/WRITE` attribuées à `SYSTEM_ADMIN` |
 | `V17` | Permission `PAIE_RESTORE`, attribuée à `SYSTEM_ADMIN` seul à l'installation et administrable ensuite depuis l'écran Rôles |
+| `V18` | Verrou optimiste `@Version` sur les entités persistées modifiables |
+| `V19` | Chaînage SHA-256 du journal d'audit |
+| `V20` | Activation conditionnelle de pgAudit pour la base ERP-RH en production |
+| `V21` | Compteur de tentatives et blocage temporaire après cinq échecs de connexion |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration

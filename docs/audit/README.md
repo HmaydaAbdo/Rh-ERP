@@ -19,6 +19,10 @@ lignes supprimées est conservé).
 | **Journal** (`audit_journal`) | Une entrée par opération (`OPERATION`), événement de sécurité (`SECURITE`) ou accès (`ACCES`) : action, auteur, origine, périmètre, résultat | `@AuditableAction` (aspect `GenericAuditAspect`), événements de sécurité et `AuditLectureResponseAdvice` pour les lectures et écritures HTTP |
 | **Garde-fous** | Tests d'architecture (CI), deux comptes PostgreSQL, vérification au démarrage | — |
 
+Les composants transverses, dont la sécurité, écrivent via la façade `IAuditJournalWriter`. Son implémentation
+`AuditJournalWriter` gère les écritures dans la transaction courante ou dans une transaction séparée ; les consommateurs
+hors du domaine audit dépendent de l'interface.
+
 ### Ce qui est audité
 
 | Entité | Instantanés | Remarques |
@@ -104,7 +108,8 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Événement | Données conservées |
 |---|---|
 | `CONNEXION_REUSSIE` | Compte, IP, navigateur |
-| `CONNEXION_ECHOUEE` | Motif (`IDENTIFIANTS_INVALIDES`, `COMPTE_INACTIF`, `COMPTE_INCONNU`) ; le compte **seulement s'il existe** (un identifiant inconnu peut être un mot de passe tapé au mauvais endroit) |
+| `CONNEXION_ECHOUEE` | Motif (`IDENTIFIANTS_INVALIDES`, `COMPTE_INACTIF`, `COMPTE_INCONNU`, `COMPTE_TEMPORAIREMENT_BLOQUE`) ; le compte **seulement s'il existe** (un identifiant inconnu peut être un mot de passe tapé au mauvais endroit) |
+| `COMPTE_BLOQUE_TEMPORAIREMENT` | Compte et règle déclenchée (5 erreurs dans une fenêtre de 15 minutes, blocage de 15 minutes) ; aucun secret saisi |
 | `SESSION_RENOUVELEE` | Compte ; aucune donnée du jeton |
 | `SESSION_RENOUVELLEMENT_REFUSE` | Compte s'il est connu et motif catégorisé (`JETON_INCONNU`, `JETON_EXPIRE`, `COMPTE_INACTIF`) |
 | `SESSIONS_REVOQUEES` | Compte acteur, identifiant du compte cible et nombre de sessions révoquées |

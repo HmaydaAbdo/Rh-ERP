@@ -10,8 +10,8 @@ import { EquipeService } from '../services/equipe.service';
 import { EquipeListComponent } from './equipe-list.component';
 
 const EQUIPES: Equipe[] = [
-  { id: 1, code: 'CH', libelle: 'Chauffeurs' },
-  { id: 2, code: 'OP', libelle: 'Opérateurs' }
+  { id: 1, version: 0, code: 'CH', libelle: 'Chauffeurs' },
+  { id: 2, version: 0, code: 'OP', libelle: 'Opérateurs' }
 ];
 
 const page = (content: Equipe[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });

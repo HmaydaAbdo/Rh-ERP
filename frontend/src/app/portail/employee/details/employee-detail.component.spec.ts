@@ -10,6 +10,7 @@ import { EmployeeDetailComponent } from './employee-detail.component';
 
 const EMPLOYE: Employee = {
   id: 9,
+  version: 0,
   nomPrenom: 'Ali Alaoui',
   cin: 'AB123',
   dateNaissance: '1990-03-07',

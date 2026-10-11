@@ -254,15 +254,13 @@ Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
 ## Tests
 
 `EndpointSecurityTest` et `JwtSecurityChainTest` vérifient les permissions de tous les endpoints et la chaîne
-JWT complète ; `AuthServiceTest` couvre connexion, rotation, vol de jeton et réinitialisation. Voir
+JWT complète ; `AuthServiceTest` couvre le verrouillage après échecs, la connexion, la rotation, le vol de jeton et la réinitialisation. Voir
 [../testing.md](../testing.md) et [../rbac/auth.md](../rbac/auth.md).
 
 ---
 
-## Limites connues
+## Limites et protections connues
 
-À trancher et corriger — suivies dans [TODO.md](../../TODO.md) :
-
-- **Pas de verrouillage de compte** après des échecs répétés. Les essais sont bornés par adresse de client par nginx inner (connexion : 20 par minute ; réinitialisation : 5 par minute ; réponse `429`), voir [../deployment.md](../deployment.md).
+- **Essais de connexion** : nginx inner limite les tentatives à 20 par minute et par adresse client (`429` au-delà) ; le compte est aussi temporairement bloqué après cinq mots de passe incorrects en quinze minutes. Le blocage dure quinze minutes ; une connexion réussie ou quinze minutes sans nouvel échec remet le compteur à zéro. Un compte bloqué reçoit le même refus générique qu'un compte avec des identifiants invalides. Les événements d'échec et de blocage sont inscrits dans le journal `SECURITE`.
 - La connexion fait toujours le même travail de hachage (identifiant inconnu, compte inactif, mot de passe faux) : la durée de la réponse ne révèle pas si un compte existe. Le courriel de réinitialisation part en tâche asynchrone (`@Async`) : la demande répond aussi vite que l'adresse corresponde ou non à un compte, et un échec d'envoi est journalisé sans jamais être renvoyé à l'appelant.
 - Les connexions, refus d'accès, changements de droits et de mots de passe sont journalisés (voir [../audit/README.md](../audit/README.md)).

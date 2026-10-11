@@ -9,9 +9,9 @@ import { RoleService } from '../../services/role.service';
 import { RoleListComponent } from './role-list.component';
 
 const ROLES: Role[] = [
-  { id: 1, nom: 'SYSTEM_ADMIN', description: 'Administration', permissions: [{ id: 1, code: 'PAIE_READ', description: 'Lire' }], protege: true },
-  { id: 2, nom: 'RH', description: null, permissions: [], protege: false },
-  { id: 3, nom: 'Comptable', description: 'Équipe comptabilité', permissions: [{ id: 1, code: 'PAIE_READ', description: 'Lire' }, { id: 2, code: 'PAIE_WRITE', description: 'Écrire' }], protege: false }
+  { id: 1, version: 0, nom: 'SYSTEM_ADMIN', description: 'Administration', permissions: [{ id: 1, version: 0, code: 'PAIE_READ', description: 'Lire' }], protege: true },
+  { id: 2, version: 0, nom: 'RH', description: null, permissions: [], protege: false },
+  { id: 3, version: 0, nom: 'Comptable', description: 'Équipe comptabilité', permissions: [{ id: 1, version: 0, code: 'PAIE_READ', description: 'Lire' }, { id: 2, version: 0, code: 'PAIE_WRITE', description: 'Écrire' }], protege: false }
 ];
 
 describe('RoleListComponent', () => {

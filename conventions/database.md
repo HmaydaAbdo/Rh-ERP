@@ -126,6 +126,7 @@ verrouillage et de volume.
 | Index ajouté | `CREATE INDEX` — acceptable sans précaution particulière |
 | Nouvelle entité auditée (`@Audited`) | `CREATE TABLE <table>_aud` dans **la même migration** que la table — voir « Tables auditées » |
 | Nouvelle colonne sur une entité auditée | `ADD COLUMN` sur la table **et** sur sa table `_aud` (nullable), dans la même migration |
+| Nouvelle propriété explicitement exclue de l'audit (`@NotAudited`) | Colonne sur la table métier uniquement ; documenter la finalité et journaliser séparément les événements de sécurité si nécessaire |
 | Données modifiées par la migration (backfill, correction, seed, fusion de doublons) sur une table auditée | Le gabarit d'audit — voir « Migrations qui modifient des données auditées » |
 
 Toute case marquée comme nécessitant un backfill ou une vérification de données existantes doit

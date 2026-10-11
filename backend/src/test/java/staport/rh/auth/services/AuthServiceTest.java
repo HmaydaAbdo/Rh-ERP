@@ -32,6 +32,7 @@ import staport.rh.auth.services.interfaces.IAuthService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -92,12 +93,12 @@ class AuthServiceTest {
         when(tokenHasher.genererTokenBrut()).thenReturn("refresh-brut");
         when(tokenHasher.hasher("refresh-brut")).thenReturn("refresh-hash");
         when(userMapper.toDto(eq(utilisateur), any())).thenReturn(
-                new UserResponseDto(1L, "hmayda", "hmayda@staport.ma", true, null, Set.of(), Set.of(), Set.of("EMPLOYEE_READ")));
+                new UserResponseDto(1L, 0L, "hmayda", "hmayda@staport.ma", true, null, Set.of(), Set.of(), Set.of("EMPLOYEE_READ")));
     }
 
     @Test
     void login_devraitReussirAvecIdentifiantsValides() {
-        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
         when(passwordEncoder.matches("bonMotDePasse", "hash")).thenReturn(true);
         stubEmission();
 
@@ -111,19 +112,84 @@ class AuthServiceTest {
 
     @Test
     void login_devraitEchouerAvecMotDePasseInvalide() {
-        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
         when(passwordEncoder.matches("mauvais", "hash")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.login("hmayda", "mauvais"))
                 .isInstanceOf(InvalidCredentialsException.class);
 
+        assertThat(utilisateur.getNombreEchecsConnexion()).isEqualTo(1);
+        assertThat(utilisateur.getDerniereEchecConnexion()).isNotNull();
+        assertThat(utilisateur.getVerrouillageJusqua()).isNull();
         verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void login_devraitBloquerQuinzeMinutesAuCinquiemeEchecDansLaFenetre() {
+        utilisateur.setNombreEchecsConnexion(4);
+        utilisateur.setDerniereEchecConnexion(Instant.now().minusSeconds(60));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("mauvais", "hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login("hmayda", "mauvais"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        assertThat(utilisateur.getNombreEchecsConnexion()).isEqualTo(5);
+        assertThat(utilisateur.getVerrouillageJusqua()).isAfter(Instant.now())
+                .isBefore(Instant.now().plusSeconds(901));
+        verify(evenements).publishEvent(EvenementSecurite.avecDetails(ActionSecurite.COMPTE_BLOQUE_TEMPORAIREMENT,
+                1L, "hmayda", Map.of("tentatives", 5, "fenetreMinutes", 15L, "dureeMinutes", 15L)));
+    }
+
+    @Test
+    void login_devraitRefuserLeCompteVerrouilleMemeAvecLeBonMotDePasse() {
+        utilisateur.setNombreEchecsConnexion(5);
+        utilisateur.setVerrouillageJusqua(Instant.now().plusSeconds(300));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("bonMotDePasse", "hash")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login("hmayda", "bonMotDePasse"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        assertThat(utilisateur.getNombreEchecsConnexion()).isEqualTo(5);
+        verify(evenements).publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE,
+                1L, "hmayda", "COMPTE_TEMPORAIREMENT_BLOQUE"));
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void login_devraitReinitialiserLeCompteurApresQuinzeMinutesSansEchec() {
+        utilisateur.setNombreEchecsConnexion(4);
+        utilisateur.setDerniereEchecConnexion(Instant.now().minusSeconds(901));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("mauvais", "hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login("hmayda", "mauvais"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        assertThat(utilisateur.getNombreEchecsConnexion()).isEqualTo(1);
+        assertThat(utilisateur.getVerrouillageJusqua()).isNull();
+    }
+
+    @Test
+    void loginReussiDevraitEffacerLeCompteur() {
+        utilisateur.setNombreEchecsConnexion(3);
+        utilisateur.setDerniereEchecConnexion(Instant.now().minusSeconds(60));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(passwordEncoder.matches("bonMotDePasse", "hash")).thenReturn(true);
+        stubEmission();
+
+        authService.login("hmayda", "bonMotDePasse");
+
+        assertThat(utilisateur.getNombreEchecsConnexion()).isZero();
+        assertThat(utilisateur.getDerniereEchecConnexion()).isNull();
+        assertThat(utilisateur.getVerrouillageJusqua()).isNull();
     }
 
     @Test
     void login_devraitEchouerSiUtilisateurInactif() {
         utilisateur.setActif(false);
-        when(utilisateurRepository.findByUsername("hmayda")).thenReturn(Optional.of(utilisateur));
+        when(utilisateurRepository.findByUsernameForUpdate("hmayda")).thenReturn(Optional.of(utilisateur));
 
         assertThatThrownBy(() -> authService.login("hmayda", "peuImporte"))
                 .isInstanceOf(InvalidCredentialsException.class);
@@ -134,7 +200,7 @@ class AuthServiceTest {
 
     @Test
     void login_devraitEchouerSiUtilisateurInconnu() {
-        when(utilisateurRepository.findByUsername("inconnu")).thenReturn(Optional.empty());
+        when(utilisateurRepository.findByUsernameForUpdate("inconnu")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login("inconnu", "peuImporte"))
                 .isInstanceOf(InvalidCredentialsException.class);
@@ -250,7 +316,7 @@ class AuthServiceTest {
 
         assertThat(existant.isRevoque()).as("le jeton présenté est consommé").isTrue();
         verify(jwtService, never()).genererAccessToken(any(), any(), any());
-        verify(evenements).publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, 1L, "hmayda", "COMPTE_INACTIF"));
+        verify(evenements).publishEvent(EvenementSecurite.avecMotif(ActionSecurite.SESSION_RENOUVELLEMENT_REFUSE, 1L, "hmayda", "COMPTE_INACTIF"));
     }
 
     @Test

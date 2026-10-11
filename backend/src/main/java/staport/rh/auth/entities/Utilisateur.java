@@ -16,6 +16,7 @@ import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.Audited;
 import staport.rh.employee.entities.Employee;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -51,6 +52,19 @@ public class Utilisateur {
 
     @Column(name = "actif", nullable = false)
     private boolean actif = true;
+
+    /** État opérationnel d'authentification, journalisé par événement de sécurité plutôt qu'en historique Envers. */
+    @NotAudited
+    @Column(name = "nombre_echecs_connexion", nullable = false)
+    private int nombreEchecsConnexion;
+
+    @NotAudited
+    @Column(name = "derniere_echec_connexion")
+    private Instant derniereEchecConnexion;
+
+    @NotAudited
+    @Column(name = "verrouillage_jusqua")
+    private Instant verrouillageJusqua;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
@@ -118,6 +132,30 @@ public class Utilisateur {
 
     public void setActif(boolean actif) {
         this.actif = actif;
+    }
+
+    public int getNombreEchecsConnexion() {
+        return nombreEchecsConnexion;
+    }
+
+    public void setNombreEchecsConnexion(int nombreEchecsConnexion) {
+        this.nombreEchecsConnexion = nombreEchecsConnexion;
+    }
+
+    public Instant getDerniereEchecConnexion() {
+        return derniereEchecConnexion;
+    }
+
+    public void setDerniereEchecConnexion(Instant derniereEchecConnexion) {
+        this.derniereEchecConnexion = derniereEchecConnexion;
+    }
+
+    public Instant getVerrouillageJusqua() {
+        return verrouillageJusqua;
+    }
+
+    public void setVerrouillageJusqua(Instant verrouillageJusqua) {
+        this.verrouillageJusqua = verrouillageJusqua;
     }
 
     public Employee getEmployee() {

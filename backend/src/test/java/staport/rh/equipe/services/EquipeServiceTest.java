@@ -2,6 +2,7 @@ package staport.rh.equipe.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -44,7 +45,7 @@ class EquipeServiceTest {
         when(repository.findByLibelleIgnoreCase("Chauffeurs")).thenReturn(Optional.empty());
         when(mapper.toEntity(dto)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new EquipeResponseDto(1L, "CH", "Chauffeurs"));
+        when(mapper.toDto(entity)).thenReturn(new EquipeResponseDto(1L, 0L, "CH", "Chauffeurs"));
 
         service.create(dto);
 
@@ -85,27 +86,29 @@ class EquipeServiceTest {
     void update_devraitAutoriserLesMemesCodeEtLibelleSurLaMemeEquipe() {
         Equipe entity = new Equipe();
         entity.setId(1L);
+        ReflectionTestUtils.setField(entity, "version", 0L);
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
         when(repository.findByCodeIgnoreCase("CH")).thenReturn(Optional.of(entity));
         when(repository.findByLibelleIgnoreCase("CHAUFFEURS")).thenReturn(Optional.of(entity));
-        when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new EquipeResponseDto(1L, "CH", "CHAUFFEURS"));
+        when(repository.saveAndFlush(entity)).thenReturn(entity);
+        when(mapper.toDto(entity)).thenReturn(new EquipeResponseDto(1L, 0L, "CH", "CHAUFFEURS"));
 
-        service.update(1L, new EquipeUpdateRequestDto("CH", "CHAUFFEURS"));
+        service.update(1L, new EquipeUpdateRequestDto(0L, "CH", "CHAUFFEURS"));
 
-        verify(repository).save(entity);
+        verify(repository).saveAndFlush(entity);
     }
 
     @Test
     void update_devraitRefuserLeCodeDUneAutreEquipe() {
         Equipe entity = new Equipe();
         entity.setId(1L);
+        ReflectionTestUtils.setField(entity, "version", 0L);
         Equipe autre = new Equipe();
         autre.setId(2L);
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
         when(repository.findByCodeIgnoreCase("OP")).thenReturn(Optional.of(autre));
 
-        assertThatThrownBy(() -> service.update(1L, new EquipeUpdateRequestDto("OP", "OPERATEURS")))
+        assertThatThrownBy(() -> service.update(1L, new EquipeUpdateRequestDto(0L, "OP", "OPERATEURS")))
                 .isInstanceOf(EquipeAlreadyExistsException.class);
 
         verify(repository, never()).save(any());

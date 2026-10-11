@@ -34,7 +34,7 @@ describe('ChantierService', () => {
     creation.flush({ id: 3 });
     expect(creation.request.body).toEqual({ code: 'C196', designation: 'Marrakech', nom: null });
 
-    service.update(3, { code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false }).subscribe();
+    service.update(3, { version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false }).subscribe();
     const modification = requete(http, 'PUT', 'chantiers/3');
     modification.flush({ id: 3 });
     expect(modification.request.body).toMatchObject({ actif: false });

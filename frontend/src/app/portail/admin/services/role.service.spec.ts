@@ -53,7 +53,7 @@ describe('RoleService', () => {
     creation.flush({ id: 5 });
     expect(creation.request.body).toEqual({ nom: 'RH', description: null, permissionIds: [1, 2] });
 
-    service.update(5, { nom: 'RH', description: 'Ressources humaines', permissionIds: [1] }).subscribe();
+    service.update(5, { version: 0, nom: 'RH', description: 'Ressources humaines', permissionIds: [1] }).subscribe();
     const modification = requete(http, 'PUT', 'roles/5');
     modification.flush({ id: 5 });
     expect(modification.request.body).toMatchObject({ permissionIds: [1] });

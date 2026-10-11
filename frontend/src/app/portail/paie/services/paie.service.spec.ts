@@ -31,7 +31,7 @@ describe('PaieService', () => {
     service.getById(8).subscribe();
     requete(http, 'GET', 'paie/8').flush({ id: 8 });
 
-    service.update(8, { fonctionId: 1, chantierId: 2, equipeId: null, nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null, salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000, observation: null }).subscribe();
+    service.update(8, { version: 0, fonctionId: 1, chantierId: 2, equipeId: null, nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null, salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000, observation: null }).subscribe();
     const modification = requete(http, 'PUT', 'paie/8');
     modification.flush({ id: 8 });
     expect(modification.request.body).toMatchObject({ salaireTotal: 4000 });

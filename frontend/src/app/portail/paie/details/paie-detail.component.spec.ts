@@ -15,6 +15,7 @@ registerLocaleData(localeFr);
 
 const BULLETIN: Paie = {
   id: 8,
+  version: 0,
   employee: { id: 9, nomPrenom: 'Ali Alaoui', cin: 'AB123' },
   periode: '2026-08',
   fonction: { id: 1, libelle: 'MACON' },

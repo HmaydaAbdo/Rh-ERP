@@ -11,13 +11,13 @@ import { RoleService } from '../../services/role.service';
 import { RoleFormComponent } from './role-form.component';
 
 const PERMISSIONS: PermissionSummary[] = [
-  { id: 1, code: 'EMPLOYEE_READ', description: 'Lire les employés' },
-  { id: 2, code: 'EMPLOYEE_WRITE', description: 'Modifier les employés' },
-  { id: 3, code: 'PAIE_READ', description: 'Lire la paie' },
-  { id: 4, code: 'PAIE_WRITE', description: 'Modifier la paie' }
+  { id: 1, version: 0, code: 'EMPLOYEE_READ', description: 'Lire les employés' },
+  { id: 2, version: 0, code: 'EMPLOYEE_WRITE', description: 'Modifier les employés' },
+  { id: 3, version: 0, code: 'PAIE_READ', description: 'Lire la paie' },
+  { id: 4, version: 0, code: 'PAIE_WRITE', description: 'Modifier la paie' }
 ];
 
-const ROLE: Role = { id: 6, nom: 'Comptable', description: 'Équipe comptabilité', permissions: [PERMISSIONS[2]], protege: false };
+const ROLE: Role = { id: 6, version: 0, nom: 'Comptable', description: 'Équipe comptabilité', permissions: [PERMISSIONS[2]], protege: false };
 
 describe('RoleFormComponent', () => {
   let fixture: ComponentFixture<RoleFormComponent>;
@@ -156,7 +156,7 @@ describe('RoleFormComponent', () => {
 
       await envoyer();
 
-      expect(service.update).toHaveBeenCalledWith(6, { nom: 'Comptable', description: 'Comptabilité et paie', permissionIds: [3, 4] });
+      expect(service.update).toHaveBeenCalledWith(6, { version: 0, nom: 'Comptable', description: 'Comptabilité et paie', permissionIds: [3, 4] });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Rôle modifié');
     });
   });
@@ -179,7 +179,7 @@ describe('RoleFormComponent', () => {
       await cocher(case_('PAIE_READ'), false);
       await envoyer();
 
-      expect(service.update).toHaveBeenCalledWith(1, { nom: 'SYSTEM_ADMIN', description: 'Équipe comptabilité', permissionIds: [1, 2, 3, 4] });
+      expect(service.update).toHaveBeenCalledWith(1, { version: 0, nom: 'SYSTEM_ADMIN', description: 'Équipe comptabilité', permissionIds: [1, 2, 3, 4] });
     });
 
     it('permet de modifier la description', async () => {

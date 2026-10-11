@@ -72,6 +72,9 @@ Pour restaurer un groupe supprimé, Paie demande à la façade `IAuditJournalSer
 suppression réussie. L'audit ne dépend pas du service Paie pour cette lecture et ne réalise aucune écriture métier ; la
 restauration, ses invariants et son audit restent dans Paie.
 
+Les composants transverses qui produisent des événements d'audit dépendent de `IAuditJournalWriter`, le port d'écriture
+du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
+
 ### Structure d'un module
 
 ```text

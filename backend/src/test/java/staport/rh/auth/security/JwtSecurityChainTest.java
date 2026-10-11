@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import staport.rh.audit.metrics.AuditMetrics;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import staport.rh.auth.entities.Utilisateur;
 import staport.rh.equipe.controller.EquipeController;
 import staport.rh.equipe.dtos.response.EquipeResponseDto;
@@ -64,6 +66,12 @@ class JwtSecurityChainTest {
     @MockitoBean
     private IEquipeService equipeService;
 
+    @MockitoBean
+    private IAuditJournalWriter auditJournalWriter;
+
+    @MockitoBean
+    private AuditMetrics auditMetrics;
+
     private String token(Set<String> permissions, Set<String> roles) {
         Utilisateur utilisateur = new Utilisateur();
         utilisateur.setId(1L);
@@ -108,7 +116,7 @@ class JwtSecurityChainTest {
 
     @Test
     void unTokenAvecLaPermissionRequiseEstAccepte() throws Exception {
-        when(equipeService.findById(1L)).thenReturn(new EquipeResponseDto(1L, "CH", "CHAUFFEURS"));
+        when(equipeService.findById(1L)).thenReturn(new EquipeResponseDto(1L, 0L, "CH", "CHAUFFEURS"));
         Page<EquipeResponseDto> page = new PageImpl<>(List.of());
         when(equipeService.search(any(), any())).thenReturn(page);
 
@@ -123,7 +131,7 @@ class JwtSecurityChainTest {
     @Test
     void unePageEstSerialiseeParUnDtoStable() throws Exception {
         when(equipeService.search(any(), any())).thenReturn(
-                new PageImpl<>(List.of(new EquipeResponseDto(1L, "CH", "CHAUFFEURS")), org.springframework.data.domain.PageRequest.of(1, 1), 5));
+                new PageImpl<>(List.of(new EquipeResponseDto(1L, 0L, "CH", "CHAUFFEURS")), org.springframework.data.domain.PageRequest.of(1, 1), 5));
 
         mockMvc.perform(post("/equipes/search").header("Authorization", "Bearer " + token(Set.of("EQUIPE_READ"), Set.of()))
                         .contentType(APPLICATION_JSON).content("{}"))

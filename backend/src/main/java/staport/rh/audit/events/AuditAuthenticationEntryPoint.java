@@ -17,6 +17,7 @@ import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.audit.entities.ResultatAudit;
 import staport.rh.audit.metrics.AuditMetrics;
 import staport.rh.audit.services.AuditJournalWriter;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import staport.rh.audit.web.AuditRequeteHttpAttributes;
 import staport.rh.common.logging.MdcRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
@@ -33,11 +34,11 @@ public class AuditAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private static final Logger log = LoggerFactory.getLogger(AuditAuthenticationEntryPoint.class);
 
     private final AuthenticationEntryPoint delegue = new BearerTokenAuthenticationEntryPoint();
-    private final AuditJournalWriter ecrivain;
+    private final IAuditJournalWriter ecrivain;
     private final AuditMetrics metriques;
     private final JsonMapper jsonMapper;
 
-    public AuditAuthenticationEntryPoint(AuditJournalWriter ecrivain, AuditMetrics metriques, JsonMapper jsonMapper) {
+    public AuditAuthenticationEntryPoint(IAuditJournalWriter ecrivain, AuditMetrics metriques, JsonMapper jsonMapper) {
         this.ecrivain = ecrivain;
         this.metriques = metriques;
         this.jsonMapper = jsonMapper;
