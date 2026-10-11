@@ -38,28 +38,6 @@ Fonction, Chantier, Équipe, Utilisateurs, Rôles et authentification manquent a
 - Ajouter les parcours navigateur manquants, puis garder une correspondance domaine → cas → commande CI à jour.
 - Rendre explicites les portes bloquantes par type de changement et publier les rapports de couverture par domaine.
 
-## Refonte visuelle (itérations successives — voir `DESIGN.md` et `conventions/design-system.md`)
-
-Socle déjà en place : marque, jetons, thèmes clair/sombre, polices, coque, responsive, écrans métier, graphiques (palette, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). La revue de la phase 7 est terminée. **Phase 8 — authentification et phase 9 — navigation** : première itération revue le 2026-10-11 ; champs alignés dans la carte, lien de récupération cliquable et centré sur tout le canevas, sidebar réduit aux icônes puis déployé au survol/focus clavier. La photographie de chantier générée pour Staport RH est intégrée comme asset local des écrans d'authentification. Tests unitaires et build de production ont passé dans GitHub Actions ; l'E2E a révélé un défaut de cycle de vie entre connexion et navigation, corrigé dans la passe actuelle. La revue Chrome et une CI complète verte restent nécessaires. La refonte projet reste en cours jusqu'à la revue de chaque domaine.
-
-- **En cours — Paie** : revoir les vues tabulaire, cartes et analytique, les filtres, les formulaires et l'assistant d'export. Première itération inspectée sur `ng serve`/Chrome (4200) : états vides enrichis dans Cartes et Analytique ; vues tabulaire, création bulletin et dialogue d'export revus. Rester sur ce domaine jusqu'à la revue de tous ses écrans et états.
-- Puis, dans cet ordre, revoir **Employés**, **Chantiers**, **Fonctions**, **Équipes**, **Administration** (utilisateurs, rôles, paramètres) et **Journal d'audit**. Pour chaque domaine : inspecter l'écran en direct, travailler ses listes, consultations et formulaires, puis vérifier thèmes, clavier, erreurs, chargement, état vide et responsive avant d'avancer.
-- **Revue de clôture** : vérifier les états repos, chargement, vide, erreur et permission, le clavier, `forced-colors`, les thèmes clair/sombre et les largeurs tactiles sur toutes les surfaces.
-
-Points déjà identifiés :
-
-- **Filtres des listes dans l'URL** : seuls ceux de la Paie y sont (lien partageable, retour navigateur) ; Employés, Chantiers,
-  Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
-- **Fermeture de l'onglet avec un formulaire modifié** : la confirmation couvre la navigation dans l'application
-  (`unsavedChangesGuard`), pas la fermeture ni le rechargement de l'onglet (`beforeunload`).
-- **Poids du bundle/CSS** : bundle initial ~555 kB (sous le budget de 800 kB) ; plus aucun dépassement de budget (assistant d'export découpé en étapes).
-- **Contraste élevé** : vérifier et compléter le support des préférences système et de `forced-colors` dans l'application, puis l'ajouter aux contrôles visuels automatisés et manuels.
-- **Monogramme « S »** (`assets/brand/monogramme.svg`) : dessin provisoire en attendant une version vectorielle du logo.
-- **`ExpressionChangedAfterItHasBeenCheckedError`** (mode développement seulement) dans `PaieListComponent` : `loading` passe à
-  `true` pendant le premier `onLazyLoad` du tableau, après la détection de changements. Antérieur à la refonte.
-
----
-
 ## Vues Cartes et Analytique des autres domaines (squelettes créés, 2026-10-06)
 
 Seule la Paie a ses trois vues (Tabulaire, Cartes, Analytique) sous une coque commune (`portail/paie/vues/`, sélecteur de vue,
