@@ -35,16 +35,11 @@ describe('AppComponent', () => {
       expect(fixture.componentInstance).toBeTruthy();
     });
 
-    it(`should have the 'Staport RH' title`, () => {
-      const fixture = TestBed.createComponent(AppComponent);
-      expect(fixture.componentInstance.title).toEqual('Staport RH');
-    });
-
     it('should not render the sidebar when not authenticated', () => {
       const fixture = TestBed.createComponent(AppComponent);
       fixture.detectChanges();
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.app-sidebar__brand')).toBeNull();
+      expect(compiled.querySelector('.app-sidebar')).toBeNull();
     });
   });
 
@@ -86,18 +81,13 @@ describe('AppComponent', () => {
       expect(document.activeElement?.id).toBe('contenu');
     });
 
-    it('protège le nom du produit de la traduction automatique dans la barre compacte', () => {
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-
-      expect((fixture.nativeElement as HTMLElement).querySelector('.app-topbar__titre[translate="no"]')).not.toBeNull();
-    });
-
-    it('should render the sidebar brand', () => {
+    it('keeps the navigation focused on destinations without a redundant brand header', () => {
       const fixture = TestBed.createComponent(AppComponent);
       fixture.detectChanges();
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.app-sidebar__brand')?.textContent).toContain('Staport RH');
+      expect(compiled.querySelector('.app-sidebar__brand')).toBeNull();
+      expect(compiled.querySelector('.app-topbar__logo')).toBeNull();
+      expect(compiled.querySelector('.app-sidebar__nav')?.getAttribute('aria-label')).toBe('Navigation principale');
     });
   });
 });

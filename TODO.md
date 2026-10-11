@@ -40,7 +40,13 @@ Fonction, Chantier, Équipe, Utilisateurs, Rôles et authentification manquent a
 
 ## Refonte visuelle (itérations successives — voir `DESIGN.md` et `conventions/design-system.md`)
 
-Fait : marque, jetons, thèmes clair/sombre, polices, coque, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). La revue de la phase 7 est terminée. L’écran de connexion passe en phase 8 avec une composition d’accueil immersive et adaptée aux petits écrans. Points déjà identifiés :
+Socle déjà en place : marque, jetons, thèmes clair/sombre, polices, coque, responsive, écrans métier, graphiques (palette, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). La revue de la phase 7 est terminée. **Phase 8 — authentification et phase 9 — navigation** : première itération revue le 2026-10-11 ; champs alignés dans la carte, lien de récupération cliquable et centré sur tout le canevas, sidebar réduit aux icônes puis déployé au survol/focus clavier. La photographie de chantier générée pour Staport RH est intégrée comme asset local des écrans d'authentification ; compilation, CI frontend et inspection Chrome de cette passe restent à confirmer. La refonte projet reste en cours jusqu'à la revue de chaque domaine.
+
+- **En cours — Paie** : revoir les vues tabulaire, cartes et analytique, les filtres, les formulaires et l'assistant d'export. Première itération inspectée sur `ng serve`/Chrome (4200) : états vides enrichis dans Cartes et Analytique ; vues tabulaire, création bulletin et dialogue d'export revus. Rester sur ce domaine jusqu'à la revue de tous ses écrans et états.
+- Puis, dans cet ordre, revoir **Employés**, **Chantiers**, **Fonctions**, **Équipes**, **Administration** (utilisateurs, rôles, paramètres) et **Journal d'audit**. Pour chaque domaine : inspecter l'écran en direct, travailler ses listes, consultations et formulaires, puis vérifier thèmes, clavier, erreurs, chargement, état vide et responsive avant d'avancer.
+- **Revue de clôture** : vérifier les états repos, chargement, vide, erreur et permission, le clavier, `forced-colors`, les thèmes clair/sombre et les largeurs tactiles sur toutes les surfaces.
+
+Points déjà identifiés :
 
 - **Filtres des listes dans l'URL** : seuls ceux de la Paie y sont (lien partageable, retour navigateur) ; Employés, Chantiers,
   Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.

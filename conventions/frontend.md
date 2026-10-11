@@ -191,22 +191,22 @@ licence et du bénéfice mesuré. Toute grille respecte les exigences suivantes 
 
 * **Tri** : toute colonne de données est triable au clavier et à la souris ; seules les
   colonnes d'actions ne le sont pas.
-* **Redimensionnement** (`[resizableColumns]="true"`, `columnResizeMode="expand"`,
-  `pResizableColumn`), **réordonnancement** par glisser-déposer (`[reorderableColumns]="true"`,
-  `pReorderableColumn`) et **choix des colonnes visibles** (composant partagé
-  `app-column-chooser`).
+* **Redimensionnement** par poignée pointeur et flèches gauche/droite au clavier, **réordonnancement** par glisser-déposer ou
+  Alt + flèches sur le bouton d'en-tête, et **choix des colonnes visibles** (composant partagé `app-column-chooser`).
 * **Pagination** avec total lisible, page courante, options de taille et navigation accessible.
 * **Filtres en temps réel** (délai de saisie de 300 ms) : aucun bouton « Rechercher », seul un bouton
   « Réinitialiser » reste dans la barre de filtres.
 
 ## Style unique
 
-Tous les tableaux ont **le même style**, défini une seule fois dans le design system Staport
-(`styles/_tables.scss`, couleurs dans les tokens `--table-*` de `_tokens.scss`) : lignes compactes, grille
-visible, en-têtes en majuscules sur fond clair, alternance de lignes, survol, paginateur compact. Les classes d'alignement
+Tous les tableaux interactifs ont **le même style**, défini une seule fois dans le design system Staport
+(`shared/ui/table/table.component.scss`, couleurs dans les tokens `--table-*` de `styles/_tokens.scss`) : lignes compactes, grille
+visible, en-têtes en majuscules sur fond neutre, alternance de lignes, survol, état vide illustré, paginateur compact. Les classes d'alignement
 (`text-center`, `text-right`) et de graisse (`font-semibold`, `font-bold`) utilisées par `TableColumn.align` et
 `cellClass` y sont définies. **Aucun écran ne redéfinit ces règles** : toute évolution du style se fait dans
-`_tables.scss`, pour tous les tableaux à la fois.
+`table.component.scss`, pour tous les tableaux interactifs à la fois. Un petit tableau statique de résultats d'import peut utiliser
+`app-static-table-scroll` et `app-static-table` (`styles/_page.scss`) ; il garde un nom accessible, une légende, des en-têtes
+`scope="col"` et un défilement clavier/tactile indépendant. Ne pas utiliser cette exception pour une liste métier.
 
 ## Colonnes pilotées par la configuration
 

@@ -69,7 +69,7 @@
                 {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().evolution) {
-                <div class="paie-analytique__tableau" tabindex="0">
+                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données de l’évolution mensuelle">
                   <table>
                     <caption class="paie-analytique__lecteur">Évolution mensuelle de la masse salariale et des bulletins</caption>
                     <thead><tr><th scope="col">Mois</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
@@ -99,7 +99,7 @@
                 {{ tableaux().tranches ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().tranches) {
-                <div class="paie-analytique__tableau" tabindex="0">
+                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données des tranches de salaire">
                   <table>
                     <caption class="paie-analytique__lecteur">Nombre de bulletins par tranche de total</caption>
                     <thead><tr><th scope="col">Tranche (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
@@ -150,7 +150,7 @@
                 {{ tableaux().chantiers ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().chantiers) {
-                <div class="paie-analytique__tableau" tabindex="0">
+                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données par chantier">
                   <table>
                     <caption class="paie-analytique__lecteur">Masse, bulletins et sorties par chantier</caption>
                     <thead><tr><th scope="col">Chantier</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th><th scope="col" class="text-right">STC / sorties</th></tr></thead>
@@ -206,7 +206,7 @@
                 {{ tableaux().fonctions ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().fonctions) {
-                <div class="paie-analytique__tableau" tabindex="0">
+                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données par fonction">
                   <table>
                     <caption class="paie-analytique__lecteur">Masse et bulletins par fonction</caption>
                     <thead><tr><th scope="col">Fonction</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>

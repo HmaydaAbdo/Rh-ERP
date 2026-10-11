@@ -29,6 +29,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
 | Reprendre l'audit exhaustif de conformité | [handoff/conformite-totale.md](handoff/conformite-totale.md) |
+| Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |
 | Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) |
 
 ---

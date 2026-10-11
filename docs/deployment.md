@@ -159,6 +159,17 @@ production. Ne déploie pas le Compose PG18 en production avant d'avoir exécut�
 le nom de volume a changé, donc le nouveau conteneur utiliserait un volume vide si aucune restauration
 n'y était faite. Ne jamais lancer `docker compose down -v`.
 
+### Images affichées avec le tag `<none>`
+
+Les variables `*_IMAGE_TAG` valent `latest` par défaut. Quand un nouveau `docker compose pull` déplace
+`latest` vers l'image du commit courant, l'image locale précédente perd ce nom si elle n'avait pas été
+téléchargée sous son tag immuable : Docker Desktop l'affiche alors avec le tag `<none>`. C'est une ancienne
+image locale devenue sans tag, pas une erreur de pull ni un volume PostgreSQL. La CI publie aussi chaque
+image sous le SHA du commit (`github.sha`) ; pour garder les versions locales identifiables, remplacer dans
+`.env` `POSTGRES_IMAGE_TAG`, `BACKUP_IMAGE_TAG`, `BACKEND_IMAGE_TAG` et `FRONTEND_IMAGE_TAG` par le même
+SHA, puis faire `docker compose --profile backup pull`. Un déploiement au tag `latest` reste valide ; les
+versions SHA facilitent le retour arrière et évitent que les anciennes images perdent leur nom local.
+
 ### Migration majeure PG17 → PG18 en production
 
 La migration se fait par export/restauration logique : un volume PostgreSQL 17 ne peut pas être

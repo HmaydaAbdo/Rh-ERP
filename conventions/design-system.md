@@ -33,13 +33,14 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 
 # Identité visuelle Staport
 
-L'interface traduit l'identité Staport en une expérience **précise, immersive et premium**, adaptée à des outils de
+L'interface traduit l'identité Staport en une expérience **précise, accueillante et premium**, adaptée à des outils de
 travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
-alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface ; son motif directionnel peut
-servir de repère visuel discret dans les transitions, les états d'accueil ou les vues de synthèse.
+alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface ; un accent minéral chaud peut
+compléter les repères de navigation et les détails de marque sans remplacer le bleu d'action.
 
 Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
-à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Les accents lumineux sont
+à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Un écran d'accès peut installer
+une atmosphère marine propre à Staport ; les écrans métier gardent des surfaces calmes. Les accents lumineux sont
 réservés aux actions, sélections et informations qui méritent l'attention. Éviter le néon généralisé, le glassmorphism
 systématique, les dégradés décoratifs et les effets qui éloignent l'interface de l'identité Staport.
 Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
@@ -111,7 +112,8 @@ non contractuels et règles globales qui fuient dans les autres domaines.
   ni d'appel à un service externe, l'application doit fonctionner sans accès à Internet.
 * Les **chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sont obligatoires partout où l'on compare des montants
   (tableaux, tuiles de synthèse).
-* Tailles : uniquement l'échelle des jetons (`--text-xs` à `--text-xl`), plus `--text-display` pour une accroche d'accueil courte.
+* Tailles : uniquement l'échelle des jetons (`--text-xs` à `--text-xl`), plus `--text-page-title` pour les titres d'écran et
+  `--text-display` pour une accroche d'accueil courte.
 
 ---
 
@@ -131,8 +133,9 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
 | Un graphique | Tracé de 600 ms, supprimé si l'utilisateur demande moins de mouvement |
 
 * **Jetons** : `--duration-fast` (150 ms), `--duration-base` (220 ms), `--duration-slow` (400 ms, entrées en cascade),
-  `--duration-slower` (700 ms, remplissage d'une jauge), `--ease-out` (la courbe de toute entrée), `--ease-in-out` (un
-  balayage continu). Un composant n'écrit jamais une durée ni une courbe en dur.
+  `--duration-slower` (700 ms, remplissage d'une jauge), `--duration-slowest` (1200 ms, mouvement indéterminé),
+  `--duration-skeleton` (1400 ms), `--ease-out` (la courbe de toute entrée), `--ease-in-out` (un balayage continu).
+  Un composant n'écrit jamais une durée ni une courbe en dur.
 * On n'anime que `opacity` et `transform` (et les couleurs) : jamais une propriété qui force une mise en page. Seule exception
   assumée : l'ouverture du menu latéral anime sa `width` — c'est un élément fixe superposé au contenu, aucune mise en page ne se
   recalcule autour de lui.
@@ -172,10 +175,10 @@ des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni 
 
 | Classe | Rôle |
 |---|---|
-| `app-page` | La carte de l'écran (fond, rayon, ombre, marge) |
-| `app-page__header` | Le titre de l'écran (`<h1>`) et, à droite, ses actions |
+| `app-page` | Le conteneur d'écran, sans surface décorative : les listes restent posées sur le canevas ; les formulaires et consultations choisissent explicitement une surface |
+| `app-page__header` | Le titre éditorial (`--text-page-title`) de l'écran et, à droite, ses actions |
 | `app-page__header` + `app-page__actions app-page__actions--liste` | Les actions d'un écran de liste (Importer, Synchroniser, Exporter, puis l'action principale « Nouveau … » en dernier), à droite du titre ; en une grille sur téléphone. Les écrans qui ont des onglets de vue (la paie) les posent au même niveau que les onglets |
-| `app-toolbar` | Les filtres : une ligne de contrôles de même hauteur (`--control-height`), à plat sur la page ; deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » à droite ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
+| `app-toolbar` | Les filtres regroupés dans une bande secondaire, sans ajouter une carte lourde : contrôles de même hauteur (`--control-height`), deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
 | `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils à droite (`app-table-bar__tools`) — pour les écrans dont les actions sont dans l'en-tête, seulement le choix des colonnes |
 | `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
 
@@ -183,7 +186,7 @@ Formulaires et consultations (`src/styles/_forms.scss`) :
 
 | Classe | Rôle |
 |---|---|
-| `app-page--narrow` / `app-page--wide` | Largeur maximale de la carte (760 / 1000 px) |
+| `app-page--narrow` / `app-page--wide` | Surface et largeur maximale de formulaire ou consultation (760 / 1000 px) |
 | `app-back` | Le retour à la liste : un lien discret « ← Employés » au-dessus du titre, jamais un bouton |
 | `app-page__actions` | Les actions de l'en-tête (consultation : Historique puis **Modifier**, l'action principale, en dernier) |
 | `app-form__grid` (`--3`) | La grille de champs : 2 colonnes (ou 3), 1 sur téléphone ; `app-form__wide` pour un champ pleine largeur |
@@ -211,8 +214,7 @@ horizontalement, à l'intérieur de sa carte.
 * **Points de rupture** : jetons Sass dans `src/styles/_breakpoints.scss` (`phone` ≤ 767 px, `tablet-down` ≤ 1023 px,
   `compact-nav` pour la navigation en tiroir) ; une feuille de composant les utilise par `@use 'breakpoints' as bp;`
   puis `@include bp.phone { … }`. Jamais un `@media` à valeur écrite en dur dans un composant.
-* **Navigation** : le menu latéral replié (bureau et tablette à souris) devient un **tiroir** ouvert par une barre du haut
-  sur téléphone et tablette tactile — fond sombre cliquable, `Échap` et le choix d'un écran le referment.
+* **Navigation** : sur grand écran, le menu latéral reste iconique et compact, avec les libellés en infobulle ; il se déploie au survol ou au focus clavier et se replie quand le pointeur sort après un clic, ou quand le focus quitte les liens. Sur téléphone et tablette tactile, il devient un **tiroir** ouvert par une barre du haut — fond sombre cliquable, `Échap` et le choix d'un écran le referment.
 * **Cibles tactiles** : sur écran tactile (`pointer: coarse`) ou téléphone, tout contrôle fait au moins 44 px
   (`--control-height`) et le texte d'un champ au moins 16 px (`--control-font-size`) — sinon iOS zoome à la saisie.
 * **Grilles** : colonnes en `minmax(0, 1fr)` (jamais `1fr` seul : un contenu large étirerait la colonne), réduites à deux
@@ -241,7 +243,7 @@ contraste élevé et navigation clavier : **aucune violation** est la barre à t
   de données.
 * **Clavier** : un lien d'évitement « Aller au contenu » en premier ; un anneau de focus unique (`:focus-visible`) sur tout élément
   interactif, jamais supprimé sans équivalent ; une zone qui défile (graphique, tableau) est atteignable au clavier
-  (`tabindex="0"`, `role="region"`, libellé) ; le menu latéral ne s'ouvre au clavier que sur `:focus-visible`, pas après un clic.
+  (`tabindex="0"`, `role="region"`, libellé) ; le menu latéral iconique se déploie au survol ou lorsque l'un de ses contrôles reçoit le focus clavier (`:has(:focus-visible)`), jamais au seul clic, puis se replie à la sortie.
 * **Formulaires** : un message d'erreur est annoncé (`role="alert"`) ; une soumission refusée met le focus sur le premier champ
   invalide (`focaliserPremiereErreur`, par `focusBoundControl` de Signal Forms) ; quitter un formulaire modifié demande confirmation
   (`unsavedChangesGuard`, boîte « Quitter sans enregistrer ? ») et un formulaire enregistré est remis à l'état intact (`reset()`) avant de

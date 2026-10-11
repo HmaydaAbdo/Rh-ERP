@@ -20,7 +20,7 @@
   bottom: 0;
   z-index: 100;
   width: var(--sidebar-width);
-  overflow: hidden;
+  overflow: visible;
   background: var(--color-sidebar-bg);
   background-image:
     radial-gradient(ellipse at 0 0, var(--color-sidebar-glow), transparent 72%),
@@ -31,24 +31,6 @@
   border-inline-end: 1px solid var(--color-sidebar-border);
   box-shadow: var(--shadow-sidebar);
   transition: width var(--duration-base) var(--ease-out);
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 3rem;
-    padding: var(--space-xs);
-    color: var(--color-sidebar-active-text);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  &__logo {
-    flex-shrink: 0;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: var(--radius-sm);
-  }
 
   &__nav {
     display: flex;
@@ -92,6 +74,11 @@
     &:hover {
       background: var(--color-sidebar-hover-bg);
       color: var(--color-sidebar-active-text);
+    }
+
+    &:focus-visible {
+      outline-color: var(--color-sidebar-active-text);
+      outline-offset: -2px;
     }
 
     &.active {
@@ -227,13 +214,6 @@
       svg { width: 1.25rem; height: 1.25rem; }
     }
 
-    &__logo {
-      border-radius: var(--radius-sm);
-    }
-
-    &__titre {
-      font-weight: 600;
-    }
   }
 
   .app-backdrop {
@@ -265,11 +245,6 @@
 
     &__link {
       min-height: 2.75rem;
-      justify-content: flex-start;
-      padding-inline: var(--space-md);
-    }
-
-    &__brand {
       justify-content: flex-start;
       padding-inline: var(--space-md);
     }

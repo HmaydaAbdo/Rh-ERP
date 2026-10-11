@@ -7,9 +7,17 @@
   </div>
 
   @if (loading()) {
-    <p role="status">Chargement des paramètres…</p>
+    <div class="parametre-list__loading" role="status" aria-busy="true">
+      <span class="app-lecteur">Chargement des paramètres…</span>
+      @for (ligne of [1, 2, 3, 4]; track ligne) {
+        <span class="app-skeleton parametre-list__squelette"></span>
+      }
+    </div>
   } @else if (parametres().length === 0) {
-    <p role="status">Aucun paramètre disponible.</p>
+    <div class="parametre-list__empty" role="status">
+      <stp-icon name="settings" size="1.25rem" />
+      <span>Aucun paramètre disponible.</span>
+    </div>
   } @else {
     <div class="parametre-list__items">
       @for (parametre of parametres(); track parametre.id) {
