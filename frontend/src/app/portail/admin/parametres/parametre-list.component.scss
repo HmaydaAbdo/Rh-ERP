@@ -13,6 +13,7 @@
 
   &__empty {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
@@ -21,6 +22,10 @@
 
     stp-icon {
       color: var(--color-primary);
+    }
+
+    &[role='alert'] {
+      color: var(--color-danger);
     }
   }
 
