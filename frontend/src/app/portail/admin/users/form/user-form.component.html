@@ -58,26 +58,59 @@
       </div>
 
       @if (isEditMode() && deniablePermissions().length > 0) {
-        <div class="app-form__wide user-form__deny">
+        <section class="app-form__wide user-form__permissions" aria-labelledby="permissions-titre">
           <div class="app-form__section">
-            <h2>Permissions refusées (deny override)</h2>
-            <p>Cochez une permission pour la refuser explicitement à cet utilisateur, même si un de ses rôles l'accorde.</p>
+            <h2 id="permissions-titre">Permissions de l’utilisateur</h2>
+            <p>Les droits proviennent des rôles sélectionnés. Décochez une permission pour la refuser explicitement à cet utilisateur.</p>
           </div>
-          <div class="user-form__deny-items">
-            @for (permission of deniablePermissions(); track permission.id) {
-              <label class="user-form__deny-item">
-                <input
-                  type="checkbox"
-                  class="stp-checkbox"
-                  [attr.aria-label]="'Refuser ' + permission.code"
-                  [checked]="isDenied(permission)"
-                  (change)="onToggleDenied(permission, $event)"
-                />
-                <span class="user-form__code">{{ permission.code }}</span>
-              </label>
+          <div class="user-form__permission-domains">
+            @for (group of permissionGroups(); track group.domaine) {
+              <section class="user-form__permission-domain" [attr.aria-labelledby]="'permissions-' + group.domaine">
+                <h3 [id]="'permissions-' + group.domaine">{{ group.domaine }}</h3>
+                <div class="user-form__permission-columns">
+                  <div class="user-form__permission-column user-form__permission-column--allowed">
+                    <h4>Autorisées <span>({{ group.autorisees.length }})</span></h4>
+                    @for (permission of group.autorisees; track permission.id) {
+                      <label class="user-form__permission-item">
+                        <input
+                          type="checkbox"
+                          class="stp-checkbox"
+                          [attr.data-permission]="permission.code"
+                          [attr.aria-label]="'Désactiver ' + permission.code"
+                          [checked]="true"
+                          (change)="onTogglePermission(permission, $event)"
+                        />
+                        <span class="user-form__code">{{ permission.code }}</span>
+                        <small>{{ permission.description }}</small>
+                      </label>
+                    } @empty {
+                      <p class="user-form__permission-empty">Aucune permission autorisée.</p>
+                    }
+                  </div>
+                  <div class="user-form__permission-column user-form__permission-column--denied">
+                    <h4>Non autorisées <span>({{ group.nonAutorisees.length }})</span></h4>
+                    @for (permission of group.nonAutorisees; track permission.id) {
+                      <label class="user-form__permission-item">
+                        <input
+                          type="checkbox"
+                          class="stp-checkbox"
+                          [attr.data-permission]="permission.code"
+                          [attr.aria-label]="'Activer ' + permission.code"
+                          [checked]="false"
+                          (change)="onTogglePermission(permission, $event)"
+                        />
+                        <span class="user-form__code">{{ permission.code }}</span>
+                        <small>{{ permission.description }}</small>
+                      </label>
+                    } @empty {
+                      <p class="user-form__permission-empty">Toutes les permissions sont autorisées.</p>
+                    }
+                  </div>
+                </div>
+              </section>
             }
           </div>
-        </div>
+        </section>
       }
 
       <div class="app-form__actions">

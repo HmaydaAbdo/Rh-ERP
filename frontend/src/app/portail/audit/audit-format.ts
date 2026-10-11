@@ -20,6 +20,7 @@ const LIBELLES_ACTIONS: Record<string, string> = {
   PAIE_IMPORT: 'Import de bulletins',
   PAIE_EXPORT_EXCEL: 'Export Excel de la paie',
   PAIE_RAPPORT_PDF: 'Rapport PDF de la paie',
+  PAIE_RESTAURATION_GROUPE: 'Restauration en groupe de bulletins',
   EMPLOYE_CREATION: 'Employé créé',
   EMPLOYE_MODIFICATION: 'Employé modifié',
   EMPLOYE_SUPPRESSION: 'Employé supprimé',
@@ -42,15 +43,25 @@ const LIBELLES_ACTIONS: Record<string, string> = {
   ROLE_MODIFICATION: 'Rôle modifié',
   ROLE_SUPPRESSION: 'Rôle supprimé',
   PERMISSION_CREATION: 'Permission créée',
+  PARAMETRE_MODIFICATION: 'Paramètre modifié',
+  LECTURE_METIER: 'Lecture métier',
+  ECRITURE_HTTP_SANS_TRACE_METIER: 'Écriture HTTP sans trace métier',
+  TENTATIVE_HTTP_REJETEE: 'Tentative HTTP rejetée',
+  TENTATIVE_ECRITURE_HTTP_REJETEE: 'Tentative d’écriture métier rejetée',
   AUDIT_ETAT_INITIAL: 'État initial de l’audit',
   CONNEXION_REUSSIE: 'Connexion réussie',
   CONNEXION_ECHOUEE: 'Connexion échouée',
+  COMPTE_BLOQUE_TEMPORAIREMENT: 'Compte temporairement bloqué',
+  SESSION_RENOUVELEE: 'Session renouvelée',
+  SESSION_RENOUVELLEMENT_REFUSE: 'Renouvellement de session refusé',
+  SESSIONS_REVOQUEES: 'Sessions révoquées',
   DECONNEXION: 'Déconnexion',
   JETON_REUTILISE: 'Jeton de session réutilisé (vol présumé)',
   MOT_DE_PASSE_OUBLIE: 'Mot de passe oublié demandé',
   MOT_DE_PASSE_REINITIALISE: 'Mot de passe réinitialisé (lien)',
   MOT_DE_PASSE_REINITIALISE_PAR_ADMIN: 'Mot de passe réinitialisé par un administrateur',
-  ACCES_REFUSE: 'Accès refusé'
+  ACCES_REFUSE: 'Accès refusé',
+  ACCES_ANONYME_REFUSE: 'Accès anonyme refusé'
 };
 
 export const ACTIONS_AUDIT: { code: string; libelle: string }[] = Object.entries(LIBELLES_ACTIONS).map(([code, libelle]) => ({
@@ -92,7 +103,8 @@ export const ENTITES_AUDITEES: { code: string; libelle: string }[] = [
   { code: 'Chantier', libelle: 'Chantier' },
   { code: 'Equipe', libelle: 'Équipe' },
   { code: 'Utilisateur', libelle: 'Compte' },
-  { code: 'Role', libelle: 'Rôle' }
+  { code: 'Role', libelle: 'Rôle' },
+  { code: 'Parametre', libelle: 'Paramètre' }
 ];
 
 export function libelleEntite(code: string | null): string {

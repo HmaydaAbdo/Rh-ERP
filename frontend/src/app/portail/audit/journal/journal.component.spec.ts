@@ -99,6 +99,16 @@ describe('JournalComponent', () => {
         expect(vi.mocked(service.search).mock.lastCall![1].page).toBe(0);
     });
 
+    it('propose les actions de lecture métier et les écritures complémentaires dans le filtre Action', () => {
+        const options = composant['actionOptions'];
+
+        expect(options).toEqual(expect.arrayContaining([
+            { value: 'LECTURE_METIER', label: 'Lecture métier' },
+            { value: 'PAIE_RESTAURATION_GROUPE', label: 'Restauration en groupe de bulletins' },
+            { value: 'PARAMETRE_MODIFICATION', label: 'Paramètre modifié' }
+        ]));
+    });
+
     it('retarde la frappe dans un champ texte jusqu’à la fin de la saisie', async () => {
         vi.useFakeTimers();
         service.search.mockClear();

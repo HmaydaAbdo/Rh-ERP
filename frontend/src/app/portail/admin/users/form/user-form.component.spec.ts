@@ -43,7 +43,7 @@ describe('UserFormComponent', () => {
   const racine = () => fixture.nativeElement as HTMLElement;
   const erreurs = () => Array.from(racine().querySelectorAll('[role="alert"]')).map((e) => e.textContent);
   const formulaire = () => fixture.componentInstance['form'];
-  const refus = (code: string) => racine().querySelector(`input[aria-label="Refuser ${code}"]`) as HTMLInputElement | null;
+  const permission = (code: string) => racine().querySelector(`input[data-permission="${code}"]`) as HTMLInputElement | null;
 
   async function stabiliser(): Promise<void> {
     fixture.detectChanges();
@@ -175,12 +175,16 @@ describe('UserFormComponent', () => {
       expect(formulaire()().dirty()).toBe(false);
     });
 
-    it('propose de refuser une à une les permissions des rôles de l’utilisateur, celles déjà refusées étant cochées', async () => {
+    it('regroupe les permissions par domaine et sépare les droits autorisés des droits refusés', async () => {
       await afficher('4');
 
       expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['PAIE_READ', 'PAIE_WRITE']);
-      expect(refus('PAIE_READ')!.checked).toBe(false);
-      expect(refus('PAIE_WRITE')!.checked).toBe(true);
+      expect(racine().querySelectorAll('.user-form__permission-domain')).toHaveLength(1);
+      expect(racine().querySelector('.user-form__permission-domain h3')?.textContent).toBe('PAIE');
+      expect(permission('PAIE_READ')!.checked).toBe(true);
+      expect(permission('PAIE_READ')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--allowed');
+      expect(permission('PAIE_WRITE')!.checked).toBe(false);
+      expect(permission('PAIE_WRITE')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--denied');
     });
 
     it('recalcule les permissions refusables quand les rôles changent, et oublie le refus d’une permission qui disparaît', async () => {
@@ -192,15 +196,15 @@ describe('UserFormComponent', () => {
       expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ']);
       formulaire().roleIds().value.set([10, 11]);
       await stabiliser();
-      expect(refus('PAIE_WRITE')!.checked).toBe(false);
+      expect(permission('PAIE_WRITE')!.checked).toBe(true);
     });
 
     it('enregistre l’utilisateur puis ses permissions refusées', async () => {
       await afficher('4');
       saisir(racine(), '#email', 'fatima.zahra@staport.ma');
       formulaire().actif().value.set(false);
-      refus('PAIE_READ')!.checked = true;
-      refus('PAIE_READ')!.dispatchEvent(new Event('change', { bubbles: true }));
+      permission('PAIE_READ')!.checked = false;
+      permission('PAIE_READ')!.dispatchEvent(new Event('change', { bubbles: true }));
       await stabiliser();
 
       await envoyer();
@@ -215,8 +219,8 @@ describe('UserFormComponent', () => {
       await afficher('4');
       expect(formulaire()().dirty()).toBe(false);
 
-      refus('PAIE_READ')!.checked = true;
-      refus('PAIE_READ')!.dispatchEvent(new Event('change', { bubbles: true }));
+      permission('PAIE_READ')!.checked = false;
+      permission('PAIE_READ')!.dispatchEvent(new Event('change', { bubbles: true }));
       await stabiliser();
 
       expect(formulaire()().dirty()).toBe(true);

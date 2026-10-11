@@ -17,10 +17,18 @@ describe('audit-format', () => {
     const libelles = ACTIONS_AUDIT.map((a) => a.libelle);
     expect(new Set(libelles).size).toBe(libelles.length);
     expect(ACTIONS_AUDIT.map((a) => a.code)).toContain('ACCES_REFUSE');
+    expect(ACTIONS_AUDIT.map((a) => a.code)).toEqual(expect.arrayContaining([
+      'LECTURE_METIER',
+      'PAIE_RESTAURATION_GROUPE',
+      'PARAMETRE_MODIFICATION',
+      'COMPTE_BLOQUE_TEMPORAIREMENT',
+      'ACCES_ANONYME_REFUSE'
+    ]));
   });
 
   it('nomme les entités et les champs, ou garde leur nom technique', () => {
     expect(libelleEntite('Paie')).toBe('Bulletin de paie');
+    expect(libelleEntite('Parametre')).toBe('Paramètre');
     expect(libelleEntite('Inconnue')).toBe('Inconnue');
     expect(libelleChamp('salaireTotal')).toBe('Salaire total');
     expect(libelleChamp('champInconnu')).toBe('champInconnu');

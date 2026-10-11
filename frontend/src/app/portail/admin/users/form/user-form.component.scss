@@ -1,24 +1,104 @@
 .user-form {
-  &__deny-items {
-    margin-top: var(--space-sm);
+  &__permissions .app-form__section {
+    margin-bottom: var(--space-sm);
+  }
+
+  &__permissions > .app-form__section p {
+    max-width: 72ch;
+  }
+
+  &__permission-domains {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: var(--space-sm);
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+  }
+
+  &__permission-domain {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+    overflow: hidden;
+
+    h3 {
+      margin: 0;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface-alt);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+  }
+
+  &__permission-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &__permission-column {
+    min-width: 0;
     padding: var(--space-md);
+
+    + .user-form__permission-column {
+      border-left: 1px solid var(--color-border);
+    }
+
+    h4 {
+      margin: 0 0 var(--space-sm);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      font-weight: 600;
+
+      span {
+        font-weight: 400;
+      }
+    }
+
+    &--allowed {
+      background: color-mix(in srgb, var(--color-success) 5%, transparent);
+    }
+
+    &--denied {
+      background: color-mix(in srgb, var(--color-warning) 5%, transparent);
+    }
+  }
+
+  &__permission-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-sm);
+    padding: var(--space-xs) 0;
+    font-size: var(--text-sm);
+
+    small {
+      grid-column: 2;
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+  }
+
+  &__permission-empty {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
   }
 
   &__code {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
   }
 
-  &__deny-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-base);
+  @media (max-width: 48rem) {
+    &__permission-columns {
+      grid-template-columns: 1fr;
+    }
+
+    &__permission-column + &__permission-column {
+      border-top: 1px solid var(--color-border);
+      border-left: 0;
+    }
   }
 }
 
