@@ -32,11 +32,8 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
-0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les profils et skills techniques encore présents dans la
-   version épinglée sous `conventions/staport/v<version>/`. Les règles déjà centralisées dans
-   `conventions/` à la racine font foi ; agents/IA, MCP, RAG et BI sont définis dans
-   `conventions/agents-ia.md`, `conventions/mcp.md`, `conventions/rag.md`,
-   `conventions/architecture.md`, `conventions/metrics.md` et `conventions/testing.md`.
+0. Les conventions de référence résident dans `conventions/` à la racine. Elles constituent le
+   blueprint ERP-RH ; lire les documents applicables dans l'ordre ci-dessous.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
@@ -65,10 +62,9 @@ pas ces sources et ne confère aucun droit applicatif.
 
 En cas de conflit entre plusieurs conventions :
 
-- pour un sujet déjà centralisé, les conventions à la racine sont la source de vérité ; le snapshot
-  Staport épinglé reste applicable aux seuls sujets encore à examiner et centraliser ;
-- les conventions à la racine précisent l'implémentation et les règles du projet ; elles ne peuvent
-  pas affaiblir les exigences de sécurité, d'audit ou de confidentialité ;
+- les conventions à la racine constituent la source normative et le blueprint de référence ;
+- la documentation du projet précise le métier et les choix d'implémentation sans affaiblir les
+  exigences de sécurité, d'audit ou de confidentialité ;
 - `architecture.md` ERP-RH fait foi pour les choix d'architecture propres au projet ; toute
   contradiction entre les deux niveaux est résolue par un ADR et une mise à jour des documents avant
   le changement concerné.

@@ -2,6 +2,22 @@
 
 > Profil Java/JPA. Les migrations restent la source de vérité du schéma (`conventions/database.md`).
 
+## Versions et dépendances Spring
+
+Pour une application Spring Boot, choisir une version stable et prise en charge, compatible avec le
+JDK, les starters et les bibliothèques du projet. Vérifier les matrices officielles avant une
+création de projet ou une mise à niveau ; planifier l'adoption des versions majeures stables et
+documenter un report motivé.
+
+Utiliser le BOM Spring Boot pour les dépendances qu'il gère et celui de Spring AI lorsque le projet
+l'adopte. Ne pas ajouter de version individuelle ni remplacer une version gérée sans raison
+documentée et vérification de compatibilité. Verrouiller les versions du JDK, du build et des
+dépendances dans les fichiers du projet.
+
+Après une mise à niveau majeure, vérifier notamment les starters modularisés, Jakarta, Spring
+Framework, la sécurité, l'observabilité et les dépendances tierces. Avant fusion, compiler et lancer
+les tests unitaires, les intégrations avec Testcontainers et les tests de contrats concernés.
+
 ## Entités
 
 * Utiliser une entité pour le modèle de persistance, jamais comme contrat d'API. Mapper les
@@ -77,3 +93,11 @@ jour associées le justifient.
 
 Toute évolution d'entité, relation ou requête persistante est accompagnée de sa migration, de tests
 sur le moteur relationnel cible et d'une vérification des contraintes et performances concernées.
+
+## Références officielles
+
+Vérifier les exigences et la gestion des dépendances à chaque mise à niveau :
+
+* [Exigences système Spring Boot](https://docs.spring.io/spring-boot/system-requirements.html)
+* [Gestion des dépendances Spring Boot](https://docs.spring.io/spring-boot/reference/using/build-systems.html)
+* [Référence Spring AI](https://docs.spring.io/spring-ai/reference/)

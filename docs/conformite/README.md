@@ -1,6 +1,6 @@
 # Contrôle de conformité du backend (2026-10-11)
 
-> Contrôle du backend contre les conventions ERP-RH (`conventions/*.md`) et le socle Staport épinglé (v0.1.1).
+> Contrôle du backend contre les conventions de référence applicables (`conventions/*.md`).
 > Méthode : lecture du code et de la configuration, puis règles exécutables (`ArchitectureConventionsTest`) pour que
 > les écarts corrigés ne reviennent pas. Les écarts qui engagent un choix d'architecture ou de fonctionnement sont
 > listés **sans être corrigés** : ils attendent une décision (voir « Écarts ouverts »).
@@ -52,7 +52,7 @@ Ils sont suivis dans [TODO.md](../../TODO.md).
 |---|---|---|---|
 | G3 | Moyenne | **Valeurs de fonctionnement en dur** : durée du jeton d'accès (15 min), du jeton de rafraîchissement (30 jours), du lien de réinitialisation (1 h), longueur minimale du mot de passe (10), tranche de l'analytique de paie (500). `conventions/configuration.md` demande qu'une valeur métier susceptible d'évoluer (délais, seuils, durées, tentatives) soit **réglable par un administrateur dans l'interface**, jamais dans le code ni dans `application.yml` | Nouveau chantier : table de paramètres, écran d'administration, permission dédiée, audit et documentation RBAC — c'est un choix d'architecture, donc à valider avant de le coder. Alternative : constater que ces cinq valeurs sont des paramètres techniques stables et les laisser (écart assumé) |
 | G5 | Basse | `GET /users` et `GET /roles` renvoient la liste entière, sans pagination | **Écart assumé proposé** : routes réservées à `USER_MANAGE` / `ROLE_MANAGE`, quelques dizaines de lignes, et les sélecteurs de l'interface (rôles d'un compte) ont besoin de la liste complète ; paginer changerait le contrat et trois écrans sans gain de sécurité |
-| G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise (le socle Staport et `conventions/deployment.md` demandent de ne l'activer qu'à un besoin réel) | **Écart assumé proposé** : activation décidée par le propriétaire dans `V1` (déjà appliquée en production : la modifier casse la somme de contrôle Flyway) ; la retirer demanderait une `V16` `DROP EXTENSION` et modifierait la procédure de migration PG17 → PG18, qui contrôle la présence de pgvector |
+| G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise (`conventions/database.md` et `conventions/deployment.md` demandent de ne l'activer qu'à un besoin réel) | **Écart assumé proposé** : activation décidée par le propriétaire dans `V1` (déjà appliquée en production : la modifier casse la somme de contrôle Flyway) ; la retirer demanderait une `V16` `DROP EXTENSION` et modifierait la procédure de migration PG17 → PG18, qui contrôle la présence de pgvector |
 | G10 | À vérifier | **Production** : confirmer qu'elle utilise bien les deux comptes PostgreSQL (migration / application) | Sur le serveur : `docker compose logs backend | grep "Intégrité de l'audit"` — « NON garantie » signifie un seul compte (voir [../deployment.md](../deployment.md), « Deux comptes PostgreSQL »). Aucune action sur la production sans sauvegarde et répétition |
 
 ---
@@ -61,4 +61,3 @@ Ils sont suivis dans [TODO.md](../../TODO.md).
 
 1. Décider G3, G5, G6 et vérifier G10 (G1, G2, G4, G7, G8 et G9 sont traités).
 2. Migration de la production PostgreSQL 17 → 18 : voir [../deployment.md](../deployment.md) (répétition sur une sauvegarde avant tout).
-3. Mettre à jour l'épinglage du socle Staport quand une version plus récente que v0.1.1 paraît.

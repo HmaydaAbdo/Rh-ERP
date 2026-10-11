@@ -26,6 +26,12 @@ charge dans sa configuration de build et de déploiement, puis teste avec la mê
 que celle qui sera déployée. La convention ne fixe pas un numéro de version commun à toutes les
 applications.
 
+Vérifier la politique de support officielle avant de choisir ou mettre à niveau une majeure, et
+utiliser son dernier correctif pris en charge. Verrouiller la version du serveur dans le
+déploiement. Si une extension telle que pgvector est utilisée, verrouiller également sa version et
+confirmer sa disponibilité chez le fournisseur de production ; les tests d'intégration utilisent
+les mêmes majeures PostgreSQL et versions d'extension que la cible.
+
 Utiliser un type décimal exact pour les quantités monétaires ou les mesures décimales qui exigent
 une précision déterministe ; ne pas représenter ces valeurs par des nombres flottants. Stocker les
 instants dans un type avec fuseau horaire en UTC et convertir vers l'heure locale uniquement pour
@@ -62,6 +68,33 @@ backfill sûr et sa stratégie de déploiement.
 - Un numéro de version n'est jamais réutilisé.
 - Une migration ne doit faire qu'une chose cohérente (une table, une évolution logique) — pas de
   fichier fourre-tout accumulant plusieurs changements sans rapport.
+
+Flyway exécute les migrations PostgreSQL via JDBC. Ne pas utiliser de méta-commandes propres à
+`psql` sans équivalent JDBC. Vérifier la documentation de la version Flyway retenue et ajouter le
+module de support PostgreSQL au classpath lorsqu'il n'est pas fourni par cette version. Aligner la
+version de ce module avec celle du moteur Flyway selon la gestion de dépendances retenue.
+
+Rendre une opération de données idempotente lorsqu'elle est conçue pour être relancée. Ne pas
+ajouter systématiquement `IF EXISTS` ou `IF NOT EXISTS` si cela pouvait masquer une dérive inattendue
+du schéma.
+
+## Préparer et relire une migration
+
+Avant d'écrire le SQL, lire le modèle de données et les règles du domaine ainsi que les conventions
+de base et d'audit. Déterminer si les tables concernées sont auditées, non vides, volumineuses ou
+utilisées simultanément par plusieurs versions de l'application. Signaler les risques de verrou,
+de durée, de backfill et de déploiement progressif.
+
+Clarifier toute décision manquante sur une valeur de repli, une fusion ou une suppression de données
+avant d'écrire la migration ; aucune règle métier n'est inventée. Dans la même revue, synchroniser
+le SQL, les entités, les tables d'audit, les permissions ou données initiales concernées et la
+documentation.
+
+Tester la migration sur une base PostgreSQL vierge et depuis la version précédente supportée, avec
+la même version majeure et les mêmes extensions que l'environnement cible. Vérifier
+`ddl-auto=validate`, les invariants et le résultat des backfills. Pour une migration modifiant des
+données, prévoir une restauration ou une stratégie de retour arrière ; consigner les risques de
+verrouillage et de volume.
 
 ---
 
@@ -226,3 +259,8 @@ documentation officielle PostgreSQL (`SELECT * FROM pg_get_keywords()`).
 * Toute valeur de repli ou règle de fusion est une décision métier — jamais une hypothèse.
 * Une table auditée a sa table `_aud` (même migration, colonnes nullables, jamais supprimée ni renommée), aucune cascade
   SQL, aucune écriture en masse ; une migration qui modifie des données auditées écrit aussi l'audit (gabarit).
+
+## Références officielles
+
+* [Politique de versions et de support PostgreSQL](https://www.postgresql.org/support/versioning/)
+* [Support PostgreSQL dans Flyway](https://documentation.red-gate.com/flyway/reference/database-driver-reference/postgresql-database)
