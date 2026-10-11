@@ -113,6 +113,7 @@ interface. Non revu : configuration des cookies de rafraîchissement et du JWT.
 | # | Gravité | Constat | Correction proposée |
 |---|---|---|---|
 | 6 | Moyenne | **Aucune limite de débit** sur la connexion, la réinitialisation, l'export ni la suppression en groupe (voir « Anomalies ») | Limitation de débit sur `/auth/*` et sur les routes coûteuses |
+| 8 | Ouverte | Écarts du contrôle de conformité du backend qui attendent une décision (G1 à G10) : [docs/conformite/README.md](docs/conformite/README.md) | Trancher puis traiter, G1 (limite de débit, ci-dessus) en premier |
 | 7 | Traité | `npm audit` : 19 -> 0 vulnérabilité, tous niveaux (Karma, pair optionnel inutilisé de `@angular/build`, sorti du verrou : plus d'exception, `audit:deps` échoue dès le niveau moyen) ; `audit:licences` et SBOM CycloneDX en CI | — |
 
 ---

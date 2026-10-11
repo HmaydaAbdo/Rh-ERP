@@ -26,6 +26,7 @@ les détails et décisions propres à ERP-RH.
 | Lancer ou écrire des tests | [testing.md](testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
+| Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |
 | Comprendre l'adoption du socle Staport et la trajectoire ERP-RH | [adr/0001-adoption-socle-staport.md](adr/0001-adoption-socle-staport.md) |
 
 ---
