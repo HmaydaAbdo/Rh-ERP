@@ -1,5 +1,6 @@
 package staport.rh.audit.dtos.request;
 
+import jakarta.validation.constraints.Size;
 import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.audit.entities.ResultatAudit;
 
@@ -13,12 +14,12 @@ import java.time.Instant;
 public record AuditSearchCriteria(
         Instant dateDebut,
         Instant dateFin,
-        String utilisateur,
+        @Size(max = 100) String utilisateur,
         CategorieAudit categorie,
-        String action,
+        @Size(max = 100) String action,
         ResultatAudit resultat,
-        String entiteType,
+        @Size(max = 100) String entiteType,
         Long entiteId,
-        String requestId
+        @Size(max = 100) String requestId
 ) {
 }

@@ -69,7 +69,7 @@ public class FunctionController {
     @Operation(summary = "Rechercher des fonctions")
     @PreAuthorize("hasAuthority('FUNCTION_READ')")
     public ResponseEntity<Page<FunctionResponseDto>> rechercher(
-            @RequestBody(required = false) FunctionSearchCriteria criteria,
+            @Valid @RequestBody(required = false) FunctionSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(functionService.search(criteria, pageable));
     }

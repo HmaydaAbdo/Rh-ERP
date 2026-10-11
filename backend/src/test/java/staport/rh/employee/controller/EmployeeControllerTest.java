@@ -74,4 +74,25 @@ class EmployeeControllerTest {
         mockMvc.perform(get("/employees/99"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void rechercher_devraitRetourner400QuandUnCritereDepasseSaLongueurMaximale() throws Exception {
+        String corps = "{\"nomPrenom\":\"" + "x".repeat(151) + "\"}";
+
+        mockMvc.perform(post("/employees/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corps))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rechercher_devraitRetourner400QuandUneListeDeFiltresEstDemesuree() throws Exception {
+        String ids = java.util.stream.LongStream.rangeClosed(1, 501).mapToObj(Long::toString)
+                .collect(java.util.stream.Collectors.joining(","));
+
+        mockMvc.perform(post("/employees/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fonctionIds\":[" + ids + "]}"))
+                .andExpect(status().isBadRequest());
+    }
 }

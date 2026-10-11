@@ -1,5 +1,6 @@
 package staport.rh.paie.dtos.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -9,7 +10,7 @@ import jakarta.validation.constraints.PositiveOrZero;
  * le groupe en compte un autre au moment de supprimer, rien n'est supprimé.
  */
 public record PaieSuppressionGroupeRequestDto(
-        @NotNull PaieSearchCriteria criteres,
+        @NotNull @Valid PaieSearchCriteria criteres,
         @NotNull @PositiveOrZero Long nombreAttendu
 ) {
 }

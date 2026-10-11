@@ -1,5 +1,7 @@
 package staport.rh.chantier.dtos.request;
 
+import jakarta.validation.constraints.Size;
+
 /** {@code code}/{@code designation} : filtres précis, combinés en ET avec les autres critères — la
  * liste chantier (UI d'administration) les expose comme 2 champs de filtre indépendants, un chantier
  * doit alors correspondre aux deux à la fois. {@code recherche} : recherche libre pour le sélecteur
@@ -8,9 +10,9 @@ package staport.rh.chantier.dtos.request;
  * avec {@code code}/{@code designation} pour ne pas changer le comportement du filtre précis de la
  * liste chantier. */
 public record ChantierSearchCriteria(
-        String code,
-        String designation,
-        String recherche,
+        @Size(max = 100) String code,
+        @Size(max = 500) String designation,
+        @Size(max = 500) String recherche,
         Boolean actif
 ) {
 }

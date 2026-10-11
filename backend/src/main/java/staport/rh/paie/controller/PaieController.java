@@ -84,7 +84,7 @@ public class PaieController {
     @Operation(summary = "Rechercher des bulletins de paie")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<Page<PaieResponseDto>> rechercher(
-            @RequestBody(required = false) PaieSearchCriteria criteria,
+            @Valid @RequestBody(required = false) PaieSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(paieService.search(criteria, pageable));
     }
@@ -125,7 +125,7 @@ public class PaieController {
     @PostMapping("/periodes/search")
     @Operation(summary = "Lister les mois qui contiennent de la paie sur un périmètre filtré (niveau « mois » de la vue Cartes)")
     @PreAuthorize("hasAuthority('PAIE_READ')")
-    public ResponseEntity<List<PaiePeriodeResumeDto>> rechercherPeriodes(@RequestBody(required = false) PaieSearchCriteria criteria) {
+    public ResponseEntity<List<PaiePeriodeResumeDto>> rechercherPeriodes(@Valid @RequestBody(required = false) PaieSearchCriteria criteria) {
         return ResponseEntity.ok(paieService.findPeriodes(criteria));
     }
 
@@ -133,7 +133,7 @@ public class PaieController {
     @Operation(summary = "Lister les chantiers d'un mois, avec leurs équipes, sur un périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes)")
     @ApiResponse(responseCode = "400")
     @PreAuthorize("hasAuthority('PAIE_READ')")
-    public ResponseEntity<List<PaieChantierPeriodeDto>> rechercherChantiersDeLaPeriode(@RequestBody PaieSearchCriteria criteria) {
+    public ResponseEntity<List<PaieChantierPeriodeDto>> rechercherChantiersDeLaPeriode(@Valid @RequestBody PaieSearchCriteria criteria) {
         if (criteria == null || criteria.periode() == null) {
             throw new InvalidPeriodeException("La période est obligatoire (format aaaa-MM, ex. 2026-08)");
         }
@@ -153,7 +153,7 @@ public class PaieController {
     @Operation(summary = "Indicateurs du tableau de bord analytique d'un mois, sur un périmètre filtré (nom, CIN, chantiers, fonctions, équipes)")
     @ApiResponse(responseCode = "400")
     @PreAuthorize("hasAuthority('PAIE_READ')")
-    public ResponseEntity<PaieAnalytiqueDto> analyser(@RequestBody PaieSearchCriteria criteria) {
+    public ResponseEntity<PaieAnalytiqueDto> analyser(@Valid @RequestBody PaieSearchCriteria criteria) {
         if (criteria == null || criteria.periode() == null) {
             throw new InvalidPeriodeException("La période est obligatoire (format aaaa-MM, ex. 2026-08)");
         }

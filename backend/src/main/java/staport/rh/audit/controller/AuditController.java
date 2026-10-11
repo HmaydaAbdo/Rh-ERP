@@ -1,5 +1,6 @@
 package staport.rh.audit.controller;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,7 +39,7 @@ public class AuditController {
     @PostMapping("/search")
     @Operation(summary = "Rechercher dans le journal d'audit (dates, utilisateur, catégorie, action, résultat, entité)")
     @PreAuthorize("hasAuthority('AUDIT_READ')")
-    public ResponseEntity<Page<AuditJournalLigneDto>> rechercher(@RequestBody(required = false) AuditSearchCriteria criteria,
+    public ResponseEntity<Page<AuditJournalLigneDto>> rechercher(@Valid @RequestBody(required = false) AuditSearchCriteria criteria,
                                                                  Pageable pageable) {
         return ResponseEntity.ok(journalService.search(criteria, pageable));
     }
