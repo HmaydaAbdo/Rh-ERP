@@ -1,41 +1,127 @@
-// Courbes de niveau en filigrane : le terrain et le tracé de route, sans photo
-$courbes: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600' preserveAspectRatio='xMidYMid slice' fill='none' stroke='%2382b2e0' stroke-opacity='.2' stroke-width='1.2'%3E%3Cpath d='M-40 520 C160 400 280 560 460 440 S720 300 860 380'/%3E%3Cpath d='M-40 470 C160 350 280 510 460 390 S720 250 860 330'/%3E%3Cpath d='M-40 420 C160 300 280 460 460 340 S720 200 860 280'/%3E%3Cpath d='M-40 370 C160 250 280 410 460 290 S720 150 860 230'/%3E%3Cpath d='M-40 320 C160 200 280 360 460 240 S720 100 860 180'/%3E%3Cpath d='M-40 570 C160 450 280 610 460 490 S720 350 860 430'/%3E%3C/svg%3E";
+@use 'breakpoints' as bp;
 
 .auth-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(24rem, 0.88fr);
   min-height: 100vh;
-  padding: var(--space-md);
-  background: url($courbes) center / cover no-repeat, linear-gradient(160deg, var(--brand-900) 0%, var(--brand-700) 60%, var(--brand-600) 100%);
+  min-height: 100svh;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.auth-story {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  overflow: hidden;
+  padding: var(--space-xl);
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-active-text);
+
+  &__brand,
+  &__message {
+    position: relative;
+    z-index: 1;
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: fit-content;
+    font-size: var(--text-lg);
+    font-weight: 600;
+  }
+
+  &__logo {
+    display: block;
+    width: 8rem;
+    height: auto;
+    filter: brightness(0) invert(1);
+  }
+
+  &__message {
+    max-width: 42rem;
+    margin-block: auto;
+    padding-block: var(--space-xl);
+  }
+
+  &__context {
+    margin: 0 0 var(--space-md);
+    color: var(--color-sidebar-text);
+    font-size: var(--text-base);
+    font-weight: 500;
+  }
+
+  h2 {
+    max-width: 12ch;
+    margin: 0;
+    font-size: var(--text-display);
+    font-weight: 600;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  &__description {
+    max-width: 38ch;
+    margin: var(--space-lg) 0 0;
+    color: var(--color-sidebar-text);
+    font-size: var(--text-md);
+    line-height: 1.7;
+  }
+
+  &__contours {
+    position: absolute;
+    z-index: 0;
+    right: -12%;
+    bottom: -8%;
+    width: min(100%, 52rem);
+    height: 68%;
+    color: var(--color-sidebar-active-text);
+    opacity: 0.13;
+    pointer-events: none;
+
+    path {
+      stroke: currentColor;
+      stroke-width: 1.2;
+    }
+  }
+}
+
+.auth-panel {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: var(--space-xl) var(--space-lg);
 }
 
 .auth-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   width: 100%;
-  max-width: 380px;
-  padding: var(--space-xl);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  max-width: 26rem;
+  margin: 0;
 
-  &__logo {
-    align-self: center;
-    height: auto;
-    margin-bottom: var(--space-xs);
-  }
-
-  // Le logo est monochrome : en thème sombre il passe en blanc
-  :host-context([data-theme='dark']) &__logo {
-    filter: brightness(0) invert(1);
+  &__intro {
+    display: grid;
+    gap: var(--space-xs);
   }
 
   h1 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--text-xl);
+    font-weight: 600;
+  }
+
+  &__intro p {
+    margin: 0;
+    color: var(--color-text-muted);
   }
 
   &__error {
@@ -115,6 +201,91 @@ $courbes: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox=
 
 .field-error {
   color: var(--color-danger);
+}
+
+@include bp.tablet-down {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-story {
+    min-height: 0;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+
+    &__message {
+      max-width: 46rem;
+      margin: 0;
+      padding-block: var(--space-md);
+    }
+
+    h2 {
+      max-width: 18ch;
+      font-size: var(--text-xl);
+      line-height: 1.2;
+    }
+
+    &__description {
+      margin-top: var(--space-sm);
+      font-size: var(--text-base);
+      line-height: 1.5;
+    }
+
+    &__contours {
+      right: -18%;
+      bottom: -35%;
+      width: 90%;
+      height: 120%;
+    }
+  }
+
+  .auth-panel {
+    min-height: 24rem;
+    padding: var(--space-xl) var(--space-lg);
+  }
+}
+
+@media (forced-colors: active) {
+  .auth-story {
+    background: CanvasText;
+    color: Canvas;
+    border-block-end: 1px solid CanvasText;
+  }
+
+  .auth-panel {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .auth-story__contours {
+    display: none;
+  }
+
+  .auth-story__context,
+  .auth-story__description {
+    color: Canvas;
+  }
+
+  .auth-card__password-toggle,
+  .auth-card__forgot {
+    color: LinkText;
+  }
+
+  .auth-card__submit {
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .field input {
+    border-color: ButtonText;
+    background: Field;
+    color: FieldText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
 }
 
 .visually-hidden {

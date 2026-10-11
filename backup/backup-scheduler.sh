@@ -30,7 +30,8 @@ if [ "$BACKUP_RETENTION_DAYS" -lt 1 ]; then
 fi
 
 mkdir -p "$BACKUP_DIR"
-chmod 0700 "$BACKUP_DIR"
+# Le mode du répertoire de sauvegarde est préparé sur l'hôte (voir docs/deployment.md).
+# Ne pas exécuter chmod sur un bind mount : NTFS/Docker Desktop ne garantit pas les modes POSIX.
 
 now=$(date -u +%s)
 recent_backup=false

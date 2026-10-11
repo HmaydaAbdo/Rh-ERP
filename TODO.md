@@ -38,9 +38,9 @@ Fonction, Chantier, Équipe, Utilisateurs, Rôles et authentification manquent a
 - Ajouter les parcours navigateur manquants, puis garder une correspondance domaine → cas → commande CI à jour.
 - Rendre explicites les portes bloquantes par type de changement et publier les rapports de couverture par domaine.
 
-## Refonte visuelle (en cours, phase par phase — voir `DESIGN.md` et `conventions/design-system.md`)
+## Refonte visuelle (itérations successives — voir `DESIGN.md` et `conventions/design-system.md`)
 
-Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). Revue finale faite (phase 7). Points déjà identifiés :
+Fait : marque, jetons, thèmes clair/sombre, polices, coque, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). La revue de la phase 7 est terminée. L’écran de connexion passe en phase 8 avec une composition d’accueil immersive et adaptée aux petits écrans. Points déjà identifiés :
 
 - **Filtres des listes dans l'URL** : seuls ceux de la Paie y sont (lien partageable, retour navigateur) ; Employés, Chantiers,
   Fonctions, Équipes, Utilisateurs, Rôles et Journal gardent les leurs en mémoire du composant.
@@ -124,7 +124,7 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
 5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
    prévu pour l'instant. Les dumps quotidiens restent sur le serveur.
 
-## À part — gros chantiers (à reprendre plus tard)
+## Évolutions prochaines
 
 ### Domaines restants
 - **Pointage** : à construire, en passant par les façades `IEmployeeService` (et probablement

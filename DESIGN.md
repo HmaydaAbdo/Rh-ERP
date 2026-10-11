@@ -32,6 +32,10 @@ typography:
     fontFamily: "IBM Plex Sans, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
+  display:
+    fontFamily: "IBM Plex Sans, system-ui, sans-serif"
+    fontSize: "var(--text-display)"
+    fontWeight: 600
   table-header:
     fontFamily: "IBM Plex Sans, system-ui, sans-serif"
     fontSize: "0.75rem"
@@ -65,6 +69,8 @@ components:
   sidebar:
     backgroundColor: "{colors.sidebar}"
     width: "64px"
+  login:
+    layout: "Deux panneaux : récit Staport topographique et formulaire épuré, empilés sur tablette et téléphone"
 ---
 
 # Design System: Staport RH
@@ -91,7 +97,7 @@ règles : `conventions/design-system.md`.
 ## Typography
 
 IBM Plex Sans pour tout le texte (400 / 500 / 600 / 700), IBM Plex Mono réservé aux identifiants (CIN, codes chantier,
-périodes). Échelle `12 · 13 · 14 · 16 · 20 · 28 px` ; tableaux denses à 12 px. **Chiffres tabulaires partout** où l'on compare
+périodes). Échelle `12 · 13 · 14 · 16 · 20 · 28 px`, plus `--text-display` pour l'accroche d'accueil ; tableaux denses à 12 px. **Chiffres tabulaires partout** où l'on compare
 des montants. En-têtes de tableau en capitales, graisse 600, interlettrage 0,04 em. Polices embarquées (hors ligne).
 
 ## Layout

@@ -161,6 +161,7 @@
   --text-md: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.75rem;
+  --text-display: clamp(2rem, 4vw, 3.5rem);
 
   // Hauteur commune des contrôles d'une barre d'outils (champ, bouton, sélecteur)
   --control-height: 2.25rem;

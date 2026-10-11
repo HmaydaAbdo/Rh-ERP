@@ -20,7 +20,11 @@ FROM eclipse-temurin:25-jre@sha256:fcd7fd7b387f94bb2ac461478a7436ad8e349924c374e
 WORKDIR /app
 
 # Le processus ne tourne jamais en root : compte système dédié, sans shell ni répertoire personnel.
-RUN groupadd --system --gid 10001 appuser \
+# wget est utilisé par le healthcheck Docker ; les images JRE Temurin ne le fournissent pas toutes.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 appuser \
     && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin appuser \
     && mkdir -p /app/logs \
     && chown appuser:appuser /app/logs
