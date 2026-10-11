@@ -75,13 +75,13 @@ class PaieImportServiceTest {
 
     private void stubReferentiels() {
         Page<EmployeeResponseDto> employees = new PageImpl<>(List.of(
-                new EmployeeResponseDto(1L, "BOULJIHEL SALH", "PB85747", null, null, null, null, null)));
+                new EmployeeResponseDto(1L, 0L, "BOULJIHEL SALH", "PB85747", null, null, null, null, null)));
         Page<FunctionResponseDto> functions = new PageImpl<>(List.of(
-                new FunctionResponseDto(10L, "OPERATEUR")));
+                new FunctionResponseDto(10L, 0L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(List.of(
-                new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
+                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, true)));
         Page<EquipeResponseDto> equipes = new PageImpl<>(List.of(
-                new EquipeResponseDto(30L, "EQUIPE A", "Equipe A")));
+                new EquipeResponseDto(30L, 0L, "EQUIPE A", "Equipe A")));
         lenient().when(equipeService.search(isNull(), any(Pageable.class))).thenReturn(equipes);
         lenient().when(entityManager.getReference(eq(Equipe.class), any())).thenReturn(new Equipe());
         lenient().when(repository.findEmployeeIdsByPeriode(periode)).thenReturn(Set.of());
@@ -249,7 +249,7 @@ class PaieImportServiceTest {
     void importer_devraitCreerAutomatiquementUneFonctionInconnue() throws IOException {
         stubReferentiels();
         when(functionService.create(new FunctionCreateRequestDto("GRUTIER")))
-                .thenReturn(new FunctionResponseDto(99L, "GRUTIER"));
+                .thenReturn(new FunctionResponseDto(99L, 0L, "GRUTIER"));
 
         MockMultipartFile fichier = buildExcelFile(
                 new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""},

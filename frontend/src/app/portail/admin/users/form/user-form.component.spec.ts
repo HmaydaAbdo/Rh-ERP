@@ -13,17 +13,18 @@ import { RoleService } from '../../services/role.service';
 import { UserService } from '../../services/user.service';
 import { UserFormComponent } from './user-form.component';
 
-const PAIE_READ: PermissionSummary = { id: 1, code: 'PAIE_READ', description: 'Lire la paie' };
-const PAIE_WRITE: PermissionSummary = { id: 2, code: 'PAIE_WRITE', description: 'Modifier la paie' };
-const EMPLOYEE_READ: PermissionSummary = { id: 3, code: 'EMPLOYEE_READ', description: 'Lire les employés' };
+const PAIE_READ: PermissionSummary = { id: 1, version: 0, code: 'PAIE_READ', description: 'Lire la paie' };
+const PAIE_WRITE: PermissionSummary = { id: 2, version: 0, code: 'PAIE_WRITE', description: 'Modifier la paie' };
+const EMPLOYEE_READ: PermissionSummary = { id: 3, version: 0, code: 'EMPLOYEE_READ', description: 'Lire les employés' };
 
 const ROLES: Role[] = [
-  { id: 10, nom: 'Comptable', description: null, permissions: [PAIE_READ, PAIE_WRITE], protege: false },
-  { id: 11, nom: 'RH', description: null, permissions: [EMPLOYEE_READ, PAIE_READ], protege: false }
+  { id: 10, version: 0, nom: 'Comptable', description: null, permissions: [PAIE_READ, PAIE_WRITE], protege: false },
+  { id: 11, version: 0, nom: 'RH', description: null, permissions: [EMPLOYEE_READ, PAIE_READ], protege: false }
 ];
 
 const UTILISATEUR: AdminUser = {
   id: 4,
+  version: 0,
   username: 'fatima',
   email: 'fatima@staport.ma',
   actif: true,
@@ -54,7 +55,7 @@ describe('UserFormComponent', () => {
     users = {
       findById: vi.fn().mockReturnValue(of(UTILISATEUR)),
       create: vi.fn().mockReturnValue(of({ id: 30 })),
-      update: vi.fn().mockReturnValue(of({ id: 4 })),
+      update: vi.fn().mockReturnValue(of({ id: 4, version: 1 })),
       updateDeniedPermissions: vi.fn().mockReturnValue(of({ id: 4 }))
     };
     TestBed.configureTestingModule({
@@ -204,8 +205,8 @@ describe('UserFormComponent', () => {
 
       await envoyer();
 
-      expect(users.update).toHaveBeenCalledWith(4, { email: 'fatima.zahra@staport.ma', actif: false, employeeId: 9, roleIds: [10] });
-      expect(users.updateDeniedPermissions).toHaveBeenCalledWith(4, { permissionIds: [2, 1] });
+      expect(users.update).toHaveBeenCalledWith(4, { version: 0, email: 'fatima.zahra@staport.ma', actif: false, employeeId: 9, roleIds: [10] });
+      expect(users.updateDeniedPermissions).toHaveBeenCalledWith(4, { version: 1, permissionIds: [2, 1] });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Utilisateur modifié');
       expect(navigation).toHaveBeenCalledWith(['/admin/users']);
     });

@@ -62,9 +62,9 @@ class EmployeeImportServiceTest {
 
     private void stubReferentiels() {
         Page<FunctionResponseDto> functions = new PageImpl<>(
-                List.of(new FunctionResponseDto(10L, "OPERATEUR")));
+                List.of(new FunctionResponseDto(10L, 0L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(
-                List.of(new ChantierResponseDto(20L, "C059", "Travaux de voirie", null, false, true)));
+                List.of(new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, true)));
         lenient().when(repository.findAllCinsEnMajuscules()).thenReturn(Set.of());
         lenient().when(functionService.search(isNull(), any(Pageable.class))).thenReturn(functions);
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(chantiers);

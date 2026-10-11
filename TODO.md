@@ -101,18 +101,6 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 ---
 
-## Anomalies constatées à trancher (relevées lors de la mise à jour de la documentation, 2026-10-03)
-
-Comportements actuels, documentés tels quels (voir `docs/data-model.md`, `docs/auth/README.md`) mais qui
-demandent une décision avant correction :
-
-- **Pas de verrouillage de compte** après des échecs répétés (les essais sont limités par adresse dans nginx inner, voir `docs/deployment.md`).
-- **Tests frontend** : voir « Frontend — tests du kit » ci-dessus.
-
----
-
----
-
 ## Travail côté serveur
 
 À traiter en premier lors de la prochaine intervention sur l'hôte de production. Toutes les opérations
@@ -121,7 +109,7 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
 1. **Migration PostgreSQL 17→18** : obtenir l'accès SSH, inventorier la production et répéter la
    restauration logique sur le serveur à partir d'une sauvegarde stockée sur ce même serveur, hors du
    volume PostgreSQL. Pendant la fenêtre de maintenance, créer/restaurer le volume PG18, démarrer
-   Flyway jusqu'à V20 (V16–V20 sont en attente si la production est actuellement en V15), contrôler
+   Flyway jusqu'à V21 (V16–V21 sont en attente si la production est actuellement en V15), contrôler
    données, rôles, extensions, permissions et application, puis conserver intact le volume PG17
    comme retour arrière.
 2. **Activer et vérifier pgAudit en production** pour la seule base ERP-RH, avec toutes les classes

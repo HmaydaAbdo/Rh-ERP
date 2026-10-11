@@ -42,19 +42,19 @@ describe('UserService', () => {
   });
 
   it('modifie un utilisateur sans pouvoir changer son identifiant', () => {
-    service.update(3, { email: 'rh@staport.ma', actif: false, employeeId: 4, roleIds: [1, 2] }).subscribe();
+    service.update(3, { version: 0, email: 'rh@staport.ma', actif: false, employeeId: 4, roleIds: [1, 2] }).subscribe();
 
     const r = requete(http, 'PUT', 'users/3');
     r.flush({ id: 3 });
-    expect(Object.keys(r.request.body as object).sort()).toEqual(['actif', 'email', 'employeeId', 'roleIds']);
+    expect(Object.keys(r.request.body as object).sort()).toEqual(['actif', 'email', 'employeeId', 'roleIds', 'version']);
   });
 
   it('enregistre les permissions refusées d’un utilisateur', () => {
-    service.updateDeniedPermissions(3, { permissionIds: [7, 8] }).subscribe();
+    service.updateDeniedPermissions(3, { version: 0, permissionIds: [7, 8] }).subscribe();
 
     const r = requete(http, 'PUT', 'users/3/permissions-refusees');
     r.flush({ id: 3 });
-    expect(r.request.body).toEqual({ permissionIds: [7, 8] });
+    expect(r.request.body).toEqual({ version: 0, permissionIds: [7, 8] });
   });
 
   it('réinitialise un mot de passe en tant qu’administrateur', () => {

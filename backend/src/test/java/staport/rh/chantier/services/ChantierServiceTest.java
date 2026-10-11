@@ -51,7 +51,7 @@ class ChantierServiceTest {
         when(repository.existsByCodeIgnoreCase("C059")).thenReturn(false);
         when(mapper.toEntity(dto)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, "C059", "Travaux de voirie", null, false, true));
+        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, 0L, "C059", "Travaux de voirie", null, false, true));
 
         ChantierResponseDto result = chantierService.create(dto);
 

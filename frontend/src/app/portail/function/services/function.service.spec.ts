@@ -48,10 +48,10 @@ describe('FunctionService', () => {
     creation.flush({ id: 5, libelle: 'PLOMBIER' });
     expect(creation.request.body).toEqual({ libelle: 'PLOMBIER' });
 
-    service.update(5, { libelle: 'PLOMBIER SENIOR' }).subscribe();
+    service.update(5, { version: 0, libelle: 'PLOMBIER SENIOR' }).subscribe();
     const modification = requete(http, 'PUT', 'functions/5');
     modification.flush({ id: 5, libelle: 'PLOMBIER SENIOR' });
-    expect(modification.request.body).toEqual({ libelle: 'PLOMBIER SENIOR' });
+    expect(modification.request.body).toEqual({ version: 0, libelle: 'PLOMBIER SENIOR' });
 
     service.delete(5).subscribe();
     requete(http, 'DELETE', 'functions/5').flush(null);

@@ -28,6 +28,7 @@ import staport.rh.audit.entities.ResultatAudit;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.metrics.AuditMetrics;
 import staport.rh.audit.services.AuditJournalWriter;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Array;
@@ -45,11 +46,11 @@ public class AuditLectureResponseAdvice implements ResponseBodyAdvice<Object> {
     private static final Logger log = LoggerFactory.getLogger(AuditLectureResponseAdvice.class);
     private static final String ACTION_LECTURE = "LECTURE_METIER";
 
-    private final AuditJournalWriter ecrivain;
+    private final IAuditJournalWriter ecrivain;
     private final AuditMetrics metriques;
     private final JsonMapper jsonMapper;
 
-    public AuditLectureResponseAdvice(AuditJournalWriter ecrivain, AuditMetrics metriques, JsonMapper jsonMapper) {
+    public AuditLectureResponseAdvice(IAuditJournalWriter ecrivain, AuditMetrics metriques, JsonMapper jsonMapper) {
         this.ecrivain = ecrivain;
         this.metriques = metriques;
         this.jsonMapper = jsonMapper;

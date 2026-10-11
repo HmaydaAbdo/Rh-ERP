@@ -49,7 +49,7 @@ class RoleAdministrationProtegeeTest extends AuditIntegrationTestBase {
     void renommer_le_role_d_administration_est_refuse() {
         RoleResponseDto admin = admin();
 
-        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto("ADMIN_RENOMME", admin.description(), ids(admin))))
+        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto(admin.version(), "ADMIN_RENOMME", admin.description(), ids(admin))))
                 .isInstanceOf(ProtectedRoleException.class).hasMessageContaining("renommé");
 
         assertThat(admin().nom()).isEqualTo("SYSTEM_ADMIN");
@@ -61,9 +61,9 @@ class RoleAdministrationProtegeeTest extends AuditIntegrationTestBase {
         Set<Long> amputees = new HashSet<>(ids(admin));
         amputees.remove(admin.permissions().iterator().next().id());
 
-        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto(admin.nom(), admin.description(), amputees)))
+        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto(admin.version(), admin.nom(), admin.description(), amputees)))
                 .isInstanceOf(ProtectedRoleException.class).hasMessageContaining("privé de permissions");
-        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto(admin.nom(), admin.description(), Set.of())))
+        assertThatThrownBy(() -> roleService.update(admin.id(), new RoleUpdateRequestDto(admin.version(), admin.nom(), admin.description(), Set.of())))
                 .isInstanceOf(ProtectedRoleException.class);
 
         assertThat(ids(admin())).isEqualTo(ids(admin));
@@ -73,11 +73,11 @@ class RoleAdministrationProtegeeTest extends AuditIntegrationTestBase {
     void la_description_du_role_d_administration_reste_modifiable() {
         RoleResponseDto admin = admin();
 
-        roleService.update(admin.id(), new RoleUpdateRequestDto(admin.nom(), "Description modifiée", ids(admin)));
-        assertThat(admin().description()).isEqualTo("Description modifiée");
+        RoleResponseDto modifie = roleService.update(admin.id(), new RoleUpdateRequestDto(admin.version(), admin.nom(), "Description modifiée", ids(admin)));
+        assertThat(modifie.description()).isEqualTo("Description modifiée");
 
-        roleService.update(admin.id(), new RoleUpdateRequestDto(admin.nom(), admin.description(), ids(admin)));
-        assertThat(admin().description()).isEqualTo(admin.description());
+        RoleResponseDto modifieEncore = roleService.update(admin.id(), new RoleUpdateRequestDto(modifie.version(), modifie.nom(), admin.description(), ids(admin)));
+        assertThat(modifieEncore.description()).isEqualTo(admin.description());
     }
 
     @Test
@@ -85,7 +85,7 @@ class RoleAdministrationProtegeeTest extends AuditIntegrationTestBase {
         String s = Long.toHexString(System.nanoTime());
         RoleResponseDto libre = roleService.create(new RoleCreateRequestDto("Libre-" + s, null, ids(admin())));
 
-        RoleResponseDto modifie = roleService.update(libre.id(), new RoleUpdateRequestDto("Renomme-" + s, null, Set.of()));
+        RoleResponseDto modifie = roleService.update(libre.id(), new RoleUpdateRequestDto(libre.version(), "Renomme-" + s, null, Set.of()));
 
         assertThat(modifie.nom()).isEqualTo("Renomme-" + s);
         assertThat(modifie.permissions()).isEmpty();

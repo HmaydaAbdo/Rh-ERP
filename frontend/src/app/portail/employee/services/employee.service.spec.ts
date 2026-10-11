@@ -35,7 +35,7 @@ describe('EmployeeService', () => {
     creation.flush({ id: 10 });
     expect(creation.request.body).toEqual(dto);
 
-    service.update(10, { ...dto, statut: 'INACTIF' }).subscribe();
+    service.update(10, { ...dto, version: 0, statut: 'INACTIF' }).subscribe();
     const modification = requete(http, 'PUT', 'employees/10');
     modification.flush({ id: 10 });
     expect(modification.request.body).toMatchObject({ statut: 'INACTIF' });

@@ -22,7 +22,7 @@ describe('ParametreService', () => {
     lecture.flush([{ id: 1, cle: 'securite.jeton-acces.minutes', valeur: '15' }]);
     expect(parametres).toEqual([{ id: 1, cle: 'securite.jeton-acces.minutes', valeur: '15' }]);
 
-    const valeur = { valeur: '20' };
+    const valeur = { version: 0, valeur: '20' };
     service.update(1, valeur).subscribe();
     const modification = requete(http, 'PUT', 'parametres/1');
     expect(modification.request.body).toEqual(valeur);

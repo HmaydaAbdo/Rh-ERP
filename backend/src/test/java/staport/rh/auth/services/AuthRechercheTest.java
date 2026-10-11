@@ -33,7 +33,7 @@ class AuthRechercheTest extends AuditIntegrationTestBase {
         String nom = prefixe + n;
         UserResponseDto cree = userService.create(new UserCreateRequestDto(nom, nom + "@exemple.test", MOT_DE_PASSE, null, Set.of()));
         if (!actif) {
-            userService.update(cree.id(), new staport.rh.auth.dtos.request.UserUpdateRequestDto(cree.email(), false, null, Set.of()));
+            userService.update(cree.id(), new staport.rh.auth.dtos.request.UserUpdateRequestDto(0L, cree.email(), false, null, Set.of()));
         }
         return cree;
     }

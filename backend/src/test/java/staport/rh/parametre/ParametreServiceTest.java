@@ -33,11 +33,16 @@ class ParametreServiceTest extends AuditIntegrationTestBase {
     }
 
     private void remettre(CleParametre cle, String valeur) {
-        parametres.update(idDe(cle), new ParametreUpdateRequestDto(valeur));
+        Long id = idDe(cle);
+        parametres.update(id, new ParametreUpdateRequestDto(versionDe(id), valeur));
     }
 
     private Long idDe(CleParametre cle) {
         return parametres.findAll().stream().filter(p -> p.cle().equals(cle.code())).findFirst().orElseThrow().id();
+    }
+
+    private Long versionDe(Long id) {
+        return parametres.findAll().stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow().version();
     }
 
     @Test
@@ -56,7 +61,7 @@ class ParametreServiceTest extends AuditIntegrationTestBase {
     void une_modification_se_lit_aussitot_et_laisse_une_entree_d_audit_avec_l_ancienne_et_la_nouvelle_valeur() {
         Long id = idDe(CleParametre.JETON_SESSION);
 
-        ParametreResponseDto modifie = parametres.update(id, new ParametreUpdateRequestDto(" 8 "));
+        ParametreResponseDto modifie = parametres.update(id, new ParametreUpdateRequestDto(versionDe(id), " 8 "));
 
         assertThat(modifie.valeur()).as("espaces retirés").isEqualTo("8");
         assertThat(parametres.dureeJetonSession()).isEqualTo(Duration.ofHours(8));
@@ -74,9 +79,10 @@ class ParametreServiceTest extends AuditIntegrationTestBase {
     void une_valeur_hors_bornes_ou_d_un_autre_type_est_refusee_sans_rien_changer() {
         Long id = idDe(CleParametre.LONGUEUR_MOT_DE_PASSE);
 
-        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto("3")))
+        Long version = versionDe(id);
+        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto(version, "3")))
                 .isInstanceOf(ParametreInvalideException.class).hasMessageContaining("entre 8 et 100");
-        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto("dix")))
+        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto(version, "dix")))
                 .isInstanceOf(ParametreInvalideException.class);
 
         assertThat(parametres.longueurMinimaleMotDePasse()).isEqualTo(10);
@@ -84,7 +90,7 @@ class ParametreServiceTest extends AuditIntegrationTestBase {
 
     @Test
     void un_parametre_inconnu_est_introuvable() {
-        assertThatThrownBy(() -> parametres.update(-1L, new ParametreUpdateRequestDto("5")))
+        assertThatThrownBy(() -> parametres.update(-1L, new ParametreUpdateRequestDto(0L, "5")))
                 .isInstanceOf(ParametreNotFoundException.class);
     }
 
@@ -92,7 +98,7 @@ class ParametreServiceTest extends AuditIntegrationTestBase {
     void une_expression_cron_invalide_est_refusee() {
         Long id = idDe(CleParametre.CRON_SYNCHRONISATION_CHANTIERS);
 
-        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto("tous les soirs")))
+        assertThatThrownBy(() -> parametres.update(id, new ParametreUpdateRequestDto(versionDe(id), "tous les soirs")))
                 .isInstanceOf(ParametreInvalideException.class).hasMessageContaining("cron");
         assertThat(parametres.cronSynchronisationChantiers()).isEqualTo("0 0 23 * * *");
     }

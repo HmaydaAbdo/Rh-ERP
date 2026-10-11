@@ -132,7 +132,8 @@ test.describe('Formulaires (Signal Forms)', () => {
 
   test('utilisateur : la règle du mot de passe est rappelée, le mot de passe peut être affiché', async ({ page }) => {
     const mock = await mockApi(page, { username: 'admin', permissions: DROITS }, {
-      'GET /roles': () => [],
+      'GET /auth/password-policy': () => ({ longueurMinimale: 10 }),
+      'POST /roles/search': () => pageDe([]),
       'POST /employees/search': () => pageDe([])
     });
     await page.goto('/admin/users/new');

@@ -11,7 +11,7 @@ import { authInterceptor } from './auth.interceptor';
 function connexion(jeton: string): LoginResponse {
   return {
     accessToken: jeton,
-    utilisateur: { id: 1, username: 'rh', email: 'rh@staport.ma', actif: true, employee: null, roles: [], permissionsRefusees: [], permissionsEffectives: [] }
+    utilisateur: { id: 1, version: 0, username: 'rh', email: 'rh@staport.ma', actif: true, employee: null, roles: [], permissionsRefusees: [], permissionsEffectives: [] }
   };
 }
 

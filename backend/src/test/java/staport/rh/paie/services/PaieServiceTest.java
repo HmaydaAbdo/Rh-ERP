@@ -335,7 +335,7 @@ class PaieServiceTest {
     }
 
     private PaieResponseDto mockResponseDto() {
-        return new PaieResponseDto(1L, null, createDto.periode(), null, null,
+        return new PaieResponseDto(1L, 0L, null, createDto.periode(), null, null,
                 new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"),
                 26, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("5000"),
                 new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"), null);

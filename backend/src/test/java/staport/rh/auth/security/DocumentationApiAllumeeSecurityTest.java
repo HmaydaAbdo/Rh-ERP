@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import staport.rh.audit.metrics.AuditMetrics;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import staport.rh.equipe.controller.EquipeController;
 import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.parametre.services.interfaces.IParametreService;
@@ -47,6 +49,12 @@ class DocumentationApiAllumeeSecurityTest {
 
     @MockitoBean
     private IEquipeService equipeService;
+
+    @MockitoBean
+    private IAuditJournalWriter auditJournalWriter;
+
+    @MockitoBean
+    private AuditMetrics auditMetrics;
 
     @Test
     void sans_connexion_la_documentation_n_est_pas_refusee_par_la_securite() throws Exception {

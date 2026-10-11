@@ -52,6 +52,7 @@ describe('AppComponent', () => {
     beforeEach(async () => {
       const user: CurrentUser = {
         id: 1,
+        version: 0,
         username: 'hmayda',
         email: 'hmayda@staport.ma',
         actif: true,

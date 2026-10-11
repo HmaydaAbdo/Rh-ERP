@@ -68,8 +68,8 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
                 null, null, new BigDecimal(salaire), null, null, new BigDecimal(salaire), null);
     }
 
-    private PaieUpdateRequestDto modification(Referentiel ref, String salaire) {
-        return new PaieUpdateRequestDto(ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
+    private PaieUpdateRequestDto modification(Long version, Referentiel ref, String salaire) {
+        return new PaieUpdateRequestDto(version, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
                 new BigDecimal(salaire), null, null, new BigDecimal(salaire), "revu");
     }
 
@@ -101,7 +101,7 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
     void le_detail_d_une_modification_ne_montre_que_ce_qui_a_change_avec_son_avant_et_son_apres() {
         Referentiel ref = donnees.creerReferentiel();
         PaieResponseDto cree = paieService.create(bulletin(ref, YearMonth.of(2034, 2), "3000.00"));
-        paieService.update(cree.id(), modification(ref, "3500.00"));
+        paieService.update(cree.id(), modification(cree.version(), ref, "3500.00"));
         Long entree = ((Number) uneEntree("PAIE_MODIFICATION", cree.id()).get("id")).longValue();
 
         AuditChangementDto changement = consultation.details(entree, PAGE).getContent().get(0);
@@ -151,7 +151,7 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
         Long lecture = jdbc.queryForObject("SELECT id FROM permission WHERE code = 'PAIE_READ'", Long.class);
         Long ecriture = jdbc.queryForObject("SELECT id FROM permission WHERE code = 'PAIE_WRITE'", Long.class);
         RoleResponseDto role = roleService.create(new RoleCreateRequestDto("R-" + s, null, Set.of(lecture)));
-        roleService.update(role.id(), new RoleUpdateRequestDto("R-" + s, null, Set.of(ecriture)));
+        roleService.update(role.id(), new RoleUpdateRequestDto(role.version(), "R-" + s, null, Set.of(ecriture)));
         Long entree = ((Number) uneEntree("ROLE_MODIFICATION", role.id()).get("id")).longValue();
 
         AuditChangementDto changement = consultation.details(entree, PAGE).getContent().stream()
@@ -181,8 +181,8 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
     void l_historique_d_un_enregistrement_liste_ses_versions_de_la_plus_recente_a_la_plus_ancienne() {
         Referentiel ref = donnees.creerReferentiel();
         PaieResponseDto cree = paieService.create(bulletin(ref, YearMonth.of(2034, 6), "3000.00"));
-        paieService.update(cree.id(), modification(ref, "3100.00"));
-        paieService.update(cree.id(), modification(ref, "3200.00"));
+        PaieResponseDto modifie = paieService.update(cree.id(), modification(cree.version(), ref, "3100.00"));
+        paieService.update(cree.id(), modification(modifie.version(), ref, "3200.00"));
 
         List<AuditVersionDto> versions = consultation.historique("paie", cree.id(), PAGE).getContent();
 

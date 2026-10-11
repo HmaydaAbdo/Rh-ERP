@@ -34,7 +34,7 @@ describe('EquipeService', () => {
     creation.flush({ id: 2 });
     expect(creation.request.body).toEqual({ code: 'CH', libelle: 'Chauffeurs' });
 
-    service.update(2, { code: 'CH', libelle: 'Chauffeurs PL' }).subscribe();
+    service.update(2, { version: 0, code: 'CH', libelle: 'Chauffeurs PL' }).subscribe();
     requete(http, 'PUT', 'equipes/2').flush({ id: 2 });
 
     service.delete(2).subscribe();

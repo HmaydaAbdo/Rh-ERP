@@ -39,6 +39,9 @@ import java.util.UUID;
 public class AuthService implements IAuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final int SEUIL_ECHECS_CONNEXION = 5;
+    private static final Duration FENETRE_ECHECS_CONNEXION = Duration.ofMinutes(15);
+    private static final Duration DUREE_VERROUILLAGE_CONNEXION = Duration.ofMinutes(15);
 
     private final UtilisateurRepository utilisateurRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -77,9 +80,9 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public Connexion login(String username, String motDePasse) {
-        Optional<Utilisateur> trouve = utilisateurRepository.findByUsername(username);
+        Optional<Utilisateur> trouve = utilisateurRepository.findByUsernameForUpdate(username);
         if (trouve.isEmpty()) {
             // Même travail de hachage que pour un compte existant : sans lui, la rapidité de la réponse révélerait qu'un
             // identifiant n'existe pas (conventions/security.md, « Principes »).
@@ -95,9 +98,38 @@ public class AuthService implements IAuthService {
         if (!utilisateur.isActif()) {
             refuserConnexion(utilisateur, "COMPTE_INACTIF");
         }
-        if (!motDePasseValide) {
-            refuserConnexion(utilisateur, "IDENTIFIANTS_INVALIDES");
+
+        Instant maintenant = Instant.now();
+        Instant verrouillageJusqua = utilisateur.getVerrouillageJusqua();
+        if (verrouillageJusqua != null && verrouillageJusqua.isAfter(maintenant)) {
+            refuserConnexion(utilisateur, "COMPTE_TEMPORAIREMENT_BLOQUE");
         }
+        if (verrouillageJusqua != null) {
+            reinitialiserEchecsConnexion(utilisateur);
+        }
+
+        if (!motDePasseValide) {
+            Instant derniereEchec = utilisateur.getDerniereEchecConnexion();
+            boolean dansLaFenetre = derniereEchec != null
+                    && derniereEchec.plus(FENETRE_ECHECS_CONNEXION).isAfter(maintenant);
+            int echecs = dansLaFenetre ? utilisateur.getNombreEchecsConnexion() + 1 : 1;
+            utilisateur.setNombreEchecsConnexion(echecs);
+            utilisateur.setDerniereEchecConnexion(maintenant);
+
+            evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE,
+                    utilisateur.getId(), utilisateur.getUsername(), "IDENTIFIANTS_INVALIDES"));
+            if (echecs >= SEUIL_ECHECS_CONNEXION) {
+                utilisateur.setVerrouillageJusqua(maintenant.plus(DUREE_VERROUILLAGE_CONNEXION));
+                evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.COMPTE_BLOQUE_TEMPORAIREMENT,
+                        utilisateur.getId(), utilisateur.getUsername(), Map.of(
+                                "tentatives", SEUIL_ECHECS_CONNEXION,
+                                "fenetreMinutes", FENETRE_ECHECS_CONNEXION.toMinutes(),
+                                "dureeMinutes", DUREE_VERROUILLAGE_CONNEXION.toMinutes())));
+            }
+            throw new InvalidCredentialsException();
+        }
+
+        reinitialiserEchecsConnexion(utilisateur);
 
         log.info("Connexion réussie : utilisateurId={}", utilisateur.getId());
         Connexion connexion = emettreConnexion(utilisateur, UUID.randomUUID().toString());
@@ -238,6 +270,12 @@ public class AuthService implements IAuthService {
     private void refuserConnexion(Utilisateur utilisateur, String motif) {
         evenements.publishEvent(EvenementSecurite.avecMotif(ActionSecurite.CONNEXION_ECHOUEE, utilisateur.getId(), utilisateur.getUsername(), motif));
         throw new InvalidCredentialsException();
+    }
+
+    private static void reinitialiserEchecsConnexion(Utilisateur utilisateur) {
+        utilisateur.setNombreEchecsConnexion(0);
+        utilisateur.setDerniereEchecConnexion(null);
+        utilisateur.setVerrouillageJusqua(null);
     }
 
     @Override

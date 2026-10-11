@@ -10,8 +10,8 @@ import { ChantierService } from '../services/chantier.service';
 import { ChantierListComponent } from './chantier-list.component';
 
 const CHANTIERS: Chantier[] = [
-  { id: 1, code: 'C168', designation: 'Nador', nom: null, sourceErp: true, actif: true },
-  { id: 2, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: false, actif: false }
+  { id: 1, version: 0, code: 'C168', designation: 'Nador', nom: null, sourceErp: true, actif: true },
+  { id: 2, version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: false, actif: false }
 ];
 
 const page = (content: Chantier[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });

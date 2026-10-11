@@ -7,7 +7,7 @@ import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans
 import { ChantierService } from '../services/chantier.service';
 import { ChantierDetailComponent } from './chantier-detail.component';
 
-const CHANTIER: Chantier = { id: 3, code: 'C196', designation: 'Autoroute Marrakech', nom: null, sourceErp: false, actif: true };
+const CHANTIER: Chantier = { id: 3, version: 0, code: 'C196', designation: 'Autoroute Marrakech', nom: null, sourceErp: false, actif: true };
 
 describe('ChantierDetailComponent', () => {
   const service = { getById: vi.fn() };

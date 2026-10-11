@@ -114,7 +114,7 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
     void un_compte_inactif_qui_se_connecte_est_trace_avec_son_motif() {
         String s = Long.toHexString(System.nanoTime());
         UserResponseDto compte = creerCompte(s);
-        userService.update(compte.id(), new UserUpdateRequestDto(compte.email(), false, null, Set.of()));
+        userService.update(compte.id(), new UserUpdateRequestDto(0L, compte.email(), false, null, Set.of()));
         AuthentificationDeTest.deconnecter();
         long repere = dernierId();
 
@@ -132,7 +132,7 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
         IAuthService.Connexion autreAppareil = authService.login("u" + s, MOT_DE_PASSE);
         AuthentificationDeTest.connecter(UTILISATEUR_ID, UTILISATEUR_NOM);
 
-        userService.update(compte.id(), new UserUpdateRequestDto(compte.email(), false, null, Set.of()));
+        userService.update(compte.id(), new UserUpdateRequestDto(0L, compte.email(), false, null, Set.of()));
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refresh_token WHERE utilisateur_id = ? AND NOT revoque", Long.class, compte.id()))
                 .as("plus aucune session active").isZero();
@@ -149,7 +149,7 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
         IAuthService.Connexion connexion = authService.login("u" + s, MOT_DE_PASSE);
         AuthentificationDeTest.connecter(UTILISATEUR_ID, UTILISATEUR_NOM);
 
-        userService.update(compte.id(), new UserUpdateRequestDto("autre-" + s + "@exemple.test", true, null, Set.of()));
+        userService.update(compte.id(), new UserUpdateRequestDto(0L, "autre-" + s + "@exemple.test", true, null, Set.of()));
 
         AuthentificationDeTest.deconnecter();
         assertThat(authService.refresh(connexion.refreshTokenBrut()).refreshTokenBrut()).isNotBlank();

@@ -9,6 +9,7 @@ import staport.rh.audit.entities.ResultatAudit;
 public enum ActionSecurite {
     CONNEXION_REUSSIE(ResultatAudit.SUCCES),
     CONNEXION_ECHOUEE(ResultatAudit.ECHEC),
+    COMPTE_BLOQUE_TEMPORAIREMENT(ResultatAudit.SUCCES),
     SESSION_RENOUVELEE(ResultatAudit.SUCCES),
     SESSION_RENOUVELLEMENT_REFUSE(ResultatAudit.ECHEC),
     SESSIONS_REVOQUEES(ResultatAudit.SUCCES),

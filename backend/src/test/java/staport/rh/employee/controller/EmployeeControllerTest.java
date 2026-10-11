@@ -8,6 +8,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import staport.rh.audit.metrics.AuditMetrics;
+import staport.rh.audit.services.interfaces.IAuditJournalWriter;
 import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.response.ChantierSummaryDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
@@ -37,6 +39,12 @@ class EmployeeControllerTest {
     @MockitoBean
     private IEmployeeService employeeService;
 
+    @MockitoBean
+    private IAuditJournalWriter auditJournalWriter;
+
+    @MockitoBean
+    private AuditMetrics auditMetrics;
+
     @Test
     void creer_devraitRetourner400QuandLeNomPrenomEstManquant() throws Exception {
         EmployeeCreateRequestDto invalide = new EmployeeCreateRequestDto(
@@ -54,7 +62,7 @@ class EmployeeControllerTest {
                 "BOULJIHEL SALH", "PB85747", LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14), 10L, 20L);
 
         EmployeeResponseDto response = new EmployeeResponseDto(
-                1L, "BOULJIHEL SALH", "PB85747", LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14),
+                1L, 0L, "BOULJIHEL SALH", "PB85747", LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14),
                 new FunctionSummaryDto(10L, "OPERATEUR"), new ChantierSummaryDto(20L, "C059", "Travaux de voirie"), EmployeeStatut.ACTIF);
 
         when(employeeService.create(any())).thenReturn(response);

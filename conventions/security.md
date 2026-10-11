@@ -69,6 +69,12 @@ compromis de durée de session.
   générique non fiable.
 * Protéger les opérations de connexion, récupération et changement de credential contre les essais
   automatisés et abusifs, avec des limites compatibles avec les utilisateurs légitimes.
+* Pour ERP-RH, combiner la limite par adresse dans nginx inner avec le verrouillage du compte après
+  cinq mots de passe incorrects en quinze minutes. Le compte reste bloqué quinze minutes ; une
+  connexion réussie ou quinze minutes sans nouvel échec remet le compteur à zéro. Une tentative
+  pendant le blocage reste refusée avec la même réponse générique que des identifiants invalides.
+  Journaliser l'échec et le déclenchement du blocage dans la catégorie `SECURITE` sans conserver le
+  mot de passe saisi.
 
 ## Identifiants et récupération de compte
 

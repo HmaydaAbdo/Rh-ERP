@@ -3,6 +3,7 @@ package staport.rh.employee.services;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -66,6 +67,7 @@ class EmployeeServiceTest {
 
         entity = new Employee();
         entity.setId(1L);
+        ReflectionTestUtils.setField(entity, "version", 0L);
         entity.setNomPrenom("BOULJIHEL SALH");
         entity.setCin("PB85747");
     }
@@ -85,7 +87,7 @@ class EmployeeServiceTest {
         when(entityManager.getReference(Chantier.class, 20L)).thenReturn(chantier);
         when(repository.save(entity)).thenReturn(entity);
         when(mapper.toDto(entity)).thenReturn(new EmployeeResponseDto(
-                1L, "BOULJIHEL SALH", "PB85747", createDto.dateNaissance(), createDto.dateEmbauche(),
+                1L, 0L, "BOULJIHEL SALH", "PB85747", createDto.dateNaissance(), createDto.dateEmbauche(),
                 null, null, EmployeeStatut.ACTIF));
 
         EmployeeResponseDto result = employeeService.create(createDto);
@@ -144,7 +146,7 @@ class EmployeeServiceTest {
         autre.setId(2L);
         autre.setCin("PB85747");
 
-        EmployeeUpdateRequestDto dto = new EmployeeUpdateRequestDto(
+        EmployeeUpdateRequestDto dto = new EmployeeUpdateRequestDto(0L,
                 "AUTRE NOM", "PB85747",
                 LocalDate.of(1990, 1, 1), LocalDate.of(2020, 1, 1),
                 10L, 20L, EmployeeStatut.ACTIF
