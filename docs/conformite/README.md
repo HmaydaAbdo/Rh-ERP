@@ -36,6 +36,8 @@
 | C6 | Aucune règle exécutable pour les conventions d'architecture, de journalisation, de JPA et de documentation d'API | `ArchitectureConventionsTest` (14 règles) |
 | C7 | **Aucune limite de débit** (G1) | `limit_req` dans nginx inner (`429`) : connexion 20/min, réinitialisation 5/min, session 120/min, `POST` coûteux 30/min, par adresse de client réel ; essayé sur un nginx réel. Convention ajoutée à `conventions/security.md`. Le verrouillage de compte reste possible plus tard |
 | C8 | **Métriques et journaux** (G4) : `/actuator/prometheus` était ouvert par la sécurité mais n'existait pas ; journaux en texte | Registre Prometheus + exposition de `health` et `prometheus` seulement (tag `application`) ; journaux JSON asynchrones en production (`LOGGING_FORMAT=json`, `logstash-logback-encoder`) ; `SupervisionTest` |
+| C9 | **Images Docker** (G7) : exécution en root, images de base non épinglées, healthcheck frontend fragile | Backend sous un compte dédié, frontend sur `nginx-unprivileged` (8080), bases épinglées par empreinte ; essayé : les deux images construites et lancées ensemble (non-root, santé, JSON, `429`) |
+| C10 | **Chaîne d'approvisionnement Maven** (G8) : aucune analyse, aucun SBOM, aucune couverture. **L'analyse a révélé 26 vulnérabilités connues** (3 critiques, 15 hautes) : Tomcat 11.0.24 (contournement d'authentification DIGEST, contrôle d'accès et FORM), Jackson (dénis de service), jsoup 1.18.1, Batik 1.14 (SSRF, exécution de code), Xalan 2.7.2 | Versions relevées : Tomcat 11.0.26, Jackson 2.21.7 / 3.1.7, jsoup 1.23.2, Batik 1.19, Xalan retiré (devenu inutile). CI : SBOM CycloneDX, OSV-Scanner (échec si vulnérabilité), JaCoCo (87 % des lignes, 73 % des branches), Dependabot. Suite complète verte (284) |
 
 ---
 
@@ -49,8 +51,6 @@ Ils sont suivis dans [TODO.md](../../TODO.md). Pour chacun : le constat, puis le
 | G3 | Basse | **Valeurs de fonctionnement en dur** : durées des jetons, longueur du mot de passe, expressions cron, tranche de pas | Variables d'environnement (`conventions/configuration.md`) ou paramètres administrables en base |
 | G5 | Basse | **Listes non paginées** : `GET /users` et `GET /roles` ; statuts `201` des créations à aligner route par route | Pagination et statuts alignés (change le contrat avec le frontend) |
 | G6 | Basse | **Extension `vector`** créée dès `V1` alors qu'aucune table ne l'utilise encore | La garder (socle Staport) ou la créer à la première table concernée |
-| G7 | Moyenne | **Image Docker** : exécution non confinée à un utilisateur sans privilèges, images non épinglées par empreinte | Utilisateur dédié, empreinte de l'image de base |
-| G8 | Moyenne | **Chaîne d'approvisionnement Maven** : pas d'analyse de vulnérabilités, de SBOM ni de couverture mesurée (le frontend a déjà l'audit, les licences et le SBOM) | Plugin d'analyse (OWASP Dependency-Check ou équivalent), SBOM CycloneDX, JaCoCo, alertes Dependabot |
 | G9 | Basse | **Tests sur PostgreSQL** : la CI utilise un conteneur de service, pas Testcontainers | Garder le service CI ou passer à Testcontainers (exécution locale sans base préparée) |
 | G10 | À vérifier | **Production** : confirmer que le déploiement utilise bien les deux comptes PostgreSQL (migration / application) comme la CI et `afterMigrate.sql` | Vérification côté serveur, à faire avec le propriétaire (aucune action sur la production sans sauvegarde et répétition) |
 

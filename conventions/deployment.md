@@ -211,6 +211,14 @@ données, même sans dépendre du filtrage réseau externe au serveur.
 
 ---
 
+## Images Docker : non-root, épinglées
+
+* Aucun processus de production ne tourne en root : le backend s'exécute sous un compte système dédié (`USER` dans le `Dockerfile`), le frontend sur l'image `nginx-unprivileged` (écoute sur 8080, fichier de PID et répertoires temporaires dans `/tmp`).
+* Les images de base sont épinglées par empreinte (`image:tag@sha256:…`) : la balise dit la version suivie, l'empreinte ce qui est réellement tiré. Dependabot propose la mise à jour des deux ensemble.
+* Un healthcheck sur `localhost` peut résoudre l'IPv6 (`::1`) alors que nginx n'écoute qu'en IPv4 : utiliser `127.0.0.1`.
+
+---
+
 ## CI — build et publication des images
 
 À chaque push sur la branche principale : tests, puis build + publication des images sur le
@@ -218,6 +226,8 @@ registre, taguées avec le SHA du commit (traçabilité exacte) et `latest` (der
 branche principale) — un tag de version supplémentaire sur un tag Git (`v*`) si une release est
 publiée. Sur une pull request, seuls les tests tournent — jamais de publication d'image depuis une
 PR (évite d'exposer les identifiants du registre à du code non encore revu).
+
+La CI du backend produit aussi le rapport de couverture (JaCoCo) et le SBOM CycloneDX, puis analyse les dépendances (OSV-Scanner) : une vulnérabilité connue fait échouer le job (exception motivée et datée dans `backend/osv-scanner.toml`). Celle du frontend fait `npm audit`, la vérification des licences et le SBOM npm.
 
 Le déploiement (CD — appliquer la nouvelle image sur le serveur) reste une étape séparée, à ne
 mettre en place qu'une fois le besoin confirmé (`docker compose pull && up -d` manuel au minimum,

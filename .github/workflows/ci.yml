@@ -81,6 +81,31 @@ jobs:
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
 
+      # Couverture des tests (JaCoCo, générée par la phase test) : rapport HTML conservé comme artefact.
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/target/site/jacoco
+          retention-days: 14
+
+      # Sécurité de la chaîne d'approvisionnement : SBOM CycloneDX des dépendances réellement résolues, puis analyse de
+      # vulnérabilités (OSV-Scanner, sans clé ni compte) ; toute vulnérabilité connue fait échouer le job. Une exception
+      # motivée et datée se déclare dans backend/osv-scanner.toml.
+      - name: Generate SBOM
+        working-directory: backend
+        run: ./mvnw -B -q -DskipTests cyclonedx:makeBom
+
+      - name: Scan dependencies for known vulnerabilities
+        working-directory: backend
+        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml -L /src/target/bom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-backend
+          path: backend/target/bom.json
+
       - name: Determine image tags
         if: github.event_name == 'push'
         id: tags

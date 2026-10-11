@@ -5,7 +5,9 @@
 # et conventions/deployment.md) — ce Dockerfile n'a pas de variante développement (pas de bind
 # mount, pas de node_modules en volume, conformément à l'architecture de production demandée).
 
-FROM node:24.15-alpine AS build
+# Images de base épinglées par empreinte (reproductibilité, conventions/deployment.md) ; Dependabot propose la mise à jour
+# de la balise et de l'empreinte ensemble.
+FROM node:24.15-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -14,11 +16,12 @@ RUN npm ci
 COPY . .
 RUN npx ng build --configuration production
 
-FROM nginx:1.27-alpine
+# nginx « unprivileged » : le processus ne tourne jamais en root, il écoute donc sur 8080 (un port < 1024 exigerait root).
+FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:15c994d10d6d78658721c3bcafff14cb281fba2a4bdf9d5ba92c416a472516e3
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost/health || exit 1
+    CMD wget -qO- http://127.0.0.1:8080/health || exit 1

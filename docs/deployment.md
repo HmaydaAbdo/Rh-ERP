@@ -189,6 +189,8 @@ PostgreSQL de service GitHub Actions) et frontend, puis build + push des images 
 request, seuls les tests tournent (pas de push d'image, pas d'exposition des secrets Docker Hub à
 une PR).
 
+**Chaîne d'approvisionnement** : la CI du backend génère un SBOM CycloneDX (`./mvnw cyclonedx:makeBom`, artefact `sbom-backend`), l'analyse avec OSV-Scanner (échec à la première vulnérabilité connue ; exceptions motivées dans `backend/osv-scanner.toml`) et conserve le rapport de couverture JaCoCo (artefact `backend-coverage`). Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour Maven, npm, Docker (balise et empreinte) et GitHub Actions. Les images sont non-root et épinglées par empreinte (voir [../conventions/deployment.md](../conventions/deployment.md)) : le conteneur frontend écoute sur **8080** (le Compose publie `127.0.0.1:${FRONTEND_PORT}` vers ce port ; nginx outer n'est pas concerné).
+
 **CD non traité** — le déploiement (`docker compose pull && up -d` sur le serveur) reste manuel
 pour l'instant. À prévoir séparément (ex. déclenchement SSH depuis la CI, ou `watchtower`/
 webhook côté serveur) une fois le besoin confirmé.

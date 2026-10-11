@@ -1,0 +1,5 @@
+# Exceptions à l analyse de vulnérabilités OSV-Scanner (CI) : une entrée par advisory, avec sa raison et sa date limite.
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2026-12-31
+# reason = "Pas de correctif publié ; non exploitable parce que ..."
