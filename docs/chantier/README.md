@@ -203,5 +203,5 @@ Voir [TODO.md](../../TODO.md) pour le détail :
 - Audité (voir [../audit/README.md](../audit/README.md)) : chaque création, modification et suppression de chantier, et chaque
   synchronisation (une entrée pour l'ensemble, une révision par chantier créé), sont tracées ; la synchronisation planifiée
   est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.
-- Les métriques de synchronisation sont enregistrées mais pas encore exportées (aucun Prometheus configuré, voir
+- Les métriques de synchronisation (`rh.chantier.sync.*`) sont exposées par `/actuator/prometheus` (voir
   [../architecture.md](../architecture.md)).

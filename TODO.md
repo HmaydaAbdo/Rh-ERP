@@ -95,9 +95,7 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 Comportements actuels, documentés tels quels (voir `docs/data-model.md`, `docs/auth/README.md`) mais qui
 demandent une décision avant correction :
 
-- **Pas de limitation des tentatives** de connexion ni de demandes de réinitialisation (force brute).
-- **Métriques** : les compteurs de synchronisation sont enregistrés dans Micrometer mais aucun export
-  (Prometheus) n'est configuré, alors que `/actuator/prometheus` est autorisé par la configuration de sécurité.
+- **Pas de verrouillage de compte** après des échecs répétés (les essais sont limités par adresse dans nginx inner, voir `docs/deployment.md`).
 - **Tests frontend** : voir « Frontend — tests du kit » ci-dessus.
 
 ---

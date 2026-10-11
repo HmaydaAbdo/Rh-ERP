@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Journalisation (conventions/logging.md). Le format se choisit avec logging.format : "text" (défaut) ou "json" (production).
+     Les deux écrivent sur la sortie standard, jamais dans un fichier. requestId et userId (MDC, MdcRequestFilter) figurent
+     dans chaque ligne, dans les deux formats. -->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <springProperty scope="context" name="LOG_FORMAT" source="logging.format" defaultValue="text"/>
+    <springProperty scope="context" name="APPLICATION" source="spring.application.name" defaultValue="paie"/>
+
+    <include resource="logback-${LOG_FORMAT}.xml"/>
+
+    <root level="INFO">
+        <appender-ref ref="SORTIE"/>
+    </root>
+</configuration>

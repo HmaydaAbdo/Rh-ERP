@@ -71,6 +71,8 @@ services:
       SMTP_AUTH: ${SMTP_AUTH}
       SMTP_STARTTLS: ${SMTP_STARTTLS}
       MAIL_FROM: ${MAIL_FROM}
+      # Journaux en JSON, un événement par ligne (conventions/logging.md, « Production »).
+      LOGGING_FORMAT: json
     networks:
       - db-net
       - web-net

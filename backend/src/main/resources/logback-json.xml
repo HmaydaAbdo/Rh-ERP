@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Format de production : JSON (logstash-logback-encoder) derrière un appender asynchrone. L'exception est écrite avec sa
+     trace complète (champ stack_trace). discardingThreshold=0 : aucun événement n'est abandonné quand la file se remplit
+     (l'appelant attend plutôt que de perdre un log d'audit ou de sécurité). -->
+<included>
+    <appender name="SORTIE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <customFields>{"application":"${APPLICATION}"}</customFields>
+        </encoder>
+    </appender>
+    <appender name="SORTIE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>false</neverBlock>
+        <appender-ref ref="SORTIE_JSON"/>
+    </appender>
+</included>
