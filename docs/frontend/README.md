@@ -34,7 +34,7 @@ npm run audit:licences                       # licences des dépendances livrée
 Ne pas employer `--force` ou `legacy-peer-deps` pour masquer les incompatibilités : `npm ci` doit passer sans option.
 
 Le proxy de développement (`frontend/proxy.conf.js`) relaie `/employees`, `/functions`, `/chantiers`,
-`/equipes`, `/paie`, `/auth`, `/users`, `/roles`, `/permissions` vers `BACKEND_URL` (défaut
+`/equipes`, `/paie`, `/parametres`, `/auth`, `/users`, `/roles`, `/permissions` vers `BACKEND_URL` (défaut
 `http://localhost:8080`). Une navigation de page (`Accept: text/html`) reste servie par Angular. Tout **nouveau
 préfixe d'API** s'ajoute à `proxy.conf.js` **et** à `nginx.conf`.
 

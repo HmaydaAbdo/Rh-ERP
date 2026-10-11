@@ -1,7 +1,7 @@
 import { Page, Request, Route } from '@playwright/test';
 
 /** Chemins proxifiés vers le backend (voir `proxy.conf.js`) : un appel XHR/fetch vers l'un d'eux est une requête d'API. */
-const API_PREFIXES = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/auth', '/users', '/roles', '/permissions', '/logs', '/audit'];
+const API_PREFIXES = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/parametres', '/auth', '/users', '/roles', '/permissions', '/logs', '/audit'];
 
 export interface MockUser {
   username: string;

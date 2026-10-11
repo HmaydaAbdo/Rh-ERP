@@ -13,6 +13,12 @@
         <span class="app-skeleton parametre-list__squelette"></span>
       }
     </div>
+  } @else if (erreur()) {
+    <div class="parametre-list__empty" role="alert">
+      <stp-icon name="triangle-alert" size="1.25rem" />
+      <span>Impossible de charger les paramètres. Vérifiez la connexion puis réessayez.</span>
+      <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
+    </div>
   } @else if (parametres().length === 0) {
     <div class="parametre-list__empty" role="status">
       <stp-icon name="settings" size="1.25rem" />

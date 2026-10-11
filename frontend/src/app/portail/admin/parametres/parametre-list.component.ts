@@ -3,13 +3,14 @@ import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { Parametre, ParametreService } from '../services/parametre.service';
 import { ParametreItemComponent } from './parametre-item.component';
 
 @Component({
   selector: 'app-parametre-list',
-  imports: [IconComponent, ParametreItemComponent],
+  imports: [ButtonComponent, IconComponent, ParametreItemComponent],
   templateUrl: './parametre-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './parametre-list.component.scss'
@@ -21,13 +22,27 @@ export class ParametreListComponent {
 
   protected readonly parametres = signal<Parametre[]>([]);
   protected readonly loading = signal(true);
+  protected readonly erreur = signal(false);
   protected readonly canWrite = computed(() => this.authService.hasPermission('PARAMETRE_WRITE'));
 
   constructor() {
+    this.charger();
+  }
+
+  protected reessayer(): void {
+    this.charger();
+  }
+
+  private charger(): void {
+    this.loading.set(true);
+    this.erreur.set(false);
     this.parametreService
       .findAll()
       .pipe(finalize(() => this.loading.set(false)))
-      .subscribe((parametres) => this.parametres.set(parametres));
+      .subscribe({
+        next: (parametres) => this.parametres.set(parametres),
+        error: () => this.erreur.set(true)
+      });
   }
 
   protected onSaved(parametre: Parametre): void {

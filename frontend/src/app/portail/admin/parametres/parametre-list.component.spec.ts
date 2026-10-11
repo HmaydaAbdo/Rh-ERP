@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ParametreService } from '../services/parametre.service';
@@ -42,16 +42,38 @@ describe('ParametreListComponent', () => {
         { provide: AuthService, useValue: { hasPermission: () => true } }
       ]
     });
+  });
+
+  async function afficher(): Promise<void> {
     fixture = TestBed.createComponent(ParametreListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-  });
+  }
 
-  it('charge et affiche les paramètres du serveur', () => {
+  it('charge et affiche les paramètres du serveur', async () => {
+    await afficher();
+
     expect(service.findAll).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.querySelector('h1')?.textContent).toBe('Paramètres');
     const titres = fixture.nativeElement.querySelectorAll('app-parametre-item h2') as NodeListOf<Element>;
     expect(Array.from(titres).map((h) => h.textContent)).toEqual(PARAMETRES.map((p) => p.libelle));
+  });
+
+  it('distingue une erreur réseau d’une liste réellement vide et permet de réessayer', async () => {
+    service.findAll.mockReturnValueOnce(throwError(() => new Error('Réponse API invalide'))).mockReturnValueOnce(of(PARAMETRES));
+    await afficher();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les paramètres');
+    expect(fixture.nativeElement.textContent).not.toContain('Aucun paramètre disponible.');
+
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('app-parametre-item h2')).toHaveLength(2);
+    expect(service.findAll).toHaveBeenCalledTimes(2);
   });
 });
