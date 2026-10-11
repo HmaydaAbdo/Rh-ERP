@@ -4,6 +4,10 @@
 > sont exécutés par la CI à chaque push et chaque pull request (`.github/workflows/ci.yml`) : un test qui
 > échoue empêche la publication des images.
 
+La règle normative est [`conventions/testing.md`](../conventions/testing.md) : elle rend les tests obligatoires
+pour chaque domaine, changement transversal et parcours full stack. Ce document décrit les commandes et l'état
+actuel des tests ERP-RH ; la convention décrit le niveau de preuve attendu.
+
 ---
 
 ## Lancer les tests
@@ -30,10 +34,10 @@ Le backend mesure sa couverture avec JaCoCo : `./mvnw test` écrit le rapport da
 
 ---
 
-## Backend (261 tests)
+## Backend (304 tests)
 
-Dernière validation locale propre : 261 tests réussis, sans échec ni erreur, sous Java 21 et
-PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-10. Cette validation utilise une base jetable séparée
+Dernière validation locale propre : 304 tests réussis, sans échec ni erreur, sous Java 21 et
+PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-11. Cette validation utilise une base jetable séparée
 des données migrées.
 
 JUnit 5, Mockito, AssertJ, ArchUnit. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
@@ -43,7 +47,7 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 
 | Zone | Classes de test | Ce qu'elles vérifient |
 |---|---|---|
-| Démarrage | `PaieApplicationTests` | L'application démarre sur une **base vide** : toute la chaîne de migrations V1 → V15 est rejouée et validée contre les entités (`ddl-auto: validate`) |
+| Démarrage | `PaieApplicationTests` | L'application démarre sur une **base vide** : toute la chaîne de migrations V1 → V16 est rejouée et validée contre les entités (`ddl-auto: validate`) |
 | Sécurité des endpoints | `EndpointSecurityTest` | Découvre automatiquement tous les `@RestController` (sauf `AuthController`) : chaque endpoint déclare une permission, la **refuse** sans elle, l'**accepte** avec elle, refuse une autre permission du même domaine, et correspond à la **table de référence** (45 endpoints) |
 | Chaîne JWT | `JwtSecurityChainTest` | De vrais jetons signés : `401` sans jeton, avec un jeton invalide ou signé avec un autre secret ; `403` sans la permission, même avec un rôle d'administrateur ; `200` avec ; une page est sérialisée par un DTO stable (`content` + `page`) ; une requête mal formée est un `400`, pas un `500` |
 | Documentation d'API | `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest` | Swagger éteint (défaut, production) : ses routes exigent un jeton (`401`) ; allumé (développement) : publiques, le reste de l'API reste protégé |
@@ -163,6 +167,9 @@ Ajouter un parcours : le programmer avec `mockApi(page, utilisateur, routes)` ; 
 ## Ce qui n'est pas testé automatiquement
 
 - Les écrans Angular Employé, Fonction, Chantier, Équipe, Utilisateurs, Rôles et l'authentification (les écrans Paie et Audit, les guards et la coque de l'application le sont).
+- Un parcours full stack avec frontend réel, API Spring réelle et PostgreSQL réel : les E2E Playwright simulent
+  actuellement l'API, et les tests backend Testcontainers ne démarrent pas le frontend. La convention impose
+  d'ajouter ce niveau par domaine et avant fusion des changements concernés.
 - Le rendu visuel du rapport PDF : vérifié à la main (les tests contrôlent la structure et les nombres, pas
   l'apparence).
 - La synchronisation avec l'ERP réel (le client HTTP est simulé).

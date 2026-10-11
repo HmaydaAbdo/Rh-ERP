@@ -23,7 +23,7 @@ les détails et décisions propres à ERP-RH.
 | Comprendre l'authentification, les comptes et les rôles | [auth/README.md](auth/README.md) |
 | Savoir qui a le droit de faire quoi (catalogue des permissions) | [rbac/README.md](rbac/README.md) |
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
-| Lancer ou écrire des tests | [testing.md](testing.md) |
+| Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |

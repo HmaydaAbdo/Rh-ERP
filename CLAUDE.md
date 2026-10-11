@@ -40,15 +40,16 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 3. conventions/configuration.md
 4. conventions/jpa.md
 5. conventions/database.md
-6. conventions/deployment.md
-7. conventions/security.md
-8. conventions/audit.md
-9. conventions/logging.md
-10. conventions/swagger.md
-11. conventions/metrics.md
-12. conventions/performance.md
-13. conventions/frontend.md
-14. conventions/design-system.md
+6. conventions/testing.md
+7. conventions/deployment.md
+8. conventions/security.md
+9. conventions/audit.md
+10. conventions/logging.md
+11. conventions/swagger.md
+12. conventions/metrics.md
+13. conventions/performance.md
+14. conventions/frontend.md
+15. conventions/design-system.md
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,

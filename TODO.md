@@ -28,6 +28,18 @@ Restent à faire :
 Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
 et procédure de retour arrière propres à cette étape.
 
+## Mettre la couverture de tests au niveau obligatoire par domaine
+
+La stratégie obligatoire est définie dans `conventions/testing.md`. La CI actuelle exécute les tests
+unitaires/intégration backend et frontend, le build de production et des E2E avec API simulée, mais ne
+fait pas encore tourner le frontend, l'API et PostgreSQL ensemble. Les E2E frontend des écrans Employé,
+Fonction, Chantier, Équipe, Utilisateurs, Rôles et authentification manquent aussi (voir `docs/testing.md`).
+
+- Ajouter une porte full stack reproductible en CI (navigateur, frontend, API et PostgreSQL réels) avec au
+  moins un parcours de référence pour chaque domaine et les flux transverses.
+- Ajouter les parcours navigateur manquants, puis garder une correspondance domaine → cas → commande CI à jour.
+- Rendre explicites les portes bloquantes par type de changement et publier les rapports de couverture par domaine.
+
 ## Refonte visuelle (en cours, phase par phase — voir `DESIGN.md` et `conventions/design-system.md`)
 
 Fait : marque, jetons, thèmes clair/sombre, polices, coque et connexion, responsive, refonte des écrans, graphiques (palette validée, un axe, tableaux de données, redessin à la bascule de thème) et mouvement (squelettes, transitions, thème en fondu). Revue finale faite (phase 7). Points déjà identifiés :
