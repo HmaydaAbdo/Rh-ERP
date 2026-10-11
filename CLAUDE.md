@@ -34,7 +34,7 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 0. `STAPORT_STANDARDS_VERSION`, `conventions/staport/README.md`, puis les standards de la version
    épinglée dans `conventions/staport/v<version>/` (architecture, PostgreSQL/Flyway/pgvector, RBAC,
-   audit, tests, Angular, agents/skills/MCP/RAG/BI).
+   audit, Angular, agents/skills/MCP/RAG/BI).
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
