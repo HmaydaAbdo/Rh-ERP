@@ -9,10 +9,9 @@
 
 ## Par où commencer
 
-Les conventions partagées Staport et leur version consommée sont indexées dans
-[`conventions/staport/README.md`](../conventions/staport/README.md) ; version épinglée :
-[`STAPORT_STANDARDS_VERSION`](../STAPORT_STANDARDS_VERSION). Les conventions ci-dessous décrivent
-les détails et décisions propres à ERP-RH.
+Les conventions de référence sont centralisées dans [`conventions/`](../conventions). Elles
+constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. Les documents de
+`docs/` décrivent le métier, les données et les décisions propres à ERP-RH.
 
 | Je veux… | Document |
 |---|---|
@@ -27,7 +26,7 @@ les détails et décisions propres à ERP-RH.
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Connaître l'état de conformité du backend aux conventions (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) |
-| Comprendre l'adoption du socle Staport et la trajectoire ERP-RH | [adr/0001-adoption-socle-staport.md](adr/0001-adoption-socle-staport.md) |
+| Comprendre les décisions d'architecture et la trajectoire ERP-RH | [adr/0001-adoption-socle-staport.md](adr/0001-adoption-socle-staport.md) |
 
 ---
 

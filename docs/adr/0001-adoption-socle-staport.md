@@ -2,7 +2,7 @@
 
 - **Statut :** accepté
 - **Date :** 2026-10-10
-- **Socle épinglé :** `0.1.1` (`STAPORT_STANDARDS_VERSION`)
+- **Source normative :** conventions centralisées dans `conventions/`
 - **Périmètre :** règles transverses et trajectoire de modernisation. L'adhésion globale est
   autorisée ; les migrations restent découpées, testées et documentées pour pouvoir être vérifiées.
 
@@ -14,10 +14,10 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 
 ## Décisions
 
-1. Pour ERP-RH, les fichiers de `conventions/` à la racine sont la source de vérité normative.
-   Le snapshot épinglé sous `conventions/staport/v0.1.1/` est un inventaire temporaire des éléments
-   Staport restant à examiner : chaque point fusionné est retiré du snapshot après vérification.
-   Les règles métier et permissions restent locales à l'application.
+1. Les fichiers de `conventions/` à la racine sont la source de vérité normative et le blueprint
+   éprouvé par ERP-RH. Les applications suivantes peuvent reprendre ce corpus puis documenter leurs
+   différences de métier et de pile dans leurs propres `docs/` et ADR. Les règles métier et
+   permissions restent locales à chaque application.
 2. PostgreSQL + Flyway, RBAC dynamique par domaine et modèle d'audit ERP-RH sont les références
    communes. Chaque application garde sa propre base et son propre historique de migration.
 3. La cible UI est Angular 22 stable (baseline vérifiée au 2026-10-10 : 22.2.2), Signals/Signal Forms

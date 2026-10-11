@@ -7,9 +7,9 @@
 
 ---
 
-## Adoption du socle Staport dans ERP-RH
+## Suivi de conformité et d’exploitation ERP-RH
 
-Le socle `v0.1.1` est épinglé dans `conventions/staport/` ; l'ADR et les skills IA métier sont dans
+Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
 Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (653, couverture complète) et E2E Playwright + axe (39),
@@ -18,7 +18,6 @@ Restent à faire :
 
 - **Backend** : contrôle de conformité par domaine (RBAC par domaine, audit métier, secrets/configuration, logs et métriques, erreurs) ;
   rapport d'écarts à produire avant tout changement ;
-- mettre à jour les conventions Staport vers la version suivante et repinner le snapshot central ;
 - planifier puis exécuter la migration du serveur de production PG17→PG18 : répétition sur sauvegarde,
   fenêtre de maintenance, restauration logique dans un volume neuf, contrôles et conservation du volume
   PG17 comme retour arrière ; suivre [la procédure](docs/deployment.md#migration-majeure-pg17--pg18-en-production) ;
