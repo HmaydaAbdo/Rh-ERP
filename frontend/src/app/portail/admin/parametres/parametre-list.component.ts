@@ -3,12 +3,13 @@ import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { Parametre, ParametreService } from '../services/parametre.service';
 import { ParametreItemComponent } from './parametre-item.component';
 
 @Component({
   selector: 'app-parametre-list',
-  imports: [ParametreItemComponent],
+  imports: [IconComponent, ParametreItemComponent],
   templateUrl: './parametre-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './parametre-list.component.scss'

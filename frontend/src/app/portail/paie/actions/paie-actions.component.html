@@ -44,14 +44,15 @@
     }
 
     @if (result.lignesIgnorees.length > 0) {
-      <div class="paie-actions__import-table-scroll">
-        <table class="paie-actions__import-table">
+      <div class="paie-actions__dialog-table-scroll app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes de paie ignorées à l’import">
+        <table class="app-static-table">
+          <caption class="app-lecteur">Détail des lignes de paie ignorées pendant l'import</caption>
           <thead>
             <tr>
-              <th>Ligne</th>
-              <th>CIN</th>
-              <th>Nom &amp; prénom</th>
-              <th>Raison</th>
+              <th scope="col">Ligne</th>
+              <th scope="col">CIN</th>
+              <th scope="col">Nom &amp; prénom</th>
+              <th scope="col">Raison</th>
             </tr>
           </thead>
           <tbody>

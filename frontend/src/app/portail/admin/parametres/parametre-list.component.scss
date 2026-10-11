@@ -1,4 +1,29 @@
 .parametre-list {
+  &__loading {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: var(--space-md);
+  }
+
+  &__squelette {
+    display: block;
+    height: 8rem;
+    border-radius: var(--radius-md);
+  }
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    min-height: 10rem;
+    color: var(--color-text-muted);
+
+    stp-icon {
+      color: var(--color-primary);
+    }
+  }
+
   &__items {
     display: grid;
     gap: var(--space-md);

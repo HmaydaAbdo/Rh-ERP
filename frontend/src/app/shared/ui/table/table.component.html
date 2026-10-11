@@ -26,7 +26,7 @@
                 (keydown.alt.arrowleft)="moveWithKeyboard($event, col, -1)"
                 (keydown.alt.arrowright)="moveWithKeyboard($event, col, 1)"
               >
-                {{ col.header }}
+                <span class="stp-table__sort-label">{{ col.header }}</span>
                 @if (col.sortable !== false) {
                   <stp-icon
                     class="stp-table__sort-icon"
@@ -83,7 +83,9 @@
         } @empty {
           @if (!loading()) {
             <tr>
-              <td class="stp-table__empty" [attr.colspan]="columnCount()">{{ emptyMessage() }}</td>
+              <td class="stp-table__empty" [attr.colspan]="columnCount()">
+                <span class="stp-table__empty-state"><stp-icon name="search" /><span>{{ emptyMessage() }}</span></span>
+              </td>
             </tr>
           }
         }

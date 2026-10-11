@@ -47,6 +47,6 @@ describe('ForgotPasswordComponent', () => {
 
         expect(recovery.requestReset).toHaveBeenCalledWith('employe@example.com');
         expect(component.submitted()).toBe(true);
-        expect(fixture.nativeElement.textContent).toContain('Si un compte existe pour cet email');
+        expect(fixture.nativeElement.textContent).toContain('Si cette adresse correspond à un compte, un lien sécurisé vient d\'être envoyé.');
     });
 });

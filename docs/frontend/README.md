@@ -83,12 +83,12 @@ Aucune valeur de design ne doit être écrite en dur. Règles : `conventions/des
 ### Mise en page des écrans de liste
 
 Tous les écrans de liste (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, et le tabulaire de la Paie)
-ont **la même structure** : titre, ligne de filtres à plat, barre du tableau, tableau. Pour **Employés, Chantiers, Fonctions,
-Équipes et la Paie**, les **actions** (secondaire, puis l'action principale en bleu plein) sont **dans l'en-tête, à droite du
+ont **la même structure** : titre éditorial, panneau de filtres, barre du tableau, tableau. Pour **Employés, Chantiers, Fonctions,
+Équipes, Utilisateurs, Rôles et la Paie**, les **actions** (secondaire, puis l'action principale en bleu plein) sont **dans l'en-tête, à droite du
 titre** (`app-page__actions app-page__actions--liste` ; à la Paie, au niveau du titre et des onglets de vue, les mêmes dans les
 trois vues) et la barre du tableau ne porte que le total à gauche et le choix des colonnes à droite. Employés et Fonctions
-regroupent « Importer » et le téléchargement du modèle Excel dans un seul bouton fractionné. Utilisateurs, Rôles et Journal
-gardent leurs outils dans la barre du tableau. Classes : `app-page`, `app-toolbar`, `app-table-bar`
+regroupent « Importer » et le téléchargement du modèle Excel dans un seul bouton fractionné. La barre du tableau garde le total,
+le choix des colonnes et les outils propres à Journal. Classes : `app-page`, `app-toolbar`, `app-table-bar`
 (`src/styles/_page.scss`, voir `conventions/design-system.md`). Le total est celui du serveur (listes paginées) ou des lignes
 affichées après filtre (Utilisateurs, Rôles). Un nouvel écran de liste reprend ces classes dès sa création.
 
@@ -135,12 +135,12 @@ nouveau reprend ces règles dès sa création.
 
 | | |
 |---|---|
-| Couleur de marque | Le bleu marine du logo, `#084478` (`--brand-700`, `--color-primary` en thème clair), décliné en échelle `--brand-50` … `--brand-950` ; en thème sombre le bleu d'action s'éclaircit (`#5b9be0`) |
-| Logo | `src/assets/brand/logo-staport.png` (logo existant de Staport, repris du rapport PDF) sur les écrans de connexion ; en thème sombre, il passe en blanc par un filtre CSS. Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon et menu latéral) — dessin provisoire, à remplacer par une version vectorielle du logo |
-| Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; jeton `--text-display` réservé à l'accroche d'accueil |
+| Couleur de marque | Le bleu marine du logo, `#084478` (`--brand-700`, `--color-primary` en thème clair), décliné en échelle `--brand-50` … `--brand-950` ; en thème sombre le bleu d'action s'éclaircit (`#5b9be0`). Un accent minéral chaud (`--color-brand-accent`) reste réservé aux repères secondaires |
+| Logo | Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon uniquement) — dessin provisoire, à remplacer par une version vectorielle du logo. Aucun logo dans l'authentification ou le menu latéral |
+| Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; `--text-page-title` pour les titres d'écran, `--text-display` réservé à l'accroche d'accueil |
 | Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage |
-| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère bleu clair sur l'écran actif. Replié à 64 px, il s'ouvre au survol ; sur **téléphone et tablette tactile** il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
-| Connexion | Écran en deux panneaux : courbes topographiques SVG et présentation Staport sur fond marine, formulaire sans carte imbriquée sur surface claire ; sur tablette et téléphone, la présentation devient un bandeau au-dessus du formulaire. Aucun visuel distant. |
+| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère minéral chaud sur l'écran actif. Sur grand écran, il reste réduit aux icônes (4,5 rem) ; les libellés sont accessibles en infobulle et au clavier, le panneau se déploie au survol ou au focus clavier puis se replie à la sortie. Sur **téléphone et tablette compacte**, il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
+| Authentification | Connexion, mot de passe oublié et réinitialisation partagent un formulaire centré sur tout le canevas, même si une session est active, posé sur la photographie locale `src/assets/auth/staport-login-atlas.png` générée pour Staport RH. Un voile sombre conserve le contraste ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
 
 ---
 
@@ -292,14 +292,17 @@ Tous les tableaux de données — **sans exception** — offrent :
 | Fonction | Détail |
 |---|---|
 | Tri | Sur chaque colonne de données (pas sur la colonne d'actions) ; `sortField` donne le chemin transmis au backend (ex. `chantier.code`) |
-| Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite |
+| Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite ; largeur bornée entre 60 et 2 000 px |
 | Réordonnancement | Glisser-déposer un en-tête, ou **Alt + flèche** sur son bouton de tri ; l'ordre est reporté sur le corps du tableau |
 | Colonnes visibles | `app-column-chooser` ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
 | Pagination | 10 / 20 / 50 / 100 lignes, avec « 1 - 20 sur 134 — page 1/7 » |
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
-**Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `_tokens.scss`) ; aucun écran ne définit
-son propre style de tableau. Une cellule à texte long porte `cellClass: 'text-truncate'`.
+**Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
+son propre style de tableau. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
+`emptyMessage` et présenté dans le tableau. Les seuls tableaux hors `stp-table` sont des listes courtes de lignes d'import ignorées :
+elles utilisent `app-static-table-scroll` / `app-static-table` (`styles/_page.scss`), une région de défilement focusable, une légende
+accessible et des en-têtes `scope="col"`.
 
 Les colonnes sont déclarées une seule fois (`TableColumn`, regroupées dans un `ColumnState`, voir
 `shared/table/table-columns.ts`) ; l'en-tête et le corps parcourent `columns.visible`. Un en-tête groupé sur

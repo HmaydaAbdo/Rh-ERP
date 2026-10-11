@@ -10,6 +10,7 @@ import {
   LucideMoon,
   LucideNetwork,
   LucideShield,
+  LucideSettings,
   LucideSun,
   LucideUserCog,
   LucideUsers,
@@ -44,6 +45,7 @@ function estRouteAuthentification(url: string): boolean {
       LucideMoon,
       LucideNetwork,
       LucideShield,
+      LucideSettings,
       LucideSun,
       LucideUserCog,
       LucideUsers,
@@ -58,8 +60,6 @@ export class AppComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly theme = inject(ThemeService);
-
-  title = 'Staport RH';
 
   /** Menu en tiroir (téléphone, tablette tactile) : ouvert par le bouton de la barre du haut, fermé par le fond, Échap ou un choix. */
   readonly menuOuvert = signal(false);

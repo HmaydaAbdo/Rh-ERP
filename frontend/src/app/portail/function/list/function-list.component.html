@@ -9,24 +9,27 @@
     </p>
 
     @if (result.lignesIgnorees.length > 0) {
-      <table class="function-list__import-table">
-        <thead>
-          <tr>
-            <th>Ligne</th>
-            <th>Libellé</th>
-            <th>Raison</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
+      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes de fonctions ignorées à l’import">
+        <table class="app-static-table">
+          <caption class="app-lecteur">Détail des lignes de fonctions ignorées pendant l'import</caption>
+          <thead>
             <tr>
-              <td>{{ ligne.numeroLigne }}</td>
-              <td>{{ ligne.libelle }}</td>
-              <td>{{ ligne.raison }}</td>
+              <th scope="col">Ligne</th>
+              <th scope="col">Libellé</th>
+              <th scope="col">Raison</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
+              <tr>
+                <td>{{ ligne.numeroLigne }}</td>
+                <td>{{ ligne.libelle }}</td>
+                <td>{{ ligne.raison }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   }
 </stp-dialog>

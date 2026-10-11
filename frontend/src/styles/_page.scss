@@ -1,11 +1,11 @@
 @use 'breakpoints' as bp;
 
-// Mise en page unique des écrans de liste, définie une seule fois comme le style des tableaux (`ui/table/table.component.scss`) : aucun écran ne
-// redéfinit ces règles (voir conventions/design-system.md, section « Mise en page des écrans »).
+// Mise en page commune des écrans : les listes respirent directement sur le canevas, les formulaires et détails
+// conservent une surface de travail cadrée. Aucun domaine ne redéfinit cette structure.
 //
 //   <div class="… app-page">
 //     <div class="app-page__header"><h1>Titre</h1></div>
-//     <form class="app-toolbar">           filtres, une ligne de contrôles de même hauteur
+//     <form class="app-toolbar">           filtres regroupés dans une bande secondaire
 //     <div class="app-table-bar">          total à gauche, outils à droite (du moins au plus important)
 //     <stp-table …>
 
@@ -13,25 +13,20 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
+}
+
+// Formulaires et consultations ont une surface contenue; les listes gardent le canevas libre pour leurs données.
+.app-page--narrow,
+.app-page--wide {
   padding: var(--space-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 
-  &::before {
-    position: absolute;
-    top: -1px;
-    right: var(--space-lg);
-    left: var(--space-lg);
-    height: 1px;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-brand-accent) 58%, transparent), transparent);
-    content: '';
-    pointer-events: none;
-  }
-
   @include bp.phone {
     padding: var(--space-md);
+    border-radius: var(--radius-md);
   }
 }
 
@@ -53,7 +48,7 @@
   }
 }
 
-// ---- Filtres : une ligne de contrôles de même hauteur, à plat sur la page ; elle passe à la suivante si la largeur manque ----
+// ---- Filtres : bande calme, distincte des données sans devenir une seconde carte ----
 .app-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -62,7 +57,7 @@
   margin-bottom: var(--space-lg);
   padding: var(--space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-alt);
 
   > input.stp-input,
@@ -215,5 +210,54 @@
     .stp-split-button .stp-button--join-next {
       flex: 1;
     }
+  }
+}
+
+// Tableaux courts hors stp-table (résultats d'import, journaux spécialisés) : mêmes repères et défilement autonome.
+.app-static-table-scroll {
+  max-width: 100%;
+  max-height: min(28rem, 60vh);
+  overflow: auto;
+  border: 1px solid var(--table-border);
+  border-radius: var(--radius-md);
+  overscroll-behavior: contain;
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.app-static-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+
+  th,
+  td {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--table-border-light);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--table-header-bg);
+    color: var(--color-text);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:nth-child(even) {
+    background: var(--table-row-alt-bg);
+  }
+
+  tbody tr:hover {
+    background: var(--table-row-hover-bg);
   }
 }

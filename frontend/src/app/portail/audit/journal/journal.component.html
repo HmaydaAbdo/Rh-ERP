@@ -43,11 +43,12 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      {{ totalRecords() }} entrée{{ totalRecords() > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} entrée{{ totalRecords() > 1 ? 's' : '' }}
+      }
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-
     </div>
   </div>
 

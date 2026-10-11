@@ -12,6 +12,9 @@
 <div class="user-list app-page">
   <div class="app-page__header">
     <h1>Utilisateurs</h1>
+    <div class="app-page__actions app-page__actions--liste">
+      <button stp-button icon="plus" type="button" routerLink="/admin/users/new">Nouvel utilisateur</button>
+    </div>
   </div>
 
   <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
@@ -29,7 +32,6 @@
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-      <button stp-button icon="plus" type="button" routerLink="/admin/users/new">Nouvel utilisateur</button>
     </div>
   </div>
 

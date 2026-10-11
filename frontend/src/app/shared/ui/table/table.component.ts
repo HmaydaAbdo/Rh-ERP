@@ -32,6 +32,7 @@ export class TableFooterDirective {
 }
 
 const MIN_COLUMN_WIDTH = 60;
+const MAX_COLUMN_WIDTH = 2000;
 const KEYBOARD_RESIZE_STEP = 12;
 
 /**
@@ -200,11 +201,14 @@ export class TableComponent<T extends object> {
     }
     event.preventDefault();
     const header = (event.target as HTMLElement).closest('th') as HTMLElement;
-    this.setWidth(column, header.offsetWidth + delta);
+    this.setWidth(column, (this.widths()[column.field] ?? header.offsetWidth) + delta);
   }
 
   private setWidth(column: TableColumn, width: number): void {
-    this.widths.update((current) => ({ ...current, [column.field]: Math.max(MIN_COLUMN_WIDTH, Math.round(width)) }));
+    this.widths.update((current) => ({
+      ...current,
+      [column.field]: Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)))
+    }));
   }
 
   // ---- Réordonnancement ----
