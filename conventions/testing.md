@@ -22,7 +22,7 @@ parcours complets limités aux flux représentatifs. Aucun niveau ne remplace le
 | Statique et architecture | Compilation, types, lint, règles de dépendance, conventions de modules | Tout changement concerné ; contrôles communs à chaque PR |
 | Unitaire backend | Règles métier, calculs, validations, transitions d'état, erreurs, décisions d'autorisation | Toute logique backend ajoutée ou modifiée |
 | Intégration backend | Service, repository, transaction, base, migrations, audit et sécurité réellement branchés | Toute frontière ou persistance touchée ; migrations sur base vierge et mise à niveau |
-| Contrat API | Requêtes/réponses, codes d'erreur, pagination, schémas et compatibilité consommateur-producteur | Toute modification d'API ou de contrat interservice |
+| Contrat API et événementiel | Requêtes/réponses OpenAPI, schémas MCP/BI, flux et événements d'agent (ex. AG-UI), codes d'erreur, pagination et compatibilité consommateur-producteur | Toute modification d'API, d'événement ou de contrat interservice |
 | Unitaire frontend | Fonctions, stores, services, guards, interceptors, validateurs et transformations | Toute logique frontend ajoutée ou modifiée |
 | Composant frontend | Rendu, actions, formulaires, clavier, focus, chargement, vide, erreur, refus et responsive | Tout composant, écran ou interaction touché |
 | E2E navigateur | Parcours utilisateur pilotés par rôles et libellés accessibles, permissions visibles, navigation et états accessibles | Chaque flux critique et chaque fonctionnalité visible qui traverse plusieurs écrans |
