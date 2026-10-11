@@ -69,6 +69,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(passwordEncoder.encode(any())).thenReturn("empreinte-factice");
         authService = new AuthService(utilisateurRepository, refreshTokenRepository, resetPasswordTokenRepository,
                 passwordEncoder, jwtService, tokenHasher, permissionResolver, userMapper, emailService, evenements);
 
@@ -121,6 +122,9 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login("hmayda", "peuImporte"))
                 .isInstanceOf(InvalidCredentialsException.class);
+
+        // Le mot de passe est vérifié quand même : la durée de la réponse ne distingue pas un compte inactif d'un mot de passe faux.
+        verify(passwordEncoder).matches("peuImporte", "hash");
     }
 
     @Test
@@ -129,6 +133,9 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login("inconnu", "peuImporte"))
                 .isInstanceOf(InvalidCredentialsException.class);
+
+        // Même travail de hachage que pour un compte existant : la rapidité de la réponse ne révèle pas qu'il n'existe pas.
+        verify(passwordEncoder).matches("peuImporte", "empreinte-factice");
     }
 
     @Test
