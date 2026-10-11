@@ -33,6 +33,9 @@ L'arborescence exacte suit le framework choisi si les frontières de domaine res
 
 ## IA, agents et analytique
 
+Les exigences opérationnelles sont précisées dans [`agents-ia.md`](agents-ia.md),
+[`mcp.md`](mcp.md), [`rag.md`](rag.md) et [`testing.md`](testing.md).
+
 * Les règles métier et les indicateurs restent la source de vérité dans leurs domaines propriétaires.
   Un modèle, un index de recherche ou un tableau de bord ne les redéfinit pas.
 * Un agent ou un orchestrateur accède aux données et aux actions par des API ou des outils explicites
@@ -47,6 +50,7 @@ L'arborescence exacte suit le framework choisi si les frontières de domaine res
 * Commencer par des projections analytiques bornées. Introduire une plateforme ou un entrepôt
   analytique séparé seulement si les besoins de volume, d'historisation, de fraîcheur ou de
   croisement de domaines le justifient.
+* Ne pas utiliser le RAG comme source de vérité d'un indicateur numérique.
 
 ### Orchestration en graphe
 

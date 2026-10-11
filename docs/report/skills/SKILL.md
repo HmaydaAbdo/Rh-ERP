@@ -10,7 +10,10 @@ description: Use when changing ERP-RH payroll reports, BI measures, PDF or Excel
 - [README métier et technique](../README.md)
 - [Permissions Paie et export](../../rbac/paie.md)
 - [README Paie](../../paie/README.md) et [README Audit](../../audit/README.md) selon le périmètre
-- `conventions/performance.md` et le standard `standards/agents-skills-mcp-rag.md`
+- [`conventions/performance.md`](../../../conventions/performance.md),
+  [`conventions/agents-ia.md`](../../../conventions/agents-ia.md),
+  [`conventions/rag.md`](../../../conventions/rag.md) et
+  [`conventions/testing.md`](../../../conventions/testing.md)
 
 ## Périmètre
 

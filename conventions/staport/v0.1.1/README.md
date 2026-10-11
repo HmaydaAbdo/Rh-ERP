@@ -20,8 +20,11 @@ de ce dossier. Pour ces aspects, les fichiers de `conventions/` font foi.
 2. `conventions/testing.md` — stratégie de tests consolidée.
 3. `conventions/frontend.md` — convention Angular consolidée. Le design system est défini dans
    `conventions/design-system.md`.
-4. `standards/agents-skills-mcp-rag.md`.
-5. `profiles/README.md` puis les documents métier locaux du dépôt consommateur.
+4. `profiles/README.md` puis les documents métier locaux du dépôt consommateur.
+
+Les règles agents/skills/IA, MCP, RAG et BI ont été centralisées dans les conventions à la racine
+(`agents-ia.md`, `mcp.md`, `rag.md`, `architecture.md`, `metrics.md` et `testing.md`). Elles ne sont
+plus maintenues en double dans ce snapshot.
 
 En cas de conflit, une décision locale documentée ne peut pas affaiblir les exigences de sécurité,
 d'audit ou de confidentialité du socle. Toute dérogation est inscrite dans un ADR du projet avec
@@ -31,12 +34,8 @@ raison, risque, responsable et date de réexamen.
 
 ```text
 AGENTS.md, CLAUDE.md       Entrées courtes pour les outils d'agents
-standards/                 Règles communes normatives
-profiles/                  Versions/outils vérifiés par famille technique
-agents/                    Rôles de travail bornés pour agents IA
-skills/shared/             Procédures réutilisables sans savoir métier
-skills/domains/            Emplacement réservé, vide dans le socle
-templates/application/     Adaptateurs, docs et skill de domaine à copier
+profiles/                  Profils techniques encore à examiner et centraliser
+skills/                    Procédures techniques encore à examiner et centraliser
 ```
 
 ## Consommation

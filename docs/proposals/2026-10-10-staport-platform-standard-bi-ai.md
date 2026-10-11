@@ -4,6 +4,11 @@
 **Date de référence :** 2026-10-10  
 **Périmètre :** G-Banque, ERP-RH et futurs projets Staport
 
+> **Statut documentaire :** cette étude préparatoire conserve les options explorées à cette date ;
+> elle n'est pas normative. Les conventions à la racine et l'ADR 0001 font foi pour les décisions
+> actuelles. La priorité est de terminer les conventions et les capacités de chaque application ;
+> l'application IA globale reste une étape finale, et son framework n'est pas encore choisi.
+
 ## But
 
 Définir un socle réutilisable de conventions et de pratiques d'agents, tout en gardant dans chaque
