@@ -1,5 +1,6 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   LucideBriefcase,
   LucideBuilding,
@@ -15,12 +16,18 @@ import {
   LucideWallet,
   LucideX
 } from '@lucide/angular';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 
 import { AuthService } from './core/auth/services/auth.service';
 import { NAV_ITEMS } from './core/navigation/nav-items';
 import { ThemeService } from './core/theme/theme.service';
 import { FeedbackViewportComponent } from './shared/feedback/feedback-viewport.component';
+
+function estRouteAuthentification(url: string): boolean {
+  const chemin = url.split(/[?#]/, 1)[0] ?? '';
+  return chemin === '/login' || chemin === '/forgot-password' || chemin === '/reset-password';
+}
 
 @Component({
     selector: 'app-root',
@@ -59,6 +66,14 @@ export class AppComponent {
 
   readonly user = this.authService.user;
   readonly isAuthenticated = this.authService.isAuthenticated;
+  readonly estRouteAuthentification = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => estRouteAuthentification(event.urlAfterRedirects)),
+      startWith(estRouteAuthentification(this.router.url))
+    ),
+    { initialValue: estRouteAuthentification(this.router.url) }
+  );
 
   readonly navItems = computed(() =>
     NAV_ITEMS.filter((item) => this.authService.hasPermission(item.permission))

@@ -1,6 +1,6 @@
 <app-feedback-viewport />
 
-@if (isAuthenticated()) {
+@if (isAuthenticated() && !estRouteAuthentification()) {
   <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
   <div class="app-shell" [class.app-shell--menu-ouvert]="menuOuvert()" (keydown.escape)="fermerMenu()">
     <header class="app-topbar">
@@ -22,7 +22,6 @@
     <aside id="menu-principal" class="app-sidebar">
       <div class="app-sidebar__brand">
         <img class="app-sidebar__logo" src="assets/brand/monogramme.svg" alt="" width="36" height="36" />
-        <span class="app-sidebar__label" translate="no">{{ title }}</span>
       </div>
       <nav class="app-sidebar__nav" aria-label="Navigation principale">
         @for (item of navItems(); track item.route) {

@@ -1,7 +1,7 @@
 .audit-champs {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 
   th,
   td {
@@ -12,7 +12,7 @@
   }
 
   thead th {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     color: var(--color-text-muted);
   }

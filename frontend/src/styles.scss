@@ -4,6 +4,13 @@
 @use 'styles/forms';
 @use 'styles/overlays';
 @use 'styles/motion';
+@use 'styles/accessibility';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 html,
 body {
@@ -58,6 +65,14 @@ html {
 
 // Écran tactile ou téléphone : cibles d'au moins 44 px, texte de champ d'au moins 16 px (sinon iOS zoome à la saisie)
 @media (pointer: coarse), (max-width: 767px) {
+  :root {
+    --control-height: var(--control-height-touch);
+    --control-font-size: var(--control-font-size-touch);
+  }
+
+  .stp-button,
+  .stp-input,
+  .stp-select__input,
   .p-button,
   .p-inputtext,
   .p-dropdown,
@@ -70,6 +85,8 @@ html {
   }
 
   .p-inputtext,
+  .stp-input,
+  .stp-select__input,
   .p-dropdown .p-dropdown-label,
   .p-multiselect .p-multiselect-label {
     font-size: var(--control-font-size);

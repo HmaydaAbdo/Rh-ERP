@@ -18,7 +18,9 @@
   transition:
     background-color var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 
   &:disabled,
   &[aria-disabled='true'] {
@@ -30,10 +32,12 @@
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: var(--color-primary-contrast);
+    box-shadow: var(--shadow-sm);
 
     &:hover:not(:disabled):not([aria-disabled='true']) {
       background: var(--color-primary-hover);
       border-color: var(--color-primary-hover);
+      box-shadow: var(--shadow-md);
     }
   }
 
@@ -80,6 +84,10 @@
     width: var(--control-height);
     padding: 0;
   }
+
+  &:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(1px);
+  }
 }
 
 // Bouton scindé : l'action principale et le déclencheur de menu se touchent
@@ -100,11 +108,7 @@
 
 // Indicateur de chargement
 .stp-spin {
-  animation: stp-spin 0.9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation-duration: 2.4s;
-  }
+  animation: stp-spin var(--duration-slowest) linear infinite;
 }
 
 @keyframes stp-spin {

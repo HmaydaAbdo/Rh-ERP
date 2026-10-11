@@ -1,0 +1,166 @@
+// États du mode contraste forcé : les composants gardent leurs contours et leurs repères d'interaction
+// quand le système remplace les couleurs de la marque par sa palette accessible.
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight !important;
+  }
+
+  .app-sidebar {
+    border-inline-end: 1px solid Canvas;
+    background: CanvasText;
+    background-image: none;
+    color: Canvas;
+    box-shadow: none;
+  }
+
+  .app-sidebar__brand,
+  .app-sidebar__footer {
+    border-color: Canvas;
+    color: Canvas;
+  }
+
+  .app-sidebar__eyebrow {
+    color: Canvas;
+  }
+
+  .app-sidebar__link {
+    color: Canvas;
+
+    &:hover,
+    &.active {
+      border: 1px solid Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    &.active::before {
+      background: HighlightText;
+    }
+  }
+
+  .app-page,
+  .paie-vues,
+  .app-toolbar,
+  .paie-analytique__tuile,
+  .paie-analytique__carte,
+  .paie-cartes__carte,
+  .stp-popover {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .app-page::before {
+    display: none;
+  }
+
+  .stp-button {
+    border: 1px solid ButtonText;
+  }
+
+  .stp-button--primary,
+  .stp-button--danger {
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .stp-button--secondary {
+    border-color: ButtonText;
+    color: LinkText;
+  }
+
+  .stp-badge {
+    border: 1px solid currentColor;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .stp-input,
+  .stp-select__input,
+  .stp-table__rows select,
+  input[type='date'],
+  input[type='month'],
+  input[type='number'],
+  input[type='password'],
+  input[type='text'],
+  input[type='email'],
+  textarea {
+    border-color: FieldText;
+    background: Field;
+    color: FieldText;
+  }
+
+  .stp-table__scroll {
+    border-color: CanvasText;
+  }
+
+  .stp-table th,
+  .stp-table tfoot td {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .stp-table td {
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+
+  .stp-table tbody tr:nth-child(even),
+  .stp-table tbody tr:nth-child(even) td:first-child {
+    background: Canvas;
+  }
+
+  .stp-table tbody tr:hover,
+  .stp-table tbody tr:hover td {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .stp-table__sort-icon--active {
+    color: Highlight;
+  }
+
+  .stp-dialog,
+  .stp-dialog__header {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .stp-dialog__header {
+    border-block: 0 1px solid CanvasText;
+    border-inline: 0;
+  }
+
+  .stp-dialog__footer {
+    border-color: CanvasText;
+  }
+
+  .paie-analytique__mesure {
+    border-color: CanvasText;
+  }
+
+  .paie-analytique__mesure button,
+  .paie-analytique__donnees {
+    color: LinkText;
+  }
+
+  .paie-analytique__mesure button.paie-analytique__mesure--active {
+    outline: 1px solid Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .stp-dialog-backdrop {
+    background: Canvas;
+  }
+
+  .app-skeleton {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    animation: none;
+  }
+}

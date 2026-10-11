@@ -7,13 +7,19 @@
       }
     </div>
   } @else if (aucunResultat()) {
-    <p class="paie-cartes__message">
-      @if (niveau() === 1) {
-        Aucune paie ne correspond à ces filtres.
-      } @else {
-        Aucun bulletin en {{ libellePeriode(periode()) }} avec ces filtres.
-      }
-    </p>
+    <div class="paie-cartes__etat-vide" role="status">
+      <span class="paie-cartes__icone-vide"><stp-icon name="file-text" size="1.5rem" /></span>
+      <div>
+        <h2 class="paie-cartes__titre-vide">Aucun résultat</h2>
+        <p class="paie-cartes__message">
+          @if (niveau() === 1) {
+            Aucune paie ne correspond à ces filtres.
+          } @else {
+            Aucun bulletin en {{ libellePeriode(periode()) }} avec ces filtres.
+          }
+        </p>
+      </div>
+    </div>
   } @else {
     @switch (niveau()) {
       @case (1) {
