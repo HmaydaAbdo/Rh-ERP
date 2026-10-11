@@ -16,14 +16,21 @@ const ROLES: Role[] = [
 
 describe('RoleListComponent', () => {
   let fixture: ComponentFixture<RoleListComponent>;
-  let service: { findAll: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
+  let service: { search: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement;
   const noms = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
 
   async function afficher(): Promise<void> {
-    service = { findAll: vi.fn().mockReturnValue(of(ROLES)), delete: vi.fn().mockReturnValue(of(undefined)) };
+    service = {
+      search: vi.fn((criteres: { nom?: string; description?: string }) => {
+        const inclut = (texte: string | null, filtre?: string) => !filtre || (texte ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(filtre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+        const resultat = ROLES.filter((role) => inclut(role.nom, criteres.nom) && inclut(role.description, criteres.description));
+        return of({ content: resultat, page: { size: 10, number: 0, totalElements: resultat.length, totalPages: 1 } });
+      }),
+      delete: vi.fn().mockReturnValue(of(undefined))
+    };
     TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: RoleService, useValue: service }] });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(RoleListComponent);
@@ -40,10 +47,10 @@ describe('RoleListComponent', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('charge tous les rôles d’un coup (liste non paginée) et affiche nom, description et nombre de permissions', async () => {
+  it('charge la première page et affiche nom, description et nombre de permissions', async () => {
     await afficher();
 
-    expect(service.findAll).toHaveBeenCalledTimes(1);
+    expect(service.search).toHaveBeenCalledWith({}, { page: 0, size: 10, sort: 'nom,asc' });
     expect(noms()).toEqual(['SYSTEM_ADMIN', 'RH', 'Comptable']);
     const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 3).map((td) => td.textContent?.trim());
     expect(ligne(0)).toEqual(['SYSTEM_ADMIN', 'Administration', '1 permission(s)']);
@@ -51,7 +58,7 @@ describe('RoleListComponent', () => {
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('3 rôles');
   });
 
-  it('filtre côté client par nom, sans tenir compte des accents ni de la casse, après un court délai', async () => {
+  it('envoie le filtre de nom au serveur après un court délai', async () => {
     await afficher();
     vi.useFakeTimers();
 
@@ -59,7 +66,7 @@ describe('RoleListComponent', () => {
     await filtrer();
 
     expect(noms()).toEqual(['Comptable']);
-    expect(service.findAll).toHaveBeenCalledTimes(1);
+    expect(service.search).toHaveBeenLastCalledWith({ nom: 'COMPTA', description: undefined }, { page: 0, size: 10, sort: 'nom,asc' });
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('1 rôle');
   });
 
@@ -73,7 +80,7 @@ describe('RoleListComponent', () => {
     expect(noms()).toEqual(['Comptable']);
   });
 
-  it('« Réinitialiser » rend tous les rôles', async () => {
+  it('« Réinitialiser » relance la recherche sans filtre', async () => {
     await afficher();
     vi.useFakeTimers();
     saisir(racine(), 'input[aria-label="Nom"]', 'RH');
@@ -81,9 +88,10 @@ describe('RoleListComponent', () => {
     expect(noms()).toEqual(['RH']);
 
     (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réinitialiser')) as HTMLButtonElement).click();
-    fixture.detectChanges();
+    await filtrer();
 
     expect(noms()).toHaveLength(3);
+    expect(service.search).toHaveBeenLastCalledWith({}, { page: 0, size: 10, sort: 'nom,asc' });
   });
 
   it('annonce l’absence de résultat', async () => {
@@ -93,7 +101,7 @@ describe('RoleListComponent', () => {
     saisir(racine(), 'input[aria-label="Nom"]', 'zzz');
     await filtrer();
 
-    expect(racine().querySelector('.stp-table__empty')?.textContent).toBe('Aucun rôle.');
+    expect(racine().querySelector('.stp-table__empty')?.textContent).toBe('Aucun rôle ne correspond à ces critères.');
   });
 
   it('ouvre la modification d’un rôle', async () => {
@@ -116,7 +124,7 @@ describe('RoleListComponent', () => {
   it('demande confirmation (en prévenant qu’un rôle attribué ne peut être supprimé) puis supprime et recharge', async () => {
     await afficher();
     const confirmation = TestBed.inject(ConfirmDialogService);
-    service.findAll.mockClear();
+    service.search.mockClear();
 
     bouton('Supprimer le rôle RH').click();
     expect(confirmation.request()?.header).toBe('Supprimer ce rôle');
@@ -125,7 +133,7 @@ describe('RoleListComponent', () => {
 
     expect(service.delete).toHaveBeenCalledWith(2);
     expect(TestBed.inject(NotificationService).notifications().map((n) => n.summary)).toEqual(['Rôle supprimé']);
-    expect(service.findAll).toHaveBeenCalledTimes(1);
+    expect(service.search).toHaveBeenCalledTimes(1);
   });
 
   it('ne supprime rien si on renonce', async () => {

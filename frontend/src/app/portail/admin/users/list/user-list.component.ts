@@ -1,21 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { debounce, form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, map } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { surChangementDesFiltres } from '../../../../shared/forms/filtres';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { ColumnState } from '../../../../shared/table/table-columns';
-import { contient } from '../../../../shared/text/recherche';
 import { BadgeComponent } from '../../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../../shared/ui/dialog/dialog.component';
 import { FieldErrorComponent } from '../../../../shared/ui/field-error/field-error.component';
 import { PasswordInputComponent } from '../../../../shared/ui/password-input/password-input.component';
 import { SelectComponent } from '../../../../shared/ui/select/select.component';
-import { TableCellDirective, TableComponent, TableRowActionsDirective } from '../../../../shared/ui/table/table.component';
-import { motDePasseConforme, REGLE_MOT_DE_PASSE } from '../../../../shared/validators/mot-de-passe.validator';
+import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../../shared/ui/table/table.component';
+import { motDePasseConforme } from '../../../../shared/validators/mot-de-passe.validator';
+import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
 import { AdminUser } from '../../models/admin.model';
 import { UserService } from '../../services/user.service';
 
@@ -46,9 +47,12 @@ export class UserListComponent {
   private readonly userService = inject(UserService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly politique = inject(PolitiqueMotDePasseService);
 
   protected readonly users = signal<AdminUser[]>([]);
+  protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
+  protected readonly first = signal(0);
 
   protected readonly showResetDialog = signal(false);
   protected readonly resetDialogUser = signal<AdminUser | null>(null);
@@ -56,7 +60,7 @@ export class UserListComponent {
   protected readonly resetForm = form(
     this.saisieReset,
     (chemin) => {
-      required(chemin.nouveauMotDePasse, { message: REGLE_MOT_DE_PASSE });
+      required(chemin.nouveauMotDePasse, { message: () => this.politique.regle() });
       motDePasseConforme(chemin.nouveauMotDePasse);
     },
     { submission: { action: () => this.confirmerReset() } }
@@ -65,7 +69,7 @@ export class UserListComponent {
   protected readonly columns = new ColumnState([
     { field: 'username', header: 'Username' },
     { field: 'email', header: 'Email' },
-    { field: 'roles', header: 'Rôles', sortField: 'roles.length' },
+    { field: 'roles', header: 'Rôles', sortable: false },
     { field: 'actif', header: 'Statut' }
   ]);
 
@@ -74,20 +78,35 @@ export class UserListComponent {
     { label: 'Inactif', value: false }
   ];
 
-  /** Filtres en temps réel : appliqués côté client sur la liste complète déjà chargée (liste non paginée côté serveur). */
-  private readonly criteres = signal<{ username: string; email: string; actif: boolean | null }>({ username: '', email: '', actif: null });
-  protected readonly filterForm = form(this.criteres, (chemin) => {
+  /** Filtres envoyés au serveur (recherche paginée) : la saisie texte est retardée par la règle `debounce` du formulaire. */
+  protected readonly filtres = signal<{ username: string; email: string; actif: boolean | null }>({ username: '', email: '', actif: null });
+  protected readonly filterForm = form(this.filtres, (chemin) => {
     debounce(chemin.username, DEBOUNCE_FILTRE_MS);
     debounce(chemin.email, DEBOUNCE_FILTRE_MS);
   });
 
-  protected readonly filtres = computed(() => {
-    const { username, email, actif } = this.criteres();
-    return this.users().filter((user) => contient(user.username, username) && contient(user.email, email) && (actif === null || user.actif === actif));
-  });
+  private lastPage = 0;
+  private lastSize = 10;
+  private lastSort = 'username,asc';
 
   constructor() {
-    this.fetch();
+    surChangementDesFiltres(this.filtres, () => this.onSearch());
+  }
+
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    this.first.set(event.first);
+    const size = event.rows;
+    this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
+    this.lastSize = size;
+    this.lastSort = event.sortField ? `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}` : this.lastSort;
+
+    this.fetchPage();
+  }
+
+  protected onSearch(): void {
+    this.first.set(0);
+    this.lastPage = 0;
+    this.fetchPage();
   }
 
   protected onResetFilters(): void {
@@ -124,11 +143,16 @@ export class UserListComponent {
     }
   }
 
-  private fetch(): void {
+  private fetchPage(): void {
     this.loading.set(true);
+    const { username, email, actif } = this.filtres();
+
     this.userService
-      .findAll()
+      .search({ username: username || undefined, email: email || undefined, actif: actif ?? undefined }, { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
       .pipe(finalize(() => this.loading.set(false)))
-      .subscribe((users) => this.users.set(users));
+      .subscribe((result) => {
+        this.users.set(result.content);
+        this.totalRecords.set(result.page.totalElements);
+      });
   }
 }

@@ -1,18 +1,22 @@
+import { inject } from '@angular/core';
 import { SchemaPath, validate } from '@angular/forms/signals';
 
-/** La règle des mots de passe, énoncée aux utilisateurs. Le serveur en est l'autorité (il refuse aussi un mot de passe égal à l’identifiant). */
-export const REGLE_MOT_DE_PASSE = '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.';
+import { PolitiqueMotDePasseService } from './politique-mot-de-passe.service';
 
-const LONGUEUR_MIN = 10;
-
-/** Longueur, lettre et chiffre : de quoi guider la saisie avant l'envoi. Un champ vide relève de `required`. */
+/**
+ * Longueur (réglée par le serveur), lettre et chiffre : de quoi guider la saisie avant l'envoi. Un champ vide relève de
+ * `required`. À appeler dans un contexte d'injection (le schéma d'un formulaire). Le serveur reste l'autorité : il refuse aussi
+ * un mot de passe égal à l’identifiant.
+ */
 export function motDePasseConforme(chemin: SchemaPath<string>): void {
+  const politique = inject(PolitiqueMotDePasseService);
   validate(chemin, ({ value }) => {
     const valeur = value();
     if (!valeur) {
       return undefined;
     }
-    const conforme = valeur.length >= LONGUEUR_MIN && /\p{L}/u.test(valeur) && /\p{Nd}/u.test(valeur);
-    return conforme ? undefined : { kind: 'motDePasse', message: REGLE_MOT_DE_PASSE };
+    const longueurMin = politique.longueurMinimale() ?? 0;
+    const conforme = valeur.length >= longueurMin && /\p{L}/u.test(valeur) && /\p{Nd}/u.test(valeur);
+    return conforme ? undefined : { kind: 'motDePasse', message: politique.regle() };
   });
 }

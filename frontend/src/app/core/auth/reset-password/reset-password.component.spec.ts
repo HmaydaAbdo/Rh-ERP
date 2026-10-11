@@ -5,6 +5,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { saisir, soumettre } from '../../../shared/testing/formulaire';
+import { PolitiqueMotDePasseService } from '../../../shared/validators/politique-mot-de-passe.service';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 import { ResetPasswordComponent } from './reset-password.component';
 
@@ -27,6 +28,7 @@ describe('ResetPasswordComponent', () => {
             providers: [
                 provideRouter([]),
                 { provide: PasswordRecoveryService, useValue: recovery },
+                { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } },
                 { provide: Router, useValue: router },
                 { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => token } } } }
             ]

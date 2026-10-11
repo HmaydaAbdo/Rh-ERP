@@ -15,14 +15,36 @@ describe('RoleService', () => {
 
   afterEach(() => http.verify());
 
-  it('liste les rôles et lit un rôle', () => {
-    let roles: unknown;
-    service.findAll().subscribe((r) => (roles = r));
-    requete(http, 'GET', 'roles').flush([{ id: 1, nom: 'SYSTEM_ADMIN' }]);
-    expect(roles).toEqual([{ id: 1, nom: 'SYSTEM_ADMIN' }]);
+  it('recherche les rôles côté serveur avec filtres et pagination, puis lit un rôle', () => {
+    let page: unknown;
+    service.search({ nom: 'SYSTEM', description: 'admin' }, { page: 1, size: 25, sort: 'nom,desc' }).subscribe((resultat) => (page = resultat));
+    const recherche = requete(http, 'POST', 'roles/search');
+    expect(recherche.request.body).toEqual({ nom: 'SYSTEM', description: 'admin' });
+    expect(recherche.request.params.get('page')).toBe('1');
+    expect(recherche.request.params.get('size')).toBe('25');
+    expect(recherche.request.params.get('sort')).toBe('nom,desc');
+    const resultat = { content: [{ id: 1, nom: 'SYSTEM_ADMIN' }], page: { size: 25, number: 1, totalElements: 26, totalPages: 2 } };
+    recherche.flush(resultat);
+    expect(page).toEqual(resultat);
 
     service.findById(1).subscribe();
     requete(http, 'GET', 'roles/1').flush({ id: 1 });
+  });
+
+  it('charge tous les rôles page par page pour le formulaire utilisateur', () => {
+    let roles: unknown;
+    service.findEvery().subscribe((r) => (roles = r));
+
+    const premiere = requete(http, 'POST', 'roles/search');
+    expect(premiere.request.params.get('page')).toBe('0');
+    expect(premiere.request.params.get('size')).toBe('200');
+    premiere.flush({ content: [{ id: 1, nom: 'SYSTEM_ADMIN' }], page: { size: 200, number: 0, totalElements: 201, totalPages: 2 } });
+
+    const seconde = requete(http, 'POST', 'roles/search');
+    expect(seconde.request.params.get('page')).toBe('1');
+    seconde.flush({ content: [{ id: 2, nom: 'RH' }], page: { size: 200, number: 1, totalElements: 201, totalPages: 2 } });
+
+    expect(roles).toEqual([{ id: 1, nom: 'SYSTEM_ADMIN' }, { id: 2, nom: 'RH' }]);
   });
 
   it('crée, modifie et supprime un rôle avec ses permissions', () => {

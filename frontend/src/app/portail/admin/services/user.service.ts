@@ -1,16 +1,28 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { AdminResetPasswordRequest, AdminUser, DenyPermissionsRequest, UserCreateRequest, UserUpdateRequest } from '../models/admin.model';
+import { Page } from '../../../shared/models/page.model';
+import { AdminResetPasswordRequest, AdminUser, DenyPermissionsRequest, UserCreateRequest, UserSearchCriteria, UserUpdateRequest } from '../models/admin.model';
+
+export interface UserPageRequest {
+  page: number;
+  size: number;
+  sort?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'users';
 
-  findAll(): Observable<AdminUser[]> {
-    return this.http.get<AdminUser[]>(this.baseUrl);
+  /** Une page de comptes, filtrée et triée par le serveur. */
+  search(criteria: UserSearchCriteria, pageRequest: UserPageRequest): Observable<Page<AdminUser>> {
+    let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);
+    if (pageRequest.sort) {
+      params = params.set('sort', pageRequest.sort);
+    }
+    return this.http.post<Page<AdminUser>>(`${this.baseUrl}/search`, criteria, { params });
   }
 
   findById(id: number): Observable<AdminUser> {

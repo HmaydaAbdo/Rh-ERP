@@ -13,6 +13,7 @@
 | Employé | [employee.md](employee.md) |
 | Paie (et rapport) | [paie.md](paie.md) |
 | Auth (comptes, rôles) | [auth.md](auth.md) |
+| Paramètres | [parametre.md](parametre.md) |
 | Audit (journal, historique) | [audit.md](audit.md) |
 
 ---
@@ -31,12 +32,12 @@
   doit jamais appeler une route que son utilisateur n'a pas le droit d'appeler.
 - **Le frontend masque** ce que l'utilisateur ne peut pas faire (menu, routes, boutons), mais la sécurité réelle
   est celle du backend.
-- Les permissions voyagent dans le jeton d'accès (15 minutes) : un changement de droits s'applique au prochain
+- Les permissions voyagent dans le jeton d'accès (15 minutes par défaut, durée réglable) : un changement de droits s'applique au prochain
   rafraîchissement de l'utilisateur concerné.
 
 ---
 
-## Catalogue des 24 permissions
+## Catalogue des 26 permissions
 
 | Domaine | Permission | Action autorisée | Migration |
 |---|---|---|---|
@@ -63,6 +64,8 @@
 | | `EQUIPE_DELETE` | Supprimer | V9 |
 | Administration | `USER_MANAGE` | Gérer les comptes (création, rôles, refus individuels, mot de passe) | V4 |
 | | `ROLE_MANAGE` | Gérer les rôles et consulter le catalogue des permissions | V4 |
+| Paramètres | `PARAMETRE_READ` | Consulter les valeurs et métadonnées des paramètres de fonctionnement | V16 |
+| | `PARAMETRE_WRITE` | Modifier les valeurs des paramètres de fonctionnement | V16 |
 | Audit | `AUDIT_READ` | Consulter le journal d'audit et l'historique des enregistrements (données personnelles et montants : réservée à l'administrateur à l'installation) | V12 |
 
 ### Dépendances entre permissions
@@ -85,7 +88,7 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 
 | Rôle | Permissions |
 |---|---|
-| `SYSTEM_ADMIN` | Les 24 |
+| `SYSTEM_ADMIN` | Les 26 |
 | `PAIE_MANAGER` | Les 21 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE` et `AUDIT_READ`) |
 
 D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans toucher au code.
@@ -120,10 +123,12 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `POST /paie/suppression` (suppression en groupe) | `PAIE_PURGE` |
 | | `POST /paie/import` · `GET /paie/import/modele` | `PAIE_IMPORT` |
 | | `POST /paie/export` · `POST /paie/report/pdf` | `PAIE_EXPORT` |
-| Utilisateurs | `GET /users`, `GET /users/{id}`, `POST /users`, `PUT /users/{id}`, `PUT /users/{id}/permissions-refusees`, `POST /users/{id}/reset-password` | `USER_MANAGE` |
-| Rôles | `GET /roles`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`, `DELETE /roles/{id}`, `GET /permissions` | `ROLE_MANAGE` |
+| Utilisateurs | `POST /users/search`, `GET /users/{id}`, `POST /users`, `PUT /users/{id}`, `PUT /users/{id}/permissions-refusees`, `POST /users/{id}/reset-password` | `USER_MANAGE` |
+| Rôles | `POST /roles/search`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`, `DELETE /roles/{id}`, `GET /permissions` | `ROLE_MANAGE` |
+| Paramètres | `GET /parametres` | `PARAMETRE_READ` |
+| | `PUT /parametres/{id}` | `PARAMETRE_WRITE` |
 | Audit | `POST /logs/search`, `GET /logs/{id}`, `GET /logs/{id}/details`, `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` |
-| Auth publique | `POST /auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password` | Aucune |
+| Auth publique | `POST /auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `GET /auth/password-policy` | Aucune |
 | Auth connecté | `GET /auth/me`, `POST /auth/logout` | Jeton valide |
 | Supervision | `GET /actuator/health` | Aucune |
 | | Swagger (`/swagger-ui/**`, `/v3/api-docs/**`) | Aucune **si la documentation est allumée** (développement) ; éteinte par défaut, ces routes exigent un jeton |

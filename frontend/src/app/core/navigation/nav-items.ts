@@ -1,6 +1,6 @@
 export interface NavItem {
   label: string;
-  icon: 'wallet' | 'users' | 'building' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'history';
+  icon: 'wallet' | 'users' | 'building' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'settings' | 'history';
   route: string;
   /** Permission de lecture qui donne accès à l'écran (jamais un rôle codé en dur). */
   permission: string;
@@ -16,5 +16,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Équipes', icon: 'network', route: '/equipes', permission: 'EQUIPE_READ' },
   { label: 'Utilisateurs', icon: 'user-cog', route: '/admin/users', permission: 'USER_MANAGE' },
   { label: 'Rôles', icon: 'shield', route: '/admin/roles', permission: 'ROLE_MANAGE' },
+  { label: 'Paramètres', icon: 'settings', route: '/admin/parametres', permission: 'PARAMETRE_READ' },
   { label: 'Journal', icon: 'history', route: '/audit', permission: 'AUDIT_READ' }
 ];

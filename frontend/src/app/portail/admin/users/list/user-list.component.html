@@ -14,7 +14,7 @@
     <h1>Utilisateurs</h1>
   </div>
 
-  <form [formRoot]="filterForm" class="app-toolbar">
+  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
     <input class="stp-input" type="text" [formField]="filterForm.username" aria-label="Username" autocomplete="off" spellcheck="false" placeholder="Username" />
     <input class="stp-input" type="text" [formField]="filterForm.email" aria-label="Email" autocomplete="off" spellcheck="false" placeholder="Email" />
     <stp-select [formField]="filterForm.actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
@@ -23,7 +23,9 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      {{ filtres().length }} utilisateur{{ filtres().length > 1 ? 's' : '' }}
+      @if (!loading()) {
+        {{ totalRecords() }} utilisateur{{ totalRecords() > 1 ? 's' : '' }}
+      }
     </p>
     <div class="app-table-bar__tools">
       <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
@@ -33,10 +35,14 @@
 
   <stp-table
     label="Liste : Utilisateurs"
-    emptyMessage="Aucun utilisateur."
-    [value]="filtres()"
+    emptyMessage="Aucun utilisateur ne correspond à ces critères."
+    [lazy]="true"
+    [value]="users()"
+    [totalRecords]="totalRecords()"
     [loading]="loading()"
     [columns]="columns.visible"
+    [(first)]="first"
+    (lazyLoad)="onLazyLoad($event)"
     (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-user let-col="col">

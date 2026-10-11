@@ -10,7 +10,7 @@
               [id]="headerId(col)"
               [class]="col.align ?? ''"
               [class.stp-table__th--target]="dropTarget() === col.field"
-              [attr.aria-sort]="ariaSort(col)"
+              [attr.aria-sort]="col.sortable === false ? null : ariaSort(col)"
               [style.width.px]="widths()[col.field] ?? null"
               [style.min-width.px]="widths()[col.field] ?? null"
               [attr.draggable]="reorderable() ? 'true' : null"
@@ -27,11 +27,13 @@
                 (keydown.alt.arrowright)="moveWithKeyboard($event, col, 1)"
               >
                 {{ col.header }}
-                <stp-icon
-                  class="stp-table__sort-icon"
-                  [class.stp-table__sort-icon--active]="ariaSort(col) !== 'none'"
-                  [name]="ariaSort(col) === 'ascending' ? 'arrow-up' : ariaSort(col) === 'descending' ? 'arrow-down' : 'arrow-up-down'"
-                />
+                @if (col.sortable !== false) {
+                  <stp-icon
+                    class="stp-table__sort-icon"
+                    [class.stp-table__sort-icon--active]="ariaSort(col) !== 'none'"
+                    [name]="ariaSort(col) === 'ascending' ? 'arrow-up' : ariaSort(col) === 'descending' ? 'arrow-down' : 'arrow-up-down'"
+                  />
+                }
               </button>
               @if (resizable()) {
                 <span

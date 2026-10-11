@@ -21,6 +21,7 @@ describe('NAV_ITEMS', () => {
     const routes = NAV_ITEMS.map((i) => i.route);
 
     expect(routes.indexOf('/admin/users')).toBeGreaterThan(routes.indexOf('/equipes'));
+    expect(routes).toContain('/admin/parametres');
     expect(routes.at(-1)).toBe('/audit');
   });
 });

@@ -15,11 +15,17 @@ describe('UserService', () => {
 
   afterEach(() => http.verify());
 
-  it('liste tous les utilisateurs et lit un utilisateur', () => {
-    let tous: unknown;
-    service.findAll().subscribe((u) => (tous = u));
-    requete(http, 'GET', 'users').flush([{ id: 1 }, { id: 2 }]);
-    expect(tous).toEqual([{ id: 1 }, { id: 2 }]);
+  it('recherche les utilisateurs côté serveur avec filtres et pagination, puis lit un utilisateur', () => {
+    let page: unknown;
+    service.search({ username: 'fatima', actif: false }, { page: 2, size: 25, sort: 'username,desc' }).subscribe((resultat) => (page = resultat));
+    const recherche = requete(http, 'POST', 'users/search');
+    expect(recherche.request.body).toEqual({ username: 'fatima', actif: false });
+    expect(recherche.request.params.get('page')).toBe('2');
+    expect(recherche.request.params.get('size')).toBe('25');
+    expect(recherche.request.params.get('sort')).toBe('username,desc');
+    const resultat = { content: [{ id: 1 }, { id: 2 }], page: { size: 25, number: 2, totalElements: 52, totalPages: 3 } };
+    recherche.flush(resultat);
+    expect(page).toEqual(resultat);
 
     service.findById(2).subscribe();
     requete(http, 'GET', 'users/2').flush({ id: 2 });

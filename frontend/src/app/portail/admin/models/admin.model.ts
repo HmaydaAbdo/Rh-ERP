@@ -34,6 +34,19 @@ export interface Role {
   protege: boolean;
 }
 
+/** Filtres de la liste des rôles : texte « contient ». */
+export interface RoleSearchCriteria {
+  nom?: string;
+  description?: string;
+}
+
+/** Filtres de la liste des comptes : texte « contient » et statut exact. */
+export interface UserSearchCriteria {
+  username?: string;
+  email?: string;
+  actif?: boolean;
+}
+
 export interface RoleCreateRequest {
   nom: string;
   description: string | null;
