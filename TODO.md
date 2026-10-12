@@ -95,12 +95,16 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    PG17→PG18.
 5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
    prévu pour l'instant. Les archives quotidiennes chiffrées restent sur le serveur.
-6. **Mise en service de la sauvegarde chiffrée** : renseigner `BACKUP_AGE_RECIPIENT` dans le `.env`
-   de production, vérifier la création d'archives `.tar.gz.age`, vérifier que le tmpfs `/tmp` peut
-   contenir le dump selon la taille réelle de la base et la mémoire disponible, préparer une alerte
-   lorsque le service est unhealthy ou qu'aucune archive récente n'existe, et valider la procédure de
-   restauration avec la clé privée conservée hors serveur. Aucun secret privé ne doit être copié dans
-   le dépôt ou laissé sur l'hôte après l'opération.
+6. **Mise en service et exercice de la sauvegarde chiffrée** : depuis le poste d'administration,
+   générer l'identité `age` (`age-keygen`) et conserver la clé privée avec une copie de secours
+   protégée, toutes deux hors serveur ; sur l'hôte, configurer uniquement la clé publique
+   `BACKUP_AGE_RECIPIENT` dans le `.env` protégé. Vérifier la création d'archives `.tar.gz.age`, la
+   capacité de `/tmp` tmpfs selon la taille réelle de la base et la mémoire disponible, et préparer
+   une alerte lorsque le service est unhealthy ou qu'aucune archive récente n'existe. Récupérer une
+   archive vers un poste de restauration contrôlé, la déchiffrer avec la clé privée (`age --decrypt`),
+   puis exécuter une restauration isolée et mesurer le RTO avec le volume réel. Ne jamais copier la
+   clé privée sur l'hôte ou dans le dépôt. La copie des sauvegardes hors hôte reste différée par la
+   décision du propriétaire.
 
 ## Évolutions prochaines
 
