@@ -26,7 +26,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Connexion PostgreSQL du compte **applicatif** (l'application, à l'exécution) | `localhost`, `5432`, `staport_rh`, `staport_app` |
 | `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway seulement. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
 | `CHANTIER_SYNC_BASE_URL` | URL de l'ERP qui liste les chantiers | `http://staport.dyndns.org/webServiceBS/getChantiers` |
-| `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum** | `openssl rand -base64 32` |
+| `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum, taille vérifiée au démarrage** | `openssl rand -base64 32` |
 | `FRONTEND_URL` | URL **publique complète** de l'application ; sert à construire le lien du courriel « mot de passe oublié » | `http://localhost:4200`, `https://<domaine>/rh-erp` |
 | `CORS_ALLOWED_ORIGINS` | Origines navigateur autorisées par CORS, séparées par des virgules ; schéma+hôte+port uniquement, sans chemin ni wildcard | `http://localhost:4200` ; `https://<domaine>` en production |
 | `COOKIE_SECURE` | `true` pour tout accès HTTPS (production) ; `false` seulement en HTTP direct | `false` en local, `true` en production |
@@ -92,6 +92,8 @@ sont gérées dans la table `parametre` et dans l'écran Paramètres ; voir [doc
 - Jamais de secret dans le dépôt, ni dans une image, ni dans un log.
 - `JWT_SECRET` : un secret **différent par environnement** ; le changer **invalide tous les jetons d'accès**
   en cours (les utilisateurs rafraîchissent alors leur session).
+- Les jetons d'accès portent `iss` et `aud` égaux au nom de l'application (`spring.application.name`, `paie`) ; le
+  décodeur fixe HS256 et refuse les jetons d'un autre émetteur/destinataire, expirés ou sans expiration.
 - Les mots de passe d'exemple (`change-me…`) ne doivent jamais servir en production.
 - Les secrets de CI (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`) sont des secrets GitHub Actions.
 

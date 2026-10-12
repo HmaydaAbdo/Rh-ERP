@@ -13,15 +13,14 @@ import staport.rh.parametre.services.interfaces.IParametreService;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Émission des Access Tokens (JWT auto-émis, HS256 — voir conventions/security.md). La validation
- * (signature + expiration) est déléguée au {@code JwtDecoder} de Spring Security OAuth2 Resource
- * Server (voir {@link SecurityConfig}), configuré avec le même secret.
+ * (signature, algorithme, émetteur, destinataire et claims temporels requis) est déléguée au
+ * {@code JwtDecoder} de Spring Security OAuth2 Resource Server (voir {@link SecurityConfig}).
  */
 @Service
 public class JwtService {
@@ -37,7 +36,7 @@ public class JwtService {
     public JwtService(@Value("${security.jwt.secret}") String base64Secret,
                        @Value("${spring.application.name}") String issuer,
                        IParametreService parametres) {
-        this.signingKey = new SecretKeySpec(Base64.getDecoder().decode(base64Secret), "HmacSHA256");
+        this.signingKey = JwtSigningKey.depuisBase64(base64Secret);
         this.issuer = issuer;
         this.parametres = parametres;
     }
@@ -47,6 +46,7 @@ public class JwtService {
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(utilisateur.getUsername())
                 .issuer(issuer)
+                .audience(issuer)
                 .issueTime(Date.from(maintenant))
                 .expirationTime(Date.from(maintenant.plus(parametres.dureeJetonAcces())))
                 .claim(CLAIM_USER_ID, utilisateur.getId())

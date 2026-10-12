@@ -105,6 +105,13 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    puis exécuter une restauration isolée et mesurer le RTO avec le volume réel. Ne jamais copier la
    clé privée sur l'hôte ou dans le dépôt. La copie des sauvegardes hors hôte reste différée par la
    décision du propriétaire.
+7. **Vérifications sécurité Auth en production** : dans l'environnement protégé, vérifier un
+   `JWT_SECRET` aléatoire propre à la production (Base64, au moins 256 bits), `COOKIE_SECURE=true`,
+   les seules origines HTTPS réelles dans `CORS_ALLOWED_ORIGINS`, et Swagger désactivé. Après la
+   migration qui inclut V21, contrôler le verrouillage 5 échecs/15 minutes et la rotation/révocation
+   des sessions sur l'instance de production. Vérifier également que nginx inner limite les essais
+   par adresse réelle et que l'outer transmet correctement cette adresse ; ne modifier nginx outer
+   qu'après revue de l'exemple fourni par le propriétaire.
 
 ## Évolutions prochaines
 

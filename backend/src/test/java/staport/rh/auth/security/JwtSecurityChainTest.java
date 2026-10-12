@@ -1,5 +1,11 @@
 package staport.rh.auth.security;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -21,6 +27,9 @@ import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.parametre.services.interfaces.IParametreService;
 import staport.rh.support.ParametresDeTest;
 
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -47,6 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "security.cors.allowed-origins=http://localhost:4200"
 })
 class JwtSecurityChainTest {
+
+    private static final String SECRET_BASE64 = "dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMTIzNDU2Nzg5MA==";
 
     /** Le contexte de test restreint à la couche web n'active pas Spring Security web tout seul. */
     @TestConfiguration
@@ -82,6 +93,24 @@ class JwtSecurityChainTest {
         return jwtService.genererAccessToken(utilisateur, permissions, roles);
     }
 
+    private String tokenAvecClaims(String issuer, String audience, boolean expiration) throws JOSEException {
+        Instant maintenant = Instant.now();
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+                .subject("test")
+                .issuer(issuer)
+                .audience(audience)
+                .issueTime(Date.from(maintenant))
+                .claim("uid", 1L)
+                .claim("permissions", List.of("EQUIPE_READ"))
+                .claim("roles", List.of());
+        if (expiration) {
+            claims.expirationTime(Date.from(maintenant.plusSeconds(60)));
+        }
+        SignedJWT signe = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims.build());
+        signe.sign(new MACSigner(Base64.getDecoder().decode(SECRET_BASE64)));
+        return signe.serialize();
+    }
+
     @Test
     void sansTokenLaRequeteEstRefuseeEn401() throws Exception {
         mockMvc.perform(get("/equipes/1")).andExpect(status().isUnauthorized());
@@ -107,6 +136,20 @@ class JwtSecurityChainTest {
     }
 
     @Test
+    void leRafraichissementParCookieRefuseUneOrigineNonAutoriseeOuAbsente() throws Exception {
+        mockMvc.perform(post("/auth/refresh").header("Origin", "https://evil.example"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/auth/refresh"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void leRafraichissementAccepteUneOrigineAutoriseeJusquaLaResolutionDuControleur() throws Exception {
+        mockMvc.perform(post("/auth/refresh").header("Origin", "http://localhost:4200"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void unTokenInvalideEstRefuseEn401() throws Exception {
         mockMvc.perform(get("/equipes/1").header("Authorization", "Bearer pas.un.jwt"))
                 .andExpect(status().isUnauthorized());
@@ -121,6 +164,27 @@ class JwtSecurityChainTest {
         String forge = autre.genererAccessToken(utilisateur, Set.of("EQUIPE_READ", "EQUIPE_DELETE"), Set.of("SYSTEM_ADMIN"));
 
         mockMvc.perform(get("/equipes/1").header("Authorization", "Bearer " + forge))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unTokenDUnAutreEmetteurEstRefuseEn401() throws Exception {
+        mockMvc.perform(get("/equipes/1").header("Authorization",
+                        "Bearer " + tokenAvecClaims("autre-application", "paie-test", true)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unTokenDestineAUneAutreApplicationEstRefuseEn401() throws Exception {
+        mockMvc.perform(get("/equipes/1").header("Authorization",
+                        "Bearer " + tokenAvecClaims("paie-test", "autre-api", true)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unTokenSansExpirationEstRefuseEn401() throws Exception {
+        mockMvc.perform(get("/equipes/1").header("Authorization",
+                        "Bearer " + tokenAvecClaims("paie-test", "paie-test", false)))
                 .andExpect(status().isUnauthorized());
     }
 

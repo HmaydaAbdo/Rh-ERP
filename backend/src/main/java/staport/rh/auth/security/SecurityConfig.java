@@ -15,8 +15,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -32,7 +36,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -44,25 +47,25 @@ import java.util.stream.Stream;
  * l'état de connexion vit uniquement dans le Refresh Token (cookie httpOnly, voir
  * {@code AuthController}), jamais côté serveur pour l'Access Token.
  *
- * CSRF désactivé : tous les endpoints métier s'authentifient par l'en-tête {@code Authorization}
- * (immunisé au CSRF, un site tiers ne peut pas le positionner), pas par le cookie. Seul
- * {@code /auth/refresh}/{@code /auth/logout} lisent le cookie de Refresh Token ; le pire cas d'un
- * CSRF sur ces deux endpoints est une rotation/révocation prématurée du Refresh Token de la
- * victime (déconnexion forcée), jamais une fuite de données — risque résiduel documenté
- * volontairement accepté (voir conventions/security.md, "Points d'attention").
+ * CSRF est désactivé pour les opérations métier authentifiées par Bearer. Le seul endpoint public
+ * authentifié par cookie, {@code /auth/refresh}, exige au niveau de l'autorisation une origine
+ * exactement présente dans la liste CORS ; {@code /auth/logout} exige en plus un Bearer valide.
  */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final String jwtSecret;
+    private final String jwtIssuer;
     private final boolean documentationApiActive;
     private final List<String> allowedCorsOrigins;
 
     public SecurityConfig(@Value("${security.jwt.secret}") String jwtSecret,
+                          @Value("${spring.application.name}") String jwtIssuer,
                           @Value("${springdoc.api-docs.enabled}") boolean documentationApiActive,
                           @Value("${security.cors.allowed-origins}") String allowedCorsOrigins) {
         this.jwtSecret = jwtSecret;
+        this.jwtIssuer = jwtIssuer;
         this.documentationApiActive = documentationApiActive;
         this.allowedCorsOrigins = validateCorsOrigins(allowedCorsOrigins);
     }
@@ -84,8 +87,24 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        SecretKeySpec key = new SecretKeySpec(Base64.getDecoder().decode(jwtSecret), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build();
+        SecretKeySpec key = JwtSigningKey.depuisBase64(jwtSecret);
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
+                .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256)
+                .build();
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(jwtIssuer),
+                jeton -> {
+                    boolean claimsRequis = jeton.getAudience().contains(jwtIssuer)
+                            && jeton.getExpiresAt() != null
+                            && jeton.getIssuedAt() != null
+                            && jeton.getSubject() != null && !jeton.getSubject().isBlank()
+                            && jeton.getClaim("uid") instanceof Number;
+                    return claimsRequis
+                            ? OAuth2TokenValidatorResult.success()
+                            : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token",
+                                    "Le jeton ne contient pas les claims requis pour ERP-RH", null));
+                }));
+        return decoder;
     }
 
     /**
@@ -166,6 +185,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    // /auth/refresh authentifie par cookie : vérifier l'origine au serveur pour bloquer
+                    // les POST CSRF, même si un formulaire tiers contourne le preflight CORS.
+                    auth.requestMatchers(HttpMethod.POST, "/auth/refresh").access((authentication, context) -> {
+                        String origin = context.getRequest().getHeader("Origin");
+                        return new org.springframework.security.authorization.AuthorizationDecision(
+                                origin != null && allowedCorsOrigins.contains(origin));
+                    });
                     auth.requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/auth/password-policy").permitAll();
                     auth.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll();
