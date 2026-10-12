@@ -26,7 +26,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
-| Connaître l'état de conformité du backend et de l'exploitation (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) · [matrice](conformite/matrice.md) · [journal du contrôle](conformite/controle-2026-10-11.md) · [preuve sécurité](conformite/security-2026-10-12.md) · [applicabilité IA/MCP/RAG](conformite/applicabilite.md) |
+| Connaître l'état de conformité du backend et de l'exploitation (écarts corrigés et ouverts) | [conformite/README.md](conformite/README.md) · [matrice](conformite/matrice.md) · [journal du contrôle](conformite/controle-2026-10-11.md) · [preuve sécurité](conformite/security-2026-10-12.md) · [preuve audit](conformite/audit-2026-10-12.md) · [applicabilité IA/MCP/RAG](conformite/applicabilite.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
 | Reprendre l'audit exhaustif de conformité | [handoff/conformite-totale.md](handoff/conformite-totale.md) |
 | Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |

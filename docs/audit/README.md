@@ -187,9 +187,9 @@ sont stockés en UTC et affichés à l'heure de Casablanca.
   **Validation locale (2026-10-11)** : l'image `database/Dockerfile` a été construite ; PostgreSQL 18.6 démarre avec
   pgAudit préchargé, `CREATE EXTENSION pgaudit` réussit et une requête de contrôle produit une ligne `AUDIT: SESSION`.
   Cette preuve ne remplace pas l'activation et le contrôle sur le serveur de production.
-  Les journaux CSV
-  sont écrits dans le volume PostgreSQL sans rotation avec purge ; ils restent sur le serveur et sont exposés au risque de
-  perte de ce volume. L'activation reste à vérifier sur le serveur après accès SSH.
+  Les journaux CSV tournent quotidiennement dans le volume PostgreSQL, mais aucune purge ni durée de conservation n'est
+  configurée ; ils restent sur le serveur et sont exposés au risque de perte de ce volume. La protection de ce volume,
+  la règle de conservation des CSV et les alertes d'exploitation restent à vérifier sur le serveur après accès SSH.
 - **Limite de confiance** : une modification faite directement en base par le détenteur du compte propriétaire n'est pas
   capturée par l'application. pgAudit est préparé pour tracer le SQL direct après migration de production vers PostgreSQL 18 ;
   un superutilisateur peut toutefois modifier la configuration ou réécrire les journaux locaux.
