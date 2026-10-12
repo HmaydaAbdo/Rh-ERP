@@ -46,7 +46,7 @@ public class AuditController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter une entrée du journal, avec son contexte et son périmètre")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "L'entrée du journal demandée n'existe pas.")
     @PreAuthorize("hasAuthority('AUDIT_READ')")
     public ResponseEntity<AuditJournalDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(journalService.findById(id));
@@ -54,7 +54,7 @@ public class AuditController {
 
     @GetMapping("/{id}/details")
     @Operation(summary = "Ce que l'opération d'une entrée a changé, champ par champ (paginé)")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "L'entrée du journal demandée n'existe pas.")
     @PreAuthorize("hasAuthority('AUDIT_READ')")
     public ResponseEntity<Page<AuditChangementDto>> details(@PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(journalService.details(id, pageable));
@@ -62,7 +62,7 @@ public class AuditController {
 
     @GetMapping("/historique/{entite}/{id}")
     @Operation(summary = "Toutes les versions d'un enregistrement (ex. /logs/historique/paie/42), de la plus récente à la plus ancienne")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "L'entité ou l'enregistrement demandé n'existe pas dans l'historique.")
     @PreAuthorize("hasAuthority('AUDIT_READ')")
     public ResponseEntity<Page<AuditVersionDto>> historique(@PathVariable String entite, @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(journalService.historique(entite, id, pageable));

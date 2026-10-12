@@ -81,7 +81,7 @@ public class AuditAuthenticationEntryPoint implements AuthenticationEntryPoint {
             ecrivain.ecrireSeparement(entree);
             requete.setAttribute(AuditRequeteHttpAttributes.ACTION_AUDITEE, Boolean.TRUE);
         } catch (RuntimeException impossible) {
-            metriques.ecritureEnEchec(CategorieAudit.SECURITE.name());
+            metriques.ecritureEnEchec(CategorieAudit.SECURITE);
             log.error("Refus HTTP 401 non tracé : méthode={}", requete.getMethod(), impossible);
         } finally {
             if (requestIdPrecedent == null) {

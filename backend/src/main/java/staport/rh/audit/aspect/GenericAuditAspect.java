@@ -123,7 +123,7 @@ public class GenericAuditAspect {
                 ecrivain.ecrireSeparement(entree.build());
             }
         } catch (RuntimeException impossible) {
-            metriques.ecritureEnEchec(action.categorie().name());
+            metriques.ecritureEnEchec(action.categorie());
             log.error("Entrée d'audit impossible à écrire : action={}, l'opération est annulée", action.action(), impossible);
             enregistrerEchec(action, contexte, perimetre, point, resultat, "AuditIndisponible");
             throw impossible;
@@ -146,7 +146,7 @@ public class GenericAuditAspect {
             ecrivain.ecrireSeparement(entree(action, contexte, point, resultat, description, ResultatAudit.ECHEC, motif).build());
         } catch (RuntimeException impossible) {
             // Ne jamais masquer l'exception d'origine : on compte et on loggue.
-            metriques.ecritureEnEchec(action.categorie().name());
+            metriques.ecritureEnEchec(action.categorie());
             log.error("Entrée d'audit d'échec impossible à écrire : action={}", action.action(), impossible);
         }
     }

@@ -190,6 +190,17 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
         assertThat(versions.get(0).utilisateurNom()).isEqualTo(UTILISATEUR_NOM);
         assertThat(versions.get(0).champs()).anyMatch(c -> c.champ().equals("salaireTotal") && "3100.00".equals(c.avant()) && "3200.00".equals(c.apres()));
         assertThat(consultation.historique("PAIE", cree.id(), PAGE).getTotalElements()).as("nom insensible à la casse").isEqualTo(3);
+
+        var premiere = consultation.historique("paie", cree.id(), PageRequest.of(0, 1));
+        var deuxieme = consultation.historique("paie", cree.id(), PageRequest.of(1, 1));
+        var derniere = consultation.historique("paie", cree.id(), PageRequest.of(2, 1));
+        assertThat(premiere.getContent().get(0).champs())
+                .anyMatch(c -> c.champ().equals("salaireTotal") && "3100.00".equals(c.avant()) && "3200.00".equals(c.apres()));
+        assertThat(deuxieme.getContent().get(0).champs())
+                .anyMatch(c -> c.champ().equals("salaireTotal") && "3000.00".equals(c.avant()) && "3100.00".equals(c.apres()));
+        assertThat(derniere.getContent().get(0).champs())
+                .anyMatch(c -> c.champ().equals("salaireTotal") && c.avant() == null && "3000.00".equals(c.apres()));
+        assertThat(premiere.getTotalElements()).isEqualTo(3);
     }
 
     @Test

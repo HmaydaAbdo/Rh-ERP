@@ -112,27 +112,37 @@ public class EnversDiffService {
     /** Toutes les versions d'un enregistrement, de la plus récente à la plus ancienne, chacune avec ce qu'elle a changé. */
     public Page<AuditVersionDto> historique(Class<?> classe, Long id, Pageable pageable) {
         AuditReader lecteur = AuditReaderFactory.get(entityManager);
+        long total = ((Number) lecteur.createQuery().forRevisionsOfEntity(classe, false, true)
+                .add(AuditEntity.id().eq(id))
+                .addProjection(AuditEntity.id().count())
+                .getSingleResult()).longValue();
+        if (pageable.getOffset() >= total) {
+            return new PageImpl<>(List.of(), pageable, total);
+        }
+
+        // Une version plus ancienne supplémentaire suffit à calculer le diff de la dernière ligne
+        // de la page ; toute la chronologie n'a pas à résider en mémoire.
         List<?> lignes = lecteur.createQuery().forRevisionsOfEntity(classe, false, true)
                 .add(AuditEntity.id().eq(id))
-                .addOrder(AuditEntity.revisionNumber().asc())
+                .addOrder(AuditEntity.revisionNumber().desc())
+                .setFirstResult(Math.toIntExact(pageable.getOffset()))
+                .setMaxResults(Math.addExact(pageable.getPageSize(), 1))
                 .getResultList();
 
-        List<AuditVersionDto> versions = new ArrayList<>();
-        Object precedente = null;
-        for (Object ligne : lignes) {
+        int taillePage = Math.min(pageable.getPageSize(), lignes.size());
+        List<AuditVersionDto> versions = new ArrayList<>(taillePage);
+        for (int index = 0; index < taillePage; index++) {
+            Object ligne = lignes.get(index);
             Object[] triplet = (Object[]) ligne;
             Object entite = triplet[0];
             AuditRevision revision = (AuditRevision) triplet[1];
             RevisionType type = (RevisionType) triplet[2];
+            Object precedente = index + 1 < lignes.size() ? ((Object[]) lignes.get(index + 1))[0] : null;
             versions.add(new AuditVersionDto(revision.getId(), revision.getHorodatage(), revision.getUtilisateurId(),
                     revision.getUtilisateurNom(), revision.getOrigine(), revision.getRequestId(), operation(type),
                     champs(classe, type, precedente, entite)));
-            precedente = entite;
         }
-        java.util.Collections.reverse(versions);
-        int debut = (int) Math.min(pageable.getOffset(), versions.size());
-        int fin = Math.min(debut + pageable.getPageSize(), versions.size());
-        return new PageImpl<>(versions.subList(debut, fin), pageable, versions.size());
+        return new PageImpl<>(versions, pageable, total);
     }
 
     private AuditChangementDto versChangement(AuditReader lecteur, Class<?> classe, Object[] ligne) {

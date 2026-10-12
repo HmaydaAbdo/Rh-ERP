@@ -121,6 +121,14 @@ Un jeton présenté par un **compte désactivé** est refusé (`401`) et consomm
 `FRONTEND_URL` doit être l'URL publique complète de l'application, sinon le lien du courriel est invalide
 (voir [../deployment.md](../deployment.md)).
 
+L'envoi SMTP s'exécute sur le pool asynchrone dédié `mailTaskExecutor` : 2 travailleurs de base, 4 au
+maximum, file bornée à 100 tâches et conservation des travailleurs inactifs pendant 30 secondes.
+Les délais SMTP sont de 5 s pour la connexion, 3 s pour la lecture et 5 s pour l'écriture. Quand la
+file est pleine, la tâche est rejetée immédiatement : la réponse `202` générique reste identique,
+et un avertissement technique ne contient ni adresse ni jeton. La file est en mémoire ; un arrêt
+forcé peut perdre les envois en attente, et une demande peut être renouvelée. Ces valeurs sont un
+profil initial accepté pour la mesure locale, pas une garantie de capacité de production.
+
 ### Mots de passe
 
 BCrypt. Règle (`PolitiqueMotDePasse`) : longueur minimale réglable (**10 caractères par défaut**, de 8 à 100 ; 100 au plus), **au moins une lettre

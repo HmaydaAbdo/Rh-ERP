@@ -2,6 +2,7 @@ package staport.rh.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,7 @@ import staport.rh.auth.services.interfaces.IAuthService;
 import staport.rh.auth.services.interfaces.IUserService;
 
 /**
- * Endpoints publics (pas d'authentification requise, voir SecurityConfig) sauf /auth/me. Le
+ * Endpoints publics (pas d'authentification requise, voir SecurityConfig) sauf /auth/logout et /auth/me. Le
  * Refresh Token n'est jamais présent dans un corps JSON — uniquement en cookie httpOnly, jamais
  * lisible par JavaScript (voir conventions/security.md).
  */
@@ -50,6 +51,7 @@ public class AuthController {
 
     @PostMapping("/auth/login")
     @Operation(summary = "Ouvrir une session", description = "Renvoie l'Access Token ; le Refresh Token est posé en cookie httpOnly.")
+    @SecurityRequirements
     @ApiResponse(responseCode = "401", description = "Identifiants invalides (réponse identique quel que soit le motif)")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto dto) {
         IAuthService.Connexion connexion = authService.login(dto.username(), dto.password());
@@ -58,6 +60,7 @@ public class AuthController {
 
     @PostMapping("/auth/refresh")
     @Operation(summary = "Renouveler la session", description = "Rotation à usage unique du Refresh Token (cookie).")
+    @SecurityRequirements
     @ApiResponse(responseCode = "401", description = "Refresh Token absent, expiré ou déjà consommé (sa famille est alors révoquée)")
     public ResponseEntity<LoginResponseDto> refresh(
             @CookieValue(name = COOKIE_NAME, required = false) String refreshToken) {
@@ -85,6 +88,7 @@ public class AuthController {
 
     @PostMapping("/auth/forgot-password")
     @Operation(summary = "Demander un lien de réinitialisation", description = "Réponse identique que l'adresse corresponde ou non à un compte.")
+    @SecurityRequirements
     @ApiResponse(responseCode = "202", description = "Demande prise en compte")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto dto) {
         authService.demanderReinitialisationMotDePasse(dto.email());
@@ -93,6 +97,7 @@ public class AuthController {
 
     @PostMapping("/auth/reset-password")
     @Operation(summary = "Choisir un nouveau mot de passe", description = "Consomme le lien reçu par courriel et coupe toutes les sessions du compte.")
+    @SecurityRequirements
     @ApiResponse(responseCode = "204", description = "Mot de passe changé")
     @ApiResponse(responseCode = "400", description = "Lien invalide, expiré ou utilisé ; ou mot de passe non conforme à la règle")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDto dto) {
@@ -102,6 +107,7 @@ public class AuthController {
 
     @GetMapping("/auth/password-policy")
     @Operation(summary = "Lire la règle des mots de passe", description = "Publique : l'écran de réinitialisation, ouvert sans session, en a besoin.")
+    @SecurityRequirements
     public ResponseEntity<PolitiqueMotDePasseDto> politiqueMotDePasse() {
         return ResponseEntity.ok(new PolitiqueMotDePasseDto(authService.longueurMinimaleMotDePasse()));
     }

@@ -91,9 +91,9 @@ public class EcouteurEvenementsSecurite {
                 entree.perimetre(jsonMapper.writeValueAsString(details));
             }
             ecrivain.ecrireSeparement(entree.build());
-            metriques.evenementSecurite(action.name());
+            metriques.evenementSecurite(action);
         } catch (RuntimeException impossible) {
-            metriques.ecritureEnEchec(CategorieAudit.SECURITE.name());
+            metriques.ecritureEnEchec(CategorieAudit.SECURITE);
             log.error("Événement de sécurité impossible à écrire : action={}", action, impossible);
         }
     }

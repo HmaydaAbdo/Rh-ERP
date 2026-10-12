@@ -33,7 +33,7 @@ public class EmailService {
      * (conventions/security.md, « Mot de passe oublié »). Un échec d'envoi est journalisé, jamais renvoyé à l'appelant — il
      * révélerait que l'adresse correspond à un compte.
      */
-    @Async
+    @Async("mailTaskExecutor")
     public void envoyerLienReinitialisation(String email, String token, Duration validite) {
         String lien = frontendUrl + "/reset-password?token=" + token;
 

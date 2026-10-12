@@ -25,7 +25,7 @@ import staport.rh.chantier.services.interfaces.IChantierService;
 
 @RestController
 @RequestMapping("/chantiers")
-@Tag(name = "Chantiers", description = "Référentiel des chantiers sur lesquels les employés sont affectés")
+@Tag(name = "Chantiers", description = "Référentiel des chantiers et synchronisation avec l'ERP source")
 public class ChantierController {
 
     private final IChantierService chantierService;
@@ -36,9 +36,9 @@ public class ChantierController {
 
     @PostMapping
     @Operation(summary = "Créer un chantier")
-    @ApiResponse(responseCode = "201")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "201", description = "Chantier créé.")
+    @ApiResponse(responseCode = "400", description = "Les champs du chantier ou une référence ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "409", description = "Un chantier avec ce code existe déjà ou une contrainte métier interdit l'opération.")
     @PreAuthorize("hasAuthority('CHANTIER_WRITE')")
     public ResponseEntity<ChantierResponseDto> creer(@Valid @RequestBody ChantierCreateRequestDto dto) {
         ChantierResponseDto created = chantierService.create(dto);
@@ -47,9 +47,9 @@ public class ChantierController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier un chantier")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "400", description = "Les champs du chantier ou une référence ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "404", description = "Le chantier demandé n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "Le code du chantier existe déjà ou une contrainte métier interdit la modification.")
     @PreAuthorize("hasAuthority('CHANTIER_WRITE')")
     public ResponseEntity<ChantierResponseDto> modifier(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class ChantierController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un chantier")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "Le chantier demandé n'existe pas.")
     @PreAuthorize("hasAuthority('CHANTIER_READ')")
     public ResponseEntity<ChantierResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(chantierService.findById(id));
@@ -76,9 +76,9 @@ public class ChantierController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un chantier")
-    @ApiResponse(responseCode = "204")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "204", description = "Chantier supprimé.")
+    @ApiResponse(responseCode = "404", description = "Le chantier demandé n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "Le chantier est encore référencé et ne peut pas être supprimé.")
     @PreAuthorize("hasAuthority('CHANTIER_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         chantierService.delete(id);

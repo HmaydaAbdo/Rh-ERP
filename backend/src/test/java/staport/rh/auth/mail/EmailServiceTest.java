@@ -53,7 +53,9 @@ class EmailServiceTest {
 
     @Test
     void l_envoi_est_asynchrone() throws NoSuchMethodException {
-        assertThat(EmailService.class.getMethod("envoyerLienReinitialisation", String.class, String.class, Duration.class)
-                .isAnnotationPresent(Async.class)).isTrue();
+        Async annotation = EmailService.class.getMethod("envoyerLienReinitialisation", String.class, String.class, Duration.class)
+                .getAnnotation(Async.class);
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.value()).isEqualTo("mailTaskExecutor");
     }
 }

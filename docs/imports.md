@@ -60,7 +60,7 @@ Partir du modèle évite de se baser sur un ancien fichier dont la structure a c
 
 ### 6. Fichier
 
-Format `.xlsx`, 20 Mo maximum (`spring.servlet.multipart`). Les lignes entièrement vides sont ignorées. Les
+Format `.xlsx`, 20 Mo maximum (`spring.servlet.multipart` et limite du proxy Nginx inner). Les lignes entièrement vides sont ignorées. Les
 références (fonction, chantier, équipe) sont trouvées **sans tenir compte de la casse ni des espaces**
 superflus.
 

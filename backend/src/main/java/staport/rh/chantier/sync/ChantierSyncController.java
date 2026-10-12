@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/chantiers/sync")
-@Tag(name = "Chantiers", description = "Synchronisation des chantiers avec l'ERP source")
+@Tag(name = "Chantiers", description = "Référentiel des chantiers et synchronisation avec l'ERP source")
 public class ChantierSyncController {
 
     private final ChantierSyncService syncService;

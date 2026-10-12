@@ -1,6 +1,9 @@
 package staport.rh.paie.report;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,7 +29,7 @@ import java.time.format.DateTimeParseException;
  */
 @RestController
 @RequestMapping("/paie/report")
-@Tag(name = "Paie", description = "Rapport PDF BI de synthèse RH/Paie pour la direction")
+@Tag(name = "Paie", description = "Bulletins de paie, import, export et rapport PDF")
 public class PaieReportController {
 
     private final PaieReportHtmlPdfService pdfService;
@@ -37,6 +40,8 @@ public class PaieReportController {
 
     @PostMapping("/pdf")
     @Operation(summary = "Télécharger le rapport PDF BI de la paie sur le périmètre filtré (période obligatoire)")
+    @ApiResponse(responseCode = "200", description = "Rapport PDF", content = @Content(mediaType = "application/pdf", schema = @Schema(type = "string", format = "binary")))
+    @ApiResponse(responseCode = "400", description = "Période ou filtres invalides", content = @Content(mediaType = "application/json", schema = @Schema(implementation = staport.rh.common.dtos.ErrorResponseDto.class)))
     @PreAuthorize("hasAuthority('PAIE_EXPORT')")
     public ResponseEntity<byte[]> telecharger(@Valid @RequestBody PaieReportPdfRequestDto requete) {
         YearMonth periode = parsePeriode(requete.periode());

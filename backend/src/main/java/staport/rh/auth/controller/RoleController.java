@@ -54,7 +54,7 @@ public class RoleController {
 
     @PostMapping("/roles")
     @Operation(summary = "Créer un rôle")
-    @ApiResponse(responseCode = "201")
+    @ApiResponse(responseCode = "201", description = "Rôle créé.")
     public ResponseEntity<RoleResponseDto> create(@Valid @RequestBody RoleCreateRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(roleService.create(dto));
     }
