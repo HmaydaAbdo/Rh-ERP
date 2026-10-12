@@ -14,7 +14,7 @@
 
 services:
   postgres:
-    image: ${DOCKERHUB_USERNAME}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG immuable est obligatoire}
     command:
       - postgres
       - -c
@@ -59,7 +59,7 @@ services:
       retries: 10
 
   backup:
-    image: ${DOCKERHUB_USERNAME}/erp-rh-backup:${BACKUP_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG immuable est obligatoire}
     # Optionnel en local ; activer explicitement en production avec --profile backup.
     profiles: ["backup"]
     restart: unless-stopped
@@ -87,9 +87,15 @@ services:
       - /var/lib/postgresql
     networks:
       - db-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h \"$${PGHOST}\" -p \"$${PGPORT}\" -U \"$${PGUSER}\" -d \"$${PGDATABASE}\" && test -w \"$${BACKUP_DIR}\""]
+      interval: 1m
+      timeout: 10s
+      start_period: 10s
+      retries: 3
 
   backend:
-    image: ${DOCKERHUB_USERNAME}/erp-rh-backend:${BACKEND_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG immuable est obligatoire}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -146,7 +152,7 @@ services:
       retries: 5
 
   frontend:
-    image: ${DOCKERHUB_USERNAME}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG immuable est obligatoire}
     restart: unless-stopped
     depends_on:
       backend:
