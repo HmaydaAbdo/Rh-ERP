@@ -157,16 +157,15 @@ production. Ne déploie pas le Compose PG18 en production avant d'avoir exécut�
 le nom de volume a changé, donc le nouveau conteneur utiliserait un volume vide si aucune restauration
 n'y était faite. Ne jamais lancer `docker compose down -v`.
 
-### Images affichées avec le tag `<none>`
+### Tags immuables des images
 
-Les variables `*_IMAGE_TAG` valent `latest` par défaut. Quand un nouveau `docker compose pull` déplace
-`latest` vers l'image du commit courant, l'image locale précédente perd ce nom si elle n'avait pas été
-téléchargée sous son tag immuable : Docker Desktop l'affiche alors avec le tag `<none>`. C'est une ancienne
-image locale devenue sans tag, pas une erreur de pull ni un volume PostgreSQL. La CI publie aussi chaque
-image sous le SHA du commit (`github.sha`) ; pour garder les versions locales identifiables, remplacer dans
-`.env` `POSTGRES_IMAGE_TAG`, `BACKUP_IMAGE_TAG`, `BACKEND_IMAGE_TAG` et `FRONTEND_IMAGE_TAG` par le même
-SHA, puis faire `docker compose --profile backup pull`. Un déploiement au tag `latest` reste valide ; les
-versions SHA facilitent le retour arrière et évitent que les anciennes images perdent leur nom local.
+La CI publie chaque image avec le SHA du commit (`github.sha`) et publie aussi `latest` pour les usages
+qui ne déploient pas en production. Compose exige explicitement les quatre variables
+`POSTGRES_IMAGE_TAG`, `BACKUP_IMAGE_TAG`, `BACKEND_IMAGE_TAG` et `FRONTEND_IMAGE_TAG` : définir le même
+SHA publié pour chacune avant `docker compose --profile backup pull`. Aucun tag par défaut n'est accepté,
+afin d'éviter qu'une mise à jour déplace silencieusement les images utilisées et de conserver une version
+précise pour le retour arrière. La valeur `change-me-commit-sha` de `.env.example` est un placeholder à
+remplacer avant tout `pull` ou démarrage.
 
 ### Migration majeure PG17 → PG18 en production
 
@@ -212,7 +211,7 @@ suspendues jusqu'à la décision de réouverture.
 de production à planifier/exécuter séparément**. Les migrations V16 à V21 sont postérieures à cette
 validation et doivent être rejouées sur une restauration de production PG17 avant la bascule.
 
-Validation locale pgAudit au 2026-10-11 : l'image PostgreSQL ERP-RH se construit ; PostgreSQL 18.6 charge l'extension,
+Validation locale pgAudit au 2026-10-11 : l'image PostgreSQL ERP-RH se construit avec pgAudit 18.0 ; PostgreSQL 18.6 charge l'extension,
 `CREATE EXTENSION pgaudit` réussit et une requête de contrôle apparaît dans les logs `AUDIT: SESSION`. L'activation
 de la base de production reste à vérifier après la migration PG17→PG18 et l'obtention de l'accès SSH.
 
