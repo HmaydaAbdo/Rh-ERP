@@ -40,10 +40,15 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `PGAUDIT_ENABLED` | **Facultative** hors production ; transmet à la migration le contrôle d'activation pgAudit attendu. Le Compose de production la force à `true` | `false` en CI, `true` en production |
 | `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED` | **Facultatives** : `true` allume la documentation d'API (Swagger UI) — développement seulement. Absentes, elle est éteinte (réglage `springdoc.*` de `application.yml`) ; le Compose de production ne les transmet pas | `true` en local |
 
+Le groupe `chantier.sync.*` est lié par `ChantierSyncProperties` (`@ConfigurationProperties`) et validé au
+démarrage : `base-url` doit être une URL HTTP(S), et `connect-timeout` / `read-timeout` doivent être
+strictement positifs. Les valeurs par défaut sûres sont respectivement `5s` et `30s`.
+
 Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,
 `DB_MIGRATION_USER`/`DB_MIGRATION_PASSWORD` de `POSTGRES_USER`/`POSTGRES_PASSWORD` et `DB_USER`/`DB_PASSWORD` de
-`POSTGRES_APP_USER`/`POSTGRES_APP_PASSWORD` (repli de transition : sans elles, le compte propriétaire sert aussi à
-l'application). Le compte applicatif est créé tout seul par Flyway s'il n'existe pas.
+`POSTGRES_APP_USER`/`POSTGRES_APP_PASSWORD`. Ces deux variables applicatives sont obligatoires : Compose refuse une
+configuration qui les omet et le compte propriétaire ne peut pas servir de repli. Le compte applicatif est créé tout
+seul par Flyway s'il n'existe pas.
 
 ## Variables du Compose de production (`.env` racine)
 
@@ -65,9 +70,9 @@ Variable du frontend (développement) : `BACKEND_URL` (défaut `http://localhost
 | Réglage | Valeur | Remarque |
 |---|---|---|
 | `spring.jpa.hibernate.ddl-auto` | `validate` | Le schéma n'est géré que par Flyway |
-| `spring.jpa.show-sql` | `false` | Aucune requête SQL dans les logs (bruit et coût en production) ; le développement les allume avec `SPRING_JPA_SHOW_SQL=true` |
+| `spring.jpa.show-sql` | `${SPRING_JPA_SHOW_SQL:false}` | Aucune requête SQL dans les logs par défaut ; le développement peut l'allumer explicitement |
 | `spring.jpa.open-in-view` | `false` | Pas de session JPA ouverte pendant le rendu de la réponse (`conventions/jpa.md`) : une association paresseuse se charge dans la transaction du service |
-| `springdoc.api-docs.enabled`, `springdoc.swagger-ui.enabled` | `false` | Documentation d'API éteinte par défaut, donc en production (voir `SPRINGDOC_*` plus haut) |
+| `springdoc.api-docs.enabled`, `springdoc.swagger-ui.enabled` | `${SPRINGDOC_*:false}` | Documentation d'API éteinte par défaut, activable explicitement en développement |
 | `spring.servlet.multipart.max-file-size` | `20MB` | Taille maximale d'un fichier d'import |
 | `spring.data.web.pageable.max-page-size` | `200` | Plafond du paramètre de taille de page |
 | `spring.jpa.properties.org.hibernate.envers.*` | `audit_table_suffix=_aud`, `revision_field_name=rev`, `revision_type_field_name=revtype`, `store_data_at_delete=true` | Instantanés d'audit (stratégie par défaut : insertions seulement) — voir [audit/README.md](audit/README.md) |

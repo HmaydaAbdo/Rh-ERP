@@ -2,6 +2,7 @@ package staport.rh;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
 
@@ -18,6 +19,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerial
  * plutôt que dans une configuration : le réglage s'applique alors à toute l'application et aux tests de la couche web.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
 public class PaieApplication {
 
