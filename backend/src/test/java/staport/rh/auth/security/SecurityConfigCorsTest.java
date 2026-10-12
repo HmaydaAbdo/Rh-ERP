@@ -10,7 +10,7 @@ class SecurityConfigCorsTest {
 
     @Test
     void conserveLesOriginesDeclareesSansWildcard() {
-        SecurityConfig config = new SecurityConfig("secret", false,
+        SecurityConfig config = new SecurityConfig("secret", "staport-rh", false,
                 "http://localhost:4200, https://rh.example.com");
 
         var cors = config.corsConfigurationSource()
@@ -24,21 +24,21 @@ class SecurityConfigCorsTest {
 
     @Test
     void refuseUneOrigineNonConforme() {
-        assertThatThrownBy(() -> new SecurityConfig("secret", false, "*"))
+        assertThatThrownBy(() -> new SecurityConfig("secret", "staport-rh", false, "*"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Origine CORS invalide");
     }
 
     @Test
     void refuseUneValeurVide() {
-        assertThatThrownBy(() -> new SecurityConfig("secret", false, "http://localhost:4200,"))
+        assertThatThrownBy(() -> new SecurityConfig("secret", "staport-rh", false, "http://localhost:4200,"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("CORS_ALLOWED_ORIGINS");
     }
 
     @Test
     void refuseUneOrigineAvecUnChemin() {
-        assertThatThrownBy(() -> new SecurityConfig("secret", false, "https://rh.example.com/rh-erp"))
+        assertThatThrownBy(() -> new SecurityConfig("secret", "staport-rh", false, "https://rh.example.com/rh-erp"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Origine CORS invalide");
     }

@@ -78,7 +78,7 @@ l'audit (`UserService.creerAdminInitial`, appelé seulement quand `adminExiste()
 |---|---|---|
 | Nature | JWT signé HS256 | Chaîne aléatoire opaque de 256 bits |
 | Durée initiale | **15 minutes** (réglable) | **12 heures** (réglable) |
-| Contenu | `sub` (username), `uid`, `permissions`, `roles`, `iss`, `iat`, `exp` | Rien : une clé vers une ligne de `refresh_token` |
+| Contenu | `sub` (username), `uid`, `permissions`, `roles`, `iss`, `aud`, `iat`, `exp` | Rien : une clé vers une ligne de `refresh_token` |
 | Stockage côté client | **En mémoire** (jamais `localStorage`) : perdu au rechargement de la page | Cookie `refresh_token`, `httpOnly`, `SameSite=Lax`, chemin `/auth`, `Secure` selon `COOKIE_SECURE` |
 | Stockage côté serveur | Aucun (stateless) | Haché SHA-256 en base, jamais en clair |
 | Transport | En-tête `Authorization: Bearer …` | Cookie seulement, jamais dans un corps JSON |
@@ -241,9 +241,11 @@ Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
 
 ## Sécurité du transport
 
-- **CSRF désactivé** : tous les endpoints métier s'authentifient par l'en-tête `Authorization`, qu'un site tiers
-  ne peut pas positionner. Seuls `/auth/refresh` et `/auth/logout` lisent le cookie ; le pire cas d'un CSRF y
-  est une déconnexion forcée.
+- **CSRF** : les endpoints métier s'authentifient par l'en-tête `Authorization`, qu'un site tiers ne peut pas
+  positionner. `/auth/logout` exige également ce jeton. Le seul endpoint public authentifié par cookie est
+  `/auth/refresh` : une autorisation serveur vérifie son en-tête `Origin` contre la liste CORS exacte avant de
+  permettre la rotation. Une requête sans origine ou d'une origine non autorisée est refusée ; `SameSite=Lax`
+  constitue une défense supplémentaire.
 - **CORS restreint par environnement** : `CORS_ALLOWED_ORIGINS` contient uniquement les origines
   `http(s)` autorisées, sans wildcard ni chemin ; les credentials ne sont renvoyés que pour ces origines.
   Voir [../deployment.md](../deployment.md) et [../configuration.md](../configuration.md).
@@ -255,7 +257,9 @@ Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
 ## Tests
 
 `EndpointSecurityTest` et `JwtSecurityChainTest` vérifient les permissions de tous les endpoints et la chaîne
-JWT complète ; `AuthServiceTest` couvre le verrouillage après échecs, la connexion, la rotation, le vol de jeton et la réinitialisation. Voir
+JWT complète (signature HS256, `iss`, `aud`, dates et claims requis) ; `JwtSigningKeyTest` vérifie la taille minimale du
+secret. `AuthServiceTest` et `VerrouillageConnexionIntegrationTest` couvrent la connexion, le blocage après échecs,
+la rotation, le vol de jeton, la révocation et la réinitialisation. Voir
 [../testing.md](../testing.md) et [../rbac/auth.md](../rbac/auth.md).
 
 ---
