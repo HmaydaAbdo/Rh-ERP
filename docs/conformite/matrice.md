@@ -19,7 +19,7 @@ Les passes de contrôle des 2026-10-11 et 2026-10-12 et leurs limites d'exécuti
 | Convention | Périmètre à contrôler | Preuves candidates | Contrôle attendu | Statut initial | Prochaine action |
 |---|---|---|---|---|---|
 | `architecture.md` | Backend, frontières des domaines, dépendances, interfaces | `ArchitectureConventionsTest`, `ChantierSyncClient`, CI 38204503967 | ArchUnit + revue des dépendances inter-domaines + bornes de l'adaptateur externe | Conforme (local/CI) | Contrôles d'exploitation externes uniquement dans `TODO.md` |
-| `design-patterns.md` | Services, intégrations, workflows | Code backend et frontend | Vérifier chaque abstraction contre un besoin documenté | À vérifier | Revue par module |
+| `design-patterns.md` | Services, intégrations, workflows | [`patterns-2026-10-12.md`](patterns-2026-10-12.md), code backend/frontend | Vérifier chaque abstraction contre un besoin documenté | Conforme (revue) | Confirmer par la CI du commit documentaire |
 | `configuration.md` | Variables, secrets, profils, bornes | `application.yml`, `.env.example`, docs configuration | Inventaire clé → type → source → validation | Partiel | Comparer toutes les clés aux usages |
 | `jpa.md` | Entités, repositories, transactions, chargement | Entités, repositories, `ArchitectureConventionsTest` | Pas d'entité exposée, pas d'EAGER, transactions et requêtes bornées | Partiel | Contrôle repository/service par domaine |
 | `database.md` | Flyway, contraintes, audit SQL, migrations de données | `db/migration`, `PaieApplicationTests`, `AuditIntegriteTest` | Base vierge + mise à niveau + schéma/audit cohérents | Partiel | Vérifier V1→V21 et chaque table |
