@@ -86,7 +86,11 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    comme retour arrière.
 2. **Activer et vérifier pgAudit en production** pour la seule base ERP-RH, avec toutes les classes
    d'instructions (`all`, y compris `ROLE`), puis confirmer que les événements apparaissent dans les
-   journaux PostgreSQL. Cela fait partie de la bascule PG18.
+   journaux PostgreSQL. Cela fait partie de la bascule PG18. Vérifier les droits d'accès et la
+   protection du volume CSV, définir avec la RH la durée de conservation/purge de ces journaux pgAudit
+   (distincte de la conservation à vie décidée pour `audit_journal`/Envers), et configurer des alertes
+   de capacité et sur `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et
+   `rh.audit.chaine.invalide`.
 3. **Nginx outer** : le serveur en possède déjà un. Obtenir l'exemple de configuration de l'utilisateur,
    puis s'aligner dessus ; ne pas remplacer ni modifier sa configuration avant cette revue. Voir
    [les informations à fournir](docs/deployment-informations-a-fournir.md).

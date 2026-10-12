@@ -16,6 +16,7 @@ import staport.rh.paie.services.interfaces.IPaieService;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.YearMonth;
@@ -119,5 +120,31 @@ class AuditIntegriteTest extends AuditIntegrationTestBase {
             ordre.execute("UPDATE audit_journal SET motif = motif WHERE false");
             ordre.execute("DELETE FROM audit_journal WHERE false");
         }
+    }
+
+    @Test
+    void la_chaine_est_valide_apres_ajout_et_detecte_une_modification_directe() throws SQLException {
+        jdbc.update("INSERT INTO audit_journal (horodatage, categorie, action, resultat, utilisateur_nom, origine) "
+                + "VALUES (now(), 'SECURITE', 'TEST_CHAINE_INTEGRITE', 'SUCCES', 'test-integrite', 'API')");
+        Long id = jdbc.queryForObject("SELECT max(id) FROM audit_journal WHERE action = 'TEST_CHAINE_INTEGRITE'", Long.class);
+        assertThat(jdbc.queryForObject("SELECT audit_journal_chaine_valide()", Boolean.class)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT hash_entree FROM audit_journal WHERE id = ?", String.class, id))
+                .hasSize(64);
+
+        try (Connection connexion = connexionProprietaire()) {
+            connexion.setAutoCommit(false);
+            try (Statement ordre = connexion.createStatement()) {
+                ordre.execute("UPDATE audit_journal SET motif = 'modification de test' WHERE id = " + id);
+                try (ResultSet resultat = ordre.executeQuery("SELECT audit_journal_chaine_valide()")) {
+                    assertThat(resultat.next()).isTrue();
+                    assertThat(resultat.getBoolean(1)).as("la chaîne signale une altération directe").isFalse();
+                }
+            } finally {
+                connexion.rollback();
+            }
+        }
+
+        assertThat(jdbc.queryForObject("SELECT audit_journal_chaine_valide()", Boolean.class))
+                .as("l'annulation de l'altération restaure la validité de la chaîne").isTrue();
     }
 }
