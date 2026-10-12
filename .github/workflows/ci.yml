@@ -292,7 +292,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: pgvector/pgvector:pg18
+        image: pgvector/pgvector:0.8.7-pg18
         env:
           POSTGRES_DB: staport_rh
           POSTGRES_USER: staport

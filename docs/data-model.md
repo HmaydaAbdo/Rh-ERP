@@ -173,6 +173,6 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
 - Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
-  toute la chaîne V1 → V17 est rejouée et validée contre les entités à chaque exécution.
+  toute la chaîne V1 → V21 est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

@@ -3,7 +3,7 @@ package staport.rh.support;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
- * Le PostgreSQL des tests d'intégration (conventions Staport, « Stratégie de tests ») : un conteneur {@code pgvector/pgvector:pg18}
+ * Le PostgreSQL des tests d'intégration (conventions Staport, « Stratégie de tests ») : un conteneur {@code pgvector/pgvector:0.8.7-pg18}
  * — la version et l'extension de la production —, démarré une seule fois pour toute la JVM de test et jeté à la fin (Ryuk).
  * Les coordonnées sont publiées comme propriétés système sous les noms des variables d'environnement de l'application
  * ({@code DB_HOST}, {@code DB_USER}…) : elles priment sur l'environnement, et {@code application.yml} les résout sans
@@ -25,7 +25,7 @@ final class PostgresPartage {
         if (conteneur != null) {
             return;
         }
-        conteneur = new PostgreSQLContainer("pgvector/pgvector:pg18")
+        conteneur = new PostgreSQLContainer("pgvector/pgvector:0.8.7-pg18")
                 .withDatabaseName(BASE)
                 .withUsername(COMPTE)
                 .withPassword(MOT_DE_PASSE);
