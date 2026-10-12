@@ -4,7 +4,7 @@ Cette matrice est le registre de travail de l'audit exhaustif. Les conventions r
 normatives ; les fichiers de `docs/`, les tests et les rapports existants sont des pistes de preuve
 qui doivent être revalidées contre le code courant.
 
-La passe de contrôle du 2026-10-11 et ses limites d'exécution sont consignées dans
+Les passes de contrôle des 2026-10-11 et 2026-10-12 et leurs limites d'exécution sont consignées dans
 [`controle-2026-10-11.md`](controle-2026-10-11.md).
 
 ## Légende
@@ -18,12 +18,12 @@ La passe de contrôle du 2026-10-11 et ses limites d'exécution sont consignées
 
 | Convention | Périmètre à contrôler | Preuves candidates | Contrôle attendu | Statut initial | Prochaine action |
 |---|---|---|---|---|---|
-| `architecture.md` | Backend, frontières des domaines, dépendances, interfaces | `docs/architecture.md`, `ArchitectureConventionsTest` | ArchUnit + revue des dépendances inter-domaines | Partiel | Rejouer les règles sur tout le code courant |
+| `architecture.md` | Backend, frontières des domaines, dépendances, interfaces | `ArchitectureConventionsTest`, `ChantierSyncClient`, CI 38204503967 | ArchUnit + revue des dépendances inter-domaines + bornes de l'adaptateur externe | Conforme (local/CI) | Contrôles d'exploitation externes uniquement dans `TODO.md` |
 | `design-patterns.md` | Services, intégrations, workflows | Code backend et frontend | Vérifier chaque abstraction contre un besoin documenté | À vérifier | Revue par module |
 | `configuration.md` | Variables, secrets, profils, bornes | `application.yml`, `.env.example`, docs configuration | Inventaire clé → type → source → validation | Partiel | Comparer toutes les clés aux usages |
 | `jpa.md` | Entités, repositories, transactions, chargement | Entités, repositories, `ArchitectureConventionsTest` | Pas d'entité exposée, pas d'EAGER, transactions et requêtes bornées | Partiel | Contrôle repository/service par domaine |
 | `database.md` | Flyway, contraintes, audit SQL, migrations de données | `db/migration`, `PaieApplicationTests`, `AuditIntegriteTest` | Base vierge + mise à niveau + schéma/audit cohérents | Partiel | Vérifier V1→V21 et chaque table |
-| `testing.md` | Backend, frontend, contrats, E2E, full stack | `docs/testing.md`, `.github/workflows/ci.yml`, couverture | Portes bloquantes et preuves exécutées | Partiel | Vérifier la nouvelle porte dans CI |
+| `testing.md` | Backend, frontend, contrats, E2E, full stack | `docs/testing.md`, `.github/workflows/ci.yml`, CI 38204503967 | Portes bloquantes et preuves exécutées | Conforme (CI) | Maintenir les portes sur chaque changement |
 | `deployment.md` | Images, Compose, nginx inner/outer, migration PG | `docker-compose.yml`, Dockerfiles, `docs/deployment.md` | Build, santé, non-root, réseau, rollback | Partiel | Contrôler avec une exécution isolée |
 | `backup.md` | Création, rétention, restauration, copie indépendante | `backup/`, Compose, `docs/deployment.md` | Sauvegarde vérifiée + restauration périodique | À vérifier | Établir une preuve de restauration locale |
 | `security.md` | Authentification, RBAC, sessions, portée, secrets | `JwtSecurityChainTest`, `EndpointSecurityTest`, `docs/auth`, `docs/rbac` | Refus par défaut, permissions effectives, absence de fuite | Partiel | CORS corrigé ; poursuivre les contrôles secrets, sessions et endpoints |
@@ -54,9 +54,9 @@ Les domaines métier sont ensuite contrôlés avec la même grille :
 | Paramètres | partiel | partiel | partiel | partiel | partiel | conforme |
 | Audit | partiel | partiel | partiel | partiel | partiel | conforme |
 
-Les scénarios de couverture par domaine et les parcours E2E sont présents dans
-le dépôt ; leur exécution locale complète reste suspendue aux contrôles Maven/Angular consignés dans
-le journal du 2026-10-11.
+Les scénarios de couverture par domaine et les parcours E2E sont présents dans le dépôt et ont été
+exécutés par la CI 38204503967. La CI fournit la preuve reproductible lorsque l'environnement local
+ne dispose pas de Maven Central ou des services nécessaires.
 
 Un statut ne passe à **conforme** que lorsqu'une commande, un test ou un artefact permet de refaire
 la vérification. Une absence de fonctionnalité IA/MCP/RAG est conforme lorsque son applicabilité est
