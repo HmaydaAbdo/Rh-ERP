@@ -10,20 +10,16 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import staport.rh.paie.audit.PerimetreImportPaie;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
-import staport.rh.chantier.dtos.response.ChantierResponseDto;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
-import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
-import staport.rh.equipe.dtos.response.EquipeResponseDto;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
@@ -33,6 +29,7 @@ import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.imports.PaieImportResultDto.LigneIgnoreeDto;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.common.recherche.PageLoader;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -277,35 +274,32 @@ public class PaieImportService {
 
     private Map<String, Long> chargerEmployesParCin() {
         Map<String, Long> resultat = new HashMap<>();
-        for (EmployeeResponseDto employee : employeeService.search(null, Pageable.unpaged())) {
-            resultat.put(employee.cin().toUpperCase(), employee.id());
-        }
+        PageLoader.forEach(pageable -> employeeService.search(null, pageable),
+                employee -> resultat.put(employee.cin().toUpperCase(), employee.id()));
         return resultat;
     }
 
     private Map<String, Long> chargerFonctions() {
         Map<String, Long> resultat = new HashMap<>();
-        for (FunctionResponseDto fonction : functionService.search(null, Pageable.unpaged())) {
-            resultat.put(fonction.libelle().toUpperCase(), fonction.id());
-        }
+        PageLoader.forEach(pageable -> functionService.search(null, pageable),
+                fonction -> resultat.put(fonction.libelle().toUpperCase(), fonction.id()));
         return resultat;
     }
 
     private Map<String, Long> chargerChantiersActifs() {
         Map<String, Long> resultat = new HashMap<>();
-        for (ChantierResponseDto chantier : chantierService.search(null, Pageable.unpaged())) {
+        PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
             if (chantier.actif()) {
                 resultat.put(chantier.code().toUpperCase(), chantier.id());
             }
-        }
+        });
         return resultat;
     }
 
     private Map<String, Long> chargerEquipesParCode() {
         Map<String, Long> resultat = new HashMap<>();
-        for (EquipeResponseDto equipe : equipeService.search(null, Pageable.unpaged())) {
-            resultat.put(equipe.code().toUpperCase(), equipe.id());
-        }
+        PageLoader.forEach(pageable -> equipeService.search(null, pageable),
+                equipe -> resultat.put(equipe.code().toUpperCase(), equipe.id()));
         return resultat;
     }
 
