@@ -165,6 +165,11 @@ conformément à `conventions/security.md`) :
 CHANTIER_SYNC_BASE_URL=http://staport.dyndns.org/webServiceBS/getChantiers
 ```
 
+L'adaptateur impose un délai de connexion de 5 secondes et un délai de lecture de 30 secondes
+(`chantier.sync.connect-timeout` et `chantier.sync.read-timeout`). Une erreur réseau est remontée
+à la synchronisation, sans retry automatique : l'export complet sera repris par l'exécution planifiée
+suivante ou par un déclenchement manuel, ce qui évite de rejouer partiellement une opération métier.
+
 Voir `backend/.env.example`.
 
 ---
