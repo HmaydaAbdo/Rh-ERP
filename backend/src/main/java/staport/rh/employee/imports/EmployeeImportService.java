@@ -11,23 +11,21 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import staport.rh.employee.audit.PerimetreImportEmployee;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
-import staport.rh.chantier.dtos.response.ChantierResponseDto;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.imports.EmployeeImportResultDto.LigneIgnoreeDto;
 import staport.rh.employee.repositories.EmployeeRepository;
-import staport.rh.function.dtos.response.FunctionResponseDto;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
+import staport.rh.common.recherche.PageLoader;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -233,19 +231,18 @@ public class EmployeeImportService {
 
     private Map<String, Long> chargerFonctions() {
         Map<String, Long> resultat = new HashMap<>();
-        for (FunctionResponseDto fonction : functionService.search(null, Pageable.unpaged())) {
-            resultat.put(fonction.libelle().toUpperCase(), fonction.id());
-        }
+        PageLoader.forEach(pageable -> functionService.search(null, pageable),
+                fonction -> resultat.put(fonction.libelle().toUpperCase(), fonction.id()));
         return resultat;
     }
 
     private Map<String, Long> chargerChantiersActifs() {
         Map<String, Long> resultat = new HashMap<>();
-        for (ChantierResponseDto chantier : chantierService.search(null, Pageable.unpaged())) {
+        PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
             if (chantier.actif()) {
                 resultat.put(chantier.code().toUpperCase(), chantier.id());
             }
-        }
+        });
         return resultat;
     }
 
