@@ -215,7 +215,6 @@ public class PaieImportService {
             FunctionResponseDto fonction = functionService.create(new FunctionCreateRequestDto(libelle));
             fonctionsParLibelle.put(libelle.toUpperCase(), fonction.id());
             creees.add(libelle);
-            log.info("Fonction créée automatiquement par l'import paie : libelle={}", libelle);
         }
         return creees;
     }

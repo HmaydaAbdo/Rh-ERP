@@ -206,7 +206,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> resourceServer) -> resourceServer
                         .authenticationEntryPoint(pointEntreeAudit)
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-                // Identifiant de requête et utilisateur dans le MDC, dès que l'authentification est faite : les contrôles
+                // Identifiant de requête dans le MDC, dès que l'authentification est faite : les contrôles
                 // d'accès qui suivent (et leurs refus) portent déjà l'identifiant (conventions/logging.md).
                 .addFilterAfter(new MdcRequestFilter(), BearerTokenAuthenticationFilter.class);
 

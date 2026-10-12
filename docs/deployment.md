@@ -2,10 +2,16 @@
 
 ## Journaux et répertoires locaux
 
-Le backend émet ses journaux sur la sortie console (consultables en temps réel avec
+Le backend émet ses journaux JSON sur la sortie console en production (consultables en temps réel avec
 `docker compose logs --follow backend`) et écrit les archives quotidiennes compressées dans
 `./logs/`, à côté de `docker-compose.yml`. Les archives utilisent UTC et sont conservées 30 jours.
-Le dossier est monté depuis l'hôte et exclu de Git. Avant le premier démarrage sur un hôte Linux,
+Chaque événement porte le nom de l'application et le `requestId` lorsque l'appel vient d'une requête HTTP.
+L'identité de l'acteur reste dans le journal d'audit ; les logs techniques excluent noms d'utilisateur,
+adresses e-mail, identifiants d'employé, secrets, jetons, cookies, corps de requête et valeurs métier/financières.
+L'encodeur JSON n'autorise que `requestId` parmi les champs MDC ; un `TaskDecorator` le propage aux tâches `@Async`.
+L'accès aux flux et aux archives est réservé aux administrateurs de l'hôte disposant des droits Docker et du
+répertoire ; cette séparation des droits doit être contrôlée sur l'hôte de production. Le dossier est monté depuis
+l'hôte et exclu de Git. Avant le premier démarrage sur un hôte Linux,
 le créer avec des droits d'écriture pour l'UID/GID 10001 du conteneur, par exemple :
 
 ```sh

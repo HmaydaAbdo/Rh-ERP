@@ -35,7 +35,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Identifiants SMTP (vides si le serveur n'exige pas d'authentification) | |
 | `SMTP_AUTH`, `SMTP_STARTTLS` | `true`/`false` | `false` en local |
 | `MAIL_FROM` | Adresse expéditrice des courriels | `noreply@staport-rh.local` |
-| `LOGGING_FORMAT` | **Facultative** (réglage `logging.format`) : `json` pour des journaux en JSON asynchrones (une ligne par événement), `text` (défaut) pour le format lisible. Le Compose de production la positionne à `json` | `text` en local |
+| `LOGGING_FORMAT` | **Facultative** (réglage `logging.format`) : `json` pour des journaux en JSON asynchrones (une ligne par événement, seule clé MDC permise : `requestId`), `text` (défaut) pour le format lisible. Le Compose de production la positionne à `json` | `text` en local |
 | `LOGGING_FILE_PATH` | **Facultative** : répertoire des journaux archivés ; le Compose de production utilise `/app/logs` monté sur `./logs` | `logs` en local |
 | `PGAUDIT_ENABLED` | **Facultative** hors production ; transmet à la migration le contrôle d'activation pgAudit attendu. Le Compose de production la force à `true` | `false` en CI, `true` en production |
 | `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED` | **Facultatives** : `true` allume la documentation d'API (Swagger UI) — développement seulement. Absentes, elle est éteinte (réglage `springdoc.*` de `application.yml`) ; le Compose de production ne les transmet pas | `true` en local |

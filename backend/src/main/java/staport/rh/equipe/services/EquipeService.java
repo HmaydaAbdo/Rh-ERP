@@ -1,7 +1,5 @@
 package staport.rh.equipe.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,8 +25,6 @@ import java.util.Locale;
 @Service
 public class EquipeService implements IEquipeService {
 
-    private static final Logger log = LoggerFactory.getLogger(EquipeService.class);
-
     private final EquipeRepository repository;
     private final EquipeMapper mapper;
 
@@ -49,7 +45,6 @@ public class EquipeService implements IEquipeService {
         entity.setCode(code);
         entity.setLibelle(libelle);
         Equipe saved = repository.save(entity);
-        log.info("Équipe créée : id={}", saved.getId());
         return mapper.toDto(saved);
     }
 
@@ -67,7 +62,6 @@ public class EquipeService implements IEquipeService {
         entity.setCode(code);
         entity.setLibelle(libelle);
         Equipe updated = repository.saveAndFlush(entity);
-        log.info("Équipe mise à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
 
@@ -90,7 +84,6 @@ public class EquipeService implements IEquipeService {
     public void delete(Long id) {
         Equipe entity = getEntityById(id);
         repository.delete(entity);
-        log.info("Équipe supprimée : id={}", id);
     }
 
     @Override

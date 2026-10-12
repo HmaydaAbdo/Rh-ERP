@@ -131,7 +131,6 @@ public class AuthService implements IAuthService {
 
         reinitialiserEchecsConnexion(utilisateur);
 
-        log.info("Connexion réussie : utilisateurId={}", utilisateur.getId());
         Connexion connexion = emettreConnexion(utilisateur, UUID.randomUUID().toString());
         evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.CONNEXION_REUSSIE, utilisateur.getId(), utilisateur.getUsername()));
         return connexion;
@@ -158,8 +157,7 @@ public class AuthService implements IAuthService {
             List<RefreshToken> famille = refreshTokenRepository.findAllByFamilleAndRevoqueFalse(existant.getFamille());
             famille.forEach(token -> token.setRevoque(true));
             refreshTokenRepository.saveAll(famille);
-            log.warn("Refresh token déjà consommé réutilisé : famille révoquée ({} token(s) actif(s)), utilisateurId={}",
-                    famille.size(), existant.getUtilisateur().getId());
+            log.warn("Refresh token déjà consommé réutilisé : famille révoquée, sessions coupées={}", famille.size());
             evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.JETON_REUTILISE, existant.getUtilisateur().getId(),
                     existant.getUtilisateur().getUsername(), Map.of("sessionsRevoquees", famille.size())));
             throw new InvalidRefreshTokenException();
@@ -249,7 +247,6 @@ public class AuthService implements IAuthService {
 
         revoquerSessions(utilisateur.getId());
 
-        log.info("Mot de passe réinitialisé via lien email : utilisateurId={}", utilisateur.getId());
         evenements.publishEvent(EvenementSecurite.pour(ActionSecurite.MOT_DE_PASSE_REINITIALISE, utilisateur.getId(), utilisateur.getUsername()));
     }
 

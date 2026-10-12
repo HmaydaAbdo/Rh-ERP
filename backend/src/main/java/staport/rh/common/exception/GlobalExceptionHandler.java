@@ -121,7 +121,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleUnexpectedException(Exception ex, HttpServletRequest request) {
-        log.error("Erreur inattendue sur {}", request.getRequestURI(), ex);
+        log.error("Erreur inattendue lors d'une requête HTTP : méthode={}", request.getMethod(), ex);
         ErrorResponseDto body = new ErrorResponseDto(
                 Instant.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

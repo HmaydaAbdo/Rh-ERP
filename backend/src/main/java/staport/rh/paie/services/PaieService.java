@@ -2,8 +2,6 @@ package staport.rh.paie.services;
 
 import jakarta.persistence.EntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -61,8 +59,6 @@ import java.util.stream.Collectors;
 @Service
 public class PaieService implements IPaieService {
 
-    private static final Logger log = LoggerFactory.getLogger(PaieService.class);
-
     private final PaieRepository repository;
     private final PaieMapper mapper;
     private final IEmployeeService employeeService;
@@ -108,7 +104,6 @@ public class PaieService implements IPaieService {
         entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Paie saved = repository.save(entity);
-        log.info("Bulletin de paie créé : id={}, employeeId={}, periode={}", saved.getId(), dto.employeeId(), dto.periode());
         return mapper.toDto(saved);
     }
 
@@ -125,7 +120,6 @@ public class PaieService implements IPaieService {
         entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Paie updated = repository.saveAndFlush(entity);
-        log.info("Bulletin de paie mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
 
@@ -150,7 +144,6 @@ public class PaieService implements IPaieService {
     public void delete(Long id) {
         Paie entity = getEntityById(id);
         repository.delete(entity);
-        log.info("Bulletin de paie supprimé : id={}", id);
     }
 
     @Override
@@ -167,9 +160,8 @@ public class PaieService implements IPaieService {
             throw new PaieGroupeModifieException(groupe.size(), nombreAttendu);
         }
         // Entité par entité, jamais en masse (deleteAllInBatch) : seul moyen pour que l'audit voie chaque bulletin
-        // supprimé (conventions/audit.md). Le log ne porte que des identifiants et des nombres, pas les textes de filtre.
+        // supprimé (conventions/audit.md).
         repository.deleteAll(groupe);
-        log.info("Groupe de bulletins de paie supprimé : periode={}, nombre={}", criteres.periode(), groupe.size());
         return groupe.size();
     }
 
@@ -188,7 +180,6 @@ public class PaieService implements IPaieService {
         } catch (DataIntegrityViolationException conflitConcurrent) {
             throw new PaieGroupeRestaurationConflictException(1);
         }
-        log.info("Groupe de bulletins restauré : entreeAuditSourceId={}, nombre={}", idEntreeAudit, bulletins.size());
         return bulletins.size();
     }
 

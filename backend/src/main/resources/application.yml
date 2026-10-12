@@ -91,9 +91,8 @@ logging:
   file:
     path: ${LOGGING_FILE_PATH:logs}
   pattern:
-    # Chaque ligne de log porte l'identifiant de requête et l'utilisateur (MdcRequestFilter, conventions/logging.md) : le même
-    # identifiant relie une entrée du journal d'audit, ses révisions et les logs techniques de la requête.
-    level: "%5p [%X{requestId:-}] [%X{userId:-}]"
+    # Seul l'identifiant de corrélation est ajouté aux logs ; l'identité de l'acteur reste dans l'audit à accès contrôlé.
+    level: "%5p [%X{requestId:-}]"
 
 management:
   endpoints:

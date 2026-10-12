@@ -4,6 +4,7 @@
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeContext>false</includeContext>
+            <includeMdcKeyName>requestId</includeMdcKeyName>
             <customFields>{"application":"${APPLICATION}"}</customFields>
         </encoder>
     </appender>
@@ -17,6 +18,7 @@
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeContext>false</includeContext>
+            <includeMdcKeyName>requestId</includeMdcKeyName>
             <customFields>{"application":"${APPLICATION}"}</customFields>
         </encoder>
     </appender>

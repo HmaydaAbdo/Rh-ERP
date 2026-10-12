@@ -1,7 +1,5 @@
 package staport.rh.function.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,8 +23,6 @@ import staport.rh.function.specifications.FunctionSpecification;
 @Service
 public class FunctionService implements IFunctionService {
 
-    private static final Logger log = LoggerFactory.getLogger(FunctionService.class);
-
     private final FunctionRepository repository;
     private final FunctionMapper mapper;
 
@@ -45,7 +41,6 @@ public class FunctionService implements IFunctionService {
 
         Function entity = mapper.toEntity(dto);
         Function saved = repository.save(entity);
-        log.info("Fonction créée : id={}", saved.getId());
         return mapper.toDto(saved);
     }
 
@@ -64,7 +59,6 @@ public class FunctionService implements IFunctionService {
 
         mapper.updateEntityFromDto(dto, entity);
         Function updated = repository.saveAndFlush(entity);
-        log.info("Fonction mise à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
 
@@ -87,7 +81,6 @@ public class FunctionService implements IFunctionService {
     public void delete(Long id) {
         Function entity = getEntityById(id);
         repository.delete(entity);
-        log.info("Fonction supprimée : id={}", id);
     }
 
     @Override

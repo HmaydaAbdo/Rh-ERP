@@ -135,7 +135,7 @@ public class AuditLectureResponseAdvice implements ResponseBodyAdvice<Object> {
             ecrivain.ecrireSeparement(entree.build());
         } catch (RuntimeException impossible) {
             metriques.ecritureEnEchec(securite ? CategorieAudit.SECURITE.name() : CategorieAudit.OPERATION.name());
-            log.error("Écriture HTTP non tracée : méthode={}, route={}, statut={}", requete.getMethod(), chemin,
+            log.error("Écriture HTTP non tracée : méthode={}, statut={}", requete.getMethod(),
                     statut.value(), impossible);
         }
     }
