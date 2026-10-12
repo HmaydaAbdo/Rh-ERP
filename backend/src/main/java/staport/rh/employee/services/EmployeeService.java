@@ -1,8 +1,6 @@
 package staport.rh.employee.services;
 
 import jakarta.persistence.EntityManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,8 +28,6 @@ import staport.rh.function.services.interfaces.IFunctionService;
 
 @Service
 public class EmployeeService implements IEmployeeService {
-
-    private static final Logger log = LoggerFactory.getLogger(EmployeeService.class);
 
     private final EmployeeRepository repository;
     private final EmployeeMapper mapper;
@@ -64,7 +60,6 @@ public class EmployeeService implements IEmployeeService {
         entity.setChantier(resolveChantierReference(dto.chantierId()));
 
         Employee saved = repository.save(entity);
-        log.info("Employé créé : id={}", saved.getId());
         return mapper.toDto(saved);
     }
 
@@ -86,7 +81,6 @@ public class EmployeeService implements IEmployeeService {
         entity.setChantier(resolveChantierReference(dto.chantierId()));
 
         Employee updated = repository.saveAndFlush(entity);
-        log.info("Employé mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
 
@@ -111,7 +105,6 @@ public class EmployeeService implements IEmployeeService {
     public void delete(Long id) {
         Employee entity = getEntityById(id);
         repository.delete(entity);
-        log.info("Employé supprimé : id={}", id);
     }
 
     @Override

@@ -1,7 +1,5 @@
 package staport.rh.chantier.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,8 +23,6 @@ import staport.rh.chantier.specifications.ChantierSpecification;
 @Service
 public class ChantierService implements IChantierService {
 
-    private static final Logger log = LoggerFactory.getLogger(ChantierService.class);
-
     private final ChantierRepository repository;
     private final ChantierMapper mapper;
 
@@ -45,7 +41,6 @@ public class ChantierService implements IChantierService {
 
         Chantier entity = mapper.toEntity(dto);
         Chantier saved = repository.save(entity);
-        log.info("Chantier créé : id={}", saved.getId());
         return mapper.toDto(saved);
     }
 
@@ -64,7 +59,6 @@ public class ChantierService implements IChantierService {
 
         mapper.updateEntityFromDto(dto, entity);
         Chantier updated = repository.saveAndFlush(entity);
-        log.info("Chantier mis à jour : id={}", updated.getId());
         return mapper.toDto(updated);
     }
 
@@ -87,7 +81,6 @@ public class ChantierService implements IChantierService {
     public void delete(Long id) {
         Chantier entity = getEntityById(id);
         repository.delete(entity);
-        log.info("Chantier supprimé : id={}", id);
     }
 
     @Override

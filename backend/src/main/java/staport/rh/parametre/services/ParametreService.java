@@ -1,7 +1,5 @@
 package staport.rh.parametre.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -28,8 +26,6 @@ import java.util.Map;
 
 @Service
 public class ParametreService implements IParametreService {
-
-    private static final Logger log = LoggerFactory.getLogger(ParametreService.class);
 
     private final ParametreRepository repository;
     private final ParametreMapper mapper;
@@ -63,7 +59,6 @@ public class ParametreService implements IParametreService {
         parametre.setValeur(cle.normaliser(dto.valeur()));
         Parametre enregistre = repository.saveAndFlush(parametre);
         invaliderApresValidation();
-        log.info("Paramètre modifié : id={}, cle={}", enregistre.getId(), cle.code());
         return mapper.toDto(enregistre, cle);
     }
 

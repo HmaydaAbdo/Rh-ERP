@@ -19,8 +19,8 @@ class PageLoaderTest {
         PageLoader.forEach(pageable -> {
             demandes.add(pageable);
             return pageable.getPageNumber() == 0
-                    ? new PageImpl<>(List.of(1, 2), pageable, 3)
-                    : new PageImpl<>(List.of(3), pageable, 3);
+                    ? new PageImpl<>(List.of(1, 2), pageable, PageLoader.PAGE_SIZE + 1L)
+                    : new PageImpl<>(List.of(3), pageable, PageLoader.PAGE_SIZE + 1L);
         }, valeurs::add);
 
         assertThat(valeurs).containsExactly(1, 2, 3);

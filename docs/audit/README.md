@@ -54,7 +54,8 @@ ne réécrit pas l'histoire), l'origine, l'identifiant de requête et l'adresse 
 | `INCONNUE` | Une écriture hors de tout contexte : **un oubli rendu visible**, jamais attribué à tort. Un test vérifie qu'aucun scénario couvert n'en produit |
 
 **Identifiant de requête** : `MdcRequestFilter` en génère un par requête (jamais repris du client), le pose dans les logs
-(`requestId`, `userId`) et le renvoie dans l'en-tête de réponse **`X-Request-Id`**. Il relie une entrée du journal, ses
+(`requestId` uniquement) et le renvoie dans l'en-tête de réponse **`X-Request-Id`**. Le `TaskDecorator` Spring propage ce
+contexte aux appels `@Async` sans transporter de donnée d'identité. Il relie une entrée du journal, ses
 révisions et les logs techniques ; un utilisateur peut le citer pour qu'on retrouve sa requête. Un traitement planifié
 reçoit son propre identifiant d'exécution.
 

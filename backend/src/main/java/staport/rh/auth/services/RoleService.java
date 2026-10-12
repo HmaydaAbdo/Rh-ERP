@@ -1,7 +1,5 @@
 package staport.rh.auth.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,8 +34,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class RoleService implements IRoleService {
-
-    private static final Logger log = LoggerFactory.getLogger(RoleService.class);
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -78,7 +74,6 @@ public class RoleService implements IRoleService {
         role.setPermissions(resolvePermissions(dto.permissionIds()));
 
         Role saved = roleRepository.save(role);
-        log.info("Rôle créé : id={}, nom={}", saved.getId(), saved.getNom());
         return mapper.toDto(saved);
     }
 
@@ -105,7 +100,6 @@ public class RoleService implements IRoleService {
         role.setPermissions(permissions);
 
         Role updated = roleRepository.saveAndFlush(role);
-        log.info("Rôle mis à jour : id={}, nom={}", updated.getId(), updated.getNom());
         return mapper.toDto(updated);
     }
 
@@ -122,7 +116,6 @@ public class RoleService implements IRoleService {
             throw new RoleInUseException(role.getNom(), comptes);
         }
         roleRepository.delete(role);
-        log.info("Rôle supprimé : id={}", id);
     }
 
     @Override

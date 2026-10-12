@@ -1,8 +1,6 @@
 package staport.rh.auth.services;
 
 import jakarta.persistence.EntityManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
@@ -50,8 +48,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService implements IUserService {
-
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UtilisateurRepository repository;
     private final RoleRepository roleRepository;
@@ -117,7 +113,6 @@ public class UserService implements IUserService {
         utilisateur.setRoles(resolveRoles(dto.roleIds()));
 
         Utilisateur saved = repository.save(utilisateur);
-        log.info("Utilisateur créé : id={}, username={}", saved.getId(), saved.getUsername());
         return toDto(saved);
     }
 
@@ -143,10 +138,8 @@ public class UserService implements IUserService {
 
         Utilisateur updated = repository.saveAndFlush(utilisateur);
         if (desactive) {
-            int sessions = authService.revoquerSessions(id);
-            log.info("Compte désactivé : utilisateurId={}, sessions coupées={}", id, sessions);
+            authService.revoquerSessions(id);
         }
-        log.info("Utilisateur mis à jour : id={}, username={}", updated.getId(), updated.getUsername());
         return toDto(updated);
     }
 
@@ -158,7 +151,6 @@ public class UserService implements IUserService {
         VersionOptimiste.verifier(dto.version(), utilisateur.getVersion());
         utilisateur.setPermissionsRefusees(resolvePermissions(dto.permissionIds()));
         Utilisateur updated = repository.saveAndFlush(utilisateur);
-        log.info("Deny overrides mis à jour : utilisateurId={}, permissions={}", id, dto.permissionIds().size());
         return toDto(updated);
     }
 
@@ -171,7 +163,6 @@ public class UserService implements IUserService {
         repository.save(utilisateur);
         // Comme la réinitialisation par lien : l'ancien mot de passe est peut-être celui que l'on cherche à écarter.
         int sessions = authService.revoquerSessions(id);
-        log.info("Mot de passe réinitialisé par un administrateur : utilisateurId={}, sessions coupées={}", id, sessions);
         // L'acteur est l'administrateur authentifié (contexte) ; le compte visé est dans le détail.
         evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.MOT_DE_PASSE_REINITIALISE_PAR_ADMIN, null, null,
                 Map.of("cibleId", id, "cibleUsername", utilisateur.getUsername(), "sessionsRevoquees", sessions)));
@@ -200,7 +191,6 @@ public class UserService implements IUserService {
         admin.setRoles(Set.of(adminRole));
 
         Utilisateur saved = repository.save(admin);
-        log.info("Compte SYSTEM_ADMIN de bootstrap créé : id={}, username={}", saved.getId(), username);
         return saved.getId();
     }
 

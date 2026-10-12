@@ -116,6 +116,10 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    des sessions sur l'instance de production. Vérifier également que nginx inner limite les essais
    par adresse réelle et que l'outer transmet correctement cette adresse ; ne modifier nginx outer
    qu'après revue de l'exemple fourni par le propriétaire.
+8. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
+   `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
+   purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
+   qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
 
 ## Évolutions prochaines
 
