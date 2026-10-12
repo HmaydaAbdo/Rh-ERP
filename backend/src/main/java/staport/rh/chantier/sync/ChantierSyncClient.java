@@ -1,11 +1,9 @@
 package staport.rh.chantier.sync;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
 import java.util.List;
 
 /**
@@ -20,14 +18,12 @@ public class ChantierSyncClient {
 
     private final RestClient restClient;
 
-    public ChantierSyncClient(@Value("${chantier.sync.base-url}") String baseUrl,
-                              @Value("${chantier.sync.connect-timeout:5s}") Duration connectTimeout,
-                              @Value("${chantier.sync.read-timeout:30s}") Duration readTimeout) {
+    public ChantierSyncClient(ChantierSyncProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(connectTimeout);
-        requestFactory.setReadTimeout(readTimeout);
+        requestFactory.setConnectTimeout(properties.getConnectTimeout());
+        requestFactory.setReadTimeout(properties.getReadTimeout());
         this.restClient = RestClient.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(properties.getBaseUrl())
                 .requestFactory(requestFactory)
                 .build();
     }

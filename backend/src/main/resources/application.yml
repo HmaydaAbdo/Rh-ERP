@@ -16,7 +16,7 @@ spring:
     # Ni les requêtes SQL dans les logs (bruit et coût en production ; le développement les allume avec
     # SPRING_JPA_SHOW_SQL=true), ni de session JPA ouverte pendant tout le rendu de la réponse (conventions/jpa.md) :
     # une association paresseuse se charge dans la transaction du service, jamais après.
-    show-sql: false
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     open-in-view: false
     properties:
       # Envers (conventions/audit.md) : une table <table>_aud par entité auditée, écrite par insertion seulement
@@ -74,9 +74,9 @@ spring:
 # SPRINGDOC_API_DOCS_ENABLED=true et SPRINGDOC_SWAGGER_UI_ENABLED=true (backend/.env.example).
 springdoc:
   api-docs:
-    enabled: false
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:false}
   swagger-ui:
-    enabled: false
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:false}
 
 server:
   # Le backend n'est joignable que par nginx (réseau Docker interne) : l'adresse du client réel, enregistrée par
@@ -87,7 +87,7 @@ server:
 logging:
   # text (défaut) ou json (production). Dans les deux cas, les événements vont en console et dans
   # des archives journalières gardées 30 jours. Voir logback-spring.xml.
-  format: text
+  format: ${LOGGING_FORMAT:text}
   file:
     path: ${LOGGING_FILE_PATH:logs}
   pattern:
