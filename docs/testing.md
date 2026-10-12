@@ -66,11 +66,13 @@ exécuté après les tests backend et publie le rapport JaCoCo par domaine.
 
 ---
 
-## Backend (304 tests)
+## Backend
 
-Dernière validation locale propre : 304 tests réussis, sans échec ni erreur, sous Java 21 et
-PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-11. Cette validation utilise une base jetable séparée
-des données migrées.
+Dernière validation complète consignée : 304 tests réussis, sans échec ni erreur, sous Java 21 et
+PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-11. Depuis, des tests de contrats Swagger et de
+métriques ont été ajoutés ; la suite complète n'a pas été relancée. Le 2026-10-12, les 17 tests
+ciblés métriques/audit/synchronisation ont réussi, sur une base jetable Testcontainers
+séparée des données migrées. Les vérifications locales ne remplacent pas la CI.
 
 JUnit 5, Mockito, AssertJ, ArchUnit. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
 simulées, sans base de données. `PaieApplicationTests` et **les tests d'intégration de l'audit** démarrent l'application
@@ -84,6 +86,7 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 | Chaîne JWT | `JwtSecurityChainTest`, `JwtSigningKeyTest` | De vrais jetons signés : `401` sans jeton, signature invalide, autre secret/émetteur/destinataire, expiration absente ; HS256 fixé, claims requis et secret Base64 d'au moins 256 bits ; `403` sans la permission, même avec un rôle d'administrateur ; `200` avec ; requête mal formée `400` |
 | CORS et CSRF du refresh | `SecurityConfigCorsTest`, `JwtSecurityChainTest` | Origines explicites validées au démarrage ; pré-vol autorisé avec credentials ; origine tierce et requête de refresh sans origine refusées |
 | Documentation d'API | `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest` | Swagger éteint (défaut, production) : ses routes exigent un jeton (`401`) ; allumé (développement) : publiques, le reste de l'API reste protégé |
+| Contrat OpenAPI généré | `OpenApiContractTest` | Swagger Parser valide la syntaxe OpenAPI 3.1 ; le test vérifie opérations, erreurs, sécurité, schémas `$ref`, imports multipart et téléchargements binaires |
 | Conventions d'architecture | `ArchitectureConventionsTest` | 14 règles ArchUnit sur `staport.rh` : un contrôleur n'atteint ni repository ni entité ; mapper et repository sans logique ; entités indépendantes de l'API ; DTO en `record` ; frontières entre domaines (façade seulement) ; injection par constructeur ; pas de sortie standard ; logger `log` privé statique final, absent des contrôleurs ; table explicite et aucune relation `EAGER` ; `@Tag` sur chaque contrôleur et `@Operation` sur chaque route |
 | Permissions effectives | `EffectivePermissionResolverTest` | Union des rôles moins les refus individuels |
 | Audit — garde-fous | `AuditArchitectureTest` | Toute entité est auditée ou explicitement exclue ; toute méthode d'écriture d'un service porte `@AuditableAction` ou une exception justifiée ; aucune écriture en masse (`deleteAllInBatch`, `@Modifying`, `executeUpdate`, `JdbcTemplate.update`) ; les actions déclarent type et entité |
@@ -95,12 +98,13 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 | Rôles | `RoleAdministrationProtegeeTest` | `SYSTEM_ADMIN` ni supprimé, ni renommé, ni privé d'une permission (description modifiable) ; les autres rôles libres ; `protege` dans la réponse |
 | Mots de passe | `PolitiqueMotDePasseTest` | Longueur, lettre, chiffre, différent de l'identifiant ; message sans la valeur saisie |
 | Recherches | `MotifRechercheTest`, `PaieRechercheJokersTest` | Jokers `%` et `_` échappés ; dans la liste (Specification) **et** dans les agrégats (JPQL) de la paie, nom et CIN |
-| Authentification | `AuthServiceTest`, `VerrouillageConnexionIntegrationTest` | Connexion (identifiants invalides, compte inactif ou inconnu, seuil de 5 échecs/15 min, blocage de 15 min persisté sur PostgreSQL, expiration de la fenêtre, remise à zéro après réussite), rotation, **renouvellement refusé pour un compte désactivé**, `revoquerSessions`, **réutilisation d'un jeton = révocation de la famille**, jeton expiré ou inconnu, déconnexion, mot de passe oublié (sans révéler l'existence d'un compte) et réinitialisation |
+| Authentification | `AuthServiceTest`, `VerrouillageConnexionIntegrationTest`, `EmailServiceTest`, `AsyncConfigTest` | Connexion (identifiants invalides, compte inactif ou inconnu, seuil de 5 échecs/15 min, blocage de 15 min persisté sur PostgreSQL, expiration de la fenêtre, remise à zéro après réussite), rotation, **renouvellement refusé pour un compte désactivé**, `revoquerSessions`, **réutilisation d'un jeton = révocation de la famille**, jeton expiré ou inconnu, déconnexion, mot de passe oublié sans révélation de compte ni changement de réponse si la file SMTP est pleine ; exécution async, limites du pool et rejet sous saturation |
 | Fonction | `FunctionServiceTest`, `FunctionImportServiceTest` | CRUD, doublons, suppression bloquée ; import atomique |
 | Chantier | `ChantierServiceTest`, `ChantierSyncServiceTest`, `ChantierSyncTransactionalOperationsTest` | création et code en double ; synchronisation : création des absents, **jamais de modification** d'un existant, lignes sans code ignorées, isolation des échecs par ligne |
 | Équipe | `EquipeServiceTest` | Normalisation du code, doublons, suppression bloquée |
 | Employé | `EmployeeServiceTest`, `EmployeeControllerTest`, `EmployeeImportServiceTest`, `EmployeeSuppressionTest` | CRUD et références ; contrôleur ; import (CIN existant rejeté, un seul motif par ligne, atomicité) ; suppression : `409` explicite avec un bulletin ou un compte lié (employé conservé), `204` sans dépendant |
 | Paie | `PaieServiceTest`, `PaieAnalytiqueServiceTest`, `PaieImportServiceTest`, `PaieExportServiceTest` | CRUD, bulletin en double ; masse des équipes d'un chantier ; suppression en groupe (nombre confirmé identique, refus et rien supprimé sinon, mois obligatoire, groupe vide) ; import (bulletin existant rejeté, création des fonctions manquantes, équipe) ; analytique (coût moyen, mois précédent absent sans bulletin, filtres vides ignorés, nom et CIN en motifs sans casse, tranches égales à dernière ouverte, nom du chantier, tout l'historique d'évolution sans fenêtre, tous les chantiers et toutes les fonctions sans plafond) ; `FiltresPaieTest` (mêmes règles de filtre que la liste) ; export Excel (feuille globale et par chantier, tri par fonction puis nom, sorties STC, mois précédent, squelette matériel du chantier C168, sélection et exclusion d'équipes) |
+| Profil performance | `PerformanceProfileTest` (opt-in) | Jeu PostgreSQL synthétique de 1 000 employés × 60 périodes, statistiques analysées, 600 recherches à 10 req/s et 20 sessions, 20 imports/exports Excel/PDF de 1 000 lignes sous trois opérations lourdes simultanées ; percentiles, plan SQL et ressources consignés dans `conformite/performance-2026-10-12.md` |
 | Rapport PDF | `PaieBiReportBuilderTest`, `RapportPageModelBuilderTest`, `RapportChartSvgBuilderTest`, `PaieReportHtmlPdfServiceTest` | Agrégation (tous les chantiers dans le graphique, sans « Autres », sections conservées) ; répartition du graphique sur plusieurs pages à tailles égales avec échelle commune ; graphique SVG **pleine largeur** (non-régression) ; génération d'un PDF valide, y compris une charge hostile jamais interprétée comme du balisage; graphique par chantier libellé par le nom (code en repli) ; libellé trop long coupé par « … » ; chantier sans détail par équipe : la section « reste » suit les KPI du chantier sur la même page, sans espace vide |
 
 ### Les deux tests de sécurité à connaître

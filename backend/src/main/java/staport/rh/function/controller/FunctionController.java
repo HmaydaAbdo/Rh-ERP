@@ -25,7 +25,7 @@ import staport.rh.function.services.interfaces.IFunctionService;
 
 @RestController
 @RequestMapping("/functions")
-@Tag(name = "Fonctions", description = "Référentiel des fonctions occupées par les employés")
+@Tag(name = "Fonctions", description = "Référentiel des fonctions occupées par les employés et import Excel")
 public class FunctionController {
 
     private final IFunctionService functionService;
@@ -36,9 +36,9 @@ public class FunctionController {
 
     @PostMapping
     @Operation(summary = "Créer une fonction")
-    @ApiResponse(responseCode = "201")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "201", description = "Fonction créée.")
+    @ApiResponse(responseCode = "400", description = "Le libellé ne respecte pas les règles de validation.")
+    @ApiResponse(responseCode = "409", description = "Une fonction avec ce libellé existe déjà.")
     @PreAuthorize("hasAuthority('FUNCTION_WRITE')")
     public ResponseEntity<FunctionResponseDto> creer(@Valid @RequestBody FunctionCreateRequestDto dto) {
         FunctionResponseDto created = functionService.create(dto);
@@ -47,9 +47,9 @@ public class FunctionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une fonction")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "400", description = "Le libellé ne respecte pas les règles de validation.")
+    @ApiResponse(responseCode = "404", description = "La fonction demandée n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "Une fonction avec ce libellé existe déjà.")
     @PreAuthorize("hasAuthority('FUNCTION_WRITE')")
     public ResponseEntity<FunctionResponseDto> modifier(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class FunctionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter une fonction")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "La fonction demandée n'existe pas.")
     @PreAuthorize("hasAuthority('FUNCTION_READ')")
     public ResponseEntity<FunctionResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(functionService.findById(id));
@@ -76,9 +76,9 @@ public class FunctionController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une fonction")
-    @ApiResponse(responseCode = "204")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "204", description = "Fonction supprimée.")
+    @ApiResponse(responseCode = "404", description = "La fonction demandée n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "La fonction est utilisée et ne peut pas être supprimée.")
     @PreAuthorize("hasAuthority('FUNCTION_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         functionService.delete(id);

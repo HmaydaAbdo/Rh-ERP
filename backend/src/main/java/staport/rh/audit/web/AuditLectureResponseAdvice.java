@@ -100,7 +100,7 @@ public class AuditLectureResponseAdvice implements ResponseBodyAdvice<Object> {
             requete.setAttribute(AuditRequeteHttpAttributes.ACTION_AUDITEE, Boolean.TRUE);
             return body;
         } catch (RuntimeException impossible) {
-            metriques.ecritureEnEchec(CategorieAudit.ACCES.name());
+            metriques.ecritureEnEchec(CategorieAudit.ACCES);
             log.error("Consultation métier non servie : sa trace d'audit n'a pas pu être écrite", impossible);
             throw new IllegalStateException("La consultation ne peut pas être servie sans sa trace d'audit", impossible);
         }
@@ -134,7 +134,7 @@ public class AuditLectureResponseAdvice implements ResponseBodyAdvice<Object> {
             }
             ecrivain.ecrireSeparement(entree.build());
         } catch (RuntimeException impossible) {
-            metriques.ecritureEnEchec(securite ? CategorieAudit.SECURITE.name() : CategorieAudit.OPERATION.name());
+            metriques.ecritureEnEchec(securite ? CategorieAudit.SECURITE : CategorieAudit.OPERATION);
             log.error("Écriture HTTP non tracée : méthode={}, statut={}", requete.getMethod(),
                     statut.value(), impossible);
         }

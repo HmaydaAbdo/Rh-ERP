@@ -36,9 +36,9 @@ public class EquipeController {
 
     @PostMapping
     @Operation(summary = "Créer une équipe")
-    @ApiResponse(responseCode = "201")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "201", description = "Équipe créée.")
+    @ApiResponse(responseCode = "400", description = "Les champs de l'équipe ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "409", description = "Une équipe avec ce code existe déjà ou une contrainte métier interdit l'opération.")
     @PreAuthorize("hasAuthority('EQUIPE_WRITE')")
     public ResponseEntity<EquipeResponseDto> creer(@Valid @RequestBody EquipeCreateRequestDto dto) {
         EquipeResponseDto created = equipeService.create(dto);
@@ -47,9 +47,9 @@ public class EquipeController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une équipe")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "400", description = "Les champs de l'équipe ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "404", description = "L'équipe demandée n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "Le code d'équipe existe déjà ou une contrainte métier interdit la modification.")
     @PreAuthorize("hasAuthority('EQUIPE_WRITE')")
     public ResponseEntity<EquipeResponseDto> modifier(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class EquipeController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter une équipe")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "L'équipe demandée n'existe pas.")
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
     public ResponseEntity<EquipeResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(equipeService.findById(id));
@@ -76,9 +76,9 @@ public class EquipeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une équipe")
-    @ApiResponse(responseCode = "204")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "204", description = "Équipe supprimée.")
+    @ApiResponse(responseCode = "404", description = "L'équipe demandée n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "L'équipe est encore référencée et ne peut pas être supprimée.")
     @PreAuthorize("hasAuthority('EQUIPE_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         equipeService.delete(id);

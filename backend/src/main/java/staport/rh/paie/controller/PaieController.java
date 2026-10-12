@@ -40,7 +40,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/paie")
-@Tag(name = "Paie", description = "Bulletins de paie mensuels des employés")
+@Tag(name = "Paie", description = "Bulletins de paie, import, export et rapport PDF")
 public class PaieController {
 
     private final IPaieService paieService;
@@ -53,9 +53,9 @@ public class PaieController {
 
     @PostMapping
     @Operation(summary = "Créer un bulletin de paie")
-    @ApiResponse(responseCode = "201")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "201", description = "Bulletin créé.")
+    @ApiResponse(responseCode = "400", description = "Les montants, la période ou les références ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "409", description = "Un bulletin existe déjà pour cet employé et cette période.")
     @PreAuthorize("hasAuthority('PAIE_WRITE')")
     public ResponseEntity<PaieResponseDto> creer(@Valid @RequestBody PaieCreateRequestDto dto) {
         PaieResponseDto created = paieService.create(dto);
@@ -64,8 +64,8 @@ public class PaieController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier un bulletin de paie")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "400", description = "Les montants ou les références ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "404", description = "Le bulletin demandé n'existe pas.")
     @PreAuthorize("hasAuthority('PAIE_WRITE')")
     public ResponseEntity<PaieResponseDto> modifier(
             @PathVariable Long id,
@@ -75,7 +75,7 @@ public class PaieController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un bulletin de paie")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "Le bulletin demandé n'existe pas.")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<PaieResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(paieService.findById(id));
@@ -92,8 +92,8 @@ public class PaieController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un bulletin de paie")
-    @ApiResponse(responseCode = "204")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "204", description = "Bulletin supprimé.")
+    @ApiResponse(responseCode = "404", description = "Le bulletin demandé n'existe pas.")
     @PreAuthorize("hasAuthority('PAIE_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         paieService.delete(id);
@@ -102,7 +102,7 @@ public class PaieController {
 
     @PostMapping("/suppression")
     @Operation(summary = "Supprimer d'un coup un groupe de bulletins (mois, chantier ou équipe d'une carte), après confirmation de leur nombre")
-    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "400", description = "Le périmètre ou le nombre attendu est invalide.")
     @ApiResponse(responseCode = "409", description = "Le groupe ne compte plus le nombre confirmé : rien n'est supprimé")
     @PreAuthorize("hasAuthority('PAIE_PURGE')")
     public ResponseEntity<PaieSuppressionDto> supprimerGroupe(@Valid @RequestBody PaieSuppressionGroupeRequestDto requete) {
@@ -141,7 +141,7 @@ public class PaieController {
 
     @PostMapping("/chantiers/search")
     @Operation(summary = "Lister les chantiers d'un mois, avec leurs équipes, sur un périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes)")
-    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "400", description = "La période est obligatoire et doit respecter le format aaaa-MM.")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<List<PaieChantierPeriodeDto>> rechercherChantiersDeLaPeriode(@Valid @RequestBody PaieSearchCriteria criteria) {
         if (criteria == null || criteria.periode() == null) {
@@ -161,7 +161,7 @@ public class PaieController {
 
     @PostMapping("/analytique")
     @Operation(summary = "Indicateurs du tableau de bord analytique d'un mois, sur un périmètre filtré (nom, CIN, chantiers, fonctions, équipes)")
-    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "400", description = "La période est obligatoire et doit respecter le format aaaa-MM.")
     @PreAuthorize("hasAuthority('PAIE_READ')")
     public ResponseEntity<PaieAnalytiqueDto> analyser(@Valid @RequestBody PaieSearchCriteria criteria) {
         if (criteria == null || criteria.periode() == null) {

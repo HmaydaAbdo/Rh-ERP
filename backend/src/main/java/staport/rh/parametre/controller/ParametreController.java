@@ -40,7 +40,7 @@ public class ParametreController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier la valeur d'un paramètre")
     @ApiResponse(responseCode = "400", description = "Valeur d'un autre type, hors bornes ou expression cron invalide")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "Le paramètre demandé n'existe pas dans le catalogue fixe.")
     @PreAuthorize("hasAuthority('PARAMETRE_WRITE')")
     public ResponseEntity<ParametreResponseDto> update(@PathVariable Long id, @Valid @RequestBody ParametreUpdateRequestDto dto) {
         return ResponseEntity.ok(parametreService.update(id, dto));

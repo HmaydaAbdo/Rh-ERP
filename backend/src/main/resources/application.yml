@@ -66,8 +66,21 @@ spring:
       mail:
         smtp:
           auth: ${SMTP_AUTH}
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
           starttls:
             enable: ${SMTP_STARTTLS}
+
+staport:
+  auth:
+    mail:
+      executor:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 100
+        keep-alive: 30s
+        await-termination: 30s
 
 # Documentation d'API (conventions/swagger.md) : ÉTEINTE par défaut, donc en production — la liste de toutes les routes
 # n'a pas à être lisible sans connexion. Le développement l'allume avec les variables d'environnement

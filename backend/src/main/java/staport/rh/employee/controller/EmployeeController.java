@@ -25,7 +25,7 @@ import staport.rh.employee.services.interfaces.IEmployeeService;
 
 @RestController
 @RequestMapping("/employees")
-@Tag(name = "Employés", description = "Gestion de la fiche d'identité des employés")
+@Tag(name = "Employés", description = "Gestion des fiches d'employés et import Excel")
 public class EmployeeController {
 
     private final IEmployeeService employeeService;
@@ -36,9 +36,9 @@ public class EmployeeController {
 
     @PostMapping
     @Operation(summary = "Créer un employé")
-    @ApiResponse(responseCode = "201")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "201", description = "Employé créé.")
+    @ApiResponse(responseCode = "400", description = "Les champs de l'employé ou une référence ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "409", description = "Le CIN est déjà utilisé ou une contrainte métier interdit l'opération.")
     @PreAuthorize("hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<EmployeeResponseDto> creer(@Valid @RequestBody EmployeeCreateRequestDto dto) {
         EmployeeResponseDto created = employeeService.create(dto);
@@ -47,9 +47,9 @@ public class EmployeeController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier un employé")
-    @ApiResponse(responseCode = "400")
-    @ApiResponse(responseCode = "404")
-    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "400", description = "Les champs de l'employé ou une référence ne respectent pas les règles de validation.")
+    @ApiResponse(responseCode = "404", description = "L'employé demandé n'existe pas.")
+    @ApiResponse(responseCode = "409", description = "Le CIN est déjà utilisé.")
     @PreAuthorize("hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<EmployeeResponseDto> modifier(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class EmployeeController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Consulter un employé")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "404", description = "L'employé demandé n'existe pas.")
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     public ResponseEntity<EmployeeResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.findById(id));
@@ -76,8 +76,8 @@ public class EmployeeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un employé")
-    @ApiResponse(responseCode = "204")
-    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "204", description = "Employé supprimé.")
+    @ApiResponse(responseCode = "404", description = "L'employé demandé n'existe pas.")
     @PreAuthorize("hasAuthority('EMPLOYEE_DELETE')")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         employeeService.delete(id);

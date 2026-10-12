@@ -120,6 +120,26 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
    qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
+9. **Raccorder la supervision métrique en production** : configurer un collecteur Prometheus privé
+   pour `/actuator/prometheus`, choisir sa rétention, créer le tableau de bord et les alertes décrits
+   dans [le contrôle métriques](docs/conformite/metrics-2026-10-12.md), désigner le responsable de
+   garde et tester le routage et les actions de réponse avant la mise en service.
+
+## Performance — arbitrages et mesures à terminer
+
+Le profil de base a été validé et le contrôle local a passé les seuils ; les preuves sont consignées dans le
+[rapport de conformité performance](docs/conformite/performance-2026-10-12.md). Avant de déclarer
+la performance opérationnelle de production validée :
+
+- rejouer le profil à 20 échantillons par opération lourde sur un hôte représentatif et comparer les
+  ressources aux capacités réservées ;
+- mesurer les parcours HTTP de bout en bout avec sérialisation et proxy nginx outer ;
+- vérifier les délais et comportements d'échec face à PostgreSQL, l'ERP et le fournisseur SMTP réels.
+
+Le pool SMTP et les délais 5/3/5 s sont configurés, le rejet en saturation et la réponse générique
+sont couverts par test ; `nginx -t` réussit dans l'image Nginx du projet. La conformité de code et
+les mesures locales sont vérifiées ; elles ne démontrent ni la disponibilité des services réels ni
+la capacité de production.
 
 ## Évolutions prochaines
 

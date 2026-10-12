@@ -55,7 +55,7 @@ public class UserController {
 
     @PostMapping
     @Operation(summary = "Créer un utilisateur")
-    @ApiResponse(responseCode = "201")
+    @ApiResponse(responseCode = "201", description = "Compte utilisateur créé.")
     public ResponseEntity<UserResponseDto> create(@Valid @RequestBody UserCreateRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(dto));
     }

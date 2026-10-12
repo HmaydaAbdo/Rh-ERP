@@ -2,6 +2,8 @@ package staport.rh.paie.imports;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.InputStreamResource;
@@ -25,7 +27,7 @@ import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping("/paie/import")
-@Tag(name = "Paie", description = "Import Excel des bulletins de paie")
+@Tag(name = "Paie", description = "Bulletins de paie, import, export et rapport PDF")
 public class PaieImportController {
 
     private final PaieImportService importService;
@@ -34,15 +36,17 @@ public class PaieImportController {
         this.importService = importService;
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Importer des bulletins de paie pour une période depuis un fichier Excel. " +
             "Import atomique : une seule ligne invalide rejette tout le fichier. Une fonction absente du " +
             "référentiel est créée automatiquement (jamais l'employé ni le chantier). Un bulletin déjà existant " +
             "pour l'employé et la période rejette la ligne : l'import ne modifie jamais un bulletin.")
-    @ApiResponse(responseCode = "400", description = "Période invalide, fichier illisible, ou au moins une ligne "
-            + "invalide (voir lignesIgnorees) — rien n'a été créé")
+    @ApiResponse(responseCode = "200", description = "Résultat de l'import", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PaieImportResultDto.class)))
+    @ApiResponse(responseCode = "400", description = "Période invalide, fichier XLSX illisible, ou ligne invalide (voir lignesIgnorees) — rien n'a été créé",
+            content = @Content(mediaType = "application/json", schema = @Schema(oneOf = {PaieImportResultDto.class, staport.rh.common.dtos.ErrorResponseDto.class})))
     @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<PaieImportResultDto> importer(
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo. Import atomique : aucune ligne n'est créée si une ligne est invalide.")
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
             @RequestParam("periode") String periode) {
@@ -53,6 +57,7 @@ public class PaieImportController {
 
     @GetMapping("/modele")
     @Operation(summary = "Télécharger le modèle Excel vierge attendu par l'import (13 colonnes, 3 lignes d'en-tête)")
+    @ApiResponse(responseCode = "200", description = "Modèle XLSX à compléter", content = @Content(mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", schema = @Schema(type = "string", format = "binary")))
     @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<Resource> telechargerModele() {
         ByteArrayInputStream flux = importService.genererModele();

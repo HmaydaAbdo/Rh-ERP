@@ -7,6 +7,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import staport.rh.audit.events.ActionSecurite;
 import staport.rh.audit.events.EvenementSecurite;
@@ -37,10 +38,12 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -387,6 +390,21 @@ class AuthServiceTest {
 
         verify(emailService).envoyerLienReinitialisation("hmayda@staport.ma", "reset-brut", Duration.ofHours(1));
         verify(resetPasswordTokenRepository).save(any(ResetPasswordToken.class));
+    }
+
+    @Test
+    void demanderReinitialisationMotDePasse_gardeLaReponseGeneriqueSiLaFileEstPleine() {
+        when(utilisateurRepository.findByEmail("hmayda@staport.ma")).thenReturn(Optional.of(utilisateur));
+        when(tokenHasher.genererTokenBrut()).thenReturn("reset-brut");
+        when(tokenHasher.hasher("reset-brut")).thenReturn("reset-hash");
+        doThrow(new TaskRejectedException("file pleine"))
+                .when(emailService).envoyerLienReinitialisation("hmayda@staport.ma", "reset-brut", Duration.ofHours(1));
+
+        assertThatCode(() -> authService.demanderReinitialisationMotDePasse("hmayda@staport.ma"))
+                .doesNotThrowAnyException();
+
+        verify(resetPasswordTokenRepository).save(any(ResetPasswordToken.class));
+        verify(evenements).publishEvent(EvenementSecurite.pour(ActionSecurite.MOT_DE_PASSE_OUBLIE, 1L, "hmayda"));
     }
 
     @Test

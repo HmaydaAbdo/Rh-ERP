@@ -145,7 +145,7 @@ du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
 | Santé | `/actuator/health` (public — utilisé par les healthchecks Docker) ; l'état du serveur SMTP n'y est volontairement pas inclus |
 | Autres endpoints Actuator | Non exposés (seuls `health` et `prometheus` le sont, `management.endpoints.web.exposure.include`) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
 | Métriques Prometheus | `/actuator/prometheus` (registre `micrometer-registry-prometheus`), public comme la santé (aucune donnée sensible) mais **joignable depuis le serveur seulement** : nginx inner ne relaie que `/actuator/health`, le port du backend est lié à `127.0.0.1`. Chaque série porte le tag `application` |
-| Métriques métier | Compteurs et durée de la synchronisation des chantiers, exportés avec les autres métriques (voir [chantier/README.md](chantier/README.md)) |
+| Métriques applicatives | Compteurs et jauges d'audit, compteurs et timer de synchronisation ; inventaire, tags et raccordement opérationnel : [contrôle de conformité métriques](conformite/metrics-2026-10-12.md) et [chantier/README.md](chantier/README.md) |
 | Logs | SLF4J ; jamais de secret, identifiant de connexion, identité d'employé ni contenu métier/financier (voir `conventions/logging.md`). Format : texte en développement ; **JSON en production** (`LOGGING_FORMAT=json`) ; les événements sortent en temps réel sur la console et sont archivés chaque jour, compressés et gardés 30 jours UTC dans `./logs/`, à côté de `docker-compose.yml`. Seul `requestId` est ajouté au MDC et propagé aux tâches `@Async` ; l'acteur reste traçable dans l'audit à accès contrôlé |
 
 ---

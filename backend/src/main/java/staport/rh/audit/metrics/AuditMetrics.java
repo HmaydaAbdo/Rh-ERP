@@ -2,6 +2,8 @@ package staport.rh.audit.metrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
+import staport.rh.audit.entities.CategorieAudit;
+import staport.rh.audit.events.ActionSecurite;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,13 +25,13 @@ public class AuditMetrics {
     }
 
     /** Une entrée du journal n'a pas pu s'écrire (la catégorie dit si l'opération a été bloquée ou non). */
-    public void ecritureEnEchec(String categorie) {
-        registre.counter("rh.audit.ecriture.echec", "categorie", categorie).increment();
+    public void ecritureEnEchec(CategorieAudit categorie) {
+        registre.counter("rh.audit.ecriture.echec", "categorie", categorie.name()).increment();
     }
 
     /** Un événement de sécurité a été journalisé. */
-    public void evenementSecurite(String action) {
-        registre.counter("rh.audit.evenement.securite", "action", action).increment();
+    public void evenementSecurite(ActionSecurite action) {
+        registre.counter("rh.audit.evenement.securite", "action", action.name()).increment();
     }
 
     /** Vaut 1 quand le compte applicatif peut modifier une table d'audit, 0 sinon. */

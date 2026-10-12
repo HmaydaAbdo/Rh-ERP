@@ -3,6 +3,7 @@ package staport.rh.auth.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -221,7 +222,12 @@ public class AuthService implements IAuthService {
             token.setExpireLe(Instant.now().plus(parametres.dureeLienReinitialisation()));
             resetPasswordTokenRepository.save(token);
 
-            emailService.envoyerLienReinitialisation(utilisateur.getEmail(), tokenBrut, parametres.dureeLienReinitialisation());
+            try {
+                emailService.envoyerLienReinitialisation(utilisateur.getEmail(), tokenBrut, parametres.dureeLienReinitialisation());
+            } catch (TaskRejectedException saturation) {
+                // La réponse reste identique et immédiate ; le journal d'application signale le rejet sans PII ni jeton.
+                log.warn("Courriel de réinitialisation non planifié : file asynchrone saturée");
+            }
         });
         // Réponse identique que l'email existe ou non — ne jamais révéler si un compte existe.
     }

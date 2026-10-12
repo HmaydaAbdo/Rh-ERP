@@ -26,7 +26,9 @@ les tableaux ci-dessous décrivent uniquement les vérifications backend déjà 
 | RBAC | Chaque route déclare une permission ; refus, acceptation et table de référence vérifiés | `EndpointSecurityTest`, `JwtSecurityChainTest` |
 | Sessions | Jeton d'accès court, jeton de rafraîchissement opaque à rotation et révocation de famille, cookie `httpOnly` | `AuthServiceTest` |
 | Base | Flyway V1 → V21, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
-| Documentation d'API | Swagger éteint par défaut ; ses routes exigent un jeton quand il est éteint | `DocumentationApiSecurityTest` |
+| Documentation d'API | Swagger désactivé par défaut ; contrat généré validé en OpenAPI 3.1 ; routes de documentation protégées quand elles sont éteintes | [`swagger-2026-10-12.md`](swagger-2026-10-12.md), `OpenApiContractTest`, `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest` |
+| Métriques | Micrometer/Prometheus, séries applicatives à dimensions fermées, jauges d'intégrité, exposition réseau limitée et signaux d'alerte documentés | [`metrics-2026-10-12.md`](metrics-2026-10-12.md), `MetricsConformityTest`, `SupervisionTest` |
+| Performance | Pagination, limites de requêtes, intégrations et opérations de paie contrôlées ; historique Envers paginé efficacement, Nginx aligné à 20 Mo et profil local sous les seuils | [`performance-2026-10-12.md`](performance-2026-10-12.md) — conforme localement ; validation HTTP de bout en bout et des dépendances sur l'hôte d'exploitation à faire |
 
 ---
 
@@ -36,7 +38,7 @@ les tableaux ci-dessous décrivent uniquement les vérifications backend déjà 
 |---|---|---|
 | C1 | **Énumération des comptes par le temps de réponse** : un identifiant inconnu ou un compte inactif était refusé sans hachage de mot de passe, donc plus vite qu'un mot de passe faux (conventions/security.md, « Principes ») | `AuthService.login` compare toujours le mot de passe (empreinte factice pour un identifiant inconnu, vérification avant le refus d'un compte inactif) ; `AuthServiceTest` le vérifie |
 | C2 | **Adresse e-mail dans les journaux** : `EmailService` écrivait l'adresse du destinataire d'une réinitialisation (donnée personnelle, conventions/logging.md) | L'adresse n'est plus journalisée |
-| C3 | **Documentation d'API incomplète** : les contrôleurs d'authentification, d'utilisateurs et de rôles n'avaient ni `@Tag` ni `@Operation` (conventions/swagger.md) | Annotations ajoutées (avec les réponses d'erreur utiles) ; la règle est verrouillée pour tous les contrôleurs |
+| C3 | **Documentation d'API incomplète** : les contrôleurs d'authentification, d'utilisateurs et de rôles n'avaient ni `@Tag` ni `@Operation` (conventions/swagger.md) | Annotations et réponses harmonisées ; tags uniques, schémas d'erreur, transferts de fichiers et validation générée OpenAPI 3.1 ajoutés, verrouillés par `ArchitectureConventionsTest` et `OpenApiContractTest` |
 | C4 | **Durée du jeton de rafraîchissement en deux endroits** (30 jours dans le service et dans le cookie) | Source unique : `IAuthService.REFRESH_TOKEN_TTL` |
 | C5 | **Critères de recherche sans borne** : chaînes et listes d'identifiants de taille libre, corps non validé | `@Size` alignés sur les colonnes filtrées (listes : 500 identifiants au plus), `@Valid` sur tous les corps de critères, y compris celui de la suppression en groupe ; `EmployeeControllerTest` vérifie le `400` |
 | C6 | Aucune règle exécutable pour les conventions d'architecture, de journalisation, de JPA et de documentation d'API | `ArchitectureConventionsTest` (14 règles) |
