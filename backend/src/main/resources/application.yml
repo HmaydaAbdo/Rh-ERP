@@ -118,6 +118,10 @@ management:
 chantier:
   sync:
     base-url: ${CHANTIER_SYNC_BASE_URL}
+    # Bornes de l'adaptateur ERP : aucune connexion ou lecture ne peut bloquer la tâche indéfiniment.
+    # Une erreur est propagée sans retry automatique ; la prochaine exécution reprend l'export complet.
+    connect-timeout: 5s
+    read-timeout: 30s
     # La planification quotidienne n'est pas ici : c'est le paramètre « Planification de la synchronisation des chantiers »
     # (écran Paramètres, conventions/configuration.md).
 
