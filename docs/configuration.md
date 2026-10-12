@@ -56,6 +56,7 @@ seul par Flyway s'il n'existe pas.
 |---|---|
 | `DOCKERHUB_USERNAME` | Compte Docker Hub qui publie les images |
 | `POSTGRES_IMAGE_TAG`, `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG`, `BACKUP_IMAGE_TAG` | SHA du même commit publié par la CI ; obligatoire, aucune valeur `latest` par défaut |
+| `BACKUP_AGE_RECIPIENT` | Clé publique age obligatoire pour chiffrer les archives PostgreSQL ; la clé privée reste hors du serveur |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL et son compte **propriétaire** (migrations) |
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |
 | `BACKUP_TIME_UTC`, `BACKUP_RETENTION_DAYS` | Heure quotidienne UTC (`02:00`) et conservation des archives (`30` jours) ; le service de backup utilise le compte propriétaire PostgreSQL pour dumper la base et les rôles |

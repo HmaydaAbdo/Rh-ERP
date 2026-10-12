@@ -74,6 +74,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       BACKUP_TIME_UTC: ${BACKUP_TIME_UTC:-02:00}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT est obligatoire}
       BACKUP_DIR: /backups
     volumes:
       - type: bind
@@ -85,13 +86,14 @@ services:
     # tmpfs évite la création d'un volume anonyme à chaque nouveau conteneur backup.
     tmpfs:
       - /var/lib/postgresql
+      - /tmp
     networks:
       - db-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h \"$${PGHOST}\" -p \"$${PGPORT}\" -U \"$${PGUSER}\" -d \"$${PGDATABASE}\" && test -w \"$${BACKUP_DIR}\""]
+      test: ["CMD-SHELL", "pg_isready -h \"$${PGHOST}\" -p \"$${PGPORT}\" -U \"$${PGUSER}\" -d \"$${PGDATABASE}\" && test -w \"$${BACKUP_DIR}\" && find \"$${BACKUP_DIR}\" -maxdepth 1 -type f -name 'rh-erp-*.tar.gz.age' -mmin -1440 -print -quit | grep -q ."]
       interval: 1m
       timeout: 10s
-      start_period: 10s
+      start_period: 1h
       retries: 3
 
   backend:

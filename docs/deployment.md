@@ -256,29 +256,61 @@ En production, les commandes de démarrage et de mise à jour activent explicite
 Les archives PostgreSQL complètes sont créées chaque jour à `02:00 UTC` et conservées 30 jours. Si
 le service démarre sans archive datant de moins de 24 heures, il en crée une immédiatement ; un
 échec est retenté chaque heure.
-Le service place `rh-erp-<horodatage-UTC>.tar.gz` dans `./backups/`, à côté de
-`docker-compose.yml`. Chaque archive contient le dump PostgreSQL au format custom, les rôles sans
-leurs mots de passe et les sommes SHA-256 des deux fichiers. Le dump custom est validé avec
-`pg_restore --list` avant publication de l'archive. Les permissions sont restreintes au compte
-`postgres` du conteneur (UID/GID 70) ; sur un hôte Linux, préparer le dossier avec la commande
-indiquée en tête de ce document avant le démarrage. Le conteneur applique `umask 077` à chaque archive ;
-il ne change pas les permissions du bind mount, car les partages Windows/NTFS ne garantissent pas `chmod` POSIX.
+Le service place `rh-erp-<horodatage-UTC>.tar.gz.age` dans `./backups/`, à côté de
+`docker-compose.yml`. Le dump PostgreSQL au format custom, les rôles sans leurs mots de passe et les
+sommes SHA-256 sont regroupés dans une archive tar.gz, puis chiffrés avec `age` avant leur publication.
+Le dump est validé avec `pg_restore --list` ; l'archive tar est relue et ses sommes vérifiées avant
+chiffrement. Le plaintext temporaire est placé dans `/tmp`, monté en tmpfs par Compose, puis supprimé.
+Les permissions sont restreintes au compte `postgres` du conteneur (UID/GID 70) ; sur un hôte Linux,
+préparer le dossier avec la commande indiquée en tête de ce document avant le démarrage. Le conteneur
+applique `umask 077` à chaque archive ; il ne change pas les permissions du bind mount, car les
+partages Windows/NTFS ne garantissent pas `chmod` POSIX.
 
 `BACKUP_TIME_UTC` et `BACKUP_RETENTION_DAYS` sont configurables dans `.env` ; les valeurs par défaut
-sont `02:00` et `30`. La sauvegarde est stockée sans chiffrement, conformément au choix confirmé
-pour ce déploiement local. Les archives contiennent des données personnelles et salariales : toute
-personne ou processus pouvant lire `./backups/` peut lire ces données. Ne pas synchroniser le
-dossier vers un stockage partagé non contrôlé. Le répertoire est exclu de Git.
+sont `02:00` et `30`. `BACKUP_AGE_RECIPIENT` contient la clé publique `age` destinée au chiffrement ;
+ce n'est pas un secret. La clé privée ne doit jamais être placée sur le serveur, dans le dépôt ou dans
+les archives. Les archives contiennent des données personnelles et salariales : limiter également
+l'accès au répertoire `./backups/`, qui est exclu de Git.
+
+**Objectifs de reprise** : RPO cible de 24 heures (sauvegarde quotidienne à 02:00 UTC) et RTO cible
+de 4 heures, retenu le 2026-10-12. L'exercice local synthétique réussit dans ce délai ; confirmer le
+RTO avec le volume et les contraintes d'accès réels avant de le tenir pour validé en production.
+
+### Préparer la clé age et accéder aux archives
+
+Sur le poste d'administration, installer `age` (Windows : `winget install --id FiloSottile.age`),
+puis générer une identité :
+
+```powershell
+age-keygen -o "$env:USERPROFILE\erp-rh-backup-identity.txt"
+```
+
+La commande affiche une clé publique `age1...` : reporter uniquement cette valeur dans
+`BACKUP_AGE_RECIPIENT` du `.env` du serveur. Garder `erp-rh-backup-identity.txt` dans un gestionnaire
+de secrets ou un support chiffré hors serveur, avec une seconde copie de secours protégée. Sans cette
+clé privée, aucune archive ne peut être déchiffrée.
+
+Pour lire une archive, copier le fichier `.tar.gz.age` vers un poste de restauration contrôlé, puis la
+déchiffrer avec la clé privée :
+
+```powershell
+age --decrypt --identity "$env:USERPROFILE\erp-rh-backup-identity.txt" `
+  --output .\restore-check.tar.gz .\rh-erp-<horodatage-UTC>.tar.gz.age
+```
+
+Extraire ensuite le `.tar.gz`, vérifier `SHA256SUMS` avec `sha256sum -c SHA256SUMS` dans WSL/Linux,
+et contrôler le dump avec `pg_restore --list database.dump` avant de suivre la procédure de
+restauration isolée ci-dessous. Ne jamais transmettre la clé privée avec l'archive.
 
 ### Vérifier et restaurer
 
 Vérifier les exécutions récentes avec `docker compose logs backup` et l'existence d'une archive
-datée de moins de 24 heures dans `backups/`. Pour vérifier les sommes et préparer une restauration
-isolée :
+chiffrée datée de moins de 24 heures dans `backups/`. Déchiffrer celle-ci avec la procédure ci-dessus,
+puis vérifier les sommes et préparer une restauration isolée :
 
 ```sh
 mkdir -m 0700 restore-check
-tar -xzf backups/rh-erp-<horodatage-UTC>.tar.gz -C restore-check
+tar -xzf restore-check.tar.gz -C restore-check
 cd restore-check
 sha256sum -c SHA256SUMS
 pg_restore --list database.dump
@@ -292,7 +324,9 @@ Contrôler extensions, migrations Flyway, volumes de données, permissions et d�
 avant tout retour au service. Ne jamais tester sur le seul volume de production.
 
 Par décision du 2026-10-11, les sauvegardes restent sur le serveur pour l'instant ; aucune copie
-indépendante hors hôte ni exercice de restauration hors hôte n'est planifié. Cette sauvegarde locale
-ne protège pas contre la perte ou la compromission de l'hôte. Voir `TODO.md`.
+indépendante hors hôte ni exercice de restauration hors hôte n'est planifié. Le chiffrement protège
+le contenu des archives, mais une copie locale ne protège pas contre la perte ou la compromission de
+l'hôte. L'installation de la clé publique et la supervision des sauvegardes en production restent
+dans `TODO.md`.
 
 Voir `TODO.md` pour le suivi.
