@@ -94,7 +94,13 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    de la CI, puis préparer et valider cette chaîne. Ne pas déployer en production avant la migration
    PG17→PG18.
 5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
-   prévu pour l'instant. Les dumps quotidiens restent sur le serveur.
+   prévu pour l'instant. Les archives quotidiennes chiffrées restent sur le serveur.
+6. **Mise en service de la sauvegarde chiffrée** : renseigner `BACKUP_AGE_RECIPIENT` dans le `.env`
+   de production, vérifier la création d'archives `.tar.gz.age`, vérifier que le tmpfs `/tmp` peut
+   contenir le dump selon la taille réelle de la base et la mémoire disponible, préparer une alerte
+   lorsque le service est unhealthy ou qu'aucune archive récente n'existe, et valider la procédure de
+   restauration avec la clé privée conservée hors serveur. Aucun secret privé ne doit être copié dans
+   le dépôt ou laissé sur l'hôte après l'opération.
 
 ## Évolutions prochaines
 

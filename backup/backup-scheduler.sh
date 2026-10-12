@@ -6,9 +6,15 @@ set -eu
 : "${PGDATABASE:?PGDATABASE is required}"
 : "${PGUSER:?PGUSER is required}"
 : "${PGPASSWORD:?PGPASSWORD is required}"
+: "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}"
 : "${BACKUP_TIME_UTC:=02:00}"
 : "${BACKUP_RETENTION_DAYS:=30}"
 : "${BACKUP_DIR:=/backups}"
+
+case "$BACKUP_AGE_RECIPIENT" in
+  age1*) ;;
+  *) echo "BACKUP_AGE_RECIPIENT must be an age public key (age1...)" >&2; exit 2 ;;
+esac
 
 export PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD
 
@@ -35,7 +41,7 @@ mkdir -p "$BACKUP_DIR"
 
 now=$(date -u +%s)
 recent_backup=false
-for archive in "$BACKUP_DIR"/rh-erp-*.tar.gz; do
+for archive in "$BACKUP_DIR"/rh-erp-*.tar.gz.age; do
   [ -f "$archive" ] || continue
   modified=$(stat -c %Y "$archive")
   if [ $((now - modified)) -lt 86400 ]; then
