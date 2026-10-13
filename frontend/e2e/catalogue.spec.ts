@@ -48,6 +48,8 @@ test.describe('Catalogue des composants', () => {
     });
     await page.keyboard.press('End');
 
+    const derniereOption = liste.getByRole('option').last();
+    await expect(champ).toHaveAttribute('aria-activedescendant', await derniereOption.getAttribute('id'));
     await expect.poll(() => liste.evaluate((element) => (element as HTMLElement).scrollTop)).toBeGreaterThan(0);
     const limites = await liste.evaluate((element) => {
       const panneau = element as HTMLElement;
