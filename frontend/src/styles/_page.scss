@@ -99,7 +99,7 @@
     display: inline-block;
     min-width: 1.25rem;
     margin: 0 var(--space-xs);
-    padding: 0 0.35rem;
+    padding: 0 var(--space-xs);
     border-radius: var(--radius-badge);
     background: var(--color-primary);
     color: var(--color-primary-contrast);

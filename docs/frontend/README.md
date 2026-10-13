@@ -240,7 +240,7 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-field-error` | Première erreur Signal Forms annoncée (`role="alert"`) quand le champ touché est invalide | Signal Forms |
 | `stp-chart` | Graphique Chart.js (`role="img"`), navigation par flèches, Début/Fin et sélection par Entrée/Espace ; annonce du point courant, `dataSelect` au clic ou au clavier | Chart.js |
 
-Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles ; ses parcours E2E couvrent axe en thème clair/sombre et interactions clavier ciblées. Les vérifications manuelles de contraste élevé et les états qui ne sont pas atteignables dans cette démonstration restent à consigner dans le rapport de conformité avant de clôturer `design-system.md`.
+Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles ; ses parcours E2E couvrent axe en thème clair/sombre et interactions clavier ciblées. Le [rapport de conformité](../conformite/design-system-2026-10-13.md) consigne les vérifications manuelles de contraste élevé déjà obtenues et celles qui restent à faire avant de clôturer `design-system.md`.
 
 Clavier du sélecteur : ouverture par clic ou **Flèche bas**, navigation aux flèches, **Entrée** coche/choisit, **Échap** ferme ;
 la frappe filtre (sélecteurs filtrables). Conséquence de l'implémentation sur Angular Aria : sans filtre, la frappe de lettres

@@ -7,6 +7,11 @@
 
 ---
 
+## Clôture du Design System frontend
+
+- Rejouer la CI après push des jetons d’espacement mis à jour ; `npm run build` local est bloqué par Sass Embedded (OS error 5), tandis que les quatre feuilles touchées compilent individuellement.
+- Compléter la revue visuelle des états du kit dans les deux thèmes/contraste forcé et valider les annonces au clavier avec un lecteur d’écran réel avant de passer `design-system.md` à conforme. Suivi : [rapport de contrôle](docs/conformite/design-system-2026-10-13.md).
+
 ## Évolutions IA et KPI
 
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
