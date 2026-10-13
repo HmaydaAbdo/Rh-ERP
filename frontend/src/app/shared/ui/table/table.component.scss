@@ -22,7 +22,8 @@
   }
 
   table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
   }
@@ -30,7 +31,7 @@
 
 th {
   position: relative;
-  min-width: 0;
+  min-width: var(--table-column-min-width, 9rem);
   padding: 0;
   background: var(--table-header-bg);
   color: var(--color-text);
@@ -80,7 +81,7 @@ th {
 .stp-table__sort-label {
   min-width: 0;
   flex: 1;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   white-space: normal;
 }
 

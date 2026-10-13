@@ -324,7 +324,8 @@ describe('TableComponent', () => {
         poignee('Nom').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
         fixture.detectChanges();
       }
-      expect(poignee('Nom').getAttribute('aria-valuenow')).toBe('60');
+      expect(poignee('Nom').getAttribute('aria-valuenow')).toBe('144');
+      expect(poignee('Nom').getAttribute('aria-valuemin')).toBe('144');
     });
 
     it('borne la largeur maximale annoncée au séparateur', () => {

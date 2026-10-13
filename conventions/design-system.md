@@ -220,6 +220,9 @@ horizontalement, à l'intérieur de sa carte.
 * **Grilles** : colonnes en `minmax(0, 1fr)` (jamais `1fr` seul : un contenu large étirerait la colonne), réduites à deux
   colonnes sur tablette et à une sur téléphone. Un élément pleine largeur se place par `grid-column: 1 / -1`
   (jamais `span n`, qui crée des colonnes implicites).
+* **Tableaux** : les en-têtes affichent leur libellé complet et reviennent à la ligne aux espaces. La largeur minimale de
+  colonne est de 9 rem (`--table-column-min-width`) afin d'éviter une coupure caractère par caractère ; le tableau défile
+  dans son propre conteneur lorsque toutes ses colonnes ne tiennent pas dans la fenêtre.
 * **Tableaux** : la première colonne reste en vue pendant le défilement horizontal ; le paginateur se replie sur
   plusieurs lignes, sans « première / dernière page ».
 * **Barres de filtres** : ce qui est secondaire se replie derrière un bouton « Filtres (n) » sur téléphone (le n compte les
