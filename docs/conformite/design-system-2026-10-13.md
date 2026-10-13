@@ -2,14 +2,17 @@
 
 ## Périmètre et statut
 
-Revue du code courant (`be35c66`, puis correctif local non poussé) contre [`conventions/design-system.md`](../../conventions/design-system.md), du catalogue partagé, des tests E2E et de la documentation frontend. La CI du commit poussé est verte, mais le correctif local du tableau partagé n'est pas encore intégré ni validé par une nouvelle CI. Les vérifications visuelles manuelles, notamment en contraste forcé, restent à faire ; ce document ne déclare donc pas la convention conforme.
+Revue du code courant (`9f26de9`, puis correctif local non poussé) contre [`conventions/design-system.md`](../../conventions/design-system.md), du catalogue partagé, des tests E2E et de la documentation frontend. La CI du commit poussé est verte, mais le correctif local du tableau partagé n'est pas encore intégré ni validé par une nouvelle CI. Les vérifications visuelles manuelles, notamment en contraste forcé, restent à faire ; ce document ne déclare donc pas la convention conforme.
 
 **Statut : partiel.** Le socle de thèmes et plusieurs contrôles automatisés existent. Les preuves ne couvrent pas encore tous les composants, leurs états et les vérifications manuelles requises.
 
 ## Avancement de cette passe
 
 - Après le push de `be35c66`, la CI [38449650028](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38449650028) est verte : les cinq jobs ont réussi, dont le build et les 664 tests frontend. La vérification du Compose lancé par l'utilisateur a néanmoins révélé que les 16 colonnes Paie se réduisaient à environ 69 px et cassaient les en-têtes caractère par caractère.
-- Correctif local en attente de commit : largeur minimale de colonne de 9 rem (144 px), retours à la ligne aux espaces et défilement limité au conteneur du tableau. La borne ARIA et le redimensionnement clavier/souris sont alignés ; documentation et spec ciblée sont ajustées. La nouvelle image n'est pas encore déployée dans Compose.
+- Le commit `9f26de9` et sa CI [38452739833](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38452739833) sont aussi verts : les cinq jobs ont réussi, dont 664 tests frontend. Son image Compose applique toutefois une largeur minimale de 144 px à toutes les colonnes, ce qui prend trop de place ; l'utilisateur a confirmé la préférence pour des intitulés Paie compacts (Jours trav., J.R.O, J.R.D, Prime RO/RD).
+- Correctif local en attente de commit : les colonnes Paie affichent ces libellés compacts, tout en conservant le nom complet dans le sélecteur, l'info-bulle et le nom accessible ; la largeur minimale globale revient à 60 px. La nouvelle image n'est pas encore déployée dans Compose.
+- Le test manuel du sélecteur de colonnes Paie confirme 16 options et un défilement à la molette, mais le panneau dépasse du bord droit (1446 px pour une fenêtre de 1366 px), ce qui masque sa barre de défilement. La navigation `Fin` active « Période » sans la faire apparaître. Correctif local ajouté : repositionnement CDK dans la fenêtre, barre verticale visible et défilement de l'option active ; un E2E vérifie le panneau en viewport mobile et la navigation jusqu'à la dernière option.
+- La CI ne couvre pas encore ces derniers changements locaux. `ngc`, `tsc` des specs, la compilation Sass directe et la découverte du scénario Playwright réussissent ; l'exécution des tests Angular et du scénario E2E est bloquée avant le démarrage de l'application par Sass Embedded (`sass.snapshot`, OS error 5).
 - `ngc -p tsconfig.app.json --rootDir src` et la compilation Sass directe du tableau réussissent localement. Le test ciblé et `npm run build` restent bloqués avant exécution par l'erreur Sass Embedded sur `sass.snapshot` (OS error 5) ; cette passe n'a donc pas de preuve locale de build ou de test unitaire.
 
 - Remplacement de trois usages de primitives neutres par leurs jetons sémantiques et centralisation des ruptures responsive dans `_breakpoints.scss`, y compris la règle tactile globale.

@@ -87,6 +87,16 @@ describe('TableComponent', () => {
   describe('rendu', () => {
     beforeEach(() => afficher((h) => h.lignes.set(LIGNES)));
 
+    it('affiche le libellé compact tout en exposant le libellé complet', () => {
+      hote.colonnes.set([{ field: 'nom', header: 'Nombre de jours travaillés', shortHeader: 'Jours trav.' }]);
+      fixture.detectChanges();
+
+      const boutonEntete = entete('Jours trav.').querySelector<HTMLButtonElement>('button')!;
+      expect(boutonEntete.textContent).toContain('Jours trav.');
+      expect(boutonEntete.getAttribute('aria-label')).toBe('Nombre de jours travaillés');
+      expect(boutonEntete.title).toBe('Nombre de jours travaillés');
+    });
+
     it('présente des colonnes nommées, une région défilante atteignable au clavier et un tableau natif', () => {
       const region = racine().querySelector('[role="region"]') as HTMLElement;
 
@@ -324,8 +334,8 @@ describe('TableComponent', () => {
         poignee('Nom').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
         fixture.detectChanges();
       }
-      expect(poignee('Nom').getAttribute('aria-valuenow')).toBe('144');
-      expect(poignee('Nom').getAttribute('aria-valuemin')).toBe('144');
+      expect(poignee('Nom').getAttribute('aria-valuenow')).toBe('60');
+      expect(poignee('Nom').getAttribute('aria-valuemin')).toBe('60');
     });
 
     it('borne la largeur maximale annoncée au séparateur', () => {

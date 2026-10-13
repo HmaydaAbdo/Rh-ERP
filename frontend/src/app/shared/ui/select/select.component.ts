@@ -74,6 +74,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   protected readonly known = signal(new Map<V, string>());
   protected readonly positions = POSITIONS;
   protected readonly minWidth = signal(0);
+  private readonly listbox = viewChild(Listbox);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
@@ -153,6 +154,11 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     }
     this.term.set(text);
     this.filterChange.emit(text);
+  }
+
+  /** Le combobox aria déplace le descendant actif ; le listbox défile pour le garder visible. */
+  protected onComboboxKeydown(): void {
+    queueMicrotask(() => this.listbox()?.scrollActiveItemIntoView({ block: 'nearest' }));
   }
 
   protected onSelection(values: V[]): void {

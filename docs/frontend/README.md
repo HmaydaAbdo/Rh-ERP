@@ -231,7 +231,7 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-badge` | Pastille de statut (success, warning, danger, info, neutral), contraste calculé par thème | |
 | `stp-dialog` | Dialogue modal ou tiroir (`placement="end"`) : piège de focus, Échap, `closable`, panneau en overlay | CDK Overlay + A11y |
 | `stp-menu-button`, `stp-split-button` | Menu d'actions (`role="menu"`, flèches, Échap) ; bouton scindé | Angular Aria `menu` |
-| `stp-select` | Liste déroulante simple/multiple, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` ; un clic l'ouvre (avec filtre, il n'ouvre que : il ne referme pas) ; en multiple, les valeurs choisies qui ne figurent pas dans les options affichées sont conservées | Aria `combobox` + `listbox` |
+| `stp-select` | Liste déroulante simple/multiple, panneau contraint à la fenêtre et défilable, navigation clavier qui garde l'option active visible, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` ; en multiple, les valeurs choisies qui ne figurent pas dans les options affichées sont conservées | Aria `combobox` + `listbox`, CDK Overlay |
 | `stp-table` | Tableau natif : tri, pagination serveur ou mémoire, redimensionnement/réordonnancement clavier, pied, ligne cliquable | HTML natif |
 | `stp-number-input` | Nombre au format `fr-FR`, bornes, décimales | |
 | `stp-password-input` | Mot de passe avec afficher/masquer (`aria-pressed`) | |
@@ -301,14 +301,14 @@ Tous les tableaux de données — **sans exception** — offrent :
 | Fonction | Détail |
 |---|---|
 | Tri | Sur chaque colonne de données (pas sur la colonne d'actions) ; `sortField` donne le chemin transmis au backend (ex. `chantier.code`) |
-| Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite ; largeur bornée entre 144 et 2 000 px pour préserver la lisibilité des en-têtes |
+| Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite ; largeur bornée entre 60 et 2 000 px |
 | Réordonnancement | Glisser-déposer un en-tête, ou **Alt + flèche** sur son bouton de tri ; l'ordre est reporté sur le corps du tableau |
 | Colonnes visibles | `app-column-chooser` liste toutes les colonnes métier déclarées ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
 | Pagination | 10 / 20 / 50 / 100 lignes, avec « 1 - 20 sur 134 — page 1/7 » |
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
 **Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
-son propre style de tableau. Les colonnes gardent au moins 9 rem pour éviter les retours à la ligne caractère par caractère ; les en-têtes restent affichés en entier et peuvent revenir à la ligne aux espaces. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
+son propre style de tableau. Un en-tête peut déclarer `shortHeader` pour afficher un libellé compact ; son `header` complet reste annoncé aux technologies d'assistance, visible au survol et utilisé dans le sélecteur de colonnes. Les en-têtes ne sont pas tronqués. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
 `emptyMessage` et présenté dans le tableau. Les seuls tableaux hors `stp-table` sont des listes courtes de lignes d'import ignorées :
 elles utilisent `app-static-table-scroll` / `app-static-table` (`styles/_page.scss`), une région de défilement focusable, une légende
 accessible et des en-têtes `scope="col"`.
