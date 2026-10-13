@@ -4,7 +4,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
 
 .export-wizard {
   &__panneau {
-    animation: export-wizard-avant var(--duration-slow);
+    animation: export-wizard-avant var(--duration-base) var(--ease-out);
     &--arriere {
       animation-name: export-wizard-arriere;
     }
@@ -33,7 +33,7 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
   &__recherche {
     width: 100%;
     margin-bottom: var(--space-sm);
-    padding: 0.5rem 0.75rem;
+    padding: var(--space-sm) var(--space-sm-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: var(--text-base);
@@ -47,36 +47,5 @@ $accent-doux: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
     margin-left: var(--space-sm);
     font-size: var(--text-xs);
     color: var(--color-text-muted);
-  }
-}
-
-@keyframes export-wizard-avant {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes export-wizard-arriere {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .export-wizard * {
-    animation: none !important;
-    transition: none !important;
   }
 }

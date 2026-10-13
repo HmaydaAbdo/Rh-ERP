@@ -24,7 +24,7 @@
     aspect-ratio: 1;
     place-items: center;
     border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
-    border-radius: 1.125rem;
+    border-radius: var(--radius-xl);
     background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
     color: var(--color-primary);
   }
@@ -106,7 +106,6 @@
   }
 
   &__carte {
-    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -116,23 +115,14 @@
     background: var(--color-surface);
     color: var(--color-text);
     text-decoration: none;
-    transition: border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base);
+    transition: border-color var(--duration-fast);
 
     &:hover,
     &:focus-visible {
       border-color: var(--color-primary);
       box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-
-      &:hover,
-      &:focus-visible {
-        transform: none;
-      }
-    }
   }
 
   &__libelle {
@@ -168,16 +158,16 @@
       height: 100%;
       background: var(--color-primary);
       transform-origin: left;
-      animation: jauge-remplir var(--duration-slower) var(--ease-out) 0.3s backwards;
+      animation: jauge-remplir var(--duration-slower) var(--ease-out) var(--duration-base) backwards;
     }
   }
 
   // ---- Scène d'un niveau : glisse depuis la droite en descendant, depuis la gauche en remontant ----
   &__scene {
-    animation: scene-avant var(--duration-slow) var(--ease-out) backwards;
+    animation: scene-entree-avant var(--duration-slow) var(--ease-out) backwards;
 
     &--arriere {
-      animation-name: scene-arriere;
+      animation-name: scene-entree-arriere;
     }
   }
 
@@ -190,7 +180,6 @@
   }
 
   &__tuile {
-    animation: carte-entree var(--duration-slow) var(--ease-out) backwards;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -213,58 +202,4 @@
     font-variant-numeric: tabular-nums;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    &__carte,
-    &__tuile,
-    &__scene,
-    &__jauge span {
-      animation: none;
-    }
-  }
-}
-
-@keyframes carte-entree {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes scene-avant {
-  from {
-    opacity: 0;
-    transform: translateX(2rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes scene-arriere {
-  from {
-    opacity: 0;
-    transform: translateX(-2rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes jauge-remplir {
-  from {
-    transform: scaleX(0);
-  }
-
-  to {
-    transform: scaleX(1);
-  }
 }

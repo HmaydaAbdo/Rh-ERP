@@ -19,7 +19,6 @@
     background-color var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
 
   &:disabled,
@@ -111,12 +110,6 @@
   animation: stp-spin var(--duration-slowest) linear infinite;
 }
 
-@keyframes stp-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 // ---- Pastilles de statut ----
 // Fond = le statut dilué dans la surface ; texte = le statut mêlé au texte courant, donc plus foncé en thème clair et plus clair
 // en thème sombre : le contraste suit le thème. L'état n'est jamais porté par la seule couleur : la pastille le dit en toutes lettres.
@@ -128,7 +121,7 @@
 .stp-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
+  padding: var(--space-2xs) var(--space-sm);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: 600;

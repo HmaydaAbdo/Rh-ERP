@@ -1,3 +1,4 @@
+@use 'styles/breakpoints' as bp;
 @use 'styles/tokens';
 @use 'styles/buttons';
 @use 'styles/page';
@@ -24,7 +25,7 @@ body {
 // Anneau de focus clavier unique, aux couleurs de la marque
 :focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline-offset: var(--focus-offset);
 }
 
 // Titres : pas de mot orphelin en fin de ligne
@@ -64,7 +65,7 @@ html {
 }
 
 // Écran tactile ou téléphone : cibles d'au moins 44 px, texte de champ d'au moins 16 px (sinon iOS zoome à la saisie)
-@media (pointer: coarse), (max-width: 767px) {
+@include bp.touch {
   :root {
     --control-height: var(--control-height-touch);
     --control-font-size: var(--control-font-size-touch);

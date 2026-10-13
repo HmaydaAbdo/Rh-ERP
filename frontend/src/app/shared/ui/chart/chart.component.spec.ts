@@ -42,7 +42,9 @@ describe('ChartComponent', () => {
     await afficher();
 
     expect(canvas().getAttribute('role')).toBe('img');
-    expect(canvas().getAttribute('aria-label')).toBe('Masse salariale par chantier');
+    expect(canvas().getAttribute('aria-label')).toBe(
+      'Masse salariale par chantier. Utilisez les flèches pour parcourir les données, puis Entrée pour sélectionner.'
+    );
   });
 
   it('crée un graphique du type demandé avec ses données', async () => {

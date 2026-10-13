@@ -2,18 +2,21 @@
 
 ## Périmètre et statut
 
-Revue du code courant (`30c59c8`) contre [`conventions/design-system.md`](../../conventions/design-system.md), du catalogue partagé, des tests E2E et de la documentation frontend. Après l'audit initial, les corrections mécaniques listées ci-dessous ont été appliquées. Les vérifications visuelles manuelles, notamment en contraste forcé, restent à faire ; ce document ne déclare donc pas la convention conforme.
+Revue du code courant (`f5ef1cc`) contre [`conventions/design-system.md`](../../conventions/design-system.md), du catalogue partagé, des tests E2E et de la documentation frontend. Les corrections décrites ci-dessous sont locales et ne sont pas encore intégrées ni validées par une nouvelle CI. Les vérifications visuelles manuelles, notamment en contraste forcé, restent à faire ; ce document ne déclare donc pas la convention conforme.
 
 **Statut : partiel.** Le socle de thèmes et plusieurs contrôles automatisés existent. Les preuves ne couvrent pas encore tous les composants, leurs états et les vérifications manuelles requises.
 
 ## Avancement de cette passe
 
-- Remplacement de trois usages de primitives neutres par leurs jetons sémantiques et centralisation des deux ruptures `48rem`.
+- Remplacement de trois usages de primitives neutres par leurs jetons sémantiques et centralisation des ruptures responsive dans `_breakpoints.scss`, y compris la règle tactile globale.
 - Ajout au catalogue des démonstrations d'erreur de champ, nombre, date, mois, mot de passe, message, icône et graphique.
 - Ajout d'une navigation clavier dans `stp-chart` : flèches, Début/Fin, Entrée/Espace et annonce du point sélectionné ; ajout d'un scénario E2E ciblé.
 - Les utilitaires Tailwind compilés (`bg-surface`, `text-muted`, `rounded-md`, `shadow-md`, `text-page-title`) pointent vers les variables sémantiques du thème ; aucun jeu de valeurs concurrent n'est généré.
-- `ngc --noEmit -p tsconfig.app.json` réussit et les cinq feuilles Sass concernées compilent avec l'API JS Sass.
-- Le build Angular et le test Angular ciblé n'ont pas abouti : Sass Embedded échoue à canonicaliser/lire `node_modules/sass-embedded-win32-x64/dart-sass/src/sass.snapshot` (OS error 5). Le test ciblé a été interrompu après répétition de la même erreur.
+- Les keyframes sont centralisés dans `_motion.scss`. Les entrées redondantes des cartes et tuiles Paie ont été retirées ; les règles de mouvement réduit restent centralisées. Le squelette respire par opacité, et la confirmation de l'export utilise uniquement opacité/transform.
+- Les jetons `--space-2xs`, `--space-sm-md`, `--radius-xl`, `--radius-pill`, `--radius-badge` et `--focus-offset` couvrent plusieurs valeurs auparavant écrites dans les feuilles ; la référence inexistante `--radius-2xs` a été supprimée.
+- `ngc --noEmit -p tsconfig.app.json` et `npx tsc --noEmit -p tsconfig.spec.json` réussissent. Les feuilles Sass modifiées compilent avec l'API JS Sass.
+- Le build Angular et le test ciblé ne démarrent pas : Sass Embedded échoue à canonicaliser/lire `node_modules/sass-embedded-win32-x64/dart-sass/src/sass.snapshot` (OS error 5). Cette limitation locale n'est pas une réussite de build/test.
+- La CI GitHub Actions du commit `f5ef1cc`, run [38447235345](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38447235345), a compilé puis échoué dans un test unitaire du graphique : le test attendait l'ancien nom accessible sans l'aide clavier ajoutée au canvas. L'attendu a été corrigé localement ; une CI relancée reste nécessaire.
 
 ## Éléments déjà présents
 
@@ -27,7 +30,7 @@ Revue du code courant (`30c59c8`) contre [`conventions/design-system.md`](../../
 
 ### 1. Catalogue et états incomplets
 
-À l'audit initial, le catalogue ne présentait pas comme démonstrations dédiées les composants d'erreur de champ, mot de passe, mois, date, nombre, icône, message et graphique. Ces huit démonstrations ont été ajoutées dans cette passe. Leurs états applicables et les scénarios d'accessibilité restent à examiner ; la présence d'une démo ne constitue pas à elle seule une preuve de conformité de tous les états.
+Le catalogue présente maintenant des démonstrations dédiées pour l'erreur de champ, le mot de passe, le mois, la date, le nombre, l'icône, le message et le graphique. `docs/frontend/README.md` inventorie les 15 composants partagés ; les tests unitaires ont aussi un fichier de spec pour chacun. Il manque encore une correspondance explicite entre les états applicables, les interactions testées et les états non atteignables dans le catalogue. La présence d'une démo ou d'un fichier de spec ne prouve pas à elle seule que tous les états sont conformes.
 
 Le test axe du catalogue ne contrôle que son contenu actuellement rendu, dans les thèmes clair et sombre. Les tests clavier couvrent des parcours ciblés, pas tous les composants et états documentés par la convention.
 
@@ -41,26 +44,26 @@ Les styles `forced-colors` sont définis globalement et sur l'écran de connexio
 
 Les usages directs de `--neutral-*` dans `select.component.scss`, `password-input.component.ts` et `materiel-etape.component.scss` ont été remplacés par `--color-surface-alt` ou `--color-surface`.
 
-### 4. Exceptions de valeurs et mouvement à inventorier
+### 4. Exceptions de valeurs et mouvement
 
 - Les ruptures de `48rem` de `parametre-item.component.scss` et `user-form.component.scss` sont maintenant centralisées dans le mixin `form-compact` de `_breakpoints.scss`.
-- Les vues Cartes et Analytique ont des animations d'entrée locales de 14 px, distinctes de l'entrée d'écran définie dans `_motion.scss` (6 px). Les animations et délais locaux doivent être comparés à la règle de mouvement centrale.
-- Des détails visuels ponctuels (dimensions, traits et espacements en pixels) apparaissent encore dans des styles de composants. Ils doivent être triés entre valeurs de design à tokeniser et mesures purement géométriques nécessaires au rendu.
+- Les animations d'entrée redondantes des cartes et tuiles ont été supprimées ; les keyframes restantes sont dans `_motion.scss`. Le seul changement de mise en page animé est la largeur du menu latéral, exception explicitement prévue par la convention.
+- Le scan trouve encore des dimensions et mesures géométriques locales (icônes, poignées, hauteurs de panneau, largeur de tableaux, etc.). Elles restent à distinguer des valeurs d'espacement/rayon/typographie qui doivent utiliser ou ajouter un jeton ; le scan n'est donc pas déclaré clos.
 
 ### 5. Graphique : preuve d'interaction clavier à exécuter
 
-`stp-chart` expose désormais une interaction clavier : flèches gauche/droite ou haut/bas parcourent les points, Début/Fin vont au premier/dernier, et Entrée/Espace émettent `dataSelect`. Le point courant est annoncé par une région live. Un scénario E2E couvre cette interaction ; il n'a pas encore pu être exécuté dans cette session à cause de l'erreur Sass Embedded. La vérification avec une technologie d'assistance reste également à faire.
+`stp-chart` expose désormais une interaction clavier : flèches gauche/droite ou haut/bas parcourent les points, Début/Fin vont au premier/dernier, et Entrée/Espace émettent `dataSelect`. Le point courant est annoncé par une région live. Le test unitaire vérifie le nom accessible corrigé ; un scénario E2E couvre le clavier mais reste à exécuter après correction de l'environnement Sass. La vérification avec une technologie d'assistance reste également à faire.
 
-### 6. Inventaire documentaire absent
+### 6. Matrice de couverture des composants à compléter
 
-`docs/frontend/README.md` documente les principaux patterns, mais il n'y a pas de registre complet des composants partagés avec variantes, états, clavier/ARIA, thèmes et preuve de test. C'est le principal suivi demandé par la matrice actuelle.
+`docs/frontend/README.md` contient déjà un inventaire des 15 composants avec leur rôle et leur primitive. Il ne relie pas encore chaque composant à ses états, à son spec, aux parcours E2E pertinents et aux vérifications manuelles clair/sombre/contraste forcé. Le rapport de conformité doit faire ce lien avant de considérer l'audit documentaire fini.
 
 ## Suite proposée
 
-1. Étendre les preuves axe et clavier aux états et composants du catalogue, puis vérifier manuellement les thèmes clair/sombre et le contraste forcé.
-2. Produire l'inventaire complet des composants, jetons et exceptions de styles, puis corriger les mouvements locaux clairement hors convention.
-3. Exécuter le scénario E2E du graphique et valider son fonctionnement avec technologie d'assistance.
-4. Relancer build et test ciblé quand Sass Embedded peut lire son snapshot ; exécuter ensuite les contrôles frontend prévus par la convention.
-5. Mettre à jour la documentation du kit et cette matrice avec les preuves reproductibles ; garder le statut partiel jusqu'à clôture des contrôles automatisés et manuels.
+1. Compléter la matrice composants → états → tests unitaires/E2E → thèmes et contraste forcé.
+2. Relancer build, test ciblé et E2E après intégration du correctif du test CI ; résoudre l'accès local à Sass Embedded si le problème persiste.
+3. Exécuter le scénario E2E du graphique et vérifier au clavier et avec une technologie d'assistance.
+4. Démarrer l'application via Docker Compose, puis vérifier manuellement clair/sombre, contraste forcé, focus/clavier et rendu responsive.
+5. Finir le tri des dimensions et espacements locaux, mettre à jour les preuves et seulement alors réévaluer le statut.
 
 Les points 1 à 4 touchent au langage visuel partagé. Toute modification qui change les couleurs, les thèmes ou l'API globale du kit doit être instruite avant implémentation conformément à la règle de décision d'architecture du projet.

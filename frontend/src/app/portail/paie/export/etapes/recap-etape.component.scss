@@ -10,10 +10,10 @@
       display: flex;
       align-items: center;
       gap: var(--space-md);
-      padding: 0.65rem var(--space-md);
+      padding: var(--space-sm-md) var(--space-md);
       border-bottom: 1px solid var(--color-border);
       font-size: var(--text-sm);
-      animation: export-wizard-avant var(--duration-slow) backwards;
+      animation: export-wizard-avant var(--duration-base) var(--ease-out) backwards;
       &:last-child {
         border-bottom: none;
       }

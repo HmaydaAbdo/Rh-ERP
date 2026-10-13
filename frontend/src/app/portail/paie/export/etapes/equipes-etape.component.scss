@@ -25,7 +25,7 @@
     justify-content: space-between;
     gap: var(--space-md);
     width: 100%;
-    padding: 0.6rem var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     border: none;
     background: none;
     color: inherit;
@@ -47,7 +47,7 @@
     color: var(--color-text-muted);
     i {
       font-size: var(--text-xs);
-      transition: transform var(--duration-slow);
+      transition: transform var(--duration-base);
     }
   }
 
@@ -56,8 +56,8 @@
   }
 
   &__badge {
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-pill);
     background: $accent-doux;
     color: var(--color-primary);
     font-size: var(--text-xs);
@@ -67,7 +67,6 @@
   &__deplie {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows var(--duration-slow);
     > div {
       overflow: hidden;
     }
@@ -101,21 +100,21 @@
   &__pastilles {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
+    gap: var(--space-xs);
   }
 
   &__equipe {
     display: inline-flex;
     align-items: center;
     border: 1px solid var(--color-border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--color-surface);
     font-size: var(--text-xs);
-    transition: background var(--duration-base), border-color var(--duration-base), color var(--duration-base);
+    transition: background-color var(--duration-base), border-color var(--duration-base), color var(--duration-base);
     button {
-      padding: 0.25rem 0.65rem;
+      padding: var(--space-xs) var(--space-sm);
       border: none;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       background: none;
       color: inherit;
       font-size: inherit;
@@ -133,7 +132,7 @@
   }
 
   &__retrait {
-    padding: 0.25rem 0.5rem 0.25rem 0.1rem !important;
+      padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-2xs) !important;
     color: var(--color-text-muted) !important;
     &--actif {
       color: var(--color-danger) !important;
