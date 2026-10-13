@@ -1,35 +1,32 @@
 @if (champs().length === 0) {
   <p class="audit-champs__vide">Aucun changement.</p>
 } @else {
-  <table class="audit-champs">
-    <thead>
-      <tr>
-        <th>Champ</th>
-        <th>Avant</th>
-        <th>Après</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (champ of champs(); track champ.champ) {
-        <tr>
-          <th scope="row">{{ libelleChamp(champ.champ) }}</th>
+  <app-column-chooser [state]="colonnes" />
+  <stp-table label="Différences des champs" [value]="champs()" [columns]="colonnes.visible" [rowsPerPageOptions]="[10, 20, 50, 100]">
+    <ng-template stpCell let-champ let-col="col">
+      @switch (col.field) {
+        @case ('champ') {
+          {{ libelleChamp(champ.champ) }}
+        }
+        @case ('avant') {
           @if (champ.ajoutes || champ.retires) {
-            <td class="audit-champs__retire">
-              @for (element of champ.retires ?? []; track element) {
-                <span class="audit-champs__element">− {{ element }}</span>
-              }
-            </td>
-            <td class="audit-champs__ajoute">
-              @for (element of champ.ajoutes ?? []; track element) {
-                <span class="audit-champs__element">+ {{ element }}</span>
-              }
-            </td>
+            @for (element of champ.retires ?? []; track element) {
+              <span class="audit-champs__element audit-champs__retire">− {{ element }}</span>
+            }
           } @else {
-            <td class="audit-champs__retire">{{ champ.avant ?? '—' }}</td>
-            <td class="audit-champs__ajoute">{{ champ.apres ?? '—' }}</td>
+            <span class="audit-champs__retire">{{ champ.avant ?? '—' }}</span>
           }
-        </tr>
+        }
+        @case ('apres') {
+          @if (champ.ajoutes || champ.retires) {
+            @for (element of champ.ajoutes ?? []; track element) {
+              <span class="audit-champs__element audit-champs__ajoute">+ {{ element }}</span>
+            }
+          } @else {
+            <span class="audit-champs__ajoute">{{ champ.apres ?? '—' }}</span>
+          }
+        }
       }
-    </tbody>
-  </table>
+    </ng-template>
+  </stp-table>
 }

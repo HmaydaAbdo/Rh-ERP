@@ -6,8 +6,11 @@ import { catchError, EMPTY, filter, switchMap, tap } from 'rxjs';
 
 import { ThemeService } from '../../../core/theme/theme.service';
 import { CountUpDirective } from '../../../shared/directives/count-up.directive';
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState } from '../../../shared/table/table-columns';
 import { ChartComponent } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
 import { PaieAnalytique, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
@@ -56,7 +59,7 @@ function hauteurPourLignes(lignes: number): number {
  */
 @Component({
   selector: 'app-paie-analytique',
-  imports: [CountUpDirective, ChartComponent, IconComponent],
+  imports: [CountUpDirective, ChartComponent, IconComponent, ColumnChooserComponent, TableComponent, TableCellDirective],
   templateUrl: './paie-analytique.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './paie-analytique.component.scss'
@@ -81,6 +84,27 @@ export class PaieAnalytiqueComponent {
 
   /** Le tableau des données d'un graphique, replié par défaut : le dessin d'abord, le détail à la demande. */
   readonly tableaux = signal<Record<GraphiqueAvecTableau, boolean>>({ evolution: false, tranches: false, chantiers: false, fonctions: false });
+
+  readonly colonnesEvolution = new ColumnState([
+    { field: 'mois', header: 'Mois' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-right' }
+  ]);
+  readonly colonnesTranches = new ColumnState([
+    { field: 'tranche', header: 'Tranche (DH)' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-right' }
+  ]);
+  readonly colonnesChantiers = new ColumnState([
+    { field: 'chantier', header: 'Chantier' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-right' },
+    { field: 'stc', header: 'STC / sorties', align: 'text-right' }
+  ]);
+  readonly colonnesFonctions = new ColumnState([
+    { field: 'fonction', header: 'Fonction' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-right' }
+  ]);
 
   readonly libellePeriode = libellePeriode;
   readonly libelleMesure = libelleMesure;

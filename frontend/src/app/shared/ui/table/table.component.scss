@@ -31,7 +31,6 @@
 th {
   position: relative;
   min-width: 0;
-  overflow: hidden;
   padding: 0;
   background: var(--table-header-bg);
   color: var(--color-text);
@@ -40,7 +39,7 @@ th {
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
   border-right: 1px solid var(--table-border);
   border-bottom: 1px solid var(--table-border);
 
@@ -63,7 +62,6 @@ th {
   gap: var(--space-xs);
   width: 100%;
   min-width: 0;
-  overflow: hidden;
   padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
   border: 0;
   background: transparent;
@@ -82,12 +80,12 @@ th {
 .stp-table__sort-label {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .stp-table__sort-icon {
+  flex: 0 0 auto;
   color: var(--color-text-muted);
   opacity: 0.5;
 

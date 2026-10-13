@@ -31,6 +31,17 @@ const CHANTIERS = [
   { id: 3, code: 'C168', libelle: 'Nador', effectif: 1, masse: 4800, equipes: [{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 1, masse: 4800 }] }
 ];
 
+const ANALYTIQUE = {
+  periode: '2026-08',
+  kpis: { masse: 4800, effectif: 1, coutMoyen: 4800, nombreChantiers: 1, stc: 0 },
+  moisPrecedent: null,
+  parChantier: [{ id: 3, code: 'C168', libelle: 'Nador', masse: 4800, effectif: 1, stc: 0 }],
+  parFonction: [{ id: 2, libelle: 'CH. CAMION', masse: 4800, effectif: 1 }],
+  tranches: [{ min: 0, max: null, effectif: 1 }],
+  evolution: [{ periode: '2026-08', masse: 4800, effectif: 1 }],
+  qualite: { sansEquipe: 0, sansObservation: 0 }
+};
+
 function routes() {
   return {
     'POST /paie/search': () => pageDe([BULLETIN]),
@@ -38,6 +49,8 @@ function routes() {
     'POST /paie/periodes/search': () => PERIODES,
     'POST /paie/chantiers/search': () => CHANTIERS,
     'GET /paie/chantiers': () => CHANTIERS,
+    'POST /paie/options/chantiers': () => pageDe([{ id: 3, code: 'C168', designation: 'Nador', actif: true }]),
+    'POST /paie/options/equipes': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
     'GET /paie/materiel': () => [],
     'POST /chantiers/search': () => pageDe([]),
     'POST /equipes/search': () => pageDe([]),
@@ -66,7 +79,7 @@ test.describe('Paie', () => {
   });
 
   test('passe de la vue tabulaire aux cartes puis à l’analytique', async ({ page }) => {
-    await mockApi(page, { username: 'paie', permissions: DROITS }, { ...routes(), 'POST /paie/analytique': () => ({}) });
+    await mockApi(page, { username: 'paie', permissions: DROITS }, { ...routes(), 'POST /paie/analytique': () => ANALYTIQUE });
     await page.goto('/paie');
 
     const vues = page.getByRole('navigation', { name: 'Vue de la paie' });

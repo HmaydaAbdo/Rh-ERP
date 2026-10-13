@@ -264,7 +264,7 @@ listbox, panneau en overlay CDK) : contrôle de Signal Forms (`FormValueControl`
 Comportement : recherche **côté serveur** à la frappe (délai de saisie), options chargées **page par page** au défilement,
 et `fetchById` pour afficher la valeur déjà choisie en modification avant même que sa page soit chargée. Le
 panneau d'options a une **largeur minimale** (`--select-panel-min-width: 22rem`, maximale 40 rem) pour que les
-libellés longs ne soient pas tronqués.
+libellés longs ne soient pas tronqués. En mode multiple, chaque option présente aussi une case à cocher visible.
 
 Adaptateurs fournis dans `shared/reference-data/` : `FunctionReferenceService`, `ChantierReferenceService`,
 `EquipeReferenceService`, `EmployeeReferenceService` (libellé `displayLabel`). Ils interrogent les endpoints
@@ -298,15 +298,19 @@ Tous les tableaux de données — **sans exception** — offrent :
 | Tri | Sur chaque colonne de données (pas sur la colonne d'actions) ; `sortField` donne le chemin transmis au backend (ex. `chantier.code`) |
 | Redimensionnement | Glisser le bord d'un en-tête, ou le focaliser (séparateur) et utiliser les flèches gauche/droite ; largeur bornée entre 60 et 2 000 px |
 | Réordonnancement | Glisser-déposer un en-tête, ou **Alt + flèche** sur son bouton de tri ; l'ordre est reporté sur le corps du tableau |
-| Colonnes visibles | `app-column-chooser` ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
+| Colonnes visibles | `app-column-chooser` liste toutes les colonnes métier déclarées ; au moins une colonne reste affichée ; posé dans une barre d'outils avec la classe `en-ligne` (hauteur `--control-height`, sans marge propre) |
 | Pagination | 10 / 20 / 50 / 100 lignes, avec « 1 - 20 sur 134 — page 1/7 » |
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
 **Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
-son propre style de tableau. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
+son propre style de tableau. Les en-têtes restent affichés en entier et peuvent revenir à la ligne ; une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
 `emptyMessage` et présenté dans le tableau. Les seuls tableaux hors `stp-table` sont des listes courtes de lignes d'import ignorées :
 elles utilisent `app-static-table-scroll` / `app-static-table` (`styles/_page.scss`), une région de défilement focusable, une légende
 accessible et des en-têtes `scope="col"`.
+
+Les libellés d'en-tête et d'option restent intégralement visibles : le texte passe à la ligne et ne dépend pas d'une infobulle pour
+être lu. Le sélecteur expose toutes les colonnes déclarées dans `ColumnState`, y compris celles temporairement masquées. Les
+sélections multiples affichent une case à cocher par option, en conservant la sélection accessible du listbox.
 
 Les colonnes sont déclarées une seule fois (`TableColumn`, regroupées dans un `ColumnState`, voir
 `shared/table/table-columns.ts`) ; l'en-tête et le corps parcourent `columns.visible`. Un en-tête groupé sur
@@ -316,14 +320,14 @@ entre deux visites.
 
 | Écran | Colonnes | Filtres | Pagination |
 |---|---|---|---|
-| Paie | Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO, Prime RD, Total, Obs, Chantier, Équipe, Période | Barre de filtres commune aux trois vues, toute visible (mois, nom, CIN, chantiers, équipes, fonctions ; dans l'URL) | Serveur |
+| Paie | Nom & prénom, Fonction, CIN, Nombre de jours travaillés, Jours de récupération ouvrables, Jours de récupération du dimanche, Salaire mensuel, Prime de roulage ordinaire, Prime de roulage du dimanche, Salaire total, Observation, Chantier, Désignation du chantier, Équipe, Libellé de l’équipe, Période | Barre de filtres commune aux trois vues, toute visible (mois, nom, CIN, chantiers, équipes, fonctions ; dans l'URL) | Serveur |
 | Employés | Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut | Nom, CIN, fonctions, chantiers, statut | Serveur |
 | Chantiers | Code, Nom, Désignation, Source, Statut | Code, désignation, statut | Serveur |
 | Fonctions | Libellé | Libellé | Serveur |
 | Équipes | Code, Libellé | Code, libellé | Serveur |
 | Utilisateurs | Username, Email, Rôles, Statut | Username, email, statut | Client (liste complète en mémoire) |
 | Rôles | Nom, Description, Permissions | Nom, description | Client |
-| Journal | Date, Catégorie, Action, Résultat, Utilisateur, Origine, Cible, Éléments, Motif | Dates, utilisateur, catégorie, action, résultat, entité, identifiant de requête | Serveur (tri par défaut : date décroissante) |
+| Journal | Date, Catégorie, Action, Résultat, Utilisateur, Origine, Cible, Éléments, Motif ; détail des changements : Champ, Avant, Après | Dates, utilisateur, catégorie, action, résultat, entité, identifiant de requête | Serveur (tri par défaut : date décroissante) |
 
 Pour les tableaux paginés côté serveur, un chemin de tri invalide provoque une erreur `500` : chaque `sortField`
 est testé contre le backend.

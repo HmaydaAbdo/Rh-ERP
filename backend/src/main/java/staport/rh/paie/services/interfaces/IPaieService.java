@@ -4,11 +4,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
+import staport.rh.paie.dtos.request.PaieOptionsChantierRequest;
+import staport.rh.paie.dtos.request.PaieOptionsEquipeRequest;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.dtos.response.PaieChantierOptionDto;
+import staport.rh.paie.dtos.response.PaieEquipeOptionDto;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -26,6 +30,10 @@ public interface IPaieService {
     PaieResponseDto findById(Long id);
 
     Page<PaieResponseDto> search(PaieSearchCriteria criteria, Pageable pageable);
+
+    Page<PaieChantierOptionDto> rechercherOptionsChantiers(PaieOptionsChantierRequest requete, Pageable pageable);
+
+    Page<PaieEquipeOptionDto> rechercherOptionsEquipes(PaieOptionsEquipeRequest requete, Pageable pageable);
 
     void delete(Long id);
 

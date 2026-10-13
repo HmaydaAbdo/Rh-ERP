@@ -69,17 +69,16 @@
                 {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().evolution) {
-                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données de l’évolution mensuelle">
-                  <table>
-                    <caption class="paie-analytique__lecteur">Évolution mensuelle de la masse salariale et des bulletins</caption>
-                    <thead><tr><th scope="col">Mois</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
-                    <tbody>
-                      @for (ligne of lignesEvolution(); track ligne.mois) {
-                        <tr><th scope="row">{{ ligne.mois }}</th><td class="text-right">{{ formaterMontant(ligne.masse) }}</td><td class="text-right">{{ ligne.effectif }}</td></tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                <app-column-chooser class="en-ligne" [state]="colonnesEvolution" />
+                <stp-table label="Évolution mensuelle de la masse salariale et des bulletins" [value]="lignesEvolution()" [columns]="colonnesEvolution.visible">
+                  <ng-template stpCell let-ligne let-col="col">
+                    @switch (col.field) {
+                      @case ('mois') { {{ ligne.mois }} }
+                      @case ('masse') { {{ formaterMontant(ligne.masse) }} }
+                      @case ('effectif') { {{ ligne.effectif }} }
+                    }
+                  </ng-template>
+                </stp-table>
               }
             </section>
 
@@ -99,17 +98,15 @@
                 {{ tableaux().tranches ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().tranches) {
-                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données des tranches de salaire">
-                  <table>
-                    <caption class="paie-analytique__lecteur">Nombre de bulletins par tranche de total</caption>
-                    <thead><tr><th scope="col">Tranche (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
-                    <tbody>
-                      @for (ligne of lignesTranches(); track ligne.tranche) {
-                        <tr><th scope="row">{{ ligne.tranche }}</th><td class="text-right">{{ ligne.effectif }}</td></tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                <app-column-chooser class="en-ligne" [state]="colonnesTranches" />
+                <stp-table label="Nombre de bulletins par tranche de total" [value]="lignesTranches()" [columns]="colonnesTranches.visible">
+                  <ng-template stpCell let-ligne let-col="col">
+                    @switch (col.field) {
+                      @case ('tranche') { {{ ligne.tranche }} }
+                      @case ('effectif') { {{ ligne.effectif }} }
+                    }
+                  </ng-template>
+                </stp-table>
               }
             </section>
 
@@ -150,22 +147,17 @@
                 {{ tableaux().chantiers ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().chantiers) {
-                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données par chantier">
-                  <table>
-                    <caption class="paie-analytique__lecteur">Masse, bulletins et sorties par chantier</caption>
-                    <thead><tr><th scope="col">Chantier</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th><th scope="col" class="text-right">STC / sorties</th></tr></thead>
-                    <tbody>
-                      @for (chantier of chantiersTries(); track chantier.id) {
-                        <tr>
-                          <th scope="row">{{ chantier.code }}@if (chantier.libelle) { · {{ chantier.libelle }} }</th>
-                          <td class="text-right">{{ formaterMontant(chantier.masse) }}</td>
-                          <td class="text-right">{{ chantier.effectif }}</td>
-                          <td class="text-right">{{ chantier.stc }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                <app-column-chooser class="en-ligne" [state]="colonnesChantiers" />
+                <stp-table label="Masse, bulletins et sorties par chantier" [value]="chantiersTries()" [columns]="colonnesChantiers.visible">
+                  <ng-template stpCell let-chantier let-col="col">
+                    @switch (col.field) {
+                      @case ('chantier') { {{ chantier.code }}@if (chantier.libelle) { · {{ chantier.libelle }} } }
+                      @case ('masse') { {{ formaterMontant(chantier.masse) }} }
+                      @case ('effectif') { {{ chantier.effectif }} }
+                      @case ('stc') { {{ chantier.stc }} }
+                    }
+                  </ng-template>
+                </stp-table>
               }
             </section>
 
@@ -206,17 +198,16 @@
                 {{ tableaux().fonctions ? 'Masquer les données' : 'Afficher les données' }}
               </button>
               @if (tableaux().fonctions) {
-                <div class="paie-analytique__tableau" tabindex="0" role="region" aria-label="Données par fonction">
-                  <table>
-                    <caption class="paie-analytique__lecteur">Masse et bulletins par fonction</caption>
-                    <thead><tr><th scope="col">Fonction</th><th scope="col" class="text-right">Masse (DH)</th><th scope="col" class="text-right">Bulletins</th></tr></thead>
-                    <tbody>
-                      @for (fonction of fonctionsTriees(); track fonction.id) {
-                        <tr><th scope="row">{{ fonction.libelle }}</th><td class="text-right">{{ formaterMontant(fonction.masse) }}</td><td class="text-right">{{ fonction.effectif }}</td></tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                <app-column-chooser class="en-ligne" [state]="colonnesFonctions" />
+                <stp-table label="Masse et bulletins par fonction" [value]="fonctionsTriees()" [columns]="colonnesFonctions.visible">
+                  <ng-template stpCell let-fonction let-col="col">
+                    @switch (col.field) {
+                      @case ('fonction') { {{ fonction.libelle }} }
+                      @case ('masse') { {{ formaterMontant(fonction.masse) }} }
+                      @case ('effectif') { {{ fonction.effectif }} }
+                    }
+                  </ng-template>
+                </stp-table>
               }
             </section>
 

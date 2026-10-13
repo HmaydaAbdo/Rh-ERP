@@ -3,7 +3,9 @@ package staport.rh.paie.services;
 import jakarta.persistence.EntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,7 @@ import staport.rh.paie.audit.PerimetreRestaurationGroupePaie;
 import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.common.VersionOptimiste;
+import staport.rh.common.recherche.MotifRecherche;
 import staport.rh.audit.dtos.response.PaieRestaurationInstantane;
 import staport.rh.audit.services.interfaces.IAuditJournalService;
 import staport.rh.chantier.entities.Chantier;
@@ -24,12 +27,16 @@ import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
+import staport.rh.paie.dtos.request.PaieOptionsChantierRequest;
+import staport.rh.paie.dtos.request.PaieOptionsEquipeRequest;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.dtos.response.PaieChantierOptionDto;
+import staport.rh.paie.dtos.response.PaieEquipeOptionDto;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 import staport.rh.paie.exceptions.InvalidReferenceException;
@@ -136,6 +143,28 @@ public class PaieService implements IPaieService {
     public Page<PaieResponseDto> search(PaieSearchCriteria criteria, Pageable pageable) {
         Specification<Paie> spec = PaieSpecification.searchByCriteria(criteria);
         return repository.findAll(spec, pageable).map(mapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PaieChantierOptionDto> rechercherOptionsChantiers(PaieOptionsChantierRequest requete, Pageable pageable) {
+        Pageable trie = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("code").ascending());
+        String motif = motifOption(requete.recherche());
+        return repository.rechercherOptionsChantiers(requete.periode(), motif, trie)
+                .map(c -> new PaieChantierOptionDto(c.getId(), c.getCode(), c.getDesignation(), c.getActif()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PaieEquipeOptionDto> rechercherOptionsEquipes(PaieOptionsEquipeRequest requete, Pageable pageable) {
+        Pageable trie = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("code").ascending());
+        String motif = motifOption(requete.recherche());
+        return repository.rechercherOptionsEquipes(requete.periode(), requete.chantierIds(), motif, trie)
+                .map(e -> new PaieEquipeOptionDto(e.getId(), e.getCode(), e.getLibelle()));
+    }
+
+    private String motifOption(String recherche) {
+        return recherche == null || recherche.isBlank() ? null : MotifRecherche.contient(recherche.trim());
     }
 
     @Override

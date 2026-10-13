@@ -121,6 +121,8 @@ rétroactive ou automatique des bulletins déjà existants.
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
 | `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
+| `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; recherche serveur sur code et désignation | 200, 400 |
+| `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
@@ -314,16 +316,18 @@ panneau, croix pour revenir à « tous les mois »), la recherche **nom et prén
 sélecteurs **chantiers, équipes et fonctions** (sélecteur générique multiple, recherche serveur, mode compact : la valeur seule
 quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante. **Sur téléphone**, la barre tient sur deux lignes — le mois (pleine largeur), puis la recherche, « Filtres (n) » et « Effacer » (icône seule) — et le CIN et les trois sélecteurs se déplient sous le bouton « Filtres » (n = nombre de ces filtres actifs) ; les onglets de vue se partagent la largeur et les actions se rangent en grille sous eux (Exporter et Importer côte à côte, Nouveau bulletin pleine largeur).
 En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, un **fil de
-navigation** s'ajoute sous la barre : `Tous les mois › Août 2026 › C168`, chaque segment cliquable pour remonter, plus
+navigation** s'ajoute sous la barre : `Tous les mois › Août 2026 › n° 3`, chaque segment cliquable pour remonter, plus
 « Remonter ».
 
-**Permissions** : chaque sélecteur (chantiers, équipes, fonctions) interroge le référentiel correspondant ; elle n'est
-proposée que si l'utilisateur a `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ` — un refus `403` serait un faux refus dans le
-journal d'audit (voir [../rbac/paie.md](../rbac/paie.md)).
+**Permissions** : sans mois, les sélecteurs chantiers, équipes et fonctions interrogent leurs référentiels ; ils ne sont
+proposés qu'avec `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ`. Avec un mois, les menus chantiers et équipes interrogent
+les options Paie paginées, protégées par `PAIE_READ`, tout en restant masqués sans la permission du référentiel correspondant.
+Cela évite un appel qui serait refusé et journalisé comme un faux refus (voir [../rbac/paie.md](../rbac/paie.md)).
 
 **Cascade** (indiquée au survol des sélecteurs) : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec
-des chantiers choisis, les équipes proposées sont celles de ces chantiers ce mois-là (une seule requête,
-`POST /paie/chantiers/search`, gardée par mois). **Sans mois**, ou sans chantier choisi pour les équipes, ce sont les listes
+des chantiers choisis, les équipes proposées sont celles de ces chantiers ce mois-là. Ces menus utilisent `POST
+/paie/options/chantiers` et `POST /paie/options/equipes` : recherche et pages de 30 éléments côté serveur, déclenchées à la frappe
+et au défilement par `LazySelectComponent`. **Sans mois**, ou sans chantier choisi pour les équipes, ce sont les listes
 complètes du référentiel — le référentiel Équipe n'est pas rattaché aux chantiers, seule la paie d'un mois les relie. Un choix
 qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'office : il reste visible dans son sélecteur.
 

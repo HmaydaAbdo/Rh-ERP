@@ -1,5 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
+import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnState } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { libelleChamp } from '../audit-format';
 import { AuditChamp } from '../models/audit.model';
 
@@ -9,12 +12,18 @@ import { AuditChamp } from '../models/audit.model';
  */
 @Component({
   selector: 'app-audit-champs',
+  imports: [ColumnChooserComponent, TableComponent, TableCellDirective],
   templateUrl: './audit-champs.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './audit-champs.component.scss'
 })
 export class AuditChampsComponent {
   readonly champs = input.required<AuditChamp[]>();
+  protected readonly colonnes = new ColumnState([
+    { field: 'champ', header: 'Champ' },
+    { field: 'avant', header: 'Avant' },
+    { field: 'apres', header: 'Après' }
+  ]);
 
   protected readonly libelleChamp = libelleChamp;
 }

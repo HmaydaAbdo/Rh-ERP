@@ -27,6 +27,20 @@ describe('PaieService', () => {
     expect(r.request.params.toString()).toBe('page=3&size=25&sort=salaireTotal,desc');
   });
 
+  it('recherche à la demande les chantiers et équipes du mois, avec pagination et filtres côté serveur', () => {
+    service.rechercherOptionsChantiers('2026-08', 1, 30, 'nador').subscribe();
+    const chantiers = requete(http, 'POST', 'paie/options/chantiers');
+    chantiers.flush(PAGE_VIDE);
+    expect(chantiers.request.body).toEqual({ periode: '2026-08', recherche: 'nador' });
+    expect(chantiers.request.params.toString()).toBe('page=1&size=30&sort=code,asc');
+
+    service.rechercherOptionsEquipes('2026-08', [3, 8], 2, 30, 'chauff').subscribe();
+    const equipes = requete(http, 'POST', 'paie/options/equipes');
+    equipes.flush(PAGE_VIDE);
+    expect(equipes.request.body).toEqual({ periode: '2026-08', chantierIds: [3, 8], recherche: 'chauff' });
+    expect(equipes.request.params.toString()).toBe('page=2&size=30&sort=code,asc');
+  });
+
   it('lit, modifie et supprime un bulletin', () => {
     service.getById(8).subscribe();
     requete(http, 'GET', 'paie/8').flush({ id: 8 });

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import staport.rh.paie.dtos.request.PaieCreateRequestDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
+import staport.rh.paie.dtos.request.PaieOptionsChantierRequest;
+import staport.rh.paie.dtos.request.PaieOptionsEquipeRequest;
 import staport.rh.paie.dtos.request.PaieSuppressionGroupeRequestDto;
 import staport.rh.paie.dtos.request.PaieUpdateRequestDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
@@ -28,6 +31,8 @@ import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
+import staport.rh.paie.dtos.response.PaieChantierOptionDto;
+import staport.rh.paie.dtos.response.PaieEquipeOptionDto;
 import staport.rh.paie.dtos.response.PaieRestaurationDto;
 import staport.rh.paie.dtos.response.PaieSuppressionDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
@@ -88,6 +93,24 @@ public class PaieController {
             @Valid @RequestBody(required = false) PaieSearchCriteria criteria,
             Pageable pageable) {
         return ResponseEntity.ok(paieService.search(criteria, pageable));
+    }
+
+    @PostMapping("/options/chantiers")
+    @Operation(summary = "Rechercher les chantiers d'un mois pour les filtres Paie (pagination serveur)")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<Page<PaieChantierOptionDto>> rechercherOptionsChantiers(
+            @Valid @RequestBody PaieOptionsChantierRequest requete,
+            @PageableDefault(size = 30) Pageable pageable) {
+        return ResponseEntity.ok(paieService.rechercherOptionsChantiers(requete, pageable));
+    }
+
+    @PostMapping("/options/equipes")
+    @Operation(summary = "Rechercher les équipes des chantiers choisis pour un mois (pagination serveur)")
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    public ResponseEntity<Page<PaieEquipeOptionDto>> rechercherOptionsEquipes(
+            @Valid @RequestBody PaieOptionsEquipeRequest requete,
+            @PageableDefault(size = 30) Pageable pageable) {
+        return ResponseEntity.ok(paieService.rechercherOptionsEquipes(requete, pageable));
     }
 
     @DeleteMapping("/{id}")
