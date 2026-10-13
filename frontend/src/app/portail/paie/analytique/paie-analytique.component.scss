@@ -12,7 +12,7 @@
     display: grid;
     justify-items: center;
     gap: var(--space-sm);
-    padding: clamp(var(--space-xl), 6vw, 4rem) var(--space-md);
+    padding: clamp(var(--space-xl), 6vw, var(--space-2xl)) var(--space-md);
     text-align: center;
   }
 

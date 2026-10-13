@@ -1,78 +1,72 @@
-# Contrôle du design system — 2026-10-13
+# Contrôle du Design System — 2026-10-13
 
 ## Périmètre et statut
 
-Revue du commit `560fcf0` et des correctifs locaux en cours contre [`conventions/design-system.md`](../../conventions/design-system.md), le catalogue partagé, les tests E2E et la documentation frontend. Le build de production et les 665 tests unitaires frontend passent dans la CI, mais le scénario E2E du sélecteur échoue. L'image actuellement ouverte via Compose à `http://127.0.0.1:5002/paie` confirme le défaut de placement et de navigation clavier du panneau. Les vérifications manuelles générales, notamment en contraste forcé, restent à faire ; ce document ne déclare donc pas la convention conforme.
+Contrôle du kit partagé et des principaux écrans de l’application, selon [`conventions/design-system.md`](../../conventions/design-system.md), dans l’image Compose accessible sur `http://127.0.0.1:5002`.
 
-**Statut : partiel.** Le socle de thèmes et plusieurs contrôles automatisés existent. Les preuves ne couvrent pas encore tous les composants, leurs états et les vérifications manuelles requises.
+**Statut : partiel, en attente de validation assistive et de CI sur les derniers changements locaux.** Le parcours CI de `850374c` est vert et le contrôle du navigateur couvre les écrans listés ci-dessous. Il manque encore une validation avec un lecteur d’écran et la revalidation CI des changements de jetons faits pendant cette passe ; le statut ne peut donc pas être déclaré conforme à 100 %.
 
-## Avancement de cette passe
+## Preuves d’exécution
 
-- Après le push de `be35c66`, la CI [38449650028](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38449650028) est verte : les cinq jobs ont réussi, dont le build et les 664 tests frontend. La vérification du Compose lancé par l'utilisateur a néanmoins révélé que les 16 colonnes Paie se réduisaient à environ 69 px et cassaient les en-têtes caractère par caractère.
-- Le commit `9f26de9` et sa CI [38452739833](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38452739833) sont aussi verts : les cinq jobs ont réussi, dont 664 tests frontend. Son image Compose applique toutefois une largeur minimale de 144 px à toutes les colonnes, ce qui prend trop de place ; l'utilisateur a confirmé la préférence pour des intitulés Paie compacts (Jours trav., J.R.O, J.R.D, Prime RO/RD).
-- Le commit `560fcf0` inclut les libellés compacts Paie, le nom complet dans le sélecteur, l'info-bulle et le nom accessible, ainsi que le repositionnement CDK et la barre de défilement. Son build et ses tests unitaires passent ; l'E2E échoue avant l'étape de publication de l'image frontend.
-- Le contrôle visuel de Compose confirme les 16 options et leurs libellés complets ; le tableau affiche les abréviations demandées avec les noms complets accessibles, et son défilement horizontal fonctionne. Le panneau du sélecteur reste cependant coupé à droite : les cases ne sont pas visibles. Le défilement à la molette atteint les dernières options, mais `Fin` ne quitte pas le haut de la liste. Correctif local en cours : ajouter des positions d'overlay alignées à droite et différer le défilement clavier au prochain frame. Deux E2E vérifient séparément le défilement générique et les 16 cases, les limites du panneau et `Fin` dans la vue Paie mobile.
-- Le commit `560fcf0` (CI [38456272352](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38456272352)) passe le build de production et les 665 tests unitaires frontend, mais échoue dans l'E2E : `End` ne fait pas défiler le panneau du sélecteur (`scrollTop` reste à 0), sur deux tentatives. Correctif local en cours : attendre le prochain frame avant de faire défiler le descendant actif et vérifier explicitement que `End` active la dernière option. La validation de ce correctif attend une exécution E2E verte.
-- Le contrôle TypeScript Angular (`ngc`) et celui des specs passent après ce correctif. Le build de production et l'E2E ciblé ne peuvent pas être exécutés dans cet environnement : Sass Embedded ne peut pas lire `node_modules/sass-embedded-win32-x64/dart-sass/src/sass.snapshot` (OS error 5).
-- Compose est lancé et accessible sur le port 5002 ; les contrôles ci-dessus portent sur l'image actuellement exécutée. L'image construite depuis le commit `560fcf0` n'a pas été publiée par le CI en échec. Après le prochain CI vert et le renouvellement de l'image, vérifier de nouveau le sélecteur, les libellés Paie et les thèmes clair/sombre.
-- `ngc -p tsconfig.app.json --rootDir src` et la compilation Sass directe du tableau réussissent localement. Le test ciblé et `npm run build` restent bloqués avant exécution par l'erreur Sass Embedded sur `sass.snapshot` (OS error 5) ; cette passe n'a donc pas de preuve locale de build ou de test unitaire.
+### CI et image
 
-- Remplacement de trois usages de primitives neutres par leurs jetons sémantiques et centralisation des ruptures responsive dans `_breakpoints.scss`, y compris la règle tactile globale.
-- Ajout au catalogue des démonstrations d'erreur de champ, nombre, date, mois, mot de passe, message, icône et graphique.
-- Ajout d'une navigation clavier dans `stp-chart` : flèches, Début/Fin, Entrée/Espace et annonce du point sélectionné ; ajout d'un scénario E2E ciblé.
-- Les utilitaires Tailwind compilés (`bg-surface`, `text-muted`, `rounded-md`, `shadow-md`, `text-page-title`) pointent vers les variables sémantiques du thème ; aucun jeu de valeurs concurrent n'est généré.
-- Les keyframes sont centralisés dans `_motion.scss`. Les entrées redondantes des cartes et tuiles Paie ont été retirées ; les règles de mouvement réduit restent centralisées. Le squelette respire par opacité, et la confirmation de l'export utilise uniquement opacité/transform.
-- Les jetons `--space-2xs`, `--space-sm-md`, `--radius-xl`, `--radius-pill`, `--radius-badge` et `--focus-offset` couvrent plusieurs valeurs auparavant écrites dans les feuilles ; la référence inexistante `--radius-2xs` a été supprimée.
-- `ngc --noEmit -p tsconfig.app.json` et `npx tsc --noEmit -p tsconfig.spec.json` réussissent. Les feuilles Sass modifiées compilent avec l'API JS Sass.
-- Le build Angular et le test ciblé ne démarrent pas : Sass Embedded échoue à canonicaliser/lire `node_modules/sass-embedded-win32-x64/dart-sass/src/sass.snapshot` (OS error 5). Cette limitation locale n'est pas une réussite de build/test.
-- La CI GitHub Actions du commit `f5ef1cc`, run [38447235345](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38447235345), a compilé puis échoué dans un test unitaire du graphique : le test attendait l'ancien nom accessible sans l'aide clavier ajoutée au canvas. L'attendu a été corrigé localement ; une CI relancée reste nécessaire.
+Le [run GitHub Actions 38459437213](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38459437213), sur `850374c` (`fix ci prob`), est terminé avec succès : les cinq jobs `postgres`, `frontend`, `backend`, `full-stack` et `backup` sont verts. Le job frontend passe les tests Angular (665 résultats), le build de production, les E2E, puis la construction et la publication de l’image frontend.
 
-## Éléments déjà présents
+Les modifications de jetons ci-dessous sont locales et postérieures à ce run. La compilation Angular locale s’arrête sur l’erreur d’accès de Sass Embedded à `sass.snapshot` (OS error 5), mais les quatre feuilles modifiées compilent avec l’API Sass JavaScript. Une nouvelle CI devra valider ces modifications après leur push.
 
-- `frontend/src/styles/_tokens.scss` centralise les couleurs, espacements, rayons, ombres, typographie, mouvement et jetons de tableaux ; le thème sombre redéfinit les valeurs sémantiques à partir des primitives du thème.
-- `ThemeService` suit la préférence système, mémorise le choix utilisateur localement et pose `data-theme`. Le script de `index.html` pose le thème avant le premier rendu.
-- Les polices IBM Plex sont embarquées depuis `@fontsource`; le mouvement réduit est traité dans `_motion.scss`; `_accessibility.scss` contient des règles `forced-colors`.
-- Le catalogue `/catalogue` et ses parcours Playwright couvrent déjà des composants en clair/sombre avec axe, ainsi que des interactions clavier pour le sélecteur, le dialogue et le tableau.
-- Des contrôles responsive existent pour la navigation mobile, le débordement horizontal et la taille tactile.
+Le serveur répond et les écrans authentifiés sont consultables sur le port 5002. La comparaison de l’identifiant d’image Compose avec l’image produite par le run n’a pas pu être faite : le client Docker de cet environnement est refusé par le pipe Docker Desktop.
 
-## Écarts constatés
+### Contrôle navigateur de l’application
 
-### 1. Catalogue et états incomplets
+Connexion réussie à l’instance locale. Les écrans Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Paramètres, Journal d’audit et les trois vues Paie ont été parcourus. Les routes Paie tabulaire/cartes/analytique s’ouvrent ; l’analytique affiche son état vide parce qu’aucun bulletin n’est disponible dans cette instance. Les pages sans données montrent un état vide plutôt qu’un écran cassé.
 
-Le catalogue présente maintenant des démonstrations dédiées pour l'erreur de champ, le mot de passe, le mois, la date, le nombre, l'icône, le message et le graphique. `docs/frontend/README.md` inventorie les 15 composants partagés ; les tests unitaires ont aussi un fichier de spec pour chacun. Il manque encore une correspondance explicite entre les états applicables, les interactions testées et les états non atteignables dans le catalogue. La présence d'une démo ou d'un fichier de spec ne prouve pas à elle seule que tous les états sont conformes.
+À 390 px, les neuf écrans principaux (Paie, Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Paramètres et Journal) ont une largeur de page identique au viewport. Le débordement des tableaux reste dans leur conteneur défilant.
 
-Le test axe du catalogue ne contrôle que son contenu actuellement rendu, dans les thèmes clair et sombre. Les tests clavier couvrent des parcours ciblés, pas tous les composants et états documentés par la convention.
+En `forced-colors: active`, les neuf écrans principaux ont été rouverts à 390 px : le titre reste présent, le texte reprend les couleurs système, le focus reçoit un contour système et aucun débordement horizontal de page n’est apparu. Une inspection visuelle complémentaire du rendu Paie confirme les repères de navigation, les contrôles, le tableau et sa barre de défilement.
 
-### 2. Contraste forcé : règles présentes, preuve visuelle manquante
+Dans le tableau Paie, les 16 colonnes déclarées restent disponibles ; les intitulés longs sont accessibles, et les abréviations compactes approuvées sont affichées dans l’en-tête. Le sélecteur contient les 16 options avec une case visible par option, une barre de défilement et un placement dans le viewport ; `Fin` amène la dernière option à l’écran. Ces points ont été vérifiés sur Compose et sont aussi couverts par les E2E du sélecteur.
 
-Les styles `forced-colors` sont définis globalement et sur l'écran de connexion. La suite E2E d'authentification vérifie que le navigateur émule ce mode, mais ne vérifie pas la lisibilité de l'ensemble du kit dans ce mode. Aucun relevé de contrôle manuel au contraste élevé/clavier n'est référencé dans la matrice.
+### Thèmes, accessibilité et responsive
 
-### 3. Source des jetons Tailwind
+- Le catalogue `/catalogue` est contrôlé par axe en clair et en sombre dans les E2E ; les tests CI du sélecteur, du dialogue, du tableau et du graphique couvrent leurs principaux parcours clavier.
+- Les pages principales ont été parcourues en thème clair à 390 px puis en thème sombre avec contraste forcé ; les neuf titres sont présents et la page ne déborde pas horizontalement.
+- Le rendu `forced-colors` de Paie a été inspecté visuellement ; le focus clavier expose un contour `Highlight` de 2 px. Le test axe du dépôt couvre le catalogue clair/sombre, pas toutes les routes en contraste forcé.
+- Le CI vérifie aussi les cibles tactiles et les interactions mobiles ciblées ; cette passe ne simule pas un lecteur d’écran.
 
-`frontend/src/styles/tailwind.css` relie maintenant les noms d'utilitaires aux variables sémantiques de `_tokens.scss` via `@theme inline`. La compilation PostCSS ciblée confirme que les utilitaires vérifiés émettent ces variables (`bg-surface` → `--color-surface`, `text-muted` → `--color-text-muted`, `rounded-md` → `--radius-md`, etc.). La compilation Angular complète reste bloquée par l'erreur Sass Embedded décrite plus haut.
+## Couverture traçable des composants partagés
 
-Les usages directs de `--neutral-*` dans `select.component.scss`, `password-input.component.ts` et `materiel-etape.component.scss` ont été remplacés par `--color-surface-alt` ou `--color-surface`.
+Les états ci-dessous correspondent aux assertions déjà présentes dans les specs ; ils ne signifient pas que chaque variante a fait l’objet d’une inspection visuelle manuelle.
 
-### 4. Exceptions de valeurs et mouvement
+| Composant | États et interactions vérifiés par les specs | Parcours navigateur complémentaire |
+|---|---|---|
+| `stp-icon` | Icône connue/inconnue, décorative, taille héritée ou fixée | Catalogue axe clair/sombre |
+| `stp-button` | Variantes, bouton/lien, icône seule, chargement, clic bloqué | Actions et formulaires E2E |
+| `stp-badge` | Valeur et sévérités | Catalogue axe clair/sombre |
+| `stp-dialog` | Fermé/ouvert, Échap, fermeture, non-fermé, focus piégé, tiroir | Focus piégé, retour du focus et axe du dialogue |
+| `stp-menu-button` | Ouvert, action, action désactivée, bouton désactivé, icône seule | Menus d’import E2E |
+| `stp-split-button` | Action principale, menu secondaire, désactivation | Import Paie E2E |
+| `stp-select` | Simple/multiple, filtrage, vide, chargement, désactivé, effacement, page suivante, valeur hors page | Flèches/Entrée/Échap, `End`, viewport mobile, 16 cases Paie |
+| `stp-table` | Vide/chargement, tri, pagination mémoire/serveur, ligne clavier, largeur et ordre des colonnes | Tri, pagination et réordonnancement au clavier |
+| `stp-number-input` | Format `fr-FR`, bornes, décimales, saisie vide, désactivé, focus, erreur | Formulaires E2E |
+| `stp-password-input` | Masquer/afficher, valeur, validation, désactivé, focus | Connexion et formulaires E2E |
+| `stp-date-input` | Liaison/format, effacement, champ touché, désactivé, focus | Formulaires E2E |
+| `stp-month-input` | Placeholder, ouverture, choix, Échap, erreur, désactivé, focus | Assistant d’export Paie E2E |
+| `stp-message` | Information, avertissement et erreur avec annonces adaptées | Catalogue axe clair/sombre |
+| `stp-field-error` | Non touché, touché/invalide, plusieurs règles, retour valide | Formulaires E2E |
+| `stp-chart` | Nom accessible, création, mise à jour, clic, destruction | Flèches, Début/Fin et sélection clavier |
 
-- Les ruptures de `48rem` de `parametre-item.component.scss` et `user-form.component.scss` sont maintenant centralisées dans le mixin `form-compact` de `_breakpoints.scss`.
-- Les animations d'entrée redondantes des cartes et tuiles ont été supprimées ; les keyframes restantes sont dans `_motion.scss`. Le seul changement de mise en page animé est la largeur du menu latéral, exception explicitement prévue par la convention.
-- Le scan trouve encore des dimensions et mesures géométriques locales (icônes, poignées, hauteurs de panneau, largeur de tableaux, etc.). Elles restent à distinguer des valeurs d'espacement/rayon/typographie qui doivent utiliser ou ajouter un jeton ; le scan n'est donc pas déclaré clos.
+Références de specs : `frontend/src/app/shared/ui/<composant>/*.spec.ts` ; parcours catalogue : `frontend/e2e/catalogue.spec.ts`. Le thème système est testé dans `frontend/src/app/core/theme/theme.service.spec.ts`.
 
-### 5. Graphique : preuve d'interaction clavier à exécuter
+## Contrôle des jetons
 
-`stp-chart` expose désormais une interaction clavier : flèches gauche/droite ou haut/bas parcourent les points, Début/Fin vont au premier/dernier, et Entrée/Espace émettent `dataSelect`. Le point courant est annoncé par une région live. Le test unitaire vérifie le nom accessible corrigé ; un scénario E2E couvre le clavier mais reste à exécuter après correction de l'environnement Sass. La vérification avec une technologie d'assistance reste également à faire.
+Un scan des styles du frontend ne trouve pas de couleurs littérales, d’ombres d’élévation, de rayons ni de durées hors de la source de jetons. Les couleurs, opacités et élévations sont dans `frontend/src/styles/_tokens.scss`. Les deux `box-shadow` de `table.component.scss` sont des séparateurs géométriques avec couleurs de jetons, pas des ombres d’élévation.
 
-### 6. Matrice de couverture des composants à compléter
+Les espacements codés en dur trouvés par le scan ont été rattachés à l’échelle : le badge de filtres utilise `--space-xs`, les états vides des cartes/analytique utilisent désormais `--space-2xl` comme maximum de leur `clamp()`, et le retrait réservé à l’icône du sélecteur réutilise `--space-md`. Le `margin: -1px` du helper `visually-hidden` est une technique de masquage accessible, pas un espacement de mise en page.
 
-`docs/frontend/README.md` contient déjà un inventaire des 15 composants avec leur rôle et leur primitive. Il ne relie pas encore chaque composant à ses états, à son spec, aux parcours E2E pertinents et aux vérifications manuelles clair/sombre/contraste forcé. Le rapport de conformité doit faire ce lien avant de considérer l'audit documentaire fini.
+## Écarts avant clôture à 100 %
 
-## Suite proposée
+1. Faire une validation avec une technologie d’assistance réelle (par exemple NVDA) sur les annonces, le focus et les actions du kit, notamment tableau, menus, sélecteurs et graphique. Les arbres d’accessibilité et les tests clavier ne remplacent pas cette validation.
+2. Rejouer le build et les E2E CI après push des trois modifications locales de styles/jetons.
+3. Compléter la revue visuelle des états hover, focus-visible, chargement, erreur et désactivé pour chaque variante dans les deux thèmes et en contraste forcé. Les tests prouvent déjà certains de ces états, mais ne constituent pas une inspection visuelle exhaustive de chaque écran.
 
-1. Compléter la matrice composants → états → tests unitaires/E2E → thèmes et contraste forcé.
-2. Relancer build, test ciblé et E2E après intégration du correctif du test CI ; résoudre l'accès local à Sass Embedded si le problème persiste.
-3. Exécuter le scénario E2E du graphique et vérifier au clavier et avec une technologie d'assistance.
-4. Démarrer l'application via Docker Compose, puis vérifier manuellement clair/sombre, contraste forcé, focus/clavier et rendu responsive.
-5. Finir le tri des dimensions et espacements locaux, mettre à jour les preuves et seulement alors réévaluer le statut.
-
-Les points 1 à 4 touchent au langage visuel partagé. Toute modification qui change les couleurs, les thèmes ou l'API globale du kit doit être instruite avant implémentation conformément à la règle de décision d'architecture du projet.
+Le tableau de conformité reste **partiel** jusqu’à obtention de ces preuves.

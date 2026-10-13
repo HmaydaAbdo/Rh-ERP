@@ -11,7 +11,7 @@
 .stp-select__input {
   width: 100%;
   min-height: var(--control-height);
-  padding: 0 calc(var(--space-md) * 2 + 1rem) 0 var(--space-md);
+  padding: 0 calc(var(--space-md) * 2 + var(--space-md)) 0 var(--space-md);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
