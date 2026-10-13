@@ -37,6 +37,34 @@ test.describe('Catalogue des composants', () => {
     await expect(page.getByRole('listbox')).toHaveCount(0);
   });
 
+  test('le panneau multiple reste dans la fenêtre et fait défiler l’option clavier active', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 640 });
+    const champ = page.getByRole('combobox', { name: 'Chantiers' });
+    await champ.click();
+
+    const liste = page.getByRole('listbox');
+    await liste.evaluate((element) => {
+      (element as HTMLElement).style.maxHeight = '5rem';
+    });
+    await page.keyboard.press('End');
+
+    await expect.poll(() => liste.evaluate((element) => (element as HTMLElement).scrollTop)).toBeGreaterThan(0);
+    const limites = await liste.evaluate((element) => {
+      const panneau = element as HTMLElement;
+      const bounds = panneau.getBoundingClientRect();
+      const derniereOption = panneau.lastElementChild!.getBoundingClientRect();
+      return {
+        left: bounds.left,
+        right: bounds.right,
+        dernierElementVisible: derniereOption.top >= bounds.top && derniereOption.bottom <= bounds.bottom
+      };
+    });
+
+    expect(limites.left).toBeGreaterThanOrEqual(0);
+    expect(limites.right).toBeLessThanOrEqual(390);
+    expect(limites.dernierElementVisible).toBe(true);
+  });
+
   test('un clic sur le sélecteur filtrable ouvre la liste', async ({ page }) => {
     await page.getByRole('combobox', { name: 'Recherche' }).click();
 

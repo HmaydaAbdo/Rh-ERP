@@ -31,7 +31,7 @@ export class TableFooterDirective {
   readonly template = inject(TemplateRef);
 }
 
-const MIN_COLUMN_WIDTH = 144;
+const MIN_COLUMN_WIDTH = 60;
 const MAX_COLUMN_WIDTH = 2000;
 const KEYBOARD_RESIZE_STEP = 12;
 

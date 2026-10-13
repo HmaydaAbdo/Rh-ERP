@@ -3,7 +3,10 @@
  * `chantier.code` pour une relation, voir `conventions/frontend.md`, section Tableaux). */
 export interface TableColumn {
   field: string;
+  /** Libellé complet destiné au sélecteur de colonnes et aux technologies d'assistance. */
   header: string;
+  /** Libellé compact affiché dans l'en-tête quand l'espace est limité (ex. « J.R.O »). */
+  shortHeader?: string;
   sortField?: string;
   /** `false` : colonne qui ne se trie pas (valeur calculée que le serveur ne sait pas trier) ; vrai par défaut. */
   sortable?: boolean;

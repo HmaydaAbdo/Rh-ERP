@@ -43,6 +43,10 @@ describe('PaieListComponent — filtres de la barre commune', () => {
             'Prime de roulage du dimanche', 'Salaire total', 'Observation', 'Chantier',
             'Désignation du chantier', 'Équipe', 'Libellé de l’équipe', 'Période'
         ]);
+        expect(composant['columns'].all.map((column) => column.shortHeader ?? column.header)).toEqual([
+            'Nom & prénom', 'Fonction', 'CIN', 'Jours trav.', 'J.R.O', 'J.R.D', 'Salaire', 'Prime RO',
+            'Prime RD', 'Total', 'Obs', 'Chantier', 'Désign. chantier', 'Équipe', 'Libellé équipe', 'Période'
+        ]);
 
         expect(service.search).toHaveBeenCalledTimes(1);
         expect(vi.mocked(service.search).mock.lastCall![0]).toEqual({

@@ -171,7 +171,9 @@ Le panneau d'options d'un sélecteur ne doit jamais être limité à la largeur 
 l'ouvre, notamment dans une barre de filtres : les libellés longs seraient tronqués et une barre de
 défilement horizontale apparaîtrait. Le composant partagé impose une largeur minimale issue des
 tokens `--select-panel-min-width` / `--select-panel-max-width` (`_tokens.scss`) et masque le
-défilement horizontal — ne jamais contourner cette règle dans un écran, corriger le composant.
+défilement horizontal — ne jamais contourner cette règle dans un écran, corriger le composant. Le
+panneau reste dans la fenêtre du navigateur, garde son défilement vertical visible lorsque la liste
+dépasse sa hauteur et fait défiler l'option active pendant la navigation clavier.
 
 ## Composant partagé
 

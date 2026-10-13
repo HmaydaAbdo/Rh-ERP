@@ -12,7 +12,7 @@
               [class.stp-table__th--target]="dropTarget() === col.field"
               [attr.aria-sort]="col.sortable === false ? null : ariaSort(col)"
               [style.width.px]="widths()[col.field] ?? null"
-              [style.min-width.px]="widths()[col.field] ?? minColumnWidth"
+              [style.min-width.px]="widths()[col.field] ?? null"
               [attr.draggable]="reorderable() ? 'true' : null"
               (dragstart)="onDragStart($event, col)"
               (dragover)="onDragOver($event, col)"
@@ -22,11 +22,13 @@
               <button
                 type="button"
                 class="stp-table__sort"
+                [attr.aria-label]="col.header"
+                [attr.title]="col.header"
                 (click)="sortBy(col)"
                 (keydown.alt.arrowleft)="moveWithKeyboard($event, col, -1)"
                 (keydown.alt.arrowright)="moveWithKeyboard($event, col, 1)"
               >
-                <span class="stp-table__sort-label">{{ col.header }}</span>
+                <span class="stp-table__sort-label">{{ col.shortHeader ?? col.header }}</span>
                 @if (col.sortable !== false) {
                   <stp-icon
                     class="stp-table__sort-icon"

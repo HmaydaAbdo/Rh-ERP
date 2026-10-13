@@ -73,17 +73,32 @@
 
 // ---- Panneau (rendu dans l'overlay du CDK ; le gabarit reste celui du composant, l'encapsulation s'applique) ----
 .stp-select__panel {
-  min-width: var(--select-panel-min-width);
-  max-width: min(var(--select-panel-max-width), 95vw);
-  max-height: 18rem;
+  min-width: min(var(--select-panel-min-width), calc(100vw - 1rem));
+  max-width: min(var(--select-panel-max-width), calc(100vw - 1rem));
+  max-height: min(18rem, calc(100vh - 1rem));
   margin: 0;
   padding: var(--space-xs);
   list-style: none;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
+
+  &::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-pill);
+    background: var(--color-border-strong);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-surface-alt);
+  }
 }
 
 .stp-select__option {
