@@ -1,41 +1,16 @@
-.audit-champs {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-base);
+.audit-champs__retire {
+  color: var(--color-danger);
+}
 
-  th,
-  td {
-    text-align: left;
-    padding: var(--space-xs) var(--space-sm);
-    border-bottom: 1px solid var(--color-border);
-    vertical-align: top;
-  }
+.audit-champs__ajoute {
+  color: var(--color-success);
+}
 
-  thead th {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
+.audit-champs__element {
+  display: block;
+}
 
-  tbody th {
-    font-weight: 600;
-    width: 30%;
-  }
-
-  &__retire {
-    color: var(--color-danger);
-  }
-
-  &__ajoute {
-    color: var(--color-success);
-  }
-
-  &__element {
-    display: block;
-  }
-
-  &__vide {
-    margin: 0;
-    color: var(--color-text-muted);
-  }
+.audit-champs__vide {
+  margin: 0;
+  color: var(--color-text-muted);
 }

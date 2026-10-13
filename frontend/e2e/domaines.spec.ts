@@ -12,7 +12,8 @@ test.describe('Parcours des domaines', () => {
     await mockApi(page, { username: 'rh', permissions: DROITS }, {
       'POST /employees/search': () => pageDe([]),
       'POST /chantiers/search': () => pageDe([]),
-      'POST /equipes/search': () => pageDe([])
+      'POST /equipes/search': () => pageDe([]),
+      'POST /functions/search': () => pageDe([])
     });
     for (const [url, titre] of [['/employees', 'Employés'], ['/chantiers', 'Chantiers'], ['/equipes', 'Équipes']] as const) {
       await page.goto(url);

@@ -221,11 +221,16 @@ describe('SelectComponent', () => {
       await afficher((h) => h.multiple.set(true));
       await ouvrir();
 
+      expect(document.querySelectorAll('.stp-select__checkbox')).toHaveLength(4);
+      expect(document.querySelectorAll('.stp-select__checkbox--checked')).toHaveLength(0);
+
       await choisir('Marrakech');
+      expect(document.querySelectorAll('.stp-select__checkbox--checked')).toHaveLength(1);
       await choisir('Souss');
 
       expect(valeur()).toEqual([1, 4]);
       expect(champ().value).toBe('2 chantiers');
+      expect(document.querySelectorAll('.stp-select__checkbox--checked')).toHaveLength(2);
     });
 
     it('affiche le libellé seul avec une valeur, puis le résumé à partir de deux', async () => {

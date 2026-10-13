@@ -159,6 +159,7 @@ test.describe('Formulaires (Signal Forms)', () => {
         { id: 2, code: 'PAIE_WRITE', description: 'Modifier la paie' },
         { id: 3, code: 'EMPLOYEE_READ', description: 'Lire les employés' }
       ],
+      'POST /roles/search': () => pageDe([]),
       'POST /roles': () => ({ id: 5 }),
       'GET /roles': () => []
     });

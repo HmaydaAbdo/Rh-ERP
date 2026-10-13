@@ -35,7 +35,14 @@ describe('PaieListComponent — filtres de la barre commune', () => {
     });
 
     it('ne filtre rien quand l\'URL n\'a pas de paramètre', async () => {
-        await harness.navigateByUrl('/paie', PaieListComponent);
+        const composant = await harness.navigateByUrl('/paie', PaieListComponent);
+
+        expect(composant['columns'].all.map((column) => column.header)).toEqual([
+            'Nom & prénom', 'Fonction', 'CIN', 'Nombre de jours travaillés', 'Jours de récupération ouvrables',
+            'Jours de récupération du dimanche', 'Salaire mensuel', 'Prime de roulage ordinaire',
+            'Prime de roulage du dimanche', 'Salaire total', 'Observation', 'Chantier',
+            'Désignation du chantier', 'Équipe', 'Libellé de l’équipe', 'Période'
+        ]);
 
         expect(service.search).toHaveBeenCalledTimes(1);
         expect(vi.mocked(service.search).mock.lastCall![0]).toEqual({

@@ -25,7 +25,7 @@ describe('AuditChampsComponent', () => {
     const element = afficher([{ champ: 'salaireTotal', avant: '3000.00', apres: '3500.00', ajoutes: null, retires: null }]);
 
     const ligne = element.querySelector('tbody tr') as HTMLElement;
-    expect(ligne.querySelector('th')?.textContent).toContain('Salaire total');
+    expect(ligne.querySelector('td')?.textContent).toContain('Salaire total');
     expect(ligne.querySelector('.audit-champs__retire')?.textContent).toContain('3000.00');
     expect(ligne.querySelector('.audit-champs__ajoute')?.textContent).toContain('3500.00');
   });
@@ -41,5 +41,16 @@ describe('AuditChampsComponent', () => {
 
     expect(element.querySelector('.audit-champs__ajoute')?.textContent).toContain('+ 7 — PAIE_WRITE');
     expect(element.querySelector('.audit-champs__retire')?.textContent).toContain('− 3 — PAIE_READ');
+  });
+
+  it('expose chaque colonne de détail dans le sélecteur et chaque valeur dans le tableau partagé', async () => {
+    const element = afficher([{ champ: 'observation', avant: 'ancien', apres: 'nouveau', ajoutes: null, retires: null }]);
+    (element.querySelector('app-column-chooser input') as HTMLInputElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(Array.from(element.querySelectorAll('thead th')).map((header) => header.textContent?.trim())).toEqual(['Champ', 'Avant', 'Après']);
+    expect(Array.from(document.querySelectorAll('.stp-select__option-label')).map((option) => option.textContent?.trim())).toEqual(['Champ', 'Avant', 'Après']);
   });
 });

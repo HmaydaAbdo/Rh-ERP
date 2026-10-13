@@ -56,7 +56,15 @@
           <li ngOption class="stp-select__option" [value]="option.value" [label]="option.label">
             <span class="stp-select__option-label">{{ option.label }}</span>
             @if (multiple()) {
-              <stp-icon class="stp-select__check" name="check" />
+              <span
+                class="stp-select__checkbox"
+                [class.stp-select__checkbox--checked]="selected().includes(option.value)"
+                aria-hidden="true"
+              >
+                @if (selected().includes(option.value)) {
+                  <stp-icon name="check" />
+                }
+              </span>
             }
           </li>
         } @empty {

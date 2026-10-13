@@ -74,6 +74,32 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             " GROUP BY c.id, c.code, c.nom, c.designation, e.id, e.code, e.libelle")
     List<ChantierEquipePeriodeProjection> resumerChantiersEtEquipesParPeriode(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
 
+    /** Page des chantiers ayant au moins un bulletin pour le mois, tri stable par code. */
+    @Query(value = "SELECT DISTINCT c.id AS id, c.code AS code, c.designation AS designation, c.actif AS actif " +
+            "FROM Paie p JOIN p.chantier c WHERE p.periode = :periode " +
+            "AND (:motif IS NULL OR LOWER(c.code) LIKE :motif ESCAPE '\\' " +
+            "OR LOWER(COALESCE(c.designation, '')) LIKE :motif ESCAPE '\\') ORDER BY c.code ASC",
+            countQuery = "SELECT COUNT(DISTINCT c.id) FROM Paie p JOIN p.chantier c " +
+                    "WHERE p.periode = :periode AND (:motif IS NULL OR LOWER(c.code) LIKE :motif ESCAPE '\\' " +
+                    "OR LOWER(COALESCE(c.designation, '')) LIKE :motif ESCAPE '\\')")
+    Page<PaieChantierOptionProjection> rechercherOptionsChantiers(@Param("periode") YearMonth periode,
+                                                                  @Param("motif") String motif,
+                                                                  Pageable pageable);
+
+    /** Page des équipes ayant des bulletins sur au moins un des chantiers sélectionnés ce mois. */
+    @Query(value = "SELECT DISTINCT e.id AS id, e.code AS code, e.libelle AS libelle " +
+            "FROM Paie p JOIN p.equipe e WHERE p.periode = :periode AND p.chantier.id IN :chantierIds " +
+            "AND (:motif IS NULL OR LOWER(e.code) LIKE :motif ESCAPE '\\' " +
+            "OR LOWER(e.libelle) LIKE :motif ESCAPE '\\') ORDER BY e.code ASC",
+            countQuery = "SELECT COUNT(DISTINCT e.id) FROM Paie p JOIN p.equipe e " +
+                    "WHERE p.periode = :periode AND p.chantier.id IN :chantierIds " +
+                    "AND (:motif IS NULL OR LOWER(e.code) LIKE :motif ESCAPE '\\' " +
+                    "OR LOWER(e.libelle) LIKE :motif ESCAPE '\\')")
+    Page<PaieEquipeOptionProjection> rechercherOptionsEquipes(@Param("periode") YearMonth periode,
+                                                              @Param("chantierIds") List<Long> chantierIds,
+                                                              @Param("motif") String motif,
+                                                              Pageable pageable);
+
     /** Masse, effectif et STC/sorties agrégés par (chantier, équipe, mois) sur l'intervalle
      * {@code [debut, fin]} — alimente les 3 niveaux d'évolution du rapport PDF (global, par chantier,
      * par équipe — voir {@code PaieBiReportBuilder.evolutionParNiveau}). **Une seule requête pour les

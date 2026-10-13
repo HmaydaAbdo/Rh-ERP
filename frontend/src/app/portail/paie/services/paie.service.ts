@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
+import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { EquipeReference } from '../../../shared/reference-data/equipe-reference.model';
 import {
   Paie,
   PaieAnalytique,
@@ -38,6 +40,22 @@ export class PaieService {
     }
 
     return this.http.post<Page<Paie>>(`${this.baseUrl}/search`, criteria, { params });
+  }
+
+  /** Page des chantiers qui possèdent une paie pour le mois sélectionné dans les filtres. */
+  rechercherOptionsChantiers(periode: string, page: number, size: number, recherche: string): Observable<Page<ChantierReference>> {
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'code,asc');
+    return this.http.post<Page<ChantierReference>>(
+      `${this.baseUrl}/options/chantiers`, { periode, recherche: recherche || null }, { params }
+    );
+  }
+
+  /** Page des équipes des chantiers choisis pour le mois sélectionné dans les filtres. */
+  rechercherOptionsEquipes(periode: string, chantierIds: number[], page: number, size: number, recherche: string): Observable<Page<EquipeReference>> {
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'code,asc');
+    return this.http.post<Page<EquipeReference>>(
+      `${this.baseUrl}/options/equipes`, { periode, chantierIds, recherche: recherche || null }, { params }
+    );
   }
 
   getById(id: number): Observable<Paie> {

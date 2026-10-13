@@ -6,26 +6,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { PaieChantierPeriode } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 import { AUCUN_FILTRE, PaieFiltres } from './paie-filtres';
 import { PaieFiltresComponent } from './paie-filtres.component';
-
-const CHANTIERS: PaieChantierPeriode[] = [
-    {
-        id: 3,
-        code: 'C168',
-        libelle: 'Nador',
-        effectif: 10,
-        masse: 100,
-        equipes: [
-            { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 6, masse: 60 },
-            { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 4, masse: 40 }
-        ]
-    },
-    { id: 4, code: 'C196', libelle: null, effectif: 5, masse: 50, equipes: [{ id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 5, masse: 50 }] },
-    { id: 5, code: 'C057', libelle: 'Depot', effectif: 2, masse: 20, equipes: [{ id: 9, code: 'LABO', libelle: 'Labo', effectif: 2, masse: 20 }] }
-];
 
 describe('PaieFiltresComponent', () => {
   afterEach(() => vi.useRealTimers());
@@ -45,9 +28,18 @@ describe('PaieFiltresComponent', () => {
     beforeEach(() => {
         permissions.set(['CHANTIER_READ', 'EQUIPE_READ', 'FUNCTION_READ']);
         service = {
-            rechercherChantiers: vi.fn().mockName("PaieService.rechercherChantiers")
+            rechercherOptionsChantiers: vi.fn().mockName("PaieService.rechercherOptionsChantiers"),
+            rechercherOptionsEquipes: vi.fn().mockName("PaieService.rechercherOptionsEquipes")
         } as unknown as MockedObject<PaieService>;
-        service.rechercherChantiers.mockReturnValue(of(CHANTIERS));
+        service.rechercherOptionsChantiers.mockReturnValue(of({ content: [
+            { id: 5, code: 'C057', designation: 'Depot', actif: true },
+            { id: 3, code: 'C168', designation: 'Nador', actif: true },
+            { id: 4, code: 'C196', designation: '', actif: true }
+        ], page: { size: 10, number: 0, totalElements: 3, totalPages: 1 } }));
+        service.rechercherOptionsEquipes.mockReturnValue(of({ content: [
+            { id: 1, code: 'CH', libelle: 'Chauffeurs' },
+            { id: 2, code: 'OP', libelle: 'Opérateurs' }
+        ], page: { size: 10, number: 0, totalElements: 2, totalPages: 1 } }));
         TestBed.configureTestingModule({
             imports: [PaieFiltresComponent],
             providers: [
@@ -179,23 +171,24 @@ describe('PaieFiltresComponent', () => {
     });
 
     describe('cascade', () => {
-        it('restreint les chantiers proposés à ceux du mois choisi', async () => {
-            expect(service.rechercherChantiers).toHaveBeenCalledTimes(1);
-            expect(service.rechercherChantiers).toHaveBeenCalledWith({ periode: '2026-08' });
+        it('demande au serveur une page des chantiers du mois choisi', async () => {
             const [source] = composant['sourcesChantiers']();
 
             const page = await firstValueFrom(source.fetchPage(0, 10, ''));
 
             expect(page.items.map((c) => c.code)).toEqual(['C057', 'C168', 'C196']);
+            expect(page.totalRecords).toBe(3);
+            expect(service.rechercherOptionsChantiers).toHaveBeenCalledWith('2026-08', 0, 10, '');
         });
 
-        it('restreint les équipes à celles des chantiers choisis ce mois-là, sans doublon', async () => {
+        it('demande au serveur les équipes des chantiers choisis pour le mois, avec la recherche saisie', async () => {
             afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
             const [source] = composant['sourcesEquipes']();
 
-            const page = await firstValueFrom(source.fetchPage(0, 10, ''));
+            const page = await firstValueFrom(source.fetchPage(2, 30, 'chauff'));
 
             expect(page.items.map((e) => e.code)).toEqual(['CH', 'OP']);
+            expect(service.rechercherOptionsEquipes).toHaveBeenCalledWith('2026-08', [3, 4], 2, 30, 'chauff');
         });
 
         it('propose les listes complètes du référentiel sans mois', () => {
@@ -211,12 +204,6 @@ describe('PaieFiltresComponent', () => {
             expect(composant['sourcesEquipes']()[0]).toBe(composant['equipeReferenceService']);
         });
 
-        it('ne recharge pas les chantiers d\'un mois déjà vu', () => {
-            afficher({ ...AUCUN_FILTRE, periode: '2026-09' });
-            afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
-
-            expect(service.rechercherChantiers).toHaveBeenCalledTimes(2);
-        });
     });
 
     describe('sélecteurs toujours visibles, selon les permissions', () => {
@@ -295,8 +282,8 @@ describe('PaieFiltresComponent', () => {
             expect(emis.at(-1)).toEqual(AUCUN_FILTRE);
         });
 
-        it("nomme le chantier ouvert d'après les chantiers du mois", () => {
-            expect(composant['chantierOuvert']()).toBe('C168');
+        it("identifie le chantier ouvert sans précharger la liste entière du mois", () => {
+            expect(composant['chantierOuvert']()).toBe('n° 3');
 
             afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
             expect(composant['chantierOuvert']()).toBeNull();

@@ -86,6 +86,8 @@ class EndpointSecurityTest {
             Map.entry("PaieController.modifier", "PAIE_WRITE"),
             Map.entry("PaieController.lireParId", "PAIE_READ"),
             Map.entry("PaieController.rechercher", "PAIE_READ"),
+            Map.entry("PaieController.rechercherOptionsChantiers", "PAIE_READ"),
+            Map.entry("PaieController.rechercherOptionsEquipes", "PAIE_READ"),
             Map.entry("PaieController.supprimer", "PAIE_DELETE"),
             Map.entry("PaieController.supprimerGroupe", "PAIE_PURGE"),
             Map.entry("PaieController.restaurerGroupe", "PAIE_RESTORE"),

@@ -1,11 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, linkedSignal, output, signal, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, output, signal, untracked } from '@angular/core';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
-import { BehaviorSubject, catchError, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
-
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { LazySelectInMemorySource } from '../../../shared/components/lazy-select/lazy-select-in-memory.source';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { MonthPickerComponent } from '../../../shared/components/month-picker/month-picker.component';
@@ -16,9 +12,9 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
-import { PaieChantierPeriode } from '../models/paie.model';
 import { libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
+import { PaieChantierOptionSource, PaieEquipeOptionSource } from '../services/paie-option.sources';
 import { AUCUN_FILTRE, memesFiltres, PaieFiltres } from './paie-filtres';
 
 const DEBOUNCE_FILTRES_MS = 300;
@@ -45,7 +41,6 @@ const DEBOUNCE_FILTRES_MS = 300;
   styleUrl: './paie-filtres.component.scss'
 })
 export class PaieFiltresComponent {
-  private readonly destroyRef = inject(DestroyRef);
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
 
@@ -82,10 +77,6 @@ export class PaieFiltresComponent {
   /** Téléphone : le CIN et les trois sélecteurs se replient derrière le bouton « Filtres » ; ailleurs la barre est toujours entière. */
   protected readonly secondairesOuverts = signal(false);
 
-  /** Les chantiers du mois choisi, avec leurs équipes : de quoi restreindre les choix de la cascade. */
-  private readonly chantiersDuMois = signal<PaieChantierPeriode[]>([]);
-  private readonly periodeSuivie = new BehaviorSubject<string | null>(null);
-  private readonly cacheChantiersDuMois = new Map<string, PaieChantierPeriode[]>();
   /** Les derniers filtres émis : un changement des filtres courants identique à celui-ci n'est pas à ré-émettre. */
   private dernierEmis: PaieFiltres = AUCUN_FILTRE;
 
@@ -111,43 +102,30 @@ export class PaieFiltresComponent {
     return (f.cin.trim() ? 1 : 0) + (f.chantierIds.length > 0 ? 1 : 0) + (f.equipeIds.length > 0 ? 1 : 0) + (f.fonctionIds.length > 0 ? 1 : 0);
   });
 
-  /** Chantier du fil de navigation (niveau 3 des Cartes), nommé d'après les chantiers du mois. */
+  /** Chantier choisi du fil de navigation (niveau 3 des Cartes), sans charger toute la liste du mois. */
   protected readonly chantierOuvert = computed(() => {
     const ids = this.courant().chantierIds;
     if (ids.length !== 1) {
       return null;
     }
-    const trouve = this.chantiersDuMois().find((c) => c.id === ids[0]);
-    return trouve?.code ?? `n° ${ids[0]}`;
+    return `n° ${ids[0]}`;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
   protected readonly sourcesChantiers = computed<LazySelectSource<ChantierReference>[]>(() => {
-    const chantiers = this.chantiersDuMois();
-    if (!this.periode() || chantiers.length === 0) {
+    const periode = this.periode();
+    if (!periode) {
       return [this.chantierReferenceService];
     }
-    const liste = chantiers
-      .map((c) => ({ id: c.id, code: c.code, designation: c.libelle ?? '', actif: true }))
-      .sort((a, b) => a.code.localeCompare(b.code));
-    return [new LazySelectInMemorySource(liste, (c) => `${c.code} ${c.designation}`, this.chantierReferenceService)];
+    return [new PaieChantierOptionSource(this.paieService, this.chantierReferenceService, periode)];
   });
 
   protected readonly sourcesEquipes = computed<LazySelectSource<EquipeReference>[]>(() => {
     const { periode, chantierIds } = this.courant();
-    const chantiers = this.chantiersDuMois();
-    if (!periode || chantierIds.length === 0 || chantiers.length === 0) {
+    if (!periode || chantierIds.length === 0) {
       return [this.equipeReferenceService];
     }
-    const equipes = new Map<number, EquipeReference>();
-    chantiers
-      .filter((c) => chantierIds.includes(c.id))
-      .forEach((c) => c.equipes.forEach((e) => equipes.set(e.id, { id: e.id, code: e.code, libelle: e.libelle })));
-    if (equipes.size === 0) {
-      return [this.equipeReferenceService];
-    }
-    const liste = [...equipes.values()].sort((a, b) => a.code.localeCompare(b.code));
-    return [new LazySelectInMemorySource(liste, (e) => `${e.code} ${e.libelle}`, this.equipeReferenceService)];
+    return [new PaieEquipeOptionSource(this.paieService, this.equipeReferenceService, periode, [...chantierIds])];
   });
 
   constructor() {
@@ -155,7 +133,6 @@ export class PaieFiltresComponent {
       const filtres = this.value();
       untracked(() => {
         this.dernierEmis = filtres;
-        this.periodeSuivie.next(filtres.periode);
       });
     });
 
@@ -168,14 +145,6 @@ export class PaieFiltresComponent {
         }
       });
     });
-
-    this.periodeSuivie
-      .pipe(
-        distinctUntilChanged(),
-        switchMap((periode) => this.chargerChantiersDuMois(periode)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((chantiers) => this.chantiersDuMois.set(chantiers));
   }
 
   /** Choisit un mois ; `null` revient à « tous les mois ». Les choix qui dépendaient de l'ancien mois restent : on les voit. */
@@ -207,20 +176,6 @@ export class PaieFiltresComponent {
     if (event.key === 'Escape') {
       this.panneauMoisOuvert.set(false);
     }
-  }
-
-  private chargerChantiersDuMois(periode: string | null) {
-    if (!periode) {
-      return of<PaieChantierPeriode[]>([]);
-    }
-    const enCache = this.cacheChantiersDuMois.get(periode);
-    if (enCache) {
-      return of(enCache);
-    }
-    return this.paieService.rechercherChantiers({ periode }).pipe(
-      tap((chantiers) => this.cacheChantiersDuMois.set(periode, chantiers)),
-      catchError(() => of<PaieChantierPeriode[]>([]))
-    );
   }
 
   /** Le mois contigu dans la liste des mois disponibles (`decalage` 1 : plus ancien, -1 : plus récent), ou `null`. */

@@ -7,9 +7,12 @@ import staport.rh.audit.support.AuditIntegrationTestBase;
 import staport.rh.audit.support.DonneesDeTest;
 import staport.rh.audit.support.DonneesDeTest.Referentiel;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
+import staport.rh.paie.dtos.request.PaieOptionsChantierRequest;
+import staport.rh.paie.dtos.request.PaieOptionsEquipeRequest;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,5 +71,39 @@ class PaieRechercheJokersTest extends AuditIntegrationTestBase {
         assertThat(dansLesAgregats("ab%" + s, null, periode)).isEqualTo(1);
         assertThat(dansLaListe("ab_" + s, null)).as("« _ » n'est pas un joker : aucun CIN ne contient de tiret bas").isZero();
         assertThat(dansLesAgregats("ab_" + s, null, periode)).isZero();
+    }
+
+    @Test
+    void les_options_des_filtres_sont_recherchees_et_pagees_par_la_base_sur_le_mois_et_le_chantier() {
+        String s = DonneesDeTest.suffixeUnique();
+        YearMonth periode = YearMonth.of(2091, 5);
+        Referentiel a = donnees.creerReferentiel();
+        Referentiel b = donnees.creerReferentiel();
+        Referentiel c = donnees.creerReferentiel();
+        donnees.creerBulletin(a, periode);
+        donnees.creerBulletin(b, periode);
+        donnees.creerBulletin(c, periode);
+        jdbc.update("UPDATE chantier SET code = ?, designation = ? WHERE id = ?", "O%T-A-" + s, "Site Alpha " + s, a.chantierId());
+        jdbc.update("UPDATE chantier SET code = ?, designation = ? WHERE id = ?", "OPT-B-" + s, "Site Beta " + s, b.chantierId());
+        jdbc.update("UPDATE chantier SET code = ?, designation = ? WHERE id = ?", "OPT-C-" + s, "Site Gamma " + s, c.chantierId());
+        jdbc.update("UPDATE equipe SET code = ?, libelle = ? WHERE id = ?", "TEAM-A-" + s, "Crew Alpha " + s, a.equipeId());
+        jdbc.update("UPDATE equipe SET code = ?, libelle = ? WHERE id = ?", "TEAM-B-" + s, "Crew Beta " + s, b.equipeId());
+
+        var premierePage = paieService.rechercherOptionsChantiers(
+                new PaieOptionsChantierRequest(periode, null), PageRequest.of(0, 2));
+        var deuxiemePage = paieService.rechercherOptionsChantiers(
+                new PaieOptionsChantierRequest(periode, null), PageRequest.of(1, 2));
+        assertThat(premierePage.getTotalElements()).isEqualTo(3);
+        assertThat(premierePage.getContent()).hasSize(2);
+        assertThat(deuxiemePage.getContent()).hasSize(1);
+
+        var chantierJoker = paieService.rechercherOptionsChantiers(
+                new PaieOptionsChantierRequest(periode, "%"), PageRequest.of(0, 10));
+        assertThat(chantierJoker.getContent()).extracting("id").containsExactly(a.chantierId());
+
+        var equipes = paieService.rechercherOptionsEquipes(
+                new PaieOptionsEquipeRequest(periode, List.of(a.chantierId()), "crew alpha " + s), PageRequest.of(0, 10));
+        assertThat(equipes.getTotalElements()).isEqualTo(1);
+        assertThat(equipes.getContent()).extracting("id").containsExactly(a.equipeId());
     }
 }
