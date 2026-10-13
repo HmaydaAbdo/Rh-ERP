@@ -9,10 +9,10 @@
     height: 1.25rem;
     padding: 0;
     border: none;
-    border-radius: 0.625rem;
+    border-radius: var(--radius-md);
     background: var(--color-border);
     cursor: pointer;
-    transition: background var(--duration-base);
+    transition: background-color var(--duration-base);
     &::after {
       content: '';
       position: absolute;
@@ -53,7 +53,7 @@
     align-items: center;
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
-    padding: 0.6rem var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     background: $accent-doux;
     font-size: var(--text-sm);
@@ -105,7 +105,7 @@
   &__barre {
     flex: 1;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--radius-pill);
     background: var(--color-surface-alt);
     overflow: hidden;
     span {
@@ -122,7 +122,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    padding: 0.25rem 0;
+    padding: var(--space-xs) 0;
     border-bottom: 1px solid var(--color-border);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
@@ -139,7 +139,7 @@
   &__compteur {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-2xs);
     button {
       display: flex;
       align-items: center;
@@ -160,7 +160,7 @@
     input {
       width: 2.9rem;
       height: 1.6rem;
-      padding: 0 2px;
+      padding: 0 var(--space-2xs);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       text-align: center;

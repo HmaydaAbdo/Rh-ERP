@@ -22,6 +22,51 @@
   }
 }
 
+// Mouvements nommés du produit : définis ici pour garder une seule source des animations.
+@keyframes scene-entree-avant {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes scene-entree-arriere {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes jauge-remplir {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes barre-course {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+@keyframes stp-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes export-wizard-indetermine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(333%); }
+}
+
+@keyframes export-wizard-confirme {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes export-wizard-avant {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes export-wizard-arriere {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
 // ---- Bascule de thème : les couleurs glissent d'un thème à l'autre au lieu de claquer (classe posée par ThemeService, 300 ms) ----
 html.theme-transition,
 html.theme-transition *,
@@ -50,13 +95,8 @@ html.theme-transition *::after {
 }
 
 @keyframes skeleton-balayage {
-  from {
-    background-position: 100% 0;
-  }
-
-  to {
-    background-position: 0 0;
-  }
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
 }
 
 // Texte réservé aux lecteurs d'écran (annonce « Chargement… » d'un squelette)

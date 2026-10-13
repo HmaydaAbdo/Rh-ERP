@@ -110,8 +110,8 @@
     display: inline-block;
     min-width: 1.25rem;
     margin: 0 var(--space-xs);
-    padding: 0 0.35rem;
-    border-radius: 0.625rem;
+    padding: 0 var(--space-xs);
+    border-radius: var(--radius-md);
     background: var(--color-primary);
     color: var(--color-primary-contrast);
     font-size: var(--text-xs);
