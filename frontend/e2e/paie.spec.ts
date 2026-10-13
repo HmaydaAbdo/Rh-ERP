@@ -71,6 +71,33 @@ test.describe('Paie', () => {
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
   });
 
+  test('le sélecteur de colonnes reste visible, défile et montre une case par option sur mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 640 });
+    await mockApi(page, { username: 'paie', permissions: DROITS }, routes());
+    await page.goto('/paie');
+
+    const champ = page.getByRole('combobox', { name: 'Choisir les colonnes visibles' });
+    await champ.click();
+    const liste = page.getByRole('listbox');
+    const options = liste.getByRole('option');
+    await expect(options).toHaveCount(16);
+    await expect(liste.locator('.stp-select__checkbox')).toHaveCount(16);
+    await expect(liste.locator('.stp-select__checkbox').first()).toBeVisible();
+
+    const limites = await liste.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { left: bounds.left, right: bounds.right };
+    });
+    expect(limites.left).toBeGreaterThanOrEqual(0);
+    expect(limites.right).toBeLessThanOrEqual(390);
+
+    const derniereOption = options.last();
+    await page.keyboard.press('End');
+    await expect(champ).toHaveAttribute('aria-activedescendant', await derniereOption.getAttribute('id'));
+    await expect.poll(() => liste.evaluate((element) => (element as HTMLElement).scrollTop)).toBeGreaterThan(0);
+    await expect(derniereOption).toBeInViewport();
+  });
+
   test('les filtres de l’URL sont envoyés à la recherche', async ({ page }) => {
     const mock = await mockApi(page, { username: 'paie', permissions: DROITS }, routes());
     await page.goto('/paie?periode=2026-08&cin=AB1');
