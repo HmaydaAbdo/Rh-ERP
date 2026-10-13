@@ -63,7 +63,7 @@ import { IconComponent } from '../icon/icon.component';
       cursor: pointer;
 
       &:hover:not(:disabled) {
-        background: var(--neutral-100);
+        background: var(--color-surface-alt);
         color: var(--color-text);
       }
     }

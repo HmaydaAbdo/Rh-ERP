@@ -1,20 +1,42 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { form, FormField } from '@angular/forms/signals';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { form, FormField, required } from '@angular/forms/signals';
+import type { ChartData, ChartOptions } from 'chart.js';
 
 import { ColumnState } from '../../table/table-columns';
 import { BadgeComponent } from '../badge/badge.component';
 import { ButtonComponent } from '../button/button.directive';
+import { ChartComponent } from '../chart/chart.component';
+import { DateInputComponent } from '../date-input/date-input.component';
 import { DialogComponent } from '../dialog/dialog.component';
+import { FieldErrorComponent } from '../field-error/field-error.component';
+import { IconComponent } from '../icon/icon.component';
+import { MessageComponent } from '../message/message.component';
 import { MenuAction, MenuButtonComponent } from '../menu/menu-button.component';
+import { MonthInputComponent } from '../month-input/month-input.component';
+import { NumberInputComponent } from '../number-input/number-input.component';
+import { PasswordInputComponent } from '../password-input/password-input.component';
 import { SplitButtonComponent } from '../menu/split-button.component';
 import { SelectComponent, SelectOption } from '../select/select.component';
 import { TableCellDirective, TableComponent, TableRowActionsDirective } from '../table/table.component';
+import { ThemeService } from '../../../core/theme/theme.service';
 
 interface Ligne {
   id: number;
   nom: string;
   fonction: string;
   actif: boolean;
+}
+
+interface ValeursCatalogue {
+  simple: number | null;
+  multiple: number[];
+  recherche: number | null;
+  nombre: number | null;
+  date: Date | null;
+  mois: Date | null;
+  motDePasse: string;
+  champErreur: string;
 }
 
 /**
@@ -27,8 +49,16 @@ interface Ligne {
     FormField,
     BadgeComponent,
     ButtonComponent,
+    ChartComponent,
+    DateInputComponent,
     DialogComponent,
+    FieldErrorComponent,
+    IconComponent,
+    MessageComponent,
     MenuButtonComponent,
+    MonthInputComponent,
+    NumberInputComponent,
+    PasswordInputComponent,
     SplitButtonComponent,
     SelectComponent,
     TableComponent,
@@ -55,8 +85,40 @@ export class CatalogueComponent {
     { label: 'Barrage Souss', value: 4 }
   ];
 
-  protected readonly valeurs = signal<{ simple: number | null; multiple: number[]; recherche: number | null }>({ simple: 2, multiple: [1, 3], recherche: null });
-  protected readonly formulaire = form(this.valeurs);
+  private readonly document = inject(DOCUMENT);
+  private readonly theme = inject(ThemeService);
+  protected readonly valeurs = signal<ValeursCatalogue>({
+    simple: 2,
+    multiple: [1, 3],
+    recherche: null,
+    nombre: 12500.5,
+    date: new Date(2026, 9, 13),
+    mois: new Date(2026, 9, 1),
+    motDePasse: 'Staport2026!',
+    champErreur: ''
+  });
+  protected readonly formulaire = form(this.valeurs, (chemin) => {
+    required(chemin.champErreur, { message: 'Ce champ est obligatoire.' });
+  });
+
+  protected readonly chartData = computed<ChartData<'bar'>>(() => {
+    this.theme.theme();
+    return {
+      labels: ['Août', 'Septembre', 'Octobre'],
+      datasets: [{ label: 'Masse salariale (DH)', data: [125000, 143500, 138000], backgroundColor: this.couleurGraphique() }]
+    };
+  });
+  protected readonly chartOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: true } }
+  };
+
+  protected couleurGraphique(): string {
+    this.theme.theme();
+    return this.document.defaultView?.getComputedStyle(this.document.documentElement).getPropertyValue('--chart-1').trim() ?? '';
+  }
 
   protected readonly columns = new ColumnState([
     { field: 'nom', header: 'Nom' },

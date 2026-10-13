@@ -38,7 +38,33 @@
     <div class="w-60">
       <stp-select ariaLabel="Recherche" placeholder="Rechercher un chantier" [filterable]="true" [options]="options" [formField]="formulaire.recherche" />
     </div>
+    <div class="w-60">
+      <stp-number-input ariaLabel="Montant" [formField]="formulaire.nombre" [minFractionDigits]="2" />
+    </div>
+    <div class="w-60">
+      <stp-date-input ariaLabel="Date de référence" [formField]="formulaire.date" />
+    </div>
+    <div class="w-60">
+      <stp-month-input ariaLabel="Mois de référence" [formField]="formulaire.mois" />
+    </div>
+    <div class="w-60">
+      <stp-password-input ariaLabel="Mot de passe" autocomplete="new-password" [formField]="formulaire.motDePasse" />
+    </div>
+    <div class="w-60">
+      <input class="stp-input w-full" aria-label="Champ obligatoire" [formField]="formulaire.champErreur" />
+      <stp-field-error [field]="formulaire.champErreur" />
+    </div>
     <span role="status">Valeurs : {{ valeurs().simple }} / {{ valeurs().multiple }} / {{ valeurs().recherche }}</span>
+  </div>
+</section>
+
+<section class="mb-8">
+  <h2 class="mb-2 text-base font-semibold">Messages et icônes</h2>
+  <div class="flex flex-wrap items-center gap-2">
+    <stp-message severity="info" text="Information de référence." />
+    <stp-message severity="warn" text="Une vérification est nécessaire." />
+    <stp-message severity="error" text="La saisie doit être corrigée." />
+    <span class="inline-flex items-center gap-2"><stp-icon name="calendar" /> Icône décorative</span>
   </div>
 </section>
 
@@ -53,6 +79,19 @@
       <button stp-button (click)="dialogOpen.set(false)">Valider</button>
     </div>
   </stp-dialog>
+</section>
+
+<section class="mb-8">
+  <h2 class="mb-2 text-base font-semibold">Graphique</h2>
+  <div class="h-56 min-w-0">
+    <stp-chart
+      type="bar"
+      [data]="chartData()"
+      [options]="chartOptions"
+      ariaLabel="Masse salariale mensuelle"
+      (dataSelect)="last.set('point du graphique sélectionné')"
+    />
+  </div>
 </section>
 
 <section class="mb-8">

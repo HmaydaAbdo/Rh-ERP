@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .user-form {
   &__permissions .app-form__section {
     margin-bottom: var(--space-sm);
@@ -90,7 +92,7 @@
     font-size: var(--text-xs);
   }
 
-  @media (max-width: 48rem) {
+  @include bp.form-compact {
     &__permission-columns {
       grid-template-columns: 1fr;
     }

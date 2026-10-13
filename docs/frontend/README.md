@@ -105,7 +105,9 @@ sont en français : `stp-date-input` s'appuie sur le champ date natif du navigat
 ### Graphiques et mouvement
 
 Graphiques : habillage commun `paie-chart-theme.ts` (couleurs, police et infobulle lues dans les jetons), redessinés à la
-bascule de thème, une seule mesure par axe, tableau de données accessible — voir `docs/paie/README.md` (Vue Analytique) et
+bascule de thème, une seule mesure par axe, tableau de données accessible. `stp-chart` est aussi focalisable : flèches gauche/droite
+(ou haut/bas) et Début/Fin parcourent ses points, Entrée/Espace sélectionne le point et l'annonce aux technologies d'assistance — voir
+`docs/paie/README.md` (Vue Analytique) et
 `conventions/design-system.md`. Mouvement : `styles/_motion.scss` (écran qui apparaît, bascule de thème en fondu, squelettes de
 chargement, appui sur un bouton), durées et courbe en jetons, supprimé par `prefers-reduced-motion`.
 
@@ -235,7 +237,10 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-password-input` | Mot de passe avec afficher/masquer (`aria-pressed`) | |
 | `stp-date-input`, `stp-month-input` | Date (champ natif) et mois (sélecteur de mois en popover) ; valeur `Date` | natif / CDK Overlay |
 | `stp-message` | Message permanent dans la page | |
-| `stp-chart` | Graphique Chart.js (`role="img"`), recréé quand type/données/options changent ; `dataSelect` au clic | Chart.js |
+| `stp-field-error` | Première erreur Signal Forms annoncée (`role="alert"`) quand le champ touché est invalide | Signal Forms |
+| `stp-chart` | Graphique Chart.js (`role="img"`), navigation par flèches, Début/Fin et sélection par Entrée/Espace ; annonce du point courant, `dataSelect` au clic ou au clavier | Chart.js |
+
+Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles ; ses parcours E2E couvrent axe en thème clair/sombre et interactions clavier ciblées. Les vérifications manuelles de contraste élevé et les états qui ne sont pas atteignables dans cette démonstration restent à consigner dans le rapport de conformité avant de clôturer `design-system.md`.
 
 Clavier du sélecteur : ouverture par clic ou **Flèche bas**, navigation aux flèches, **Entrée** coche/choisit, **Échap** ferme ;
 la frappe filtre (sélecteurs filtrables). Conséquence de l'implémentation sur Angular Aria : sans filtre, la frappe de lettres

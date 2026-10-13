@@ -3,6 +3,7 @@
 // (le dossier `src/styles` est un chemin d'inclusion Sass, voir angular.json). Mêmes valeurs que dans conventions/design-system.md.
 $phone-max: 767px;
 $tablet-max: 1023px;
+$form-compact-max: 48rem;
 
 /// Téléphone : jusqu'à 767 px.
 @mixin phone {
@@ -14,6 +15,13 @@ $tablet-max: 1023px;
 /// Tablette et en dessous : jusqu'à 1023 px.
 @mixin tablet-down {
   @media (max-width: $tablet-max) {
+    @content;
+  }
+}
+
+/// Formulaires et vues d'administration étroites : jusqu'à 48 rem.
+@mixin form-compact {
+  @media (max-width: $form-compact-max) {
     @content;
   }
 }
