@@ -80,4 +80,14 @@ test.describe('Catalogue des composants', () => {
     await page.keyboard.press('Alt+ArrowRight');
     await expect(entetes.first()).toContainText('Fonction');
   });
+
+  test('le graphique se parcourt et sélectionne un point au clavier', async ({ page }) => {
+    const graphique = page.getByRole('img', { name: /Masse salariale mensuelle/ });
+    await graphique.focus();
+    await page.keyboard.press('ArrowRight');
+
+    await expect(page.locator('.app-lecteur[aria-live="polite"]')).toContainText('Septembre');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('status').filter({ hasText: 'point du graphique sélectionné' })).toBeVisible();
+  });
 });

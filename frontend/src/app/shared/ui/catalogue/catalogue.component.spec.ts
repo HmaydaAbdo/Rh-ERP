@@ -17,7 +17,9 @@ describe('CatalogueComponent', () => {
     const { page } = afficher();
 
     expect(page.querySelector('h1')?.textContent).toBe('Catalogue Staport');
-    expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual(['Boutons', 'Pastilles', 'Champs', 'Dialogue', 'Tableau (mode mémoire)']);
+    expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual([
+      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', 'Dialogue', 'Graphique', 'Tableau (mode mémoire)'
+    ]);
   });
 
   it('laisse le repère principal à la coque applicative', () => {

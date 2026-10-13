@@ -21,7 +21,7 @@
       width: calc(1.25rem - 4px);
       height: calc(1.25rem - 4px);
       border-radius: 50%;
-      background: var(--neutral-0);
+      background: var(--color-surface);
       transition: transform var(--duration-base);
     }
     &--actif {

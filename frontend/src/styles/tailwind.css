@@ -1,37 +1,46 @@
 /*
  * Tailwind CSS 4 — utilitaires seulement (pas de preflight : le socle visuel est celui des jetons Staport, voir _tokens.scss).
- * Les valeurs ci-dessous ne servent qu'à déclarer les noms au compilateur de Tailwind (`bg-surface`, `text-muted`, `rounded-md`…) ;
- * les vraies valeurs sont celles de `_tokens.scss`, non encapsulées, donc prioritaires sur la couche `theme` — et les deux
- * thèmes (clair/sombre) s'appliquent aux utilitaires sans rien de plus. Un composant n'écrit jamais d'utilitaire de couleur
- * en dur (`bg-blue-500`) : seulement les jetons ci-dessous.
+ * `@theme inline` relie les noms d'utilitaires Tailwind (`bg-surface`, `text-muted`, `rounded-md`…) aux jetons de `_tokens.scss`.
+ * Les utilitaires lisent donc la valeur sémantique active, y compris après un changement de thème ; aucune palette concurrente
+ * n'est définie ici. Un composant n'écrit jamais d'utilitaire de couleur en dur (`bg-blue-500`).
  */
 @layer theme, base, components, utilities;
 
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-@theme {
+@theme inline {
   --color-*: initial;
-  --color-primary: #084478;
-  --color-primary-soft: #e4eef9;
-  --color-primary-contrast: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f4f7fb;
-  --color-canvas: #f4f7fb;
-  --color-border: #dce4ee;
-  --color-text: #0f2236;
-  --color-muted: #5b6e85;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
+  --color-primary: var(--color-primary);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-contrast: var(--color-primary-contrast);
+  --color-surface: var(--color-surface);
+  --color-surface-alt: var(--color-surface-alt);
+  --color-canvas: var(--color-canvas);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-muted: var(--color-text-muted);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
 
   --radius-*: initial;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 
   --shadow-*: initial;
-  --shadow-sm: 0 1px 2px rgba(3, 26, 46, 0.06);
-  --shadow-md: 0 2px 8px rgba(3, 26, 46, 0.08);
-  --shadow-lg: 0 12px 32px rgba(3, 26, 46, 0.16);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --spacing: var(--space-xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-page-title: var(--text-page-title);
+  --text-display: var(--text-display);
 }
