@@ -132,8 +132,16 @@ describe('ChartComponent', () => {
 
     const chart = await graphique();
     const contexte = document.createElement('canvas').getContext('2d')!;
+    const optionsRadiales = (chart.options.scales as unknown as Record<string, {
+      grid?: { color?: unknown };
+      angleLines?: { color?: unknown };
+      pointLabels?: { color?: unknown };
+    }>)['r'];
     contexte.fillStyle = 'GrayText';
-    expect(chart.options.scales?.['r']?.grid?.color).toBe(contexte.fillStyle);
+    expect(optionsRadiales.grid?.color).toBe(contexte.fillStyle);
+    expect(optionsRadiales.angleLines?.color).toBe(contexte.fillStyle);
+    contexte.fillStyle = 'CanvasText';
+    expect(optionsRadiales.pointLabels?.color).toBe(contexte.fillStyle);
 
     fixture.destroy();
     vi.restoreAllMocks();
