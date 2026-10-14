@@ -4,13 +4,15 @@
 
 Contrôle du kit partagé et des principaux écrans de l’application, selon [`conventions/design-system.md`](../../conventions/design-system.md), dans l’image Compose accessible sur `http://127.0.0.1:5002`.
 
-**Statut : contrôle ouvert, revue finale (2026-10-14).** La CI et l’image du commit `006f777` sont validées ; l’instance Compose répond sur `http://127.0.0.1:5002` et sert bien le nouveau jeton `--space-2xl`. Le parcours navigateur couvre les 11 routes principales en responsive, thème clair/sombre et contraste forcé. L’utilisateur a confirmé le test manuel avec Narrateur Windows du sélecteur multiple, du dialogue, du tableau et du graphique. Après ces vérifications, le composant partagé `stp-chart` a été adapté pour rendre ses couleurs lisibles en contraste forcé et suivre les changements à chaud. Les tests frontend locaux passent (669 tests), ainsi que les 9 E2E du Catalogue. Le build local (`ng build`, aussi en configuration développement) s’interrompt avec le code 1 sans diagnostic ; la CI verte citée plus haut précède ces changements locaux. Le contrôle attend la revalidation finale du nouveau nom accessible du graphique avec Narrateur et un build réussi de cette version.
+**Statut : contrôles locaux terminés, validation CI/runtime de la version finale en attente (2026-10-14).** La CI et l’image du commit `006f777` sont validées ; l’instance Compose répond sur `http://127.0.0.1:5002` et sert le jeton `--space-2xl`. Le parcours navigateur antérieur couvre les 11 routes principales en responsive, thèmes clair/sombre et contraste forcé. L’utilisateur a confirmé au Narrateur les sélecteurs multiples, le dialogue, le tableau et, sur la dernière version, le nouveau nom accessible et le tableau de données du graphique. `stp-chart` traite les couleurs système pour les graphiques cartésiens et radiaux, y compris les bascules à chaud. L’inspection locale du Catalogue couvre les variantes du kit et les états ouverts du multisélect, du dialogue, du tableau et du graphique en contraste forcé. Les 669 tests frontend, les 9 E2E Catalogue et le build de production local passent. Le build a nécessité le mode CI (`CI=true`, `NG_BUILD_MAX_WORKERS=2`) pour contourner une sortie silencieuse du build local standard. Il reste à faire passer cette version par la CI, puis vérifier son image sur Compose avant de clore et supprimer ce rapport.
 
 ## Preuves d’exécution
 
 ### CI et image
 
 Le [run GitHub Actions 38463587093](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38463587093), sur `006f777` (tentative 2), est terminé avec succès : les cinq jobs `postgres`, `frontend`, `backend`, `full-stack` et `backup` sont verts. Les tests frontend, le build de production, les E2E, les tests backend et la construction/publication des images passent. La tentative 1 avait reçu un `HTTP 429` de Maven Central pendant la construction de l’image backend ; la relance ciblée du job backend a réussi.
+
+Après les derniers changements de `stp-chart`, la vérification locale finale est verte : `npm test` (96 fichiers, 669 tests), `npx playwright test e2e/catalogue.spec.ts --workers=1 --timeout=60000` (9/9), `npx tsc --noEmit -p tsconfig.app.json`, et `CI=true NG_BUILD_MAX_WORKERS=2 npx ng build --configuration production` (build réussi, bundle initial 630,50 Ko). La CI et l’image publiées de cette révision locale restent à valider par le propriétaire après commit/push.
 
 Sur l’instance Compose `http://127.0.0.1:5002`, la feuille chargée définit `--space-2xl: 4rem`, ce qui confirme le bundle frontend mis à jour. La connexion et les requêtes API fonctionnent après authentification. Une seule erreur `401` a été observée au premier rafraîchissement avant la connexion ; elle ne se reproduit pas ensuite. Aucun avertissement navigateur n’a été relevé.
 
@@ -76,8 +78,7 @@ La page Catalogue expose aussi le tableau des données du graphique à la demand
 
 ## Vérifications restantes avant clôture
 
-1. Rejouer le contrôle Narrateur Windows du graphique sur cette version : vérifier le nouveau nom accessible, le parcours par flèches et l’accès au tableau de données dépliable.
-2. Obtenir un build de production réussi de cette version. Localement, `ng serve` compile et les 668 tests passent, mais `ng build` quitte avec le code 1 sans diagnostic ; la CI verte disponible concerne le commit antérieur `006f777`.
-3. Terminer l’inspection visuelle des variantes d’état restantes du kit et joindre la preuve au rapport avant clôture.
+1. Faire passer cette révision locale en CI et vérifier que tous les jobs sont verts.
+2. Après pull de la nouvelle image et démarrage Compose par le propriétaire, contrôler le rendu du graphique Paie en contraste forcé, son tableau de données et le thème normal. Supprimer ensuite ce rapport uniquement après preuve CI et runtime.
 
 Le contrôle reste ouvert dans le suivi jusqu’à la fin de cette revue et la mise à jour des preuves.

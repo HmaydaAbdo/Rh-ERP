@@ -125,13 +125,15 @@ export class ChartComponent<T extends ChartType = ChartType> {
     const sourceScales = source['scales'];
     let scales: unknown = sourceScales;
     if (sourceScales !== false) {
+      let echellesParDefaut: Record<string, unknown> = {};
+      if (['bar', 'line', 'scatter', 'bubble'].includes(type)) {
+        echellesParDefaut = { x: {}, y: {} };
+      } else if (['polarArea', 'radar'].includes(type)) {
+        echellesParDefaut = { r: {} };
+      }
       const scalesSource = sourceScales && typeof sourceScales === 'object'
         ? sourceScales as Record<string, unknown>
-        : ['bar', 'line', 'scatter', 'bubble'].includes(type)
-          ? { x: {}, y: {} }
-          : ['polarArea', 'radar'].includes(type)
-            ? { r: {} }
-          : {};
+        : echellesParDefaut;
       scales = Object.fromEntries(Object.entries(scalesSource).map(([nom, valeur]) => {
         if (!valeur || typeof valeur !== 'object') {
           return [nom, valeur];
@@ -141,7 +143,9 @@ export class ChartComponent<T extends ChartType = ChartType> {
           ...scale,
           ticks: { ...this.optionsObjet(scale['ticks']), color: texte },
           grid: { ...this.optionsObjet(scale['grid']), color: grille },
-          border: { ...this.optionsObjet(scale['border']), color: texte }
+          border: { ...this.optionsObjet(scale['border']), color: texte },
+          angleLines: { ...this.optionsObjet(scale['angleLines']), color: grille },
+          pointLabels: { ...this.optionsObjet(scale['pointLabels']), color: texte }
         }];
       }));
     }
