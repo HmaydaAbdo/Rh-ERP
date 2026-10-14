@@ -82,16 +82,36 @@
 </section>
 
 <section class="mb-8">
-  <h2 class="mb-2 text-base font-semibold">Graphique</h2>
+  <h2 class="mb-2 text-base font-semibold">Masse salariale mensuelle</h2>
   <div class="h-56 min-w-0">
     <stp-chart
       type="bar"
       [data]="chartData()"
-      [options]="chartOptions"
-      ariaLabel="Masse salariale mensuelle"
+      [options]="chartOptions()"
+      ariaLabel="Masse salariale mensuelle en dirhams, d’août à octobre"
       (dataSelect)="last.set('point du graphique sélectionné')"
     />
   </div>
+  <details class="mt-2">
+    <summary class="cursor-pointer text-sm text-primary">Afficher les données du graphique</summary>
+    <div class="mt-2">
+      <stp-table
+        label="Données de la masse salariale mensuelle"
+        [value]="lignesGraphique()"
+        [columns]="colonnesGraphique"
+        [reorderable]="false"
+        [resizable]="false"
+      >
+        <ng-template stpCell let-ligne let-col="col">
+          @if (col.field === 'periode') {
+            {{ ligne.periode }}
+          } @else {
+            {{ ligne.montant }}
+          }
+        </ng-template>
+      </stp-table>
+    </div>
+  </details>
 </section>
 
 <section class="mb-8">

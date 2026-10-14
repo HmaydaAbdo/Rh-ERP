@@ -1,0 +1,4 @@
+- generic [ref=f54e2]:
+  - generic:
+    - region "Notifications"
+  - main [ref=f54e4]

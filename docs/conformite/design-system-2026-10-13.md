@@ -4,7 +4,7 @@
 
 Contrôle du kit partagé et des principaux écrans de l’application, selon [`conventions/design-system.md`](../../conventions/design-system.md), dans l’image Compose accessible sur `http://127.0.0.1:5002`.
 
-**Statut : contrôle clôturé le 2026-10-14 à la demande de l’utilisateur.** La CI et l’image du commit `006f777` sont validées ; l’instance Compose répond sur `http://127.0.0.1:5002` et sert bien le nouveau jeton `--space-2xl`. Le parcours navigateur couvre les 11 routes principales en responsive, thème clair/sombre et contraste forcé. La clôture ne transforme pas les vérifications non exécutées en preuves : la sortie réelle d’un lecteur d’écran et l’inspection visuelle exhaustive de toutes les variantes restent explicitement non vérifiées.
+**Statut : contrôle ouvert, revue finale (2026-10-14).** La CI et l’image du commit `006f777` sont validées ; l’instance Compose répond sur `http://127.0.0.1:5002` et sert bien le nouveau jeton `--space-2xl`. Le parcours navigateur couvre les 11 routes principales en responsive, thème clair/sombre et contraste forcé. L’utilisateur a confirmé le test manuel avec Narrateur Windows du sélecteur multiple, du dialogue, du tableau et du graphique. Après ces vérifications, le composant partagé `stp-chart` a été adapté pour rendre ses couleurs lisibles en contraste forcé et suivre les changements à chaud. Les tests frontend locaux passent (669 tests), ainsi que les 9 E2E du Catalogue. Le build local (`ng build`, aussi en configuration développement) s’interrompt avec le code 1 sans diagnostic ; la CI verte citée plus haut précède ces changements locaux. Le contrôle attend la revalidation finale du nouveau nom accessible du graphique avec Narrateur et un build réussi de cette version.
 
 ## Preuves d’exécution
 
@@ -32,6 +32,10 @@ Dans le tableau Paie, les 16 colonnes déclarées restent disponibles ; les en-t
 - Un rendu Paie en contraste forcé a été inspecté : les cases, le défilement du sélecteur et les repères de focus restent visibles.
 - Le CI vérifie aussi les cibles tactiles et les interactions mobiles ciblées ; cette passe ne simule pas un lecteur d’écran.
 
+### Lecteur d’écran réel
+
+Le 2026-10-14, l’utilisateur a parcouru le catalogue avec Narrateur Windows et a confirmé que les annonces et actions se sont bien déroulées pour le sélecteur multiple, l’ouverture/fermeture du dialogue et le retour du focus, le tri de l’en-tête et l’action de ligne du tableau, ainsi que le parcours au clavier du graphique. Cette validation manuelle complète les arbres d’accessibilité et les tests clavier automatisés ; elle ne remplace pas l’inspection visuelle exhaustive ci-dessous.
+
 ## Couverture traçable des composants partagés
 
 Les états ci-dessous correspondent aux assertions déjà présentes dans les specs ; ils ne signifient pas que chaque variante a fait l’objet d’une inspection visuelle manuelle.
@@ -52,7 +56,7 @@ Les états ci-dessous correspondent aux assertions déjà présentes dans les sp
 | `stp-month-input` | Placeholder, ouverture, choix, Échap, erreur, désactivé, focus | Assistant d’export Paie E2E |
 | `stp-message` | Information, avertissement et erreur avec annonces adaptées | Catalogue axe clair/sombre |
 | `stp-field-error` | Non touché, touché/invalide, plusieurs règles, retour valide | Formulaires E2E |
-| `stp-chart` | Nom accessible, création, mise à jour, clic, destruction | Flèches, Début/Fin et sélection clavier |
+| `stp-chart` | Nom accessible, création, mise à jour, clic, destruction, couleurs système en contraste forcé, bascule à chaud forcé/normal | Axe clair/sombre, parcours clavier, sélection et annonce E2E ; inspection du canvas en contraste forcé |
 
 Références de specs : `frontend/src/app/shared/ui/<composant>/*.spec.ts` ; parcours catalogue : `frontend/e2e/catalogue.spec.ts`. Le thème système est testé dans `frontend/src/app/core/theme/theme.service.spec.ts`.
 
@@ -62,9 +66,18 @@ Un scan des styles du frontend ne trouve pas de couleurs littérales, d’ombres
 
 Les espacements codés en dur trouvés par le scan ont été rattachés à l’échelle : le badge de filtres utilise `--space-xs`, les états vides des cartes/analytique utilisent désormais `--space-2xl` comme maximum de leur `clamp()`, et le retrait réservé à l’icône du sélecteur réutilise `--space-md`. Le `margin: -1px` du helper `visually-hidden` est une technique de masquage accessible, pas un espacement de mise en page.
 
-## Vérifications non exécutées à la clôture
+## Écart visuel découvert et correction locale
 
-1. Faire une validation avec une technologie d’assistance réelle (par exemple NVDA) sur les annonces, le focus et les actions du kit, notamment tableau, menus, sélecteurs et graphique. Les arbres d’accessibilité et les tests clavier ne remplacent pas cette validation.
-2. Compléter l’inspection visuelle des états applicables (survol, focus-visible, actif, désactivé, chargement, erreur) pour chaque variante du kit dans les deux thèmes et en contraste forcé. La revue navigateur de cette passe couvre les principales routes et interactions, mais pas chaque variante d’état de chaque composant.
+En thème sombre avec `forced-colors: active`, le navigateur remplace les couleurs DOM par la palette système, mais le canvas Chart.js garde les couleurs que son consommateur lui transmet. Dans le catalogue, les libellés d’axes et la grille restent bleu-gris foncé sur le canevas système noir. Le code Chart.js ne peut pas être corrigé par les seules règles CSS `@media (forced-colors: active)`.
 
-Ces deux vérifications sont enregistrées comme réserves acceptées lors de la clôture demandée par l’utilisateur ; elles ne sont pas présentées comme réussies. Le contrôle est fermé dans le suivi. Réouvrir ce contrôle si une attestation stricte de ces deux preuves est nécessaire.
+La convention exige que les graphiques restent utilisables en contraste forcé. L’utilisateur a validé l’adaptation du composant partagé `stp-chart`. Celui-ci détecte `forced-colors: active`, résout les couleurs `CanvasText`, `Canvas` et `GrayText` dans le contexte canvas, applique ces couleurs aux axes, grilles, légende et infobulle, puis recrée le graphique lors d’une bascule de préférence. Les couleurs des jeux de données restent celles de leur entité. Un test unitaire vérifie l’activation et le retour à la palette Chart.js normale ; le navigateur a confirmé visuellement les axes et la grille en contraste forcé.
+
+La page Catalogue expose aussi le tableau des données du graphique à la demande ; il affiche les trois périodes et les montants, et le nom accessible annonce la mesure, l’unité, la période et les touches de navigation.
+
+## Vérifications restantes avant clôture
+
+1. Rejouer le contrôle Narrateur Windows du graphique sur cette version : vérifier le nouveau nom accessible, le parcours par flèches et l’accès au tableau de données dépliable.
+2. Obtenir un build de production réussi de cette version. Localement, `ng serve` compile et les 668 tests passent, mais `ng build` quitte avec le code 1 sans diagnostic ; la CI verte disponible concerne le commit antérieur `006f777`.
+3. Terminer l’inspection visuelle des variantes d’état restantes du kit et joindre la preuve au rapport avant clôture.
+
+Le contrôle reste ouvert dans le suivi jusqu’à la fin de cette revue et la mise à jour des preuves.

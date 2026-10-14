@@ -19,9 +19,24 @@ class GraphiqueTestComponent {
   readonly selections: ChartSelection[] = [];
 }
 
+@Component({
+  selector: 'app-graphique-radar-test',
+  imports: [ChartComponent],
+  template: `
+    <div style="width: 400px; height: 240px">
+      <stp-chart type="radar" ariaLabel="Valeurs par critère" [data]="donnees()" />
+    </div>
+  `
+})
+class GraphiqueRadarTestComponent {
+  readonly donnees = signal<ChartData<'radar'>>({ labels: ['A', 'B'], datasets: [{ label: 'Masse', data: [10, 20] }] });
+}
+
 describe('ChartComponent', () => {
   let fixture: ComponentFixture<GraphiqueTestComponent>;
   const canvas = () => fixture.nativeElement.querySelector('canvas') as HTMLCanvasElement;
+
+  afterEach(() => vi.restoreAllMocks());
 
   async function afficher(): Promise<void> {
     fixture = TestBed.createComponent(GraphiqueTestComponent);
@@ -68,6 +83,60 @@ describe('ChartComponent', () => {
       expect(apres).not.toBe(avant);
       expect(apres.data.labels).toEqual(['C057']);
     });
+  });
+
+  it('applique les couleurs système en contraste forcé et suit sa désactivation', async () => {
+    let changement: ((event: MediaQueryListEvent) => void) | undefined;
+    const media = {
+      matches: true,
+      addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => changement = listener,
+      removeEventListener: vi.fn()
+    } as unknown as MediaQueryList;
+    vi.spyOn(window, 'matchMedia').mockReturnValue(media);
+    const couleurSysteme = (nom: string): string => {
+      const contexte = document.createElement('canvas').getContext('2d')!;
+      contexte.fillStyle = nom;
+      return contexte.fillStyle;
+    };
+
+    await afficher();
+    const contraste = await graphique();
+    expect(contraste.options.color).toBe(couleurSysteme('CanvasText'));
+    expect(contraste.options.scales?.['x']?.ticks?.color).toBe(couleurSysteme('CanvasText'));
+    expect(contraste.options.scales?.['y']?.grid?.color).toBe(couleurSysteme('GrayText'));
+
+    changement?.({ matches: false } as MediaQueryListEvent);
+    fixture.detectChanges();
+    await vi.waitFor(async () => expect(await graphique()).not.toBe(contraste));
+    const normal = await graphique();
+    expect(normal.options.color).toBe('#666');
+    expect(normal.options.scales?.['x']?.ticks?.color).toBe('#666');
+
+    fixture.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it('applique la palette système à l’échelle radar', async () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    } as unknown as MediaQueryList);
+    fixture = TestBed.createComponent(GraphiqueRadarTestComponent) as unknown as ComponentFixture<GraphiqueTestComponent>;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await vi.waitFor(async () => {
+      const { default: Chart } = await import('chart.js/auto');
+      expect(Chart.getChart(canvas())).toBeDefined();
+    }, { timeout: 10_000 });
+
+    const chart = await graphique();
+    const contexte = document.createElement('canvas').getContext('2d')!;
+    contexte.fillStyle = 'GrayText';
+    expect(chart.options.scales?.['r']?.grid?.color).toBe(contexte.fillStyle);
+
+    fixture.destroy();
+    vi.restoreAllMocks();
   });
 
   it('prévient du point cliqué', async () => {

@@ -1,0 +1,162 @@
+- generic [ref=f54e2]:
+  - generic:
+    - region "Notifications"
+  - main [ref=f54e4]:
+    - generic [ref=f54e6]:
+      - heading "Catalogue Staport" [level=1] [ref=f54e7]
+      - generic [ref=f54e8]:
+        - heading "Boutons" [level=2] [ref=f54e9]
+        - generic [ref=f54e10]:
+          - button "Principal" [ref=f54e11] [cursor=pointer]
+          - button "Secondaire" [ref=f54e12] [cursor=pointer]
+          - button "Texte" [ref=f54e17] [cursor=pointer]
+          - button "Supprimer" [ref=f54e20] [cursor=pointer]
+          - button "Supprimer" [ref=f54e25] [cursor=pointer]
+          - button "Chargement" [disabled] [ref=f54e30]
+          - button "Désactivé" [disabled] [ref=f54e34]
+          - generic [ref=f54e35]:
+            - button "Importer" [ref=f54e36] [cursor=pointer]
+            - button "Autres actions" [ref=f54e43] [cursor=pointer]
+          - button "Actions" [ref=f54e49] [cursor=pointer]
+          - status [ref=f54e55]: "Dernière action :"
+      - generic [ref=f54e56]:
+        - heading "Pastilles" [level=2] [ref=f54e57]
+        - generic [ref=f54e58]:
+          - generic [ref=f54e59]: Actif
+          - generic [ref=f54e60]: Inactif
+          - generic [ref=f54e61]: ERP
+          - generic [ref=f54e62]: Manuel
+      - generic [ref=f54e63]:
+        - heading "Champs" [level=2] [ref=f54e64]
+        - generic [ref=f54e65]:
+          - textbox "Texte" [ref=f54e66]
+          - generic [ref=f54e69]:
+            - combobox "Chantier" [ref=f54e70] [cursor=pointer]: Chantier Casablanca
+            - button "Effacer la sélection" [ref=f54e71] [cursor=pointer]
+          - generic [ref=f54e78]:
+            - combobox "Chantiers" [ref=f54e79] [cursor=pointer]: 2 chantiers
+            - button "Effacer la sélection" [ref=f54e80] [cursor=pointer]
+          - combobox "Recherche" [ref=f54e88]
+          - textbox "Montant" [ref=f54e91]: 12 500,50
+          - textbox "Date de référence" [ref=f54e94]: 2026-10-13
+          - button "Mois de référence" [ref=f54e97] [cursor=pointer]:
+            - generic [ref=f54e98]: 10/2026
+          - generic [ref=f54e104]:
+            - textbox "Mot de passe" [ref=f54e105]: Staport2026!
+            - button "Afficher le mot de passe" [ref=f54e106] [cursor=pointer]
+          - textbox "Champ obligatoire" [ref=f54e112]
+          - status [ref=f54e113]: "Valeurs : 2 / 1,3 /"
+      - generic [ref=f54e114]:
+        - heading "Messages et icônes" [level=2] [ref=f54e115]
+        - generic [ref=f54e116]:
+          - status [ref=f54e117]:
+            - generic [ref=f54e121]: Information de référence.
+          - status [ref=f54e122]:
+            - generic [ref=f54e126]: Une vérification est nécessaire.
+          - alert [ref=f54e127]:
+            - generic [ref=f54e131]: La saisie doit être corrigée.
+          - generic [ref=f54e132]: Icône décorative
+      - generic [ref=f54e136]:
+        - heading "Dialogue" [level=2] [ref=f54e137]
+        - button "Ouvrir" [ref=f54e138] [cursor=pointer]
+      - generic [ref=f54e139]:
+        - heading "Masse salariale mensuelle" [level=2] [ref=f54e140]
+        - img "Masse salariale mensuelle en dirhams, d’août à octobre. Utilisez les flèches pour parcourir les données, puis Entrée pour sélectionner." [ref=f54e143]
+        - group [ref=f54e145]:
+          - generic "Afficher les données du graphique" [ref=f54e146] [cursor=pointer]
+          - option "10" [selected]
+          - option "20"
+          - option "50"
+          - option "100"
+      - generic [ref=f54e147]:
+        - heading "Tableau (mode mémoire)" [level=2] [ref=f54e148]
+        - generic [ref=f54e150]:
+          - region "Employés" [ref=f54e151]:
+            - table [ref=f54e152]:
+              - rowgroup [ref=f54e153]:
+                - row [ref=f54e154]:
+                  - columnheader [ref=f54e155]:
+                    - button "Nom" [ref=f54e156] [cursor=pointer]
+                    - separator "Largeur de la colonne Nom" [ref=f54e162]
+                  - columnheader [ref=f54e163]:
+                    - button "Fonction" [ref=f54e164] [cursor=pointer]
+                    - separator "Largeur de la colonne Fonction" [ref=f54e170]
+                  - columnheader [ref=f54e171]:
+                    - button "Statut" [ref=f54e172] [cursor=pointer]
+                    - separator "Largeur de la colonne Statut" [ref=f54e178]
+                  - columnheader "Actions" [ref=f54e179]
+              - rowgroup [ref=f54e181]:
+                - row [ref=f54e182]:
+                  - cell "Employé 01" [ref=f54e183]
+                  - cell "CH. CAMION" [ref=f54e184]
+                  - cell "Inactif" [ref=f54e185]
+                  - cell [ref=f54e187]:
+                    - button "Voir Employé 01" [ref=f54e188] [cursor=pointer]
+                - row [ref=f54e193]:
+                  - cell "Employé 02" [ref=f54e194]
+                  - cell "OP. PELLE" [ref=f54e195]
+                  - cell "Actif" [ref=f54e196]
+                  - cell [ref=f54e198]:
+                    - button "Voir Employé 02" [ref=f54e199] [cursor=pointer]
+                - row [ref=f54e204]:
+                  - cell "Employé 03" [ref=f54e205]
+                  - cell "MAÇON" [ref=f54e206]
+                  - cell "Actif" [ref=f54e207]
+                  - cell [ref=f54e209]:
+                    - button "Voir Employé 03" [ref=f54e210] [cursor=pointer]
+                - row [ref=f54e215]:
+                  - cell "Employé 04" [ref=f54e216]
+                  - cell "CH. CAMION" [ref=f54e217]
+                  - cell "Actif" [ref=f54e218]
+                  - cell [ref=f54e220]:
+                    - button "Voir Employé 04" [ref=f54e221] [cursor=pointer]
+                - row [ref=f54e226]:
+                  - cell "Employé 05" [ref=f54e227]
+                  - cell "OP. PELLE" [ref=f54e228]
+                  - cell "Inactif" [ref=f54e229]
+                  - cell [ref=f54e231]:
+                    - button "Voir Employé 05" [ref=f54e232] [cursor=pointer]
+                - row [ref=f54e237]:
+                  - cell "Employé 06" [ref=f54e238]
+                  - cell "MAÇON" [ref=f54e239]
+                  - cell "Actif" [ref=f54e240]
+                  - cell [ref=f54e242]:
+                    - button "Voir Employé 06" [ref=f54e243] [cursor=pointer]
+                - row [ref=f54e248]:
+                  - cell "Employé 07" [ref=f54e249]
+                  - cell "CH. CAMION" [ref=f54e250]
+                  - cell "Actif" [ref=f54e251]
+                  - cell [ref=f54e253]:
+                    - button "Voir Employé 07" [ref=f54e254] [cursor=pointer]
+                - row [ref=f54e259]:
+                  - cell "Employé 08" [ref=f54e260]
+                  - cell "OP. PELLE" [ref=f54e261]
+                  - cell "Actif" [ref=f54e262]
+                  - cell [ref=f54e264]:
+                    - button "Voir Employé 08" [ref=f54e265] [cursor=pointer]
+                - row [ref=f54e270]:
+                  - cell "Employé 09" [ref=f54e271]
+                  - cell "MAÇON" [ref=f54e272]
+                  - cell "Inactif" [ref=f54e273]
+                  - cell [ref=f54e275]:
+                    - button "Voir Employé 09" [ref=f54e276] [cursor=pointer]
+                - row [ref=f54e281]:
+                  - cell "Employé 10" [ref=f54e282]
+                  - cell "CH. CAMION" [ref=f54e283]
+                  - cell "Actif" [ref=f54e284]
+                  - cell [ref=f54e286]:
+                    - button "Voir Employé 10" [ref=f54e287] [cursor=pointer]
+          - navigation "Pagination" [ref=f54e292]:
+            - status [ref=f54e293]: 1 - 10 sur 27 — page 1/3
+            - generic [ref=f54e294]:
+              - button "Première page" [disabled] [ref=f54e295]
+              - button "Page précédente" [disabled] [ref=f54e300]
+              - button "Page suivante" [ref=f54e304] [cursor=pointer]
+              - button "Dernière page" [ref=f54e308] [cursor=pointer]
+              - generic [ref=f54e313]:
+                - generic [ref=f54e314]: Lignes par page
+                - combobox "Lignes par page" [ref=f54e315]:
+                  - option "10" [selected]
+                  - option "20"
+                  - option "50"
+                  - option "100"

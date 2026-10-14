@@ -1,0 +1,162 @@
+- generic [ref=f51e2]:
+  - generic:
+    - region "Notifications"
+  - main [ref=f51e4]:
+    - generic [ref=f51e6]:
+      - heading "Catalogue Staport" [level=1] [ref=f51e7]
+      - generic [ref=f51e8]:
+        - heading "Boutons" [level=2] [ref=f51e9]
+        - generic [ref=f51e10]:
+          - button "Principal" [ref=f51e11] [cursor=pointer]
+          - button "Secondaire" [ref=f51e12] [cursor=pointer]
+          - button "Texte" [ref=f51e17] [cursor=pointer]
+          - button "Supprimer" [ref=f51e20] [cursor=pointer]
+          - button "Supprimer" [ref=f51e25] [cursor=pointer]
+          - button "Chargement" [disabled] [ref=f51e30]
+          - button "Désactivé" [disabled] [ref=f51e34]
+          - generic [ref=f51e35]:
+            - button "Importer" [ref=f51e36] [cursor=pointer]
+            - button "Autres actions" [ref=f51e43] [cursor=pointer]
+          - button "Actions" [ref=f51e49] [cursor=pointer]
+          - status [ref=f51e55]: "Dernière action :"
+      - generic [ref=f51e56]:
+        - heading "Pastilles" [level=2] [ref=f51e57]
+        - generic [ref=f51e58]:
+          - generic [ref=f51e59]: Actif
+          - generic [ref=f51e60]: Inactif
+          - generic [ref=f51e61]: ERP
+          - generic [ref=f51e62]: Manuel
+      - generic [ref=f51e63]:
+        - heading "Champs" [level=2] [ref=f51e64]
+        - generic [ref=f51e65]:
+          - textbox "Texte" [ref=f51e66]
+          - generic [ref=f51e69]:
+            - combobox "Chantier" [ref=f51e70] [cursor=pointer]: Chantier Casablanca
+            - button "Effacer la sélection" [ref=f51e71] [cursor=pointer]
+          - generic [ref=f51e77]:
+            - generic [ref=f51e78]:
+              - combobox "Chantiers" [expanded] [active] [ref=f51e79] [cursor=pointer]: 2 chantiers
+              - button "Effacer la sélection" [ref=f51e80] [cursor=pointer]
+            - listbox "Chantiers" [ref=f51e305]:
+              - option "Chantier Marrakech" [selected] [ref=f51e306] [cursor=pointer]
+              - option "Chantier Casablanca" [ref=f51e312] [cursor=pointer]
+              - option "Autoroute Rabat–Fès" [selected] [ref=f51e315] [cursor=pointer]
+              - option "Barrage Souss" [ref=f51e321] [cursor=pointer]
+          - combobox "Recherche" [ref=f51e88]
+          - textbox "Montant" [ref=f51e91]: 12 500,50
+          - textbox "Date de référence" [ref=f51e94]: 2026-10-13
+          - button "Mois de référence" [ref=f51e97] [cursor=pointer]:
+            - generic [ref=f51e98]: 10/2026
+          - generic [ref=f51e104]:
+            - textbox "Mot de passe" [ref=f51e105]: Staport2026!
+            - button "Afficher le mot de passe" [ref=f51e106] [cursor=pointer]
+          - textbox "Champ obligatoire" [ref=f51e112]
+          - status [ref=f51e113]: "Valeurs : 2 / 1,3 /"
+      - generic [ref=f51e114]:
+        - heading "Messages et icônes" [level=2] [ref=f51e115]
+        - generic [ref=f51e116]:
+          - status [ref=f51e117]:
+            - generic [ref=f51e121]: Information de référence.
+          - status [ref=f51e122]:
+            - generic [ref=f51e126]: Une vérification est nécessaire.
+          - alert [ref=f51e127]:
+            - generic [ref=f51e131]: La saisie doit être corrigée.
+          - generic [ref=f51e132]: Icône décorative
+      - generic [ref=f51e136]:
+        - heading "Dialogue" [level=2] [ref=f51e137]
+        - button "Ouvrir" [ref=f51e138] [cursor=pointer]
+      - generic [ref=f51e139]:
+        - heading "Graphique" [level=2] [ref=f51e140]
+        - img "Masse salariale mensuelle. Utilisez les flèches pour parcourir les données, puis Entrée pour sélectionner." [ref=f51e143]
+      - generic [ref=f51e145]:
+        - heading "Tableau (mode mémoire)" [level=2] [ref=f51e146]
+        - generic [ref=f51e148]:
+          - region "Employés" [ref=f51e149]:
+            - table [ref=f51e150]:
+              - rowgroup [ref=f51e151]:
+                - row [ref=f51e152]:
+                  - columnheader [ref=f51e153]:
+                    - button "Nom" [ref=f51e154] [cursor=pointer]
+                    - separator "Largeur de la colonne Nom" [ref=f51e160]
+                  - columnheader [ref=f51e161]:
+                    - button "Fonction" [ref=f51e162] [cursor=pointer]
+                    - separator "Largeur de la colonne Fonction" [ref=f51e168]
+                  - columnheader [ref=f51e169]:
+                    - button "Statut" [ref=f51e170] [cursor=pointer]
+                    - separator "Largeur de la colonne Statut" [ref=f51e176]
+                  - columnheader "Actions" [ref=f51e177]
+              - rowgroup [ref=f51e179]:
+                - row [ref=f51e180]:
+                  - cell "Employé 01" [ref=f51e181]
+                  - cell "CH. CAMION" [ref=f51e182]
+                  - cell "Inactif" [ref=f51e183]
+                  - cell [ref=f51e185]:
+                    - button "Voir Employé 01" [ref=f51e186] [cursor=pointer]
+                - row [ref=f51e191]:
+                  - cell "Employé 02" [ref=f51e192]
+                  - cell "OP. PELLE" [ref=f51e193]
+                  - cell "Actif" [ref=f51e194]
+                  - cell [ref=f51e196]:
+                    - button "Voir Employé 02" [ref=f51e197] [cursor=pointer]
+                - row [ref=f51e202]:
+                  - cell "Employé 03" [ref=f51e203]
+                  - cell "MAÇON" [ref=f51e204]
+                  - cell "Actif" [ref=f51e205]
+                  - cell [ref=f51e207]:
+                    - button "Voir Employé 03" [ref=f51e208] [cursor=pointer]
+                - row [ref=f51e213]:
+                  - cell "Employé 04" [ref=f51e214]
+                  - cell "CH. CAMION" [ref=f51e215]
+                  - cell "Actif" [ref=f51e216]
+                  - cell [ref=f51e218]:
+                    - button "Voir Employé 04" [ref=f51e219] [cursor=pointer]
+                - row [ref=f51e224]:
+                  - cell "Employé 05" [ref=f51e225]
+                  - cell "OP. PELLE" [ref=f51e226]
+                  - cell "Inactif" [ref=f51e227]
+                  - cell [ref=f51e229]:
+                    - button "Voir Employé 05" [ref=f51e230] [cursor=pointer]
+                - row [ref=f51e235]:
+                  - cell "Employé 06" [ref=f51e236]
+                  - cell "MAÇON" [ref=f51e237]
+                  - cell "Actif" [ref=f51e238]
+                  - cell [ref=f51e240]:
+                    - button "Voir Employé 06" [ref=f51e241] [cursor=pointer]
+                - row [ref=f51e246]:
+                  - cell "Employé 07" [ref=f51e247]
+                  - cell "CH. CAMION" [ref=f51e248]
+                  - cell "Actif" [ref=f51e249]
+                  - cell [ref=f51e251]:
+                    - button "Voir Employé 07" [ref=f51e252] [cursor=pointer]
+                - row [ref=f51e257]:
+                  - cell "Employé 08" [ref=f51e258]
+                  - cell "OP. PELLE" [ref=f51e259]
+                  - cell "Actif" [ref=f51e260]
+                  - cell [ref=f51e262]:
+                    - button "Voir Employé 08" [ref=f51e263] [cursor=pointer]
+                - row [ref=f51e268]:
+                  - cell "Employé 09" [ref=f51e269]
+                  - cell "MAÇON" [ref=f51e270]
+                  - cell "Inactif" [ref=f51e271]
+                  - cell [ref=f51e273]:
+                    - button "Voir Employé 09" [ref=f51e274] [cursor=pointer]
+                - row [ref=f51e279]:
+                  - cell "Employé 10" [ref=f51e280]
+                  - cell "CH. CAMION" [ref=f51e281]
+                  - cell "Actif" [ref=f51e282]
+                  - cell [ref=f51e284]:
+                    - button "Voir Employé 10" [ref=f51e285] [cursor=pointer]
+          - navigation "Pagination" [ref=f51e290]:
+            - status [ref=f51e291]: 1 - 10 sur 27 — page 1/3
+            - generic [ref=f51e292]:
+              - button "Première page" [disabled] [ref=f51e324]
+              - button "Page précédente" [disabled] [ref=f51e293]
+              - button "Page suivante" [ref=f51e297] [cursor=pointer]
+              - button "Dernière page" [ref=f51e329] [cursor=pointer]
+              - generic [ref=f51e301]:
+                - generic [ref=f51e302]: Lignes par page
+                - combobox "Lignes par page" [ref=f51e303]:
+                  - option "10" [selected]
+                  - option "20"
+                  - option "50"
+                  - option "100"

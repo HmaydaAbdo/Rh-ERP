@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import type { Chart, ChartData, ChartOptions, ChartType } from 'chart.js';
 
@@ -60,12 +61,33 @@ export class ChartComponent<T extends ChartType = ChartType> {
   });
 
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly document = inject(DOCUMENT);
+  private readonly forcedColors = signal(false);
   private chart: Chart | null = null;
   private generation = 0;
 
   constructor() {
+    const forcedColorsQuery = this.document.defaultView?.matchMedia?.('(forced-colors: active)');
+    const onForcedColorsChange = (event: MediaQueryListEvent) => this.forcedColors.set(event.matches);
+    this.forcedColors.set(forcedColorsQuery?.matches ?? false);
+    forcedColorsQuery?.addEventListener('change', onForcedColorsChange);
+
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      forcedColorsQuery?.removeEventListener('change', onForcedColorsChange);
+      this.generation++;
+      this.chart?.destroy();
+    });
+
     effect(() => {
-      const config = { type: this.type(), data: this.data(), options: this.options() };
+      const forcedColors = this.forcedColors();
+      const type = this.type();
+      const options = this.options();
+      const config = {
+        type,
+        data: this.data(),
+        options: forcedColors ? this.optionsEnContrasteForce(options, type) : options
+      };
       const generation = ++this.generation;
       import('chart.js/auto').then(({ default: ChartJs }) => {
         // Une création plus récente a pris le relais pendant le chargement du module.
@@ -76,10 +98,83 @@ export class ChartComponent<T extends ChartType = ChartType> {
         this.chart = new ChartJs(this.canvas().nativeElement, config as never);
       });
     });
-    inject(DestroyRef).onDestroy(() => {
-      this.generation++;
-      this.chart?.destroy();
-    });
+  }
+
+  /** Chart.js peint sur canvas : les couleurs forcées du navigateur ne touchent pas les pixels déjà dessinés. */
+  private optionsEnContrasteForce(options: ChartOptions<T>, type: T): ChartOptions<T> {
+    const texte = this.couleurSysteme('CanvasText');
+    const surface = this.couleurSysteme('Canvas');
+    const grille = this.couleurSysteme('GrayText');
+    const source = options as unknown as Record<string, unknown>;
+
+    const optionsPlugins = source['plugins'];
+    let plugins: false | Record<string, unknown> = false;
+    if (optionsPlugins !== false) {
+      plugins = optionsPlugins && typeof optionsPlugins === 'object'
+        ? { ...optionsPlugins as Record<string, unknown> }
+        : {};
+      plugins['legend'] = this.optionsPlugin(plugins['legend'], { labels: { color: texte } });
+      plugins['tooltip'] = this.optionsPlugin(plugins['tooltip'], {
+        backgroundColor: surface,
+        borderColor: texte,
+        titleColor: texte,
+        bodyColor: texte
+      });
+    }
+
+    const sourceScales = source['scales'];
+    let scales: unknown = sourceScales;
+    if (sourceScales !== false) {
+      const scalesSource = sourceScales && typeof sourceScales === 'object'
+        ? sourceScales as Record<string, unknown>
+        : ['bar', 'line', 'scatter', 'bubble'].includes(type)
+          ? { x: {}, y: {} }
+          : ['polarArea', 'radar'].includes(type)
+            ? { r: {} }
+          : {};
+      scales = Object.fromEntries(Object.entries(scalesSource).map(([nom, valeur]) => {
+        if (!valeur || typeof valeur !== 'object') {
+          return [nom, valeur];
+        }
+        const scale = valeur as Record<string, unknown>;
+        return [nom, {
+          ...scale,
+          ticks: { ...this.optionsObjet(scale['ticks']), color: texte },
+          grid: { ...this.optionsObjet(scale['grid']), color: grille },
+          border: { ...this.optionsObjet(scale['border']), color: texte }
+        }];
+      }));
+    }
+
+    return { ...options, color: texte, plugins, scales } as unknown as ChartOptions<T>;
+  }
+
+  private optionsPlugin(value: unknown, valeursSysteme: Record<string, unknown>): false | Record<string, unknown> {
+    if (value === false) {
+      return false;
+    }
+    const original = this.optionsObjet(value);
+    if ('labels' in valeursSysteme) {
+      return {
+        ...original,
+        labels: { ...this.optionsObjet(original['labels']), ...this.optionsObjet(valeursSysteme['labels']) }
+      };
+    }
+    return { ...original, ...valeursSysteme };
+  }
+
+  private optionsObjet(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  }
+
+  /** Le contexte canvas résout les couleurs système selon la palette de contraste choisie par l’OS. */
+  private couleurSysteme(nom: 'CanvasText' | 'Canvas' | 'GrayText'): string {
+    const contexte = this.document.createElement('canvas').getContext('2d');
+    if (!contexte) {
+      return nom;
+    }
+    contexte.fillStyle = nom;
+    return contexte.fillStyle;
   }
 
   protected onClick(event: MouseEvent): void {
