@@ -14,12 +14,6 @@
 - Contrôle Compose après pull : PostgreSQL et backend déclarés sains, frontend démarré et `/` répond `200` sur `127.0.0.1:5002`. La recherche de rôles émet `POST /roles/search` et le filtre d’audit transmet plusieurs catégories à `POST /logs/search` ; la page audit à 390 px ne déborde pas horizontalement, son tableau défile dans son conteneur, aucune erreur console.
 - La preuve de clôture figure dans la ligne `frontend.md` de [la matrice de conformité](docs/conformite/matrice.md) ; le rapport détaillé a été supprimé après clôture.
 
-## Contrôle de convention JPA — clôturé
-
-- Revue statique du backend et garde ArchUnit terminées : mappings explicites, relations paresseuses, projections/EntityGraph, transactions, pagination des recherches et imports, montants paie en `BigDecimal`, migrations de version, absence d'écritures en masse et `@Version` sur chaque entité modifiable ont été vérifiés. Les deux journaux append-only sont les exceptions documentées.
-- Tests de versions courantes, périmées et absentes, compilation et suite backend confirmés par la CI #237 verte sur `255cd2c` ; les jobs PostgreSQL, frontend, backend, backup et full-stack ont réussi.
-- Le contrôle est clôturé. La migration PG17→18 et les contrôles de qualité des données restent suivis séparément. Voir le [rapport JPA](docs/conformite/jpa-2026-10-12.md) et la [matrice](docs/conformite/matrice.md).
-
 ## Évolutions IA et KPI
 
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
