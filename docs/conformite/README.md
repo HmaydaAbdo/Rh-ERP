@@ -26,7 +26,7 @@ les tableaux ci-dessous décrivent uniquement les vérifications backend déjà 
 | RBAC | Chaque route déclare une permission ; refus, acceptation et table de référence vérifiés | `EndpointSecurityTest`, `JwtSecurityChainTest` |
 | Sessions | Jeton d'accès court, jeton de rafraîchissement opaque à rotation et révocation de famille, cookie `httpOnly` | `AuthServiceTest` |
 | Base | Flyway V1 → V21, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
-| Documentation d'API | Swagger désactivé par défaut ; contrat généré validé en OpenAPI 3.1 ; routes de documentation protégées quand elles sont éteintes | [`swagger-2026-10-12.md`](swagger-2026-10-12.md), `OpenApiContractTest`, `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest` |
+| Documentation d'API | Contrat généré validé en OpenAPI 3.1 ; réponses, sécurité et fichiers contrôlés ; Swagger désactivé par défaut et protégé quand il est éteint | `OpenApiContractTest`, `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest`, CI #240 — statut courant dans la [matrice](matrice.md) |
 | Métriques | Micrometer/Prometheus, séries applicatives à dimensions fermées, jauges d'intégrité, exposition réseau limitée et signaux d'alerte documentés | [`metrics-2026-10-12.md`](metrics-2026-10-12.md), `MetricsConformityTest`, `SupervisionTest` |
 | Performance | Pagination, limites de requêtes, intégrations et opérations de paie contrôlées ; historique Envers paginé efficacement, Nginx aligné à 20 Mo et profil local sous les seuils | [`performance-2026-10-12.md`](performance-2026-10-12.md) — conforme localement ; validation HTTP de bout en bout et des dépendances sur l'hôte d'exploitation à faire |
 
