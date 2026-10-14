@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
@@ -9,7 +10,7 @@ import { fournirRoute } from '../../../../shared/testing/ecrans';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
 import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
 import { AdminUser, PermissionSummary, Role } from '../../models/admin.model';
-import { RoleService } from '../../services/role.service';
+import { RoleReferenceService } from '../../services/role-reference.service';
 import { UserService } from '../../services/user.service';
 import { UserFormComponent } from './user-form.component';
 
@@ -58,17 +59,22 @@ describe('UserFormComponent', () => {
       update: vi.fn().mockReturnValue(of({ id: 4, version: 1 })),
       updateDeniedPermissions: vi.fn().mockReturnValue(of({ id: 4 }))
     };
+    const rolesSource = {
+      rolesConnus: signal(new Map(ROLES.map((role) => [role.id, role]))),
+      fetchPage: vi.fn().mockReturnValue(of({ items: ROLES, totalRecords: ROLES.length })),
+      fetchById: vi.fn((id: number | string) => of(ROLES.find((role) => role.id === Number(id))!))
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
         { provide: UserService, useValue: users },
-        { provide: RoleService, useValue: { findEvery: () => of(ROLES) } },
         { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } },
         { provide: EmployeeReferenceService, useValue: EMPLOYES }
       ]
     });
+    TestBed.overrideComponent(UserFormComponent, { set: { providers: [{ provide: RoleReferenceService, useValue: rolesSource }] } });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(UserFormComponent);
     await stabiliser();

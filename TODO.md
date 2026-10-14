@@ -7,10 +7,16 @@
 
 ---
 
-## Clôture du Design System frontend
+## Contrôle Design System frontend — clôturé
 
-- Rejouer la CI après push des jetons d’espacement mis à jour ; `npm run build` local est bloqué par Sass Embedded (OS error 5), tandis que les quatre feuilles touchées compilent individuellement.
-- Compléter la revue visuelle des états du kit dans les deux thèmes/contraste forcé et valider les annonces au clavier avec un lecteur d’écran réel avant de passer `design-system.md` à conforme. Suivi : [rapport de contrôle](docs/conformite/design-system-2026-10-13.md).
+- Clôturé le 2026-10-14 à la demande de l’utilisateur. CI verte sur `006f777`, bundle confirmé dans Compose sur le port 5002, 11 routes vérifiées en responsive, thèmes clair/sombre et contraste forcé. La sortie réelle d’un lecteur d’écran et l’inspection visuelle exhaustive des variantes sont consignées comme vérifications non exécutées, pas comme preuves réussies.
+- [Rapport de contrôle](docs/conformite/design-system-2026-10-13.md). Contrôle de convention suivant : [`frontend.md`](docs/conformite/frontend-2026-10-14.md), revue locale terminée ; CI du delta attendue après push.
+
+## Contrôle de convention frontend — validation locale terminée, CI attendue
+
+- Revue complète de `conventions/frontend.md` et corrections locales terminées le 2026-10-14 : rôles chargés par recherche serveur et pages dans le formulaire utilisateur ; filtres d’audit à cardinalité élevée multisélectionnables, avec contrat pluriel borné et compatibilité singulière.
+- Contrôles locaux : build de production du Dockerfile réussi, 667/667 tests Angular rapportés réussis, 28 tests ciblés réussis avec code de sortie 0, E2E utilisateur réussi, `AuditConsultationTest` 14/14, TypeScript, audits npm/licences et `git diff --check` réussis.
+- [Rapport de contrôle](docs/conformite/frontend-2026-10-14.md). La CI `006f777` ne couvre pas ce delta ; rejouer le CI après le push avant de retirer ce point.
 
 ## Évolutions IA et KPI
 

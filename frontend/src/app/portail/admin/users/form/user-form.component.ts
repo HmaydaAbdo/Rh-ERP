@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { disabled, email, form, FormField, FormRoot, maxLength, minLength, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, forkJoin, switchMap } from 'rxjs';
+import { finalize, switchMap } from 'rxjs';
 
 import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
@@ -12,10 +12,9 @@ import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
 import { FieldErrorComponent } from '../../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PasswordInputComponent } from '../../../../shared/ui/password-input/password-input.component';
-import { SelectComponent, SelectOption } from '../../../../shared/ui/select/select.component';
 import { motDePasseConforme } from '../../../../shared/validators/mot-de-passe.validator';
-import { PermissionSummary, Role } from '../../models/admin.model';
-import { RoleService } from '../../services/role.service';
+import { PermissionSummary } from '../../models/admin.model';
+import { RoleReferenceService } from '../../services/role-reference.service';
 import { UserService } from '../../services/user.service';
 
 interface UserSaisie {
@@ -35,15 +34,16 @@ interface PermissionGroup {
 
 @Component({
   selector: 'app-user-form',
-  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent, SelectComponent],
+  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
+  providers: [RoleReferenceService],
   templateUrl: './user-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './user-form.component.scss'
 })
 export class UserFormComponent {
   private readonly userService = inject(UserService);
-  private readonly roleService = inject(RoleService);
   protected readonly employeeReferenceService = inject(EmployeeReferenceService);
+  protected readonly roleReferenceService = inject(RoleReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
@@ -52,8 +52,6 @@ export class UserFormComponent {
   private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.userId() !== null);
   protected readonly loading = signal(true);
-  private readonly allRoles = signal<Role[]>([]);
-  protected readonly roleOptions = computed<SelectOption<number>[]>(() => this.allRoles().map((role) => ({ label: role.nom, value: role.id })));
 
   private readonly deniedPermissionIds = signal(new Set<number>());
 
@@ -78,7 +76,7 @@ export class UserFormComponent {
   protected readonly deniablePermissions = computed<PermissionSummary[]>(() => {
     const roleIds = new Set(this.form.roleIds().value());
     const parCode = new Map<string, PermissionSummary>();
-    for (const role of this.allRoles()) {
+    for (const role of this.roleReferenceService.rolesConnus().values()) {
       if (!roleIds.has(role.id)) {
         continue;
       }
@@ -113,21 +111,25 @@ export class UserFormComponent {
 
     // Retirer un rôle retire aussi les refus de ses permissions : seules les permissions encore déniables restent refusées.
     effect(() => {
+      const roleIds = this.form.roleIds().value();
+      const rolesConnus = this.roleReferenceService.rolesConnus();
+      // En édition, attendre que le sélecteur ait résolu tous les rôles avant de purger des refus.
+      if (roleIds.some((id) => !rolesConnus.has(id))) {
+        return;
+      }
       const deniables = new Set(this.deniablePermissions().map((permission) => permission.id));
       untracked(() => this.deniedPermissionIds.update((courant) => new Set(Array.from(courant).filter((id) => deniables.has(id)))));
     });
 
-    const roles$ = this.roleService.findEvery();
     const id = this.userId();
 
     if (id === null) {
-      roles$.pipe(finalize(() => this.loading.set(false))).subscribe((roles) => this.allRoles.set(roles));
+      this.loading.set(false);
     } else {
-      forkJoin([roles$, this.userService.findById(id)])
+      this.userService.findById(id)
         .pipe(finalize(() => this.loading.set(false)))
-        .subscribe(([roles, user]) => {
+        .subscribe((user) => {
           this.version.set(user.version);
-          this.allRoles.set(roles);
           this.deniedPermissionIds.set(new Set(user.permissionsRefusees.map((p) => p.id)));
           this.modele.set({
             username: user.username,

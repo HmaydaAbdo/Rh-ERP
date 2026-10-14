@@ -18,12 +18,13 @@ describe('AuditService', () => {
   afterEach(() => http.verify());
 
   it('recherche dans le journal par POST, critères dans le corps, page et tri dans l’URL', () => {
-    service.search({ utilisateur: 'ali', categorie: 'SECURITE' }, { page: 1, size: 20, sort: 'horodatage,desc' }).subscribe();
+    service.search({ utilisateur: 'ali', categories: ['SECURITE', 'ACCES'], actions: ['ACCES_REFUSE'], entiteTypes: ['Paie', 'Employee'] },
+      { page: 1, size: 20, sort: 'horodatage,desc' }).subscribe();
 
     const r = requete(http, 'POST', 'logs/search');
     r.flush(PAGE_VIDE);
 
-    expect(r.request.body).toEqual({ utilisateur: 'ali', categorie: 'SECURITE' });
+    expect(r.request.body).toEqual({ utilisateur: 'ali', categories: ['SECURITE', 'ACCES'], actions: ['ACCES_REFUSE'], entiteTypes: ['Paie', 'Employee'] });
     expect(r.request.params.toString()).toBe('page=1&size=20&sort=horodatage,desc');
   });
 

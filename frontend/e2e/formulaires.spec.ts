@@ -152,6 +152,32 @@ test.describe('Formulaires (Signal Forms)', () => {
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
   });
 
+  test('utilisateur : recherche les rôles côté serveur et enregistre la sélection multiple', async ({ page }) => {
+    const role = { id: 10, version: 0, nom: 'Comptable', description: null, permissions: [], protege: false };
+    const mock = await mockApi(page, { username: 'admin', permissions: DROITS }, {
+      'GET /auth/password-policy': () => ({ longueurMinimale: 10 }),
+      'POST /roles/search': () => pageDe([role]),
+      'POST /employees/search': () => pageDe([]),
+      'POST /users': () => ({ id: 30 }),
+      'POST /users/search': () => pageDe([])
+    });
+    await page.goto('/admin/users/new');
+
+    await page.getByLabel('Username').fill('nouveau');
+    await page.getByLabel('Email').fill('nouveau@staport.ma');
+    await page.locator('input#motDePasse').fill('MotDePasse2026');
+    const rolesField = page.getByRole('combobox', { name: 'Rôles' });
+    await rolesField.click();
+    await rolesField.pressSequentially('Comp');
+    await expect.poll(() => mock.bodies['POST /roles/search']).toContainEqual({ nom: 'Comp' });
+    await page.getByRole('option', { name: 'Comptable' }).click();
+    await page.getByRole('button', { name: 'Créer' }).click();
+
+    await expect(page).toHaveURL(/\/admin\/users$/);
+    expect(mock.bodies['POST /roles/search']).toContainEqual({ nom: 'Comp' });
+    expect(mock.bodies['POST /users']).toEqual([{ username: 'nouveau', email: 'nouveau@staport.ma', motDePasse: 'MotDePasse2026', employeeId: null, roleIds: [10] }]);
+  });
+
   test('rôle : cocher un domaine coche toutes ses permissions', async ({ page }) => {
     const mock = await mockApi(page, { username: 'admin', permissions: DROITS }, {
       'GET /permissions': () => [

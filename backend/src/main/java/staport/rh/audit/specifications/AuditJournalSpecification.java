@@ -4,10 +4,13 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import staport.rh.audit.dtos.request.AuditSearchCriteria;
 import staport.rh.audit.entities.AuditJournalEntry;
+import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.common.recherche.MotifRecherche;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class AuditJournalSpecification {
 
@@ -30,17 +33,23 @@ public final class AuditJournalSpecification {
                 predicates.add(builder.like(builder.lower(root.get("utilisateurNom")),
                         MotifRecherche.contient(criteria.utilisateur().trim()), MotifRecherche.ECHAPPEMENT));
             }
+            Set<CategorieAudit> categories = new LinkedHashSet<>(criteria.categories() == null ? List.of() : criteria.categories());
             if (criteria.categorie() != null) {
-                predicates.add(builder.equal(root.get("categorie"), criteria.categorie()));
+                categories.add(criteria.categorie());
             }
-            if (criteria.action() != null && !criteria.action().isBlank()) {
-                predicates.add(builder.equal(root.get("action"), criteria.action().trim()));
+            if (!categories.isEmpty()) {
+                predicates.add(root.get("categorie").in(categories));
+            }
+            Set<String> actions = valeursTextuelles(criteria.actions(), criteria.action());
+            if (!actions.isEmpty()) {
+                predicates.add(root.get("action").in(actions));
             }
             if (criteria.resultat() != null) {
                 predicates.add(builder.equal(root.get("resultat"), criteria.resultat()));
             }
-            if (criteria.entiteType() != null && !criteria.entiteType().isBlank()) {
-                predicates.add(builder.equal(root.get("entiteType"), criteria.entiteType().trim()));
+            Set<String> entiteTypes = valeursTextuelles(criteria.entiteTypes(), criteria.entiteType());
+            if (!entiteTypes.isEmpty()) {
+                predicates.add(root.get("entiteType").in(entiteTypes));
             }
             if (criteria.entiteId() != null) {
                 predicates.add(builder.equal(root.get("entiteId"), criteria.entiteId()));
@@ -50,5 +59,19 @@ public final class AuditJournalSpecification {
             }
             return builder.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Set<String> valeursTextuelles(List<String> valeurs, String valeurSinguliere) {
+        Set<String> normalisees = new LinkedHashSet<>();
+        if (valeurs != null) {
+            valeurs.stream()
+                    .filter(valeur -> valeur != null && !valeur.isBlank())
+                    .map(String::trim)
+                    .forEach(normalisees::add);
+        }
+        if (valeurSinguliere != null && !valeurSinguliere.isBlank()) {
+            normalisees.add(valeurSinguliere.trim());
+        }
+        return normalisees;
     }
 }

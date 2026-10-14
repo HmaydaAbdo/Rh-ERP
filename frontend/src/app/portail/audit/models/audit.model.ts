@@ -63,6 +63,11 @@ export interface AuditCriteres {
   dateDebut?: string;
   dateFin?: string;
   utilisateur?: string;
+  /** Filtres pluriels ; les propriétés singulières restent acceptées par l'API pour compatibilité. */
+  categories?: CategorieAudit[];
+  actions?: string[];
+  entiteTypes?: string[];
+  /** Compatibilité avec les clients antérieurs au multisélecteur. */
   categorie?: CategorieAudit;
   action?: string;
   resultat?: ResultatAudit;

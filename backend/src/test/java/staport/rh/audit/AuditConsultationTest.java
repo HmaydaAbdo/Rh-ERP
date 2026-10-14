@@ -216,16 +216,30 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
         Instant avant = Instant.now().minusSeconds(60);
 
         var parAction = consultation.search(new AuditSearchCriteria(avant, null, null, CategorieAudit.OPERATION, "PAIE_CREATION", null,
-                "Paie", cree.id(), null), PAGE);
-        var parUtilisateur = consultation.search(new AuditSearchCriteria(avant, null, "TESTE", null, null, null, "Paie", cree.id(), null), PAGE);
-        var jokerNeFiltrePasTout = consultation.search(new AuditSearchCriteria(null, null, "%", null, null, null, "Paie", cree.id(), null), PAGE);
-        var dansLeFutur = consultation.search(new AuditSearchCriteria(Instant.now().plusSeconds(3600), null, null, null, null, null, "Paie", cree.id(), null), PAGE);
+                "Paie", cree.id(), null, null, null, null), PAGE);
+        var parUtilisateur = consultation.search(new AuditSearchCriteria(avant, null, "TESTE", null, null, null, "Paie", cree.id(), null, null, null, null), PAGE);
+        var jokerNeFiltrePasTout = consultation.search(new AuditSearchCriteria(null, null, "%", null, null, null, "Paie", cree.id(), null, null, null, null), PAGE);
+        var dansLeFutur = consultation.search(new AuditSearchCriteria(Instant.now().plusSeconds(3600), null, null, null, null, null, "Paie", cree.id(), null, null, null, null), PAGE);
 
         assertThat(parAction.getContent()).hasSize(1);
         assertThat(parAction.getContent().get(0).utilisateurNom()).isEqualTo(UTILISATEUR_NOM);
         assertThat(parUtilisateur.getContent()).as("« contient », sans casse").hasSize(1);
         assertThat(jokerNeFiltrePasTout.getContent()).as("« % » est un caractère ordinaire, pas un joker").isEmpty();
         assertThat(dansLeFutur.getContent()).isEmpty();
+    }
+
+    @Test
+    void les_filtres_multiselect_du_journal_combinent_les_valeurs_par_inclusion() {
+        Referentiel ref = donnees.creerReferentiel();
+        PaieResponseDto cree = paieService.create(bulletin(ref, YearMonth.of(2034, 9), "3000.00"));
+
+        var resultat = consultation.search(new AuditSearchCriteria(null, null, null, null, null, null, null, null, null,
+                List.of(CategorieAudit.OPERATION, CategorieAudit.ACCES),
+                List.of("PAIE_CREATION", "PAIE_MODIFICATION"),
+                List.of("Paie", "Employee")), PAGE);
+
+        assertThat(resultat.getContent()).anyMatch(ligne -> ligne.id().equals(
+                ((Number) uneEntree("PAIE_CREATION", cree.id()).get("id")).longValue()));
     }
 
     @Test
@@ -271,6 +285,10 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
 
         mockMvc.perform(post("/logs/search?size=5&sort=horodatage,desc").header("Authorization", "Bearer " + jeton(Set.of("AUDIT_READ")))
                         .contentType("application/json").content("{\"categorie\":\"OPERATION\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+        mockMvc.perform(post("/logs/search?size=5&sort=horodatage,desc").header("Authorization", "Bearer " + jeton(Set.of("AUDIT_READ")))
+                        .contentType("application/json").content("{\"categories\":[\"OPERATION\",\"ACCES\"],\"actions\":[\"PAIE_CREATION\",\"PAIE_MODIFICATION\"],\"entiteTypes\":[\"Paie\",\"Employee\"]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
         mockMvc.perform(get("/logs/historique/inconnue/1").header("Authorization", "Bearer " + jeton(Set.of("AUDIT_READ"))))

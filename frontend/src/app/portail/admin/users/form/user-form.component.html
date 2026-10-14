@@ -47,14 +47,15 @@
 
       <div class="field app-form__wide">
         <label for="roleIds">Rôles</label>
-        <stp-select
+        <app-lazy-select
           ariaLabel="Rôles"
           inputId="roleIds"
           [formField]="form.roleIds"
           [multiple]="true"
-          [options]="roleOptions()"
-          placeholder="Sélectionner des rôles"
-        ></stp-select>
+          [source]="roleReferenceService"
+          optionLabel="nom"
+          placeholder="Rechercher et sélectionner des rôles"
+        ></app-lazy-select>
       </div>
 
       @if (isEditMode() && deniablePermissions().length > 0) {
