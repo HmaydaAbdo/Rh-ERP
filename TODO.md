@@ -7,17 +7,18 @@
 
 ---
 
-## Contrôle Design System frontend — en cours
-
-- Contrôle réouvert pour atteindre une clôture stricte : CI verte sur `006f777`, bundle confirmé dans Compose sur le port 5002, 11 routes vérifiées en responsive, thèmes clair/sombre et contraste forcé. Le test manuel Narrateur Windows des sélecteurs multiples, du dialogue, du tableau et du graphique a été déclaré réussi par l’utilisateur le 2026-10-14.
-- L’utilisateur a validé au Narrateur l’adaptation de `stp-chart` : nom accessible, parcours clavier et tableau associé. Le composant prend les couleurs système en contraste forcé pour les graphiques cartésiens et radiaux, y compris lors des bascules à chaud. Vérifications locales finales : 669 tests Angular, 9 E2E Catalogue, vérification TypeScript et build de production réussi avec `CI=true NG_BUILD_MAX_WORKERS=2`; inspection du catalogue en contraste forcé. Le contrôle attend maintenant le CI de cette révision puis la vérification Compose de la nouvelle image par le propriétaire ; voir le [rapport Design System](docs/conformite/design-system-2026-10-13.md). Le contrôle frontend suivant, [`frontend.md`](conventions/frontend.md), reste clôturé après CI et validation runtime.
-
 ## Contrôle de convention frontend — clôturé
 
 - Revue complète de `conventions/frontend.md` et corrections locales terminées le 2026-10-14 : rôles chargés par recherche serveur et pages dans le formulaire utilisateur ; filtres d’audit à cardinalité élevée multisélectionnables, avec contrat pluriel borné et compatibilité singulière.
 - Contrôles locaux et CI verts sur `0d30593999eb5305f48a147bbd375596ee66c171` (run `38547264561`), y compris tests Angular, E2E, build/push des images et contrôle full-stack.
 - Contrôle Compose après pull : PostgreSQL et backend déclarés sains, frontend démarré et `/` répond `200` sur `127.0.0.1:5002`. La recherche de rôles émet `POST /roles/search` et le filtre d’audit transmet plusieurs catégories à `POST /logs/search` ; la page audit à 390 px ne déborde pas horizontalement, son tableau défile dans son conteneur, aucune erreur console.
 - La preuve de clôture figure dans la ligne `frontend.md` de [la matrice de conformité](docs/conformite/matrice.md) ; le rapport détaillé a été supprimé après clôture.
+
+## Contrôle de convention JPA — en cours
+
+- Revue statique du backend terminée : mappings explicites, relations paresseuses, projections/EntityGraph, transactions, pagination des recherches et imports, montants paie en `BigDecimal`, migrations de version et absence d'écritures en masse ont été vérifiés.
+- Garde ArchUnit ajouté pour exiger `@Version` sur les entités modifiables, avec exceptions explicites pour les deux journaux immuables ; tests ajoutés pour les versions courantes, périmées et absentes. Le JDK 21 fonctionne, mais Maven ne peut ouvrir le verrou du dépôt local `.m2`, et l'accès DNS à Maven Central est indisponible depuis un dépôt isolé. CI #236 est verte sur le code antérieur à ces ajouts.
+- À faire : exécuter les nouveaux tests et confirmer compilation/suite backend dans la CI avant de clôturer. Voir le [rapport JPA](docs/conformite/jpa-2026-10-12.md) et la [matrice](docs/conformite/matrice.md).
 
 ## Évolutions IA et KPI
 
@@ -78,6 +79,9 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   `THECNICIEN DE QUALITE` (`CH. CAMION` / `CH. CAMION SR` et `OP. COMPACTEUR` / `OP. MINI COMPACTEUR`
   sont probablement distinctes). Ensuite, réintroduire le chapitre « Répartition par fonction » dans le
   rapport PDF (donnée déjà calculée côté Java, voir `docs/report/README.md` — « Points d'extension »).
+- **Vérifier le doublon apparent du chantier `C157A`** : il apparaît deux fois dans le filtre Chantiers
+  « Tous les mois » avec deux options distinctes. Confirmer s'il s'agit de deux enregistrements en base,
+  puis décider avec la RH s'il faut corriger les données ou différencier les libellés.
 - **Libellés des équipes `A`, `LABO`, `ASPHALET`, `8`** (créées avec libellé = code le 2026-10-03) : à
   compléter avec la RH via l'écran Équipes.
 - **Empêcher les quasi-doublons à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs « THECNICIEN DE

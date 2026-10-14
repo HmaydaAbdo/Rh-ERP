@@ -19,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -153,6 +154,25 @@ class ArchitectureConventionsTest {
     void toute_entite_declare_sa_table() {
         classes().that().areAnnotatedWith(Entity.class).should().beAnnotatedWith(Table.class)
                 .because("le nom de la table est explicite (conventions/jpa.md, « Entités »)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void toute_entite_modifiable_est_versionnee() {
+        List<String> entitesAppendOnly = List.of(
+                "staport.rh.audit.entities.AuditRevision",
+                "staport.rh.audit.entities.AuditJournalEntry");
+        classes().that().areAnnotatedWith(Entity.class).should(new ArchCondition<>("déclarer @Version, sauf les journaux immuables") {
+            @Override
+            public void check(JavaClass entite, ConditionEvents evenements) {
+                boolean appendOnly = entitesAppendOnly.contains(entite.getName());
+                boolean versionnee = entite.getFields().stream().anyMatch(champ -> champ.isAnnotatedWith(Version.class));
+                if (!appendOnly && !versionnee) {
+                    evenements.add(SimpleConditionEvent.violated(entite,
+                            entite.getName() + " est modifiable mais ne déclare pas de @Version"));
+                }
+            }
+        }).because("les écritures concurrentes doivent être détectées (conventions/jpa.md, « Entités »)")
                 .check(CLASSES);
     }
 
