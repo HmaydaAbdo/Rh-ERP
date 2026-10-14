@@ -24,10 +24,10 @@ const filtresVides = () => ({
   dateDebut: '',
   dateFin: '',
   utilisateur: '',
-  categorie: null as CategorieAudit | null,
-  action: null as string | null,
+  categories: [] as CategorieAudit[],
+  actions: [] as string[],
   resultat: null as ResultatAudit | null,
-  entiteType: null as string | null,
+  entiteTypes: [] as string[],
   requestId: ''
 });
 
@@ -128,7 +128,7 @@ export class JournalComponent {
   /** Nombre de filtres actifs du panneau « Plus de filtres ». */
   nombreAvances(): number {
     const f = this.filtres();
-    return [f.resultat, f.entiteType, f.requestId].filter((valeur) => Boolean(valeur)).length;
+    return [f.resultat, f.entiteTypes.length > 0, f.requestId].filter(Boolean).length;
   }
 
   avancesVisibles(): boolean {
@@ -255,10 +255,10 @@ export class JournalComponent {
       dateDebut: f.dateDebut ? new Date(`${f.dateDebut}T00:00:00`).toISOString() : undefined,
       dateFin: f.dateFin ? new Date(`${f.dateFin}T23:59:59.999`).toISOString() : undefined,
       utilisateur: f.utilisateur || undefined,
-      categorie: f.categorie ?? undefined,
-      action: f.action ?? undefined,
+      categories: f.categories.length > 0 ? f.categories : undefined,
+      actions: f.actions.length > 0 ? f.actions : undefined,
       resultat: f.resultat ?? undefined,
-      entiteType: f.entiteType ?? undefined,
+      entiteTypes: f.entiteTypes.length > 0 ? f.entiteTypes : undefined,
       requestId: f.requestId || undefined
     };
   }

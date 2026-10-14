@@ -135,7 +135,7 @@ mot de passe sont tracés sans conserver les secrets. La réponse HTTP ne change
 
 | Route | Permission | Contenu |
 |---|---|---|
-| `POST /logs/search` | `AUDIT_READ` | Journal paginé ; filtres : dates, utilisateur (« contient », jokers neutralisés), catégorie, action, résultat, entité, identifiant de requête |
+| `POST /logs/search` | `AUDIT_READ` | Journal paginé ; filtres : dates, utilisateur (« contient », jokers neutralisés), catégories/actions/entités multiples, résultat, identifiant de requête. Les critères singuliers restent acceptés pour compatibilité. |
 | `GET /logs/{id}` | `AUDIT_READ` | Une entrée avec son contexte complet et son périmètre |
 | `GET /logs/{id}/details` | `AUDIT_READ` | Ce que l'opération a changé, champ par champ, **paginé** (une suppression de 1 000 bulletins = 1 000 éléments) |
 | `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` | Toutes les versions d'un enregistrement (`paie`, `employee`, `function`, `chantier`, `equipe`, `utilisateur`, `role`), de la plus récente à la plus ancienne |

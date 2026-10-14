@@ -1,8 +1,10 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { AuditChangement, AuditEntree, AuditLigne } from '../models/audit.model';
 import { AuditService } from '../services/audit.service';
 import { JournalComponent } from './journal.component';
@@ -82,7 +84,7 @@ describe('JournalComponent', () => {
         composant['onLazyLoad']({ first: 20, rows: 10, sortField: null, sortOrder: 1 });
         service.search.mockClear();
 
-        composant['filtres'].update((f) => ({ ...f, utilisateur: 'ali', categorie: 'SECURITE', action: 'ACCES_REFUSE' }));
+        composant['filtres'].update((f) => ({ ...f, utilisateur: 'ali', categories: ['SECURITE', 'ACCES'], actions: ['ACCES_REFUSE', 'CONNEXION_ECHOUEE'] }));
         TestBed.tick();
 
         expect(service.search).toHaveBeenCalledTimes(1);
@@ -90,13 +92,25 @@ describe('JournalComponent', () => {
             dateDebut: undefined,
             dateFin: undefined,
             utilisateur: 'ali',
-            categorie: 'SECURITE',
-            action: 'ACCES_REFUSE',
+            categories: ['SECURITE', 'ACCES'],
+            actions: ['ACCES_REFUSE', 'CONNEXION_ECHOUEE'],
             resultat: undefined,
-            entiteType: undefined,
+            entiteTypes: undefined,
             requestId: undefined
         });
         expect(vi.mocked(service.search).mock.lastCall![1].page).toBe(0);
+    });
+
+    it('utilise la sélection multiple pour les dimensions de journal à forte cardinalité', () => {
+        (fixture.nativeElement.querySelector('[aria-controls="journal-filtres-avances"]') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        const selects = fixture.debugElement.queryAll(By.directive(SelectComponent));
+        const parLibelle = (libelle: string) => selects.find(({ componentInstance }) => componentInstance.ariaLabel() === libelle)?.componentInstance;
+
+        expect(parLibelle('Catégorie')?.multiple()).toBe(true);
+        expect(parLibelle('Action')?.multiple()).toBe(true);
+        expect(parLibelle('Entité')?.multiple()).toBe(true);
+        expect(parLibelle('Résultat')?.multiple()).toBe(false);
     });
 
     it('propose les actions de lecture métier et les écritures complémentaires dans le filtre Action', () => {

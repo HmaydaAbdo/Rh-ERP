@@ -59,7 +59,7 @@ src/app/
 │   │       ├── list/ form/ details/  Écrans (composants standalone)
 │   │       ├── models/               Interfaces TypeScript des DTO
 │   │       └── services/             Appels HTTP du domaine
-│   └── admin/               Utilisateurs et Rôles (users/, roles/, services/, models/)
+│   └── admin/               Utilisateurs et Rôles (users/, roles/, services/, models/ ; adaptateur des rôles paginés)
 └── shared/
     ├── ui/                  Kit Staport (icon, button, badge, dialog, menu, select, table, champs, message, chart, catalogue)
     ├── feedback/            Notifications et confirmations (Signals + CDK A11y)
@@ -275,6 +275,8 @@ Adaptateurs fournis dans `shared/reference-data/` : `FunctionReferenceService`, 
 `EquipeReferenceService`, `EmployeeReferenceService` (libellé `displayLabel`). Ils interrogent les endpoints
 `/search` des domaines. **Toute nouvelle liste déroulante les réutilise** ; on n'écrit jamais une pagination ou
 un délai de recherche dans un composant d'écran.
+
+`admin/services/RoleReferenceService` adapte `POST /roles/search` et `GET /roles/{id}` au sélecteur des rôles du formulaire utilisateur. La recherche et le défilement chargent les rôles par page ; seuls les rôles consultés sont gardés localement pour calculer les permissions déniables. Le formulaire ne charge jamais le catalogue complet des rôles.
 
 Règle de cardinalité : filtre de liste → sélection multiple ; relation unique d'un formulaire → sélection
 simple ; statut binaire (actif/inactif) → sélection simple.

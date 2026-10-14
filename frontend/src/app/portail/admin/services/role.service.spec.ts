@@ -31,22 +31,6 @@ describe('RoleService', () => {
     requete(http, 'GET', 'roles/1').flush({ id: 1 });
   });
 
-  it('charge tous les rôles page par page pour le formulaire utilisateur', () => {
-    let roles: unknown;
-    service.findEvery().subscribe((r) => (roles = r));
-
-    const premiere = requete(http, 'POST', 'roles/search');
-    expect(premiere.request.params.get('page')).toBe('0');
-    expect(premiere.request.params.get('size')).toBe('200');
-    premiere.flush({ content: [{ id: 1, nom: 'SYSTEM_ADMIN' }], page: { size: 200, number: 0, totalElements: 201, totalPages: 2 } });
-
-    const seconde = requete(http, 'POST', 'roles/search');
-    expect(seconde.request.params.get('page')).toBe('1');
-    seconde.flush({ content: [{ id: 2, nom: 'RH' }], page: { size: 200, number: 1, totalElements: 201, totalPages: 2 } });
-
-    expect(roles).toEqual([{ id: 1, nom: 'SYSTEM_ADMIN' }, { id: 2, nom: 'RH' }]);
-  });
-
   it('crée, modifie et supprime un rôle avec ses permissions', () => {
     service.create({ nom: 'RH', description: null, permissionIds: [1, 2] }).subscribe();
     const creation = requete(http, 'POST', 'roles');
