@@ -19,6 +19,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -52,6 +53,16 @@ class OpenApiContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Test
+    void documentation_interactive_est_servie_et_api_metier_reste_protegee_quand_tout_est_active() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/equipes/1"))
+                .andExpect(status().isUnauthorized());
+    }
 
     @Test
     void la_specification_generee_est_complete_et_reste_coherente_avec_la_securite_et_les_fichiers() throws Exception {

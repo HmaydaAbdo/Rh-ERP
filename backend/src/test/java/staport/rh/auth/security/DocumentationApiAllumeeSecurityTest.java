@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "security.jwt.secret=dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMTIzNDU2Nzg5MA==",
         "spring.application.name=paie-test",
         "security.cors.allowed-origins=http://localhost:4200",
-        "springdoc.api-docs.enabled=true"
+        "springdoc.api-docs.enabled=true",
+        "springdoc.swagger-ui.enabled=true"
 })
 class DocumentationApiAllumeeSecurityTest {
 
