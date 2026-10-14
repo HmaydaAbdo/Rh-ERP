@@ -7,16 +7,17 @@
 
 ---
 
-## Contrôle Design System frontend — clôturé
+## Contrôle Design System frontend — en cours
 
-- Clôturé le 2026-10-14 à la demande de l’utilisateur. CI verte sur `006f777`, bundle confirmé dans Compose sur le port 5002, 11 routes vérifiées en responsive, thèmes clair/sombre et contraste forcé. La sortie réelle d’un lecteur d’écran et l’inspection visuelle exhaustive des variantes sont consignées comme vérifications non exécutées, pas comme preuves réussies.
-- [Rapport de contrôle](docs/conformite/design-system-2026-10-13.md). Contrôle de convention suivant : [`frontend.md`](docs/conformite/frontend-2026-10-14.md), revue locale terminée ; CI du delta attendue après push.
+- Contrôle réouvert pour atteindre une clôture stricte : CI verte sur `006f777`, bundle confirmé dans Compose sur le port 5002, 11 routes vérifiées en responsive, thèmes clair/sombre et contraste forcé. Le test manuel Narrateur Windows des sélecteurs multiples, du dialogue, du tableau et du graphique a été déclaré réussi par l’utilisateur le 2026-10-14.
+- L’utilisateur a validé l’adaptation partagée de `stp-chart` : textes, axes, grille, légende et infobulle prennent les couleurs système en contraste forcé et suivent les bascules à chaud. Vérifications locales : 669 tests Angular et 9 E2E Catalogue réussis ; inspection visuelle du graphique, du multisélect et du dialogue en contraste forcé. Le contrôle reste ouvert pour le nouveau passage Narrateur du graphique, un build réussi sur cette version et la revue visuelle des variantes restantes ; voir le [rapport Design System](docs/conformite/design-system-2026-10-13.md). `ng serve` compile, mais `ng build` termine actuellement sans diagnostic local ; la CI verte de `006f777` précède les changements présents. Le contrôle frontend suivant, [`frontend.md`](conventions/frontend.md), reste clôturé après CI et validation runtime.
 
-## Contrôle de convention frontend — validation locale terminée, CI attendue
+## Contrôle de convention frontend — clôturé
 
 - Revue complète de `conventions/frontend.md` et corrections locales terminées le 2026-10-14 : rôles chargés par recherche serveur et pages dans le formulaire utilisateur ; filtres d’audit à cardinalité élevée multisélectionnables, avec contrat pluriel borné et compatibilité singulière.
-- Contrôles locaux : build de production du Dockerfile réussi, 667/667 tests Angular rapportés réussis, 28 tests ciblés réussis avec code de sortie 0, E2E utilisateur réussi, `AuditConsultationTest` 14/14, TypeScript, audits npm/licences et `git diff --check` réussis.
-- [Rapport de contrôle](docs/conformite/frontend-2026-10-14.md). La CI `006f777` ne couvre pas ce delta ; rejouer le CI après le push avant de retirer ce point.
+- Contrôles locaux et CI verts sur `0d30593999eb5305f48a147bbd375596ee66c171` (run `38547264561`), y compris tests Angular, E2E, build/push des images et contrôle full-stack.
+- Contrôle Compose après pull : PostgreSQL et backend déclarés sains, frontend démarré et `/` répond `200` sur `127.0.0.1:5002`. La recherche de rôles émet `POST /roles/search` et le filtre d’audit transmet plusieurs catégories à `POST /logs/search` ; la page audit à 390 px ne déborde pas horizontalement, son tableau défile dans son conteneur, aucune erreur console.
+- La preuve de clôture figure dans la ligne `frontend.md` de [la matrice de conformité](docs/conformite/matrice.md) ; le rapport détaillé a été supprimé après clôture.
 
 ## Évolutions IA et KPI
 

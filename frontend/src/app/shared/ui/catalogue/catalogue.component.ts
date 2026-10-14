@@ -4,6 +4,7 @@ import { form, FormField, required } from '@angular/forms/signals';
 import type { ChartData, ChartOptions } from 'chart.js';
 
 import { ColumnState } from '../../table/table-columns';
+import type { TableColumn } from '../../table/table-columns';
 import { BadgeComponent } from '../badge/badge.component';
 import { ButtonComponent } from '../button/button.directive';
 import { ChartComponent } from '../chart/chart.component';
@@ -20,6 +21,8 @@ import { SplitButtonComponent } from '../menu/split-button.component';
 import { SelectComponent, SelectOption } from '../select/select.component';
 import { TableCellDirective, TableComponent, TableRowActionsDirective } from '../table/table.component';
 import { ThemeService } from '../../../core/theme/theme.service';
+
+const FORMAT_MASSE = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
 interface Ligne {
   id: number;
@@ -108,16 +111,66 @@ export class CatalogueComponent {
       datasets: [{ label: 'Masse salariale (DH)', data: [125000, 143500, 138000], backgroundColor: this.couleurGraphique() }]
     };
   });
-  protected readonly chartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    plugins: { legend: { display: true } }
-  };
+  protected readonly chartOptions = computed<ChartOptions<'bar'>>(() => {
+    this.theme.theme();
+    const texte = this.jeton('--color-text-muted');
+    const textePrincipal = this.jeton('--color-text');
+    const bordure = this.jeton('--color-border');
+    const police = this.jeton('--font-sans');
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: this.jeton('--color-surface'),
+          borderColor: this.jeton('--color-border-strong'),
+          borderWidth: 1,
+          titleColor: textePrincipal,
+          bodyColor: textePrincipal,
+          titleFont: { family: police, size: 13, weight: 600 },
+          bodyFont: { family: police, size: 12 },
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${FORMAT_MASSE.format(Number(context.parsed.y))}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: texte, font: { family: police, size: 12 } }, grid: { display: false }, border: { display: false } },
+        y: {
+          ticks: { color: texte, font: { family: police, size: 12 }, callback: (valeur) => FORMAT_MASSE.format(Number(valeur)) },
+          grid: { color: bordure, drawTicks: false },
+          border: { display: false }
+        }
+      }
+    };
+  });
+
+  protected readonly colonnesGraphique: TableColumn[] = [
+    { field: 'periode', header: 'Période', sortable: false },
+    { field: 'montant', header: 'Masse salariale (DH)', sortable: false }
+  ];
+
+  protected readonly lignesGraphique = computed(() => {
+    const graphique = this.chartData();
+    const valeurs = graphique.datasets[0]?.data ?? [];
+    return (graphique.labels ?? []).map((periode, index) => ({
+      periode: String(periode),
+      montant: FORMAT_MASSE.format(Number(valeurs[index] ?? 0))
+    }));
+  });
 
   protected couleurGraphique(): string {
     this.theme.theme();
-    return this.document.defaultView?.getComputedStyle(this.document.documentElement).getPropertyValue('--chart-1').trim() ?? '';
+    return this.jeton('--chart-1');
+  }
+
+  private jeton(nom: string): string {
+    return this.document.defaultView?.getComputedStyle(this.document.documentElement).getPropertyValue(nom).trim() ?? '';
   }
 
   protected readonly columns = new ColumnState([

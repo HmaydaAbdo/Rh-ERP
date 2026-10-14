@@ -18,8 +18,9 @@ describe('CatalogueComponent', () => {
 
     expect(page.querySelector('h1')?.textContent).toBe('Catalogue Staport');
     expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual([
-      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', 'Dialogue', 'Graphique', 'Tableau (mode mémoire)'
+      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', 'Dialogue', 'Masse salariale mensuelle', 'Tableau (mode mémoire)'
     ]);
+    expect(page.querySelector('details summary')?.textContent?.trim()).toBe('Afficher les données du graphique');
   });
 
   it('laisse le repère principal à la coque applicative', () => {
@@ -48,9 +49,10 @@ describe('CatalogueComponent', () => {
 
   it('affiche le tableau de démonstration paginé en mémoire', () => {
     const { page } = afficher();
+    const tableau = page.querySelectorAll('stp-table')[1];
 
-    expect(page.querySelectorAll('tbody tr')).toHaveLength(10);
-    expect(page.querySelector('.stp-table__report')?.textContent?.trim()).toBe('1 - 10 sur 27 — page 1/3');
+    expect(tableau.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(tableau.querySelector('.stp-table__report')?.textContent?.trim()).toBe('1 - 10 sur 27 — page 1/3');
   });
 
   it('mémorise la dernière action du menu', () => {
