@@ -70,7 +70,7 @@ describe('UserFormComponent', () => {
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
         { provide: UserService, useValue: users },
-        { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } },
+        { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, différent de l’identifiant.' } },
         { provide: EmployeeReferenceService, useValue: EMPLOYES }
       ]
     });
@@ -123,7 +123,7 @@ describe('UserFormComponent', () => {
       await envoyer();
 
       expect(users.create).not.toHaveBeenCalled();
-      expect(erreurs()).toEqual(['3 à 50 caractères.', 'Email invalide.', '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.']);
+      expect(erreurs()).toEqual(['3 à 50 caractères.', 'Email invalide.', '10 caractères minimum, différent de l’identifiant.']);
     });
 
     it('limite l’identifiant à 50 caractères', async () => {

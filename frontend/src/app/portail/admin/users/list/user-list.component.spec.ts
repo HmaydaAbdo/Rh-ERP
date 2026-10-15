@@ -40,7 +40,7 @@ describe('UserListComponent', () => {
       }),
       resetPassword: vi.fn().mockReturnValue(of(undefined))
     };
-    const politique = { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' };
+    const politique = { longueurMinimale: () => 10, regle: () => '10 caractères minimum, différent de l’identifiant.' };
     TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: UserService, useValue: service }, { provide: PolitiqueMotDePasseService, useValue: politique }] });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(UserListComponent);

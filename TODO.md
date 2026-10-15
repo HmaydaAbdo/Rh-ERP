@@ -116,11 +116,13 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    `conventions/backup.md` et `docs/deployment.md`.
 6. **Vérifications sécurité Auth en production** : dans l'environnement protégé, vérifier un
    `JWT_SECRET` aléatoire propre à la production (Base64, au moins 256 bits), `COOKIE_SECURE=true`,
-   les seules origines HTTPS réelles dans `CORS_ALLOWED_ORIGINS`, et Swagger désactivé. Après la
-   migration qui inclut V21, contrôler le verrouillage 5 échecs/15 minutes et la rotation/révocation
-   des sessions sur l'instance de production. Vérifier également que nginx inner limite les essais
-   par adresse réelle et que l'outer transmet correctement cette adresse ; ne modifier nginx outer
-   qu'après revue de l'exemple fourni par le propriétaire.
+   les seules origines HTTPS réelles dans `CORS_ALLOWED_ORIGINS`, Swagger désactivé et le mot de
+   passe administrateur de bootstrap remplacé après la première connexion. Après la migration qui
+   inclut V21, contrôler le verrouillage 5 échecs/15 minutes et la rotation/révocation des sessions
+   sur l'instance de production. Vérifier également que nginx inner limite les essais par adresse
+   réelle, que l'outer transmet correctement cette adresse et que la confiance nginx inner est
+   limitée à l'adresse ou au sous-réseau exact de l'outer (pas à tous les réseaux privés) ; ne
+   modifier nginx outer qu'après revue de l'exemple fourni par le propriétaire.
 7. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
    `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles

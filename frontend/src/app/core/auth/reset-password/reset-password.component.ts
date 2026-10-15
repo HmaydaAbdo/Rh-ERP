@@ -38,7 +38,12 @@ export class ResetPasswordComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.token.set(this.route.snapshot.queryParamMap.get('token'));
+    const token = new URLSearchParams(this.route.snapshot.fragment ?? '').get('token');
+    this.token.set(token);
+    if (token) {
+      // Le jeton reste en mémoire pour l'envoi du formulaire, mais disparaît de l'URL affichée.
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
     if (!this.token()) {
       this.errorMessage.set('Lien invalide : jeton manquant.');
     }

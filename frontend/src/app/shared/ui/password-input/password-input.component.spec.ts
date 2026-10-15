@@ -28,7 +28,7 @@ describe('PasswordInputComponent', () => {
   const bascule = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [{ provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, différent de l’identifiant.' } }] });
   });
 
   async function afficher(configurer?: (h: MotDePasseTestComponent) => void): Promise<void> {
