@@ -55,7 +55,7 @@ staport.rh.paie.repositories/
 │                                 effectif, stc, stcMontant) — la donnée la plus fine dont le rapport
 │                                 calcule un historique (Global, Chantier). Plus consommée par aucun
 │                                 graphique du rapport (évolution mensuelle retirée, voir
-│                                 docs/report/rapport-v2.md) mais toujours calculée, prête à être
+│                                 ../../evolution-rapport/rapport-v2.md) mais toujours calculée, prête à être
 │                                 réutilisée sans redévelopper si le besoin se confirme un jour.
 └── PaieRepository.premierePeriode()  Mois le plus ancien où une paie existe réellement en base —
                                   plancher de la fenêtre glissante utilisée par le calcul ci-dessus,
@@ -423,11 +423,11 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | STC / sortie (DH) | `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / chantier / section | Non |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
 | Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
-| ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
+| ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `../../evolution-rapport/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
 | Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Répartition par équipe"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
 | STC / sortie (personnes et DH) | `COUNT` et `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — deux KPI à chaque niveau et séries dédiées de chaque `<barChart>` |
-| ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
+| ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `../../evolution-rapport/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
 
 Pas de KPI dupliqué : chaque carte/graphique répond à une question différente (jamais deux façons de
 montrer le même montant). La dimension Fonction n'a plus d'écran dédié au niveau global du rapport
@@ -522,7 +522,7 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    **verticalement**, puis un bloc **signatures** (Directeur Général à gauche, DRH à droite — rôle +
    nom du signataire en dur + filet à signer, jamais le filet pré-rempli). **Pas de date de
    génération** (retirée le 2026-09-29, demande explicite de direction — voir
-   `docs/report/rapport-v2.md`).
+   `../../evolution-rapport/rapport-v2.md`).
 2. **Bandeau récurrent** (`.page-header`, construit une seule fois par `PaieReportHtmlBuilder` et
    répété sur chaque page de contenu — jamais sur la page de garde) : 3 blocs sur une seule ligne
    chacun, séparés par de fins filets verticaux — Ressources Humaines / `Paie <Mois> <Année>` (ex. « Paie Septembre 2026 ») / **Niveau**. Le
@@ -737,6 +737,12 @@ jsoup — voir son Javadoc), rendu nativement par openhtmltopdf (support Batik) 
 chantier (chapitre I) et répartition par équipe de chaque chantier concerné — la donnée sous-jacente
 (`RepartitionBean`) est la même forme à chaque niveau.
 
+Le nœud racine de chaque graphique est créé explicitement dans le namespace SVG
+(`http://www.w3.org/2000/svg`). Cette précision est nécessaire dans le DOM jsoup converti par
+`W3CDom` : sans elle, openhtmltopdf traite le nœud comme un élément HTML et laisse sa zone de
+graphique vide dans le PDF. Le test du pipeline PDF vérifie qu'une page de synthèse contient les
+pixels bleus des barres après rendu du PDF en image.
+
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
   rouge), STC (DH, marron) — chacune nommée avec son unité dans la légende.
@@ -800,7 +806,7 @@ Le rapport a porté, à une itération précédente, un graphique d'évolution m
 aux niveaux Global et Chantier, avec une fenêtre glissante d'au plus 12 mois (jamais avant le
 premier mois où une paie existe réellement en base, `PaieRepository.premierePeriode()`). **Ce
 graphique a été retiré entièrement** (manque d'historique suffisant pour qu'une tendance mensuelle
-soit significative) — voir `docs/report/rapport-v2.md` pour le détail complet de cette décision, de
+soit significative) — voir `../../evolution-rapport/rapport-v2.md` pour le détail complet de cette décision, de
 celle qui l'a précédée (retrait du STC de ce même graphique), et de ce qui reste calculé côté Java
 sans être affiché (`PaieBiReportBuilder.evolutionParNiveau`, prêt à être réactivé sans recalcul si le
 besoin se confirme un jour). Le rapport ne porte donc aucun graphique d'évolution.
@@ -926,7 +932,7 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
 
 ## Points d'extension
 
-> Voir aussi [rapport-v2.md](rapport-v2.md) — journal détaillé de tout ce qui
+> Voir aussi [../../evolution-rapport/rapport-v2.md](../../evolution-rapport/rapport-v2.md) — journal détaillé de tout ce qui
 > a été retiré ou restructuré dans le rapport, avec pour chacun ce qui reste réutilisable sans
 > redévelopper.
 
@@ -935,7 +941,7 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
   `SyntheseGlobaleVue.repartitionFonction`/`P_REPARTITION_FONCTION` restent calculés côté Java pour
   ne pas tout redévelopper à la réintroduction.
 - **Réintroduire l'évolution mensuelle** : retirée entièrement (manque d'historique, voir
-  `docs/report/rapport-v2.md`) mais toujours calculée côté Java
+  `../../evolution-rapport/rapport-v2.md`) mais toujours calculée côté Java
   (`PaieBiReportBuilder.evolutionParNiveau`) — à reconsidérer une fois plusieurs mois/années de
   données accumulées, si le besoin se confirme réellement.
 - **Généraliser le squelette parc matériel** : aujourd'hui figé au chantier C168 (équipes CH/OP),

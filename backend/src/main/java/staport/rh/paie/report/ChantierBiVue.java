@@ -12,7 +12,7 @@ import java.util.List;
  * nombre de départs STC / sortie, {@code evolutionMensuelle} (masse et effectif de CE chantier, 12
  * derniers mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}) : reste calculé mais n'alimente
  * plus aucun graphique du rapport (évolution mensuelle retirée de tout le document, demande explicite
- * de direction — voir {@code docs/report/rapport-v2.md}). Le détail employé est porté par
+ * de direction — voir {@code evolution-rapport/rapport-v2.md}). Le détail employé est porté par
  * {@link #equipes()}.
  *
  * <p>{@code identifiant} : "&lt;nom&gt; (&lt;code&gt;)" quand {@code Chantier.nom} est renseigné,
@@ -23,7 +23,7 @@ import java.util.List;
  *
  * <p>Chaque chantier a désormais sa propre section (demande explicite de direction, 2026-09-29 :
  * fusion des exports PDF/Excel autour d'une seule sélection manuelle d'équipes — voir
- * {@code docs/report/rapport-v2.md}). {@code avecDetailEquipe} : {@code true} quand l'utilisateur a
+ * {@code evolution-rapport/rapport-v2.md}). {@code avecDetailEquipe} : {@code true} quand l'utilisateur a
  * sélectionné au moins une équipe de CE chantier pour un détail séparé (via
  * {@code PaieReportPdfRequestDto.equipesParChantier}, même sélection que l'export Excel) — pilote
  * l'affichage du graphique "répartition par équipe" (toujours la distribution COMPLÈTE, même si seule

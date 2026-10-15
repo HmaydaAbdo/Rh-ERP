@@ -50,7 +50,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 | **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [README](audit/README.md) · [skill IA](audit/skills/SKILL.md) | [rbac/audit.md](rbac/audit.md) |
 
 Journal des décisions du rapport PDF (ce qui a été retiré et pourquoi) :
-[report/rapport-v2.md](report/rapport-v2.md).
+[../evolution-rapport/rapport-v2.md](../evolution-rapport/rapport-v2.md).
 
 ---
 
