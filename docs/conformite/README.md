@@ -62,7 +62,7 @@ Ils sont suivis dans [TODO.md](../../TODO.md).
 
 | # | Gravité | Constat | Proposition / options |
 |---|---|---|---|
-| G10 | À vérifier en production | Le dépôt prépare le compte applicatif distinct, la chaîne locale d'intégrité et pgAudit. Le serveur est encore en PostgreSQL 17 ; ces contrôles seront faits pendant la migration vers PostgreSQL 18. | Après accès SSH, vérifier le message d'intégrité, `shared_preload_libraries`, l'extension et les journaux pgAudit selon [../deployment.md](../deployment.md). Aucun accès SSH disponible dans cette session |
+| G10 | À vérifier en production | Le serveur est passé à PostgreSQL 18.6 le 2026-10-14 ; pgvector 0.8.7 et pgAudit 18.0 sont disponibles, `pgaudit.log=all` est configuré et l'application utilise un rôle non-superuser. | Confirmer les événements pgAudit dans les journaux, les comptes de lignes restaurés et la conservation du volume PG17 comme retour arrière ; suivi dans `TODO.md` |
 
 ---
 

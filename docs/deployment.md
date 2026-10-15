@@ -212,14 +212,12 @@ suspendues jusqu'à la décision de réouverture.
    par une migration inverse contrôlée. Conserver les deux volumes jusqu'à validation métier et
    sauvegarde PG18 restaurable.
 
-État au 2026-10-10 : migration locale PG17→PG18 vérifiée (PostgreSQL 18.6, pgvector 0.8.7, Flyway V15 à cette date,
-28 tables ; nombres de lignes identiques), tests backend propres passés sur PG18. **Migration du serveur
-de production à planifier/exécuter séparément**. Les migrations V16 à V21 sont postérieures à cette
-validation et doivent être rejouées sur une restauration de production PG17 avant la bascule.
-
-Validation locale pgAudit au 2026-10-11 : l'image PostgreSQL ERP-RH se construit avec pgAudit 18.0 ; PostgreSQL 18.6 charge l'extension,
-`CREATE EXTENSION pgaudit` réussit et une requête de contrôle apparaît dans les logs `AUDIT: SESSION`. L'activation
-de la base de production reste à vérifier après la migration PG17→PG18 et l'obtention de l'accès SSH.
+État de production au 2026-10-14, d'après les commandes exécutées sur le serveur : la restauration
+PG17→PG18 a été faite dans le nouveau volume ; PostgreSQL 18.6, pgvector 0.8.7 et pgAudit 18.0 sont
+disponibles ; Flyway a atteint V21 ; `pgaudit.log=all` est configuré ; le rôle applicatif est
+non-superuser et le backend est sain. La vérification comparative des volumes de données restaurés,
+la présence conservée du volume PG17 et la lecture d'événements pgAudit dans les journaux restent
+suivies dans [`TODO.md`](../TODO.md).
 
 ---
 
@@ -236,12 +234,10 @@ une PR).
 **CD non traité** — le déploiement (`docker compose --profile backup pull && docker compose --profile backup up -d` sur le serveur) reste manuel
 pour l'instant. Proposition à valider : déployer sur un tag `v*` uniquement après réussite de la CI,
 par SSH depuis GitHub Actions, puis vérifier la santé des services. Les secrets SSH et les paramètres
-du serveur seraient configurés dans GitHub Actions, jamais dans le dépôt. Cette mise en production
-doit attendre la migration PG17→PG18 décrite plus haut ; le Compose actuel démarre PostgreSQL 18 et
-un volume distinct. Aucune livraison ne doit être déclenchée sur la production avant cette migration.
-Après l'accès SSH, la première bascule doit définir le tag PostgreSQL à déployer et vérifier l'activation pgAudit
-par Flyway (`PGAUDIT_ENABLED=true`) ainsi que les droits applicatifs. L'image DB conserve les fichiers CSV sans purge
-dans le volume PostgreSQL ; surveiller l'espace disque du serveur.
+du serveur seraient configurés dans GitHub Actions, jamais dans le dépôt. La bascule PG17→PG18 a été
+effectuée le 2026-10-14 ; ce n'est plus une condition préalable au CD. Vérifier encore les événements
+pgAudit sur le serveur. L'image DB conserve les fichiers CSV sans purge dans le volume PostgreSQL ;
+surveiller l'espace disque du serveur.
 
 Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (token d'accès Docker Hub, pas le mot de passe du compte).
