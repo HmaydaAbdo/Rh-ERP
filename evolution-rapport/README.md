@@ -15,7 +15,7 @@ Le rapport actuel est généré par un pipeline HTML/CSS puis converti en PDF. I
 - permettre de sélectionner plusieurs marchés dans l’assistant d’export PDF ;
 - rendre effectivement visibles les graphiques dans le PDF produit.
 
-Les trois premiers points sont déjà présents dans le code fusionné sur `main` (PR #45). La correction de rendu SVG des graphiques est en cours de validation CI dans la PR #46 ; l’état final doit être vérifié avant de considérer ce point livré.
+Les trois premiers points sont présents dans le code fusionné sur `main` (PR #45). La correction du rendu SVG a été fusionnée dans `main` par la PR #46. La CI de la branche principale (run #282, commit `08c80b9`) a réussi, y compris le test qui rasterise la page globale et vérifie les pixels du graphique, ainsi que la publication des images Docker. Une vérification similaire du graphique de répartition par équipe sur la page chantier est ajoutée dans le changement courant ; son CI reste à confirmer. La validation du PDF généré depuis l’image déployée reste à confirmer par l’utilisateur.
 
 ## Décisions et pistes antérieures
 
@@ -25,6 +25,24 @@ Les trois premiers points sont déjà présents dans le code fusionné sur `main
 - Le sommaire imprimé et le tableau redondant de répartition par équipe avaient été retirés pour limiter les pages ou éviter une répétition d’information.
 
 Ces pistes ne sont pas des exigences validées de la prochaine version. Elles doivent être comparées au besoin de lecture actuel et aux données disponibles avant d’être ajoutées.
+
+## Niveau 1 — Vue d’ensemble : proposition à valider
+
+### Existant vérifié
+
+- Six KPI : masse salariale du mois, masse du mois précédent, effectif, nombre de marchés, STC en personnes et STC en DH.
+- Un graphique horizontal par marché avec quatre séries (masse, effectif, STC personnes, STC DH), trié par masse décroissante ; les valeurs réelles sont affichées dans des colonnes dédiées.
+- Les marchés choisis filtrent déjà les calculs. `PaieBiReportBuilder` construit aussi `RapportBiVue.filtresActifs`, mais cette information n’est pas actuellement consommée par le rendu HTML/PDF.
+- La longueur des barres est actuellement calculée par rapport au maximum de chaque série (`valeur / maxParSerie`), pas à la part du total. Le graphique n’exprime donc pas une contribution en pourcentage.
+- La masse du mois précédent est affichée sans écart absolu ni pourcentage ; cette variation avait été retirée dans une décision antérieure.
+
+### Proposition
+
+1. Garder les six KPI existants et ajouter une indication de périmètre sur la page globale : « Tous les marchés » ou « N marchés sélectionnés ». Les chapitres suivants donnent déjà le détail des marchés inclus.
+2. Garder les quatre séries et les valeurs réelles, mais faire représenter aux barres la part de chaque marché dans le total de sa série, avec une échelle graduée de 0 à 100 %. Cela donnerait au lecteur une mesure explicite de contribution.
+3. Traiter séparément la variation de masse entre le mois courant et le précédent : elle est calculable avec les valeurs existantes, mais nécessite une décision explicite avant réintroduction.
+
+**État :** proposition présentée à l’utilisateur ; aucun choix n’est encore validé et aucun changement de contenu global n’est implémenté. À confirmer avant de modifier le modèle de page ou le graphique.
 
 ## Préparer la nouvelle version
 
