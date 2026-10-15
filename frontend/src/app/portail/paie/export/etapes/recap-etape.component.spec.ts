@@ -19,7 +19,7 @@ describe('PaieExportEtapeRecapComponent', () => {
     expect(lignes(racine)).toEqual([
       ['Période', 'août 2026 · 969 bulletins'],
       ['Format', 'Rapport PDF de synthèse'],
-      ['Chantier', 'Tous les chantiers'],
+      ['Marchés', 'Tous les marchés'],
       ['Vue d\'ensemble', 'Incluse'],
       ['Détail par équipe', 'Aucun, une section par chantier']
     ]);
