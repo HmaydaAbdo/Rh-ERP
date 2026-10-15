@@ -22,7 +22,7 @@ les tableaux ci-dessous décrivent uniquement les vérifications backend déjà 
 | DTO | Tous des `record` | `ArchitectureConventionsTest` |
 | Injection, journalisation | Injection par constructeur ; pas de `System.out` ni de `java.util.logging` ; logger `private static final … log`, jamais dans un contrôleur, un repository ou un mapper | `ArchitectureConventionsTest` |
 | JPA | Toute entité déclare sa table ; aucune relation en `EAGER` | `ArchitectureConventionsTest` |
-| Audit | Trois couches (Envers, journal d'actions, événements de sécurité) ; couverture des écritures, atomicité, permissions dédiées, protection append-only et chaîne d'intégrité | [`audit-2026-10-12.md`](audit-2026-10-12.md), `Audit*Test` |
+| Audit | Trois couches (Envers, journal d'actions, événements de sécurité) ; couverture des écritures, atomicité, permissions dédiées, protection append-only et chaîne d'intégrité | `Audit*Test` ; statut et preuve courante dans la [matrice](matrice.md) |
 | RBAC | Chaque route déclare une permission ; refus, acceptation et table de référence vérifiés | `EndpointSecurityTest`, `JwtSecurityChainTest` |
 | Sessions | Jeton d'accès court, jeton de rafraîchissement opaque à rotation et révocation de famille, cookie `httpOnly` | `AuthServiceTest` |
 | Base | Flyway V1 → V21, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
