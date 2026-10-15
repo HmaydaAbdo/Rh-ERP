@@ -7,7 +7,7 @@ import java.util.List;
  *
  * <p>{@code chantiers} : TOUS les chantiers du périmètre, triés par masse décroissante — chacun a
  * désormais son propre chapitre romain, qu'il ait ou non une équipe détaillée (voir
- * {@code ChantierBiVue.avecDetailEquipe} et {@code docs/report/rapport-v2.md} pour la décision qui a
+ * {@code ChantierBiVue.avecDetailEquipe} et {@code evolution-rapport/rapport-v2.md} pour la décision qui a
  * mis fin à l'ancien chapitre final consolidé "Chantiers à effectif réduit"). */
 record RapportBiVue(
         String periodeLibelle,

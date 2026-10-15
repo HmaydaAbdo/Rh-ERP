@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * Construit la vue-modèle du rapport PDF BI (voir {@code docs/report/README.md} pour le modèle
  * analytique complet). Le périmètre de données (quels chantiers/employés) reste toujours TOUT le
  * périmètre filtré, mais depuis la fusion des exports PDF/Excel (demande explicite de direction,
- * 2026-09-29 — voir {@code docs/report/rapport-v2.md}), {@code PaieReportPdfRequestDto.equipesParChantier}
+ * 2026-09-29 — voir {@code evolution-rapport/rapport-v2.md}), {@code PaieReportPdfRequestDto.equipesParChantier}
  * porte la MÊME sélection manuelle que l'export Excel ({@code PaieExportRequestDto.equipesParChantier})
  * pour décider, chantier par chantier, quelles équipes obtiennent leur propre section détaillée (voir
  * {@link ChantierBiVue#avecDetailEquipe()}) — contrairement à l'Excel, un employé n'apparaît jamais
@@ -97,7 +97,7 @@ class PaieBiReportBuilder {
     /** Surcharge sans historique d'évolution (utilisée par les tests de {@link PaieBiReportBuilder},
      * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : les données
      * d'évolution restent alors simplement vides, sans incidence sur le reste du calcul (aucun
-     * graphique du rapport ne les consomme de toute façon, voir {@code docs/report/rapport-v2.md}). */
+     * graphique du rapport ne les consomme de toute façon, voir {@code evolution-rapport/rapport-v2.md}). */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
         return construireDepuis(periode, requete, courant, precedent, EvolutionParNiveau.VIDE);
     }
@@ -130,7 +130,7 @@ class PaieBiReportBuilder {
         // liste, lu tel quel par RapportPageModelBuilder, détermine entièrement la
         // numérotation des chapitres : chaque chantier a désormais sa propre section, qu'il ait ou non
         // une équipe détaillée (voir ChantierBiVue.avecDetailEquipe, plus de chapitre final consolidé —
-        // voir docs/report/rapport-v2.md).
+        // voir evolution-rapport/rapport-v2.md).
         List<ChantierBiVue> chantiers = agregatChantier.stream()
                 .map(Agregat::cle)
                 .map(code -> chantierVue(code, filtrerParChantier(courant, code), filtrerParChantier(precedent, code),
@@ -424,7 +424,7 @@ class PaieBiReportBuilder {
      *
      * <p><b>Retiré de tout graphique du rapport</b> (demande explicite de direction, 2026-09-28 :
      * manque d'historique suffisant pour qu'une tendance mensuelle soit significative — voir
-     * {@code docs/report/rapport-v2.md}), mais volontairement conservé ici, calculé sans être
+     * {@code evolution-rapport/rapport-v2.md}), mais volontairement conservé ici, calculé sans être
      * consommé : même principe que {@code PaieBiReportBuilder.versRepartition} pour la fonction
      * (voir {@code SyntheseGlobaleVue.repartitionFonction}) — éviter de tout redévelopper si
      * l'historique disponible devient un jour suffisant pour justifier de le réafficher. */

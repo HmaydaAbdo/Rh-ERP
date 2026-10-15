@@ -10,7 +10,7 @@ import java.util.List;
  * regroupement qui peut très bien contenir des employés d'une vraie équipe non sélectionnée). Voir
  * {@code PaieBiReportBuilder.chantierVue} pour la construction de cette liste — un employé n'apparaît
  * JAMAIS dans deux sections différentes (contrairement à l'export Excel, où Global/chantier/équipe se
- * chevauchent volontairement, voir {@code docs/report/rapport-v2.md}).
+ * chevauchent volontairement, voir {@code evolution-rapport/rapport-v2.md}).
  *
  * <p>{@code effectif}, {@code masse}, {@code stc} et {@code stcMontant} : les indicateurs de CETTE
  * section, les mêmes qu'aux niveaux global et chantier — {@code masse} porte aussi son mois précédent (même

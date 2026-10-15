@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 /**
  * Une catégorie (chantier, équipe, ou point mensuel d'une évolution — voir
- * {@code docs/report/rapport-v2.md} pour ce dernier usage, retiré de tout graphique du rapport mais
+ * {@code evolution-rapport/rapport-v2.md} pour ce dernier usage, retiré de tout graphique du rapport mais
  * toujours calculé) d'une répartition du rapport BI — masse, effectif et STC/sorties bruts (jamais
  * formatés), consommés comme source de données d'un {@code <barChart>} JRXML natif. Le STC est porté
  * sous ses 2 représentations — {@code stc} (nombre de personnes) et {@code stcMontant} (masse
