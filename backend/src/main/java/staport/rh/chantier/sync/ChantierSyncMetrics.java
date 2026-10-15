@@ -27,6 +27,7 @@ public class ChantierSyncMetrics {
                 .register(registry);
         this.durationTimer = Timer.builder("rh.chantier.sync.duration")
                 .description("Durée d'une synchronisation chantier")
+                .publishPercentileHistogram()
                 .register(registry);
     }
 
