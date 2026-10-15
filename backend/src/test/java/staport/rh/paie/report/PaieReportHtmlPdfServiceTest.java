@@ -72,6 +72,10 @@ class PaieReportHtmlPdfServiceTest {
 
         assertThat(pdf).isNotEmpty();
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String texte = new PDFTextStripper().getText(document);
+            assertThat(texte).contains("Masse (DH)", "STC (DH)");
+        }
     }
 
     /** Rapport d'un seul chantier, sans vue d'ensemble : un PDF valide, plus court que le rapport complet (une page de moins). */
