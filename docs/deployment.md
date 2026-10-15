@@ -349,10 +349,10 @@ pas inclus : les rétablir depuis la configuration de secrets avant de connecter
 Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
 avant tout retour au service. Ne jamais tester sur le seul volume de production.
 
-Par décision du 2026-10-11, les sauvegardes restent sur le serveur pour l'instant ; aucune copie
-indépendante hors hôte ni exercice de restauration hors hôte n'est planifié. Le chiffrement protège
-le contenu des archives, mais une copie locale ne protège pas contre la perte ou la compromission de
-l'hôte. L'installation de la clé publique et la supervision des sauvegardes en production restent
-dans `TODO.md`.
+Par décision du propriétaire, réaffirmée le 2026-10-15, les archives de base restent uniquement sur
+le serveur ; aucune copie hors hôte n'est demandée. Cette stratégie protège contre la perte du volume
+PostgreSQL ou une erreur sur les données, mais pas contre la perte ou la compromission de l'hôte. La
+clé publique age est configurée et une archive chiffrée récente a été créée ; la restauration isolée
+d'une archive de production, la mesure du RTO et l'alerte de fraîcheur restent dans `TODO.md`.
 
 Voir `TODO.md` pour le suivi.

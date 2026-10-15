@@ -129,8 +129,10 @@ Avant la production, définir pour chaque donnée persistante les objectifs de p
 reprise, la fréquence et la rétention des sauvegardes, leur destination et leur responsable.
 Conserver les sauvegardes indépendamment des conteneurs et volumes opérationnels, limiter leur
 accès, puis tester régulièrement une restauration. Un volume Docker persistant ne constitue pas à
-lui seul une sauvegarde. Appliquer `conventions/backup.md` et documenter les chemins locaux et la
-copie externe dans la procédure du projet.
+lui seul une sauvegarde. Une destination hors hôte est recommandée ; si le propriétaire accepte une
+stratégie limitée à l'hôte, documenter explicitement le risque de perte ou de compromission de cet
+hôte. Appliquer `conventions/backup.md` et documenter les destinations retenues dans la procédure du
+projet.
 
 Les fichiers d'exploitation locaux, notamment `logs/` et `backups/`, sont placés à côté du fichier
 Compose, exclus du contrôle de version et montés explicitement dans les conteneurs qui en ont besoin.

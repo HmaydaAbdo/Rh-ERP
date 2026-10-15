@@ -130,7 +130,7 @@ du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
 | Élément | Détail |
 |---|---|
 | Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](chantier/README.md) |
-| Sauvegarde PostgreSQL | Service Docker dédié : exécution quotidienne à 02:00 UTC, rétention locale de 30 jours dans `./backups/` ; restauration et copie hors hôte à organiser. Voir [deployment.md](deployment.md) |
+| Sauvegarde PostgreSQL | Service Docker dédié : exécution quotidienne à 02:00 UTC, rétention locale de 30 jours dans `./backups/` ; la destination locale seule est acceptée par décision du propriétaire. Restauration d'une archive réelle et alerte à organiser. Voir [deployment.md](deployment.md) |
 | Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](auth/README.md) |
 | Vérification de l'intégrité de l'audit | Au démarrage, signale si le compte de la base peut modifier une table d'audit. Voir [audit/README.md](audit/README.md) |
 | Courriel | Envoi du lien « mot de passe oublié » (SMTP) |
