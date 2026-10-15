@@ -22,7 +22,7 @@ public class Function {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    @Column(name = "libelle", nullable = false, unique = true, length = 100)
+    @Column(name = "libelle", nullable = false, length = 100)
     private String libelle;
 
     public Function() {
