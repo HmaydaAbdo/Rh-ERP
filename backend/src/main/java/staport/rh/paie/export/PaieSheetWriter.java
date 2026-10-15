@@ -105,7 +105,7 @@ class PaieSheetWriter {
         ecrireTexte(ligne, 0, paie.getEmployee().getNomPrenom(), styles.donneeGauche);
         ecrireTexte(ligne, 1, paie.getFonction().getLibelle(), styles.donneeGauche);
         ecrireTexte(ligne, 2, paie.getEmployee().getCin(), styles.donneeCentre);
-        ecrireEntier(ligne, 3, paie.getNombreJoursTravailles(), styles.donneeCentre);
+        ecrireDecimal(ligne, 3, paie.getNombreJoursTravailles(), styles.donneeCentre);
         ecrireDecimal(ligne, 4, paie.getJoursRecuperationOuvrable(), styles.donneeCentre);
         ecrireDecimal(ligne, 5, paie.getJoursRecuperationDimanche(), styles.donneeCentre);
         ecrireMontant(ligne, 6, paie.getSalaireMensuel(), styles.donneeMontant);

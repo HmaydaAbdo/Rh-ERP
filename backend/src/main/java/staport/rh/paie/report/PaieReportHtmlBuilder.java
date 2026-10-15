@@ -214,7 +214,7 @@ final class PaieReportHtmlBuilder {
             tr.appendElement("td").addClass("nom-prenom").text(ligne.nomPrenom());
             tr.appendElement("td").addClass("fonction").text(ligne.fonction());
             tr.appendElement("td").addClass("cin").text(ligne.cin());
-            tr.appendElement("td").addClass("jours-p").text(String.valueOf(ligne.joursTravailles()));
+            tr.appendElement("td").addClass("jours-p").text(PaieReportNumberFormat.quantite(ligne.joursTravailles()));
             tr.appendElement("td").addClass("jours-jro").text(ligne.joursRecuperationOuvrable());
             tr.appendElement("td").addClass("jours-jrd").text(ligne.joursRecuperationDimanche());
             tr.appendElement("td").addClass("salaire").text(ligne.salaireMensuel());

@@ -16,7 +16,7 @@ record LigneEmployeVue(
         String nomPrenom,
         String fonction,
         String cin,
-        int joursTravailles,
+        java.math.BigDecimal joursTravailles,
         String joursRecuperationOuvrable,
         String joursRecuperationDimanche,
         String salaireMensuel,

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { disabled, form, FormField, FormRoot, min, required } from '@angular/forms/signals';
+import { disabled, form, FormField, FormRoot, max, min, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
@@ -104,6 +104,14 @@ export class PaieFormComponent {
       required(chemin.fonctionId, { message: 'La fonction est obligatoire.' });
       required(chemin.chantierId, { message: 'Le chantier est obligatoire.' });
       required(chemin.nombreJoursTravailles, { message: 'Le nombre de jours travaillés est obligatoire.' });
+      max(chemin.nombreJoursTravailles, 999.99, { message: 'Le maximum est de 999,99 jours.' });
+      validate(chemin.nombreJoursTravailles, ({ value }) => {
+        const jours = value();
+        if (jours !== null && Number(jours.toFixed(2)) !== jours) {
+          return { kind: 'precision', message: 'Saisissez au maximum deux décimales.' };
+        }
+        return undefined;
+      });
       required(chemin.salaireMensuel, { message: 'Le salaire mensuel est obligatoire.' });
       required(chemin.salaireTotal, { message: 'Le salaire total est obligatoire.' });
       for (const montant of [

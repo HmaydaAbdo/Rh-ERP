@@ -469,7 +469,7 @@ class RapportPageModelBuilderTest {
                             "EMPLOYE " + i,
                             "FONCTION " + (i % Math.max(1, lignesRecapMax)),
                             "CIN" + i,
-                            26,
+                            BigDecimal.valueOf(26),
                             "-",
                             "-",
                             "5 000,00",

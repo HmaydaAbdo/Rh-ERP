@@ -87,7 +87,7 @@ class PaieServiceTest {
     void setUp() {
         createDto = new PaieCreateRequestDto(
                 1L, YearMonth.of(2026, 8), 10L, 20L, 30L,
-                26, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null
         );
@@ -126,7 +126,7 @@ class PaieServiceTest {
     void create_devraitAccepterUnBulletinSansEquipe() {
         PaieCreateRequestDto sansEquipe = new PaieCreateRequestDto(
                 1L, YearMonth.of(2026, 8), 10L, 20L, null,
-                26, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null);
         when(employeeService.existsById(1L)).thenReturn(true);
@@ -360,7 +360,7 @@ class PaieServiceTest {
     private PaieResponseDto mockResponseDto() {
         return new PaieResponseDto(1L, 0L, null, createDto.periode(), null, null,
                 new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"),
-                26, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("5000"),
+                BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("5000"),
                 new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"), null);
     }
 }

@@ -11,7 +11,7 @@ public record PaieResponseDto(
         FunctionSummaryDto fonction,
         ChantierSummaryDto chantier,
         EquipeSummaryDto equipe,
-        Integer nombreJoursTravailles,
+        BigDecimal nombreJoursTravailles,
         BigDecimal joursRecuperationOuvrable,
         BigDecimal joursRecuperationDimanche,
         BigDecimal salaireMensuel,
