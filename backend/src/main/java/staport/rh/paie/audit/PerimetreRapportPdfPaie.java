@@ -18,8 +18,13 @@ public class PerimetreRapportPdfPaie implements PerimetreAudit {
         perimetre.put("periode", String.valueOf(arguments[0]));
         perimetre.put("format", "PDF");
         if (arguments[1] instanceof PaieReportPdfRequestDto requete) {
-            if (requete.chantierId() != null) {
-                perimetre.put("chantierId", requete.chantierId());
+            java.util.List<Long> chantierIds = requete.chantiersEffectifs();
+            if (chantierIds != null && !chantierIds.isEmpty()) {
+                if (chantierIds.size() == 1) {
+                    perimetre.put("chantierId", chantierIds.getFirst());
+                } else {
+                    perimetre.put("chantierIds", chantierIds);
+                }
             }
             if (requete.vueEnsembleRetiree()) {
                 perimetre.put("sansVueEnsemble", true);

@@ -456,13 +456,15 @@ table.recap th {
     text-align: center;
 }
 
-table.recap.fonction { width: 300pt; }
+table.recap.fonction { width: 370pt; }
 table.recap.fonction col.libelle { width: 160pt; }
 table.recap.fonction col.effectif,
-table.recap.fonction col.stc { width: 70pt; }
+table.recap.fonction col.stc-personnes { width: 65pt; }
+table.recap.fonction col.stc-montant { width: 80pt; }
 table.recap.fonction td.libelle { text-align: left; }
 table.recap.fonction td.effectif,
-table.recap.fonction td.stc { text-align: center; }
+table.recap.fonction td.stc-personnes { text-align: center; }
+table.recap.fonction td.stc-montant { text-align: right; }
 
 table.recap.materiel { width: 250pt; }
 table.recap.materiel col.libelle { width: 180pt; }

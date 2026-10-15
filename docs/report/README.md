@@ -219,8 +219,8 @@ mouvement dans son système.
 |---|---|
 | **1. Mois** | Un seul champ : sélecteur de mois partagé (`app-month-picker`, flèches d'année et 12 tuiles). Les mois **sans paie sont grisés** et non sélectionnables ; le dernier mois disponible est présélectionné. Dès qu'un mois est choisi, une carte annonce son contenu avec des compteurs animés (bulletins, chantiers, masse salariale, STC / sorties). Sans aucune paie : message « Aucune paie enregistrée ». Source : `GET /paie/periodes` (chargée une fois à l'ouverture, donc sans attente) |
 | **2. Format** | Deux cartes : Rapport PDF (synthèse pour la direction) et Classeur Excel (détail ligne par ligne), avec aperçu animé |
-| **3. Chantier** (PDF seulement, facultative) | Limite le rapport à **un seul chantier**, choisi parmi ceux du mois (recherche par code ou libellé) ; par défaut « Tous les chantiers » (rapport complet). La case **« Sans vue d'ensemble »** retire le chapitre « I — Vue d'ensemble » : elle est cochée d'office dès qu'un chantier est choisi (la vue d'ensemble d'un seul chantier répéterait son propre chapitre) et décochée en revenant à « Tous les chantiers » ; l'utilisateur peut la changer dans les deux cas. Choisir un chantier fait oublier les équipes détaillées des autres chantiers ; en Excel l'étape n'existe pas et le choix est ignoré (retrouvé au retour en PDF). Envoie `chantierId` et `sansVueEnsemble` (voir « Rapport sans vue d'ensemble ») |
-| **4. Équipes** (facultative) | Chantiers du mois triés par masse, avec recherche. **Cliquer sur la ligne d'un chantier déplie ses équipes** (un badge « n / N équipes » signale ceux dont au moins une équipe est cochée ; un chantier sans équipe ne se déplie pas) : **aucune équipe n'est cochée d'office** : l'utilisateur choisit explicitement les équipes (une par une, ou « Toutes » / « Aucune » par chantier). Il n'y a volontairement **pas de sélection globale des chantiers** : tous les chantiers figurent de toute façon dans l'export, déplier un chantier ne sert qu'à choisir ses équipes, chantier par chantier. En Excel, une icône œil barré par équipe la **retire de la feuille du chantier** (elle garde sa propre feuille). Un chantier sans équipe ne peut pas être détaillé. En PDF avec un chantier choisi, seul ce chantier est proposé. Source : `GET /paie/chantiers` |
+| **3. Marchés** (PDF seulement, facultative) | Limite le rapport à **un ou plusieurs marchés**, cochés parmi ceux du mois (recherche par code ou libellé) ; par défaut « Tous les marchés » (rapport complet). La case **« Sans vue d'ensemble »** retire le chapitre « I — Vue d'ensemble » : elle est cochée d'office dès qu'un marché est sélectionné et décochée en revenant à « Tous les marchés » ; l'utilisateur peut la changer. Les équipes des marchés choisis restent disponibles à l'étape suivante. En Excel l'étape n'existe pas et le choix est ignoré. Envoie `chantierIds` et `sansVueEnsemble` (voir « Rapport sans vue d'ensemble ») ; l'ancien champ `chantierId` reste accepté par l'API |
+| **4. Équipes** (facultative) | Marchés du mois triés par masse, avec recherche ; en PDF, seuls les marchés sélectionnés sont proposés. **Cliquer sur la ligne d'un marché déplie ses équipes** (un badge « n / N équipes » signale ceux dont au moins une équipe est cochée ; un marché sans équipe ne se déplie pas) : **aucune équipe n'est cochée d'office** : l'utilisateur choisit explicitement les équipes (une par une, ou « Toutes » / « Aucune » par marché). En Excel, une icône œil barré par équipe la **retire de la feuille du marché** (elle garde sa propre feuille). Source : `GET /paie/chantiers` |
 | **5. Matériel** (conditionnelle) | Voir ci-dessous |
 | **6. Export** | Récapitulatif (chaque ligne a un lien « Modifier » qui ramène à son étape) et nom du fichier ; « Générer » lance l'appel, avec une barre d'attente **sans pourcentage** (le backend ne notifie pas son avancement), puis un écran de fin avec « Télécharger à nouveau » et « Nouvel export ». Les erreurs du backend (corps JSON en `Blob`) sont relues et affichées |
 
@@ -248,8 +248,9 @@ Seuls les nombres des tableaux réellement imprimés et non « laissés vides »
 
 `paie-export-wizard.component.spec.ts` (mois présélectionné, refus sans mois valide, chargement des chantiers,
 équipes cochées, apparition de l'étape matériel, contenu des requêtes PDF et Excel, nombres invalides,
-mémorisation ; étape chantier : présente en PDF seulement, rapport complet sans chantier choisi, chantier choisi = `chantierId` + vue d'ensemble retirée
-modifiable, équipes des autres chantiers oubliées, retour à « Tous », chantier choisi ignoré en Excel, recherche, changement de mois),
+mémorisation ; étape marchés : présente en PDF seulement, sélection multiple et envoi de `chantierIds`, vue d'ensemble
+retirée et modifiable, équipes limitées aux marchés sélectionnés, retour à « Tous », sélection ignorée en Excel, recherche,
+changement de mois),
 `RapportPageModelBuilderTest` et `PaieReportHtmlPdfServiceTest` (rapport sans vue d'ensemble : aucune page GLOBAL, premier chantier
 numéroté I, PDF valide plus court), `month-picker.component.spec.ts` (mois grisés, émission `aaaa-MM`, bornes d'année),
 `PaieServiceTest` (routes de lecture), `PaieExportServiceTest` et `PaieBiReportBuilderTest` (nombres du parc
@@ -387,7 +388,7 @@ masse/l'effectif (chantier, équipe) ? et pour chaque chantier, que se passe-t-i
 ### Périmètre et filtres
 
 L'assistant unifié (`PaieExportWizardComponent`, voir « Assistant d'export ») pilote : la
-période, le **chantier** (`chantierId`, facultatif : un seul chantier), `sansVueEnsemble` et la sélection d'équipes à détailler par
+période, les **marchés** (`chantierIds`, facultatif : un ou plusieurs marchés), `sansVueEnsemble` et la sélection d'équipes à détailler par
 chantier (`equipesParChantier`). Les autres filtres (nom & prénom, CIN, fonction) **ne sont pas exposés par ce dialog** : le
 rapport porte sur l'ensemble des employés du périmètre. Le backend (`PaieReportPdfRequestDto`) garde ces champs optionnels
 (même forme que `PaieSearchCriteria`, sans pagination) pour un appel API direct.
@@ -396,9 +397,8 @@ rapport porte sur l'ensemble des employés du périmètre. Le backend (`PaieRepo
 
 `sansVueEnsemble` (booléen, faux par défaut) retire le chapitre « I — Vue d'ensemble » (indicateurs globaux et répartition par
 chantier) : aucune page de niveau `GLOBAL`, le premier chantier devient le chapitre **I** (au lieu de II), la pagination et le total de
-pages se calculent sans elle. Indépendant de `chantierId` : avec un chantier (`chantierId`), les indicateurs portent sur ce seul chantier ;
-sans lui, tous les chantiers sont gardés. La page de garde est inchangée ; le journal d'audit du rapport consigne `sansVueEnsemble` dans
-son périmètre (avec `chantierId`). `RapportPageModelBuilder.construire(vue, sansVueEnsemble)`.
+pages se calculent sans elle. Avec un ou plusieurs `chantierIds`, les indicateurs portent sur ces marchés ; sans filtre, tous sont gardés.
+La page de garde est inchangée ; le journal d'audit du rapport consigne les filtres du périmètre. `RapportPageModelBuilder.construire(vue, sansVueEnsemble)`.
 
 ### Modèle analytique
 
@@ -406,8 +406,8 @@ son périmètre (avec `chantierId`). `RapportPageModelBuilder.construire(vue, sa
 |---|---|
 | **Fait** | `Paie` — grain = 1 employé × 1 période (contrainte d'unicité `employee_id + periode` : `COUNT(*)` est toujours un effectif exact, jamais de double comptage). |
 | **Dimensions** | Chantier (obligatoire sur `Paie`), Fonction (obligatoire — sert à trier le tableau employé ET alimente le tableau récap Fonction/Effectif/STC de chaque section, voir « Lignes de résumé et tableau récap »), Équipe (optionnelle → `Sans équipe`), Employé, Période (mois analysé + mois précédent). |
-| **Mesures de base** | Masse réelle de paie = `SUM(salaireTotal)` (**jamais** `salaireMensuel` — voir ci-dessous) ; Effectif = `COUNT(*)` ; STC / sortie = `COUNT` des lignes où `ObservationStc.estStcOuSortie`, calculé **par chantier** et **par section** (indicateur, jamais une liste globale — voir « Catalogue de KPI »). |
-| **Mesures calculées** | Masse moyenne par employé. Aucune variation (absolue ou %) n'est affichée : le montant du mois précédent figure dans sa propre carte. |
+| **Mesures de base** | Masse réelle de paie = `SUM(salaireTotal)` (**jamais** `salaireMensuel` — voir ci-dessous) ; Effectif = `COUNT(*)` ; STC / sortie en personnes = `COUNT` et en DH = `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie`, calculés par niveau. |
+| **Mesures calculées** | Montant STC en DH : somme des salaires totaux des lignes STC/sortie. Aucune variation (absolue ou %) n'est affichée : le montant du mois précédent figure dans sa propre carte. |
 | **Historique** | Chaque bulletin `Paie` est un instantané figé de chantier/fonction/équipe pour son mois — le rapport agrège donc les valeurs *stockées sur `Paie`*, jamais l'affectation actuelle de `Employee` (qui peut avoir changé depuis). La comparaison au mois précédent respecte le même principe. |
 
 **Pourquoi `salaireTotal` et pas `salaireMensuel`** : `salaireMensuel` est une composante du
@@ -420,13 +420,13 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 |---|---|---|---|
 | Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — montant du mois précédent affiché tel quel (carte « Masse mois précédent ») aux trois niveaux, sans variation (voir « Null-handling ») |
 | Effectif | `COUNT(*)` | Global / chantier / section | Non — l'effectif du mois précédent n'est pas affiché |
-| Masse moyenne par employé | masse ÷ effectif | Global / chantier / section | Non (dérivé, comparer une moyenne de moyennes n'apporte rien) |
+| STC / sortie (DH) | `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / chantier / section | Non |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
 | Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
 | ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
 | Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Répartition par équipe"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
-| STC / sortie | `COUNT` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — indicateur numérique à chaque niveau, **et** 3ᵉ/4ᵉ série de chaque `<barChart>` |
+| STC / sortie (personnes et DH) | `COUNT` et `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — deux KPI à chaque niveau et séries dédiées de chaque `<barChart>` |
 | ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `docs/report/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
 
 Pas de KPI dupliqué : chaque carte/graphique répond à une question différente (jamais deux façons de
@@ -534,8 +534,8 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
 3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 6 cartes KPI, chacune avec son indicateur (voir
-   « Cartes KPI ») : masse salariale, masse mois précédent, effectif, masse moyenne/employé, nombre de
-   chantiers, STC/sorties — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
+   « Cartes KPI ») : masse salariale, masse mois précédent, effectif, nombre de
+   chantiers, STC/sorties en personnes, STC/sorties en DH — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
    à 4 séries (masse/effectif/STC en personnes/STC en DH), qui montre **TOUS les chantiers**. Au-delà de 16
    chantiers, il continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir
    « Visualisations ».
@@ -558,7 +558,7 @@ graphique titré « Répartition par équipe »
 hiérarchie de lecture qu'à chaque niveau du rapport : **KPI → graphe (optionnel) → tableau(x)**.
 
 1. **5 cartes KPI**, chacune avec son indicateur (voir « Cartes KPI ») : Masse salariale, Masse mois précédent,
-   Effectif, Masse moyenne / employé, STC / sorties.
+   Effectif, STC / sorties (personnes), STC / sorties (DH).
 2. **"Répartition par équipe"** (renommé depuis "Équipes de chantier X" le 2026-09-29 — le chantier
    est déjà identifié par le titre de chapitre et le bandeau récurrent), SUR LA MÊME PAGE,
    **uniquement si au moins une équipe de ce chantier a été sélectionnée** pour un détail séparé
@@ -699,14 +699,14 @@ la rangée, dans cet ordre :
 | Masse salariale | `SUM(salaireTotal)` du périmètre | oui | oui | oui |
 | Masse mois précédent | même somme le mois précédent — libellé gardé, valeur vide si introuvable | oui | oui | oui |
 | Effectif | nombre de bulletins | oui | oui | oui |
-| Masse moyenne / employé | masse ÷ effectif | oui | oui | oui |
 | Chantiers | nombre de chantiers | oui | — | — |
-| STC / sorties | nombre de lignes STC ou sorties | oui | oui | oui |
+| STC / sorties (personnes) | nombre de lignes STC ou sorties | oui | oui | oui |
+| STC / sorties (DH) | somme de `salaireTotal` des lignes STC ou sorties | oui | oui | oui |
 
 **Une masse salariale est toujours arrondie à l'unité** (au plus proche, 0,5 vers le haut, sans décimales : `1 182 402 DH`) —
 cartes « Masse salariale » et « Masse mois précédent » aux trois niveaux, colonnes « Masse » et « STC DH » des graphiques
-(`PaieReportNumberFormat.masse`, demande de direction, 2026-10-07). Les montants individuels du tableau employé et la masse
-moyenne par employé gardent leurs deux décimales ; l'export Excel n'est pas concerné. Les masses arrondies d'un chantier et de
+(`PaieReportNumberFormat.masse`, demande de direction, 2026-10-07). Les montants individuels du tableau employé et les montants STC
+dans les KPI et tableaux récapitulatifs gardent leurs deux décimales ; l'export Excel n'est pas concerné. Les masses arrondies d'un chantier et de
 ses équipes peuvent donc différer d'une unité de leur somme.
 
 Pas de carte « Évolution » ni de pourcentage : retirés à la demande de la direction (2026-10-06). Les valeurs sont
@@ -722,9 +722,8 @@ connue avant la pagination, ne peut structurellement jamais se retrouver orpheli
 Collé directement au bas de CHAQUE tableau employé, quand il tient (voir « Pagination : contrôle
 100 % Java » ci-dessus) :
 
-1. **Tableau récap Fonction/Effectif/STC** : effectif et nombre de STC/sorties de CETTE section,
-   groupés par fonction (`EquipeBiVue.repartitionFonction`, réutilise `RepartitionBean` sans ses
-   champs montant) — jamais un graphique (redondant avec celui du chantier), nombre de lignes
+1. **Tableau récap Fonction/Effectif/STC** : effectif, nombre et montant en DH des STC/sorties de CETTE section,
+   groupés par fonction (`EquipeBiVue.repartitionFonction`) — jamais un graphique (redondant avec celui du chantier), nombre de lignes
    variable d'une section à l'autre.
 2. **Squelette parc matériel**, uniquement pour le chantier C168 équipes CH/OP (voir « Squelette
    parc matériel ») — absent (pas de tableau du tout) pour toute autre section.
