@@ -15,7 +15,7 @@ Le rapport actuel est généré par un pipeline HTML/CSS puis converti en PDF. I
 - permettre de sélectionner plusieurs marchés dans l’assistant d’export PDF ;
 - rendre effectivement visibles les graphiques dans le PDF produit.
 
-Les trois premiers points sont présents dans le code fusionné sur `main` (PR #45). La correction du rendu SVG a été fusionnée dans `main` par la PR #46. La CI de la branche principale (run #282, commit `08c80b9`) a réussi, y compris le test qui rasterise la page globale et vérifie les pixels du graphique, ainsi que la publication des images Docker. Une vérification similaire du graphique de répartition par équipe sur la page chantier est ajoutée dans le changement courant ; son CI reste à confirmer. La validation du PDF généré depuis l’image déployée reste à confirmer par l’utilisateur.
+Les trois premiers points sont présents dans le code fusionné sur `main` (PR #45). La correction du rendu SVG a été fusionnée dans `main` par la PR #46. La CI de la branche principale (run #282, commit `08c80b9`) avait validé le graphique global et publié les images Docker. La PR #47 a ajouté le même contrôle de pixels pour le graphique de répartition par équipe sur la page chantier ; ses quatre checks CI ont réussi et elle est fusionnée dans `main` (commit `0992efa`). La revue visuelle du PDF généré avec l’image déployée reste à confirmer par l’utilisateur.
 
 ## Décisions et pistes antérieures
 

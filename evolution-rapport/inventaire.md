@@ -14,7 +14,7 @@ Cet inventaire permet de retrouver le rapport existant dans le dépôt. Les fich
 | Client et modèles Paie | `frontend/src/app/portail/paie/services/paie.service.ts`, `frontend/src/app/portail/paie/models/` | Appel de l’API et contrat de requête du rapport. |
 | Permission d’export | [`docs/rbac/paie.md`](../docs/rbac/paie.md) | Documente `PAIE_EXPORT` pour l’export Excel et le PDF. |
 | Audit d’accès | `backend/src/main/java/staport/rh/paie/audit/PerimetreRapportPdfPaie.java`, [`docs/audit/README.md`](../docs/audit/README.md) | Décrit la trace d’accès et son périmètre, sans enregistrer le contenu du rapport. |
-| Contrôles du rendu et des données | `backend/src/test/java/staport/rh/paie/report/` | Tests du modèle, de la pagination et des graphiques SVG. La CI #282 sur `main` vérifie les pixels du graphique de la page globale ; le changement courant ajoute ce contrôle à la page chantier avec répartition par équipe, en attente de CI. Le PDF généré avec l’image déployée reste à confirmer par l’utilisateur. |
+| Contrôles du rendu et des données | `backend/src/test/java/staport/rh/paie/report/` | Tests du modèle, de la pagination et des graphiques SVG. La PR #47 vérifie les pixels du graphique dans le PDF rasterisé aux niveaux Global et Chantier ; ses quatre checks CI ont réussi. La revue du PDF généré avec l’image déployée reste à confirmer par l’utilisateur. |
 | Anciennes décisions | [`rapport-v2.md`](rapport-v2.md) | Journal des rubriques retirées ou restructurées et des raisons associées. |
 | Idées liées à la qualité des données | [`TODO.md`](../TODO.md), [`docs/function/README.md`](../docs/function/README.md) | Nettoyage des doublons de Fonction avant d’envisager sa répartition dans le rapport. |
 
