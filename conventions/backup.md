@@ -29,12 +29,15 @@ responsable, les objectifs de reprise et la procédure de restauration.
   l'accès aux seuls rôles responsables de la sauvegarde et de la restauration ; ne jamais exposer
   leur contenu dans les journaux.
 * Garder les sauvegardes indépendantes des données opérationnelles, des conteneurs et de leurs
-  volumes. Prévoir une copie hors de l'hôte ou un mécanisme équivalent contre la perte ou la
-  compromission du système principal. Une copie locale seule n'est pas une stratégie de reprise
-  suffisante.
-* Pour un déploiement Docker Compose, un répertoire local de transit peut être placé dans
-  `./backups/`, à côté du fichier Compose. Il est exclu du contrôle de version et ne constitue pas
-  l'unique destination de sauvegarde.
+  volumes. Une copie hors hôte protège aussi contre la perte ou la compromission de l'hôte et reste
+  la stratégie recommandée.
+* Une stratégie limitée à l'hôte peut être retenue par décision explicite du propriétaire. Documenter
+  les risques acceptés : une copie stockée sur le même hôte ne protège pas contre sa perte ou sa
+  compromission. Revoir cette décision si les obligations métier ou le niveau de risque évoluent.
+* Pour ERP-RH, le propriétaire a retenu une seule destination locale chiffrée, distincte du volume
+  PostgreSQL. Aucune copie des archives de base hors hôte n'est demandée. Le répertoire `./backups/`,
+  à côté du fichier Compose, est exclu du contrôle de version et sa protection d'accès est documentée
+  dans la procédure de déploiement.
 * Appliquer la durée de conservation décidée, purger les copies expirées de façon contrôlée et
   prévenir l'épuisement du stockage. Conserver les traces d'exécution et de purge sans exposer de
   secret ou de contenu sauvegardé.

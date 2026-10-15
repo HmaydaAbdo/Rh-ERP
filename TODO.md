@@ -104,30 +104,28 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    [les informations à fournir](docs/deployment-informations-a-fournir.md).
 4. **CD** : décider si le déploiement doit être automatisé sur tag `v*` après réussite de la CI, puis
    préparer et valider cette chaîne ; le déploiement reste manuel jusque-là.
-5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
-   prévu pour l'instant. Les archives quotidiennes chiffrées restent sur le serveur.
-6. **Mise en service et exercice de la sauvegarde chiffrée** : depuis le poste d'administration,
-   générer l'identité `age` (`age-keygen`) et conserver la clé privée avec une copie de secours
-   protégée, toutes deux hors serveur ; sur l'hôte, configurer uniquement la clé publique
-   `BACKUP_AGE_RECIPIENT` dans le `.env` protégé. Vérifier la création d'archives `.tar.gz.age`, la
-   capacité de `/tmp` tmpfs selon la taille réelle de la base et la mémoire disponible, et préparer
-   une alerte lorsque le service est unhealthy ou qu'aucune archive récente n'existe. Récupérer une
-   archive vers un poste de restauration contrôlé, la déchiffrer avec la clé privée (`age --decrypt`),
-   puis exécuter une restauration isolée et mesurer le RTO avec le volume réel. Ne jamais copier la
-   clé privée sur l'hôte ou dans le dépôt. La copie des sauvegardes hors hôte reste différée par la
-   décision du propriétaire.
-7. **Vérifications sécurité Auth en production** : dans l'environnement protégé, vérifier un
+5. **Exercice de restauration de la sauvegarde de production** : la clé publique `age` est configurée
+   et le service `backup` a créé une archive `.tar.gz.age` récente, confirmée par les journaux du
+   2026-10-14. Depuis un poste de restauration contrôlé, confirmer que la clé privée et sa copie de
+   secours sont protégées hors serveur, récupérer une archive, la déchiffrer (`age --decrypt`), vérifier
+   les sommes et restaurer dans une instance isolée. Mesurer le RTO avec le volume réel; vérifier aussi
+   la capacité de `/tmp` tmpfs selon la base et la mémoire disponibles. Une alerte reste à configurer
+   lorsque le service est unhealthy ou qu'aucune archive récente n'existe. Ne jamais copier la clé
+   privée sur l'hôte ou dans le dépôt. Les archives de base restent sur le serveur par décision du
+   propriétaire; le risque de perte ou de compromission de l'hôte est accepté et documenté dans
+   `conventions/backup.md` et `docs/deployment.md`.
+6. **Vérifications sécurité Auth en production** : dans l'environnement protégé, vérifier un
    `JWT_SECRET` aléatoire propre à la production (Base64, au moins 256 bits), `COOKIE_SECURE=true`,
    les seules origines HTTPS réelles dans `CORS_ALLOWED_ORIGINS`, et Swagger désactivé. Après la
    migration qui inclut V21, contrôler le verrouillage 5 échecs/15 minutes et la rotation/révocation
    des sessions sur l'instance de production. Vérifier également que nginx inner limite les essais
    par adresse réelle et que l'outer transmet correctement cette adresse ; ne modifier nginx outer
    qu'après revue de l'exemple fourni par le propriétaire.
-8. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
+7. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
    `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
    qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
-9. **Raccorder la supervision métrique en production** : configurer un collecteur Prometheus privé
+8. **Raccorder la supervision métrique en production** : configurer un collecteur Prometheus privé
    pour `/actuator/prometheus` et choisir sa rétention. Créer un tableau de bord de disponibilité,
    débit et latence HTTP, d'échecs d'audit et de ses jauges d'intégrité, ainsi que des succès,
    échecs, lignes ignorées et durées de synchronisation des chantiers. Définir les alertes avec un
