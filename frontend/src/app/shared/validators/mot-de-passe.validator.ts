@@ -4,7 +4,7 @@ import { SchemaPath, validate } from '@angular/forms/signals';
 import { PolitiqueMotDePasseService } from './politique-mot-de-passe.service';
 
 /**
- * Longueur (réglée par le serveur), lettre et chiffre : de quoi guider la saisie avant l'envoi. Un champ vide relève de
+ * Longueur minimale (réglée par le serveur) : de quoi guider la saisie avant l'envoi. Un champ vide relève de
  * `required`. À appeler dans un contexte d'injection (le schéma d'un formulaire). Le serveur reste l'autorité : il refuse aussi
  * un mot de passe égal à l’identifiant.
  */
@@ -16,7 +16,7 @@ export function motDePasseConforme(chemin: SchemaPath<string>): void {
       return undefined;
     }
     const longueurMin = politique.longueurMinimale() ?? 0;
-    const conforme = valeur.length >= longueurMin && /\p{L}/u.test(valeur) && /\p{Nd}/u.test(valeur);
+    const conforme = valeur.length >= longueurMin;
     return conforme ? undefined : { kind: 'motDePasse', message: politique.regle() };
   });
 }

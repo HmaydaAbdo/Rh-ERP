@@ -27,7 +27,7 @@ public enum CleParametre {
             TypeParametre.ENTIER, "minutes", 5L, 1440L),
     LONGUEUR_MOT_DE_PASSE("securite.mot-de-passe.longueur-minimale", "Longueur minimale du mot de passe",
             "S'applique à la création d'un compte et aux réinitialisations ; les mots de passe existants ne changent pas. "
-                    + "Une lettre et un chiffre au moins restent exigés.",
+                    + "Le mot de passe ne peut pas être identique à l'identifiant.",
             TypeParametre.ENTIER, "caractères", 8L, 100L),
     PAS_TRANCHE_ANALYTIQUE("paie.analytique.pas-tranche", "Pas des tranches de l'analytique de paie",
             "Largeur minimale et pas d'arrondi des tranches de la répartition des salaires : des bornes lisibles "

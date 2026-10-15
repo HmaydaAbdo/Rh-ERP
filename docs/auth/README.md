@@ -113,7 +113,9 @@ Un jeton présenté par un **compte désactivé** est refusé (`401`) et consomm
 
 1. `POST /auth/forgot-password {email}` répond **toujours `202`**, que le compte existe ou non (on ne révèle
    jamais l'existence d'un compte). Si le compte existe, un jeton à usage unique (valable **60 minutes par défaut**, durée réglable, haché en
-   base) est envoyé par courriel : lien `<FRONTEND_URL>/reset-password?token=…`.
+   base) est envoyé par courriel : lien `<FRONTEND_URL>/reset-password#token=…`. Le fragment est lu par
+   Angular, gardé en mémoire le temps du formulaire puis retiré de l'URL ; il n'est pas transmis dans
+   les requêtes ni dans les journaux d'accès nginx. Le frontend renvoie aussi `Referrer-Policy: no-referrer`.
 2. `POST /auth/reset-password {token, nouveauMotDePasse}` : change le mot de passe, marque le jeton utilisé et
    **révoque tous les jetons de rafraîchissement actifs** de l'utilisateur. Un jeton déjà utilisé, expiré ou
    inconnu est refusé (`400`).
@@ -131,12 +133,12 @@ profil initial accepté pour la mesure locale, pas une garantie de capacité de 
 
 ### Mots de passe
 
-BCrypt. Règle (`PolitiqueMotDePasse`) : longueur minimale réglable (**10 caractères par défaut**, de 8 à 100 ; 100 au plus), **au moins une lettre
-et un chiffre**, **différent de l'identifiant** (casse ignorée). Elle s'applique à la création d'un compte et aux deux
+BCrypt. Règle (`PolitiqueMotDePasse`) : longueur minimale réglable (**10 caractères par défaut**, de 8 à 100 ; 100 au plus),
+**différent de l'identifiant** (casse ignorée). Aucune combinaison de catégories de caractères n'est imposée. Elle s'applique à la création d'un compte et aux deux
 réinitialisations (par lien, par un administrateur) ; un mot de passe refusé répond `400` avec la règle, jamais la valeur, et ne
 brûle pas le lien de réinitialisation. Les mots de passe existants ne changent pas. Le mot de passe du compte d'amorçage vient de
-la configuration (`ADMIN_PASSWORD`) et n'y est pas soumis. Les formulaires répètent longueur, lettre et chiffre pour guider la
-saisie ; le serveur reste l'autorité.
+la configuration (`ADMIN_PASSWORD`) et n'y est pas soumis. Les formulaires vérifient la longueur dès que la politique est
+chargée ; le serveur reste l'autorité et vérifie aussi la différence avec l'identifiant.
 
 ### Ce qui est révocable
 
@@ -274,6 +276,9 @@ la rotation, le vol de jeton, la révocation et la réinitialisation. Voir
 
 ## Limites et protections connues
 
+- **MFA** : l'application n'en utilise pas. La connexion repose sur le mot de passe, les limites de débit,
+  le verrouillage temporaire, le stockage protégé des jetons et leur révocation ; ce choix ne fournit pas
+  le facteur supplémentaire qu'apporterait une authentification multifacteur.
 - **Essais de connexion** : nginx inner limite les tentatives à 20 par minute et par adresse client (`429` au-delà) ; le compte est aussi temporairement bloqué après cinq mots de passe incorrects en quinze minutes. Le blocage dure quinze minutes ; une connexion réussie ou quinze minutes sans nouvel échec remet le compteur à zéro. Un compte bloqué reçoit le même refus générique qu'un compte avec des identifiants invalides. Les événements d'échec et de blocage sont inscrits dans le journal `SECURITE`.
 - La connexion fait toujours le même travail de hachage (identifiant inconnu, compte inactif, mot de passe faux) : la durée de la réponse ne révèle pas si un compte existe. Le courriel de réinitialisation part en tâche asynchrone (`@Async`) : la demande répond aussi vite que l'adresse corresponde ou non à un compte, et un échec d'envoi est journalisé sans jamais être renvoyé à l'appelant.
 - Les connexions, refus d'accès, changements de droits et de mots de passe sont journalisés (voir [../audit/README.md](../audit/README.md)).

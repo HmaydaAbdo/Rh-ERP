@@ -32,7 +32,7 @@ class EmailServiceTest {
         assertThat(message.getValue().getTo()).containsExactly("ali@staport.test");
         assertThat(message.getValue().getFrom()).isEqualTo("noreply@staport.test");
         assertThat(message.getValue().getText())
-                .contains("https://rh.staport.test/reset-password?token=jeton-brut")
+                .contains("https://rh.staport.test/reset-password#token=jeton-brut")
                 .as("la validité vient du paramètre, pas du texte").contains("valable 45 minutes");
     }
 
