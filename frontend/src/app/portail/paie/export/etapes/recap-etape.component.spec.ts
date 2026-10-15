@@ -37,13 +37,13 @@ describe('PaieExportEtapeRecapComponent', () => {
     expect(racine.querySelector('.export-wizard__fichier code')?.textContent).toBe('Paie_Export_2026-08.xlsx');
   });
 
-  it('montre le chantier choisi et la vue d’ensemble retirée', async () => {
+  it('montre le marché choisi et la vue d’ensemble retirée', async () => {
     const { fixture, store, racine } = await monter();
 
-    store.choisirChantier('C168');
+    store.choisirMarches(['C168']);
     await stabiliser(fixture);
 
-    expect(lignes(racine)[2]).toEqual(['Chantier', 'C168 — Nador']);
+    expect(lignes(racine)[2]).toEqual(['Marchés', 'C168 — Nador']);
     expect(lignes(racine)[3]).toEqual(['Vue d\'ensemble', 'Retirée : le rapport commence par le premier chantier']);
   });
 

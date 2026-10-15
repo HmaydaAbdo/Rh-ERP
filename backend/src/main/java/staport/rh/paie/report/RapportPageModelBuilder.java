@@ -211,7 +211,7 @@ final class RapportPageModelBuilder {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(),
-                synthese.masseMoyenneParEmploye(), synthese.stc(), synthese.nombreChantiers()));
+                synthese.stc(), synthese.stcMontant(), synthese.nombreChantiers()));
         blocs.add(kpi);
         // Le graphique cède la place que des cartes plus hautes que prévu prennent au-dessus de lui
         double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART
@@ -279,7 +279,7 @@ final class RapportPageModelBuilder {
         String chapitre = chapitreChantier(rang, chantier);
         blocs.add(new PageModel.BlocTitreChapitre(chapitre));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
-                chantier.masseMoyenneParEmploye(), chantier.stc(), null));
+                chantier.stc(), chantier.stcMontant(), null));
         blocs.add(kpi);
         if (chantier.avecDetailEquipe()) {
             // Le graphique cède la place que le titre ou les cartes prennent en plus au-dessus de lui
@@ -339,20 +339,19 @@ final class RapportPageModelBuilder {
         return new PageModel.BlocKpi(cartes, hauteur);
     }
 
-    /** Les cartes d'un niveau — les mêmes à tous les niveaux, chacune avec son propre indicateur : masse salariale,
-     * masse du mois précédent, effectif, masse moyenne par employé, nombre de chantiers (niveau global seulement :
-     * {@code nombreChantiers} non {@code null}) et STC. */
-    private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiEffectifVue effectif, String masseMoyenne, int stc,
+    /** Les mêmes indicateurs à chaque niveau : masse, mois précédent, effectif, STC en personnes et STC en DH.
+     * Le nombre de chantiers n'est affiché qu'au niveau global. */
+    private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiEffectifVue effectif, int stc, String stcMontant,
                                       Integer nombreChantiers) {
         List<CarteKpi> cartes = new ArrayList<>();
         cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant"));
         cartes.add(new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(masse.valeurPrecedente()).strip(), "montant"));
         cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.effectifCourant()), "compte"));
-        cartes.add(new CarteKpi("MASSE MOYENNE / EMPLOYÉ", masseMoyenne + " DH", "montant"));
         if (nombreChantiers != null) {
             cartes.add(new CarteKpi("CHANTIERS", String.valueOf(nombreChantiers), "compte"));
         }
-        cartes.add(new CarteKpi("STC / SORTIES", String.valueOf(stc), "compte"));
+        cartes.add(new CarteKpi("STC / SORTIES (PERSONNES)", String.valueOf(stc), "compte"));
+        cartes.add(new CarteKpi("STC / SORTIES (DH)", stcMontant + " DH", "montant"));
         return cartes;
     }
 
@@ -500,7 +499,7 @@ final class RapportPageModelBuilder {
     }
 
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
-        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.masseMoyenneParEmploye(), equipe.stc(), null));
+        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null));
     }
 
     /** {@code " <montant> DH"} (espace de tête inclus, pour la concaténation après un libellé), ou chaîne vide

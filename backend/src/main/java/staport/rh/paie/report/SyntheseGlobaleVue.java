@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Synthèse exécutive globale (chapitre I du rapport, « I — Vue d'ensemble ») — périmètre déterminé
  * par les filtres actifs (voir {@code PaieReportPdfRequestDto}), jamais silencieusement ignoré. Porte
- * les 5 KPI + un narratif léger, puis « Vue par chantier » (un seul {@code <barChart>} à barres
+ * les KPI + un narratif léger, puis « Vue par chantier » (un seul {@code <barChart>} à barres
  * groupées masse/effectif/STC, {@code repartitionChantier}, voir
  * {@code PaieReportGroupedChartCustomizer}) sur sa propre page. {@code repartitionFonction} reste
  * calculé mais n'est plus affiché (chapitre retiré temporairement, référentiel Fonction avec
@@ -19,9 +19,9 @@ import java.util.List;
 record SyntheseGlobaleVue(
         KpiMontantVue masse,
         KpiEffectifVue effectif,
-        String masseMoyenneParEmploye,
         int nombreChantiers,
         int stc,
+        String stcMontant,
         List<RepartitionBean> repartitionChantier,
         List<RepartitionBean> repartitionFonction,
         List<RepartitionBean> evolutionMensuelle

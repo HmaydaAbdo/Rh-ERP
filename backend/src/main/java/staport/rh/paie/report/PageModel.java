@@ -53,7 +53,7 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
                                boolean avecColonneEquipe) implements Bloc {
     }
 
-    /** Récap de section équipe — tableau Fonction/Effectif/STC (toujours) + squelette parc matériel
+    /** Récap de section équipe — tableau Fonction/Effectif/STC personnes/DH (toujours) + squelette parc matériel
      * (uniquement si {@code titreMateriel} non {@code null}, voir {@code MaterielChantierCatalogue}). Quand la
      * section compte trop de fonctions pour tenir sur la page, le tableau est découpé : {@code suite} est vrai
      * pour les tranches reprises sur les pages suivantes (titre « (suite) », sans parc matériel). Voir

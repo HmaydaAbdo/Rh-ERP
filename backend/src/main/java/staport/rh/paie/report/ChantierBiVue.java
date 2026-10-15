@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Synthèse BI d'un chantier — agrégations uniquement (jamais de tableau employé à ce niveau, voir
  * README « anti-redondance ») : masse et effectif de CE chantier, comparés au mois précédent sur le
- * même chantier, coût moyen par employé, répartition interne par équipe (incluant "Sans équipe" —
+ * même chantier, répartition interne par équipe (incluant "Sans équipe" —
  * {@code repartitionEquipe}, voir
  * {@code PaieBiReportBuilder}) — la répartition par fonction à CE niveau a été retirée (demande
  * explicite de direction, doublon avec celle, plus fine, portée par chaque {@link EquipeBiVue}),
@@ -39,8 +39,8 @@ record ChantierBiVue(
         String titre,
         KpiMontantVue masse,
         KpiEffectifVue effectif,
-        String masseMoyenneParEmploye,
         int stc,
+        String stcMontant,
         List<RepartitionBean> repartitionEquipe,
         List<RepartitionBean> evolutionMensuelle,
         List<EquipeBiVue> equipes,
