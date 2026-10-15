@@ -160,7 +160,12 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
 
   /** Le combobox aria déplace le descendant actif ; le listbox défile pour le garder visible. */
   protected onComboboxKeydown(): void {
-    requestAnimationFrame(() => this.listbox()?.scrollActiveItemIntoView({ block: 'nearest' }));
+    requestAnimationFrame(() => {
+      const activeId = this.listbox()?.activeDescendant();
+      if (activeId) {
+        this.host.nativeElement.ownerDocument.getElementById(activeId)?.scrollIntoView({ block: 'nearest' });
+      }
+    });
   }
 
   protected onSelection(values: V[]): void {
