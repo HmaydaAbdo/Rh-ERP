@@ -94,11 +94,11 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    les volumes de données restaurés au dump final et confirmer que le volume PG17 d'origine reste
    disponible comme retour arrière ; conserver les deux volumes jusqu'à cette vérification.
 2. **Terminer la vérification pgAudit en production** : confirmer dans les journaux PostgreSQL que
-   les événements sont bien émis, y compris `ROLE`. Vérifier les droits d'accès et la
-   protection du volume CSV, définir avec la RH la durée de conservation/purge de ces journaux pgAudit
-   (distincte de la conservation à vie décidée pour `audit_journal`/Envers), et configurer des alertes
-   de capacité et sur `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et
-   `rh.audit.chaine.invalide`.
+   les événements sont bien émis, y compris `ROLE`. La RH a fixé le 2026-10-15 la conservation des
+   CSV pgAudit à 90 jours, distincte de la conservation à vie de `audit_journal`/Envers. Mettre en
+   place et vérifier la purge effective au-delà de 90 jours, vérifier les droits d'accès et la
+   protection du volume CSV, puis configurer des alertes de capacité et sur
+   `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et `rh.audit.chaine.invalide`.
 3. **Nginx outer** : le serveur en possède déjà un. Obtenir l'exemple de configuration de l'utilisateur,
    puis s'aligner dessus ; ne pas remplacer ni modifier sa configuration avant cette revue. Voir
    [les informations à fournir](docs/deployment-informations-a-fournir.md).
