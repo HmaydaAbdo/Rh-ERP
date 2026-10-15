@@ -737,6 +737,12 @@ jsoup — voir son Javadoc), rendu nativement par openhtmltopdf (support Batik) 
 chantier (chapitre I) et répartition par équipe de chaque chantier concerné — la donnée sous-jacente
 (`RepartitionBean`) est la même forme à chaque niveau.
 
+Le nœud racine de chaque graphique est créé explicitement dans le namespace SVG
+(`http://www.w3.org/2000/svg`). Cette précision est nécessaire dans le DOM jsoup converti par
+`W3CDom` : sans elle, openhtmltopdf traite le nœud comme un élément HTML et laisse sa zone de
+graphique vide dans le PDF. Le test du pipeline PDF vérifie que les libellés de séries du graphique
+sont bien rendus et extractibles.
+
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
   rouge), STC (DH, marron) — chacune nommée avec son unité dans la légende.
