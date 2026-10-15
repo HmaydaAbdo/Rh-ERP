@@ -58,7 +58,7 @@ class PaieReportHtmlPdfServiceTest {
     }
 
     @Test
-    void generer_devraitProduireUnPdfValide() {
+    void generer_devraitProduireUnPdfValide() throws IOException {
         Paie c059EquipeA = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);
         Paie c059SansEquipe = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", null, "3000", "STC");
         Paie c068EquipeB = paie("EMPLOYE TROIS", "CIN3", "MACON", "C068", "EQUIPE B", "4000", null);
