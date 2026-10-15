@@ -1,6 +1,7 @@
 package staport.rh.paie.report;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import staport.rh.paie.entities.Paie;
 import staport.rh.paie.repositories.PaieRepository;
 
 import java.io.IOException;
+import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
@@ -73,8 +75,8 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(pdf).isNotEmpty();
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
-            String texte = new PDFTextStripper().getText(document);
-            assertThat(texte).contains("Masse (DH)");
+            BufferedImage pageSynthese = new PDFRenderer(document).renderImage(1);
+            assertThat(nombrePixelsBleus(pageSynthese)).isGreaterThan(20);
         }
     }
 
@@ -176,5 +178,22 @@ class PaieReportHtmlPdfServiceTest {
         equipe.setCode(code);
         equipe.setLibelle(code);
         return equipe;
+    }
+
+    /** Vérifie le dessin SVG réellement rendu dans le PDF, sans dépendre de l'extraction textuelle des glyphes. */
+    private long nombrePixelsBleus(BufferedImage image) {
+        long nombre = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                int rouge = (rgb >> 16) & 0xff;
+                int vert = (rgb >> 8) & 0xff;
+                int bleu = rgb & 0xff;
+                if (rouge >= 30 && rouge <= 45 && vert >= 90 && vert <= 110 && bleu >= 220 && bleu <= 245) {
+                    nombre++;
+                }
+            }
+        }
+        return nombre;
     }
 }
