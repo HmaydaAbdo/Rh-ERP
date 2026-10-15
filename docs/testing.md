@@ -110,7 +110,7 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 | Paramètres | `ParametreServiceTest`, `CleParametreTest`, `parametre-list.component.spec.ts`, `parametre-item.component.spec.ts` | Catalogue fermé, bornes, cron, normalisation, version optimiste, invalidation de cache après validation transactionnelle, audit métier, permission de lecture/écriture |
 | Audit | `AuditArchitectureTest`, `AuditOperationTest`, `AuditImportTest`, `AuditSynchronisationTest`, `AuditSecurityEventsTest`, `AuditAccesTest`, `AuditDefaillanceTest`, `AuditMigrationGabaritTest`, `AuditIntegriteTest`, `AuditConsultationTest` | Couverture des écritures et événements, atomicité, minimisation, consultation autorisée, chaîne hash, droits PostgreSQL, intégrité, échec d'écriture et affichage paginé |
 | Profil performance | `PerformanceProfileTest` ; porte CI `performance-profile` sur chaque push/PR | PostgreSQL 18/Testcontainers avec 60 000 bulletins synthétiques, 600 recherches à 10 req/s et 20 sessions, 20 imports/exports Excel/PDF de 1 000 lignes sous trois opérations lourdes simultanées ; seuils et mesures consignés dans l'artefact CI « Performance profile » (14 jours). Commande locale depuis `backend/` : `./mvnw -B -ntp '-Dperformance.profile=true' '-Dtest=PerformanceProfileTest' test`. Le profil ne couvre pas le réseau HTTP/nginx outer ni les fournisseurs externes réels. |
-| Rapport PDF | `PaieBiReportBuilderTest`, `RapportPageModelBuilderTest`, `RapportChartSvgBuilderTest`, `PaieReportHtmlPdfServiceTest` | Agrégation (tous les chantiers dans le graphique, sans « Autres », sections conservées) ; répartition du graphique sur plusieurs pages à tailles égales avec échelle commune ; graphique SVG **pleine largeur** (non-régression) ; génération d'un PDF valide, y compris une charge hostile jamais interprétée comme du balisage; graphique par chantier libellé par le nom (code en repli) ; libellé trop long coupé par « … » ; chantier sans détail par équipe : la section « reste » suit les KPI du chantier sur la même page, sans espace vide |
+| Rapport PDF | `PaieBiReportBuilderTest`, `RapportPageModelBuilderTest`, `RapportChartSvgBuilderTest`, `PaieReportHtmlPdfServiceTest` | Agrégation (tous les chantiers dans le graphique, sans « Autres », sections conservées) ; répartition du graphique sur plusieurs pages à tailles égales avec échelle commune ; graphique SVG **pleine largeur** (non-régression) ; présence réelle des pixels du graphique dans le PDF rasterisé au niveau global et sur la page chantier avec détail des équipes ; génération d'un PDF valide, y compris une charge hostile jamais interprétée comme du balisage ; graphique par chantier libellé par le nom (code en repli) ; libellé trop long coupé par « … » ; chantier sans détail par équipe : la section « reste » suit les KPI du chantier sur la même page, sans espace vide |
 
 ### Les deux tests de sécurité à connaître
 
@@ -213,7 +213,8 @@ de l'application et le parcours visite chaque domaine, y compris l'administratio
 
 ## Ce qui n'est pas testé automatiquement
 
-- Le rendu visuel du rapport PDF : vérifié à la main (les tests contrôlent la structure et les nombres, pas
-  l'apparence).
+- La revue visuelle complète du rapport PDF (espacements, coupures, lisibilité, en-têtes et pieds) reste
+  manuelle. Les tests vérifient aussi la présence de graphiques rendus par comptage de pixels pour les
+  pages Global et Chantier.
 - La synchronisation avec l'ERP réel (le client HTTP est simulé).
 - L'envoi réel de courriel.

@@ -31,12 +31,10 @@ import static org.mockito.Mockito.when;
 /**
  * Vérifie que le pipeline HTML/CSS (jsoup → openhtmltopdf, voir {@link PaieReportHtmlPdfService})
  * produit réellement un PDF de bout en bout — pas seulement que {@link PaieBiReportBuilder} calcule
- * la bonne vue-modèle (voir {@code PaieBiReportBuilderTest}). Remplace l'ancien
- * {@code PaieReportPdfServiceTest} (JasperReports, supprimé) : les 2 premiers tests reprennent les
- * mêmes scénarios (PDF valide "au repos", puis le chemin le plus à risque — chantier avec équipes
- * détaillées + squelette matériel) ; le 3e est un test de non-régression dédié à l'incident de
- * production qui avait fait abandonner un premier pipeline HTML pour ce même rapport (voir le
- * Javadoc de {@link PaieReportHtmlBuilder}).
+ * la bonne vue-modèle (voir {@code PaieBiReportBuilderTest}). Les tests contrôlent le rendu des
+ * graphiques PDF aux niveaux global et chantier, le chemin avec équipes détaillées et squelette
+ * matériel, ainsi que la non-régression de l'incident de production lié à l'échappement HTML (voir
+ * le Javadoc de {@link PaieReportHtmlBuilder}).
  */
 @ExtendWith(MockitoExtension.class)
 class PaieReportHtmlPdfServiceTest {
@@ -99,7 +97,7 @@ class PaieReportHtmlPdfServiceTest {
     /** Exerce le chemin le plus à risque du gabarit (chantier avec équipe détaillée sélectionnée,
      * section "reste", tableaux récap Fonction/Effectif/STC et parc matériel C168/CH/OP). */
     @Test
-    void generer_devraitProduireUnPdfValideAvecEquipeDetailleeEtSqueletteMateriel() {
+    void generer_devraitProduireUnPdfValideAvecEquipeDetailleeEtSqueletteMateriel() throws IOException {
         Paie c168Ch = paie("EMPLOYE UN", "CIN1", "CHAUFFEUR", "C168", "CH", "5000", null);
         Paie c168Op = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR ENGIN", "C168", "OP", "4500", null);
         Paie c168AutreEquipe = paie("EMPLOYE TROIS", "CIN3", "MACON", "C168", "EQUIPE X", "3000", null);
@@ -115,6 +113,13 @@ class PaieReportHtmlPdfServiceTest {
 
         assertThat(pdf).isNotEmpty();
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        try (PDDocument document = PDDocument.load(pdf)) {
+            assertThat(document.getNumberOfPages()).isGreaterThan(2);
+            BufferedImage pageChantier = new PDFRenderer(document).renderImage(2);
+            assertThat(nombrePixelsBleus(pageChantier))
+                    .as("pixels bleus du graphique par équipe rendu sur la page chantier")
+                    .isGreaterThan(20);
+        }
     }
 
     /** Non-régression de l'incident de production historique #1 (2026-09-25, ancien pipeline HTML

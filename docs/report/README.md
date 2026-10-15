@@ -740,8 +740,8 @@ chantier (chapitre I) et répartition par équipe de chaque chantier concerné �
 Le nœud racine de chaque graphique est créé explicitement dans le namespace SVG
 (`http://www.w3.org/2000/svg`). Cette précision est nécessaire dans le DOM jsoup converti par
 `W3CDom` : sans elle, openhtmltopdf traite le nœud comme un élément HTML et laisse sa zone de
-graphique vide dans le PDF. Le test du pipeline PDF vérifie qu'une page de synthèse contient les
-pixels bleus des barres après rendu du PDF en image.
+graphique vide dans le PDF. Les tests du pipeline rasterisent le PDF et vérifient les pixels bleus des
+barres sur la page globale ainsi que sur la page chantier qui contient la répartition par équipe.
 
 - **Barres HORIZONTALES groupées** (catégories en Y — chantier ou équipe selon le niveau ; valeurs
   en X). 4 séries par catégorie : Masse (DH, bleu), Effectif (personnes, orange), STC (personnes,
