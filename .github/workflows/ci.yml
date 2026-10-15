@@ -198,7 +198,7 @@ jobs:
 
       - name: Enforce frontend coverage by domain
         working-directory: frontend
-        run: node ../scripts/check-frontend-domain-coverage.mjs coverage/lcov.info
+        run: node ../scripts/check-frontend-domain-coverage.mjs coverage/frontend/lcov.info
 
       - name: Upload frontend coverage report
         if: always()
