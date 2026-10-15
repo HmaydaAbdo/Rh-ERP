@@ -1,7 +1,7 @@
 import { Combobox, ComboboxPopup, ComboboxWidget } from '@angular/aria/combobox';
 import { Listbox, Option } from '@angular/aria/listbox';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, model, output, signal, untracked, viewChild } from '@angular/core';
+import { afterRenderEffect, ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, model, output, signal, untracked, viewChild } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
 
 import { normaliser } from '../../text/recherche';
@@ -120,6 +120,14 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
         this.term.set('');
       }
     });
+    afterRenderEffect({
+      write: () => {
+        const listbox = this.listbox();
+        if (listbox?.activeDescendant()) {
+          listbox.scrollActiveItemIntoView({ block: 'nearest' });
+        }
+      }
+    });
   }
 
   /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
@@ -156,16 +164,6 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     }
     this.term.set(text);
     this.filterChange.emit(text);
-  }
-
-  /** Le combobox aria déplace le descendant actif ; le listbox défile pour le garder visible. */
-  protected onComboboxKeydown(): void {
-    requestAnimationFrame(() => {
-      const activeId = this.listbox()?.activeDescendant();
-      if (activeId) {
-        this.host.nativeElement.ownerDocument.getElementById(activeId)?.scrollIntoView({ block: 'nearest' });
-      }
-    });
   }
 
   protected onSelection(values: V[]): void {
