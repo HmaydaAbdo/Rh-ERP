@@ -157,6 +157,55 @@ jobs:
           push: true
           tags: ${{ steps.tags.outputs.tags }}
 
+  performance-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Install fonts for AWT/SVG chart rendering
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core
+
+      - name: Run approved PostgreSQL performance profile
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp '-Dperformance.profile=true' '-Dtest=PerformanceProfileTest' test
+        env:
+          CHANTIER_SYNC_BASE_URL: http://example.invalid/webServiceBS/getChantiers
+          JWT_SECRET: Y2ktdGVzdC1zZWNyZXQtbmV2ZXItdXNlLWluLXByb2Q9MTIzNA==
+          FRONTEND_URL: http://localhost:4200
+          CORS_ALLOWED_ORIGINS: http://localhost:4200
+          COOKIE_SECURE: "false"
+          ADMIN_USERNAME: ci-admin
+          ADMIN_EMAIL: ci-admin@example.invalid
+          ADMIN_PASSWORD: ci-admin-password
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+          SMTP_USERNAME: ""
+          SMTP_PASSWORD: ""
+          SMTP_AUTH: "false"
+          SMTP_STARTTLS: "false"
+          MAIL_FROM: noreply@example.invalid
+
+      - name: Upload performance profile result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-profile
+          path: backend/target/surefire-reports/TEST-staport.rh.paie.performance.PerformanceProfileTest.xml
+          if-no-files-found: warn
+          retention-days: 14
+
   frontend:
     runs-on: ubuntu-latest
 
