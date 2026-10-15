@@ -14,6 +14,7 @@
     [attr.aria-label]="ariaLabel()"
     [value]="text()"
     [(expanded)]="expanded"
+    (keydown)="onComboboxKeydown()"
     (valueChange)="onType($event)"
     (click)="toggle()"
     (beforeinput)="onBeforeInput($event)"
