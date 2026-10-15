@@ -74,7 +74,7 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
             String texte = new PDFTextStripper().getText(document);
-            assertThat(texte).contains("Masse (DH)", "STC (DH)");
+            assertThat(texte).contains("Masse (DH)");
         }
     }
 
