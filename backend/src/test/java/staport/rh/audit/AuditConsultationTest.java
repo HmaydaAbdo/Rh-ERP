@@ -64,12 +64,12 @@ class AuditConsultationTest extends AuditIntegrationTestBase {
     private static final Pageable PAGE = PageRequest.of(0, 50);
 
     private PaieCreateRequestDto bulletin(Referentiel ref, YearMonth periode, String salaire) {
-        return new PaieCreateRequestDto(ref.employeId(), periode, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26,
+        return new PaieCreateRequestDto(ref.employeId(), periode, ref.fonctionId(), ref.chantierId(), ref.equipeId(), BigDecimal.valueOf(26),
                 null, null, new BigDecimal(salaire), null, null, new BigDecimal(salaire), null);
     }
 
     private PaieUpdateRequestDto modification(Long version, Referentiel ref, String salaire) {
-        return new PaieUpdateRequestDto(version, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
+        return new PaieUpdateRequestDto(version, ref.fonctionId(), ref.chantierId(), ref.equipeId(), BigDecimal.valueOf(26), null, null,
                 new BigDecimal(salaire), null, null, new BigDecimal(salaire), "revu");
     }
 

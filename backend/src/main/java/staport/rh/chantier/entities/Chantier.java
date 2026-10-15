@@ -29,7 +29,7 @@ public class Chantier {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    @Column(name = "code", nullable = false, unique = true, length = 100)
+    @Column(name = "code", nullable = false, length = 100)
     private String code;
 
     @Column(name = "designation", length = 500)

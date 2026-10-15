@@ -3,6 +3,7 @@ package staport.rh.employee;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.MockMvc;
 import staport.rh.audit.support.AuditIntegrationTestBase;
 import staport.rh.audit.support.DonneesDeTest.Referentiel;
@@ -15,6 +16,7 @@ import java.time.YearMonth;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -76,5 +78,17 @@ class EmployeeSuppressionTest extends AuditIntegrationTestBase {
                 .andExpect(status().isNoContent());
 
         assertThat(employes(ref.employeId())).isZero();
+    }
+
+    @Test
+    void la_base_refuse_un_cin_deja_present_avec_une_casse_differente() {
+        Referentiel ref = donnees.creerReferentiel();
+
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, statut)
+                SELECT 'Autre employé', lower(cin), date_naissance, date_embauche, fonction_id, chantier_id, statut
+                FROM employe WHERE id = ?
+                """, ref.employeId()))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

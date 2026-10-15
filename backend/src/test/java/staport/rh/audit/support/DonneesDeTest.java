@@ -78,7 +78,7 @@ public class DonneesDeTest {
         paie.setFonction(entityManager.getReference(Function.class, ref.fonctionId()));
         paie.setChantier(entityManager.getReference(Chantier.class, ref.chantierId()));
         paie.setEquipe(entityManager.getReference(Equipe.class, ref.equipeId()));
-        paie.setNombreJoursTravailles(26);
+        paie.setNombreJoursTravailles(BigDecimal.valueOf(26));
         paie.setSalaireMensuel(new BigDecimal("3000.00"));
         paie.setSalaireTotal(new BigDecimal("3000.00"));
         return paie;

@@ -23,26 +23,38 @@ Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retiré
 audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
 Restent à faire :
 
-- ensuite instrumenter le catalogue de KPI existant puis cadrer un premier outil MCP RH en lecture
-  seule avant d'étendre l'IA.
+### Chantier séparé — appliquer les concepts IA, Agent UI, MCP et RAG à ERP-RH
 
-Le contrôle local de conformité est documenté dans [la matrice de preuves](docs/conformite/matrice.md)
-et [le journal de contrôle](docs/conformite/controle-2026-10-11.md). Les validations d'exploitation
-restent regroupées ci-dessous dans **Travail côté serveur**.
+Ce chantier est distinct de l'audit des conventions actuellement en cours. Il vise à étudier puis
+intégrer ces capacités dans l'application à partir de besoins RH concrets ; aucune architecture ni
+fonctionnalité n'est présupposée.
+
+1. **Préparer les données et le besoin** : instrumenter le catalogue de KPI existant, puis choisir
+   avec la RH un premier cas d'usage, ses utilisateurs, ses données autorisées et le résultat attendu.
+2. **Cadrer les quatre concepts** : déterminer le rôle d'un agent/modèle, la nécessité d'une
+   interface AG-UI/A2UI, les outils MCP utiles (premier outil en lecture seule) et l'usage éventuel
+   de RAG/pgvector. Pour chaque capacité, documenter le périmètre et la raison de l'inclure ou non.
+3. **Valider l'architecture avant le code** : comparer les approches et faire valider le choix
+   d'architecture avant d'introduire un nouveau composant, service, transport ou index.
+4. **Implémenter par étapes** : relier chaque capacité retenue à une permission RBAC, une source de
+   données autorisée, une trace d'audit appropriée et une interface compréhensible ; aucune
+   connexion directe d'un modèle à la base métier.
+5. **Vérifier avant livraison** : tests de contrat et de permissions, provenance des réponses,
+   absence de fuite de données, résistance aux entrées hostiles, comportement en cas d'indisponibilité,
+   puis mesures de latence et de coût. Garder les fonctionnalités non validées hors production.
+
+La matrice de conformité (`docs/conformite/matrice.md`) est l'unique registre des statuts et preuves
+de contrôle. Les validations d'exploitation restent regroupées ci-dessous dans **Travail côté serveur**.
 
 Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
 et procédure de retour arrière propres à cette étape.
 
-## Vues Cartes et Analytique des autres domaines (squelettes créés, 2026-10-06)
+## Vues Cartes et Analytique des autres domaines
 
 Seule la Paie a ses trois vues (Tabulaire, Cartes, Analytique) sous une coque commune (`portail/paie/vues/`, sélecteur de vue,
-actions dans l'en-tête). Pour **Employés, Chantiers, Fonctions et Équipes**, seul le tabulaire existe ; les composants des deux
-autres vues ont été créés **vides** (un message « disponible prochainement »), sans route ni onglet :
-
-- `employee/cartes`, `employee/analytique` (`EmployeeCartesComponent`, `EmployeeAnalytiqueComponent`)
-- `chantier/cartes`, `chantier/analytique`
-- `function/cartes`, `function/analytique`
-- `equipe/cartes`, `equipe/analytique`
+actions dans l'en-tête). Pour **Employés, Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe. Les anciens composants
+vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de conformité ; aucun parcours
+utilisateur n'y était relié.
 
 À faire, domaine par domaine : concevoir et coder le contenu de chaque vue (avec ses tests) ; ajouter une coque commune sur le
 modèle de `PaieVuesComponent` (titre, onglets de vue au même niveau que les actions déjà dans l'en-tête, filtres) ; déclarer les routes
@@ -60,6 +72,12 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 **données existantes** (champs vides, doublons), avec correction par migration Flyway.
 
 À instruire dans cette tâche :
+
+- **Avant V22–V25** : vérifier les doublons selon les normalisations imposées par les index :
+  `upper(cin)`, `upper(fonction.libelle)`, `upper(chantier.code)`, puis
+  `upper(btrim(equipe.code))` et `upper(btrim(equipe.libelle))`. Les migrations échouent
+  volontairement si un tel doublon existe ; aucune donnée n'a été consultée ou modifiée dans le
+  cadre du contrôle de conformité.
 
 - **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
   équipe en base), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;

@@ -68,7 +68,7 @@
 
     <div class="field">
       <label for="nombreJoursTravailles">Jours travaillés <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-number-input inputId="nombreJoursTravailles" [formField]="form.nombreJoursTravailles" />
+      <stp-number-input inputId="nombreJoursTravailles" [formField]="form.nombreJoursTravailles" [maxFractionDigits]="2" />
       <stp-field-error [field]="form.nombreJoursTravailles" />
     </div>
 

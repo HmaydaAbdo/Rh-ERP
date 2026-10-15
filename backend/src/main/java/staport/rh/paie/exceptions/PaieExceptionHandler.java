@@ -2,6 +2,7 @@ package staport.rh.paie.exceptions;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +34,12 @@ public class PaieExceptionHandler {
     @ExceptionHandler(PaieAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleAlreadyExists(PaieAlreadyExistsException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+                                                                          HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }
 
     @ExceptionHandler(PaieGroupeModifieException.class)

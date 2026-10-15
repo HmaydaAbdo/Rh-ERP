@@ -160,7 +160,7 @@ class PaieReportHtmlPdfServiceTest {
         paie.setFonction(fonction);
         paie.setChantier(chantier);
         paie.setEquipe(equipe == null ? null : equipe(equipe));
-        paie.setNombreJoursTravailles(26);
+        paie.setNombreJoursTravailles(BigDecimal.valueOf(26));
         paie.setSalaireMensuel(new BigDecimal(salaireTotal));
         paie.setSalaireTotal(new BigDecimal(salaireTotal));
         paie.setObservation(observation);

@@ -67,7 +67,10 @@ l'import comme l'API exigent déjà ces deux dates).
 
 ## Règles métier
 
-- `cin` est la clé métier, unique, insensible à la casse (`findByCinIgnoreCase`).
+- `cin` est la clé métier, unique, insensible à la casse (`findByCinIgnoreCase`) ; la migration
+  V22 impose également cette règle en base avec un index unique sur `UPPER(cin)`, pour couvrir les
+  écritures concurrentes et hors du service. V22 échoue explicitement si des CIN existants ne
+  diffèrent que par la casse ; traiter ce prérequis dans le chantier séparé « Qualité des données ».
 - `fonction` et `chantier` sont résolus via `IFunctionService`/`IChantierService` (jamais leur
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant

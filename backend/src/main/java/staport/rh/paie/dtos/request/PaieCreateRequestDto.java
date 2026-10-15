@@ -1,7 +1,7 @@
 package staport.rh.paie.dtos.request;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -26,8 +26,9 @@ public record PaieCreateRequestDto(
         Long equipeId,
 
         @NotNull
-        @Min(0)
-        Integer nombreJoursTravailles,
+        @DecimalMin(value = "0", inclusive = true)
+        @Digits(integer = 3, fraction = 2)
+        BigDecimal nombreJoursTravailles,
 
         @DecimalMin(value = "0", inclusive = true)
         BigDecimal joursRecuperationOuvrable,

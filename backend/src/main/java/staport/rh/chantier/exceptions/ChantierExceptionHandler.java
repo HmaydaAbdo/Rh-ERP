@@ -28,7 +28,10 @@ public class ChantierExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "Ce chantier est utilisé par au moins un employé ou un bulletin de paie et ne peut pas être supprimé.", request);
+        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
+            return build(HttpStatus.CONFLICT, "Ce chantier est utilisé par au moins un employé ou un bulletin de paie et ne peut pas être supprimé.", request);
+        }
+        return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }
 
     private ResponseEntity<ErrorResponseDto> build(HttpStatus status, String message, HttpServletRequest request) {

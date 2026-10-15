@@ -346,7 +346,7 @@ class PaieExportServiceTest {
         paie.setFonction(fonction);
         paie.setChantier(chantier);
         paie.setEquipe(equipe == null ? null : equipe(equipe));
-        paie.setNombreJoursTravailles(26);
+        paie.setNombreJoursTravailles(BigDecimal.valueOf(26));
         paie.setSalaireMensuel(new BigDecimal("5000"));
         paie.setSalaireTotal(new BigDecimal("5000"));
         return paie;
