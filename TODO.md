@@ -131,9 +131,13 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
    qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
 9. **Raccorder la supervision métrique en production** : configurer un collecteur Prometheus privé
-   pour `/actuator/prometheus`, choisir sa rétention, créer le tableau de bord et les alertes décrits
-   dans [le contrôle métriques](docs/conformite/metrics-2026-10-12.md), désigner le responsable de
-   garde et tester le routage et les actions de réponse avant la mise en service.
+   pour `/actuator/prometheus` et choisir sa rétention. Créer un tableau de bord de disponibilité,
+   débit et latence HTTP, d'échecs d'audit et de ses jauges d'intégrité, ainsi que des succès,
+   échecs, lignes ignorées et durées de synchronisation des chantiers. Définir les alertes avec un
+   seuil, une durée, un responsable et une action : intégrité d'audit `> 0` pendant 1 minute ; nouvel
+   échec d'écriture d'audit dans une fenêtre de 5 minutes ; nouvel échec de synchronisation dans une
+   fenêtre de 15 minutes. Confirmer ces seuils avec l'exploitation, tester la collecte et le routage
+   des alertes avant la mise en service.
 
 ## Performance — arbitrages et mesures à terminer
 
