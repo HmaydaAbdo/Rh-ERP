@@ -141,9 +141,9 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
 
 ## Performance — arbitrages et mesures à terminer
 
-Le profil de base a été validé et le contrôle local a passé les seuils ; les preuves sont consignées dans le
-[rapport de conformité performance](docs/conformite/performance-2026-10-12.md). Avant de déclarer
-la performance opérationnelle de production validée :
+Le contrôle du dépôt est conforme à 100 % : le profil PostgreSQL synthétique possède une porte CI
+obligatoire et le CI #38715644287 l'a passé. Cela ne valide pas les capacités de l'hôte de production.
+Pour compléter la validation opérationnelle :
 
 - rejouer le profil à 20 échantillons par opération lourde sur un hôte représentatif et comparer les
   ressources aux capacités réservées ;

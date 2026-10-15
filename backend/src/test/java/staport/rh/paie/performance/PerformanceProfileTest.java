@@ -45,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.data.domain.PageRequest.of;
 
 /**
- * Mesure opt-in du profil accepté dans docs/conformite/performance-2026-10-12.md.
- * Exécution : ./mvnw -Dperformance.profile=true -Dtest=PerformanceProfileTest test.
+ * Mesure opt-in localement et exécutée comme porte CI dédiée ; les objectifs et la commande sont
+ * documentés dans docs/testing.md.
  * Le test utilise PostgreSQL réel via PostgresPartageExtension et uniquement des données synthétiques.
  */
 @SpringBootTest
