@@ -28,7 +28,7 @@ les tableaux ci-dessous décrivent uniquement les vérifications backend déjà 
 | Base | Flyway V1 → V21, deux comptes PostgreSQL (migration / application restreint), PostgreSQL 18 en CI | `PaieApplicationTests`, `AuditIntegriteTest` |
 | Documentation d'API | Contrat généré validé en OpenAPI 3.1 ; réponses, sécurité et fichiers contrôlés ; Swagger désactivé par défaut et protégé quand il est éteint | `OpenApiContractTest`, `DocumentationApiSecurityTest`, `DocumentationApiAllumeeSecurityTest`, CI #240 — statut courant dans la [matrice](matrice.md) |
 | Métriques | Micrometer/Prometheus, histogramme de durée, dimensions bornées, jauges d'intégrité et exposition limitée | `MetricsConformityTest`, `AuditDefaillanceTest`, `AuditIntegriteTest`, `SupervisionTest` ; résultat courant dans la [matrice](matrice.md) |
-| Performance | Pagination, limites de requêtes, intégrations et opérations de paie contrôlées ; historique Envers paginé efficacement, Nginx aligné à 20 Mo et profil local sous les seuils | [`performance-2026-10-12.md`](performance-2026-10-12.md) — conforme localement ; validation HTTP de bout en bout et des dépendances sur l'hôte d'exploitation à faire |
+| Performance | Pagination, limites de requêtes, intégrations et opérations de paie contrôlées ; historique Envers paginé efficacement, Nginx aligné à 20 Mo et profil PostgreSQL sous seuils vérifié par une porte CI dédiée | Contrôle conforme à 100 % côté dépôt ; mesures HTTP/nginx outer et dépendances réelles de production suivies dans `TODO.md` |
 
 ---
 
