@@ -1,7 +1,7 @@
 # Couverture obligatoire par domaine
 
 Les seuils backend sont calculés sur `jacoco.xml` après `./mvnw -B test`. Ils agrègent les packages
-propriétaires de chaque domaine. Le frontend instrumente `src/app/**/*.ts`, produit `coverage/lcov.info`
+propriétaires de chaque domaine. Le frontend instrumente `src/app/**/*.ts`, produit `coverage/frontend/lcov.info`
 et applique les mêmes seuils de lignes/branches à chaque domaine dans la CI. Un chemin frontend non
 classé bloque la porte pour éviter qu'un nouveau domaine échappe au contrôle.
 

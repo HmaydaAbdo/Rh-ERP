@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const reportPath = resolve(process.argv[2] ?? 'frontend/coverage/lcov.info');
+const reportPath = resolve(process.argv[2] ?? 'frontend/coverage/frontend/lcov.info');
 const lcov = readFileSync(reportPath, 'utf8');
 const domains = [
   {
