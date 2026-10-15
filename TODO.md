@@ -14,6 +14,15 @@
 - Contrôle Compose après pull : PostgreSQL et backend déclarés sains, frontend démarré et `/` répond `200` sur `127.0.0.1:5002`. La recherche de rôles émet `POST /roles/search` et le filtre d’audit transmet plusieurs catégories à `POST /logs/search` ; la page audit à 390 px ne déborde pas horizontalement, son tableau défile dans son conteneur, aucune erreur console.
 - La preuve de clôture figure dans la ligne `frontend.md` de [la matrice de conformité](docs/conformite/matrice.md) ; le rapport détaillé a été supprimé après clôture.
 
+## Contrôle de convention Testing — en cours
+
+- Le contrôle a révélé que les images Docker pouvaient être publiées avant la fin des portes full-stack et performance.
+- La couverture frontend est maintenant bloquée à 70 % de lignes et 50 % de branches par domaine (seuils acceptés), en plus des seuils backend.
+- Le workflow CI attend les contrôles backend, frontend, couverture, audits, performance et full-stack, puis construit les quatre images avant leur publication. Les rapports de test et de couverture sont conservés même quand une porte échoue.
+- La CI doit encore valider ces changements et les seuils sur le rapport LCOV du commit.
+- Les règles de protection de `main` restent à vérifier dans GitHub : l'API des rulesets renvoie une liste vide et l'API branch-protection n'est pas accessible à l'intégration connectée.
+- La matrice de conformité conserve le statut « En cours » jusqu'à cette preuve CI.
+
 ## Évolutions IA et KPI
 
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
