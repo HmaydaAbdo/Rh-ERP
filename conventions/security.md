@@ -85,13 +85,14 @@ compromis de durée de session.
   différences de message, de code de réponse ou de délai qui faciliteraient l'énumération.
 * Un mécanisme de récupération utilise un secret aléatoire, limité dans le temps et à usage unique ;
   ne pas stocker sa valeur brute et ne la transmettre qu'au canal vérifié du propriétaire du compte.
-  Limiter les tentatives et invalider les sessions ou credentials concernés selon une politique
-  documentée.
+  Ne jamais placer ce secret dans la query string d'une URL, où il serait exposé aux journaux et aux
+  en-têtes de référent ; pour un lien web, utiliser le fragment (`#`) et le retirer de l'URL affichée
+  après lecture. Limiter les tentatives et invalider les sessions ou credentials concernés selon une
+  politique documentée.
 * Définir les exigences de longueur et de vérification des secrets selon le risque et les règles
   applicables. Ne pas imposer une composition fixe de caractères sans justification.
-* Décider si une authentification multifacteur est requise en fonction de la sensibilité des données,
-  des privilèges et des obligations applicables. Les parcours de récupération doivent être au moins
-  aussi sûrs que le parcours d'authentification qu'ils remplacent.
+* Les parcours de récupération doivent être au moins aussi sûrs que le parcours d'authentification
+  qu'ils remplacent.
 
 ## Sécurité des API et des données
 

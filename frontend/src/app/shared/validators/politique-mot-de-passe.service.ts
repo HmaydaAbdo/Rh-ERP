@@ -8,7 +8,8 @@ interface PolitiqueMotDePasse {
 /**
  * La règle des mots de passe telle que le serveur la fixe : sa longueur minimale est un paramètre réglable par un
  * administrateur (`GET /auth/password-policy`, publique : l'écran de réinitialisation est ouvert sans session). Tant que la
- * réponse n'est pas arrivée, seules la lettre et le chiffre sont vérifiés ; le serveur reste l'autorité.
+ * réponse n'est pas arrivée, la longueur n'est pas encore vérifiée ; le serveur reste l'autorité et vérifie aussi que le
+ * mot de passe est différent de l'identifiant.
  */
 @Injectable({ providedIn: 'root' })
 export class PolitiqueMotDePasseService {
@@ -21,8 +22,9 @@ export class PolitiqueMotDePasseService {
   /** La règle énoncée aux utilisateurs. */
   readonly regle = computed(() => {
     const longueur = this.longueur();
-    const debut = longueur === null ? 'Au moins une lettre et un chiffre' : `${longueur} caractères minimum, avec au moins une lettre et un chiffre`;
-    return `${debut}, différent de l’identifiant.`;
+    return longueur === null
+      ? 'La longueur minimale dépend du paramètre administrateur ; le mot de passe doit différer de l’identifiant.'
+      : `${longueur} caractères minimum, différent de l’identifiant.`;
   });
 
   constructor() {

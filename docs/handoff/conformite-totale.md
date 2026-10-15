@@ -45,7 +45,7 @@ tests sont des indices à revalider contre le code courant, pas des preuves suff
 ## Premier passage
 
 Commencer par vérifier la liste réelle des conventions et l'état Git, puis lire `TODO.md`,
-`docs/conformite/README.md`, `docs/architecture.md`, `docs/deployment.md` et `docs/testing.md`.
+`docs/conformite/matrice.md`, `docs/architecture.md`, `docs/deployment.md` et `docs/testing.md`.
 Confirmer les écarts contre le dépôt actuel avant de reprendre les points anciens. Examiner les
 parcours d'authentification/RBAC et audit, les domaines métier, les écrans/tests frontend, la
 configuration et les services Docker/CI. Produire la matrice avant d'entreprendre un refactoring
@@ -53,8 +53,8 @@ large.
 
 ## Passe active du 2026-10-11
 
-La matrice courante est [`docs/conformite/matrice.md`](../conformite/matrice.md), le journal des
-commandes est [`docs/conformite/controle-2026-10-11.md`](../conformite/controle-2026-10-11.md).
+La matrice [`docs/conformite/matrice.md`](../conformite/matrice.md) est l'unique registre des statuts
+et preuves de conformité. Les opérations d'exploitation sont suivies dans `TODO.md`.
 La décision CORS a été validée : les origines sont désormais explicites par environnement et
 documentées dans l'[ADR 0003](../adr/0003-cors-origines-explicites.md). Les contrôles Maven et
 Angular restent à rejouer dans une session où leurs verrous/outils sont disponibles ; la bascule

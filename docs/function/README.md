@@ -60,7 +60,11 @@ Chantier, où un chantier peut être désactivé sans être supprimé). Ce champ
 
 ## Règles métier
 
-- `libelle` est la clé métier, unique, insensible à la casse (`findByLibelleIgnoreCase`).
+- `libelle` est la clé métier, unique, insensible à la casse (`findByLibelleIgnoreCase`) ; la
+  migration V23 impose aussi cette règle en base avec un index unique sur `UPPER(libelle)`, pour
+  couvrir les écritures concurrentes et hors du service. V23 échoue explicitement si des libellés
+  existants ne diffèrent que par la casse ; traiter ce prérequis dans le chantier séparé « Qualité
+  des données ».
 - La suppression (`DELETE /functions/{id}`) est bloquée (409) si la fonction est référencée par au
   moins un employé ou un bulletin de paie (clés étrangères `employe.fonction_id` et `paie.fonction_id`).
 - L'import ne **crée** jamais de doublon : une ligne dont le libellé existe déjà (en base ou déjà

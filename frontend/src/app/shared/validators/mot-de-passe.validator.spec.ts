@@ -9,7 +9,9 @@ describe('motDePasseConforme', () => {
   const longueur = signal<number | null>(10);
   const politique = {
     longueurMinimale: longueur.asReadonly(),
-    regle: computed(() => `${longueur() ?? 'Au moins'} caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.`)
+    regle: computed(() => longueur() === null
+      ? 'La longueur minimale dépend du paramètre administrateur ; le mot de passe doit différer de l’identifiant.'
+      : `${longueur()} caractères minimum, différent de l’identifiant.`)
   };
 
   beforeEach(() => {
@@ -22,16 +24,18 @@ describe('motDePasseConforme', () => {
     return formulaire.motDePasse().errors();
   };
 
-  it('accepte 10 caractères ou plus avec une lettre et un chiffre', () => {
+  it('accepte toute valeur de 10 caractères ou plus sans règle de composition', () => {
     expect(erreurs('abcdefghi1')).toEqual([]);
     expect(erreurs('Mot de passe 2026 !')).toEqual([]);
+    expect(erreurs('1234567890')).toEqual([]);
+    expect(erreurs('!!!!!!!!!!')).toEqual([]);
   });
 
-  it('refuse un mot de passe trop court, sans lettre ou sans chiffre, en énonçant la règle', () => {
-    for (const valeur of ['abcdefgh1', '1234567890', 'abcdefghijk']) {
+  it('refuse un mot de passe trop court en énonçant la règle', () => {
+    for (const valeur of ['abcdefgh1']) {
       const [erreur] = erreurs(valeur);
       expect(erreur.kind).toBe('motDePasse');
-      expect(erreur.message).toBe('10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.');
+      expect(erreur.message).toBe('10 caractères minimum, différent de l’identifiant.');
     }
   });
 

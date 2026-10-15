@@ -176,8 +176,9 @@ class AuditSecurityEventsTest extends AuditIntegrationTestBase {
         String s = Long.toHexString(System.nanoTime());
         assertThatThrownBy(() -> userService.create(new UserCreateRequestDto("u" + s, s + "@exemple.test", "court1", null, Set.of())))
                 .isInstanceOf(MotDePasseNonConformeException.class);
-        assertThatThrownBy(() -> userService.create(new UserCreateRequestDto("u" + s, s + "@exemple.test", "uniquement-des-lettres", null, Set.of())))
-                .isInstanceOf(MotDePasseNonConformeException.class);
+        UserResponseDto compteSansComposition = userService.create(new UserCreateRequestDto(
+                "l" + s, "lettres-" + s + "@exemple.test", "uniquement-des-lettres", null, Set.of()));
+        assertThat(compteSansComposition.id()).as("une composition lettre/chiffre n'est pas imposée").isPositive();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM utilisateur WHERE username = ?", Long.class, "u" + s)).as("aucun compte créé").isZero();
 
         UserResponseDto compte = creerCompte(s + "b");

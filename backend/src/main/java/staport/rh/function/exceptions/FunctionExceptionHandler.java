@@ -35,7 +35,10 @@ public class FunctionExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "Cette fonction est utilisée par au moins un employé ou un bulletin de paie et ne peut pas être supprimée.", request);
+        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
+            return build(HttpStatus.CONFLICT, "Cette fonction est utilisée par au moins un employé ou un bulletin de paie et ne peut pas être supprimée.", request);
+        }
+        return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }
 
     private ResponseEntity<ErrorResponseDto> build(HttpStatus status, String message, HttpServletRequest request) {

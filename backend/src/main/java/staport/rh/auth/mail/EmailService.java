@@ -35,7 +35,8 @@ public class EmailService {
      */
     @Async("mailTaskExecutor")
     public void envoyerLienReinitialisation(String email, String token, Duration validite) {
-        String lien = frontendUrl + "/reset-password?token=" + token;
+        // Le fragment n'est pas transmis au serveur ni inscrit dans les journaux HTTP du frontend.
+        String lien = frontendUrl + "/reset-password#token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);

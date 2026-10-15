@@ -44,7 +44,7 @@ test.describe('Catalogue des composants', () => {
 
     const liste = page.getByRole('listbox');
     await liste.evaluate((element) => {
-      (element as HTMLElement).style.maxHeight = '5rem';
+      (element as HTMLElement).style.height = '3rem';
     });
     await page.keyboard.press('End');
 
