@@ -58,12 +58,12 @@ class AuditOperationTest extends AuditIntegrationTestBase {
     private IUserService userService;
 
     private PaieCreateRequestDto nouveauBulletin(Referentiel ref, YearMonth periode) {
-        return new PaieCreateRequestDto(ref.employeId(), periode, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26,
+        return new PaieCreateRequestDto(ref.employeId(), periode, ref.fonctionId(), ref.chantierId(), ref.equipeId(), BigDecimal.valueOf(26),
                 null, null, new BigDecimal("3000.00"), null, null, new BigDecimal("3000.00"), null);
     }
 
     private PaieUpdateRequestDto modificationBulletin(Referentiel ref, String observation) {
-        return new PaieUpdateRequestDto(0L, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26, null, null,
+        return new PaieUpdateRequestDto(0L, ref.fonctionId(), ref.chantierId(), ref.equipeId(), BigDecimal.valueOf(26), null, null,
                 new BigDecimal("3000.00"), null, null, new BigDecimal("3000.00"), observation);
     }
 
@@ -158,7 +158,7 @@ class AuditOperationTest extends AuditIntegrationTestBase {
     void une_operation_rejetee_trace_la_tentative_sans_rien_enregistrer() {
         Referentiel ref = donnees.creerReferentiel();
         PaieCreateRequestDto inconnu = new PaieCreateRequestDto(-1L, YearMonth.of(2031, 4), ref.fonctionId(), ref.chantierId(),
-                null, 26, null, null, BigDecimal.TEN, null, null, BigDecimal.TEN, null);
+                null, BigDecimal.valueOf(26), null, null, BigDecimal.TEN, null, null, BigDecimal.TEN, null);
         long avant = jdbc.queryForObject("SELECT COALESCE(max(id), 0) FROM audit_journal", Long.class);
 
         assertThatThrownBy(() -> paieService.create(inconnu)).isInstanceOf(InvalidReferenceException.class);
@@ -289,7 +289,7 @@ class AuditOperationTest extends AuditIntegrationTestBase {
                 paie.setPeriode(mois);
                 paie.setFonction(em.getReference(staport.rh.function.entities.Function.class, ref.fonctionId()));
                 paie.setChantier(em.getReference(staport.rh.chantier.entities.Chantier.class, ref.chantierId()));
-                paie.setNombreJoursTravailles(26);
+                paie.setNombreJoursTravailles(BigDecimal.valueOf(26));
                 paie.setSalaireMensuel(BigDecimal.TEN);
                 paie.setSalaireTotal(BigDecimal.TEN);
                 em.persist(paie);

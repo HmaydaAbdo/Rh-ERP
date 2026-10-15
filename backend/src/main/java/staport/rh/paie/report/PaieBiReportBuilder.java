@@ -313,7 +313,7 @@ class PaieBiReportBuilder {
                 paie.getEmployee().getNomPrenom(),
                 paie.getFonction().getLibelle(),
                 paie.getEmployee().getCin(),
-                paie.getNombreJoursTravailles() != null ? paie.getNombreJoursTravailles() : 0,
+                paie.getNombreJoursTravailles() != null ? paie.getNombreJoursTravailles() : BigDecimal.ZERO,
                 PaieReportNumberFormat.quantite(paie.getJoursRecuperationOuvrable()),
                 PaieReportNumberFormat.quantite(paie.getJoursRecuperationDimanche()),
                 PaieReportNumberFormat.montant(paie.getSalaireMensuel()),
