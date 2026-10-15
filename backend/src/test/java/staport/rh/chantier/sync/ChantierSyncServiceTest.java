@@ -33,7 +33,7 @@ class ChantierSyncServiceTest {
     private ChantierSyncService syncService;
 
     @Test
-    void synchroniser_devraitCreerEtMettreAJourSelonLetatExistant() {
+    void synchroniser_devraitCreerLesChantiersManquantsEtConserverLesExistants() {
         ChantierErpDto nouveau = new ChantierErpDto(1L, "Chantier neuf", "C001", 0);
         ChantierErpDto existant = new ChantierErpDto(2L, "Chantier existant", "C002", 0);
         when(client.fetchChantiers()).thenReturn(List.of(nouveau, existant));

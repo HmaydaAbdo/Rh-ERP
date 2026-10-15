@@ -28,9 +28,9 @@ describe('ResetPasswordComponent', () => {
             providers: [
                 provideRouter([]),
                 { provide: PasswordRecoveryService, useValue: recovery },
-                { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, avec au moins une lettre et un chiffre, différent de l’identifiant.' } },
+                { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, différent de l’identifiant.' } },
                 { provide: Router, useValue: router },
-                { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => token } } } }
+                { provide: ActivatedRoute, useValue: { snapshot: { fragment: token ? `token=${token}` : null } } }
             ]
         }).compileComponents();
 
@@ -44,6 +44,14 @@ describe('ResetPasswordComponent', () => {
 
         expect(component.errorMessage()).toBe('Lien invalide : jeton manquant.');
         expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
+    });
+
+    it('lit le jeton du fragment puis le retire de l’URL affichée', async () => {
+        window.history.replaceState(null, '', '/reset-password#token=reset-token');
+        await createComponent('reset-token');
+
+        expect(component.token()).toBe('reset-token');
+        expect(window.location.hash).toBe('');
     });
 
     it('applique le changement puis retourne à la connexion', async () => {

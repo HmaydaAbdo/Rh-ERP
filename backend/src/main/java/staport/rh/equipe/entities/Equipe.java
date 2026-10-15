@@ -27,10 +27,10 @@ public class Equipe {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
+    @Column(name = "code", nullable = false, length = 50)
     private String code;
 
-    @Column(name = "libelle", nullable = false, unique = true, length = 100)
+    @Column(name = "libelle", nullable = false, length = 100)
     private String libelle;
 
     public Equipe() {

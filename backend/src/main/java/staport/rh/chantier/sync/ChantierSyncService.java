@@ -13,8 +13,8 @@ import staport.rh.audit.annotations.AuditableAction;
 
 /**
  * Réconciliation des chantiers avec l'ERP source (webServiceBS/getChantiers).
- * Upsert par code (id_chantier n'est pas un identifiant fiable par chantier — voir
- * Chantier.sourceErp) : chaque ligne reçue crée ou met à jour un chantier, quel que soit son
+ * Ajout par code (id_chantier n'est pas un identifiant fiable par chantier — voir
+ * Chantier.sourceErp) : chaque ligne reçue crée un chantier manquant ou conserve le chantier existant, quel que soit son
  * {@code CodeErreur} — ce champ n'est pas utilisé comme un filtre. Aucune désactivation
  * automatique : un chantier absent d'un import ERP conserve son état précédent.
  */

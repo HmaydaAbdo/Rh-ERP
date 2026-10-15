@@ -153,15 +153,17 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
   (`$proxy_add_x_forwarded_for`), nginx inner le relaie, et Tomcat l'honore des seuls proxys internes
   (`server.forward-headers-strategy: native`) : un client ne peut pas usurper l'adresse enregistrée.
 
-Aucun `build:` dans `docker-compose.yml` — uniquement des `image:` déjà publiées sur Docker Hub. L'image
-`erp-rh-postgres` est construite depuis `database/Dockerfile` (PostgreSQL 18 + pgvector + pgAudit).
-Pour re-déployer une nouvelle version : `docker compose --profile backup pull && docker compose --profile backup up -d` (met à jour
-les conteneurs dont l'image a changé, sans toucher au volume `postgres_data_v18`). Sur la machine de
-développement, la migration logique de PG17 vers PG18 a été répétée et contrôlée le 2026-10-10 ;
-l'ancien volume `erp-rh_postgres_data` reste conservé. **Cette validation locale ne migre pas la
-production. Ne déploie pas le Compose PG18 en production avant d'avoir exécuté la procédure ci-dessous** :
-le nom de volume a changé, donc le nouveau conteneur utiliserait un volume vide si aucune restauration
-n'y était faite. Ne jamais lancer `docker compose down -v`.
+`docker-compose.yml` ne contient aucun `build:` : il utilise uniquement des images publiées sur
+Docker Hub. L'image `erp-rh-postgres` est construite depuis `database/Dockerfile` (PostgreSQL 18 +
+pgvector + pgAudit). Pour re-déployer une nouvelle version, sélectionner le même SHA approuvé pour
+les quatre images, puis exécuter `docker compose --profile backup pull && docker compose --profile
+backup up -d`. Cette opération ne supprime pas le volume `postgres_data_v18`. Ne jamais lancer
+`docker compose down -v`.
+
+La migration locale PG17→PG18 du 2026-10-10 était une répétition isolée. La bascule de production a
+été effectuée le 2026-10-14 ; voir la procédure et les vérifications consignées plus bas. Le volume
+PG17 et le volume `postgres_data_v18` doivent rester préservés jusqu'au rapprochement des données et
+à la validation d'une restauration PG18, suivis dans [`TODO.md`](../TODO.md).
 
 ### Tags immuables des images
 
@@ -172,6 +174,22 @@ SHA publié pour chacune avant `docker compose --profile backup pull`. Aucun tag
 afin d'éviter qu'une mise à jour déplace silencieusement les images utilisées et de conserver une version
 précise pour le retour arrière. La valeur `change-me-commit-sha` de `.env.example` est un placeholder à
 remplacer avant tout `pull` ou démarrage.
+
+### Retour arrière d'une mise à jour applicative
+
+Avant la mise à jour, noter le SHA des quatre images actuellement déployées et vérifier qu'une
+sauvegarde récente est disponible. Mettre les quatre variables de tag dans `.env` sur le SHA validé
+à déployer, puis exécuter la procédure manuelle ci-dessus. En cas d'échec d'un healthcheck ou d'un
+parcours critique, remettre ensemble les quatre tags précédents dans `.env`, exécuter
+`docker compose --profile backup pull` puis `docker compose --profile backup up -d`, et vérifier la
+santé des services ainsi que les parcours concernés.
+
+Ce retour aux images précédentes n'est sûr que si les migrations Flyway de la version déployée restent
+compatibles avec cette version applicative. Si une migration rend le schéma ou les données incompatibles,
+ne pas simplement redémarrer l'ancien backend ni restaurer par-dessus le volume actif : maintenir la
+fenêtre d'incident, préserver le volume courant, puis appliquer une correction en avant ou restaurer
+la sauvegarde vers un nouveau volume après décision de l'exploitant et analyse des écritures à réconcilier.
+Les migrations majeures PostgreSQL suivent la procédure de retour arrière dédiée ci-dessous.
 
 ### Migration majeure PG17 → PG18 en production
 
@@ -195,11 +213,14 @@ suspendues jusqu'à la décision de réouverture.
 4. **Arrêter les écritures** : activer la maintenance, arrêter les services backend et tout autre client
    qui écrit en base, puis produire le dump final PG17. Garder le conteneur PG17 et son volume présents.
 5. **Restaurer dans le nouveau volume PG18** : démarrer un conteneur PG18 temporaire sur un port local
-   différent, monté sur le volume cible `postgres_data_v18` et initialisé avec un compte de migration
-   distinct des rôles exportés. Restaurer le dump logique (rôles, droits, extensions et bases), puis
-   inventorier la dernière version Flyway déjà appliquée puis appliquer les migrations manquantes
-   jusqu'à V21 avec `PGAUDIT_ENABLED=true`. Contrôler que les tables attendues et leurs données sont
-   présentes, et que pgvector est disponible. Garder backend et trafic public arrêtés.
+   différent, monté sur le volume cible `postgres_data_v18` et initialisé avec le rôle propriétaire de
+   la base, qui sert aussi au compte de migration. Restaurer le dump de la base avec ce rôle. Examiner
+   `globals.sql` avant toute exécution : le rôle initial créé par PostgreSQL existe déjà et les mots de
+   passe ne figurent pas dans cette sauvegarde ; ne pas rejouer aveuglément des `CREATE ROLE` en conflit.
+   Recréer ou restaurer uniquement les rôles supplémentaires nécessaires, puis inventorier la dernière
+   version Flyway et appliquer les migrations manquantes jusqu'à V21 avec `PGAUDIT_ENABLED=true`.
+   Contrôler que les tables attendues et leurs données sont présentes et que pgvector est disponible.
+   Garder backend et trafic public arrêtés.
 6. **Basculer Compose** : arrêter proprement le conteneur temporaire PG18, puis lancer le service
    `postgres` du Compose publié avec l'image ERP-RH PG18. Vérifier qu'il remonte le même volume cible et qu'il
    devient `healthy`. Démarrer backend seul, vérifier les logs, l'Actuator, l'authentification et les
@@ -223,21 +244,24 @@ suivies dans [`TODO.md`](../TODO.md).
 
 ## CI/CD — état actuel
 
-**CI en place** (`.github/workflows/ci.yml`) : à chaque push sur `main`, tests backend (contre un
-PostgreSQL jetable démarré par Testcontainers) et frontend, puis build + push des images PostgreSQL 18 (pgvector + pgAudit), backend, frontend
-(tags `<git-sha>` et `latest`, plus le tag de version sur un push de tag `v*`). Sur une pull
-request, seuls les tests tournent (pas de push d'image, pas d'exposition des secrets Docker Hub à
-une PR).
+**CI en place** (`.github/workflows/ci.yml`) : chaque pull request exécute `backend`, `frontend`,
+`performance-profile` et `full-stack` ; aucune image n'est publiée depuis une pull request. La branche
+`main` est protégée : une pull request à jour et la réussite de ces quatre contrôles sont requises,
+y compris pour les administrateurs. Sur les pushs autorisés vers `main` ou sur un tag de version
+`v*`, le workflow attend ces contrôles, construit les quatre images (PostgreSQL 18 + pgvector + pgAudit,
+backend, frontend et sauvegarde), puis les publie sous le SHA du commit ; `latest` est aussi publié
+pour `main`, et le tag de version pour `v*`. La publication ne reçoit pas les secrets Docker Hub dans
+le contexte d'une pull request.
 
 **Chaîne d'approvisionnement** : la CI du backend génère un SBOM CycloneDX (`./mvnw cyclonedx:makeBom`, artefact `sbom-backend`), l'analyse avec OSV-Scanner (échec à la première vulnérabilité connue ; exceptions motivées dans `backend/osv-scanner.toml`) et conserve le rapport de couverture JaCoCo (artefact `backend-coverage`). Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour Maven, npm, Docker (balise et empreinte) et GitHub Actions. Les images sont non-root et épinglées par empreinte (voir [../conventions/deployment.md](../conventions/deployment.md)) : le conteneur frontend écoute sur **8080** (le Compose publie `127.0.0.1:${FRONTEND_PORT}` vers ce port ; nginx outer n'est pas concerné).
 
-**CD non traité** — le déploiement (`docker compose --profile backup pull && docker compose --profile backup up -d` sur le serveur) reste manuel
-pour l'instant. Proposition à valider : déployer sur un tag `v*` uniquement après réussite de la CI,
-par SSH depuis GitHub Actions, puis vérifier la santé des services. Les secrets SSH et les paramètres
-du serveur seraient configurés dans GitHub Actions, jamais dans le dépôt. La bascule PG17→PG18 a été
-effectuée le 2026-10-14 ; ce n'est plus une condition préalable au CD. Vérifier encore les événements
-pgAudit sur le serveur. L'image DB conserve les fichiers CSV sans purge dans le volume PostgreSQL ;
-surveiller l'espace disque du serveur.
+**CD manuel** — la mise à jour de production est déclenchée par un opérateur autorisé avec
+`docker compose --profile backup pull && docker compose --profile backup up -d`, après validation CI
+du SHA ciblé. Vérifier l'état de santé des quatre services et les parcours critiques avant de terminer
+la fenêtre. Aucun déploiement SSH automatisé n'est configuré ; son éventuelle introduction sera une
+évolution séparée, avec secrets dans GitHub Actions et contrôle de santé. La migration PG17→PG18 est
+terminée. La lecture des événements pgAudit et la surveillance de l'espace des journaux CSV restent
+des vérifications de production dans `TODO.md`.
 
 Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (token d'accès Docker Hub, pas le mot de passe du compte).
@@ -325,10 +349,10 @@ pas inclus : les rétablir depuis la configuration de secrets avant de connecter
 Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
 avant tout retour au service. Ne jamais tester sur le seul volume de production.
 
-Par décision du 2026-10-11, les sauvegardes restent sur le serveur pour l'instant ; aucune copie
-indépendante hors hôte ni exercice de restauration hors hôte n'est planifié. Le chiffrement protège
-le contenu des archives, mais une copie locale ne protège pas contre la perte ou la compromission de
-l'hôte. L'installation de la clé publique et la supervision des sauvegardes en production restent
-dans `TODO.md`.
+Par décision du propriétaire, réaffirmée le 2026-10-15, les archives de base restent uniquement sur
+le serveur ; aucune copie hors hôte n'est demandée. Cette stratégie protège contre la perte du volume
+PostgreSQL ou une erreur sur les données, mais pas contre la perte ou la compromission de l'hôte. La
+clé publique age est configurée et une archive chiffrée récente a été créée ; la restauration isolée
+d'une archive de production, la mesure du RTO et l'alerte de fraîcheur restent dans `TODO.md`.
 
 Voir `TODO.md` pour le suivi.

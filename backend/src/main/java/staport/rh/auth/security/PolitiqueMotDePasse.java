@@ -6,8 +6,7 @@ import staport.rh.parametre.services.interfaces.IParametreService;
 
 /**
  * La règle des mots de passe, en un seul endroit (conventions/security.md) : une longueur minimale réglable par un
- * administrateur (paramètre « Longueur minimale du mot de passe »), au moins une lettre et un chiffre, différent de
- * l'identifiant (sans tenir compte de la casse).
+ * administrateur (paramètre « Longueur minimale du mot de passe »), différent de l'identifiant (sans tenir compte de la casse).
  *
  * <p>S'applique à la création d'un compte et aux deux réinitialisations (par lien, par un administrateur) ; les mots de
  * passe existants ne changent pas. Le mot de passe du compte d'amorçage vient de la configuration de l'exploitant et n'y est
@@ -32,8 +31,6 @@ public class PolitiqueMotDePasse {
         int longueurMin = longueurMin();
         boolean conforme = motDePasse != null
                 && motDePasse.length() >= longueurMin
-                && motDePasse.codePoints().anyMatch(Character::isLetter)
-                && motDePasse.codePoints().anyMatch(Character::isDigit)
                 && !motDePasse.equalsIgnoreCase(identifiant);
         if (!conforme) {
             throw new MotDePasseNonConformeException(longueurMin);

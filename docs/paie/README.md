@@ -92,7 +92,8 @@ rétroactive ou automatique des bulletins déjà existants.
 ## Règles métier
 
 - `(employee_id, periode)` est unique — appliqué en base (contrainte) et en service
-  (`existsByEmployee_IdAndPeriode` avant `create`, 409 sinon).
+  (`existsByEmployee_IdAndPeriode` avant `create`, 409 sinon, y compris lorsqu'une création concurrente
+  gagne la course et déclenche la contrainte PostgreSQL).
 - `employeeId` et `periode` sont **immuables après création** : `PaieUpdateRequestDto` ne les
   expose pas. Un bulletin est un document historique — le corriger reviendrait à en créer un autre
   pour un employé/mois différent, jamais à réassigner un bulletin existant.
@@ -198,7 +199,8 @@ créé, **aucune fonction n'est créée non plus** :
 
 | Cas | Message affiché |
 |---|---|
-| Champ obligatoire manquant (fonction, jours, salaire, chantier) | `Champs obligatoires manquants ou invalides : ...` |
+| Champ obligatoire manquant (CIN, fonction, jours, salaire, total, chantier) | `Champs obligatoires manquants ou invalides : ...` |
+| Jour fractionnaire, valeur négative pour jours/salaires/primes, ou observation de plus de 255 caractères | `400 Bad Request`, ligne détaillée dans `lignesIgnorees` |
 | CIN sans employé correspondant | `Employé introuvable avec ce CIN` |
 | CIN présent plus d'une fois dans le fichier | `CIN en doublon dans le fichier` |
 | Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |

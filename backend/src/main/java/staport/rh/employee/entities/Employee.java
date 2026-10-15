@@ -43,7 +43,7 @@ public class Employee {
     @Column(name = "nom_prenom", nullable = false, length = 150)
     private String nomPrenom;
 
-    @Column(name = "cin", nullable = false, unique = true, length = 30)
+    @Column(name = "cin", nullable = false, length = 30)
     private String cin;
 
     @Column(name = "date_naissance", nullable = false)
