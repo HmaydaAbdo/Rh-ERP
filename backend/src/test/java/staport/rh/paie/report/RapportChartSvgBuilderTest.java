@@ -2,6 +2,7 @@ package staport.rh.paie.report;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -48,6 +49,8 @@ class RapportChartSvgBuilderTest {
         assertThat(svg.attr("viewBox")).startsWith("0 0 1069.33 ");
         assertThat(svg.attr("width")).isEqualTo("1069.33px");
         assertThat(svg.selectFirst("g").attr("transform")).startsWith("scale(1.33");
+        assertThat(svg.tag().namespace()).isEqualTo(Parser.NamespaceSvg);
+        assertThat(svg.selectFirst("g").tag().namespace()).isEqualTo(Parser.NamespaceSvg);
     }
 
     /** Un graphique réparti sur plusieurs pages passe l'ensemble des lignes comme échelle : une même valeur doit

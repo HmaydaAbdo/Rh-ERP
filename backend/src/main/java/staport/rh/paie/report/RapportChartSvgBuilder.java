@@ -1,6 +1,7 @@
 package staport.rh.paie.report;
 
 import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -117,7 +118,7 @@ final class RapportChartSvgBuilder {
         double hauteurPlot = somme(hauteursLignes);
         double hauteurSvg = HAUTEUR_ENTETE + hauteurPlot + HAUTEUR_LEGENDE;
 
-        Element svg = container.appendElement("svg")
+        Element svg = container.appendElement("svg", Parser.NamespaceSvg)
                 .attr("xmlns", "http://www.w3.org/2000/svg")
                 .attr("width", format(LARGEUR_TOTALE * PX_PAR_PT) + "px")
                 .attr("height", format(hauteurSvg * PX_PAR_PT) + "px")
