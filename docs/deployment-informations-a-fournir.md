@@ -12,13 +12,11 @@ proxy, la réécriture du cookie de rafraîchissement et le traitement de `<base
 
 Aucune modification de la configuration nginx outer ne doit être proposée avant cette comparaison.
 
-## CD
+## CD automatisé
 
-La stratégie envisagée reste à valider : déploiement sur les tags `v*` après réussite de la CI,
-connexion SSH depuis GitHub Actions et vérification de santé après `docker compose --profile backup pull`
-puis `docker compose --profile backup up -d`. Pour préparer la mise en œuvre, confirmer les paramètres d'exploitation du
-serveur et les secrets GitHub Actions à créer. Ne jamais inscrire les valeurs secrètes dans ce
-fichier ou dans le dépôt.
-
-Le CD de production reste bloqué jusqu'à la migration PostgreSQL 17 vers PostgreSQL 18 décrite dans
-[`deployment.md`](deployment.md#migration-majeure-pg17--pg18-en-production).
+Le déploiement de production reste manuel par un opérateur autorisé ; aucune connexion SSH de GitHub
+Actions au serveur n'est configurée. L'automatisation du CD est une évolution distincte, non requise
+pour la migration PostgreSQL déjà réalisée ni pour la procédure manuelle documentée dans
+[`deployment.md`](deployment.md). Si elle est décidée, confirmer au préalable les
+paramètres du serveur et les secrets GitHub Actions à créer. Ne jamais inscrire de valeur secrète dans
+ce fichier ou dans le dépôt.
