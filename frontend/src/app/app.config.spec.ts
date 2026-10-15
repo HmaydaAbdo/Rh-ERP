@@ -1,4 +1,5 @@
-import { APP_INITIALIZER, FactoryProvider, LOCALE_ID, TestBed, ValueProvider } from '@angular/core';
+import { APP_INITIALIZER, FactoryProvider, LOCALE_ID, ValueProvider } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { appConfig } from './app.config';
