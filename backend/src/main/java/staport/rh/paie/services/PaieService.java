@@ -110,8 +110,28 @@ public class PaieService implements IPaieService {
         entity.setChantier(resolveChantierReference(dto.chantierId()));
         entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
-        Paie saved = repository.save(entity);
+        Paie saved;
+        try {
+            // Force la vérification de uk_paie_employee_periode ici : sinon deux créations
+            // concurrentes peuvent se heurter au commit et sortir du contrat HTTP de ce domaine.
+            saved = repository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException conflit) {
+            if (estConflitUniqueEmployePeriode(conflit)) {
+                throw new PaieAlreadyExistsException(dto.employeeId(), dto.periode());
+            }
+            throw conflit;
+        }
         return mapper.toDto(saved);
+    }
+
+    private boolean estConflitUniqueEmployePeriode(Throwable erreur) {
+        for (Throwable cause = erreur; cause != null; cause = cause.getCause()) {
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && "uk_paie_employee_periode".equals(violation.getConstraintName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
