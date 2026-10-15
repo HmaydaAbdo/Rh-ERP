@@ -116,7 +116,7 @@ final class RapportPageModelBuilder {
                 new ColonneEmploye(avecColonneEquipe ? 120 : 192, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::nomPrenom),
                 new ColonneEmploye(100, 8, INTERLIGNE_EMPLOYE_FONCTION, false, LigneEmployeVue::fonction),
                 new ColonneEmploye(65, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::cin),
-                new ColonneEmploye(35, 10.5, INTERLIGNE_EMPLOYE, false, l -> String.valueOf(l.joursTravailles())),
+                new ColonneEmploye(35, 10.5, INTERLIGNE_EMPLOYE, false, l -> PaieReportNumberFormat.quantite(l.joursTravailles())),
                 new ColonneEmploye(40, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::joursRecuperationOuvrable),
                 new ColonneEmploye(40, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::joursRecuperationDimanche),
                 new ColonneEmploye(65, 10.5, INTERLIGNE_EMPLOYE, false, LigneEmployeVue::salaireMensuel),

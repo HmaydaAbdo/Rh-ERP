@@ -125,7 +125,7 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 
 ### Valeurs monétaires et périodes
 
-- Montants en `NUMERIC(10,2)`, jours de récupération en `NUMERIC(5,2)`.
+- Montants en `NUMERIC(10,2)`, jours travaillés et jours de récupération en `NUMERIC(5,2)`.
 - La période est un `YearMonth` Java stocké en entier `aaaaMM` (ex. `202609`) par
   `YearMonthAttributeConverter` ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.

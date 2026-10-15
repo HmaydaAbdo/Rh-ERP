@@ -67,8 +67,10 @@ class AuditIntegriteTest extends AuditIntegrationTestBase {
         // Les opérations métier, y compris la suppression en groupe, n'ont besoin que d'insérer dans l'audit.
         YearMonth mois = YearMonth.of(2035, 1);
         Referentiel ref = donnees.creerReferentiel();
-        paieService.create(new PaieCreateRequestDto(ref.employeId(), mois, ref.fonctionId(), ref.chantierId(), ref.equipeId(), 26,
+        paieService.create(new PaieCreateRequestDto(ref.employeId(), mois, ref.fonctionId(), ref.chantierId(), ref.equipeId(), new BigDecimal("26.75"),
                 null, null, BigDecimal.TEN, null, null, BigDecimal.TEN, null));
+        assertThat(jdbc.queryForObject("SELECT nombre_jours_travailles FROM paie WHERE employee_id = ? AND periode = ?",
+                BigDecimal.class, ref.employeId(), 203501)).isEqualByComparingTo("26.75");
         long supprimes = paieService.deleteGroupe(new PaieSearchCriteria(null, null, mois, null, null, null), 1);
 
         assertThat(supprimes).isEqualTo(1);

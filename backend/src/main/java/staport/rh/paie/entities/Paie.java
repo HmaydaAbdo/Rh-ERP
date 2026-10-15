@@ -71,8 +71,8 @@ public class Paie {
     @JoinColumn(name = "equipe_id")
     private Equipe equipe;
 
-    @Column(name = "nombre_jours_travailles", nullable = false)
-    private Integer nombreJoursTravailles;
+    @Column(name = "nombre_jours_travailles", nullable = false, precision = 5, scale = 2)
+    private BigDecimal nombreJoursTravailles;
 
     @Column(name = "jours_recuperation_ouvrable", precision = 5, scale = 2)
     private BigDecimal joursRecuperationOuvrable;
@@ -150,11 +150,11 @@ public class Paie {
         this.equipe = equipe;
     }
 
-    public Integer getNombreJoursTravailles() {
+    public BigDecimal getNombreJoursTravailles() {
         return nombreJoursTravailles;
     }
 
-    public void setNombreJoursTravailles(Integer nombreJoursTravailles) {
+    public void setNombreJoursTravailles(BigDecimal nombreJoursTravailles) {
         this.nombreJoursTravailles = nombreJoursTravailles;
     }
 

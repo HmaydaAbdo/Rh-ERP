@@ -11,7 +11,7 @@ public record PaieRestaurationInstantane(
         Long fonctionId,
         Long chantierId,
         Long equipeId,
-        Integer nombreJoursTravailles,
+        BigDecimal nombreJoursTravailles,
         BigDecimal joursRecuperationOuvrable,
         BigDecimal joursRecuperationDimanche,
         BigDecimal salaireMensuel,
