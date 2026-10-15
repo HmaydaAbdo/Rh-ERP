@@ -7,13 +7,6 @@
 
 ---
 
-## Contrôle de convention frontend — clôturé
-
-- Revue complète de `conventions/frontend.md` et corrections locales terminées le 2026-10-14 : rôles chargés par recherche serveur et pages dans le formulaire utilisateur ; filtres d’audit à cardinalité élevée multisélectionnables, avec contrat pluriel borné et compatibilité singulière.
-- Contrôles locaux et CI verts sur `0d30593999eb5305f48a147bbd375596ee66c171` (run `38547264561`), y compris tests Angular, E2E, build/push des images et contrôle full-stack.
-- Contrôle Compose après pull : PostgreSQL et backend déclarés sains, frontend démarré et `/` répond `200` sur `127.0.0.1:5002`. La recherche de rôles émet `POST /roles/search` et le filtre d’audit transmet plusieurs catégories à `POST /logs/search` ; la page audit à 390 px ne déborde pas horizontalement, son tableau défile dans son conteneur, aucune erreur console.
-- La preuve de clôture figure dans la ligne `frontend.md` de [la matrice de conformité](docs/conformite/matrice.md) ; le rapport détaillé a été supprimé après clôture.
-
 ## Évolutions IA et KPI
 
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
@@ -43,8 +36,7 @@ fonctionnalité n'est présupposée.
    absence de fuite de données, résistance aux entrées hostiles, comportement en cas d'indisponibilité,
    puis mesures de latence et de coût. Garder les fonctionnalités non validées hors production.
 
-La matrice de conformité (`docs/conformite/matrice.md`) est l'unique registre des statuts et preuves
-de contrôle. Les validations d'exploitation restent regroupées ci-dessous dans **Travail côté serveur**.
+Les validations d'exploitation restent regroupées ci-dessous dans **Travail côté serveur**.
 
 Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
 et procédure de retour arrière propres à cette étape.

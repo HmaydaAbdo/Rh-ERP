@@ -26,9 +26,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
-| Connaître l'état des contrôles de conformité et des suivis d'exploitation | [matrice de conformité](conformite/matrice.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
-| Reprendre l'audit exhaustif de conformité | [handoff/conformite-totale.md](handoff/conformite-totale.md) |
 | Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |
 | Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) · [ADR 0003 — CORS explicite](adr/0003-cors-origines-explicites.md) |
 

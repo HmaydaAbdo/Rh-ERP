@@ -35,6 +35,7 @@ import staport.rh.paie.repositories.PaieRepository;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Set;
@@ -320,7 +321,7 @@ class PaieImportServiceTest {
     }
 
     @Test
-    void importer_devraitRejeterDesJoursFractionnairesSansLesTronquer() throws IOException {
+    void importer_devraitConserverLesJoursFractionnaires() throws IOException {
         stubReferentiels();
         Object[] ligne = ligneValide("PB85747");
         ligne[3] = 26.5;
@@ -328,10 +329,10 @@ class PaieImportServiceTest {
 
         PaieImportResultDto result = importService.importer(fichier, periode);
 
-        assertThat(result.crees()).isZero();
-        assertThat(result.lignesIgnorees()).hasSize(1);
-        assertThat(result.lignesIgnorees().get(0).raison()).contains("Nombre de jours travaillés");
-        verify(repository, never()).save(any(Paie.class));
+        assertThat(result.crees()).isEqualTo(1);
+        ArgumentCaptor<Paie> captor = ArgumentCaptor.forClass(Paie.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getNombreJoursTravailles()).isEqualByComparingTo(new BigDecimal("26.5"));
     }
 
     @Test

@@ -148,6 +148,7 @@ describe('PaieFormComponent', () => {
     it('crée le bulletin : période au format aaaa-mm, champs facultatifs absents envoyés comme tels', async () => {
       await afficher();
       await remplirObligatoires();
+      formulaire().nombreJoursTravailles().value.set(26.5);
 
       await envoyer();
 
@@ -157,7 +158,7 @@ describe('PaieFormComponent', () => {
         fonctionId: 1,
         chantierId: 2,
         equipeId: null,
-        nombreJoursTravailles: 26,
+        nombreJoursTravailles: 26.5,
         joursRecuperationOuvrable: null,
         joursRecuperationDimanche: null,
         salaireMensuel: 4000,
