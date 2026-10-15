@@ -29,11 +29,13 @@ import staport.rh.function.dtos.response.FunctionResponseDto;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.paie.entities.Paie;
+import staport.rh.paie.imports.PaieImportResultDto.LigneIgnoreeDto;
 import staport.rh.paie.repositories.PaieRepository;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Set;
@@ -306,6 +308,54 @@ class PaieImportServiceTest {
     }
 
     @Test
+    void importer_devraitRejeterUneLigneNonVideSansCin() throws IOException {
+        stubReferentiels();
+        MockMultipartFile fichier = fichierAvecLignes(ligneValide(""));
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.totalLignes()).isEqualTo(1);
+        assertThat(result.crees()).isZero();
+        assertThat(result.lignesIgnorees().get(0).raison()).contains("CIN");
+        verify(repository, never()).save(any(Paie.class));
+    }
+
+    @Test
+    void importer_devraitConserverLesJoursFractionnaires() throws IOException {
+        stubReferentiels();
+        Object[] ligne = ligneValide("PB85747");
+        ligne[3] = 26.5;
+        MockMultipartFile fichier = fichierAvecLignes(ligne);
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.crees()).isEqualTo(1);
+        ArgumentCaptor<Paie> captor = ArgumentCaptor.forClass(Paie.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getNombreJoursTravailles()).isEqualByComparingTo(new BigDecimal("26.5"));
+    }
+
+    @Test
+    void importer_devraitRejeterLesValeursNegativesEtLesObservationsTropLongues() throws IOException {
+        stubReferentiels();
+        Object[] salaireNegatif = ligneValide("PB85747");
+        salaireNegatif[6] = -1.0;
+        Object[] observationTropLongue = ligneValide("PB85747");
+        observationTropLongue[10] = "x".repeat(256);
+        MockMultipartFile fichier = fichierAvecLignes(salaireNegatif, observationTropLongue);
+
+        PaieImportResultDto result = importService.importer(fichier, periode);
+
+        assertThat(result.totalLignes()).isEqualTo(2);
+        assertThat(result.crees()).isZero();
+        assertThat(result.ignores()).isEqualTo(2);
+        assertThat(result.lignesIgnorees()).extracting(LigneIgnoreeDto::raison)
+                .anyMatch(raison -> raison.contains("positifs ou nuls"))
+                .anyMatch(raison -> raison.contains("255 caractères"));
+        verify(repository, never()).save(any(Paie.class));
+    }
+
+    @Test
     void genererModele_devraitProduireUnFichierAvecLes13ColonnesEtTroisLignesDentete() throws IOException {
         ByteArrayInputStream flux = importService.genererModele();
 
@@ -360,5 +410,23 @@ class PaieImportServiceTest {
             return new MockMultipartFile("file", "paie.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", out.toByteArray());
         }
+    }
+
+    private Object[] entetes() {
+        return new Object[]{"Nom", "Fonction", "CIN", "P", "JRO", "JRD", "Salaire", "RO", "RD", "Total", "Obs", "Chantier", "Equipe"};
+    }
+
+    private Object[] ligneValide(String cin) {
+        return new Object[]{"BOULJIHEL SALH", "OPERATEUR", cin, 26.0, 0.0, 0.0, 5000.0,
+                200.0, 100.0, 5300.0, "", "C059", "EQUIPE A"};
+    }
+
+    private MockMultipartFile fichierAvecLignes(Object[]... lignes) throws IOException {
+        Object[][] lignesExcel = new Object[3 + lignes.length][];
+        lignesExcel[0] = new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""};
+        lignesExcel[1] = new Object[]{"", "", "", "", "", "", "", "", "", "", "", "", ""};
+        lignesExcel[2] = entetes();
+        System.arraycopy(lignes, 0, lignesExcel, 3, lignes.length);
+        return buildExcelFile(lignesExcel);
     }
 }

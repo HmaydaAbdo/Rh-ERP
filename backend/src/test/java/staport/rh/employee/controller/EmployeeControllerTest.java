@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -73,6 +74,19 @@ class EmployeeControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.cin").value("PB85747"));
+    }
+
+    @Test
+    void creer_devraitRetournerUnConflitGeneriqueQuandLaBaseRefuseUneEcriture() throws Exception {
+        EmployeeCreateRequestDto valide = new EmployeeCreateRequestDto(
+                "BOULJIHEL SALH", "PB85747", LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14), 10L, 20L);
+        when(employeeService.create(any())).thenThrow(new DataIntegrityViolationException("contrainte unique"));
+
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(valide)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Une contrainte d'intégrité empêche cette opération."));
     }
 
     @Test

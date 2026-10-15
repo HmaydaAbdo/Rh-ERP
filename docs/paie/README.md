@@ -56,7 +56,7 @@ Table `paie` :
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | **Snapshot** — chantier d'affectation ce mois-là |
 | `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | **Snapshot** — équipe ce mois-là (voir `docs/equipe/README.md`) ; `NULL` = employé sans équipe |
-| `nombre_jours_travailles` | `INT` | `NOT NULL` | Jours travaillés |
+| `nombre_jours_travailles` | `NUMERIC(5,2)` | `NOT NULL` | Jours travaillés, jusqu'à deux décimales |
 | `jours_recuperation_ouvrable` | `DECIMAL(5,2)` | nullable | Jours de récupération (jour ouvrable) |
 | `jours_recuperation_dimanche` | `DECIMAL(5,2)` | nullable | Jours de récupération (dimanche) |
 | `salaire_mensuel` | `DECIMAL(10,2)` | `NOT NULL` | Salaire de base |
@@ -92,7 +92,8 @@ rétroactive ou automatique des bulletins déjà existants.
 ## Règles métier
 
 - `(employee_id, periode)` est unique — appliqué en base (contrainte) et en service
-  (`existsByEmployee_IdAndPeriode` avant `create`, 409 sinon).
+  (`existsByEmployee_IdAndPeriode` avant `create`, 409 sinon, y compris lorsqu'une création concurrente
+  gagne la course et déclenche la contrainte PostgreSQL).
 - `employeeId` et `periode` sont **immuables après création** : `PaieUpdateRequestDto` ne les
   expose pas. Un bulletin est un document historique — le corriger reviendrait à en créer un autre
   pour un employé/mois différent, jamais à réassigner un bulletin existant.
@@ -106,7 +107,7 @@ rétroactive ou automatique des bulletins déjà existants.
   saisie (formulaire) ou importée (Excel) ; un calcul automatique à partir du Pointage reste une évolution
   envisagée (voir [TODO.md](../../TODO.md), « Domaines restants »).
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
-  `nombreJoursTravailles` est un entier positif ou nul ; `observation` fait 255 caractères au plus.
+  `nombreJoursTravailles` accepte de 0 à 999,99 avec au plus deux décimales ; `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
   bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**
   (`POST /paie/suppression`) suit la même règle, avec les garde-fous décrits dans « Suppression en groupe ».
@@ -198,7 +199,8 @@ créé, **aucune fonction n'est créée non plus** :
 
 | Cas | Message affiché |
 |---|---|
-| Champ obligatoire manquant (fonction, jours, salaire, chantier) | `Champs obligatoires manquants ou invalides : ...` |
+| Champ obligatoire manquant (CIN, fonction, jours, salaire, total, chantier) | `Champs obligatoires manquants ou invalides : ...` |
+| Jour fractionnaire, valeur négative pour jours/salaires/primes, ou observation de plus de 255 caractères | `400 Bad Request`, ligne détaillée dans `lignesIgnorees` |
 | CIN sans employé correspondant | `Employé introuvable avec ce CIN` |
 | CIN présent plus d'une fois dans le fichier | `CIN en doublon dans le fichier` |
 | Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |

@@ -36,10 +36,10 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 
 | Table | Clé métier (unique) | Colonnes | Clés étrangères |
 |---|---|---|---|
-| `fonction` | `libelle` | `libelle` (100, non nul), `version` | — |
-| `chantier` | `code` | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
-| `equipe` | `code` **et** `libelle`, plus un index unique sur `UPPER(code)` | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` | `fonction_id`, `chantier_id` (non nuls) |
+| `fonction` | `libelle` (unique après mise en majuscules, V23) | `libelle` (100, non nul), `version` | — |
+| `chantier` | `code` (unique après mise en majuscules, V24) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
+| `equipe` | `code` et `libelle` (uniques après trim et mise en majuscules, V25) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
+| `employe` | `cin` (unique après mise en majuscules, V22) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` | `fonction_id`, `chantier_id` (non nuls) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 
 Détail et règles métier : [function](function/README.md), [chantier](chantier/README.md),
@@ -90,18 +90,18 @@ Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMig
 
 | Donnée | Garantie en base | Garantie en service |
 |---|---|---|
-| Fonction (`libelle`) | `UNIQUE` | Comparaison insensible à la casse, `409` |
-| Chantier (`code`) | `UNIQUE` | Comparaison insensible à la casse, `409` |
-| Équipe (`code`, `libelle`) | `UNIQUE` + index sur `UPPER(code)` | Code normalisé (espaces retirés, majuscules), comparaison insensible à la casse, `409` |
-| Employé (`cin`) | `UNIQUE` | Comparaison insensible à la casse, `409` |
+| Fonction (`libelle`) | `V23` : index unique sur `UPPER(libelle)` | Comparaison insensible à la casse, `409` |
+| Chantier (`code`) | `V24` : index unique sur `UPPER(code)` | Comparaison insensible à la casse, `409` |
+| Équipe (`code`, `libelle`) | `V25` : index uniques sur `UPPER(BTRIM(...))` | Code et libellé trimés, comparaison insensible à la casse, `409` |
+| Employé (`cin`) | `V22` : index unique sur `UPPER(cin)` | Comparaison insensible à la casse, `409` |
 | Bulletin (employé, période) | `UNIQUE` | Contrôle avant création, `409` |
 | Utilisateur (`username`, `email`) | `UNIQUE` | Contrôle avant création/modification, `409` |
 | Rôle (`nom`) | `UNIQUE` | Contrôle avant création/modification, `409` |
 
-Limites actuelles : seule l'égalité exacte (hors casse) est bloquée, pas les quasi-doublons
-(`TECHNICIEN DE QUALITE` / `THECNICIEN DE QUALITE`) ; la base n'impose pas l'insensibilité à la casse
-partout (seule l'équipe a un index sur `UPPER(code)`). Traité dans la tâche « Qualité des données »
-([../TODO.md](../TODO.md)).
+Limites actuelles : les index fonctionnels bloquent l'égalité après normalisation, mais pas les
+quasi-doublons sémantiques (`TECHNICIEN DE QUALITE` / `THECNICIEN DE QUALITE`). Ces cas et les
+doublons préexistants éventuels sont instruits dans la
+tâche « Qualité des données » ([../TODO.md](../TODO.md)).
 
 ### Que se passe-t-il à la suppression ?
 
@@ -125,7 +125,7 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 
 ### Valeurs monétaires et périodes
 
-- Montants en `NUMERIC(10,2)`, jours de récupération en `NUMERIC(5,2)`.
+- Montants en `NUMERIC(10,2)`, jours travaillés et jours de récupération en `NUMERIC(5,2)`.
 - La période est un `YearMonth` Java stocké en entier `aaaaMM` (ex. `202609`) par
   `YearMonthAttributeConverter` ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.
@@ -161,6 +161,10 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V19` | Chaînage SHA-256 du journal d'audit |
 | `V20` | Activation conditionnelle de pgAudit pour la base ERP-RH en production |
 | `V21` | Compteur de tentatives et blocage temporaire après cinq échecs de connexion |
+| `V22` | Unicité du CIN sans tenir compte de la casse |
+| `V23` | Unicité du libellé de fonction sans tenir compte de la casse |
+| `V24` | Unicité du code de chantier sans tenir compte de la casse |
+| `V25` | Unicité du code et du libellé d'équipe après trim et sans tenir compte de la casse |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
@@ -173,6 +177,6 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
 - Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
-  toute la chaîne V1 → V21 est rejouée et validée contre les entités à chaque exécution.
+  toute la chaîne V1 → V25 est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

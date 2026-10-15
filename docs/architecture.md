@@ -11,7 +11,7 @@
 ```text
 Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (API REST) ──JPA──▶ PostgreSQL 18
                     │                                   │
-                    │                                   ├── Flyway (schéma, migrations V1…V21, droits du compte applicatif)
+                    │                                   ├── Flyway (schéma, migrations V1…V25, droits du compte applicatif)
                     │                                   ├── Hibernate Envers + journal d'audit (qui, quoi, quand, avant / après)
                     │                                   ├── Apache POI (imports/exports Excel)
                     │                                   ├── jsoup + openhtmltopdf + Batik (rapport PDF)

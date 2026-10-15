@@ -1,6 +1,8 @@
 package staport.rh.paie.services;
 
 import jakarta.persistence.EntityManager;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.domain.Specification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ import staport.rh.paie.repositories.PaiePeriodeProjection;
 import staport.rh.paie.repositories.PaieRepository;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -84,7 +87,7 @@ class PaieServiceTest {
     void setUp() {
         createDto = new PaieCreateRequestDto(
                 1L, YearMonth.of(2026, 8), 10L, 20L, 30L,
-                26, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null
         );
@@ -110,7 +113,7 @@ class PaieServiceTest {
         when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
         Equipe equipe = new Equipe();
         when(entityManager.getReference(Equipe.class, 30L)).thenReturn(equipe);
-        when(repository.save(entity)).thenReturn(entity);
+        when(repository.saveAndFlush(entity)).thenReturn(entity);
         when(mapper.toDto(entity)).thenReturn(mockResponseDto());
 
         PaieResponseDto result = paieService.create(createDto);
@@ -123,7 +126,7 @@ class PaieServiceTest {
     void create_devraitAccepterUnBulletinSansEquipe() {
         PaieCreateRequestDto sansEquipe = new PaieCreateRequestDto(
                 1L, YearMonth.of(2026, 8), 10L, 20L, null,
-                26, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null);
         when(employeeService.existsById(1L)).thenReturn(true);
@@ -134,7 +137,7 @@ class PaieServiceTest {
         when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
         when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
         when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
-        when(repository.save(entity)).thenReturn(entity);
+        when(repository.saveAndFlush(entity)).thenReturn(entity);
         when(mapper.toDto(entity)).thenReturn(mockResponseDto());
 
         paieService.create(sansEquipe);
@@ -158,7 +161,7 @@ class PaieServiceTest {
         assertThatThrownBy(() -> paieService.create(createDto))
                 .isInstanceOf(InvalidReferenceException.class);
 
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -168,7 +171,7 @@ class PaieServiceTest {
         assertThatThrownBy(() -> paieService.create(createDto))
                 .isInstanceOf(InvalidReferenceException.class);
 
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -179,7 +182,7 @@ class PaieServiceTest {
         assertThatThrownBy(() -> paieService.create(createDto))
                 .isInstanceOf(PaieAlreadyExistsException.class);
 
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -193,7 +196,27 @@ class PaieServiceTest {
         assertThatThrownBy(() -> paieService.create(createDto))
                 .isInstanceOf(InvalidReferenceException.class);
 
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void create_devraitTraduireUnConflitConcurrentSurEmployeEtPeriodeEn409Metier() {
+        when(employeeService.existsById(1L)).thenReturn(true);
+        when(repository.existsByEmployee_IdAndPeriode(1L, createDto.periode())).thenReturn(false);
+        when(mapper.toEntity(createDto)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(equipeService.existsById(30L)).thenReturn(true);
+        when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
+        when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
+        when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
+        when(entityManager.getReference(Equipe.class, 30L)).thenReturn(new Equipe());
+        ConstraintViolationException violation = new ConstraintViolationException(
+                "duplicate key", new SQLException("duplicate key"), "uk_paie_employee_periode");
+        when(repository.saveAndFlush(entity)).thenThrow(new DataIntegrityViolationException("unique", violation));
+
+        assertThatThrownBy(() -> paieService.create(createDto))
+                .isInstanceOf(PaieAlreadyExistsException.class);
     }
 
     @Test

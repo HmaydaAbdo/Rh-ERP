@@ -36,8 +36,11 @@ public class EmployeeExceptionHandler {
     /** La base refuse de supprimer un employé encore référencé : un refus explicite (409), comme pour les autres référentiels. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "Cet employé est lié à au moins un bulletin de paie ou un compte utilisateur et ne peut pas être supprimé. "
-                + "Passez-le à INACTIF pour conserver son historique.", request);
+        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
+            return build(HttpStatus.CONFLICT, "Cet employé est lié à au moins un bulletin de paie ou un compte utilisateur et ne peut pas être supprimé. "
+                    + "Passez-le à INACTIF pour conserver son historique.", request);
+        }
+        return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }
 
     @ExceptionHandler(EmployeeImportException.class)

@@ -69,10 +69,11 @@ via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'�
 ## Règles métier
 
 - `code` est la **clé métier** : stocké **trimé et en majuscules** (`EquipeService.normaliserCode`),
-  donc `"ch"` et `"CH "` désignent la même équipe. Unique, insensible à la casse
-  (`findByCodeIgnoreCase`, doublon → 409).
-- `libelle` est aussi unique, insensible à la casse (doublon → 409) : aucun doublon d'équipe ne doit
-  pouvoir exister.
+  donc `"ch"` et `"CH "` désignent la même équipe. La migration V25 impose également l'unicité
+  après `trim` et sans casse en base (`findByCodeIgnoreCase`, doublon → 409).
+- `libelle` est aussi unique après `trim` et sans casse en base (migration V25, doublon → 409) :
+  aucun doublon d'équipe ne doit pouvoir exister. V25 échoue explicitement si des données existantes
+  violent la normalisation ; traiter ce prérequis dans le chantier séparé « Qualité des données ».
 - Le **code** reste la clé de sélection/regroupement partout (import Excel, dialog d'export,
   agrégation BI) ; le **libellé** ne sert qu'à l'affichage (titres de section/feuille, graphique
   « Répartition par équipe »).

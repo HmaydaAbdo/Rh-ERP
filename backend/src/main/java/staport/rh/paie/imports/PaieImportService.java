@@ -66,6 +66,7 @@ public class PaieImportService {
 
     private static final Logger log = LoggerFactory.getLogger(PaieImportService.class);
     private static final int LIGNES_ENTETE = 3;
+    private static final BigDecimal MAX_JOURS_TRAVAILLES = new BigDecimal("999.99");
     private static final DataFormatter DATA_FORMATTER = new DataFormatter();
 
     private final PaieRepository repository;
@@ -116,14 +117,11 @@ public class PaieImportService {
                 }
 
                 String cin = getCellAsString(row.getCell(2));
-                if (cin == null) {
-                    continue;
-                }
                 totalLignes++;
 
                 String nomPrenom = getCellAsString(row.getCell(0));
                 String fonctionLibelle = getCellAsString(row.getCell(1));
-                Integer nombreJoursTravailles = getCellAsInteger(row.getCell(3));
+                BigDecimal nombreJoursTravailles = getCellAsBigDecimal(row.getCell(3));
                 BigDecimal joursRecuperationOuvrable = getCellAsBigDecimal(row.getCell(4));
                 BigDecimal joursRecuperationDimanche = getCellAsBigDecimal(row.getCell(5));
                 BigDecimal salaireMensuel = getCellAsBigDecimal(row.getCell(6));
@@ -135,8 +133,9 @@ public class PaieImportService {
                 String equipe = getCellAsString(row.getCell(12));
 
                 String raison = validerLigne(cin, fonctionLibelle, chantierCode, equipe, nombreJoursTravailles,
-                        salaireMensuel, salaireTotal, cinsTraites, employesParCin, chantiersParCode, equipesParCode,
-                        employesAvecBulletin);
+                        joursRecuperationOuvrable, joursRecuperationDimanche, salaireMensuel,
+                        primeRoulageOrdinaire, primeRoulageDimanche, salaireTotal, observation,
+                        cinsTraites, employesParCin, chantiersParCode, equipesParCode, employesAvecBulletin);
 
                 if (raison != null) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
@@ -220,18 +219,24 @@ public class PaieImportService {
     }
 
     private record LigneAAppliquer(Long employeeId, String fonctionLibelle, Long chantierId, Long equipeId,
-                                    Integer nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
+                                    BigDecimal nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
                                     BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
                                     BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,BigDecimal salaireTotal,
                                     String observation) {
     }
 
     private String validerLigne(String cin, String fonctionLibelle, String chantierCode, String equipeCode,
-                                 Integer nombreJoursTravailles, BigDecimal salaireMensuel,BigDecimal salaireTotal,
+                                 BigDecimal nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
+                                 BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
+                                 BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,
+                                 BigDecimal salaireTotal, String observation,
                                  Set<String> cinsTraites, Map<String, Long> employesParCin,
                                  Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode,
                                  Set<Long> employesAvecBulletin) {
         List<String> champsManquants = new ArrayList<>();
+        if (cin == null || cin.isBlank()) {
+            champsManquants.add("CIN");
+        }
         if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
             champsManquants.add("Fonction");
         }
@@ -249,6 +254,19 @@ public class PaieImportService {
         }
         if (!champsManquants.isEmpty()) {
             return "Champs obligatoires manquants ou invalides : " + String.join(", ", champsManquants);
+        }
+
+        if (nombreJoursTravailles.signum() < 0 || estNegatif(joursRecuperationOuvrable)
+                || estNegatif(joursRecuperationDimanche) || estNegatif(salaireMensuel)
+                || estNegatif(primeRoulageOrdinaire) || estNegatif(primeRoulageDimanche)
+                || estNegatif(salaireTotal)) {
+            return "Les jours, salaires et primes doivent être positifs ou nuls";
+        }
+        if (estJourTravailleInvalide(nombreJoursTravailles)) {
+            return "Le nombre de jours travaillés doit être compris entre 0 et 999,99 avec au plus deux décimales";
+        }
+        if (observation != null && observation.length() > 255) {
+            return "Observation trop longue (255 caractères maximum)";
         }
 
         String cinNormalise = cin.trim().toUpperCase();
@@ -269,6 +287,15 @@ public class PaieImportService {
         }
 
         return null;
+    }
+
+    private boolean estNegatif(BigDecimal valeur) {
+        return valeur != null && valeur.signum() < 0;
+    }
+
+    private boolean estJourTravailleInvalide(BigDecimal valeur) {
+        BigDecimal normalisee = valeur.stripTrailingZeros();
+        return normalisee.scale() > 2 || valeur.compareTo(MAX_JOURS_TRAVAILLES) > 0;
     }
 
     private Map<String, Long> chargerEmployesParCin() {
@@ -322,21 +349,6 @@ public class PaieImportService {
         }
         String value = DATA_FORMATTER.formatCellValue(cell);
         return value == null || value.isBlank() ? null : value;
-    }
-
-    private Integer getCellAsInteger(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-        try {
-            if (cell.getCellType() == CellType.NUMERIC) {
-                return (int) cell.getNumericCellValue();
-            }
-            String value = DATA_FORMATTER.formatCellValue(cell).trim();
-            return value.isEmpty() ? null : Integer.parseInt(value);
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 
     private BigDecimal getCellAsBigDecimal(Cell cell) {

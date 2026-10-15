@@ -36,7 +36,7 @@
           {{ paie.employee?.cin || '-' }}
         }
         @case ('nombreJoursTravailles') {
-          {{ paie.nombreJoursTravailles ?? '-' }}
+          {{ paie.nombreJoursTravailles === null ? '-' : (paie.nombreJoursTravailles | number:'1.0-2') }}
         }
         @case ('joursRecuperationOuvrable') {
           {{ paie.joursRecuperationOuvrable ?? '-' }}

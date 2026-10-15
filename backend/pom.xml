@@ -33,7 +33,7 @@
 		<jacoco.version>0.8.15</jacoco.version>
 		<cyclonedx.version>2.9.3</cyclonedx.version>
 		<!-- Correctifs de sécurité plus récents que ceux de la BOM de Spring Boot 4.1.1 (analyse OSV du 2026-10-11, voir
-		     docs/conformite/README.md) : à retirer quand la BOM les rattrape. Tomcat : contournement d'authentification et
+		     docs/conformite/matrice.md) : à retirer quand la BOM les rattrape. Tomcat : contournement d'authentification et
 		     contrôle d'accès (GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6, GHSA-h3x4-894j-xpx5) ; Jackson : dénis de service. -->
 		<tomcat.version>11.0.26</tomcat.version>
 		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
