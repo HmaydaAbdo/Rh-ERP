@@ -14,7 +14,7 @@ export type Etat = 'saisie' | 'generation' | 'termine';
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
   format: 'Format',
-  chantier: 'Chantier',
+  chantier: 'Marchés',
   equipes: 'Équipes',
   materiel: 'Matériel',
   recap: 'Export'
@@ -22,7 +22,7 @@ const LIBELLES_ETAPES: Record<EtapeId, string> = {
 const SOUS_TITRES: Record<EtapeId, string> = {
   periode: 'Choisissez le mois à exporter',
   format: 'Choisissez le format du fichier',
-  chantier: 'Un seul chantier, ou tous',
+  chantier: 'Choisissez un ou plusieurs marchés',
   equipes: 'Étape facultative',
   materiel: 'Nombre de camions et d\'engins du chantier',
   recap: 'Dernière vérification'
@@ -60,7 +60,8 @@ export class PaieExportStore {
   readonly chantiersEnCours = signal(false);
   readonly recherche = signal('');
   /** Rapport PDF limité à un chantier : code du chantier choisi, ou `null` pour tous les chantiers. Sans effet en Excel. */
-  readonly chantierChoisi = signal<string | null>(null);
+  /** Codes des marchés retenus pour le PDF ; liste vide = tous les marchés. */
+  readonly marchesChoisis = signal<string[]>([]);
   readonly rechercheChantier = signal('');
   /** Retire le chapitre « Vue d'ensemble » du PDF (voir `PaieReportPdfRequestDto.sansVueEnsemble`). */
   readonly sansVueEnsemble = signal(false);
@@ -83,17 +84,17 @@ export class PaieExportStore {
 
   /** Tableaux matériel qui seront réellement imprimés : leur chantier est détaillé avec l'équipe qui les porte. */
   readonly tableauxConcernes = computed(() =>
-    this.tableauxMateriel().filter((t) => this.detail()[t.chantierCode]?.includes(t.equipeCode))
+    this.tableauxMateriel().filter((t) => this.chantiersPourEquipes().some((c) => c.code === t.chantierCode)
+      && this.detail()[t.chantierCode]?.includes(t.equipeCode))
   );
 
-  /** Le chantier unique n'existe qu'en PDF ; en Excel le choix éventuel est ignoré (et conservé si l'on revient au PDF). */
-  readonly chantierEffectif = computed(() => (this.format() === 'PDF' ? this.chantierChoisi() : null));
-  readonly chantierRapport = computed(() => this.chantiers().find((c) => c.code === this.chantierEffectif()) ?? null);
+  /** Les marchés choisis ne restreignent que le rapport PDF, pas l'export Excel. */
+  readonly marchesEffectifs = computed(() => (this.format() === 'PDF' ? this.marchesChoisis() : []));
 
-  /** Les chantiers que l'étape équipes propose : celui du chantier choisi seul, ou tous. */
+  /** Les chantiers que l'étape équipes propose : ceux retenus à l'étape marché, ou tous. */
   readonly chantiersPourEquipes = computed(() => {
-    const code = this.chantierEffectif();
-    return code ? this.chantiers().filter((c) => c.code === code) : this.chantiers();
+    const codes = this.marchesEffectifs();
+    return codes.length > 0 ? this.chantiers().filter((c) => codes.includes(c.code)) : this.chantiers();
   });
 
   /** Les chantiers proposés, filtrés par la recherche de l'étape chantier. */
@@ -137,7 +138,7 @@ export class PaieExportStore {
     this.periode.set(periode);
     this.erreur.set(null);
     this.chantiers.set([]);
-    this.chantierChoisi.set(null);
+    this.marchesChoisis.set([]);
     this.sansVueEnsemble.set(false);
     this.ouverts.set([]);
     this.detail.set({});
@@ -146,10 +147,6 @@ export class PaieExportStore {
 
   choisirFormat(format: Format): void {
     this.format.set(format);
-    const code = this.chantierEffectif();
-    if (code) {
-      this.limiterAuChantier(code);
-    }
   }
 
   // ---- Étape chantier (PDF) ----
@@ -158,30 +155,32 @@ export class PaieExportStore {
     this.rechercheChantier.set(valeur);
   }
 
-  /** Choisit le chantier du rapport (`null` : tous les chantiers). Un seul chantier rend la vue d'ensemble redondante : elle est
-   * alors proposée retirée — l'utilisateur garde la main (case « Sans vue d'ensemble »). */
-  choisirChantier(code: string | null): void {
-    this.chantierChoisi.set(code);
-    this.sansVueEnsemble.set(code !== null);
-    if (code) {
-      this.limiterAuChantier(code);
-    }
+  /** Choisit les marchés du rapport (liste vide : tous). Un périmètre choisi démarre sans vue d'ensemble. */
+  choisirMarches(codes: string[]): void {
+    this.marchesChoisis.set([...new Set(codes)]);
+    this.sansVueEnsemble.set(codes.length > 0);
+  }
+
+  basculerMarche(code: string): void {
+    const choisis = this.marchesChoisis();
+    this.choisirMarches(choisis.includes(code) ? choisis.filter((c) => c !== code) : [...choisis, code]);
+  }
+
+  marcheChoisi(code: string): boolean {
+    return this.marchesChoisis().includes(code);
   }
 
   basculerVueEnsemble(): void {
     this.sansVueEnsemble.set(!this.sansVueEnsemble());
   }
 
-  /** Les équipes à détailler ne concernent que le chantier choisi : celles des autres chantiers sont oubliées. */
-  private limiterAuChantier(code: string): void {
-    const garder = <T>(valeurs: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(valeurs).filter(([chantier]) => chantier === code));
-    this.detail.set(garder(this.detail()));
-    this.retirees.set(garder(this.retirees()));
-  }
-
   texteChantier(): string {
-    const chantier = this.chantierRapport();
-    return chantier ? `${chantier.code}${chantier.libelle ? ' — ' + chantier.libelle : ''}` : 'Tous les chantiers';
+    const codes = this.marchesEffectifs();
+    if (codes.length === 0) {
+      return 'Tous les marchés';
+    }
+    return this.chantiers().filter((c) => codes.includes(c.code))
+      .map((c) => `${c.code}${c.libelle ? ' — ' + c.libelle : ''}`).join(', ');
   }
 
   texteVueEnsemble(): string {
@@ -291,7 +290,7 @@ export class PaieExportStore {
   }
 
   texteDetail(): string {
-    const parties = this.chantiers()
+    const parties = this.chantiersPourEquipes()
       .filter((c) => this.equipesChoisies(c.code).length > 0)
       .map((c) => {
         const n = this.equipesChoisies(c.code).length;
@@ -425,7 +424,9 @@ export class PaieExportStore {
   }
 
   private construireEquipesParChantier(): Record<string, string[]> {
-    return Object.fromEntries(Object.entries(this.detail()).filter(([, equipes]) => equipes.length > 0));
+    const codes = this.format() === 'PDF' ? new Set(this.chantiersPourEquipes().map((c) => c.code)) : null;
+    return Object.fromEntries(Object.entries(this.detail()).filter(([code, equipes]) =>
+      equipes.length > 0 && (codes === null || codes.has(code))));
   }
 
   /** Lignes à envoyer : celles des tableaux imprimés dont la colonne n'est pas laissée vide et dont le nombre est renseigné. */
@@ -467,7 +468,9 @@ export class PaieExportStore {
   private requetePdf(periode: string, equipesParChantier: Record<string, string[]>, materiel: Record<string, number> | null): PaieRapportPdfRequest {
     return {
       periode,
-      chantierId: this.chantierRapport()?.id ?? null,
+      chantierIds: this.marchesEffectifs().length > 0
+        ? this.chantiers().filter((c) => this.marchesEffectifs().includes(c.code)).map((c) => c.id)
+        : null,
       sansVueEnsemble: this.sansVueEnsemble(),
       equipesParChantier: Object.keys(equipesParChantier).length > 0 ? equipesParChantier : null,
       materiel
@@ -513,7 +516,7 @@ export class PaieExportStore {
     this.chantiers.set([]);
     this.recherche.set('');
     this.rechercheChantier.set('');
-    this.chantierChoisi.set(null);
+    this.marchesChoisis.set([]);
     this.sansVueEnsemble.set(false);
     this.ouverts.set([]);
     this.detail.set({});

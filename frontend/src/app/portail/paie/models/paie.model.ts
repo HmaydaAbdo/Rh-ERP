@@ -224,7 +224,8 @@ export interface PaieRapportPdfRequest {
   nomPrenom?: string | null;
   cin?: string | null;
   fonctionId?: number | null;
-  chantierId?: number | null;
+  /** Marchés retenus pour le rapport ; absent, nul ou vide = tous les marchés. */
+  chantierIds?: number[] | null;
   /** Retire le chapitre « Vue d'ensemble » : le rapport commence par le premier chantier. */
   sansVueEnsemble?: boolean;
   equipesParChantier?: Record<string, string[]> | null;

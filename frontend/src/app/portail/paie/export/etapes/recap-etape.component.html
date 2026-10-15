@@ -4,7 +4,7 @@
     <div><stp-icon name="calendar" /><span>Période</span><strong class="export-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · {{ store.resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
     <div><stp-icon name="file" /><span>Format</span><strong>{{ store.format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="store.allerA('format')">Modifier</button></div>
       @if (store.format() === 'PDF') {
-        <div><stp-icon name="building" /><span>Chantier</span><strong>{{ store.texteChantier() }}</strong><button type="button" (click)="store.allerA('chantier')">Modifier</button></div>
+        <div><stp-icon name="building" /><span>Marchés</span><strong>{{ store.texteChantier() }}</strong><button type="button" (click)="store.allerA('chantier')">Modifier</button></div>
         <div><stp-icon name="layout-grid" /><span>Vue d'ensemble</span><strong>{{ store.texteVueEnsemble() }}</strong><button type="button" (click)="store.allerA('chantier')">Modifier</button></div>
       }
     <div><stp-icon name="users" /><span>Détail par équipe</span><strong>{{ store.texteDetail() }}</strong><button type="button" (click)="store.allerA('equipes')">Modifier</button></div>

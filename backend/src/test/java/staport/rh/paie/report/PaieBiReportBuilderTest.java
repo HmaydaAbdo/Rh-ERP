@@ -332,7 +332,7 @@ class PaieBiReportBuilderTest {
         PaieReportPdfRequestDto requeteFiltreeChantier = new PaieReportPdfRequestDto("2026-09", null, null, null, 42L, null, null);
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requeteFiltreeChantier, List.of(ligne), List.of());
 
-        assertThat(vue.filtresActifs()).containsExactly("Chantier : C059");
+        assertThat(vue.filtresActifs()).containsExactly("Marchés : C059");
     }
 
     private BigDecimal montantDepuisFormat(String montantFormate) {

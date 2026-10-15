@@ -11,7 +11,6 @@ import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.specifications.PaieSpecification;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -118,9 +117,9 @@ class PaieBiReportBuilder {
         SyntheseGlobaleVue synthese = new SyntheseGlobaleVue(
                 kpiMontant(masseCourante, massePrecedente),
                 kpiEffectif(courant.size(), precedent.size()),
-                PaieReportNumberFormat.montant(masseCourante.divide(BigDecimal.valueOf(courant.size()), 2, RoundingMode.HALF_UP)),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
+                montantStc(courant),
                 repartitionChantiers(agregatChantier, courant),
                 versRepartition(agregatFonction),
                 evolutions.global()
@@ -200,8 +199,8 @@ class PaieBiReportBuilder {
                 titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
                 kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
-                masseMoyenne(masseChantier, lignesChantier.size()),
                 stc,
+                montantStc(lignesChantier),
                 versRepartitionEquipe(agregatEquipe, libellesEquipes),
                 evolutions.pourChantier(code),
                 equipes,
@@ -249,11 +248,12 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Masse moyenne par employé, formatée ("-" sans employé). */
-    private String masseMoyenne(BigDecimal masse, int effectif) {
-        return effectif == 0
-                ? "-"
-                : PaieReportNumberFormat.montant(masse.divide(BigDecimal.valueOf(effectif), 2, RoundingMode.HALF_UP));
+    /** Somme des salaires totaux des seuls bulletins STC/sortie, formatée en DH. */
+    private String montantStc(List<Paie> lignes) {
+        BigDecimal montant = lignes.stream().filter(ObservationStc::estStcOuSortie)
+                .map(Paie::getSalaireTotal).filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return PaieReportNumberFormat.montant(montant);
     }
 
     private EquipeBiVue equipeVue(String nom, String titre, String libelleAffiche, List<Paie> lignesEquipe,
@@ -286,8 +286,8 @@ class PaieBiReportBuilder {
                 libelleAffiche,
                 kpiEffectif(lignesEquipe.size(), lignesEquipePrecedent.size()),
                 kpiMontant(masseEquipe, masseEquipePrecedente),
-                masseMoyenne(masseEquipe, lignesEquipe.size()),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
+                montantStc(lignesEquipe),
                 repartitionFonctionSimple(agregatFonctionEquipe),
                 materiel,
                 employes);
@@ -491,9 +491,13 @@ class PaieBiReportBuilder {
 
     private List<String> filtresActifs(PaieReportPdfRequestDto requete, List<Paie> courant) {
         List<String> filtres = new ArrayList<>();
-        if (requete.chantierId() != null) {
-            courant.stream().filter(p -> requete.chantierId().equals(p.getChantier().getId())).findFirst()
-                    .ifPresent(p -> filtres.add("Chantier : " + p.getChantier().getCode()));
+        List<Long> chantierIds = requete.chantiersEffectifs();
+        if (chantierIds != null && !chantierIds.isEmpty()) {
+            List<String> codes = courant.stream().filter(p -> chantierIds.contains(p.getChantier().getId()))
+                    .map(p -> p.getChantier().getCode()).distinct().toList();
+            if (!codes.isEmpty()) {
+                filtres.add("Marchés : " + String.join(", ", codes));
+            }
         }
         if (requete.fonctionId() != null) {
             courant.stream().filter(p -> requete.fonctionId().equals(p.getFonction().getId())).findFirst()
@@ -549,7 +553,7 @@ class PaieBiReportBuilder {
         PaieSearchCriteria criteria = new PaieSearchCriteria(
                 requete.cin(), requete.nomPrenom(), periode,
                 requete.fonctionId() != null ? List.of(requete.fonctionId()) : null,
-                requete.chantierId() != null ? List.of(requete.chantierId()) : null,
+                requete.chantiersEffectifs(),
                 null);
         return repository.findAll(PaieSpecification.searchByCriteria(criteria));
     }

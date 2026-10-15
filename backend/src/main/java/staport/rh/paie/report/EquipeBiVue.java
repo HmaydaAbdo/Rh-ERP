@@ -12,7 +12,7 @@ import java.util.List;
  * JAMAIS dans deux sections différentes (contrairement à l'export Excel, où Global/chantier/équipe se
  * chevauchent volontairement, voir {@code docs/report/rapport-v2.md}).
  *
- * <p>{@code effectif}, {@code masse}, {@code masseMoyenneParEmploye} et {@code stc} : les indicateurs de CETTE
+ * <p>{@code effectif}, {@code masse}, {@code stc} et {@code stcMontant} : les indicateurs de CETTE
  * section, les mêmes qu'aux niveaux global et chantier — {@code masse} porte aussi son mois précédent (même
  * périmètre équipe/reste), {@code null} si aucune donnée, voir {@link KpiMontantVue}. {@code
  * repartitionFonction} : effectif et STC de CETTE section par fonction — nouveau tableau récap
@@ -34,8 +34,8 @@ record EquipeBiVue(
         String libelleAffiche,
         KpiEffectifVue effectif,
         KpiMontantVue masse,
-        String masseMoyenneParEmploye,
         int stc,
+        String stcMontant,
         List<RepartitionBean> repartitionFonction,
         List<MaterielLigneVue> materiel,
         List<LigneEmployeVue> employes

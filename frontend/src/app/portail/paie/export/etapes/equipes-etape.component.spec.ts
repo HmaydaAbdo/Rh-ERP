@@ -105,10 +105,10 @@ describe('PaieExportEtapeEquipesComponent', () => {
     expect(codes(racine)).toEqual(['C196']);
   });
 
-  it('avec un chantier choisi en PDF, ne propose que ce chantier', async () => {
+  it('avec un marché choisi en PDF, ne propose que ce marché', async () => {
     const { fixture, store, racine } = await monter();
 
-    store.choisirChantier('C196');
+    store.choisirMarches(['C196']);
     await stabiliser(fixture);
 
     expect(codes(racine)).toEqual(['C196']);
