@@ -153,7 +153,7 @@ test.describe('Paie', () => {
     await expect(page.getByRole('heading', { name: /ALAMI Karim/ })).toBeVisible();
   });
 
-  test('exporte un PDF limité à un chantier, sans vue d’ensemble', async ({ page }) => {
+  test('exporte un PDF limité à un marché, sans vue d’ensemble', async ({ page }) => {
     const mock = await mockApi(page, { username: 'paie', permissions: DROITS }, { ...routes(), 'POST /paie/report/pdf': () => ({}) });
     await page.goto('/paie');
 
@@ -162,11 +162,11 @@ test.describe('Paie', () => {
     await dialogue.getByRole('button', { name: 'Continuer' }).click(); // mois
     await dialogue.getByRole('button', { name: 'Continuer' }).click(); // format PDF (par défaut)
 
-    await expect(dialogue.getByRole('radiogroup', { name: 'Chantier du rapport' })).toBeVisible();
+    await expect(dialogue.getByRole('group', { name: 'Marchés du rapport' })).toBeVisible();
     const accessibilite = await new AxeBuilder({ page }).include('[role=dialog]').analyze();
     expect(accessibilite.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
-    await dialogue.getByRole('radio', { name: /C168/ }).check();
+    await dialogue.getByRole('checkbox', { name: /C168/ }).check();
     await expect(dialogue.getByRole('checkbox', { name: /Sans vue d.ensemble/ })).toBeChecked();
     await dialogue.getByRole('button', { name: 'Continuer' }).click(); // équipes : le chantier seul
     await expect(dialogue.getByText('C168', { exact: true })).toBeVisible();
@@ -176,6 +176,6 @@ test.describe('Paie', () => {
     await expect(dialogue.getByText(/Retirée/)).toBeVisible();
     await dialogue.getByRole('button', { name: 'Générer le PDF' }).click();
 
-    await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierId: 3, sansVueEnsemble: true });
+    await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierIds: [3], sansVueEnsemble: true });
   });
 });
