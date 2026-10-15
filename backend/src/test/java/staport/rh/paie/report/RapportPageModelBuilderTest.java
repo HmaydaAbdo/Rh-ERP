@@ -301,7 +301,7 @@ class RapportPageModelBuilderTest {
                         .noneMatch(b -> b instanceof PageModel.BlocTitreEquipe);
                 assertThat(((PageModel.BlocKpi) premiere.get(1)).cartes().stream().map(CarteKpi::label))
                         .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF",
-                                "MASSE MOYENNE / EMPLOYÉ", "STC / SORTIES");
+                                "STC / SORTIES (PERSONNES)", "STC / SORTIES (DH)");
 
                 int lignes = 0;
                 for (int p = 1; p < pages.size(); p++) {
@@ -524,8 +524,8 @@ class RapportPageModelBuilderTest {
                         "TEST",
                         effectif,
                         masse,
-                        "1 000,00",
                         0,
+                        "0,00",
                         repartitionFonction,
                         materiel,
                         employes
@@ -538,8 +538,8 @@ class RapportPageModelBuilderTest {
                         "CHANTIER : C1",
                         masse,
                         effectif,
-                        "1 000,00",
                         0,
+                        "0,00",
                         List.of(),
                         List.of(),
                         List.of(equipe),
@@ -550,9 +550,9 @@ class RapportPageModelBuilderTest {
                 new SyntheseGlobaleVue(
                         masse,
                         effectif,
-                        "1 000,00",
                         1,
                         0,
+                        "0,00",
                         List.of(),
                         List.of(),
                         List.of()

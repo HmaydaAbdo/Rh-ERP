@@ -264,17 +264,20 @@ final class PaieReportHtmlBuilder {
         Element tableFonction = blocFonction.appendElement("table").addClass("recap").addClass("fonction");
         tableFonction.appendElement("col").addClass("libelle");
         tableFonction.appendElement("col").addClass("effectif");
-        tableFonction.appendElement("col").addClass("stc");
+        tableFonction.appendElement("col").addClass("stc-personnes");
+        tableFonction.appendElement("col").addClass("stc-montant");
         Element theadFonction = tableFonction.appendElement("thead").appendElement("tr");
         theadFonction.appendElement("th").text("FONCTION");
         theadFonction.appendElement("th").text("EFFECTIF");
-        theadFonction.appendElement("th").text("STC");
+        theadFonction.appendElement("th").text("STC (PERS.)");
+        theadFonction.appendElement("th").text("STC (DH)");
         Element tbodyFonction = tableFonction.appendElement("tbody");
         for (RepartitionBean ligneRecap : repartitionFonction) {
             Element tr = tbodyFonction.appendElement("tr");
             tr.appendElement("td").addClass("libelle").text(ligneRecap.getLibelle());
             tr.appendElement("td").addClass("effectif").text(String.valueOf(ligneRecap.getEffectif()));
-            tr.appendElement("td").addClass("stc").text(String.valueOf(ligneRecap.getStc()));
+            tr.appendElement("td").addClass("stc-personnes").text(String.valueOf(ligneRecap.getStc()));
+            tr.appendElement("td").addClass("stc-montant").text(PaieReportNumberFormat.montant(ligneRecap.getStcMontant()));
         }
 
         if (titreMateriel != null) {
