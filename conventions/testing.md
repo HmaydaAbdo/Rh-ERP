@@ -88,8 +88,9 @@ Les portes suivantes sont obligatoires :
 3. **Avant livraison**, exécuter la suite complète de régression, les parcours critiques de tous les domaines et
    les contrôles non fonctionnels associés au risque de la version. Les migrations et procédures de restauration
    sont vérifiées pour toute évolution de persistance.
-4. Une porte rouge bloque la fusion ou la livraison. Une relance peut aider au diagnostic, mais ne transforme pas
-   un échec intermittent en succès acceptable.
+4. Une porte rouge bloque la fusion ou la livraison. Les publications d'artefacts destinés à la livraison
+   dépendent de toutes les portes obligatoires ; aucune image ne doit être publiée avant leur réussite. Une
+   relance peut aider au diagnostic, mais ne transforme pas un échec intermittent en succès acceptable.
 
 Les seuils de couverture sont mesurés par domaine et par type de code. Ils ne doivent pas baisser sur le code
 modifié ; le rapport de couverture doit rester visible en CI. La couverture de lignes ne prouve pas la qualité :

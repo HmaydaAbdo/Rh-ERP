@@ -93,7 +93,19 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "runner": "vitest",
-            "buildTarget": "frontend:build:development"
+            "buildTarget": "frontend:build:development",
+            "coverageReporters": [
+              "text-summary",
+              "html",
+              "lcov"
+            ],
+            "coverageInclude": [
+              "src/app/**/*.ts"
+            ],
+            "coverageExclude": [
+              "src/app/**/*.spec.ts",
+              "src/app/shared/testing/**/*.ts"
+            ]
           }
         }
       }

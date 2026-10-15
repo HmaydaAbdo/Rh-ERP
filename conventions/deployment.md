@@ -109,8 +109,9 @@ fois une opération non idempotente.
 ## CI, publication et déploiement
 
 La CI exécute les contrôles et tests pertinents, puis construit les images Docker à partir du commit
-à livrer. Les images validées sont publiées dans un registre et promues entre environnements par
-leur identifiant immuable ; ne pas reconstruire une image différente pour la production.
+à livrer. La publication attend la réussite de toutes les portes obligatoires et de la construction
+de toutes les images. Les images validées sont publiées dans un registre et promues entre environnements
+par leur identifiant immuable ; ne pas reconstruire une image différente pour la production.
 
 * Ne jamais publier d'image de production depuis un changement non approuvé ou un contexte qui peut
   exposer des identifiants du registre.

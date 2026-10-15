@@ -1,12 +1,18 @@
 # Tests
 
-> Ce qui est testé, comment lancer les tests, et les règles à suivre en écrivant un test. Les tests
-> sont exécutés par la CI à chaque push et chaque pull request (`.github/workflows/ci.yml`) : un test qui
-> échoue empêche la publication des images.
+> Ce qui est testé, comment lancer les tests, et les règles à suivre en écrivant un test. La CI
+> (`.github/workflows/ci.yml`) exécute les contrôles à chaque push sur `main`, tag `v*` et pull request
+> vers `main`. Sur un push, le job `publish-images` attend les tests backend et frontend, les audits,
+> les seuils de couverture, le profil de performance et le parcours full-stack ; il construit les quatre
+> images avant de les publier. Une porte rouge ou un build d'image en échec bloque donc la publication.
 
 La règle normative est [`conventions/testing.md`](../conventions/testing.md) : elle rend les tests obligatoires
 pour chaque domaine, changement transversal et parcours full stack. Ce document décrit les commandes et l'état
 actuel des tests ERP-RH ; la convention décrit le niveau de preuve attendu.
+
+Les résultats Surefire et JaCoCo backend ainsi que la couverture frontend sont conservés 14 jours, y compris
+après un échec lorsque les fichiers ont été produits. Les rapports E2E et full-stack en échec sont conservés
+7 jours pour permettre le diagnostic sans relancer immédiatement le parcours.
 
 ---
 
@@ -59,7 +65,7 @@ Les tests d'intégration démarrent eux-mêmes un PostgreSQL 18 + pgvector jetab
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en
 environnement sans écran.
 
-Le backend mesure sa couverture avec JaCoCo : `./mvnw test` écrit le rapport dans `backend/target/site/jacoco/index.html` (2026-10-11 : 87 % des lignes, 73 % des branches ; la CI le conserve comme artefact). La CI génère aussi le SBOM et analyse les dépendances (voir [deployment.md](deployment.md)).
+Le backend mesure sa couverture avec JaCoCo : `./mvnw test` écrit le rapport dans `backend/target/site/jacoco/index.html`. La CI applique les seuils par domaine et conserve le rapport JaCoCo 14 jours. Elle génère aussi le SBOM et analyse les dépendances (voir [deployment.md](deployment.md)).
 
 Les seuils bloquants par domaine et la correspondance domaine → parcours → commande sont publiés dans
 [domain-coverage.md](testing/domain-coverage.md). Le script `scripts/check-domain-coverage.mjs` est
@@ -69,11 +75,7 @@ exécuté après les tests backend et publie le rapport JaCoCo par domaine.
 
 ## Backend
 
-Dernière validation complète consignée : 304 tests réussis, sans échec ni erreur, sous Java 21 et
-PostgreSQL 18.6 + pgvector 0.8.7, le 2026-10-11. Depuis, des tests de contrats Swagger et de
-métriques ont été ajoutés ; la suite complète n'a pas été relancée. Le 2026-10-12, les 17 tests
-ciblés métriques/audit/synchronisation ont réussi, sur une base jetable Testcontainers
-séparée des données migrées. Les vérifications locales ne remplacent pas la CI.
+Dernière preuve complète disponible : le run CI [38716785146](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38716785146) a réussi les jobs backend, couverture par domaine, analyse de dépendances, profil PostgreSQL, frontend, E2E et full-stack. Les rapports JaCoCo et les sorties de test sont consultables dans ses artefacts CI ; les décomptes historiques ci-dessous ne sont pas des totaux garantis pour le code courant.
 
 JUnit 5, Mockito, AssertJ, ArchUnit. La plupart des tests sont **unitaires** : le service est testé avec ses dépendances
 simulées, sans base de données. `PaieApplicationTests` et **les tests d'intégration de l'audit** démarrent l'application
@@ -118,9 +120,9 @@ toujours par identifiant, jamais par comptage global, car le conteneur est parta
 
 ---
 
-## Frontend (653 tests unitaires et composants, 39 parcours E2E)
+## Frontend (Vitest et Playwright)
 
-Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** (Playwright ; `CHROME_BIN` pour réutiliser un Chrome installé), sans Zone.js : les minuteries se pilotent avec `vi.useFakeTimers()`, les doublures avec `vi.fn()`. Les membres de composant utilisés par le gabarit sont `protected` ; un test y accède par `composant['membre']`. Couches : unités (services, utilitaires, gardes, intercepteurs), composants (rendu, clavier, signaux, formulaires, erreurs), E2E (voir plus bas).
+Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** (Playwright ; `CHROME_BIN` pour réutiliser un Chrome installé), sans Zone.js : les minuteries se pilotent avec `vi.useFakeTimers()`, les doublures avec `vi.fn()`. Les membres de composant utilisés par le gabarit sont `protected` ; un test y accède par `composant['membre']`. Couches : unités (services, utilitaires, gardes, intercepteurs), composants (rendu, clavier, signaux, formulaires, erreurs), E2E (voir plus bas). Le job CI applique les seuils bloquants par domaine (70 % lignes, 50 % branches) sur le rapport LCOV, avec une couverture instrumentée de `src/app/**/*.ts` ; le détail des groupes est dans [domain-coverage.md](testing/domain-coverage.md).
 
 | Fichier | Ce qu'il vérifie |
 |---|---|
@@ -149,7 +151,7 @@ Runner Angular `@angular/build:unit-test` (Vitest 5) dans un **Chromium réel** 
 
 `core/interceptors/error.interceptor.spec.ts` couvre en plus la notification d'erreur d'API et le silence de `auth/refresh` (restauration de session).
 
-### Couverture complète par famille (2026-10-10)
+### Couverture par famille
 
 Chaque composant, directive, service, intercepteur et utilitaire du frontend a son fichier de test voisin (`*.spec.ts`). Les tests d'écran agissent comme l'utilisateur
 (saisie par événements `input`, soumission du `<form>`, clic) plutôt que sur l'état interne ; les aides communes sont dans `shared/testing/` (`formulaire.ts` : `saisir`,
@@ -168,7 +170,7 @@ Chaque composant, directive, service, intercepteur et utilitaire du frontend a s
 | Formulaires | `*/form/*.spec.ts`, `core/auth/*/*.spec.ts` | Champs obligatoires signalés (message de la règle), focus sur le premier invalide, longueurs maximales, création et modification (corps envoyé, notification, navigation), formulaire remis à l'état intact après enregistrement, refus du serveur sans perte de saisie, champs verrouillés (employé et période d'un bulletin, identifiant d'utilisateur, rôle protégé), permissions utilisateur regroupées par domaine et états autorisé/refusé recalculés quand les rôles changent |
 | Assistant d'export | `paie/export/etapes/*.spec.ts`, `paie-export-wizard.component.spec.ts`, `paie-vue-switcher` | Une spec par étape (mois, format, chantier, équipes, matériel, récapitulatif) montée avec le vrai `PaieExportStore` (`etapes.testing.ts`), puis l'assistant entier |
 
-La suite a passé **653 tests** (91 fichiers) le 2026-10-10. Des avertissements `NG0956` (suivi par identité d'une liste d'un élément) apparaissent dans les tests des cartes de paie ; ils ne sont pas bloquants.
+Le run CI [38716785146](https://github.com/HmaydaAbdo/Rh-ERP/actions/runs/38716785146) a réussi la suite frontend, le build de production, les E2E et le contrôle full-stack. L'artefact de couverture frontend est conservé 14 jours ; il fait foi pour le décompte correspondant à un commit donné.
 
 ### Tests E2E (Playwright + axe)
 

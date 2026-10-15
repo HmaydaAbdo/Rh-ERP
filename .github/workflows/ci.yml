@@ -1,8 +1,8 @@
 name: CI
 
-# CI uniquement pour l'instant (pas de CD — voir docs/deployment.md) : tests + build + push des
-# images Docker Hub à chaque push sur main. Sur une pull request, seuls les tests tournent (pas de
-# build/push d'image — évite d'exposer les secrets Docker Hub à une PR non fiable).
+# CI uniquement pour l'instant (pas de CD — voir docs/deployment.md) : les contrôles requis passent
+# avant la construction et la publication des images Docker Hub. Sur une pull request, seuls les
+# contrôles tournent (pas de publication — évite d'exposer les secrets Docker Hub à une PR non fiable).
 
 on:
   push:
@@ -12,40 +12,6 @@ on:
     branches: [main]
 
 jobs:
-  postgres:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Determine image tags
-        if: github.event_name == 'push'
-        id: tags
-        run: |
-          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-postgres:${{ github.sha }}"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-postgres:latest"
-          fi
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-postgres:${{ github.ref_name }}"
-          fi
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push PostgreSQL 18 with pgvector and pgAudit
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v7
-        with:
-          context: database
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-
   backend:
     runs-on: ubuntu-latest
 
@@ -101,15 +67,26 @@ jobs:
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
 
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-results
+          path: backend/target/surefire-reports
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Enforce backend coverage by domain
         run: node scripts/check-domain-coverage.mjs backend/target/site/jacoco/jacoco.xml
 
       # Couverture des tests (JaCoCo, générée par la phase test) : rapport HTML conservé comme artefact.
       - name: Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: backend/target/site/jacoco
+          if-no-files-found: warn
           retention-days: 14
 
       # Sécurité de la chaîne d'approvisionnement : SBOM CycloneDX des dépendances réellement résolues, puis analyse de
@@ -128,34 +105,6 @@ jobs:
         with:
           name: sbom-backend
           path: backend/target/bom.json
-
-      - name: Determine image tags
-        if: github.event_name == 'push'
-        id: tags
-        run: |
-          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:${{ github.sha }}"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:latest"
-          fi
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backend:${{ github.ref_name }}"
-          fi
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push backend image
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v7
-        with:
-          context: backend
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
 
   performance-profile:
     runs-on: ubuntu-latest
@@ -247,11 +196,17 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
+      - name: Enforce frontend coverage by domain
+        working-directory: frontend
+        run: node ../scripts/check-frontend-domain-coverage.mjs coverage/lcov.info
+
       - name: Upload frontend coverage report
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: frontend/coverage
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Build (verifies the production bundle compiles)
@@ -273,68 +228,6 @@ jobs:
             frontend/playwright-report
             frontend/test-results
           retention-days: 7
-
-      - name: Determine image tags
-        if: github.event_name == 'push'
-        id: tags
-        run: |
-          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:${{ github.sha }}"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:latest"
-          fi
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-frontend:${{ github.ref_name }}"
-          fi
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push frontend image
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v7
-        with:
-          context: frontend
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-
-  backup:
-    needs: [backend, frontend]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Determine image tags
-        if: github.event_name == 'push'
-        id: tags
-        run: |
-          TAGS="${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backup:${{ github.sha }}"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backup:latest"
-          fi
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/erp-rh-backup:${{ github.ref_name }}"
-          fi
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v7
-        with:
-          context: backup
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.tags.outputs.tags }}
 
   full-stack:
     needs: [backend, frontend]
@@ -409,3 +302,70 @@ jobs:
           ADMIN_USERNAME: ci-admin
           ADMIN_PASSWORD: ci-admin-password
           BACKEND_URL: http://localhost:8080
+
+      - name: Upload full-stack failure reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-stack-failure-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            ${{ runner.temp }}/erp-rh-backend.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish-images:
+    needs: [backend, performance-profile, frontend, full-stack]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Construire les quatre images avant la connexion authentifiée au registre ou leur publication.
+      # Un échec de build n'en publie ainsi aucune.
+      - name: Build all images locally
+        run: |
+          set -euo pipefail
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-postgres:$GITHUB_SHA" database
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backend:$GITHUB_SHA" backend
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
+
+      - name: Add release aliases
+        run: |
+          set -euo pipefail
+          for image in postgres backend frontend backup; do
+            repository="$DOCKERHUB_USERNAME/erp-rh-$image"
+            source="$repository:$GITHUB_SHA"
+            if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+              docker tag "$source" "$repository:latest"
+            fi
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              docker tag "$source" "$repository:$GITHUB_REF_NAME"
+            fi
+          done
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Les tests, le contrôle de couverture, les audits et les builds des quatre images sont verts.
+      - name: Publish validated images
+        run: |
+          set -euo pipefail
+          for image in postgres backend frontend backup; do
+            repository="$DOCKERHUB_USERNAME/erp-rh-$image"
+            docker push "$repository:$GITHUB_SHA"
+            if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+              docker push "$repository:latest"
+            fi
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              docker push "$repository:$GITHUB_REF_NAME"
+            fi
+          done
