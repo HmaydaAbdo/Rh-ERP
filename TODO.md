@@ -88,15 +88,13 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 À traiter en premier lors de la prochaine intervention sur l'hôte de production. Toutes les opérations
 ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la [procédure détaillée](docs/deployment.md#migration-majeure-pg17--pg18-en-production).
 
-1. **Migration PostgreSQL 17→18** : obtenir l'accès SSH, inventorier la production et répéter la
-   restauration logique sur le serveur à partir d'une sauvegarde stockée sur ce même serveur, hors du
-   volume PostgreSQL. Pendant la fenêtre de maintenance, créer/restaurer le volume PG18, démarrer
-   Flyway jusqu'à V21 (V16–V21 sont en attente si la production est actuellement en V15), contrôler
-   données, rôles, extensions, permissions et application, puis conserver intact le volume PG17
-   comme retour arrière.
-2. **Activer et vérifier pgAudit en production** pour la seule base ERP-RH, avec toutes les classes
-   d'instructions (`all`, y compris `ROLE`), puis confirmer que les événements apparaissent dans les
-   journaux PostgreSQL. Cela fait partie de la bascule PG18. Vérifier les droits d'accès et la
+1. **Migration PostgreSQL 17→18 — bascule réalisée le 2026-10-14.** Les sorties du serveur confirment
+   PostgreSQL 18.6, pgvector 0.8.7, pgAudit 18.0, Flyway V21, `pgaudit.log=all`, le rôle applicatif
+   `staport_app` non-superuser et un backend sain. Avant de retirer ce suivi opérationnel, comparer
+   les volumes de données restaurés au dump final et confirmer que le volume PG17 d'origine reste
+   disponible comme retour arrière ; conserver les deux volumes jusqu'à cette vérification.
+2. **Terminer la vérification pgAudit en production** : confirmer dans les journaux PostgreSQL que
+   les événements sont bien émis, y compris `ROLE`. Vérifier les droits d'accès et la
    protection du volume CSV, définir avec la RH la durée de conservation/purge de ces journaux pgAudit
    (distincte de la conservation à vie décidée pour `audit_journal`/Envers), et configurer des alertes
    de capacité et sur `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et
@@ -104,9 +102,8 @@ ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la 
 3. **Nginx outer** : le serveur en possède déjà un. Obtenir l'exemple de configuration de l'utilisateur,
    puis s'aligner dessus ; ne pas remplacer ni modifier sa configuration avant cette revue. Voir
    [les informations à fournir](docs/deployment-informations-a-fournir.md).
-4. **CD** : après accès SSH, décider si le déploiement doit être automatisé sur tag `v*` après réussite
-   de la CI, puis préparer et valider cette chaîne. Ne pas déployer en production avant la migration
-   PG17→PG18.
+4. **CD** : décider si le déploiement doit être automatisé sur tag `v*` après réussite de la CI, puis
+   préparer et valider cette chaîne ; le déploiement reste manuel jusque-là.
 5. **Sauvegarde hors serveur** : différée par décision du 2026-10-11 ; aucun transfert hors hôte n'est
    prévu pour l'instant. Les archives quotidiennes chiffrées restent sur le serveur.
 6. **Mise en service et exercice de la sauvegarde chiffrée** : depuis le poste d'administration,

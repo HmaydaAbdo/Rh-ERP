@@ -36,9 +36,9 @@ Les points suivants nécessitent les accès ou l'environnement de production ; i
 
 - revue de la configuration Nginx outer existante et de ses en-têtes/TLS ;
 - choix et validation de l'automatisation CD sur l'hôte ;
-- migration PostgreSQL 17 → 18 sur une restauration réelle, Flyway V16 → V21 et contrôles en
-  production ;
+- vérifications post-bascule PostgreSQL 18 : rapprochement des données restaurées, conservation du
+  volume PG17 et événements pgAudit dans les journaux ;
 - copie des sauvegardes hors hôte, différée par décision du propriétaire.
 
-Aucune commande de déploiement ni modification de l'hôte de production n'a été effectuée pendant ce
-contrôle.
+Ce rapport décrit le contrôle local du 2026-10-12. La migration PG17→PG18 a ensuite été effectuée le
+2026-10-14 ; le suivi des vérifications post-bascule reste dans `TODO.md`.
