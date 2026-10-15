@@ -1,6 +1,8 @@
 package staport.rh.common.metrics;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import org.junit.jupiter.api.Test;
 import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.audit.events.ActionSecurite;
@@ -57,5 +59,20 @@ class MetricsConformityTest {
         assertThat(registre.get("rh.chantier.sync.duration").timer().count()).isEqualTo(2);
         assertThat(registre.get("rh.chantier.sync.duration").timer().totalTime(TimeUnit.MILLISECONDS)).isEqualTo(500.0);
         assertThat(registre.getMeters()).allSatisfy(metre -> assertThat(metre.getId().getTags()).isEmpty());
+    }
+
+    @Test
+    void duree_synchronisation_expose_un_histogramme_prometheus_en_secondes() {
+        PrometheusMeterRegistry registre = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        try {
+            ChantierSyncMetrics metriques = new ChantierSyncMetrics(registre);
+            metriques.recordSuccess(125);
+
+            String exposition = registre.scrape();
+            assertThat(exposition).contains("rh_chantier_sync_duration_seconds_bucket");
+            assertThat(exposition).contains("rh_chantier_sync_duration_seconds_count 1");
+        } finally {
+            registre.close();
+        }
     }
 }
