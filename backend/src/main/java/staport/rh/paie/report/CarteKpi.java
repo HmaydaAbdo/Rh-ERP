@@ -5,5 +5,9 @@ package staport.rh.paie.report;
  * si elle dépasse la largeur de la carte. {@code classeValeur} ("compte" ou "montant") pilote la taille de police de
  * la valeur en CSS (voir rapport.css). Type de données pur, jamais un élément jsoup — {@link RapportPageModelBuilder}
  * ne dépend d'aucune API HTML/PDF. */
-record CarteKpi(String label, String valeur, String classeValeur) {
+record CarteKpi(String label, String valeur, String classeValeur, String sousTexte) {
+
+    CarteKpi(String label, String valeur, String classeValeur) {
+        this(label, valeur, classeValeur, null);
+    }
 }

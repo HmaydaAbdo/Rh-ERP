@@ -51,9 +51,10 @@ class PaieReportHtmlPdfServiceTest {
     void setUp() {
         RapportRessourcesStatiques ressources = new RapportRessourcesStatiques();
         RapportChartSvgBuilder chartSvgBuilder = new RapportChartSvgBuilder();
+        RapportEvolutionSvgBuilder evolutionSvgBuilder = new RapportEvolutionSvgBuilder();
         PaieBiReportBuilder biReportBuilder = new PaieBiReportBuilder(repository);
         RapportPageModelBuilder pageModelBuilder = new RapportPageModelBuilder();
-        PaieReportHtmlBuilder htmlBuilder = new PaieReportHtmlBuilder(ressources, chartSvgBuilder);
+        PaieReportHtmlBuilder htmlBuilder = new PaieReportHtmlBuilder(ressources, chartSvgBuilder, evolutionSvgBuilder);
         service = new PaieReportHtmlPdfService(ressources, biReportBuilder, pageModelBuilder, htmlBuilder);
     }
 
@@ -67,6 +68,16 @@ class PaieReportHtmlPdfServiceTest {
         @SuppressWarnings("unchecked")
         List<Paie> courant = List.of(c059EquipeA, c059SansEquipe, c068EquipeB);
         when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of(precedent));
+        staport.rh.paie.repositories.EvolutionChantierEquipeProjection historique =
+                org.mockito.Mockito.mock(staport.rh.paie.repositories.EvolutionChantierEquipeProjection.class);
+        when(historique.getChantierCode()).thenReturn("C059");
+        when(historique.getPeriode()).thenReturn(YearMonth.of(2026, 9));
+        when(historique.getMasse()).thenReturn(new BigDecimal("12000"));
+        when(historique.getEffectif()).thenReturn(3L);
+        when(historique.getStc()).thenReturn(0L);
+        when(historique.getStcMontant()).thenReturn(BigDecimal.ZERO);
+        when(repository.sommerParChantierEquipePeriode(any(YearMonth.class), any(YearMonth.class)))
+                .thenReturn(List.of(historique));
 
         byte[] pdf = service.generer(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE);
 
@@ -78,7 +89,7 @@ class PaieReportHtmlPdfServiceTest {
         }
     }
 
-    /** Rapport d'un seul chantier, sans vue d'ensemble : un PDF valide, plus court que le rapport complet (une page de moins). */
+    /** Rapport d'un seul chantier, sans vue d'ensemble : un PDF valide, sans les deux pages globales. */
     @Test
     void generer_sansVueEnsembleProduitUnPdfValideSansLaPageGlobale() {
         Paie c059 = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);
@@ -115,7 +126,7 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
             assertThat(document.getNumberOfPages()).isGreaterThan(2);
-            BufferedImage pageChantier = new PDFRenderer(document).renderImage(2);
+            BufferedImage pageChantier = new PDFRenderer(document).renderImage(3);
             assertThat(nombrePixelsBleus(pageChantier))
                     .as("pixels bleus du graphique par équipe rendu sur la page chantier")
                     .isGreaterThan(20);

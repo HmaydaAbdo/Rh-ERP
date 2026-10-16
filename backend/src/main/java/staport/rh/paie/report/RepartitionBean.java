@@ -3,15 +3,12 @@ package staport.rh.paie.report;
 import java.math.BigDecimal;
 
 /**
- * Une catégorie (chantier, équipe, ou point mensuel d'une évolution — voir
- * {@code evolution-rapport/rapport-v2.md} pour ce dernier usage, retiré de tout graphique du rapport mais
- * toujours calculé) d'une répartition du rapport BI — masse, effectif et STC/sorties bruts (jamais
- * formatés), consommés comme source de données d'un {@code <barChart>} JRXML natif. Le STC est porté
+ * Une catégorie (chantier, équipe, ou point mensuel d'une évolution) des graphiques BI — masse,
+ * effectif et STC/sorties bruts (jamais formatés), consommés par les générateurs SVG. Le STC est porté
  * sous ses 2 représentations — {@code stc} (nombre de personnes) et {@code stcMontant} (masse
  * salariale des seules lignes STC/sortie) — demande explicite : les 2 doivent être visibles, pas une
- * seule (voir {@code PaieReportGroupedChartCustomizer}). Classe simple à getters, pas un record :
- * {@code JRBeanCollectionDataSource} résout les champs d'un graphique par introspection JavaBean
- * (convention {@code getXxx()}), pas par les accesseurs générés pour un record.
+ * seule (voir {@code docs/report/README.md}). Classe simple à getters conservée comme structure de
+ * lecture compatible avec les agrégats de rapport existants.
  */
 public final class RepartitionBean {
 

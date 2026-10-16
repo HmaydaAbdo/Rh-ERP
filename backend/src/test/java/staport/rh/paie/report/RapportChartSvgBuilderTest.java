@@ -53,8 +53,8 @@ class RapportChartSvgBuilderTest {
         assertThat(svg.selectFirst("g").tag().namespace()).isEqualTo(Parser.NamespaceSvg);
     }
 
-    /** Un graphique réparti sur plusieurs pages passe l'ensemble des lignes comme échelle : une même valeur doit
-     * donner une barre plus courte quand l'ensemble contient une valeur bien plus grande. */
+    /** Un graphique réparti sur plusieurs pages passe l'ensemble des lignes comme échelle commune : le mode historique
+     * divise par le maximum, tandis que la vue d'ensemble divise par le total de la série. */
     @Test
     void ajouterGraphique_doitCalerLesBarresSurLEchelleFournie() {
         RepartitionBean petit = new RepartitionBean("C001", 10, new BigDecimal("1000.00"), 0, BigDecimal.ZERO);
@@ -68,6 +68,13 @@ class RapportChartSvgBuilderTest {
         double largeurSeul = largeurBarreMasse(seul);
         double largeurCommune = largeurBarreMasse(surEchelleCommune);
         assertThat(largeurCommune).isCloseTo(largeurSeul / 4, org.assertj.core.data.Offset.offset(0.02));
+
+        Document partDuTotal = Document.createShell("");
+        builder.ajouterGraphique(partDuTotal.body().appendElement("div"), List.of(petit), List.of(petit, grand),
+                RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART, true);
+        double largeurPartDuTotal = largeurBarreMasse(partDuTotal);
+        assertThat(largeurPartDuTotal).isCloseTo(largeurSeul / 5, org.assertj.core.data.Offset.offset(0.02));
+        assertThat(partDuTotal.body().text()).contains("0%", "25%", "50%", "75%", "100%");
     }
 
     /** Largeur de la barre « Masse » (bleue) : les autres rectangles bleus sont le filet d'en-tête (2,5 pt de haut)

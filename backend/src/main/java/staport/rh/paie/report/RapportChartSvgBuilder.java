@@ -48,8 +48,9 @@ final class RapportChartSvgBuilder {
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
     /** Espace entre la fin des barres et la première colonne de valeurs. */
     private static final double ECART_AVANT_COLONNES = 12;
-    /** Hauteur totale maximale du graphique (en-tête des colonnes, lignes et légende comprises), en pt : il doit
-     * tenir sous le bandeau, le titre de chapitre et les cartes KPI d'une page paysage A4 (corps de page de 495 pt). */
+    /** Hauteur totale maximale du graphique (en-tête des colonnes, lignes, échelle éventuelle et légende comprises),
+     * en pt : il doit tenir sous le bandeau, le titre de chapitre et les cartes KPI d'une page paysage A4
+     * (corps de page de 495 pt). */
     static final double HAUTEUR_TOTALE_CHART = 361;
     /** Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs {@code width}/{@code height} du SVG et
      * dimensionne le dessin d'après son {@code viewBox}, exprimé en px (1 px = 0,75 pt) : le repère de dessin
@@ -58,6 +59,7 @@ final class RapportChartSvgBuilder {
     private static final double PX_PAR_PT = 4.0 / 3;
     static final double HAUTEUR_ENTETE = 14;
     static final double HAUTEUR_LEGENDE = 24;
+    static final double HAUTEUR_ECHELLE_POURCENTAGE = 12;
     private static final double HAUTEUR_CATEGORIE_MAX = 40;
     /** Part de la hauteur d'une ligne occupée par ses 4 barres ; le reste est l'espace blanc entre deux lignes. */
     private static final double PART_BARRES_PAR_CATEGORIE = 0.72;
@@ -79,25 +81,36 @@ final class RapportChartSvgBuilder {
         ajouterGraphique(corps, donnees, donnees);
     }
 
-    /** {@code echelle} : lignes dont les maxima fixent la longueur des barres (un graphique réparti sur plusieurs
-     * pages passe ici l'ensemble des lignes, pour que les barres restent comparables d'une page à l'autre). */
+    /** {@code echelle} : ensemble de lignes qui fixe les dénominateurs (maxima ou totaux selon le mode) des barres.
+     * Un graphique réparti sur plusieurs pages passe ici toutes ses lignes pour conserver une échelle commune. */
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle) {
         ajouterGraphique(corps, donnees, echelle, HAUTEUR_TOTALE_CHART);
     }
 
     /** {@code hauteurMax} : hauteur totale que le graphique ne doit pas dépasser (voir {@link PageModel.BlocGraphique}). */
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax) {
+        ajouterGraphique(corps, donnees, echelle, hauteurMax, false);
+    }
+
+    /** {@code partDuTotal} : les barres représentent la contribution à la somme de chaque série plutôt que la valeur
+     * rapportée au maximum de la série. Utilisé par la vue d'ensemble ; les graphiques chantier gardent leur échelle
+     * actuelle jusqu'à décision spécifique pour ce niveau. */
+    void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle,
+                          double hauteurMax, boolean partDuTotal) {
         Element container = corps.appendElement("div").addClass("chart-container");
         if (donnees.isEmpty()) {
             return;
         }
 
         double[] maxParSerie = new double[SERIES.size()];
+        double[] totalParSerie = new double[SERIES.size()];
         for (RepartitionBean ligne : echelle) {
-            maxParSerie[0] = Math.max(maxParSerie[0], valeurMontant(ligne.getMontant()));
-            maxParSerie[1] = Math.max(maxParSerie[1], ligne.getEffectif());
-            maxParSerie[2] = Math.max(maxParSerie[2], ligne.getStc());
-            maxParSerie[3] = Math.max(maxParSerie[3], valeurMontant(ligne.getStcMontant()));
+            double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(),
+                    valeurMontant(ligne.getStcMontant())};
+            for (int serie = 0; serie < SERIES.size(); serie++) {
+                maxParSerie[serie] = Math.max(maxParSerie[serie], valeurs[serie]);
+                totalParSerie[serie] += valeurs[serie];
+            }
         }
 
         double largeurColonnes = 0;
@@ -107,7 +120,8 @@ final class RapportChartSvgBuilder {
         List<List<String>> libellesParLigne = donnees.stream().map(ligne -> lignesLibelle(ligne.getLibelle())).toList();
         double largeurLabel = largeurColonneLibelles(libellesParLigne);
         double largeurPlot = LARGEUR_TOTALE - largeurLabel - ECART_AVANT_COLONNES - largeurColonnes;
-        double hauteurDisponible = hauteurMax - HAUTEUR_ENTETE - HAUTEUR_LEGENDE;
+        double hauteurEchelle = partDuTotal ? HAUTEUR_ECHELLE_POURCENTAGE : 0;
+        double hauteurDisponible = hauteurMax - HAUTEUR_ENTETE - hauteurEchelle - HAUTEUR_LEGENDE;
         double hauteurCategorie = Math.min(HAUTEUR_CATEGORIE_MAX, hauteurDisponible / donnees.size());
         double[] hauteursLignes = hauteursLignes(libellesParLigne, hauteurCategorie);
         if (somme(hauteursLignes) > hauteurDisponible) {
@@ -116,7 +130,8 @@ final class RapportChartSvgBuilder {
             hauteursLignes = hauteursLignes(libellesParLigne, hauteurCategorie);
         }
         double hauteurPlot = somme(hauteursLignes);
-        double hauteurSvg = HAUTEUR_ENTETE + hauteurPlot + HAUTEUR_LEGENDE;
+        double yLegende = HAUTEUR_ENTETE + hauteurPlot + hauteurEchelle;
+        double hauteurSvg = yLegende + HAUTEUR_LEGENDE;
 
         Element svg = container.appendElement("svg", Parser.NamespaceSvg)
                 .attr("xmlns", "http://www.w3.org/2000/svg")
@@ -180,7 +195,17 @@ final class RapportChartSvgBuilder {
             };
 
             for (int s = 0; s < SERIES.size(); s++) {
-                double largeur = maxParSerie[s] <= 0 ? 0 : (valeurs[s] / maxParSerie[s]) * largeurPlot;
+                if (partDuTotal) {
+                    dessin.appendElement("rect")
+                            .attr("x", format(largeurLabel))
+                            .attr("y", format(yGroupe + s * (barHauteur + ECART_ENTRE_BARRES)))
+                            .attr("width", format(largeurPlot))
+                            .attr("height", format(barHauteur))
+                            .attr("fill", "#F1F3F6");
+                }
+
+                double denominateur = partDuTotal ? totalParSerie[s] : maxParSerie[s];
+                double largeur = denominateur <= 0 ? 0 : (valeurs[s] / denominateur) * largeurPlot;
                 if (largeur > 0) {
                     dessin.appendElement("rect")
                             .attr("x", format(largeurLabel))
@@ -201,7 +226,28 @@ final class RapportChartSvgBuilder {
             }
         }
 
-        ajouterLegende(dessin, HAUTEUR_ENTETE + hauteurPlot, largeurLabel);
+        if (partDuTotal) {
+            ajouterEchellePourcentage(dessin, largeurLabel, largeurPlot, HAUTEUR_ENTETE + hauteurPlot);
+        }
+        ajouterLegende(dessin, yLegende, largeurLabel);
+    }
+
+    private void ajouterEchellePourcentage(Element dessin, double xDebut, double largeur, double yBas) {
+        for (int pourcentage = 0; pourcentage <= 100; pourcentage += 25) {
+            double x = xDebut + largeur * pourcentage / 100;
+            if (pourcentage > 0) {
+                dessin.appendElement("line")
+                        .attr("x1", format(x)).attr("y1", format(HAUTEUR_ENTETE))
+                        .attr("x2", format(x)).attr("y2", format(yBas))
+                        .attr("stroke", "#E5E7EB").attr("stroke-width", "0.5");
+            }
+            dessin.appendElement("text")
+                    .attr("x", format(x)).attr("y", format(yBas + HAUTEUR_ECHELLE_POURCENTAGE / 2))
+                    .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+                    .attr("font-size", "7")
+                    .attr("fill", "#667085")
+                    .text(pourcentage + "%");
+        }
     }
 
     /** Titre de chaque colonne de valeurs, souligné d'un filet de la couleur de sa série : la couleur relie la

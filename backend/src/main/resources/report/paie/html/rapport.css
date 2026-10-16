@@ -267,6 +267,29 @@ html, body {
     margin-top: 8pt;
 }
 
+.rubrique-titre {
+    font-size: 11pt;
+    line-height: 13pt;
+    margin-top: 5pt;
+}
+
+.perimetre-global {
+    margin: 3pt 0 1pt;
+    font-size: 9pt;
+    line-height: 12pt;
+    color: #555555;
+}
+
+.couverture-historique {
+    margin: 2pt 0 3pt;
+    padding: 2pt 0;
+    border-bottom: 0.5pt solid #CCCCCC;
+    color: #595959;
+    font-size: 8.5pt;
+    font-weight: bold;
+    line-height: 11pt;
+}
+
 .titre-indicateurs {
     margin-top: 4pt;
     font-size: 10pt;
@@ -334,6 +357,13 @@ html, body {
 .kpi-carte .valeur.montant {
     font-size: 10pt;
     line-height: 11.5pt;
+}
+
+.kpi-carte .sous-texte {
+    margin-top: 2pt;
+    font-size: 7pt;
+    line-height: 8pt;
+    color: #595959;
 }
 
 /* ================================ TABLEAU EMPLOYÉ ================================ */
@@ -479,4 +509,29 @@ table.recap.materiel td.libelle { text-align: left; }
 
 .chart-container svg text {
     font-family: "Liberation Serif", serif;
+}
+
+.evolution-container {
+    margin-top: 4pt;
+    width: 802pt;
+    height: 226pt;
+}
+
+.evolution-container.compact {
+    margin-top: 2pt;
+    height: 130pt;
+}
+
+.evolution-container svg {
+    display: block;
+}
+
+.evolution-container svg text {
+    font-family: "Liberation Serif", serif;
+}
+
+.evolution-indisponible {
+    margin: 18pt 0;
+    color: #595959;
+    font-size: 9pt;
 }

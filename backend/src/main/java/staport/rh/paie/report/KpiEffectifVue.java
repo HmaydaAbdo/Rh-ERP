@@ -1,10 +1,15 @@
 package staport.rh.paie.report;
 
-/** KPI d'effectif (headcount) avec comparaison au mois précédent — 0 est une valeur légitime
- * (contrairement à un montant, un effectif de 0 n'est jamais ambigu avec "aucune donnée"). */
+/** KPI d'effectif (headcount) avec comparaison au mois précédent — 0 est une valeur légitime. Une comparaison
+ * indisponible (aucune ligne de paie le mois précédent) est distincte d'une variation réelle égale à zéro. */
 record KpiEffectifVue(
         int effectifCourant,
         int effectifPrecedent,
-        String variation
+        int variation,
+        boolean comparaisonDisponible
 ) {
+
+    KpiEffectifVue(int effectifCourant, int effectifPrecedent, int variation) {
+        this(effectifCourant, effectifPrecedent, variation, true);
+    }
 }
