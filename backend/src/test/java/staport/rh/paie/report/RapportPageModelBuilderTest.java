@@ -55,8 +55,8 @@ class RapportPageModelBuilderTest {
      *     <li>aucune page ne dépasse la hauteur utile de page ;</li>
      *     <li>le pied récap n'est jamais accompagné d'un tableau employé VIDE
      *         (soit il suit des lignes réelles, soit il est seul sur sa page) ;</li>
-     *     <li>la 1re page de la section porte bien le titre + les cartes KPI,
-     *         les suivantes non.</li>
+     *     <li>dans le cas sans équipe sélectionnée, le détail reste fusionné au chapitre chantier
+     *         et ne répète pas le titre d'équipe ni ses cartes KPI.</li>
      * </ol>
      */
     @Test
@@ -198,11 +198,11 @@ class RapportPageModelBuilderTest {
                 assertThat(premierePageVue)
                         .as(
                                 "total=%d, lignesRecapMax=%d : "
-                                        + "la 1re page de la section porte le titre équipe",
+                                        + "le détail fusionné au chantier ne répète pas le titre équipe",
                                 total,
                                 lignesRecapMax
                         )
-                        .isTrue();
+                        .isFalse();
 
                 assertThat(lignesRecapVues)
                         .as("total=%d, lignesRecapMax=%d : chaque fonction du récap apparaît exactement une fois",
