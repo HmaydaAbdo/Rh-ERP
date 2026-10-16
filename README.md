@@ -71,8 +71,8 @@ Détail de ce qui est testé : [`docs/testing.md`](docs/testing.md).
 cp .env.example .env
 # renseigner DOCKERHUB_USERNAME + toutes les valeurs (voir .env.example) ; COOKIE_SECURE=true,
 # FRONTEND_URL en HTTPS réel pour une vraie mise en production.
-docker compose --profile backup pull    # récupère les images publiées par la CI, backup compris
-docker compose --profile backup up -d   # active aussi le service de sauvegarde
+docker compose --profile backup pull    # récupère les images publiées par la CI, sauvegarde comprise
+docker compose --profile backup up -d   # active aussi les services backup et rétention pgAudit
 ```
 
 Sans image déjà publiée sur Docker Hub (ex. avant le premier run de la CI, ou pour tester la stack
@@ -82,6 +82,7 @@ avant `docker compose --profile backup up -d` — `docker compose pull` échouer
 ```bash
 docker build -t $DOCKERHUB_USERNAME/erp-rh-backend:$BACKEND_IMAGE_TAG ./backend
 docker build -t $DOCKERHUB_USERNAME/erp-rh-frontend:$FRONTEND_IMAGE_TAG ./frontend
+docker build -t $DOCKERHUB_USERNAME/erp-rh-postgres:$POSTGRES_IMAGE_TAG ./database
 docker build -t $DOCKERHUB_USERNAME/erp-rh-backup:$BACKUP_IMAGE_TAG ./backup
 docker compose --profile backup up -d
 ```

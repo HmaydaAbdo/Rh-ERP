@@ -96,17 +96,19 @@ public class UserService implements IUserService {
     @Transactional
     @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public UserResponseDto create(UserCreateRequestDto dto) {
-        politiqueMotDePasse.exiger(dto.motDePasse(), dto.username());
-        if (repository.existsByUsername(dto.username())) {
-            throw new UsernameAlreadyExistsException(dto.username());
+        String username = dto.username().strip();
+        String email = dto.email().strip();
+        politiqueMotDePasse.exiger(dto.motDePasse(), username);
+        if (repository.existsByUsernameIgnoreCase(username)) {
+            throw new UsernameAlreadyExistsException(username);
         }
-        if (repository.existsByEmail(dto.email())) {
-            throw new EmailAlreadyExistsException(dto.email());
+        if (repository.existsByEmailIgnoreCase(email)) {
+            throw new EmailAlreadyExistsException(email);
         }
 
         Utilisateur utilisateur = new Utilisateur();
-        utilisateur.setUsername(dto.username());
-        utilisateur.setEmail(dto.email());
+        utilisateur.setUsername(username);
+        utilisateur.setEmail(email);
         utilisateur.setMotDePasseHash(passwordEncoder.encode(dto.motDePasse()));
         utilisateur.setActif(true);
         utilisateur.setEmployee(resolveEmployeeReference(dto.employeeId()));
@@ -123,15 +125,16 @@ public class UserService implements IUserService {
         Utilisateur utilisateur = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), utilisateur.getVersion());
 
-        repository.findByEmail(dto.email())
+        String email = dto.email().strip();
+        repository.findByEmail(email)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new EmailAlreadyExistsException(dto.email());
+                    throw new EmailAlreadyExistsException(email);
                 });
 
         boolean desactive = utilisateur.isActif() && !dto.actif();
 
-        utilisateur.setEmail(dto.email());
+        utilisateur.setEmail(email);
         utilisateur.setActif(dto.actif());
         utilisateur.setEmployee(resolveEmployeeReference(dto.employeeId()));
         utilisateur.setRoles(resolveRoles(dto.roleIds()));
@@ -178,6 +181,8 @@ public class UserService implements IUserService {
     @Transactional
     @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public Long creerAdminInitial(String username, String email, String motDePasse) {
+        username = username.strip();
+        email = email.strip();
         Role adminRole = roleRepository.findAllByOrderByNomAsc().stream()
                 .filter(r -> r.getNom().equals(RolesSysteme.SYSTEM_ADMIN))
                 .findFirst()

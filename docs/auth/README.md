@@ -162,8 +162,8 @@ Un compte est **indépendant** d'un employé (un administrateur n'est pas forcé
 
 | Champ | Règle |
 |---|---|
-| `username` | 3 à 50 caractères, **unique** ; **non modifiable** après création |
-| `email` | Format courriel, **unique** |
+| `username` | 3 à 50 caractères, espaces extérieurs retirés, **unique sans casse** ; **non modifiable** après création |
+| `email` | Format courriel, espaces extérieurs retirés, **unique sans casse** |
 | `motDePasse` | Règle des mots de passe (voir plus haut), création uniquement |
 | `actif` | Un compte inactif ne peut ni se connecter ni se rafraîchir ; **le désactiver coupe ses sessions** (jetons de rafraîchissement révoqués) |
 | `employeeId` | Optionnel ; un identifiant inconnu est refusé (`400`) |
@@ -184,7 +184,7 @@ différé), rôles, et — en modification seulement — les permissions refusé
 
 | Champ | Règle |
 |---|---|
-| `nom` | 2 à 50 caractères, **unique** |
+| `nom` | 2 à 50 caractères, espaces extérieurs retirés, **unique sans casse** |
 | `description` | Facultative, 255 caractères maximum |
 | `permissionIds` | Zéro ou plusieurs permissions du catalogue ; un identifiant inconnu est refusé (`400`) |
 

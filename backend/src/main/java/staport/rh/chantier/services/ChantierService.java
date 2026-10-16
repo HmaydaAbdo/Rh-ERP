@@ -35,11 +35,13 @@ public class ChantierService implements IChantierService {
     @Transactional
     @AuditableAction(action = "CHANTIER_CREATION", type = TypeOperation.CREATE, entite = Chantier.class)
     public ChantierResponseDto create(ChantierCreateRequestDto dto) {
-        if (repository.existsByCodeIgnoreCase(dto.code())) {
-            throw new ChantierAlreadyExistsException(dto.code());
+        String code = dto.code().strip();
+        if (repository.existsByCodeIgnoreCase(code)) {
+            throw new ChantierAlreadyExistsException(code);
         }
 
         Chantier entity = mapper.toEntity(dto);
+        entity.setCode(code);
         Chantier saved = repository.save(entity);
         return mapper.toDto(saved);
     }
@@ -51,13 +53,15 @@ public class ChantierService implements IChantierService {
         Chantier entity = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
-        repository.findByCodeIgnoreCase(dto.code())
+        String code = dto.code().strip();
+        repository.findByCodeIgnoreCase(code)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new ChantierAlreadyExistsException(dto.code());
+                    throw new ChantierAlreadyExistsException(code);
                 });
 
         mapper.updateEntityFromDto(dto, entity);
+        entity.setCode(code);
         Chantier updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
     }

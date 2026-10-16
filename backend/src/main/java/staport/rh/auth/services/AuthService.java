@@ -83,7 +83,7 @@ public class AuthService implements IAuthService {
     @Override
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public Connexion login(String username, String motDePasse) {
-        Optional<Utilisateur> trouve = utilisateurRepository.findByUsernameForUpdate(username);
+        Optional<Utilisateur> trouve = utilisateurRepository.findByUsernameForUpdate(username.strip());
         if (trouve.isEmpty()) {
             // Même travail de hachage que pour un compte existant : sans lui, la rapidité de la réponse révélerait qu'un
             // identifiant n'existe pas (conventions/security.md, « Principes »).
@@ -208,7 +208,7 @@ public class AuthService implements IAuthService {
     @Override
     @Transactional
     public void demanderReinitialisationMotDePasse(String email) {
-        Optional<Utilisateur> compte = utilisateurRepository.findByEmail(email);
+        Optional<Utilisateur> compte = utilisateurRepository.findByEmail(email.strip());
         // Un événement à chaque demande (repère les demandes en rafale) : le compte seulement s'il existe, jamais l'adresse saisie.
         evenements.publishEvent(compte
                 .map(u -> EvenementSecurite.pour(ActionSecurite.MOT_DE_PASSE_OUBLIE, u.getId(), u.getUsername()))

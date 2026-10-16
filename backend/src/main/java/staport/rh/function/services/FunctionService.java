@@ -35,11 +35,13 @@ public class FunctionService implements IFunctionService {
     @Transactional
     @AuditableAction(action = "FONCTION_CREATION", type = TypeOperation.CREATE, entite = Function.class)
     public FunctionResponseDto create(FunctionCreateRequestDto dto) {
-        if (repository.existsByLibelleIgnoreCase(dto.libelle())) {
-            throw new FunctionAlreadyExistsException(dto.libelle());
+        String libelle = dto.libelle().strip();
+        if (repository.existsByLibelleIgnoreCase(libelle)) {
+            throw new FunctionAlreadyExistsException(libelle);
         }
 
         Function entity = mapper.toEntity(dto);
+        entity.setLibelle(libelle);
         Function saved = repository.save(entity);
         return mapper.toDto(saved);
     }
@@ -51,13 +53,15 @@ public class FunctionService implements IFunctionService {
         Function entity = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
-        repository.findByLibelleIgnoreCase(dto.libelle())
+        String libelle = dto.libelle().strip();
+        repository.findByLibelleIgnoreCase(libelle)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new FunctionAlreadyExistsException(dto.libelle());
+                    throw new FunctionAlreadyExistsException(libelle);
                 });
 
         mapper.updateEntityFromDto(dto, entity);
+        entity.setLibelle(libelle);
         Function updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
     }

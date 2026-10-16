@@ -14,7 +14,7 @@
 
 services:
   postgres:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG immuable est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     command:
       - postgres
       - -c
@@ -26,7 +26,8 @@ services:
       - -c
       - log_directory=/var/lib/postgresql
       - -c
-      - log_filename=postgresql-%Y-%m-%d_%H%M%S.csv
+      # PostgreSQL ajoute lui-même .csv à la sortie csvlog.
+      - log_filename=postgresql-%Y-%m-%d_%H%M%S
       - -c
       - log_rotation_age=1d
       - -c
@@ -59,7 +60,7 @@ services:
       retries: 10
 
   backup:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG immuable est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG est obligatoire}
     # Optionnel en local ; activer explicitement en production avec --profile backup.
     profiles: ["backup"]
     restart: unless-stopped
@@ -96,8 +97,32 @@ services:
       start_period: 1h
       retries: 3
 
+  postgres-log-retention:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    # La rétention est activée avec le profil backup déjà requis en production.
+    profiles: ["backup"]
+    restart: unless-stopped
+    user: postgres
+    entrypoint: ["/usr/local/bin/pgaudit-retention-scheduler"]
+    command: []
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    volumes:
+      # Le job tourne avec le même UID postgres et ne cible que les CSV au premier niveau.
+      - postgres_data_v18:/var/lib/postgresql
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+
   backend:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG immuable est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -154,7 +179,7 @@ services:
       retries: 5
 
   frontend:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG immuable est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     depends_on:
       backend:

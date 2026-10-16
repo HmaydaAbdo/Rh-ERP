@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -142,11 +143,11 @@ public class PaieImportService {
                     continue;
                 }
 
-                cinsTraites.add(cin.trim().toUpperCase());
-                Long employeeId = employesParCin.get(cin.trim().toUpperCase());
-                aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.trim(),
-                        chantiersParCode.get(chantierCode.trim().toUpperCase()),
-                        equipe != null ? equipesParCode.get(equipe.trim().toUpperCase()) : null, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
+                cinsTraites.add(normaliserCle(cin));
+                Long employeeId = employesParCin.get(normaliserCle(cin));
+                aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.strip(),
+                        chantiersParCode.get(normaliserCle(chantierCode)),
+                        equipe != null ? equipesParCode.get(normaliserCle(equipe)) : null, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
                         salaireMensuel, primeRoulageOrdinaire, primeRoulageDimanche,salaireTotal,observation));
             }
         } catch (IOException | RuntimeException e) {
@@ -168,7 +169,7 @@ public class PaieImportService {
         List<String> fonctionsCreees = creerFonctionsManquantes(aAppliquer, fonctionsParLibelle);
 
         for (LigneAAppliquer ligne : aAppliquer) {
-            Long fonctionId = fonctionsParLibelle.get(ligne.fonctionLibelle().toUpperCase());
+            Long fonctionId = fonctionsParLibelle.get(normaliserCle(ligne.fonctionLibelle()));
 
             Paie paie = new Paie();
             paie.setEmployee(entityManager.getReference(Employee.class, ligne.employeeId()));
@@ -203,7 +204,7 @@ public class PaieImportService {
     private List<String> creerFonctionsManquantes(List<LigneAAppliquer> aAppliquer, Map<String, Long> fonctionsParLibelle) {
         Set<String> libellesACreer = new LinkedHashSet<>();
         for (LigneAAppliquer ligne : aAppliquer) {
-            String cle = ligne.fonctionLibelle().toUpperCase();
+            String cle = normaliserCle(ligne.fonctionLibelle());
             if (!fonctionsParLibelle.containsKey(cle)) {
                 libellesACreer.add(ligne.fonctionLibelle());
             }
@@ -212,7 +213,7 @@ public class PaieImportService {
         List<String> creees = new ArrayList<>();
         for (String libelle : libellesACreer) {
             FunctionResponseDto fonction = functionService.create(new FunctionCreateRequestDto(libelle));
-            fonctionsParLibelle.put(libelle.toUpperCase(), fonction.id());
+            fonctionsParLibelle.put(normaliserCle(libelle), fonction.id());
             creees.add(libelle);
         }
         return creees;
@@ -269,7 +270,7 @@ public class PaieImportService {
             return "Observation trop longue (255 caractères maximum)";
         }
 
-        String cinNormalise = cin.trim().toUpperCase();
+        String cinNormalise = normaliserCle(cin);
         if (cinsTraites.contains(cinNormalise)) {
             return "CIN en doublon dans le fichier";
         }
@@ -279,11 +280,11 @@ public class PaieImportService {
         if (employesAvecBulletin.contains(employesParCin.get(cinNormalise))) {
             return "Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)";
         }
-        if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
-            return "Chantier introuvable ou inactif : " + chantierCode.trim();
+        if (!chantiersParCode.containsKey(normaliserCle(chantierCode))) {
+            return "Chantier introuvable ou inactif : " + chantierCode.strip();
         }
-        if (equipeCode != null && !equipesParCode.containsKey(equipeCode.trim().toUpperCase())) {
-            return "Équipe introuvable : " + equipeCode.trim();
+        if (equipeCode != null && !equipesParCode.containsKey(normaliserCle(equipeCode))) {
+            return "Équipe introuvable : " + equipeCode.strip();
         }
 
         return null;
@@ -301,14 +302,14 @@ public class PaieImportService {
     private Map<String, Long> chargerEmployesParCin() {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> employeeService.search(null, pageable),
-                employee -> resultat.put(employee.cin().toUpperCase(), employee.id()));
+                employee -> resultat.put(normaliserCle(employee.cin()), employee.id()));
         return resultat;
     }
 
     private Map<String, Long> chargerFonctions() {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> functionService.search(null, pageable),
-                fonction -> resultat.put(fonction.libelle().toUpperCase(), fonction.id()));
+                fonction -> resultat.put(normaliserCle(fonction.libelle()), fonction.id()));
         return resultat;
     }
 
@@ -316,7 +317,7 @@ public class PaieImportService {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
             if (chantier.actif()) {
-                resultat.put(chantier.code().toUpperCase(), chantier.id());
+                resultat.put(normaliserCle(chantier.code()), chantier.id());
             }
         });
         return resultat;
@@ -325,8 +326,12 @@ public class PaieImportService {
     private Map<String, Long> chargerEquipesParCode() {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> equipeService.search(null, pageable),
-                equipe -> resultat.put(equipe.code().toUpperCase(), equipe.id()));
+                equipe -> resultat.put(normaliserCle(equipe.code()), equipe.id()));
         return resultat;
+    }
+
+    private static String normaliserCle(String valeur) {
+        return valeur.strip().toUpperCase(Locale.ROOT);
     }
 
     private boolean estLigneVide(Row row) {

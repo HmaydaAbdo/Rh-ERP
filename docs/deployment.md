@@ -59,8 +59,8 @@ joignable que par le backend, sur le réseau `db-net` — le frontend ne peut pa
 cas de compromission du conteneur.
 
 Tous les ports publiés par `docker-compose.yml` (`POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT`)
-sont liés à `127.0.0.1` — accessibles uniquement depuis le serveur lui-même (nginx outer, ou un
-accès SSH direct pour l'administration/le backup), jamais depuis l'extérieur.
+sont liés à `127.0.0.1` — accessibles uniquement depuis le serveur lui-même (nginx outer ou les
+services locaux), jamais depuis l'extérieur.
 
 ---
 
@@ -131,9 +131,19 @@ activés uniquement pour ces origines explicites.
 
 ```bash
 cp .env.example .env   # une seule fois, puis renseigner de vraies valeurs (voir .env.example)
-docker compose --profile backup pull    # récupère les images publiées par la CI (voir .github/workflows/ci.yml)
-docker compose --profile backup up -d   # le profil active le service de sauvegarde
 ```
+
+Sur le serveur de production, ajouter `COMPOSE_PROFILES=backup` au fichier `.env` une seule fois,
+puis lancer les commandes ordinaires :
+
+```bash
+docker compose pull    # récupère les images publiées par la CI (voir .github/workflows/ci.yml)
+docker compose up -d   # démarre aussi les planificateurs de sauvegarde et de rétention pgAudit
+```
+
+Compose active alors ce profil pour les commandes. Le profil lance le planificateur de sauvegarde
+et le planificateur de rétention pgAudit ; ce n'est pas une commande de restauration. Sans cette
+variable ou `--profile backup`, ces services optionnels ne sont pas inclus.
 
 ### Deux comptes PostgreSQL
 
@@ -142,7 +152,7 @@ d'audit ; le **propriétaire** (`POSTGRES_USER`) ne sert qu'à Flyway. Au démar
 n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manuelle**.
 
 - **Bascule** : ajouter `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` dans `.env` (voir `.env.example`), puis
-  `docker compose --profile backup pull && docker compose --profile backup up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
+  `docker compose pull && docker compose up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
   applicatif ne peut pas modifier les tables d'audit ». À essayer d'abord sur une copie de la base.
 - **Retour arrière** : retirer ces deux variables ; le compte propriétaire sert de nouveau à tout (l'application signale
   alors, au démarrage, que l'intégrité de l'audit n'est pas garantie).
@@ -155,34 +165,50 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
 
 `docker-compose.yml` ne contient aucun `build:` : il utilise uniquement des images publiées sur
 Docker Hub. L'image `erp-rh-postgres` est construite depuis `database/Dockerfile` (PostgreSQL 18 +
-pgvector + pgAudit). Pour re-déployer une nouvelle version, sélectionner le même SHA approuvé pour
-les quatre images, puis exécuter `docker compose --profile backup pull && docker compose --profile
-backup up -d`. Cette opération ne supprime pas le volume `postgres_data_v18`. Ne jamais lancer
+pgvector + pgAudit). Pour redéployer la production, vérifier que la CI de `main` a réussi, puis exécuter
+`docker compose pull && docker compose up -d`. Les quatre variables d'image suivent `latest` par
+décision du propriétaire (voir [ADR 0004](adr/0004-production-latest-tag.md)).
+Cette opération ne supprime pas le volume `postgres_data_v18`. Ne jamais lancer
 `docker compose down -v`.
 
+### Rétention des journaux CSV PostgreSQL
+
+Le service `postgres-log-retention`, activé par le profil `backup`, utilise l'image PostgreSQL ERP-RH
+et monte le volume `postgres_data_v18` avec l'utilisateur `postgres`, sans réseau. Il supprime au
+démarrage puis chaque jour à 03:00 UTC les fichiers réguliers du premier niveau qui correspondent
+à `postgresql-*.csv*` et dont la modification remonte à plus de 90 jours. Cette rétention concerne
+uniquement les CSV PostgreSQL ; elle ne supprime ni `audit_journal`/Envers ni les sauvegardes chiffrées.
+Le nom `log_filename` ne doit pas inclure `.csv`, car PostgreSQL ajoute ce suffixe à la sortie `csvlog`.
+
+Après déploiement, vérifier que `postgres-log-retention` est démarré et sain avec
+`docker compose ps postgres-log-retention`, puis consulter `docker compose logs --tail 20 postgres-log-retention`
+pour confirmer l'exécution quotidienne. Le conteneur ne peut supprimer que les CSV de plus de 90 jours ;
+la vérification initiale des droits d'accès du volume et la configuration des alertes restent nécessaires.
+
 La migration locale PG17→PG18 du 2026-10-10 était une répétition isolée. La bascule de production a
-été effectuée le 2026-10-14 ; voir la procédure et les vérifications consignées plus bas. Le volume
-PG17 et le volume `postgres_data_v18` doivent rester préservés jusqu'au rapprochement des données et
-à la validation d'une restauration PG18, suivis dans [`TODO.md`](../TODO.md).
+été effectuée le 2026-10-14 et le propriétaire confirme qu'il n'y a plus de suivi à faire sur l'ancien
+volume PG17. Les prochains essais de migrations et de restauration se feront sur des instances isolées,
+comme indiqué dans [`TODO.md`](../TODO.md).
 
-### Tags immuables des images
+### Tags des images en production
 
-La CI publie chaque image avec le SHA du commit (`github.sha`) et publie aussi `latest` pour les usages
-qui ne déploient pas en production. Compose exige explicitement les quatre variables
-`POSTGRES_IMAGE_TAG`, `BACKUP_IMAGE_TAG`, `BACKEND_IMAGE_TAG` et `FRONTEND_IMAGE_TAG` : définir le même
-SHA publié pour chacune avant `docker compose --profile backup pull`. Aucun tag par défaut n'est accepté,
-afin d'éviter qu'une mise à jour déplace silencieusement les images utilisées et de conserver une version
-précise pour le retour arrière. La valeur `change-me-commit-sha` de `.env.example` est un placeholder à
-remplacer avant tout `pull` ou démarrage.
+La CI publie chaque image avec le SHA du commit (`github.sha`) et publie aussi `latest` pour `main`.
+Conformément à l'ADR 0004, la production suit `latest` pour les quatre variables
+`POSTGRES_IMAGE_TAG`, `BACKUP_IMAGE_TAG`, `BACKEND_IMAGE_TAG` et `FRONTEND_IMAGE_TAG`, déjà renseignées
+ainsi dans `.env.example`. Avant chaque pull, attendre la réussite de la CI sur `main` et vérifier
+l'état de santé des cinq services actifs avec le profil `backup`. `latest` est mutable : il peut désigner un autre build
+au prochain déploiement et ne permet pas de retrouver seul l'ancienne version. Pour faciliter un
+diagnostic ou un retour arrière, conserver les identifiants/digests des images actuellement déployées
+dans le registre d'exploitation, ou utiliser les tags SHA publiés en cas d'incident.
 
 ### Retour arrière d'une mise à jour applicative
 
-Avant la mise à jour, noter le SHA des quatre images actuellement déployées et vérifier qu'une
-sauvegarde récente est disponible. Mettre les quatre variables de tag dans `.env` sur le SHA validé
-à déployer, puis exécuter la procédure manuelle ci-dessus. En cas d'échec d'un healthcheck ou d'un
-parcours critique, remettre ensemble les quatre tags précédents dans `.env`, exécuter
-`docker compose --profile backup pull` puis `docker compose --profile backup up -d`, et vérifier la
-santé des services ainsi que les parcours concernés.
+Avant la mise à jour, vérifier qu'une sauvegarde récente est disponible. Après le pull, en cas d'échec
+d'un healthcheck ou d'un parcours critique, ne pas relancer aveuglément `latest` : consulter le registre
+d'exploitation pour retrouver l'image précédente (ou son tag SHA publié), rétablir ensemble les quatre
+images correspondantes, puis vérifier la santé des services et les parcours concernés. Si cette
+référence n'a pas été conservée, appliquer une correction en avant ou suivre la procédure de restauration
+après décision de l'exploitant.
 
 Ce retour aux images précédentes n'est sûr que si les migrations Flyway de la version déployée restent
 compatibles avec cette version applicative. Si une migration rend le schéma ou les données incompatibles,
@@ -233,12 +259,14 @@ suspendues jusqu'à la décision de réouverture.
    par une migration inverse contrôlée. Conserver les deux volumes jusqu'à validation métier et
    sauvegarde PG18 restaurable.
 
-État de production au 2026-10-14, d'après les commandes exécutées sur le serveur : la restauration
-PG17→PG18 a été faite dans le nouveau volume ; PostgreSQL 18.6, pgvector 0.8.7 et pgAudit 18.0 sont
-disponibles ; Flyway a atteint V21 ; `pgaudit.log=all` est configuré ; le rôle applicatif est
-non-superuser et le backend est sain. La vérification comparative des volumes de données restaurés,
-la présence conservée du volume PG17 et la lecture d'événements pgAudit dans les journaux restent
-suivies dans [`TODO.md`](../TODO.md).
+État de production relevé le 2026-10-14 : PostgreSQL 18.6, pgvector 0.8.7 et pgAudit 18.0 sont
+disponibles ; Flyway avait atteint V21 ; `pgaudit.log=all` était configuré ; le rôle applicatif était
+non-superuser et le backend sain. Le propriétaire confirme le 2026-10-16 que pgAudit fonctionne. Le
+2026-10-16, les migrations V22 à V26 ont été appliquées avec Flyway sur une copie restaurée de la
+sauvegarde de production, sans doublon préexistant ni valeur hors plage. Le backend a démarré ensuite
+avec `ddl-auto=validate` ; la dernière version Flyway est V26. Aucun suivi du volume PG17 n'est requis,
+selon le propriétaire. La purge CSV, les ACL et les alertes pgAudit restent à finaliser dans
+[`TODO.md`](../TODO.md).
 
 ---
 
@@ -256,12 +284,12 @@ le contexte d'une pull request.
 **Chaîne d'approvisionnement** : la CI du backend génère un SBOM CycloneDX (`./mvnw cyclonedx:makeBom`, artefact `sbom-backend`), l'analyse avec OSV-Scanner (échec à la première vulnérabilité connue ; exceptions motivées dans `backend/osv-scanner.toml`) et conserve le rapport de couverture JaCoCo (artefact `backend-coverage`). Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour Maven, npm, Docker (balise et empreinte) et GitHub Actions. Les images sont non-root et épinglées par empreinte (voir [../conventions/deployment.md](../conventions/deployment.md)) : le conteneur frontend écoute sur **8080** (le Compose publie `127.0.0.1:${FRONTEND_PORT}` vers ce port ; nginx outer n'est pas concerné).
 
 **CD manuel** — la mise à jour de production est déclenchée par un opérateur autorisé avec
-`docker compose --profile backup pull && docker compose --profile backup up -d`, après validation CI
-du SHA ciblé. Vérifier l'état de santé des quatre services et les parcours critiques avant de terminer
-la fenêtre. Aucun déploiement SSH automatisé n'est configuré ; son éventuelle introduction sera une
-évolution séparée, avec secrets dans GitHub Actions et contrôle de santé. La migration PG17→PG18 est
-terminée. La lecture des événements pgAudit et la surveillance de l'espace des journaux CSV restent
-des vérifications de production dans `TODO.md`.
+`docker compose pull && docker compose up -d`, après réussite de la CI sur `main`. La production suit
+`latest` pour les quatre images selon l'ADR 0004. Le `.env` de production doit porter
+`COMPOSE_PROFILES=backup` pour inclure les conteneurs de sauvegarde et de rétention planifiées. Vérifier
+l'état de santé des cinq services et les parcours critiques avant de terminer la fenêtre. Aucun accès SSH ni déploiement
+automatisé n'est souhaité. La migration PG17→PG18 et l'émission pgAudit sont confirmées ; les contrôles
+restants sont dans `TODO.md`.
 
 Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (token d'accès Docker Hub, pas le mot de passe du compte).
@@ -299,8 +327,10 @@ les archives. Les archives contiennent des données personnelles et salariales :
 l'accès au répertoire `./backups/`, qui est exclu de Git.
 
 **Objectifs de reprise** : RPO cible de 24 heures (sauvegarde quotidienne à 02:00 UTC) et RTO cible
-de 4 heures, retenu le 2026-10-12. L'exercice local synthétique réussit dans ce délai ; confirmer le
-RTO avec le volume et les contraintes d'accès réels avant de le tenir pour validé en production.
+de 4 heures, retenu le 2026-10-12. Le 2026-10-16, l'archive de production `rh-erp-20261016T020000Z.tar.gz.age`
+a été déchiffrée et restaurée avec succès en PostgreSQL 18.6 isolé ; `pgaudit` et `vector` sont présents
+et Flyway est en V21. L'opération locale a pris 6 secondes pour une archive de 1,5 Mo. Ce temps mesure
+la restauration de la base, pas le redémarrage complet de l'application en production.
 
 ### Préparer la clé age et accéder aux archives
 
@@ -351,8 +381,12 @@ avant tout retour au service. Ne jamais tester sur le seul volume de production.
 
 Par décision du propriétaire, réaffirmée le 2026-10-15, les archives de base restent uniquement sur
 le serveur ; aucune copie hors hôte n'est demandée. Cette stratégie protège contre la perte du volume
-PostgreSQL ou une erreur sur les données, mais pas contre la perte ou la compromission de l'hôte. La
-clé publique age est configurée et une archive chiffrée récente a été créée ; la restauration isolée
-d'une archive de production, la mesure du RTO et l'alerte de fraîcheur restent dans `TODO.md`.
+PostgreSQL ou une erreur sur les données, mais pas contre la perte ou la compromission de l'hôte. Le
+2026-10-16, le service `backup` était `healthy`, deux archives de moins de 24 heures étaient présentes
+et le tmpfs `/tmp` disposait de 3,9 Go libres. Une archive de production a été restaurée avec succès
+dans une instance PostgreSQL 18.6 isolée, puis V22 à V26 y ont été appliquées avec succès. La clé
+privée est absente du dossier de sauvegarde du serveur et le propriétaire a confirmé en conserver une
+copie de secours protégée hors serveur. L'exercice est terminé ; l'alerte de fraîcheur est suivie avec
+la supervision métrique dans `TODO.md`.
 
 Voir `TODO.md` pour le suivi.

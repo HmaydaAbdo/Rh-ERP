@@ -64,12 +64,13 @@ public class RoleService implements IRoleService {
     @Transactional
     @AuditableAction(action = "ROLE_CREATION", type = TypeOperation.CREATE, entite = Role.class)
     public RoleResponseDto create(RoleCreateRequestDto dto) {
-        if (roleRepository.existsByNom(dto.nom())) {
-            throw new RoleAlreadyExistsException(dto.nom());
+        String nom = dto.nom().strip();
+        if (roleRepository.existsByNomIgnoreCase(nom)) {
+            throw new RoleAlreadyExistsException(nom);
         }
 
         Role role = new Role();
-        role.setNom(dto.nom());
+        role.setNom(nom);
         role.setDescription(dto.description());
         role.setPermissions(resolvePermissions(dto.permissionIds()));
 
@@ -83,19 +84,20 @@ public class RoleService implements IRoleService {
     public RoleResponseDto update(Long id, RoleUpdateRequestDto dto) {
         Role role = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), role.getVersion());
+        String nom = dto.nom().strip();
         Set<Permission> permissions = resolvePermissions(dto.permissionIds());
         if (RolesSysteme.SYSTEM_ADMIN.equals(role.getNom())) {
-            garantirAdministrationIntacte(role, dto.nom(), permissions);
+            garantirAdministrationIntacte(role, nom, permissions);
         }
 
         roleRepository.findAllByOrderByNomAsc().stream()
-                .filter(existing -> existing.getNom().equalsIgnoreCase(dto.nom()) && !existing.getId().equals(id))
+                .filter(existing -> existing.getNom().strip().equalsIgnoreCase(nom) && !existing.getId().equals(id))
                 .findAny()
                 .ifPresent(existing -> {
-                    throw new RoleAlreadyExistsException(dto.nom());
+                    throw new RoleAlreadyExistsException(nom);
                 });
 
-        role.setNom(dto.nom());
+        role.setNom(nom);
         role.setDescription(dto.description());
         role.setPermissions(permissions);
 

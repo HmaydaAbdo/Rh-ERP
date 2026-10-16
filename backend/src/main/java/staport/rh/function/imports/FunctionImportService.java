@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -69,7 +70,7 @@ public class FunctionImportService {
                 if (libelle == null || libelle.isBlank()) {
                     continue;
                 }
-                libelle = libelle.trim();
+                libelle = libelle.strip();
                 totalLignes++;
 
                 if (libelle.length() > MAX_LIBELLE_LENGTH) {
@@ -78,7 +79,7 @@ public class FunctionImportService {
                     continue;
                 }
 
-                String cle = libelle.toLowerCase();
+                String cle = libelle.toUpperCase(Locale.ROOT);
                 if (libellesTraites.contains(cle) || repository.existsByLibelleIgnoreCase(libelle)) {
                     lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, libelle, "Fonction déjà existante"));
                     continue;

@@ -36,10 +36,10 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 
 | Table | Clé métier (unique) | Colonnes | Clés étrangères |
 |---|---|---|---|
-| `fonction` | `libelle` (unique après mise en majuscules, V23) | `libelle` (100, non nul), `version` | — |
-| `chantier` | `code` (unique après mise en majuscules, V24) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
-| `equipe` | `code` et `libelle` (uniques après trim et mise en majuscules, V25) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après mise en majuscules, V22) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` | `fonction_id`, `chantier_id` (non nuls) |
+| `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
+| `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
+| `equipe` | `code` et `libelle` (uniques après trim et mise en majuscules, V25 ; espaces extérieurs refusés en base par V27) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
+| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` | `fonction_id`, `chantier_id` (non nuls) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 
 Détail et règles métier : [function](function/README.md), [chantier](chantier/README.md),
@@ -50,9 +50,9 @@ Détail et règles métier : [function](function/README.md), [chantier](chantier
 | Table | Rôle |
 |---|---|
 | `permission` | Catalogue **fixe** des permissions (une ligne par domaine × action), alimenté par migration, jamais modifié depuis l'interface. Code unique, `version` |
-| `role` | Rôles administrables via l'interface. Nom unique, `version` |
+| `role` | Rôles administrables via l'interface. Nom unique après trim et comparaison sans casse (V27), `version` |
 | `role_permission` | Association rôle ↔ permission (`ON DELETE RESTRICT` des deux côtés depuis `V13` : Hibernate retire d'abord les liaisons d'un rôle supprimé, ce que l'audit voit) |
-| `utilisateur` | Compte de connexion : `username` et `email` uniques, `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
+| `utilisateur` | Compte de connexion : `username` et `email` uniques après trim et comparaison sans casse (V27), `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
 | `utilisateur_role` | Association utilisateur ↔ rôle (`ON DELETE RESTRICT` depuis `V13`) |
 | `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
 | `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille`, `version` (identifiant de session, voir [auth/README.md](auth/README.md)) |
@@ -90,13 +90,13 @@ Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMig
 
 | Donnée | Garantie en base | Garantie en service |
 |---|---|---|
-| Fonction (`libelle`) | `V23` : index unique sur `UPPER(libelle)` | Comparaison insensible à la casse, `409` |
-| Chantier (`code`) | `V24` : index unique sur `UPPER(code)` | Comparaison insensible à la casse, `409` |
+| Fonction (`libelle`) | `V27` : index unique sur `UPPER(BTRIM(libelle))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
+| Chantier (`code`) | `V27` : index unique sur `UPPER(BTRIM(code))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
 | Équipe (`code`, `libelle`) | `V25` : index uniques sur `UPPER(BTRIM(...))` | Code et libellé trimés, comparaison insensible à la casse, `409` |
-| Employé (`cin`) | `V22` : index unique sur `UPPER(cin)` | Comparaison insensible à la casse, `409` |
+| Employé (`cin`) | `V27` : index unique sur `UPPER(BTRIM(cin))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
 | Bulletin (employé, période) | `UNIQUE` | Contrôle avant création, `409` |
-| Utilisateur (`username`, `email`) | `UNIQUE` | Contrôle avant création/modification, `409` |
-| Rôle (`nom`) | `UNIQUE` | Contrôle avant création/modification, `409` |
+| Utilisateur (`username`, `email`) | `V27` : index uniques sur `UPPER(BTRIM(...))` et contraintes anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
+| Rôle (`nom`) | `V27` : index unique sur `UPPER(BTRIM(nom))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
 
 Limites actuelles : les index fonctionnels bloquent l'égalité après normalisation, mais pas les
 quasi-doublons sémantiques (`TECHNICIEN DE QUALITE` / `THECNICIEN DE QUALITE`). Ces cas et les

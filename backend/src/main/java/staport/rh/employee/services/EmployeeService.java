@@ -51,11 +51,13 @@ public class EmployeeService implements IEmployeeService {
     @Transactional
     @AuditableAction(action = "EMPLOYE_CREATION", type = TypeOperation.CREATE, entite = Employee.class)
     public EmployeeResponseDto create(EmployeeCreateRequestDto dto) {
-        if (repository.existsByCinIgnoreCase(dto.cin())) {
-            throw new CinAlreadyExistsException(dto.cin());
+        String cin = dto.cin().strip();
+        if (repository.existsByCinIgnoreCase(cin)) {
+            throw new CinAlreadyExistsException(cin);
         }
 
         Employee entity = mapper.toEntity(dto);
+        entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
 
@@ -70,13 +72,15 @@ public class EmployeeService implements IEmployeeService {
         Employee entity = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
-        repository.findByCinIgnoreCase(dto.cin())
+        String cin = dto.cin().strip();
+        repository.findByCinIgnoreCase(cin)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new CinAlreadyExistsException(dto.cin());
+                    throw new CinAlreadyExistsException(cin);
                 });
 
         mapper.updateEntityFromDto(dto, entity);
+        entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
 
