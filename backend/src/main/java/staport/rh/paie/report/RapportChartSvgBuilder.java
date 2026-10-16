@@ -60,7 +60,7 @@ final class RapportChartSvgBuilder {
     static final double HAUTEUR_ENTETE = 14;
     static final double HAUTEUR_LEGENDE = 24;
     static final double HAUTEUR_ECHELLE_POURCENTAGE = 12;
-    private static final double HAUTEUR_CATEGORIE_MAX = 40;
+    static final double HAUTEUR_CATEGORIE_MAX = 54;
     /** Part de la hauteur d'une ligne occupée par ses 4 barres ; le reste est l'espace blanc entre deux lignes. */
     private static final double PART_BARRES_PAR_CATEGORIE = 0.72;
     /** Espace blanc entre deux barres d'une même ligne, en pt. */
@@ -234,6 +234,10 @@ final class RapportChartSvgBuilder {
 
     /** Graphique matériel à une seule série. Les quantités restent alignées dans une colonne à droite des barres. */
     void ajouterGraphiqueMateriel(Element corps, String titre, List<MaterielLigneVue> donnees) {
+        ajouterGraphiqueMateriel(corps, titre, donnees, HAUTEUR_TOTALE_CHART);
+    }
+
+    void ajouterGraphiqueMateriel(Element corps, String titre, List<MaterielLigneVue> donnees, double hauteurMax) {
         List<MaterielLigneVue> renseignees = donnees.stream()
                 .filter(ligne -> ligne.getNombre() != null)
                 .toList();
@@ -249,7 +253,7 @@ final class RapportChartSvgBuilder {
         double espaceValeur = 12;
         double largeurPlot = LARGEUR_TOTALE - largeurLabel - largeurValeur - espaceValeur;
         double hauteurLigne = Math.min(HAUTEUR_CATEGORIE_MAX,
-                Math.max(HAUTEUR_RANGEE_MIN, (HAUTEUR_TOTALE_CHART - HAUTEUR_ENTETE) / renseignees.size()));
+                Math.max(HAUTEUR_RANGEE_MIN, (hauteurMax - HAUTEUR_ENTETE) / renseignees.size()));
         double hauteurSvg = HAUTEUR_ENTETE + hauteurLigne * renseignees.size();
         Element svg = container.appendElement("svg", Parser.NamespaceSvg)
                 .attr("xmlns", "http://www.w3.org/2000/svg")
