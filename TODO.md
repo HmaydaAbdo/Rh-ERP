@@ -97,56 +97,46 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 ## Travail côté serveur
 
-À traiter en premier lors de la prochaine intervention sur l'hôte de production. Toutes les opérations
-ci-dessous sont regroupées car elles nécessitent l'accès serveur ; suivre la [procédure détaillée](docs/deployment.md#migration-majeure-pg17--pg18-en-production).
+À traiter lors d'interventions autorisées sur l'hôte de production. Vérifier les sauvegardes et les
+procédures propres à chaque opération dans `docs/deployment.md` avant toute action.
 
-1. **Migration PostgreSQL 17→18 — bascule réalisée le 2026-10-14.** Les sorties du serveur confirment
-   PostgreSQL 18.6, pgvector 0.8.7, pgAudit 18.0, Flyway V21, `pgaudit.log=all`, le rôle applicatif
-   `staport_app` non-superuser et un backend sain. Avant de retirer ce suivi opérationnel, comparer
-   les volumes de données restaurés au dump final et confirmer que le volume PG17 d'origine reste
-   disponible comme retour arrière ; conserver les deux volumes jusqu'à cette vérification.
-2. **Terminer la vérification pgAudit en production** : confirmer dans les journaux PostgreSQL que
-   les événements sont bien émis, y compris `ROLE`. La RH a fixé le 2026-10-15 la conservation des
-   CSV pgAudit à 90 jours, distincte de la conservation à vie de `audit_journal`/Envers. Mettre en
-   place et vérifier la purge effective au-delà de 90 jours, vérifier les droits d'accès et la
-   protection du volume CSV, puis configurer des alertes de capacité et sur
+1. **Terminer l'exploitation pgAudit** : la génération des événements en production est confirmée.
+   La RH a fixé le 2026-10-15 la conservation des CSV pgAudit à 90 jours, distincte de la conservation
+   à vie de `audit_journal`/Envers. Le service Compose `postgres-log-retention` et son exécution quotidienne
+   à 03:00 UTC sont implémentés ; les déployer et vérifier la purge effective. Contrôler les droits d'accès
+   et la protection du volume CSV, puis configurer des alertes de capacité et sur
    `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et `rh.audit.chaine.invalide`.
-3. **Nginx outer** : le serveur en possède déjà un. Obtenir l'exemple de configuration de l'utilisateur,
-   puis s'aligner dessus ; ne pas remplacer ni modifier sa configuration avant cette revue. Voir
-   [les informations à fournir](docs/deployment-informations-a-fournir.md).
-4. **CD** : décider si le déploiement doit être automatisé sur tag `v*` après réussite de la CI, puis
-   préparer et valider cette chaîne ; le déploiement reste manuel jusque-là.
-5. **Exercice de restauration de la sauvegarde de production** : la clé publique `age` est configurée
-   et le service `backup` a créé une archive `.tar.gz.age` récente, confirmée par les journaux du
-   2026-10-14. Depuis un poste de restauration contrôlé, confirmer que la clé privée et sa copie de
-   secours sont protégées hors serveur, récupérer une archive, la déchiffrer (`age --decrypt`), vérifier
-   les sommes et restaurer dans une instance isolée. Mesurer le RTO avec le volume réel; vérifier aussi
-   la capacité de `/tmp` tmpfs selon la base et la mémoire disponibles. Une alerte reste à configurer
-   lorsque le service est unhealthy ou qu'aucune archive récente n'existe. Ne jamais copier la clé
-   privée sur l'hôte ou dans le dépôt. Les archives de base restent sur le serveur par décision du
-   propriétaire; le risque de perte ou de compromission de l'hôte est accepté et documenté dans
-   `conventions/backup.md` et `docs/deployment.md`.
-6. **Vérifications sécurité Auth en production** : dans l'environnement protégé, vérifier un
-   `JWT_SECRET` aléatoire propre à la production (Base64, au moins 256 bits), `COOKIE_SECURE=true`,
-   les seules origines HTTPS réelles dans `CORS_ALLOWED_ORIGINS`, Swagger désactivé et le mot de
-   passe administrateur de bootstrap remplacé après la première connexion. Après la migration qui
-   inclut V21, contrôler le verrouillage 5 échecs/15 minutes et la rotation/révocation des sessions
-   sur l'instance de production. Vérifier également que nginx inner limite les essais par adresse
-   réelle, que l'outer transmet correctement cette adresse et que la confiance nginx inner est
-   limitée à l'adresse ou au sous-réseau exact de l'outer (pas à tous les réseaux privés) ; ne
-   modifier nginx outer qu'après revue de l'exemple fourni par le propriétaire.
-7. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
+2. **Contrôles de connexion et de proxy en production** : vérifier sans afficher les secrets que
+   `JWT_SECRET` est propre à la production et suffisamment aléatoire, que Swagger est désactivé et que
+   le mot de passe administrateur initial a été changé. Tester le verrouillage après 5 échecs pendant
+   15 minutes et la rotation/révocation des sessions. Confirmer que Nginx outer transmet l'adresse IP
+   réelle, que Nginx inner n'accepte ces en-têtes que depuis l'outer, et que les limites de connexion
+   s'appliquent bien par utilisateur/adresse. Après HTTPS, vérifier aussi le cookie `Secure` et les
+   origines CORS publiques. Aucun secret ne doit être partagé.
+3. **Mettre l'accès ERP en HTTPS** (session dédiée) : déterminer l'URL publique et le point de terminaison
+   TLS, configurer le certificat et le listener Nginx, puis vérifier la redirection HTTP→HTTPS, le
+   sous-chemin `/erp-rh/`, les cookies sécurisés, CORS et le renouvellement du certificat. La config
+   Nginx actuelle ne montre que HTTP/80 ; ne pas modifier le serveur avant de confirmer le nom public
+   et la méthode d'obtention/renouvellement du certificat.
+4. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
    `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
    qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
-8. **Raccorder la supervision métrique en production** : configurer un collecteur Prometheus privé
+5. **Raccorder la supervision métrique en production** (session dédiée) : configurer un collecteur Prometheus privé
    pour `/actuator/prometheus` et choisir sa rétention. Créer un tableau de bord de disponibilité,
    débit et latence HTTP, d'échecs d'audit et de ses jauges d'intégrité, ainsi que des succès,
    échecs, lignes ignorées et durées de synchronisation des chantiers. Définir les alertes avec un
    seuil, une durée, un responsable et une action : intégrité d'audit `> 0` pendant 1 minute ; nouvel
    échec d'écriture d'audit dans une fenêtre de 5 minutes ; nouvel échec de synchronisation dans une
-   fenêtre de 15 minutes. Confirmer ces seuils avec l'exploitation, tester la collecte et le routage
-   des alertes avant la mise en service.
+   fenêtre de 15 minutes ; sauvegarde unhealthy ou archive de plus de 24 heures. Confirmer ces seuils
+   avec l'exploitation, tester la collecte et le routage des alertes avant la mise en service.
+
+Le propriétaire n'utilisera pas SSH. Le CD manuel a été confirmé le 2026-10-16 : aucun staging ni
+déploiement GitHub Actions vers le serveur. La production utilisera `latest` pour les quatre images
+après réussite de la CI sur `main` (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
+inclure automatiquement les services de sauvegarde et de rétention pgAudit, le `.env` de production doit contenir
+`COMPOSE_PROFILES=backup`. La revue de l'extrait Nginx outer a été faite ; les contrôles restants sont
+détaillés ci-dessus.
 
 ## Performance — arbitrages et mesures à terminer
 
