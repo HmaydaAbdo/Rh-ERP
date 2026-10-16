@@ -68,7 +68,9 @@ class RapportPageModelBuilderTest {
                  lignesRecapMax <= Math.min(60, total);
                  lignesRecapMax++) {
 
-                RapportBiVue vue = vueAvecUneEquipe(total, lignesRecapMax, false);
+                // Ce balayage couvre la pagination du récapitulatif fonctionnel. Avec une équipe
+                // sélectionnée, cette rubrique est un graphique (sans lignes de récapitulatif).
+                RapportBiVue vue = vueAvecUneEquipe(total, lignesRecapMax, false, false);
 
                 List<PageModel> pages = builder.construire(vue);
 
@@ -635,9 +637,11 @@ class RapportPageModelBuilderTest {
         KpiCompteVue stc = new KpiCompteVue(0, 0, 0, false);
         KpiMontantVue stcMontant = new KpiMontantVue("0,00", null, "Écart indisponible");
 
+        String chantierCode = avecMateriel ? "C168" : "C1";
+        String equipeCode = avecMateriel ? "CH" : "EQ";
         EquipeBiVue equipe =
                 new EquipeBiVue(
-                        "EQ",
+                        equipeCode,
                         "ÉQUIPE : TEST",
                         "TEST",
                         effectif,
@@ -653,9 +657,9 @@ class RapportPageModelBuilderTest {
 
         ChantierBiVue chantier =
                 new ChantierBiVue(
-                        "C1",
-                        "C1",
-                        "CHANTIER : C1",
+                        chantierCode,
+                        chantierCode,
+                        "CHANTIER : " + chantierCode,
                         masse,
                         effectif,
                         stc,

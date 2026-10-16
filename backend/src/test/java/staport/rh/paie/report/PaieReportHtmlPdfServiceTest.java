@@ -139,11 +139,27 @@ class PaieReportHtmlPdfServiceTest {
         try (PDDocument document = PDDocument.load(pdf)) {
             assertThat(document.getNumberOfPages()).isGreaterThan(2);
             String texte = new PDFTextStripper().getText(document);
-            assertThat(texte).contains("4. Parc matériel", "CAMION", "5. Liste des employés",
-                    "CAMION CITERNE", "3", "PELLE PNEU", "2");
+            assertThat(texte).contains("4. Parc matériel — CAMION", "5. Liste des employés",
+                    "EMPLOYE UN", "EMPLOYE DEUX");
             BufferedImage pageChantier = new PDFRenderer(document).renderImage(6);
             assertThat(nombrePixelsBleus(pageChantier))
                     .as("pixels bleus du graphique par équipe rendu sur la page de répartition chantier")
+                    .isGreaterThan(20);
+
+            int pageGraphiqueMateriel = -1;
+            PDFTextStripper extracteur = new PDFTextStripper();
+            for (int page = 1; page <= document.getNumberOfPages(); page++) {
+                extracteur.setStartPage(page);
+                extracteur.setEndPage(page);
+                if (extracteur.getText(document).contains("4. Parc matériel — CAMION")) {
+                    pageGraphiqueMateriel = page - 1;
+                    break;
+                }
+            }
+            assertThat(pageGraphiqueMateriel).as("page contenant le graphique matériel").isGreaterThanOrEqualTo(0);
+            BufferedImage graphiqueMateriel = new PDFRenderer(document).renderImage(pageGraphiqueMateriel);
+            assertThat(nombrePixelsViolets(graphiqueMateriel))
+                    .as("pixels violets des barres du graphique matériel réellement rendu dans le PDF")
                     .isGreaterThan(20);
         }
     }
@@ -221,6 +237,23 @@ class PaieReportHtmlPdfServiceTest {
                 int vert = (rgb >> 8) & 0xff;
                 int bleu = rgb & 0xff;
                 if (rouge >= 30 && rouge <= 45 && vert >= 90 && vert <= 110 && bleu >= 220 && bleu <= 245) {
+                    nombre++;
+                }
+            }
+        }
+        return nombre;
+    }
+
+    /** Vérifie le rendu du remplissage violet du graphique matériel sans dépendre de l'extraction SVG. */
+    private long nombrePixelsViolets(BufferedImage image) {
+        long nombre = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                int rouge = (rgb >> 16) & 0xff;
+                int vert = (rgb >> 8) & 0xff;
+                int bleu = rgb & 0xff;
+                if (rouge >= 90 && rouge <= 150 && vert >= 20 && vert <= 100 && bleu >= 170) {
                     nombre++;
                 }
             }
