@@ -70,9 +70,7 @@ class PaieReportHtmlPdfServiceTest {
         when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of(precedent));
         staport.rh.paie.repositories.EvolutionChantierEquipeProjection historique =
                 org.mockito.Mockito.mock(staport.rh.paie.repositories.EvolutionChantierEquipeProjection.class);
-        when(historique.getChantierId()).thenReturn(1L);
         when(historique.getChantierCode()).thenReturn("C059");
-        when(historique.getEquipe()).thenReturn("EQUIPE A");
         when(historique.getPeriode()).thenReturn(YearMonth.of(2026, 9));
         when(historique.getMasse()).thenReturn(new BigDecimal("12000"));
         when(historique.getEffectif()).thenReturn(3L);
