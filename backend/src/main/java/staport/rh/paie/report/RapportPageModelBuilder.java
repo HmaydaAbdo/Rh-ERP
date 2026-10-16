@@ -80,6 +80,10 @@ final class RapportPageModelBuilder {
     /** Titre « Liste des employés » (marge 8 + 12pt). */
     private static final double DETAILS_TITRE_HAUTEUR = 18;
 
+    /** Deux graphiques d'évolution et leurs titres partagent une seule page d'analyse. */
+    private static final double HAUTEUR_EVOLUTION_PAIREE = RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE;
+    private static final double MARGE_GRAPHIQUE = 8;
+
     /** Marge du tableau (8) + en-tête à deux lignes (2 × 16). */
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
@@ -149,6 +153,8 @@ final class RapportPageModelBuilder {
      * ici) : uniquement une précaution, vérifiée empiriquement lors de la reproduction locale (voir
      * {@code docs/report/README.md}). */
     private static final double MARGE_SECURITE = 8;
+    private static final double BUDGET_GRAPHIQUES_EQUIPE = PAGE_BODY_HAUTEUR - MARGE_SECURITE
+            - 2 * DETAILS_TITRE_HAUTEUR - 2 * MARGE_GRAPHIQUE;
 
     private static final int CHAPITRES_FIXES = 1;
 
@@ -182,10 +188,6 @@ final class RapportPageModelBuilder {
             ChantierBiVue chantier = chantiers.get(index);
             List<PageModel.Bloc> enteteChantier = blocsChantier(chantier, chapitresFixes + index);
             pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
-            pages.add(new PageEnConstruction(niveauTexteChantier(chantier), List.of(
-                    new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"),
-                    new PageModel.BlocGraphiqueEvolution(
-                            chantier.evolutionMensuelle(), PageModel.GroupeEvolution.STC))));
             pages.add(new PageEnConstruction(niveauTexteChantier(chantier), blocsRepartitionChantier(chantier)));
             List<EquipeBiVue> equipes = chantier.equipes();
             int premiereEquipeSeule = 0;
@@ -197,7 +199,7 @@ final class RapportPageModelBuilder {
             for (EquipeBiVue equipe : equipes.subList(premiereEquipeSeule, equipes.size())) {
                 if (equipe.equipeSelectionnee()) {
                     ajouterAnalyseEquipeSelectionnee(pages, chantier, equipe);
-                    ajouterPagesEmployesEquipe(pages, chantier, equipe);
+                    ajouterPagesEmployesEquipe(pages, chantier, equipe, pages.get(pages.size() - 1));
                 } else {
                     ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0, false);
                 }
@@ -221,14 +223,10 @@ final class RapportPageModelBuilder {
         blocs.add(kpi);
         blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF));
+                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                HAUTEUR_EVOLUTION_PAIREE));
+        ajouterEvolutionStc(blocs, synthese.evolutionMensuelle());
         pages.add(new PageEnConstruction("GLOBAL", blocs));
-
-        List<PageModel.Bloc> blocsEvolution = new ArrayList<>();
-        blocsEvolution.add(new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"));
-        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.STC));
-        pages.add(new PageEnConstruction("GLOBAL", blocsEvolution));
 
         ajouterPagesRepartitionGlobale(pages, synthese.repartitionChantier());
     }
@@ -299,8 +297,16 @@ final class RapportPageModelBuilder {
         blocs.add(blocKpi(cartesKpi(chantier.masse(), chantier.effectif(), chantier.stc(), chantier.stcMontant(), null)));
         blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
-                chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF));
+                chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                HAUTEUR_EVOLUTION_PAIREE));
+        ajouterEvolutionStc(blocs, chantier.evolutionMensuelle());
         return blocs;
+    }
+
+    private void ajouterEvolutionStc(List<PageModel.Bloc> blocs, List<RepartitionBean> evolution) {
+        blocs.add(new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"));
+        blocs.add(new PageModel.BlocGraphiqueEvolution(evolution, PageModel.GroupeEvolution.STC,
+                HAUTEUR_EVOLUTION_PAIREE));
     }
 
     private List<PageModel.Bloc> blocsRepartitionChantier(ChantierBiVue chantier) {
@@ -327,12 +333,9 @@ final class RapportPageModelBuilder {
         masse.add(cartesKpiEquipe(equipe));
         masse.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         masse.add(new PageModel.BlocGraphiqueEvolution(equipe.evolutionMensuelle(),
-                PageModel.GroupeEvolution.MASSE_EFFECTIF));
+                PageModel.GroupeEvolution.MASSE_EFFECTIF, HAUTEUR_EVOLUTION_PAIREE));
+        ajouterEvolutionStc(masse, equipe.evolutionMensuelle());
         pages.add(new PageEnConstruction(niveau, masse));
-
-        pages.add(new PageEnConstruction(niveau, List.of(
-                new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"),
-                new PageModel.BlocGraphiqueEvolution(equipe.evolutionMensuelle(), PageModel.GroupeEvolution.STC))));
 
         List<RepartitionBean> fonction = equipe.repartitionFonction().stream().sorted((a, b) -> {
             java.math.BigDecimal montantA = a.getMontant() == null ? java.math.BigDecimal.ZERO : a.getMontant();
@@ -340,30 +343,82 @@ final class RapportPageModelBuilder {
             int comparaison = montantB.compareTo(montantA);
             return comparaison != 0 ? comparaison : a.getLibelle().compareToIgnoreCase(b.getLibelle());
         }).toList();
-        List<List<RepartitionBean>> tranchesFonction = repartirParPages(fonction,
-                RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART);
+        List<MaterielLigneVue> materielRenseigne = equipe.materiel().stream()
+                .filter(ligne -> ligne.getNombre() != null).toList();
+        boolean avecMateriel = materielRenseigne.stream().anyMatch(ligne -> ligne.getNombre() > 0);
+        String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
+
+        List<List<RepartitionBean>> tranchesFonction;
+        double hauteurGraphiqueFonction = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART;
+        double hauteurGraphiqueMateriel = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART;
+        boolean materielAvecFonction = avecMateriel && fonction.size() <= PaieBiReportBuilder.MAX_BARRES_GRAPHIQUE
+                && hauteurMinimaleGraphiquesEquipe(fonction, materielRenseigne) <= BUDGET_GRAPHIQUES_EQUIPE;
+        if (materielAvecFonction) {
+            tranchesFonction = List.of(fonction);
+            double[] hauteurs = hauteursGraphiquesEquipe(fonction, materielRenseigne);
+            hauteurGraphiqueFonction = hauteurs[0];
+            hauteurGraphiqueMateriel = hauteurs[1];
+        } else {
+            tranchesFonction = repartirParPages(fonction, hauteurGraphiqueFonction);
+        }
+
         for (int i = 0; i < tranchesFonction.size(); i++) {
             List<PageModel.Bloc> blocs = new ArrayList<>();
             blocs.add(i == 0
                     ? new PageModel.BlocTitreRubrique(3, "Répartition par fonction")
                     : new PageModel.BlocTitreSection("Répartition par fonction (suite)"));
             blocs.add(new PageModel.BlocGraphique(tranchesFonction.get(i), fonction,
-                    RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART));
+                    hauteurGraphiqueFonction));
+            if (i == tranchesFonction.size() - 1 && materielAvecFonction) {
+                blocs.add(new PageModel.BlocTitreRubrique(4, "Parc matériel — " + titreMateriel));
+                blocs.add(new PageModel.BlocGraphiqueMateriel(titreMateriel, materielRenseigne,
+                        hauteurGraphiqueMateriel));
+            }
             pages.add(new PageEnConstruction(niveau, blocs));
         }
 
-        List<MaterielLigneVue> materielRenseigne = equipe.materiel().stream()
-                .filter(ligne -> ligne.getNombre() != null).toList();
-        if (materielRenseigne.stream().anyMatch(ligne -> ligne.getNombre() > 0)) {
-            String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
+        if (avecMateriel && !materielAvecFonction) {
             pages.add(new PageEnConstruction(niveau, List.of(
                     new PageModel.BlocTitreRubrique(4, "Parc matériel — " + titreMateriel),
-                    new PageModel.BlocGraphiqueMateriel(titreMateriel, materielRenseigne))));
+                    new PageModel.BlocGraphiqueMateriel(titreMateriel, materielRenseigne,
+                            hauteurGraphiqueMateriel))));
         }
     }
 
+    private double hauteurMinimaleGraphiquesEquipe(List<RepartitionBean> fonction,
+                                                    List<MaterielLigneVue> materiel) {
+        double hauteurFonction = RapportChartSvgBuilder.HAUTEUR_ENTETE + RapportChartSvgBuilder.HAUTEUR_LEGENDE
+                + fonction.stream().mapToDouble(ligne -> RapportChartSvgBuilder.hauteurMinimaleLigne(
+                        ligne.getLibelle())).sum();
+        double hauteurMateriel = RapportChartSvgBuilder.HAUTEUR_ENTETE
+                + materiel.size() * RapportChartSvgBuilder.HAUTEUR_RANGEE_MIN;
+        return hauteurFonction + hauteurMateriel;
+    }
+
+    /** Répartit l'espace restant entre les deux graphiques sans dépasser leur hauteur lisible maximale. */
+    private double[] hauteursGraphiquesEquipe(List<RepartitionBean> fonction, List<MaterielLigneVue> materiel) {
+        double minFonction = RapportChartSvgBuilder.HAUTEUR_ENTETE + RapportChartSvgBuilder.HAUTEUR_LEGENDE
+                + fonction.stream().mapToDouble(ligne -> RapportChartSvgBuilder.hauteurMinimaleLigne(
+                        ligne.getLibelle())).sum();
+        double minMateriel = RapportChartSvgBuilder.HAUTEUR_ENTETE
+                + materiel.size() * RapportChartSvgBuilder.HAUTEUR_RANGEE_MIN;
+        double maximumFonction = Math.min(RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART,
+                RapportChartSvgBuilder.HAUTEUR_ENTETE + RapportChartSvgBuilder.HAUTEUR_LEGENDE
+                        + fonction.size() * RapportChartSvgBuilder.HAUTEUR_CATEGORIE_MAX);
+        double maximumMateriel = Math.min(RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART,
+                RapportChartSvgBuilder.HAUTEUR_ENTETE
+                        + materiel.size() * RapportChartSvgBuilder.HAUTEUR_CATEGORIE_MAX);
+        double surplus = BUDGET_GRAPHIQUES_EQUIPE - minFonction - minMateriel;
+        double ajoutFonction = surplus * fonction.size() / Math.max(1, fonction.size() + materiel.size());
+        double hauteurFonction = Math.min(maximumFonction, minFonction + ajoutFonction);
+        double hauteurMateriel = Math.min(maximumMateriel,
+                minMateriel + surplus - (hauteurFonction - minFonction));
+        return new double[]{hauteurFonction, hauteurMateriel};
+    }
+
     /** Liste des employés d'une équipe sélectionnée ; la rubrique 4 ou 5 dépend de la présence du graphique matériel. */
-    private void ajouterPagesEmployesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe) {
+    private void ajouterPagesEmployesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe,
+                                            PageEnConstruction derniereAnalyse) {
         String niveau = niveauTexteEquipe(chantier, equipe);
         List<LigneEmployeVue> employes = equipe.employes();
         boolean avecColonneEquipe = false;
@@ -371,8 +426,17 @@ final class RapportPageModelBuilder {
                 .anyMatch(ligne -> ligne.getNombre() != null && ligne.getNombre() > 0) ? 5 : 4;
         double utile = PAGE_BODY_HAUTEUR - MARGE_SECURITE;
         int position = 0;
+        double hauteurAnalyse = hauteurPageAnalyse(derniereAnalyse.blocs());
+        int lignesSurAnalyse = lignesQuiTiennent(employes, 0,
+                utile - hauteurAnalyse - DETAILS_TITRE_HAUTEUR - TABLEAU_ENTETE_HAUTEUR, avecColonneEquipe);
+        if (!employes.isEmpty() && lignesSurAnalyse >= Math.min(MIN_LIGNES_PREMIERE_PAGE, employes.size())) {
+            derniereAnalyse.blocs().add(new PageModel.BlocTitreRubrique(numeroRubrique, "Liste des employés"));
+            derniereAnalyse.blocs().add(new PageModel.BlocTableauEmployes(
+                    employes.subList(0, lignesSurAnalyse), true, avecColonneEquipe));
+            position = lignesSurAnalyse;
+        }
         boolean premiere = true;
-        do {
+        while (position < employes.size()) {
             List<PageModel.Bloc> blocs = new ArrayList<>();
             boolean avecTitre = premiere;
             double disponible = avecTitre ? utile - DETAILS_TITRE_HAUTEUR - TABLEAU_ENTETE_HAUTEUR : utile;
@@ -387,7 +451,54 @@ final class RapportPageModelBuilder {
             pages.add(new PageEnConstruction(niveau, blocs));
             position = fin;
             premiere = false;
-        } while (position < employes.size());
+        }
+    }
+
+    /** Hauteur réservée sur la dernière page d'analyse avant d'y ajouter la liste des employés. */
+    private double hauteurPageAnalyse(List<PageModel.Bloc> blocs) {
+        double hauteur = 0;
+        for (PageModel.Bloc bloc : blocs) {
+            if (bloc instanceof PageModel.BlocTitreEquipe titre) {
+                hauteur += hauteurTitreEquipe(titre.texte());
+            } else if (bloc instanceof PageModel.BlocKpi kpi) {
+                hauteur += hauteurKpi(kpi);
+            } else if (bloc instanceof PageModel.BlocTitreRubrique || bloc instanceof PageModel.BlocTitreSection) {
+                hauteur += DETAILS_TITRE_HAUTEUR;
+            } else if (bloc instanceof PageModel.BlocGraphiqueEvolution evolution) {
+                hauteur += evolution.hauteur() + 4;
+            } else if (bloc instanceof PageModel.BlocGraphique graphique) {
+                hauteur += hauteurGraphiqueRepartition(graphique) + MARGE_GRAPHIQUE;
+            } else if (bloc instanceof PageModel.BlocGraphiqueMateriel graphique) {
+                hauteur += hauteurGraphiqueMateriel(graphique) + MARGE_GRAPHIQUE;
+            }
+        }
+        return hauteur;
+    }
+
+    private double hauteurGraphiqueRepartition(PageModel.BlocGraphique graphique) {
+        if (graphique.donnees().isEmpty()) {
+            return 0;
+        }
+        double espaceFixe = RapportChartSvgBuilder.HAUTEUR_ENTETE + RapportChartSvgBuilder.HAUTEUR_LEGENDE
+                + (graphique.partDuTotal() ? RapportChartSvgBuilder.HAUTEUR_ECHELLE_POURCENTAGE : 0);
+        double hauteurCategorie = Math.min(RapportChartSvgBuilder.HAUTEUR_CATEGORIE_MAX,
+                (graphique.hauteurMax() - espaceFixe) / graphique.donnees().size());
+        double lignes = graphique.donnees().stream()
+                .mapToDouble(ligne -> Math.max(hauteurCategorie,
+                        RapportChartSvgBuilder.hauteurMinimaleLigne(ligne.getLibelle())))
+                .sum();
+        return espaceFixe + lignes;
+    }
+
+    private double hauteurGraphiqueMateriel(PageModel.BlocGraphiqueMateriel graphique) {
+        long lignes = graphique.donnees().stream().filter(ligne -> ligne.getNombre() != null).count();
+        if (lignes == 0) {
+            return 0;
+        }
+        double hauteurLigne = Math.min(RapportChartSvgBuilder.HAUTEUR_CATEGORIE_MAX,
+                Math.max(RapportChartSvgBuilder.HAUTEUR_RANGEE_MIN,
+                        (graphique.hauteurMax() - RapportChartSvgBuilder.HAUTEUR_ENTETE) / lignes));
+        return RapportChartSvgBuilder.HAUTEUR_ENTETE + hauteurLigne * lignes;
     }
 
     private double hauteurTitreChapitre(String texte) {

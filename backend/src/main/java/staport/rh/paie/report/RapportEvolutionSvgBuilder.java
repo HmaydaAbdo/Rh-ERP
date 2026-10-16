@@ -14,7 +14,7 @@ import java.util.function.Function;
 final class RapportEvolutionSvgBuilder {
 
     private static final double LARGEUR = 802;
-    private static final double HAUTEUR = 226;
+    static final double HAUTEUR_COMPACTE = 170;
     private static final double PX_PAR_PT = 4.0 / 3;
     private static final double X_GAUCHE = 82;
     private static final double X_DROITE = 82;
@@ -28,8 +28,10 @@ final class RapportEvolutionSvgBuilder {
                          Function<BigDecimal, String> format) {
     }
 
-    void ajouterGraphique(Element corps, List<RepartitionBean> donnees, PageModel.GroupeEvolution groupe) {
+    void ajouterGraphique(Element corps, List<RepartitionBean> donnees, PageModel.GroupeEvolution groupe,
+                          double hauteur) {
         Element container = corps.appendElement("div").addClass("evolution-container");
+        container.attr("style", "height:" + format(hauteur) + "pt");
         if (donnees.isEmpty()) {
             container.appendElement("p").addClass("evolution-indisponible")
                     .text("Aucune donnée historique disponible pour le périmètre sélectionné.");
@@ -40,7 +42,7 @@ final class RapportEvolutionSvgBuilder {
         Element svg = container.appendElement("svg", Parser.NamespaceSvg);
         String description = series.get(0).nom() + " et " + series.get(1).nom()
                 + ", évolution mensuelle sur les périodes disponibles";
-        construire(svg, donnees, series, description);
+        construire(svg, donnees, series, description, hauteur);
     }
 
     private List<Serie> series(PageModel.GroupeEvolution groupe) {
@@ -58,10 +60,11 @@ final class RapportEvolutionSvgBuilder {
         };
     }
 
-    private void construire(Element svg, List<RepartitionBean> donnees, List<Serie> series, String description) {
+    private void construire(Element svg, List<RepartitionBean> donnees, List<Serie> series, String description,
+                            double hauteur) {
         double xDebut = X_GAUCHE;
         double xFin = LARGEUR - X_DROITE;
-        double yBas = HAUTEUR - Y_BAS_MARGE;
+        double yBas = hauteur - Y_BAS_MARGE;
         double hauteurTrace = yBas - Y_HAUT;
         double largeurTrace = xFin - xDebut;
         List<List<BigDecimal>> valeurs = series.stream().map(serie -> donnees.stream()
@@ -73,8 +76,8 @@ final class RapportEvolutionSvgBuilder {
                 .attr("role", "img")
                 .attr("aria-label", description)
                 .attr("width", format(LARGEUR * PX_PAR_PT) + "px")
-                .attr("height", format(HAUTEUR * PX_PAR_PT) + "px")
-                .attr("viewBox", "0 0 " + format(LARGEUR * PX_PAR_PT) + " " + format(HAUTEUR * PX_PAR_PT));
+                .attr("height", format(hauteur * PX_PAR_PT) + "px")
+                .attr("viewBox", "0 0 " + format(LARGEUR * PX_PAR_PT) + " " + format(hauteur * PX_PAR_PT));
         Element dessin = svg.appendElement("g").attr("transform", "scale(" + PX_PAR_PT + ")");
 
         ajouterLegende(dessin, series);
@@ -105,15 +108,16 @@ final class RapportEvolutionSvgBuilder {
         dessin.appendElement("line").attr("x1", format(xDebut)).attr("x2", format(xFin))
                 .attr("y1", format(yBas)).attr("y2", format(yBas)).attr("stroke", AXE).attr("stroke-width", "1");
 
+        double[][] positionsEtiquettes = positionsEtiquettes(valeurs, maximums, yBas, hauteurTrace);
         for (int s = 0; s < series.size(); s++) {
             ajouterSerie(dessin, donnees, series.get(s), valeurs.get(s), maximums[s], s,
-                    xDebut, largeurTrace, yBas, hauteurTrace);
+                    xDebut, largeurTrace, yBas, hauteurTrace, positionsEtiquettes[s]);
         }
     }
 
     private void ajouterSerie(Element dessin, List<RepartitionBean> donnees, Serie serie, List<BigDecimal> valeurs,
                               double maximum, int indexSerie, double xDebut, double largeurTrace,
-                              double yBas, double hauteurTrace) {
+                              double yBas, double hauteurTrace, double[] positionsEtiquettes) {
         StringBuilder chemin = new StringBuilder();
         for (int i = 0; i < donnees.size(); i++) {
             double x = abscisse(i, donnees.size(), xDebut, largeurTrace);
@@ -144,17 +148,58 @@ final class RapportEvolutionSvgBuilder {
                     .attr("stroke-width", "0.8").appendElement("title")
                     .text(point.getLibelle() + " — " + serie.nom() + " : "
                             + serie.format().apply(valeurs.get(i)) + " " + serie.unite());
-            double decalage = indexSerie == 0 ? -8 : 12;
-            double yLibelle = Math.max(Y_HAUT + 7, Math.min(yBas - 4, y + decalage));
-            dessin.appendElement("text").attr("x", format(x)).attr("y", format(yLibelle))
+            double decalageHorizontal = i == 0 ? 14 : i == donnees.size() - 1 ? -14 : 0;
+            dessin.appendElement("text").addClass("evolution-valeur")
+                    .attr("data-index", String.valueOf(i)).attr("data-serie", String.valueOf(indexSerie))
+                    .attr("x", format(x + decalageHorizontal)).attr("y", format(positionsEtiquettes[i]))
                     .attr("text-anchor", "middle").attr("font-size", "6.8").attr("font-weight", "bold")
-                    .attr("fill", serie.couleur()).text(serie.format().apply(valeurs.get(i)));
+                    .attr("fill", serie.couleur()).attr("stroke", "#FFFFFF").attr("stroke-width", "2")
+                    .attr("paint-order", "stroke").text(serie.format().apply(valeurs.get(i)));
             if (indexSerie == 0) {
                 dessin.appendElement("text").attr("x", format(x)).attr("y", format(yBas + 15))
                         .attr("text-anchor", "middle").attr("font-size", "8").attr("font-weight", "bold")
                         .attr("fill", AXE).text(point.getLibelle());
             }
         }
+    }
+
+    /** Place les valeurs de chaque mois de part et d'autre des points si leurs deux échelles les rapprochent. */
+    private double[][] positionsEtiquettes(List<List<BigDecimal>> valeurs, double[] maximums,
+                                           double yBas, double hauteurTrace) {
+        double[][] positions = new double[2][valeurs.get(0).size()];
+        for (int i = 0; i < valeurs.get(0).size(); i++) {
+            double[] points = new double[2];
+            for (int s = 0; s < 2; s++) {
+                points[s] = ordonnee(valeurs.get(s).get(i), maximums[s], yBas, hauteurTrace);
+            }
+            double minY = Y_HAUT + 7;
+            double maxY = yBas - 4;
+            double meilleureCout = Double.POSITIVE_INFINITY;
+            double[] decalages = {-11, 12, -18, 19};
+            for (double d0 : decalages) {
+                for (double d1 : decalages) {
+                    double y0 = Math.max(minY, Math.min(maxY, points[0] + d0));
+                    double y1 = Math.max(minY, Math.min(maxY, points[1] + d1));
+                    if (Math.abs(y0 - y1) < 9) {
+                        continue;
+                    }
+                    double cout = Math.abs(y0 - points[0]) + Math.abs(y1 - points[1]);
+                    if ((d0 < 0) == (d1 < 0)) {
+                        cout += 18;
+                    }
+                    if (cout < meilleureCout) {
+                        meilleureCout = cout;
+                        positions[0][i] = y0;
+                        positions[1][i] = y1;
+                    }
+                }
+            }
+            if (meilleureCout == Double.POSITIVE_INFINITY) {
+                positions[0][i] = Math.max(minY, Math.min(maxY, points[0] - 18));
+                positions[1][i] = Math.max(minY, Math.min(maxY, points[1] + 19));
+            }
+        }
+        return positions;
     }
 
     private void ajouterLegende(Element dessin, List<Serie> series) {

@@ -174,8 +174,8 @@ Voir [TODO.md](../../TODO.md) pour le détail :
 
 - **Quasi-doublons** : seule l'égalité exacte (hors casse) est bloquée. Le référentiel actuel contient 114
   fonctions dont 9 paires très proches (fautes de frappe), toutes utilisées ; leur fusion est une décision métier
-  suivie dans la tâche « Qualité des données ». Tant qu'elle n'est pas faite, le chapitre « Répartition par
-  fonction » du rapport PDF reste retiré (voir [../../evolution-rapport/rapport-v2.md](../../evolution-rapport/rapport-v2.md)).
+  suivie dans la tâche « Qualité des données ». Le rapport global ne présente pas de répartition par fonction ;
+  au niveau chantier, elle sert de solution de repli lorsqu'aucune équipe n'est sélectionnée.
 - Audité (voir [../audit/README.md](../audit/README.md)) : créations, modifications, suppressions et imports. Le nettoyage
   des doublons (tâche « Qualité des données ») est une migration de données : elle doit suivre le gabarit de migration auditée
   de `conventions/database.md`.
