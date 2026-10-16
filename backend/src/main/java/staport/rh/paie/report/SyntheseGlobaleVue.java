@@ -9,16 +9,17 @@ import java.util.List;
  * ({@code repartitionChantier}) dans trois rubriques numérotées. {@code evolutionMensuelle} ne
  * contient que les mois réellement disponibles dans la fenêtre de 12 mois et respecte les marchés
  * sélectionnés dans le wizard.
- * {@code stc} : total des STC/sorties du mois, tous chantiers confondus — même indicateur qu'au
- * niveau chantier/équipe (voir {@code ObservationStc.estStcOuSortie}), présent à chaque niveau de la
- * hiérarchie du rapport.
+ * {@code stc}/{@code stcMontant} : nombre et montant des STC/sorties du mois, tous chantiers
+ * confondus — les mêmes indicateurs qu'au niveau chantier/équipe (voir
+ * {@code ObservationStc.estStcOuSortie}). Chaque KPI conserve sa valeur du mois précédent et sa
+ * variation lorsque la comparaison est disponible.
  */
 record SyntheseGlobaleVue(
         KpiMontantVue masse,
-        KpiEffectifVue effectif,
-        int nombreChantiers,
-        int stc,
-        String stcMontant,
+        KpiCompteVue effectif,
+        KpiCompteVue nombreChantiers,
+        KpiCompteVue stc,
+        KpiMontantVue stcMontant,
         List<RepartitionBean> repartitionChantier,
         List<RepartitionBean> evolutionMensuelle
 ) {

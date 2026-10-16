@@ -7,12 +7,9 @@ import java.util.Map;
  * Catalogue du squelette "parc matériel" (CAMION ou ENGINS) — décision (HMAYDA, 2026-09-22) : sur le
  * chantier "C168", l'équipe "CH" reçoit un tableau CAMION, l'équipe "OP" un tableau ENGINS. Propre à
  * ce chantier uniquement, aucune règle générale identifiée pour les autres. Partagé entre l'export
- * Excel ({@code staport.rh.paie.export.PaieExportService}, colonne "Nbre" éditable à la main dans le
- * classeur) et le rapport PDF ({@code staport.rh.paie.report.PaieBiReportBuilder}, colonne vide,
- * destinée à être remplie au stylo sur le document imprimé, demande explicite de direction,
- * 2026-09-29) — même règle métier (quel chantier/équipe, quels libellés), jamais dupliquée entre les
- * deux formats ; seule la présentation de la colonne "Nbre" diffère, ce qui reste du ressort de
- * chaque format.
+ * Excel ({@code staport.rh.paie.export.PaieExportService}) et le rapport PDF
+ * ({@code staport.rh.paie.report.PaieBiReportBuilder}) — les quantités du wizard sont reprises dans
+ * les deux formats ; même règle métier (quel chantier/équipe, quels libellés), jamais dupliquée.
  */
 public final class MaterielChantierCatalogue {
 
@@ -41,8 +38,7 @@ public final class MaterielChantierCatalogue {
                 new Tableau(CHANTIER_MATERIEL, EQUIPE_ENGINS, TITRE_ENGINS, LIBELLES_ENGINS));
     }
 
-    /** Nombre saisi pour une ligne du parc matériel, ou {@code null} si non renseigné (la cellule reste alors
-     * vide, à remplir à la main). {@code nombres} peut être {@code null}. */
+    /** Nombre saisi pour une ligne du parc matériel, ou {@code null} si non renseigné. {@code nombres} peut être {@code null}. */
     public static Integer nombre(Map<String, Integer> nombres, String libelle) {
         return nombres == null ? null : nombres.get(libelle);
     }

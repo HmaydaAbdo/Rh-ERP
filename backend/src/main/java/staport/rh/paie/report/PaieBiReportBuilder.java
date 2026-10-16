@@ -57,18 +57,26 @@ class PaieBiReportBuilder {
     private record Agregat(String cle, int effectif, BigDecimal montant, int stc, BigDecimal stcMontant) {
     }
 
-    /** Historique mensuel dérivé en Java d'un seul jeu
-     * de lignes déjà groupé en base au niveau le plus fin (voir
-     * {@code PaieRepository.sommerParChantierEquipePeriode}), jamais une requête par chantier. Aucune
-     * BI (donc aucune évolution) au niveau équipe (demande explicite de direction). */
+    /** Clé d'une évolution d'équipe, unique dans son chantier. */
+    private record CleEvolutionEquipe(String chantier, String equipe) {
+    }
+
+    /** Historique mensuel dérivé en Java d'un seul jeu de lignes déjà groupé en base au niveau le
+     * plus fin (voir {@code PaieRepository.sommerParChantierEquipePeriode}), sans requête par chantier
+     * ni par équipe. */
     private record EvolutionParNiveau(
             List<RepartitionBean> global,
-            Map<String, List<RepartitionBean>> parChantier) {
+            Map<String, List<RepartitionBean>> parChantier,
+            Map<CleEvolutionEquipe, List<RepartitionBean>> parEquipe) {
 
-        static final EvolutionParNiveau VIDE = new EvolutionParNiveau(List.of(), Map.of());
+        static final EvolutionParNiveau VIDE = new EvolutionParNiveau(List.of(), Map.of(), Map.of());
 
         List<RepartitionBean> pourChantier(String code) {
             return parChantier.getOrDefault(code, List.of());
+        }
+
+        List<RepartitionBean> pourEquipe(String chantier, String equipe) {
+            return parEquipe.getOrDefault(new CleEvolutionEquipe(chantier, equipe), List.of());
         }
     }
 
@@ -109,12 +117,15 @@ class PaieBiReportBuilder {
         BigDecimal massePrecedente = precedent.isEmpty() ? null : sommer(precedent);
 
         List<Agregat> agregatChantier = agreger(courant, this::codeChantier);
+        List<Agregat> agregatChantierPrecedent = agreger(precedent, this::codeChantier);
+        BigDecimal montantStcCourant = montantStc(courant);
+        BigDecimal montantStcPrecedent = precedent.isEmpty() ? null : montantStc(precedent);
         SyntheseGlobaleVue synthese = new SyntheseGlobaleVue(
                 kpiMontant(masseCourante, massePrecedente),
-                kpiEffectif(courant.size(), precedent.size(), !precedent.isEmpty()),
-                agregatChantier.size(),
-                (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
-                montantStc(courant),
+                kpiCompte(courant.size(), precedent.size(), !precedent.isEmpty()),
+                kpiCompte(agregatChantier.size(), agregatChantierPrecedent.size(), !precedent.isEmpty()),
+                kpiCompte(nombreStc(courant), nombreStc(precedent), !precedent.isEmpty()),
+                kpiMontantStc(montantStcCourant, montantStcPrecedent),
                 repartitionChantiers(agregatChantier, courant),
                 evolutions.global()
         );
@@ -156,7 +167,8 @@ class PaieBiReportBuilder {
         BigDecimal masseChantierPrecedente = lignesChantierPrecedent.isEmpty() ? null : sommer(lignesChantierPrecedent);
         List<Agregat> agregatEquipe = agreger(lignesChantier, this::libelleEquipe);
         Map<String, String> libellesEquipes = libellesParCode(lignesChantier);
-        int stc = (int) lignesChantier.stream().filter(ObservationStc::estStcOuSortie).count();
+        BigDecimal montantStcCourant = montantStc(lignesChantier);
+        BigDecimal montantStcPrecedent = lignesChantierPrecedent.isEmpty() ? null : montantStc(lignesChantierPrecedent);
         boolean avecDetailEquipe = !equipesSelectionnees.isEmpty();
         String identifiantChantier = identifiantChantier(code, lignesChantier);
         String titreChantier = "CHANTIER : " + identifiantChantier;
@@ -175,16 +187,17 @@ class PaieBiReportBuilder {
                     .forEach(nom -> equipes.add(equipeVue(
                             nom, titreEquipe(nom, libellesEquipes), libellesEquipes.getOrDefault(nom, nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
-                            materiel(code, nom, nombresMateriel), false)));
+                            evolutions.pourEquipe(code, nom), materiel(code, nom, nombresMateriel), false)));
             List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
             if (!reste.isEmpty()) {
                 List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
-                equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, List.of(), true));
+                equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, List.of(), List.of(), true));
             }
         } else {
             // Aucune équipe sélectionnée pour ce chantier : une seule section réunissant tous ses
             // employés, sans graphique de répartition par équipe (voir rapport.jrxml, GroupChantier).
-            equipes.add(equipeVue(code, titreChantier, code, lignesChantier, lignesChantierPrecedent, List.of(), true));
+            equipes.add(equipeVue(code, titreChantier, code, lignesChantier, lignesChantierPrecedent,
+                    List.of(), List.of(), true));
         }
 
         return new ChantierBiVue(
@@ -192,9 +205,9 @@ class PaieBiReportBuilder {
                 identifiantChantier,
                 titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
-                kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size(), !lignesChantierPrecedent.isEmpty()),
-                stc,
-                montantStc(lignesChantier),
+                kpiCompte(lignesChantier.size(), lignesChantierPrecedent.size(), !lignesChantierPrecedent.isEmpty()),
+                kpiCompte(nombreStc(lignesChantier), nombreStc(lignesChantierPrecedent), !lignesChantierPrecedent.isEmpty()),
+                kpiMontantStc(montantStcCourant, montantStcPrecedent),
                 versRepartitionEquipe(agregatEquipe, libellesEquipes),
                 evolutions.pourChantier(code),
                 equipes,
@@ -242,17 +255,21 @@ class PaieBiReportBuilder {
                 .toList();
     }
 
-    /** Somme des salaires totaux des seuls bulletins STC/sortie, formatée en DH. */
-    private String montantStc(List<Paie> lignes) {
-        BigDecimal montant = lignes.stream().filter(ObservationStc::estStcOuSortie)
+    /** Somme brute des salaires totaux des seuls bulletins STC/sortie. */
+    private BigDecimal montantStc(List<Paie> lignes) {
+        return lignes.stream().filter(ObservationStc::estStcOuSortie)
                 .map(Paie::getSalaireTotal).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return PaieReportNumberFormat.montant(montant);
+    }
+
+    private int nombreStc(List<Paie> lignes) {
+        return (int) lignes.stream().filter(ObservationStc::estStcOuSortie).count();
     }
 
     private EquipeBiVue equipeVue(String nom, String titre, String libelleAffiche, List<Paie> lignesEquipe,
                                    List<Paie> lignesEquipePrecedent,
-                                   List<MaterielLigneVue> materiel, boolean afficherEquipeReelle) {
+                                   List<RepartitionBean> evolutionMensuelle, List<MaterielLigneVue> materiel,
+                                   boolean afficherEquipeReelle) {
         BigDecimal masseEquipe = sommer(lignesEquipe);
         BigDecimal masseEquipePrecedente = lignesEquipePrecedent.isEmpty() ? null : sommer(lignesEquipePrecedent);
         // agregatFonctionEquipe sert à la fois à ordonner le tableau employé ET à alimenter le tableau
@@ -278,13 +295,16 @@ class PaieBiReportBuilder {
                 nom,
                 titre,
                 libelleAffiche,
-                kpiEffectif(lignesEquipe.size(), lignesEquipePrecedent.size(), !lignesEquipePrecedent.isEmpty()),
+                kpiCompte(lignesEquipe.size(), lignesEquipePrecedent.size(), !lignesEquipePrecedent.isEmpty()),
                 kpiMontant(masseEquipe, masseEquipePrecedente),
-                (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
-                montantStc(lignesEquipe),
+                kpiCompte(nombreStc(lignesEquipe), nombreStc(lignesEquipePrecedent), !lignesEquipePrecedent.isEmpty()),
+                kpiMontantStc(montantStc(lignesEquipe), lignesEquipePrecedent.isEmpty()
+                        ? null : montantStc(lignesEquipePrecedent)),
                 repartitionFonctionSimple(agregatFonctionEquipe),
+                evolutionMensuelle,
                 materiel,
-                employes);
+                employes,
+                !afficherEquipeReelle);
     }
 
     /** Convertit un agrégat par fonction en tableau récap (voir {@link EquipeBiVue#repartitionFonction()})
@@ -422,6 +442,7 @@ class PaieBiReportBuilder {
 
         Map<YearMonth, Cumul> global = new LinkedHashMap<>();
         Map<String, Map<YearMonth, Cumul>> parChantier = new LinkedHashMap<>();
+        Map<CleEvolutionEquipe, Map<YearMonth, Cumul>> parEquipe = new LinkedHashMap<>();
 
         for (EvolutionChantierEquipeProjection ligne : lignes) {
             if (chantierIds != null && !chantierIds.isEmpty() && !chantierIds.contains(ligne.getChantierId())) {
@@ -436,11 +457,16 @@ class PaieBiReportBuilder {
 
             cumuler(global, mois, masse, effectif, stc, stcMontant);
             cumuler(parChantier.computeIfAbsent(chantier, c -> new LinkedHashMap<>()), mois, masse, effectif, stc, stcMontant);
+            String equipe = ligne.getEquipe() == null ? SANS_EQUIPE : ligne.getEquipe();
+            CleEvolutionEquipe cleEquipe = new CleEvolutionEquipe(chantier, equipe);
+            cumuler(parEquipe.computeIfAbsent(cleEquipe, c -> new LinkedHashMap<>()), mois,
+                    masse, effectif, stc, stcMontant);
         }
 
         return new EvolutionParNiveau(
                 pointsMensuels(debut, periode, global),
-                versPointsParCle(debut, periode, parChantier));
+                versPointsParCle(debut, periode, parChantier),
+                versPointsParCle(debut, periode, parEquipe));
     }
 
     private void cumuler(Map<YearMonth, Cumul> parMois, YearMonth mois, BigDecimal masse, long effectif, long stc,
@@ -452,8 +478,9 @@ class PaieBiReportBuilder {
         cumul.stcMontant = cumul.stcMontant.add(stcMontant);
     }
 
-    private Map<String, List<RepartitionBean>> versPointsParCle(YearMonth debut, YearMonth periode, Map<String, Map<YearMonth, Cumul>> parCle) {
-        Map<String, List<RepartitionBean>> resultat = new LinkedHashMap<>();
+    private <T> Map<T, List<RepartitionBean>> versPointsParCle(
+            YearMonth debut, YearMonth periode, Map<T, Map<YearMonth, Cumul>> parCle) {
+        Map<T, List<RepartitionBean>> resultat = new LinkedHashMap<>();
         parCle.forEach((cle, parMois) -> resultat.put(cle, pointsMensuels(debut, periode, parMois)));
         return resultat;
     }
@@ -522,9 +549,34 @@ class PaieBiReportBuilder {
                 + PaieReportNumberFormat.pourcentage(pourcentage.abs()) + " %)";
     }
 
-    private KpiEffectifVue kpiEffectif(int actuel, int precedent, boolean comparaisonDisponible) {
+    /** Le STC en DH conserve les deux décimales utilisées par les autres montants STC du rapport. */
+    private KpiMontantVue kpiMontantStc(BigDecimal actuel, BigDecimal precedent) {
+        return new KpiMontantVue(
+                PaieReportNumberFormat.montant(actuel),
+                PaieReportNumberFormat.montant(precedent),
+                libelleEcartStc(actuel, precedent));
+    }
+
+    private String libelleEcartStc(BigDecimal actuel, BigDecimal precedent) {
+        if (precedent == null) {
+            return "Écart indisponible";
+        }
+        BigDecimal ecart = actuel.subtract(precedent);
+        String signe = ecart.signum() > 0 ? "+" : ecart.signum() < 0 ? "−" : "";
+        String montant = signe + PaieReportNumberFormat.montant(ecart.abs()) + " DH";
+        if (precedent.signum() == 0) {
+            return "Écart : " + montant + " (base à 0)";
+        }
+        BigDecimal pourcentage = ecart.multiply(BigDecimal.valueOf(100))
+                .divide(precedent, 1, java.math.RoundingMode.HALF_UP);
+        String signePourcentage = pourcentage.signum() > 0 ? "+" : pourcentage.signum() < 0 ? "−" : "";
+        return "Écart : " + montant + " (" + signePourcentage
+                + PaieReportNumberFormat.pourcentage(pourcentage.abs()) + " %)";
+    }
+
+    private KpiCompteVue kpiCompte(int actuel, int precedent, boolean comparaisonDisponible) {
         int variation = actuel - precedent;
-        return new KpiEffectifVue(actuel, precedent, comparaisonDisponible ? variation : 0, comparaisonDisponible);
+        return new KpiCompteVue(actuel, precedent, comparaisonDisponible ? variation : 0, comparaisonDisponible);
     }
 
     private String codeChantier(Paie paie) {

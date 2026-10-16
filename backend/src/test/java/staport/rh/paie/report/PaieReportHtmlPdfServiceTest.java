@@ -90,7 +90,8 @@ class PaieReportHtmlPdfServiceTest {
                     .isGreaterThan(20);
             String texte = new PDFTextStripper().getText(document);
             assertThat(texte).contains("1. Évolution de la masse salariale et de l'effectif",
-                    "2. Évolution du STC — personnes et DH", "3. Répartition par chantier");
+                    "2. Évolution du STC — personnes et DH", "3. Répartition par chantier",
+                    "4. Liste des employés");
             assertThat(texte).doesNotContain("Périmètre : Tous les marchés", "Historique disponible :", "12 mois");
             BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(6);
             assertThat(nombrePixelsBleus(repartitionFonction))
@@ -128,7 +129,8 @@ class PaieReportHtmlPdfServiceTest {
         when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of());
 
         PaieReportPdfRequestDto requeteAvecDetail = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, Map.of("C168", List.of("CH", "OP")), null);
+                "2026-09", null, null, null, null, null, Map.of("C168", List.of("CH", "OP")),
+                Map.of("CAMION CITERNE", 3, "PELLE PNEU", 2), null);
 
         byte[] pdf = service.generer(YearMonth.of(2026, 9), requeteAvecDetail);
 
@@ -136,6 +138,9 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
             assertThat(document.getNumberOfPages()).isGreaterThan(2);
+            String texte = new PDFTextStripper().getText(document);
+            assertThat(texte).contains("4. Parc matériel", "CAMION", "5. Liste des employés",
+                    "CAMION CITERNE", "3", "PELLE PNEU", "2");
             BufferedImage pageChantier = new PDFRenderer(document).renderImage(6);
             assertThat(nombrePixelsBleus(pageChantier))
                     .as("pixels bleus du graphique par équipe rendu sur la page de répartition chantier")

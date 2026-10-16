@@ -77,13 +77,13 @@ final class RapportPageModelBuilder {
     private static final double KPI_CORPS_SOUS_TEXTE = 7;
     private static final double KPI_INTERLIGNE_SOUS_TEXTE = 8;
 
-    /** Titre « Détails » (marge 8 + 12pt). */
-    private static final double DETAILS_TITRE_HAUTEUR = 24;
+    /** Titre « Liste des employés » (marge 8 + 12pt). */
+    private static final double DETAILS_TITRE_HAUTEUR = 18;
 
     /** Marge du tableau (8) + en-tête à deux lignes (2 × 16). */
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
-    /** Si moins de lignes que ça tiennent sous le récap, « Détails » démarre sur la page suivante. */
+    /** Si moins de lignes que ça tiennent sous le récap, « Liste des employés » démarre sur la page suivante. */
     private static final int MIN_LIGNES_PREMIERE_PAGE = 3;
 
     /** Hauteur minimale d'une ligne du tableau employé (voir {@code table.employes td/th} dans rapport.css) : une
@@ -195,7 +195,12 @@ final class RapportPageModelBuilder {
                 premiereEquipeSeule = 1;
             }
             for (EquipeBiVue equipe : equipes.subList(premiereEquipeSeule, equipes.size())) {
-                ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0, false);
+                if (equipe.equipeSelectionnee()) {
+                    ajouterAnalyseEquipeSelectionnee(pages, chantier, equipe);
+                    ajouterPagesEmployesEquipe(pages, chantier, equipe);
+                } else {
+                    ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0, false);
+                }
             }
         }
 
@@ -211,8 +216,8 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
-        PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(),
-                synthese.stc(), synthese.stcMontant(), synthese.nombreChantiers(), true, true));
+        PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(), synthese.stc(),
+                synthese.stcMontant(), synthese.nombreChantiers()));
         blocs.add(kpi);
         blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
@@ -291,8 +296,7 @@ final class RapportPageModelBuilder {
     private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int rang) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre(chapitreChantier(rang, chantier)));
-        blocs.add(blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
-                chantier.stc(), chantier.stcMontant(), null, true, true)));
+        blocs.add(blocKpi(cartesKpi(chantier.masse(), chantier.effectif(), chantier.stc(), chantier.stcMontant(), null)));
         blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
                 chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF));
@@ -312,6 +316,78 @@ final class RapportPageModelBuilder {
         }).toList();
         return List.of(new PageModel.BlocTitreRubrique(3, titre),
                 new PageModel.BlocGraphique(triee, RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART));
+    }
+
+    /** Analyse d'une équipe choisie dans le wizard, selon le même ordre d'indicateurs que les autres niveaux. */
+    private void ajouterAnalyseEquipeSelectionnee(List<PageEnConstruction> pages, ChantierBiVue chantier,
+                                                  EquipeBiVue equipe) {
+        String niveau = niveauTexteEquipe(chantier, equipe);
+        List<PageModel.Bloc> masse = new ArrayList<>();
+        masse.add(new PageModel.BlocTitreEquipe(equipe.titre()));
+        masse.add(cartesKpiEquipe(equipe));
+        masse.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
+        masse.add(new PageModel.BlocGraphiqueEvolution(equipe.evolutionMensuelle(),
+                PageModel.GroupeEvolution.MASSE_EFFECTIF));
+        pages.add(new PageEnConstruction(niveau, masse));
+
+        pages.add(new PageEnConstruction(niveau, List.of(
+                new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"),
+                new PageModel.BlocGraphiqueEvolution(equipe.evolutionMensuelle(), PageModel.GroupeEvolution.STC))));
+
+        List<RepartitionBean> fonction = equipe.repartitionFonction().stream().sorted((a, b) -> {
+            java.math.BigDecimal montantA = a.getMontant() == null ? java.math.BigDecimal.ZERO : a.getMontant();
+            java.math.BigDecimal montantB = b.getMontant() == null ? java.math.BigDecimal.ZERO : b.getMontant();
+            int comparaison = montantB.compareTo(montantA);
+            return comparaison != 0 ? comparaison : a.getLibelle().compareToIgnoreCase(b.getLibelle());
+        }).toList();
+        List<List<RepartitionBean>> tranchesFonction = repartirParPages(fonction,
+                RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART);
+        for (int i = 0; i < tranchesFonction.size(); i++) {
+            List<PageModel.Bloc> blocs = new ArrayList<>();
+            blocs.add(i == 0
+                    ? new PageModel.BlocTitreRubrique(3, "Répartition par fonction")
+                    : new PageModel.BlocTitreSection("Répartition par fonction (suite)"));
+            blocs.add(new PageModel.BlocGraphique(tranchesFonction.get(i), fonction,
+                    RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART));
+            pages.add(new PageEnConstruction(niveau, blocs));
+        }
+
+        List<MaterielLigneVue> materielRenseigne = equipe.materiel().stream()
+                .filter(ligne -> ligne.getNombre() != null).toList();
+        if (materielRenseigne.stream().anyMatch(ligne -> ligne.getNombre() > 0)) {
+            String titreMateriel = MaterielChantierCatalogue.titre(chantier.code(), equipe.nom());
+            pages.add(new PageEnConstruction(niveau, List.of(
+                    new PageModel.BlocTitreRubrique(4, "Parc matériel — " + titreMateriel),
+                    new PageModel.BlocGraphiqueMateriel(titreMateriel, materielRenseigne))));
+        }
+    }
+
+    /** Liste des employés d'une équipe sélectionnée ; la rubrique 4 ou 5 dépend de la présence du graphique matériel. */
+    private void ajouterPagesEmployesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe) {
+        String niveau = niveauTexteEquipe(chantier, equipe);
+        List<LigneEmployeVue> employes = equipe.employes();
+        boolean avecColonneEquipe = false;
+        int numeroRubrique = equipe.materiel().stream()
+                .anyMatch(ligne -> ligne.getNombre() != null && ligne.getNombre() > 0) ? 5 : 4;
+        double utile = PAGE_BODY_HAUTEUR - MARGE_SECURITE;
+        int position = 0;
+        boolean premiere = true;
+        do {
+            List<PageModel.Bloc> blocs = new ArrayList<>();
+            boolean avecTitre = premiere;
+            double disponible = avecTitre ? utile - DETAILS_TITRE_HAUTEUR - TABLEAU_ENTETE_HAUTEUR : utile;
+            int fin = Math.min(employes.size(), position + Math.max(1,
+                    lignesQuiTiennent(employes, position, disponible, avecColonneEquipe)));
+            if (avecTitre) {
+                blocs.add(new PageModel.BlocTitreRubrique(numeroRubrique, "Liste des employés"));
+            } else {
+                blocs.add(new PageModel.BlocTitreSection("Liste des employés (suite)"));
+            }
+            blocs.add(new PageModel.BlocTableauEmployes(employes.subList(position, fin), avecTitre, avecColonneEquipe));
+            pages.add(new PageEnConstruction(niveau, blocs));
+            position = fin;
+            premiere = false;
+        } while (position < employes.size());
     }
 
     private double hauteurTitreChapitre(String texte) {
@@ -355,30 +431,32 @@ final class RapportPageModelBuilder {
 
     /** Les mêmes indicateurs à chaque niveau : masse, mois précédent, effectif, STC en personnes et STC en DH.
      * Le nombre de chantiers n'est affiché qu'au niveau global. */
-    private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiEffectifVue effectif, int stc, String stcMontant,
-                                      Integer nombreChantiers, boolean afficherEcartMasse,
-                                      boolean afficherEcartEffectif) {
+    private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiCompteVue effectif, KpiCompteVue stc,
+                                      KpiMontantVue stcMontant, KpiCompteVue nombreChantiers) {
         List<CarteKpi> cartes = new ArrayList<>();
         cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant",
-                afficherEcartMasse ? masse.ecart() : null));
+                masse.ecart()));
         cartes.add(new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(masse.valeurPrecedente()).strip(), "montant"));
-        cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.effectifCourant()), "compte",
-                afficherEcartEffectif ? libelleEcartEffectif(effectif) : null));
+        cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.valeurCourante()), "compte",
+                libelleEcartCompte(effectif, "personne", "personnes")));
         if (nombreChantiers != null) {
-            cartes.add(new CarteKpi("CHANTIERS", String.valueOf(nombreChantiers), "compte"));
+            cartes.add(new CarteKpi("CHANTIERS", String.valueOf(nombreChantiers.valeurCourante()), "compte",
+                    libelleEcartCompte(nombreChantiers, "chantier", "chantiers")));
         }
-        cartes.add(new CarteKpi("STC / SORTIES (PERSONNES)", String.valueOf(stc), "compte"));
-        cartes.add(new CarteKpi("STC / SORTIES (DH)", stcMontant + " DH", "montant"));
+        cartes.add(new CarteKpi("STC / SORTIES (PERSONNES)", String.valueOf(stc.valeurCourante()), "compte",
+                libelleEcartCompte(stc, "personne", "personnes")));
+        cartes.add(new CarteKpi("STC / SORTIES (DH)", stcMontant.valeurCourante() + " DH", "montant",
+                stcMontant.ecart()));
         return cartes;
     }
 
-    private String libelleEcartEffectif(KpiEffectifVue effectif) {
-        if (!effectif.comparaisonDisponible()) {
+    private String libelleEcartCompte(KpiCompteVue kpi, String uniteSingulier, String unitePluriel) {
+        if (!kpi.comparaisonDisponible()) {
             return "Écart indisponible";
         }
-        int variation = effectif.variation();
+        int variation = kpi.variation();
         String signe = variation > 0 ? "+" : variation < 0 ? "−" : "";
-        String unite = Math.abs(variation) == 1 ? "personne" : "personnes";
+        String unite = Math.abs(variation) == 1 ? uniteSingulier : unitePluriel;
         return "Écart : " + signe + Math.abs(variation) + " " + unite + " vs mois précédent";
     }
 
@@ -390,7 +468,7 @@ final class RapportPageModelBuilder {
      * <p>Les lignes des tableaux n'ont pas une hauteur fixe (un texte trop long passe à la ligne, voir
      * {@link #hauteurLigneEmploye}) : tout est découpé d'après la hauteur cumulée des lignes. Le récap par fonction
      * est coupé en tranches quand il ne tient pas sous les cartes KPI : la 1re tranche (avec le parc matériel)
-     * remplit la 1re page, les suivantes (« suite ») les pages suivantes. Le tableau « Détails » démarre sous la
+     * remplit la 1re page, les suivantes (« suite ») les pages suivantes. Le tableau « Liste des employés » démarre sous la
      * dernière tranche si assez de lignes y tiennent, sinon sur la page suivante. */
     private void ajouterPagesEquipe(List<PageEnConstruction> pages, ChantierBiVue chantier, EquipeBiVue equipe,
                                     List<PageModel.Bloc> blocsEnTete, double hauteurEnTete, boolean fusionneeAuChantier) {
@@ -430,14 +508,14 @@ final class RapportPageModelBuilder {
                 continue;
             }
 
-            // Dernière page du récap : « Détails » la suit si assez de lignes y tiennent
+            // Dernière page du récap : « Liste des employés » la suit si assez de lignes y tiennent
             double utilise = (premiere ? hauteurTetePremierePage : 0) + hauteurRecap(tranche, materiel);
             int position = lignesQuiTiennent(employes, 0, utile - utilise - enteteDetails, avecColonneEquipe);
             if (position < Math.min(MIN_LIGNES_PREMIERE_PAGE, total)) {
                 position = 0;
             }
             if (position > 0) {
-                blocs.add(new PageModel.BlocTitreSection("Détails"));
+                blocs.add(new PageModel.BlocTitreRubrique(4, "Liste des employés"));
                 blocs.add(new PageModel.BlocTableauEmployes(employes.subList(0, position), true, avecColonneEquipe));
             }
             pages.add(new PageEnConstruction(niveau, blocs));
@@ -445,9 +523,9 @@ final class RapportPageModelBuilder {
             boolean detailsAFaire = position == 0;
             while (position < total) {
                 List<PageModel.Bloc> blocsSuite = new ArrayList<>();
-                double disponible = detailsAFaire ? utile - enteteDetails : utile;   // « Détails » ouvre la page, ou suite
+                double disponible = detailsAFaire ? utile - enteteDetails : utile;   // « Liste des employés » ouvre la page, ou suite
                 if (detailsAFaire) {
-                    blocsSuite.add(new PageModel.BlocTitreSection("Détails"));
+                    blocsSuite.add(new PageModel.BlocTitreRubrique(4, "Liste des employés"));
                 }
                 int fin = position + Math.max(1, lignesQuiTiennent(employes, position, disponible, avecColonneEquipe));
                 blocsSuite.add(new PageModel.BlocTableauEmployes(employes.subList(position, fin), detailsAFaire, avecColonneEquipe));
@@ -525,8 +603,7 @@ final class RapportPageModelBuilder {
     }
 
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
-        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null,
-                true, true));
+        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null));
     }
 
     /** {@code " <montant> DH"} (espace de tête inclus, pour la concaténation après un libellé), ou chaîne vide

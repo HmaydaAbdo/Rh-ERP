@@ -28,8 +28,6 @@ const SOUS_TITRES: Record<EtapeId, string> = {
   recap: 'Dernière vérification'
 };
 export const NOMBRE_MAX_MATERIEL = 999;
-/** Dernière saisie du parc matériel, gardée dans le navigateur pour préremplir l'export suivant (jamais en base). */
-const CLE_MATERIEL_MEMORISE = 'paie.export.materiel';
 
 /**
  * État et logique de l'assistant d'export de la paie (voir `PaieExportWizardComponent`) : fourni par l'assistant, injecté
@@ -73,9 +71,9 @@ export class PaieExportStore {
   readonly retirees = signal<Record<string, string[]>>({});
 
   readonly tableauxMateriel = signal<PaieMaterielTableau[]>([]);
-  /** Libellé de la ligne -> nombre saisi, ou `null` (non renseigné : la colonne reste vide à l'impression). */
+  /** Libellé de la ligne -> nombre saisi, ou `null` (champ vide tant que l'utilisateur ne saisit rien). */
   readonly nombres = signal<Record<string, number | null>>({});
-  /** Titre du tableau -> la colonne « Nbre » reste vide (à remplir au stylo). */
+  /** Titre du tableau -> l'utilisateur choisit de ne pas saisir de quantités pour ce tableau. */
   readonly laisseVide = signal<Record<string, boolean>>({});
 
   readonly resume = computed(() => this.periodes().find((p) => p.periode === this.periode()) ?? null);
@@ -403,7 +401,6 @@ export class PaieExportStore {
       )
       .subscribe({
         next: (blob) => {
-          this.memoriserMateriel();
           this.dernierEnregistre.set({ blob, nom });
           this.telecharger(blob, nom);
           this.etat.set('termine');
@@ -522,7 +519,12 @@ export class PaieExportStore {
     this.detail.set({});
     this.retirees.set({});
     this.laisseVide.set({});
-    this.nombres.set(this.lireMaterielMemorise());
+    this.nombres.set({});
+    try {
+      localStorage.removeItem('paie.export.materiel');
+    } catch {
+      // La mémoire navigateur est facultative ; aucune valeur sauvegardée n'est relue par l'assistant.
+    }
     this.dernierEnregistre.set(null);
     this.chargerPeriodes();
     this.chargerTableauxMateriel();
@@ -557,20 +559,4 @@ export class PaieExportStore {
       .subscribe((chantiers) => this.chantiers.set(chantiers));
   }
 
-  private lireMaterielMemorise(): Record<string, number | null> {
-    try {
-      const brut = localStorage.getItem(CLE_MATERIEL_MEMORISE);
-      return brut ? (JSON.parse(brut) as Record<string, number | null>) : {};
-    } catch {
-      return {};
-    }
-  }
-
-  private memoriserMateriel(): void {
-    try {
-      localStorage.setItem(CLE_MATERIEL_MEMORISE, JSON.stringify(this.nombres()));
-    } catch {
-      // stockage indisponible : sans conséquence, le préremplissage est un simple confort
-    }
-  }
 }

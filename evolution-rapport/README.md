@@ -20,13 +20,16 @@ Les trois premiers points sont présents dans le code fusionné sur `main` (PR #
 ### Mise à jour du périmètre (2026-10-16)
 
 Après validation de la maquette globale, la portée a été précisée : trois rubriques aux niveaux global
-et chantier — évolution masse/effectif, évolution STC personnes/DH, puis répartition. Les deux
+et chantier — évolution masse/effectif, évolution STC personnes/DH, puis répartition. Chaque équipe sélectionnée
+reprend les deux évolutions, puis présente une répartition par fonction. Les deux
 évolutions utilisent chacune un graphique à deux axes Y indépendants, avec unités, échelles, valeurs
 et couleurs explicites. Au chantier, la répartition est par équipe si au moins une équipe est
-sélectionnée, sinon par fonction ; la vue globale reste répartie par chantier. Les KPI et leurs
-variations suivent les niveaux global, chantier et équipe. La ligne « Tous les marchés » et la
-couverture textuelle de l'historique disparaissent de la vue d'ensemble ; la limite de 12 mois reste
-interne et n'est mentionnée nulle part dans le rapport affiché.
+sélectionnée, sinon par fonction ; la vue globale reste répartie par chantier. Les variations mensuelles sont
+affichées sous les KPI comparables (masse, effectif, nombre de chantiers, STC en personnes et en DH) quand une paie
+du mois précédent existe sur le même périmètre ; sinon l'écart est indiqué comme indisponible. La carte « Masse mois
+précédent » reste une référence. La ligne « Tous les marchés » et la couverture textuelle de l'historique
+disparaissent de la vue d'ensemble ; la limite de 12 mois reste interne et n'est mentionnée nulle part dans le
+rapport affiché.
 
 ## Décisions et pistes antérieures
 
@@ -52,10 +55,19 @@ Ces pistes ne sont pas des exigences validées de la prochaine version. Elles do
 1. L’indication de périmètre « Tous les marchés » avait été validée puis retirée après clarification : elle ne figure pas dans la vue d’ensemble.
 2. Les quatre séries de répartition par chantier conservent les valeurs réelles et leurs parts avec une échelle de 0 à 100 %.
 3. La carte « Masse salariale » conserve la masse du mois précédent et affiche l’écart en DH et en pourcentage aux niveaux global et chantier.
-4. Le KPI « Effectif » affiche l’écart en personnes aux niveaux global et chantier.
-5. Les niveaux global et chantier présentent les évolutions masse/effectif puis STC personnes/DH avant la répartition. Le calcul utilise au plus les 12 dernières périodes disponibles ; cette limite reste invisible dans le rapport. Au chantier, la répartition est par équipe si une équipe est sélectionnée, sinon par fonction.
+4. Tous les KPI comparables affichent leur variation au mois précédent : masse et STC en DH avec montant et
+   pourcentage, effectif, chantiers et STC en personnes avec leur écart numérique. Une comparaison absente est
+   explicitement indiquée comme indisponible ; la carte « Masse mois précédent » reste la valeur de référence.
+5. Les niveaux global, chantier et équipe sélectionnée présentent les évolutions masse/effectif puis STC personnes/DH avant la répartition. Le calcul utilise au plus les 12 dernières périodes disponibles ; cette limite reste invisible dans le rapport. Au chantier, la répartition est par équipe si une équipe est sélectionnée, sinon par fonction.
 
-**État :** cette évolution est implémentée dans la PR en cours. Les tests backend ciblés passent ; les contrôles CI et la revue visuelle du PDF restent à confirmer.
+6. Au niveau équipe, chaque équipe choisie présente les rubriques 1 évolution masse/effectif, 2 évolution STC,
+   3 répartition par fonction en graphique à barres avec valeurs à droite, 4 graphique du parc matériel si des
+   quantités du wizard sont disponibles et au moins l'une est positive, puis 5 liste des employés. Si toutes les
+   quantités sont vides ou zéro, le graphique matériel disparaît et la liste reste rubrique 4. Le wizard ne garde
+   aucune quantité matérielle d'un export précédent : chaque ouverture présente des champs vides.
+
+**État :** la vue d'ensemble et le niveau chantier sont implémentés. L'extension équipe et le graphique matériel
+associé sont en cours dans la PR. Les tests backend ciblés, les contrôles CI et la revue visuelle du PDF restent à confirmer.
 
 ## Préparer la nouvelle version
 

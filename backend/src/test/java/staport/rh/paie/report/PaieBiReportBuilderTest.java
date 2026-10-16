@@ -45,7 +45,7 @@ class PaieBiReportBuilderTest {
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, courant, List.of());
 
-        assertThat(vue.synthese().nombreChantiers()).isEqualTo(12);
+        assertThat(vue.synthese().nombreChantiers().valeurCourante()).isEqualTo(12);
         assertThat(vue.synthese().repartitionChantier())
                 .extracting(RepartitionBean::getLibelle)
                 .containsExactly("C12", "C11", "C10", "C09", "C08", "C07", "C06", "C05", "C04", "C03", "C02", "C01");
@@ -142,6 +142,7 @@ class PaieBiReportBuilderTest {
     void construireDepuis_devraitCalculerLaMasseGlobaleEtSaVariation() {
         Paie c059EquipeA = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "5000");
         Paie c059SansEquipe = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", null, "3000");
+        c059SansEquipe.setObservation("STC");
         Paie precedent = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "4000");
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE,
@@ -149,14 +150,29 @@ class PaieBiReportBuilderTest {
 
         assertThat(vue.synthese().masse().valeurCourante()).isEqualTo("8 000");
         assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000");
-        assertThat(vue.synthese().effectif().effectifCourant()).isEqualTo(2);
-        assertThat(vue.synthese().effectif().effectifPrecedent()).isEqualTo(1);
+        assertThat(vue.synthese().effectif().valeurCourante()).isEqualTo(2);
+        assertThat(vue.synthese().effectif().valeurPrecedente()).isEqualTo(1);
         assertThat(vue.synthese().effectif().variation()).isEqualTo(1);
+        assertThat(vue.synthese().nombreChantiers().variation()).isZero();
+        assertThat(vue.synthese().stc().valeurCourante()).isEqualTo(1);
+        assertThat(vue.synthese().stc().valeurPrecedente()).isZero();
+        assertThat(vue.synthese().stc().variation()).isEqualTo(1);
+        assertThat(vue.synthese().stcMontant().valeurCourante()).isEqualTo("3 000,00");
+        assertThat(vue.synthese().stcMontant().ecart()).contains("+3 000,00 DH");
+        ChantierBiVue chantier = vue.chantiers().get(0);
+        assertThat(chantier.stc().variation()).isEqualTo(1);
+        assertThat(chantier.stcMontant().ecart()).contains("+3 000,00 DH");
+        EquipeBiVue equipe = chantier.equipes().get(0);
+        assertThat(equipe.effectif().variation()).isEqualTo(1);
+        assertThat(equipe.stc().variation()).isEqualTo(1);
+        assertThat(equipe.stcMontant().ecart()).contains("+3 000,00 DH");
         PageModel.BlocKpi kpiGlobal = (PageModel.BlocKpi) new RapportPageModelBuilder().construire(vue).get(0)
                 .blocs().stream().filter(PageModel.BlocKpi.class::isInstance).findFirst().orElseThrow();
         CarteKpi kpiEffectif = kpiGlobal.cartes().stream()
                 .filter(carte -> carte.label().equals("EFFECTIF")).findFirst().orElseThrow();
         assertThat(kpiEffectif.sousTexte()).isEqualTo("Écart : +1 personne vs mois précédent");
+        assertThat(kpiGlobal.cartes().stream().filter(carte -> carte.label().equals("STC / SORTIES (PERSONNES)"))
+                .findFirst().orElseThrow().sousTexte()).isEqualTo("Écart : +1 personne vs mois précédent");
     }
 
     /** Une masse salariale est toujours arrondie à l'unité (0,5 vers le haut), sans décimales — jamais « 1 001,50 ». */
@@ -198,7 +214,7 @@ class PaieBiReportBuilderTest {
         assertThat(chantier.avecDetailEquipe()).isFalse();
         assertThat(chantier.equipes()).hasSize(1);
         assertThat(chantier.equipes().get(0).nom()).isEqualTo("C059");
-        assertThat(chantier.equipes().get(0).effectif().effectifCourant()).isEqualTo(3);
+        assertThat(chantier.equipes().get(0).effectif().valeurCourante()).isEqualTo(3);
     }
 
     @Test
@@ -219,7 +235,7 @@ class PaieBiReportBuilderTest {
                 .filter(l -> l.getLibelle().equals("PICK UP")).findFirst().orElseThrow();
         assertThat(citerne.getNombre()).isEqualTo(3);
         assertThat(bull.getNombre()).isZero();
-        // Ligne non renseignée : aucune valeur, la cellule reste vide (à remplir au stylo).
+        // Ligne non renseignée : aucune valeur ; elle sera omise du graphique matériel.
         assertThat(picku.getNombre()).isNull();
     }
 
@@ -241,8 +257,10 @@ class PaieBiReportBuilderTest {
         // selectionnees) - jamais de section "EQUIPE B" ou "Sans equipe" separee, jamais un employe
         // dans deux sections a la fois.
         assertThat(chantier.equipes()).extracting(EquipeBiVue::nom).containsExactly("EQUIPE A", "C059");
-        assertThat(chantier.equipes().get(0).effectif().effectifCourant()).isEqualTo(1);
-        assertThat(chantier.equipes().get(1).effectif().effectifCourant()).isEqualTo(2);
+        assertThat(chantier.equipes().get(0).effectif().valeurCourante()).isEqualTo(1);
+        assertThat(chantier.equipes().get(0).equipeSelectionnee()).isTrue();
+        assertThat(chantier.equipes().get(1).effectif().valeurCourante()).isEqualTo(2);
+        assertThat(chantier.equipes().get(1).equipeSelectionnee()).isFalse();
     }
 
     @Test
@@ -327,7 +345,7 @@ class PaieBiReportBuilderTest {
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE, List.of(stc, sortie, actif), List.of());
 
         ChantierBiVue chantier = vue.chantiers().get(0);
-        assertThat(chantier.stc()).isEqualTo(2);
+        assertThat(chantier.stc().valeurCourante()).isEqualTo(2);
     }
 
     @Test

@@ -108,7 +108,7 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │                                 « Export unifié PDF/Excel »). N'utilise PAS PaiePerimetreService :
 │                                 besoin différent (agrégation systématique de tout le périmètre
 │                                 filtré) — voir « Pourquoi deux pipelines ? ».
-├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiEffectifVue /
+├── RapportBiVue / SyntheseGlobaleVue / ChantierBiVue / EquipeBiVue / KpiMontantVue / KpiCompteVue /
 │   LigneEmployeVue / RepartitionBean / MaterielLigneVue  Vue-modèle (records, sauf RepartitionBean/
 │                                 MaterielLigneVue — classes à getters historiques, conservées telles
 │                                 quelles), aucune logique métier — TOUTE valeur affichable y est déjà
@@ -121,7 +121,7 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │                                 manuellement. `EquipeBiVue` porte, en plus du détail employé,
 │                                 `montantMoisPrecedent` (carte KPI "MASSE MOIS
 │                                 PRECEDENT"), `repartitionFonction` (tableau récap) et `materiel`
-│                                 (squelette parc matériel, vide sauf C168/CH/OP).
+│                                 (parc matériel C168/CH/OP, quantités issues du wizard).
 ├── PaieReportNumberFormat.java   Formatage des nombres (montants, quantités)
 │                                 et chiffres romains (numérotation des chapitres)
 └── PaieReportPdfRequestDto.java  Corps de la requête — mêmes filtres que PaieSearchCriteria (page
@@ -229,14 +229,13 @@ pour ENGINS) ; sinon l'assistant passe directement au récapitulatif. Une carte 
 - une ligne par libellé du catalogue, avec un champ numérique et des boutons moins / plus, navigation au clavier
   par Entrée jusqu'au bouton « Continuer » ;
 - barre « n sur N renseignées », total animé, carte en vert quand toutes les lignes sont renseignées ;
-- **vide ou zéro** : une ligne vide s'imprime vide (à remplir au stylo), un `0` s'imprime `0` ; l'interrupteur
+- **vide ou zéro** : les champs sont vides à chaque nouvelle ouverture de l'assistant ; une ligne vide reste absente du graphique matériel, un `0` s'affiche comme zéro si une autre quantité est positive. Si toutes les quantités sont nulles ou à zéro, le graphique matériel est omis. L'interrupteur
   « laisser vide » d'une carte conserve le comportement d'avant en un clic ; « Mettre 0 aux lignes vides » évite de
   saisir les zéros un par un ;
 - saisie validée : entier de 0 à 999, message d'erreur sous la zone sinon, et on ne peut pas continuer tant qu'il
   est affiché ;
-- **mémorisation** : les derniers nombres saisis sont gardés dans le navigateur (`localStorage`, clé
-  `paie.export.materiel`) et préremplissent l'export suivant ; jamais écrits en base, jamais partagés entre
-  utilisateurs ni appareils.
+- **pas de mémorisation** : les quantités ne sont pas gardées pour l'export suivant. Les champs restent vides
+  à chaque nouvelle ouverture et l'utilisateur les renseigne à nouveau.
 
 Seuls les nombres des tableaux réellement imprimés et non « laissés vides » sont envoyés (`materiel`).
 
@@ -244,7 +243,7 @@ Seuls les nombres des tableaux réellement imprimés et non « laissés vides »
 
 `paie-export-wizard.component.spec.ts` (mois présélectionné, refus sans mois valide, chargement des chantiers,
 équipes cochées, apparition de l'étape matériel, contenu des requêtes PDF et Excel, nombres invalides,
-mémorisation ; étape marchés : présente en PDF seulement, sélection multiple et envoi de `chantierIds`, vue d'ensemble
+champs matériels vides entre deux exports ; étape marchés : présente en PDF seulement, sélection multiple et envoi de `chantierIds`, vue d'ensemble
 retirée et modifiable, équipes limitées aux marchés sélectionnés, retour à « Tous », sélection ignorée en Excel, recherche,
 changement de mois),
 `RapportPageModelBuilderTest` et `PaieReportHtmlPdfServiceTest` (rapport sans vue d'ensemble : aucune page GLOBAL, premier chantier
@@ -351,8 +350,7 @@ capacité plus large reste disponible pour un appel direct à l'API.
 
 Décision (HMAYDA, 2026-09-22, étendue au PDF le 2026-09-29) : sur les sections équipe du chantier
 **C168**, un tableau matériel est ajouté à côté du tableau récap Fonction/Effectif/STC. Sa colonne
-« Nbre » est **remplie avec les nombres saisis dans l'assistant d'export** (décision du 2026-10-03,
-voir « Assistant d'export », étape « Matériel »), ou laissée vide pour une ligne non renseignée :
+« Nbre » est **reprise du wizard d'export** (voir « Assistant d'export », étape « Matériel ») :
 
 - Équipe **CH** → tableau **CAMION** (Camion citerne, Camion 8x4, Camion SR, Port char, Pick up).
 - Équipe **OP** → tableau **ENGINS** (Pelle pneu, Pelle chenille, Niveleuse, Compacteurs, Chargeur,
@@ -367,10 +365,13 @@ remplir au stylo sur le document imprimé, et un `0` s'imprime `0`. Le PDF les i
 `MaterielLigneVue.nombre`, l'Excel les écrit en cellule numérique (`SqueletteMateriel.nombres`). La règle métier (quel chantier/équipe → quels libellés) vit dans
 `MaterielChantierCatalogue` (package `staport.rh.paie.reporting`), partagée par les deux formats —
 `PaieExportService.squeletteMateriel` et `PaieBiReportBuilder` (via `EquipeBiVue.materiel`)
-délèguent tous deux à cette classe, jamais de duplication de la règle. Le PDF affiche ce squelette
+délèguent tous deux à cette classe, jamais de duplication de la règle. Le PDF affiche ce parc
 uniquement quand l'équipe CH/OP a été explicitement sélectionnée pour un détail séparé (voir
-« Export unifié ») — une équipe non détaillée rejoint le "reste" du chantier, sans squelette
-matériel propre.
+« Export unifié ») — une équipe non détaillée rejoint le "reste" du chantier, sans parc matériel propre.
+Dans l'analyse d'une équipe sélectionnée, les valeurs renseignées apparaissent dans une rubrique graphique dédiée
+(une barre par type de matériel, quantité alignée à droite). Les quantités nulles sont omises ; si toutes les
+quantités sont absentes ou égales à zéro, la rubrique graphique est omise. Les champs du wizard ne sont jamais
+préremplis d'après un export précédent.
 
 ---
 
@@ -561,8 +562,11 @@ JasperReports, dont l'aplatissement n'a plus d'utilité une fois la pagination p
 
 Chaque chantier occupe trois pages d'analyse avant ses pages de détail : KPI et rubrique 1 (masse/effectif),
 rubrique 2 (STC personnes/DH), puis rubrique 3 (répartition). Les titres et les trois rubriques reprennent
-la même numérotation et les mêmes conventions que la vue d'ensemble. Les cartes masse et effectif affichent
-leurs écarts au mois précédent. Après l'analyse, une ou plusieurs pages portent les sections équipe/employés.
+la même numérotation et les mêmes conventions que la vue d'ensemble. Les cartes comparables affichent leur
+variation au mois précédent ; si aucune paie précédente n'existe sur le périmètre, l'écart indique qu'il est
+indisponible. La carte « Masse mois précédent » reste la valeur de référence utilisée pour l'écart de masse.
+Après l'analyse, une ou plusieurs pages portent la rubrique **4. Liste des employés**, puis les tableaux des
+sections équipe/employés.
 
 1. **5 cartes KPI**, chacune avec son indicateur (voir « Cartes KPI ») : Masse salariale, Masse mois précédent,
    Effectif, STC / sorties (personnes), STC / sorties (DH).
@@ -651,8 +655,8 @@ blanche et de ligne perdue.
 **Chantier sans détail par équipe** (aucune équipe sélectionnée, donc pas de graphique « Répartition par
 équipe ») : la rubrique 3 affiche la répartition par fonction avant la section « reste ». Celle-ci suit les
 trois pages d'analyse du chantier et ne répète ni son titre ni ses indicateurs. Avec des équipes sélectionnées,
-la rubrique 3 affiche la répartition complète par équipe ; les détails des équipes suivent aussi les pages
-d'analyse.
+la rubrique 3 affiche la répartition complète par équipe ; chaque équipe choisie dispose ensuite de ses évolutions,
+de la répartition par fonction, du graphique matériel éventuel, puis de sa liste d'employés.
 Couvert par `RapportPageModelBuilderTest` (1 à 120 employés × 0 à 16 lignes de récap : rien ne déborde, aucun
 employé perdu).
 
@@ -671,10 +675,9 @@ Liberation Serif embarquée, majorée de 3 % pour rester du côté prudent) :
 - **Tableau employé** : `hauteurLigneEmploye` = la plus haute de ses cellules (`nombre de lignes × interligne`, au moins
   16 pt) ; les colonnes (largeur, corps, interligne) sont recopiées de rapport.css dans `colonnesEmploye`. Les lignes
   tiennent sur une page tant que leur hauteur cumulée tient (`lignesQuiTiennent`), plus un nombre fixe de lignes.
-- **Récap par fonction / parc matériel** : même principe (`hauteurLigneRecap`, `hauteurRecap`). Un récap trop long
-  pour la page est coupé en tranches (`decouperRecap`) : la 1re tranche, avec le parc matériel, sous les cartes KPI,
-  les suivantes sur les pages suivantes sous le titre « Répartition par fonction (suite) » ; « Détails » démarre
-  sous la dernière tranche si au moins 3 lignes y tiennent (`MIN_LIGNES_PREMIERE_PAGE`), sinon sur la page suivante.
+- **Récap des sections fusionnées** : même principe (`hauteurLigneRecap`, `hauteurRecap`). Un récap trop long
+  est coupé en tranches (`decouperRecap`) et la liste commence sous la dernière tranche si assez de lignes y
+  tiennent, sinon sur la page suivante. Les équipes sélectionnées ont des pages dédiées à leurs rubriques.
 - **Cartes KPI** : les cartes d'une rangée ont la hauteur de la plus haute (`blocKpi`, `BlocKpi.hauteurCarte`,
   appliquée en `style="height"` par `PaieReportHtmlBuilder`) — 54 pt minimum, à tous les niveaux.
 - **Titres** : `hauteurTitreChapitre`/`hauteurTitreEquipe` ajoutent un interligne par ligne en plus.
@@ -712,9 +715,11 @@ cartes « Masse salariale » et « Masse mois précédent » aux trois niveaux, 
 dans les KPI et tableaux récapitulatifs gardent leurs deux décimales ; l'export Excel n'est pas concerné. Les masses arrondies d'un chantier et de
 ses équipes peuvent donc différer d'une unité de leur somme.
 
-Pas de carte autonome « Évolution » : les variations restent sous les KPI de masse et d'effectif, en montant/pourcentage
-et en personnes respectivement, et sont affichées aux trois niveaux. Les valeurs sont construites dans
-`RapportPageModelBuilder.cartesKpi` à partir de `KpiMontantVue`/`KpiEffectifVue`
+Pas de carte autonome « Évolution » : les variations restent sous les KPI comparables : masse et STC en DH en
+montant/pourcentage, effectif, chantiers et STC en personnes en nombre. Elles sont affichées lorsqu'une paie du
+mois précédent existe sur le même périmètre ; sinon le libellé « Écart indisponible » le précise. La carte
+« Masse mois précédent » reste la référence de comparaison de la masse courante. Les valeurs sont construites dans
+`RapportPageModelBuilder.cartesKpi` à partir de `KpiMontantVue`/`KpiCompteVue`
 (ensemble : `SyntheseGlobaleVue`, chantier : `ChantierBiVue`, équipe : `EquipeBiVue.masse`/`.effectif`). Une section
 « reste » de chantier sans détail par équipe ne répète pas ses cartes : elles sont déjà celles du chantier (voir
 « Chantier sans détail par équipe »). Les cartes sont dans l'en-tête plutôt que des lignes au bas du tableau
@@ -723,23 +728,30 @@ connue avant la pagination, ne peut structurellement jamais se retrouver orpheli
 
 ### Tableau récap de section
 
-Collé directement au bas de CHAQUE tableau employé, quand il tient (voir « Pagination : contrôle
-100 % Java » ci-dessus) :
+Conservé pour la section « reste » (ou la section fusionnée sans équipe choisie), sous le tableau
+employé quand il tient (voir « Pagination : contrôle 100 % Java » ci-dessus). Une équipe choisie a
+son analyse dédiée avant sa liste d'employés :
 
-1. **Tableau récap Fonction/Effectif/STC** : effectif, nombre et montant en DH des STC/sorties de CETTE section,
-   groupés par fonction (`EquipeBiVue.repartitionFonction`) — jamais un graphique (redondant avec celui du chantier), nombre de lignes
-   variable d'une section à l'autre.
-2. **Squelette parc matériel**, uniquement pour le chantier C168 équipes CH/OP (voir « Squelette
-   parc matériel ») — absent (pas de tableau du tout) pour toute autre section.
+1. Le récap Fonction/Effectif/STC conserve les lignes de CETTE section groupées par fonction.
+2. Le parc matériel est repris du wizard d'export pour C168/CH et C168/OP.
+
+Pour chaque équipe sélectionnée, les rubriques sont : 1) évolution masse/effectif, 2) évolution
+STC personnes/DH, 3) répartition par fonction en graphique à quatre séries, 4) parc matériel en
+graphique à une série lorsque le wizard a fourni au moins une quantité, puis 5) liste des employés.
+Une quantité nulle est affichée comme zéro ; une quantité absente est omise. Sans valeur matérielle,
+la liste des employés est directement la rubrique 4. Le graphique fonction suit le style horizontal
+des autres répartitions, avec les valeurs alignées à droite.
 
 ### Visualisations
 
-**Convention du document : barres groupées horizontales à 4 séries (masse/effectif/STC en
-personnes/STC en DH), aucun graphique empilé — la SEULE famille de graphique du rapport (voir
+**Convention du document : barres horizontales groupées à 4 séries (masse/effectif/STC en
+personnes/STC en DH) pour les répartitions, aucun graphique empilé — voir
 « Évolution mensuelle » ci-dessous).** Construits en **SVG à la main** (`RapportChartSvgBuilder`,
 jsoup — voir son Javadoc), rendu nativement par openhtmltopdf (support Batik) : répartition par
 chantier (chapitre I), par équipe au chantier si une équipe est sélectionnée, et par fonction au
-chantier sinon — la donnée sous-jacente (`RepartitionBean`) est la même forme à chaque niveau.
+chantier sinon, ainsi que par fonction dans l'analyse d'une équipe sélectionnée — la donnée sous-jacente
+(`RepartitionBean`) est la même forme à chaque niveau. Le parc matériel utilise une seule série dédiée,
+avec les valeurs saisies alignées à droite.
 
 Le nœud racine de chaque graphique est créé explicitement dans le namespace SVG
 (`http://www.w3.org/2000/svg`). Cette précision est nécessaire dans le DOM jsoup converti par
@@ -806,7 +818,8 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
 
 ### Évolutions mensuelles
 
-Aux niveaux global et chantier, la rubrique 1 trace ensemble la masse salariale (`DH`) et l'effectif
+Aux niveaux global et chantier, ainsi qu'au niveau de chaque équipe sélectionnée, la rubrique 1 trace
+ensemble la masse salariale (`DH`) et l'effectif
 (`personnes`) ; la rubrique 2 trace le STC en personnes et en DH. Chaque paire partage les mêmes mois
 sur une fenêtre finissant à la période du rapport et limitée aux 12 derniers mois. Seuls les mois
 disponibles sont affichés ; aucun mois sans paie n'est inventé. La limite de 12 mois reste une règle de
@@ -946,14 +959,13 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
 - **Réintroduire la répartition par fonction au niveau global** : reste retirée (le référentiel Fonction
   contient des doublons non nettoyés, voir TODO.md pour la tâche de nettoyage côté données). Au niveau
   chantier, la répartition par fonction sert de solution de repli quand aucune équipe n'est sélectionnée.
-- **Évolutions mensuelles par équipe** : le global et le chantier montrent masse/effectif et STC personnes/DH ;
-  l'extension aux vues équipe détaillées reste à examiner avec l'utilisateur.
+- **Évolutions mensuelles par équipe** : le global, le chantier et les équipes sélectionnées montrent
+  masse/effectif et STC personnes/DH.
 - **Généraliser le squelette parc matériel** : aujourd'hui figé au chantier C168 (équipes CH/OP),
   sans persistance ni UI de saisie (voir « Squelette parc matériel ») — si le besoin s'étend à
   d'autres chantiers/équipes, la règle métier centralisée dans `MaterielChantierCatalogue` est le
   seul point à faire évoluer (aucune duplication à corriger des deux côtés).
-- **Comparaison mois précédent au niveau équipe/section** : déjà en place (carte KPI "MASSE MOIS
-  PRECEDENT" de chaque section, voir « Cartes KPI de section et tableau récap »).
+- **Comparaison mois précédent au niveau équipe/section** : déjà présente dans les cartes KPI de chaque section.
 - **Autres filtres du dialog (nom, CIN, fonction, chantier unique)** : volontairement non exposés
   par `PaieExportWizardComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
   sur l'ensemble des chantiers/employés de la période, pas sur une recherche ponctuelle.
