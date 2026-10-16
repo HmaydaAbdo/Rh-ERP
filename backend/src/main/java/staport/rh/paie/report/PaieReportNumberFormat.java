@@ -51,11 +51,15 @@ final class PaieReportNumberFormat {
         return valeur == null ? null : MASSE.format(valeur);
     }
 
+    static String pourcentage(BigDecimal valeur) {
+        return POURCENTAGE.format(valeur);
+    }
+
     private static final int[] VALEURS_ROMAINES = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
     private static final String[] SYMBOLES_ROMAINS = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
 
-    /** Numérotation des chapitres du rapport (I — Synthèse globale, II — Répartition par chantier,
-     * puis un chiffre romain par chantier) — jamais au-delà d'une trentaine de chapitres en pratique,
+    /** Numérotation des chapitres du rapport (I — Vue d'ensemble, puis un chiffre romain par chantier)
+     * — jamais au-delà d'une trentaine de chapitres en pratique,
      * la table classique (M/D/C/L/X/V/I) suffit largement. */
     static String romain(int valeur) {
         StringBuilder resultat = new StringBuilder();

@@ -47,7 +47,7 @@ class PaieBiReportBuilder {
     private static final String SANS_EQUIPE = "Sans équipe";
     private static final int MAX_BARRES_GRAPHIQUE = 15;
     private static final int MOIS_EVOLUTION = 12;
-    private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("MMM yy", Locale.FRENCH);
+    private static final DateTimeFormatter FORMAT_MOIS_COURT = DateTimeFormatter.ofPattern("M/yyyy");
 
     /** Agrégat brut (avant formatage) d'un groupe de lignes — évite tout aller-retour par une
      * chaîne déjà formatée pour trier ou construire un graphique. {@code stc}/{@code stcMontant} :
@@ -57,7 +57,7 @@ class PaieBiReportBuilder {
     private record Agregat(String cle, int effectif, BigDecimal montant, int stc, BigDecimal stcMontant) {
     }
 
-    /** Historique mensuel aux 2 niveaux du rapport (global, chantier) — dérivés en Java d'un seul jeu
+    /** Historique mensuel dérivé en Java d'un seul jeu
      * de lignes déjà groupé en base au niveau le plus fin (voir
      * {@code PaieRepository.sommerParChantierEquipePeriode}), jamais une requête par chantier. Aucune
      * BI (donc aucune évolution) au niveau équipe (demande explicite de direction). */
@@ -90,14 +90,11 @@ class PaieBiReportBuilder {
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
         List<Paie> courant = rechercher(periode, requete);
         List<Paie> precedent = rechercher(periode.minusMonths(1), requete);
-        EvolutionParNiveau evolutions = evolutionParNiveau(periode);
+        EvolutionParNiveau evolutions = evolutionParNiveau(periode, requete.chantiersEffectifs());
         return construireDepuis(periode, requete, courant, precedent, evolutions);
     }
 
-    /** Surcharge sans historique d'évolution (utilisée par les tests de {@link PaieBiReportBuilder},
-     * qui ne dépendent jamais du repository — voir {@code PaieBiReportBuilderTest}) : les données
-     * d'évolution restent alors simplement vides, sans incidence sur le reste du calcul (aucun
-     * graphique du rapport ne les consomme de toute façon, voir {@code evolution-rapport/rapport-v2.md}). */
+    /** Surcharge sans historique d'évolution utilisée par les tests du calcul pur, sans repository. */
     RapportBiVue construireDepuis(YearMonth periode, PaieReportPdfRequestDto requete, List<Paie> courant, List<Paie> precedent) {
         return construireDepuis(periode, requete, courant, precedent, EvolutionParNiveau.VIDE);
     }
@@ -115,8 +112,9 @@ class PaieBiReportBuilder {
         List<Agregat> agregatFonction = agreger(courant, this::libelleFonction);
 
         SyntheseGlobaleVue synthese = new SyntheseGlobaleVue(
+                libellePerimetreMarches(requete),
                 kpiMontant(masseCourante, massePrecedente),
-                kpiEffectif(courant.size(), precedent.size()),
+                kpiEffectif(courant.size(), precedent.size(), !precedent.isEmpty()),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
                 montantStc(courant),
@@ -142,6 +140,15 @@ class PaieBiReportBuilder {
                 filtresActifs(requete, courant),
                 synthese,
                 chantiers);
+    }
+
+    private String libellePerimetreMarches(PaieReportPdfRequestDto requete) {
+        List<Long> marches = requete.chantiersEffectifs();
+        if (marches == null || marches.isEmpty()) {
+            return "Tous les marchés";
+        }
+        long nombre = marches.stream().distinct().count();
+        return nombre + (nombre == 1 ? " marché sélectionné" : " marchés sélectionnés");
     }
 
     /** Sélection manuelle d'équipes à détailler pour ce chantier (voir
@@ -198,7 +205,7 @@ class PaieBiReportBuilder {
                 identifiantChantier,
                 titreChantier,
                 kpiMontant(masseChantier, masseChantierPrecedente),
-                kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size()),
+                kpiEffectif(lignesChantier.size(), lignesChantierPrecedent.size(), !lignesChantierPrecedent.isEmpty()),
                 stc,
                 montantStc(lignesChantier),
                 versRepartitionEquipe(agregatEquipe, libellesEquipes),
@@ -284,7 +291,7 @@ class PaieBiReportBuilder {
                 nom,
                 titre,
                 libelleAffiche,
-                kpiEffectif(lignesEquipe.size(), lignesEquipePrecedent.size()),
+                kpiEffectif(lignesEquipe.size(), lignesEquipePrecedent.size(), !lignesEquipePrecedent.isEmpty()),
                 kpiMontant(masseEquipe, masseEquipePrecedente),
                 (int) lignesEquipe.stream().filter(ObservationStc::estStcOuSortie).count(),
                 montantStc(lignesEquipe),
@@ -414,31 +421,25 @@ class PaieBiReportBuilder {
         return versRepartition(avecLibelleAffiche);
     }
 
-    /** Historique mensuel aux 2 niveaux (global, chantier) — une seule requête groupée au niveau le
+    /** Historique mensuel — une seule requête groupée au niveau le
      * plus fin (voir {@code PaieRepository.sommerParChantierEquipePeriode} pour la justification
      * performance), le global en est dérivé par simple somme des lignes déjà en mémoire, jamais une
-     * requête supplémentaire par chantier. Fenêtre glissante d'AU PLUS {@value #MOIS_EVOLUTION} mois,
-     * mais jamais avant le premier mois où une paie existe réellement en base (voir
-     * {@link PaieRepository#premierePeriode()}) — sans ce plancher, un système mis en place il y a 2
-     * mois afficherait 10 mois "fantômes" à zéro avant la donnée réelle.
+     * requête supplémentaire par chantier. Fenêtre glissante d'au plus {@value #MOIS_EVOLUTION} mois,
+     * finissant à la période du rapport. Les périodes sans bulletin ne sont pas ajoutées
+     * artificiellement au graphique.
      *
-     * <p><b>Retiré de tout graphique du rapport</b> (demande explicite de direction, 2026-09-28 :
-     * manque d'historique suffisant pour qu'une tendance mensuelle soit significative — voir
-     * {@code evolution-rapport/rapport-v2.md}), mais volontairement conservé ici, calculé sans être
-     * consommé : même principe que {@code PaieBiReportBuilder.versRepartition} pour la fonction
-     * (voir {@code SyntheseGlobaleVue.repartitionFonction}) — éviter de tout redévelopper si
-     * l'historique disponible devient un jour suffisant pour justifier de le réafficher. */
-    private EvolutionParNiveau evolutionParNiveau(YearMonth periode) {
-        YearMonth premierePeriode = repository.premierePeriode().orElse(periode);
-        YearMonth debut = premierePeriode.isAfter(periode.minusMonths(MOIS_EVOLUTION - 1))
-                ? premierePeriode
-                : periode.minusMonths(MOIS_EVOLUTION - 1);
+     * Le filtre des marchés du wizard est appliqué aux agrégats historiques avant leur cumul. */
+    private EvolutionParNiveau evolutionParNiveau(YearMonth periode, List<Long> chantierIds) {
+        YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
         List<EvolutionChantierEquipeProjection> lignes = repository.sommerParChantierEquipePeriode(debut, periode);
 
         Map<YearMonth, Cumul> global = new LinkedHashMap<>();
         Map<String, Map<YearMonth, Cumul>> parChantier = new LinkedHashMap<>();
 
         for (EvolutionChantierEquipeProjection ligne : lignes) {
+            if (chantierIds != null && !chantierIds.isEmpty() && !chantierIds.contains(ligne.getChantierId())) {
+                continue;
+            }
             YearMonth mois = ligne.getPeriode();
             BigDecimal masse = ligne.getMasse() == null ? BigDecimal.ZERO : ligne.getMasse();
             long effectif = ligne.getEffectif() == null ? 0 : ligne.getEffectif();
@@ -470,21 +471,19 @@ class PaieBiReportBuilder {
         return resultat;
     }
 
-    /** Un point par mois entre {@code debut} et {@code periode} (bornes incluses — voir
-     * {@link #evolutionParNiveau} pour le calcul de {@code debut}, jamais fixé à
-     * {@value #MOIS_EVOLUTION} mois de façon rigide), y compris les mois sans aucun bulletin pour ce
-     * périmètre (masse, effectif et STC à 0 — une absence réelle de paie ce mois-là, pas une valeur
-     * inconnue à distinguer comme le fait la comparaison mois précédent). */
+    /** Un point par mois disponible dans la fenêtre glissante de {@value #MOIS_EVOLUTION} mois.
+     * Les périodes sans bulletin ne sont pas inventées ni représentées par zéro. */
     private List<RepartitionBean> pointsMensuels(YearMonth debut, YearMonth periode, Map<YearMonth, Cumul> parMois) {
         List<RepartitionBean> points = new ArrayList<>();
-        for (YearMonth mois = debut; !mois.isAfter(periode); mois = mois.plusMonths(1)) {
-            Cumul cumul = parMois.get(mois);
-            points.add(new RepartitionBean(
-                    mois.format(FORMAT_MOIS_COURT),
-                    cumul == null ? 0 : (int) cumul.effectif,
-                    cumul == null ? BigDecimal.ZERO : cumul.masse,
-                    cumul == null ? 0 : (int) cumul.stc,
-                    cumul == null ? BigDecimal.ZERO : cumul.stcMontant));
+        for (Map.Entry<YearMonth, Cumul> entree : parMois.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()).toList()) {
+            YearMonth mois = entree.getKey();
+            if (mois.isBefore(debut) || mois.isAfter(periode)) {
+                continue;
+            }
+            Cumul cumul = entree.getValue();
+            points.add(new RepartitionBean(mois.format(FORMAT_MOIS_COURT), (int) cumul.effectif,
+                    cumul.masse, (int) cumul.stc, cumul.stcMontant));
         }
         return points;
     }
@@ -515,13 +514,30 @@ class PaieBiReportBuilder {
     private KpiMontantVue kpiMontant(BigDecimal actuel, BigDecimal precedent) {
         return new KpiMontantVue(
                 PaieReportNumberFormat.masse(actuel),
-                PaieReportNumberFormat.masseOuNull(precedent));
+                PaieReportNumberFormat.masseOuNull(precedent),
+                libelleEcartMasse(actuel, precedent));
     }
 
-    private KpiEffectifVue kpiEffectif(int actuel, int precedent) {
+    private String libelleEcartMasse(BigDecimal actuel, BigDecimal precedent) {
+        if (precedent == null) {
+            return "Écart indisponible";
+        }
+        BigDecimal ecart = actuel.subtract(precedent);
+        String signe = ecart.signum() > 0 ? "+" : ecart.signum() < 0 ? "−" : "";
+        String montant = signe + PaieReportNumberFormat.masse(ecart.abs()) + " DH";
+        if (precedent.signum() == 0) {
+            return "Écart : " + montant + " (base à 0)";
+        }
+        BigDecimal pourcentage = ecart.multiply(BigDecimal.valueOf(100))
+                .divide(precedent, 1, java.math.RoundingMode.HALF_UP);
+        String signePourcentage = pourcentage.signum() > 0 ? "+" : pourcentage.signum() < 0 ? "−" : "";
+        return "Écart : " + montant + " (" + signePourcentage
+                + PaieReportNumberFormat.pourcentage(pourcentage.abs()) + " %)";
+    }
+
+    private KpiEffectifVue kpiEffectif(int actuel, int precedent, boolean comparaisonDisponible) {
         int variation = actuel - precedent;
-        String signe = variation > 0 ? "+" : "";
-        return new KpiEffectifVue(actuel, precedent, signe + variation);
+        return new KpiEffectifVue(actuel, precedent, comparaisonDisponible ? variation : 0, comparaisonDisponible);
     }
 
     private String codeChantier(Paie paie) {

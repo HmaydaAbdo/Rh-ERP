@@ -10,9 +10,9 @@ import java.util.List;
  * {@code PaieBiReportBuilder}) — la répartition par fonction à CE niveau a été retirée (demande
  * explicite de direction, doublon avec celle, plus fine, portée par chaque {@link EquipeBiVue}),
  * nombre de départs STC / sortie, {@code evolutionMensuelle} (masse et effectif de CE chantier, 12
- * derniers mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}) : reste calculé mais n'alimente
- * plus aucun graphique du rapport (évolution mensuelle retirée de tout le document, demande explicite
- * de direction — voir {@code evolution-rapport/rapport-v2.md}). Le détail employé est porté par
+ * derniers mois — voir {@code PaieBiReportBuilder.evolutionParNiveau}) : reste calculé, mais seule
+ * l'évolution de masse globale est affichée à cette étape. La déclinaison par chantier sera décidée
+ * avec l'utilisateur au niveau suivant. Le détail employé est porté par
  * {@link #equipes()}.
  *
  * <p>{@code identifiant} : "&lt;nom&gt; (&lt;code&gt;)" quand {@code Chantier.nom} est renseigné,

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 /**
  * Vérifie {@link RapportPageModelBuilder} — moteur de pagination 100% Java du rapport HTML
@@ -71,10 +72,9 @@ class RapportPageModelBuilderTest {
 
                 List<PageModel> pages = builder.construire(vue);
 
-                // La 1re page est toujours la synthèse globale.
-                // La 2e page est toujours le chapitre chantier.
-                // Les pages de la section équipe commencent donc à l'index 2.
-                List<PageModel> pagesEquipe = pages.subList(2, pages.size());
+                // Pages 0-1 = synthèse et évolutions, page 2 = répartition,
+                // puis viennent le chapitre chantier et ses pages d'équipe.
+                List<PageModel> pagesEquipe = pages.subList(4, pages.size());
 
                 assertThat(pagesEquipe)
                         .as(
@@ -235,13 +235,46 @@ class RapportPageModelBuilderTest {
         assertThat(pages.get(0).niveauTexte())
                 .isEqualTo("GLOBAL");
 
+        assertThat(pages.get(0).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(tuple(1, "Évolution de la masse salariale (DH) — fenêtre de 12 mois"));
+        assertThat(pages.get(0).blocs())
+                .anyMatch(b -> b instanceof PageModel.BlocGraphiqueEvolution graph
+                        && graph.mesure() == PageModel.MesureEvolution.MASSE);
+        assertThat(pages.get(0).blocs())
+                .noneMatch(b -> b instanceof PageModel.BlocGraphique);
         assertThat(pages.get(1).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(
+                        tuple(2, "Évolution mensuelle de l'effectif"),
+                        tuple(3, "Évolution mensuelle du STC en personnes"),
+                        tuple(4, "Évolution mensuelle du STC en DH"));
+        assertThat(pages.get(1).blocs())
+                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(b -> (PageModel.BlocGraphiqueEvolution) b)
+                .extracting(PageModel.BlocGraphiqueEvolution::mesure)
+                .containsExactly(PageModel.MesureEvolution.EFFECTIF,
+                        PageModel.MesureEvolution.STC_PERSONNES, PageModel.MesureEvolution.STC_DH);
+        assertThat(pages.get(1).blocs())
+                .noneMatch(b -> b instanceof PageModel.BlocGraphique);
+        assertThat(pages.get(2).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(tuple(5, "Répartition par chantier"));
+        assertThat(pages.get(2).blocs())
+                .anyMatch(b -> b instanceof PageModel.BlocGraphique);
+        assertThat(pages.get(3).blocs())
                 .anyMatch(b -> b instanceof PageModel.BlocTitreChapitre);
 
-        assertThat(pages.get(1).blocs())
+        assertThat(pages.get(3).blocs())
                 .noneMatch(b -> b instanceof PageModel.BlocTableauEmployes);
 
-        assertThat(pages.get(2).blocs().get(0))
+        assertThat(pages.get(4).blocs().get(0))
                 .isInstanceOf(PageModel.BlocTitreEquipe.class);
     }
 
@@ -258,13 +291,13 @@ class RapportPageModelBuilderTest {
         List<PageModel> sansEnsemble = builder.construire(vue, true);
 
         assertThat(sansEnsemble).noneMatch(page -> "GLOBAL".equals(page.niveauTexte()));
-        assertThat(sansEnsemble).hasSize(complet.size() - 1);
+        assertThat(sansEnsemble).hasSize(complet.size() - 3);
         assertThat(sansEnsemble.get(0).blocs())
                 .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
                 .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
                 .singleElement()
                 .asString().startsWith("I — ");
-        assertThat(complet.get(1).blocs())
+        assertThat(complet.get(3).blocs())
                 .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
                 .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
                 .singleElement()
@@ -287,8 +320,8 @@ class RapportPageModelBuilderTest {
 
                 List<PageModel> pages = builder.construire(vueAvecUneEquipe(total, lignesRecapMax, false, false));
 
-                // page 0 = synthèse globale ; la 1re page du chantier porte tout l'en-tête puis la section
-                List<PageModel.Bloc> premiere = pages.get(1).blocs();
+                // pages 0-2 = synthèse, évolutions et répartition ; le chantier commence page 3.
+                List<PageModel.Bloc> premiere = pages.get(3).blocs();
                 assertThat(premiere.subList(0, 3))
                         .as("total=%d, recap=%d : chapitre, KPI chantier puis directement le récap", total, lignesRecapMax)
                         .satisfiesExactly(
@@ -304,8 +337,8 @@ class RapportPageModelBuilderTest {
                                 "STC / SORTIES (PERSONNES)", "STC / SORTIES (DH)");
 
                 int lignes = 0;
-                for (int p = 1; p < pages.size(); p++) {
-                    double hauteur = p == 1 ? TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR : 0;
+                for (int p = 3; p < pages.size(); p++) {
+                    double hauteur = p == 3 ? TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR : 0;
                     for (PageModel.Bloc bloc : pages.get(p).blocs()) {
                         if (bloc instanceof PageModel.BlocTitreSection) {
                             hauteur += DETAILS_TITRE_HAUTEUR;
@@ -425,6 +458,10 @@ class RapportPageModelBuilderTest {
                 .toList();
         assertThat(moisPrecedent).hasSize(3);
         assertThat(moisPrecedent).allSatisfy(c -> assertThat(c.valeur()).isEmpty());
+        assertThat(cartesKpi(pages.get(0)))
+                .filteredOn(c -> c.label().equals("EFFECTIF"))
+                .extracting(CarteKpi::sousTexte)
+                .containsExactly("Écart indisponible");
     }
 
     private List<CarteKpi> cartesKpi(PageModel page) {
@@ -514,7 +551,8 @@ class RapportPageModelBuilderTest {
                 new KpiEffectifVue(
                         totalEmployes,
                         0,
-                        "+" + totalEmployes
+                        0,
+                        false
                 );
 
         EquipeBiVue equipe =
@@ -548,6 +586,7 @@ class RapportPageModelBuilderTest {
 
         SyntheseGlobaleVue synthese =
                 new SyntheseGlobaleVue(
+                        "Tous les marchés",
                         masse,
                         effectif,
                         1,
