@@ -101,9 +101,9 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
                                                               Pageable pageable);
 
     /** Masse, effectif et STC/sorties agrégés par (chantier, équipe, mois) sur l'intervalle
-     * {@code [debut, fin]} — alimente les 3 niveaux d'évolution du rapport PDF (global, par chantier,
-     * par équipe — voir {@code PaieBiReportBuilder.evolutionParNiveau}). **Une seule requête pour les
-     * 3 niveaux** — pas une requête par chantier ni par équipe (25 chantiers × plusieurs équipes × 12
+     * {@code [debut, fin]} — alimente l'évolution globale et, ultérieurement si retenu, par chantier
+     * (voir {@code PaieBiReportBuilder.evolutionParNiveau}). Une seule requête pour les deux niveaux
+     * — pas une requête par chantier ni par équipe (25 chantiers × plusieurs équipes × 12
      * mois ferait des centaines d'allers-retours base pour la même fenêtre de données) : le global et
      * le chantier sont simplement une somme en Java du même jeu de lignes déjà groupé au niveau le
      * plus fin, jamais un second appel base. Agrégation faite en base (pas un chargement des entités
@@ -114,22 +114,13 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
      * {@code ObservationStc.estStcOuSortie} (comparaison insensible à la casse/espaces à "stc" ou
      * "sortie") directement en JPQL, plutôt que de recharger les `Paie` complètes pour appliquer le
      * prédicat Java — même donnée, même définition, jamais dupliquée ni divergente. */
-    @Query("SELECT p.chantier.code AS chantierCode, e.code AS equipe, p.periode AS periode, " +
+    @Query("SELECT p.chantier.id AS chantierId, p.chantier.code AS chantierCode, e.code AS equipe, p.periode AS periode, " +
             "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
             "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc, " +
             "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p LEFT JOIN p.equipe e WHERE p.periode BETWEEN :debut AND :fin " +
-            "GROUP BY p.chantier.code, e.code, p.periode")
+            "GROUP BY p.chantier.id, p.chantier.code, e.code, p.periode")
     List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
-
-    /** Mois le plus ancien pour lequel une paie existe, toutes périodes confondues — sert à ne pas
-     * afficher de mois "fantômes" antérieurs à la mise en place du système sur les graphiques
-     * d'évolution (voir {@code PaieBiReportBuilder.evolutionParNiveau}) : la fenêtre glissante de 12
-     * mois ne démarre jamais avant ce mois, même si la période demandée le permettrait. {@code
-     * Optional.empty()} seulement si la table est vide (jamais atteint en pratique : le rapport lève
-     * déjà {@code AucunePaiePeriodeException} avant d'en arriver là). */
-    @Query("SELECT MIN(p.periode) FROM Paie p")
-    Optional<YearMonth> premierePeriode();
 
     // ---- Tableau de bord analytique : mêmes filtres multi-valeurs pour toutes les requêtes ci-dessous ----
 

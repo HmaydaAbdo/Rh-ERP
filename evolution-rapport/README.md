@@ -26,23 +26,25 @@ Les trois premiers points sont présents dans le code fusionné sur `main` (PR #
 
 Ces pistes ne sont pas des exigences validées de la prochaine version. Elles doivent être comparées au besoin de lecture actuel et aux données disponibles avant d’être ajoutées.
 
-## Niveau 1 — Vue d’ensemble : proposition à valider
+## Niveau 1 — Vue d’ensemble
 
 ### Existant vérifié
 
 - Six KPI : masse salariale du mois, masse du mois précédent, effectif, nombre de marchés, STC en personnes et STC en DH.
 - Un graphique horizontal par marché avec quatre séries (masse, effectif, STC personnes, STC DH), trié par masse décroissante ; les valeurs réelles sont affichées dans des colonnes dédiées.
-- Les marchés choisis filtrent déjà les calculs. `PaieBiReportBuilder` construit aussi `RapportBiVue.filtresActifs`, mais cette information n’est pas actuellement consommée par le rendu HTML/PDF.
-- La longueur des barres est actuellement calculée par rapport au maximum de chaque série (`valeur / maxParSerie`), pas à la part du total. Le graphique n’exprime donc pas une contribution en pourcentage.
-- La masse du mois précédent est affichée sans écart absolu ni pourcentage ; cette variation avait été retirée dans une décision antérieure.
+- Les marchés choisis filtrent déjà les calculs ; le code de la courbe applique également ce filtre aux mois historiques.
+- En vue d’ensemble, les barres représentent la part de chaque marché dans le total de sa série (échelle 0 à 100 %) ; les colonnes de valeurs conservent les valeurs réelles. Les graphiques des niveaux chantier/équipe gardent leur normalisation par maximum.
+- La masse du mois précédent reste affichée dans sa propre carte ; la vue d’ensemble ajoute l’écart en DH et en pourcentage sous la masse courante.
 
 ### Proposition
 
-1. Garder les six KPI existants et ajouter une indication de périmètre sur la page globale : « Tous les marchés » ou « N marchés sélectionnés ». Les chapitres suivants donnent déjà le détail des marchés inclus.
-2. Garder les quatre séries et les valeurs réelles, mais faire représenter aux barres la part de chaque marché dans le total de sa série, avec une échelle graduée de 0 à 100 %. Cela donnerait au lecteur une mesure explicite de contribution.
-3. Traiter séparément la variation de masse entre le mois courant et le précédent : elle est calculable avec les valeurs existantes, mais nécessite une décision explicite avant réintroduction.
+1. Garder les six KPI existants et ajouter une indication de périmètre sur la page globale : « Tous les marchés » ou « N marchés sélectionnés ». Les chapitres suivants donnent déjà le détail des marchés inclus. **Validé et implémenté dans l’arbre de travail ; CI et rendu PDF restent à confirmer.**
+2. Garder les quatre séries et les valeurs réelles, et représenter aux barres la part de chaque marché dans le total de sa série, avec une échelle graduée de 0 à 100 %. **Validé par l’utilisateur pour la vue d’ensemble uniquement.**
+3. Dans la carte « Masse salariale », afficher l’écart par rapport au mois précédent en montant et en pourcentage, en conservant la carte « Masse mois précédent ». **Validé par l’utilisateur pour la vue d’ensemble uniquement** ; les niveaux marché et équipe seront décidés plus tard.
+4. Sous le KPI « Effectif », afficher l’écart en personnes par rapport au mois précédent. **Validé par l’utilisateur pour la vue d’ensemble uniquement** ; les niveaux marché et équipe seront décidés plus tard.
+5. Réintroduire une courbe de masse salariale au niveau global sur une fenêtre glissante de 12 mois, avec seulement les mois réellement disponibles et selon le périmètre de marchés choisi. La placer sur la première page de contenu avec les KPI ; déplacer « Répartition par chantier » à la page suivante. **Validé par l’utilisateur et en cours d’implémentation.**
 
-**État :** proposition présentée à l’utilisateur ; aucun choix n’est encore validé et aucun changement de contenu global n’est implémenté. À confirmer avant de modifier le modèle de page ou le graphique.
+**État :** le périmètre visible, les écarts de masse et d’effectif sous leurs KPI respectifs, les barres exprimées en part du total et la courbe globale de masse sont implémentés dans l’arbre de travail pour la vue d’ensemble. La courbe utilise les mois disponibles dans une fenêtre de 12 mois et respecte les marchés sélectionnés ; la répartition commence sur la page suivante. Les tests ont été mis à jour, mais ne sont pas exécutés localement. CI et rendu PDF restent à confirmer. Les niveaux marché et équipe seront abordés après validation complète de cette vue.
 
 ## Préparer la nouvelle version
 

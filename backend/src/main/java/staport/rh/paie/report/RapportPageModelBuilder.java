@@ -65,9 +65,7 @@ final class RapportPageModelBuilder {
     private static final double KPI_TITRE_HAUTEUR = 16;
     private static final double KPI_CARTE_HAUTEUR = 54;
 
-    /** Hauteur des cartes pour laquelle {@code RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART} a été dimensionnée, au niveau
-     * global puis chantier : le graphique cède la place que des cartes plus hautes prennent au-dessus de lui. */
-    private static final double KPI_CARTE_REFERENCE_GLOBALE = 50;
+    /** Hauteur des cartes pour laquelle {@code RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART} a été dimensionnée au niveau chantier. */
     private static final double KPI_CARTE_REFERENCE_CHANTIER = 36;
 
     /** Cartes KPI (rapport.css {@code .kpi-carte}) : largeur de la carte, marges intérieures + filets (16 + 1),
@@ -78,6 +76,9 @@ final class RapportPageModelBuilder {
     private static final double KPI_CORPS_LIBELLE = 7.5;
     private static final double KPI_INTERLIGNE_LIBELLE = 8.5;
     private static final double KPI_ESPACE_VALEUR = 4;
+    private static final double KPI_ESPACE_SOUS_TEXTE = 2;
+    private static final double KPI_CORPS_SOUS_TEXTE = 7;
+    private static final double KPI_INTERLIGNE_SOUS_TEXTE = 8;
 
     /** Titre « Détails » (marge 8 + 12pt). */
     private static final double DETAILS_TITRE_HAUTEUR = 24;
@@ -153,6 +154,7 @@ final class RapportPageModelBuilder {
     private static final double MARGE_SECURITE = 8;
 
     private static final int CHAPITRES_FIXES = 1;
+    private static final int FENETRE_HISTORIQUE_MOIS = 12;
 
     /** Nombre maximal de chantiers par page dans le graphique « Répartition par chantier » : au-delà, il est
      * réparti sur plusieurs pages, à parts égales. Avec 16 lignes, chacune garde environ 20 pt de hauteur (voir
@@ -210,22 +212,45 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
+        blocs.add(new PageModel.BlocPerimetre("Périmètre : " + synthese.perimetreMarches()));
+        blocs.add(new PageModel.BlocCouvertureHistorique(
+                synthese.evolutionMensuelle().size(), FENETRE_HISTORIQUE_MOIS));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(),
-                synthese.stc(), synthese.stcMontant(), synthese.nombreChantiers()));
+                synthese.stc(), synthese.stcMontant(), synthese.nombreChantiers(), true, true));
         blocs.add(kpi);
-        // Le graphique cède la place que des cartes plus hautes que prévu prennent au-dessus de lui
-        double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART
-                - (kpi.hauteurCarte() - KPI_CARTE_REFERENCE_GLOBALE);
-        List<RepartitionBean> tous = synthese.repartitionChantier();
-        List<List<RepartitionBean>> tranches = repartirParPages(tous, hauteurMaxGraphique);
-        blocs.add(new PageModel.BlocTitreSection("Répartition par chantier"));
-        blocs.add(new PageModel.BlocGraphique(tranches.get(0), tous, hauteurMaxGraphique));
+        blocs.add(new PageModel.BlocTitreRubrique(1,
+                "Évolution de la masse salariale (DH) — fenêtre de " + FENETRE_HISTORIQUE_MOIS + " mois"));
+        blocs.add(new PageModel.BlocGraphiqueEvolution(
+                synthese.evolutionMensuelle(), PageModel.MesureEvolution.MASSE));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
+
+        List<PageModel.Bloc> blocsEvolution = new ArrayList<>();
+        blocsEvolution.add(new PageModel.BlocTitreRubrique(2, "Évolution mensuelle de l'effectif"));
+        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
+                synthese.evolutionMensuelle(), PageModel.MesureEvolution.EFFECTIF));
+        blocsEvolution.add(new PageModel.BlocTitreRubrique(3, "Évolution mensuelle du STC en personnes"));
+        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
+                synthese.evolutionMensuelle(), PageModel.MesureEvolution.STC_PERSONNES));
+        blocsEvolution.add(new PageModel.BlocTitreRubrique(4, "Évolution mensuelle du STC en DH"));
+        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
+                synthese.evolutionMensuelle(), PageModel.MesureEvolution.STC_DH));
+        pages.add(new PageEnConstruction("GLOBAL", blocsEvolution));
+
+        ajouterPagesRepartitionGlobale(pages, synthese.repartitionChantier());
+    }
+
+    private void ajouterPagesRepartitionGlobale(List<PageEnConstruction> pages, List<RepartitionBean> tous) {
+        double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART;
+        List<List<RepartitionBean>> tranches = repartirParPages(tous, hauteurMaxGraphique);
+        List<PageModel.Bloc> premierePage = new ArrayList<>();
+        premierePage.add(new PageModel.BlocTitreRubrique(5, "Répartition par chantier"));
+        premierePage.add(new PageModel.BlocGraphique(tranches.get(0), tous, hauteurMaxGraphique, true));
+        pages.add(new PageEnConstruction("GLOBAL", premierePage));
 
         for (List<RepartitionBean> suite : tranches.subList(1, tranches.size())) {
             List<PageModel.Bloc> blocsSuite = new ArrayList<>();
             blocsSuite.add(new PageModel.BlocTitreSection("Répartition par chantier (suite)"));
-            blocsSuite.add(new PageModel.BlocGraphique(suite, tous, hauteurMaxGraphique));
+            blocsSuite.add(new PageModel.BlocGraphique(suite, tous, hauteurMaxGraphique, true));
             pages.add(new PageEnConstruction("GLOBAL", blocsSuite));
         }
     }
@@ -235,7 +260,8 @@ final class RapportPageModelBuilder {
      * plusieurs lignes) tiennent dans {@code hauteurMax} — jamais une page presque vide à la fin. Toujours au moins
      * une tranche. */
     private List<List<RepartitionBean>> repartirParPages(List<RepartitionBean> chantiers, double hauteurMax) {
-        double disponible = hauteurMax - RapportChartSvgBuilder.HAUTEUR_ENTETE - RapportChartSvgBuilder.HAUTEUR_LEGENDE;
+        double disponible = hauteurMax - RapportChartSvgBuilder.HAUTEUR_ENTETE
+                - RapportChartSvgBuilder.HAUTEUR_LEGENDE - RapportChartSvgBuilder.HAUTEUR_ECHELLE_POURCENTAGE;
 
         // Tranches pleines, remplies dans l'ordre : donnent le nombre minimal de pages
         List<List<RepartitionBean>> remplies = new ArrayList<>();
@@ -279,7 +305,7 @@ final class RapportPageModelBuilder {
         String chapitre = chapitreChantier(rang, chantier);
         blocs.add(new PageModel.BlocTitreChapitre(chapitre));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
-                chantier.stc(), chantier.stcMontant(), null));
+                chantier.stc(), chantier.stcMontant(), null, false, false));
         blocs.add(kpi);
         if (chantier.avecDetailEquipe()) {
             // Le graphique cède la place que le titre ou les cartes prennent en plus au-dessus de lui
@@ -334,6 +360,11 @@ final class RapportPageModelBuilder {
                             carte.label().toUpperCase(java.util.Locale.ROOT), largeurTexte, KPI_CORPS_LIBELLE, true)
                     + KPI_ESPACE_VALEUR
                     + interligneValeur * RapportMesureTexte.lignes(carte.valeur(), largeurTexte, corpsValeur, true);
+            if (carte.sousTexte() != null) {
+                besoin += KPI_ESPACE_SOUS_TEXTE
+                        + KPI_INTERLIGNE_SOUS_TEXTE * RapportMesureTexte.lignes(
+                                carte.sousTexte(), largeurTexte, KPI_CORPS_SOUS_TEXTE, false);
+            }
             hauteur = Math.max(hauteur, Math.ceil(besoin));
         }
         return new PageModel.BlocKpi(cartes, hauteur);
@@ -342,17 +373,30 @@ final class RapportPageModelBuilder {
     /** Les mêmes indicateurs à chaque niveau : masse, mois précédent, effectif, STC en personnes et STC en DH.
      * Le nombre de chantiers n'est affiché qu'au niveau global. */
     private List<CarteKpi> cartesKpi(KpiMontantVue masse, KpiEffectifVue effectif, int stc, String stcMontant,
-                                      Integer nombreChantiers) {
+                                      Integer nombreChantiers, boolean afficherEcartMasse,
+                                      boolean afficherEcartEffectif) {
         List<CarteKpi> cartes = new ArrayList<>();
-        cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant"));
+        cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant",
+                afficherEcartMasse ? masse.ecart() : null));
         cartes.add(new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(masse.valeurPrecedente()).strip(), "montant"));
-        cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.effectifCourant()), "compte"));
+        cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.effectifCourant()), "compte",
+                afficherEcartEffectif ? libelleEcartEffectif(effectif) : null));
         if (nombreChantiers != null) {
             cartes.add(new CarteKpi("CHANTIERS", String.valueOf(nombreChantiers), "compte"));
         }
         cartes.add(new CarteKpi("STC / SORTIES (PERSONNES)", String.valueOf(stc), "compte"));
         cartes.add(new CarteKpi("STC / SORTIES (DH)", stcMontant + " DH", "montant"));
         return cartes;
+    }
+
+    private String libelleEcartEffectif(KpiEffectifVue effectif) {
+        if (!effectif.comparaisonDisponible()) {
+            return "Écart indisponible";
+        }
+        int variation = effectif.variation();
+        String signe = variation > 0 ? "+" : variation < 0 ? "−" : "";
+        String unite = Math.abs(variation) == 1 ? "personne" : "personnes";
+        return "Écart : " + signe + Math.abs(variation) + " " + unite + " vs mois précédent";
     }
 
     /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du
@@ -499,7 +543,8 @@ final class RapportPageModelBuilder {
     }
 
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
-        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null));
+        return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null,
+                false, false));
     }
 
     /** {@code " <montant> DH"} (espace de tête inclus, pour la concaténation après un libellé), ou chaîne vide

@@ -21,6 +21,18 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocTitreSection(String texte) implements Bloc {
     }
 
+    /** Rubrique globale numérotée et destinée à alimenter le futur sommaire avec son numéro de page. */
+    record BlocTitreRubrique(int numero, String texte) implements Bloc {
+    }
+
+    /** Périmètre des marchés utilisé par la synthèse globale. */
+    record BlocPerimetre(String texte) implements Bloc {
+    }
+
+    /** Nombre de mois réellement présents dans l'historique, comparé à la fenêtre maximale affichée. */
+    record BlocCouvertureHistorique(int moisDisponibles, int fenetreMois) implements Bloc {
+    }
+
     /** Titre de section équipe (12pt, filet — "ÉQUIPE : CHAUFFEURS"), toujours suivi d'un
      * {@link BlocKpi} : présent UNIQUEMENT sur la 1re page d'une section équipe/reste. */
     record BlocTitreEquipe(String texte) implements Bloc {
@@ -38,11 +50,24 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
      * les barres restent comparables d'une page à l'autre. {@code hauteurMax} (pt) : hauteur totale que le
      * graphique ne doit pas dépasser — réduite quand les blocs au-dessus (titre, cartes KPI) occupent plus de place
      * que prévu parce que leur texte passe à la ligne. */
-    record BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax) implements Bloc {
+    record BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax,
+                         boolean partDuTotal) implements Bloc {
+
+        BlocGraphique(List<RepartitionBean> donnees, List<RepartitionBean> echelle, double hauteurMax) {
+            this(donnees, echelle, hauteurMax, false);
+        }
 
         BlocGraphique(List<RepartitionBean> donnees, double hauteurMax) {
-            this(donnees, donnees, hauteurMax);
+            this(donnees, donnees, hauteurMax, false);
         }
+    }
+
+    enum MesureEvolution {
+        MASSE, EFFECTIF, STC_PERSONNES, STC_DH
+    }
+
+    /** Graphique d'évolution globale ; sa rubrique numérotée précédente est collectable pour le sommaire. */
+    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, MesureEvolution mesure) implements Bloc {
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la

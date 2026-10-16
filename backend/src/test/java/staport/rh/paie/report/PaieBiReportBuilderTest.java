@@ -119,8 +119,15 @@ class PaieBiReportBuilderTest {
     private List<String> titresSectionRepartitionChantier(RapportBiVue vue) {
         return new RapportPageModelBuilder().construire(vue).stream()
                 .flatMap(page -> page.blocs().stream())
-                .filter(PageModel.BlocTitreSection.class::isInstance)
-                .map(bloc -> ((PageModel.BlocTitreSection) bloc).texte())
+                .map(bloc -> {
+                    if (bloc instanceof PageModel.BlocTitreSection titre) {
+                        return titre.texte();
+                    }
+                    if (bloc instanceof PageModel.BlocTitreRubrique titre) {
+                        return titre.texte();
+                    }
+                    return "";
+                })
                 .filter(texte -> texte.startsWith("Répartition par chantier"))
                 .toList();
     }
@@ -144,6 +151,12 @@ class PaieBiReportBuilderTest {
         assertThat(vue.synthese().masse().valeurPrecedente()).isEqualTo("4 000");
         assertThat(vue.synthese().effectif().effectifCourant()).isEqualTo(2);
         assertThat(vue.synthese().effectif().effectifPrecedent()).isEqualTo(1);
+        assertThat(vue.synthese().effectif().variation()).isEqualTo(1);
+        PageModel.BlocKpi kpiGlobal = (PageModel.BlocKpi) new RapportPageModelBuilder().construire(vue).get(0)
+                .blocs().stream().filter(PageModel.BlocKpi.class::isInstance).findFirst().orElseThrow();
+        CarteKpi kpiEffectif = kpiGlobal.cartes().stream()
+                .filter(carte -> carte.label().equals("EFFECTIF")).findFirst().orElseThrow();
+        assertThat(kpiEffectif.sousTexte()).isEqualTo("Écart : +1 personne vs mois précédent");
     }
 
     /** Une masse salariale est toujours arrondie à l'unité (0,5 vers le haut), sans décimales — jamais « 1 001,50 ». */

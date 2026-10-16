@@ -1,5 +1,7 @@
 # Rapport PDF BI (Paie) — v2 : journal des simplifications
 
+> **Mise à jour 2026-10-16 :** le retrait de l'évolution mensuelle décrit ci-dessous est conservé comme historique de décision. Pour la nouvelle évolution globale, l'utilisateur a validé une courbe de masse salariale sur 12 mois au maximum, ne montrant que les périodes réellement disponibles, placée avec les KPI en première page de contenu. La répartition par chantier commence sur la page suivante. Cette validation ne réintroduit pas de courbe aux niveaux chantier ou équipe.
+
 > Ce fichier n'est PAS une documentation d'architecture (voir `docs/report/README.md` pour l'état
 > actuel réel du rapport). C'est un **journal de décisions** : ce qui a été retiré du rapport BI au
 > fil des itérations, pourquoi, et — pour ce qui reste calculé sans être affiché — comment le
@@ -158,3 +160,24 @@ jugé inutile.
 - Les cartes KPI et le narratif léger, à chaque niveau (Global, Chantier, Équipe/chantier compact).
 - Le tableau employé détaillé (nom, fonction, CIN, jours, salaire, total, observation) — jamais
   résumé ni retiré, c'est le niveau de détail que le rapport garantit de ne jamais perdre.
+
+---
+
+## 6. Évolutions mensuelles globales — version en cours
+
+La vue d’ensemble est enrichie progressivement, avant toute extension aux niveaux chantier et équipe :
+
+- La première page affiche la couverture réelle de l’historique (mois disponibles sur une fenêtre maximale de 12),
+  la masse salariale mensuelle et les KPI déjà retenus.
+- Une deuxième page dédiée affiche l’évolution mensuelle de l’effectif, du STC en personnes et du STC en DH.
+- Les courbes utilisent uniquement les mois ayant des bulletins dans le périmètre de marchés demandé. Les libellés
+  de mois sont au format `M/YYYY` (ex. `1/2026`). Chaque point dispose de repères vers les axes X et Y, dont le contraste
+  est renforcé pour l’impression.
+- La répartition par chantier commence après cette page d’évolutions. Les montants de STC et les nombres de personnes
+  restent des mesures distinctes, avec des axes adaptés à leurs unités.
+- Les graphiques globaux sont des rubriques numérotées : 1. masse salariale, 2. effectif, 3. STC en personnes,
+  4. STC en DH et 5. répartition par chantier. Le modèle conserve numéro et libellé séparément du graphique pour
+  permettre de construire ensuite un sommaire dynamique avec les pages correspondantes.
+
+Cette évolution a été validée sous forme de maquette avant implémentation. Les niveaux chantier et équipe seront
+examinés séparément avec l’utilisateur.

@@ -51,15 +51,11 @@ staport.rh.paie.export/      ← sortie Excel (Apache POI)
 └── PaieExportRequestDto.java     Corps de la requête
 
 staport.rh.paie.repositories/
-├── EvolutionChantierEquipeProjection.java  Projection JPQL (chantierCode, equipe, periode, masse,
-│                                 effectif, stc, stcMontant) — la donnée la plus fine dont le rapport
-│                                 calcule un historique (Global, Chantier). Plus consommée par aucun
-│                                 graphique du rapport (évolution mensuelle retirée, voir
-│                                 ../../evolution-rapport/rapport-v2.md) mais toujours calculée, prête à être
-│                                 réutilisée sans redévelopper si le besoin se confirme un jour.
-└── PaieRepository.premierePeriode()  Mois le plus ancien où une paie existe réellement en base —
-                                  plancher de la fenêtre glissante utilisée par le calcul ci-dessus,
-                                  jamais un historique qui n'a jamais existé (mois "fantômes" à 0)
+├── EvolutionChantierEquipeProjection.java  Projection JPQL (chantierId/code, équipe, période, masse,
+│                                 effectif, STC, STC DH) — base du calcul mensuel global/chantier.
+└── PaieRepository.sommerParChantierEquipePeriode() Agrège les périodes réellement disponibles sur
+                                  les 12 mois précédant la période du rapport ; le filtre de marchés
+                                  sélectionnés est appliqué au calcul global.
 
 staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup + openhtmltopdf, voir
 │                                 « Rapport PDF (BI) » plus bas pour l'historique complet de cette
@@ -95,8 +91,8 @@ staport.rh.paie.report/      ← sortie PDF BI — pipeline HTML/CSS pur (jsoup 
 │                                 HTML/CSS, aucune décision de pagination ici.
 ├── RapportChartSvgBuilder.java   Graphiques en barres groupées — construits en SVG à la main (voir
 │                                 « Visualisations »), remplace PaieReportGroupedChartCustomizer/
-│                                 JFreeChart (retirés avec JasperReports). Même logique de
-│                                 normalisation par série (voir plus bas).
+│                                 JFreeChart (retirés avec JasperReports). Parts du total en vue
+│                                 d'ensemble, normalisation par maximum aux autres niveaux (voir plus bas).
 ├── RapportMesureTexte.java       Découpe un texte en lignes pour une largeur donnée (police
 │                                 Liberation Serif embarquée) — sert à prévoir la hauteur des
 │                                 cellules qui passent à la ligne, voir « Retour à la ligne des
@@ -400,6 +396,8 @@ chantier) : aucune page de niveau `GLOBAL`, le premier chantier devient le chapi
 pages se calculent sans elle. Avec un ou plusieurs `chantierIds`, les indicateurs portent sur ces marchés ; sans filtre, tous sont gardés.
 La page de garde est inchangée ; le journal d'audit du rapport consigne les filtres du périmètre. `RapportPageModelBuilder.construire(vue, sansVueEnsemble)`.
 
+Quand la vue d'ensemble est incluse, elle affiche également son périmètre de marchés : « Tous les marchés » sans sélection, ou le nombre de marchés sélectionnés. La ligne est calculée depuis `chantierIds` et sa hauteur est prise en compte dans la pagination du graphique global.
+
 ### Modèle analytique
 
 | | |
@@ -407,7 +405,7 @@ La page de garde est inchangée ; le journal d'audit du rapport consigne les fil
 | **Fait** | `Paie` — grain = 1 employé × 1 période (contrainte d'unicité `employee_id + periode` : `COUNT(*)` est toujours un effectif exact, jamais de double comptage). |
 | **Dimensions** | Chantier (obligatoire sur `Paie`), Fonction (obligatoire — sert à trier le tableau employé ET alimente le tableau récap Fonction/Effectif/STC de chaque section, voir « Lignes de résumé et tableau récap »), Équipe (optionnelle → `Sans équipe`), Employé, Période (mois analysé + mois précédent). |
 | **Mesures de base** | Masse réelle de paie = `SUM(salaireTotal)` (**jamais** `salaireMensuel` — voir ci-dessous) ; Effectif = `COUNT(*)` ; STC / sortie en personnes = `COUNT` et en DH = `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie`, calculés par niveau. |
-| **Mesures calculées** | Montant STC en DH : somme des salaires totaux des lignes STC/sortie. Aucune variation (absolue ou %) n'est affichée : le montant du mois précédent figure dans sa propre carte. |
+| **Mesures calculées** | Montant STC en DH : somme des salaires totaux des lignes STC/sortie. Dans la vue d'ensemble, l'écart de masse (montant et pourcentage) apparaît sous la carte de masse courante, et l'écart d'effectif (personnes) sous la carte Effectif ; la carte de masse du mois précédent reste affichée séparément. |
 | **Historique** | Chaque bulletin `Paie` est un instantané figé de chantier/fonction/équipe pour son mois — le rapport agrège donc les valeurs *stockées sur `Paie`*, jamais l'affectation actuelle de `Employee` (qui peut avoir changé depuis). La comparaison au mois précédent respecte le même principe. |
 
 **Pourquoi `salaireTotal` et pas `salaireMensuel`** : `salaireMensuel` est une composante du
@@ -418,16 +416,20 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 
 | KPI | Formule | Grain | Comparaison mois précédent |
 |---|---|---|---|
-| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — montant du mois précédent affiché tel quel (carte « Masse mois précédent ») aux trois niveaux, sans variation (voir « Null-handling ») |
-| Effectif | `COUNT(*)` | Global / chantier / section | Non — l'effectif du mois précédent n'est pas affiché |
+| Masse réelle de paie | `SUM(salaireTotal)` sur le périmètre filtré | Global / chantier / section | Oui — montant du mois précédent affiché aux trois niveaux ; l'écart montant/pourcentage apparaît uniquement sous la masse courante en vue d'ensemble |
+| Effectif | `COUNT(*)` | Global / chantier / section | Écart en personnes sous le KPI uniquement en vue d'ensemble ; pas d'écart aux niveaux chantier/équipe |
 | STC / sortie (DH) | `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / chantier / section | Non |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
+| Évolution de la masse salariale sur 12 mois au plus | `SUM(salaireTotal)` par mois disponible, sur une fenêtre finissant au mois du rapport | Global | Oui — courbe affichée avec les KPI en première page ; seuls les mois ayant des bulletins sont représentés et les marchés sélectionnés filtrent la courbe |
+| Couverture de l'historique | Nombre de mois avec bulletins dans la fenêtre maximale de 12 mois | Global | Mention de couverture sur la première page, selon les marchés sélectionnés |
+| Évolution mensuelle de l'effectif | `COUNT(*)` par mois disponible, sur la même fenêtre et le même périmètre que la masse | Global | Courbe dédiée sur la deuxième page |
+| Évolution mensuelle du STC (personnes et DH) | `COUNT(ObservationStc.estStcOuSortie)` et `SUM(salaireTotal)` des lignes STC par mois disponible | Global | Deux courbes dédiées sur la deuxième page, une par unité |
 | Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
 | ~~Masse/Effectif par fonction (globale)~~ | `SUM(salaireTotal)`/`COUNT` groupés par fonction | Global | Retiré temporairement (doublons dans le référentiel Fonction, voir « Points d'extension », TODO.md et `../../evolution-rapport/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder`/`SyntheseGlobaleVue.repartitionFonction`), simplement plus affiché |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
 | Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe détaillée | Non — 1 graphique par chantier concerné ("Répartition par équipe"), TOUJOURS la distribution complète de toutes les équipes réelles — voir « Visualisations » |
 | STC / sortie (personnes et DH) | `COUNT` et `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — deux KPI à chaque niveau et séries dédiées de chaque `<barChart>` |
-| ~~Évolution masse/effectif (fenêtre glissante ≤ 12 mois)~~ | `SUM(salaireTotal)`/`COUNT` groupés par chantier/`periode` (`PaieRepository.sommerParChantierEquipePeriode`) | Global / Chantier | Retiré entièrement du rapport (2026-09-28, manque d'historique suffisant — voir `../../evolution-rapport/rapport-v2.md`) — toujours calculé (`PaieBiReportBuilder.evolutionParNiveau`), simplement plus affiché |
+| Évolutions mensuelles globales (fenêtre glissante ≤ 12 mois) | `SUM(salaireTotal)`, `COUNT(*)`, `COUNT(ObservationStc.estStcOuSortie)` et `SUM(salaireTotal STC)` groupés par `periode`, filtrés par les marchés sélectionnés | Global | Couverture et masse sur la première page ; effectif et deux courbes STC sur la deuxième ; répartition par chantier sur la troisième. Seuls les mois disponibles sont tracés. |
 
 Pas de KPI dupliqué : chaque carte/graphique répond à une question différente (jamais deux façons de
 montrer le même montant). La dimension Fonction n'a plus d'écran dédié au niveau global du rapport
@@ -440,6 +442,8 @@ montrer le même montant). La dimension Fonction n'a plus d'écran dédié au ni
   indisponible (valeur précédente `null` : le PDF garde le libellé et laisse la valeur vide) — jamais un `0 DH` trompeur.
 - **Des lignes existent mais leur somme vaut zéro** (cas réel, distinct du cas précédent) → le montant précédent
   s'affiche : `0,00 DH`.
+- Dans la vue d'ensemble, sans ligne au mois précédent, l'écart est indiqué comme indisponible. Si le montant précédent vaut zéro, seul l'écart en DH est affiché ; un pourcentage sur une base nulle n'est pas calculable.
+- L'écart d'effectif est indiqué comme indisponible s'il n'y a aucune ligne de paie le mois précédent ; sinon il exprime la différence en personnes, y compris `0 personne` si les effectifs sont égaux.
 - Cette distinction est la même que celle déjà en place côté Excel (`INTROUVABLE` vs `0`,
   `PaiePerimetreService.totalSalairesOuNull`) — réutilisée à l'identique, pas réinventée. La ligne
   "TOTAL GENERAL MOIS PRECEDENT" collée au bas de chaque tableau employé du PDF (voir plus bas)
@@ -533,15 +537,20 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    temps qu'il construit chaque page (voir « Numérotation des chapitres et des pages » : plus de
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
-3. **I — Vue d'ensemble** : rubrique « Indicateurs clés » et 6 cartes KPI, chacune avec son indicateur (voir
-   « Cartes KPI ») : masse salariale, masse mois précédent, effectif, nombre de
-   chantiers, STC/sorties en personnes, STC/sorties en DH — puis, SUR LA MÊME PAGE, le graphique « Répartition par chantier »
-   à 4 séries (masse/effectif/STC en personnes/STC en DH), qui montre **TOUS les chantiers**. Au-delà de 16
-   chantiers, il continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir
-   « Visualisations ».
+3. **I — Vue d'ensemble** : le périmètre des marchés (« Tous les marchés » ou nombre sélectionné), les KPI
+   (masse courante, masse précédente, effectif, nombre de chantiers et STC en personnes/DH), le nombre de mois
+   d'historique disponible sur 12, puis la rubrique **1. Évolution de la masse salariale** et son graphique.
+   Chaque graphique global porte un titre de rubrique numéroté, stocké séparément des données du graphique afin de
+   pouvoir alimenter un sommaire dynamique avec son numéro de page.
+4. La page dédiée porte les rubriques **2. Évolution mensuelle de l'effectif**, **3. Évolution mensuelle du STC
+   en personnes** et **4. Évolution mensuelle du STC en DH**, chacune avec son graphique séparé.
+   Les points sont projetés en pointillés vers les axes ; valeurs et mois au format `M/YYYY` sont affichés.
+5. La rubrique **5. Répartition par chantier** commence sur la troisième page de contenu, avec quatre séries (masse, effectif,
+   STC en personnes et STC en DH) pour les chantiers du périmètre. Au-delà de 16 chantiers, elle continue sur
+   une ou plusieurs pages « Répartition par chantier (suite) » — voir « Visualisations ».
 
    Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
-4. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
+6. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
    seul chapitre fixe (II, III, ... — voir `RapportPageModelBuilder.chapitreChantier`) — voir « Vue
    détaillée d'un chantier » pour le détail.
 
@@ -753,22 +762,22 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
   minimale d'une ligne est celle d'**un** texte, donc aucun chevauchement n'est possible, quel que soit le
   nombre de catégories. Chaque colonne a un en-tête souligné d'un filet de la couleur de sa série, ce qui la
   relie à ses barres sans mesurer la largeur du texte.
-- **Axe des valeurs masqué ET chaque série normalisée à sa propre valeur maximale** (0 à 1,
-  indépendamment des 3 autres séries) : masse/STC en DH (milliers de DH) et effectif/STC en
-  personnes (quelques unités) ont des ordres de grandeur si différents qu'un axe masqué seul ne
-  suffit pas. Le texte de chaque colonne reste la **vraie** valeur, lue AVANT normalisation, avec un
-  null-check explicite (`RapportChartSvgBuilder.valeurMontant`, `RepartitionBean.montant`/`stcMontant` pouvant
-  être `null` — seul endroit de toute la vue-modèle dans ce cas, voir « Architecture » — traité comme zéro,
-  jamais la chaîne littérale "null", couvert par un test de non-régression dédié). Une valeur nulle (ou `null`)
-  n'a pas de barre et s'affiche « – » : une cellule vide serait ambiguë.
+- **Échelle selon le niveau** : en vue d'ensemble, chaque barre représente la part du marché dans le total de sa
+  série (0 à 100 %) et une échelle graduée est visible ; aux niveaux chantier/équipe, les barres restent rapportées
+  au maximum de chaque série, avec l'axe masqué. Les ordres de grandeur diffèrent fortement entre masse, effectif et
+  STC ; les colonnes à droite gardent donc toujours les **valeurs réelles**, lues avant normalisation. Le null-check
+  explicite (`RapportChartSvgBuilder.valeurMontant`, `RepartitionBean.montant`/`stcMontant` pouvant être `null` —
+  seul endroit de toute la vue-modèle dans ce cas, voir « Architecture » — traite `null` comme zéro, jamais comme
+  la chaîne littérale "null", couvert par un test de non-régression dédié). Une valeur nulle n'a pas de barre et
+  s'affiche « – » dans sa colonne.
 - **Pleine largeur utile** : le dessin est construit en pt puis agrandi de 4/3 (`PX_PAR_PT`) pour occuper
   les 802 pt de largeur utile de la page. Le moteur de rendu (openhtmltopdf + Batik) ignore les attributs
   `width`/`height` du SVG et dimensionne le dessin d'après son `viewBox`, en px (1 px = 0,75 pt) : sans cet
   agrandissement, le graphique n'occupait que les trois quarts de la largeur (corrigé le 2026-10-03, test de
   non-régression dans `RapportChartSvgBuilderTest`). La colonne des libellés s'adapte au plus large des libellés, déjà passés à la ligne
-  (48 à 200 pt), les 4 colonnes de valeurs prennent 292 pt à droite (`LARGEUR_COLONNES`) et la barre la plus
-  longue de chaque série occupe tout l'espace restant entre les deux. La hauteur totale (en-tête des colonnes,
-  lignes, légende) est plafonnée à 361 pt (`HAUTEUR_TOTALE_CHART`) pour tenir sous le bandeau, le titre de
+  (48 à 200 pt), les 4 colonnes de valeurs prennent 292 pt à droite (`LARGEUR_COLONNES`) et la barre maximale
+  occupe tout l'espace restant en mode maximum ; en vue d'ensemble, 100 % représente le total de la série. La
+  hauteur totale (en-tête, lignes, échelle éventuelle, légende) est plafonnée à 361 pt (`HAUTEUR_TOTALE_CHART`) pour tenir sous le bandeau, le titre de
   chapitre et les cartes KPI ; une ligne fait au plus 40 pt.
 - **Aération** : les 4 barres d'une ligne occupent 72 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste est
   de l'espace blanc entre lignes, renforcé par un filet gris clair entre deux lignes et un axe vertical fin à
@@ -800,16 +809,18 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
 > X numérique (2 échelles simultanées) a également été envisagé puis écarté — la normalisation par
 > série reste l'alternative retenue, explicitement admise par la direction.
 
-### Évolution mensuelle — retirée (2026-09-28)
+### Évolution mensuelle de la masse salariale
 
-Le rapport a porté, à une itération précédente, un graphique d'évolution mensuelle (masse, effectif)
-aux niveaux Global et Chantier, avec une fenêtre glissante d'au plus 12 mois (jamais avant le
-premier mois où une paie existe réellement en base, `PaieRepository.premierePeriode()`). **Ce
-graphique a été retiré entièrement** (manque d'historique suffisant pour qu'une tendance mensuelle
-soit significative) — voir `../../evolution-rapport/rapport-v2.md` pour le détail complet de cette décision, de
-celle qui l'a précédée (retrait du STC de ce même graphique), et de ce qui reste calculé côté Java
-sans être affiché (`PaieBiReportBuilder.evolutionParNiveau`, prêt à être réactivé sans recalcul si le
-besoin se confirme un jour). Le rapport ne porte donc aucun graphique d'évolution.
+La vue d'ensemble affiche la masse salariale par mois disponible dans une fenêtre glissante se terminant à la
+période du rapport et limitée aux 12 derniers mois. La mention de couverture indique le nombre de mois réellement
+présents sur cette fenêtre. Les périodes sans bulletin ne sont pas représentées par un zéro. Le libellé de l'axe X
+est au format `M/YYYY` (par exemple `1/2026`) ; l'axe Y et son axe de base sont renforcés visuellement, et chaque
+point est projeté vers les axes pour lire sa valeur.
+
+Une deuxième page globale montre de la même manière l'évolution mensuelle de l'effectif et du STC en personnes et
+en DH, chacun sur sa propre courbe et sa propre échelle. Le périmètre des marchés sélectionnés est commun aux
+quatre évolutions. La répartition par chantier commence à la troisième page de contenu. Les mois sans bulletin ne
+sont jamais ajoutés artificiellement.
 
 ### Style visuel
 
@@ -940,10 +951,9 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
   contient des doublons non nettoyés, voir TODO.md pour la tâche de nettoyage côté données).
   `SyntheseGlobaleVue.repartitionFonction`/`P_REPARTITION_FONCTION` restent calculés côté Java pour
   ne pas tout redévelopper à la réintroduction.
-- **Réintroduire l'évolution mensuelle** : retirée entièrement (manque d'historique, voir
-  `../../evolution-rapport/rapport-v2.md`) mais toujours calculée côté Java
-  (`PaieBiReportBuilder.evolutionParNiveau`) — à reconsidérer une fois plusieurs mois/années de
-  données accumulées, si le besoin se confirme réellement.
+- **Évolutions mensuelles par chantier/équipe** : l’historique est calculé en amont. Cette version affiche au niveau global
+  la masse salariale, l'effectif et le STC (personnes et DH) ; une déclinaison à des niveaux plus fins reste à décider
+  avec l’utilisateur.
 - **Généraliser le squelette parc matériel** : aujourd'hui figé au chantier C168 (équipes CH/OP),
   sans persistance ni UI de saisie (voir « Squelette parc matériel ») — si le besoin s'étend à
   d'autres chantiers/équipes, la règle métier centralisée dans `MaterielChantierCatalogue` est le

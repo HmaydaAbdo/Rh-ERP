@@ -11,6 +11,8 @@ import java.time.YearMonth;
  * pour le mapping vers "Sans équipe"). */
 public interface EvolutionChantierEquipeProjection {
 
+    Long getChantierId();
+
     String getChantierCode();
 
     String getEquipe();

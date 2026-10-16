@@ -39,11 +39,14 @@ final class PaieReportHtmlBuilder {
     private final String css;
     private final String logoDataUri;
     private final RapportChartSvgBuilder chartSvgBuilder;
+    private final RapportEvolutionSvgBuilder evolutionSvgBuilder;
 
-    PaieReportHtmlBuilder(RapportRessourcesStatiques ressources, RapportChartSvgBuilder chartSvgBuilder) {
+    PaieReportHtmlBuilder(RapportRessourcesStatiques ressources, RapportChartSvgBuilder chartSvgBuilder,
+                          RapportEvolutionSvgBuilder evolutionSvgBuilder) {
         this.css = ressources.css;
         this.logoDataUri = ressources.logoDataUri();
         this.chartSvgBuilder = chartSvgBuilder;
+        this.evolutionSvgBuilder = evolutionSvgBuilder;
     }
 
     /** Largeur (pt) du bloc « niveau » du bandeau, voir rapport.css {@code .page-header .bloc.bloc-niveau}. */
@@ -67,12 +70,24 @@ final class PaieReportHtmlBuilder {
             corps.appendElement("div").addClass("titre-chapitre").text(b.texte());
         } else if (bloc instanceof PageModel.BlocTitreSection b) {
             corps.appendElement("div").addClass("titre-section").text(b.texte());
+        } else if (bloc instanceof PageModel.BlocTitreRubrique b) {
+            corps.appendElement("div").addClass("titre-section").addClass("rubrique-titre")
+                    .text(b.numero() + ". " + b.texte());
+        } else if (bloc instanceof PageModel.BlocPerimetre b) {
+            corps.appendElement("div").addClass("perimetre-global").text(b.texte());
+        } else if (bloc instanceof PageModel.BlocCouvertureHistorique b) {
+            String mois = b.moisDisponibles() == 1 ? "mois disponible" : "mois disponibles";
+            corps.appendElement("div").addClass("couverture-historique")
+                    .text("Historique disponible : " + b.moisDisponibles() + " " + mois
+                            + " sur " + b.fenetreMois());
         } else if (bloc instanceof PageModel.BlocTitreEquipe b) {
             corps.appendElement("div").addClass("titre-equipe").text(b.texte());
         } else if (bloc instanceof PageModel.BlocKpi b) {
             ajouterCartesKpi(corps, b.cartes(), b.hauteurCarte());
         } else if (bloc instanceof PageModel.BlocGraphique b) {
-            chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax());
+            chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax(), b.partDuTotal());
+        } else if (bloc instanceof PageModel.BlocGraphiqueEvolution b) {
+            evolutionSvgBuilder.ajouterGraphique(corps, b.donnees(), b.mesure());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
             ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {
@@ -184,6 +199,9 @@ final class PaieReportHtmlBuilder {
             }
             carteEl.appendElement("div").addClass("label").text(carte.label());
             carteEl.appendElement("div").addClass("valeur").addClass(carte.classeValeur()).text(carte.valeur());
+            if (carte.sousTexte() != null) {
+                carteEl.appendElement("div").addClass("sous-texte").text(carte.sousTexte());
+            }
         }
     }
 
