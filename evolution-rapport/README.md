@@ -17,10 +17,24 @@ Le rapport actuel est généré par un pipeline HTML/CSS puis converti en PDF. I
 
 Les trois premiers points sont présents dans le code fusionné sur `main` (PR #45). La correction du rendu SVG a été fusionnée dans `main` par la PR #46. La CI de la branche principale (run #282, commit `08c80b9`) avait validé le graphique global et publié les images Docker. La PR #47 a ajouté le même contrôle de pixels pour le graphique de répartition par équipe sur la page chantier ; ses quatre checks CI ont réussi et elle est fusionnée dans `main` (commit `0992efa`). La revue visuelle du PDF généré avec l’image déployée reste à confirmer par l’utilisateur.
 
+### Mise à jour du périmètre (2026-10-16)
+
+Après validation de la maquette globale, la portée a été précisée : trois rubriques aux niveaux global
+et chantier — évolution masse/effectif, évolution STC personnes/DH, puis répartition. Chaque équipe sélectionnée
+reprend les deux évolutions, puis présente une répartition par fonction. Les deux
+évolutions utilisent chacune un graphique à deux axes Y indépendants, avec unités, échelles, valeurs
+et couleurs explicites. Au chantier, la répartition est par équipe si au moins une équipe est
+sélectionnée, sinon par fonction ; la vue globale reste répartie par chantier. Les variations mensuelles sont
+affichées sous les KPI comparables (masse, effectif, nombre de chantiers, STC en personnes et en DH) quand une paie
+du mois précédent existe sur le même périmètre ; sinon l'écart est indiqué comme indisponible. La carte « Masse mois
+précédent » reste une référence. La ligne « Tous les marchés » et la couverture textuelle de l'historique
+disparaissent de la vue d'ensemble ; la limite de 12 mois reste interne et n'est mentionnée nulle part dans le
+rapport affiché.
+
 ## Décisions et pistes antérieures
 
 - [`rapport-v2.md`](rapport-v2.md) décrit les retraits antérieurs, leurs raisons et les conditions éventuelles de réintroduction.
-- La répartition par fonction reste une piste après nettoyage du référentiel Fonction, suivi dans [`TODO.md`](../TODO.md).
+- La répartition globale par fonction reste une piste après nettoyage du référentiel Fonction, suivi dans [`TODO.md`](../TODO.md) ; elle apparaît déjà au niveau chantier quand aucune équipe n'est sélectionnée.
 - L’évolution mensuelle masse/effectif avait été retirée faute d’historique suffisant. Sa réintroduction demande de vérifier que les périodes réellement disponibles rendent la tendance lisible.
 - Le sommaire imprimé et le tableau redondant de répartition par équipe avaient été retirés pour limiter les pages ou éviter une répétition d’information.
 
@@ -36,15 +50,24 @@ Ces pistes ne sont pas des exigences validées de la prochaine version. Elles do
 - En vue d’ensemble, les barres représentent la part de chaque marché dans le total de sa série (échelle 0 à 100 %) ; les colonnes de valeurs conservent les valeurs réelles. Les graphiques des niveaux chantier/équipe gardent leur normalisation par maximum.
 - La masse du mois précédent reste affichée dans sa propre carte ; la vue d’ensemble ajoute l’écart en DH et en pourcentage sous la masse courante.
 
-### Proposition
+### Décisions validées et évolution de la portée
 
-1. Garder les six KPI existants et ajouter une indication de périmètre sur la page globale : « Tous les marchés » ou « N marchés sélectionnés ». Les chapitres suivants donnent déjà le détail des marchés inclus. **Validé et implémenté dans l’arbre de travail ; CI et rendu PDF restent à confirmer.**
-2. Garder les quatre séries et les valeurs réelles, et représenter aux barres la part de chaque marché dans le total de sa série, avec une échelle graduée de 0 à 100 %. **Validé par l’utilisateur pour la vue d’ensemble uniquement.**
-3. Dans la carte « Masse salariale », afficher l’écart par rapport au mois précédent en montant et en pourcentage, en conservant la carte « Masse mois précédent ». **Validé par l’utilisateur pour la vue d’ensemble uniquement** ; les niveaux marché et équipe seront décidés plus tard.
-4. Sous le KPI « Effectif », afficher l’écart en personnes par rapport au mois précédent. **Validé par l’utilisateur pour la vue d’ensemble uniquement** ; les niveaux marché et équipe seront décidés plus tard.
-5. Réintroduire une courbe de masse salariale au niveau global sur une fenêtre glissante de 12 mois, avec seulement les mois réellement disponibles et selon le périmètre de marchés choisi. La placer sur la première page de contenu avec les KPI ; déplacer « Répartition par chantier » à la page suivante. **Validé par l’utilisateur et en cours d’implémentation.**
+1. L’indication de périmètre « Tous les marchés » avait été validée puis retirée après clarification : elle ne figure pas dans la vue d’ensemble.
+2. Les quatre séries de répartition par chantier conservent les valeurs réelles et leurs parts avec une échelle de 0 à 100 %.
+3. La carte « Masse salariale » conserve la masse du mois précédent et affiche l’écart en DH et en pourcentage aux niveaux global et chantier.
+4. Tous les KPI comparables affichent leur variation au mois précédent : masse et STC en DH avec montant et
+   pourcentage, effectif, chantiers et STC en personnes avec leur écart numérique. Une comparaison absente est
+   explicitement indiquée comme indisponible ; la carte « Masse mois précédent » reste la valeur de référence.
+5. Les niveaux global, chantier et équipe sélectionnée présentent les évolutions masse/effectif puis STC personnes/DH avant la répartition. Le calcul utilise au plus les 12 dernières périodes disponibles ; cette limite reste invisible dans le rapport. Au chantier, la répartition est par équipe si une équipe est sélectionnée, sinon par fonction.
 
-**État :** le périmètre visible, les écarts de masse et d’effectif sous leurs KPI respectifs, les barres exprimées en part du total et la courbe globale de masse sont implémentés dans l’arbre de travail pour la vue d’ensemble. La courbe utilise les mois disponibles dans une fenêtre de 12 mois et respecte les marchés sélectionnés ; la répartition commence sur la page suivante. Les tests ont été mis à jour, mais ne sont pas exécutés localement. CI et rendu PDF restent à confirmer. Les niveaux marché et équipe seront abordés après validation complète de cette vue.
+6. Au niveau équipe, chaque équipe choisie présente les rubriques 1 évolution masse/effectif, 2 évolution STC,
+   3 répartition par fonction en graphique à barres avec valeurs à droite, 4 graphique du parc matériel si des
+   quantités du wizard sont disponibles et au moins l'une est positive, puis 5 liste des employés. Si toutes les
+   quantités sont vides ou zéro, le graphique matériel disparaît et la liste reste rubrique 4. Le wizard ne garde
+   aucune quantité matérielle d'un export précédent : chaque ouverture présente des champs vides.
+
+**État :** la vue d'ensemble et le niveau chantier sont implémentés. L'extension équipe et le graphique matériel
+associé sont en cours dans la PR. Les tests backend ciblés, les contrôles CI et la revue visuelle du PDF restent à confirmer.
 
 ## Préparer la nouvelle version
 

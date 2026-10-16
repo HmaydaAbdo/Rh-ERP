@@ -13,14 +13,15 @@ import java.util.List;
  * chevauchent volontairement, voir {@code evolution-rapport/rapport-v2.md}).
  *
  * <p>{@code effectif}, {@code masse}, {@code stc} et {@code stcMontant} : les indicateurs de CETTE
- * section, les mêmes qu'aux niveaux global et chantier — {@code masse} porte aussi son mois précédent (même
- * périmètre équipe/reste), {@code null} si aucune donnée, voir {@link KpiMontantVue}. {@code
- * repartitionFonction} : effectif et STC de CETTE section par fonction — nouveau tableau récap
- * (demande explicite de direction, 2026-09-28), imprimé via un sous-rapport (nombre de fonctions
- * variable, voir recap-fonction.jrxml), jamais un graphique (redondant avec celui du chantier).
- * {@code materiel} : squelette "parc matériel" (CAMION/ENGINS), vide sauf chantier "C168" équipes
- * "CH"/"OP" (voir {@code PaieBiReportBuilder.squeletteMateriel}) — imprimé via le même mécanisme de
- * sous-rapport que {@code repartitionFonction} (recap-materiel.jrxml).
+ * section, les mêmes qu'aux niveaux global et chantier. Ils portent leur valeur du mois précédent et
+ * leur variation lorsque la comparaison sur ce même périmètre est disponible, voir
+ * {@link KpiMontantVue} et {@link KpiCompteVue}. {@code
+ * repartitionFonction} : agrégat par fonction, utilisé dans le graphique de rubrique 3 des équipes
+ * sélectionnées et le récap des sections fusionnées.
+ * {@code evolutionMensuelle} : historique mensuel de cette équipe, dérivé du même agrégat en base
+ * que les niveaux global et chantier.
+ * {@code materiel} : lignes du parc matériel éventuel (CAMION/ENGINS) avec les nombres saisis dans
+ * le wizard d'export ; une ligne non renseignée garde une valeur {@code null}.
  *
  * <p>{@code libelleAffiche} : libellé de l'équipe ({@code Equipe.libelle}, "CHAUFFEURS" pour
  * {@code nom == "CH"}) pour AFFICHAGE uniquement — {@code nom} reste le code, réservé aux mécanismes internes (sélection utilisateur, ancre de page, comparaison avec
@@ -32,12 +33,14 @@ record EquipeBiVue(
         String nom,
         String titre,
         String libelleAffiche,
-        KpiEffectifVue effectif,
+        KpiCompteVue effectif,
         KpiMontantVue masse,
-        int stc,
-        String stcMontant,
+        KpiCompteVue stc,
+        KpiMontantVue stcMontant,
         List<RepartitionBean> repartitionFonction,
+        List<RepartitionBean> evolutionMensuelle,
         List<MaterielLigneVue> materiel,
-        List<LigneEmployeVue> employes
+        List<LigneEmployeVue> employes,
+        boolean equipeSelectionnee
 ) {
 }

@@ -206,14 +206,16 @@ describe('PaieExportWizardComponent', () => {
         expect(requete.periode).toBe('2026-09');
     });
 
-    it('mémorise les derniers nombres saisis pour préremplir le prochain export', () => {
+    it('ne conserve pas les nombres matériels saisis pour le prochain export', () => {
         store.suivant();
         store.basculerEquipe('C168', 'CH');
         store.saisirNombre('CAMION CITERNE', '7');
         store.etape.set('recap');
         store.suivant();
 
-        expect(JSON.parse(localStorage.getItem('paie.export.materiel') ?? '{}')['CAMION CITERNE']).toBe(7);
+        expect(localStorage.getItem('paie.export.materiel')).toBeNull();
+        store.ouvrir();
+        expect(store.nombre('CAMION CITERNE')).toBeNull();
     });
 
     describe('étape « chantier » (PDF)', () => {

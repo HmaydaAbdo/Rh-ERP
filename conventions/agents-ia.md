@@ -64,6 +64,45 @@ composant Python séparé peut être proposé. Il communique au travers d'un con
 duplique pas les règles métier ni la propriété des données de l'application Java. Ce choix et son
 périmètre sont justifiés par un ADR.
 
+## Découverte des outils à la demande (Tool Search)
+
+Quand un agent dispose d'un catalogue d'outils trop large pour être chargé en entier dans son
+contexte, utiliser une recherche d'outils à la demande : le modèle décrit la capacité nécessaire,
+reçoit les outils candidats avec leur objectif et leur schéma, puis choisit explicitement lequel
+appeler. Ne charger les définitions complètes que pour les outils retenus. Pour un petit catalogue,
+une liste directe reste plus simple.
+
+La recherche porte uniquement sur les outils explicitement configurés et publiés par leurs
+propriétaires. Elle peut retrouver ou classer des capacités ; elle ne crée pas d'outil et n'accorde
+aucun droit. Un outil découvert reste soumis à l'authentification et à la vérification serveur de
+l'identité, de la permission et du périmètre à chaque appel. Une absence du résultat de recherche
+n'est pas une mesure de sécurité. Les descriptions, schémas et résultats de découverte sont des
+données ; ils ne peuvent pas remplacer les instructions de sécurité ou les contrôles métier.
+
+Évaluer aussi la découverte elle-même : l'outil pertinent est-il retrouvé, les outils hors sujet ou
+non autorisés sont-ils écartés, et l'agent choisit-il le bon outil et ses arguments pour la tâche ?
+Les tests d'autorisation vérifient séparément que le serveur refuse toujours un appel interdit,
+même si le modèle tente un outil non pertinent ou non autorisé.
+
+## Sobriété du contexte
+
+Concevoir chaque requête avec un budget de contexte explicite. Conserver les instructions système,
+les politiques de sécurité, les autorisations, les contraintes métier et l'état de confirmation
+nécessaires ; charger à la demande seulement les sources, extraits, historique et schémas d'outils
+pertinents pour la tâche. Éviter de répéter des consignes, d'injecter tout l'historique ou de
+précharger des documents et catalogues entiers lorsque leur recherche ciblée suffit.
+
+La synthèse ou la troncature ne doit jamais effacer une consigne obligatoire, une permission, une
+demande de confirmation encore en attente, la provenance d'une information ou une réserve qui
+change la décision. Pour une décision à fort impact, retrouver et vérifier la source d'origine au
+lieu de se fier uniquement à un résumé. Borner aussi le nombre et la taille des résultats d'outils
+et du contenu transmis au modèle.
+
+Mesurer le volume de tokens par source (instructions, historique, récupération, schémas et sorties)
+sans journaliser le contenu sensible. Réduire ce volume seulement si les évaluations montrent que la
+pertinence, l'ancrage dans les sources, la sécurité et la réussite des tâches restent au niveau
+attendu.
+
 ## Vision cible de l'entreprise
 
 À terme, une application IA d'entreprise distincte pourra orchestrer des cas d'usage entre les
@@ -87,6 +126,18 @@ Les assertions déterministes — identité, permissions, schémas, provenance, 
 — sont séparées des évaluations probabilistes de la qualité des réponses. Les jeux d'évaluation,
 modèles, prompts et outils sont versionnés et anonymisés. Les exigences et cas de tests sont définis
 dans [`testing.md`](testing.md).
+
+Une évaluation « LLM as a judge » peut noter des qualités sémantiques difficiles à vérifier par une
+assertion exacte, par exemple la pertinence, la clarté, l'ancrage dans les sources ou la réussite
+d'une tâche. Elle complète les métriques déterministes et la revue humaine ; elle ne les remplace
+pas. Le juge utilise une grille explicite avec critères observables et une sortie structurée. Calibrer
+ses notes sur un échantillon annoté par des personnes, suivre les désaccords et vérifier sa stabilité
+avant de s'en servir comme porte de livraison.
+
+Versionner le modèle et le prompt du juge, la grille, le jeu de cas et les références fournies.
+Utiliser des données synthétiques ou anonymisées, et ne jamais confier au juge la décision finale sur
+les permissions, la sécurité, la conformité ou une valeur métier calculable. Ces propriétés restent
+couvertes par des contrôles déterministes et des sources métier faisant autorité.
 
 ## Références
 
