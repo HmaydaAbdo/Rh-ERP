@@ -73,13 +73,6 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocTitreRubrique b) {
             corps.appendElement("div").addClass("titre-section").addClass("rubrique-titre")
                     .text(b.numero() + ". " + b.texte());
-        } else if (bloc instanceof PageModel.BlocPerimetre b) {
-            corps.appendElement("div").addClass("perimetre-global").text(b.texte());
-        } else if (bloc instanceof PageModel.BlocCouvertureHistorique b) {
-            String mois = b.moisDisponibles() == 1 ? "mois disponible" : "mois disponibles";
-            corps.appendElement("div").addClass("couverture-historique")
-                    .text("Historique disponible : " + b.moisDisponibles() + " " + mois
-                            + " sur " + b.fenetreMois());
         } else if (bloc instanceof PageModel.BlocTitreEquipe b) {
             corps.appendElement("div").addClass("titre-equipe").text(b.texte());
         } else if (bloc instanceof PageModel.BlocKpi b) {
@@ -87,7 +80,9 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocGraphique b) {
             chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax(), b.partDuTotal());
         } else if (bloc instanceof PageModel.BlocGraphiqueEvolution b) {
-            evolutionSvgBuilder.ajouterGraphique(corps, b.donnees(), b.mesure());
+            evolutionSvgBuilder.ajouterGraphique(corps, b.donnees(), b.groupe());
+        } else if (bloc instanceof PageModel.BlocGraphiqueMateriel b) {
+            chartSvgBuilder.ajouterGraphiqueMateriel(corps, b.titre(), b.donnees());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
             ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {
@@ -268,8 +263,7 @@ final class PaieReportHtmlBuilder {
         ligne2.appendElement("th").text("RD");
     }
 
-    /** Pied de section — tableau récap Fonction/Effectif/STC (toujours) + squelette parc matériel
-     * (uniquement si {@code titreMateriel} non {@code null}, voir {@code MaterielChantierCatalogue}). */
+    /** Tableau récap des sections fusionnées ; les équipes sélectionnées utilisent des graphiques dédiés. */
     private void ajouterRecap(Element corps, List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel,
                               String titreMateriel, boolean suite) {
         Element ligne = corps.appendElement("div").addClass("recap-row");

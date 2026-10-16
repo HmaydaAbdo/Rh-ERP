@@ -72,7 +72,7 @@ module modifié.
 | Import/export ou synchronisation | Fichier valide, invalide, partiel, doublon, limites, atomicité, audit et résultat observable |
 | Audit ou journal | Présence et cohérence, intégrité transactionnelle/rollback, privilèges minimaux du compte applicatif, absence de secrets et contrôle d'accès à la consultation |
 | Appel externe/adaptateur | Contrat, délais, erreurs, reprise/idempotence et données reçues/sorties ; aucun réseau réel dans la suite rapide |
-| IA, RAG, MCP ou BI | Jeu de régression versionné ; permissions, provenance/citations, filtres, bornes, refus sûr, absence de fuite, exactitude, latence et coût |
+| IA, RAG, MCP ou BI | Jeu de régression versionné ; permissions, provenance/citations, filtres, bornes, refus sûr, absence de fuite, exactitude, tokens de contexte, latence et coût. Si un juge LLM est utilisé : grille versionnée, calibration humaine et mesure des désaccords |
 | Dépendance ou configuration | Démarrage et parcours qui utilisent le composant, compatibilité de version et configuration absente/invalide |
 
 ## Portes de qualité et CI
@@ -128,8 +128,23 @@ rapide peut simuler les outils externes, mais exerce le vrai contrat et les règ
 Pour un agent ou un modèle, séparer les assertions déterministes (permissions, format, provenance,
 refus, absence de fuite) de l'évaluation probabiliste de la qualité. Versionner les prompts, modèles,
 outils et jeux de régression anonymisés. Suivre la réussite des tâches, l'ancrage des réponses dans
-les sources, les refus sûrs, les fuites, la latence et le coût ; toute modification de prompt, modèle,
-outil ou index met à jour le jeu et relance les évaluations pertinentes.
+les sources, les refus sûrs, les fuites, le volume de contexte par source, la latence et le coût ;
+toute modification de prompt, modèle, outil ou index met à jour le jeu et relance les évaluations
+pertinentes. Une réduction du volume de contexte n'est acceptée que si elle ne dégrade pas la qualité,
+la provenance, la sécurité ou la réussite des tâches.
+
+Une évaluation « LLM as a judge » est réservée aux critères sémantiques qui ne se réduisent pas à une
+assertion déterministe. Définir une grille avec des critères observables, fournir au juge uniquement
+les éléments nécessaires, et versionner son modèle, son prompt, la grille et le jeu de cas. Calibrer
+les résultats sur un échantillon évalué par des personnes, suivre les désaccords et contrôler la
+stabilité du juge. Une note du juge seule ne peut ni valider les permissions, la sécurité ou la
+conformité, ni prouver l'exactitude d'une valeur métier ; ces attentes gardent des contrôles
+déterministes. Les cas du jeu d'évaluation utilisent des données synthétiques ou anonymisées.
+
+Pour un agent avec découverte d'outils à la demande, mesurer si l'outil attendu est retrouvé et bien
+choisi, et si les outils non pertinents sont évités. Garder des tests distincts qui prouvent que
+l'autorisation serveur bloque les appels interdits, quel que soit le résultat de recherche ou le
+choix du modèle.
 
 Pour la BI, valider chaque indicateur de référence contre des données synthétiques attendues : formule,
 unité, période, fuseau horaire, arrondis, filtres, permissions et absence de doublon. Les métriques

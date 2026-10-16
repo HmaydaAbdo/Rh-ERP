@@ -24,8 +24,8 @@ import java.util.Map;
  * section. {@code null} ou vide : aucun chantier détaillé par équipe.
  *
  * <p>{@code materiel} : nombre de chaque ligne du parc matériel (clé = libellé de la ligne, voir
- * {@code MaterielChantierCatalogue.tableaux()}) imprimé dans la colonne « Nbre » ; une ligne absente reste vide,
- * à remplir au stylo.
+ * {@code MaterielChantierCatalogue.tableaux()}) ; les lignes renseignées sont présentées dans le graphique du parc
+ * matériel, et une ligne absente reste exclue de ce graphique.
  *
  * <p>{@code sansVueEnsemble} : retire le chapitre « Vue d'ensemble » (indicateurs globaux et répartition par
  * chantier) — le rapport commence alors directement par le premier chantier, numéroté I (demande de direction,

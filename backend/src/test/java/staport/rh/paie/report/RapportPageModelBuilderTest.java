@@ -39,7 +39,7 @@ class RapportPageModelBuilderTest {
     private static final double EQUIPE_TITRE_HAUTEUR = 20;
     private static final double KPI_EQUIPE_HAUTEUR = 70;
     private static final double KPI_CARTE_HAUTEUR = 54;
-    private static final double DETAILS_TITRE_HAUTEUR = 24;
+    private static final double DETAILS_TITRE_HAUTEUR = 18;
     private static final double TABLEAU_ENTETE_HAUTEUR = 40;
 
     private static final double LIGNE_HAUTEUR = 16;
@@ -55,8 +55,8 @@ class RapportPageModelBuilderTest {
      *     <li>aucune page ne dépasse la hauteur utile de page ;</li>
      *     <li>le pied récap n'est jamais accompagné d'un tableau employé VIDE
      *         (soit il suit des lignes réelles, soit il est seul sur sa page) ;</li>
-     *     <li>la 1re page de la section porte bien le titre + les cartes KPI,
-     *         les suivantes non.</li>
+     *     <li>dans le cas sans équipe sélectionnée, le détail reste fusionné au chapitre chantier
+     *         et ne répète pas le titre d'équipe ni ses cartes KPI.</li>
      * </ol>
      */
     @Test
@@ -68,13 +68,14 @@ class RapportPageModelBuilderTest {
                  lignesRecapMax <= Math.min(60, total);
                  lignesRecapMax++) {
 
-                RapportBiVue vue = vueAvecUneEquipe(total, lignesRecapMax, false);
+                // Ce balayage couvre la pagination du récapitulatif fonctionnel. Avec une équipe
+                // sélectionnée, cette rubrique est un graphique (sans lignes de récapitulatif).
+                RapportBiVue vue = vueAvecUneEquipe(total, lignesRecapMax, false, false);
 
                 List<PageModel> pages = builder.construire(vue);
 
-                // Pages 0-1 = synthèse et évolutions, page 2 = répartition,
-                // puis viennent le chapitre chantier et ses pages d'équipe.
-                List<PageModel> pagesEquipe = pages.subList(4, pages.size());
+                // Pages 0-2 = synthèse globale, 3-5 = analyse du chantier, puis son détail équipe.
+                List<PageModel> pagesEquipe = pages.subList(6, pages.size());
 
                 assertThat(pagesEquipe)
                         .as(
@@ -197,11 +198,11 @@ class RapportPageModelBuilderTest {
                 assertThat(premierePageVue)
                         .as(
                                 "total=%d, lignesRecapMax=%d : "
-                                        + "la 1re page de la section porte le titre équipe",
+                                        + "le détail fusionné au chantier ne répète pas le titre équipe",
                                 total,
                                 lignesRecapMax
                         )
-                        .isTrue();
+                        .isFalse();
 
                 assertThat(lignesRecapVues)
                         .as("total=%d, lignesRecapMax=%d : chaque fonction du récap apparaît exactement une fois",
@@ -239,43 +240,70 @@ class RapportPageModelBuilderTest {
                 .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(b -> (PageModel.BlocTitreRubrique) b)
                 .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(1, "Évolution de la masse salariale (DH) — fenêtre de 12 mois"));
+                .containsExactly(tuple(1, "Évolution de la masse salariale et de l'effectif"));
         assertThat(pages.get(0).blocs())
                 .anyMatch(b -> b instanceof PageModel.BlocGraphiqueEvolution graph
-                        && graph.mesure() == PageModel.MesureEvolution.MASSE);
+                        && graph.groupe() == PageModel.GroupeEvolution.MASSE_EFFECTIF);
         assertThat(pages.get(0).blocs())
                 .noneMatch(b -> b instanceof PageModel.BlocGraphique);
         assertThat(pages.get(1).blocs())
                 .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(b -> (PageModel.BlocTitreRubrique) b)
                 .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(
-                        tuple(2, "Évolution mensuelle de l'effectif"),
-                        tuple(3, "Évolution mensuelle du STC en personnes"),
-                        tuple(4, "Évolution mensuelle du STC en DH"));
+                .containsExactly(tuple(2, "Évolution du STC — personnes et DH"));
         assertThat(pages.get(1).blocs())
                 .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
                 .map(b -> (PageModel.BlocGraphiqueEvolution) b)
-                .extracting(PageModel.BlocGraphiqueEvolution::mesure)
-                .containsExactly(PageModel.MesureEvolution.EFFECTIF,
-                        PageModel.MesureEvolution.STC_PERSONNES, PageModel.MesureEvolution.STC_DH);
+                .extracting(PageModel.BlocGraphiqueEvolution::groupe)
+                .containsExactly(PageModel.GroupeEvolution.STC);
         assertThat(pages.get(1).blocs())
                 .noneMatch(b -> b instanceof PageModel.BlocGraphique);
         assertThat(pages.get(2).blocs())
                 .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(b -> (PageModel.BlocTitreRubrique) b)
                 .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(5, "Répartition par chantier"));
+                .containsExactly(tuple(3, "Répartition par chantier"));
         assertThat(pages.get(2).blocs())
                 .anyMatch(b -> b instanceof PageModel.BlocGraphique);
         assertThat(pages.get(3).blocs())
                 .anyMatch(b -> b instanceof PageModel.BlocTitreChapitre);
 
         assertThat(pages.get(3).blocs())
-                .noneMatch(b -> b instanceof PageModel.BlocTableauEmployes);
-
-        assertThat(pages.get(4).blocs().get(0))
-                .isInstanceOf(PageModel.BlocTitreEquipe.class);
+                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(b -> ((PageModel.BlocGraphiqueEvolution) b).groupe())
+                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF);
+        assertThat(pages.get(3).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::texte)
+                .containsExactly("Évolution de la masse salariale et de l'effectif");
+        assertThat(pages.get(4).blocs())
+                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(b -> ((PageModel.BlocGraphiqueEvolution) b).groupe())
+                .containsExactly(PageModel.GroupeEvolution.STC);
+        assertThat(pages.get(4).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::texte)
+                .containsExactly("Évolution du STC — personnes et DH");
+        assertThat(pages.get(5).blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(tuple(3, "Répartition par équipe"));
+        assertThat(pages.get(3).blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(b -> (PageModel.BlocTitreRubrique) b).extracting(PageModel.BlocTitreRubrique::numero)
+                .containsExactly(1);
+        assertThat(pages.get(6).blocs().get(0)).isInstanceOf(PageModel.BlocTitreEquipe.class);
+        assertThat(cartesKpi(pages.get(3)).stream().filter(c -> c.label().equals("MASSE SALARIALE")).toList())
+                .singleElement().extracting(CarteKpi::sousTexte).isNull();
+        assertThat(cartesKpi(pages.get(6)).stream().filter(c -> c.label().equals("EFFECTIF")).toList())
+                .singleElement().extracting(CarteKpi::sousTexte).isEqualTo("Écart indisponible");
+        assertThat(pages.get(8).blocs()).anyMatch(b -> b instanceof PageModel.BlocGraphique);
+        assertThat(pages.get(9).blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(tuple(4, "Liste des employés"));
     }
 
     /**
@@ -307,9 +335,8 @@ class RapportPageModelBuilderTest {
     }
 
     /**
-     * Sans détail par équipe (donc sans graphique « Répartition par équipe »), la section « reste » suit
-     * directement les cartes KPI du chantier sur la même page, sans répéter son titre ni ses indicateurs : aucune page
-     * ne porte le seul chapitre chantier, et rien ne déborde, quelle que soit la taille de la section.
+     * Sans détail par équipe, la rubrique 3 porte la répartition par fonction avant la section « reste ».
+     * Le détail ne répète ni le titre ni les KPI du chantier. Les tableaux continuent de tenir dans leurs pages.
      */
     @Test
     void construire_sansDetailEquipe_laSectionResteSuitLesCartesKpiDuChantierSurLaMemePage() {
@@ -320,25 +347,28 @@ class RapportPageModelBuilderTest {
 
                 List<PageModel> pages = builder.construire(vueAvecUneEquipe(total, lignesRecapMax, false, false));
 
-                // pages 0-2 = synthèse, évolutions et répartition ; le chantier commence page 3.
-                List<PageModel.Bloc> premiere = pages.get(3).blocs();
-                assertThat(premiere.subList(0, 3))
-                        .as("total=%d, recap=%d : chapitre, KPI chantier puis directement le récap", total, lignesRecapMax)
-                        .satisfiesExactly(
-                                b -> assertThat(b).isInstanceOf(PageModel.BlocTitreChapitre.class),
-                                b -> assertThat(b).isInstanceOf(PageModel.BlocKpi.class),
-                                b -> assertThat(b).isInstanceOf(PageModel.BlocRecap.class));
-                assertThat(premiere).noneMatch(b -> b instanceof PageModel.BlocGraphique);
+                // Les pages 0-2 sont la synthèse globale, 3-5 le chantier ; son détail commence page 6.
+                assertThat(pages.get(5).blocs())
+                        .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                        .map(b -> (PageModel.BlocTitreRubrique) b)
+                        .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                        .containsExactly(tuple(3, "Répartition par fonction"));
+                List<PageModel.Bloc> premiere = pages.get(6).blocs();
+                assertThat(premiere.get(0)).isInstanceOf(PageModel.BlocRecap.class);
                 assertThat(pages.stream().flatMap(p -> p.blocs().stream()))
                         .as("total=%d, recap=%d : ni titre ni cartes KPI de section répétés", total, lignesRecapMax)
                         .noneMatch(b -> b instanceof PageModel.BlocTitreEquipe);
-                assertThat(((PageModel.BlocKpi) premiere.get(1)).cartes().stream().map(CarteKpi::label))
+                assertThat(pages.stream().flatMap(p -> p.blocs().stream()))
+                        .as("la liste des employés est une rubrique 4 destinée au futur sommaire")
+                        .anyMatch(b -> b instanceof PageModel.BlocTitreRubrique titre
+                                && titre.numero() == 4 && titre.texte().equals("Liste des employés"));
+                assertThat(((PageModel.BlocKpi) pages.get(3).blocs().get(1)).cartes().stream().map(CarteKpi::label))
                         .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF",
                                 "STC / SORTIES (PERSONNES)", "STC / SORTIES (DH)");
 
                 int lignes = 0;
-                for (int p = 3; p < pages.size(); p++) {
-                    double hauteur = p == 3 ? TITRE_CHAPITRE_HAUTEUR + KPI_EQUIPE_HAUTEUR : 0;
+                for (int p = 6; p < pages.size(); p++) {
+                    double hauteur = 0;
                     for (PageModel.Bloc bloc : pages.get(p).blocs()) {
                         if (bloc instanceof PageModel.BlocTitreSection) {
                             hauteur += DETAILS_TITRE_HAUTEUR;
@@ -384,7 +414,7 @@ class RapportPageModelBuilderTest {
     @Test
     void construire_recapTropLong_continueSurLaPageSuivante() {
 
-        List<PageModel> pages = builder.construire(vueAvecUneEquipe(10, 45, true));
+        List<PageModel> pages = builder.construire(vueAvecUneEquipe(10, 45, true, false));
 
         List<PageModel.BlocRecap> recaps = pages.stream()
                 .flatMap(p -> p.blocs().stream())
@@ -400,6 +430,44 @@ class RapportPageModelBuilderTest {
             assertThat(r.materiel()).isEmpty();
         });
         assertThat(recaps.stream().mapToInt(r -> r.repartitionFonction().size()).sum()).isEqualTo(45);
+    }
+
+    @Test
+    void construire_equipeSelectionneeAjouteLeGraphiqueMaterielAvantLaListeEnRubriqueCinq() {
+        List<PageModel> pages = builder.construire(vueAvecUneEquipe(3, 2, true));
+
+        PageModel materiel = pages.stream()
+                .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocGraphiqueMateriel.class::isInstance))
+                .findFirst().orElseThrow();
+        assertThat(materiel.blocs())
+                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
+                .containsExactly(tuple(4, "Parc matériel — CAMION"));
+        assertThat(materiel.blocs()).filteredOn(PageModel.BlocGraphiqueMateriel.class::isInstance)
+                .map(PageModel.BlocGraphiqueMateriel.class::cast)
+                .singleElement().satisfies(graph -> {
+                    assertThat(graph.titre()).isEqualTo("CAMION");
+                    assertThat(graph.donnees()).extracting(MaterielLigneVue::getNombre).containsExactly(4);
+                });
+        assertThat(pages.stream().flatMap(page -> page.blocs().stream())
+                .filter(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .map(PageModel.BlocTitreRubrique::numero))
+                .contains(1, 2, 3, 4, 5);
+    }
+
+    @Test
+    void construire_toutesLesQuantitesMaterielAZeroOmetLaRubriqueEtGardeLaListeEnQuatre() {
+        List<PageModel> pages = builder.construire(vueAvecUneEquipe(3, 2, true, true, "", 0));
+
+        assertThat(pages.stream().flatMap(page -> page.blocs().stream()))
+                .noneMatch(PageModel.BlocGraphiqueMateriel.class::isInstance);
+        assertThat(pages.stream().flatMap(page -> page.blocs().stream())
+                .filter(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .filter(titre -> titre.texte().equals("Liste des employés")))
+                .singleElement().extracting(PageModel.BlocTitreRubrique::numero).isEqualTo(4);
     }
 
     /** Une cellule dont le texte dépasse sa largeur passe à la ligne : la ligne grandit, donc moins de lignes tiennent
@@ -496,6 +564,18 @@ class RapportPageModelBuilderTest {
             boolean avecDetailEquipe,
             String observation
     ) {
+        return vueAvecUneEquipe(totalEmployes, lignesRecapMax, avecMateriel, avecDetailEquipe, observation,
+                avecMateriel ? 4 : null);
+    }
+
+    private RapportBiVue vueAvecUneEquipe(
+            int totalEmployes,
+            int lignesRecapMax,
+            boolean avecMateriel,
+            boolean avecDetailEquipe,
+            String observation,
+            Integer nombreMateriel
+    ) {
 
         List<LigneEmployeVue> employes = new ArrayList<>();
 
@@ -537,7 +617,7 @@ class RapportPageModelBuilderTest {
         List<MaterielLigneVue> materiel =
                 avecMateriel
                         ? List.of(
-                        new MaterielLigneVue("CAMION CITERNE", null)
+                        new MaterielLigneVue("CAMION CITERNE", nombreMateriel)
                 )
                         : List.of();
 
@@ -547,37 +627,43 @@ class RapportPageModelBuilderTest {
                         null
                 );
 
-        KpiEffectifVue effectif =
-                new KpiEffectifVue(
+        KpiCompteVue effectif =
+                new KpiCompteVue(
                         totalEmployes,
                         0,
                         0,
                         false
                 );
+        KpiCompteVue stc = new KpiCompteVue(0, 0, 0, false);
+        KpiMontantVue stcMontant = new KpiMontantVue("0,00", null, "Écart indisponible");
 
+        String chantierCode = avecMateriel ? "C168" : "C1";
+        String equipeCode = avecMateriel ? "CH" : "EQ";
         EquipeBiVue equipe =
                 new EquipeBiVue(
-                        "EQ",
+                        equipeCode,
                         "ÉQUIPE : TEST",
                         "TEST",
                         effectif,
                         masse,
-                        0,
-                        "0,00",
+                        stc,
+                        stcMontant,
                         repartitionFonction,
+                        List.of(),
                         materiel,
-                        employes
+                        employes,
+                        avecDetailEquipe
                 );
 
         ChantierBiVue chantier =
                 new ChantierBiVue(
-                        "C1",
-                        "C1",
-                        "CHANTIER : C1",
+                        chantierCode,
+                        chantierCode,
+                        "CHANTIER : " + chantierCode,
                         masse,
                         effectif,
-                        0,
-                        "0,00",
+                        stc,
+                        stcMontant,
                         List.of(),
                         List.of(),
                         List.of(equipe),
@@ -586,13 +672,11 @@ class RapportPageModelBuilderTest {
 
         SyntheseGlobaleVue synthese =
                 new SyntheseGlobaleVue(
-                        "Tous les marchés",
                         masse,
                         effectif,
-                        1,
-                        0,
-                        "0,00",
-                        List.of(),
+                        new KpiCompteVue(1, 0, 0, false),
+                        stc,
+                        stcMontant,
                         List.of(),
                         List.of()
                 );

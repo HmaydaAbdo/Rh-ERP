@@ -1,6 +1,6 @@
 # Rapport PDF BI (Paie) — v2 : journal des simplifications
 
-> **Mise à jour 2026-10-16 :** le retrait de l'évolution mensuelle décrit ci-dessous est conservé comme historique de décision. Pour la nouvelle évolution globale, l'utilisateur a validé une courbe de masse salariale sur 12 mois au maximum, ne montrant que les périodes réellement disponibles, placée avec les KPI en première page de contenu. La répartition par chantier commence sur la page suivante. Cette validation ne réintroduit pas de courbe aux niveaux chantier ou équipe.
+> **Mise à jour 2026-10-16 :** les retraits d'évolution décrits ci-dessous sont conservés comme historique. La décision actuelle est de présenter, aux niveaux global, chantier et équipe sélectionnée, l'évolution masse/effectif, puis l'évolution STC personnes/DH, avant la répartition. La rubrique équipe 3 est un graphique par fonction avec les valeurs à droite. La rubrique 4 est un graphique du parc matériel si au moins une quantité du wizard est positive ; la liste des employés est alors la rubrique 5. Si le graphique matériel est omis, la liste reste en rubrique 4. Les champs matériels du wizard sont vides à chaque nouvel export et ne reprennent aucune saisie précédente. Voir `docs/report/README.md` et la section 6 ci-dessous.
 
 > Ce fichier n'est PAS une documentation d'architecture (voir `docs/report/README.md` pour l'état
 > actuel réel du rapport). C'est un **journal de décisions** : ce qui a été retiré du rapport BI au
@@ -163,21 +163,28 @@ jugé inutile.
 
 ---
 
-## 6. Évolutions mensuelles globales — version en cours
+## 6. Évolutions mensuelles globales et chantier — version en cours
 
-La vue d’ensemble est enrichie progressivement, avant toute extension aux niveaux chantier et équipe :
+La même trame d'analyse est appliquée aux niveaux global et chantier. Chaque niveau porte trois rubriques numérotées :
 
-- La première page affiche la couverture réelle de l’historique (mois disponibles sur une fenêtre maximale de 12),
-  la masse salariale mensuelle et les KPI déjà retenus.
-- Une deuxième page dédiée affiche l’évolution mensuelle de l’effectif, du STC en personnes et du STC en DH.
-- Les courbes utilisent uniquement les mois ayant des bulletins dans le périmètre de marchés demandé. Les libellés
-  de mois sont au format `M/YYYY` (ex. `1/2026`). Chaque point dispose de repères vers les axes X et Y, dont le contraste
-  est renforcé pour l’impression.
-- La répartition par chantier commence après cette page d’évolutions. Les montants de STC et les nombres de personnes
-  restent des mesures distinctes, avec des axes adaptés à leurs unités.
-- Les graphiques globaux sont des rubriques numérotées : 1. masse salariale, 2. effectif, 3. STC en personnes,
-  4. STC en DH et 5. répartition par chantier. Le modèle conserve numéro et libellé séparément du graphique pour
-  permettre de construire ensuite un sommaire dynamique avec les pages correspondantes.
+1. Masse salariale en DH et effectif en personnes, dans le même graphique avec un axe Y distinct par unité.
+2. STC en personnes et STC en DH, dans le même graphique avec un axe Y distinct par unité.
+3. Répartition : par chantier au niveau global ; par équipe au niveau chantier si au moins une équipe est sélectionnée,
+   sinon par fonction.
 
-Cette évolution a été validée sous forme de maquette avant implémentation. Les niveaux chantier et équipe seront
-examinés séparément avec l’utilisateur.
+Les deux graphiques d'évolution sont placés avant la répartition. Le calcul est limité aux 12 derniers mois au plus ;
+cette limite ne figure pas dans le titre ni ailleurs dans le rapport. Seuls les mois réellement disponibles dans le
+périmètre sélectionné sont montrés, au format `M/YYYY`.
+Chaque série a une couleur distincte, une légende, une unité et une échelle propres ; les valeurs aux points et les
+projections vers les axes rendent les chiffres lisibles. La même palette d'indicateurs, la légende et le format des
+valeurs s'appliquent aux répartitions globales et chantier.
+
+La vue d'ensemble n'affiche plus les lignes « Périmètre : Tous les marchés » ni la couverture d'historique. Les KPI
+comparables montrent leurs variations à chaque niveau : masse et STC en DH avec montant/pourcentage, effectif,
+chantiers et STC en personnes avec leur écart numérique. En l'absence de paie précédente dans le périmètre, l'écart est
+signalé comme indisponible. Les rubriques sont enregistrées séparément des données des graphiques pour préparer un
+sommaire dynamique ; la liste des employés est la rubrique 4 des chapitres chantier (décision antérieure au détail
+par équipe : voir la mise à jour du 2026-10-16 ci-dessus pour la numérotation actuelle des rubriques équipe).
+
+La maquette a été validée par l'utilisateur avant l'implémentation. Les tests ciblés sont mis à jour ; la CI de la PR et
+la revue du PDF rendu restent à confirmer.

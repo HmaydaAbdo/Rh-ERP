@@ -72,9 +72,9 @@ final class RapportChartSvgBuilder {
 
     private static final List<Serie> SERIES = List.of(
             new Serie("Masse (DH)", "Masse", "#2563EB"),
-            new Serie("Effectif (personnes)", "Effectif", "#F59E0B"),
+            new Serie("Effectif (personnes)", "Effectif", "#D97706"),
             new Serie("STC (personnes)", "STC pers.", "#B91C1C"),
-            new Serie("STC (DH)", "STC DH", "#7F1D1D")
+            new Serie("STC (DH)", "STC DH", "#0F766E")
     );
 
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees) {
@@ -230,6 +230,63 @@ final class RapportChartSvgBuilder {
             ajouterEchellePourcentage(dessin, largeurLabel, largeurPlot, HAUTEUR_ENTETE + hauteurPlot);
         }
         ajouterLegende(dessin, yLegende, largeurLabel);
+    }
+
+    /** Graphique matériel à une seule série. Les quantités restent alignées dans une colonne à droite des barres. */
+    void ajouterGraphiqueMateriel(Element corps, String titre, List<MaterielLigneVue> donnees) {
+        List<MaterielLigneVue> renseignees = donnees.stream()
+                .filter(ligne -> ligne.getNombre() != null)
+                .toList();
+        Element container = corps.appendElement("div").addClass("chart-container");
+        if (renseignees.stream().noneMatch(ligne -> ligne.getNombre() > 0)) {
+            return;
+        }
+
+        double largeurLabel = Math.max(LARGEUR_LABEL_MIN, Math.min(LARGEUR_LABEL_MAX,
+                renseignees.stream().mapToDouble(ligne -> RapportMesureTexte.largeur(
+                        ligne.getLibelle(), TAILLE_LIBELLE, true)).max().orElse(0) + MARGES_LIBELLE));
+        double largeurValeur = 52;
+        double espaceValeur = 12;
+        double largeurPlot = LARGEUR_TOTALE - largeurLabel - largeurValeur - espaceValeur;
+        double hauteurLigne = Math.min(HAUTEUR_CATEGORIE_MAX,
+                Math.max(HAUTEUR_RANGEE_MIN, (HAUTEUR_TOTALE_CHART - HAUTEUR_ENTETE) / renseignees.size()));
+        double hauteurSvg = HAUTEUR_ENTETE + hauteurLigne * renseignees.size();
+        Element svg = container.appendElement("svg", Parser.NamespaceSvg)
+                .attr("xmlns", "http://www.w3.org/2000/svg")
+                .attr("width", format(LARGEUR_TOTALE * PX_PAR_PT) + "px")
+                .attr("height", format(hauteurSvg * PX_PAR_PT) + "px")
+                .attr("viewBox", "0 0 " + format(LARGEUR_TOTALE * PX_PAR_PT) + " " + format(hauteurSvg * PX_PAR_PT));
+        Element dessin = svg.appendElement("g").attr("transform", "scale(" + PX_PAR_PT + ")");
+        int maximum = renseignees.stream().mapToInt(MaterielLigneVue::getNombre).max().orElse(0);
+        dessin.appendElement("text").attr("x", format(LARGEUR_TOTALE)).attr("y", format(HAUTEUR_ENTETE / 2))
+                .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+                .attr("font-size", "7").attr("font-weight", "bold").text(titre + " — Nbre");
+
+        for (int i = 0; i < renseignees.size(); i++) {
+            MaterielLigneVue ligne = renseignees.get(i);
+            double y = HAUTEUR_ENTETE + i * hauteurLigne;
+            double centre = y + hauteurLigne / 2;
+            if (i > 0) {
+                dessin.appendElement("line").attr("x1", "0").attr("y1", format(y))
+                        .attr("x2", format(LARGEUR_TOTALE)).attr("y2", format(y))
+                        .attr("stroke", "#E5E7EB").attr("stroke-width", "0.5");
+            }
+            dessin.appendElement("text").attr("x", format(largeurLabel - MARGES_LIBELLE / 2))
+                    .attr("y", format(centre)).attr("text-anchor", "end")
+                    .attr("dominant-baseline", "middle").attr("font-size", format(TAILLE_LIBELLE))
+                    .attr("font-weight", "bold").text(ligne.getLibelle());
+            dessin.appendElement("rect").attr("x", format(largeurLabel)).attr("y", format(centre - 4))
+                    .attr("width", format(largeurPlot)).attr("height", "8").attr("fill", "#F1F3F6");
+            double largeurBarre = maximum == 0 ? 0 : (double) ligne.getNombre() / maximum * largeurPlot;
+            if (largeurBarre > 0) {
+                dessin.appendElement("rect").attr("x", format(largeurLabel)).attr("y", format(centre - 4))
+                        .attr("width", format(largeurBarre)).attr("height", "8").attr("fill", "#7C3AED");
+            }
+            dessin.appendElement("text").attr("x", format(LARGEUR_TOTALE)).attr("y", format(centre))
+                    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+                    .attr("font-size", format(TAILLE_VALEUR)).attr("font-weight", "bold")
+                    .text(PaieReportNumberFormat.entier(ligne.getNombre()));
+        }
     }
 
     private void ajouterEchellePourcentage(Element dessin, double xDebut, double largeur, double yBas) {

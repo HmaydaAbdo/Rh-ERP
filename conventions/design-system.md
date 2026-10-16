@@ -153,8 +153,11 @@ Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc comm
 Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
 son interprétation.
 
-* **Une mesure, un axe.** Jamais deux échelles dans un même graphique (masse et bulletins ne sont pas comparables) : on
-  propose un choix de mesure ou deux graphiques.
+* **Une mesure, un axe par défaut.** Ne jamais comparer les longueurs de séries qui utilisent des unités différentes.
+  Exception cadrée pour les évolutions temporelles de rapports explicitement validées : deux indicateurs peuvent partager
+  un graphique à deux axes Y quand leurs périodes correspondent et que les unités ne sont pas comparables. Chaque axe
+  porte son nom et son unité, ses graduations indépendantes restent visibles, et couleur, légende et valeurs relient sans
+  ambiguïté chaque série à son axe. Cette exception ne s'étend pas aux graphiques de distribution ni aux écrans interactifs.
 * **La couleur suit l'entité, jamais son rang** : une mesure a la même couleur dans tous les graphiques, quel que soit le
   filtre. Palette catégorielle `--chart-1…8` validée avec le validateur de la méthode (écart de vision des couleurs ≥ 8,
   plancher de vision normale ≥ 15) en clair **et** en sombre, dans un ordre fixe ; au-delà de trois séries on regroupe ou on

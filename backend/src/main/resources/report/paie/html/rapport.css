@@ -273,23 +273,6 @@ html, body {
     margin-top: 5pt;
 }
 
-.perimetre-global {
-    margin: 3pt 0 1pt;
-    font-size: 9pt;
-    line-height: 12pt;
-    color: #555555;
-}
-
-.couverture-historique {
-    margin: 2pt 0 3pt;
-    padding: 2pt 0;
-    border-bottom: 0.5pt solid #CCCCCC;
-    color: #595959;
-    font-size: 8.5pt;
-    font-weight: bold;
-    line-height: 11pt;
-}
-
 .titre-indicateurs {
     margin-top: 4pt;
     font-size: 10pt;
@@ -515,11 +498,6 @@ table.recap.materiel td.libelle { text-align: left; }
     margin-top: 4pt;
     width: 802pt;
     height: 226pt;
-}
-
-.evolution-container.compact {
-    margin-top: 2pt;
-    height: 130pt;
 }
 
 .evolution-container svg {

@@ -21,16 +21,8 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocTitreSection(String texte) implements Bloc {
     }
 
-    /** Rubrique globale numérotée et destinée à alimenter le futur sommaire avec son numéro de page. */
+    /** Rubrique numérotée à chaque niveau, destinée à alimenter le futur sommaire avec son numéro de page. */
     record BlocTitreRubrique(int numero, String texte) implements Bloc {
-    }
-
-    /** Périmètre des marchés utilisé par la synthèse globale. */
-    record BlocPerimetre(String texte) implements Bloc {
-    }
-
-    /** Nombre de mois réellement présents dans l'historique, comparé à la fenêtre maximale affichée. */
-    record BlocCouvertureHistorique(int moisDisponibles, int fenetreMois) implements Bloc {
     }
 
     /** Titre de section équipe (12pt, filet — "ÉQUIPE : CHAUFFEURS"), toujours suivi d'un
@@ -62,12 +54,16 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
         }
     }
 
-    enum MesureEvolution {
-        MASSE, EFFECTIF, STC_PERSONNES, STC_DH
+    enum GroupeEvolution {
+        MASSE_EFFECTIF, STC
     }
 
-    /** Graphique d'évolution globale ; sa rubrique numérotée précédente est collectable pour le sommaire. */
-    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, MesureEvolution mesure) implements Bloc {
+    /** Graphique mensuel à deux séries et deux axes Y explicitement associés à leurs unités. */
+    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, GroupeEvolution groupe) implements Bloc {
+    }
+
+    /** Graphique horizontal du parc matériel : une série de quantités et les nombres alignés à droite. */
+    record BlocGraphiqueMateriel(String titre, List<MaterielLigneVue> donnees) implements Bloc {
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la
@@ -78,11 +74,9 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
                                boolean avecColonneEquipe) implements Bloc {
     }
 
-    /** Récap de section équipe — tableau Fonction/Effectif/STC personnes/DH (toujours) + squelette parc matériel
-     * (uniquement si {@code titreMateriel} non {@code null}, voir {@code MaterielChantierCatalogue}). Quand la
-     * section compte trop de fonctions pour tenir sur la page, le tableau est découpé : {@code suite} est vrai
-     * pour les tranches reprises sur les pages suivantes (titre « (suite) », sans parc matériel). Voir
-     * {@link RapportPageModelBuilder#ajouterPagesEquipe}. */
+    /** Récap des sections fusionnées (sans équipe sélectionnée) : fonction et matériel éventuel en tableaux.
+     * Les équipes sélectionnées ont leurs graphiques dédiés. Quand le récap est trop long, {@code suite} est vrai
+     * pour les tranches reprises sur les pages suivantes. Voir {@link RapportPageModelBuilder#ajouterPagesEquipe}. */
     record BlocRecap(List<RepartitionBean> repartitionFonction, List<MaterielLigneVue> materiel, String titreMateriel,
                      boolean suite) implements Bloc {
     }

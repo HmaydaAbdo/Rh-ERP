@@ -3,8 +3,8 @@ package staport.rh.paie.report;
 /**
  * KPI financier avec le montant du mois précédent — {@code valeurPrecedente} est {@code null} quand aucun
  * bulletin n'existe pour le mois précédent sur ce périmètre (distinct d'un montant réellement nul), voir
- * {@code PaieReportNumberFormat.masseOuNull}. {@code ecart} est présenté sous la masse courante uniquement dans la
- * vue d'ensemble ; les niveaux chantier et équipe gardent leurs KPI actuels.
+ * {@code PaieReportNumberFormat.masseOuNull}. {@code ecart} compare les valeurs courante et précédente lorsqu'il est
+ * possible de le calculer.
  */
 record KpiMontantVue(
         String valeurCourante,

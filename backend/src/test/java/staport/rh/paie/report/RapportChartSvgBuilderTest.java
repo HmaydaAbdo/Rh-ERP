@@ -95,6 +95,33 @@ class RapportChartSvgBuilderTest {
         assertThat(doc.select("svg")).isEmpty();
     }
 
+    @Test
+    void ajouterGraphiqueMateriel_afficheUnGraphiqueUneSerieEtLesQuantitesAlignees() {
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+
+        builder.ajouterGraphiqueMateriel(corps, "CAMION", List.of(
+                new MaterielLigneVue("CAMION CITERNE", 0),
+                new MaterielLigneVue("PICK UP", 4),
+                new MaterielLigneVue("CAMION SR", null)));
+
+        String svg = corps.html();
+        assertThat(svg).contains("CAMION — Nbre", "CAMION CITERNE", "PICK UP", ">0<", ">4<", "#7C3AED")
+                .doesNotContain("CAMION SR");
+    }
+
+    @Test
+    void ajouterGraphiqueMateriel_nAffichePasDeGraphiqueQuandToutesLesQuantitesSontNullesOuZero() {
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+
+        builder.ajouterGraphiqueMateriel(corps, "CAMION", List.of(
+                new MaterielLigneVue("CAMION CITERNE", 0),
+                new MaterielLigneVue("PICK UP", null)));
+
+        assertThat(corps.select("svg")).isEmpty();
+    }
+
     /** Un nom de chantier peut compter jusqu'à 255 caractères : il passe sur plusieurs lignes, sans rien perdre. */
     @Test
     void ajouterGraphique_doitFaireDescendreUnLibelleTropLongSurPlusieursLignes() {

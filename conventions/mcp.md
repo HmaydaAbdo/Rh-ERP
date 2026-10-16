@@ -13,6 +13,11 @@ de sortie typé et documenté, et des limites de taille et de résultats. Les re
 définissent leurs limites et leur ordre. Séparer les outils de lecture des outils d'écriture, et ne
 pas exposer indistinctement toutes les routes CRUD de l'application.
 
+Pour un catalogue important, l'agent peut rechercher les outils pertinents à la demande (Tool
+Search) et ne charger ensuite que leurs descriptions et schémas. La recherche doit rester bornée au
+catalogue publié et configuré. Elle ne change pas les permissions : le serveur contrôle chaque appel
+selon l'identité et le périmètre effectifs.
+
 Les outils sont bornés et prévisibles : valider les entrées côté serveur, fixer des délais d'attente
 et des quotas, définir les reprises et rendre les écritures idempotentes lorsque c'est nécessaire.
 Une nouvelle tentative ne doit pas répéter un effet métier. Une action sensible exige une
