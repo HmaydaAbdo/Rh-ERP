@@ -81,10 +81,7 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   `OP. COMPACTEUR ENROBE` / `OP. COMPCTEUR ENROBE`, `OP. AOUTOBETONNIERE` / `OP. AUTOBETONNIERE`,
   `OP. TRACTOPEDLLE` / `OP. TRACTOPELLE` / `OP. TRACTIPELLE`, `TECHNICIEN DE QUALITE` /
   `THECNICIEN DE QUALITE` (`CH. CAMION` / `CH. CAMION SR` et `OP. COMPACTEUR` / `OP. MINI COMPACTEUR`
-  sont probablement distinctes). La répartition globale par fonction reste retirée jusqu'au nettoyage ; au
-  niveau chantier, le rapport affiche désormais cette répartition lorsque aucune équipe n'est sélectionnée
-  (voir « Points d'extension » dans
-  [`docs/report/README.md`](docs/report/README.md) et le [dossier d’évolution du rapport](evolution-rapport/README.md)).
+  sont probablement distinctes).
 - **Vérifier le doublon apparent du chantier `C157A`** : il apparaît deux fois dans le filtre Chantiers
   « Tous les mois » avec deux options distinctes. Confirmer s'il s'agit de deux enregistrements en base,
   puis décider avec la RH s'il faut corriger les données ou différencier les libellés.

@@ -523,8 +523,7 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    (Mois avant Année — l'ordre de lecture naturel d'une période « Août 2026 »), empilées
    **verticalement**, puis un bloc **signatures** (Directeur Général à gauche, DRH à droite — rôle +
    nom du signataire en dur + filet à signer, jamais le filet pré-rempli). **Pas de date de
-   génération** (retirée le 2026-09-29, demande explicite de direction — voir
-   `../../evolution-rapport/rapport-v2.md`).
+   génération** (retirée le 2026-09-29, demande explicite de direction).
 2. **Bandeau récurrent** (`.page-header`, construit une seule fois par `PaieReportHtmlBuilder` et
    répété sur chaque page de contenu — jamais sur la page de garde) : 3 blocs sur une seule ligne
    chacun, séparés par de fins filets verticaux — Ressources Humaines / `Paie <Mois> <Année>` (ex. « Paie Septembre 2026 ») / **Niveau**. Le
@@ -548,7 +547,6 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    sélectionnée dans l'assistant ; sinon elle montre la répartition par fonction. Les graphiques de répartition
    partagent le même style, les mêmes quatre indicateurs, couleurs et colonnes de valeurs.
 
-   Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 6. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
    seul chapitre fixe (II, III, ... — voir `RapportPageModelBuilder.chapitreChantier`) — voir « Vue
    détaillée d'un chantier » pour le détail.
@@ -958,33 +956,3 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
    TOUJOURS, jamais de `.html(String)` — voir le Javadoc de `PaieReportHtmlBuilder`) et évite la
    catégorie de bugs JasperReports en ne déléguant JAMAIS de décision de pagination au moteur de
    rendu (voir « Pagination : contrôle 100 % Java »).
-
----
-
-## Points d'extension
-
-> Voir aussi [../../evolution-rapport/rapport-v2.md](../../evolution-rapport/rapport-v2.md) — journal détaillé de tout ce qui
-> a été retiré ou restructuré dans le rapport, avec pour chacun ce qui reste réutilisable sans
-> redévelopper.
-
-- **Réintroduire la répartition par fonction au niveau global** : reste retirée (le référentiel Fonction
-  contient des doublons non nettoyés, voir TODO.md pour la tâche de nettoyage côté données). Au niveau
-  chantier, la répartition par fonction sert de solution de repli quand aucune équipe n'est sélectionnée.
-- **Évolutions mensuelles par équipe** : le global, le chantier et les équipes sélectionnées montrent
-  masse/effectif et STC personnes/DH.
-- **Généraliser le squelette parc matériel** : aujourd'hui figé au chantier C168 (équipes CH/OP),
-  sans persistance ni UI de saisie (voir « Squelette parc matériel ») — si le besoin s'étend à
-  d'autres chantiers/équipes, la règle métier centralisée dans `MaterielChantierCatalogue` est le
-  seul point à faire évoluer (aucune duplication à corriger des deux côtés).
-- **Comparaison mois précédent au niveau équipe/section** : déjà présente dans les cartes KPI de chaque section.
-- **Autres filtres du dialog (nom, CIN, fonction, chantier unique)** : volontairement non exposés
-  par `PaieExportWizardComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
-  sur l'ensemble des chantiers/employés de la période, pas sur une recherche ponctuelle.
-  `PaieReportPdfRequestDto` les garde optionnels pour un appel API direct ; à réexposer côté UI
-  seulement si un besoin réel de rapport filtré se confirme.
-- **Nouveaux indicateurs BI** : ajouter une mesure suit toujours le même chemin —
-  `PaieBiReportBuilder` (calcul), un nouveau champ de vue-modèle si la forme ne rentre dans aucun
-  existant, le `PageModel.Bloc` et le rendu `PaieReportHtmlBuilder` correspondants, une entrée dans
-  le catalogue de KPI ci-dessus. Avant d'ajouter un KPI, vérifier qu'il répond à une question non
-  déjà couverte pour
-  éviter la duplication.
