@@ -189,10 +189,11 @@ sont stockés en UTC et affichés à l'heure de Casablanca.
   pgAudit préchargé, `CREATE EXTENSION pgaudit` réussit et une requête de contrôle produit une ligne `AUDIT: SESSION`.
   Cette preuve ne remplace pas l'activation et le contrôle sur le serveur de production.
   Les journaux CSV tournent quotidiennement dans le volume PostgreSQL. Décision RH du 2026-10-15 : leur conservation est
-  limitée à 90 jours, distincte de la conservation à vie décidée pour `audit_journal` et Envers. La purge effective des
-  CSV, les droits d'accès au volume et les alertes d'exploitation sont des opérations côté serveur suivies dans
-  [`TODO.md`](../../TODO.md) ; la rotation quotidienne seule ne purge pas les fichiers expirés. Les CSV restent sur le
-  serveur et sont exposés au risque de perte de ce volume.
+  limitée à 90 jours, distincte de la conservation à vie décidée pour `audit_journal` et Envers. Le service Compose
+  `postgres-log-retention` purge au démarrage puis chaque jour à 03:00 UTC les fichiers `postgresql-*.csv*` âgés de plus
+  de 90 jours. Le nom configuré omet le suffixe `.csv`, que PostgreSQL ajoute lui-même. L'activation et la purge effective
+  doivent encore être vérifiées en production ; les droits d'accès au volume et les alertes d'exploitation restent suivis
+  dans [`TODO.md`](../../TODO.md). Les CSV restent sur le serveur et sont exposés au risque de perte de ce volume.
 - **Limite de confiance** : une modification faite directement en base par le détenteur du compte propriétaire n'est pas
   capturée par l'application. pgAudit est préparé pour tracer le SQL direct après migration de production vers PostgreSQL 18 ;
   un superutilisateur peut toutefois modifier la configuration ou réécrire les journaux locaux.

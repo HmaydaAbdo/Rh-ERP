@@ -29,9 +29,10 @@ docker compose -f compose.yaml -f compose.production.yaml up -d
 
 ## Images et conteneurs
 
-* Utiliser des images minimales, maintenues et épinglées. Une mise à jour d'image est testée avant
-  déploiement ; éviter `latest` comme référence de production. Les artefacts applicatifs sont
-  identifiables par une version immuable ou le digest de l'image.
+* Utiliser des images minimales et maintenues. Une mise à jour d'image est testée avant déploiement.
+  Préférer une version immuable ou le digest en production. Un tag mutable tel que `latest` exige
+  une décision d'exploitation documentée, la validation CI avant le pull et l'acceptation explicite
+  d'un retour arrière moins direct.
 * Construire les images applicatives de façon reproductible, avec des étapes de build séparées de
   l'image d'exécution lorsque cela convient à la pile technique.
 * Exécuter les processus sans privilèges root. Ne pas utiliser `privileged` ou ajouter des

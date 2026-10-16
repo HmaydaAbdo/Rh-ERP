@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -122,15 +123,15 @@ public class EmployeeImportService {
                     continue;
                 }
 
-                cinsTraites.add(cin.trim().toUpperCase());
+                cinsTraites.add(normaliserCle(cin));
 
                 aAppliquer.add(new LigneAAppliquer(
-                        nomPrenom.trim(),
-                        cin.trim(),
+                        nomPrenom.strip(),
+                        cin.strip(),
                         dateNaissance,
                         dateEmbauche,
-                        fonctionsParLibelle.get(fonctionLibelle.trim().toUpperCase()),
-                        chantiersParCode.get(chantierCode.trim().toUpperCase())));
+                        fonctionsParLibelle.get(normaliserCle(fonctionLibelle)),
+                        chantiersParCode.get(normaliserCle(chantierCode))));
             }
         } catch (IOException | RuntimeException e) {
             if (e instanceof EmployeeImportException importException) {
@@ -193,11 +194,11 @@ public class EmployeeImportService {
             return "Champs obligatoires manquants ou invalides : " + String.join(", ", champsManquants);
         }
 
-        if (nomPrenom.trim().length() > MAX_NOM_PRENOM_LENGTH || cin.trim().length() > MAX_CIN_LENGTH) {
+        if (nomPrenom.strip().length() > MAX_NOM_PRENOM_LENGTH || cin.strip().length() > MAX_CIN_LENGTH) {
             return "Nom/prénom ou CIN trop long";
         }
 
-        String cinNormalise = cin.trim().toUpperCase();
+        String cinNormalise = normaliserCle(cin);
         if (cinsTraites.contains(cinNormalise)) {
             return "CIN en doublon dans le fichier";
         }
@@ -205,11 +206,11 @@ public class EmployeeImportService {
             return "Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)";
         }
 
-        if (!fonctionsParLibelle.containsKey(fonctionLibelle.trim().toUpperCase())) {
-            return "Fonction introuvable : " + fonctionLibelle.trim();
+        if (!fonctionsParLibelle.containsKey(normaliserCle(fonctionLibelle))) {
+            return "Fonction introuvable : " + fonctionLibelle.strip();
         }
-        if (!chantiersParCode.containsKey(chantierCode.trim().toUpperCase())) {
-            return "Chantier introuvable ou inactif : " + chantierCode.trim();
+        if (!chantiersParCode.containsKey(normaliserCle(chantierCode))) {
+            return "Chantier introuvable ou inactif : " + chantierCode.strip();
         }
 
         return null;
@@ -232,7 +233,7 @@ public class EmployeeImportService {
     private Map<String, Long> chargerFonctions() {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> functionService.search(null, pageable),
-                fonction -> resultat.put(fonction.libelle().toUpperCase(), fonction.id()));
+                fonction -> resultat.put(normaliserCle(fonction.libelle()), fonction.id()));
         return resultat;
     }
 
@@ -240,10 +241,14 @@ public class EmployeeImportService {
         Map<String, Long> resultat = new HashMap<>();
         PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
             if (chantier.actif()) {
-                resultat.put(chantier.code().toUpperCase(), chantier.id());
+                resultat.put(normaliserCle(chantier.code()), chantier.id());
             }
         });
         return resultat;
+    }
+
+    private static String normaliserCle(String valeur) {
+        return valeur.strip().toUpperCase(Locale.ROOT);
     }
 
     private boolean estLigneVide(Row row) {

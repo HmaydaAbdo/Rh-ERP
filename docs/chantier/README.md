@@ -65,11 +65,10 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 
 ## Règles métier
 
-- `code` est la clé métier, unique, insensible à la casse (`existsByCodeIgnoreCase` pour le contrôle,
-  `findByCodeIgnoreCase` pour la recherche) ; la migration V24 impose aussi cette règle en base avec
-  un index unique sur `UPPER(code)`, pour couvrir les écritures concurrentes et hors du service.
-  V24 échoue explicitement si des codes existants ne diffèrent que par la casse ; traiter ce
-  prérequis dans le chantier séparé « Qualité des données ».
+- `code` est la clé métier : le service et la synchronisation retirent les espaces extérieurs. V27
+  impose l'unicité après trim et sans tenir compte de la casse, au moyen d'un index sur
+  `UPPER(BTRIM(code))`, et bloque les nouvelles valeurs entourées d'espaces en base. Les collisions
+  existantes font échouer V27 pour être résolues explicitement, sans fusion implicite.
 - À la création manuelle, `code` et `designation` sont obligatoires (`designation` : 500 caractères au plus) ;
   `nom` est facultatif (255 caractères au plus). Voir « Qualité des données » dans [TODO.md](../../TODO.md).
 - La synchronisation **ajoute uniquement les chantiers manquants** (décision du 2026-10-03 : toute

@@ -38,7 +38,7 @@ public class EquipeService implements IEquipeService {
     @AuditableAction(action = "EQUIPE_CREATION", type = TypeOperation.CREATE, entite = Equipe.class)
     public EquipeResponseDto create(EquipeCreateRequestDto dto) {
         String code = normaliserCode(dto.code());
-        String libelle = dto.libelle().trim();
+        String libelle = dto.libelle().strip();
         verifierUnicite(null, code, libelle);
 
         Equipe entity = mapper.toEntity(dto);
@@ -55,7 +55,7 @@ public class EquipeService implements IEquipeService {
         Equipe entity = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), entity.getVersion());
         String code = normaliserCode(dto.code());
-        String libelle = dto.libelle().trim();
+        String libelle = dto.libelle().strip();
         verifierUnicite(id, code, libelle);
 
         mapper.updateEntityFromDto(dto, entity);
@@ -100,7 +100,7 @@ public class EquipeService implements IEquipeService {
     /** Le code sert de clé de sélection/regroupement : toujours stocké trimé et en majuscules, pour
      * que "ch" et "CH " ne produisent jamais deux équipes distinctes. */
     private static String normaliserCode(String code) {
-        return code.trim().toUpperCase(Locale.FRANCE);
+        return code.strip().toUpperCase(Locale.ROOT);
     }
 
     private void verifierUnicite(Long idCourant, String code, String libelle) {
