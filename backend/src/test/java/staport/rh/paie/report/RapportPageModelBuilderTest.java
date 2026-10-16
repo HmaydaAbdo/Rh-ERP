@@ -74,8 +74,8 @@ class RapportPageModelBuilderTest {
 
                 List<PageModel> pages = builder.construire(vue);
 
-                // Pages 0-2 = synthèse globale, 3-5 = analyse du chantier, puis son détail équipe.
-                List<PageModel> pagesEquipe = pages.subList(6, pages.size());
+                // Pages 0-1 = synthèse globale, 2-3 = analyse du chantier, puis son détail équipe.
+                List<PageModel> pagesEquipe = pages.subList(4, pages.size());
 
                 assertThat(pagesEquipe)
                         .as(
@@ -221,89 +221,40 @@ class RapportPageModelBuilderTest {
         }
     }
 
-    /**
-     * Chaque chantier démarre sur sa propre page, et chaque équipe/reste aussi —
-     * jamais deux sections sur la même page
-     * (demande explicite de direction, reconduite depuis JasperReports).
-     */
+    /** Les deux évolutions partagent la page d'analyse globale, chantier et équipe sélectionnée. */
     @Test
-    void construire_chaqueChantierEtChaqueEquipeDemarreSaPropresPage() {
+    void construire_groupeLesDeuxEvolutionsSurChaquePageAnalyse() {
 
         RapportBiVue vue = vueAvecUneEquipe(5, 2, false);
 
         List<PageModel> pages = builder.construire(vue);
-
-        assertThat(pages.get(0).niveauTexte())
-                .isEqualTo("GLOBAL");
-
-        assertThat(pages.get(0).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(1, "Évolution de la masse salariale et de l'effectif"));
-        assertThat(pages.get(0).blocs())
-                .anyMatch(b -> b instanceof PageModel.BlocGraphiqueEvolution graph
-                        && graph.groupe() == PageModel.GroupeEvolution.MASSE_EFFECTIF);
-        assertThat(pages.get(0).blocs())
-                .noneMatch(b -> b instanceof PageModel.BlocGraphique);
-        assertThat(pages.get(1).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(2, "Évolution du STC — personnes et DH"));
-        assertThat(pages.get(1).blocs())
-                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
-                .map(b -> (PageModel.BlocGraphiqueEvolution) b)
-                .extracting(PageModel.BlocGraphiqueEvolution::groupe)
-                .containsExactly(PageModel.GroupeEvolution.STC);
-        assertThat(pages.get(1).blocs())
-                .noneMatch(b -> b instanceof PageModel.BlocGraphique);
-        assertThat(pages.get(2).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(3, "Répartition par chantier"));
-        assertThat(pages.get(2).blocs())
-                .anyMatch(b -> b instanceof PageModel.BlocGraphique);
-        assertThat(pages.get(3).blocs())
-                .anyMatch(b -> b instanceof PageModel.BlocTitreChapitre);
-
-        assertThat(pages.get(3).blocs())
-                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
-                .map(b -> ((PageModel.BlocGraphiqueEvolution) b).groupe())
-                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF);
-        assertThat(pages.get(3).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::texte)
-                .containsExactly("Évolution de la masse salariale et de l'effectif");
-        assertThat(pages.get(4).blocs())
-                .filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
-                .map(b -> ((PageModel.BlocGraphiqueEvolution) b).groupe())
-                .containsExactly(PageModel.GroupeEvolution.STC);
-        assertThat(pages.get(4).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::texte)
-                .containsExactly("Évolution du STC — personnes et DH");
-        assertThat(pages.get(5).blocs())
-                .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b)
-                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(3, "Répartition par équipe"));
-        assertThat(pages.get(3).blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
-                .map(b -> (PageModel.BlocTitreRubrique) b).extracting(PageModel.BlocTitreRubrique::numero)
-                .containsExactly(1);
-        assertThat(pages.get(6).blocs().get(0)).isInstanceOf(PageModel.BlocTitreEquipe.class);
-        assertThat(cartesKpi(pages.get(3)).stream().filter(c -> c.label().equals("MASSE SALARIALE")).toList())
-                .singleElement().extracting(CarteKpi::sousTexte).isNull();
-        assertThat(cartesKpi(pages.get(6)).stream().filter(c -> c.label().equals("EFFECTIF")).toList())
-                .singleElement().extracting(CarteKpi::sousTexte).isEqualTo("Écart indisponible");
-        assertThat(pages.get(8).blocs()).anyMatch(b -> b instanceof PageModel.BlocGraphique);
-        assertThat(pages.get(9).blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+        PageModel global = pages.stream().filter(page -> "GLOBAL".equals(page.niveauTexte()))
+                .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
+                .findFirst().orElseThrow();
+        assertThat(global.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(PageModel.BlocTitreRubrique.class::cast)
-                .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(4, "Liste des employés"));
+                .extracting(PageModel.BlocTitreRubrique::numero)
+                .containsExactly(1, 2);
+        assertThat(global.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(PageModel.BlocGraphiqueEvolution.class::cast)
+                .extracting(PageModel.BlocGraphiqueEvolution::groupe)
+                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+
+        PageModel analyseChantier = pages.stream().filter(page -> page.blocs().stream()
+                        .anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
+                .filter(page -> "GLOBAL".equals(page.niveauTexte()) == false)
+                .findFirst().orElseThrow();
+        assertThat(analyseChantier.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::numero)
+                .containsExactly(1, 2);
+        assertThat(analyseChantier.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(PageModel.BlocGraphiqueEvolution.class::cast)
+                .extracting(PageModel.BlocGraphiqueEvolution::groupe)
+                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+
+        assertThat(cartesKpi(analyseChantier).stream().filter(c -> c.label().equals("MASSE SALARIALE")).toList())
+                .singleElement().extracting(CarteKpi::sousTexte).isNull();
     }
 
     /**
@@ -319,13 +270,13 @@ class RapportPageModelBuilderTest {
         List<PageModel> sansEnsemble = builder.construire(vue, true);
 
         assertThat(sansEnsemble).noneMatch(page -> "GLOBAL".equals(page.niveauTexte()));
-        assertThat(sansEnsemble).hasSize(complet.size() - 3);
+        assertThat(sansEnsemble).hasSize(complet.size() - 2);
         assertThat(sansEnsemble.get(0).blocs())
                 .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
                 .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
                 .singleElement()
                 .asString().startsWith("I — ");
-        assertThat(complet.get(3).blocs())
+        assertThat(complet.get(2).blocs())
                 .filteredOn(PageModel.BlocTitreChapitre.class::isInstance)
                 .map(b -> ((PageModel.BlocTitreChapitre) b).texte())
                 .singleElement()
@@ -347,13 +298,20 @@ class RapportPageModelBuilderTest {
 
                 List<PageModel> pages = builder.construire(vueAvecUneEquipe(total, lignesRecapMax, false, false));
 
-                // Les pages 0-2 sont la synthèse globale, 3-5 le chantier ; son détail commence page 6.
-                assertThat(pages.get(5).blocs())
+                // Les pages 0-1 sont la synthèse globale, 2-3 le chantier ; son détail commence ensuite.
+                PageModel repartitionChantier = pages.stream()
+                        .filter(page -> page.blocs().stream().anyMatch(bloc -> bloc instanceof PageModel.BlocTitreRubrique titre
+                                && titre.numero() == 3 && titre.texte().equals("Répartition par fonction")))
+                        .findFirst().orElseThrow();
+                assertThat(repartitionChantier.blocs())
                         .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                         .map(b -> (PageModel.BlocTitreRubrique) b)
                         .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
                         .containsExactly(tuple(3, "Répartition par fonction"));
-                List<PageModel.Bloc> premiere = pages.get(6).blocs();
+                int debutDetail = pages.indexOf(pages.stream()
+                        .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocRecap.class::isInstance))
+                        .findFirst().orElseThrow());
+                List<PageModel.Bloc> premiere = pages.get(debutDetail).blocs();
                 assertThat(premiere.get(0)).isInstanceOf(PageModel.BlocRecap.class);
                 assertThat(pages.stream().flatMap(p -> p.blocs().stream()))
                         .as("total=%d, recap=%d : ni titre ni cartes KPI de section répétés", total, lignesRecapMax)
@@ -362,12 +320,15 @@ class RapportPageModelBuilderTest {
                         .as("la liste des employés est une rubrique 4 destinée au futur sommaire")
                         .anyMatch(b -> b instanceof PageModel.BlocTitreRubrique titre
                                 && titre.numero() == 4 && titre.texte().equals("Liste des employés"));
-                assertThat(((PageModel.BlocKpi) pages.get(3).blocs().get(1)).cartes().stream().map(CarteKpi::label))
+                PageModel analyseChantier = pages.stream().filter(page -> page.blocs().stream()
+                        .anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
+                        .filter(page -> !"GLOBAL".equals(page.niveauTexte())).findFirst().orElseThrow();
+                assertThat(cartesKpi(analyseChantier).stream().map(CarteKpi::label))
                         .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF",
                                 "STC / SORTIES (PERSONNES)", "STC / SORTIES (DH)");
 
                 int lignes = 0;
-                for (int p = 6; p < pages.size(); p++) {
+                for (int p = debutDetail; p < pages.size(); p++) {
                     double hauteur = 0;
                     for (PageModel.Bloc bloc : pages.get(p).blocs()) {
                         if (bloc instanceof PageModel.BlocTitreSection) {
@@ -436,6 +397,18 @@ class RapportPageModelBuilderTest {
     void construire_equipeSelectionneeAjouteLeGraphiqueMaterielAvantLaListeEnRubriqueCinq() {
         List<PageModel> pages = builder.construire(vueAvecUneEquipe(3, 2, true));
 
+        PageModel evolutionEquipe = pages.stream()
+                .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocTitreEquipe.class::isInstance))
+                .findFirst().orElseThrow();
+        assertThat(evolutionEquipe.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::numero)
+                .containsExactly(1, 2);
+        assertThat(evolutionEquipe.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
+                .map(PageModel.BlocGraphiqueEvolution.class::cast)
+                .extracting(PageModel.BlocGraphiqueEvolution::groupe)
+                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+
         PageModel materiel = pages.stream()
                 .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocGraphiqueMateriel.class::isInstance))
                 .findFirst().orElseThrow();
@@ -443,7 +416,9 @@ class RapportPageModelBuilderTest {
                 .filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(PageModel.BlocTitreRubrique.class::cast)
                 .extracting(PageModel.BlocTitreRubrique::numero, PageModel.BlocTitreRubrique::texte)
-                .containsExactly(tuple(4, "Parc matériel — CAMION"));
+                .containsExactly(tuple(3, "Répartition par fonction"), tuple(4, "Parc matériel — CAMION"),
+                        tuple(5, "Liste des employés"));
+        assertThat(materiel.blocs()).anyMatch(PageModel.BlocGraphique.class::isInstance);
         assertThat(materiel.blocs()).filteredOn(PageModel.BlocGraphiqueMateriel.class::isInstance)
                 .map(PageModel.BlocGraphiqueMateriel.class::cast)
                 .singleElement().satisfies(graph -> {
@@ -463,6 +438,10 @@ class RapportPageModelBuilderTest {
 
         assertThat(pages.stream().flatMap(page -> page.blocs().stream()))
                 .noneMatch(PageModel.BlocGraphiqueMateriel.class::isInstance);
+        assertThat(pages).anySatisfy(page -> {
+            assertThat(page.blocs()).anyMatch(PageModel.BlocGraphique.class::isInstance);
+            assertThat(page.blocs()).anyMatch(PageModel.BlocTableauEmployes.class::isInstance);
+        });
         assertThat(pages.stream().flatMap(page -> page.blocs().stream())
                 .filter(PageModel.BlocTitreRubrique.class::isInstance)
                 .map(PageModel.BlocTitreRubrique.class::cast)

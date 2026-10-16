@@ -93,7 +93,10 @@ class PaieReportHtmlPdfServiceTest {
                     "2. Évolution du STC — personnes et DH", "3. Répartition par chantier",
                     "4. Liste des employés");
             assertThat(texte).doesNotContain("Périmètre : Tous les marchés", "Historique disponible :", "12 mois");
-            BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(6);
+            int pageEvolution = pageContenantTexte(document, "1. Évolution de la masse salariale et de l'effectif");
+            assertThat(textePage(document, pageEvolution)).contains("2. Évolution du STC — personnes et DH");
+            int pageFonction = pageContenantTexte(document, "3. Répartition par fonction");
+            BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(pageFonction);
             assertThat(nombrePixelsBleus(repartitionFonction))
                     .as("la répartition par fonction du chantier est réellement rendue")
                     .isGreaterThan(20);
@@ -141,7 +144,8 @@ class PaieReportHtmlPdfServiceTest {
             String texte = new PDFTextStripper().getText(document);
             assertThat(texte).contains("4. Parc matériel — CAMION", "5. Liste des employés",
                     "EMPLOYE UN", "EMPLOYE DEUX");
-            BufferedImage pageChantier = new PDFRenderer(document).renderImage(6);
+            int pageRepartitionEquipe = pageContenantTexte(document, "3. Répartition par équipe");
+            BufferedImage pageChantier = new PDFRenderer(document).renderImage(pageRepartitionEquipe);
             assertThat(nombrePixelsBleus(pageChantier))
                     .as("pixels bleus du graphique par équipe rendu sur la page de répartition chantier")
                     .isGreaterThan(20);
@@ -157,6 +161,7 @@ class PaieReportHtmlPdfServiceTest {
                 }
             }
             assertThat(pageGraphiqueMateriel).as("page contenant le graphique matériel").isGreaterThanOrEqualTo(0);
+            assertThat(textePage(document, pageGraphiqueMateriel)).contains("3. Répartition par fonction");
             BufferedImage graphiqueMateriel = new PDFRenderer(document).renderImage(pageGraphiqueMateriel);
             assertThat(nombrePixelsViolets(graphiqueMateriel))
                     .as("pixels violets des barres du graphique matériel réellement rendu dans le PDF")
@@ -242,6 +247,22 @@ class PaieReportHtmlPdfServiceTest {
             }
         }
         return nombre;
+    }
+
+    private int pageContenantTexte(PDDocument document, String texte) throws IOException {
+        for (int page = 0; page < document.getNumberOfPages(); page++) {
+            if (textePage(document, page).contains(texte)) {
+                return page;
+            }
+        }
+        throw new AssertionError("Texte introuvable dans le PDF : " + texte);
+    }
+
+    private String textePage(PDDocument document, int index) throws IOException {
+        PDFTextStripper extracteur = new PDFTextStripper();
+        extracteur.setStartPage(index + 1);
+        extracteur.setEndPage(index + 1);
+        return extracteur.getText(document);
     }
 
     /** Vérifie le rendu du remplissage violet du graphique matériel sans dépendre de l'extraction SVG. */

@@ -523,8 +523,7 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    (Mois avant Année — l'ordre de lecture naturel d'une période « Août 2026 »), empilées
    **verticalement**, puis un bloc **signatures** (Directeur Général à gauche, DRH à droite — rôle +
    nom du signataire en dur + filet à signer, jamais le filet pré-rempli). **Pas de date de
-   génération** (retirée le 2026-09-29, demande explicite de direction — voir
-   `../../evolution-rapport/rapport-v2.md`).
+   génération** (retirée le 2026-09-29, demande explicite de direction).
 2. **Bandeau récurrent** (`.page-header`, construit une seule fois par `PaieReportHtmlBuilder` et
    répété sur chaque page de contenu — jamais sur la page de garde) : 3 blocs sur une seule ligne
    chacun, séparés par de fins filets verticaux — Ressources Humaines / `Paie <Mois> <Année>` (ex. « Paie Septembre 2026 ») / **Niveau**. Le
@@ -548,7 +547,6 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    sélectionnée dans l'assistant ; sinon elle montre la répartition par fonction. Les graphiques de répartition
    partagent le même style, les mêmes quatre indicateurs, couleurs et colonnes de valeurs.
 
-   Chapitre « Répartition par fonction » retiré temporairement (voir « Points d'extension »).
 6. **Une section par CHANTIER**, TOUS désormais — chacun son propre chapitre romain à la suite du
    seul chapitre fixe (II, III, ... — voir `RapportPageModelBuilder.chapitreChantier`) — voir « Vue
    détaillée d'un chantier » pour le détail.
@@ -654,9 +652,11 @@ blanche et de ligne perdue.
 
 **Chantier sans détail par équipe** (aucune équipe sélectionnée, donc pas de graphique « Répartition par
 équipe ») : la rubrique 3 affiche la répartition par fonction avant la section « reste ». Celle-ci suit les
-trois pages d'analyse du chantier et ne répète ni son titre ni ses indicateurs. Avec des équipes sélectionnées,
-la rubrique 3 affiche la répartition complète par équipe ; chaque équipe choisie dispose ensuite de ses évolutions,
-de la répartition par fonction, du graphique matériel éventuel, puis de sa liste d'employés.
+deux pages d'analyse du chantier et ne répète ni son titre ni ses indicateurs. Avec des équipes sélectionnées,
+la rubrique 3 affiche la répartition complète par équipe ; chaque équipe choisie regroupe ses deux évolutions sur
+une page, puis la fonction et le matériel éventuel sur la même page lorsque leurs lignes tiennent. La liste des
+employés commence sous l'analyse lorsqu'elle tient, sinon sur la page suivante. La pagination conserve sa marge
+de sécurité de 8 pt et utilise la page courante tant que le bloc suivant tient dans les 495 pt utiles.
 Couvert par `RapportPageModelBuilderTest` (1 à 120 employés × 0 à 16 lignes de récap : rien ne déborde, aucun
 employé perdu).
 
@@ -742,6 +742,13 @@ Une quantité nulle est affichée comme zéro ; une quantité absente est omise.
 la liste des employés est directement la rubrique 4. Le graphique fonction suit le style horizontal
 des autres répartitions, avec les valeurs alignées à droite.
 
+Les deux évolutions partagent une page d'analyse ; leurs graphiques font 170 pt de haut afin de conserver
+une zone de tracé lisible sous les cartes KPI. Fonction et matériel partagent le budget de la page selon le
+nombre et la hauteur minimale de leurs lignes. La hauteur d'une catégorie peut atteindre 54 pt pour réduire
+les grands espaces vides dans les petites répartitions. Si les hauteurs minimales ne tiennent pas ensemble,
+le matériel passe sur la page suivante. La liste des employés commence sur l'espace restant lorsqu'il permet
+d'afficher son titre, son en-tête et au moins trois lignes ; sinon elle ouvre la page suivante.
+
 ### Visualisations
 
 **Convention du document : barres horizontales groupées à 4 séries (masse/effectif/STC en
@@ -785,7 +792,7 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
   (48 à 200 pt), les 4 colonnes de valeurs prennent 292 pt à droite (`LARGEUR_COLONNES`) et la barre maximale
   occupe tout l'espace restant en mode maximum ; en vue d'ensemble, 100 % représente le total de la série. La
   hauteur totale (en-tête, lignes, échelle éventuelle, légende) est plafonnée à 361 pt (`HAUTEUR_TOTALE_CHART`) pour tenir sous le bandeau, le titre de
-  chapitre et les cartes KPI ; une ligne fait au plus 40 pt.
+  chapitre et les cartes KPI ; une ligne fait au plus 54 pt.
 - **Aération** : les 4 barres d'une ligne occupent 72 % de sa hauteur (`PART_BARRES_PAR_CATEGORIE`), le reste est
   de l'espace blanc entre lignes, renforcé par un filet gris clair entre deux lignes et un axe vertical fin à
   gauche des barres. Barres séparées de 1,4 pt (`ECART_ENTRE_BARRES`), libellés de catégorie en gras 9,5 pt,
@@ -818,8 +825,8 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
 
 ### Évolutions mensuelles
 
-Aux niveaux global et chantier, ainsi qu'au niveau de chaque équipe sélectionnée, la rubrique 1 trace
-ensemble la masse salariale (`DH`) et l'effectif
+Aux niveaux global et chantier, ainsi qu'au niveau de chaque équipe sélectionnée, les rubriques 1 et 2
+partagent la même page d'analyse. La rubrique 1 trace ensemble la masse salariale (`DH`) et l'effectif
 (`personnes`) ; la rubrique 2 trace le STC en personnes et en DH. Chaque paire partage les mêmes mois
 sur une fenêtre finissant à la période du rapport et limitée aux 12 derniers mois. Seuls les mois
 disponibles sont affichés ; aucun mois sans paie n'est inventé. La limite de 12 mois reste une règle de
@@ -827,7 +834,9 @@ calcul interne et n'est affichée ni dans le titre ni ailleurs dans le rapport.
 
 Chaque indicateur conserve une couleur stable, une légende explicite, un axe Y avec son unité et sa propre
 échelle. Les mois au format `M/YYYY`, les valeurs numériques exactes et les projections en pointillés vers
-les axes sont rendus dans le SVG. Les marques, lignes de grille et étiquettes restent lisibles dans le PDF.
+les axes sont rendus dans le SVG. Les valeurs des deux séries sont espacées verticalement quand leurs
+étiquettes se rapprochent ; celles des premier et dernier mois sont décalées vers l'intérieur du tracé pour
+ne pas recouvrir les graduations des axes. Les marques, lignes de grille et étiquettes restent lisibles dans le PDF.
 La répartition suit ces graphiques : au global par chantier, au chantier par équipe si une équipe est sélectionnée,
 sinon par fonction.
 
@@ -947,33 +956,3 @@ fond : fiabiliser un document dont la pagination/le rendu se comportait de faço
    TOUJOURS, jamais de `.html(String)` — voir le Javadoc de `PaieReportHtmlBuilder`) et évite la
    catégorie de bugs JasperReports en ne déléguant JAMAIS de décision de pagination au moteur de
    rendu (voir « Pagination : contrôle 100 % Java »).
-
----
-
-## Points d'extension
-
-> Voir aussi [../../evolution-rapport/rapport-v2.md](../../evolution-rapport/rapport-v2.md) — journal détaillé de tout ce qui
-> a été retiré ou restructuré dans le rapport, avec pour chacun ce qui reste réutilisable sans
-> redévelopper.
-
-- **Réintroduire la répartition par fonction au niveau global** : reste retirée (le référentiel Fonction
-  contient des doublons non nettoyés, voir TODO.md pour la tâche de nettoyage côté données). Au niveau
-  chantier, la répartition par fonction sert de solution de repli quand aucune équipe n'est sélectionnée.
-- **Évolutions mensuelles par équipe** : le global, le chantier et les équipes sélectionnées montrent
-  masse/effectif et STC personnes/DH.
-- **Généraliser le squelette parc matériel** : aujourd'hui figé au chantier C168 (équipes CH/OP),
-  sans persistance ni UI de saisie (voir « Squelette parc matériel ») — si le besoin s'étend à
-  d'autres chantiers/équipes, la règle métier centralisée dans `MaterielChantierCatalogue` est le
-  seul point à faire évoluer (aucune duplication à corriger des deux côtés).
-- **Comparaison mois précédent au niveau équipe/section** : déjà présente dans les cartes KPI de chaque section.
-- **Autres filtres du dialog (nom, CIN, fonction, chantier unique)** : volontairement non exposés
-  par `PaieExportWizardComponent` (voir « Périmètre et filtres ») — un rapport de direction porte
-  sur l'ensemble des chantiers/employés de la période, pas sur une recherche ponctuelle.
-  `PaieReportPdfRequestDto` les garde optionnels pour un appel API direct ; à réexposer côté UI
-  seulement si un besoin réel de rapport filtré se confirme.
-- **Nouveaux indicateurs BI** : ajouter une mesure suit toujours le même chemin —
-  `PaieBiReportBuilder` (calcul), un nouveau champ de vue-modèle si la forme ne rentre dans aucun
-  existant, le `PageModel.Bloc` et le rendu `PaieReportHtmlBuilder` correspondants, une entrée dans
-  le catalogue de KPI ci-dessus. Avant d'ajouter un KPI, vérifier qu'il répond à une question non
-  déjà couverte pour
-  éviter la duplication.

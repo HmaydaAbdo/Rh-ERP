@@ -80,9 +80,9 @@ final class PaieReportHtmlBuilder {
         } else if (bloc instanceof PageModel.BlocGraphique b) {
             chartSvgBuilder.ajouterGraphique(corps, b.donnees(), b.echelle(), b.hauteurMax(), b.partDuTotal());
         } else if (bloc instanceof PageModel.BlocGraphiqueEvolution b) {
-            evolutionSvgBuilder.ajouterGraphique(corps, b.donnees(), b.groupe());
+            evolutionSvgBuilder.ajouterGraphique(corps, b.donnees(), b.groupe(), b.hauteur());
         } else if (bloc instanceof PageModel.BlocGraphiqueMateriel b) {
-            chartSvgBuilder.ajouterGraphiqueMateriel(corps, b.titre(), b.donnees());
+            chartSvgBuilder.ajouterGraphiqueMateriel(corps, b.titre(), b.donnees(), b.hauteurMax());
         } else if (bloc instanceof PageModel.BlocTableauEmployes b) {
             ajouterTableauEmployes(corps, b.lignes(), b.avecEnTeteColonnes(), b.avecColonneEquipe());
         } else if (bloc instanceof PageModel.BlocRecap b) {

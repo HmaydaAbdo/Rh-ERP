@@ -59,11 +59,13 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     }
 
     /** Graphique mensuel à deux séries et deux axes Y explicitement associés à leurs unités. */
-    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, GroupeEvolution groupe) implements Bloc {
+    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, GroupeEvolution groupe,
+                                  double hauteur) implements Bloc {
     }
 
     /** Graphique horizontal du parc matériel : une série de quantités et les nombres alignés à droite. */
-    record BlocGraphiqueMateriel(String titre, List<MaterielLigneVue> donnees) implements Bloc {
+    record BlocGraphiqueMateriel(String titre, List<MaterielLigneVue> donnees,
+                                 double hauteurMax) implements Bloc {
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la

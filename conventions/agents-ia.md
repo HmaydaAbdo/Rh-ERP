@@ -5,6 +5,55 @@ contribuent à leur développement. Elle fixe les règles communes ; chaque appl
 cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans `docs/` et ses
 ADR.
 
+## Choisir la famille de solution IA
+
+Le choix se fait à partir du problème, de son résultat attendu et de ses contraintes, avant de
+choisir un modèle, un fournisseur ou une bibliothèque. Cette démarche est réutilisable d'une
+application et d'un scénario à l'autre ; la décision concrète et ses preuves restent documentées
+dans le domaine concerné.
+
+Les termes ne forment pas tous une seule hiérarchie. Le Deep Learning est une famille de méthodes
+de Machine Learning fondées sur des réseaux neuronaux. L'IA générative décrit une capacité à
+produire du contenu nouveau ; elle s'appuie souvent sur le Deep Learning, mais désigne un objectif
+de système plutôt qu'un niveau supplémentaire de cette hiérarchie. Le traitement du langage, la
+vision par ordinateur, la parole, la recommandation, la recherche, l'optimisation et la planification
+décrivent des domaines ou des capacités, pas tous des sous-domaines de l'IA au même sens. Selon le
+besoin, ils peuvent s'appuyer sur des règles, du Machine Learning ou du Deep Learning.
+
+| Approche | À retenir lorsque… | Exemples de tâches |
+|---|---|---|
+| Règles, requêtes, recherche ou calcul déterministe | Les règles sont explicites et le résultat doit être exact, reproductible et vérifiable. C'est le point de comparaison initial, pas une capacité d'IA à ajouter par défaut. | Calcul métier, contrôles, filtres, recherche exacte, workflow déterministe |
+| Machine Learning classique | Des données représentatives permettent d'apprendre une relation et de prédire une cible mesurable ; les données sont souvent tabulaires ou les caractéristiques peuvent être décrites explicitement. | Classification, score, régression, prévision tabulaire, détection d'anomalies |
+| Deep Learning | Le problème porte sur des données complexes ou non structurées et les méthodes plus simples n'atteignent pas les critères attendus ; des données représentatives, un modèle adapté et les moyens d'entraînement ou d'inférence sont disponibles. | Image, audio, parole, texte complexe, perception multimodale |
+| IA générative | Le résultat demandé est un contenu nouveau ou une transformation souple d'une entrée : texte, image, audio ou code. Les réponses factuelles doivent être ancrées dans des sources vérifiables et contrôlées selon le risque. | Rédaction, résumé, extraction souple, dialogue, génération ou transformation multimodale |
+| Méthode ou domaine ciblé | Le besoin correspond mieux à une capacité ciblée, sans imposer un modèle génératif. Comparer aussi les méthodes déterministes et les méthodes apprises. | Traitement du langage, vision, reconnaissance vocale, recommandation, recherche, optimisation, planification ou apprentissage par renforcement |
+
+Pour chaque cas d'usage, suivre ces étapes :
+
+1. Décrire l'utilisateur, la décision ou tâche à accomplir, les entrées autorisées, la sortie attendue,
+   les erreurs acceptables et les conséquences d'une erreur.
+2. Définir une solution de référence simple. Si une règle, une requête, un calcul ou une recherche
+   existante atteint le niveau requis, conserver cette solution sans ajouter d'IA.
+3. Si une capacité apprise est nécessaire, identifier le type de tâche, les données disponibles,
+   leur qualité, leur représentativité, les étiquettes disponibles et la possibilité d'évaluer les
+   résultats. Ne pas retenir une méthode qui exige des données absentes ou de qualité insuffisante.
+4. Comparer les approches candidates sur des cas représentatifs et des critères définis avant
+   l'évaluation : qualité, erreurs critiques, explicabilité, latence, coût total, confidentialité,
+   sécurité, disponibilité et facilité de maintenance. Utiliser la méthode la plus simple qui
+   atteint les seuils métier ; ne pas présumer qu'un modèle plus complexe est plus exact.
+5. Prévoir la validation humaine, le repli vers un parcours sûr et la surveillance en exploitation
+   lorsque les erreurs peuvent avoir un impact important ou que les sorties sont probabilistes.
+6. Documenter dans le domaine le cas d'usage, les options évaluées, la solution retenue ou le motif
+   de ne pas utiliser d'IA, les données et permissions, les critères de réussite, les limites et le
+   comportement en cas d'échec. Les modèles génératifs ne deviennent pas une source de vérité pour
+   les calculs, les permissions ou les règles métier.
+
+Une décision qui introduit une nouvelle famille de modèles, un fournisseur d'inférence, un service
+transverse ou une architecture nouvelle suit le processus ADR et la validation prévus par
+[`architecture.md`](architecture.md). Pour les cas analogues dans d'autres applications, réutiliser
+la démarche et les critères ; ne pas réutiliser automatiquement le même modèle, les mêmes données ou
+la même décision technique.
+
 ## Deux usages distincts des agents
 
 ### Agents de développement
