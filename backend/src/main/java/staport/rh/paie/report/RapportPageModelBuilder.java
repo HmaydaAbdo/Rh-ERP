@@ -65,9 +65,6 @@ final class RapportPageModelBuilder {
     private static final double KPI_TITRE_HAUTEUR = 16;
     private static final double KPI_CARTE_HAUTEUR = 54;
 
-    /** Hauteur des cartes pour laquelle {@code RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART} a été dimensionnée au niveau chantier. */
-    private static final double KPI_CARTE_REFERENCE_CHANTIER = 36;
-
     /** Cartes KPI (rapport.css {@code .kpi-carte}) : largeur de la carte, marges intérieures + filets (16 + 1),
      * corps/interligne du libellé, espaces entre les lignes et marges haute + basse de la carte. */
     private static final double KPI_LARGEUR_CARTE = 126;
@@ -154,7 +151,6 @@ final class RapportPageModelBuilder {
     private static final double MARGE_SECURITE = 8;
 
     private static final int CHAPITRES_FIXES = 1;
-    private static final int FENETRE_HISTORIQUE_MOIS = 12;
 
     /** Nombre maximal de chantiers par page dans le graphique « Répartition par chantier » : au-delà, il est
      * réparti sur plusieurs pages, à parts égales. Avec 16 lignes, chacune garde environ 20 pt de hauteur (voir
@@ -185,15 +181,18 @@ final class RapportPageModelBuilder {
         for (int index = 0; index < chantiers.size(); index++) {
             ChantierBiVue chantier = chantiers.get(index);
             List<PageModel.Bloc> enteteChantier = blocsChantier(chantier, chapitresFixes + index);
+            pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
+            pages.add(new PageEnConstruction(niveauTexteChantier(chantier), List.of(
+                    new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"),
+                    new PageModel.BlocGraphiqueEvolution(
+                            chantier.evolutionMensuelle(), PageModel.GroupeEvolution.STC))));
+            pages.add(new PageEnConstruction(niveauTexteChantier(chantier), blocsRepartitionChantier(chantier)));
             List<EquipeBiVue> equipes = chantier.equipes();
             int premiereEquipeSeule = 0;
             if (!chantier.avecDetailEquipe() && !equipes.isEmpty()) {
-                // Pas de graphique par équipe : la section « reste » est le chantier entier. Elle suit directement les
-                // cartes KPI du chantier, sur la même page, sans répéter son titre ni ses indicateurs.
-                ajouterPagesEquipe(pages, chantier, equipes.get(0), enteteChantier, hauteurEnteteChantier(enteteChantier), true);
+                // La synthèse du chantier a déjà ses propres pages ; le détail continue sans répéter ses KPI.
+                ajouterPagesEquipe(pages, chantier, equipes.get(0), List.of(), 0, true);
                 premiereEquipeSeule = 1;
-            } else {
-                pages.add(new PageEnConstruction(niveauTexteChantier(chantier), enteteChantier));
             }
             for (EquipeBiVue equipe : equipes.subList(premiereEquipeSeule, equipes.size())) {
                 ajouterPagesEquipe(pages, chantier, equipe, List.of(), 0, false);
@@ -212,28 +211,18 @@ final class RapportPageModelBuilder {
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre("I — Vue d'ensemble"));
-        blocs.add(new PageModel.BlocPerimetre("Périmètre : " + synthese.perimetreMarches()));
-        blocs.add(new PageModel.BlocCouvertureHistorique(
-                synthese.evolutionMensuelle().size(), FENETRE_HISTORIQUE_MOIS));
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(),
                 synthese.stc(), synthese.stcMontant(), synthese.nombreChantiers(), true, true));
         blocs.add(kpi);
-        blocs.add(new PageModel.BlocTitreRubrique(1,
-                "Évolution de la masse salariale (DH) — fenêtre de " + FENETRE_HISTORIQUE_MOIS + " mois"));
+        blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.MesureEvolution.MASSE));
+                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF));
         pages.add(new PageEnConstruction("GLOBAL", blocs));
 
         List<PageModel.Bloc> blocsEvolution = new ArrayList<>();
-        blocsEvolution.add(new PageModel.BlocTitreRubrique(2, "Évolution mensuelle de l'effectif"));
+        blocsEvolution.add(new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"));
         blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.MesureEvolution.EFFECTIF));
-        blocsEvolution.add(new PageModel.BlocTitreRubrique(3, "Évolution mensuelle du STC en personnes"));
-        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.MesureEvolution.STC_PERSONNES));
-        blocsEvolution.add(new PageModel.BlocTitreRubrique(4, "Évolution mensuelle du STC en DH"));
-        blocsEvolution.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.MesureEvolution.STC_DH));
+                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.STC));
         pages.add(new PageEnConstruction("GLOBAL", blocsEvolution));
 
         ajouterPagesRepartitionGlobale(pages, synthese.repartitionChantier());
@@ -243,7 +232,7 @@ final class RapportPageModelBuilder {
         double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART;
         List<List<RepartitionBean>> tranches = repartirParPages(tous, hauteurMaxGraphique);
         List<PageModel.Bloc> premierePage = new ArrayList<>();
-        premierePage.add(new PageModel.BlocTitreRubrique(5, "Répartition par chantier"));
+        premierePage.add(new PageModel.BlocTitreRubrique(3, "Répartition par chantier"));
         premierePage.add(new PageModel.BlocGraphique(tranches.get(0), tous, hauteurMaxGraphique, true));
         pages.add(new PageEnConstruction("GLOBAL", premierePage));
 
@@ -298,37 +287,31 @@ final class RapportPageModelBuilder {
         return egales;
     }
 
-    /** Titre de chapitre, cartes KPI et — seulement si le détail par équipe est demandé — graphique de répartition
-     * par équipe : le contenu de tête d'un chantier. */
+    /** Première page d'analyse du chantier : titre, KPI avec variations et évolution masse/effectif. */
     private List<PageModel.Bloc> blocsChantier(ChantierBiVue chantier, int rang) {
         List<PageModel.Bloc> blocs = new ArrayList<>();
-        String chapitre = chapitreChantier(rang, chantier);
-        blocs.add(new PageModel.BlocTitreChapitre(chapitre));
-        PageModel.BlocKpi kpi = blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
-                chantier.stc(), chantier.stcMontant(), null, false, false));
-        blocs.add(kpi);
-        if (chantier.avecDetailEquipe()) {
-            // Le graphique cède la place que le titre ou les cartes prennent en plus au-dessus de lui
-            double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART
-                    - (hauteurTitreChapitre(chapitre) - TITRE_CHAPITRE_HAUTEUR)
-                    - (kpi.hauteurCarte() - KPI_CARTE_REFERENCE_CHANTIER);
-            blocs.add(new PageModel.BlocTitreSection("Répartition par équipe"));
-            blocs.add(new PageModel.BlocGraphique(chantier.repartitionEquipe(), hauteurMaxGraphique));
-        }
+        blocs.add(new PageModel.BlocTitreChapitre(chapitreChantier(rang, chantier)));
+        blocs.add(blocKpi(cartesKpi(chantier.masse(), chantier.effectif(),
+                chantier.stc(), chantier.stcMontant(), null, true, true)));
+        blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
+        blocs.add(new PageModel.BlocGraphiqueEvolution(
+                chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF));
         return blocs;
     }
 
-    /** Hauteur des blocs de tête d'un chantier (titre de chapitre + cartes KPI) posés avant la section « reste ». */
-    private double hauteurEnteteChantier(List<PageModel.Bloc> blocs) {
-        double hauteur = 0;
-        for (PageModel.Bloc bloc : blocs) {
-            if (bloc instanceof PageModel.BlocTitreChapitre titre) {
-                hauteur += hauteurTitreChapitre(titre.texte());
-            } else if (bloc instanceof PageModel.BlocKpi kpi) {
-                hauteur += hauteurKpi(kpi);
-            }
-        }
-        return hauteur;
+    private List<PageModel.Bloc> blocsRepartitionChantier(ChantierBiVue chantier) {
+        List<RepartitionBean> repartition = chantier.avecDetailEquipe()
+                ? chantier.repartitionEquipe()
+                : chantier.equipes().stream().findFirst().map(EquipeBiVue::repartitionFonction).orElse(List.of());
+        String titre = chantier.avecDetailEquipe() ? "Répartition par équipe" : "Répartition par fonction";
+        List<RepartitionBean> triee = repartition.stream().sorted((a, b) -> {
+            java.math.BigDecimal montantA = a.getMontant() == null ? java.math.BigDecimal.ZERO : a.getMontant();
+            java.math.BigDecimal montantB = b.getMontant() == null ? java.math.BigDecimal.ZERO : b.getMontant();
+            int comparaison = montantB.compareTo(montantA);
+            return comparaison != 0 ? comparaison : a.getLibelle().compareToIgnoreCase(b.getLibelle());
+        }).toList();
+        return List.of(new PageModel.BlocTitreRubrique(3, titre),
+                new PageModel.BlocGraphique(triee, RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART));
     }
 
     private double hauteurTitreChapitre(String texte) {
@@ -401,9 +384,8 @@ final class RapportPageModelBuilder {
 
     /** @param blocsEnTete blocs déjà posés en haut de la 1re page de la section (vide en général ; l'en-tête du
      * chantier quand la section « reste » le suit sur la même page), de hauteur {@code hauteurEnTete}
-     * @param fusionneeAuChantier vrai pour la section « reste » d'un chantier sans détail par équipe : elle couvre tout
-     * le chantier, dont le titre et les cartes KPI sont déjà dans {@code blocsEnTete} — elle ne répète ni son titre ni
-     * ses indicateurs et commence directement par le récap.
+     * @param fusionneeAuChantier vrai pour l'unique section de détail d'un chantier sans équipe sélectionnée ; le titre
+     * et les KPI du chantier sont déjà affichés dans ses pages d'analyse, cette section ne les répète pas.
      *
      * <p>Les lignes des tableaux n'ont pas une hauteur fixe (un texte trop long passe à la ligne, voir
      * {@link #hauteurLigneEmploye}) : tout est découpé d'après la hauteur cumulée des lignes. Le récap par fonction
@@ -544,7 +526,7 @@ final class RapportPageModelBuilder {
 
     private PageModel.BlocKpi cartesKpiEquipe(EquipeBiVue equipe) {
         return blocKpi(cartesKpi(equipe.masse(), equipe.effectif(), equipe.stc(), equipe.stcMontant(), null,
-                false, false));
+                true, true));
     }
 
     /** {@code " <montant> DH"} (espace de tête inclus, pour la concaténation après un libellé), ou chaîne vide

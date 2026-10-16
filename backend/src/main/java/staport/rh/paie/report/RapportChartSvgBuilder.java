@@ -72,9 +72,9 @@ final class RapportChartSvgBuilder {
 
     private static final List<Serie> SERIES = List.of(
             new Serie("Masse (DH)", "Masse", "#2563EB"),
-            new Serie("Effectif (personnes)", "Effectif", "#F59E0B"),
+            new Serie("Effectif (personnes)", "Effectif", "#D97706"),
             new Serie("STC (personnes)", "STC pers.", "#B91C1C"),
-            new Serie("STC (DH)", "STC DH", "#7F1D1D")
+            new Serie("STC (DH)", "STC DH", "#0F766E")
     );
 
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees) {

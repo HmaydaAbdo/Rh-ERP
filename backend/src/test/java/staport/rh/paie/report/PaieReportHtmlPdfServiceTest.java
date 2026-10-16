@@ -85,7 +85,17 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
             BufferedImage pageSynthese = new PDFRenderer(document).renderImage(1);
-            assertThat(nombrePixelsBleus(pageSynthese)).isGreaterThan(20);
+            assertThat(nombrePixelsBleus(pageSynthese))
+                    .as("la série masse salariale du graphique global est réellement rendue")
+                    .isGreaterThan(20);
+            String texte = new PDFTextStripper().getText(document);
+            assertThat(texte).contains("1. Évolution de la masse salariale et de l'effectif",
+                    "2. Évolution du STC — personnes et DH", "3. Répartition par chantier");
+            assertThat(texte).doesNotContain("Périmètre : Tous les marchés", "Historique disponible :", "12 mois");
+            BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(6);
+            assertThat(nombrePixelsBleus(repartitionFonction))
+                    .as("la répartition par fonction du chantier est réellement rendue")
+                    .isGreaterThan(20);
         }
     }
 
@@ -126,9 +136,9 @@ class PaieReportHtmlPdfServiceTest {
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         try (PDDocument document = PDDocument.load(pdf)) {
             assertThat(document.getNumberOfPages()).isGreaterThan(2);
-            BufferedImage pageChantier = new PDFRenderer(document).renderImage(3);
+            BufferedImage pageChantier = new PDFRenderer(document).renderImage(6);
             assertThat(nombrePixelsBleus(pageChantier))
-                    .as("pixels bleus du graphique par équipe rendu sur la page chantier")
+                    .as("pixels bleus du graphique par équipe rendu sur la page de répartition chantier")
                     .isGreaterThan(20);
         }
     }

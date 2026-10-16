@@ -109,17 +109,13 @@ class PaieBiReportBuilder {
         BigDecimal massePrecedente = precedent.isEmpty() ? null : sommer(precedent);
 
         List<Agregat> agregatChantier = agreger(courant, this::codeChantier);
-        List<Agregat> agregatFonction = agreger(courant, this::libelleFonction);
-
         SyntheseGlobaleVue synthese = new SyntheseGlobaleVue(
-                libellePerimetreMarches(requete),
                 kpiMontant(masseCourante, massePrecedente),
                 kpiEffectif(courant.size(), precedent.size(), !precedent.isEmpty()),
                 agregatChantier.size(),
                 (int) courant.stream().filter(ObservationStc::estStcOuSortie).count(),
                 montantStc(courant),
                 repartitionChantiers(agregatChantier, courant),
-                versRepartition(agregatFonction),
                 evolutions.global()
         );
 
@@ -140,15 +136,6 @@ class PaieBiReportBuilder {
                 filtresActifs(requete, courant),
                 synthese,
                 chantiers);
-    }
-
-    private String libellePerimetreMarches(PaieReportPdfRequestDto requete) {
-        List<Long> marches = requete.chantiersEffectifs();
-        if (marches == null || marches.isEmpty()) {
-            return "Tous les marchés";
-        }
-        long nombre = marches.stream().distinct().count();
-        return nombre + (nombre == 1 ? " marché sélectionné" : " marchés sélectionnés");
     }
 
     /** Sélection manuelle d'équipes à détailler pour ce chantier (voir

@@ -246,7 +246,7 @@ class PaieBiReportBuilderTest {
     }
 
     @Test
-    void construireDepuis_devraitRepartirMasseEtEffectifParChantierEtParFonction() {
+    void construireDepuis_devraitRepartirMasseEtEffectifParChantier() {
         Paie macon = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000");
         Paie operateur = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C068", "EQUIPE B", "3000");
 
@@ -257,11 +257,6 @@ class PaieBiReportBuilderTest {
                 .containsExactlyInAnyOrder(
                         org.assertj.core.groups.Tuple.tuple("C059", 1, 5000),
                         org.assertj.core.groups.Tuple.tuple("C068", 1, 3000));
-        assertThat(vue.synthese().repartitionFonction())
-                .extracting(RepartitionBean::getLibelle, RepartitionBean::getEffectif, r -> r.getMontant().intValue())
-                .containsExactlyInAnyOrder(
-                        org.assertj.core.groups.Tuple.tuple("MACON", 1, 5000),
-                        org.assertj.core.groups.Tuple.tuple("OPERATEUR", 1, 3000));
     }
 
     /** Demande de direction (2026-10-05) : le graphique de répartition par chantier porte le NOM du chantier, jamais son

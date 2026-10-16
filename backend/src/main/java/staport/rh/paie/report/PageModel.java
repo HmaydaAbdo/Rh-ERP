@@ -21,16 +21,8 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocTitreSection(String texte) implements Bloc {
     }
 
-    /** Rubrique globale numérotée et destinée à alimenter le futur sommaire avec son numéro de page. */
+    /** Rubrique numérotée à chaque niveau, destinée à alimenter le futur sommaire avec son numéro de page. */
     record BlocTitreRubrique(int numero, String texte) implements Bloc {
-    }
-
-    /** Périmètre des marchés utilisé par la synthèse globale. */
-    record BlocPerimetre(String texte) implements Bloc {
-    }
-
-    /** Nombre de mois réellement présents dans l'historique, comparé à la fenêtre maximale affichée. */
-    record BlocCouvertureHistorique(int moisDisponibles, int fenetreMois) implements Bloc {
     }
 
     /** Titre de section équipe (12pt, filet — "ÉQUIPE : CHAUFFEURS"), toujours suivi d'un
@@ -62,12 +54,12 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
         }
     }
 
-    enum MesureEvolution {
-        MASSE, EFFECTIF, STC_PERSONNES, STC_DH
+    enum GroupeEvolution {
+        MASSE_EFFECTIF, STC
     }
 
-    /** Graphique d'évolution globale ; sa rubrique numérotée précédente est collectable pour le sommaire. */
-    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, MesureEvolution mesure) implements Bloc {
+    /** Graphique mensuel à deux séries et deux axes Y explicitement associés à leurs unités. */
+    record BlocGraphiqueEvolution(List<RepartitionBean> donnees, GroupeEvolution groupe) implements Bloc {
     }
 
     /** Tranche du tableau employé d'une section — {@code avecEnTeteColonnes} vrai uniquement sur la
