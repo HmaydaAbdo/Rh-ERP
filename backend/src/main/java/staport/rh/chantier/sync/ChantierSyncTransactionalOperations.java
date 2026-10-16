@@ -30,12 +30,13 @@ public class ChantierSyncTransactionalOperations {
      */
     @Transactional
     public boolean creerSiAbsent(ChantierErpDto record) {
-        if (repository.existsByCodeIgnoreCase(record.code())) {
+        String code = record.code().strip();
+        if (repository.existsByCodeIgnoreCase(code)) {
             return false;
         }
 
         Chantier chantier = new Chantier();
-        chantier.setCode(record.code());
+        chantier.setCode(code);
         chantier.setDesignation(record.designation());
         chantier.setSourceErp(true);
         chantier.setActif(true);

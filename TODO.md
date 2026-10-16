@@ -65,11 +65,12 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 À instruire dans cette tâche :
 
-- **Avant V22–V25** : vérifier les doublons selon les normalisations imposées par les index :
-  `upper(cin)`, `upper(fonction.libelle)`, `upper(chantier.code)`, puis
-  `upper(btrim(equipe.code))` et `upper(btrim(equipe.libelle))`. Les migrations échouent
-  volontairement si un tel doublon existe ; aucune donnée n'a été consultée ou modifiée dans le
-  cadre du contrôle de conformité.
+- **V27 — unicité des identifiants** : vérifier les collisions avec `UPPER(BTRIM(...))` avant
+  d'appliquer l'index aux CIN, libellés Fonction, codes Chantier, identifiants Équipe, username,
+  email et noms de rôle. V27 échoue explicitement en cas de collision. Les contraintes `CHECK`
+  `NOT VALID` bloquent les nouvelles valeurs espacées ; les anciennes valeurs restent à inventorier
+  puis à nettoyer avant validation complète des contraintes. Le prérequis `C157A` ci-dessous n'est
+  pas encore résolu.
 
 - **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
   équipe en base), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
@@ -90,8 +91,9 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   puis décider avec la RH s'il faut corriger les données ou différencier les libellés.
 - **Libellés des équipes `A`, `LABO`, `ASPHALET`, `8`** (créées avec libellé = code le 2026-10-03) : à
   compléter avec la RH via l'écran Équipes.
-- **Empêcher les quasi-doublons à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs « THECNICIEN DE
-  QUALITE ») : seule l'égalité exacte (hors casse) est aujourd'hui bloquée.
+- **Traiter les quasi-doublons sémantiques à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs
+  « THECNICIEN DE QUALITE ») : la normalisation trim/casse de V27 ne détecte pas les fautes de frappe ;
+  toute fusion ou règle de similarité doit être instruite avec la RH.
 
 ---
 

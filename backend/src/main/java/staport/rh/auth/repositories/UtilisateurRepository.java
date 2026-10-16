@@ -13,14 +13,15 @@ import java.util.Optional;
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long>, JpaSpecificationExecutor<Utilisateur> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select u from Utilisateur u where u.username = :username")
+    @Query("select u from Utilisateur u where upper(trim(u.username)) = upper(trim(:username))")
     Optional<Utilisateur> findByUsernameForUpdate(@Param("username") String username);
 
-    boolean existsByUsername(String username);
+    boolean existsByUsernameIgnoreCase(String username);
 
-    boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
 
-    Optional<Utilisateur> findByEmail(String email);
+    @Query("select u from Utilisateur u where upper(trim(u.email)) = upper(trim(:email))")
+    Optional<Utilisateur> findByEmail(@Param("email") String email);
 
     boolean existsByRoles_Nom(String nom);
 
