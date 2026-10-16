@@ -66,8 +66,15 @@ Ces pistes ne sont pas des exigences validées de la prochaine version. Elles do
    quantités sont vides ou zéro, le graphique matériel disparaît et la liste reste rubrique 4. Le wizard ne garde
    aucune quantité matérielle d'un export précédent : chaque ouverture présente des champs vides.
 
-**État :** la vue d'ensemble et le niveau chantier sont implémentés. L'extension équipe et le graphique matériel
-associé sont en cours dans la PR. Les tests backend ciblés, les contrôles CI et la revue visuelle du PDF restent à confirmer.
+**Mise en page et densité (2026-10-16) :** les deux graphiques d'évolution sont regroupés sur la même page
+aux niveaux global, chantier et équipe. Les répartitions par fonction et matériel partagent la page d'équipe
+quand leur contenu tient lisiblement ; la liste des employés utilise le bas de la dernière page d'analyse dès
+qu'un minimum de lignes peut y être ajouté. Les graphiques d'évolution déplacent les valeurs des mois extrêmes
+vers l'intérieur de la zone de tracé et espacent les étiquettes proches. Les pages de répartition restent
+séparées lorsque les catégories ne tiennent pas sans réduire leur lisibilité.
+
+**État :** l'implémentation et la documentation sont prêtes dans la branche de travail. Les tests backend
+ciblés et la revue visuelle du PDF restent à confirmer ; les contrôles CI seront suivis sur la PR.
 
 ## Préparer la nouvelle version
 

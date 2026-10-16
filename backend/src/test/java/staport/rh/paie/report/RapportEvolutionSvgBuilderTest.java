@@ -18,7 +18,8 @@ class RapportEvolutionSvgBuilderTest {
                 new RepartitionBean("1/2026", 10, new BigDecimal("90000"), 1, new BigDecimal("10000")),
                 new RepartitionBean("2/2026", 12, new BigDecimal("120000"), 0, BigDecimal.ZERO));
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.MASSE_EFFECTIF);
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select(".evolution-container svg")).hasSize(1);
         assertThat(corps.select(".evolution-container path")).hasSize(2);
@@ -39,7 +40,8 @@ class RapportEvolutionSvgBuilderTest {
                 new RepartitionBean("1/2026", 10, new BigDecimal("90000"), 2, new BigDecimal("10000")),
                 new RepartitionBean("2/2026", 12, new BigDecimal("120000"), 1, new BigDecimal("18000")));
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.STC);
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.STC,
+                RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select(".evolution-container path").eachAttr("stroke"))
                 .containsExactly("#B91C1C", "#0F766E");
@@ -53,9 +55,34 @@ class RapportEvolutionSvgBuilderTest {
     void ajouterGraphique_sansMoisNaffichePasUneCourbeNulle() {
         Element corps = Document.createShell("").body();
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, List.of(), PageModel.GroupeEvolution.MASSE_EFFECTIF);
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, List.of(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select("svg")).isEmpty();
         assertThat(corps.text()).contains("Aucune donnée historique disponible");
+    }
+
+    @Test
+    void ajouterGraphique_decaleLesEtiquettesDesAxesEtSepareLesSeriesAuxMemesNiveaux() {
+        Element corps = Document.createShell("").body();
+        List<RepartitionBean> donnees = List.of(
+                new RepartitionBean("8/2026", 1, BigDecimal.ZERO, 50, new BigDecimal("100000")),
+                new RepartitionBean("9/2026", 1, BigDecimal.ZERO, 50, new BigDecimal("100000")));
+
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.STC,
+                RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
+
+        for (int index = 0; index < donnees.size(); index++) {
+            List<Element> labels = corps.select("text.evolution-valeur[data-index=" + index + "]");
+            assertThat(labels).hasSize(2);
+            double y0 = Double.parseDouble(labels.get(0).attr("y"));
+            double y1 = Double.parseDouble(labels.get(1).attr("y"));
+            assertThat(Math.abs(y0 - y1)).isGreaterThanOrEqualTo(9);
+        }
+
+        List<Element> premiers = corps.select("text.evolution-valeur[data-index=0]");
+        List<Element> derniers = corps.select("text.evolution-valeur[data-index=1]");
+        assertThat(premiers).allSatisfy(label -> assertThat(Double.parseDouble(label.attr("x"))).isGreaterThan(82));
+        assertThat(derniers).allSatisfy(label -> assertThat(Double.parseDouble(label.attr("x"))).isLessThan(720));
     }
 }
