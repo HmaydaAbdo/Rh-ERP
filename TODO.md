@@ -48,8 +48,10 @@ propre rôle. Livrée par étapes, une PR par étape :
 
 1. **Fait (2026-10-17)** : dépendance `ol` ajoutée et compatibilité vérifiée (Angular 22, TS 6, zoneless, build,
    audit, licences) — voir [ADR 0006](docs/adr/0006-openlayers-carte-chantiers.md).
-2. Configuration du fond de carte (URL isolée, attribution, emprise du Maroc) et décision sur les tuiles en production
-   (`Referrer-Policy: no-referrer` de `nginx.conf` incompatible avec les conditions d'usage d'OSM).
+2. **Fait (2026-10-17)** : configuration du fond (CARTO Positron), de l'attribution et de l'emprise du Maroc, dans
+   `carte.config.ts` — voir [ADR 0007](docs/adr/0007-fond-de-carte-carto.md) et [docs/chantier/carte.md](docs/chantier/carte.md).
+   **Bloquant avant la production** : obtenir et valider une clé et les conditions commerciales de CARTO (ou héberger les
+   tuiles), décider comment la clé est fournie à un frontend statique, confirmer l'emprise du Maroc.
 3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
    démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
    tant qu'ils ne sont pas gérés.
