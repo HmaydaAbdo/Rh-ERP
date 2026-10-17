@@ -233,6 +233,7 @@
 
   &__mesure {
     display: inline-flex;
+    flex-wrap: wrap;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
