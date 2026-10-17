@@ -1,4 +1,4 @@
-import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, mouvementReduit, police, valeursSurPoints } from './paie-chart-theme';
+import { animationGraphique, couleurEvolution, couleurMesure, grille, infobulle, jeton, libelleEvolutionMesure, libelleMesure, mouvementReduit, police, valeursSurPoints } from './paie-chart-theme';
 
 describe('paie-chart-theme', () => {
   const racine = document.documentElement;
@@ -6,6 +6,8 @@ describe('paie-chart-theme', () => {
   afterEach(() => {
     racine.style.removeProperty('--chart-1');
     racine.style.removeProperty('--chart-2');
+    racine.style.removeProperty('--chart-3');
+    racine.style.removeProperty('--chart-4');
     racine.style.removeProperty('--font-sans');
     racine.style.removeProperty('--color-border');
     vi.restoreAllMocks();
@@ -35,6 +37,16 @@ describe('paie-chart-theme', () => {
     it('nomme chaque mesure comme les infobulles et les tableaux de données', () => {
       expect(libelleMesure('masse')).toBe('Masse (DH)');
       expect(libelleMesure('effectif')).toBe('Bulletins');
+    });
+
+    it('distingue les deux unités STC dans l’évolution', () => {
+      racine.style.setProperty('--chart-3', 'green');
+      racine.style.setProperty('--chart-4', 'goldenrod');
+
+      expect(couleurEvolution('stc')).toBe('green');
+      expect(couleurEvolution('stcMontant')).toBe('goldenrod');
+      expect(libelleEvolutionMesure('stc')).toBe('STC (personnes)');
+      expect(libelleEvolutionMesure('stcMontant')).toBe('STC (DH)');
     });
 
     it('fournit le plugin qui affiche la valeur de chaque point', () => {
