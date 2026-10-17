@@ -15,7 +15,7 @@ import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtr
 import { PaieAnalytique, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police } from './paie-chart-theme';
+import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police, valeursSurPoints } from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 /** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories visibles. */
@@ -39,6 +39,7 @@ interface Tuile {
 interface Graphique<T extends 'bar' | 'line'> {
   data: ChartData<T>;
   options: ChartOptions<T>;
+  plugins?: import('chart.js').Plugin<T>[];
 }
 
 /** Les éléments strictement positifs pour la mesure choisie, du plus grand au plus petit. */
@@ -252,7 +253,8 @@ export class PaieAnalytiqueComponent {
             border: { display: false }
           }
         }
-      }
+      },
+      plugins: [valeursSurPoints()]
     };
   });
 
