@@ -15,7 +15,7 @@ import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtr
 import { PaieAnalytique, PaieChantierMasse, PaieEquipeMasse, PaieFonctionMasse, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police, valeursSurPoints } from './paie-chart-theme';
+import { animationGraphique, couleurEvolution, couleurMesure, grille, infobulle, jeton, libelleEvolutionMesure, libelleMesure, MesureEvolution, MesureGraphique, police, valeursSurPoints } from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 /** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories visibles. */
@@ -103,7 +103,7 @@ export class PaieAnalytiqueComponent {
   readonly donnees = signal<PaieAnalytique | null>(null);
   readonly chargement = signal(false);
 
-  readonly mesureEvolution = signal<Mesure>('masse');
+  readonly mesureEvolution = signal<MesureEvolution>('masse');
   readonly mesureChantiers = signal<Mesure>('masse');
   readonly mesureEquipes = signal<Mesure>('masse');
   readonly mesureFonctions = signal<Mesure>('masse');
@@ -115,7 +115,9 @@ export class PaieAnalytiqueComponent {
   readonly colonnesEvolution = new ColumnState([
     { field: 'mois', header: 'Mois' },
     { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
-    { field: 'effectif', header: 'Bulletins', align: 'text-right' }
+    { field: 'effectif', header: 'Effectif (personnes)', align: 'text-right' },
+    { field: 'stc', header: 'STC (personnes)', align: 'text-right' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-right' }
   ]);
   readonly colonnesTranches = new ColumnState([
     { field: 'tranche', header: 'Tranche (DH)' },
@@ -141,6 +143,7 @@ export class PaieAnalytiqueComponent {
 
   readonly libellePeriode = libellePeriode;
   readonly libelleMesure = libelleMesure;
+  readonly libelleEvolutionMesure = libelleEvolutionMesure;
   readonly formaterMontant = formaterMontant;
   readonly formaterPart = formaterPart;
 
@@ -309,14 +312,15 @@ export class PaieAnalytiqueComponent {
   /**
    * Tous les mois qui ont de la paie sur le périmètre, du plus ancien au plus récent ; le mois analysé est mis en évidence
    * (grand repère cerclé de la couleur de la carte). **Une seule mesure, un seul axe** : la masse et les bulletins n'ont pas la
-   * même échelle, ils ne partagent jamais un graphique — l'utilisateur choisit celle qu'il lit.
+   * même échelle, ils ne partagent jamais un graphique — l'utilisateur choisit celle qu'il lit. Les STC sont disponibles
+   * dans leurs deux unités : personnes et DH.
    */
   readonly graphiqueEvolution = computed<Graphique<'line'>>(() => {
     this.theme.theme();
     const donnees = this.donnees();
     const evolution = donnees?.evolution ?? [];
     const mesure = this.mesureEvolution();
-    const couleur = couleurMesure(mesure);
+    const couleur = couleurEvolution(mesure);
     const rayons = evolution.map((e) => (e.periode === donnees?.periode ? 8 : 4));
     const texte = jeton('--color-text-muted');
     return {
@@ -324,7 +328,7 @@ export class PaieAnalytiqueComponent {
         labels: evolution.map((e) => libellePeriode(e.periode)),
         datasets: [
           {
-            label: libelleMesure(mesure),
+            label: libelleEvolutionMesure(mesure),
             data: evolution.map((e) => e[mesure]),
             borderColor: couleur,
             backgroundColor: couleur,
@@ -348,7 +352,7 @@ export class PaieAnalytiqueComponent {
           tooltip: {
             ...infobulle(),
             callbacks: {
-              label: (element) => `${libelleMesure(mesure)} : ${mesure === 'masse' ? formaterMontant(Number(element.parsed.y)) : element.parsed.y}`
+              label: (element) => `${libelleEvolutionMesure(mesure)} : ${mesure === 'masse' || mesure === 'stcMontant' ? formaterMontant(Number(element.parsed.y)) : FORMAT_ENTIER.format(Number(element.parsed.y))}`
             }
           }
         },
@@ -362,7 +366,7 @@ export class PaieAnalytiqueComponent {
           }
         }
       },
-      plugins: [valeursSurPoints(mesure === 'masse' ? formaterMontant : (valeur) => FORMAT_ENTIER.format(valeur))]
+      plugins: [valeursSurPoints(mesure === 'masse' || mesure === 'stcMontant' ? formaterMontant : (valeur) => FORMAT_ENTIER.format(valeur))]
     };
   });
 
@@ -395,8 +399,8 @@ export class PaieAnalytiqueComponent {
     };
   });
 
-  /** Les lignes des tableaux de données : l'alternative accessible au dessin, deux mesures côte à côte (un tableau n'a pas d'échelle). */
-  readonly lignesEvolution = computed(() => (this.donnees()?.evolution ?? []).map((e) => ({ mois: libellePeriode(e.periode), masse: e.masse, effectif: e.effectif })));
+  /** Les lignes des tableaux de données : l'alternative accessible au dessin, toutes les mesures côte à côte (un tableau n'a pas d'échelle). */
+  readonly lignesEvolution = computed(() => (this.donnees()?.evolution ?? []).map((e) => ({ mois: libellePeriode(e.periode), masse: e.masse, effectif: e.effectif, stc: e.stc, stcMontant: e.stcMontant })));
   readonly lignesTranches = computed(() => (this.donnees()?.tranches ?? []).map((t) => ({ tranche: this.libelleTranche(t), effectif: t.effectif })));
 
   readonly qualite = computed(() => {
