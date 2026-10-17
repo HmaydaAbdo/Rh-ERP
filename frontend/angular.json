@@ -23,7 +23,12 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "maplibre-gl-worker.mjs",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "carte"
+              }
             ],
             "styles": [
               "@fontsource/ibm-plex-sans/latin-400.css",
@@ -62,7 +67,24 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "assets": [
+                "src/assets",
+                {
+                  "glob": "maplibre-gl-worker.mjs",
+                  "input": "node_modules/maplibre-gl/dist",
+                  "output": "carte"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "carte-fond",
+                  "output": "carte/fond",
+                  "ignore": [
+                    ".gitignore",
+                    "README.md"
+                  ]
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -105,7 +127,8 @@
             "coverageExclude": [
               "src/app/**/*.spec.ts",
               "src/app/shared/testing/**/*.ts"
-            ]
+            ],
+            "runnerConfig": "vitest-base.config.mts"
           }
         }
       }

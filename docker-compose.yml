@@ -186,6 +186,10 @@ services:
         condition: service_healthy
     networks:
       - web-net
+    volumes:
+      # Fond de carte auto-hébergé (archive PMTiles du Maroc, polices, icônes), produit par
+      # scripts/carte/preparer-fond-maroc.sh ; lecture seule, hors de l'image (plusieurs centaines de Mo).
+      - ${CARTE_FOND_DIR:-./carte-fond}:/usr/share/nginx/html/carte/fond:ro
     ports:
       # Lié à 127.0.0.1 : seul nginx outer (sur ce même serveur, géré séparément) s'y connecte ;
       # jamais exposé directement à Internet (conventions/security.md).

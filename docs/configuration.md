@@ -61,6 +61,7 @@ seul par Flyway s'il n'existe pas.
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |
 | `BACKUP_TIME_UTC`, `BACKUP_RETENTION_DAYS` | Heure quotidienne UTC (`02:00`) et conservation des archives (`30` jours) ; le service de backup utilise le compte propriétaire PostgreSQL pour dumper la base et les rôles |
 | `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Ports publiés, **liés à `127.0.0.1`** (jamais exposés à Internet) |
+| `CARTE_FOND_DIR` | Dossier de l'hôte qui contient le fond de carte auto-hébergé, monté en lecture seule dans le frontend (défaut `./carte-fond`, voir [chantier/carte.md](chantier/carte.md)) |
 | `CHANTIER_SYNC_BASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM` | Transmises telles quelles au backend |
 
 Variable du frontend (développement) : `BACKEND_URL` (défaut `http://localhost:8080`), lue par
