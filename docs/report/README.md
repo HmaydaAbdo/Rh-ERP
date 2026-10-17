@@ -421,14 +421,14 @@ roulage) — c'est la seule mesure qui représente la masse de paie réelle de l
 | Effectif | `COUNT(*)` | Global / chantier / section équipe | Écart en personnes affiché sous le KPI à chaque niveau |
 | STC / sortie (DH) | `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / chantier / section | Non |
 | Nombre de chantiers | `COUNT DISTINCT` | Global | Non — seul indicateur global conservé sur la déclinaison par chantier |
-| Évolution mensuelle de la masse et de l'effectif | `SUM(salaireTotal)` et `COUNT(*)` par mois disponible, avec une fenêtre de calcul maximale de 12 mois | Global / chantier | Graphique à deux séries et axes explicitement libellés ; mois réellement disponibles seulement ; la limite n'est pas affichée ; global en première page, chantier en première page d'analyse |
-| Évolution mensuelle du STC (personnes et DH) | `COUNT(ObservationStc.estStcOuSortie)` et `SUM(salaireTotal)` des lignes STC par mois disponible | Global / chantier | Graphique à deux séries et axes explicitement libellés ; global et chantier avant leur répartition |
+| Masse salariale et montants des STC (DH) | `SUM(salaireTotal)` et `SUM(salaireTotal)` des lignes STC par mois disponible, avec une fenêtre maximale de 12 mois | Global / chantier / équipe sélectionnée | Graphique à deux séries en DH et échelle Y commune ; mois réellement disponibles seulement ; global en première page d'analyse |
+| Effectif rémunéré et sorties du personnel (personnes) | `COUNT(*)` et `COUNT(ObservationStc.estStcOuSortie)` par mois disponible | Global / chantier / équipe sélectionnée | Graphique à deux séries en personnes et échelle Y commune ; global et chantier avant leur répartition |
 | Masse/Effectif/STC (personnes et DH) par chantier | `SUM(salaireTotal)`/`COUNT`/`COUNT(ObservationStc)`/`SUM(salaireTotal STC)` groupés par chantier | Global | Non — 1 seul graphique à 4 séries groupées, titré « Répartition par chantier » — voir « Visualisations » |
 | Répartition par fonction | `SUM(salaireTotal)`/`COUNT`/STC groupés par fonction | Chantier sans équipe sélectionnée | Graphique à barres groupées, mêmes quatre indicateurs, légende, couleurs et valeurs que les répartitions globales |
 | Effectif/STC par fonction (tableau récap) | `COUNT`/`COUNT(ObservationStc)` groupés par fonction | Chaque section (équipe détaillée ou "reste") | Non — un tableau (jamais un graphique), voir « Lignes de résumé et tableau récap » |
 | Répartition par équipe (avec Sans équipe) | `SUM(salaireTotal)`/`COUNT`/STC groupés par équipe | Chantier ayant au moins une équipe sélectionnée | Graphique à barres groupées pour toutes les équipes réelles du chantier, y compris celles qui ne sont pas détaillées |
 | STC / sortie (personnes et DH) | `COUNT` et `SUM(salaireTotal)` des lignes où `ObservationStc.estStcOuSortie` | Global / Chantier / Section | Non — deux KPI à chaque niveau et séries dédiées de chaque `<barChart>` |
-| Évolutions mensuelles (fenêtre glissante ≤ 12 mois) | `SUM(salaireTotal)`, `COUNT(*)`, `COUNT(ObservationStc.estStcOuSortie)` et `SUM(salaireTotal STC)` groupés par `periode`, filtrés par les marchés sélectionnés | Global / chantier | Rubrique 1 : masse et effectif ; rubrique 2 : STC personnes et DH ; rubrique 3 : répartition. Seuls les mois disponibles sont tracés. |
+| Évolutions mensuelles (fenêtre glissante ≤ 12 mois) | `SUM(salaireTotal)`, `COUNT(*)`, `COUNT(ObservationStc.estStcOuSortie)` et `SUM(salaireTotal STC)` groupés par `periode`, filtrés par les marchés sélectionnés | Global / chantier / équipe sélectionnée | Rubrique 1 : montants en DH ; rubrique 2 : effectifs et sorties en personnes ; chaque graphique utilise une seule échelle Y commune. Seuls les mois disponibles sont tracés. |
 
 Pas de KPI dupliqué : chaque carte/graphique répond à une question différente (jamais deux façons de
 montrer le même montant). La répartition par fonction est affichée au niveau chantier seulement quand
@@ -535,14 +535,15 @@ Section → Employé : chaque niveau au-dessus du dernier résume, seul le derni
    passage de découverte, contrairement à l'ancien pipeline JasperReports). Le **pied de page**
    porte la même information (texte discret, aligné à gauche à côté de la pagination).
 3. **I — Vue d'ensemble** : les KPI (masse courante, masse précédente, effectif, nombre de chantiers et STC en
-   personnes/DH), puis les rubriques **1. Évolution de la masse salariale et de l'effectif** et **2. Évolution
-   du STC — personnes et DH**. Les données sont limitées en interne à 12 mois au maximum, mais cette limite
-   n'est pas affichée ; seuls les mois réellement disponibles sont tracés. Les points sont projetés vers les axes, les valeurs sont lisibles,
-   et chaque axe porte son unité et sa propre échelle.
+   personnes/DH), puis les rubriques **1. Masse salariale et montants des STC (DH)** et **2. Effectif rémunéré
+   et sorties du personnel (personnes)**. Les données sont limitées en interne à 12 mois au maximum, mais cette
+   limite n'est pas affichée ; seuls les mois réellement disponibles sont tracés. Chaque graphique porte une seule
+   unité et une seule échelle Y commune à ses deux séries.
 4. La rubrique **3. Répartition par chantier** commence après les deux pages d'évolution. Elle garde les quatre
    séries (masse, effectif, STC personnes et STC DH), leur légende et leur code couleur. Au-delà de 16 chantiers,
    elle continue sur une ou plusieurs pages « Répartition par chantier (suite) » — voir « Visualisations ».
-5. Chaque chapitre chantier reprend les rubriques **1. Masse salariale et effectif**, **2. STC personnes et DH**,
+5. Chaque chapitre chantier reprend les rubriques **1. Masse salariale et montants des STC (DH)**,
+   **2. Effectif rémunéré et sorties du personnel (personnes)**,
    puis **3. Répartition**. Cette dernière montre toutes les équipes du chantier si au moins une équipe est
    sélectionnée dans l'assistant ; sinon elle montre la répartition par fonction. Les graphiques de répartition
    partagent le même style, les mêmes quatre indicateurs, couleurs et colonnes de valeurs.
@@ -558,8 +559,8 @@ JasperReports, dont l'aplatissement n'a plus d'utilité une fois la pagination p
 
 ### Vue détaillée d'un chantier
 
-Chaque chantier occupe trois pages d'analyse avant ses pages de détail : KPI et rubrique 1 (masse/effectif),
-rubrique 2 (STC personnes/DH), puis rubrique 3 (répartition). Les titres et les trois rubriques reprennent
+Chaque chantier occupe trois pages d'analyse avant ses pages de détail : KPI et rubrique 1 (montants en DH),
+rubrique 2 (effectifs et sorties en personnes), puis rubrique 3 (répartition). Les titres et les trois rubriques reprennent
 la même numérotation et les mêmes conventions que la vue d'ensemble. Les cartes comparables affichent leur
 variation au mois précédent ; si aucune paie précédente n'existe sur le périmètre, l'écart indique qu'il est
 indisponible. La carte « Masse mois précédent » reste la valeur de référence utilisée pour l'écart de masse.
@@ -735,8 +736,8 @@ son analyse dédiée avant sa liste d'employés :
 1. Le récap Fonction/Effectif/STC conserve les lignes de CETTE section groupées par fonction.
 2. Le parc matériel est repris du wizard d'export pour C168/CH et C168/OP.
 
-Pour chaque équipe sélectionnée, les rubriques sont : 1) évolution masse/effectif, 2) évolution
-STC personnes/DH, 3) répartition par fonction en graphique à quatre séries, 4) parc matériel en
+Pour chaque équipe sélectionnée, les rubriques sont : 1) masse salariale et montants des STC (DH),
+2) effectif rémunéré et sorties du personnel (personnes), 3) répartition par fonction en graphique à quatre séries, 4) parc matériel en
 graphique à une série lorsque le wizard a fourni au moins une quantité, puis 5) liste des employés.
 Une quantité nulle est affichée comme zéro ; une quantité absente est omise. Sans valeur matérielle,
 la liste des employés est directement la rubrique 4. Le graphique fonction suit le style horizontal
@@ -820,20 +821,21 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
 > **Historique** : ce graphique a connu plusieurs conventions antérieures côté JasperReports, toutes
 > abandonnées sur demande explicite de direction — barres verticales à série unique, puis colonnes
 > verticales empilées. **Plus aucun graphique empilé n'existe dans ce document.** Les évolutions
-> mensuelles utilisent deux axes Y indépendants uniquement pour les paires validées (masse/effectif
-> et STC personnes/DH) : unités, graduations, couleurs et valeurs restent associées à chaque série.
+> mensuelles regroupent désormais les indicateurs par unité afin d'éviter les doubles axes Y.
 
 ### Évolutions mensuelles
 
 Aux niveaux global et chantier, ainsi qu'au niveau de chaque équipe sélectionnée, les rubriques 1 et 2
-partagent la même page d'analyse. La rubrique 1 trace ensemble la masse salariale (`DH`) et l'effectif
-(`personnes`) ; la rubrique 2 trace le STC en personnes et en DH. Chaque paire partage les mêmes mois
-sur une fenêtre finissant à la période du rapport et limitée aux 12 derniers mois. Seuls les mois
+partagent la même page d'analyse. La rubrique 1, **Masse salariale et montants des STC (DH)**, trace
+les deux montants en DH ; la rubrique 2, **Effectif rémunéré et sorties du personnel (personnes)**,
+trace les deux effectifs en personnes. Chaque paire partage les mêmes mois sur une fenêtre finissant à
+la période du rapport et limitée aux 12 derniers mois. Seuls les mois
 disponibles sont affichés ; aucun mois sans paie n'est inventé. La limite de 12 mois reste une règle de
 calcul interne et n'est affichée ni dans le titre ni ailleurs dans le rapport.
 
-Chaque indicateur conserve une couleur stable, une légende explicite, un axe Y avec son unité et sa propre
-échelle. Les mois au format `M/YYYY`, les valeurs numériques exactes et les projections en pointillés vers
+Chaque indicateur conserve une couleur stable et une légende explicite. Les deux séries de chaque graphique
+partagent une échelle Y commune, exprimée dans l'unité indiquée sur l'unique axe. Les mois au format `M/YYYY`,
+les valeurs numériques exactes et les projections en pointillés vers
 les axes sont rendus dans le SVG. Les valeurs des deux séries sont espacées verticalement quand leurs
 étiquettes se rapprochent ; celles des premier et dernier mois sont décalées vers l'intérieur du tracé pour
 ne pas recouvrir les graduations des axes. Les marques, lignes de grille et étiquettes restent lisibles dans le PDF.

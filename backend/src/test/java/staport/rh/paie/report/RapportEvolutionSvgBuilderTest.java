@@ -18,44 +18,59 @@ class RapportEvolutionSvgBuilderTest {
                 new RepartitionBean("1/2026", 10, new BigDecimal("90000"), 1, new BigDecimal("10000")),
                 new RepartitionBean("2/2026", 12, new BigDecimal("120000"), 0, BigDecimal.ZERO));
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.MASSE_EFFECTIF,
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.MONTANTS,
                 RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select(".evolution-container svg")).hasSize(1);
         assertThat(corps.select(".evolution-container path")).hasSize(2);
         assertThat(corps.select(".evolution-container circle[stroke]")).hasSize(4);
         assertThat(corps.text().replace('\u00A0', ' '))
-                .contains("1/2026", "2/2026", "120 000", "Masse salariale (DH)", "Effectif (personnes)");
+                .contains("1/2026", "2/2026", "120 000", "Masse salariale · DH", "Montants des STC · DH");
         assertThat(corps.select(".evolution-container svg").attr("aria-label"))
-                .contains("Masse salariale et Effectif");
+                .contains("Masse salariale et Montants des STC");
         assertThat(corps.select(".evolution-container line[stroke-dasharray='2 2']")).hasSize(8);
+        assertThat(corps.select(".evolution-container text").eachText())
+                .contains("DH").doesNotContain("personnes");
+        assertThat(corps.select(".evolution-container svg text[x^=74]")).hasSize(5);
+        assertThat(corps.select(".evolution-container line[stroke='#40566B']")).hasSize(2);
         assertThat(corps.select(".evolution-container path").eachAttr("stroke"))
-                .containsExactly("#2563EB", "#D97706");
+                .containsExactly("#2563EB", "#0F766E");
     }
 
     @Test
-    void ajouterGraphique_stcDistingueLesDeuxEchellesEtConserveLesValeursExactes() {
+    void ajouterGraphique_effectifsRegroupeLesPersonnesEtUtiliseUneEchelleCommune() {
         Element corps = Document.createShell("").body();
         List<RepartitionBean> donnees = List.of(
                 new RepartitionBean("1/2026", 10, new BigDecimal("90000"), 2, new BigDecimal("10000")),
                 new RepartitionBean("2/2026", 12, new BigDecimal("120000"), 1, new BigDecimal("18000")));
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.STC,
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.EFFECTIFS,
                 RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select(".evolution-container path").eachAttr("stroke"))
-                .containsExactly("#B91C1C", "#0F766E");
+                .containsExactly("#D97706", "#B91C1C");
         assertThat(corps.text().replace('\u00A0', ' '))
-                .contains("STC (personnes)", "STC (DH)", "18 000", "2/2026");
+                .contains("Effectif rémunéré · personnes", "Sorties du personnel (STC) · personnes", "12", "2/2026");
         assertThat(corps.select(".evolution-container svg").attr("aria-label"))
-                .contains("STC et STC");
+                .contains("Effectif rémunéré et Sorties du personnel");
+        assertThat(corps.select(".evolution-container text").eachText())
+                .contains("personnes").doesNotContain("DH");
+        assertThat(corps.select(".evolution-container svg text[x^=74]")).hasSize(5);
+        // L'effectif maximal (12) fixe aussi la position de 6 sorties à la moitié de la hauteur utile.
+        Element labelEffectif = corps.selectFirst("text.evolution-valeur[data-serie=0][data-index=1]");
+        Element labelSorties = corps.selectFirst("text.evolution-valeur[data-serie=1][data-index=1]");
+        assertThat(labelEffectif).isNotNull();
+        assertThat(labelSorties).isNotNull();
+        assertThat(Double.parseDouble(labelEffectif.attr("y")))
+                .isNotEqualTo(Double.parseDouble(labelSorties.attr("y")));
+        assertThat(corps.select(".evolution-container line[stroke='#40566B']")).hasSize(2);
     }
 
     @Test
     void ajouterGraphique_sansMoisNaffichePasUneCourbeNulle() {
         Element corps = Document.createShell("").body();
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, List.of(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, List.of(), PageModel.GroupeEvolution.MONTANTS,
                 RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         assertThat(corps.select("svg")).isEmpty();
@@ -69,7 +84,7 @@ class RapportEvolutionSvgBuilderTest {
                 new RepartitionBean("8/2026", 1, BigDecimal.ZERO, 50, new BigDecimal("100000")),
                 new RepartitionBean("9/2026", 1, BigDecimal.ZERO, 50, new BigDecimal("100000")));
 
-        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.STC,
+        new RapportEvolutionSvgBuilder().ajouterGraphique(corps, donnees, PageModel.GroupeEvolution.EFFECTIFS,
                 RapportEvolutionSvgBuilder.HAUTEUR_COMPACTE);
 
         for (int index = 0; index < donnees.size(); index++) {

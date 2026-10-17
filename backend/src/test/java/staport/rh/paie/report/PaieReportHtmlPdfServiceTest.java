@@ -89,12 +89,13 @@ class PaieReportHtmlPdfServiceTest {
                     .as("la série masse salariale du graphique global est réellement rendue")
                     .isGreaterThan(20);
             String texte = new PDFTextStripper().getText(document);
-            assertThat(texte).contains("1. Évolution de la masse salariale et de l'effectif",
-                    "2. Évolution du STC — personnes et DH", "3. Répartition par chantier",
+            assertThat(texte).contains("1. Masse salariale et montants des STC (DH)",
+                    "2. Effectif rémunéré et sorties du personnel (personnes)", "3. Répartition par chantier",
                     "4. Liste des employés");
             assertThat(texte).doesNotContain("Périmètre : Tous les marchés", "Historique disponible :", "12 mois");
-            int pageEvolution = pageContenantTexte(document, "1. Évolution de la masse salariale et de l'effectif");
-            assertThat(textePage(document, pageEvolution)).contains("2. Évolution du STC — personnes et DH");
+            int pageEvolution = pageContenantTexte(document, "1. Masse salariale et montants des STC (DH)");
+            assertThat(textePage(document, pageEvolution))
+                    .contains("2. Effectif rémunéré et sorties du personnel (personnes)");
             int pageFonction = pageContenantTexte(document, "3. Répartition par fonction");
             BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(pageFonction);
             assertThat(nombrePixelsBleus(repartitionFonction))
