@@ -13,6 +13,7 @@ import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Tranche;
 import staport.rh.paie.repositories.ChantierMasseProjection;
 import staport.rh.paie.repositories.EvolutionMasseProjection;
+import staport.rh.paie.repositories.EquipeMasseProjection;
 import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.FonctionMasseProjection;
 import staport.rh.paie.repositories.PaieKpiProjection;
@@ -200,6 +201,23 @@ class PaieAnalytiqueServiceTest {
         assertThat(resultat.parFonction()).hasSize(114);
     }
 
+    @Test
+    void analyser_devraitRenvoyerLesEquipesYComprisSansEquipe() {
+        when(repository.resumerKpi(any(), any())).thenReturn(kpi(10, "10000", 2, 1, 4, 0));
+        lenient().when(repository.listerTotaux(any(), any())).thenReturn(List.of());
+        when(repository.sommerParEquipe(any(), any())).thenReturn(List.of(
+                equipe(21L, "EQ-A", "Équipe A", "6000", 6, 1, "1000"),
+                equipe(null, null, null, "4000", 4, 0, "0")));
+
+        PaieAnalytiqueDto resultat = service.analyser(criteres(AOUT, null, null, null));
+
+        assertThat(resultat.parEquipe()).extracting(PaieAnalytiqueDto.EquipeMasse::id)
+                .containsExactly(21L, null);
+        assertThat(resultat.parEquipe().get(0).masse()).isEqualByComparingTo("6000");
+        assertThat(resultat.parEquipe().get(0).stcMontant()).isEqualByComparingTo("1000");
+        assertThat(resultat.parEquipe().get(1).libelle()).isNull();
+    }
+
     private static PaieSearchCriteria criteres(YearMonth periode, List<Long> chantierIds, List<Long> fonctionIds, List<Long> equipeIds) {
         return new PaieSearchCriteria(null, null, periode, fonctionIds, chantierIds, equipeIds);
     }
@@ -235,6 +253,19 @@ class PaieAnalytiqueServiceTest {
             public String getLibelle() { return libelle; }
             public BigDecimal getMasse() { return new BigDecimal("10"); }
             public Long getEffectif() { return 1L; }
+        };
+    }
+
+    private static EquipeMasseProjection equipe(Long id, String code, String libelle, String masse, long effectif, long stc,
+            String stcMontant) {
+        return new EquipeMasseProjection() {
+            public Long getId() { return id; }
+            public String getCode() { return code; }
+            public String getLibelle() { return libelle; }
+            public BigDecimal getMasse() { return new BigDecimal(masse); }
+            public Long getEffectif() { return effectif; }
+            public Long getStc() { return stc; }
+            public BigDecimal getStcMontant() { return new BigDecimal(stcMontant); }
         };
     }
 

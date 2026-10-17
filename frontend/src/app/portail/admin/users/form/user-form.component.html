@@ -58,11 +58,11 @@
         ></app-lazy-select>
       </div>
 
-      @if (isEditMode() && deniablePermissions().length > 0) {
+      @if (isEditMode() && displayedPermissions().length > 0) {
         <section class="app-form__wide user-form__permissions" aria-labelledby="permissions-titre">
           <div class="app-form__section">
             <h2 id="permissions-titre">Permissions de l’utilisateur</h2>
-            <p>Les droits proviennent des rôles sélectionnés. Décochez une permission pour la refuser explicitement à cet utilisateur.</p>
+            <p>La liste couvre tout le catalogue des permissions. Les droits hérités des rôles peuvent être refusés explicitement à cet utilisateur ; une permission non héritée reste visible mais doit être ajoutée à un rôle pour devenir effective.</p>
           </div>
           <div class="user-form__permission-domains">
             @for (group of permissionGroups(); track group.domaine) {
@@ -98,10 +98,11 @@
                           [attr.data-permission]="permission.code"
                           [attr.aria-label]="'Activer ' + permission.code"
                           [checked]="false"
+                          [disabled]="!permissionHeritee(permission)"
                           (change)="onTogglePermission(permission, $event)"
                         />
                         <span class="user-form__code">{{ permission.code }}</span>
-                        <small>{{ permission.description }}</small>
+                        <small>{{ permission.description }}@if (!permissionHeritee(permission)) { · Non héritée par les rôles sélectionnés }</small>
                       </label>
                     } @empty {
                       <p class="user-form__permission-empty">Toutes les permissions sont autorisées.</p>

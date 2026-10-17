@@ -12,7 +12,7 @@ import { ChartComponent } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtres/paie-filtres';
-import { PaieAnalytique, PaieTranche } from '../models/paie.model';
+import { PaieAnalytique, PaieChantierMasse, PaieEquipeMasse, PaieFonctionMasse, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police, valeursSurPoints } from './paie-chart-theme';
@@ -26,7 +26,7 @@ const HAUTEUR_MIN_REM = 12;
 export type Mesure = MesureGraphique;
 
 /** Les graphiques dont les données peuvent s'afficher sous forme de tableau (alternative accessible au dessin). */
-export type GraphiqueAvecTableau = 'evolution' | 'tranches' | 'chantiers' | 'fonctions';
+export type GraphiqueAvecTableau = 'evolution' | 'tranches' | 'repartition' | 'chantiers' | 'fonctions';
 
 interface Tuile {
   libelle: string;
@@ -40,6 +40,30 @@ interface Graphique<T extends 'bar' | 'line'> {
   data: ChartData<T>;
   options: ChartOptions<T>;
   plugins?: import('chart.js').Plugin<T>[];
+}
+
+type DimensionRepartition = 'chantier' | 'equipe' | 'fonction';
+
+interface LigneRepartition {
+  id: number | null;
+  code: string | null;
+  libelle: string | null;
+  masse: number;
+  effectif: number;
+  stc: number;
+  stcMontant: number;
+}
+
+function versLigneRepartition(element: PaieChantierMasse | PaieEquipeMasse | PaieFonctionMasse): LigneRepartition {
+  return {
+    id: element.id,
+    code: 'code' in element ? element.code : null,
+    libelle: element.libelle,
+    masse: element.masse,
+    effectif: element.effectif,
+    stc: 'stc' in element ? element.stc : 0,
+    stcMontant: 'stcMontant' in element ? element.stcMontant : 0
+  };
 }
 
 /** Les éléments strictement positifs pour la mesure choisie, du plus grand au plus petit. */
@@ -81,10 +105,12 @@ export class PaieAnalytiqueComponent {
 
   readonly mesureEvolution = signal<Mesure>('masse');
   readonly mesureChantiers = signal<Mesure>('masse');
+  readonly mesureEquipes = signal<Mesure>('masse');
   readonly mesureFonctions = signal<Mesure>('masse');
+  readonly mesureRepartition = signal<Mesure>('masse');
 
   /** Le tableau des données d'un graphique, replié par défaut : le dessin d'abord, le détail à la demande. */
-  readonly tableaux = signal<Record<GraphiqueAvecTableau, boolean>>({ evolution: false, tranches: false, chantiers: false, fonctions: false });
+  readonly tableaux = signal<Record<GraphiqueAvecTableau, boolean>>({ evolution: false, tranches: false, repartition: false, chantiers: false, fonctions: false });
 
   readonly colonnesEvolution = new ColumnState([
     { field: 'mois', header: 'Mois' },
@@ -105,6 +131,12 @@ export class PaieAnalytiqueComponent {
     { field: 'fonction', header: 'Fonction' },
     { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
     { field: 'effectif', header: 'Bulletins', align: 'text-right' }
+  ]);
+  readonly colonnesRepartition = new ColumnState([
+    { field: 'libelle', header: 'Élément' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-right' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-right' },
+    { field: 'stc', header: 'STC / sorties', align: 'text-right' }
   ]);
 
   readonly libellePeriode = libellePeriode;
@@ -136,9 +168,85 @@ export class PaieAnalytiqueComponent {
   });
 
   readonly chantiersTries = computed(() => trierParMesure(this.donnees()?.parChantier ?? [], this.mesureChantiers()));
+  readonly equipesTries = computed(() => trierParMesure(this.donnees()?.parEquipe ?? [], this.mesureEquipes()));
   readonly fonctionsTriees = computed(() => trierParMesure(this.donnees()?.parFonction ?? [], this.mesureFonctions()));
   readonly hauteurChantiers = computed(() => hauteurPourLignes(this.chantiersTries().length));
+  readonly hauteurEquipes = computed(() => hauteurPourLignes(this.equipesTries().length));
   readonly hauteurFonctions = computed(() => hauteurPourLignes(this.fonctionsTriees().length));
+
+  /** Le niveau de lecture suit le périmètre URL : chantier, puis équipe, puis fonction. */
+  readonly dimensionRepartition = computed<DimensionRepartition>(() => {
+    const filtres = this.filtres();
+    if (filtres.equipeIds.length > 0) {
+      return 'fonction';
+    }
+    return filtres.chantierIds.length === 1 ? 'equipe' : 'chantier';
+  });
+
+  readonly titreRepartition = computed(() => {
+    switch (this.dimensionRepartition()) {
+      case 'equipe': return 'Répartition par équipe';
+      case 'fonction': return 'Répartition par fonction';
+      default: return 'Répartition par chantier';
+    }
+  });
+
+  readonly aideRepartition = computed(() => {
+    const dimension = this.dimensionRepartition();
+    const nombre = this.repartitionTriee().length;
+    const libelle = dimension === 'chantier' ? 'chantier(s)' : dimension === 'equipe' ? 'équipe(s)' : 'fonction(s)';
+    return `${nombre} ${libelle} avec une valeur positive pour la mesure choisie. Cliquez une barre pour approfondir ce périmètre.`;
+  });
+
+  readonly repartitionSource = computed<LigneRepartition[]>(() => {
+    const donnees = this.donnees();
+    if (!donnees) {
+      return [];
+    }
+    switch (this.dimensionRepartition()) {
+      case 'equipe': return donnees.parEquipe.map(versLigneRepartition);
+      case 'fonction': return donnees.parFonction.map(versLigneRepartition);
+      default: return donnees.parChantier.map(versLigneRepartition);
+    }
+  });
+
+  readonly repartitionTriee = computed(() => trierParMesure(this.repartitionSource(), this.mesureRepartition()));
+  readonly hauteurRepartition = computed(() => hauteurPourLignes(this.repartitionTriee().length));
+  readonly lignesRepartition = computed(() => this.repartitionTriee().map((ligne) => ({
+    ...ligne,
+    libelle: this.libelleRepartitionLigne(ligne)
+  })));
+
+  readonly graphiqueRepartition = computed<Graphique<'bar'>>(() => {
+    this.theme.theme();
+    const lignes = this.repartitionTriee();
+    const mesure = this.mesureRepartition();
+    return {
+      data: {
+        labels: lignes.map((ligne) => this.libelleRepartitionLigne(ligne)),
+        datasets: [this.jeuDeBarres(libelleMesure(mesure), lignes.map((ligne) => ligne[mesure]), couleurMesure(mesure), 'horizontal')]
+      },
+      options: {
+        ...this.optionsBarresHorizontales(),
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...infobulle(),
+            callbacks: {
+              label: (element) => {
+                const ligne = lignes[element.dataIndex];
+                return [`Masse : ${formaterMontant(ligne.masse)} DH`, `Bulletins : ${ligne.effectif}`, `STC / sorties : ${ligne.stc}`];
+              },
+              title: (elements) => {
+                const ligne = lignes[elements[0].dataIndex];
+                return this.libelleRepartitionLigne(ligne);
+              }
+            }
+          }
+        }
+      }
+    };
+  });
 
   readonly graphiqueChantiers = computed<Graphique<'bar'>>(() => {
     this.theme.theme();
@@ -341,6 +449,30 @@ export class PaieAnalytiqueComponent {
     void this.router.navigate([], { relativeTo: this.route, replaceUrl: true, queryParams: versParametres(filtres) });
   }
 
+  /** Le clic suit le niveau affiché et enrichit les mêmes filtres URL que Cartes. */
+  surBarreRepartition(evenement: { index?: number }): void {
+    const ligne = this.repartitionTriee()[evenement.index ?? -1];
+    if (!ligne) {
+      return;
+    }
+    const filtres = this.filtres();
+    switch (this.dimensionRepartition()) {
+      case 'chantier':
+        if (ligne.id !== null) {
+          this.appliquer({ ...filtres, chantierIds: [ligne.id], equipeIds: [] });
+        }
+        break;
+      case 'equipe':
+        this.appliquer({ ...filtres, equipeIds: [ligne.id ?? 0] });
+        break;
+      case 'fonction':
+        if (ligne.id !== null) {
+          this.appliquer({ ...filtres, fonctionIds: [ligne.id] });
+        }
+        break;
+    }
+  }
+
   /** Clic sur une barre du graphique des chantiers : l'analyse se resserre sur ce chantier. */
   surBarreChantier(evenement: { index?: number }): void {
     const chantier = this.chantiersTries()[evenement.index ?? -1];
@@ -367,6 +499,19 @@ export class PaieAnalytiqueComponent {
   private libelleTranche(tranche: PaieTranche): string {
     const min = FORMAT_ENTIER.format(tranche.min);
     return tranche.max === null ? `≥ ${min}` : `${min} – ${FORMAT_ENTIER.format(tranche.max)}`;
+  }
+
+  private libelleRepartitionLigne(ligne: LigneRepartition): string {
+    if (this.dimensionRepartition() === 'equipe') {
+      if (ligne.id === null) {
+        return 'Sans équipe';
+      }
+      return ligne.libelle ? `${ligne.code ?? ''} · ${ligne.libelle}` : (ligne.code ?? 'Équipe');
+    }
+    if (this.dimensionRepartition() === 'chantier') {
+      return ligne.libelle ? `${ligne.code ?? ''} · ${ligne.libelle}` : (ligne.code ?? 'Chantier');
+    }
+    return ligne.libelle ?? 'Fonction non renseignée';
   }
 
   /** Une série de barres fine, au bout arrondi (4 px) et ancrée sur la ligne de base ; jamais d'ombre ni de contour. */

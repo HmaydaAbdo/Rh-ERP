@@ -6,10 +6,12 @@ import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.ChantierMasse;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Evolution;
+import staport.rh.paie.dtos.response.PaieAnalytiqueDto.EquipeMasse;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.FonctionMasse;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Kpi;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Qualite;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Tranche;
+import staport.rh.paie.repositories.EquipeMasseProjection;
 import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.PaieKpiProjection;
 import staport.rh.paie.repositories.PaieRepository;
@@ -43,7 +45,7 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
 
         PaieKpiProjection courant = repository.resumerKpi(periode, filtres);
         if (courant.getEffectif() == 0) {
-            return new PaieAnalytiqueDto(periode.toString(), versKpi(courant), null, List.of(), List.of(), List.of(), List.of(),
+            return new PaieAnalytiqueDto(periode.toString(), versKpi(courant), null, List.of(), List.of(), List.of(), List.of(), List.of(),
                     new Qualite(0, 0));
         }
 
@@ -55,6 +57,9 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
                 repository.sommerParChantier(periode, filtres).stream()
                         .map(c -> new ChantierMasse(c.getId(), c.getCode(), libelleChantier(c.getNom(), c.getDesignation()),
                                 c.getMasse(), c.getEffectif(), c.getStc(), c.getStcMontant()))
+                        .toList(),
+                repository.sommerParEquipe(periode, filtres).stream()
+                        .map(this::versEquipe)
                         .toList(),
                 repository.sommerParFonction(periode, filtres).stream()
                         .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif()))
@@ -70,6 +75,11 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
         long effectif = projection.getEffectif();
         BigDecimal coutMoyen = effectif > 0 ? projection.getMasse().divide(BigDecimal.valueOf(effectif), 2, RoundingMode.HALF_UP) : null;
         return new Kpi(projection.getMasse(), effectif, coutMoyen, projection.getChantiers(), projection.getStc(), projection.getStcMontant());
+    }
+
+    private EquipeMasse versEquipe(EquipeMasseProjection projection) {
+        return new EquipeMasse(projection.getId(), projection.getCode(), projection.getLibelle(), projection.getMasse(),
+                projection.getEffectif(), projection.getStc(), projection.getStcMontant());
     }
 
     /** Le nom du chantier, à défaut sa désignation (même règle que {@code PaieService.findChantiersDeLaPeriode}). */
