@@ -113,7 +113,7 @@ export class PaieFiltresComponent {
   /** Équipe sélectionnée au niveau détaillé des Cartes. */
   protected readonly equipeOuverte = computed(() => {
     const ids = this.courant().equipeIds;
-    return ids.length === 1 ? `Équipe n° ${ids[0]}` : null;
+    return ids.length === 1 ? (ids[0] === 0 ? 'Sans équipe' : `Équipe n° ${ids[0]}`) : null;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
@@ -127,9 +127,6 @@ export class PaieFiltresComponent {
 
   protected readonly sourcesEquipes = computed<LazySelectSource<EquipeReference>[]>(() => {
     const { periode, chantierIds } = this.courant();
-    if (!periode || chantierIds.length === 0) {
-      return [this.equipeReferenceService];
-    }
     return [new PaieEquipeOptionSource(this.paieService, this.equipeReferenceService, periode, [...chantierIds])];
   });
 

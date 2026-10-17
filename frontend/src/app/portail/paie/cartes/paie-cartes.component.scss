@@ -1,11 +1,23 @@
 .paie-cartes {
-  &__entete-equipes,
-  &__pagination {
+  &__entete-equipes {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
     flex-wrap: wrap;
+  }
+
+  &__niveau-entete,
+  &__actions-niveau {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  &__niveau-entete {
+    margin-bottom: var(--space-md);
   }
 
   &__indicateurs {
@@ -49,22 +61,14 @@
       font-size: var(--text-md);
     }
 
-    .stp-input {
-      max-width: 22rem;
-    }
   }
 
-  &__employes {
+  &__fonctions {
     margin-top: var(--space-lg);
   }
 
-  &__pagination {
-    justify-content: center;
-    margin-top: var(--space-md);
-  }
-
-  &__employe {
-    gap: var(--space-sm);
+  &__liste-lien {
+    align-self: flex-start;
   }
 
   @media (max-width: 640px) {
@@ -141,6 +145,7 @@
   &__element {
     position: relative;
     display: flex;
+    flex-direction: column;
 
     > .paie-cartes__carte {
       flex: 1;

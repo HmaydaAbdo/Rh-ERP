@@ -9,7 +9,7 @@ import java.util.List;
  * Filtres de la barre de la page Paie, appliqués aux requêtes d'agrégation de {@link PaieRepository} (mois, chantiers,
  * tableau de bord). Ils lisent {@link PaieSearchCriteria} avec les mêmes règles que {@code PaieSpecification}, qui filtre
  * la liste : nom et CIN « contient » sans tenir compte de la casse (jokers échappés, {@link MotifRecherche}), identifiants multi-valeurs, un filtre vide ou absent
- * est ignoré. Le mois n'en fait pas partie : chaque requête le traite à sa façon.
+ * est ignoré. {@code equipeIds=0} sélectionne les bulletins sans équipe. Le mois n'en fait pas partie : chaque requête le traite à sa façon.
  *
  * <p>Lus par SpEL dans les {@code @Query} (d'où de vrais getters, pas un record). Un filtre ignoré porte {@code tous = true}
  * et une valeur factice : un {@code IN ()} vide n'est pas valide en SQL, et l'indicateur court-circuite de toute façon la
@@ -31,6 +31,7 @@ public final class FiltresPaie {
     private final boolean toutesFonctions;
     private final List<Long> fonctionIds;
     private final boolean toutesEquipes;
+    private final boolean inclureSansEquipe;
     private final List<Long> equipeIds;
 
     public FiltresPaie(String nomPrenom, String cin, List<Long> chantierIds, List<Long> fonctionIds, List<Long> equipeIds) {
@@ -42,8 +43,11 @@ public final class FiltresPaie {
         this.chantierIds = tousChantiers ? AUCUN_ID : List.copyOf(chantierIds);
         this.toutesFonctions = estVide(fonctionIds);
         this.fonctionIds = toutesFonctions ? AUCUN_ID : List.copyOf(fonctionIds);
-        this.toutesEquipes = estVide(equipeIds);
-        this.equipeIds = toutesEquipes ? AUCUN_ID : List.copyOf(equipeIds);
+        List<Long> equipes = equipeIds == null ? List.of() : equipeIds;
+        this.inclureSansEquipe = equipes.contains(0L);
+        List<Long> equipesAvecId = equipes.stream().filter(id -> id != null && id > 0).toList();
+        this.toutesEquipes = equipesAvecId.isEmpty() && !inclureSansEquipe;
+        this.equipeIds = equipesAvecId.isEmpty() ? AUCUN_ID : List.copyOf(equipesAvecId);
     }
 
     /** Les filtres d'une recherche ; {@code null} ou critères vides = {@link #AUCUN}. */
@@ -95,6 +99,11 @@ public final class FiltresPaie {
 
     public boolean isToutesEquipes() {
         return toutesEquipes;
+    }
+
+    /** Vrai quand la sélection inclut les bulletins dont l'équipe est absente. */
+    public boolean isInclureSansEquipe() {
+        return inclureSansEquipe;
     }
 
     public List<Long> getEquipeIds() {
