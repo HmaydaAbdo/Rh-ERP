@@ -218,7 +218,7 @@ describe('PaieAnalytiqueComponent', () => {
         expect(composant.lignesEvolution().map((l) => l.effectif)).toEqual([8, 10]);
     });
 
-    it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
+    it('montre toutes les catégories positives, sans plafond ni « Autres »', async () => {
         service.analyser.mockReturnValue(of(donnees({
             parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0, stcMontant: 0 })),
             parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
@@ -229,6 +229,27 @@ describe('PaieAnalytiqueComponent', () => {
         expect(composant.graphiqueChantiers().data.labels?.length).toBe(40);
         expect(composant.graphiqueFonctions().data.labels?.length).toBe(114);
         expect(composant.graphiqueFonctions().data.labels).not.toContain('Autres');
+    });
+
+    it('retire une catégorie quand la mesure choisie vaut zéro', async () => {
+        service.analyser.mockReturnValue(of(donnees({
+            parChantier: [
+                { id: 1, code: 'ACTIF', libelle: null, masse: 100, effectif: 1, stc: 0, stcMontant: 0 },
+                { id: 2, code: 'VIDE', libelle: null, masse: 0, effectif: 0, stc: 0, stcMontant: 0 }
+            ],
+            parFonction: [
+                { id: 1, libelle: 'ACTIVE', masse: 10, effectif: 1 },
+                { id: 2, libelle: 'VIDE', masse: 0, effectif: 0 }
+            ]
+        })));
+
+        const composant = await ouvrir('/paie/analytique?periode=2026-08');
+
+        expect(composant.graphiqueChantiers().data.labels).toEqual(['ACTIF']);
+        expect(composant.graphiqueFonctions().data.labels).toEqual(['ACTIVE']);
+
+        composant.mesureChantiers.set('effectif');
+        expect(composant.graphiqueChantiers().data.labels).toEqual(['ACTIF']);
     });
 
     it('agrandit les graphiques avec le nombre de catégories pour que chaque ligne reste lisible', async () => {
