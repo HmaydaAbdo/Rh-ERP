@@ -124,7 +124,15 @@
       }
       @if (periode() && chantierOuvert(); as chantier) {
         <stp-icon name="chevron-right" />
-        <span class="paie-filtres__segment paie-filtres__segment--courant">{{ chantier }}</span>
+        @if (equipeOuverte()) {
+          <button type="button" class="paie-filtres__segment" (click)="allerAuNiveau(3)">{{ chantier }}</button>
+        } @else {
+          <span class="paie-filtres__segment paie-filtres__segment--courant">{{ chantier }}</span>
+        }
+      }
+      @if (periode() && chantierOuvert() && equipeOuverte(); as equipe) {
+        <stp-icon name="chevron-right" />
+        <span class="paie-filtres__segment paie-filtres__segment--courant">{{ equipe }}</span>
       }
     </nav>
     @if (periode()) {

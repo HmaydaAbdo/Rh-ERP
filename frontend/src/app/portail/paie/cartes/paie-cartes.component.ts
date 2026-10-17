@@ -2,31 +2,55 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EMPTY, finalize, merge, Observable, Subject, switchMap, tap } from 'rxjs';
+import type { ChartData, ChartOptions } from 'chart.js';
+import { EMPTY, finalize, forkJoin, merge, Observable, of, Subject, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { CountUpDirective } from '../../../shared/directives/count-up.directive';
-import { ColumnState } from '../../../shared/table/table-columns';
+import { ThemeService } from '../../../core/theme/theme.service';
+import { Page } from '../../../shared/models/page.model';
 import { contient } from '../../../shared/text/recherche';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
-import { TableCellDirective, TableComponent, TableFooterDirective, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
-import { PaieChantierPeriode, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
+import { Paie, PaieAnalytique, PaieChantierPeriode, PaieEvolution, PaiePeriodeComparaison, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode, periodePrecedente } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 import { NotificationService } from '@shared/feedback/feedback.service';
+import { animationGraphique, couleurMesure, grille, infobulle, jeton, police } from '../analytique/paie-chart-theme';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 const DELAI_CASCADE_MS = 50;
 const DELAI_CASCADE_MAX_RANG = 12;
+const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
-/** Un mois affiché en carte, avec l'évolution de sa masse par rapport au mois contigu (absente si ce mois n'a pas de paie). */
+type IndicateurPaie = 'masse' | 'effectif' | 'stcMontant' | 'stc';
+
+interface IndicateurAffiche {
+  cle: IndicateurPaie;
+  libelle: string;
+  valeur: number;
+  unite: string;
+  comparaison: string | null;
+}
+
+const LIBELLES_INDICATEURS: Record<IndicateurPaie, string> = {
+  masse: 'Masse salariale (DH)',
+  effectif: 'Bulletins / employés payés (personnes)',
+  stcMontant: 'Montant des STC / sorties (DH)',
+  stc: 'STC / sorties (personnes)'
+};
+
+interface Graphique<T extends 'bar' | 'line'> {
+  data: ChartData<T>;
+  options: ChartOptions<T>;
+}
+
+/** Résumé du mois affiché en carte et du mois contigu pour calculer les quatre comparaisons. */
 interface CarteMois {
   resume: PaiePeriodeResume;
-  variation: number | null;
+  precedent: PaiePeriodeResume | null;
 }
 
 interface CarteChantier {
@@ -35,15 +59,16 @@ interface CarteChantier {
   part: number;
 }
 
-/** Une ligne du tableau des équipes d'un chantier ; `code` vaut `-` et `equipeId` est nul pour les bulletins sans équipe. */
+/** Résumé d'une équipe ; `equipeId` est nul pour les bulletins sans équipe. */
 interface LigneEquipe {
   equipeId: number | null;
   code: string;
   libelle: string;
   effectif: number;
   masse: number;
-  /** Part de la masse du chantier, en pourcentage. */
-  part: number;
+  stc: number;
+  stcMontant: number;
+  moisPrecedent: PaiePeriodeComparaison | null;
 }
 
 /** Une suppression en groupe en attente de confirmation : ce qui sera supprimé, décrit pour l'utilisateur. */
@@ -60,8 +85,8 @@ interface Suppression {
 }
 
 /**
- * Vue « Cartes » de la paie, en trois niveaux de descente : cartes par mois, puis cartes par chantier du mois, puis
- * tableau des équipes du chantier. **Descendre, c'est filtrer** : le niveau se déduit des filtres de la barre commune
+ * Vue « Cartes » de la paie, en quatre niveaux de descente : mois, vue d'ensemble, chantier et équipe.
+ * **Descendre, c'est filtrer** : le niveau se déduit des filtres de la barre commune
  * (voir `filtres/paie-filtres.ts`) — sans mois, les mois ; avec un mois, les chantiers ; avec un mois et un seul chantier,
  * ses équipes — et cliquer une carte pose le filtre correspondant dans l'URL. Retour navigateur, lien direct et barre de
  * filtres restent donc toujours d'accord. Les autres filtres (nom, CIN, fonctions, équipes, chantiers) restreignent les
@@ -74,15 +99,10 @@ interface Suppression {
   imports: [
     FormField,
     RouterLink,
-    ColumnChooserComponent,
-    CountUpDirective,
+    ChartComponent,
     IconComponent,
     ButtonComponent,
-    DialogComponent,
-    TableComponent,
-    TableCellDirective,
-    TableRowActionsDirective,
-    TableFooterDirective
+    DialogComponent
   ],
   templateUrl: './paie-cartes.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,14 +115,7 @@ export class PaieCartesComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(NotificationService);
-
-  readonly columns = new ColumnState([
-    { field: 'code', header: 'Équipe', cellClass: 'font-semibold' },
-    { field: 'libelle', header: 'Libellé' },
-    { field: 'effectif', header: 'Effectif', align: 'text-right' },
-    { field: 'masse', header: 'Masse (DH)', align: 'text-right', cellClass: 'font-bold' },
-    { field: 'part', header: 'Part du chantier', align: 'text-right' }
-  ]);
+  private readonly theme = inject(ThemeService);
 
   readonly filtres = signal<PaieFiltres>(lireFiltres(this.route.snapshot.queryParamMap));
   /** Sens du dernier changement de niveau : oriente le glissement de l'animation (vers l'avant en descendant). */
@@ -110,6 +123,16 @@ export class PaieCartesComponent {
   readonly chargement = signal(true);
   readonly periodes = signal<PaiePeriodeResume[]>([]);
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
+  readonly analytique = signal<PaieAnalytique | null>(null);
+  readonly pageEmployes = signal<Page<Paie> | null>(null);
+  readonly employesEnChargement = signal(false);
+  readonly mesureGraphique = signal<IndicateurPaie>('masse');
+  readonly graphiqueEvolutionAgrandit = signal(false);
+  readonly graphiqueRepartitionAgrandit = signal(false);
+  readonly tableauEvolutionOuvert = signal(false);
+  readonly tableauChantiersOuvert = signal(false);
+  readonly tableauEquipesOuvert = signal(false);
+  readonly tableauFonctionsOuvert = signal(false);
 
   private readonly saisieRecherche = signal({ terme: '' });
   readonly rechercheForm = form(this.saisieRecherche, (chemin) => debounce(chemin.terme, DEBOUNCE_RECHERCHE_MS));
@@ -130,17 +153,23 @@ export class PaieCartesComponent {
   /** Réponses déjà reçues, par filtres : revenir sur une même vue ne relance aucun appel. */
   private readonly cachePeriodes = new Map<string, PaiePeriodeResume[]>();
   private readonly cacheChantiers = new Map<string, PaieChantierPeriode[]>();
+  private readonly cacheAnalytique = new Map<string, PaieAnalytique>();
 
   readonly periode = computed(() => this.filtres().periode);
-  readonly niveau = computed<1 | 2 | 3>(() => (this.periode() === null ? 1 : this.filtres().chantierIds.length === 1 ? 3 : 2));
+  readonly niveau = computed<1 | 2 | 3 | 4>(() => {
+    const filtres = this.filtres();
+    if (filtres.periode === null) return 1;
+    if (filtres.chantierIds.length !== 1) return 2;
+    return filtres.equipeIds.length === 1 ? 4 : 3;
+  });
   readonly chantier = computed(() => this.chantiers().find((c) => c.id === this.filtres().chantierIds[0]) ?? null);
+  readonly equipe = computed(() => this.chantier()?.equipes.find((e) => e.id === this.filtres().equipeIds[0]) ?? null);
 
   readonly cartesMois = computed<CarteMois[]>(() => {
     const periodes = this.periodes();
     return periodes.map((resume) => {
       const precedent = periodes.find((p) => p.periode === periodePrecedente(resume.periode));
-      const variation = precedent && precedent.masse > 0 ? ((resume.masse - precedent.masse) / precedent.masse) * 100 : null;
-      return { resume, variation };
+      return { resume, precedent: precedent ?? null };
     });
   });
 
@@ -148,9 +177,11 @@ export class PaieCartesComponent {
   readonly resumeMois = computed(() => {
     const chantiers = this.chantiers();
     return {
-      masse: chantiers.reduce((somme, c) => somme + c.masse, 0),
-      bulletins: chantiers.reduce((somme, c) => somme + c.effectif, 0),
-      chantiers: chantiers.length
+      masse: this.analytique()?.kpis.masse ?? chantiers.reduce((somme, c) => somme + c.masse, 0),
+      effectif: this.analytique()?.kpis.effectif ?? chantiers.reduce((somme, c) => somme + c.effectif, 0),
+      stc: this.analytique()?.kpis.stc ?? chantiers.reduce((somme, c) => somme + c.stc, 0),
+      stcMontant: this.analytique()?.kpis.stcMontant ?? chantiers.reduce((somme, c) => somme + c.stcMontant, 0),
+      chantiers: this.analytique()?.kpis.nombreChantiers ?? chantiers.length
     };
   });
 
@@ -159,31 +190,29 @@ export class PaieCartesComponent {
     return this.chantiers().map((chantier) => ({ chantier, part: masseTotale > 0 ? (chantier.masse / masseTotale) * 100 : 0 }));
   });
 
-  /** Part de la masse du mois portée par le chantier ouvert, en pourcentage. */
-  readonly partDuMois = computed(() => {
-    const masseTotale = this.resumeMois().masse;
-    return masseTotale > 0 ? ((this.chantier()?.masse ?? 0) / masseTotale) * 100 : 0;
-  });
-
   /** Équipes du chantier, plus une ligne « Sans équipe » déduite : le total du tableau égale ainsi celui du chantier. */
   readonly lignesEquipes = computed<LigneEquipe[]>(() => {
     const chantier = this.chantier();
     if (!chantier) {
       return [];
     }
-    const part = (masse: number): number => (chantier.masse > 0 ? (masse / chantier.masse) * 100 : 0);
     const lignes: LigneEquipe[] = chantier.equipes.map((e) => ({
       equipeId: e.id,
       code: e.code,
       libelle: e.libelle,
       effectif: e.effectif,
       masse: e.masse,
-      part: part(e.masse)
+      stc: e.stc,
+      stcMontant: e.stcMontant,
+      moisPrecedent: e.moisPrecedent ?? null
     }));
     const effectifSansEquipe = chantier.effectif - chantier.equipes.reduce((somme, e) => somme + e.effectif, 0);
     if (effectifSansEquipe > 0) {
       const masseSansEquipe = chantier.masse - chantier.equipes.reduce((somme, e) => somme + e.masse, 0);
-      lignes.push({ equipeId: null, code: '-', libelle: 'Sans équipe', effectif: effectifSansEquipe, masse: masseSansEquipe, part: part(masseSansEquipe) });
+      const stcSansEquipe = chantier.stc - chantier.equipes.reduce((somme, e) => somme + e.stc, 0);
+      const stcMontantSansEquipe = chantier.stcMontant - chantier.equipes.reduce((somme, e) => somme + e.stcMontant, 0);
+      const comparaisonSansEquipe = chantier.sansEquipeMoisPrecedent ?? null;
+      lignes.push({ equipeId: null, code: '-', libelle: 'Sans équipe', effectif: effectifSansEquipe, masse: masseSansEquipe, stc: stcSansEquipe, stcMontant: stcMontantSansEquipe, moisPrecedent: comparaisonSansEquipe });
     }
     return lignes;
   });
@@ -191,14 +220,173 @@ export class PaieCartesComponent {
   /** Les équipes dont le code ou le libellé contient la recherche (insensible à la casse et aux accents). */
   readonly equipesAffichees = computed(() => this.lignesEquipes().filter((ligne) => contient(ligne.code, this.saisieRecherche().terme) || contient(ligne.libelle, this.saisieRecherche().terme)));
 
-  /** Aucun mois (niveau 1) ou aucun chantier (niveaux 2 et 3) ne correspond aux filtres. */
-  readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1 ? this.periodes().length === 0 : this.chantiers().length === 0));
-  readonly chantierIntrouvable = computed(() => this.niveau() === 3 && !this.chargement() && !this.aucunResultat() && this.chantier() === null);
+  readonly indicateursVue = computed(() => {
+    const analytique = this.analytique();
+    return analytique ? this.construireIndicateurs(analytique.kpis, analytique.moisPrecedent) : [];
+  });
+
+  readonly evolutionGraphique = computed<Graphique<'line'>>(() => {
+    this.theme.theme();
+    const mesure = this.mesureGraphique();
+    const periodeCourante = this.periode();
+    const sources: PaieEvolution[] | PaiePeriodeResume[] = this.niveau() === 1
+      ? this.periodes()
+      : this.analytique()?.evolution ?? [];
+    const lignes = [...sources].sort((a, b) => a.periode.localeCompare(b.periode));
+    const couleur = couleurMesure(mesure === 'effectif' || mesure === 'stc' ? 'effectif' : 'masse');
+    return {
+      data: {
+        labels: lignes.map((ligne) => libellePeriode(ligne.periode)),
+        datasets: [{
+          label: LIBELLES_INDICATEURS[mesure],
+          data: lignes.map((ligne) => this.valeurPeriode(ligne, mesure)),
+          borderColor: couleur,
+          backgroundColor: couleur,
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: lignes.map((ligne) => ligne.periode === periodeCourante ? 8 : 4),
+          pointHoverRadius: 9,
+          pointBorderColor: jeton('--color-surface'),
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: animationGraphique(),
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: infobulle()
+        },
+        scales: {
+          x: { ticks: { color: jeton('--color-text-muted'), font: police(), autoSkip: true, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+          y: { beginAtZero: true, ticks: { color: jeton('--color-text-muted'), font: police(), callback: (valeur) => FORMAT_ENTIER.format(Number(valeur)) }, grid: grille(), border: { display: false } }
+        }
+      }
+    };
+  });
+
+  readonly chantiersTries = computed(() => [...(this.analytique()?.parChantier ?? [])]
+    .sort((a, b) => b[this.mesureGraphique()] - a[this.mesureGraphique()]));
+  readonly graphiqueChantiers = computed(() => this.graphiqueBarres(
+    this.chantiersTries().map((chantier) => chantier.code),
+    this.chantiersTries().map((chantier) => chantier[this.mesureGraphique()]),
+    this.mesureGraphique()
+  ));
+
+  readonly equipesTriees = computed(() => [...this.lignesEquipes()]
+    .sort((a, b) => b[this.mesureGraphique()] - a[this.mesureGraphique()]));
+  readonly graphiqueEquipes = computed(() => this.graphiqueBarres(
+    this.equipesTriees().map((equipe) => equipe.equipeId === null ? 'Sans équipe' : `${equipe.code} · ${equipe.libelle}`),
+    this.equipesTriees().map((equipe) => equipe[this.mesureGraphique()]),
+    this.mesureGraphique()
+  ));
+
+  readonly fonctionsTriees = computed(() => [...(this.analytique()?.parFonction ?? [])].sort((a, b) => b.effectif - a.effectif));
+  readonly graphiqueFonctions = computed(() => this.graphiqueBarres(
+    this.fonctionsTriees().map((fonction) => fonction.libelle),
+    this.fonctionsTriees().map((fonction) => fonction.effectif),
+    'effectif'
+  ));
+
+  readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1
+    ? this.periodes().length === 0
+    : (this.analytique()?.kpis.effectif ?? 0) === 0));
+  readonly chantierIntrouvable = computed(() => this.niveau() >= 3 && !this.chargement() && !this.aucunResultat() && this.chantier() === null);
+  readonly equipeIntrouvable = computed(() => this.niveau() === 4 && !this.chargement() && this.chantier() !== null && this.equipe() === null);
 
   readonly libellePeriode = libellePeriode;
   readonly formaterMontant = formaterMontant;
   readonly formaterVariation = formaterVariation;
   readonly formaterPart = formaterPart;
+  readonly libellesIndicateurs = LIBELLES_INDICATEURS;
+  readonly mesuresGraphique: { cle: IndicateurPaie; libelle: string }[] = [
+    { cle: 'masse', libelle: 'Masse (DH)' },
+    { cle: 'effectif', libelle: 'Bulletins / personnes' },
+    { cle: 'stcMontant', libelle: 'STC (DH)' },
+    { cle: 'stc', libelle: 'STC (personnes)' }
+  ];
+
+  indicateursDeCarte(carte: CarteMois): IndicateurAffiche[] {
+    return this.construireIndicateurs(
+      { masse: carte.resume.masse, effectif: carte.resume.nombreBulletins, stcMontant: carte.resume.stcMontant, stc: carte.resume.stc },
+      carte.precedent ? { masse: carte.precedent.masse, effectif: carte.precedent.nombreBulletins, stcMontant: carte.precedent.stcMontant, stc: carte.precedent.stc } : null
+    );
+  }
+
+  indicateursDeChantier(chantier: PaieChantierPeriode): IndicateurAffiche[] {
+    return this.construireIndicateurs(
+      { masse: chantier.masse, effectif: chantier.effectif, stcMontant: chantier.stcMontant, stc: chantier.stc },
+      chantier.moisPrecedent ?? null
+    );
+  }
+
+  indicateursDeLigneEquipe(ligne: LigneEquipe): IndicateurAffiche[] {
+    return this.construireIndicateurs(
+      { masse: ligne.masse, effectif: ligne.effectif, stcMontant: ligne.stcMontant, stc: ligne.stc },
+      ligne.moisPrecedent
+    );
+  }
+
+  formaterValeur(indicateur: IndicateurAffiche): string {
+    return indicateur.cle === 'masse' || indicateur.cle === 'stcMontant'
+      ? formaterMontant(indicateur.valeur)
+      : FORMAT_ENTIER.format(indicateur.valeur);
+  }
+
+  formaterValeurMesure(mesure: IndicateurPaie, valeur: number): string {
+    return mesure === 'masse' || mesure === 'stcMontant' ? formaterMontant(valeur) : FORMAT_ENTIER.format(valeur);
+  }
+
+  valeurPeriode(ligne: PaieEvolution | PaiePeriodeResume, mesure: IndicateurPaie): number {
+    if (mesure === 'effectif') {
+      return 'nombreBulletins' in ligne ? ligne.nombreBulletins : ligne.effectif;
+    }
+    if (mesure === 'masse') return ligne.masse;
+    if (mesure === 'stc') return ligne.stc;
+    return ligne.stcMontant;
+  }
+
+  basculerGraphique(type: 'evolution' | 'repartition'): void {
+    const agrandit = type === 'evolution' ? this.graphiqueEvolutionAgrandit : this.graphiqueRepartitionAgrandit;
+    agrandit.update((valeur) => !valeur);
+  }
+
+  basculerTableauEvolution(): void { this.tableauEvolutionOuvert.update((ouvert) => !ouvert); }
+  basculerTableauChantiers(): void { this.tableauChantiersOuvert.update((ouvert) => !ouvert); }
+  basculerTableauEquipes(): void { this.tableauEquipesOuvert.update((ouvert) => !ouvert); }
+  basculerTableauFonctions(): void { this.tableauFonctionsOuvert.update((ouvert) => !ouvert); }
+
+  surBarreChantier(selection: ChartSelection): void {
+    const chantier = this.chantiersTries()[selection.index];
+    if (chantier) {
+      void this.router.navigate([], { queryParams: { chantierIds: String(chantier.id), equipeIds: null }, queryParamsHandling: 'merge' });
+    }
+  }
+
+  surBarreEquipe(selection: ChartSelection): void {
+    const equipe = this.equipesTriees()[selection.index];
+    if (equipe?.equipeId !== null && equipe) {
+      void this.router.navigate([], { queryParams: { equipeIds: String(equipe.equipeId) }, queryParamsHandling: 'merge' });
+    }
+  }
+
+  surBarreFonction(selection: ChartSelection): void {
+    const fonction = this.fonctionsTriees()[selection.index];
+    if (!fonction) return;
+    const dejaSelectionnee = this.filtres().fonctionIds.length === 1 && this.filtres().fonctionIds[0] === fonction.id;
+    void this.router.navigate([], { queryParams: { fonctionIds: dejaSelectionnee ? null : String(fonction.id) }, queryParamsHandling: 'merge' });
+  }
+
+  changerPageEmployes(page: number): void {
+    const actuel = this.pageEmployes();
+    if (!actuel || page < 0 || page >= actuel.page.totalPages) return;
+    this.employesEnChargement.set(true);
+    this.paieService.search(versCriteres(this.filtres()), { page, size: actuel.page.size, sort: 'employee.nomPrenom,asc' })
+      .pipe(finalize(() => this.employesEnChargement.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe((resultat) => this.pageEmployes.set(resultat));
+  }
 
   constructor() {
     const parametres$ = this.route.queryParamMap.pipe(
@@ -211,7 +399,7 @@ export class PaieCartesComponent {
     );
     merge(parametres$, this.rechargement)
       .pipe(
-        switchMap(() => (this.niveau() === 1 ? this.chargerMois() : this.chargerChantiers())),
+        switchMap(() => this.chargerVue()),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
@@ -222,16 +410,61 @@ export class PaieCartesComponent {
     this.rechercheForm().reset({ terme: '' });
   }
 
-  /** Seule une équipe réelle s'ouvre : « Sans équipe » n'a pas d'identifiant, l'API ne sait pas filtrer sur son absence. */
-  readonly ligneCliquable = (ligne: LigneEquipe): boolean => ligne.equipeId !== null;
-  readonly titreLigne = (ligne: LigneEquipe): string | null => (ligne.equipeId !== null ? 'Voir les bulletins de cette équipe' : null);
+  private construireIndicateurs(
+    courant: { masse: number; effectif: number; stcMontant: number; stc: number },
+    precedent: { masse: number; effectif: number; stcMontant: number; stc: number } | null
+  ): IndicateurAffiche[] {
+    return (['masse', 'effectif', 'stcMontant', 'stc'] as const).map((cle) => ({
+      cle,
+      libelle: LIBELLES_INDICATEURS[cle],
+      valeur: courant[cle],
+      unite: cle === 'masse' || cle === 'stcMontant' ? 'DH' : 'personnes',
+      comparaison: precedent ? this.formaterEcart(courant[cle], precedent[cle], cle) : null
+    }));
+  }
 
-  /** Clic (ou Entrée) sur une équipe : ouvre la vue tabulaire avec les mêmes filtres, plus cette équipe. Les bulletins sans
-   * équipe ne s'ouvrent pas : l'API ne sait pas filtrer sur l'absence d'équipe. */
-  ouvrirBulletins(ligne: LigneEquipe): void {
-    if (ligne.equipeId !== null) {
-      void this.router.navigate(['/paie'], { queryParams: { equipeIds: String(ligne.equipeId) }, queryParamsHandling: 'merge' });
-    }
+  private formaterEcart(courant: number, precedent: number, mesure: IndicateurPaie): string {
+    const difference = courant - precedent;
+    const signe = difference > 0 ? '+' : difference < 0 ? '−' : '';
+    const valeur = mesure === 'masse' || mesure === 'stcMontant'
+      ? formaterMontant(Math.abs(difference))
+      : FORMAT_ENTIER.format(Math.abs(difference));
+    const unite = mesure === 'masse' || mesure === 'stcMontant' ? 'DH' : Math.abs(difference) === 1 ? 'personne' : 'personnes';
+    const pourcentage = (mesure === 'masse' || mesure === 'stcMontant') && precedent > 0
+      ? ` (${formaterVariation((difference / precedent) * 100)})`
+      : '';
+    return `${signe}${valeur} ${unite}${pourcentage}`;
+  }
+
+  private graphiqueBarres(labels: string[], valeurs: number[], mesure: IndicateurPaie): Graphique<'bar'> {
+    this.theme.theme();
+    const couleur = couleurMesure(mesure === 'effectif' || mesure === 'stc' ? 'effectif' : 'masse');
+    return {
+      data: {
+        labels,
+        datasets: [{
+          label: LIBELLES_INDICATEURS[mesure],
+          data: valeurs,
+          backgroundColor: couleur,
+          borderRadius: { topRight: 4, bottomRight: 4 },
+          borderSkipped: 'start',
+          maxBarThickness: 18,
+          categoryPercentage: 0.82
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: animationGraphique(),
+        interaction: { mode: 'nearest', axis: 'y', intersect: false },
+        plugins: { legend: { display: false }, tooltip: infobulle() },
+        scales: {
+          x: { beginAtZero: true, ticks: { color: jeton('--color-text-muted'), font: police(), callback: (valeur) => FORMAT_ENTIER.format(Number(valeur)) }, grid: grille(), border: { display: false } },
+          y: { ticks: { color: jeton('--color-text-muted'), font: police(), autoSkip: false }, grid: { display: false }, border: { display: false } }
+        }
+      }
+    };
   }
 
   /** La suppression en groupe a sa permission propre : supprimer un bulletin (PAIE_DELETE) ne suffit pas. */
@@ -310,14 +543,6 @@ export class PaieCartesComponent {
     return Math.min(indice, DELAI_CASCADE_MAX_RANG) * DELAI_CASCADE_MS;
   }
 
-  effectifTotalEquipes(): number {
-    return this.lignesEquipes().reduce((somme, l) => somme + l.effectif, 0);
-  }
-
-  masseTotaleEquipes(): number {
-    return this.lignesEquipes().reduce((somme, l) => somme + l.masse, 0);
-  }
-
   private viderConfirmation(): void {
     this.confirmationForm().reset({ nombre: '' });
   }
@@ -353,11 +578,47 @@ export class PaieCartesComponent {
   private apresSuppression(suppression: Suppression): void {
     this.cachePeriodes.clear();
     this.cacheChantiers.clear();
+    this.cacheAnalytique.clear();
     if (suppression.remonterApres) {
-      void this.router.navigate([], { queryParams: { chantierIds: null }, queryParamsHandling: 'merge' });
+      const queryParams = this.niveau() === 4 ? { equipeIds: null } : { chantierIds: null, equipeIds: null };
+      void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
     } else {
       this.rechargement.next();
     }
+  }
+
+  private chargerVue(): Observable<unknown> {
+    if (this.niveau() === 1) {
+      this.analytique.set(null);
+      this.chantiers.set([]);
+      this.pageEmployes.set(null);
+      return this.chargerMois();
+    }
+
+    const criteres = versCriteres(this.filtres());
+    const cle = JSON.stringify(criteres);
+    const analytique$ = this.cacheAnalytique.has(cle)
+      ? of(this.cacheAnalytique.get(cle)!)
+      : this.paieService.analyser(criteres);
+    const chantiers$ = this.cacheChantiers.has(cle)
+      ? of(this.cacheChantiers.get(cle)!)
+      : this.paieService.rechercherChantiers(criteres);
+    const pageVide: Page<Paie> = { content: [], page: { size: 12, number: 0, totalElements: 0, totalPages: 0 } };
+    const employes$ = this.niveau() === 4
+      ? this.paieService.search(criteres, { page: 0, size: 12, sort: 'employee.nomPrenom,asc' })
+      : of(pageVide);
+
+    this.chargement.set(true);
+    return forkJoin({ analytique: analytique$, chantiers: chantiers$, employes: employes$ }).pipe(
+      tap(({ analytique, chantiers, employes }) => {
+        this.cacheAnalytique.set(cle, analytique);
+        this.cacheChantiers.set(cle, chantiers);
+        this.analytique.set(analytique);
+        this.chantiers.set(chantiers);
+        this.pageEmployes.set(this.niveau() === 4 ? employes : null);
+      }),
+      finalize(() => this.chargement.set(false))
+    );
   }
 
   /** Niveau 1 : les mois qui ont de la paie sur le périmètre filtré (le mois des filtres n'a pas de sens ici). */
@@ -380,23 +641,4 @@ export class PaieCartesComponent {
     );
   }
 
-  /** Niveaux 2 et 3 : les chantiers du mois, avec leurs équipes, sur le périmètre filtré. */
-  private chargerChantiers(): Observable<unknown> {
-    const criteres = versCriteres(this.filtres());
-    const cle = JSON.stringify(criteres);
-    const enCache = this.cacheChantiers.get(cle);
-    if (enCache) {
-      this.chantiers.set(enCache);
-      this.chargement.set(false);
-      return EMPTY;
-    }
-    this.chargement.set(true);
-    return this.paieService.rechercherChantiers(criteres).pipe(
-      tap((chantiers) => {
-        this.cacheChantiers.set(cle, chantiers);
-        this.chantiers.set(chantiers);
-      }),
-      finalize(() => this.chargement.set(false))
-    );
-  }
 }

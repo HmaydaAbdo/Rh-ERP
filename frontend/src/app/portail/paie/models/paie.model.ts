@@ -28,6 +28,7 @@ export interface PaiePeriodeResume {
   nombreChantiers: number;
   masse: number;
   stc: number;
+  stcMontant: number;
 }
 
 export interface PaieEquipePeriode {
@@ -36,6 +37,17 @@ export interface PaieEquipePeriode {
   libelle: string;
   effectif: number;
   masse: number;
+  stc: number;
+  stcMontant: number;
+  moisPrecedent?: PaiePeriodeComparaison | null;
+}
+
+export interface PaiePeriodeComparaison {
+  periode: string;
+  effectif: number;
+  masse: number;
+  stc: number;
+  stcMontant: number;
 }
 
 /** Un chantier d'un mois avec ses équipes (GET /paie/chantiers) — `libelle` : nom, à défaut désignation. */
@@ -45,6 +57,10 @@ export interface PaieChantierPeriode {
   libelle: string | null;
   effectif: number;
   masse: number;
+  stc: number;
+  stcMontant: number;
+  moisPrecedent?: PaiePeriodeComparaison | null;
+  sansEquipeMoisPrecedent?: PaiePeriodeComparaison | null;
   equipes: PaieEquipePeriode[];
 }
 
@@ -120,6 +136,7 @@ export interface PaieKpi {
   coutMoyen: number | null;
   nombreChantiers: number;
   stc: number;
+  stcMontant: number;
 }
 
 export interface PaieChantierMasse {
@@ -129,6 +146,7 @@ export interface PaieChantierMasse {
   masse: number;
   effectif: number;
   stc: number;
+  stcMontant: number;
 }
 
 export interface PaieFonctionMasse {
@@ -149,6 +167,8 @@ export interface PaieEvolution {
   periode: string;
   masse: number;
   effectif: number;
+  stc: number;
+  stcMontant: number;
 }
 
 /** Réponse de POST /paie/analytique. `moisPrecedent` est nul quand le mois contigu n'a aucun bulletin dans le périmètre. */

@@ -9,6 +9,7 @@ public record PaiePeriodeResumeDto(
         long nombreBulletins,
         long nombreChantiers,
         BigDecimal masse,
-        long stc
+        long stc,
+        BigDecimal stcMontant
 ) {
 }

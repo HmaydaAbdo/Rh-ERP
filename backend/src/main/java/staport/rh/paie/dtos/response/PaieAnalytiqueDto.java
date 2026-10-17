@@ -22,10 +22,10 @@ public record PaieAnalytiqueDto(
 ) {
 
     /** {@code coutMoyen} = masse ÷ effectif, {@code null} sans bulletin. {@code stc} : même définition que le rapport PDF. */
-    public record Kpi(BigDecimal masse, long effectif, BigDecimal coutMoyen, long nombreChantiers, long stc) {
+    public record Kpi(BigDecimal masse, long effectif, BigDecimal coutMoyen, long nombreChantiers, long stc, BigDecimal stcMontant) {
     }
 
-    public record ChantierMasse(Long id, String code, String libelle, BigDecimal masse, long effectif, long stc) {
+    public record ChantierMasse(Long id, String code, String libelle, BigDecimal masse, long effectif, long stc, BigDecimal stcMontant) {
     }
 
     public record FonctionMasse(Long id, String libelle, BigDecimal masse, long effectif) {
@@ -36,7 +36,7 @@ public record PaieAnalytiqueDto(
     public record Tranche(BigDecimal min, BigDecimal max, long effectif) {
     }
 
-    public record Evolution(String periode, BigDecimal masse, long effectif) {
+    public record Evolution(String periode, BigDecimal masse, long effectif, long stc, BigDecimal stcMontant) {
     }
 
     /** Bulletins du périmètre auxquels il manque une information facultative. */

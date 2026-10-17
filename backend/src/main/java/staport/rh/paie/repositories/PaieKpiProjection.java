@@ -14,6 +14,8 @@ public interface PaieKpiProjection {
 
     Long getStc();
 
+    BigDecimal getStcMontant();
+
     Long getSansEquipe();
 
     Long getSansObservation();

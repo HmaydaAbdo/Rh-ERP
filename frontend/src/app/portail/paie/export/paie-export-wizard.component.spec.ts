@@ -9,8 +9,8 @@ import { PaieExportWizardComponent } from './paie-export-wizard.component';
 import { PaieExportStore } from './paie-export.store';
 
 const PERIODES: PaiePeriodeResume[] = [
-    { periode: '2026-09', nombreBulletins: 975, nombreChantiers: 25, masse: 4421310.05, stc: 41 },
-    { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 25, masse: 4399080.74, stc: 37 }
+    { periode: '2026-09', nombreBulletins: 975, nombreChantiers: 25, masse: 4421310.05, stc: 41, stcMontant: 75000 },
+    { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 25, masse: 4399080.74, stc: 37, stcMontant: 68000 }
 ];
 const CHANTIERS: PaieChantierPeriode[] = [
     {
@@ -19,12 +19,14 @@ const CHANTIERS: PaieChantierPeriode[] = [
         libelle: 'Nador',
         effectif: 313,
         masse: 1439875.77,
+        stc: 20,
+        stcMontant: 30000,
         equipes: [
-            { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 74, masse: 700000 },
-            { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 69, masse: 600000 }
+            { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 74, masse: 700000, stc: 8, stcMontant: 15000 },
+            { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 69, masse: 600000, stc: 12, stcMontant: 15000 }
         ]
     },
-    { id: 2, code: 'C196', libelle: 'Marrakech', effectif: 125, masse: 559886.92, equipes: [{ id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 48, masse: 200000 }] }
+    { id: 2, code: 'C196', libelle: 'Marrakech', effectif: 125, masse: 559886.92, stc: 9, stcMontant: 12000, equipes: [{ id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 48, masse: 200000, stc: 4, stcMontant: 7000 }] }
 ];
 const TABLEAUX: PaieMaterielTableau[] = [
     { chantierCode: 'C168', equipeCode: 'CH', titre: 'CAMION', libelles: ['CAMION CITERNE', 'PICK UP'] },

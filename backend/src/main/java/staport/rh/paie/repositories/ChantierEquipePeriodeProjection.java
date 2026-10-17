@@ -24,4 +24,8 @@ public interface ChantierEquipePeriodeProjection {
     Long getEffectif();
 
     BigDecimal getMasse();
+
+    Long getStc();
+
+    BigDecimal getStcMontant();
 }

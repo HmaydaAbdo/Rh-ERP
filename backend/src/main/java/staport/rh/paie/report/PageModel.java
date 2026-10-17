@@ -55,10 +55,10 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     }
 
     enum GroupeEvolution {
-        MASSE_EFFECTIF, STC
+        MONTANTS, EFFECTIFS
     }
 
-    /** Graphique mensuel à deux séries et deux axes Y explicitement associés à leurs unités. */
+    /** Graphique mensuel à deux séries d'une même unité, rapportées à une échelle Y commune. */
     record BlocGraphiqueEvolution(List<RepartitionBean> donnees, GroupeEvolution groupe,
                                   double hauteur) implements Bloc {
     }

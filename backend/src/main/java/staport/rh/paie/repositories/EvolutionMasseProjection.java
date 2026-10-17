@@ -11,4 +11,8 @@ public interface EvolutionMasseProjection {
     BigDecimal getMasse();
 
     Long getEffectif();
+
+    Long getStc();
+
+    BigDecimal getStcMontant();
 }

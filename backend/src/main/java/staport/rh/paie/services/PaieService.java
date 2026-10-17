@@ -34,6 +34,7 @@ import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaieMaterielTableauDto;
 import staport.rh.paie.dtos.response.PaieEquipePeriodeDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
+import staport.rh.paie.dtos.response.PaiePeriodeComparaisonDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
 import staport.rh.paie.dtos.response.PaieChantierOptionDto;
 import staport.rh.paie.dtos.response.PaieEquipeOptionDto;
@@ -277,7 +278,7 @@ public class PaieService implements IPaieService {
     public List<PaiePeriodeResumeDto> findPeriodes(PaieSearchCriteria criteres) {
         return repository.resumerParPeriode(FiltresPaie.depuis(criteres)).stream()
                 .map(p -> new PaiePeriodeResumeDto(p.getPeriode().toString(), p.getBulletins(), p.getChantiers(),
-                        p.getMasse(), p.getStc()))
+                        p.getMasse(), p.getStc(), p.getStcMontant()))
                 .toList();
     }
 
@@ -295,19 +296,32 @@ public class PaieService implements IPaieService {
         for (ChantierEquipePeriodeProjection ligne : repository.resumerChantiersEtEquipesParPeriode(periode, FiltresPaie.depuis(criteres))) {
             parChantier.computeIfAbsent(ligne.getChantierCode(), code -> new ArrayList<>()).add(ligne);
         }
+        Map<String, List<ChantierEquipePeriodeProjection>> parChantierPrecedent = new LinkedHashMap<>();
+        for (ChantierEquipePeriodeProjection ligne : repository.resumerChantiersEtEquipesParPeriode(periode.minusMonths(1), FiltresPaie.depuis(criteres))) {
+            parChantierPrecedent.computeIfAbsent(ligne.getChantierCode(), code -> new ArrayList<>()).add(ligne);
+        }
         return parChantier.values().stream()
-                .map(this::versChantierPeriode)
+                .map(lignes -> versChantierPeriode(lignes, parChantierPrecedent.get(lignes.get(0).getChantierCode()), periode.minusMonths(1)))
                 .sorted(Comparator.comparing(PaieChantierPeriodeDto::masse).reversed())
                 .toList();
     }
 
-    private PaieChantierPeriodeDto versChantierPeriode(List<ChantierEquipePeriodeProjection> lignes) {
+    private PaieChantierPeriodeDto versChantierPeriode(List<ChantierEquipePeriodeProjection> lignes,
+                                                       List<ChantierEquipePeriodeProjection> lignesPrecedentes,
+                                                       YearMonth periodePrecedente) {
         ChantierEquipePeriodeProjection premiere = lignes.get(0);
         String nom = premiere.getChantierNom();
         String libelle = nom != null && !nom.isBlank() ? nom : premiere.getChantierDesignation();
+        Map<Long, ChantierEquipePeriodeProjection> equipesPrecedentes = lignesPrecedentes == null ? Map.of() : lignesPrecedentes.stream()
+                .filter(ligne -> ligne.getEquipeId() != null)
+                .collect(Collectors.toMap(ChantierEquipePeriodeProjection::getEquipeId, ligne -> ligne));
         List<PaieEquipePeriodeDto> equipes = lignes.stream()
                 .filter(l -> l.getEquipeId() != null)
-                .map(l -> new PaieEquipePeriodeDto(l.getEquipeId(), l.getEquipeCode(), l.getEquipeLibelle(), l.getEffectif(), l.getMasse()))
+                .map(l -> {
+                    ChantierEquipePeriodeProjection precedent = equipesPrecedentes.get(l.getEquipeId());
+                    return new PaieEquipePeriodeDto(l.getEquipeId(), l.getEquipeCode(), l.getEquipeLibelle(), l.getEffectif(),
+                            l.getMasse(), l.getStc(), l.getStcMontant(), versComparaison(precedent, periodePrecedente));
+                })
                 .sorted(Comparator.comparing(PaieEquipePeriodeDto::code))
                 .toList();
         return new PaieChantierPeriodeDto(
@@ -316,7 +330,34 @@ public class PaieService implements IPaieService {
                 libelle,
                 lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getEffectif).sum(),
                 lignes.stream().map(ChantierEquipePeriodeProjection::getMasse).reduce(BigDecimal.ZERO, BigDecimal::add),
+                lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getStc).sum(),
+                lignes.stream().map(ChantierEquipePeriodeProjection::getStcMontant).reduce(BigDecimal.ZERO, BigDecimal::add),
+                versComparaison(lignesPrecedentes, periodePrecedente),
+                versComparaisonSansEquipe(lignesPrecedentes, periodePrecedente),
                 equipes);
+    }
+
+    private PaiePeriodeComparaisonDto versComparaisonSansEquipe(List<ChantierEquipePeriodeProjection> lignes, YearMonth periode) {
+        if (lignes == null || lignes.isEmpty()) return null;
+        return lignes.stream()
+                .filter(ligne -> ligne.getEquipeId() == null)
+                .findFirst()
+                .map(ligne -> versComparaison(ligne, periode))
+                .orElseGet(() -> new PaiePeriodeComparaisonDto(periode.toString(), 0, BigDecimal.ZERO, 0, BigDecimal.ZERO));
+    }
+
+    private PaiePeriodeComparaisonDto versComparaison(List<ChantierEquipePeriodeProjection> lignes, YearMonth periode) {
+        if (lignes == null || lignes.isEmpty()) return null;
+        return new PaiePeriodeComparaisonDto(periode.toString(),
+                lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getEffectif).sum(),
+                lignes.stream().map(ChantierEquipePeriodeProjection::getMasse).reduce(BigDecimal.ZERO, BigDecimal::add),
+                lignes.stream().mapToLong(ChantierEquipePeriodeProjection::getStc).sum(),
+                lignes.stream().map(ChantierEquipePeriodeProjection::getStcMontant).reduce(BigDecimal.ZERO, BigDecimal::add));
+    }
+
+    private PaiePeriodeComparaisonDto versComparaison(ChantierEquipePeriodeProjection ligne, YearMonth periode) {
+        if (ligne == null) return null;
+        return new PaiePeriodeComparaisonDto(periode.toString(), ligne.getEffectif(), ligne.getMasse(), ligne.getStc(), ligne.getStcMontant());
     }
 
     private Paie getEntityById(Long id) {

@@ -8,6 +8,9 @@ public record PaieEquipePeriodeDto(
         String code,
         String libelle,
         long effectif,
-        BigDecimal masse
+        BigDecimal masse,
+        long stc,
+        BigDecimal stcMontant,
+        PaiePeriodeComparaisonDto moisPrecedent
 ) {
 }

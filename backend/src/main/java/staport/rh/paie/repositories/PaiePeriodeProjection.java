@@ -16,4 +16,6 @@ public interface PaiePeriodeProjection {
     BigDecimal getMasse();
 
     Long getStc();
+
+    BigDecimal getStcMontant();
 }

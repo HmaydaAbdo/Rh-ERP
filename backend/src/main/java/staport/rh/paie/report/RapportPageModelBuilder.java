@@ -221,9 +221,9 @@ final class RapportPageModelBuilder {
         PageModel.BlocKpi kpi = blocKpi(cartesKpi(synthese.masse(), synthese.effectif(), synthese.stc(),
                 synthese.stcMontant(), synthese.nombreChantiers()));
         blocs.add(kpi);
-        blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
+        blocs.add(new PageModel.BlocTitreRubrique(1, "Masse salariale et montants des STC (DH)"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
-                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                synthese.evolutionMensuelle(), PageModel.GroupeEvolution.MONTANTS,
                 HAUTEUR_EVOLUTION_PAIREE));
         ajouterEvolutionStc(blocs, synthese.evolutionMensuelle());
         pages.add(new PageEnConstruction("GLOBAL", blocs));
@@ -295,17 +295,17 @@ final class RapportPageModelBuilder {
         List<PageModel.Bloc> blocs = new ArrayList<>();
         blocs.add(new PageModel.BlocTitreChapitre(chapitreChantier(rang, chantier)));
         blocs.add(blocKpi(cartesKpi(chantier.masse(), chantier.effectif(), chantier.stc(), chantier.stcMontant(), null)));
-        blocs.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
+        blocs.add(new PageModel.BlocTitreRubrique(1, "Masse salariale et montants des STC (DH)"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(
-                chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MASSE_EFFECTIF,
+                chantier.evolutionMensuelle(), PageModel.GroupeEvolution.MONTANTS,
                 HAUTEUR_EVOLUTION_PAIREE));
         ajouterEvolutionStc(blocs, chantier.evolutionMensuelle());
         return blocs;
     }
 
     private void ajouterEvolutionStc(List<PageModel.Bloc> blocs, List<RepartitionBean> evolution) {
-        blocs.add(new PageModel.BlocTitreRubrique(2, "Évolution du STC — personnes et DH"));
-        blocs.add(new PageModel.BlocGraphiqueEvolution(evolution, PageModel.GroupeEvolution.STC,
+        blocs.add(new PageModel.BlocTitreRubrique(2, "Effectif rémunéré et sorties du personnel (personnes)"));
+        blocs.add(new PageModel.BlocGraphiqueEvolution(evolution, PageModel.GroupeEvolution.EFFECTIFS,
                 HAUTEUR_EVOLUTION_PAIREE));
     }
 
@@ -331,9 +331,9 @@ final class RapportPageModelBuilder {
         List<PageModel.Bloc> masse = new ArrayList<>();
         masse.add(new PageModel.BlocTitreEquipe(equipe.titre()));
         masse.add(cartesKpiEquipe(equipe));
-        masse.add(new PageModel.BlocTitreRubrique(1, "Évolution de la masse salariale et de l'effectif"));
+        masse.add(new PageModel.BlocTitreRubrique(1, "Masse salariale et montants des STC (DH)"));
         masse.add(new PageModel.BlocGraphiqueEvolution(equipe.evolutionMensuelle(),
-                PageModel.GroupeEvolution.MASSE_EFFECTIF, HAUTEUR_EVOLUTION_PAIREE));
+                PageModel.GroupeEvolution.MONTANTS, HAUTEUR_EVOLUTION_PAIREE));
         ajouterEvolutionStc(masse, equipe.evolutionMensuelle());
         pages.add(new PageEnConstruction(niveau, masse));
 

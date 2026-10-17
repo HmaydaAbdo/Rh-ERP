@@ -18,4 +18,6 @@ public interface ChantierMasseProjection {
     Long getEffectif();
 
     Long getStc();
+
+    BigDecimal getStcMontant();
 }

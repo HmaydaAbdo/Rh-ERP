@@ -102,13 +102,18 @@ export class PaieFiltresComponent {
     return (f.cin.trim() ? 1 : 0) + (f.chantierIds.length > 0 ? 1 : 0) + (f.equipeIds.length > 0 ? 1 : 0) + (f.fonctionIds.length > 0 ? 1 : 0);
   });
 
-  /** Chantier choisi du fil de navigation (niveau 3 des Cartes), sans charger toute la liste du mois. */
+  /** Chantier choisi du fil de navigation, sans charger toute la liste du mois. */
   protected readonly chantierOuvert = computed(() => {
     const ids = this.courant().chantierIds;
     if (ids.length !== 1) {
       return null;
     }
     return `n° ${ids[0]}`;
+  });
+  /** Équipe sélectionnée au niveau détaillé des Cartes. */
+  protected readonly equipeOuverte = computed(() => {
+    const ids = this.courant().equipeIds;
+    return ids.length === 1 ? `Équipe n° ${ids[0]}` : null;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
@@ -156,16 +161,28 @@ export class PaieFiltresComponent {
     this.secondairesOuverts.update((ouverts) => !ouverts);
   }
 
-  /** Fil de navigation (Cartes) : revient au niveau demandé, 1 = tous les mois, 2 = chantiers du mois. */
-  protected allerAuNiveau(niveau: 1 | 2): void {
+  /** Fil de navigation (Cartes) : revient au mois, à la vue d'ensemble, ou au chantier. */
+  protected allerAuNiveau(niveau: 1 | 2 | 3): void {
     const f = this.courant();
-    this.emettreFiltres(niveau === 1 ? { ...f, periode: null, chantierIds: [] } : { ...f, chantierIds: [] });
+    if (niveau === 1) {
+      this.emettreFiltres({ ...f, periode: null, chantierIds: [], equipeIds: [] });
+    } else if (niveau === 2) {
+      this.emettreFiltres({ ...f, chantierIds: [], equipeIds: [] });
+    } else {
+      this.emettreFiltres({ ...f, equipeIds: [] });
+    }
   }
 
-  /** Un pas en arrière dans le fil de navigation : d'abord le chantier, puis le mois. */
+  /** Un pas en arrière dans le fil de navigation : d'abord l'équipe, puis le chantier, puis le mois. */
   protected remonter(): void {
     const f = this.courant();
-    this.emettreFiltres(f.chantierIds.length > 0 ? { ...f, chantierIds: [] } : { ...f, periode: null });
+    if (f.equipeIds.length > 0) {
+      this.emettreFiltres({ ...f, equipeIds: [] });
+    } else if (f.chantierIds.length > 0) {
+      this.emettreFiltres({ ...f, chantierIds: [] });
+    } else {
+      this.emettreFiltres({ ...f, periode: null });
+    }
   }
 
   protected reinitialiser(): void {
