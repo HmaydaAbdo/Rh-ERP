@@ -38,7 +38,7 @@
                   }
                 </div>
               </a>
-              <a stp-button variant="text" icon="list" class="paie-cartes__liste-lien" routerLink="/paie" queryParamsHandling="merge" [queryParams]="{ periode: carte.resume.periode }">Liste des employés</a>
+              <a stp-button variant="text" icon="table" class="paie-cartes__liste-lien" routerLink="/paie" queryParamsHandling="merge" [queryParams]="{ periode: carte.resume.periode }">Liste des employés</a>
             @if (canPurge()) {
               <button stp-button variant="danger-text" icon="trash-2" iconOnly class="paie-cartes__supprimer" type="button" [attr.aria-label]="'Supprimer les bulletins de ' + libellePeriode(carte.resume.periode)" title="Supprimer les bulletins de ce mois" (click)="demanderSuppressionMois(carte)"></button>
             }
@@ -51,7 +51,7 @@
         <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
           <div class="paie-cartes__niveau-entete">
             <h2 class="paie-cartes__sous-titre">Vue d’ensemble</h2>
-            <a stp-button variant="secondary" icon="list" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
+            <a stp-button variant="secondary" icon="table" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
           </div>
           <div class="paie-cartes__tuiles">
             @for (indicateur of indicateursVue(); track indicateur.cle; let i = $index) {
@@ -111,7 +111,7 @@
               </div>
               <div class="paie-cartes__entete-equipes"><h2>Équipes du chantier</h2>
                 <div class="paie-cartes__actions-niveau">
-                <a stp-button variant="secondary" icon="list" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
+                <a stp-button variant="secondary" icon="table" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
                 @if (canPurge()) { <button stp-button variant="danger" icon="trash-2" type="button" (click)="demanderSuppressionChantier(c)">Supprimer ce chantier</button> }
                 </div>
               </div>
@@ -157,7 +157,7 @@
           <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
               <div class="paie-cartes__niveau-entete">
                 <h2 class="paie-cartes__sous-titre">{{ chantier()?.code }}@if (chantier()?.libelle) { · {{ chantier()?.libelle }} } / @if (equipeSansEquipe()) { Sans équipe } @else { Équipe {{ equipe()?.code }} · {{ equipe()?.libelle }} }</h2>
-                <a stp-button variant="secondary" icon="list" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
+                <a stp-button variant="secondary" icon="table" routerLink="/paie" queryParamsHandling="preserve">Liste des employés</a>
               </div>
               <div class="paie-cartes__tuiles">
                 @for (indicateur of indicateursVue(); track indicateur.cle; let i = $index) {
