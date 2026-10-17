@@ -55,7 +55,13 @@ public class PaieSpecification {
             }
 
             if (criteria.equipeIds() != null && !criteria.equipeIds().isEmpty()) {
-                predicates.add(root.get("equipe").get("id").in(criteria.equipeIds()));
+                boolean sansEquipe = criteria.equipeIds().contains(0L);
+                List<Long> equipes = criteria.equipeIds().stream().filter(id -> id != null && id > 0).toList();
+                Predicate equipe = sansEquipe ? criteriaBuilder.isNull(root.get("equipe")) : criteriaBuilder.disjunction();
+                if (!equipes.isEmpty()) {
+                    equipe = criteriaBuilder.or(equipe, root.get("equipe").get("id").in(equipes));
+                }
+                predicates.add(equipe);
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
