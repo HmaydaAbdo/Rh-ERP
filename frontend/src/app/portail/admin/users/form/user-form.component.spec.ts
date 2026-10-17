@@ -62,7 +62,8 @@ describe('UserFormComponent', () => {
     const rolesSource = {
       rolesConnus: signal(new Map(ROLES.map((role) => [role.id, role]))),
       fetchPage: vi.fn().mockReturnValue(of({ items: ROLES, totalRecords: ROLES.length })),
-      fetchById: vi.fn((id: number | string) => of(ROLES.find((role) => role.id === Number(id))!))
+      fetchById: vi.fn((id: number | string) => of(ROLES.find((role) => role.id === Number(id))!)),
+      findAllPermissions: vi.fn().mockReturnValue(of([PAIE_READ, PAIE_WRITE, EMPLOYEE_READ]))
     };
     TestBed.configureTestingModule({
       providers: [
@@ -181,16 +182,18 @@ describe('UserFormComponent', () => {
       expect(formulaire()().dirty()).toBe(false);
     });
 
-    it('regroupe les permissions par domaine et sépare les droits autorisés des droits refusés', async () => {
+    it('affiche tout le catalogue par domaine et sépare les droits hérités des droits refusés ou non hérités', async () => {
       await afficher('4');
 
-      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['PAIE_READ', 'PAIE_WRITE']);
-      expect(racine().querySelectorAll('.user-form__permission-domain')).toHaveLength(1);
-      expect(racine().querySelector('.user-form__permission-domain h3')?.textContent).toBe('PAIE');
+      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
+      expect(racine().querySelectorAll('.user-form__permission-domain')).toHaveLength(2);
+      expect(Array.from(racine().querySelectorAll('.user-form__permission-domain h3')).map((h3) => h3.textContent)).toEqual(['EMPLOYEE', 'PAIE']);
       expect(permission('PAIE_READ')!.checked).toBe(true);
       expect(permission('PAIE_READ')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--allowed');
       expect(permission('PAIE_WRITE')!.checked).toBe(false);
       expect(permission('PAIE_WRITE')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--denied');
+      expect(permission('EMPLOYEE_READ')!.checked).toBe(false);
+      expect(permission('EMPLOYEE_READ')!.disabled).toBe(true);
     });
 
     it('recalcule les permissions refusables quand les rôles changent, et oublie le refus d’une permission qui disparaît', async () => {
@@ -199,7 +202,7 @@ describe('UserFormComponent', () => {
       formulaire().roleIds().value.set([11]);
       await stabiliser();
 
-      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ']);
+      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
       formulaire().roleIds().value.set([10, 11]);
       await stabiliser();
       expect(permission('PAIE_WRITE')!.checked).toBe(true);

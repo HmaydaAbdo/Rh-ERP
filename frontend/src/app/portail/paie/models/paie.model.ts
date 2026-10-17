@@ -149,6 +149,16 @@ export interface PaieChantierMasse {
   stcMontant: number;
 }
 
+export interface PaieEquipeMasse {
+  id: number | null;
+  code: string | null;
+  libelle: string | null;
+  masse: number;
+  effectif: number;
+  stc: number;
+  stcMontant: number;
+}
+
 export interface PaieFonctionMasse {
   id: number;
   libelle: string;
@@ -177,6 +187,7 @@ export interface PaieAnalytique {
   kpis: PaieKpi;
   moisPrecedent: PaieKpi | null;
   parChantier: PaieChantierMasse[];
+  parEquipe: PaieEquipeMasse[];
   parFonction: PaieFonctionMasse[];
   tranches: PaieTranche[];
   evolution: PaieEvolution[];

@@ -44,6 +44,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EndpointSecurityTest {
 
     private static final Pattern HAS_AUTHORITY = Pattern.compile("hasAuthority\\('([^']+)'\\)");
+    private static final Pattern HAS_ANY_AUTHORITY = Pattern.compile("hasAnyAuthority\\(([^)]*)\\)");
+    private static final Pattern QUOTED_AUTHORITY = Pattern.compile("'([^']+)'");
     private static final String PERMISSION_INCONNUE = "PERMISSION_QUI_N_EXISTE_PAS";
 
     /**
@@ -108,7 +110,7 @@ class EndpointSecurityTest {
             Map.entry("RoleController.create", "ROLE_MANAGE"),
             Map.entry("RoleController.update", "ROLE_MANAGE"),
             Map.entry("RoleController.delete", "ROLE_MANAGE"),
-            Map.entry("RoleController.findAllPermissions", "ROLE_MANAGE"),
+            Map.entry("RoleController.findAllPermissions", "ROLE_MANAGE|USER_MANAGE"),
             Map.entry("UserController.search", "USER_MANAGE"),
             Map.entry("UserController.findById", "USER_MANAGE"),
             Map.entry("UserController.create", "USER_MANAGE"),
@@ -183,7 +185,7 @@ class EndpointSecurityTest {
             PreAuthorize annotation = preAuthorize(endpoint);
             if (annotation == null) {
                 sansProtection.add(nom(endpoint));
-            } else if (!HAS_AUTHORITY.matcher(annotation.value()).find()) {
+            } else if (autorites(annotation).isEmpty()) {
                 expressionsNonAnalysees.add(nom(endpoint) + " : " + annotation.value());
             }
         }
@@ -198,9 +200,7 @@ class EndpointSecurityTest {
     void lesPermissionsCorrespondentALaTableDeReference() {
         Map<String, String> reelles = new TreeMap<>();
         for (Method endpoint : endpoints()) {
-            Matcher matcher = HAS_AUTHORITY.matcher(preAuthorize(endpoint).value());
-            matcher.find();
-            reelles.put(nom(endpoint), matcher.group(1));
+            reelles.put(nom(endpoint), String.join("|", autorites(preAuthorize(endpoint))));
         }
 
         assertThat(reelles).as("endpoints et permissions (table de référence du test)")
@@ -226,11 +226,9 @@ class EndpointSecurityTest {
         List<String> accesRefuses = new ArrayList<>();
 
         for (Method endpoint : endpoints()) {
-            Matcher matcher = HAS_AUTHORITY.matcher(preAuthorize(endpoint).value());
-            matcher.find();
-            authentifierAvec(matcher.group(1));
+            authentifierAvec(autorites(preAuthorize(endpoint)).toArray(String[]::new));
             if (estRefuse(endpoint)) {
-                accesRefuses.add(nom(endpoint) + " avec " + matcher.group(1));
+                accesRefuses.add(nom(endpoint) + " avec " + String.join(" ou ", autorites(preAuthorize(endpoint))));
             }
         }
 
@@ -244,9 +242,8 @@ class EndpointSecurityTest {
         List<String> trops = new ArrayList<>();
 
         for (Method endpoint : endpoints()) {
-            Matcher matcher = HAS_AUTHORITY.matcher(preAuthorize(endpoint).value());
-            matcher.find();
-            String requise = matcher.group(1);
+            List<String> requises = autorites(preAuthorize(endpoint));
+            String requise = requises.get(0);
             if (!requise.endsWith("_READ")) {
                 String lecture = requise.substring(0, requise.lastIndexOf('_')) + "_READ";
                 authentifierAvec(lecture);
@@ -277,6 +274,23 @@ class EndpointSecurityTest {
         return surMethode != null
                 ? surMethode
                 : AnnotatedElementUtils.findMergedAnnotation(endpoint.getDeclaringClass(), PreAuthorize.class);
+    }
+
+    private List<String> autorites(PreAuthorize annotation) {
+        Matcher simple = HAS_AUTHORITY.matcher(annotation.value());
+        if (simple.find()) {
+            return List.of(simple.group(1));
+        }
+        Matcher multiple = HAS_ANY_AUTHORITY.matcher(annotation.value());
+        if (!multiple.find()) {
+            return List.of();
+        }
+        Matcher quoted = QUOTED_AUTHORITY.matcher(multiple.group(1));
+        List<String> autorites = new ArrayList<>();
+        while (quoted.find()) {
+            autorites.add(quoted.group(1));
+        }
+        return autorites;
     }
 
     private void authentifierAvec(String... permissions) {

@@ -124,7 +124,7 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `POST /paie/import` · `GET /paie/import/modele` | `PAIE_IMPORT` |
 | | `POST /paie/export` · `POST /paie/report/pdf` | `PAIE_EXPORT` |
 | Utilisateurs | `POST /users/search`, `GET /users/{id}`, `POST /users`, `PUT /users/{id}`, `PUT /users/{id}/permissions-refusees`, `POST /users/{id}/reset-password` | `USER_MANAGE` |
-| Rôles | `POST /roles/search`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`, `DELETE /roles/{id}`, `GET /permissions` | `ROLE_MANAGE` |
+| Rôles | `POST /roles/search`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`, `DELETE /roles/{id}`, `GET /permissions` | `ROLE_MANAGE` pour les rôles ; `ROLE_MANAGE` ou `USER_MANAGE` pour le catalogue |
 | Paramètres | `GET /parametres` | `PARAMETRE_READ` |
 | | `PUT /parametres/{id}` | `PARAMETRE_WRITE` |
 | Audit | `POST /logs/search`, `GET /logs/{id}`, `GET /logs/{id}/details`, `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` |
