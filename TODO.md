@@ -100,11 +100,13 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 À traiter lors d'interventions autorisées sur l'hôte de production. Vérifier les sauvegardes et les
 procédures propres à chaque opération dans `docs/deployment.md` avant toute action.
 
-1. **Finaliser la confiance du proxy en production** : identifier le pair réel de Nginx outer vu par
-   Nginx inner, limiter `set_real_ip_from` à ce pair, puis vérifier la résistance aux en-têtes falsifiés
-   et l'application effective des limites par IP/utilisateur. La config actuelle accepte toutes les
-   plages RFC1918 et loopback ; la passerelle `web-net` est `172.21.0.1`. Vérifier aussi que le secret
-   JWT est unique à la production sans jamais l'afficher ; sa valeur actuelle décode à au moins 256 bits.
+1. **Finaliser la confiance du proxy en production** : le 2026-10-17, les journaux ont confirmé
+   `socket_peer=172.20.0.1` pour les requêtes utilisateur et `127.0.0.1` pour le healthcheck ; le
+   réseau `erp-rh_web-net` est `172.20.0.0/16` (passerelle `.1`) et `erp-rh_db-net` est
+   `172.21.0.0/16` (passerelle `.1`). Déployer la configuration `set_real_ip_from 172.20.0.1/32`, puis
+   vérifier la résistance aux en-têtes falsifiés ainsi que l'application effective des
+   limites par IP/utilisateur. Vérifier aussi que le secret JWT est unique à la production sans jamais
+   l'afficher ; sa valeur actuelle décode à au moins 256 bits.
 2. **Mettre l'accès ERP en HTTPS** (session dédiée) : déterminer l'URL publique et le point de terminaison
    TLS, configurer le certificat et le listener Nginx, puis vérifier la redirection HTTP→HTTPS, le
    sous-chemin `/erp-rh/`, les cookies sécurisés, CORS et le renouvellement du certificat. La config
