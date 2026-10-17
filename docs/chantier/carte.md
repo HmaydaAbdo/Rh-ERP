@@ -26,20 +26,53 @@ Tout se règle dans `frontend/src/app/portail/chantier/carte/carte.config.ts`, j
 | `fond.glyphes` | Modèle des polices des libellés | `carte/fond/fonts/{fontstack}/{range}.pbf` |
 | `fond.icones` | Dossier des icônes ; `light` ou `dark` y est ajouté selon le thème | `carte/fond/sprites/v4` |
 | `fond.attribution` | Mention légale affichée sur la carte (obligatoire : données OpenStreetMap, ODbL) | Protomaps, © OpenStreetMap |
-| `emprise` | `[ouest, sud, est, nord]` en degrés ; la carte n'en sort pas | Maroc `[-17.5, 20.5, -0.9, 36.1]` |
-| `centre`, `zoomInitial`, `zoomMin`, `zoomMax` | Vue initiale | `[-7.09, 31.79]`, 5, 4, 17 |
+| `territoire` | `[ouest, sud, est, nord]` en degrés : boîte englobante exacte de la frontière ; la carte s'y ajuste à l'ouverture, quelle que soit la taille de l'écran | calculé, voir ci-dessous |
+| `emprise` | Territoire plus 0,5° de marge ; le **centre** de la carte ne peut pas en sortir | calculé, voir ci-dessous |
+| `margeDeVuePx`, `zoomMin`, `zoomMax` | Espace autour du territoire à l'ouverture (24 px), zooms minimal (3) et maximal (17) | |
 | `langue` | Langue des libellés (à défaut, nom local) | `fr` |
 
-Les chemins sont relatifs à l'adresse de l'application (`document.baseURI`), ce qui fonctionne aussi derrière le
+Les valeurs de `territoire` et `emprise` sont dans `emprise-maroc.json`, produit par un script (jamais saisies à la main). Les chemins sont relatifs à l'adresse de l'application (`document.baseURI`), ce qui fonctionne aussi derrière le
 sous-chemin de nginx outer. `fond-de-carte.ts` transforme la configuration pour MapLibre :
 
 | Fonction | Rôle |
 |---|---|
 | `preparerMapLibre(base)` | Déclare le worker de MapLibre et le protocole `pmtiles://` (une seule fois) |
 | `creerStyle(config, theme, base)` | Style complet du fond, variante claire ou sombre selon `ThemeService` |
-| `optionsDeVue(config)` | Centre, zooms et borne (`maxBounds`) de la carte |
+| `optionsDeVue(config)` | Ajustement sur le territoire, zooms et contrainte de centre de la carte |
+| `creerContrainte(config)` | Maintient le centre dans l'emprise et le zoom dans ses bornes (voir « Emprise du Maroc ») |
 
 Le futur composant carte n'utilisera que ces fonctions : il ne connaît ni Protomaps ni l'emplacement des fichiers.
+
+## Emprise du Maroc
+
+Aucune coordonnée n'est saisie à la main : elles sont **calculées depuis une frontière officielle**.
+
+| | |
+|---|---|
+| Source | [Natural Earth](https://github.com/nvkelso/natural-earth-vector), `geojson/ne_10m_admin_0_countries_mar.geojson` (échelle 1:10 000 000, version de juin 2022), domaine public |
+| Périmètre | Version **« point de vue du Maroc »** : le territoire tel que le Maroc le définit, provinces du Sud comprises. Six polygones : le territoire principal et cinq petites enclaves ou îlots du littoral nord |
+| Territoire | `[-17.104644, 20.766913, -1.031999, 35.926519]` : le minimum et le maximum des 1 075 sommets de la frontière |
+| Marge | 0,5° (environ 55 km) sur les quatre côtés, arrondie à 3 décimales **vers l'extérieur** : `[-17.605, 20.266, -0.531, 36.427]` |
+
+La marge a deux raisons : la frontière est généralisée à l'échelle 1:10 000 000 (le littoral et les limites ne sont
+précis qu'à quelques kilomètres), et un marqueur placé près du bord ne doit pas être coupé.
+
+**Recalculer** (autre version des données, autre point de vue, autre marge) :
+
+```bash
+node scripts/carte/calculer-emprise.mjs chemin/vers/ne_10m_admin_0_countries_mar.geojson
+```
+
+Le script réécrit `maroc.frontiere.json` (la frontière) et `emprise-maroc.json` (territoire et emprise), qui alimentent la
+carte **et** `scripts/carte/preparer-fond-maroc.sh` : il n'existe qu'une seule valeur. `fond-de-carte.spec.ts` la
+recalcule indépendamment à chaque exécution des tests : il échoue si le territoire n'est pas exactement la boîte
+englobante de la frontière, si l'emprise n'est pas ce territoire plus 0,5° arrondi vers l'extérieur, ou si un seul
+sommet de la frontière sort de l'emprise.
+
+**Borne du centre, pas de l'écran.** MapLibre sait borner l'écran (`maxBounds`), mais il refuse alors que l'écran
+dépasse l'emprise : sur un écran en paysage, il zoomerait jusqu'à couper le haut et le bas du Maroc (le territoire
+est haut de 15°). La carte borne donc son **centre** à l'emprise (`creerContrainte`) : le Maroc entier s'affiche à
+l'ouverture sur un téléphone, un petit écran et un écran de bureau (testé), et on ne peut pas s'en éloigner.
 
 ## Préparer le fond de carte
 
@@ -79,13 +112,16 @@ par l'application, vérifier ses conditions d'usage et sa mention légale.
 
 ## Conditions d'usage
 
-- Données : OpenStreetMap, licence ODbL. La mention « © OpenStreetMap » doit rester visible sur la carte.
+- Frontière du Maroc : Natural Earth, domaine public (aucune mention obligatoire).
+- Données du fond : OpenStreetMap, licence ODbL. La mention « © OpenStreetMap » doit rester visible sur la carte.
 - Styles Protomaps : CC0 ; code BSD-3-Clause. Polices : SIL OFL 1.1 ; icônes : MIT.
 - Aucun service tiers n'est appelé à l'exécution : aucune clé, aucune limite, aucun coût.
 
 ## Limites connues
 
-- L'emprise du Maroc est approximative et doit être confirmée par la direction.
+- **Périmètre à confirmer par la direction** : l'emprise suit le point de vue du Maroc de Natural Earth (provinces du Sud
+  comprises). Un autre périmètre = une autre version du fichier source et le même script.
+- La frontière est à l'échelle 1:10 000 000 : elle sert à calculer l'emprise, pas à localiser un chantier à quelques mètres.
 - Le module de rendu de l'arabe de MapLibre (`@mapbox/mapbox-gl-rtl-text`) sera ajouté avec le composant carte :
   sans lui, les noms en arabe s'afficheraient mal formés.
 - Le fond n'a pas encore été vu à l'écran : l'environnement de développement de ces étapes n'a pas accès aux builds

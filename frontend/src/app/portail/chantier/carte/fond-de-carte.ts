@@ -1,5 +1,5 @@
 import { layers, namedFlavor } from '@protomaps/basemaps';
-import { addProtocol, getVersion, setWorkerUrl, type MapOptions, type StyleSpecification } from 'maplibre-gl';
+import { addProtocol, getVersion, LngLat, setWorkerUrl, type LngLatBoundsLike, type MapOptions, type StyleSpecification, type TransformConstrainFunction } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 
 import type { Theme } from '../../../core/theme/theme.service';
@@ -49,17 +49,30 @@ export function creerStyle(config: CarteConfig, theme: Theme, base: string): Sty
   };
 }
 
-/** Vue initiale, centrée sur le territoire et bornée à son emprise. */
-export function optionsDeVue(config: CarteConfig): Pick<MapOptions, 'center' | 'zoom' | 'minZoom' | 'maxZoom' | 'maxBounds'> {
+/**
+ * Contrainte de la carte : le **centre** reste dans l'emprise et le zoom dans ses bornes. On ne borne pas l'écran
+ * (`maxBounds`) : MapLibre refuserait qu'il dépasse l'emprise et, sur un écran en paysage, zoomerait jusqu'à couper le haut
+ * et le bas du Maroc.
+ */
+export function creerContrainte(config: CarteConfig): TransformConstrainFunction {
   const [ouest, sud, est, nord] = config.emprise;
+  return (centre, zoom) => ({
+    center: new LngLat(Math.min(Math.max(centre.lng, ouest), est), Math.min(Math.max(centre.lat, sud), nord)),
+    zoom: Math.min(Math.max(zoom, config.zoomMin), config.zoomMax)
+  });
+}
+
+/** Vue initiale, ajustée sur le territoire et bornée à son emprise. */
+export function optionsDeVue(config: CarteConfig): Pick<MapOptions, 'bounds' | 'fitBoundsOptions' | 'minZoom' | 'maxZoom' | 'transformConstrain'> {
+  const [ouest, sud, est, nord] = config.territoire;
   return {
-    center: [...config.centre],
-    zoom: config.zoomInitial,
-    minZoom: config.zoomMin,
-    maxZoom: config.zoomMax,
-    maxBounds: [
+    bounds: [
       [ouest, sud],
       [est, nord]
-    ]
+    ] satisfies LngLatBoundsLike,
+    fitBoundsOptions: { padding: config.margeDeVuePx },
+    minZoom: config.zoomMin,
+    maxZoom: config.zoomMax,
+    transformConstrain: creerContrainte(config)
   };
 }

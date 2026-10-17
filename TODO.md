@@ -51,8 +51,9 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
    TS 6, zoneless, WebGL en test, build, audit, licences). OpenLayers retiré (ADR 0006 remplacé).
 2. **Fait (2026-10-17)** : configuration du fond auto-hébergé (`CARTE_CONFIG`), thème clair/sombre, emprise du Maroc ;
    script `scripts/carte/preparer-fond-maroc.sh`, montage `CARTE_FOND_DIR`, type MIME `.mjs` dans nginx.
-   **À faire une fois** : lancer le script sur une machine ayant accès à Internet (dév. et serveur), puis vérifier le
-   rendu à l'écran ; confirmer l'emprise du Maroc avec la direction.
+   Emprise calculée depuis la frontière Natural Earth (point de vue du Maroc), pas saisie. **À faire une fois** : lancer
+   le script de préparation du fond sur une machine ayant accès à Internet (dév. et serveur), puis vérifier le rendu à
+   l'écran ; faire confirmer le périmètre (provinces du Sud comprises) par la direction.
 3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
    démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
    tant qu'ils ne sont pas gérés.

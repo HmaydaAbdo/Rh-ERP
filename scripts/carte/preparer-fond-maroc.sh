@@ -13,8 +13,14 @@ set -eu
 CIBLE="${1:?Usage : $0 <dossier-cible> [AAAAMMJJ]}"
 BUILD="${2:-$(date -u -d yesterday +%Y%m%d 2>/dev/null || date -u -v-1d +%Y%m%d)}"
 
-# Emprise et zoom maximal : identiques à CARTE_CONFIG_PAR_DEFAUT (frontend/src/app/portail/chantier/carte/carte.config.ts).
-EMPRISE="-17.5,20.5,-0.9,36.1"
+# Emprise : lue dans le fichier calculé depuis la frontière du Maroc (scripts/carte/calculer-emprise.mjs), la même source que
+# la carte (carte.config.ts) ; aucune valeur n'est répétée ici.
+FICHIER_EMPRISE="$(dirname "$0")/../../frontend/src/app/portail/chantier/carte/emprise-maroc.json"
+EMPRISE="$(sed -n 's/.*"emprise": *\[\([^]]*\)\].*/\1/p' "$FICHIER_EMPRISE" | tr -d ' ')"
+case "$EMPRISE" in
+  *,*,*,*) ;;
+  *) echo "Emprise illisible dans $FICHIER_EMPRISE" >&2; exit 1 ;;
+esac
 ZOOM_MAX=15
 
 command -v pmtiles >/dev/null || { echo "pmtiles introuvable : https://github.com/protomaps/go-pmtiles/releases" >&2; exit 1; }
@@ -24,7 +30,7 @@ mkdir -p "$CIBLE"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 
-echo "Extraction du Maroc depuis le build Protomaps $BUILD (zoom 0 à $ZOOM_MAX)…"
+echo "Extraction du Maroc depuis le build Protomaps $BUILD (emprise $EMPRISE, zoom 0 à $ZOOM_MAX)…"
 pmtiles extract "https://build.protomaps.com/$BUILD.pmtiles" "$TEMP/maroc.pmtiles" --bbox="$EMPRISE" --maxzoom="$ZOOM_MAX"
 
 echo "Récupération des polices et des icônes…"
