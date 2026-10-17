@@ -19,12 +19,13 @@ import java.util.Set;
 @Repository
 public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificationExecutor<Paie> {
 
-    /** Fragment WHERE commun : un filtre est ignoré quand son indicateur « tous » est vrai (voir {@link FiltresPaie}). */
+    /** Fragment WHERE commun : un filtre est ignoré quand son indicateur « tous » est vrai (voir {@link FiltresPaie}).
+     * Pour les équipes, l'identifiant {@code 0} inclut les bulletins dont la relation est {@code NULL}. */
     String FILTRES = " AND (:#{#f.tousNoms} = true OR LOWER(p.employee.nomPrenom) LIKE :#{#f.motifNom} ESCAPE '\\')" +
             " AND (:#{#f.tousCin} = true OR LOWER(p.employee.cin) LIKE :#{#f.motifCin} ESCAPE '\\')" +
             " AND (:#{#f.tousChantiers} = true OR p.chantier.id IN :#{#f.chantierIds})" +
             " AND (:#{#f.toutesFonctions} = true OR p.fonction.id IN :#{#f.fonctionIds})" +
-            " AND (:#{#f.toutesEquipes} = true OR p.equipe.id IN :#{#f.equipeIds})";
+            " AND (:#{#f.toutesEquipes} = true OR (:#{#f.inclureSansEquipe} = true AND p.equipe IS NULL) OR p.equipe.id IN :#{#f.equipeIds})";
 
     /** Même définition du STC que {@code ObservationStc.estStcOuSortie}, comme dans les requêtes ci-dessus. */
     String EST_STC = "LOWER(TRIM(p.observation)) IN ('stc', 'sortie')";

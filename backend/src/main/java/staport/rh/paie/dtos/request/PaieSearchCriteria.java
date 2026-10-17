@@ -7,7 +7,8 @@ import java.util.List;
 
 /** {@code fonctionIds}/{@code chantierIds}/{@code equipeIds} : filtres de liste multi-valeurs (voir
  * {@code conventions/frontend.md}, section Sélecteurs). {@code null} ou vide = pas de filtre sur
- * cette dimension. Les longueurs sont bornées comme les champs qu'elles filtrent. */
+ * cette dimension. La valeur {@code 0} dans {@code equipeIds} sélectionne les bulletins sans équipe.
+ * Les longueurs sont bornées comme les champs qu'elles filtrent. */
 public record PaieSearchCriteria(
         @Size(max = 30) String cin,
         @Size(max = 150) String nomPrenom,
