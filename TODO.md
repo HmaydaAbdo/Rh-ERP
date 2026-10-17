@@ -110,11 +110,7 @@ procédures propres à chaque opération dans `docs/deployment.md` avant toute a
    sous-chemin `/erp-rh/`, les cookies sécurisés, CORS et le renouvellement du certificat. La config
    Nginx actuelle ne montre que HTTP/80 ; ne pas modifier le serveur avant de confirmer le nom public
    et la méthode d'obtention/renouvellement du certificat.
-3. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
-   `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
-   purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
-   qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
-4. **Raccorder la supervision métrique en production** (session dédiée) : configurer un collecteur Prometheus privé
+3. **Raccorder la supervision métrique en production** (session dédiée) : configurer un collecteur Prometheus privé
    pour `/actuator/prometheus` et choisir sa rétention. Créer un tableau de bord de disponibilité,
    débit et latence HTTP, d'échecs d'audit et de ses jauges d'intégrité, ainsi que des succès,
    échecs, lignes ignorées et durées de synchronisation des chantiers. Définir les alertes avec un

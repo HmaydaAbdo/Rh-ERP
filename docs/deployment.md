@@ -298,6 +298,14 @@ mode `1777` avec les fichiers en `600`, détenus par `postgres` ; le service de 
 d'inodes utilisés. Le contrôle d'accès et la capacité actuels sont satisfaits ; la supervision/alerte
 de capacité reste ouverte. Aucun listener hôte 443 n'a été observé ; HTTPS reste ouvert.
 
+Le contrôle hôte des journaux applicatifs du 2026-10-17 montre que `C:\apps\erp-rh\logs` (y compris
+`archive`) et `C:\apps\erp-rh\backups` héritent des ACL de `C:\apps\erp-rh` : Administrateurs et
+Système ont le contrôle total, `Utilisateurs` ont la lecture, et `Utilisateurs authentifiés` ont la
+modification. Le propriétaire confirme être le seul opérateur humain du serveur et accepte ce modèle
+d'exploitation. Le lecteur C: dispose de 100 035 084 288 octets libres sur 255 072 399 360. Les
+archives de journaux présentes sont quotidiennes ; la configuration Logback conserve 30 jours et
+utilise des dates UTC. Aucun fichier de plus de 30 jours n'était présent dans l'inventaire fourni.
+
 ---
 
 ## CI/CD — état actuel
