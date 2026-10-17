@@ -36,6 +36,18 @@ class RapportChartSvgBuilderTest {
         assertThat(texteComplet).contains("C999");
     }
 
+    @Test
+    void ajouterGraphique_ometLesCategoriesSansValeurPositive() {
+        Document doc = Document.createShell("");
+        Element corps = doc.body().appendElement("div");
+
+        builder.ajouterGraphique(corps, List.of(
+                new RepartitionBean("VIDE", 0, BigDecimal.ZERO, 0, BigDecimal.ZERO),
+                new RepartitionBean("ACTIF", 3, BigDecimal.ZERO, 0, BigDecimal.ZERO)));
+
+        assertThat(doc.body().text()).contains("ACTIF").doesNotContain("VIDE");
+    }
+
     /** Non-régression : le moteur de rendu dimensionne le SVG d'après son viewBox (en px, 1 px = 0,75 pt) et
      * ignore width/height ; le dessin (en pt) doit donc être agrandi de 4/3 pour occuper toute la largeur utile
      * de la page (802 pt = 1069,33 px). Avant correction, le graphique n'en occupait que les trois quarts. */

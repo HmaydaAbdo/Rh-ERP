@@ -48,14 +48,14 @@ final class RapportEvolutionSvgBuilder {
     private List<Serie> series(PageModel.GroupeEvolution groupe) {
         return switch (groupe) {
             case MONTANTS -> List.of(
-                    new Serie("Masse salariale", "DH", "#2563EB", RepartitionBean::getMontant,
+                    new Serie("Masse salariale", "DH", RapportChartSvgBuilder.COULEUR_MASSE, RepartitionBean::getMontant,
                             PaieReportNumberFormat::masse),
-                    new Serie("Montants des STC", "DH", "#0F766E", RepartitionBean::getStcMontant,
+                    new Serie("Montants des STC", "DH", RapportChartSvgBuilder.COULEUR_STC_DH, RepartitionBean::getStcMontant,
                             PaieReportNumberFormat::masse));
             case EFFECTIFS -> List.of(
-                    new Serie("Effectif rémunéré", "personnes", "#D97706",
+                    new Serie("Effectif rémunéré", "personnes", RapportChartSvgBuilder.COULEUR_EFFECTIF,
                             point -> BigDecimal.valueOf(point.getEffectif()), this::formaterEntier),
-                    new Serie("Sorties du personnel (STC)", "personnes", "#B91C1C",
+                    new Serie("Sorties du personnel (STC)", "personnes", RapportChartSvgBuilder.COULEUR_STC_PERSONNES,
                             point -> BigDecimal.valueOf(point.getStc()), this::formaterEntier));
         };
     }

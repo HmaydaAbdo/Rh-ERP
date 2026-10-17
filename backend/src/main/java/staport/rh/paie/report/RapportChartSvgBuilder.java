@@ -46,6 +46,12 @@ final class RapportChartSvgBuilder {
     static final double HAUTEUR_RANGEE_MIN = 19;
     /** Largeur des 4 colonnes de valeurs (Masse, Effectif, STC personnes, STC DH), dans l'ordre des séries. */
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
+    /** Palette métier limitée à cinq couleurs : les quatre indicateurs et le parc matériel. */
+    static final String COULEUR_MASSE = "#2563EB";
+    static final String COULEUR_EFFECTIF = "#D97706";
+    static final String COULEUR_STC_PERSONNES = "#B91C1C";
+    static final String COULEUR_STC_DH = "#0F766E";
+    static final String COULEUR_MATERIEL = "#7C3AED";
     /** Espace entre la fin des barres et la première colonne de valeurs. */
     private static final double ECART_AVANT_COLONNES = 12;
     /** Hauteur totale maximale du graphique (en-tête des colonnes, lignes, échelle éventuelle et légende comprises),
@@ -71,10 +77,10 @@ final class RapportChartSvgBuilder {
     }
 
     private static final List<Serie> SERIES = List.of(
-            new Serie("Masse (DH)", "Masse", "#2563EB"),
-            new Serie("Effectif (personnes)", "Effectif", "#D97706"),
-            new Serie("STC (personnes)", "STC pers.", "#B91C1C"),
-            new Serie("STC (DH)", "STC DH", "#0F766E")
+            new Serie("Masse (DH)", "Masse", COULEUR_MASSE),
+            new Serie("Effectif (personnes)", "Effectif", COULEUR_EFFECTIF),
+            new Serie("STC (personnes)", "STC pers.", COULEUR_STC_PERSONNES),
+            new Serie("STC (DH)", "STC DH", COULEUR_STC_DH)
     );
 
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees) {
@@ -98,13 +104,15 @@ final class RapportChartSvgBuilder {
     void ajouterGraphique(Element corps, List<RepartitionBean> donnees, List<RepartitionBean> echelle,
                           double hauteurMax, boolean partDuTotal) {
         Element container = corps.appendElement("div").addClass("chart-container");
-        if (donnees.isEmpty()) {
+        List<RepartitionBean> visibles = donnees.stream().filter(this::aValeurPositive).toList();
+        List<RepartitionBean> echelleVisible = echelle.stream().filter(this::aValeurPositive).toList();
+        if (visibles.isEmpty()) {
             return;
         }
 
         double[] maxParSerie = new double[SERIES.size()];
         double[] totalParSerie = new double[SERIES.size()];
-        for (RepartitionBean ligne : echelle) {
+        for (RepartitionBean ligne : echelleVisible) {
             double[] valeurs = {valeurMontant(ligne.getMontant()), ligne.getEffectif(), ligne.getStc(),
                     valeurMontant(ligne.getStcMontant())};
             for (int serie = 0; serie < SERIES.size(); serie++) {
@@ -117,7 +125,7 @@ final class RapportChartSvgBuilder {
         for (double largeur : LARGEUR_COLONNES) {
             largeurColonnes += largeur;
         }
-        List<List<String>> libellesParLigne = donnees.stream().map(ligne -> lignesLibelle(ligne.getLibelle())).toList();
+        List<List<String>> libellesParLigne = visibles.stream().map(ligne -> lignesLibelle(ligne.getLibelle())).toList();
         double largeurLabel = largeurColonneLibelles(libellesParLigne);
         double largeurPlot = LARGEUR_TOTALE - largeurLabel - ECART_AVANT_COLONNES - largeurColonnes;
         double hauteurEchelle = partDuTotal ? HAUTEUR_ECHELLE_POURCENTAGE : 0;
@@ -158,8 +166,8 @@ final class RapportChartSvgBuilder {
                 .attr("stroke", "#9CA3AF").attr("stroke-width", "0.6");
 
         double yLigne = HAUTEUR_ENTETE;
-        for (int i = 0; i < donnees.size(); i++) {
-            RepartitionBean ligne = donnees.get(i);
+        for (int i = 0; i < visibles.size(); i++) {
+            RepartitionBean ligne = visibles.get(i);
             double hauteurLigne = hauteursLignes[i];
             if (i > 0) {
                 yLigne += hauteursLignes[i - 1];
@@ -284,7 +292,7 @@ final class RapportChartSvgBuilder {
             double largeurBarre = maximum == 0 ? 0 : (double) ligne.getNombre() / maximum * largeurPlot;
             if (largeurBarre > 0) {
                 dessin.appendElement("rect").attr("x", format(largeurLabel)).attr("y", format(centre - 4))
-                        .attr("width", format(largeurBarre)).attr("height", "8").attr("fill", "#7C3AED");
+                        .attr("width", format(largeurBarre)).attr("height", "8").attr("fill", COULEUR_MATERIEL);
             }
             dessin.appendElement("text").attr("x", format(LARGEUR_TOTALE)).attr("y", format(centre))
                     .attr("text-anchor", "end").attr("dominant-baseline", "middle")
@@ -398,6 +406,14 @@ final class RapportChartSvgBuilder {
     /** {@code null} traité comme zéro (jamais la chaîne "null", voir le Javadoc de la classe). */
     private double valeurMontant(BigDecimal montant) {
         return montant == null ? 0 : montant.doubleValue();
+    }
+
+    /** Une ligne sans aucune valeur positive ne raconte rien dans une répartition. */
+    private boolean aValeurPositive(RepartitionBean ligne) {
+        return valeurMontant(ligne.getMontant()) > 0
+                || ligne.getEffectif() > 0
+                || ligne.getStc() > 0
+                || valeurMontant(ligne.getStcMontant()) > 0;
     }
 
     private String libelleMontant(BigDecimal montant) {

@@ -233,16 +233,23 @@ final class RapportPageModelBuilder {
 
     private void ajouterPagesRepartitionGlobale(List<PageEnConstruction> pages, List<RepartitionBean> tous) {
         double hauteurMaxGraphique = RapportChartSvgBuilder.HAUTEUR_TOTALE_CHART;
-        List<List<RepartitionBean>> tranches = repartirParPages(tous, hauteurMaxGraphique);
+        List<RepartitionBean> visibles = lignesPositives(tous);
+        if (visibles.isEmpty()) {
+            pages.add(new PageEnConstruction("GLOBAL", List.of(
+                    new PageModel.BlocTitreRubrique(3, "Répartition par chantier"),
+                    new PageModel.BlocGraphique(List.of(), List.of(), hauteurMaxGraphique, true))));
+            return;
+        }
+        List<List<RepartitionBean>> tranches = repartirParPages(visibles, hauteurMaxGraphique);
         List<PageModel.Bloc> premierePage = new ArrayList<>();
         premierePage.add(new PageModel.BlocTitreRubrique(3, "Répartition par chantier"));
-        premierePage.add(new PageModel.BlocGraphique(tranches.get(0), tous, hauteurMaxGraphique, true));
+        premierePage.add(new PageModel.BlocGraphique(tranches.get(0), visibles, hauteurMaxGraphique, true));
         pages.add(new PageEnConstruction("GLOBAL", premierePage));
 
         for (List<RepartitionBean> suite : tranches.subList(1, tranches.size())) {
             List<PageModel.Bloc> blocsSuite = new ArrayList<>();
             blocsSuite.add(new PageModel.BlocTitreSection("Répartition par chantier (suite)"));
-            blocsSuite.add(new PageModel.BlocGraphique(suite, tous, hauteurMaxGraphique, true));
+            blocsSuite.add(new PageModel.BlocGraphique(suite, visibles, hauteurMaxGraphique, true));
             pages.add(new PageEnConstruction("GLOBAL", blocsSuite));
         }
     }
@@ -313,6 +320,7 @@ final class RapportPageModelBuilder {
         List<RepartitionBean> repartition = chantier.avecDetailEquipe()
                 ? chantier.repartitionEquipe()
                 : chantier.equipes().stream().findFirst().map(EquipeBiVue::repartitionFonction).orElse(List.of());
+        repartition = lignesPositives(repartition);
         String titre = chantier.avecDetailEquipe() ? "Répartition par équipe" : "Répartition par fonction";
         List<RepartitionBean> triee = repartition.stream().sorted((a, b) -> {
             java.math.BigDecimal montantA = a.getMontant() == null ? java.math.BigDecimal.ZERO : a.getMontant();
@@ -337,7 +345,7 @@ final class RapportPageModelBuilder {
         ajouterEvolutionStc(masse, equipe.evolutionMensuelle());
         pages.add(new PageEnConstruction(niveau, masse));
 
-        List<RepartitionBean> fonction = equipe.repartitionFonction().stream().sorted((a, b) -> {
+        List<RepartitionBean> fonction = lignesPositives(equipe.repartitionFonction()).stream().sorted((a, b) -> {
             java.math.BigDecimal montantA = a.getMontant() == null ? java.math.BigDecimal.ZERO : a.getMontant();
             java.math.BigDecimal montantB = b.getMontant() == null ? java.math.BigDecimal.ZERO : b.getMontant();
             int comparaison = montantB.compareTo(montantA);
@@ -393,6 +401,18 @@ final class RapportPageModelBuilder {
         double hauteurMateriel = RapportChartSvgBuilder.HAUTEUR_ENTETE
                 + materiel.size() * RapportChartSvgBuilder.HAUTEUR_RANGEE_MIN;
         return hauteurFonction + hauteurMateriel;
+    }
+
+    /** Une catégorie sans aucune valeur positive n'apporte aucune information au graphique. */
+    private List<RepartitionBean> lignesPositives(List<RepartitionBean> lignes) {
+        return lignes.stream().filter(this::aValeurPositive).toList();
+    }
+
+    private boolean aValeurPositive(RepartitionBean ligne) {
+        return (ligne.getMontant() != null && ligne.getMontant().signum() > 0)
+                || ligne.getEffectif() > 0
+                || ligne.getStc() > 0
+                || (ligne.getStcMontant() != null && ligne.getStcMontant().signum() > 0);
     }
 
     /** Répartit l'espace restant entre les deux graphiques sans dépasser leur hauteur lisible maximale. */
