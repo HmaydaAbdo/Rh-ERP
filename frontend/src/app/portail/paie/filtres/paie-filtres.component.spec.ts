@@ -191,17 +191,17 @@ describe('PaieFiltresComponent', () => {
             expect(service.rechercherOptionsEquipes).toHaveBeenCalledWith('2026-08', [3, 4], 2, 30, 'chauff');
         });
 
-        it('propose les listes complètes du référentiel sans mois', () => {
+        it('propose les listes complètes du référentiel avec l’option « Sans équipe » sans mois', () => {
             afficher({ ...AUCUN_FILTRE, chantierIds: [3] });
 
             expect(composant['sourcesChantiers']()[0]).toBe(composant['chantierReferenceService']);
-            expect(composant['sourcesEquipes']()[0]).toBe(composant['equipeReferenceService']);
+            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
         });
 
-        it('propose toutes les équipes tant qu\'aucun chantier n\'est choisi', () => {
+        it('propose toutes les équipes et « Sans équipe » tant qu\'aucun chantier n\'est choisi', () => {
             afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
 
-            expect(composant['sourcesEquipes']()[0]).toBe(composant['equipeReferenceService']);
+            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
         });
 
     });

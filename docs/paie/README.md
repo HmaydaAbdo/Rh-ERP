@@ -121,7 +121,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie` | Créer un bulletin | 201, 400, 409 |
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
-| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
+| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe | 200 |
 | `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; recherche serveur sur code et désignation | 200, 400 |
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
@@ -335,8 +335,9 @@ qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'
 
 **Les filtres vivent dans l'URL** (`?periode=2026-08&nom=ali&cin=AB1&chantierIds=3,4&fonctionIds=7&equipeIds=2`, voir
 `filtres/paie-filtres.ts`) : la barre les écrit — en remplaçant l'entrée d'historique, pour ne pas en empiler une par saisie —
-et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct et retour navigateur les conservent donc. Une valeur
-invalide est ignorée. Les mois grisés viennent de `GET /paie/periodes`, rechargé à chaque changement de vue.
+et chaque vue les lit ; il n'y a aucun état partagé de plus. `equipeIds=0` représente les bulletins **sans équipe**. Lien direct,
+retour navigateur et bascule entre vues les conservent donc. Une valeur invalide est ignorée. Les mois grisés viennent de
+`GET /paie/periodes`, rechargé à chaque changement de vue.
 
 **Changer de vue conserve les filtres.** Le sélecteur reporte les paramètres d'URL : le tabulaire et l'Analytique gardent le
 mois, le chantier, l'équipe, la fonction et les filtres employés actifs dans les Cartes. Le retour aux Cartes conserve à son
@@ -354,7 +355,7 @@ filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`), **lecture seule**, raconte la paie du mois en quatre niveaux : **Mois → Vue d’ensemble → Vue chantier → Vue équipe**. Le niveau est déduit des filtres de l'URL : sans mois, la liste des mois ; un mois, la vue d’ensemble ; un mois et un chantier, le chantier ; un mois, un chantier et une équipe, l'équipe. Cliquer une carte pose le filtre correspondant. Le fil de navigation permet de remonter sans perdre les filtres transversaux (nom, CIN et fonction).
+`PaieCartesComponent` (`cartes/`), **lecture seule**, raconte la paie du mois en quatre niveaux : **Mois → Vue d’ensemble → Vue chantier → Vue équipe**. Le niveau est déduit des filtres de l'URL : sans mois, la liste des mois ; un mois, la vue d’ensemble ; un mois et un chantier, le chantier ; un mois, un chantier et une équipe, l'équipe. Cliquer une carte pose le filtre correspondant. Le fil de navigation permet de remonter sans perdre les filtres transversaux (nom, CIN et fonction). La barre commune est l'unique filtre des Cartes : le champ local de recherche d'équipe a été supprimé.
 
 Les quatre indicateurs sont présentés avec leur unité : **masse (DH)**, **bulletins / personnes**, **STC / sorties (DH)** et **STC / sorties (personnes)**. Chaque niveau montre la comparaison avec le mois civil immédiatement précédent, pour le même périmètre. Si aucun bulletin n'existe dans ce mois précédent, l'interface indique qu'il n'y a pas de comparaison disponible ; elle ne compare jamais avec un mois plus ancien.
 
@@ -363,9 +364,9 @@ Les quatre indicateurs sont présentés avec leur unité : **masse (DH)**, **bul
 | 1. Mois | Une carte par mois contenant de la paie, avec les quatre indicateurs et leur comparaison au mois précédent. | `POST /paie/periodes/search` |
 | 2. Vue d'ensemble | Les quatre indicateurs agrégés du mois et leur comparaison, puis une carte par chantier avec sa part de masse. | `POST /paie/analytique`, `POST /paie/chantiers/search` |
 | 3. Vue chantier | Les quatre indicateurs du chantier et leurs comparaisons, puis les cartes d'équipe. Les bulletins sans équipe sont affichés dans une carte dédiée ; leur indicateur et comparaison sont calculés par différence entre le chantier et ses équipes. | mêmes appels |
-| 4. Vue équipe | Les quatre indicateurs et comparaisons de l'équipe, puis les cartes d'employés paginées. | `POST /paie/analytique`, `POST /paie/search` |
+| 4. Vue équipe | Les quatre indicateurs et comparaisons de l'équipe, puis un regroupement par fonction (effectif et masse). | `POST /paie/analytique` |
 
-Les graphiques d'évolution et de répartition sont regroupés dans la vue **Analytique** pour laisser aux Cartes leur rôle de navigation et de lecture des indicateurs. Depuis chaque niveau, le bouton de changement de vue ouvre le tabulaire en conservant le mois, le chantier, l'équipe et les filtres actifs.
+Les graphiques d'évolution et de répartition sont regroupés dans la vue **Analytique** pour laisser aux Cartes leur rôle de navigation et de lecture des indicateurs. Depuis chaque niveau, le bouton **Liste des employés** ouvre la vue Tabulaire avec le mois, le chantier, l'équipe et les filtres actifs ; le retour vers Cartes restitue automatiquement le niveau correspondant à ces paramètres.
 
 #### Suppression en groupe
 
@@ -383,11 +384,11 @@ tabulaire, les bulletins d'un mois importé par erreur.
   serveur revérifie le nombre de bulletins du groupe et **ne supprime rien (`409`) s'il diffère du nombre confirmé** (import
   ou suppression entre-temps) ; le tout dans une transaction. Le groupe est calculé avec le même filtre que la liste
   (`PaieSpecification`).
-- Les bulletins **sans équipe** ne se suppriment pas depuis la ligne « Sans équipe » : l'API ne sait pas filtrer sur l'absence
-  d'équipe. Après une suppression, les réponses gardées sont vidées et le niveau est rechargé ; si le chantier ouvert est
+- Les bulletins **sans équipe** sont sélectionnables comme une équipe spéciale dans la barre commune (`equipeIds=0`) ; la
+  suppression groupée reste réservée aux équipes identifiées. Après une suppression, les réponses gardées sont vidées et le niveau est rechargé ; si le chantier ouvert est
   supprimé, on remonte aux chantiers.
 
-Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une carte équipe** ouvre le niveau équipe ; la carte « Sans équipe » ne descend pas (l'API ne sait pas filtrer sur l'absence d'équipe). Les graphiques exposent aussi un tableau de données accessible. Les employés sont chargés par pages serveur et peuvent être filtrés par fonction depuis le graphique de répartition.
+Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une carte équipe** ouvre le niveau équipe, y compris la carte « Sans équipe ». Le détail complet des employés reste dans le Tabulaire, accessible depuis le bouton **Liste des employés** de chaque niveau ; ses colonnes et sa pagination sont inchangées.
 
 **Animations** : cartes et tuiles apparaissent en cascade, les montants et effectifs s'incrémentent (`CountUpDirective`), la
 jauge se remplit, et chaque niveau glisse depuis la droite en descendant, depuis la gauche en remontant. Tout est coupé quand
