@@ -100,7 +100,7 @@ describe('PaieAnalytiqueComponent', () => {
     });
 
     it('ne divise pas par un mois précédent nul', async () => {
-        service.analyser.mockReturnValue(of(donnees({ moisPrecedent: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 } })));
+        service.analyser.mockReturnValue(of(donnees({ moisPrecedent: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0, stcMontant: 0 } })));
 
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
@@ -220,7 +220,7 @@ describe('PaieAnalytiqueComponent', () => {
 
     it('montre tous les chantiers et toutes les fonctions, sans plafond ni « Autres »', async () => {
         service.analyser.mockReturnValue(of(donnees({
-            parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0 })),
+            parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0, stcMontant: 0 })),
             parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
         })));
 

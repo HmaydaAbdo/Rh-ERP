@@ -210,6 +210,7 @@ class PaieAnalytiqueServiceTest {
             public BigDecimal getMasse() { return new BigDecimal(masse); }
             public Long getChantiers() { return chantiers; }
             public Long getStc() { return stc; }
+            public BigDecimal getStcMontant() { return BigDecimal.ZERO; }
             public Long getSansEquipe() { return sansEquipe; }
             public Long getSansObservation() { return sansObservation; }
         };
@@ -224,6 +225,7 @@ class PaieAnalytiqueServiceTest {
             public BigDecimal getMasse() { return new BigDecimal(masse); }
             public Long getEffectif() { return 1L; }
             public Long getStc() { return 0L; }
+            public BigDecimal getStcMontant() { return BigDecimal.ZERO; }
         };
     }
 
@@ -241,6 +243,8 @@ class PaieAnalytiqueServiceTest {
             public YearMonth getPeriode() { return periode; }
             public BigDecimal getMasse() { return new BigDecimal(masse); }
             public Long getEffectif() { return effectif; }
+            public Long getStc() { return 0L; }
+            public BigDecimal getStcMontant() { return BigDecimal.ZERO; }
         };
     }
 }

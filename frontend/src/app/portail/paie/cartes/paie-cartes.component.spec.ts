@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 
-import { PaieChantierPeriode, PaiePeriodeResume } from '../models/paie.model';
+import { PaieAnalytique, PaieChantierPeriode, PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 import { PaieCartesComponent } from './paie-cartes.component';
 
@@ -32,6 +32,16 @@ const CHANTIERS: PaieChantierPeriode[] = [
     },
     { id: 2, code: 'C196', libelle: null, effectif: 10, masse: 80000, stc: 0, stcMontant: 0, equipes: [] }
 ];
+const ANALYTIQUE: PaieAnalytique = {
+    periode: '2026-08',
+    kpis: { masse: 800000, effectif: 158, coutMoyen: 5063.29, nombreChantiers: 2, stc: 2, stcMontant: 18000 },
+    moisPrecedent: { masse: 700000, effectif: 150, coutMoyen: 4666.67, nombreChantiers: 2, stc: 1, stcMontant: 8000 },
+    parChantier: [
+        { id: 1, code: 'C168', libelle: 'Nador', effectif: 148, masse: 720000, stc: 2, stcMontant: 18000 },
+        { id: 2, code: 'C196', libelle: null, effectif: 10, masse: 80000, stc: 0, stcMontant: 0 }
+    ],
+    parFonction: [], tranches: [], evolution: [], qualite: { sansEquipe: 5, sansObservation: 0 }
+};
 
 describe('PaieCartesComponent', () => {
     let service: MockedObject<PaieService>;
@@ -50,6 +60,8 @@ describe('PaieCartesComponent', () => {
         service = {
             rechercherPeriodes: vi.fn().mockName("PaieService.rechercherPeriodes"),
             rechercherChantiers: vi.fn().mockName("PaieService.rechercherChantiers"),
+            analyser: vi.fn().mockName("PaieService.analyser"),
+            search: vi.fn().mockName("PaieService.search"),
             supprimerGroupe: vi.fn().mockName("PaieService.supprimerGroupe")
         } as unknown as MockedObject<PaieService>;
         messages = {
@@ -57,6 +69,8 @@ describe('PaieCartesComponent', () => {
         } as unknown as MockedObject<NotificationService>;
         service.rechercherPeriodes.mockReturnValue(of(PERIODES));
         service.rechercherChantiers.mockReturnValue(of(CHANTIERS));
+        service.analyser.mockReturnValue(of(ANALYTIQUE));
+        service.search.mockReturnValue(of({ content: [], page: { number: 0, size: 12, totalElements: 0, totalPages: 0 } }));
         service.supprimerGroupe.mockReturnValue(of({ supprimes: 0 }));
 
         TestBed.configureTestingModule({
@@ -109,20 +123,20 @@ describe('PaieCartesComponent', () => {
         expect(service.rechercherPeriodes).toHaveBeenCalledWith(expect.objectContaining({ nomPrenom: 'ali', periode: undefined }));
     });
 
-    it('compare la masse au mois contigu, et seulement à lui', async () => {
+    it('compare les quatre indicateurs au mois contigu, et seulement à lui', async () => {
         const composant = await ouvrir('/paie/cartes');
 
         const [septembre, aout, juin] = composant.cartesMois();
-        expect(septembre.variation).toBeCloseTo(12.5);
+        expect(composant.indicateursDeCarte(septembre).find((i) => i.cle === 'masse')?.comparaison).toContain('+12,5 %');
         // Mai n'a pas de paie : juin n'est comparé à rien, jamais à un mois plus ancien.
-        expect(aout.variation).toBeNull();
-        expect(juin.variation).toBeNull();
+        expect(composant.indicateursDeCarte(aout).every((i) => i.comparaison === null)).toBe(true);
+        expect(composant.indicateursDeCarte(juin).every((i) => i.comparaison === null)).toBe(true);
     });
 
     it('résume le mois et calcule la part de chaque chantier à partir des chantiers filtrés', async () => {
         const composant = await ouvrir('/paie/cartes?periode=2026-08');
 
-        expect(composant.resumeMois()).toEqual({ masse: 800000, bulletins: 158, chantiers: 2 });
+        expect(composant.resumeMois()).toEqual({ masse: 800000, effectif: 158, stc: 2, stcMontant: 18000, chantiers: 2 });
         expect(composant.cartesChantier().map((c) => c.chantier.code)).toEqual(['C168', 'C196']);
         expect(composant.cartesChantier()[0].part).toBeCloseTo(90);
     });
@@ -133,8 +147,8 @@ describe('PaieCartesComponent', () => {
         const lignes = composant.lignesEquipes();
         expect(lignes.map((l) => l.code)).toEqual(['CH', 'OP', '-']);
         expect(lignes[2]).toEqual(expect.objectContaining({ equipeId: null, libelle: 'Sans équipe', effectif: 5, masse: 20000 }));
-        expect(composant.effectifTotalEquipes()).toBe(148);
-        expect(composant.masseTotaleEquipes()).toBe(720000);
+        expect(lignes.reduce((total, ligne) => total + ligne.effectif, 0)).toBe(148);
+        expect(lignes.reduce((total, ligne) => total + ligne.masse, 0)).toBe(720000);
     });
 
     it('n\'ajoute pas de ligne « Sans équipe » quand toutes les personnes ont une équipe', async () => {
@@ -145,22 +159,22 @@ describe('PaieCartesComponent', () => {
         expect(composant.lignesEquipes().map((l) => l.code)).toEqual(['CH', 'OP']);
     });
 
-    it('ouvre la vue tabulaire avec les filtres en cours plus l\'équipe cliquée', async () => {
+    it('descend sur l\'équipe cliquée sans perdre les filtres en cours', async () => {
         const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
         const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-        composant.ouvrirBulletins(composant.lignesEquipes()[1]);
+        composant.surBarreEquipe({ index: 1, datasetIndex: 0 });
 
         expect(navigation).toHaveBeenCalledTimes(1);
 
-        expect(navigation).toHaveBeenCalledWith(['/paie'], { queryParams: { equipeIds: '2' }, queryParamsHandling: 'merge' });
+        expect(navigation).toHaveBeenCalledWith([], { queryParams: { equipeIds: '2' }, queryParamsHandling: 'merge' });
     });
 
-    it('n\'ouvre rien pour les bulletins sans équipe, que l\'API ne sait pas filtrer', async () => {
+    it('ne descend pas pour les bulletins sans équipe, que l\'API ne sait pas filtrer', async () => {
         const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
         const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-        composant.ouvrirBulletins(composant.lignesEquipes()[2]);
+        composant.surBarreEquipe({ index: 2, datasetIndex: 0 });
 
         expect(navigation).not.toHaveBeenCalled();
     });
