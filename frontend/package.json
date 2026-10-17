@@ -29,8 +29,10 @@
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@lucide/angular": "^1.54.0",
+    "@protomaps/basemaps": "^5.7.2",
     "chart.js": "^4.5.1",
-    "ol": "^10.11.0",
+    "maplibre-gl": "^6.14.0",
+    "pmtiles": "^4.5.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
