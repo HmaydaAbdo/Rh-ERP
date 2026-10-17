@@ -254,7 +254,7 @@ export class PaieAnalytiqueComponent {
           }
         }
       },
-      plugins: [valeursSurPoints()]
+      plugins: [valeursSurPoints(mesure === 'masse' ? formaterMontant : (valeur) => FORMAT_ENTIER.format(valeur))]
     };
   });
 
