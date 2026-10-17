@@ -355,7 +355,7 @@ filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`), **lecture seule**, raconte la paie du mois en quatre niveaux : **Mois → Vue d’ensemble → Vue chantier → Vue équipe**. Le niveau est déduit des filtres de l'URL : sans mois, la liste des mois ; un mois, la vue d’ensemble ; un mois et un chantier, le chantier ; un mois, un chantier et une équipe, l'équipe. Cliquer une carte pose le filtre correspondant. Le fil de navigation permet de remonter sans perdre les filtres transversaux (nom, CIN et fonction). La barre commune est l'unique filtre des Cartes : le champ local de recherche d'équipe a été supprimé.
+`PaieCartesComponent` (`cartes/`), **lecture seule**, raconte la paie du mois en quatre niveaux : **Mois → Vue d’ensemble → Vue chantier → Vue équipe**. Le niveau est déduit des filtres de l'URL : sans mois, la liste des mois ; un mois, la vue d’ensemble ; un mois et un chantier, le chantier ; un mois, un chantier et une équipe, l'équipe. Cliquer une carte pose le filtre correspondant. Le fil de navigation permet de remonter sans perdre les filtres transversaux (nom, CIN et fonction). La barre commune est l'unique filtre des Cartes : le champ local de recherche d'équipe a été supprimé. Les cartes gardent une largeur confortable à chaque niveau pour laisser les quatre indicateurs et leurs unités lisibles. Le fil reprend les libellés métier (« Chantier sélectionné », « Équipe sélectionnée », « Sans équipe ») et n'affiche jamais les identifiants techniques de l'URL.
 
 Les quatre indicateurs sont présentés avec leur unité : **masse (DH)**, **bulletins / personnes**, **STC / sorties (DH)** et **STC / sorties (personnes)**. Chaque niveau montre la comparaison avec le mois civil immédiatement précédent, pour le même périmètre. Si aucun bulletin n'existe dans ce mois précédent, l'interface indique qu'il n'y a pas de comparaison disponible ; elle ne compare jamais avec un mois plus ancien.
 
@@ -397,17 +397,17 @@ la vue tabulaire.
 
 ### Vue Analytique
 
-`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune. Les répartitions restent complètes pour la mesure choisie, mais excluent les catégories dont cette mesure vaut zéro afin de préserver la lisibilité ; aucune catégorie positive n'est regroupée sous « Autres ».
-Chaque changement de filtre relance l'analyse (une demande encore en cours est abandonnée) ; pendant le chargement l'écran
-précédent reste affiché, atténué, sous une barre de progression. Sans mois, le plus récent est ouvert (et inscrit dans la
-barre).
+`PaieAnalytiqueComponent` (`analytique/`), **lecture seule**, raconte le mois sur le périmètre de la barre commune. La page
+avance dans un ordre stable : contexte et synthèse, évolution historique, répartition du niveau courant, puis structure des
+rémunérations et qualité des données. Chaque changement de filtre relance l'analyse (une demande encore en cours est
+abandonnée) ; pendant le chargement l'écran précédent reste affiché, atténué, sous une barre de progression. Sans mois, le
+plus récent est ouvert (et inscrit dans la barre).
 
 | Bloc | Contenu |
 |---|---|
-| Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
+| Contexte et synthèse | Le mois et le périmètre actif sont rappelés, puis masse salariale, bulletins, coût moyen par employé, STC / sorties et chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
 | Évolution | **Une seule mesure à la fois, sur un seul axe** (bouton Masse / Bulletins : les deux n'ont pas la même échelle, ils ne partagent jamais un graphique) pour **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est cerclé et chaque point affiche sa valeur directement. Avec un seul mois, un seul point |
-| Répartition par chantier | Les chantiers dont la mesure choisie est strictement positive, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
-| Répartition par fonction | Les fonctions dont la mesure choisie est strictement positive, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction positive n'est regroupée sous « Autres » |
+| Répartition guidée par le niveau | Sans chantier sélectionné, barres par chantier ; avec un seul chantier, barres par équipe (la catégorie « Sans équipe » est conservée) ; avec une équipe, barres par fonction. La mesure est Masse (DH) ou Effectif. Les catégories dont la mesure vaut zéro sont exclues, aucune catégorie positive n'est regroupée sous « Autres ». Le clic sur une barre ajoute le filtre correspondant et approfondit l'analyse. |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
 | Qualité des données | Bulletins sans équipe et sans observation (nombre et part), pour suivre la tâche « Qualité des données » du TODO |
 
@@ -426,7 +426,7 @@ couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure,
 disponibles pour une lecture détaillée. Les montants gardent deux décimales et les effectifs sont affichés comme des entiers.
 (`--chart-1`), les bulletins toujours orange (`--chart-2`) ; la paie reste dans une palette limitée aux cinq premiers jetons `--chart-1` à `--chart-5`, dans tous les graphiques. Marques fines (barres de 18 px au bout
 arrondi), grille discrète, infobulle au survol de toute la ligne, aucune légende pour une série unique. **Alternative
-accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois, chantiers, fonctions,
+accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois et niveau de répartition,
 tranches) et un libellé `aria-label` ; le tracé est supprimé quand l'utilisateur a demandé moins de mouvement. Premier
 chargement : des silhouettes (squelettes) à la place du texte « Chargement… ». Règles : `conventions/design-system.md`,
 section « Graphiques ».

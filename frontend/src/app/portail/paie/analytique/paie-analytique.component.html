@@ -23,77 +23,123 @@
             </div>
           </div>
         } @else {
-          <div class="paie-analytique__tuiles">
-            @for (tuile of tuiles(); track tuile.libelle; let i = $index) {
-              <div class="paie-analytique__tuile" [style.animation-delay.ms]="i * 60">
-                <span class="paie-analytique__libelle">{{ tuile.libelle }}</span>
-                <strong><span [appCountUp]="tuile.valeur"></span>@if (tuile.suffixe) { {{ tuile.suffixe }} }</strong>
-                @if (tuile.variation; as variation) {
-                  <span class="paie-analytique__variation">
-                    <stp-icon [name]="variation.startsWith('+') ? 'arrow-up-right' : variation.startsWith('-') ? 'arrow-down-right' : 'minus'" />
-                    {{ variation }} vs mois précédent
-                  </span>
-                } @else {
-                  <span class="paie-analytique__variation">Pas de mois précédent comparable</span>
-                }
-              </div>
-            }
-          </div>
+          <section class="paie-analytique__introduction" aria-labelledby="paie-analytique-contexte">
+            <div>
+              <span class="paie-analytique__eyebrow">Lecture du périmètre</span>
+              <h2 id="paie-analytique-contexte">{{ libellePeriode(d.periode) }}</h2>
+              <p class="paie-analytique__aide">Les indicateurs, l’évolution et les répartitions suivent les filtres actifs.</p>
+            </div>
+            <span class="paie-analytique__etape"><strong>1</strong> Synthèse <span aria-hidden="true">→</span> évolution <span aria-hidden="true">→</span> répartition</span>
+          </section>
 
-          <div class="paie-analytique__grille">
-            <section class="paie-analytique__carte" [style.animation-delay.ms]="320">
-              <div class="paie-analytique__entete">
-                <div>
-                  <h2>Évolution</h2>
-                  <p class="paie-analytique__aide">
-                    {{ libelleMesure(mesureEvolution()) }} sur tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est cerclé.
-                  </p>
-                </div>
-                <div class="paie-analytique__mesure" role="group" aria-label="Mesure de l'évolution">
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'masse'" (click)="mesureEvolution.set('masse')">Masse</button>
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'effectif'" (click)="mesureEvolution.set('effectif')">Bulletins</button>
-                </div>
+          <section class="paie-analytique__section" aria-labelledby="paie-analytique-synthese">
+            <div class="paie-analytique__section-entete">
+              <div>
+                <span class="paie-analytique__eyebrow">Point de départ</span>
+                <h2 id="paie-analytique-synthese">Synthèse du mois</h2>
+                <p class="paie-analytique__aide">Les chiffres clés du périmètre, comparés au mois précédent lorsque celui-ci est disponible.</p>
               </div>
-              <div
-                class="paie-analytique__graphique"
-              >
-                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
-              </div>
-              <button
-                type="button"
-                class="paie-analytique__donnees"
-                [attr.aria-expanded]="tableaux().evolution"
-                (click)="basculerTableau('evolution')"
-              >
-                <stp-icon name="table" />
-                {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
-              </button>
-              @if (tableaux().evolution) {
-                <app-column-chooser class="en-ligne" [state]="colonnesEvolution" />
-                <stp-table label="Évolution mensuelle de la masse salariale et des bulletins" [value]="lignesEvolution()" [columns]="colonnesEvolution.visible">
-                  <ng-template stpCell let-ligne let-col="col">
-                    @switch (col.field) {
-                      @case ('mois') { {{ ligne.mois }} }
-                      @case ('masse') { {{ formaterMontant(ligne.masse) }} }
-                      @case ('effectif') { {{ ligne.effectif }} }
-                    }
-                  </ng-template>
-                </stp-table>
+            </div>
+            <div class="paie-analytique__tuiles">
+              @for (tuile of tuiles(); track tuile.libelle; let i = $index) {
+                <div class="paie-analytique__tuile" [style.animation-delay.ms]="i * 60">
+                  <span class="paie-analytique__libelle">{{ tuile.libelle }}</span>
+                  <strong><span [appCountUp]="tuile.valeur"></span>@if (tuile.suffixe) { {{ tuile.suffixe }} }</strong>
+                  @if (tuile.variation; as variation) {
+                    <span class="paie-analytique__variation">
+                      <stp-icon [name]="variation.startsWith('+') ? 'arrow-up-right' : variation.startsWith('-') ? 'arrow-down-right' : 'minus'" />
+                      {{ variation }} vs mois précédent
+                    </span>
+                  } @else {
+                    <span class="paie-analytique__variation">Pas de mois précédent comparable</span>
+                  }
+                </div>
               }
-            </section>
+            </div>
+          </section>
 
-            <section class="paie-analytique__carte" [style.animation-delay.ms]="400">
-              <h2>Répartition des totaux</h2>
-              <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH), tous les bulletins du mois.</p>
+          <section class="paie-analytique__section paie-analytique__section--principal" aria-labelledby="paie-analytique-evolution">
+            <div class="paie-analytique__entete">
+              <div>
+                <span class="paie-analytique__eyebrow">2 · Tendance</span>
+                <h2 id="paie-analytique-evolution">Évolution dans le temps</h2>
+                <p class="paie-analytique__aide">{{ libelleMesure(mesureEvolution()) }} sur tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est cerclé.</p>
+              </div>
+              <div class="paie-analytique__mesure" role="group" aria-label="Mesure de l'évolution">
+                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'masse'" (click)="mesureEvolution.set('masse')">Masse (DH)</button>
+                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'effectif'" (click)="mesureEvolution.set('effectif')">Effectif</button>
+              </div>
+            </div>
+            <div class="paie-analytique__graphique paie-analytique__graphique--evolution">
+              <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
+            </div>
+            <button type="button" class="paie-analytique__donnees" [attr.aria-expanded]="tableaux().evolution" (click)="basculerTableau('evolution')">
+              <stp-icon name="table" />
+              {{ tableaux().evolution ? 'Masquer les données' : 'Afficher les données' }}
+            </button>
+            @if (tableaux().evolution) {
+              <app-column-chooser class="en-ligne" [state]="colonnesEvolution" />
+              <stp-table label="Évolution mensuelle de la masse salariale et des bulletins" [value]="lignesEvolution()" [columns]="colonnesEvolution.visible">
+                <ng-template stpCell let-ligne let-col="col">
+                  @switch (col.field) {
+                    @case ('mois') { {{ ligne.mois }} }
+                    @case ('masse') { {{ formaterMontant(ligne.masse) }} }
+                    @case ('effectif') { {{ ligne.effectif }} }
+                  }
+                </ng-template>
+              </stp-table>
+            }
+          </section>
+
+          <section class="paie-analytique__section paie-analytique__section--principal" aria-labelledby="paie-analytique-repartition">
+            <div class="paie-analytique__entete">
+              <div>
+                <span class="paie-analytique__eyebrow">3 · Où se situe la paie ?</span>
+                <h2 id="paie-analytique-repartition">{{ titreRepartition() }}</h2>
+                <p class="paie-analytique__aide">{{ aideRepartition() }}</p>
+              </div>
+              <div class="paie-analytique__mesure" role="group" aria-label="Mesure de la répartition">
+                <button type="button" [class.paie-analytique__mesure--active]="mesureRepartition() === 'masse'" (click)="mesureRepartition.set('masse')">Masse (DH)</button>
+                <button type="button" [class.paie-analytique__mesure--active]="mesureRepartition() === 'effectif'" (click)="mesureRepartition.set('effectif')">Effectif</button>
+              </div>
+            </div>
+            <div class="paie-analytique__defilement" tabindex="0" role="region" [attr.aria-label]="titreRepartition() + ', défilable'">
+              <div class="paie-analytique__graphique" [style.height.rem]="hauteurRepartition()">
+                <stp-chart [ariaLabel]="titreRepartition() + ' : ' + libelleMesure(mesureRepartition()) + ', ' + repartitionTriee().length + ' éléments ; le détail est dans le tableau des données.'" type="bar" [data]="graphiqueRepartition().data" [options]="graphiqueRepartition().options" (dataSelect)="surBarreRepartition($event)"></stp-chart>
+              </div>
+            </div>
+            <button type="button" class="paie-analytique__donnees" [attr.aria-expanded]="tableaux().repartition" (click)="basculerTableau('repartition')">
+              <stp-icon name="table" />
+              {{ tableaux().repartition ? 'Masquer les données' : 'Afficher les données' }}
+            </button>
+            @if (tableaux().repartition) {
+              <app-column-chooser class="en-ligne" [state]="colonnesRepartition" />
+              <stp-table [label]="titreRepartition()" [value]="lignesRepartition()" [columns]="colonnesRepartition.visible">
+                <ng-template stpCell let-ligne let-col="col">
+                  @switch (col.field) {
+                    @case ('libelle') { {{ ligne.libelle }} }
+                    @case ('masse') { {{ formaterMontant(ligne.masse) }} }
+                    @case ('effectif') { {{ ligne.effectif }} }
+                    @case ('stc') { {{ ligne.stc }} }
+                  }
+                </ng-template>
+              </stp-table>
+            }
+          </section>
+
+          <div class="paie-analytique__secondaire">
+            <section class="paie-analytique__carte" aria-labelledby="paie-analytique-tranches">
+              <div class="paie-analytique__section-entete">
+                <div>
+                  <span class="paie-analytique__eyebrow">4 · Structure</span>
+                  <h2 id="paie-analytique-tranches">Répartition des rémunérations</h2>
+                  <p class="paie-analytique__aide">Nombre de bulletins par tranche de total (DH), sur le périmètre du mois.</p>
+                </div>
+              </div>
               <div class="paie-analytique__graphique">
                 <stp-chart ariaLabel="Nombre de bulletins par tranche de total ; le détail est dans le tableau des données." type="bar" [data]="graphiqueTranches().data" [options]="graphiqueTranches().options" ></stp-chart>
               </div>
-              <button
-                type="button"
-                class="paie-analytique__donnees"
-                [attr.aria-expanded]="tableaux().tranches"
-                (click)="basculerTableau('tranches')"
-              >
+              <button type="button" class="paie-analytique__donnees" [attr.aria-expanded]="tableaux().tranches" (click)="basculerTableau('tranches')">
                 <stp-icon name="table" />
                 {{ tableaux().tranches ? 'Masquer les données' : 'Afficher les données' }}
               </button>
@@ -110,110 +156,14 @@
               }
             </section>
 
-            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="480">
-              <div class="paie-analytique__entete">
+            <section class="paie-analytique__carte" aria-labelledby="paie-analytique-qualite">
+              <div class="paie-analytique__section-entete">
                 <div>
-                  <h2>Répartition par chantier</h2>
-                  <p class="paie-analytique__aide">
-                    {{ chantiersTries().length }} chantier(s) avec une valeur positive pour la mesure choisie. Cliquez une barre pour filtrer sur ce chantier.
-                  </p>
-                </div>
-                <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par chantier">
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureChantiers() === 'masse'" (click)="mesureChantiers.set('masse')">Masse</button>
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureChantiers() === 'effectif'" (click)="mesureChantiers.set('effectif')">Bulletins</button>
+                  <span class="paie-analytique__eyebrow">5 · Attention</span>
+                  <h2 id="paie-analytique-qualite">Qualité des données</h2>
+                  <p class="paie-analytique__aide">Bulletins du périmètre auxquels il manque une information facultative.</p>
                 </div>
               </div>
-              <div class="paie-analytique__defilement" tabindex="0" role="region" aria-label="Graphique par chantier, défilable">
-                <div
-                  class="paie-analytique__graphique"
-                  [style.height.rem]="hauteurChantiers()"
-                >
-                  <stp-chart [ariaLabel]="'Répartition par chantier : ' + libelleMesure(mesureChantiers()) + ', ' + chantiersTries().length + ' chantiers ; le détail est dans le tableau des données.'"
-                    type="bar"
-                    [data]="graphiqueChantiers().data"
-                    [options]="graphiqueChantiers().options"
-                    
-                    (dataSelect)="surBarreChantier($event)"
-                  ></stp-chart>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="paie-analytique__donnees"
-                [attr.aria-expanded]="tableaux().chantiers"
-                (click)="basculerTableau('chantiers')"
-              >
-                <stp-icon name="table" />
-                {{ tableaux().chantiers ? 'Masquer les données' : 'Afficher les données' }}
-              </button>
-              @if (tableaux().chantiers) {
-                <app-column-chooser class="en-ligne" [state]="colonnesChantiers" />
-                <stp-table label="Masse, bulletins et sorties par chantier" [value]="chantiersTries()" [columns]="colonnesChantiers.visible">
-                  <ng-template stpCell let-chantier let-col="col">
-                    @switch (col.field) {
-                      @case ('chantier') { {{ chantier.code }}@if (chantier.libelle) { · {{ chantier.libelle }} } }
-                      @case ('masse') { {{ formaterMontant(chantier.masse) }} }
-                      @case ('effectif') { {{ chantier.effectif }} }
-                      @case ('stc') { {{ chantier.stc }} }
-                    }
-                  </ng-template>
-                </stp-table>
-              }
-            </section>
-
-            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="560">
-              <div class="paie-analytique__entete">
-                <div>
-                  <h2>Répartition par fonction</h2>
-                  <p class="paie-analytique__aide">
-                    {{ fonctionsTriees().length }} fonction(s) avec une valeur positive pour la mesure choisie. Cliquez une barre pour filtrer sur cette fonction.
-                  </p>
-                </div>
-                <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par fonction">
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureFonctions() === 'masse'" (click)="mesureFonctions.set('masse')">Masse</button>
-                  <button type="button" [class.paie-analytique__mesure--active]="mesureFonctions() === 'effectif'" (click)="mesureFonctions.set('effectif')">Bulletins</button>
-                </div>
-              </div>
-              <div class="paie-analytique__defilement" tabindex="0" role="region" aria-label="Graphique par fonction, défilable">
-                <div
-                  class="paie-analytique__graphique"
-                  [style.height.rem]="hauteurFonctions()"
-                >
-                  <stp-chart [ariaLabel]="'Répartition par fonction : ' + libelleMesure(mesureFonctions()) + ', ' + fonctionsTriees().length + ' fonctions ; le détail est dans le tableau des données.'"
-                    type="bar"
-                    [data]="graphiqueFonctions().data"
-                    [options]="graphiqueFonctions().options"
-                    
-                    (dataSelect)="surBarreFonction($event)"
-                  ></stp-chart>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="paie-analytique__donnees"
-                [attr.aria-expanded]="tableaux().fonctions"
-                (click)="basculerTableau('fonctions')"
-              >
-                <stp-icon name="table" />
-                {{ tableaux().fonctions ? 'Masquer les données' : 'Afficher les données' }}
-              </button>
-              @if (tableaux().fonctions) {
-                <app-column-chooser class="en-ligne" [state]="colonnesFonctions" />
-                <stp-table label="Masse et bulletins par fonction" [value]="fonctionsTriees()" [columns]="colonnesFonctions.visible">
-                  <ng-template stpCell let-fonction let-col="col">
-                    @switch (col.field) {
-                      @case ('fonction') { {{ fonction.libelle }} }
-                      @case ('masse') { {{ formaterMontant(fonction.masse) }} }
-                      @case ('effectif') { {{ fonction.effectif }} }
-                    }
-                  </ng-template>
-                </stp-table>
-              }
-            </section>
-
-            <section class="paie-analytique__carte paie-analytique__carte--large" [style.animation-delay.ms]="640">
-              <h2>Qualité des données</h2>
-              <p class="paie-analytique__aide">Bulletins du périmètre auxquels il manque une information facultative.</p>
               @for (ligne of qualite(); track ligne.libelle) {
                 <div class="paie-analytique__qualite">
                   <span>{{ ligne.libelle }}</span>

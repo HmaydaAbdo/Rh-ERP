@@ -40,7 +40,7 @@ const ANALYTIQUE: PaieAnalytique = {
         { id: 1, code: 'C168', libelle: 'Nador', effectif: 148, masse: 720000, stc: 2, stcMontant: 18000 },
         { id: 2, code: 'C196', libelle: null, effectif: 10, masse: 80000, stc: 0, stcMontant: 0 }
     ],
-    parFonction: [], tranches: [], evolution: [], qualite: { sansEquipe: 5, sansObservation: 0 }
+    parEquipe: [], parFonction: [], tranches: [], evolution: [], qualite: { sansEquipe: 5, sansObservation: 0 }
 };
 
 describe('PaieCartesComponent', () => {
