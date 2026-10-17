@@ -125,6 +125,10 @@ liste : l'environnement local contient `http://localhost:4200` ; la production c
 publique réelle, par exemple `https://<domaine>`, sans le sous-chemin `/rh-erp`. Les credentials restent
 activés uniquement pour ces origines explicites.
 
+Pour l'URL de production observée le 2026-10-16 (`http://staport.dyndns.org:650/erp-rh/`), l'origine
+CORS correspondante est `http://staport.dyndns.org:650` (sans le chemin). Cette origine HTTP est
+temporaire ; la valeur devra passer à HTTPS lorsque TLS sera configuré.
+
 ---
 
 ## Démarrage
@@ -259,14 +263,48 @@ suspendues jusqu'à la décision de réouverture.
    par une migration inverse contrôlée. Conserver les deux volumes jusqu'à validation métier et
    sauvegarde PG18 restaurable.
 
-État de production relevé le 2026-10-14 : PostgreSQL 18.6, pgvector 0.8.7 et pgAudit 18.0 sont
-disponibles ; Flyway avait atteint V21 ; `pgaudit.log=all` était configuré ; le rôle applicatif était
-non-superuser et le backend sain. Le propriétaire confirme le 2026-10-16 que pgAudit fonctionne. Le
-2026-10-16, les migrations V22 à V26 ont été appliquées avec Flyway sur une copie restaurée de la
-sauvegarde de production, sans doublon préexistant ni valeur hors plage. Le backend a démarré ensuite
-avec `ddl-auto=validate` ; la dernière version Flyway est V26. Aucun suivi du volume PG17 n'est requis,
-selon le propriétaire. La purge CSV, les ACL et les alertes pgAudit restent à finaliser dans
-[`TODO.md`](../TODO.md).
+État de production vérifié le 2026-10-16 : PostgreSQL 18.6, pgvector 0.8.7 et pgAudit 18.0 sont
+disponibles ; `pgaudit.log=all` est configuré et le propriétaire confirme que pgAudit fonctionne.
+Après suppression auditée de la Fonction 144 (doublon avec espace initial, aucune référence active),
+la Fonction 148 étant conservée, les migrations V22 à V27 ont été appliquées en production. Le
+backend `latest` est sain, `ddl-auto=validate` a réussi et Flyway est en V27. Aucun suivi du volume
+PG17 n'est requis, selon le propriétaire. Le service de rétention CSV est déployé et ses exécutions
+planifiées sont vérifiées. Le contrôle hôte confirme les permissions des fichiers, les seuls services
+montant le volume et la capacité disponible ; les alertes pgAudit restent à raccorder à la supervision
+dans [`TODO.md`](../TODO.md).
+
+Après correction de `BACKUP_AGE_RECIPIENT` dans le `.env` de l'hôte et redémarrage des services, le
+contrôle du 2026-10-17 montre `backup` et `postgres-log-retention` démarrés et sains. Les ports hôte
+publiés sont `127.0.0.1:5002` pour le frontend et `127.0.0.1:5001` pour le backend ; le listener Nginx
+outer est sur `0.0.0.0:80`. Le `nginx -T` du 2026-10-17 confirme les limites actives : connexion
+20/min + burst 10, réinitialisation 5/min + burst 5, session 120/min + burst 30 et écritures lourdes
+30/min + burst 10. `X-Forwarded-For` est utilisé pour l'adresse réelle. Les requêtes navigateur
+journalisées le 2026-10-17 montrent l'adresse client identique dans `$remote_addr` et
+`$http_x_forwarded_for` ; un refresh répond 200. La transmission via l'outer fonctionne. Les directives
+de confiance incluent toutefois toutes les plages RFC1918 et loopback, au-delà du pair outer attendu.
+La prochaine image du Nginx inner ajoutera `socket_peer="$realip_remote_addr"`, l'adresse de la
+connexion avant réécriture par `real_ip_header`. Après publication et déploiement de cette image,
+consulter `docker compose logs --since 5m frontend` pendant une requête et utiliser la valeur
+`socket_peer` pour restreindre `set_real_ip_from` au pair observé. Les logs d'accès sont reliés au flux
+stdout ; ne pas lire directement `/var/log/nginx/access.log` dans le conteneur.
+
+Les sauvegardes planifiées `rh-erp-20261017T015957Z` et `rh-erp-20261017T020000Z` ont réussi avec
+vérification de `globals.sql` et `database.dump`. Le journal pgAudit confirme les exécutions de
+rétention du 2026-10-16 et du 2026-10-17 ; aucun CSV de plus de 90 jours n'était présent au dernier
+inventaire. Le contrôle des montages en production du 2026-10-17 montre que le volume PostgreSQL est
+monté en lecture/écriture seulement par `postgres` et `postgres-log-retention`. Le dossier CSV est en
+mode `1777` avec les fichiers en `600`, détenus par `postgres` ; le service de rétention utilise l'UID
+`postgres`, sans capacité Linux et sans réseau. Le relevé du 2026-10-16 montrait 4 % d'espace et 1 %
+d'inodes utilisés. Le contrôle d'accès et la capacité actuels sont satisfaits ; la supervision/alerte
+de capacité reste ouverte. Aucun listener hôte 443 n'a été observé ; HTTPS reste ouvert.
+
+Le contrôle hôte des journaux applicatifs du 2026-10-17 montre que `C:\apps\erp-rh\logs` (y compris
+`archive`) et `C:\apps\erp-rh\backups` héritent des ACL de `C:\apps\erp-rh` : Administrateurs et
+Système ont le contrôle total, `Utilisateurs` ont la lecture, et `Utilisateurs authentifiés` ont la
+modification. Le propriétaire confirme être le seul opérateur humain du serveur et accepte ce modèle
+d'exploitation. Le lecteur C: dispose de 100 035 084 288 octets libres sur 255 072 399 360. Les
+archives de journaux présentes sont quotidiennes ; la configuration Logback conserve 30 jours et
+utilise des dates UTC. Aucun fichier de plus de 30 jours n'était présent dans l'inventaire fourni.
 
 ---
 
@@ -382,11 +420,16 @@ avant tout retour au service. Ne jamais tester sur le seul volume de production.
 Par décision du propriétaire, réaffirmée le 2026-10-15, les archives de base restent uniquement sur
 le serveur ; aucune copie hors hôte n'est demandée. Cette stratégie protège contre la perte du volume
 PostgreSQL ou une erreur sur les données, mais pas contre la perte ou la compromission de l'hôte. Le
-2026-10-16, le service `backup` était `healthy`, deux archives de moins de 24 heures étaient présentes
-et le tmpfs `/tmp` disposait de 3,9 Go libres. Une archive de production a été restaurée avec succès
-dans une instance PostgreSQL 18.6 isolée, puis V22 à V26 y ont été appliquées avec succès. La clé
-privée est absente du dossier de sauvegarde du serveur et le propriétaire a confirmé en conserver une
-copie de secours protégée hors serveur. L'exercice est terminé ; l'alerte de fraîcheur est suivie avec
-la supervision métrique dans `TODO.md`.
+2026-10-16, une sauvegarde post-nettoyage `rh-erp-20261016T190309Z.tar.gz.age` (2 030 763 octets) a
+été créée avec succès et ses fichiers `globals.sql` et `database.dump` ont été vérifiés. Une archive
+de production antérieure a été restaurée avec succès dans une instance PostgreSQL 18.6 isolée ; les
+migrations V22 à V27 y ont ensuite été validées et le backend a démarré sainement. La clé privée est
+absente du dossier de sauvegarde du serveur et le propriétaire a confirmé en conserver une copie de
+secours protégée hors serveur. Le contrôle hôte du 2026-10-17 montre les conteneurs `backup` et
+`postgres-log-retention` sains. Deux sauvegardes planifiées le 2026-10-17 ont réussi et validé leurs
+sommes ; le job de rétention a terminé sans erreur le 16 et le 17 octobre. La suppression d'un fichier
+de plus de 90 jours n'a pas été observée car l'inventaire précédent n'en comptait aucun. L'accès au
+volume et sa capacité ont été contrôlés le 2026-10-17 ; le routage des alertes reste ouvert dans
+`TODO.md`.
 
 Voir `TODO.md` pour le suivi.
