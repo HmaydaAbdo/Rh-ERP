@@ -28,7 +28,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
 | Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |
-| Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) · [ADR 0003 — CORS explicite](adr/0003-cors-origines-explicites.md) |
+| Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) · [ADR 0003 — CORS explicite](adr/0003-cors-origines-explicites.md) · [ADR 0006 — OpenLayers](adr/0006-openlayers-carte-chantiers.md) |
 
 ---
 
