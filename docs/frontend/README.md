@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Emplacement | `frontend/` (code dans `frontend/src/app/`) |
-| Technologies | Angular 22.2.2, TypeScript 6.0.3, standalone, composants `OnPush`, Signals, zoneless (Zone.js retiré), Angular Aria + CDK, Lucide Angular, Tailwind CSS 4 (utilitaires), Chart.js (graphiques, chargé à la demande). AG Grid Community n'est pas utilisé : il n'est réservé qu'à une grille avancée au besoin mesuré |
+| Technologies | Angular 22.2.2, TypeScript 6.0.3, standalone, composants `OnPush`, Signals, zoneless (Zone.js retiré), Angular Aria + CDK, Lucide Angular, Tailwind CSS 4 (utilitaires), Chart.js (graphiques, chargé à la demande), OpenLayers (`ol`, cartographie, chargé à la demande — voir [ADR 0006](../adr/0006-openlayers-carte-chantiers.md)). AG Grid Community n'est pas utilisé : il n'est réservé qu'à une grille avancée au besoin mesuré |
 | Kit de composants | `src/app/shared/ui/` (« kit Staport ») : voir [Kit Staport](#kit-staport) |
 | Rendu | Application monopage (SPA) ; routes chargées à la demande (lazy loading) par domaine |
 | Tests | Vitest (runner Angular `@angular/build:unit-test`, Chromium réel) pour les unités et composants ; Playwright + axe pour les parcours E2E (voir [../testing.md](../testing.md)) |
