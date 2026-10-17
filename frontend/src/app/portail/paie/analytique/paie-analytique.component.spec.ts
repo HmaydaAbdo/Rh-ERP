@@ -205,7 +205,15 @@ describe('PaieAnalytiqueComponent', () => {
         composant.mesureEvolution.set('effectif');
 
         expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([8, 10]);
-        expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('Bulletins');
+        expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('Effectif (personnes)');
+
+        composant.mesureEvolution.set('stc');
+        expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([0, 1]);
+        expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('STC (personnes)');
+
+        composant.mesureEvolution.set('stcMontant');
+        expect(composant.graphiqueEvolution().data.datasets[0].data).toEqual([0, 4000]);
+        expect(composant.graphiqueEvolution().data.datasets[0].label).toBe('STC (DH)');
     });
 
     it('colore chaque mesure de la même façon dans tous les graphiques (la couleur suit la mesure, pas le rang)', async () => {
@@ -258,7 +266,7 @@ describe('PaieAnalytiqueComponent', () => {
         // `Intl` sépare les milliers par une espace insécable fine : on compare après normalisation des espaces.
         const tranches = composant.lignesTranches().map((l) => ({ ...l, tranche: l.tranche.replace(/\s/g, ' ') }));
         expect(tranches).toEqual([{ tranche: '0 – 5 000', effectif: 6 }, { tranche: '≥ 5 000', effectif: 4 }]);
-        expect(composant.lignesEvolution().map((l) => l.effectif)).toEqual([8, 10]);
+        expect(composant.lignesEvolution().map((l) => [l.effectif, l.stc, l.stcMontant])).toEqual([[8, 0, 0], [10, 1, 4000]]);
     });
 
     it('montre toutes les catégories positives, sans plafond ni « Autres »', async () => {

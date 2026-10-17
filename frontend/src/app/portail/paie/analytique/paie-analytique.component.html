@@ -63,15 +63,17 @@
               <div>
                 <span class="paie-analytique__eyebrow">2 · Tendance</span>
                 <h2 id="paie-analytique-evolution">Évolution dans le temps</h2>
-                <p class="paie-analytique__aide">{{ libelleMesure(mesureEvolution()) }} sur tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est cerclé.</p>
+                <p class="paie-analytique__aide">{{ libelleEvolutionMesure(mesureEvolution()) }} sur tous les mois de paie de cette sélection ({{ d.evolution.length }}) ; le mois analysé est cerclé.</p>
               </div>
               <div class="paie-analytique__mesure" role="group" aria-label="Mesure de l'évolution">
                 <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'masse'" (click)="mesureEvolution.set('masse')">Masse (DH)</button>
-                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'effectif'" (click)="mesureEvolution.set('effectif')">Effectif</button>
+                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'effectif'" (click)="mesureEvolution.set('effectif')">Effectif (personnes)</button>
+                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'stc'" (click)="mesureEvolution.set('stc')">STC (personnes)</button>
+                <button type="button" [class.paie-analytique__mesure--active]="mesureEvolution() === 'stcMontant'" (click)="mesureEvolution.set('stcMontant')">STC (DH)</button>
               </div>
             </div>
             <div class="paie-analytique__graphique paie-analytique__graphique--evolution">
-              <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
+              <stp-chart [ariaLabel]="'Évolution de ' + libelleEvolutionMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
             </div>
             <button type="button" class="paie-analytique__donnees" [attr.aria-expanded]="tableaux().evolution" (click)="basculerTableau('evolution')">
               <stp-icon name="table" />
@@ -79,12 +81,14 @@
             </button>
             @if (tableaux().evolution) {
               <app-column-chooser class="en-ligne" [state]="colonnesEvolution" />
-              <stp-table label="Évolution mensuelle de la masse salariale et des bulletins" [value]="lignesEvolution()" [columns]="colonnesEvolution.visible">
+              <stp-table label="Évolution mensuelle de la masse salariale, de l'effectif et des STC" [value]="lignesEvolution()" [columns]="colonnesEvolution.visible">
                 <ng-template stpCell let-ligne let-col="col">
                   @switch (col.field) {
                     @case ('mois') { {{ ligne.mois }} }
                     @case ('masse') { {{ formaterMontant(ligne.masse) }} }
                     @case ('effectif') { {{ ligne.effectif }} }
+                    @case ('stc') { {{ ligne.stc }} }
+                    @case ('stcMontant') { {{ formaterMontant(ligne.stcMontant) }} }
                   }
                 </ng-template>
               </stp-table>
