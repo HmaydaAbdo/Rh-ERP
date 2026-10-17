@@ -57,7 +57,7 @@
               <div
                 class="paie-analytique__graphique"
               >
-                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" ></stp-chart>
+                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
               </div>
               <button
                 type="button"

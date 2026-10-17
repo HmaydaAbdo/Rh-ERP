@@ -1,4 +1,4 @@
-import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, mouvementReduit, police } from './paie-chart-theme';
+import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, mouvementReduit, police, valeursSurPoints } from './paie-chart-theme';
 
 describe('paie-chart-theme', () => {
   const racine = document.documentElement;
@@ -35,6 +35,13 @@ describe('paie-chart-theme', () => {
     it('nomme chaque mesure comme les infobulles et les tableaux de données', () => {
       expect(libelleMesure('masse')).toBe('Masse (DH)');
       expect(libelleMesure('effectif')).toBe('Bulletins');
+    });
+
+    it('fournit le plugin qui affiche la valeur de chaque point', () => {
+      const plugin = valeursSurPoints();
+
+      expect(plugin.id).toBe('paie-valeurs-sur-points');
+      expect(plugin.afterDatasetsDraw).toEqual(expect.any(Function));
     });
   });
 
