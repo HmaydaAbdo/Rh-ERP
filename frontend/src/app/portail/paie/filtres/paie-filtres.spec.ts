@@ -15,6 +15,13 @@ describe('filtres de la paie (URL)', () => {
         expect(filtres).toEqual(AUCUN_FILTRE);
     });
 
+    it('conserve zéro uniquement pour le filtre « Sans équipe »', () => {
+        const filtres = lireFiltres(convertToParamMap({ chantierIds: '0', equipeIds: '0, 2' }));
+
+        expect(filtres.chantierIds).toEqual([]);
+        expect(filtres.equipeIds).toEqual([0, 2]);
+    });
+
     it('écrit des paramètres vides à null pour les retirer de l\'URL', () => {
         expect(versParametres(AUCUN_FILTRE)).toEqual({
             periode: null,

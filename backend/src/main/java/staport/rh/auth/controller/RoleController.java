@@ -27,7 +27,7 @@ import staport.rh.auth.services.interfaces.IRoleService;
 
 import java.util.List;
 
-/** Gestion des rôles et du catalogue de permissions — réservé à ROLE_MANAGE. */
+/** Gestion des rôles — réservé à ROLE_MANAGE ; le catalogue est aussi consultable par USER_MANAGE pour l'édition des comptes. */
 @RestController
 @Tag(name = "Rôles", description = "Rôles administrables et catalogue des permissions")
 @PreAuthorize("hasAuthority('ROLE_MANAGE')")
@@ -74,6 +74,7 @@ public class RoleController {
     }
 
     @GetMapping("/permissions")
+    @PreAuthorize("hasAnyAuthority('ROLE_MANAGE', 'USER_MANAGE')")
     @Operation(summary = "Lister le catalogue des permissions")
     public ResponseEntity<List<PermissionResponseDto>> findAllPermissions() {
         return ResponseEntity.ok(roleService.findAllPermissions());

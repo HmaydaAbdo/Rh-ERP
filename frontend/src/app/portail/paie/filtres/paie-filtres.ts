@@ -5,7 +5,7 @@ import { PaieSearchCriteria } from '../models/paie.model';
 /**
  * Filtres de la barre commune aux trois vues de la paie. Ils vivent dans l'URL (`?periode=2026-08&nom=ali&cin=ab1
  * &chantierIds=3,4&fonctionIds=7&equipeIds=2`) : tout lien et retour navigateur les conserve, et chaque vue les lit sans
- * passer par un état partagé. Changer de vue par le sélecteur les réinitialise.
+ * passer par un état partagé. La valeur {@code 0} dans {@code equipeIds} représente « Sans équipe ».
  */
 export interface PaieFiltres {
   periode: string | null;
@@ -31,8 +31,10 @@ export function lireFiltres(params: ParamMap): PaieFiltres {
   const ids = (cle: string): number[] =>
     (params.get(cle) ?? '')
       .split(',')
+      .map((valeur) => valeur.trim())
+      .filter((valeur) => valeur !== '')
       .map(Number)
-      .filter((id) => Number.isInteger(id) && id > 0);
+      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' ? id >= 0 : id > 0));
   return {
     periode: FORMAT_PERIODE.test(periode) ? periode : null,
     nomPrenom: params.get('nom') ?? '',

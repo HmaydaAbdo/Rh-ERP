@@ -19,12 +19,13 @@ import java.util.Set;
 @Repository
 public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificationExecutor<Paie> {
 
-    /** Fragment WHERE commun : un filtre est ignoré quand son indicateur « tous » est vrai (voir {@link FiltresPaie}). */
+    /** Fragment WHERE commun : un filtre est ignoré quand son indicateur « tous » est vrai (voir {@link FiltresPaie}).
+     * Pour les équipes, l'identifiant {@code 0} inclut les bulletins dont la relation est {@code NULL}. */
     String FILTRES = " AND (:#{#f.tousNoms} = true OR LOWER(p.employee.nomPrenom) LIKE :#{#f.motifNom} ESCAPE '\\')" +
             " AND (:#{#f.tousCin} = true OR LOWER(p.employee.cin) LIKE :#{#f.motifCin} ESCAPE '\\')" +
             " AND (:#{#f.tousChantiers} = true OR p.chantier.id IN :#{#f.chantierIds})" +
             " AND (:#{#f.toutesFonctions} = true OR p.fonction.id IN :#{#f.fonctionIds})" +
-            " AND (:#{#f.toutesEquipes} = true OR p.equipe.id IN :#{#f.equipeIds})";
+            " AND (:#{#f.toutesEquipes} = true OR (:#{#f.inclureSansEquipe} = true AND p.equipe IS NULL) OR p.equipe.id IN :#{#f.equipeIds})";
 
     /** Même définition du STC que {@code ObservationStc.estStcOuSortie}, comme dans les requêtes ci-dessus. */
     String EST_STC = "LOWER(TRIM(p.observation)) IN ('stc', 'sortie')";
@@ -145,6 +146,15 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             "FROM Paie p JOIN p.chantier c WHERE p.periode = :periode" + FILTRES +
             " GROUP BY c.id, c.code, c.nom, c.designation ORDER BY SUM(p.salaireTotal) DESC")
     List<ChantierMasseProjection> sommerParChantier(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
+
+    /** Masse, effectif et STC par équipe, du plus gros au plus petit ; une ligne {@code NULL} représente « Sans équipe ». */
+    @Query("SELECT e.id AS id, e.code AS code, e.libelle AS libelle, " +
+            "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
+            "FROM Paie p LEFT JOIN p.equipe e WHERE p.periode = :periode" + FILTRES +
+            " GROUP BY e.id, e.code, e.libelle ORDER BY SUM(p.salaireTotal) DESC")
+    List<EquipeMasseProjection> sommerParEquipe(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
 
     /** Masse et effectif par fonction, de la plus grosse à la plus petite. */
     @Query("SELECT f.id AS id, f.libelle AS libelle, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +

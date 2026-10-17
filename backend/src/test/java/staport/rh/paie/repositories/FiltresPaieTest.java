@@ -37,6 +37,15 @@ class FiltresPaieTest {
     }
 
     @Test
+    void depuis_devraitInclureLesBulletinsSansEquipeAvecLeSentinelleZero() {
+        FiltresPaie filtres = FiltresPaie.depuis(new PaieSearchCriteria(null, null, null, null, null, List.of(0L, 5L)));
+
+        assertThat(filtres.isToutesEquipes()).isFalse();
+        assertThat(filtres.isInclureSansEquipe()).isTrue();
+        assertThat(filtres.getEquipeIds()).containsExactly(5L);
+    }
+
+    @Test
     void depuis_devraitRenvoyerAucunFiltreSansCriteres() {
         assertThat(FiltresPaie.depuis(null)).isSameAs(FiltresPaie.AUCUN);
     }

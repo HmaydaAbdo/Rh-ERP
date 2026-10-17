@@ -191,17 +191,17 @@ describe('PaieFiltresComponent', () => {
             expect(service.rechercherOptionsEquipes).toHaveBeenCalledWith('2026-08', [3, 4], 2, 30, 'chauff');
         });
 
-        it('propose les listes complètes du référentiel sans mois', () => {
+        it('propose les listes complètes du référentiel avec l’option « Sans équipe » sans mois', () => {
             afficher({ ...AUCUN_FILTRE, chantierIds: [3] });
 
             expect(composant['sourcesChantiers']()[0]).toBe(composant['chantierReferenceService']);
-            expect(composant['sourcesEquipes']()[0]).toBe(composant['equipeReferenceService']);
+            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
         });
 
-        it('propose toutes les équipes tant qu\'aucun chantier n\'est choisi', () => {
+        it('propose toutes les équipes et « Sans équipe » tant qu\'aucun chantier n\'est choisi', () => {
             afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
 
-            expect(composant['sourcesEquipes']()[0]).toBe(composant['equipeReferenceService']);
+            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
         });
 
     });
@@ -283,10 +283,16 @@ describe('PaieFiltresComponent', () => {
         });
 
         it("identifie le chantier ouvert sans précharger la liste entière du mois", () => {
-            expect(composant['chantierOuvert']()).toBe('n° 3');
+            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
 
             afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
             expect(composant['chantierOuvert']()).toBeNull();
+        });
+
+        it("n'expose pas les identifiants techniques dans le fil", () => {
+            afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3], equipeIds: [12] });
+            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
+            expect(composant['equipeOuverte']()).toBe('Équipe sélectionnée');
         });
     });
 });

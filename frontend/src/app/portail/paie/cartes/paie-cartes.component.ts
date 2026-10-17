@@ -1,22 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounce, form, FormField } from '@angular/forms/signals';
+import { form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, finalize, forkJoin, merge, Observable, of, Subject, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { Page } from '../../../shared/models/page.model';
-import { contient } from '../../../shared/text/recherche';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
-import { Paie, PaieAnalytique, PaieChantierPeriode, PaiePeriodeComparaison, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
+import { PaieAnalytique, PaieChantierPeriode, PaiePeriodeComparaison, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode, periodePrecedente } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 import { NotificationService } from '@shared/feedback/feedback.service';
 
-const DEBOUNCE_RECHERCHE_MS = 300;
 const DELAI_CASCADE_MS = 50;
 const DELAI_CASCADE_MAX_RANG = 12;
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -113,11 +110,6 @@ export class PaieCartesComponent {
   readonly periodes = signal<PaiePeriodeResume[]>([]);
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
   readonly analytique = signal<PaieAnalytique | null>(null);
-  readonly pageEmployes = signal<Page<Paie> | null>(null);
-  readonly employesEnChargement = signal(false);
-
-  private readonly saisieRecherche = signal({ terme: '' });
-  readonly rechercheForm = form(this.saisieRecherche, (chemin) => debounce(chemin.terme, DEBOUNCE_RECHERCHE_MS));
 
   readonly suppression = signal<Suppression | null>(null);
   readonly suppressionEnCours = signal(false);
@@ -145,7 +137,8 @@ export class PaieCartesComponent {
     return filtres.equipeIds.length === 1 ? 4 : 3;
   });
   readonly chantier = computed(() => this.chantiers().find((c) => c.id === this.filtres().chantierIds[0]) ?? null);
-  readonly equipe = computed(() => this.chantier()?.equipes.find((e) => e.id === this.filtres().equipeIds[0]) ?? null);
+  readonly equipeSansEquipe = computed(() => this.filtres().equipeIds.length === 1 && this.filtres().equipeIds[0] === 0);
+  readonly equipe = computed(() => this.equipeSansEquipe() ? null : this.chantier()?.equipes.find((e) => e.id === this.filtres().equipeIds[0]) ?? null);
 
   readonly cartesMois = computed<CarteMois[]>(() => {
     const periodes = this.periodes();
@@ -199,19 +192,18 @@ export class PaieCartesComponent {
     return lignes;
   });
 
-  /** Les équipes dont le code ou le libellé contient la recherche (insensible à la casse et aux accents). */
-  readonly equipesAffichees = computed(() => this.lignesEquipes().filter((ligne) => contient(ligne.code, this.saisieRecherche().terme) || contient(ligne.libelle, this.saisieRecherche().terme)));
-
   readonly indicateursVue = computed(() => {
     const analytique = this.analytique();
     return analytique ? this.construireIndicateurs(analytique.kpis, analytique.moisPrecedent) : [];
   });
+  /** Fonctions du périmètre courant ; au niveau équipe, elles remplacent les cartes employé. */
+  readonly fonctionsEquipe = computed(() => this.analytique()?.parFonction ?? []);
 
   readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1
     ? this.periodes().length === 0
     : (this.analytique()?.kpis.effectif ?? 0) === 0));
   readonly chantierIntrouvable = computed(() => this.niveau() >= 3 && !this.chargement() && !this.aucunResultat() && this.chantier() === null);
-  readonly equipeIntrouvable = computed(() => this.niveau() === 4 && !this.chargement() && this.chantier() !== null && this.equipe() === null);
+  readonly equipeIntrouvable = computed(() => this.niveau() === 4 && !this.chargement() && this.chantier() !== null && !this.equipeSansEquipe() && this.equipe() === null);
 
   readonly libellePeriode = libellePeriode;
   readonly formaterMontant = formaterMontant;
@@ -244,22 +236,12 @@ export class PaieCartesComponent {
       : FORMAT_ENTIER.format(indicateur.valeur);
   }
 
-  changerPageEmployes(page: number): void {
-    const actuel = this.pageEmployes();
-    if (!actuel || page < 0 || page >= actuel.page.totalPages) return;
-    this.employesEnChargement.set(true);
-    this.paieService.search(versCriteres(this.filtres()), { page, size: actuel.page.size, sort: 'employee.nomPrenom,asc' })
-      .pipe(finalize(() => this.employesEnChargement.set(false)), takeUntilDestroyed(this.destroyRef))
-      .subscribe((resultat) => this.pageEmployes.set(resultat));
-  }
-
   constructor() {
     const parametres$ = this.route.queryParamMap.pipe(
       tap((params) => {
         const niveauPrecedent = this.niveau();
         this.filtres.set(lireFiltres(params));
         this.sens.set(this.niveau() >= niveauPrecedent ? 'avant' : 'arriere');
-        this.reinitialiserRecherche();
       })
     );
     merge(parametres$, this.rechargement)
@@ -269,10 +251,6 @@ export class PaieCartesComponent {
       )
       .subscribe();
 
-  }
-
-  reinitialiserRecherche(): void {
-    this.rechercheForm().reset({ terme: '' });
   }
 
   private construireIndicateurs(
@@ -425,7 +403,6 @@ export class PaieCartesComponent {
     if (this.niveau() === 1) {
       this.analytique.set(null);
       this.chantiers.set([]);
-      this.pageEmployes.set(null);
       return this.chargerMois();
     }
 
@@ -437,19 +414,13 @@ export class PaieCartesComponent {
     const chantiers$ = this.cacheChantiers.has(cle)
       ? of(this.cacheChantiers.get(cle)!)
       : this.paieService.rechercherChantiers(criteres);
-    const pageVide: Page<Paie> = { content: [], page: { size: 12, number: 0, totalElements: 0, totalPages: 0 } };
-    const employes$ = this.niveau() === 4
-      ? this.paieService.search(criteres, { page: 0, size: 12, sort: 'employee.nomPrenom,asc' })
-      : of(pageVide);
-
     this.chargement.set(true);
-    return forkJoin({ analytique: analytique$, chantiers: chantiers$, employes: employes$ }).pipe(
-      tap(({ analytique, chantiers, employes }) => {
+    return forkJoin({ analytique: analytique$, chantiers: chantiers$ }).pipe(
+      tap(({ analytique, chantiers }) => {
         this.cacheAnalytique.set(cle, analytique);
         this.cacheChantiers.set(cle, chantiers);
         this.analytique.set(analytique);
         this.chantiers.set(chantiers);
-        this.pageEmployes.set(this.niveau() === 4 ? employes : null);
       }),
       finalize(() => this.chargement.set(false))
     );
