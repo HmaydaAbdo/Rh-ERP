@@ -88,3 +88,6 @@ logs/
 backups/
 *.tmp
 *.bak
+
+# --- Fond de carte auto-hébergé (carte des chantiers) : données téléchargées, jamais versionnées ---
+/carte-fond/

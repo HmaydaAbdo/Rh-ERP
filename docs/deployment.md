@@ -149,6 +149,10 @@ Compose active alors ce profil pour les commandes. Le profil lance le planificat
 et le planificateur de rétention pgAudit ; ce n'est pas une commande de restauration. Sans cette
 variable ou `--profile backup`, ces services optionnels ne sont pas inclus.
 
+Le fond de la carte des chantiers est un dossier de l'hôte (`CARTE_FOND_DIR`, défaut `./carte-fond`) monté en lecture
+seule dans le frontend ; le préparer une fois avec `scripts/carte/preparer-fond-maroc.sh ./carte-fond` (voir
+[chantier/carte.md](chantier/carte.md)). Sans lui, l'application fonctionne, la carte s'affiche sans fond.
+
 ### Deux comptes PostgreSQL
 
 Le backend se connecte avec un **compte applicatif** (`POSTGRES_APP_USER`) qui n'a que `SELECT` et `INSERT` sur les tables
