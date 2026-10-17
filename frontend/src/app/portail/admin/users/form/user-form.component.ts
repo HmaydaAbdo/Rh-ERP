@@ -54,6 +54,7 @@ export class UserFormComponent {
   protected readonly loading = signal(true);
 
   private readonly deniedPermissionIds = signal(new Set<number>());
+  private readonly permissionCatalogue = signal<PermissionSummary[]>([]);
 
   private readonly modele = signal<UserSaisie>({ username: '', email: '', motDePasse: '', actif: true, employeeId: null, roleIds: [] });
   protected readonly form = form(
@@ -87,9 +88,16 @@ export class UserFormComponent {
     return Array.from(parCode.values()).sort((a, b) => a.code.localeCompare(b.code));
   });
 
+  /** Toutes les permissions du catalogue, et pas seulement celles héritées des rôles choisis. */
+  protected readonly displayedPermissions = computed<PermissionSummary[]>(() => {
+    const catalogue = this.permissionCatalogue();
+    return catalogue.length > 0 ? catalogue : this.deniablePermissions();
+  });
+
   protected readonly permissionGroups = computed<PermissionGroup[]>(() => {
     const parDomaine = new Map<string, PermissionSummary[]>();
-    for (const permission of this.deniablePermissions()) {
+    const deniables = new Set(this.deniablePermissions().map((permission) => permission.code));
+    for (const permission of this.displayedPermissions()) {
       const domaine = permission.code.split('_')[0];
       const permissions = parDomaine.get(domaine) ?? [];
       permissions.push(permission);
@@ -100,8 +108,8 @@ export class UserFormComponent {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([domaine, permissions]) => ({
         domaine,
-        autorisees: permissions.filter((permission) => !this.isDenied(permission)),
-        nonAutorisees: permissions.filter((permission) => this.isDenied(permission))
+        autorisees: permissions.filter((permission) => deniables.has(permission.code) && !this.isDenied(permission)),
+        nonAutorisees: permissions.filter((permission) => !deniables.has(permission.code) || this.isDenied(permission))
       }));
   });
 
@@ -140,6 +148,7 @@ export class UserFormComponent {
             roleIds: user.roles.map((r) => r.id)
           });
         });
+      this.roleReferenceService.findAllPermissions().subscribe((permissions) => this.permissionCatalogue.set(permissions));
     }
   }
 
@@ -147,7 +156,14 @@ export class UserFormComponent {
     return this.deniedPermissionIds().has(permission.id);
   }
 
+  protected permissionHeritee(permission: PermissionSummary): boolean {
+    return this.deniablePermissions().some((candidate) => candidate.id === permission.id);
+  }
+
   protected onTogglePermission(permission: PermissionSummary, event: Event): void {
+    if (!this.permissionHeritee(permission)) {
+      return;
+    }
     const autorisee = (event.target as HTMLInputElement).checked;
     this.form().markAsDirty();
     this.deniedPermissionIds.update((current) => {

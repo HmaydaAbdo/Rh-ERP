@@ -147,6 +147,15 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             " GROUP BY c.id, c.code, c.nom, c.designation ORDER BY SUM(p.salaireTotal) DESC")
     List<ChantierMasseProjection> sommerParChantier(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
 
+    /** Masse, effectif et STC par équipe, du plus gros au plus petit ; une ligne {@code NULL} représente « Sans équipe ». */
+    @Query("SELECT e.id AS id, e.code AS code, e.libelle AS libelle, " +
+            "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
+            "FROM Paie p LEFT JOIN p.equipe e WHERE p.periode = :periode" + FILTRES +
+            " GROUP BY e.id, e.code, e.libelle ORDER BY SUM(p.salaireTotal) DESC")
+    List<EquipeMasseProjection> sommerParEquipe(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
+
     /** Masse et effectif par fonction, de la plus grosse à la plus petite. */
     @Query("SELECT f.id AS id, f.libelle AS libelle, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +
             "FROM Paie p JOIN p.fonction f WHERE p.periode = :periode" + FILTRES +

@@ -33,7 +33,7 @@
 | `POST /roles` | `ROLE_MANAGE` |
 | `PUT /roles/{id}` | `ROLE_MANAGE` |
 | `DELETE /roles/{id}` | `ROLE_MANAGE` |
-| `GET /permissions` | `ROLE_MANAGE` |
+| `GET /permissions` | `ROLE_MANAGE` ou `USER_MANAGE` |
 
 ## Frontend
 
@@ -47,7 +47,7 @@
 | Routes `/admin/roles/**` | `permissionGuard`, `data: { permission: 'ROLE_MANAGE' }` |
 | Route `/admin/parametres` | `permissionGuard`, `data: { permission: 'PARAMETRE_READ' }` |
 | Confirmation de suppression d'un rôle | Le message dit qu'un rôle attribué n'est pas supprimable ; le refus `409` du serveur s'affiche par l'intercepteur global |
-| Section « Permissions de l’utilisateur » (formulaire utilisateur) | Visible uniquement en édition ; permissions des rôles sélectionnés regroupées par domaine, réparties entre « Autorisées » et « Non autorisées » ; une permission décochée reste un refus individuel (« deny override ») |
+| Section « Permissions de l’utilisateur » (formulaire utilisateur) | Visible uniquement en édition ; tout le catalogue est regroupé par domaine, avec séparation entre permissions autorisées, refusées et non héritées ; une permission héritée décochée reste un refus individuel (« deny override »), une permission non héritée est informative et doit être ajoutée à un rôle |
 
 ## Rôles disposant de ces permissions (seed initial)
 

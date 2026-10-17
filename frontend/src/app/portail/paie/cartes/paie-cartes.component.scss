@@ -121,7 +121,7 @@
   // Chargement : six silhouettes de carte à la place du texte « Chargement… »
   &__squelette {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
     gap: var(--space-md);
   }
 
@@ -137,7 +137,7 @@
   // ---- Cartes ----
   &__grille {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
     gap: var(--space-md);
   }
 

@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, map, of, shareReplay, tap } from 'rxjs';
 
 import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
-import { Role } from '../models/admin.model';
+import { PermissionSummary, Role } from '../models/admin.model';
 import { RoleService } from './role.service';
 
 /** Source paginée du sélecteur de rôles des comptes. Les rôles connus restent limités aux pages
@@ -14,6 +14,11 @@ export class RoleReferenceService implements LazySelectSource<Role> {
   private readonly requetesParId = new Map<number, Observable<Role>>();
   private readonly rolesConnusState = signal<ReadonlyMap<number, Role>>(new Map());
   readonly rolesConnus = this.rolesConnusState.asReadonly();
+
+  /** Catalogue complet utilisé par l'édition d'un utilisateur, y compris les permissions absentes de ses rôles. */
+  findAllPermissions(): Observable<PermissionSummary[]> {
+    return this.roleService.findAllPermissions();
+  }
 
   fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<Role>> {
     return this.roleService.search({ nom: search || undefined }, { page, size, sort: 'nom,asc' }).pipe(

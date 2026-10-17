@@ -26,6 +26,10 @@ function donnees(surcharge: Partial<PaieAnalytique> = {}): PaieAnalytique {
             { id: 7, code: 'C168', libelle: 'Nador', masse: 30000, effectif: 7, stc: 1, stcMontant: 4000 },
             { id: 9, code: 'C196', libelle: null, masse: 10000, effectif: 3, stc: 0, stcMontant: 0 }
         ],
+        parEquipe: [
+            { id: 21, code: 'EQ-A', libelle: 'Équipe A', masse: 28000, effectif: 6, stc: 1, stcMontant: 4000 },
+            { id: null, code: null, libelle: null, masse: 12000, effectif: 4, stc: 0, stcMontant: 0 }
+        ],
         parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10 }],
         tranches: [{ min: 0, max: 5000, effectif: 6 }, { min: 5000, max: null, effectif: 4 }],
         evolution: [{ periode: '2026-07', masse: 32000, effectif: 8, stc: 0, stcMontant: 0 }, { periode: '2026-08', masse: 40000, effectif: 10, stc: 1, stcMontant: 4000 }],
@@ -125,6 +129,45 @@ describe('PaieAnalytiqueComponent', () => {
         composant.surBarreChantier({});
 
         expect(vi.mocked(service.analyser).mock.calls.length).toBe(appels);
+    });
+
+    it('guide la répartition selon le niveau porté par les filtres', async () => {
+        const vueEnsemble = await ouvrir('/paie/analytique?periode=2026-08');
+        expect(vueEnsemble.dimensionRepartition()).toBe('chantier');
+        expect(vueEnsemble.titreRepartition()).toBe('Répartition par chantier');
+
+        const vueChantier = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7');
+        expect(vueChantier.dimensionRepartition()).toBe('equipe');
+        expect(vueChantier.repartitionTriee().map((ligne) => ligne.id)).toEqual([21, null]);
+        expect(vueChantier.lignesRepartition()[1].libelle).toBe('Sans équipe');
+
+        const vueEquipe = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7&equipeIds=21');
+        expect(vueEquipe.dimensionRepartition()).toBe('fonction');
+        expect(vueEquipe.titreRepartition()).toBe('Répartition par fonction');
+    });
+
+    it('exclut une catégorie nulle et conserve le niveau équipe « Sans équipe »', async () => {
+        service.analyser.mockReturnValue(of(donnees({
+            parEquipe: [
+                { id: 21, code: 'EQ-A', libelle: 'Équipe A', masse: 100, effectif: 1, stc: 0, stcMontant: 0 },
+                { id: 22, code: 'EQ-B', libelle: 'Équipe B', masse: 0, effectif: 0, stc: 0, stcMontant: 0 },
+                { id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }
+            ]
+        })));
+
+        const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7');
+
+        expect(composant.repartitionTriee().map((ligne) => ligne.id)).toEqual([21, null]);
+        expect(composant.graphiqueRepartition().data.labels).toEqual(['EQ-A · Équipe A', 'Sans équipe']);
+    });
+
+    it('filtre le périmètre sur une barre de niveau équipe', async () => {
+        const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=7');
+
+        composant.surBarreRepartition({ index: 1 });
+        await harness.fixture.whenStable();
+
+        expect(TestBed.inject(Router).url).toContain('equipeIds=0');
     });
 
     it('retire un filtre de l\'URL quand sa sélection est vidée', async () => {

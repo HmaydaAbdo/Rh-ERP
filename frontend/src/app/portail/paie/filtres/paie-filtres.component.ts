@@ -108,12 +108,13 @@ export class PaieFiltresComponent {
     if (ids.length !== 1) {
       return null;
     }
-    return `n° ${ids[0]}`;
+    // Le fil ne doit jamais exposer un identifiant technique : le nom détaillé reste visible dans la carte ouverte.
+    return 'Chantier sélectionné';
   });
   /** Équipe sélectionnée au niveau détaillé des Cartes. */
   protected readonly equipeOuverte = computed(() => {
     const ids = this.courant().equipeIds;
-    return ids.length === 1 ? (ids[0] === 0 ? 'Sans équipe' : `Équipe n° ${ids[0]}`) : null;
+    return ids.length === 1 ? (ids[0] === 0 ? 'Sans équipe' : 'Équipe sélectionnée') : null;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */

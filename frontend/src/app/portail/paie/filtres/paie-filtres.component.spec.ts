@@ -283,10 +283,16 @@ describe('PaieFiltresComponent', () => {
         });
 
         it("identifie le chantier ouvert sans précharger la liste entière du mois", () => {
-            expect(composant['chantierOuvert']()).toBe('n° 3');
+            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
 
             afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
             expect(composant['chantierOuvert']()).toBeNull();
+        });
+
+        it("n'expose pas les identifiants techniques dans le fil", () => {
+            afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3], equipeIds: [12] });
+            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
+            expect(composant['equipeOuverte']()).toBe('Équipe sélectionnée');
         });
     });
 });
