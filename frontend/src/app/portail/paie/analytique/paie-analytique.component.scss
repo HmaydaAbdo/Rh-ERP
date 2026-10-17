@@ -149,8 +149,7 @@
     height: 18rem;
   }
 
-  // Les graphiques par chantier et par fonction montrent toutes leurs catégories : ils grandissent avec leur nombre et
-  // défilent dans leur carte plutôt que d'en omettre.
+  // Les graphiques par chantier et par fonction grandissent avec leurs catégories positives et défilent dans leur carte.
   &__defilement {
     max-height: 36rem;
     overflow-y: auto;

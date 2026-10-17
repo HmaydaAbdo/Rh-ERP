@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
-import type { Chart, ChartData, ChartOptions, ChartType } from 'chart.js';
+import type { Chart, ChartData, ChartOptions, ChartType, Plugin } from 'chart.js';
 
 /** Barre ou point cliqué d'un graphique : indice de la donnée et de la série. */
 export interface ChartSelection {
@@ -43,6 +43,8 @@ export class ChartComponent<T extends ChartType = ChartType> {
   readonly type = input.required<T>();
   readonly data = input.required<ChartData<T>>();
   readonly options = input<ChartOptions<T>>({} as ChartOptions<T>);
+  /** Plugins Chart.js supplémentaires, par exemple les valeurs persistantes des points d'une évolution. */
+  readonly plugins = input<Plugin<T>[]>([]);
   readonly ariaLabel = input.required<string>();
 
   readonly dataSelect = output<ChartSelection>();
@@ -83,10 +85,12 @@ export class ChartComponent<T extends ChartType = ChartType> {
       const forcedColors = this.forcedColors();
       const type = this.type();
       const options = this.options();
+      const plugins = this.plugins();
       const config = {
         type,
         data: this.data(),
-        options: forcedColors ? this.optionsEnContrasteForce(options, type) : options
+        options: forcedColors ? this.optionsEnContrasteForce(options, type) : options,
+        plugins
       };
       const generation = ++this.generation;
       import('chart.js/auto').then(({ default: ChartJs }) => {

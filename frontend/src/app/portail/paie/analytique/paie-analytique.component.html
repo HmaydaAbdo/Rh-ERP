@@ -57,7 +57,7 @@
               <div
                 class="paie-analytique__graphique"
               >
-                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" ></stp-chart>
+                <stp-chart [ariaLabel]="'Évolution de ' + libelleMesure(mesureEvolution()) + ' sur ' + d.evolution.length + ' mois ; le détail est dans le tableau des données.'" type="line" [data]="graphiqueEvolution().data" [options]="graphiqueEvolution().options" [plugins]="graphiqueEvolution().plugins ?? []" ></stp-chart>
               </div>
               <button
                 type="button"
@@ -115,7 +115,7 @@
                 <div>
                   <h2>Répartition par chantier</h2>
                   <p class="paie-analytique__aide">
-                    Les {{ chantiersTries().length }} chantiers du mois, sans exception. Cliquez une barre pour filtrer sur ce chantier.
+                    {{ chantiersTries().length }} chantier(s) avec une valeur positive pour la mesure choisie. Cliquez une barre pour filtrer sur ce chantier.
                   </p>
                 </div>
                 <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par chantier">
@@ -166,7 +166,7 @@
                 <div>
                   <h2>Répartition par fonction</h2>
                   <p class="paie-analytique__aide">
-                    Les {{ fonctionsTriees().length }} fonctions du mois, sans exception. Cliquez une barre pour filtrer sur cette fonction.
+                    {{ fonctionsTriees().length }} fonction(s) avec une valeur positive pour la mesure choisie. Cliquez une barre pour filtrer sur cette fonction.
                   </p>
                 </div>
                 <div class="paie-analytique__mesure" role="group" aria-label="Mesure des barres par fonction">

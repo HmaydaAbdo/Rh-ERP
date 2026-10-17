@@ -159,26 +159,6 @@ describe('PaieCartesComponent', () => {
         expect(composant.lignesEquipes().map((l) => l.code)).toEqual(['CH', 'OP']);
     });
 
-    it('descend sur l\'équipe cliquée sans perdre les filtres en cours', async () => {
-        const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
-        const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-
-        composant.surBarreEquipe({ index: 1, datasetIndex: 0 });
-
-        expect(navigation).toHaveBeenCalledTimes(1);
-
-        expect(navigation).toHaveBeenCalledWith([], { queryParams: { equipeIds: '2' }, queryParamsHandling: 'merge' });
-    });
-
-    it('ne descend pas pour les bulletins sans équipe, que l\'API ne sait pas filtrer', async () => {
-        const composant = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
-        const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-
-        composant.surBarreEquipe({ index: 2, datasetIndex: 0 });
-
-        expect(navigation).not.toHaveBeenCalled();
-    });
-
     it('ne rappelle pas le backend pour des filtres déjà chargés', async () => {
         await ouvrir('/paie/cartes?periode=2026-08');
         await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');

@@ -1,4 +1,4 @@
-import type { TooltipOptions } from 'chart.js';
+import type { Plugin, TooltipOptions } from 'chart.js';
 
 /**
  * Habillage commun des graphiques. Chart.js dessine dans un canvas et ne lit pas le CSS : on lit donc les Design Tokens
@@ -9,12 +9,38 @@ export function jeton(nom: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(nom).trim() || 'gray';
 }
 
-/** Ce que mesure un graphique : la couleur suit la mesure (jamais son rang), identique dans tous les graphiques. */
+/** Ce que mesure un graphique : la couleur suit la mesure (jamais son rang), identique dans tous les graphiques.
+ * Le domaine s'en tient aux cinq premiers jetons `--chart-1` à `--chart-5` pour garder une palette professionnelle. */
 export type MesureGraphique = 'masse' | 'effectif';
 
 /** Couleur d'une mesure : la masse salariale est toujours bleue, les bulletins toujours orange (jetons `--chart-1` et `--chart-2`). */
 export function couleurMesure(mesure: MesureGraphique): string {
   return jeton(mesure === 'masse' ? '--chart-1' : '--chart-2');
+}
+
+/** Affiche la valeur au-dessus de chaque point d'une évolution, sans attendre le survol ou le focus. */
+export function valeursSurPoints(formater: (valeur: number) => string = (valeur) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(valeur)): Plugin<'line'> {
+  return {
+    id: 'paie-valeurs-sur-points',
+    afterDatasetsDraw(chart) {
+      const contexte = chart.ctx;
+      contexte.save();
+      contexte.fillStyle = jeton('--color-text');
+      contexte.font = `500 10px ${jeton('--font-sans')}`;
+      contexte.textAlign = 'center';
+      contexte.textBaseline = 'bottom';
+      chart.data.datasets.forEach((dataset, datasetIndex) => {
+        const elements = chart.getDatasetMeta(datasetIndex).data;
+        (dataset.data as unknown as Array<number | null>).forEach((valeur, index) => {
+          const element = elements[index] as unknown as { x: number; y: number } | undefined;
+          if (element && typeof valeur === 'number' && Number.isFinite(valeur)) {
+            contexte.fillText(formater(valeur), element.x, element.y - 8);
+          }
+        });
+      });
+      contexte.restore();
+    }
+  };
 }
 
 /** Libellé d'une mesure, tel qu'il apparaît dans les infobulles, les titres et les tableaux de données. */

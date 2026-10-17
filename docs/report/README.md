@@ -798,25 +798,24 @@ barres sur la page globale ainsi que sur la page chantier qui contient la répar
   de l'espace blanc entre lignes, renforcé par un filet gris clair entre deux lignes et un axe vertical fin à
   gauche des barres. Barres séparées de 1,4 pt (`ECART_ENTRE_BARRES`), libellés de catégorie en gras 9,5 pt,
   valeurs en gras 7,5 pt. Vérifié sur des rendus de 10 chantiers et de 13 équipes.
-- Légende obligatoire en bas (4 séries à distinguer). Palette fixe : Masse `#2563EB`, Effectif
-  `#D97706`, STC personnes `#B91C1C`, STC DH `#0F766E` — chaque indicateur garde sa couleur dans
-  toutes les répartitions et les évolutions — seule exception à la règle noir/blanc/gris du
+- Légende obligatoire en bas (4 séries à distinguer). Palette fixe de cinq couleurs : Masse `#2563EB`, Effectif
+  `#D97706`, STC personnes `#B91C1C`, STC DH `#0F766E`, parc matériel `#7C3AED` — chaque indicateur garde sa couleur dans
+  toutes les répartitions et les évolutions ; la cinquième couleur est réservée au parc matériel — seule exception à la règle noir/blanc/gris du
   document (voir « Style visuel »).
-- **Répartition par chantier (chapitre I) : TOUS les chantiers**, par masse salariale décroissante, **sans**
-  regroupement « Autres » ni plafond (décision du 2026-10-03 : un premier plafond à 10 chantiers a été levé
-  une fois la disposition en colonnes en place). Jusqu'à 16 chantiers, tout tient sur la page de synthèse.
+- **Répartition par chantier (chapitre I) : tous les chantiers dont au moins une des quatre valeurs est strictement
+  positive**, par masse salariale décroissante, **sans** regroupement « Autres » ni plafond. Les catégories dont la
+  masse, l'effectif et les deux indicateurs STC sont nuls sont omises du graphique. Jusqu'à 16 chantiers visibles,
+  tout tient sur la page de synthèse.
   Au-delà, `RapportPageModelBuilder` répartit le graphique **à parts égales** sur plusieurs pages
   (`MAX_CHANTIERS_PAR_PAGE_GRAPHIQUE = 16` ; 25 chantiers = 13 puis 12, jamais une dernière page presque vide) :
   la 1re page garde le titre « Répartition par chantier », les suivantes portent « Répartition par chantier
   (suite) » avec le bandeau `GLOBAL`. **Toutes les pages partagent la même échelle** (`BlocGraphique.echelle` =
-  l'ensemble des chantiers) : sans cela chaque page serait dessinée à sa propre échelle et ses barres ne seraient
+  l'ensemble des chantiers visibles) : sans cela chaque page serait dessinée à sa propre échelle et ses barres ne seraient
   plus comparables à celles de la page précédente. Chaque page répète l'en-tête des colonnes et la légende. Le
   graphique « Répartition par équipe » d'un chantier n'est pas réparti : le nombre d'équipes d'un même chantier
   reste modeste.
-- Les autres distributions (fonction, calculée sans être affichée) restent plafonnées aux 15 plus grosses
-  valeurs (`MAX_BARRES_GRAPHIQUE`), le reste regroupé sous « Autres ». Pas de plafond au niveau
-  « répartition par équipe » d'un chantier : le nombre d'équipes distinctes au sein d'un même chantier
-  reste naturellement modeste.
+- Les répartitions par fonction et par équipe appliquent la même règle d'omission des catégories entièrement nulles.
+  Elles conservent les catégories positives et ne créent pas de ligne « Autres » pour remplacer une catégorie omise.
 
 > **Historique** : ce graphique a connu plusieurs conventions antérieures côté JasperReports, toutes
 > abandonnées sur demande explicite de direction — barres verticales à série unique, puis colonnes
