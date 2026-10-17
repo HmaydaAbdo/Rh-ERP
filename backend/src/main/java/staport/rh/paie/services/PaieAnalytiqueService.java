@@ -54,14 +54,14 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
                 precedent.getEffectif() > 0 ? versKpi(precedent) : null,
                 repository.sommerParChantier(periode, filtres).stream()
                         .map(c -> new ChantierMasse(c.getId(), c.getCode(), libelleChantier(c.getNom(), c.getDesignation()),
-                                c.getMasse(), c.getEffectif(), c.getStc()))
+                                c.getMasse(), c.getEffectif(), c.getStc(), c.getStcMontant()))
                         .toList(),
                 repository.sommerParFonction(periode, filtres).stream()
                         .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif()))
                         .toList(),
                 repartirParTranche(repository.listerTotaux(periode, filtres)),
                 repository.sommerParPeriode(filtres).stream()
-                        .map(e -> new Evolution(e.getPeriode().toString(), e.getMasse(), e.getEffectif()))
+                        .map(e -> new Evolution(e.getPeriode().toString(), e.getMasse(), e.getEffectif(), e.getStc(), e.getStcMontant()))
                         .toList(),
                 new Qualite(courant.getSansEquipe(), courant.getSansObservation()));
     }
@@ -69,7 +69,7 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
     private static Kpi versKpi(PaieKpiProjection projection) {
         long effectif = projection.getEffectif();
         BigDecimal coutMoyen = effectif > 0 ? projection.getMasse().divide(BigDecimal.valueOf(effectif), 2, RoundingMode.HALF_UP) : null;
-        return new Kpi(projection.getMasse(), effectif, coutMoyen, projection.getChantiers(), projection.getStc());
+        return new Kpi(projection.getMasse(), effectif, coutMoyen, projection.getChantiers(), projection.getStc(), projection.getStcMontant());
     }
 
     /** Le nom du chantier, à défaut sa désignation (même règle que {@code PaieService.findChantiersDeLaPeriode}). */

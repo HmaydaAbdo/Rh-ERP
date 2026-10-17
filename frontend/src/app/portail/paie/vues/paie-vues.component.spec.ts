@@ -19,8 +19,8 @@ class VueFactice {
 }
 
 const PERIODES: PaiePeriodeResume[] = [
-    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1 },
-    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0 }
+    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1, stcMontant: 4000 },
+    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0, stcMontant: 0 }
 ];
 
 describe('PaieVuesComponent', () => {

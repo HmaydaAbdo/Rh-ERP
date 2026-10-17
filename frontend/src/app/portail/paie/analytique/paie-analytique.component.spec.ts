@@ -13,22 +13,22 @@ import { PaieService } from '../services/paie.service';
 import { PaieAnalytiqueComponent } from './paie-analytique.component';
 
 const PERIODES: PaiePeriodeResume[] = [
-    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1 },
-    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0 }
+    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1, stcMontant: 4000 },
+    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0, stcMontant: 0 }
 ];
 
 function donnees(surcharge: Partial<PaieAnalytique> = {}): PaieAnalytique {
     return {
         periode: '2026-08',
-        kpis: { masse: 40000, effectif: 10, coutMoyen: 4000, nombreChantiers: 2, stc: 1 },
-        moisPrecedent: { masse: 32000, effectif: 8, coutMoyen: 4000, nombreChantiers: 2, stc: 0 },
+        kpis: { masse: 40000, effectif: 10, coutMoyen: 4000, nombreChantiers: 2, stc: 1, stcMontant: 4000 },
+        moisPrecedent: { masse: 32000, effectif: 8, coutMoyen: 4000, nombreChantiers: 2, stc: 0, stcMontant: 0 },
         parChantier: [
-            { id: 7, code: 'C168', libelle: 'Nador', masse: 30000, effectif: 7, stc: 1 },
-            { id: 9, code: 'C196', libelle: null, masse: 10000, effectif: 3, stc: 0 }
+            { id: 7, code: 'C168', libelle: 'Nador', masse: 30000, effectif: 7, stc: 1, stcMontant: 4000 },
+            { id: 9, code: 'C196', libelle: null, masse: 10000, effectif: 3, stc: 0, stcMontant: 0 }
         ],
         parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10 }],
         tranches: [{ min: 0, max: 5000, effectif: 6 }, { min: 5000, max: null, effectif: 4 }],
-        evolution: [{ periode: '2026-07', masse: 32000, effectif: 8 }, { periode: '2026-08', masse: 40000, effectif: 10 }],
+        evolution: [{ periode: '2026-07', masse: 32000, effectif: 8, stc: 0, stcMontant: 0 }, { periode: '2026-08', masse: 40000, effectif: 10, stc: 1, stcMontant: 4000 }],
         qualite: { sansEquipe: 4, sansObservation: 5 },
         ...surcharge
     };
@@ -139,13 +139,13 @@ describe('PaieAnalytiqueComponent', () => {
     });
 
     it('montre toute l\'évolution, même avec un seul mois, et met en évidence le mois analysé', async () => {
-        service.analyser.mockReturnValue(of(donnees({ evolution: [{ periode: '2026-08', masse: 40000, effectif: 10 }] })));
+        service.analyser.mockReturnValue(of(donnees({ evolution: [{ periode: '2026-08', masse: 40000, effectif: 10, stc: 1, stcMontant: 4000 }] })));
 
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
         expect(composant.graphiqueEvolution().data.labels).toEqual(['août 2026']);
 
-        service.analyser.mockReturnValue(of(donnees({ evolution: ['2024-01', '2026-07', '2026-08', '2026-09'].map((periode) => ({ periode, masse: 1, effectif: 1 })) })));
+        service.analyser.mockReturnValue(of(donnees({ evolution: ['2024-01', '2026-07', '2026-08', '2026-09'].map((periode) => ({ periode, masse: 1, effectif: 1, stc: 0, stcMontant: 0 })) })));
         await ouvrir('/paie/analytique?periode=2026-08&nom=a');
         expect(composant.graphiqueEvolution().data.labels?.length).toBe(4);
         expect(composant.graphiqueEvolution().data.datasets[0].pointRadius).toEqual([4, 4, 8, 4]);
@@ -243,8 +243,8 @@ describe('PaieAnalytiqueComponent', () => {
     it('trie les barres selon la mesure choisie, sans en perdre', async () => {
         service.analyser.mockReturnValue(of(donnees({
             parChantier: [
-                { id: 1, code: 'A', libelle: null, masse: 900, effectif: 1, stc: 0 },
-                { id: 2, code: 'B', libelle: null, masse: 100, effectif: 9, stc: 0 }
+                { id: 1, code: 'A', libelle: null, masse: 900, effectif: 1, stc: 0, stcMontant: 0 },
+                { id: 2, code: 'B', libelle: null, masse: 100, effectif: 9, stc: 0, stcMontant: 0 }
             ]
         })));
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
@@ -279,7 +279,7 @@ describe('PaieAnalytiqueComponent', () => {
     });
 
     it('signale un périmètre sans bulletin', async () => {
-        service.analyser.mockReturnValue(of(donnees({ kpis: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0 }, moisPrecedent: null, parChantier: [] })));
+        service.analyser.mockReturnValue(of(donnees({ kpis: { masse: 0, effectif: 0, coutMoyen: null, nombreChantiers: 0, stc: 0, stcMontant: 0 }, moisPrecedent: null, parChantier: [] })));
 
         const composant = await ouvrir('/paie/analytique?periode=2026-08&chantierIds=1');
 

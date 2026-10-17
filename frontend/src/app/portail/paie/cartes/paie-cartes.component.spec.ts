@@ -12,9 +12,9 @@ import { PaieService } from '../services/paie.service';
 import { PaieCartesComponent } from './paie-cartes.component';
 
 const PERIODES: PaiePeriodeResume[] = [
-    { periode: '2026-09', nombreBulletins: 975, nombreChantiers: 25, masse: 4500000, stc: 41 },
-    { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 25, masse: 4000000, stc: 0 },
-    { periode: '2026-06', nombreBulletins: 900, nombreChantiers: 24, masse: 3900000, stc: 5 }
+    { periode: '2026-09', nombreBulletins: 975, nombreChantiers: 25, masse: 4500000, stc: 41, stcMontant: 82000 },
+    { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 25, masse: 4000000, stc: 0, stcMontant: 0 },
+    { periode: '2026-06', nombreBulletins: 900, nombreChantiers: 24, masse: 3900000, stc: 5, stcMontant: 41000 }
 ];
 const CHANTIERS: PaieChantierPeriode[] = [
     {
@@ -23,12 +23,14 @@ const CHANTIERS: PaieChantierPeriode[] = [
         libelle: 'Nador',
         effectif: 148,
         masse: 720000,
+        stc: 2,
+        stcMontant: 18000,
         equipes: [
-            { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 74, masse: 400000 },
-            { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 69, masse: 300000 }
+            { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 74, masse: 400000, stc: 1, stcMontant: 10000 },
+            { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 69, masse: 300000, stc: 1, stcMontant: 8000 }
         ]
     },
-    { id: 2, code: 'C196', libelle: null, effectif: 10, masse: 80000, equipes: [] }
+    { id: 2, code: 'C196', libelle: null, effectif: 10, masse: 80000, stc: 0, stcMontant: 0, equipes: [] }
 ];
 
 describe('PaieCartesComponent', () => {
