@@ -137,13 +137,17 @@ describe('PaieVuesComponent', () => {
         expect(vi.mocked(service.listerPeriodes).mock.calls.length).toBeGreaterThan(appels);
     });
 
-    it('réinitialise les filtres quand on change de vue par le sélecteur', async () => {
+    it('conserve les filtres quand on change de vue par le sélecteur', async () => {
         const composant = await harness.navigateByUrl('/paie?periode=2026-08&nom=ali&chantierIds=3', PaieVuesComponent);
 
         (harness.routeNativeElement as HTMLElement).querySelector<HTMLAnchorElement>('a[href="/paie/cartes"]')?.click();
         await harness.fixture.whenStable();
 
-        expect(TestBed.inject(Router).url).toBe('/paie/cartes');
-        expect(composant['filtres']()).toEqual(AUCUN_FILTRE);
+        const url = TestBed.inject(Router).url;
+        expect(url).toContain('/paie/cartes?');
+        expect(url).toContain('periode=2026-08');
+        expect(url).toContain('nom=ali');
+        expect(url).toContain('chantierIds=3');
+        expect(composant['filtres']()).toEqual(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', chantierIds: [3] }));
     });
 });

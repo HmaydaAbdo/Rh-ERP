@@ -194,6 +194,12 @@ describe('PaieCartesComponent', () => {
         const composant = await ouvrir('/paie/cartes?nom=zzz');
         expect(composant.aucunResultat()).toBe(true);
 
+        service.analyser.mockReturnValue(of({
+            ...ANALYTIQUE,
+            kpis: { ...ANALYTIQUE.kpis, masse: 0, effectif: 0, nombreChantiers: 0, stc: 0, stcMontant: 0 },
+            moisPrecedent: null,
+            parChantier: []
+        }));
         await ouvrir('/paie/cartes?periode=2026-08&nom=zzz');
         expect(composant.aucunResultat()).toBe(true);
     });
