@@ -9,7 +9,8 @@ export function jeton(nom: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(nom).trim() || 'gray';
 }
 
-/** Ce que mesure un graphique : la couleur suit la mesure (jamais son rang), identique dans tous les graphiques. */
+/** Ce que mesure un graphique : la couleur suit la mesure (jamais son rang), identique dans tous les graphiques.
+ * Le domaine s'en tient aux cinq premiers jetons `--chart-1` à `--chart-5` pour garder une palette professionnelle. */
 export type MesureGraphique = 'masse' | 'effectif';
 
 /** Couleur d'une mesure : la masse salariale est toujours bleue, les bulletins toujours orange (jetons `--chart-1` et `--chart-2`). */

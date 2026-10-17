@@ -360,12 +360,12 @@ Les quatre indicateurs sont présentés avec leur unité : **masse (DH)**, **bul
 
 | Niveau | Contenu | Source |
 |---|---|---|
-| 1. Mois | Une carte par mois contenant de la paie, avec les quatre indicateurs et leur comparaison au mois précédent. Un graphique montre l'évolution d'un indicateur choisi à la fois ; sa hauteur peut être agrandie ou réduite. | `POST /paie/periodes/search` |
-| 2. Vue d’ensemble | Les quatre indicateurs agrégés du mois et leur comparaison, un graphique de répartition des chantiers selon un indicateur choisi, puis une carte par chantier avec sa part de masse. Le graphique est redimensionnable et ses données peuvent aussi être lues dans un tableau. | `POST /paie/analytique`, `POST /paie/chantiers/search` |
-| 3. Vue chantier | Les quatre indicateurs du chantier et leurs comparaisons, un graphique de répartition des équipes, puis les cartes d'équipe. Les bulletins sans équipe sont affichés dans une carte dédiée ; leur indicateur et comparaison sont calculés par différence entre le chantier et ses équipes. | mêmes appels |
-| 4. Vue équipe | Les quatre indicateurs et comparaisons de l'équipe, un graphique d'évolution mensuelle, une répartition des personnes par fonction et les cartes d'employés paginées. Cliquer une fonction filtre les employés et reste transmis à la vue tabulaire. | `POST /paie/analytique`, `POST /paie/search` |
+| 1. Mois | Une carte par mois contenant de la paie, avec les quatre indicateurs et leur comparaison au mois précédent. | `POST /paie/periodes/search` |
+| 2. Vue d'ensemble | Les quatre indicateurs agrégés du mois et leur comparaison, puis une carte par chantier avec sa part de masse. | `POST /paie/analytique`, `POST /paie/chantiers/search` |
+| 3. Vue chantier | Les quatre indicateurs du chantier et leurs comparaisons, puis les cartes d'équipe. Les bulletins sans équipe sont affichés dans une carte dédiée ; leur indicateur et comparaison sont calculés par différence entre le chantier et ses équipes. | mêmes appels |
+| 4. Vue équipe | Les quatre indicateurs et comparaisons de l'équipe, puis les cartes d'employés paginées. | `POST /paie/analytique`, `POST /paie/search` |
 
-Les graphiques de répartition permettent de choisir une grandeur parmi les quatre indicateurs et n'affichent qu'une unité sur l'axe vertical. Le graphique d'évolution suit également une grandeur à la fois. Les vues qui comportent un graphique donnent accès à ses données sous forme de tableau. Depuis chaque niveau, le bouton de changement de vue ouvre le tabulaire en conservant le mois, le chantier, l'équipe et les filtres actifs ; la sélection d'une fonction dans la vue équipe est également transmise.
+Les graphiques d'évolution et de répartition sont regroupés dans la vue **Analytique** pour laisser aux Cartes leur rôle de navigation et de lecture des indicateurs. Depuis chaque niveau, le bouton de changement de vue ouvre le tabulaire en conservant le mois, le chantier, l'équipe et les filtres actifs.
 
 #### Suppression en groupe
 
@@ -396,7 +396,7 @@ la vue tabulaire.
 
 ### Vue Analytique
 
-`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune. **Exhaustif par principe** : aucun graphique ne se limite à un palmarès (« top 10 », « Autres », fenêtre glissante), tout ce que contient le périmètre est affiché et analysé.
+`PaieAnalytiqueComponent` (`analytique/`), **lecture seule** : tableau de bord d'un mois sur le périmètre de la barre commune. Les répartitions restent complètes pour la mesure choisie, mais excluent les catégories dont cette mesure vaut zéro afin de préserver la lisibilité ; aucune catégorie positive n'est regroupée sous « Autres ».
 Chaque changement de filtre relance l'analyse (une demande encore en cours est abandonnée) ; pendant le chargement l'écran
 précédent reste affiché, atténué, sous une barre de progression. Sans mois, le plus récent est ouvert (et inscrit dans la
 barre).
@@ -405,8 +405,8 @@ barre).
 |---|---|
 | Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
 | Évolution | **Une seule mesure à la fois, sur un seul axe** (bouton Masse / Bulletins : les deux n'ont pas la même échelle, ils ne partagent jamais un graphique) pour **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est cerclé. Avec un seul mois, un seul point |
-| Répartition par chantier | **Tous** les chantiers du mois, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
-| Répartition par fonction | **Toutes** les fonctions du mois, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction n'est regroupée sous « Autres » |
+| Répartition par chantier | Les chantiers dont la mesure choisie est strictement positive, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
+| Répartition par fonction | Les fonctions dont la mesure choisie est strictement positive, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction positive n'est regroupée sous « Autres » |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
 | Qualité des données | Bulletins sans équipe et sans observation (nombre et part), pour suivre la tâche « Qualité des données » du TODO |
 
@@ -421,7 +421,7 @@ bornes lisibles qui suivent les données.
 dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles viennent des jetons, lus à l'exécution
 (`paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
 couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
-(`--chart-1`), les bulletins toujours orange (`--chart-2`), dans tous les graphiques. Marques fines (barres de 18 px au bout
+(`--chart-1`), les bulletins toujours orange (`--chart-2`) ; la paie reste dans une palette limitée aux cinq premiers jetons `--chart-1` à `--chart-5`, dans tous les graphiques. Marques fines (barres de 18 px au bout
 arrondi), grille discrète, infobulle au survol de toute la ligne, aucune légende pour une série unique. **Alternative
 accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois, chantiers, fonctions,
 tranches) et un libellé `aria-label` ; le tracé est supprimé quand l'utilisateur a demandé moins de mouvement. Premier

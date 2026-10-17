@@ -18,7 +18,7 @@ import { PaieService } from '../services/paie.service';
 import { animationGraphique, couleurMesure, grille, infobulle, jeton, libelleMesure, MesureGraphique, police } from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-/** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories, aucune n'est omise. */
+/** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories visibles. */
 const HAUTEUR_LIGNE_REM = 1.75;
 const HAUTEUR_MIN_REM = 12;
 
@@ -41,9 +41,9 @@ interface Graphique<T extends 'bar' | 'line'> {
   options: ChartOptions<T>;
 }
 
-/** Les éléments du plus grand au plus petit selon la mesure choisie — tous, jamais une sélection. */
+/** Les éléments strictement positifs pour la mesure choisie, du plus grand au plus petit. */
 function trierParMesure<T extends { masse: number; effectif: number }>(elements: T[], mesure: Mesure): T[] {
-  return [...elements].sort((a, b) => b[mesure] - a[mesure]);
+  return elements.filter((element) => element[mesure] > 0).sort((a, b) => b[mesure] - a[mesure]);
 }
 
 function hauteurPourLignes(lignes: number): number {
@@ -54,8 +54,8 @@ function hauteurPourLignes(lignes: number): number {
  * Vue « Analytique » de la paie : tableau de bord interactif d'un mois sur un périmètre filtré. Le périmètre est celui de la
  * barre de filtres commune (voir `filtres/paie-filtres.ts`), portée par l'URL : chaque changement relance l'analyse (la
  * demande précédente, si elle tarde, est abandonnée). Le mois est indispensable ici : sans mois, le plus récent est ouvert.
- * **Exhaustive** : chaque graphique montre tous les chantiers, toutes les fonctions, tous les mois — jamais un palmarès tronqué.
- * Aucun calcul métier ici : tout vient de `POST /paie/analytique` (voir docs/paie/README.md, « Vue Analytique »).
+ * Les répartitions conservent uniquement les catégories dont la mesure choisie est strictement positive ; les mois d'évolution
+ * restent exhaustifs. Aucun calcul métier ici : tout vient de `POST /paie/analytique` (voir docs/paie/README.md, « Vue Analytique »).
  */
 @Component({
   selector: 'app-paie-analytique',

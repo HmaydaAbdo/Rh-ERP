@@ -2,23 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { ChartData, ChartOptions } from 'chart.js';
 import { EMPTY, finalize, forkJoin, merge, Observable, of, Subject, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ThemeService } from '../../../core/theme/theme.service';
 import { Page } from '../../../shared/models/page.model';
 import { contient } from '../../../shared/text/recherche';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
-import { Paie, PaieAnalytique, PaieChantierPeriode, PaieEvolution, PaiePeriodeComparaison, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
+import { Paie, PaieAnalytique, PaieChantierPeriode, PaiePeriodeComparaison, PaiePeriodeResume, PaieSearchCriteria } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode, periodePrecedente } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 import { NotificationService } from '@shared/feedback/feedback.service';
-import { animationGraphique, couleurMesure, grille, infobulle, jeton, police } from '../analytique/paie-chart-theme';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 const DELAI_CASCADE_MS = 50;
@@ -41,11 +37,6 @@ const LIBELLES_INDICATEURS: Record<IndicateurPaie, string> = {
   stcMontant: 'Montant des STC / sorties (DH)',
   stc: 'STC / sorties (personnes)'
 };
-
-interface Graphique<T extends 'bar' | 'line'> {
-  data: ChartData<T>;
-  options: ChartOptions<T>;
-}
 
 /** Résumé du mois affiché en carte et du mois contigu pour calculer les quatre comparaisons. */
 interface CarteMois {
@@ -99,7 +90,6 @@ interface Suppression {
   imports: [
     FormField,
     RouterLink,
-    ChartComponent,
     IconComponent,
     ButtonComponent,
     DialogComponent
@@ -115,7 +105,6 @@ export class PaieCartesComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(NotificationService);
-  private readonly theme = inject(ThemeService);
 
   readonly filtres = signal<PaieFiltres>(lireFiltres(this.route.snapshot.queryParamMap));
   /** Sens du dernier changement de niveau : oriente le glissement de l'animation (vers l'avant en descendant). */
@@ -126,13 +115,6 @@ export class PaieCartesComponent {
   readonly analytique = signal<PaieAnalytique | null>(null);
   readonly pageEmployes = signal<Page<Paie> | null>(null);
   readonly employesEnChargement = signal(false);
-  readonly mesureGraphique = signal<IndicateurPaie>('masse');
-  readonly graphiqueEvolutionAgrandit = signal(false);
-  readonly graphiqueRepartitionAgrandit = signal(false);
-  readonly tableauEvolutionOuvert = signal(false);
-  readonly tableauChantiersOuvert = signal(false);
-  readonly tableauEquipesOuvert = signal(false);
-  readonly tableauFonctionsOuvert = signal(false);
 
   private readonly saisieRecherche = signal({ terme: '' });
   readonly rechercheForm = form(this.saisieRecherche, (chemin) => debounce(chemin.terme, DEBOUNCE_RECHERCHE_MS));
@@ -225,71 +207,6 @@ export class PaieCartesComponent {
     return analytique ? this.construireIndicateurs(analytique.kpis, analytique.moisPrecedent) : [];
   });
 
-  readonly evolutionGraphique = computed<Graphique<'line'>>(() => {
-    this.theme.theme();
-    const mesure = this.mesureGraphique();
-    const periodeCourante = this.periode();
-    const sources: PaieEvolution[] | PaiePeriodeResume[] = this.niveau() === 1
-      ? this.periodes()
-      : this.analytique()?.evolution ?? [];
-    const lignes = [...sources].sort((a, b) => a.periode.localeCompare(b.periode));
-    const couleur = couleurMesure(mesure === 'effectif' || mesure === 'stc' ? 'effectif' : 'masse');
-    return {
-      data: {
-        labels: lignes.map((ligne) => libellePeriode(ligne.periode)),
-        datasets: [{
-          label: LIBELLES_INDICATEURS[mesure],
-          data: lignes.map((ligne) => this.valeurPeriode(ligne, mesure)),
-          borderColor: couleur,
-          backgroundColor: couleur,
-          borderWidth: 2,
-          tension: 0.25,
-          pointRadius: lignes.map((ligne) => ligne.periode === periodeCourante ? 8 : 4),
-          pointHoverRadius: 9,
-          pointBorderColor: jeton('--color-surface'),
-          pointBorderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: animationGraphique(),
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: infobulle()
-        },
-        scales: {
-          x: { ticks: { color: jeton('--color-text-muted'), font: police(), autoSkip: true, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
-          y: { beginAtZero: true, ticks: { color: jeton('--color-text-muted'), font: police(), callback: (valeur) => FORMAT_ENTIER.format(Number(valeur)) }, grid: grille(), border: { display: false } }
-        }
-      }
-    };
-  });
-
-  readonly chantiersTries = computed(() => [...(this.analytique()?.parChantier ?? [])]
-    .sort((a, b) => b[this.mesureGraphique()] - a[this.mesureGraphique()]));
-  readonly graphiqueChantiers = computed(() => this.graphiqueBarres(
-    this.chantiersTries().map((chantier) => chantier.code),
-    this.chantiersTries().map((chantier) => chantier[this.mesureGraphique()]),
-    this.mesureGraphique()
-  ));
-
-  readonly equipesTriees = computed(() => [...this.lignesEquipes()]
-    .sort((a, b) => b[this.mesureGraphique()] - a[this.mesureGraphique()]));
-  readonly graphiqueEquipes = computed(() => this.graphiqueBarres(
-    this.equipesTriees().map((equipe) => equipe.equipeId === null ? 'Sans équipe' : `${equipe.code} · ${equipe.libelle}`),
-    this.equipesTriees().map((equipe) => equipe[this.mesureGraphique()]),
-    this.mesureGraphique()
-  ));
-
-  readonly fonctionsTriees = computed(() => [...(this.analytique()?.parFonction ?? [])].sort((a, b) => b.effectif - a.effectif));
-  readonly graphiqueFonctions = computed(() => this.graphiqueBarres(
-    this.fonctionsTriees().map((fonction) => fonction.libelle),
-    this.fonctionsTriees().map((fonction) => fonction.effectif),
-    'effectif'
-  ));
-
   readonly aucunResultat = computed(() => !this.chargement() && (this.niveau() === 1
     ? this.periodes().length === 0
     : (this.analytique()?.kpis.effectif ?? 0) === 0));
@@ -300,14 +217,6 @@ export class PaieCartesComponent {
   readonly formaterMontant = formaterMontant;
   readonly formaterVariation = formaterVariation;
   readonly formaterPart = formaterPart;
-  readonly libellesIndicateurs = LIBELLES_INDICATEURS;
-  readonly mesuresGraphique: { cle: IndicateurPaie; libelle: string }[] = [
-    { cle: 'masse', libelle: 'Masse (DH)' },
-    { cle: 'effectif', libelle: 'Bulletins / personnes' },
-    { cle: 'stcMontant', libelle: 'STC (DH)' },
-    { cle: 'stc', libelle: 'STC (personnes)' }
-  ];
-
   indicateursDeCarte(carte: CarteMois): IndicateurAffiche[] {
     return this.construireIndicateurs(
       { masse: carte.resume.masse, effectif: carte.resume.nombreBulletins, stcMontant: carte.resume.stcMontant, stc: carte.resume.stc },
@@ -333,50 +242,6 @@ export class PaieCartesComponent {
     return indicateur.cle === 'masse' || indicateur.cle === 'stcMontant'
       ? formaterMontant(indicateur.valeur)
       : FORMAT_ENTIER.format(indicateur.valeur);
-  }
-
-  formaterValeurMesure(mesure: IndicateurPaie, valeur: number): string {
-    return mesure === 'masse' || mesure === 'stcMontant' ? formaterMontant(valeur) : FORMAT_ENTIER.format(valeur);
-  }
-
-  valeurPeriode(ligne: PaieEvolution | PaiePeriodeResume, mesure: IndicateurPaie): number {
-    if (mesure === 'effectif') {
-      return 'nombreBulletins' in ligne ? ligne.nombreBulletins : ligne.effectif;
-    }
-    if (mesure === 'masse') return ligne.masse;
-    if (mesure === 'stc') return ligne.stc;
-    return ligne.stcMontant;
-  }
-
-  basculerGraphique(type: 'evolution' | 'repartition'): void {
-    const agrandit = type === 'evolution' ? this.graphiqueEvolutionAgrandit : this.graphiqueRepartitionAgrandit;
-    agrandit.update((valeur) => !valeur);
-  }
-
-  basculerTableauEvolution(): void { this.tableauEvolutionOuvert.update((ouvert) => !ouvert); }
-  basculerTableauChantiers(): void { this.tableauChantiersOuvert.update((ouvert) => !ouvert); }
-  basculerTableauEquipes(): void { this.tableauEquipesOuvert.update((ouvert) => !ouvert); }
-  basculerTableauFonctions(): void { this.tableauFonctionsOuvert.update((ouvert) => !ouvert); }
-
-  surBarreChantier(selection: ChartSelection): void {
-    const chantier = this.chantiersTries()[selection.index];
-    if (chantier) {
-      void this.router.navigate([], { queryParams: { chantierIds: String(chantier.id), equipeIds: null }, queryParamsHandling: 'merge' });
-    }
-  }
-
-  surBarreEquipe(selection: ChartSelection): void {
-    const equipe = this.equipesTriees()[selection.index];
-    if (equipe?.equipeId !== null && equipe) {
-      void this.router.navigate([], { queryParams: { equipeIds: String(equipe.equipeId) }, queryParamsHandling: 'merge' });
-    }
-  }
-
-  surBarreFonction(selection: ChartSelection): void {
-    const fonction = this.fonctionsTriees()[selection.index];
-    if (!fonction) return;
-    const dejaSelectionnee = this.filtres().fonctionIds.length === 1 && this.filtres().fonctionIds[0] === fonction.id;
-    void this.router.navigate([], { queryParams: { fonctionIds: dejaSelectionnee ? null : String(fonction.id) }, queryParamsHandling: 'merge' });
   }
 
   changerPageEmployes(page: number): void {
@@ -434,37 +299,6 @@ export class PaieCartesComponent {
       ? ` (${formaterVariation((difference / precedent) * 100)})`
       : '';
     return `${signe}${valeur} ${unite}${pourcentage}`;
-  }
-
-  private graphiqueBarres(labels: string[], valeurs: number[], mesure: IndicateurPaie): Graphique<'bar'> {
-    this.theme.theme();
-    const couleur = couleurMesure(mesure === 'effectif' || mesure === 'stc' ? 'effectif' : 'masse');
-    return {
-      data: {
-        labels,
-        datasets: [{
-          label: LIBELLES_INDICATEURS[mesure],
-          data: valeurs,
-          backgroundColor: couleur,
-          borderRadius: { topRight: 4, bottomRight: 4 },
-          borderSkipped: 'start',
-          maxBarThickness: 18,
-          categoryPercentage: 0.82
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: animationGraphique(),
-        interaction: { mode: 'nearest', axis: 'y', intersect: false },
-        plugins: { legend: { display: false }, tooltip: infobulle() },
-        scales: {
-          x: { beginAtZero: true, ticks: { color: jeton('--color-text-muted'), font: police(), callback: (valeur) => FORMAT_ENTIER.format(Number(valeur)) }, grid: grille(), border: { display: false } },
-          y: { ticks: { color: jeton('--color-text-muted'), font: police(), autoSkip: false }, grid: { display: false }, border: { display: false } }
-        }
-      }
-    };
   }
 
   /** La suppression en groupe a sa permission propre : supprimer un bulletin (PAIE_DELETE) ne suffit pas. */
