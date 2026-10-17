@@ -144,9 +144,12 @@ final class RapportEvolutionSvgBuilder {
             dessin.appendElement("text").addClass("evolution-valeur")
                     .attr("data-index", String.valueOf(i)).attr("data-serie", String.valueOf(indexSerie))
                     .attr("x", format(x + decalageHorizontal)).attr("y", format(positionsEtiquettes[i]))
-                    .attr("text-anchor", "middle").attr("font-size", "6.8").attr("font-weight", "bold")
-                    .attr("fill", serie.couleur()).attr("stroke", "#FFFFFF").attr("stroke-width", "2")
-                    .attr("paint-order", "stroke").text(serie.format().apply(valeurs.get(i)));
+                    .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+                    .attr("font-size", "7.2").attr("font-weight", "bold")
+                    // Batik/OpenHTMLToPDF dessine parfois le contour SVG au-dessus du remplissage,
+                    // ce qui rendait ces valeurs entièrement blanches dans le PDF. Les étiquettes
+                    // restent lisibles grâce à leur couleur de série et à leur position décalée.
+                    .attr("fill", serie.couleur()).text(serie.format().apply(valeurs.get(i)));
             if (indexSerie == 0) {
                 dessin.appendElement("text").attr("x", format(x)).attr("y", format(yBas + 15))
                         .attr("text-anchor", "middle").attr("font-size", "8").attr("font-weight", "bold")
