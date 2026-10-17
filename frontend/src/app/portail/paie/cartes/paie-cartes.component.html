@@ -23,29 +23,47 @@
   } @else {
     @switch (niveau()) {
       @case (1) {
+        <section class="paie-cartes__bloc-graphique paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
+          <div class="paie-cartes__entete-graphique">
+            <div>
+              <h2>Évolution de la paie</h2>
+              <p class="paie-cartes__detail">Suivez un indicateur à la fois sur les mois disponibles.</p>
+            </div>
+            <div class="paie-cartes__actions-graphique">
+              <div class="paie-cartes__mesures" role="group" aria-label="Indicateur à suivre">
+                @for (mesure of mesuresGraphique; track mesure.cle) {
+                  <button type="button" [class.paie-cartes__mesure--active]="mesureGraphique() === mesure.cle" (click)="mesureGraphique.set(mesure.cle)">{{ mesure.libelle }}</button>
+                }
+              </div>
+              <button stp-button variant="text" [attr.aria-label]="graphiqueEvolutionAgrandit() ? 'Réduire le graphique' : 'Agrandir le graphique'" (click)="basculerGraphique('evolution')">{{ graphiqueEvolutionAgrandit() ? 'Réduire' : 'Agrandir' }}</button>
+            </div>
+          </div>
+          <div class="paie-cartes__graphique" [class.paie-cartes__graphique--grand]="graphiqueEvolutionAgrandit()">
+            <stp-chart [ariaLabel]="'Évolution mensuelle de ' + libellesIndicateurs[mesureGraphique()]" type="line" [data]="evolutionGraphique().data" [options]="evolutionGraphique().options"></stp-chart>
+          </div>
+          <button stp-button variant="text" icon="table" (click)="basculerTableauEvolution()">{{ tableauEvolutionOuvert() ? 'Masquer les données' : 'Afficher les données' }}</button>
+          @if (tableauEvolutionOuvert()) {
+            <table class="paie-cartes__donnees"><caption>Évolution mensuelle</caption><thead><tr><th>Mois</th><th>{{ libellesIndicateurs[mesureGraphique()] }}</th></tr></thead><tbody>
+              @for (mois of periodes(); track mois.periode) { <tr><th>{{ libellePeriode(mois.periode) }}</th><td>{{ formaterValeurMesure(mesureGraphique(), valeurPeriode(mois, mesureGraphique())) }}</td></tr> }
+            </tbody></table>
+          }
+        </section>
+
         <div class="paie-cartes__grille paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
           @for (carte of cartesMois(); track carte.resume.periode; let i = $index) {
             <div class="paie-cartes__element">
-            <a
-              class="paie-cartes__carte"
-              [style.animation-delay.ms]="delaiCascade(i)"
-              routerLink="/paie/cartes"
-              queryParamsHandling="merge"
-              [queryParams]="{ periode: carte.resume.periode }"
-            >
-              <span class="paie-cartes__libelle paie-cartes__majuscule">{{ libellePeriode(carte.resume.periode) }}</span>
-              <span class="paie-cartes__valeur"><span [appCountUp]="carte.resume.masse"></span> DH</span>
-              <span class="paie-cartes__detail">{{ carte.resume.nombreBulletins }} bulletins · {{ carte.resume.nombreChantiers }} chantiers</span>
-              @if (carte.variation !== null) {
-                <span class="paie-cartes__detail">
-                  <stp-icon [name]="carte.variation >= 0 ? 'arrow-up-right' : 'arrow-down-right'" />
-                  {{ formaterVariation(carte.variation) }} vs mois précédent
-                </span>
-              }
-              @if (carte.resume.stc > 0) {
-                <span class="paie-cartes__detail">{{ carte.resume.stc }} STC / sorties</span>
-              }
-            </a>
+              <a class="paie-cartes__carte paie-cartes__carte-mois" [style.animation-delay.ms]="delaiCascade(i)" routerLink="/paie/cartes" queryParamsHandling="merge" [queryParams]="{ periode: carte.resume.periode }">
+                <span class="paie-cartes__libelle paie-cartes__majuscule">{{ libellePeriode(carte.resume.periode) }}</span>
+                <span class="paie-cartes__detail">{{ carte.resume.nombreChantiers }} chantiers</span>
+                <div class="paie-cartes__indicateurs">
+                  @for (indicateur of indicateursDeCarte(carte); track indicateur.cle) {
+                    <div class="paie-cartes__indicateur"><span>{{ indicateur.libelle }}</span><strong>{{ formaterValeur(indicateur) }} {{ indicateur.unite }}</strong>
+                      @if (indicateur.comparaison; as comparaison) { <small>{{ comparaison }} vs mois précédent</small> }
+                      @else { <small>Pas de mois précédent comparable</small> }
+                    </div>
+                  }
+                </div>
+              </a>
             @if (canPurge()) {
               <button stp-button variant="danger-text" icon="trash-2" iconOnly class="paie-cartes__supprimer" type="button" [attr.aria-label]="'Supprimer les bulletins de ' + libellePeriode(carte.resume.periode)" title="Supprimer les bulletins de ce mois" (click)="demanderSuppressionMois(carte)"></button>
             }
@@ -57,16 +75,24 @@
       @case (2) {
         <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
           <div class="paie-cartes__tuiles">
-            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(0)">
-              <span>Masse salariale</span><strong><span [appCountUp]="resumeMois().masse"></span> DH</strong>
-            </div>
-            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(1)">
-              <span>Bulletins</span><strong [appCountUp]="resumeMois().bulletins"></strong>
-            </div>
-            <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(2)">
-              <span>Chantiers</span><strong [appCountUp]="resumeMois().chantiers"></strong>
-            </div>
+            @for (indicateur of indicateursVue(); track indicateur.cle; let i = $index) {
+              <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(i)"><span>{{ indicateur.libelle }}</span><strong>{{ formaterValeur(indicateur) }} {{ indicateur.unite }}</strong>
+                @if (indicateur.comparaison; as comparaison) { <small>{{ comparaison }} vs mois précédent</small> } @else { <small>Pas de mois précédent comparable</small> }
+              </div>
+            }
           </div>
+          <section class="paie-cartes__bloc-graphique">
+            <div class="paie-cartes__entete-graphique"><div><h2>Répartition par chantier</h2><p class="paie-cartes__detail">{{ libellesIndicateurs[mesureGraphique()] }} · {{ libellePeriode(periode()) }}</p></div>
+              <div class="paie-cartes__actions-graphique"><div class="paie-cartes__mesures" role="group" aria-label="Indicateur par chantier">
+                @for (mesure of mesuresGraphique; track mesure.cle) { <button type="button" [class.paie-cartes__mesure--active]="mesureGraphique() === mesure.cle" (click)="mesureGraphique.set(mesure.cle)">{{ mesure.libelle }}</button> }
+              </div><button stp-button variant="text" [attr.aria-label]="graphiqueRepartitionAgrandit() ? 'Réduire le graphique' : 'Agrandir le graphique'" (click)="basculerGraphique('repartition')">{{ graphiqueRepartitionAgrandit() ? 'Réduire' : 'Agrandir' }}</button></div>
+            </div>
+            <div class="paie-cartes__graphique" [class.paie-cartes__graphique--grand]="graphiqueRepartitionAgrandit()"><stp-chart [ariaLabel]="'Répartition des chantiers selon ' + libellesIndicateurs[mesureGraphique()]" type="bar" [data]="graphiqueChantiers().data" [options]="graphiqueChantiers().options" (dataSelect)="surBarreChantier($event)"></stp-chart></div>
+            <button stp-button variant="text" icon="table" (click)="basculerTableauChantiers()">{{ tableauChantiersOuvert() ? 'Masquer les données' : 'Afficher les données' }}</button>
+            @if (tableauChantiersOuvert()) { <table class="paie-cartes__donnees"><caption>Indicateurs par chantier</caption><thead><tr><th>Chantier</th><th>Masse (DH)</th><th>Personnes</th><th>STC (DH)</th><th>STC (personnes)</th></tr></thead><tbody>
+              @for (chantier of chantiersTries(); track chantier.id) { <tr><th>{{ chantier.code }}@if (chantier.libelle) { · {{ chantier.libelle }} }</th><td>{{ formaterMontant(chantier.masse) }}</td><td>{{ chantier.effectif }}</td><td>{{ formaterMontant(chantier.stcMontant) }}</td><td>{{ chantier.stc }}</td></tr> }
+            </tbody></table> }
+          </section>
           <div class="paie-cartes__grille">
             @for (carte of cartesChantier(); track carte.chantier.code; let i = $index) {
               <div class="paie-cartes__element">
@@ -79,11 +105,14 @@
               >
                 <span class="paie-cartes__libelle">{{ carte.chantier.code }}</span>
                 <span class="paie-cartes__titre">{{ carte.chantier.libelle || '-' }}</span>
-                <span class="paie-cartes__valeur"><span [appCountUp]="carte.chantier.masse"></span> DH</span>
-                <span class="paie-cartes__detail">
-                  {{ carte.chantier.effectif }} bulletins · {{ carte.chantier.equipes.length }}
-                  {{ carte.chantier.equipes.length > 1 ? 'équipes' : 'équipe' }}
-                </span>
+                <div class="paie-cartes__indicateurs">
+                  @for (indicateur of indicateursDeChantier(carte.chantier); track indicateur.cle) {
+                    <div class="paie-cartes__indicateur"><span>{{ indicateur.libelle }}</span><strong>{{ formaterValeur(indicateur) }} {{ indicateur.unite }}</strong>
+                      @if (indicateur.comparaison; as comparaison) { <small>{{ comparaison }} vs mois précédent</small> } @else { <small>Pas de mois précédent comparable</small> }
+                    </div>
+                  }
+                </div>
+                <span class="paie-cartes__detail">{{ carte.chantier.equipes.length }} {{ carte.chantier.equipes.length > 1 ? 'équipes' : 'équipe' }}</span>
                 <span class="paie-cartes__jauge" aria-hidden="true"><span [style.width.%]="carte.part"></span></span>
                 <span class="paie-cartes__detail">{{ formaterPart(carte.part) }} de la masse du mois</span>
               </a>
@@ -105,106 +134,105 @@
         } @else {
           @if (chantier(); as c) {
             <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
-              <h2 class="paie-cartes__sous-titre">
-                {{ c.code }}@if (c.libelle) { · {{ c.libelle }} }
-              </h2>
-
+              <h2 class="paie-cartes__sous-titre">{{ c.code }}@if (c.libelle) { · {{ c.libelle }} }</h2>
               <div class="paie-cartes__tuiles">
-                <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(0)">
-                  <span>Masse salariale</span><strong><span [appCountUp]="c.masse"></span> DH</strong>
+                @for (indicateur of indicateursVue(); track indicateur.cle; let i = $index) {
+                  <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(i)"><span>{{ indicateur.libelle }}</span><strong>{{ formaterValeur(indicateur) }} {{ indicateur.unite }}</strong>
+                    @if (indicateur.comparaison; as comparaison) { <small>{{ comparaison }} vs mois précédent</small> } @else { <small>Pas de mois précédent comparable</small> }
+                  </div>
+                }
+              </div>
+              <section class="paie-cartes__bloc-graphique">
+                <div class="paie-cartes__entete-graphique"><div><h2>Répartition par équipe</h2><p class="paie-cartes__detail">{{ libellesIndicateurs[mesureGraphique()] }} · {{ libellePeriode(periode()) }}</p></div>
+                  <div class="paie-cartes__actions-graphique"><div class="paie-cartes__mesures" role="group" aria-label="Indicateur par équipe">
+                    @for (mesure of mesuresGraphique; track mesure.cle) { <button type="button" [class.paie-cartes__mesure--active]="mesureGraphique() === mesure.cle" (click)="mesureGraphique.set(mesure.cle)">{{ mesure.libelle }}</button> }
+                  </div><button stp-button variant="text" [attr.aria-label]="graphiqueRepartitionAgrandit() ? 'Réduire le graphique' : 'Agrandir le graphique'" (click)="basculerGraphique('repartition')">{{ graphiqueRepartitionAgrandit() ? 'Réduire' : 'Agrandir' }}</button></div>
                 </div>
-                <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(1)">
-                  <span>Bulletins</span><strong [appCountUp]="c.effectif"></strong>
-                </div>
-                <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(2)">
-                  <span>Équipes</span><strong [appCountUp]="c.equipes.length"></strong>
-                </div>
-                <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(3)">
-                  <span>Part de la masse du mois</span><strong><span [appCountUp]="partDuMois()"></span> %</strong>
-                </div>
+                <div class="paie-cartes__graphique" [class.paie-cartes__graphique--grand]="graphiqueRepartitionAgrandit()"><stp-chart [ariaLabel]="'Répartition des équipes selon ' + libellesIndicateurs[mesureGraphique()]" type="bar" [data]="graphiqueEquipes().data" [options]="graphiqueEquipes().options" (dataSelect)="surBarreEquipe($event)"></stp-chart></div>
+                <button stp-button variant="text" icon="table" (click)="basculerTableauEquipes()">{{ tableauEquipesOuvert() ? 'Masquer les données' : 'Afficher les données' }}</button>
+                @if (tableauEquipesOuvert()) { <table class="paie-cartes__donnees"><caption>Indicateurs par équipe</caption><thead><tr><th>Équipe</th><th>Masse (DH)</th><th>Personnes</th><th>STC (DH)</th><th>STC (personnes)</th></tr></thead><tbody>
+                  @for (ligne of lignesEquipes(); track ligne.equipeId ?? 'sans') { <tr><th>{{ ligne.code }} · {{ ligne.libelle }}</th><td>{{ formaterMontant(ligne.masse) }}</td><td>{{ ligne.effectif }}</td><td>{{ formaterMontant(ligne.stcMontant) }}</td><td>{{ ligne.stc }}</td></tr> }
+                </tbody></table> }
+              </section>
+
+              <div class="paie-cartes__entete-equipes"><h2>Équipes du chantier</h2><input class="stp-input" type="text" [formField]="rechercheForm.terme" autocomplete="off" placeholder="Rechercher une équipe" aria-label="Rechercher une équipe" />
+                @if (canPurge()) { <button stp-button variant="danger" icon="trash-2" type="button" (click)="demanderSuppressionChantier(c)">Supprimer ce chantier</button> }
+              </div>
+              <div class="paie-cartes__grille">
+                @for (ligne of equipesAffichees(); track ligne.equipeId ?? 'sans'; let i = $index) {
+                  <div class="paie-cartes__element">
+                    @if (ligne.equipeId !== null) {
+                      <a class="paie-cartes__carte" [style.animation-delay.ms]="delaiCascade(i)" routerLink="/paie/cartes" queryParamsHandling="merge" [queryParams]="{ equipeIds: ligne.equipeId }">
+                        <span class="paie-cartes__libelle">{{ ligne.code }}</span><span class="paie-cartes__titre">{{ ligne.libelle }}</span>
+                        <span class="paie-cartes__detail">{{ ligne.effectif }} personnes · {{ formaterMontant(ligne.masse) }} DH</span>
+                        @for (indicateur of indicateursDeLigneEquipe(ligne); track indicateur.cle) {
+                          <span class="paie-cartes__detail">{{ indicateur.libelle }} : {{ formaterValeur(indicateur) }} {{ indicateur.unite }} — @if (indicateur.comparaison; as comparaison) { {{ comparaison }} vs mois précédent } @else { pas de mois précédent comparable }</span>
+                        }
+                      </a>
+                    } @else {
+                      <div class="paie-cartes__carte"><span class="paie-cartes__titre">Sans équipe</span><span class="paie-cartes__detail">{{ ligne.effectif }} personnes · {{ formaterMontant(ligne.masse) }} DH</span>
+                        @for (indicateur of indicateursDeLigneEquipe(ligne); track indicateur.cle) { <span class="paie-cartes__detail">{{ indicateur.libelle }} : {{ formaterValeur(indicateur) }} {{ indicateur.unite }} — @if (indicateur.comparaison; as comparaison) { {{ comparaison }} vs mois précédent } @else { pas de mois précédent comparable }</span> }
+                      </div>
+                    }
+                    @if (canPurge() && ligne.equipeId !== null) { <button stp-button variant="danger-text" icon="trash-2" iconOnly class="paie-cartes__supprimer" type="button" [attr.aria-label]="'Supprimer les bulletins de l’équipe ' + ligne.code" (click)="demanderSuppressionEquipe(ligne)"></button> }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      }
+
+      @case (4) {
+        @if (equipeIntrouvable()) {
+          <p class="paie-cartes__message">Cette équipe n'a pas de bulletin pour {{ libellePeriode(periode()) }} avec ces filtres.</p>
+        } @else {
+          @if (equipe(); as e) {
+            <div class="paie-cartes__scene" [class.paie-cartes__scene--arriere]="sens() === 'arriere'">
+              <h2 class="paie-cartes__sous-titre">{{ chantier()?.code }}@if (chantier()?.libelle) { · {{ chantier()?.libelle }} } / Équipe {{ e.code }} · {{ e.libelle }}</h2>
+              <div class="paie-cartes__tuiles">
+                @for (indicateur of indicateursVue(); track indicateur.cle; let i = $index) {
+                  <div class="paie-cartes__tuile" [style.animation-delay.ms]="delaiCascade(i)"><span>{{ indicateur.libelle }}</span><strong>{{ formaterValeur(indicateur) }} {{ indicateur.unite }}</strong>
+                    @if (indicateur.comparaison; as comparaison) { <small>{{ comparaison }} vs mois précédent</small> } @else { <small>Pas de mois précédent comparable</small> }
+                  </div>
+                }
               </div>
 
-              <div class="app-toolbar">
-                <input class="stp-input" type="text" [formField]="rechercheForm.terme" autocomplete="off" placeholder="Équipe" aria-label="Rechercher une équipe" />
-                <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="reinitialiserRecherche()">Réinitialiser</button>
-              </div>
+              <section class="paie-cartes__bloc-graphique">
+                <div class="paie-cartes__entete-graphique"><div><h2>Évolution de l’équipe</h2><p class="paie-cartes__detail">{{ libellesIndicateurs[mesureGraphique()] }} sur les mois disponibles</p></div>
+                  <div class="paie-cartes__actions-graphique"><div class="paie-cartes__mesures" role="group" aria-label="Indicateur d’évolution de l’équipe">
+                    @for (mesure of mesuresGraphique; track mesure.cle) { <button type="button" [class.paie-cartes__mesure--active]="mesureGraphique() === mesure.cle" (click)="mesureGraphique.set(mesure.cle)">{{ mesure.libelle }}</button> }
+                  </div><button stp-button variant="text" [attr.aria-label]="graphiqueEvolutionAgrandit() ? 'Réduire le graphique' : 'Agrandir le graphique'" (click)="basculerGraphique('evolution')">{{ graphiqueEvolutionAgrandit() ? 'Réduire' : 'Agrandir' }}</button></div>
+                </div>
+                <div class="paie-cartes__graphique" [class.paie-cartes__graphique--grand]="graphiqueEvolutionAgrandit()"><stp-chart [ariaLabel]="'Évolution de ' + libellesIndicateurs[mesureGraphique()] + ' pour l’équipe ' + e.code" type="line" [data]="evolutionGraphique().data" [options]="evolutionGraphique().options"></stp-chart></div>
+                <button stp-button variant="text" icon="table" (click)="basculerTableauEvolution()">{{ tableauEvolutionOuvert() ? 'Masquer les données' : 'Afficher les données' }}</button>
+                @if (tableauEvolutionOuvert()) { <table class="paie-cartes__donnees"><caption>Évolution mensuelle de l’équipe</caption><thead><tr><th>Mois</th><th>{{ libellesIndicateurs[mesureGraphique()] }}</th></tr></thead><tbody>
+              @for (mois of analytique()?.evolution ?? []; track mois.periode) { <tr><th>{{ libellePeriode(mois.periode) }}</th><td>{{ formaterValeurMesure(mesureGraphique(), mois[mesureGraphique()]) }}</td></tr> }
+                </tbody></table> }
+              </section>
 
-              <div class="app-table-bar">
-                <p class="app-table-bar__total" role="status">{{ lignesEquipes().length }} équipe{{ lignesEquipes().length > 1 ? 's' : '' }}</p>
-                <div class="app-table-bar__tools">
-                  <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-                  @if (canPurge()) {
-                    <button stp-button variant="danger" icon="trash-2" type="button" (click)="demanderSuppressionChantier(c)">Supprimer ce chantier</button>
+              <section class="paie-cartes__bloc-graphique">
+              <div class="paie-cartes__entete-graphique"><div><h2>Répartition par fonction</h2><p class="paie-cartes__detail">Nombre de personnes par fonction. Sélectionnez une barre pour filtrer la liste.</p></div>
+                  <button stp-button variant="text" [attr.aria-label]="graphiqueRepartitionAgrandit() ? 'Réduire le graphique' : 'Agrandir le graphique'" (click)="basculerGraphique('repartition')">{{ graphiqueRepartitionAgrandit() ? 'Réduire' : 'Agrandir' }}</button>
+                </div>
+                <div class="paie-cartes__graphique" [class.paie-cartes__graphique--grand]="graphiqueRepartitionAgrandit()"><stp-chart [ariaLabel]="'Répartition des personnes de l’équipe ' + e.code + ' par fonction'" type="bar" [data]="graphiqueFonctions().data" [options]="graphiqueFonctions().options" (dataSelect)="surBarreFonction($event)"></stp-chart></div>
+                <button stp-button variant="text" icon="table" (click)="basculerTableauFonctions()">{{ tableauFonctionsOuvert() ? 'Masquer les données' : 'Afficher les données' }}</button>
+                @if (tableauFonctionsOuvert()) { <table class="paie-cartes__donnees"><caption>Effectif par fonction</caption><thead><tr><th>Fonction</th><th>Personnes</th></tr></thead><tbody>
+                  @for (fonction of fonctionsTriees(); track fonction.id) { <tr><th>{{ fonction.libelle }}</th><td>{{ fonction.effectif }}</td></tr> }
+                </tbody></table> }
+              </section>
+
+              <section class="paie-cartes__employes">
+                <div class="paie-cartes__entete-equipes"><h2>Employés de l’équipe</h2><span role="status">{{ pageEmployes()?.page?.totalElements ?? 0 }} employés</span></div>
+                <div class="paie-cartes__grille">
+                  @for (paie of pageEmployes()?.content ?? []; track paie.id) {
+                    <article class="paie-cartes__carte paie-cartes__employe"><span class="paie-cartes__titre">{{ paie.employee.nomPrenom }}</span><span class="paie-cartes__detail">{{ paie.fonction.libelle }} · CIN {{ paie.employee.cin }}</span><strong>{{ formaterMontant(paie.salaireTotal) }} DH</strong><span class="paie-cartes__detail">{{ paie.nombreJoursTravailles }} jours travaillés</span></article>
                   }
                 </div>
-              </div>
-
-              <div class="paie-cartes__tableau">
-                <stp-table
-                  label="Équipes du chantier"
-                  emptyMessage="Aucune équipe ne correspond à cette recherche."
-                  [value]="equipesAffichees()"
-                  [columns]="columns.visible"
-                  [rowActionsVisible]="canPurge()"
-                  [rowClickable]="ligneCliquable"
-                  [rowTitle]="titreLigne"
-                  (rowClick)="ouvrirBulletins($event)"
-                  (columnsReorder)="columns.onReorder($event)"
-                >
-                  <ng-template stpCell let-ligne let-col="col">
-                    @switch (col.field) {
-                      @case ('code') {
-                        {{ ligne.code }}
-                      }
-                      @case ('libelle') {
-                        {{ ligne.libelle }}
-                      }
-                      @case ('effectif') {
-                        {{ ligne.effectif }}
-                      }
-                      @case ('masse') {
-                        {{ formaterMontant(ligne.masse) }}
-                      }
-                      @case ('part') {
-                        {{ formaterPart(ligne.part) }}
-                      }
-                    }
-                  </ng-template>
-
-                  <ng-template stpRowActions let-ligne>
-                    @if (ligne.equipeId !== null) {
-                      <button
-                        stp-button
-                        variant="danger-text"
-                        icon="trash-2"
-                        iconOnly
-                        type="button"
-                        [attr.aria-label]="'Supprimer les bulletins de l’équipe ' + ligne.code"
-                        title="Supprimer les bulletins de cette équipe"
-                        (click)="$event.stopPropagation(); demanderSuppressionEquipe(ligne)"
-                        (keydown.enter)="$event.stopPropagation()"
-                      ></button>
-                    }
-                  </ng-template>
-
-                  <ng-template stpFooter let-col="col">
-                    @switch (col.field) {
-                      @case ('code') {
-                        Total
-                      }
-                      @case ('effectif') {
-                        {{ effectifTotalEquipes() }}
-                      }
-                      @case ('masse') {
-                        {{ formaterMontant(masseTotaleEquipes()) }}
-                      }
-                      @case ('part') {
-                        {{ formaterPart(100) }}
-                      }
-                    }
-                  </ng-template>
-                </stp-table>
-              </div>
+                @if (pageEmployes(); as page) {
+                  <div class="paie-cartes__pagination"><button stp-button variant="text" [disabled]="page.page.number === 0 || employesEnChargement()" (click)="changerPageEmployes(page.page.number - 1)">Précédent</button><span>Page {{ page.page.number + 1 }} sur {{ page.page.totalPages || 1 }}</span><button stp-button variant="text" [disabled]="page.page.number + 1 >= page.page.totalPages || employesEnChargement()" (click)="changerPageEmployes(page.page.number + 1)">Suivant</button></div>
+                }
+              </section>
             </div>
           }
         }

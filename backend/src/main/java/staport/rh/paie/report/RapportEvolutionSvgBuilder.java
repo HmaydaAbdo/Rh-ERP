@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.function.Function;
 
-/** Construit les graphiques mensuels à deux séries et deux axes en SVG pour le rapport PDF. */
+/** Construit les graphiques mensuels à deux séries et une échelle commune en SVG pour le rapport PDF. */
 @Component
 final class RapportEvolutionSvgBuilder {
 
@@ -47,16 +47,16 @@ final class RapportEvolutionSvgBuilder {
 
     private List<Serie> series(PageModel.GroupeEvolution groupe) {
         return switch (groupe) {
-            case MASSE_EFFECTIF -> List.of(
+            case MONTANTS -> List.of(
                     new Serie("Masse salariale", "DH", "#2563EB", RepartitionBean::getMontant,
                             PaieReportNumberFormat::masse),
-                    new Serie("Effectif", "personnes", "#D97706",
-                            point -> BigDecimal.valueOf(point.getEffectif()), this::formaterEntier));
-            case STC -> List.of(
-                    new Serie("STC", "personnes", "#B91C1C",
-                            point -> BigDecimal.valueOf(point.getStc()), this::formaterEntier),
-                    new Serie("STC", "DH", "#0F766E", RepartitionBean::getStcMontant,
+                    new Serie("Montants des STC", "DH", "#0F766E", RepartitionBean::getStcMontant,
                             PaieReportNumberFormat::masse));
+            case EFFECTIFS -> List.of(
+                    new Serie("Effectif rémunéré", "personnes", "#D97706",
+                            point -> BigDecimal.valueOf(point.getEffectif()), this::formaterEntier),
+                    new Serie("Sorties du personnel (STC)", "personnes", "#B91C1C",
+                            point -> BigDecimal.valueOf(point.getStc()), this::formaterEntier));
         };
     }
 
@@ -69,8 +69,8 @@ final class RapportEvolutionSvgBuilder {
         double largeurTrace = xFin - xDebut;
         List<List<BigDecimal>> valeurs = series.stream().map(serie -> donnees.stream()
                 .map(serie.extraction()).map(this::valeurOuZero).toList()).toList();
-        double[] maximums = valeurs.stream().mapToDouble(v -> v.stream()
-                .mapToDouble(BigDecimal::doubleValue).max().orElse(0)).map(this::echelleMax).toArray();
+        double maximum = echelleMax(valeurs.stream().flatMap(List::stream)
+                .mapToDouble(BigDecimal::doubleValue).max().orElse(0));
 
         svg.attr("xmlns", "http://www.w3.org/2000/svg")
                 .attr("role", "img")
@@ -87,30 +87,22 @@ final class RapportEvolutionSvgBuilder {
             dessin.appendElement("line").attr("x1", format(xDebut)).attr("x2", format(xFin))
                     .attr("y1", format(y)).attr("y2", format(y))
                     .attr("stroke", GRILLE).attr("stroke-width", tick == 0 ? "0.8" : "0.55");
-            for (int s = 0; s < series.size(); s++) {
-                double valeur = maximums[s] * proportion;
-                String texte = series.get(s).format().apply(BigDecimal.valueOf(valeur));
-                double x = s == 0 ? xDebut - 8 : xFin + 8;
-                dessin.appendElement("text").attr("x", format(x)).attr("y", format(y))
-                        .attr("text-anchor", s == 0 ? "end" : "start")
-                        .attr("dominant-baseline", "middle").attr("font-size", "7.1")
-                        .attr("fill", series.get(s).couleur()).text(texte);
-            }
+            double valeur = maximum * proportion;
+            String texte = series.get(0).format().apply(BigDecimal.valueOf(valeur));
+            dessin.appendElement("text").attr("x", format(xDebut - 8)).attr("y", format(y))
+                    .attr("text-anchor", "end").attr("dominant-baseline", "middle").attr("font-size", "7.1")
+                    .attr("fill", AXE).text(texte);
         }
 
-        // Les unités sont écrites aux deux axes : les nombres et les échelles de DH/personnes restent distincts.
-        ajouterTitreAxe(dessin, series.get(0), xDebut - 64, (Y_HAUT + yBas) / 2, -90);
-        ajouterTitreAxe(dessin, series.get(1), xFin + 72, (Y_HAUT + yBas) / 2, 90);
+        ajouterTitreAxe(dessin, series.get(0).unite(), xDebut - 64, (Y_HAUT + yBas) / 2);
         dessin.appendElement("line").attr("x1", format(xDebut)).attr("x2", format(xDebut))
-                .attr("y1", format(Y_HAUT)).attr("y2", format(yBas)).attr("stroke", AXE).attr("stroke-width", "1");
-        dessin.appendElement("line").attr("x1", format(xFin)).attr("x2", format(xFin))
                 .attr("y1", format(Y_HAUT)).attr("y2", format(yBas)).attr("stroke", AXE).attr("stroke-width", "1");
         dessin.appendElement("line").attr("x1", format(xDebut)).attr("x2", format(xFin))
                 .attr("y1", format(yBas)).attr("y2", format(yBas)).attr("stroke", AXE).attr("stroke-width", "1");
 
-        double[][] positionsEtiquettes = positionsEtiquettes(valeurs, maximums, yBas, hauteurTrace);
+        double[][] positionsEtiquettes = positionsEtiquettes(valeurs, maximum, yBas, hauteurTrace);
         for (int s = 0; s < series.size(); s++) {
-            ajouterSerie(dessin, donnees, series.get(s), valeurs.get(s), maximums[s], s,
+            ajouterSerie(dessin, donnees, series.get(s), valeurs.get(s), maximum, s,
                     xDebut, largeurTrace, yBas, hauteurTrace, positionsEtiquettes[s]);
         }
     }
@@ -133,9 +125,9 @@ final class RapportEvolutionSvgBuilder {
             RepartitionBean point = donnees.get(i);
             double x = abscisse(i, donnees.size(), xDebut, largeurTrace);
             double y = ordonnee(valeurs.get(i), maximum, yBas, hauteurTrace);
-            // Chaque série est projetée vers son axe de valeur et vers l'axe des mois.
-            dessin.appendElement("line").attr("x1", format(indexSerie == 0 ? xDebut : x))
-                    .attr("x2", format(indexSerie == 0 ? x : LARGEUR - X_DROITE))
+            // Chaque point est projeté vers l'unique axe de valeur et vers l'axe des mois.
+            dessin.appendElement("line").attr("x1", format(xDebut))
+                    .attr("x2", format(x))
                     .attr("y1", format(y)).attr("y2", format(y))
                     .attr("stroke", serie.couleur()).attr("stroke-opacity", "0.48")
                     .attr("stroke-width", "0.7").attr("stroke-dasharray", "2 2");
@@ -163,14 +155,14 @@ final class RapportEvolutionSvgBuilder {
         }
     }
 
-    /** Place les valeurs de chaque mois de part et d'autre des points si leurs deux échelles les rapprochent. */
-    private double[][] positionsEtiquettes(List<List<BigDecimal>> valeurs, double[] maximums,
+    /** Écarte les valeurs mensuelles lorsque les deux séries partagent une position proche. */
+    private double[][] positionsEtiquettes(List<List<BigDecimal>> valeurs, double maximum,
                                            double yBas, double hauteurTrace) {
         double[][] positions = new double[2][valeurs.get(0).size()];
         for (int i = 0; i < valeurs.get(0).size(); i++) {
             double[] points = new double[2];
             for (int s = 0; s < 2; s++) {
-                points[s] = ordonnee(valeurs.get(s).get(i), maximums[s], yBas, hauteurTrace);
+                points[s] = ordonnee(valeurs.get(s).get(i), maximum, yBas, hauteurTrace);
             }
             double minY = Y_HAUT + 7;
             double maxY = yBas - 4;
@@ -219,12 +211,12 @@ final class RapportEvolutionSvgBuilder {
         }
     }
 
-    private void ajouterTitreAxe(Element dessin, Serie serie, double x, double y, int rotation) {
+    private void ajouterTitreAxe(Element dessin, String unite, double x, double y) {
         dessin.appendElement("text").attr("x", format(x)).attr("y", format(y))
                 .attr("text-anchor", "middle").attr("font-size", "8").attr("font-weight", "bold")
-                .attr("fill", serie.couleur())
-                .attr("transform", "rotate(" + rotation + " " + format(x) + " " + format(y) + ")")
-                .text(serie.nom() + " (" + serie.unite() + ")");
+                .attr("fill", AXE)
+                .attr("transform", "rotate(-90 " + format(x) + " " + format(y) + ")")
+                .text(unite);
     }
 
     private double echelleMax(double maximum) {

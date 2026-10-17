@@ -19,8 +19,8 @@ class VueFactice {
 }
 
 const PERIODES: PaiePeriodeResume[] = [
-    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1 },
-    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0 }
+    { periode: '2026-08', nombreBulletins: 10, nombreChantiers: 2, masse: 40000, stc: 1, stcMontant: 4000 },
+    { periode: '2026-07', nombreBulletins: 8, nombreChantiers: 2, masse: 32000, stc: 0, stcMontant: 0 }
 ];
 
 describe('PaieVuesComponent', () => {
@@ -137,13 +137,20 @@ describe('PaieVuesComponent', () => {
         expect(vi.mocked(service.listerPeriodes).mock.calls.length).toBeGreaterThan(appels);
     });
 
-    it('réinitialise les filtres quand on change de vue par le sélecteur', async () => {
+    it('conserve les filtres quand on change de vue par le sélecteur', async () => {
         const composant = await harness.navigateByUrl('/paie?periode=2026-08&nom=ali&chantierIds=3', PaieVuesComponent);
 
-        (harness.routeNativeElement as HTMLElement).querySelector<HTMLAnchorElement>('a[href="/paie/cartes"]')?.click();
+        const lienCartes = Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'))
+            .find((lien) => lien.textContent?.includes('Cartes'));
+        expect(lienCartes).not.toBeUndefined();
+        lienCartes?.click();
         await harness.fixture.whenStable();
 
-        expect(TestBed.inject(Router).url).toBe('/paie/cartes');
-        expect(composant['filtres']()).toEqual(AUCUN_FILTRE);
+        const url = TestBed.inject(Router).url;
+        expect(url).toContain('/paie/cartes?');
+        expect(url).toContain('periode=2026-08');
+        expect(url).toContain('nom=ali');
+        expect(url).toContain('chantierIds=3');
+        expect(composant['filtres']()).toEqual(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', chantierIds: [3] }));
     });
 });

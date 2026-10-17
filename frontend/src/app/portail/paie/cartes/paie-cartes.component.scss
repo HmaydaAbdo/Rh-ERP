@@ -1,4 +1,160 @@
 .paie-cartes {
+  &__bloc-graphique {
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  &__entete-graphique,
+  &__actions-graphique,
+  &__entete-equipes,
+  &__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  &__entete-graphique {
+    margin-bottom: var(--space-sm);
+
+    h2 {
+      margin: 0;
+      font-size: var(--text-md);
+    }
+  }
+
+  &__actions-graphique {
+    justify-content: flex-end;
+  }
+
+  &__mesures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+
+    button {
+      min-height: var(--control-height);
+      padding: 0 var(--space-sm);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      cursor: pointer;
+    }
+  }
+
+  &__mesure--active,
+  &__mesures button:focus-visible {
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+  }
+
+  &__graphique {
+    height: 16rem;
+    transition: height var(--duration-fast);
+
+    &--grand {
+      height: 30rem;
+    }
+  }
+
+  &__donnees {
+    width: 100%;
+    margin-top: var(--space-sm);
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+
+    caption {
+      padding: var(--space-xs);
+      text-align: left;
+      font-weight: 600;
+    }
+
+    th,
+    td {
+      padding: var(--space-xs) var(--space-sm);
+      border-bottom: 1px solid var(--color-border);
+      text-align: left;
+    }
+  }
+
+  &__indicateurs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin-top: var(--space-xs);
+  }
+
+  &__indicateur {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    min-width: 0;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    overflow-wrap: anywhere;
+
+    > span,
+    small {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    strong {
+      font-size: var(--text-sm);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__carte-mois {
+    min-width: 0;
+  }
+
+  &__entete-equipes {
+    margin: var(--space-md) 0 var(--space-sm);
+
+    h2 {
+      margin: 0;
+      font-size: var(--text-md);
+    }
+
+    .stp-input {
+      max-width: 22rem;
+    }
+  }
+
+  &__employes {
+    margin-top: var(--space-lg);
+  }
+
+  &__pagination {
+    justify-content: center;
+    margin-top: var(--space-md);
+  }
+
+  &__employe {
+    gap: var(--space-sm);
+  }
+
+  @media (max-width: 640px) {
+    &__indicateurs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__graphique--grand {
+      height: 25rem;
+    }
+
+    &__bloc-graphique {
+      padding: var(--space-sm);
+    }
+  }
+
   &__majuscule::first-letter {
     text-transform: uppercase;
   }

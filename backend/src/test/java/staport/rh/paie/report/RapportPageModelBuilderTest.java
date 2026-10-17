@@ -238,7 +238,12 @@ class RapportPageModelBuilderTest {
         assertThat(global.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
                 .map(PageModel.BlocGraphiqueEvolution.class::cast)
                 .extracting(PageModel.BlocGraphiqueEvolution::groupe)
-                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+                .containsExactly(PageModel.GroupeEvolution.MONTANTS, PageModel.GroupeEvolution.EFFECTIFS);
+        assertThat(global.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::texte)
+                .containsExactly("Masse salariale et montants des STC (DH)",
+                        "Effectif rémunéré et sorties du personnel (personnes)");
 
         PageModel analyseChantier = pages.stream().filter(page -> page.blocs().stream()
                         .anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
@@ -251,7 +256,12 @@ class RapportPageModelBuilderTest {
         assertThat(analyseChantier.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
                 .map(PageModel.BlocGraphiqueEvolution.class::cast)
                 .extracting(PageModel.BlocGraphiqueEvolution::groupe)
-                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+                .containsExactly(PageModel.GroupeEvolution.MONTANTS, PageModel.GroupeEvolution.EFFECTIFS);
+        assertThat(analyseChantier.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::texte)
+                .containsExactly("Masse salariale et montants des STC (DH)",
+                        "Effectif rémunéré et sorties du personnel (personnes)");
 
         assertThat(cartesKpi(analyseChantier).stream().filter(c -> c.label().equals("MASSE SALARIALE")).toList())
                 .singleElement().extracting(CarteKpi::sousTexte).isNull();
@@ -407,7 +417,12 @@ class RapportPageModelBuilderTest {
         assertThat(evolutionEquipe.blocs()).filteredOn(PageModel.BlocGraphiqueEvolution.class::isInstance)
                 .map(PageModel.BlocGraphiqueEvolution.class::cast)
                 .extracting(PageModel.BlocGraphiqueEvolution::groupe)
-                .containsExactly(PageModel.GroupeEvolution.MASSE_EFFECTIF, PageModel.GroupeEvolution.STC);
+                .containsExactly(PageModel.GroupeEvolution.MONTANTS, PageModel.GroupeEvolution.EFFECTIFS);
+        assertThat(evolutionEquipe.blocs()).filteredOn(PageModel.BlocTitreRubrique.class::isInstance)
+                .map(PageModel.BlocTitreRubrique.class::cast)
+                .extracting(PageModel.BlocTitreRubrique::texte)
+                .containsExactly("Masse salariale et montants des STC (DH)",
+                        "Effectif rémunéré et sorties du personnel (personnes)");
 
         PageModel materiel = pages.stream()
                 .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocGraphiqueMateriel.class::isInstance))

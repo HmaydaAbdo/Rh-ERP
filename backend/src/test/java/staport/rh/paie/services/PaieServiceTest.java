@@ -354,6 +354,8 @@ class PaieServiceTest {
         lenient().when(projection.getEquipeLibelle()).thenReturn(equipeLibelle);
         lenient().when(projection.getEffectif()).thenReturn(effectif);
         lenient().when(projection.getMasse()).thenReturn(new BigDecimal(masse));
+        lenient().when(projection.getStc()).thenReturn(0L);
+        lenient().when(projection.getStcMontant()).thenReturn(BigDecimal.ZERO);
         return projection;
     }
 

@@ -61,7 +61,8 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
      * reproduit {@code ObservationStc.estStcOuSortie} en JPQL (même définition que le rapport). */
     @Query("SELECT p.periode AS periode, COUNT(p) AS bulletins, COUNT(DISTINCT p.chantier.id) AS chantiers, " +
             "SUM(p.salaireTotal) AS masse, " +
-            "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p WHERE 1 = 1" + FILTRES + " GROUP BY p.periode ORDER BY p.periode DESC")
     List<PaiePeriodeProjection> resumerParPeriode(@Param("f") FiltresPaie f);
 
@@ -69,7 +70,9 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
      * l'étape « détail par équipe » de l'assistant d'export et pour les niveaux chantier et équipe de la vue Cartes. */
     @Query("SELECT c.id AS chantierId, c.code AS chantierCode, c.nom AS chantierNom, c.designation AS chantierDesignation, " +
             "e.id AS equipeId, e.code AS equipeCode, e.libelle AS equipeLibelle, " +
-            "COUNT(p) AS effectif, SUM(p.salaireTotal) AS masse " +
+            "COUNT(p) AS effectif, SUM(p.salaireTotal) AS masse, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p JOIN p.chantier c LEFT JOIN p.equipe e WHERE p.periode = :periode" + FILTRES +
             " GROUP BY c.id, c.code, c.nom, c.designation, e.id, e.code, e.libelle")
     List<ChantierEquipePeriodeProjection> resumerChantiersEtEquipesParPeriode(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
@@ -128,6 +131,7 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @Query("SELECT COUNT(p) AS effectif, COALESCE(SUM(p.salaireTotal), 0) AS masse, " +
             "COUNT(DISTINCT p.chantier.id) AS chantiers, " +
             "COALESCE(SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END), 0) AS stc, " +
+            "COALESCE(SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END), 0) AS stcMontant, " +
             "COALESCE(SUM(CASE WHEN p.equipe IS NULL THEN 1 ELSE 0 END), 0) AS sansEquipe, " +
             "COALESCE(SUM(CASE WHEN p.observation IS NULL OR TRIM(p.observation) = '' THEN 1 ELSE 0 END), 0) AS sansObservation " +
             "FROM Paie p WHERE p.periode = :periode" + FILTRES)
@@ -136,7 +140,8 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     /** Masse, effectif et STC par chantier, du plus gros au plus petit. */
     @Query("SELECT c.id AS id, c.code AS code, c.nom AS nom, c.designation AS designation, " +
             "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
-            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p JOIN p.chantier c WHERE p.periode = :periode" + FILTRES +
             " GROUP BY c.id, c.code, c.nom, c.designation ORDER BY SUM(p.salaireTotal) DESC")
     List<ChantierMasseProjection> sommerParChantier(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
@@ -149,7 +154,9 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
 
     /** Masse et effectif de **chaque** mois qui contient de la paie dans le périmètre (tout l'historique, sans fenêtre),
      * du plus ancien au plus récent. */
-    @Query("SELECT p.periode AS periode, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif " +
+    @Query("SELECT p.periode AS periode, SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN 1 ELSE 0 END) AS stc, " +
+            "SUM(CASE WHEN " + EST_STC + " THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
             "FROM Paie p WHERE 1 = 1" + FILTRES +
             " GROUP BY p.periode ORDER BY p.periode")
     List<EvolutionMasseProjection> sommerParPeriode(@Param("f") FiltresPaie f);

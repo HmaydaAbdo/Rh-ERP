@@ -9,8 +9,8 @@ import { PaieExportStore } from '../paie-export.store';
 /** Aides des tests d'étape de l'assistant d'export : l'étape est montée avec le vrai `PaieExportStore` (comme dans l'assistant). */
 
 export const PERIODES: PaiePeriodeResume[] = [
-  { periode: '2026-09', nombreBulletins: 50, nombreChantiers: 2, masse: 250000, stc: 1 },
-  { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 3, masse: 5500000.5, stc: 12 }
+  { periode: '2026-09', nombreBulletins: 50, nombreChantiers: 2, masse: 250000, stc: 1, stcMontant: 2500 },
+  { periode: '2026-08', nombreBulletins: 969, nombreChantiers: 3, masse: 5500000.5, stc: 12, stcMontant: 18000 }
 ];
 
 export const CHANTIERS: PaieChantierPeriode[] = [
@@ -20,13 +20,15 @@ export const CHANTIERS: PaieChantierPeriode[] = [
     libelle: 'Nador',
     effectif: 10,
     masse: 100,
+    stc: 2,
+    stcMontant: 20,
     equipes: [
-      { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 6, masse: 60 },
-      { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 4, masse: 40 }
+      { id: 1, code: 'CH', libelle: 'Chauffeurs', effectif: 6, masse: 60, stc: 1, stcMontant: 10 },
+      { id: 2, code: 'OP', libelle: 'Opérateurs', effectif: 4, masse: 40, stc: 1, stcMontant: 10 }
     ]
   },
-  { id: 2, code: 'C196', libelle: null, effectif: 5, masse: 50, equipes: [{ id: 3, code: 'LABO', libelle: 'Labo', effectif: 5, masse: 50 }] },
-  { id: 3, code: 'C057', libelle: 'Dépôt', effectif: 2, masse: 20, equipes: [] }
+  { id: 2, code: 'C196', libelle: null, effectif: 5, masse: 50, stc: 0, stcMontant: 0, equipes: [{ id: 3, code: 'LABO', libelle: 'Labo', effectif: 5, masse: 50, stc: 0, stcMontant: 0 }] },
+  { id: 3, code: 'C057', libelle: 'Dépôt', effectif: 2, masse: 20, stc: 0, stcMontant: 0, equipes: [] }
 ];
 
 export const TABLEAUX: PaieMaterielTableau[] = [{ chantierCode: 'C168', equipeCode: 'CH', titre: 'Camions C168', libelles: ['Camion benne', 'Camion citerne'] }];

@@ -129,10 +129,10 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
-| `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export, niveaux 2 et 3 de la vue Cartes) | 200 |
-| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs du tableau de bord d'un mois sur le périmètre filtré (vue Analytique) | 200, 400 |
-| `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré (niveau « mois » de la vue Cartes) | 200 |
-| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Les chantiers du mois, avec leurs équipes, sur le périmètre filtré (niveaux « chantier » et « équipe » de la vue Cartes) | 200, 400 |
+| `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export) | 200 |
+| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs du tableau de bord d'un mois sur le périmètre filtré (vue Analytique et graphiques Cartes) | 200, 400 |
+| `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré, avec masse et STC (Cartes) | 200 |
+| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (Cartes) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search` + `sansVueEnsemble` (retire le chapitre « Vue d'ensemble »), voir `docs/report/README.md` | 200, 404 |
@@ -290,7 +290,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression, téléchargement du modèle, import (avec sélecteur de période). Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
-| `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** en trois niveaux de descente, voir « Vue Cartes » ci-dessous |
+| `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** en quatre niveaux de descente, voir « Vue Cartes » ci-dessous |
 | `/paie/analytique` | `PaieAnalytiqueComponent` | Vue **Analytique** : tableau de bord interactif, voir « Vue Analytique » ci-dessous |
 | `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
@@ -338,16 +338,15 @@ qui sort de la cascade (un chantier absent du nouveau mois) n'est pas retiré d'
 et chaque vue les lit ; il n'y a aucun état partagé de plus. Lien direct et retour navigateur les conservent donc. Une valeur
 invalide est ignorée. Les mois grisés viennent de `GET /paie/periodes`, rechargé à chaque changement de vue.
 
-**Changer de vue réinitialise les filtres.** Le sélecteur de vue ne reporte aucun paramètre d'URL : chaque vue s'ouvre sur son
-état de départ (tous les mois ; en Analytique, le mois le plus récent). Seule exception : depuis une ligne d'équipe des Cartes,
-« Voir les bulletins de cette équipe » ouvre le tabulaire avec les filtres en cours **et** cette équipe — c'est une descente
-explicite, pas un changement de vue.
+**Changer de vue conserve les filtres.** Le sélecteur reporte les paramètres d'URL : le tabulaire et l'Analytique gardent le
+mois, le chantier, l'équipe, la fonction et les filtres employés actifs dans les Cartes. Le retour aux Cartes conserve à son
+tour le niveau correspondant à ces filtres.
 
 | Vue | Effet du mois vide | Effet du mois choisi |
 |---|---|---|
 | Tabulaire | tous les mois | seulement ce mois |
-| Cartes | niveau « mois » | niveau « chantiers » de ce mois (voir ci-dessous) |
-| Analytique | le mois le plus récent est ouvert et inscrit dans la barre | ce mois |
+| Cartes | niveau « mois » | vue d'ensemble, puis chantier et équipe selon les filtres choisis (voir ci-dessous) |
+| Analytique | le mois le plus récent est ouvert uniquement si aucun mois n'est déjà sélectionné | ce mois |
 
 Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des
 Cartes et de l'Analytique par `FiltresPaie` (mêmes règles : nom et CIN « contient » sans casse (les jokers `%` et `_` tapés sont des caractères ordinaires, `MotifRecherche`), identifiants multiples, un
@@ -355,20 +354,22 @@ filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`), **lecture seule**, descend en trois niveaux. **Descendre, c'est filtrer** : le niveau se
-déduit des filtres de la barre — pas de mois : les mois ; un mois : les chantiers ; un mois et **un seul** chantier : ses
-équipes — et cliquer une carte pose le filtre correspondant dans la barre, dont le fil de navigation montre toujours la position. Les
-autres filtres (nom, CIN, fonctions, équipes, plusieurs chantiers) restreignent les bulletins comptés à chaque niveau.
+`PaieCartesComponent` (`cartes/`), **lecture seule**, raconte la paie du mois en quatre niveaux : **Mois → Vue d’ensemble → Vue chantier → Vue équipe**. Le niveau est déduit des filtres de l'URL : sans mois, la liste des mois ; un mois, la vue d’ensemble ; un mois et un chantier, le chantier ; un mois, un chantier et une équipe, l'équipe. Cliquer une carte pose le filtre correspondant. Le fil de navigation permet de remonter sans perdre les filtres transversaux (nom, CIN et fonction).
+
+Les quatre indicateurs sont présentés avec leur unité : **masse (DH)**, **bulletins / personnes**, **STC / sorties (DH)** et **STC / sorties (personnes)**. Chaque niveau montre la comparaison avec le mois civil immédiatement précédent, pour le même périmètre. Si aucun bulletin n'existe dans ce mois précédent, l'interface indique qu'il n'y a pas de comparaison disponible ; elle ne compare jamais avec un mois plus ancien.
 
 | Niveau | Contenu | Source |
 |---|---|---|
-| 1. Mois | Une carte par mois contenant de la paie : masse, bulletins, chantiers, STC / sorties, variation de la masse **par rapport au mois contigu** (absente si le mois précédent n'a aucune paie dans ce périmètre ou une masse nulle, jamais comparée à un mois plus ancien) | `POST /paie/periodes/search` |
-| 2. Chantiers | Tuiles de synthèse du mois (calculées sur les chantiers filtrés), une carte par chantier (masse, bulletins, équipes, jauge de sa part de la masse du mois) | `POST /paie/chantiers/search` |
-| 3. Équipes | Tuiles du chantier, tableau des équipes (équipe, libellé, effectif, masse, part du chantier) avec ligne de total. Une ligne **« Sans équipe »** est déduite (effectif et masse du chantier moins ceux des équipes) pour que le total égale celui du chantier ; elle n'apparaît que s'il existe des bulletins sans équipe | même appel |
+| 1. Mois | Une carte par mois contenant de la paie, avec les quatre indicateurs et leur comparaison au mois précédent. Un graphique montre l'évolution d'un indicateur choisi à la fois ; sa hauteur peut être agrandie ou réduite. | `POST /paie/periodes/search` |
+| 2. Vue d’ensemble | Les quatre indicateurs agrégés du mois et leur comparaison, un graphique de répartition des chantiers selon un indicateur choisi, puis une carte par chantier avec sa part de masse. Le graphique est redimensionnable et ses données peuvent aussi être lues dans un tableau. | `POST /paie/analytique`, `POST /paie/chantiers/search` |
+| 3. Vue chantier | Les quatre indicateurs du chantier et leurs comparaisons, un graphique de répartition des équipes, puis les cartes d'équipe. Les bulletins sans équipe sont affichés dans une carte dédiée ; leur indicateur et comparaison sont calculés par différence entre le chantier et ses équipes. | mêmes appels |
+| 4. Vue équipe | Les quatre indicateurs et comparaisons de l'équipe, un graphique d'évolution mensuelle, une répartition des personnes par fonction et les cartes d'employés paginées. Cliquer une fonction filtre les employés et reste transmis à la vue tabulaire. | `POST /paie/analytique`, `POST /paie/search` |
+
+Les graphiques de répartition permettent de choisir une grandeur parmi les quatre indicateurs et n'affichent qu'une unité sur l'axe vertical. Le graphique d'évolution suit également une grandeur à la fois. Les vues qui comportent un graphique donnent accès à ses données sous forme de tableau. Depuis chaque niveau, le bouton de changement de vue ouvre le tabulaire en conservant le mois, le chantier, l'équipe et les filtres actifs ; la sélection d'une fonction dans la vue équipe est également transmise.
 
 #### Suppression en groupe
 
-Chaque carte de mois, chaque carte de chantier, chaque ligne d'équipe et le chantier ouvert (niveau 3, bouton « Supprimer ce
+Chaque carte de mois, chaque carte de chantier, chaque carte d'équipe et le chantier ouvert (niveau 3, bouton « Supprimer ce
 chantier ») propose un bouton de suppression (permission **`PAIE_PURGE`**, distincte de `PAIE_DELETE` qui ne couvre qu'un bulletin) : plus besoin de supprimer un à un, depuis la vue
 tabulaire, les bulletins d'un mois importé par erreur.
 
@@ -386,11 +387,7 @@ tabulaire, les bulletins d'un mois importé par erreur.
   d'équipe. Après une suppression, les réponses gardées sont vidées et le niveau est rechargé ; si le chantier ouvert est
   supprimé, on remonte aux chantiers.
 
-Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une équipe**
-(ou Entrée sur sa ligne) ouvre la vue tabulaire avec les mêmes filtres plus cette équipe ; la ligne « Sans équipe » n'est pas
-cliquable (l'API ne sait pas filtrer sur l'absence d'équipe). Le tableau du niveau 3 suit les conventions des tableaux (tri,
-redimensionnement, réordonnancement, choix des colonnes, pagination avec total, recherche en temps réel) en mode client : la
-liste est courte et déjà en mémoire.
+Les réponses déjà reçues sont gardées par filtres : revenir sur une même vue ne rappelle pas le backend. **Cliquer une carte équipe** ouvre le niveau équipe ; la carte « Sans équipe » ne descend pas (l'API ne sait pas filtrer sur l'absence d'équipe). Les graphiques exposent aussi un tableau de données accessible. Les employés sont chargés par pages serveur et peuvent être filtrés par fonction depuis le graphique de répartition.
 
 **Animations** : cartes et tuiles apparaissent en cascade, les montants et effectifs s'incrémentent (`CountUpDirective`), la
 jauge se remplit, et chaque niveau glisse depuis la droite en descendant, depuis la gauche en remontant. Tout est coupé quand

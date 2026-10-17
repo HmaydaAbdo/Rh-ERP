@@ -12,6 +12,10 @@ public record PaieChantierPeriodeDto(
         String libelle,
         long effectif,
         BigDecimal masse,
+        long stc,
+        BigDecimal stcMontant,
+        PaiePeriodeComparaisonDto moisPrecedent,
+        PaiePeriodeComparaisonDto sansEquipeMoisPrecedent,
         List<PaieEquipePeriodeDto> equipes
 ) {
 }
