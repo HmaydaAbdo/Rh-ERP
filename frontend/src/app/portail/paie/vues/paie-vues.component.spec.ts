@@ -140,7 +140,10 @@ describe('PaieVuesComponent', () => {
     it('conserve les filtres quand on change de vue par le sélecteur', async () => {
         const composant = await harness.navigateByUrl('/paie?periode=2026-08&nom=ali&chantierIds=3', PaieVuesComponent);
 
-        (harness.routeNativeElement as HTMLElement).querySelector<HTMLAnchorElement>('a[href="/paie/cartes"]')?.click();
+        const lienCartes = Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'))
+            .find((lien) => lien.textContent?.includes('Cartes'));
+        expect(lienCartes).not.toBeUndefined();
+        lienCartes?.click();
         await harness.fixture.whenStable();
 
         const url = TestBed.inject(Router).url;
