@@ -162,7 +162,7 @@ n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manu
   alors, au démarrage, que l'intégrité de l'audit n'est pas garantie).
 - **Restauration d'une sauvegarde** : l'audit est dans la même base ; il revient au même instant que les données. À noter
   dans le registre d'exploitation (voir [audit/README.md](audit/README.md)).
-- **Limite de débit** : nginx inner limite, par adresse de client réel, la connexion (20 par minute, rafale de 10), la demande et la consommation d'un lien de réinitialisation (5 par minute), le renouvellement de session (120 par minute) et les `POST` coûteux — export, rapport PDF, imports, synchronisation des chantiers, suppression en groupe (30 par minute). Au-delà : `429`. L'adresse vient de `X-Forwarded-For` (posé par nginx outer), accepté des seuls réseaux privés (`set_real_ip_from`) ; si nginx outer cessait de le poser, la limite deviendrait commune à tous les utilisateurs. Les valeurs sont dans `frontend/nginx.conf`.
+- **Limite de débit** : nginx inner limite, par adresse de client réel, la connexion (20 par minute, rafale de 10), la demande et la consommation d'un lien de réinitialisation (5 par minute), le renouvellement de session (120 par minute) et les `POST` coûteux — export, rapport PDF, imports, synchronisation des chantiers, suppression en groupe (30 par minute). Au-delà : `429`. L'adresse vient de `X-Forwarded-For` (posé par nginx outer) ; nginx inner n'accepte cette adresse que depuis le pair explicitement approuvé `set_real_ip_from` configuré dans `frontend/nginx.conf`. Si nginx outer cesse de transmettre l'en-tête, la limite devient commune à tous les utilisateurs. Les valeurs sont dans `frontend/nginx.conf`.
 - **Adresse IP** : l'audit enregistre l'adresse du client réel. Le bloc nginx outer ci-dessus pose `X-Forwarded-For`
   (`$proxy_add_x_forwarded_for`), nginx inner le relaie, et Tomcat l'honore des seuls proxys internes
   (`server.forward-headers-strategy: native`) : un client ne peut pas usurper l'adresse enregistrée.
@@ -280,13 +280,14 @@ outer est sur `0.0.0.0:80`. Le `nginx -T` du 2026-10-17 confirme les limites act
 20/min + burst 10, réinitialisation 5/min + burst 5, session 120/min + burst 30 et écritures lourdes
 30/min + burst 10. `X-Forwarded-For` est utilisé pour l'adresse réelle. Les requêtes navigateur
 journalisées le 2026-10-17 montrent l'adresse client identique dans `$remote_addr` et
-`$http_x_forwarded_for` ; un refresh répond 200. La transmission via l'outer fonctionne. Les directives
-de confiance incluent toutefois toutes les plages RFC1918 et loopback, au-delà du pair outer attendu.
-La prochaine image du Nginx inner ajoutera `socket_peer="$realip_remote_addr"`, l'adresse de la
-connexion avant réécriture par `real_ip_header`. Après publication et déploiement de cette image,
-consulter `docker compose logs --since 5m frontend` pendant une requête et utiliser la valeur
-`socket_peer` pour restreindre `set_real_ip_from` au pair observé. Les logs d'accès sont reliés au flux
-stdout ; ne pas lire directement `/var/log/nginx/access.log` dans le conteneur.
+`$http_x_forwarded_for` ; un refresh répond 200. La transmission via l'outer fonctionne. Les journaux
+Nginx consultés après le déploiement de l'instrumentation montrent `socket_peer=172.20.0.1` pour les
+requêtes utilisateur, soit la passerelle de `erp-rh_web-net` (`172.20.0.0/16`), et `127.0.0.1` pour le
+healthcheck local. La passerelle `erp-rh_db-net` est `172.21.0.1` ; elle n'est pas le pair de Nginx
+outer. La configuration versionnée limite `set_real_ip_from` à `172.20.0.1/32`. Après publication et
+déploiement de cette version, vérifier un en-tête `X-Forwarded-For` falsifié et les limites par
+IP/utilisateur avant de clore le point. Les logs d'accès sont reliés au flux stdout ; ne pas lire directement
+`/var/log/nginx/access.log` dans le conteneur.
 
 Les sauvegardes planifiées `rh-erp-20261017T015957Z` et `rh-erp-20261017T020000Z` ont réussi avec
 vérification de `globals.sql` et `database.dump`. Le journal pgAudit confirme les exécutions de
