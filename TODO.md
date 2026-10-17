@@ -65,12 +65,13 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 
 À instruire dans cette tâche :
 
-- **V27 — unicité des identifiants** : vérifier les collisions avec `UPPER(BTRIM(...))` avant
-  d'appliquer l'index aux CIN, libellés Fonction, codes Chantier, identifiants Équipe, username,
-  email et noms de rôle. V27 échoue explicitement en cas de collision. Les contraintes `CHECK`
-  `NOT VALID` bloquent les nouvelles valeurs espacées ; les anciennes valeurs restent à inventorier
-  puis à nettoyer avant validation complète des contraintes. Le prérequis `C157A` ci-dessous n'est
-  pas encore résolu.
+- **V27 — unicité normalisée** : appliquée en production le 2026-10-16. Le doublon exact du
+  libellé Fonction a été résolu dans l'application avec audit : la Fonction 144 (espace initial,
+  aucune référence active) a été supprimée et la Fonction 148 (référencée) conservée. Flyway a
+  appliqué V22 à V27 et le backend a démarré sainement avec validation du schéma. Les contraintes
+  `CHECK NOT VALID` bloquent les nouvelles valeurs entourées d'espaces ; les anciennes valeurs
+  restent à inventorier et nettoyer avant validation complète des contraintes. Le doublon apparent
+  `C157A` ci-dessous reste à instruire séparément.
 
 - **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
   équipe en base), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
@@ -99,29 +100,21 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 À traiter lors d'interventions autorisées sur l'hôte de production. Vérifier les sauvegardes et les
 procédures propres à chaque opération dans `docs/deployment.md` avant toute action.
 
-1. **Terminer l'exploitation pgAudit** : la génération des événements en production est confirmée.
-   La RH a fixé le 2026-10-15 la conservation des CSV pgAudit à 90 jours, distincte de la conservation
-   à vie de `audit_journal`/Envers. Le service Compose `postgres-log-retention` et son exécution quotidienne
-   à 03:00 UTC sont implémentés ; les déployer et vérifier la purge effective. Contrôler les droits d'accès
-   et la protection du volume CSV, puis configurer des alertes de capacité et sur
-   `rh.audit.ecriture.echec`, `rh.audit.integrite.compromise` et `rh.audit.chaine.invalide`.
-2. **Contrôles de connexion et de proxy en production** : vérifier sans afficher les secrets que
-   `JWT_SECRET` est propre à la production et suffisamment aléatoire, que Swagger est désactivé et que
-   le mot de passe administrateur initial a été changé. Tester le verrouillage après 5 échecs pendant
-   15 minutes et la rotation/révocation des sessions. Confirmer que Nginx outer transmet l'adresse IP
-   réelle, que Nginx inner n'accepte ces en-têtes que depuis l'outer, et que les limites de connexion
-   s'appliquent bien par utilisateur/adresse. Après HTTPS, vérifier aussi le cookie `Secure` et les
-   origines CORS publiques. Aucun secret ne doit être partagé.
-3. **Mettre l'accès ERP en HTTPS** (session dédiée) : déterminer l'URL publique et le point de terminaison
+1. **Finaliser la confiance du proxy en production** : identifier le pair réel de Nginx outer vu par
+   Nginx inner, limiter `set_real_ip_from` à ce pair, puis vérifier la résistance aux en-têtes falsifiés
+   et l'application effective des limites par IP/utilisateur. La config actuelle accepte toutes les
+   plages RFC1918 et loopback ; la passerelle `web-net` est `172.21.0.1`. Vérifier aussi que le secret
+   JWT est unique à la production sans jamais l'afficher ; sa valeur actuelle décode à au moins 256 bits.
+2. **Mettre l'accès ERP en HTTPS** (session dédiée) : déterminer l'URL publique et le point de terminaison
    TLS, configurer le certificat et le listener Nginx, puis vérifier la redirection HTTP→HTTPS, le
    sous-chemin `/erp-rh/`, les cookies sécurisés, CORS et le renouvellement du certificat. La config
    Nginx actuelle ne montre que HTTP/80 ; ne pas modifier le serveur avant de confirmer le nom public
    et la méthode d'obtention/renouvellement du certificat.
-4. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
+3. **Protection opérationnelle des journaux applicatifs** : sur l'hôte, contrôler les propriétaires et ACL de
    `./logs/` (lecture réservée aux opérateurs autorisés), l'espace disque disponible, la rotation UTC et la
    purge effective au-delà de 30 jours ; confirmer que le flux console et les archives ne sont accessibles
    qu'aux administrateurs autorisés et que la rétention est compatible avec les obligations applicables.
-5. **Raccorder la supervision métrique en production** (session dédiée) : configurer un collecteur Prometheus privé
+4. **Raccorder la supervision métrique en production** (session dédiée) : configurer un collecteur Prometheus privé
    pour `/actuator/prometheus` et choisir sa rétention. Créer un tableau de bord de disponibilité,
    débit et latence HTTP, d'échecs d'audit et de ses jauges d'intégrité, ainsi que des succès,
    échecs, lignes ignorées et durées de synchronisation des chantiers. Définir les alertes avec un

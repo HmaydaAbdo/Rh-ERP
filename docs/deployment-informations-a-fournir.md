@@ -15,9 +15,14 @@ localhost`. La route `/erp-rh/` transmet vers `127.0.0.1:5002/`, avec les en-tê
 réécriture du cookie `/auth` vers `/erp-rh/auth` et le remplacement du `<base href>`.
 
 Le routage sous-chemin correspond au schéma décrit dans [`deployment.md`](deployment.md). Le propriétaire
-confirme que l'accès actuel est en HTTP et veut étudier HTTPS dans une session séparée. L'extrait ne
-montre pas de listener HTTPS ni de nom d'hôte public. Aucune configuration Nginx du serveur n'a été
-modifiée ; HTTPS reste suivi dans `TODO.md`.
+confirme que l'accès actuel est `http://staport.dyndns.org:650/erp-rh/login` et veut étudier HTTPS dans
+une session séparée. La valeur CORS correspondante est l'origine `http://staport.dyndns.org:650`, sans
+chemin ; le contrôle hôte du 2026-10-17 confirme cette valeur dans le `.env`. Le contrôle confirme
+également un secret JWT Base64 d'au moins 256 bits, Swagger désactivé dans le conteneur et l'absence de
+spécification OpenAPI ou d'interface Swagger aux deux URL publiques. Ces sorties ne permettent pas de
+confirmer que le JWT est unique à la production. `COOKIE_SECURE=false` est actuellement cohérent avec
+HTTP ; il devra être activé après HTTPS. L'extrait ne montre pas de listener HTTPS. Aucune configuration
+Nginx du serveur n'a été modifiée ; HTTPS reste suivi dans `TODO.md`.
 
 ## Décision CD — 2026-10-16
 
