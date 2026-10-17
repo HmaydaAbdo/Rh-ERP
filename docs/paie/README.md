@@ -404,7 +404,7 @@ barre).
 | Bloc | Contenu |
 |---|---|
 | Tuiles | Masse salariale, bulletins, coût moyen par employé, STC / sorties, chantiers — chiffres animés et variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : « Pas de mois précédent comparable », jamais un zéro ni une division par zéro |
-| Évolution | **Une seule mesure à la fois, sur un seul axe** (bouton Masse / Bulletins : les deux n'ont pas la même échelle, ils ne partagent jamais un graphique) pour **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est cerclé. Avec un seul mois, un seul point |
+| Évolution | **Une seule mesure à la fois, sur un seul axe** (bouton Masse / Bulletins : les deux n'ont pas la même échelle, ils ne partagent jamais un graphique) pour **tous** les mois qui ont de la paie dans le périmètre (tout l'historique, sans fenêtre) ; le mois analysé est cerclé et chaque point affiche sa valeur directement. Avec un seul mois, un seul point |
 | Répartition par chantier | Les chantiers dont la mesure choisie est strictement positive, une barre chacun (le graphique grandit avec leur nombre et défile dans sa carte), au choix selon la masse ou le nombre de bulletins ; l'infobulle donne masse, bulletins et STC. **Un clic sur une barre filtre l'analyse sur ce chantier** (il rejoint le filtre chantier de la barre) |
 | Répartition par fonction | Les fonctions dont la mesure choisie est strictement positive, même principe (masse ou bulletins) ; un clic sur une barre filtre sur cette fonction. Aucune fonction positive n'est regroupée sous « Autres » |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte (voir ci-dessous) |
@@ -421,6 +421,8 @@ bornes lisibles qui suivent les données.
 dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles viennent des jetons, lus à l'exécution
 (`paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
 couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
+**Les valeurs de l'évolution sont inscrites au-dessus de chaque point** ; l'infobulle et le tableau de données restent
+disponibles pour une lecture détaillée. Les montants gardent deux décimales et les effectifs sont affichés comme des entiers.
 (`--chart-1`), les bulletins toujours orange (`--chart-2`) ; la paie reste dans une palette limitée aux cinq premiers jetons `--chart-1` à `--chart-5`, dans tous les graphiques. Marques fines (barres de 18 px au bout
 arrondi), grille discrète, infobulle au survol de toute la ligne, aucune légende pour une série unique. **Alternative
 accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois, chantiers, fonctions,

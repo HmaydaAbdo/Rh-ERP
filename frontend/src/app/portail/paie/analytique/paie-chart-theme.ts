@@ -19,7 +19,7 @@ export function couleurMesure(mesure: MesureGraphique): string {
 }
 
 /** Affiche la valeur au-dessus de chaque point d'une évolution, sans attendre le survol ou le focus. */
-export function valeursSurPoints(): Plugin<'line'> {
+export function valeursSurPoints(formater: (valeur: number) => string = (valeur) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(valeur)): Plugin<'line'> {
   return {
     id: 'paie-valeurs-sur-points',
     afterDatasetsDraw(chart) {
@@ -29,13 +29,12 @@ export function valeursSurPoints(): Plugin<'line'> {
       contexte.font = `500 10px ${jeton('--font-sans')}`;
       contexte.textAlign = 'center';
       contexte.textBaseline = 'bottom';
-      const format = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
       chart.data.datasets.forEach((dataset, datasetIndex) => {
         const elements = chart.getDatasetMeta(datasetIndex).data;
         (dataset.data as unknown as Array<number | null>).forEach((valeur, index) => {
           const element = elements[index] as unknown as { x: number; y: number } | undefined;
           if (element && typeof valeur === 'number' && Number.isFinite(valeur)) {
-            contexte.fillText(format.format(valeur), element.x, element.y - 8);
+            contexte.fillText(formater(valeur), element.x, element.y - 8);
           }
         });
       });
