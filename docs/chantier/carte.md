@@ -76,28 +76,58 @@ l'ouverture sur un téléphone, un petit écran et un écran de bureau (testé),
 
 ## Préparer le fond de carte
 
-Le fond (archive du Maroc, polices, icônes) n'est **ni dans Git ni dans l'image Docker** : il pèse plusieurs centaines
-de Mo et se met à jour indépendamment du code. Prérequis : `git` et l'outil
-[`pmtiles`](https://github.com/protomaps/go-pmtiles/releases) dans le `PATH`.
+Le fond (archive du Maroc, polices, icônes) n'est **ni dans Git ni dans l'image Docker** : il pèse environ 590 Mo
+(archive de 569 Mo au build du 2026-10-16, zoom 15) et se met à jour indépendamment du code. Le script a besoin de `git` et
+de l'outil [`pmtiles`](https://github.com/protomaps/go-pmtiles/releases) dans le `PATH`, et du dépôt (il lit
+`emprise-maroc.json`). Le dépôt n'est qu'une boîte à outils : la production n'a besoin que de `docker-compose.yml` et
+de `.env`, plus le dossier du fond.
 
 ```bash
+# Estimer la taille sans rien télécharger (--dry-run), avec les mêmes valeurs que le projet
+pmtiles extract https://build.protomaps.com/20261016.pmtiles essai.pmtiles --bbox=-17.605,20.266,-0.531,36.427 --maxzoom=15 --dry-run
+
 # Développement : servi par ng serve / ng test sous carte/fond/ (configuration development d'angular.json)
 scripts/carte/preparer-fond-maroc.sh frontend/carte-fond
 
-# Production : dans le dossier CARTE_FOND_DIR du serveur (défaut ./carte-fond), monté en lecture seule dans le frontend
-scripts/carte/preparer-fond-maroc.sh ./carte-fond 20261015
+# Production : dans un dossier provisoire, puis copié dans CARTE_FOND_DIR
+scripts/carte/preparer-fond-maroc.sh ./carte-fond 20261016
 ```
 
 Le second argument est la date d'un build Protomaps (liste sur <https://maps.protomaps.com/builds>, défaut : hier).
-Le script extrait le Maroc jusqu'au zoom 15 (`pmtiles extract --bbox`, emprise identique à `CARTE_CONFIG_PAR_DEFAUT`)
-et récupère les polices et icônes de `protomaps/basemaps-assets`. Il ne remplace le fond existant qu'en fin de
-traitement : un échec laisse l'ancien en place. **Mettre à jour la carte** = relancer le script, puis recharger la page ;
-aucun redémarrage n'est nécessaire (fichiers statiques).
+Le script récupère d'abord les polices et les icônes de `protomaps/basemaps-assets` (petits, et vérifiés : un
+fichier manquant arrête tout avant le gros téléchargement), puis extrait le Maroc jusqu'au zoom 15 (`pmtiles extract
+--bbox`, emprise lue dans `emprise-maroc.json`). Il ne remplace le fond existant qu'en fin de traitement : un échec laisse
+l'ancien en place. **Mettre à jour la carte** = relancer le script, puis recharger la page ; aucun redémarrage n'est
+nécessaire (fichiers statiques).
 
-En production, nginx sert ces fichiers sous `/carte/fond/` avec les requêtes partielles (`Range`) qu'exige PMTiles,
-gérées nativement pour un fichier statique. Ces fichiers sont mis en cache une heure au plus (pas de cache « immuable » : leurs noms ne
-changent pas d'une mise à jour à l'autre). Si le dossier est vide, la carte s'affichera sans fond (état d'erreur
-prévu à l'étape 4).
+### Sous Windows (serveur de production)
+
+Le script est un script `sh` : le lancer avec **Git Bash** (inclus dans Git for Windows), après avoir placé
+`pmtiles.exe` dans un dossier, par exemple `C:\outils\pmtiles` :
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" -lc 'export PATH="$PATH:/c/outils/pmtiles"; cd /c/outils/Rh-ERP && scripts/carte/preparer-fond-maroc.sh /c/outils/carte-fond 20261016'
+```
+
+Git Bash réécrit tout argument commençant par `/` en chemin Windows avant de le passer à un programme Windows (`git`,
+`pmtiles`). C'est ce qui avait fait échouer la première version du script (motifs `/fonts/...` de `git sparse-checkout`,
+qui ne trouvaient plus rien) : les motifs du script sont donc écrits sans `/` initial. Les chemins temporaires, eux, sont
+bien convertis, et c'est voulu.
+
+### Brancher le fond sur un `docker-compose.yml` déjà déployé
+
+Une installation dont le `docker-compose.yml` est antérieur à la carte doit ajouter, dans le service `frontend`, le
+montage du dossier du fond (sans lui, les fichiers copiés restent invisibles pour l'application) :
+
+```yaml
+    volumes:
+      - ${CARTE_FOND_DIR:-./carte-fond}:/usr/share/nginx/html/carte/fond:ro
+```
+
+Puis `docker compose up -d frontend`. En production, nginx sert ces fichiers sous `/carte/fond/` avec les requêtes
+partielles (`Range`) qu'exige PMTiles, gérées nativement pour un fichier statique. Ces fichiers sont mis en cache une
+heure au plus, et seulement les réponses réussies (un `404` n'est jamais gardé). Si le dossier est vide, la carte
+s'affichera sans fond (état d'erreur prévu à l'étape 4).
 
 ## Changer de fond
 

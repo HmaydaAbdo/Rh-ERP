@@ -30,13 +30,18 @@ mkdir -p "$CIBLE"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 
-echo "Extraction du Maroc depuis le build Protomaps $BUILD (emprise $EMPRISE, zoom 0 à $ZOOM_MAX)…"
-pmtiles extract "https://build.protomaps.com/$BUILD.pmtiles" "$TEMP/maroc.pmtiles" --bbox="$EMPRISE" --maxzoom="$ZOOM_MAX"
-
+# Polices et icônes d'abord : elles sont petites, et un échec ici ne doit pas faire perdre le gros téléchargement.
+# Chemins sans « / » initial : sous Git Bash (Windows), un argument qui commence par « / » est réécrit en chemin Windows
+# avant d'arriver à git, et la sélection ne trouve alors plus rien.
 echo "Récupération des polices et des icônes…"
 git clone --quiet --depth 1 --filter=blob:none --sparse https://github.com/protomaps/basemaps-assets.git "$TEMP/assets"
-git -C "$TEMP/assets" sparse-checkout set --no-cone \
-  '/fonts/Noto Sans Regular/' '/fonts/Noto Sans Medium/' '/fonts/Noto Sans Italic/' '/fonts/OFL.txt' '/sprites/v4/'
+git -C "$TEMP/assets" sparse-checkout set --cone "fonts/Noto Sans Regular" "fonts/Noto Sans Medium" "fonts/Noto Sans Italic" "sprites/v4"
+for obligatoire in "fonts/Noto Sans Regular/0-255.pbf" "fonts/Noto Sans Medium/0-255.pbf" "fonts/Noto Sans Italic/0-255.pbf" "sprites/v4/light.json" "sprites/v4/dark.json"; do
+  [ -f "$TEMP/assets/$obligatoire" ] || { echo "Fichier manquant après la récupération : $obligatoire" >&2; exit 1; }
+done
+
+echo "Extraction du Maroc depuis le build Protomaps $BUILD (emprise $EMPRISE, zoom 0 à $ZOOM_MAX)…"
+pmtiles extract "https://build.protomaps.com/$BUILD.pmtiles" "$TEMP/maroc.pmtiles" --bbox="$EMPRISE" --maxzoom="$ZOOM_MAX"
 
 # Remplacement en fin de traitement seulement : un échec plus haut laisse le fond précédent intact.
 rm -rf "$CIBLE/fonts" "$CIBLE/sprites"
