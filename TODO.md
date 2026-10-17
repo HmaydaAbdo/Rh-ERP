@@ -41,6 +41,23 @@ Les validations d'exploitation restent regroupées ci-dessous dans **Travail cô
 Ne pas basculer une dépendance majeure ou un volume de base sans validation de compatibilité, tests
 et procédure de retour arrière propres à cette étape.
 
+## Carte des chantiers (OpenLayers, Maroc)
+
+Carte en lecture seule pour la direction, centrée et bornée sur le Maroc, avec ses propres permissions et son
+propre rôle. Livrée par étapes, une PR par étape :
+
+1. **Fait (2026-10-17)** : dépendance `ol` ajoutée et compatibilité vérifiée (Angular 22, TS 6, zoneless, build,
+   audit, licences) — voir [ADR 0006](docs/adr/0006-openlayers-carte-chantiers.md).
+2. Configuration du fond de carte (URL isolée, attribution, emprise du Maroc) et décision sur les tuiles en production
+   (`Referrer-Policy: no-referrer` de `nginx.conf` incompatible avec les conditions d'usage d'OSM).
+3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
+   démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
+   tant qu'ils ne sont pas gérés.
+4. Composant carte « bête » (marqueurs, regroupement, sélection, redimensionnement, destruction) et panneau « À localiser ».
+5. Page lazy-loaded, permission(s) et rôle dédiés (migration du seed, `docs/rbac/`), entrée de menu.
+
+À confirmer : licence Zlib (`pako`, dépendance transitive) hors de la liste `--onlyAllow`.
+
 ## Vues Cartes et Analytique des autres domaines
 
 Seule la Paie a ses trois vues (Tabulaire, Cartes, Analytique) sous une coque commune (`portail/paie/vues/`, sélecteur de vue,
