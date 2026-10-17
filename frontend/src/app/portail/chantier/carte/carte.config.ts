@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
 
+import empriseMaroc from './emprise-maroc.json';
+
 /** Emprise géographique en longitude / latitude (WGS 84) : [ouest, sud, est, nord]. */
 export type Emprise = readonly [ouest: number, sud: number, est: number, nord: number];
 
@@ -20,11 +22,12 @@ export interface FondDeCarte {
 
 export interface CarteConfig {
   readonly fond: FondDeCarte;
-  /** La carte ne peut pas être déplacée hors de cette emprise. */
+  /** Boîte englobante du territoire : la vue initiale s'y ajuste, quelle que soit la taille de l'écran. */
+  readonly territoire: Emprise;
+  /** La carte ne peut pas être déplacée hors de cette emprise (le territoire et sa marge). */
   readonly emprise: Emprise;
-  /** Centre initial en [longitude, latitude]. */
-  readonly centre: readonly [longitude: number, latitude: number];
-  readonly zoomInitial: number;
+  /** Espace laissé autour du territoire à l'ouverture de la carte, en pixels. */
+  readonly margeDeVuePx: number;
   readonly zoomMin: number;
   /** Zoom maximal ; au-delà du zoom maximal de l'archive, MapLibre agrandit les dernières tuiles. */
   readonly zoomMax: number;
@@ -41,13 +44,17 @@ export const FOND_DE_CARTE_PAR_DEFAUT: FondDeCarte = {
     '<a href="https://github.com/protomaps/basemaps" target="_blank" rel="noopener">Protomaps</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
 };
 
-/** Maroc, provinces du Sud comprises ; emprise approximative à confirmer par la direction. */
+/**
+ * Maroc, provinces du Sud comprises (frontière Natural Earth, point de vue du Maroc). Le territoire et l'emprise sont
+ * calculés par `scripts/carte/calculer-emprise.mjs` et vérifiés contre la frontière par `fond-de-carte.spec.ts` :
+ * ne jamais les saisir à la main (voir docs/chantier/carte.md, « Emprise du Maroc »).
+ */
 export const CARTE_CONFIG_PAR_DEFAUT: CarteConfig = {
   fond: FOND_DE_CARTE_PAR_DEFAUT,
-  emprise: [-17.5, 20.5, -0.9, 36.1],
-  centre: [-7.09, 31.79],
-  zoomInitial: 5,
-  zoomMin: 4,
+  territoire: empriseMaroc.territoire as unknown as Emprise,
+  emprise: empriseMaroc.emprise as unknown as Emprise,
+  margeDeVuePx: 24,
+  zoomMin: 3,
   zoomMax: 17,
   langue: 'fr'
 };

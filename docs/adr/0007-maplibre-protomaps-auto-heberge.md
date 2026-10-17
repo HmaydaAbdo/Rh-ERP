@@ -24,6 +24,7 @@ L'ADR 0006 n'avait introduit que la dépendance `ol`, sans aucun code : la rempl
 | Lecture de l'archive | `pmtiles` 4 (protocole `pmtiles://`) | BSD-3-Clause |
 | Styles | `@protomaps/basemaps` 5, variantes claire et sombre selon `ThemeService`, libellés en français | BSD-3-Clause (styles CC0) |
 | Fond | Extrait du Maroc d'un build Protomaps, **servi par notre nginx** | Données OpenStreetMap, ODbL (mention « © OpenStreetMap » obligatoire) |
+| Emprise | Calculée depuis la frontière Natural Earth « point de vue du Maroc » (`scripts/carte/calculer-emprise.mjs`) | Domaine public |
 | Polices et icônes | `protomaps/basemaps-assets`, servies par notre nginx | SIL OFL 1.1 et MIT |
 
 Aucune requête ne part vers un service tiers : le fond fonctionne sur un réseau interne, sans clé et sans limite.
@@ -59,6 +60,10 @@ retardent les montées de version d'Angular).
 - **Arabe** : les polices couvrent l'alphabet arabe, mais MapLibre a besoin de son module de rendu de droite à gauche
   (`@mapbox/mapbox-gl-rtl-text`, BSD-2-Clause) pour former correctement les noms en arabe. À ajouter avec le
   composant carte.
+
+- **Bornage** : `maxBounds` de MapLibre est écarté. Il impose que l'écran reste dans l'emprise et coupe donc le haut et
+  le bas du Maroc sur un écran en paysage ; la carte borne son centre (`transformConstrain`), ce qui garde le territoire
+  entier visible sur tous les formats d'écran.
 
 ## Conséquences
 
