@@ -31,6 +31,8 @@ export function lireFiltres(params: ParamMap): PaieFiltres {
   const ids = (cle: string): number[] =>
     (params.get(cle) ?? '')
       .split(',')
+      .map((valeur) => valeur.trim())
+      .filter((valeur) => valeur !== '')
       .map(Number)
       .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' ? id >= 0 : id > 0));
   return {
