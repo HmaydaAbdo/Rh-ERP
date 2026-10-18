@@ -68,6 +68,13 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
    l'écran, état d'erreur si le fond manque) et panneau « À localiser ».
 5. Page complète (indicateurs, légende, filtres).
 5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant carte sans donnée.
+5 ter. **Fait (2026-10-18)** : carte « niveau Google Maps » — le monde entier en globe (Maroc détaillé jusqu'au bâtiment),
+   zoom 19, bâtiments 3D, relief Mapterhorn auto-hébergé (ombrage et terrain 3D), calques Plan / Satellite / Relief,
+   imagerie Esri relayée par nginx avec la clé ArcGIS côté serveur, vue 3D, boussole, position, plein écran, échelle, fiche
+   d'un lieu ([ADR 0009](docs/adr/0009-carte-satellite-relief-3d.md)). **En production** : créer la clé ArcGIS gratuite et la
+   mettre dans `.env` (`ARCGIS_API_KEY`, pas à pas dans docs/chantier/carte.md) ; relancer
+   `scripts/carte/preparer-fond-carte.sh` (environ 40 Go au zoom 13, prévoir le double pendant la préparation) ; déployer
+   la nouvelle image du frontend. **Reste** : recherche de lieux (reportée) ; renouveler la clé ArcGIS avant son échéance.
    À vérifier en production : rendu du fond à l'écran (clair/sombre, téléphone), noms arabes.
 
 ## Vues Cartes, Tabulaire et Analytique

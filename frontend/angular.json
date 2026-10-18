@@ -88,11 +88,7 @@
                 {
                   "glob": "**/*",
                   "input": "carte-fond",
-                  "output": "carte/fond",
-                  "ignore": [
-                    ".gitignore",
-                    "README.md"
-                  ]
+                  "output": "carte/fond"
                 }
               ]
             }

@@ -1,5 +1,0 @@
-# Fichiers du fond de carte (archive PMTiles, polices, icônes) produits par scripts/carte/preparer-fond-maroc.sh :
-# jamais versionnés (plusieurs centaines de Mo, données OpenStreetMap mises à jour séparément).
-*
-!.gitignore
-!README.md
