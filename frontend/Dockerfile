@@ -7,7 +7,7 @@
 
 # Images de base épinglées par empreinte (reproductibilité, conventions/deployment.md) ; Dependabot propose la mise à jour
 # de la balise et de l'empreinte ensemble.
-FROM node:24.15-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f AS build
+FROM node:26.12-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
