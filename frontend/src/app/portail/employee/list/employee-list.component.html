@@ -1,80 +1,4 @@
-
-<input #fileInput type="file" accept=".xlsx" class="employee-list__hidden-input" (change)="onFileSelected($event)" />
-
-<stp-dialog header="Résultat de l'import" width="640px" [(open)]="showImportResultDialog">
-  @if (importResult(); as result) {
-    <p>
-      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
-      <strong>{{ result.crees }}</strong> créée(s),
-      <strong>{{ result.ignores }}</strong> ignorée(s).
-    </p>
-
-    @if (result.lignesIgnorees.length > 0) {
-      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes d’employés ignorées à l’import">
-        <table class="app-static-table">
-          <caption class="app-lecteur">Détail des lignes d'employés ignorées pendant l'import</caption>
-          <thead>
-            <tr>
-              <th scope="col">Ligne</th>
-              <th scope="col">CIN</th>
-              <th scope="col">Nom &amp; prénom</th>
-              <th scope="col">Raison</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
-              <tr>
-                <td>{{ ligne.numeroLigne }}</td>
-                <td>{{ ligne.cin }}</td>
-                <td>{{ ligne.nomPrenom }}</td>
-                <td>{{ ligne.raison }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  }
-</stp-dialog>
-
-<div class="employee-list app-page">
-  <div class="app-page__header">
-    <h1>Employés</h1>
-    <div class="app-page__actions app-page__actions--liste">
-      @if (canImport()) {
-        <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="importing()" (clicked)="onTriggerImport()"></stp-split-button>
-      }
-      @if (canWrite()) {
-        <button stp-button icon="plus" type="button" routerLink="/employees/new">Nouvel employé</button>
-      }
-    </div>
-  </div>
-
-  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
-    <input class="stp-input" type="text" [formField]="filterForm.nomPrenom" aria-label="Nom &amp; prénom" autocomplete="off" placeholder="Nom &amp; prénom" />
-    <input class="stp-input" type="text" [formField]="filterForm.cin" aria-label="CIN" autocomplete="off" spellcheck="false" placeholder="CIN" />
-
-    <app-lazy-select
-      [formField]="filterForm.fonctionIds"
-      [multiple]="true"
-      [source]="functionReferenceService"
-      optionLabel="libelle"
-      ariaLabel="Fonction" placeholder="Fonction"
-    ></app-lazy-select>
-
-    <app-lazy-select
-      [formField]="filterForm.chantierIds"
-      [multiple]="true"
-      [source]="chantierReferenceService"
-      optionLabel="code"
-      ariaLabel="Chantier" placeholder="Chantier"
-    ></app-lazy-select>
-
-    <stp-select [formField]="filterForm.statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
-
-    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
-  </form>
-
+<div class="employee-list">
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
       @if (!loading()) {
@@ -94,6 +18,7 @@
     [totalRecords]="totalRecords()"
     [loading]="loading()"
     [columns]="columns.visible"
+    [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
     (columnsReorder)="columns.onReorder($event)"
   >

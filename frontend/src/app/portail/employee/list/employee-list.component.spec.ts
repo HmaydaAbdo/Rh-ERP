@@ -1,15 +1,13 @@
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
-import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
-import { saisir } from '../../../shared/testing/formulaire';
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 import { EmployeeListComponent } from './employee-list.component';
@@ -23,40 +21,30 @@ const EMPLOYES: Employee[] = [
 
 const page = (content: Employee[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });
 
-const TOUTES = ['EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'EMPLOYEE_DELETE', 'EMPLOYEE_IMPORT'];
-const REFERENTIEL = { fetchPage: () => of({ items: [], totalRecords: 0 }), fetchById: (id: number) => of({ id, code: 'C' + id, libelle: 'L' + id }) };
+const TOUTES = ['EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'EMPLOYEE_DELETE'];
 
 describe('EmployeeListComponent', () => {
-  let fixture: ComponentFixture<EmployeeListComponent>;
-  let service: { search: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>; importer: ReturnType<typeof vi.fn> };
-  let navigation: ReturnType<typeof vi.spyOn>;
-  const racine = () => fixture.nativeElement as HTMLElement;
+  let harness: RouterTestingHarness;
+  let service: { search: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
+  const racine = () => harness.routeNativeElement as HTMLElement;
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement | null;
   const criteres = () => service.search.mock.lastCall![0];
 
-  async function afficher(permissions: string[] = TOUTES): Promise<void> {
-    service = { search: vi.fn().mockReturnValue(of(page(EMPLOYES))), delete: vi.fn().mockReturnValue(of(undefined)), importer: vi.fn() };
+  async function afficher(url = '/employees', permissions: string[] = TOUTES): Promise<void> {
+    service = { search: vi.fn().mockReturnValue(of(page(EMPLOYES))), delete: vi.fn().mockReturnValue(of(undefined)) };
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: 'employees', component: EmployeeListComponent }]),
         { provide: LOCALE_ID, useValue: 'fr-FR' },
         fournirPermissions(permissions).providers,
-        { provide: EmployeeService, useValue: service },
-        { provide: FunctionReferenceService, useValue: REFERENTIEL },
-        { provide: ChantierReferenceService, useValue: REFERENTIEL }
+        { provide: EmployeeService, useValue: service }
       ]
     });
-    navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    fixture = TestBed.createComponent(EmployeeListComponent);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url, EmployeeListComponent);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
   }
-
-  afterEach(() => {
-    vi.useRealTimers();
-    document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove());
-  });
 
   it('charge la première page, triée par nom, et affiche l’identité, l’affectation, la date d’embauche et le statut', async () => {
     await afficher();
@@ -68,72 +56,47 @@ describe('EmployeeListComponent', () => {
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 employés');
   });
 
+  describe('filtres de l’URL', () => {
+    it('cherche avec les filtres de l’URL dès l’arrivée', async () => {
+      await afficher('/employees?nom=ali&cin=AB1&fonctionIds=1,3&chantierIds=2&statut=INACTIF');
+
+      expect(criteres()).toEqual({ nomPrenom: 'ali', cin: 'AB1', fonctionIds: [1, 3], chantierIds: [2], statut: 'INACTIF' });
+    });
+
+    it('relance la recherche, depuis la première page, quand les filtres de l’URL changent', async () => {
+      await afficher();
+      service.search.mockClear();
+
+      await TestBed.inject(Router).navigateByUrl('/employees?chantierIds=4');
+      await harness.fixture.whenStable();
+
+      expect(service.search).toHaveBeenCalledTimes(1);
+      expect(criteres()).toMatchObject({ chantierIds: [4] });
+      expect(service.search.mock.lastCall![1]).toMatchObject({ page: 0 });
+    });
+  });
+
   describe('permissions', () => {
-    it('propose import, création, modification et suppression à qui a tous les droits', async () => {
+    it('propose modification et suppression à qui a tous les droits', async () => {
       await afficher();
 
-      expect(racine().querySelector('stp-split-button')).not.toBeNull();
-      expect(racine().textContent).toContain('Nouvel employé');
       expect(bouton('Modifier l’employé Ali Alaoui')).not.toBeNull();
       expect(bouton('Supprimer l’employé Ali Alaoui')).not.toBeNull();
     });
 
     it('ne propose que la consultation à qui peut seulement lire', async () => {
-      await afficher(['EMPLOYEE_READ']);
+      await afficher('/employees', ['EMPLOYEE_READ']);
 
-      expect(racine().querySelector('stp-split-button')).toBeNull();
-      expect(racine().textContent).not.toContain('Nouvel employé');
       expect(bouton('Modifier l’employé Ali Alaoui')).toBeNull();
       expect(bouton('Supprimer l’employé Ali Alaoui')).toBeNull();
       expect(bouton('Voir l’employé Ali Alaoui')).not.toBeNull();
     });
   });
 
-  describe('filtres', () => {
-    it('cherche par nom et CIN après un court délai', async () => {
-      await afficher();
-      vi.useFakeTimers();
-      service.search.mockClear();
-
-      saisir(racine(), 'input[aria-label="Nom & prénom"]', 'ali');
-      saisir(racine(), 'input[aria-label="CIN"]', 'AB1');
-      await vi.advanceTimersByTimeAsync(350);
-      TestBed.tick();
-
-      expect(service.search).toHaveBeenCalledTimes(1);
-      expect(criteres()).toMatchObject({ nomPrenom: 'ali', cin: 'AB1', fonctionIds: undefined, chantierIds: undefined, statut: undefined });
-    });
-
-    it('filtre par plusieurs fonctions et plusieurs chantiers, et par statut, sans attendre', async () => {
-      await afficher();
-      const formulaire = fixture.componentInstance['filterForm'];
-      service.search.mockClear();
-
-      formulaire.fonctionIds().value.set([1, 3]);
-      formulaire.chantierIds().value.set([2]);
-      formulaire.statut().value.set('INACTIF');
-      TestBed.tick();
-
-      expect(service.search).toHaveBeenCalledTimes(1);
-      expect(criteres()).toMatchObject({ fonctionIds: [1, 3], chantierIds: [2], statut: 'INACTIF' });
-    });
-
-    it('« Réinitialiser » vide tous les filtres', async () => {
-      await afficher();
-      fixture.componentInstance['filterForm'].fonctionIds().value.set([1]);
-      TestBed.tick();
-      service.search.mockClear();
-
-      (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réinitialiser')) as HTMLButtonElement).click();
-      TestBed.tick();
-
-      expect(criteres()).toMatchObject({ nomPrenom: undefined, cin: undefined, fonctionIds: undefined, chantierIds: undefined, statut: undefined });
-    });
-  });
-
   describe('actions', () => {
     it('ouvre la consultation et la modification', async () => {
       await afficher();
+      const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
       bouton('Voir l’employé Ali Alaoui')!.click();
       bouton('Modifier l’employé Zahra Idrissi')!.click();
@@ -154,22 +117,6 @@ describe('EmployeeListComponent', () => {
       expect(service.delete).toHaveBeenCalledWith(1);
       expect(TestBed.inject(NotificationService).notifications().map((n) => n.summary)).toEqual(['Employé supprimé']);
       expect(service.search).toHaveBeenCalledTimes(1);
-    });
-
-    it('importe le fichier choisi et annonce le bilan', async () => {
-      await afficher();
-      service.importer.mockReturnValue(of({ totalLignes: 5, crees: 4, ignores: 1, lignesIgnorees: [{ numeroLigne: 5, cin: 'AB1', raison: 'CIN déjà présent' }] }));
-      const champ = racine().querySelector('input[type="file"]') as HTMLInputElement;
-      const transfert = new DataTransfer();
-      transfert.items.add(new File(['x'], 'employes.xlsx'));
-      champ.files = transfert.files;
-
-      champ.dispatchEvent(new Event('change'));
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(service.importer).toHaveBeenCalledTimes(1);
-      expect(TestBed.inject(NotificationService).notifications()[0]).toMatchObject({ summary: 'Import terminé', detail: '4 créé(s) sur 5 ligne(s)' });
     });
   });
 });

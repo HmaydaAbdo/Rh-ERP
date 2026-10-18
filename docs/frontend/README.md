@@ -66,7 +66,8 @@ src/app/
     ├── components/
     │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé (sur `ui/select`)
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
-    │   └── column-chooser/  Choix des colonnes visibles d'un tableau
+    │   ├── column-chooser/  Choix des colonnes visibles d'un tableau
+    │   └── vue-switcher/    Onglets de vue d'un module à plusieurs vues (Paie) ; conserve les filtres de l'URL
     ├── text/recherche.ts    Comparaison sans casse ni accents (filtres côté client, filtre des sélecteurs)
     ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
     ├── models/page.model.ts Forme d'une page du serveur : `content` et `page` (size, number, totalElements, totalPages)

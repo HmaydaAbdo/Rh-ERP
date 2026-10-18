@@ -201,10 +201,19 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/employees` | `EmployeeListComponent` | Tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtres en temps réel (nom, CIN, fonctions, chantiers, statut), suppression, téléchargement du modèle, import Excel |
+| `/employees` | `EmployeeListComponent` | **Vue Tabulaire** : tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) filtré par la barre commune, consultation, modification, suppression |
 | `/employees/new` | `EmployeeFormComponent` | Création |
 | `/employees/:id` | `EmployeeDetailComponent` | Consultation |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut) |
+
+Les vues des employés sont les routes filles d'une **coque commune**, `EmployeeVuesComponent` (`vues/`) : le titre, les
+**actions** (`EmployeeActionsComponent`, `actions/` : « Importer », avec le modèle Excel dans son menu, et « Nouvel employé »,
+chacune avec sa permission) et la **barre de filtres** (`EmployeeFiltresComponent`, `filtres/` : nom, CIN, fonctions, chantiers,
+statut, « Réinitialiser »), une seule fois pour toutes les vues. Les écrans de saisie et de consultation n'en font pas partie.
+Les **filtres vivent dans l'URL** (`?nom=ali&cin=AB1&fonctionIds=7&chantierIds=3,4&statut=ACTIF`, voir `filtres/employee-filtres.ts`) :
+la barre les écrit (nom et CIN après un court délai), chaque vue les lit ; lien direct et retour navigateur les conservent, une
+valeur invalide est ignorée. Un import réussi recrée la vue affichée, qui recharge ses données. Les vues Cartes et Analytique,
+et leurs onglets (`VueSwitcherComponent` partagé avec la Paie), arrivent avec les données d'historique (voir `TODO.md`).
 
 Fonction et chantier utilisent le sélecteur générique (`shared/components/lazy-select`, recherche
 serveur + chargement différé — voir `conventions/frontend.md`, section Sélecteurs) : sélection
