@@ -226,6 +226,26 @@ la prennent en charge.
 
 ---
 
+## Base graphe facultative (Neo4j)
+
+Une base graphe n'est introduite que pour un GraphRAG ou une mémoire de connaissances justifiés par
+l'évaluation (voir [`rag.md`](rag.md)), après un ADR. Elle reste une projection dérivée : jamais une
+source de vérité métier, jamais une copie des tables transactionnelles d'un domaine.
+
+* Retenir l'édition Community (open source) sauf besoin documenté ; vérifier la version, sa licence et
+  sa compatibilité avec le client Java retenu, puis verrouiller l'image Docker par empreinte comme les
+  autres images.
+* Le schéma (contraintes d'unicité, index vectoriels et plein texte) est créé par des scripts versionnés
+  appliqués au déploiement, comme une migration ; le démarrage applicatif ne le crée pas implicitement.
+* L'application utilise un compte dédié sans droit d'administration. L'édition Community n'offrant pas
+  de contrôle d'accès fin par rôle, les droits de l'utilisateur sont appliqués dans chaque requête par
+  l'application (voir [`rag.md`](rag.md)).
+* Comme le graphe est reconstructible depuis les sources, sa sauvegarde est facultative ; documenter le
+  temps de reconstruction et la procédure de réindexation complète.
+* Les tests d'intégration utilisent l'image Neo4j de même version (Testcontainers).
+
+---
+
 ## Mots réservés PostgreSQL — liste de vigilance
 
 PostgreSQL accepte la plupart des mots ci-dessous comme identifiants non-réservés en pratique,

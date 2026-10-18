@@ -24,6 +24,39 @@ Une nouvelle tentative ne doit pas répéter un effet métier. Une action sensib
 confirmation humaine selon son risque ; son résultat et, si possible, sa procédure d'annulation sont
 expliqués à l'utilisateur.
 
+## Ce que publie le serveur MCP
+
+Un serveur MCP publie des **capacités**, pas des agents :
+
+| Primitive MCP | Usage |
+|---|---|
+| Outils (`tools`) | Opérations métier des domaines, lecture et écriture séparées. Un agent de domaine peut aussi être publié comme un outil de haut niveau (une sous-tâche en entrée, un résultat typé en sortie), sous les mêmes règles qu'un outil |
+| Ressources (`resources`) | Contenus en lecture seule et adressables : documentation, référentiels publiés, documents d'un corpus autorisé |
+| Prompts (`prompts`) | Modèles de demande réutilisables proposés aux clients, versionnés avec l'application |
+
+La délégation d'une tâche à un agent d'une autre application relève du protocole A2A (voir
+[`agents-ia.md`](agents-ia.md)), pas de MCP.
+
+Organiser le catalogue par domaine : chaque domaine déclare ses outils, ressources et prompts dans son
+propre package, et le serveur les assemble. Les noms sont préfixés par le domaine
+(`paie_rechercher_bulletins`, `chantier_lire_fiche`) pour rester uniques et lisibles dans un catalogue
+commun.
+
+## Implémentation avec Spring AI
+
+* Utiliser le starter de serveur MCP de Spring AI compatible avec la version de Spring Boot du projet,
+  en transport HTTP « Streamable HTTP » pour un serveur réseau (stdio uniquement pour un outil local de
+  développement).
+* Déclarer les outils par annotation (`@Tool` ou les annotations MCP de Spring AI selon la version
+  retenue) sur des adaptateurs du domaine qui délèguent aux services publics, jamais sur les services
+  eux-mêmes ni sur les repositories.
+* Protéger l'endpoint comme une API : authentification OAuth2/jeton porteur selon la spécification
+  d'autorisation MCP et [`security.md`](security.md), puis contrôle de permission dans chaque outil.
+* Publier le catalogue de façon explicite (liste d'outils activés par configuration) ; un outil ajouté
+  au code n'est pas exposé tant qu'il n'est pas déclaré.
+* Les notifications de changement de catalogue et les réponses longues (progression, annulation)
+  suivent la spécification ; une annulation n'annule pas un effet métier déjà confirmé.
+
 ## Identité, permissions et audit
 
 Chaque appel porte l'identité et le contexte de corrélation nécessaires. L'application qui possède

@@ -146,6 +146,15 @@ choisi, et si les outils non pertinents sont évités. Garder des tests distinct
 l'autorisation serveur bloque les appels interdits, quel que soit le résultat de recherche ou le
 choix du modèle.
 
+Pour un système multi-agents, tester de façon déterministe : le choix de l'agent délégué sur des cas
+représentatifs, les plafonds (profondeur, appels, budget) et l'état rendu quand ils sont atteints,
+l'absence d'élévation de droits lors d'une délégation, et la remontée des confirmations à l'utilisateur.
+Pour la mémoire : isolation entre utilisateurs, conservation des consignes, permissions, confirmations
+et provenances après compactage, et suppression effective. Pour la passerelle de modèles : bascule vers
+le repli quand un fournisseur échoue, routage des données selon leur classe, et absence de réponse servie
+depuis le cache à un autre utilisateur. Pour un GraphRAG : un saut dans le graphe n'atteint jamais un
+passage non autorisé, et chaque relation restituée garde sa source.
+
 Pour la BI, valider chaque indicateur de référence contre des données synthétiques attendues : formule,
 unité, période, fuseau horaire, arrondis, filtres, permissions et absence de doublon. Les métriques
 opérationnelles ne remplacent pas ces tests de définition métier.
