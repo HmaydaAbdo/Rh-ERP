@@ -1,6 +1,6 @@
 # RBAC — Catalogue des permissions
 
-> Qui a le droit de faire quoi. Ce fichier donne la vue d'ensemble (les 24 permissions, les rôles de départ,
+> Qui a le droit de faire quoi. Ce fichier donne la vue d'ensemble (les 28 permissions, les rôles de départ,
 > la matrice endpoint ↔ permission). Le détail par domaine, avec les guards et boutons du frontend, est dans
 > un fichier dédié. Le fonctionnement du modèle (rôles, refus individuels, jetons) est dans
 > [../auth/README.md](../auth/README.md), sa conception dans `conventions/security.md`.
@@ -15,6 +15,7 @@
 | Auth (comptes, rôles) | [auth.md](auth.md) |
 | Paramètres | [parametre.md](parametre.md) |
 | Audit (journal, historique) | [audit.md](audit.md) |
+| Carte des chantiers | [carte.md](carte.md) |
 
 ---
 
@@ -37,7 +38,7 @@
 
 ---
 
-## Catalogue des 26 permissions
+## Catalogue des 28 permissions
 
 | Domaine | Permission | Action autorisée | Migration |
 |---|---|---|---|
@@ -59,6 +60,7 @@
 | | `PAIE_PURGE` | Supprimer **en groupe** : un mois, un chantier ou une équipe d'un coup (séparation des pouvoirs : elle n'est pas contenue dans `PAIE_DELETE`) | V15 |
 | | `PAIE_IMPORT` | Importer depuis Excel (et télécharger le modèle) | V4 |
 | | `PAIE_EXPORT` | Exporter en Excel et générer le rapport PDF | V4 |
+| | `PAIE_RESTORE` | Restaurer un groupe de bulletins depuis le journal d'audit | V17 |
 | Équipe | `EQUIPE_READ` | Consulter | V9 |
 | | `EQUIPE_WRITE` | Créer, modifier | V9 |
 | | `EQUIPE_DELETE` | Supprimer | V9 |
@@ -66,6 +68,7 @@
 | | `ROLE_MANAGE` | Gérer les rôles et consulter le catalogue des permissions | V4 |
 | Paramètres | `PARAMETRE_READ` | Consulter les valeurs et métadonnées des paramètres de fonctionnement | V16 |
 | | `PARAMETRE_WRITE` | Modifier les valeurs des paramètres de fonctionnement | V16 |
+| Carte | `CARTE_READ` | Consulter la carte des chantiers (distincte de `CHANTIER_READ`) | V28 |
 | Audit | `AUDIT_READ` | Consulter le journal d'audit et l'historique des enregistrements (données personnelles et montants : réservée à l'administrateur à l'installation) | V12 |
 
 ### Dépendances entre permissions
@@ -88,8 +91,9 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 
 | Rôle | Permissions |
 |---|---|
-| `SYSTEM_ADMIN` | Les 26 |
-| `PAIE_MANAGER` | Les 21 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE` et `AUDIT_READ`) |
+| `SYSTEM_ADMIN` | Les 28 |
+| `PAIE_MANAGER` | Les 21 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `PAIE_RESTORE` et `PARAMETRE_*`) |
+| `DIRECTION` (V28) | `CARTE_READ` seulement ; le Président et les directeurs |
 
 D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans toucher au code.
 

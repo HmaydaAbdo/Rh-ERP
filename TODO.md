@@ -49,17 +49,20 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 1. **Fait (2026-10-17)** : moteur MapLibre GL JS, `pmtiles` et styles Protomaps ; compatibilité vérifiée (Angular 22,
    TS 6, zoneless, WebGL en test, build, audit, licences). OpenLayers retiré (ADR 0006 remplacé).
-2. **Fait (2026-10-17)** : configuration du fond auto-hébergé (`CARTE_CONFIG`), thème clair/sombre, emprise du Maroc ;
-   script `scripts/carte/preparer-fond-maroc.sh`, montage `CARTE_FOND_DIR`, type MIME `.mjs` dans nginx.
-   Emprise calculée depuis la frontière Natural Earth (point de vue du Maroc), pas saisie. **À faire une fois** : lancer
-   le script de préparation du fond sur une machine ayant accès à Internet (dév. et serveur), puis vérifier le rendu à
-   l'écran ; faire confirmer le périmètre (provinces du Sud comprises) par la direction.
+2. **Fait (2026-10-17, validé en production)** : configuration du fond auto-hébergé (`CARTE_CONFIG`), thème clair/sombre,
+   emprise du Maroc calculée depuis la frontière Natural Earth ; script `scripts/carte/preparer-fond-maroc.sh`, montage
+   `CARTE_FOND_DIR`, type MIME `.mjs` dans nginx. Fond du 2026-10-16 (545 Mo) servi en production, requêtes `Range`
+   validées à travers les deux nginx. **À faire** : voir le rendu à l'écran avec la page ; faire confirmer le périmètre
+   (provinces du Sud comprises) par la direction.
+2 bis. **Fait (2026-10-18)** : permission `CARTE_READ` et rôle `DIRECTION` (migration V28) ; `PAIE_MANAGER` ne l'a pas —
+   voir [docs/rbac/carte.md](docs/rbac/carte.md).
 3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
    démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
    tant qu'ils ne sont pas gérés.
 4. Composant carte « bête » (marqueurs, regroupement, sélection, redimensionnement, destruction, rendu de l'arabe via
    `@mapbox/mapbox-gl-rtl-text`, état d'erreur si le fond manque) et panneau « À localiser ».
-5. Page lazy-loaded, permission(s) et rôle dédiés (migration du seed, `docs/rbac/`), entrée de menu.
+5. Page lazy-loaded protégée par `CARTE_READ`, entrée de menu. Une carte minimale (sans données) vient avant les étapes 3 et 4 pour
+   valider le rendu réel.
 
 ## Vues Cartes et Analytique des autres domaines
 
