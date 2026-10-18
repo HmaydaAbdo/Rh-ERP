@@ -165,6 +165,9 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V23` | Unicité du libellé de fonction sans tenir compte de la casse |
 | `V24` | Unicité du code de chantier sans tenir compte de la casse |
 | `V25` | Unicité du code et du libellé d'équipe après trim et sans tenir compte de la casse |
+| `V26` | `paie.nombre_jours_travailles` en `NUMERIC(5,2)` (jours travaillés fractionnaires), table `paie_aud` comprise |
+| `V27` | Unicité des identifiants textuels (CIN, libellé de fonction, code de chantier, nom d'utilisateur, e-mail, nom de rôle) après trim et sans casse, et refus des espaces extérieurs en base ; les prérequis sont contrôlés avant de remplacer les index |
+| `V28` | Permission `CARTE_READ` et rôle `DIRECTION`. `CARTE_READ` est attribuée à `SYSTEM_ADMIN` et à `DIRECTION`, pas à `PAIE_MANAGER` ; un rôle `DIRECTION` déjà existant est conservé. Écrit sa révision d'audit (une révision, deux entrées de journal) |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
@@ -177,6 +180,6 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
 - Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
-  toute la chaîne V1 → V25 est rejouée et validée contre les entités à chaque exécution.
+  toute la chaîne V1 → V28 est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.
