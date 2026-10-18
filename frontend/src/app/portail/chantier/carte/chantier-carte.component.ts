@@ -75,6 +75,8 @@ export class ChantierCarteComponent {
       container: this.conteneur().nativeElement,
       style: creerStyle(this.config, this.themeAffiche, base),
       attributionControl: { compact: true },
+      // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.
+      fadeDuration: 0,
       ...optionsDeVue(this.config)
     });
     carte.addControl(new NavigationControl({ showCompass: false }), 'top-right');

@@ -29,7 +29,7 @@ export interface CarteConfig {
   /** Espace laissé autour du territoire à l'ouverture de la carte, en pixels. */
   readonly margeDeVuePx: number;
   readonly zoomMin: number;
-  /** Zoom maximal ; au-delà du zoom maximal de l'archive, MapLibre agrandit les dernières tuiles. */
+  /** Zoom maximal ; il ne dépasse pas le zoom maximal de l'archive pour éviter un agrandissement inutile. */
   readonly zoomMax: number;
   /** Langue des libellés ; à défaut de nom dans cette langue, le nom local est affiché. */
   readonly langue: string;
@@ -55,7 +55,7 @@ export const CARTE_CONFIG_PAR_DEFAUT: CarteConfig = {
   emprise: empriseMaroc.emprise as unknown as Emprise,
   margeDeVuePx: 24,
   zoomMin: 3,
-  zoomMax: 17,
+  zoomMax: 15,
   langue: 'fr'
 };
 

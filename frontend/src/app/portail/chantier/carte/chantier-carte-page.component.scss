@@ -1,14 +1,13 @@
 @use 'breakpoints' as bp;
 
-// La page occupe la hauteur de l'écran moins l'espace autour du contenu (`.app-content`) : la carte est le contenu.
+// La carte est la surface de travail de la page : elle déborde du padding de `.app-content`
+// pour utiliser toute la zone disponible, sans titre ni marge décorative.
 .carte-page {
   display: flex;
   flex-direction: column;
-  height: max(26rem, calc(100svh - 2 * var(--space-xl)));
-}
-
-.carte-page .app-page__header {
-  flex: none;
+  width: calc(100% + 2 * var(--space-xl));
+  height: max(26rem, 100svh);
+  margin: calc(-1 * var(--space-xl));
 }
 
 .carte-page__carte {
@@ -19,12 +18,16 @@
 // Navigation compacte : la barre du haut est fixe et le contenu commence sous elle.
 @include bp.compact-nav {
   .carte-page {
-    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top) - var(--space-md) - var(--space-xl)));
+    width: calc(100% + 2 * var(--space-xl));
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
+    margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-xl)) calc(-1 * var(--space-md));
   }
 }
 
 @include bp.phone {
   .carte-page {
-    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top) - 2 * var(--space-md)));
+    width: calc(100% + 2 * var(--space-md));
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
+    margin: calc(-1 * var(--space-md));
   }
 }

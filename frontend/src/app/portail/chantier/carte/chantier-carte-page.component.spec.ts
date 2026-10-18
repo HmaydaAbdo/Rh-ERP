@@ -4,7 +4,7 @@ import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT } from './carte.config';
 import { ChantierCartePageComponent } from './chantier-carte-page.component';
 
 describe('ChantierCartePageComponent', () => {
-  it('affiche le titre de la page et la carte', async () => {
+  it('affiche la carte sans titre de page', async () => {
     TestBed.configureTestingModule({
       providers: [
         {
@@ -17,7 +17,7 @@ describe('ChantierCartePageComponent', () => {
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
 
-    expect(element.querySelector('h1')?.textContent).toBe('Carte des chantiers');
+    expect(element.querySelector('h1')).toBeNull();
     expect(element.querySelector('app-chantier-carte [role="region"]')).not.toBeNull();
   });
 });

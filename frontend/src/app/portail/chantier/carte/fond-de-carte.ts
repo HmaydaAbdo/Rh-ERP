@@ -39,6 +39,15 @@ export function preparerMapLibre(base: string): void {
 /** Style du fond de carte pour le thème de l'application ; `base` est l'adresse de l'application (`document.baseURI`). */
 export function creerStyle(config: CarteConfig, theme: Theme, base: string): StyleSpecification {
   const variante = theme === 'dark' ? 'dark' : 'light';
+  const flavor = namedFlavor(variante);
+  const couches = layers(SOURCE_DU_FOND, flavor, { lang: config.langue });
+  // Le fond PMTiles est volontairement limité au Maroc. En dehors de cette emprise,
+  // MapLibre afficherait la couleur grise de Protomaps ; reprendre la couleur de l'eau
+  // évite une rupture visuelle sur les côtés de la carte.
+  const coucheFond = couches.find((couche) => couche.id === 'background');
+  if (coucheFond?.type === 'background') {
+    coucheFond.paint = { ...coucheFond.paint, 'background-color': flavor.water };
+  }
   return {
     version: 8,
     glyphs: urlAbsolue(config.fond.glyphes, base),
@@ -50,7 +59,7 @@ export function creerStyle(config: CarteConfig, theme: Theme, base: string): Sty
         attribution: config.fond.attribution
       }
     },
-    layers: layers(SOURCE_DU_FOND, namedFlavor(variante), { lang: config.langue })
+    layers: couches
   };
 }
 
