@@ -50,16 +50,16 @@ retardent les montées de version d'Angular).
 
 - **Worker** : MapLibre 6 cherche `maplibre-gl-worker.mjs` à côté de son propre chunk, ce que le build Angular ne
   produit pas. `angular.json` copie donc le fichier sous `carte/`, et `preparerMapLibre()` le déclare avec
-  `setWorkerUrl`, avec `?v=<version de MapLibre>` pour qu'un ancien worker ne soit jamais servi depuis le cache.
+  `setWorkerUrl`. La feuille de style `maplibre-gl.css` est copiée de même. Ces deux fichiers gardent le même nom d'une version à l'autre : `nginx.conf` les sert avec `Cache-Control: no-cache` (le navigateur revalide à chaque fois), pour qu'un ancien worker ne soit jamais utilisé avec un nouveau MapLibre. Une adresse `?v=` est écartée : le serveur de développement la refuse (404).
 - **Type MIME** : `mime.types` de nginx (1.31 compris) ne connaît pas `.mjs` ; `nginx.conf` le déclare en
   `application/javascript`, sans quoi le navigateur refuse d'exécuter le worker.
 - **Cache** : `/carte/fond/` est exclu du cache immuable des fichiers hashés (`location ^~`, une heure au plus) :
   une mise à jour du fond garde les mêmes noms de fichiers.
 - **Tests** : le pré-bundler de Vitest résout `fflate` (dépendance de `pmtiles`) avec la condition `node` ;
   `vitest-base.config.mts` impose la version navigateur. Le build de production n'est pas concerné.
-- **Arabe** : les polices couvrent l'alphabet arabe, mais MapLibre a besoin de son module de rendu de droite à gauche
-  (`@mapbox/mapbox-gl-rtl-text`, BSD-2-Clause) pour former correctement les noms en arabe. À ajouter avec le
-  composant carte.
+- **Arabe** : les polices couvrent l'alphabet arabe. Aucun module supplémentaire n'est nécessaire : MapLibre 6 sait
+  former et orienter le texte de droite à gauche (son plugin `rtl-text` est déprécié, voir l'aide de
+  `setRTLTextPlugin`). Le rendu des noms arabes reste à voir à l'écran, comme le reste du fond.
 
 - **Bornage** : `maxBounds` de MapLibre est écarté. Il impose que l'écran reste dans l'emprise et coupe donc le haut et
   le bas du Maroc sur un écran en paysage ; la carte borne son centre (`transformConstrain`), ce qui garde le territoire

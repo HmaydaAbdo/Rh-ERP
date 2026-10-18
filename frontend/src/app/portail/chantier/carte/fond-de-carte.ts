@@ -1,5 +1,5 @@
 import { layers, namedFlavor } from '@protomaps/basemaps';
-import { addProtocol, getVersion, LngLat, setWorkerUrl, type LngLatBoundsLike, type MapOptions, type StyleSpecification, type TransformConstrainFunction } from 'maplibre-gl';
+import { addProtocol, LngLat, setWorkerUrl, type LngLatBoundsLike, type MapOptions, type StyleSpecification, type TransformConstrainFunction } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 
 import type { Theme } from '../../../core/theme/theme.service';
@@ -11,6 +11,10 @@ export const SOURCE_DU_FOND = 'protomaps';
 /** Worker de MapLibre, copié dans le build par `angular.json` (MapLibre le cherche sinon à côté de son propre chunk). */
 const WORKER_MAPLIBRE = 'carte/maplibre-gl-worker.mjs';
 
+/** Feuille de style de MapLibre (contrôles, mention légale), copiée dans le build par `angular.json` : trop lourde (83 Ko) pour un style de composant.
+ * Worker et feuille n'ont pas de version dans leur adresse (le serveur de développement la refuse) : nginx les fait revalider à chaque ouverture. */
+const FEUILLE_MAPLIBRE = 'carte/maplibre-gl.css';
+
 let mapLibrePrete = false;
 
 /** Adresse absolue d'un chemin de la configuration, en gardant les marqueurs `{…}` des modèles d'URL. */
@@ -18,16 +22,17 @@ export function urlAbsolue(chemin: string, base: string): string {
   return new URL(chemin, base).href.replaceAll('%7B', '{').replaceAll('%7D', '}');
 }
 
-/** Déclare le worker et le protocole `pmtiles://` ; à appeler avant de créer une carte, sans effet les fois suivantes. */
+/** Déclare le worker, le protocole `pmtiles://` et la feuille de style ; à appeler avant de créer une carte, sans effet les fois suivantes. */
 export function preparerMapLibre(base: string): void {
   if (mapLibrePrete) {
     return;
   }
-  // `?v=` : le nom du fichier ne change pas d'une version à l'autre ; le cache ne doit pas servir un ancien worker.
-  const worker = new URL(urlAbsolue(WORKER_MAPLIBRE, base));
-  worker.searchParams.set('v', getVersion());
-  setWorkerUrl(worker.href);
+  setWorkerUrl(urlAbsolue(WORKER_MAPLIBRE, base));
   addProtocol('pmtiles', new Protocol().tile);
+  const feuille = document.createElement('link');
+  feuille.rel = 'stylesheet';
+  feuille.href = urlAbsolue(FEUILLE_MAPLIBRE, base);
+  document.head.append(feuille);
   mapLibrePrete = true;
 }
 

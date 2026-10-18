@@ -51,6 +51,33 @@ test.describe('Permissions', () => {
     await expect(menu.getByRole('link', { name: 'Rôles' })).toHaveCount(0);
   });
 
+  test('ouvre la carte à qui a CARTE_READ et la propose dans le menu', async ({ page }) => {
+    await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
+    await page.goto('/');
+
+    await expect(page).toHaveURL(/\/carte$/);
+    await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Carte du Maroc' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Carte' })).toBeVisible();
+  });
+
+  test('refuse la carte à qui n’a pas CARTE_READ', async ({ page }) => {
+    await mockApi(page, { username: 'paie', permissions: ['PAIE_READ'] });
+    await page.goto('/carte');
+
+    await expect(page).toHaveURL(/\/acces-refuse$/);
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Carte' })).toHaveCount(0);
+  });
+
+  test('la carte est accessible (axe)', async ({ page }) => {
+    await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
+    await page.goto('/carte');
+    await expect(page.getByRole('region', { name: 'Carte du Maroc' })).toBeVisible();
+
+    const resultats = await new AxeBuilder({ page }).analyze();
+    expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+  });
+
   test('la liste des fonctions est accessible (axe)', async ({ page }) => {
     await mockApi(page, { username: 'gestionnaire', permissions: ['FUNCTION_READ', 'FUNCTION_WRITE', 'FUNCTION_DELETE', 'FUNCTION_IMPORT'] }, { 'POST /functions/search': () => FONCTIONS });
     await page.goto('/functions');

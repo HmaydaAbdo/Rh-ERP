@@ -35,6 +35,12 @@ describe('homeGuard', () => {
     expect(url(resultat)).toBe('/employees');
   });
 
+  it("accueille le Président et les directeurs (rôle DIRECTION : CARTE_READ seule) sur la carte", () => {
+    configurer(['CARTE_READ']);
+    const resultat = TestBed.runInInjectionContext(() => homeGuard(null as never, null as never));
+    expect(url(resultat)).toBe('/carte');
+  });
+
   it('renvoie vers « accès refusé » sans aucune permission, jamais vers un écran protégé (pas de boucle)', () => {
     configurer([]);
     const resultat = TestBed.runInInjectionContext(() => homeGuard(null as never, null as never));

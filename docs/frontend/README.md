@@ -166,6 +166,7 @@ de rôle).
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
 | `/chantiers`, `/chantiers/:id` | Chantiers | `CHANTIER_READ` |
 | `/chantiers/new`, `/chantiers/:id/edit` | | `CHANTIER_WRITE` |
+| `/carte` | Carte des chantiers (le Maroc, sans donnée de chantier pour l'instant — voir [../chantier/carte.md](../chantier/carte.md)) | `CARTE_READ` |
 | `/functions`, `/functions/:id` | Fonctions | `FUNCTION_READ` |
 | `/functions/new`, `/functions/:id/edit` | | `FUNCTION_WRITE` |
 | `/equipes`, `/equipes/:id` | Équipes | `EQUIPE_READ` |

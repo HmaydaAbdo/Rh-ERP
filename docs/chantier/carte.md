@@ -10,11 +10,21 @@
 | 1. Moteur de carte (`maplibre-gl`, `pmtiles`, `@protomaps/basemaps`) | Fait |
 | 2. Configuration du fond auto-hébergé, du thème et de l'emprise | Fait |
 | Permission `CARTE_READ` et rôle `DIRECTION` | Fait — voir [../rbac/carte.md](../rbac/carte.md) |
+| Page minimale `/carte` : fond du Maroc, thème, zoom, état d'erreur, menu « Carte » | Fait |
 | 3. Contrat de données `ChantierCarte` et source | À faire |
 | 4. Composant carte, marqueurs, panneau « À localiser » | À faire |
-| 5. Page, permissions et rôle dédiés, menu | À faire |
+| 5. Page complète (indicateurs, légende, filtres) | À faire |
 
-Aucun écran ni aucune route n'existent encore. La permission `CARTE_READ` existe (migration V28), sans endpoint ni écran qui l'utilise.
+La page `/carte` existe : elle affiche le fond du Maroc et rien d'autre (aucune donnée de chantier). Elle est protégée par `CARTE_READ` (migration V28, voir [../rbac/carte.md](../rbac/carte.md)) et proposée dans le menu sous « Carte ».
+
+## Composants
+
+| Composant | Rôle |
+|---|---|
+| `ChantierCartePageComponent` (`/carte`) | Page : titre et carte à la hauteur de l'écran |
+| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre, boutons de zoom, mention légale, redessine au changement de thème, suit la taille de son conteneur, détruit la carte. Si le fond est introuvable, elle affiche le message « Le fond de carte n'est pas disponible » (la carte reste vide). Région nommée, aide au clavier (flèches, + et −) |
+
+Les couleurs des contrôles MapLibre viennent des jetons du design system (`--map-icon-filter` pour les icônes en thème sombre).
 
 ## Configuration
 
@@ -42,7 +52,7 @@ sous-chemin de nginx outer. `fond-de-carte.ts` transforme la configuration pour 
 | `optionsDeVue(config)` | Ajustement sur le territoire, zooms et contrainte de centre de la carte |
 | `creerContrainte(config)` | Maintient le centre dans l'emprise et le zoom dans ses bornes (voir « Emprise du Maroc ») |
 
-Le futur composant carte n'utilisera que ces fonctions : il ne connaît ni Protomaps ni l'emplacement des fichiers.
+Le composant carte n'utilisera que ces fonctions : il ne connaît ni Protomaps ni l'emplacement des fichiers.
 
 ## Emprise du Maroc
 
@@ -128,7 +138,7 @@ montage du dossier du fond (sans lui, les fichiers copiés restent invisibles po
 Puis `docker compose up -d frontend`. En production, nginx sert ces fichiers sous `/carte/fond/` avec les requêtes
 partielles (`Range`) qu'exige PMTiles, gérées nativement pour un fichier statique. Ces fichiers sont mis en cache une
 heure au plus, et seulement les réponses réussies (un `404` n'est jamais gardé). Si le dossier est vide, la carte
-s'affichera sans fond (état d'erreur prévu à l'étape 4).
+s'affichera sans fond, avec le message d'erreur ci-dessus.
 
 ## Changer de fond
 
@@ -153,8 +163,8 @@ par l'application, vérifier ses conditions d'usage et sa mention légale.
 - **Périmètre à confirmer par la direction** : l'emprise suit le point de vue du Maroc de Natural Earth (provinces du Sud
   comprises). Un autre périmètre = une autre version du fichier source et le même script.
 - La frontière est à l'échelle 1:10 000 000 : elle sert à calculer l'emprise, pas à localiser un chantier à quelques mètres.
-- Le module de rendu de l'arabe de MapLibre (`@mapbox/mapbox-gl-rtl-text`) sera ajouté avec le composant carte :
-  sans lui, les noms en arabe s'afficheraient mal formés.
+- Le rendu des noms en arabe n'a pas été vu à l'écran. MapLibre 6 gère le texte de droite à gauche sans module
+  supplémentaire (son plugin `rtl-text` est déprécié) ; à confirmer sur la carte déployée.
 - Le fond n'a pas encore été vu à l'écran : l'environnement de développement de ces étapes n'a pas accès aux builds
   Protomaps. Les tests (`fond-de-carte.spec.ts`) vérifient le style, les adresses, le worker et le bornage sur une
   vraie carte WebGL, sans réseau. Le script a été testé avec un `pmtiles` simulé ; l'extraction réelle reste à lancer.
