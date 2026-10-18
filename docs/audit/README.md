@@ -103,7 +103,7 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Chantier | `CHANTIER_CREATION`, `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`, `CHANTIER_SYNCHRONISATION` | `OPERATION` | Synchronisation : reçus, déjà présents, ignorés ; créés |
 | Équipe | `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` | `OPERATION` | — |
 | Comptes | `UTILISATEUR_CREATION` (y compris l'administrateur du démarrage), `UTILISATEUR_MODIFICATION`, `UTILISATEUR_PERMISSIONS_REFUSEES` | `OPERATION` | — |
-| Rôles et permissions | `ROLE_CREATION`, `ROLE_MODIFICATION`, `ROLE_SUPPRESSION` ; `PERMISSION_CREATION` (écrite par une migration qui ajoute une permission, origine `MIGRATION` — première : `V15`) | `OPERATION` | Migration : la permission et le nombre de rôles qui la reçoivent |
+| Rôles et permissions | `ROLE_CREATION`, `ROLE_MODIFICATION`, `ROLE_SUPPRESSION` ; `PERMISSION_CREATION` (écrite par une migration qui ajoute une permission, origine `MIGRATION` — première : `V15`) ; `ROLE_CREATION` écrite aussi par une migration quand elle crée un rôle (`V28`, rôle `DIRECTION`) | `OPERATION` | Migration : la permission et le nombre de rôles qui la reçoivent |
 | Audit | `AUDIT_ETAT_INITIAL` | `OPERATION` | Nombre de lignes enregistrées par table |
 | Paramètres | `PARAMETRE_MODIFICATION` | `OPERATION` | — |
 
