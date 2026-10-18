@@ -1,0 +1,42 @@
+# RBAC — Carte des chantiers
+
+> Trace exhaustive des accès de la carte des chantiers. Toute évolution des autorisations de ce module
+> met à jour ce fichier dans le même changement (conventions/security.md).
+
+## Permission
+
+| Permission | Action autorisée | Migration |
+|---|---|---|
+| `CARTE_READ` | Consulter la carte des chantiers | V28 |
+
+La carte a sa propre permission, distincte de `CHANTIER_READ` (qui donne accès au référentiel des chantiers) : un rôle
+peut voir la carte sans pouvoir consulter ni modifier le référentiel, et inversement.
+
+## Endpoints backend
+
+Aucun pour l'instant : la carte n'affiche pas encore de donnée de chantier. Quand une source de données sera branchée
+(voir [../chantier/carte.md](../chantier/carte.md)), chaque endpoint portera un `@PreAuthorize` et sera ajouté à la
+matrice de [README.md](README.md) et à `EndpointSecurityTest`.
+
+## Frontend
+
+| Élément | Condition |
+|---|---|
+| Entrée de menu « Carte » | `CARTE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) — à venir avec la page |
+| Route de la carte | `authGuard` + `permissionGuard` (`CARTE_READ`) — à venir avec la page |
+
+## Rôles disposant de cette permission (seed initial)
+
+Décision (HMAYDA, 2026-10-18) :
+
+| Rôle | `CARTE_READ` |
+|---|---|
+| `SYSTEM_ADMIN` | Oui (il porte toutes les permissions) |
+| `DIRECTION` | Oui — rôle créé par `V28` pour le Président et les directeurs ; **ne porte que cette permission** à l'installation |
+| `PAIE_MANAGER` | **Non** |
+
+Les autres attributions se font ensuite depuis l'écran **Rôles** (`/admin/roles`). Par exemple, pour que la direction puisse
+ouvrir la fiche d'un chantier depuis la carte, lui ajouter `CHANTIER_READ`.
+
+Si un rôle nommé `DIRECTION` existe déjà au moment de la migration (créé depuis l'écran Rôles), il est conservé tel quel
+et reçoit seulement `CARTE_READ` : la migration ne doit jamais empêcher le démarrage de l'application.
