@@ -186,9 +186,12 @@ services:
         condition: service_healthy
     networks:
       - web-net
+    environment:
+      # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
+      ARCGIS_API_KEY: ${ARCGIS_API_KEY:?ARCGIS_API_KEY est obligatoire (clé ArcGIS gratuite, voir docs/chantier/carte.md)}
     volumes:
-      # Fond de carte auto-hébergé (archive PMTiles du Maroc, polices, icônes), produit par
-      # scripts/carte/preparer-fond-maroc.sh ; lecture seule, hors de l'image (plusieurs centaines de Mo).
+      # Fond de carte auto-hébergé (monde, Maroc détaillé, relief, polices, icônes), produit par
+      # scripts/carte/preparer-fond-carte.sh ; lecture seule, hors de l'image (plusieurs dizaines de Go).
       - ${CARTE_FOND_DIR:-./carte-fond}:/usr/share/nginx/html/carte/fond:ro
     ports:
       # Lié à 127.0.0.1 : seul nginx outer (sur ce même serveur, géré séparément) s'y connecte ;

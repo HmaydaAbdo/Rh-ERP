@@ -91,3 +91,7 @@ backups/
 
 # --- Fond de carte auto-hébergé (carte des chantiers) : données téléchargées, jamais versionnées ---
 /carte-fond/
+# Lien de développement vers /carte-fond/, servi par ng serve sous carte/fond/ (voir docs/chantier/carte.md).
+/frontend/carte-fond
+# Dossier de travail de scripts/carte/preparer-fond-carte.sh (gardé après un échec pour reprendre, supprimé en cas de succès).
+carte-fond.preparation/

@@ -56,8 +56,8 @@ test.describe('Permissions', () => {
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/carte$/);
-    await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Carte du Maroc' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Carte' })).toBeVisible();
   });
 
@@ -72,7 +72,7 @@ test.describe('Permissions', () => {
   test('la carte est accessible (axe)', async ({ page }) => {
     await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
     await page.goto('/carte');
-    await expect(page.getByRole('region', { name: 'Carte du Maroc' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
 
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);

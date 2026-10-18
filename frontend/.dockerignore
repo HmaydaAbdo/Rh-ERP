@@ -1,0 +1,7 @@
+# Contexte de construction de l'image : le fond de carte de développement (plusieurs Go, servi en production depuis
+# CARTE_FOND_DIR, jamais depuis l'image) et les dépendances ou caches locaux, réinstallés par `npm ci`.
+carte-fond/
+carte-fond.preparation/
+node_modules/
+.angular/
+dist/
