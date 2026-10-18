@@ -1,7 +1,7 @@
 import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
 
-import { authGuard, homeGuard } from './core/auth/guards/auth.guard';
+import { authGuard, homeGuard, permissionGuard } from './core/auth/guards/auth.guard';
 
 export const routes: Routes = [
   // Catalogue des composants partagés : développement seulement, jamais dans le build de production.
@@ -47,6 +47,15 @@ export const routes: Routes = [
     title: 'Chantiers',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/chantier/chantier.routes').then((m) => m.CHANTIER_ROUTES)
+  },
+  {
+    // Droit propre à la carte (CARTE_READ), distinct de CHANTIER_READ ; route de premier niveau pour que le menu « Chantiers »
+    // ne soit pas surligné en même temps que « Carte ».
+    path: 'carte',
+    title: 'Carte des chantiers',
+    canActivate: [permissionGuard],
+    data: { permission: 'CARTE_READ' },
+    loadComponent: () => import('./portail/chantier/carte/chantier-carte-page.component').then((m) => m.ChantierCartePageComponent)
   },
   {
     path: 'functions',

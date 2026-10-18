@@ -1,0 +1,50 @@
+// La carte remplit l'espace que lui laisse la page ; le conteneur MapLibre est positionné dedans (pas de hauteur en pourcentage).
+app-chantier-carte {
+  display: block;
+  position: relative;
+  min-height: 20rem;
+}
+
+.chantier-carte__carte {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+
+.chantier-carte__erreur {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  right: calc(var(--space-md) + 3rem); // laisse libre le contrôle de zoom
+  z-index: 2;
+  box-shadow: var(--shadow-md);
+}
+
+// ---- Contrôles et mention légale de MapLibre, aux couleurs du thème ----
+.chantier-carte .maplibregl-ctrl-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.chantier-carte .maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-border);
+}
+
+.chantier-carte .maplibregl-ctrl-icon {
+  filter: var(--map-icon-filter);
+}
+
+.chantier-carte .maplibregl-ctrl-attrib.maplibregl-compact,
+.chantier-carte .maplibregl-ctrl-attrib {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.chantier-carte .maplibregl-ctrl-attrib a {
+  color: var(--color-text);
+}

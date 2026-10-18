@@ -1,0 +1,17 @@
+<div class="chantier-carte">
+  <div
+    #conteneur
+    class="chantier-carte__carte"
+    role="region"
+    aria-label="Carte du Maroc"
+    [attr.aria-describedby]="idAide"
+  ></div>
+  <p [id]="idAide" class="app-lecteur">Carte du Maroc. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer.</p>
+  @if (fondIndisponible()) {
+    <stp-message
+      class="chantier-carte__erreur"
+      severity="error"
+      text="Le fond de carte n'est pas disponible pour le moment. Prévenez l'administrateur de l'application."
+    />
+  }
+</div>
