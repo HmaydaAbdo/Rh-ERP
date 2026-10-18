@@ -3,15 +3,62 @@
     #conteneur
     class="chantier-carte__carte"
     role="region"
-    aria-label="Carte du Maroc"
+    aria-label="Carte des chantiers"
     [attr.aria-describedby]="idAide"
   ></div>
-  <p [id]="idAide" class="app-lecteur">Carte du Maroc. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer.</p>
-  @if (fondIndisponible()) {
-    <stp-message
-      class="chantier-carte__erreur"
-      severity="error"
-      text="Le fond de carte n'est pas disponible pour le moment. Prévenez l'administrateur de l'application."
-    />
+  <p [id]="idAide" class="app-lecteur">
+    Carte du monde, ouverte sur le Maroc. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer, Maj et flèches pour pivoter et
+    incliner.
+  </p>
+
+  <!-- Déplacé par MapLibre dans sa colonne de contrôles (ControleDuGabarit), sous les boutons de zoom. -->
+  <div #outils class="maplibregl-ctrl maplibregl-ctrl-group">
+    <button
+      type="button"
+      class="chantier-carte__outil"
+      [attr.aria-pressed]="vue3d()"
+      [attr.aria-label]="vue3d() ? 'Remettre la carte à plat' : 'Incliner la carte en 3D'"
+      [title]="vue3d() ? 'Vue à plat' : 'Vue 3D'"
+      (click)="basculerVue3d()"
+    >
+      <span class="chantier-carte__outil-texte" aria-hidden="true">{{ vue3d() ? '2D' : '3D' }}</span>
+    </button>
+    <button type="button" class="chantier-carte__outil" aria-label="Revenir au Maroc entier" title="Vue d'ensemble" (click)="vueDEnsemble()">
+      <stp-icon name="scan" />
+    </button>
+  </div>
+
+  <div class="chantier-carte__calques" role="group" aria-label="Calques de la carte">
+    <button
+      type="button"
+      class="chantier-carte__calque chantier-carte__calque--plan"
+      [attr.aria-pressed]="affichage().fond === 'plan'"
+      (click)="choisirFond('plan')"
+    >
+      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="map" /></span>
+      Plan
+    </button>
+    <button
+      type="button"
+      class="chantier-carte__calque chantier-carte__calque--satellite"
+      [attr.aria-pressed]="affichage().fond === 'satellite'"
+      (click)="choisirFond('satellite')"
+    >
+      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="satellite" /></span>
+      Satellite
+    </button>
+    <button
+      type="button"
+      class="chantier-carte__calque chantier-carte__calque--relief"
+      [attr.aria-pressed]="affichage().relief"
+      (click)="basculerRelief()"
+    >
+      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="mountain" /></span>
+      Relief
+    </button>
+  </div>
+
+  @if (messageErreur(); as message) {
+    <stp-message class="chantier-carte__erreur" severity="error" [text]="message" />
   }
 </div>

@@ -1,0 +1,8 @@
+# Imagerie satellite de la carte des chantiers (voir docs/adr/0009-carte-satellite-relief-3d.md), contexte http.
+# Copié dans /etc/nginx/templates/ ; au démarrage, l'image nginx le recopie dans /etc/nginx/conf.d/ en remplaçant les
+# variables d'environnement définies (envsubst) : ici, la seule clé ARCGIS_API_KEY, obligatoire (docker-compose.yml refuse
+# de démarrer sans elle). Les variables nginx ($carte_…) ne sont pas des variables d'environnement : elles restent intactes.
+# La clé ne quitte jamais ce serveur.
+map "" $carte_satellite_jeton {
+    default "${ARCGIS_API_KEY}";
+}

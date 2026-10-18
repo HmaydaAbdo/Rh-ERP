@@ -20,6 +20,9 @@ RUN npx ng build --configuration production
 FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:378d0c32f6562f7fd9629170797f57d2b953aa09be983b3daaf4809bb039ca00
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf
+# Modèles traités au démarrage par l'image nginx (envsubst) : la clé ArcGIS de l'imagerie satellite, ARCGIS_API_KEY,
+# fournie par docker-compose.yml (obligatoire).
+COPY nginx-templates/ /etc/nginx/templates/
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
 EXPOSE 8080
