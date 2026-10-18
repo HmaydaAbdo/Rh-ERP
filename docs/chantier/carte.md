@@ -9,11 +9,12 @@
 |---|---|
 | 1. Moteur de carte (`maplibre-gl`, `pmtiles`, `@protomaps/basemaps`) | Fait |
 | 2. Configuration du fond auto-hébergé, du thème et de l'emprise | Fait |
+| Permission `CARTE_READ` et rôle `DIRECTION` | Fait — voir [../rbac/carte.md](../rbac/carte.md) |
 | 3. Contrat de données `ChantierCarte` et source | À faire |
 | 4. Composant carte, marqueurs, panneau « À localiser » | À faire |
 | 5. Page, permissions et rôle dédiés, menu | À faire |
 
-Aucun écran, aucune route et aucune permission n'existent encore.
+Aucun écran ni aucune route n'existent encore. La permission `CARTE_READ` existe (migration V28), sans endpoint ni écran qui l'utilise.
 
 ## Configuration
 
