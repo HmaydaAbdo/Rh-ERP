@@ -70,16 +70,18 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant carte sans donnée.
    À vérifier en production : rendu du fond à l'écran (clair/sombre, téléphone), noms arabes.
 
-## Vues Cartes et Analytique des autres domaines
+## Vues Cartes, Tabulaire et Analytique
 
-Seule la Paie a ses trois vues (Tabulaire, Cartes, Analytique) sous une coque commune (`portail/paie/vues/`, sélecteur de vue,
-actions dans l'en-tête). Pour **Employés, Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe. Les anciens composants
-vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de conformité ; aucun parcours
-utilisateur n'y était relié.
+- **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
+  (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
+- **À faire — autres domaines** : pour **Employés, Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
+  Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
+  conformité ; aucun parcours utilisateur n'y était relié.
 
-À faire, domaine par domaine : concevoir et coder le contenu de chaque vue (avec ses tests) ; ajouter une coque commune sur le
-modèle de `PaieVuesComponent` (titre, onglets de vue au même niveau que les actions déjà dans l'en-tête, filtres) ; déclarer les routes
-`cartes` et `analytique` dans `<domaine>.routes.ts` avec la permission de lecture ; documenter dans `docs/<domaine>/README.md`.
+Pour chaque domaine restant : concevoir et coder le contenu des vues Cartes et Analytique (avec leurs tests) ; ajouter une
+coque commune sur le modèle de `PaieVuesComponent` (titre, onglets de vue au même niveau que les actions déjà dans l'en-tête,
+filtres) ; déclarer les routes `cartes` et `analytique` dans `<domaine>.routes.ts` avec la permission de lecture ; documenter
+dans `docs/<domaine>/README.md`.
 
 ---
 
