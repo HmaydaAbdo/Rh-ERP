@@ -50,15 +50,16 @@ auth/
 - Un rôle (ex. `SYSTEM_ADMIN`) est aussi transmis comme autorité dans le jeton, mais aucune règle métier ne
   s'appuie sur un nom de rôle, à l'exception de l'accès aux endpoints Actuator.
 
-### Rôles de départ (migration V4)
+### Rôles de départ (migrations V4 et V28)
 
 | Rôle | Permissions |
 |---|---|
 | `SYSTEM_ADMIN` | Toutes (y compris `USER_MANAGE`, `ROLE_MANAGE` et `AUDIT_READ`) |
 | `PAIE_MANAGER` | Toutes les permissions métier, sans `USER_MANAGE` ni `ROLE_MANAGE` |
+| `DIRECTION` (V28) | `CARTE_READ` seulement (le Président et les directeurs) |
 
 Les permissions `EQUIPE_*` (migration V9) sont attribuées aux rôles qui portaient déjà les permissions
-`CHANTIER_*`. `AUDIT_READ` (migration V12) est attribuée à `SYSTEM_ADMIN` seulement. Tout autre rôle se crée depuis l'écran **Rôles**.
+`CHANTIER_*`. `AUDIT_READ` (migration V12) est attribuée à `SYSTEM_ADMIN` seulement. `CARTE_READ` (migration V28) est attribuée à `SYSTEM_ADMIN` et au rôle `DIRECTION`, pas à `PAIE_MANAGER`. Tout autre rôle se crée depuis l'écran **Rôles**.
 
 ### Compte administrateur de départ
 
