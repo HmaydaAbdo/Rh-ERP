@@ -24,4 +24,21 @@ describe('NAV_ITEMS', () => {
     expect(routes).toContain('/admin/parametres');
     expect(routes.at(-1)).toBe('/audit');
   });
+
+  it('la carte se règle sur sa propre permission et vient juste après les chantiers', () => {
+    const routes = NAV_ITEMS.map((i) => i.route);
+
+    expect(NAV_ITEMS.find((i) => i.route === '/carte')).toMatchObject({ label: 'Carte', permission: 'CARTE_READ' });
+    expect(routes.indexOf('/carte')).toBe(routes.indexOf('/chantiers') + 1);
+  });
+
+  it('aucune route du menu n’est le préfixe d’une autre (un seul lien surligné à la fois)', () => {
+    for (const a of NAV_ITEMS) {
+      for (const b of NAV_ITEMS) {
+        if (a !== b) {
+          expect(b.route.startsWith(`${a.route}/`)).toBe(false);
+        }
+      }
+    }
+  });
 });
