@@ -59,10 +59,11 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
    démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
    tant qu'ils ne sont pas gérés.
-4. Composant carte « bête » (marqueurs, regroupement, sélection, redimensionnement, destruction, rendu de l'arabe via
-   `@mapbox/mapbox-gl-rtl-text`, état d'erreur si le fond manque) et panneau « À localiser ».
-5. Page lazy-loaded protégée par `CARTE_READ`, entrée de menu. Une carte minimale (sans données) vient avant les étapes 3 et 4 pour
-   valider le rendu réel.
+4. Composant carte « bête » (marqueurs, regroupement, sélection, redimensionnement, destruction, rendu des noms arabes à confirmer à
+   l'écran, état d'erreur si le fond manque) et panneau « À localiser ».
+5. Page complète (indicateurs, légende, filtres).
+5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant carte sans donnée.
+   À vérifier en production : rendu du fond à l'écran (clair/sombre, téléphone), noms arabes.
 
 ## Vues Cartes et Analytique des autres domaines
 

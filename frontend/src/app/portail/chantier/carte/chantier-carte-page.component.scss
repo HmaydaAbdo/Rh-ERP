@@ -1,0 +1,30 @@
+@use 'breakpoints' as bp;
+
+// La page occupe la hauteur de l'écran moins l'espace autour du contenu (`.app-content`) : la carte est le contenu.
+.carte-page {
+  display: flex;
+  flex-direction: column;
+  height: max(26rem, calc(100svh - 2 * var(--space-xl)));
+}
+
+.carte-page .app-page__header {
+  flex: none;
+}
+
+.carte-page__carte {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// Navigation compacte : la barre du haut est fixe et le contenu commence sous elle.
+@include bp.compact-nav {
+  .carte-page {
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top) - var(--space-md) - var(--space-xl)));
+  }
+}
+
+@include bp.phone {
+  .carte-page {
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top) - 2 * var(--space-md)));
+  }
+}

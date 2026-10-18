@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { getVersion, getWorkerUrl, LngLat, Map as CarteMapLibre } from 'maplibre-gl';
+import { getWorkerUrl, LngLat, Map as CarteMapLibre } from 'maplibre-gl';
 
 import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT, FondDeCarte } from './carte.config';
 import frontiere from './maroc.frontiere.json';
@@ -157,10 +157,10 @@ describe('fond de carte', () => {
       conteneur.remove();
     });
 
-    it('déclare le worker copié dans le build, versionné, une seule fois', () => {
+    it('déclare le worker copié dans le build, une seule fois', () => {
       const url = getWorkerUrl();
       preparerMapLibre('https://autre.exemple/');
-      expect(url).toBe(`${urlAbsolue('carte/maplibre-gl-worker.mjs', document.baseURI)}?v=${getVersion()}`);
+      expect(url).toBe(urlAbsolue('carte/maplibre-gl-worker.mjs', document.baseURI));
       expect(getWorkerUrl()).toBe(url);
     });
 

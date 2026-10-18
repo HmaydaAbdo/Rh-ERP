@@ -14,7 +14,7 @@ peut voir la carte sans pouvoir consulter ni modifier le référentiel, et inver
 
 ## Endpoints backend
 
-Aucun pour l'instant : la carte n'affiche pas encore de donnée de chantier. Quand une source de données sera branchée
+Aucun pour l'instant : la carte n'affiche pas encore de donnée de chantier (l'écran ne fait aucun appel à l'API). Quand une source de données sera branchée
 (voir [../chantier/carte.md](../chantier/carte.md)), chaque endpoint portera un `@PreAuthorize` et sera ajouté à la
 matrice de [README.md](README.md) et à `EndpointSecurityTest`.
 
@@ -22,8 +22,8 @@ matrice de [README.md](README.md) et à `EndpointSecurityTest`.
 
 | Élément | Condition |
 |---|---|
-| Entrée de menu « Carte » | `CARTE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) — à venir avec la page |
-| Route de la carte | `authGuard` + `permissionGuard` (`CARTE_READ`) — à venir avec la page |
+| Entrée de menu « Carte » | `CARTE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
+| Route de la carte | `authGuard` + `permissionGuard` (`CARTE_READ`) |
 
 ## Rôles disposant de cette permission (seed initial)
 
