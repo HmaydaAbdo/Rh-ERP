@@ -7,7 +7,7 @@
 
 # Images de base épinglées par empreinte (reproductibilité, conventions/deployment.md) ; Dependabot propose la mise à jour
 # de la balise et de l'empreinte ensemble.
-FROM node:24.15-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f AS build
+FROM node:26.12-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -17,7 +17,7 @@ COPY . .
 RUN npx ng build --configuration production
 
 # nginx « unprivileged » : le processus ne tourne jamais en root, il écoute donc sur 8080 (un port < 1024 exigerait root).
-FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b9241c6e7b8e9a862f129d8d4199ab64b10390949a78bdd5603379b32c844083
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:378d0c32f6562f7fd9629170797f57d2b953aa09be983b3daaf4809bb039ca00
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
