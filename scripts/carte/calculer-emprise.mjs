@@ -47,7 +47,7 @@ writeFileSync(
   resolve(dossier, 'maroc.frontiere.json'),
   JSON.stringify({ type: 'Feature', properties: { name: 'Maroc (point de vue du Maroc)', source: 'Natural Earth 10m admin 0 countries, version MAR' }, geometry: maroc.geometry }) + '\n'
 );
-// Une ligne par tableau : `scripts/carte/preparer-fond-maroc.sh` lit la ligne « emprise » avec sed.
+// Une ligne par tableau : `scripts/carte/preparer-fond-carte.sh` lit la ligne « emprise » avec sed.
 writeFileSync(
   resolve(dossier, 'emprise-maroc.json'),
   `{\n  "source": "Natural Earth 10m admin 0 countries, version MAR (domaine public)",\n  "margeDegres": ${MARGE_DEGRES},\n  "territoire": ${JSON.stringify(territoire)},\n  "emprise": ${JSON.stringify(emprise)}\n}\n`

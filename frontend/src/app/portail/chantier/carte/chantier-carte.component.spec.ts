@@ -4,7 +4,7 @@ import { Map as CarteMapLibre } from 'maplibre-gl';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT } from './carte.config';
 import { ChantierCarteComponent } from './chantier-carte.component';
-import { SOURCE_DU_FOND } from './fond-de-carte';
+import { SOURCE_DU_FOND, SOURCE_SATELLITE } from './fond-de-carte';
 
 /** Fond volontairement absent : aucun test ne dépend du réseau ni du dossier `carte-fond`. */
 const CONFIG_SANS_FOND = {
@@ -39,12 +39,52 @@ describe('ChantierCarteComponent', () => {
     const element: HTMLElement = fixture.nativeElement;
 
     const region = element.querySelector('[role="region"]');
-    expect(region?.getAttribute('aria-label')).toBe('Carte du Maroc');
+    expect(region?.getAttribute('aria-label')).toBe('Carte des chantiers');
     expect(element.querySelector('canvas.maplibregl-canvas')).not.toBeNull();
     const aide = element.querySelector(`#${region?.getAttribute('aria-describedby')}`);
     expect(aide?.textContent).toContain('Flèches du clavier');
+    expect(aide?.textContent).toContain('pivoter et');
     expect(element.querySelector('button.maplibregl-ctrl-zoom-in')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-compass')).toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-compass')).not.toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-geolocate')).not.toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-fullscreen')).not.toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-scale')).not.toBeNull();
+  });
+
+  it('passe du plan au satellite et retire le relief, en redessinant la carte', async () => {
+    const setStyle = vi.spyOn(CarteMapLibre.prototype, 'setStyle');
+    const fixture = TestBed.createComponent(ChantierCarteComponent);
+    await fixture.whenStable();
+    const element: HTMLElement = fixture.nativeElement;
+    const bouton = (nom: string) =>
+      [...element.querySelectorAll<HTMLButtonElement>('.chantier-carte__calques button')].find((b) => b.textContent?.trim() === nom)!;
+    expect(bouton('Plan').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton('Relief').getAttribute('aria-pressed')).toBe('true');
+
+    bouton('Satellite').click();
+    await fixture.whenStable();
+    expect(bouton('Satellite').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton('Plan').getAttribute('aria-pressed')).toBe('false');
+    expect(Object.keys((setStyle.mock.lastCall?.[0] as { sources: object }).sources)).toContain(SOURCE_SATELLITE);
+
+    bouton('Relief').click();
+    await fixture.whenStable();
+    expect(bouton('Relief').getAttribute('aria-pressed')).toBe('false');
+    expect((setStyle.mock.lastCall?.[0] as { terrain?: object }).terrain).toBeUndefined();
+  });
+
+  it('incline la carte en 3D, puis revient au Maroc entier à plat', async () => {
+    const easeTo = vi.spyOn(CarteMapLibre.prototype, 'easeTo');
+    const fitBounds = vi.spyOn(CarteMapLibre.prototype, 'fitBounds');
+    const fixture = TestBed.createComponent(ChantierCarteComponent);
+    await fixture.whenStable();
+    const element: HTMLElement = fixture.nativeElement;
+
+    element.querySelector<HTMLButtonElement>('[aria-label="Incliner la carte en 3D"]')!.click();
+    expect(easeTo).toHaveBeenCalledWith({ pitch: CONFIG_SANS_FOND.inclinaison3d });
+
+    element.querySelector<HTMLButtonElement>('[aria-label="Revenir au Maroc entier"]')!.click();
+    expect(fitBounds).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pitch: 0, bearing: 0 }));
   });
 
   it("signale un fond de carte introuvable, puis l'efface quand il se charge", async () => {
@@ -59,7 +99,7 @@ describe('ChantierCarteComponent', () => {
     await fixture.whenStable();
 
     ecouteurs['error']({ sourceId: 'autre-source' });
-    expect(fixture.componentInstance.fondIndisponible()).toBe(false);
+    expect(fixture.componentInstance.sourcesIndisponibles().has(SOURCE_DU_FOND)).toBe(false);
 
     ecouteurs['error']({ sourceId: SOURCE_DU_FOND });
     fixture.detectChanges();

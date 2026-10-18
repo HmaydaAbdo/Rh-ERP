@@ -150,8 +150,10 @@ et le planificateur de rétention pgAudit ; ce n'est pas une commande de restaur
 variable ou `--profile backup`, ces services optionnels ne sont pas inclus.
 
 Le fond de la carte des chantiers est un dossier de l'hôte (`CARTE_FOND_DIR`, défaut `./carte-fond`) monté en lecture
-seule dans le frontend ; le préparer une fois avec `scripts/carte/preparer-fond-maroc.sh ./carte-fond` (voir
+seule dans le frontend ; le préparer une fois avec `scripts/carte/preparer-fond-carte.sh ./carte-fond` (voir
 [chantier/carte.md](chantier/carte.md)). Sans lui, l'application fonctionne, la carte s'affiche sans fond.
+L'imagerie satellite passe par le nginx du frontend, qui y ajoute la clé ArcGIS gratuite `ARCGIS_API_KEY` de `.env`
+(obligatoire : `docker compose` refuse de démarrer sans elle ; création pas à pas dans [chantier/carte.md](chantier/carte.md#clé-arcgis)).
 
 ### Deux comptes PostgreSQL
 

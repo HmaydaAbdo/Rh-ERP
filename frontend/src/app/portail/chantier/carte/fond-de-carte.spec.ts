@@ -1,9 +1,19 @@
 import { TestBed } from '@angular/core/testing';
-import { getWorkerUrl, LngLat, Map as CarteMapLibre } from 'maplibre-gl';
+import { getWorkerUrl, Map as CarteMapLibre } from 'maplibre-gl';
 
 import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT, FondDeCarte } from './carte.config';
+import empriseMaroc from './emprise-maroc.json';
 import frontiere from './maroc.frontiere.json';
-import { creerContrainte, creerStyle, optionsDeVue, preparerMapLibre, SOURCE_DU_FOND, urlAbsolue } from './fond-de-carte';
+import {
+  creerStyle,
+  optionsDeVue,
+  preparerMapLibre,
+  SOURCE_DU_FOND,
+  SOURCE_DU_RELIEF,
+  SOURCE_SATELLITE,
+  tuileSatellite,
+  urlAbsolue
+} from './fond-de-carte';
 
 const BASE = 'https://rh.staport.ma/rh-erp/';
 
@@ -14,7 +24,7 @@ describe('fond de carte', () => {
 
   describe('urlAbsolue', () => {
     it("résout un chemin relatif sur l'adresse de l'application", () => {
-      expect(urlAbsolue('carte/fond/maroc.pmtiles', BASE)).toBe('https://rh.staport.ma/rh-erp/carte/fond/maroc.pmtiles');
+      expect(urlAbsolue('carte/fond/monde.pmtiles', BASE)).toBe('https://rh.staport.ma/rh-erp/carte/fond/monde.pmtiles');
     });
 
     it('garde les marqueurs des modèles d’URL', () => {
@@ -33,7 +43,7 @@ describe('fond de carte', () => {
       const source = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).sources[SOURCE_DU_FOND];
       expect(source).toEqual({
         type: 'vector',
-        url: 'pmtiles://https://rh.staport.ma/rh-erp/carte/fond/maroc.pmtiles',
+        url: 'pmtiles://https://rh.staport.ma/rh-erp/carte/fond/monde.pmtiles',
         attribution: CARTE_CONFIG_PAR_DEFAUT.fond.attribution
       });
       expect(CARTE_CONFIG_PAR_DEFAUT.fond.attribution).toContain('OpenStreetMap');
@@ -52,18 +62,73 @@ describe('fond de carte', () => {
       expect(sombre.layers).not.toEqual(clair.layers);
     });
 
-    it('construit toutes les couches sur la source du fond', () => {
-      const couches = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).layers;
-      expect(couches.length).toBeGreaterThan(10);
-      for (const couche of couches) {
+    it("prend la couleur de l'eau en attendant les tuiles", () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE);
+      const fond = style.layers.find((couche) => couche.id === 'background');
+      expect(fond).toMatchObject({ type: 'background', paint: { 'background-color': '#80deea' } });
+    });
+
+    it('construit toutes les couches du plan sans relief sur la source du fond', () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'plan', relief: false });
+      expect(style.layers.length).toBeGreaterThan(10);
+      for (const couche of style.layers) {
         if ('source' in couche) {
           expect(couche.source).toBe(SOURCE_DU_FOND);
         }
       }
+      expect(Object.keys(style.sources)).toEqual([SOURCE_DU_FOND]);
+      expect(style.terrain).toBeUndefined();
+    });
+
+    it('élève les bâtiments à leur hauteur OpenStreetMap', () => {
+      const batiments = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).layers.find((couche) => couche.id === 'buildings');
+      expect(batiments).toMatchObject({ type: 'fill-extrusion', source: SOURCE_DU_FOND, 'source-layer': 'buildings' });
+    });
+
+    it("ajoute le relief auto-hébergé : terrain 3D et ombrage, sous l'eau, sur deux sources de la même archive", () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'plan', relief: true });
+      expect(style.sources[SOURCE_DU_RELIEF]).toEqual({
+        type: 'raster-dem',
+        url: 'pmtiles://https://rh.staport.ma/rh-erp/carte/fond/monde-relief.pmtiles',
+        encoding: 'terrarium',
+        tileSize: 512,
+        maxzoom: CARTE_CONFIG_PAR_DEFAUT.relief.zoomMaxArchive,
+        attribution: CARTE_CONFIG_PAR_DEFAUT.relief.attribution
+      });
+      expect(style.terrain).toEqual({ source: SOURCE_DU_RELIEF, exaggeration: CARTE_CONFIG_PAR_DEFAUT.relief.exageration });
+      const ombrage = style.layers.find((couche) => couche.type === 'hillshade');
+      expect(ombrage && 'source' in ombrage && ombrage.source).not.toBe(SOURCE_DU_RELIEF);
+      const ids = style.layers.map((couche) => couche.id);
+      expect(ids.indexOf('relief')).toBe(ids.indexOf('water') - 1);
+    });
+
+    it("affiche l'imagerie satellite sous les frontières, les grands axes et des libellés blancs", () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'satellite', relief: false });
+      // Les tuiles passent par le protocole satellite:// (relais avec clé, puis secours) : aucune clé dans le navigateur.
+      expect(style.sources[SOURCE_SATELLITE]).toMatchObject({ type: 'raster', tiles: ['satellite://{z}/{y}/{x}'] });
+      expect(style.layers[1]).toMatchObject({ type: 'raster', source: SOURCE_SATELLITE });
+      expect(style.layers.some((couche) => couche.id === 'buildings')).toBe(false);
+      const libelles = style.layers.filter((couche) => couche.type === 'symbol');
+      expect(libelles.length).toBeGreaterThan(5);
+      for (const libelle of libelles) {
+        expect(libelle.paint).toMatchObject({ 'text-color': '#ffffff' });
+      }
+      expect(style.sprite).toBe('https://rh.staport.ma/rh-erp/carte/fond/sprites/v4/dark');
+    });
+
+    it('dessine le globe vu de loin, avec son atmosphère', () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'dark', BASE);
+      expect(style.projection).toEqual({ type: 'globe' });
+      expect(style.sky?.['atmosphere-blend']).toBeDefined();
+    });
+
+    it('cite chaque source affichée dans la mention légale', () => {
+      expect(CARTE_CONFIG_PAR_DEFAUT.relief.attribution).toContain('Mapterhorn');
+      expect(CARTE_CONFIG_PAR_DEFAUT.satellite.attribution).toContain('Esri');
     });
   });
 
-  it("ajuste la vue sur le territoire, avec les zooms configurés et une contrainte de centre", () => {
+  it('ajuste la vue sur le territoire, avec les zooms configurés, sans borner la carte au Maroc', () => {
     const options = optionsDeVue(CARTE_CONFIG_PAR_DEFAUT);
     const [ouest, sud, est, nord] = CARTE_CONFIG_PAR_DEFAUT.territoire;
     expect(options.bounds).toEqual([
@@ -73,28 +138,53 @@ describe('fond de carte', () => {
     expect(options.fitBoundsOptions).toEqual({ padding: CARTE_CONFIG_PAR_DEFAUT.margeDeVuePx });
     expect(options.minZoom).toBe(CARTE_CONFIG_PAR_DEFAUT.zoomMin);
     expect(options.maxZoom).toBe(CARTE_CONFIG_PAR_DEFAUT.zoomMax);
-    expect(options.transformConstrain).toBeTypeOf('function');
+    expect(options).not.toHaveProperty('transformConstrain');
+    expect(options).not.toHaveProperty('maxBounds');
   });
 
-  describe('creerContrainte', () => {
-    const contrainte = creerContrainte(CARTE_CONFIG_PAR_DEFAUT);
-    const [ouest, sud, est, nord] = CARTE_CONFIG_PAR_DEFAUT.emprise;
+  describe('tuileSatellite', () => {
+    const PRINCIPAL = 'https://app/carte/satellite/{z}/{y}/{x}';
+    const SECOURS = 'https://app/carte/satellite-secours/{z}/{y}/{x}';
+    const image = () => new Response(new Uint8Array([0xff, 0xd8]), { headers: { 'Content-Type': 'image/jpeg' } });
+    const refus = () => new Response('{"error":{"code":498,"message":"Invalid token."}}', { headers: { 'Content-Type': 'application/json' } });
+    const demander = (action: ReturnType<typeof tuileSatellite>, tuile = '12/1665/1960') =>
+      action({ url: `satellite://${tuile}`, type: 'image' } as never, new AbortController());
 
-    it("laisse un centre de l'emprise tel quel", () => {
-      const resultat = contrainte(new LngLat(-7, 32), 6);
-      expect([resultat.center.lng, resultat.center.lat, resultat.zoom]).toEqual([-7, 32, 6]);
+    afterEach(() => vi.restoreAllMocks());
+
+    it('demande la tuile au relais principal, avec la clé côté serveur', async () => {
+      const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(image());
+      const reponse = await demander(tuileSatellite(PRINCIPAL, SECOURS));
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch.mock.calls[0][0]).toBe('https://app/carte/satellite/12/1665/1960');
+      expect((reponse.data as ArrayBuffer).byteLength).toBe(2);
     });
 
-    it("ramène à l'emprise un centre qui en sort, dans les quatre directions", () => {
-      expect(contrainte(new LngLat(-40, 32), 6).center.lng).toBe(ouest);
-      expect(contrainte(new LngLat(40, 32), 6).center.lng).toBe(est);
-      expect(contrainte(new LngLat(-7, -50), 6).center.lat).toBe(sud);
-      expect(contrainte(new LngLat(-7, 80), 6).center.lat).toBe(nord);
+    it("bascule sur le secours quand Esri refuse (JSON en 200), puis y reste pour la session", async () => {
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => (String(url).includes('secours') ? image() : refus()));
+      const action = tuileSatellite(PRINCIPAL, SECOURS);
+      await demander(action);
+      await demander(action, '12/1666/1960');
+      expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+        'https://app/carte/satellite/12/1665/1960',
+        'https://app/carte/satellite-secours/12/1665/1960',
+        'https://app/carte/satellite-secours/12/1666/1960'
+      ]);
     });
 
-    it('garde le zoom dans ses bornes', () => {
-      expect(contrainte(new LngLat(-7, 32), 0).zoom).toBe(CARTE_CONFIG_PAR_DEFAUT.zoomMin);
-      expect(contrainte(new LngLat(-7, 32), 22).zoom).toBe(CARTE_CONFIG_PAR_DEFAUT.zoomMax);
+    it('bascule sur le secours quand le relais principal est en panne', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        if (!String(url).includes('secours')) {
+          throw new TypeError('Failed to fetch');
+        }
+        return image();
+      });
+      await expect(demander(tuileSatellite(PRINCIPAL, SECOURS))).resolves.toBeDefined();
+    });
+
+    it('signale une erreur quand ni le principal ni le secours ne renvoient une image', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('erreur', { status: 502 }));
+      await expect(demander(tuileSatellite(PRINCIPAL, SECOURS))).rejects.toThrow("L'imagerie satellite n'a pas répondu");
     });
   });
 
@@ -103,7 +193,9 @@ describe('fond de carte', () => {
     const sommets = (frontiere.geometry.coordinates as number[][][][]).flatMap((polygone) => polygone.flat());
     const xs = sommets.map(([x]) => x);
     const ys = sommets.map(([, y]) => y);
-    const { territoire, emprise } = CARTE_CONFIG_PAR_DEFAUT;
+    const { territoire } = CARTE_CONFIG_PAR_DEFAUT;
+    // L'emprise délimite le Maroc détaillé dans l'archive (scripts/carte/preparer-fond-carte.sh).
+    const { emprise } = empriseMaroc;
 
     it('utilise toute la frontière : territoire principal et enclaves', () => {
       expect(frontiere.geometry.type).toBe('MultiPolygon');
@@ -146,7 +238,7 @@ describe('fond de carte', () => {
     let carte: CarteMapLibre | undefined;
 
     beforeEach(() => {
-      preparerMapLibre(document.baseURI);
+      preparerMapLibre(CARTE_CONFIG_PAR_DEFAUT, document.baseURI);
       conteneur = document.createElement('div');
       conteneur.style.cssText = 'width:400px;height:300px';
       document.body.append(conteneur);
@@ -159,7 +251,7 @@ describe('fond de carte', () => {
 
     it('déclare le worker copié dans le build, une seule fois', () => {
       const url = getWorkerUrl();
-      preparerMapLibre('https://autre.exemple/');
+      preparerMapLibre(CARTE_CONFIG_PAR_DEFAUT, 'https://autre.exemple/');
       expect(url).toBe(urlAbsolue('carte/maplibre-gl-worker.mjs', document.baseURI));
       expect(getWorkerUrl()).toBe(url);
     });
@@ -186,18 +278,6 @@ describe('fond de carte', () => {
       for (const [longitude, latitude] of [[ouest, sud], [ouest, nord], [est, sud], [est, nord]]) {
         expect(visible.contains([longitude, latitude])).toBe(true);
       }
-    });
-
-    it("ne laisse pas sortir la carte de l'emprise du Maroc", async () => {
-      carte = creerCarte();
-      await carte.once('load');
-      carte.jumpTo({ center: [-40, 60] });
-      const { lng, lat } = carte.getCenter();
-      const [ouest, sud, est, nord] = CARTE_CONFIG_PAR_DEFAUT.emprise;
-      expect(lng).toBeGreaterThanOrEqual(ouest);
-      expect(lng).toBeLessThanOrEqual(est);
-      expect(lat).toBeGreaterThanOrEqual(sud);
-      expect(lat).toBeLessThanOrEqual(nord);
     });
   });
 });
