@@ -56,7 +56,7 @@ test.describe('Permissions', () => {
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/carte$/);
-    await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Carte du Maroc' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Carte' })).toBeVisible();
   });
