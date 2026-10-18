@@ -52,6 +52,12 @@ describe('fond de carte', () => {
       expect(sombre.layers).not.toEqual(clair.layers);
     });
 
+    it("remplit les zones hors emprise avec la couleur de l'eau", () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE);
+      const fond = style.layers.find((couche) => couche.id === 'background');
+      expect(fond).toMatchObject({ type: 'background', paint: { 'background-color': '#80deea' } });
+    });
+
     it('construit toutes les couches sur la source du fond', () => {
       const couches = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).layers;
       expect(couches.length).toBeGreaterThan(10);

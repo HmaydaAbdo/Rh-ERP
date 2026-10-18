@@ -21,10 +21,10 @@ La page `/carte` existe : elle affiche le fond du Maroc et rien d'autre (aucune 
 
 | Composant | Rôle |
 |---|---|
-| `ChantierCartePageComponent` (`/carte`) | Page : titre et carte à la hauteur de l'écran |
+| `ChantierCartePageComponent` (`/carte`) | Page : carte plein écran dans la zone de contenu, sans titre |
 | `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre, boutons de zoom, mention légale, redessine au changement de thème, suit la taille de son conteneur, détruit la carte. Si le fond est introuvable, elle affiche le message « Le fond de carte n'est pas disponible » (la carte reste vide). Région nommée, aide au clavier (flèches, + et −) |
 
-Les couleurs des contrôles MapLibre viennent des jetons du design system (`--map-icon-filter` pour les icônes en thème sombre).
+Les couleurs des contrôles MapLibre viennent des jetons du design system (`--map-icon-filter` pour les icônes en thème sombre). Les zones situées hors de l'emprise PMTiles reprennent la couleur de l'eau afin d'éviter un fond gris lorsque l'archive locale ne contient pas les tuiles voisines.
 
 ## Configuration
 
@@ -39,7 +39,7 @@ Tout se règle dans `frontend/src/app/portail/chantier/carte/carte.config.ts`, j
 | `fond.attribution` | Mention légale affichée sur la carte (obligatoire : données OpenStreetMap, ODbL) | Protomaps, © OpenStreetMap |
 | `territoire` | `[ouest, sud, est, nord]` en degrés : boîte englobante exacte de la frontière ; la carte s'y ajuste à l'ouverture, quelle que soit la taille de l'écran | calculé, voir ci-dessous |
 | `emprise` | Territoire plus 0,5° de marge ; le **centre** de la carte ne peut pas en sortir | calculé, voir ci-dessous |
-| `margeDeVuePx`, `zoomMin`, `zoomMax` | Espace autour du territoire à l'ouverture (24 px), zooms minimal (3) et maximal (17) | |
+| `margeDeVuePx`, `zoomMin`, `zoomMax` | Espace autour du territoire à l'ouverture (24 px), zooms minimal (3) et maximal (15) | |
 | `langue` | Langue des libellés (à défaut, nom local) | `fr` |
 
 Les valeurs de `territoire` et `emprise` sont dans `emprise-maroc.json`, produit par un script (jamais saisies à la main). Les chemins sont relatifs à l'adresse de l'application (`document.baseURI`), ce qui fonctionne aussi derrière le
