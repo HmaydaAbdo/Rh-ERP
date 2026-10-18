@@ -19,8 +19,13 @@ Restent à faire :
 ### Chantier séparé — appliquer les concepts IA, Agent UI, MCP et RAG à ERP-RH
 
 Ce chantier est distinct de l'audit des conventions actuellement en cours. Il vise à étudier puis
-intégrer ces capacités dans l'application à partir de besoins RH concrets ; aucune architecture ni
-fonctionnalité n'est présupposée.
+intégrer ces capacités dans l'application à partir de besoins RH concrets.
+
+**Terrain préparé (2026-10-18)** : le socle cible est fixé par l'[ADR 0008](docs/adr/0008-plateforme-ia-passerelle-agents-memoire-graphrag.md)
+et les conventions `agents-ia.md`, `rag.md`, `mcp.md`, `database.md`, `testing.md` : passerelle LiteLLM (alias,
+bascule entre offres gratuites, budgets), agents de domaine sous un superviseur, mémoire courte/compactée/longue,
+pgvector puis GraphRAG Neo4j si l'évaluation le justifie, serveur MCP Spring AI, A2A entre applications. Aucun
+code ni dépendance n'est ajouté ; les versions seront vérifiées au premier cas d'usage. Données actuelles : fictives.
 
 1. **Préparer les données et le besoin** : instrumenter le catalogue de KPI existant, puis choisir
    avec la RH un premier cas d'usage, ses utilisateurs, ses données autorisées et le résultat attendu.
