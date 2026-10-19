@@ -27,6 +27,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
+| **Reprendre le projet** : état, règles du propriétaire, déploiement en cours, sujets ouverts | [handoff/etat-du-projet.md](handoff/etat-du-projet.md) |
 | Reprendre la refonte visuelle après le handoff | [handoff/refonte-visuelle.md](handoff/refonte-visuelle.md) |
 | Comprendre les décisions d'architecture et la trajectoire ERP-RH | [ADR 0001 — conventions ERP-RH](adr/0001-adoption-socle-staport.md) · [ADR 0002 — interfaces agentiques](adr/0002-interface-agentique-ag-ui-a2ui.md) · [ADR 0003 — CORS explicite](adr/0003-cors-origines-explicites.md) · [ADR 0007 — carte : MapLibre et fond auto-hébergé](adr/0007-maplibre-protomaps-auto-heberge.md) · [ADR 0009 — carte : satellite, relief et 3D](adr/0009-carte-satellite-relief-3d.md) · [ADR 0010 — employé : état du dernier mois de paie](adr/0010-employe-etat-du-dernier-mois-de-paie.md) · [ADR 0008 — socle IA : passerelle, agents, mémoire, GraphRAG](adr/0008-plateforme-ia-passerelle-agents-memoire-graphrag.md) |
 
