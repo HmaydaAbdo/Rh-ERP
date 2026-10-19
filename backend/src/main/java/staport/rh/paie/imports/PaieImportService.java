@@ -1,76 +1,79 @@
 package staport.rh.paie.imports;
 
 import jakarta.persistence.EntityManager;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import staport.rh.paie.audit.PerimetreImportPaie;
-import staport.rh.audit.entities.TypeOperation;
 import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.audit.entities.TypeOperation;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
+import staport.rh.common.recherche.PageLoader;
+import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
+import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
+import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.entities.EmployeeStatut;
+import staport.rh.employee.entities.TypeSalaire;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
-import staport.rh.function.dtos.response.FunctionResponseDto;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
+import staport.rh.paie.audit.PerimetreCorrectionImportPaie;
+import staport.rh.paie.audit.PerimetreImportPaie;
 import staport.rh.paie.entities.Paie;
-import staport.rh.paie.imports.PaieImportResultDto.LigneIgnoreeDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.ChampDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.CinInconnuDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.DepartDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.EcartDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.ErreurDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.RetourDto;
+import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.repositories.PaieRepository;
-import staport.rh.common.recherche.PageLoader;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
- * Import d'un fichier Excel de paie pour une période donnée (colonnes : Nom &amp; prénom, Fonction,
- * CIN, Nbre jours travaillés, J.R.O, J.R.D, Salaire, Prime roulage ordinaire, Prime roulage
- * dimanche, Total [repris tel quel, jamais recalculé], Observation, Chantier, Équipe — trois lignes d'en-tête,
- * format hérité de paie_old). La période s'applique à tout le fichier, elle n'est pas une colonne.
+ * Import d'un fichier de paie en assistant (voir docs/adr/0010-employe-etat-du-dernier-mois-de-paie.md) : le fichier et les
+ * fiches employés doivent dire la même chose avant que les bulletins soient créés.
  *
- * Contrairement à l'import Employee (qui crée les employés), l'import Paie exige que l'employé
- * (par CIN), le chantier et l'équipe (par code, optionnelle mais jamais créée à la volée : un code
- * inconnu rejette la ligne) existent déjà — il ne fait que constater/historiser une paie. La
- * **fonction** fait exception : une fonction inconnue n'est plus une erreur, elle est **créée**
- * automatiquement (comme le ferait un import Function), jamais l'employé ni le chantier. Import
- * atomique : soit toutes les lignes sont créées (et les fonctions manquantes créées), soit rien n'est
- * persisté — une seule ligne invalide rejette tout le fichier. L'import ne **modifie jamais** un
- * bulletin existant : une ligne dont (employé, période) existe déjà est rejetée, la correction d'un
- * bulletin se fait uniquement depuis l'écran Paie.
+ * <ol>
+ *   <li>{@link #analyser} lit le fichier sans rien enregistrer et rend les problèmes : erreurs du fichier, CIN inconnus,
+ *   écarts avec les fiches ; puis les départs (STC, actifs absents) et les retours (inactifs présents).</li>
+ *   <li>{@link #corriger} aligne les fiches choisies sur leur ligne et crée les employés des CIN inconnus ; ce qui reste se
+ *   corrige dans le fichier, qu'on réanalyse — autant de fois qu'il faut.</li>
+ *   <li>{@link #importer} n'accepte qu'un fichier sans problème : il crée les bulletins, repasse ACTIF les employés revenus et
+ *   enregistre les départs confirmés.</li>
+ * </ol>
+ *
+ * Le serveur ne garde rien entre ces étapes : chacune reçoit le fichier et refait l'analyse. Seul le mois qui suit exactement
+ * le dernier mois importé est accepté (n'importe lequel s'il n'y a encore aucune paie). Le bulletin garde les valeurs du
+ * fichier — qui sont alors celles de la fiche — et le total est repris tel quel, jamais recalculé.
  */
 @Service
 public class PaieImportService {
 
     private static final Logger log = LoggerFactory.getLogger(PaieImportService.class);
-    private static final int LIGNES_ENTETE = 3;
     private static final BigDecimal MAX_JOURS_TRAVAILLES = new BigDecimal("999.99");
-    private static final DataFormatter DATA_FORMATTER = new DataFormatter();
+    private static final int LONGUEUR_NOM_MAX = 150;
 
     private final PaieRepository repository;
+    private final LecteurFichierPaie lecteur;
     private final IEmployeeService employeeService;
     private final IFunctionService functionService;
     private final IChantierService chantierService;
@@ -78,12 +81,14 @@ public class PaieImportService {
     private final EntityManager entityManager;
 
     public PaieImportService(PaieRepository repository,
-                              IEmployeeService employeeService,
-                              IFunctionService functionService,
-                              IChantierService chantierService,
-                              IEquipeService equipeService,
-                              EntityManager entityManager) {
+                             LecteurFichierPaie lecteur,
+                             IEmployeeService employeeService,
+                             IFunctionService functionService,
+                             IChantierService chantierService,
+                             IEquipeService equipeService,
+                             EntityManager entityManager) {
         this.repository = repository;
+        this.lecteur = lecteur;
         this.employeeService = employeeService;
         this.functionService = functionService;
         this.chantierService = chantierService;
@@ -91,314 +96,343 @@ public class PaieImportService {
         this.entityManager = entityManager;
     }
 
+    @Transactional(readOnly = true)
+    public PaieImportAnalyseDto analyser(MultipartFile fichier, YearMonth periode) {
+        verifierMois(periode);
+        return examiner(periode, charger(lecteur.lire(fichier), periode)).analyse();
+    }
+
+    @Transactional
+    @AuditableAction(action = "PAIE_IMPORT_CORRECTION", type = TypeOperation.UPDATE, entite = Employee.class,
+            perimetre = PerimetreCorrectionImportPaie.class)
+    public PaieImportAnalyseDto corriger(MultipartFile fichier, YearMonth periode, PaieImportCorrectionsDto corrections) {
+        verifierMois(periode);
+        List<LigneFichierPaie> lignes = lecteur.lire(fichier);
+        Contexte contexte = charger(lignes, periode);
+        Examen examen = examiner(periode, contexte);
+
+        for (PaieImportCorrectionsDto.Alignement alignement : corrections.aligner()) {
+            EcartDto ecart = examen.ecartsParEmploye().get(alignement.employeId());
+            if (ecart == null) {
+                continue; // déjà aligné (double clic, ou corrigé entre-temps) : rien à faire
+            }
+            EmployeeResponseDto employe = contexte.employesParCin().get(cle(ecart.cin()));
+            aligner(employe, examen.lignesParNumero().get(ecart.numeroLigne()), alignement.typeSalaire(), contexte);
+        }
+        for (PaieImportCorrectionsDto.Creation creation : corrections.creer()) {
+            CinInconnuDto inconnu = examen.inconnusParLigne().get(creation.numeroLigne());
+            if (inconnu == null) {
+                throw new PaieImportException("La ligne " + creation.numeroLigne() + " n'est pas un CIN inconnu : réanalysez le fichier");
+            }
+            creer(examen.lignesParNumero().get(creation.numeroLigne()), creation, contexte);
+        }
+
+        entityManager.flush();
+        return examiner(periode, charger(lignes, periode)).analyse();
+    }
+
     @Transactional
     @AuditableAction(action = "PAIE_IMPORT", type = TypeOperation.CREATE, entite = Paie.class, perimetre = PerimetreImportPaie.class)
-    public PaieImportResultDto importer(MultipartFile file, YearMonth periode) {
-        List<LigneIgnoreeDto> lignesIgnorees = new ArrayList<>();
-        List<LigneAAppliquer> aAppliquer = new ArrayList<>();
-        int totalLignes = 0;
-
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
-            Sheet sheet = workbook.getSheetAt(0);
-
-            Map<String, Long> employesParCin = chargerEmployesParCin();
-            Map<String, Long> chantiersParCode = chargerChantiersActifs();
-            Map<String, Long> equipesParCode = chargerEquipesParCode();
-            Set<Long> employesAvecBulletin = repository.findEmployeeIdsByPeriode(periode);
-            Set<String> cinsTraites = new LinkedHashSet<>();
-
-            int numeroLigne = 0;
-            for (Row row : sheet) {
-                numeroLigne++;
-                if (numeroLigne <= LIGNES_ENTETE) {
-                    continue;
-                }
-                if (estLigneVide(row)) {
-                    continue;
-                }
-
-                String cin = getCellAsString(row.getCell(2));
-                totalLignes++;
-
-                String nomPrenom = getCellAsString(row.getCell(0));
-                String fonctionLibelle = getCellAsString(row.getCell(1));
-                BigDecimal nombreJoursTravailles = getCellAsBigDecimal(row.getCell(3));
-                BigDecimal joursRecuperationOuvrable = getCellAsBigDecimal(row.getCell(4));
-                BigDecimal joursRecuperationDimanche = getCellAsBigDecimal(row.getCell(5));
-                BigDecimal salaireMensuel = getCellAsBigDecimal(row.getCell(6));
-                BigDecimal primeRoulageOrdinaire = getCellAsBigDecimal(row.getCell(7));
-                BigDecimal primeRoulageDimanche = getCellAsBigDecimal(row.getCell(8));
-                BigDecimal salaireTotal = getCellAsBigDecimal(row.getCell(9));
-                String observation = getCellAsString(row.getCell(10));
-                String chantierCode = getCellAsString(row.getCell(11));
-                String equipe = getCellAsString(row.getCell(12));
-
-                String raison = validerLigne(cin, fonctionLibelle, chantierCode, equipe, nombreJoursTravailles,
-                        joursRecuperationOuvrable, joursRecuperationDimanche, salaireMensuel,
-                        primeRoulageOrdinaire, primeRoulageDimanche, salaireTotal, observation,
-                        cinsTraites, employesParCin, chantiersParCode, equipesParCode, employesAvecBulletin);
-
-                if (raison != null) {
-                    lignesIgnorees.add(new LigneIgnoreeDto(numeroLigne, cin, nomPrenom, raison));
-                    continue;
-                }
-
-                cinsTraites.add(normaliserCle(cin));
-                Long employeeId = employesParCin.get(normaliserCle(cin));
-                aAppliquer.add(new LigneAAppliquer(employeeId, fonctionLibelle.strip(),
-                        chantiersParCode.get(normaliserCle(chantierCode)),
-                        equipe != null ? equipesParCode.get(normaliserCle(equipe)) : null, nombreJoursTravailles, joursRecuperationOuvrable, joursRecuperationDimanche,
-                        salaireMensuel, primeRoulageOrdinaire, primeRoulageDimanche,salaireTotal,observation));
-            }
-        } catch (IOException | RuntimeException e) {
-            if (e instanceof PaieImportException importException) {
-                throw importException;
-            }
-            throw new PaieImportException("Fichier Excel illisible : " + e.getMessage());
+    public PaieImportResultDto importer(MultipartFile fichier, YearMonth periode, PaieImportDepartsDto departsConfirmes) {
+        verifierMois(periode);
+        List<LigneFichierPaie> lignes = lecteur.lire(fichier);
+        Contexte contexte = charger(lignes, periode);
+        PaieImportAnalyseDto analyse = examiner(periode, contexte).analyse();
+        if (!analyse.pret()) {
+            throw new PaieImportException("Le fichier n'est pas prêt : " + analyse.erreurs().size() + " erreur(s), "
+                    + analyse.cinInconnus().size() + " CIN inconnu(s), " + analyse.ecarts().size()
+                    + " écart(s) avec les fiches. Réanalysez-le.");
         }
-
-        if (!lignesIgnorees.isEmpty()) {
-            log.warn("Import paie rejeté : periode={}, {} ligne(s) invalide(s) sur {}, rien persisté",
-                    periode, lignesIgnorees.size(), totalLignes);
-            return new PaieImportResultDto(periode, totalLignes, 0, lignesIgnorees.size(), lignesIgnorees, List.of());
-        }
-
-        // La création des fonctions manquantes ne se fait qu'ici, une fois le fichier entier confirmé
-        // valide : une fonction créée plus tôt resterait en base même si l'import est rejeté ensuite.
-        Map<String, Long> fonctionsParLibelle = chargerFonctions();
-        List<String> fonctionsCreees = creerFonctionsManquantes(aAppliquer, fonctionsParLibelle);
-
-        for (LigneAAppliquer ligne : aAppliquer) {
-            Long fonctionId = fonctionsParLibelle.get(normaliserCle(ligne.fonctionLibelle()));
-
-            Paie paie = new Paie();
-            paie.setEmployee(entityManager.getReference(Employee.class, ligne.employeeId()));
-            paie.setPeriode(periode);
-            paie.setFonction(entityManager.getReference(Function.class, fonctionId));
-            paie.setChantier(entityManager.getReference(Chantier.class, ligne.chantierId()));
-            paie.setEquipe(ligne.equipeId() != null ? entityManager.getReference(Equipe.class, ligne.equipeId()) : null);
-            paie.setNombreJoursTravailles(ligne.nombreJoursTravailles());
-            paie.setJoursRecuperationOuvrable(ligne.joursRecuperationOuvrable());
-            paie.setJoursRecuperationDimanche(ligne.joursRecuperationDimanche());
-            paie.setSalaireMensuel(ligne.salaireMensuel());
-            paie.setPrimeRoulageOrdinaire(ligne.primeRoulageOrdinaire());
-            paie.setPrimeRoulageDimanche(ligne.primeRoulageDimanche());
-            paie.setSalaireTotal(ligne.salaireTotal());
-            paie.setObservation(ligne.observation());
-
-            repository.save(paie);
-        }
-
-        log.info("Import paie terminé : periode={}, total={}, créés={}, fonctionsCreees={}",
-                periode, totalLignes, aAppliquer.size(), fonctionsCreees.size());
-
-        return new PaieImportResultDto(periode, totalLignes, aAppliquer.size(), 0, lignesIgnorees, fonctionsCreees);
-    }
-
-    /**
-     * Crée, via la façade {@link IFunctionService}, chaque libellé de fonction référencé par le
-     * fichier et absent du référentiel — jamais l'employé ni le chantier, qui doivent toujours
-     * préexister. Met à jour {@code fonctionsParLibelle} en place pour que la boucle de persistance
-     * puisse résoudre l'id de chaque fonction, nouvelle ou existante, de la même façon.
-     */
-    private List<String> creerFonctionsManquantes(List<LigneAAppliquer> aAppliquer, Map<String, Long> fonctionsParLibelle) {
-        Set<String> libellesACreer = new LinkedHashSet<>();
-        for (LigneAAppliquer ligne : aAppliquer) {
-            String cle = normaliserCle(ligne.fonctionLibelle());
-            if (!fonctionsParLibelle.containsKey(cle)) {
-                libellesACreer.add(ligne.fonctionLibelle());
+        Set<Long> departsProposes = new HashSet<>();
+        analyse.departs().forEach(depart -> departsProposes.add(depart.employeId()));
+        for (PaieImportDepartsDto.Depart depart : departsConfirmes.departs()) {
+            if (!departsProposes.contains(depart.employeId())) {
+                throw new PaieImportException("Ce départ n'a pas été proposé par l'analyse du fichier : employé " + depart.employeId());
             }
         }
 
-        List<String> creees = new ArrayList<>();
-        for (String libelle : libellesACreer) {
-            FunctionResponseDto fonction = functionService.create(new FunctionCreateRequestDto(libelle));
-            fonctionsParLibelle.put(normaliserCle(libelle), fonction.id());
-            creees.add(libelle);
+        for (LigneFichierPaie ligne : lignes) {
+            repository.save(bulletin(ligne, periode, contexte));
         }
-        return creees;
+        for (RetourDto retour : analyse.retours()) {
+            EmployeeResponseDto employe = contexte.employesParCin().get(cle(retour.cin()));
+            employeeService.update(employe.id(), avecStatut(employe, EmployeeStatut.ACTIF));
+        }
+        for (PaieImportDepartsDto.Depart depart : departsConfirmes.departs()) {
+            employeeService.enregistrerSortie(depart.employeId(), periode, depart.motif());
+        }
+
+        log.info("Import paie terminé : periode={}, bulletins={}, departs={}, retours={}",
+                periode, lignes.size(), departsConfirmes.departs().size(), analyse.retours().size());
+        return new PaieImportResultDto(periode, lignes.size(), departsConfirmes.departs().size(), analyse.retours().size());
     }
 
-    private record LigneAAppliquer(Long employeeId, String fonctionLibelle, Long chantierId, Long equipeId,
-                                    BigDecimal nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
-                                    BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
-                                    BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,BigDecimal salaireTotal,
-                                    String observation) {
+    public ByteArrayInputStream genererModele() {
+        return lecteur.genererModele();
     }
 
-    private String validerLigne(String cin, String fonctionLibelle, String chantierCode, String equipeCode,
-                                 BigDecimal nombreJoursTravailles, BigDecimal joursRecuperationOuvrable,
-                                 BigDecimal joursRecuperationDimanche, BigDecimal salaireMensuel,
-                                 BigDecimal primeRoulageOrdinaire, BigDecimal primeRoulageDimanche,
-                                 BigDecimal salaireTotal, String observation,
-                                 Set<String> cinsTraites, Map<String, Long> employesParCin,
-                                 Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode,
-                                 Set<Long> employesAvecBulletin) {
-        List<String> champsManquants = new ArrayList<>();
-        if (cin == null || cin.isBlank()) {
-            champsManquants.add("CIN");
+    /** La paie s'importe mois après mois : seul le mois qui suit le dernier importé est accepté. */
+    private void verifierMois(YearMonth periode) {
+        YearMonth dernier = repository.findDernierePeriode();
+        if (dernier != null && !periode.equals(dernier.plusMonths(1))) {
+            throw new PaieImportException("Seul le mois " + dernier.plusMonths(1) + " peut être importé : la paie s'importe mois "
+                    + "après mois et le dernier mois importé est " + dernier + ".");
         }
-        if (fonctionLibelle == null || fonctionLibelle.isBlank()) {
-            champsManquants.add("Fonction");
-        }
-        if (nombreJoursTravailles == null) {
-            champsManquants.add("Nombre de jours travaillés");
-        }
-        if (salaireMensuel == null) {
-            champsManquants.add("Salaire mensuel");
-        }
-        if (salaireTotal == null) {
-            champsManquants.add("Total");
-        }
-        if (chantierCode == null || chantierCode.isBlank()) {
-            champsManquants.add("Chantier");
-        }
-        if (!champsManquants.isEmpty()) {
-            return "Champs obligatoires manquants ou invalides : " + String.join(", ", champsManquants);
+    }
+
+    // ---- Analyse ----
+
+    private record Contexte(List<LigneFichierPaie> lignes, Map<String, EmployeeResponseDto> employesParCin,
+                            Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode,
+                            Map<String, Long> fonctionsParLibelle, Set<Long> employesAvecBulletin) {
+    }
+
+    private record Examen(PaieImportAnalyseDto analyse, Map<Long, EcartDto> ecartsParEmploye,
+                          Map<Integer, CinInconnuDto> inconnusParLigne, Map<Integer, LigneFichierPaie> lignesParNumero) {
+    }
+
+    /** Les référentiels sont chargés une seule fois, avant la lecture des lignes (aucune requête par ligne). */
+    private Contexte charger(List<LigneFichierPaie> lignes, YearMonth periode) {
+        Map<String, EmployeeResponseDto> employes = new HashMap<>();
+        PageLoader.forEach(pageable -> employeeService.search(null, pageable), employe -> employes.put(cle(employe.cin()), employe));
+        Map<String, Long> chantiers = new HashMap<>();
+        PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
+            if (chantier.actif()) {
+                chantiers.put(cle(chantier.code()), chantier.id());
+            }
+        });
+        Map<String, Long> equipes = new HashMap<>();
+        PageLoader.forEach(pageable -> equipeService.search(null, pageable), equipe -> equipes.put(cle(equipe.code()), equipe.id()));
+        Map<String, Long> fonctions = new HashMap<>();
+        PageLoader.forEach(pageable -> functionService.search(null, pageable), fonction -> fonctions.put(cle(fonction.libelle()), fonction.id()));
+        return new Contexte(lignes, employes, chantiers, equipes, fonctions, repository.findEmployeeIdsByPeriode(periode));
+    }
+
+    private Examen examiner(YearMonth periode, Contexte contexte) {
+        List<ErreurDto> erreurs = new ArrayList<>();
+        List<CinInconnuDto> inconnus = new ArrayList<>();
+        List<EcartDto> ecarts = new ArrayList<>();
+        List<DepartDto> departs = new ArrayList<>();
+        List<RetourDto> retours = new ArrayList<>();
+        Map<Integer, LigneFichierPaie> lignesParNumero = new HashMap<>();
+        Set<String> cinsDuFichier = new HashSet<>();
+        Set<String> cinsTraites = new HashSet<>();
+
+        for (LigneFichierPaie ligne : contexte.lignes()) {
+            lignesParNumero.put(ligne.numeroLigne(), ligne);
+            if (ligne.cin() != null) {
+                cinsDuFichier.add(cle(ligne.cin()));
+            }
+            String raison = erreurDuFichier(ligne, contexte, cinsTraites);
+            if (raison != null) {
+                erreurs.add(new ErreurDto(ligne.numeroLigne(), ligne.cin(), ligne.nomPrenom(), raison));
+                continue;
+            }
+            cinsTraites.add(cle(ligne.cin()));
+
+            EmployeeResponseDto employe = contexte.employesParCin().get(cle(ligne.cin()));
+            if (employe == null) {
+                inconnus.add(new CinInconnuDto(ligne.numeroLigne(), ligne.cin().strip(), texte(ligne.nomPrenom()), texte(ligne.fonction()),
+                        texte(ligne.chantier()), texte(ligne.equipe()), ligne.salaireMensuel()));
+                continue;
+            }
+            List<ChampDto> champs = champsEnEcart(ligne, employe, contexte);
+            if (!champs.isEmpty()) {
+                ecarts.add(new EcartDto(employe.id(), ligne.numeroLigne(), employe.cin(), employe.nomPrenom(), champs, employe.typeSalaire()));
+            }
+            if (ObservationStc.estStcOuSortie(ligne.observation())) {
+                departs.add(new DepartDto(employe.id(), employe.cin(), employe.nomPrenom(),
+                        ligne.observation().strip().equalsIgnoreCase("stc") ? "STC" : "Sortie"));
+            } else if (employe.statut() == EmployeeStatut.INACTIF) {
+                retours.add(new RetourDto(employe.id(), employe.cin(), employe.nomPrenom()));
+            }
         }
 
-        if (nombreJoursTravailles.signum() < 0 || estNegatif(joursRecuperationOuvrable)
-                || estNegatif(joursRecuperationDimanche) || estNegatif(salaireMensuel)
-                || estNegatif(primeRoulageOrdinaire) || estNegatif(primeRoulageDimanche)
-                || estNegatif(salaireTotal)) {
+        // Un actif absent du fichier n'est plus payé : il est proposé au départ, motif à saisir.
+        contexte.employesParCin().values().stream()
+                .filter(employe -> employe.statut() == EmployeeStatut.ACTIF && !cinsDuFichier.contains(cle(employe.cin())))
+                .sorted((a, b) -> a.nomPrenom().compareToIgnoreCase(b.nomPrenom()))
+                .forEach(employe -> departs.add(new DepartDto(employe.id(), employe.cin(), employe.nomPrenom(), null)));
+
+        boolean pret = erreurs.isEmpty() && inconnus.isEmpty() && ecarts.isEmpty();
+        PaieImportAnalyseDto analyse = new PaieImportAnalyseDto(periode, contexte.lignes().size(), erreurs, inconnus, ecarts,
+                departs, retours, pret);
+        Map<Long, EcartDto> ecartsParEmploye = new HashMap<>();
+        ecarts.forEach(ecart -> ecartsParEmploye.put(ecart.employeId(), ecart));
+        Map<Integer, CinInconnuDto> inconnusParLigne = new HashMap<>();
+        inconnus.forEach(inconnu -> inconnusParLigne.put(inconnu.numeroLigne(), inconnu));
+        return new Examen(analyse, ecartsParEmploye, inconnusParLigne, lignesParNumero);
+    }
+
+    /** Ce que seul le fichier peut corriger ; {@code null} si la ligne est valide. */
+    private String erreurDuFichier(LigneFichierPaie ligne, Contexte contexte, Set<String> cinsTraites) {
+        List<String> manquants = new ArrayList<>();
+        if (ligne.cin() == null) {
+            manquants.add("CIN");
+        }
+        if (ligne.fonction() == null) {
+            manquants.add("Fonction");
+        }
+        if (ligne.nombreJoursTravailles() == null) {
+            manquants.add("Nombre de jours travaillés");
+        }
+        if (ligne.salaireMensuel() == null) {
+            manquants.add("Salaire");
+        }
+        if (ligne.salaireTotal() == null) {
+            manquants.add("Total");
+        }
+        if (ligne.chantier() == null) {
+            manquants.add("Chantier");
+        }
+        if (!manquants.isEmpty()) {
+            return "Champs obligatoires manquants ou invalides : " + String.join(", ", manquants);
+        }
+        if (Objects.requireNonNullElse(ligne.nombreJoursTravailles(), BigDecimal.ZERO).signum() < 0
+                || estNegatif(ligne.joursRecuperationOuvrable()) || estNegatif(ligne.joursRecuperationDimanche())
+                || estNegatif(ligne.salaireMensuel()) || estNegatif(ligne.primeRoulageOrdinaire())
+                || estNegatif(ligne.primeRoulageDimanche()) || estNegatif(ligne.salaireTotal())) {
             return "Les jours, salaires et primes doivent être positifs ou nuls";
         }
-        if (estJourTravailleInvalide(nombreJoursTravailles)) {
+        if (ligne.salaireMensuel().signum() == 0) {
+            return "Salaire à 0 : chaque ligne porte le salaire de l'employé (ou son STC) ; un employé sans paie ce mois-ci "
+                    + "ne figure pas dans le fichier";
+        }
+        if (estJourTravailleInvalide(ligne.nombreJoursTravailles())) {
             return "Le nombre de jours travaillés doit être compris entre 0 et 999,99 avec au plus deux décimales";
         }
-        if (observation != null && observation.length() > 255) {
+        if (ligne.observation() != null && ligne.observation().length() > 255) {
             return "Observation trop longue (255 caractères maximum)";
         }
-
-        String cinNormalise = normaliserCle(cin);
-        if (cinsTraites.contains(cinNormalise)) {
+        if (ligne.nomPrenom() != null && ligne.nomPrenom().strip().length() > LONGUEUR_NOM_MAX) {
+            return "Nom trop long (150 caractères maximum)";
+        }
+        String cin = cle(ligne.cin());
+        if (cinsTraites.contains(cin)) {
             return "CIN en doublon dans le fichier";
         }
-        if (!employesParCin.containsKey(cinNormalise)) {
-            return "Employé introuvable avec ce CIN";
-        }
-        if (employesAvecBulletin.contains(employesParCin.get(cinNormalise))) {
+        EmployeeResponseDto employe = contexte.employesParCin().get(cin);
+        if (employe != null && contexte.employesAvecBulletin().contains(employe.id())) {
             return "Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)";
         }
-        if (!chantiersParCode.containsKey(normaliserCle(chantierCode))) {
-            return "Chantier introuvable ou inactif : " + chantierCode.strip();
+        if (!contexte.chantiersParCode().containsKey(cle(ligne.chantier()))) {
+            return "Chantier introuvable ou inactif : " + ligne.chantier().strip();
         }
-        if (equipeCode != null && !equipesParCode.containsKey(normaliserCle(equipeCode))) {
-            return "Équipe introuvable : " + equipeCode.strip();
+        if (ligne.equipe() != null && !contexte.equipesParCode().containsKey(cle(ligne.equipe()))) {
+            return "Équipe introuvable : " + ligne.equipe().strip();
         }
-
         return null;
     }
 
-    private boolean estNegatif(BigDecimal valeur) {
+    /** Les champs où la fiche ne dit pas la même chose que la ligne (nom sans tenir compte de la casse ni des espaces). */
+    private List<ChampDto> champsEnEcart(LigneFichierPaie ligne, EmployeeResponseDto employe, Contexte contexte) {
+        List<ChampDto> champs = new ArrayList<>();
+        if (ligne.nomPrenom() != null && !nom(ligne.nomPrenom()).equals(nom(employe.nomPrenom()))) {
+            champs.add(new ChampDto("nomPrenom", employe.nomPrenom(), ligne.nomPrenom().strip()));
+        }
+        if (!cle(ligne.fonction()).equals(cle(employe.fonction().libelle()))) {
+            champs.add(new ChampDto("fonction", employe.fonction().libelle(), ligne.fonction().strip()));
+        }
+        if (!contexte.chantiersParCode().get(cle(ligne.chantier())).equals(employe.chantier().id())) {
+            champs.add(new ChampDto("chantier", employe.chantier().code(), ligne.chantier().strip()));
+        }
+        Long equipeFichier = ligne.equipe() == null ? null : contexte.equipesParCode().get(cle(ligne.equipe()));
+        Long equipeFiche = employe.equipe() == null ? null : employe.equipe().id();
+        if (!Objects.equals(equipeFichier, equipeFiche)) {
+            champs.add(new ChampDto("equipe", employe.equipe() == null ? null : employe.equipe().code(), texte(ligne.equipe())));
+        }
+        if (employe.salaire() == null || employe.salaire().compareTo(ligne.salaireMensuel()) != 0) {
+            champs.add(new ChampDto("salaire", employe.salaire() == null ? null : employe.salaire().toPlainString(),
+                    ligne.salaireMensuel().toPlainString()));
+        }
+        return champs;
+    }
+
+    // ---- Corrections ----
+
+    private void aligner(EmployeeResponseDto employe, LigneFichierPaie ligne, TypeSalaire typeChoisi, Contexte contexte) {
+        TypeSalaire type = typeChoisi != null ? typeChoisi : employe.typeSalaire();
+        if (type == null) {
+            throw new PaieImportException("Choisissez le type de salaire (mensuel ou journalier) de " + employe.nomPrenom());
+        }
+        employeeService.update(employe.id(), new EmployeeUpdateRequestDto(employe.version(),
+                ligne.nomPrenom() != null ? ligne.nomPrenom().strip() : employe.nomPrenom(), employe.cin(),
+                employe.dateNaissance(), employe.dateEmbauche(), fonctionId(ligne.fonction(), contexte),
+                contexte.chantiersParCode().get(cle(ligne.chantier())), equipeId(ligne, contexte),
+                ligne.salaireMensuel(), type, employe.statut()));
+    }
+
+    private void creer(LigneFichierPaie ligne, PaieImportCorrectionsDto.Creation creation, Contexte contexte) {
+        if (ligne.nomPrenom() == null) {
+            throw new PaieImportException("La ligne " + ligne.numeroLigne() + " n'a pas de nom : complétez le fichier");
+        }
+        if (!creation.dateNaissance().isBefore(LocalDate.now())) {
+            throw new PaieImportException("La date de naissance de " + ligne.nomPrenom().strip() + " doit être passée");
+        }
+        employeeService.create(new EmployeeCreateRequestDto(ligne.nomPrenom().strip(), ligne.cin().strip(),
+                creation.dateNaissance(), creation.dateEmbauche(), fonctionId(ligne.fonction(), contexte),
+                contexte.chantiersParCode().get(cle(ligne.chantier())), equipeId(ligne, contexte),
+                ligne.salaireMensuel(), creation.typeSalaire()));
+    }
+
+    /** La fonction du fichier ; absente du référentiel, elle est créée (comme le ferait un import Function). */
+    private Long fonctionId(String libelle, Contexte contexte) {
+        return contexte.fonctionsParLibelle().computeIfAbsent(cle(libelle),
+                c -> functionService.create(new FunctionCreateRequestDto(libelle.strip())).id());
+    }
+
+    private static Long equipeId(LigneFichierPaie ligne, Contexte contexte) {
+        return ligne.equipe() == null ? null : contexte.equipesParCode().get(cle(ligne.equipe()));
+    }
+
+    private static EmployeeUpdateRequestDto avecStatut(EmployeeResponseDto employe, EmployeeStatut statut) {
+        return new EmployeeUpdateRequestDto(employe.version(), employe.nomPrenom(), employe.cin(), employe.dateNaissance(),
+                employe.dateEmbauche(), employe.fonction().id(), employe.chantier().id(),
+                employe.equipe() == null ? null : employe.equipe().id(), employe.salaire(), employe.typeSalaire(), statut);
+    }
+
+    // ---- Import ----
+
+    private Paie bulletin(LigneFichierPaie ligne, YearMonth periode, Contexte contexte) {
+        EmployeeResponseDto employe = contexte.employesParCin().get(cle(ligne.cin()));
+        Long equipeId = equipeId(ligne, contexte);
+        Paie paie = new Paie();
+        paie.setEmployee(entityManager.getReference(Employee.class, employe.id()));
+        paie.setPeriode(periode);
+        paie.setFonction(entityManager.getReference(Function.class, contexte.fonctionsParLibelle().get(cle(ligne.fonction()))));
+        paie.setChantier(entityManager.getReference(Chantier.class, contexte.chantiersParCode().get(cle(ligne.chantier()))));
+        paie.setEquipe(equipeId != null ? entityManager.getReference(Equipe.class, equipeId) : null);
+        paie.setNombreJoursTravailles(ligne.nombreJoursTravailles());
+        paie.setJoursRecuperationOuvrable(ligne.joursRecuperationOuvrable());
+        paie.setJoursRecuperationDimanche(ligne.joursRecuperationDimanche());
+        paie.setSalaireMensuel(ligne.salaireMensuel());
+        paie.setPrimeRoulageOrdinaire(ligne.primeRoulageOrdinaire());
+        paie.setPrimeRoulageDimanche(ligne.primeRoulageDimanche());
+        paie.setSalaireTotal(ligne.salaireTotal());
+        paie.setObservation(ligne.observation());
+        return paie;
+    }
+
+    // ---- Outils ----
+
+    private static boolean estNegatif(BigDecimal valeur) {
         return valeur != null && valeur.signum() < 0;
     }
 
-    private boolean estJourTravailleInvalide(BigDecimal valeur) {
-        BigDecimal normalisee = valeur.stripTrailingZeros();
-        return normalisee.scale() > 2 || valeur.compareTo(MAX_JOURS_TRAVAILLES) > 0;
+    private static boolean estJourTravailleInvalide(BigDecimal valeur) {
+        return valeur.stripTrailingZeros().scale() > 2 || valeur.compareTo(MAX_JOURS_TRAVAILLES) > 0;
     }
 
-    private Map<String, Long> chargerEmployesParCin() {
-        Map<String, Long> resultat = new HashMap<>();
-        PageLoader.forEach(pageable -> employeeService.search(null, pageable),
-                employee -> resultat.put(normaliserCle(employee.cin()), employee.id()));
-        return resultat;
-    }
-
-    private Map<String, Long> chargerFonctions() {
-        Map<String, Long> resultat = new HashMap<>();
-        PageLoader.forEach(pageable -> functionService.search(null, pageable),
-                fonction -> resultat.put(normaliserCle(fonction.libelle()), fonction.id()));
-        return resultat;
-    }
-
-    private Map<String, Long> chargerChantiersActifs() {
-        Map<String, Long> resultat = new HashMap<>();
-        PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
-            if (chantier.actif()) {
-                resultat.put(normaliserCle(chantier.code()), chantier.id());
-            }
-        });
-        return resultat;
-    }
-
-    private Map<String, Long> chargerEquipesParCode() {
-        Map<String, Long> resultat = new HashMap<>();
-        PageLoader.forEach(pageable -> equipeService.search(null, pageable),
-                equipe -> resultat.put(normaliserCle(equipe.code()), equipe.id()));
-        return resultat;
-    }
-
-    private static String normaliserCle(String valeur) {
+    private static String cle(String valeur) {
         return valeur.strip().toUpperCase(Locale.ROOT);
     }
 
-    private boolean estLigneVide(Row row) {
-        if (row == null) {
-            return true;
-        }
-        for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
-            Cell cell = row.getCell(c);
-            if (cell != null && cell.getCellType() != CellType.BLANK
-                    && !DATA_FORMATTER.formatCellValue(cell).isBlank()) {
-                return false;
-            }
-        }
-        return true;
+    /** Un nom comparé sans casse, et avec un seul espace entre les mots. */
+    private static String nom(String valeur) {
+        return cle(valeur).replaceAll("\\s+", " ");
     }
 
-    private String getCellAsString(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-        String value = DATA_FORMATTER.formatCellValue(cell);
-        return value == null || value.isBlank() ? null : value;
-    }
-
-    private BigDecimal getCellAsBigDecimal(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-        try {
-            // Cellule de formule (ex. =G5*D5) : on lit le résultat mis en cache par Excel, pas le texte formaté.
-            CellType type = cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
-            if (type == CellType.NUMERIC) {
-                return BigDecimal.valueOf(cell.getNumericCellValue());
-            }
-            String value = DATA_FORMATTER.formatCellValue(cell).replaceAll("[\\s\\u00A0\\u202F]", "");
-            return value.isEmpty() ? null : new BigDecimal(value);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Génère un fichier Excel vierge respectant le format attendu par {@link #importer} — trois
-     * lignes d'en-tête (héritées de l'ancien format), colonnes dans l'ordre attendu — pour que
-     * l'utilisateur parte d'un fichier valide plutôt que de deviner le format., pour ne
-     * pas décaler les colonnes suivantes (Observation, Chantier, Équipe) par rapport aux fichiers
-     * mensuels déjà utilisés.
-     */
-    public ByteArrayInputStream genererModele() {
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Paie");
-            sheet.createRow(0);
-            sheet.createRow(1);
-            String[] entetes = {
-                    "Nom & prénom", "Fonction", "CIN", "Nbre Jrs", "J.R.O", "J.R.D", "Salaire",
-                    "Prime RO", "Prime RD", "Total", "Observation", "Chantier", "Équipe"
-            };
-            Row ligneEntete = sheet.createRow(2);
-            for (int c = 0; c < entetes.length; c++) {
-                ligneEntete.createCell(c).setCellValue(entetes[c]);
-                sheet.setColumnWidth(c, 4500);
-            }
-
-            workbook.write(sortie);
-            return new ByteArrayInputStream(sortie.toByteArray());
-        } catch (IOException e) {
-            throw new UncheckedIOException("Erreur lors de la génération du modèle d'import : " + e.getMessage(), e);
-        }
+    private static String texte(String valeur) {
+        return valeur == null ? null : valeur.strip();
     }
 }

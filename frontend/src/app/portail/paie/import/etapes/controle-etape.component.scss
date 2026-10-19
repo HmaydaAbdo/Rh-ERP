@@ -1,0 +1,149 @@
+@use 'breakpoints' as bp;
+@use '../commun' as *;
+
+// Étape « Contrôle » de l'assistant d'import : problèmes du fichier, CIN inconnus, fiches en écart.
+.controle {
+  animation: export-wizard-avant var(--duration-base) var(--ease-out);
+
+  // ---- Contrôle ----
+  &__bilan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  &__fichier {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  // Le bouton « Réimporter le fichier corrigé » ouvre ce champ : il reste dans la page, invisible
+  &__cache {
+    display: none;
+  }
+
+  &__champ {
+    display: flex;
+    flex: 1 1 10rem;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    max-width: 13rem;
+
+    span {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+  }
+
+  &__ok {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+    color: var(--color-success);
+
+    p {
+      margin: var(--space-2xs) 0 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+
+    strong {
+      color: var(--color-text);
+    }
+  }
+
+  &__entete-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  &__cartes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__carte {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) 2fr;
+    gap: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+
+    @include bp.phone {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__qui {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+
+    span {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+  }
+
+  &__ecarts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    margin: 0;
+
+    div {
+      display: grid;
+      grid-template-columns: 6rem 1fr;
+      gap: var(--space-sm);
+      font-size: var(--text-sm);
+    }
+
+    dt {
+      color: var(--color-text-muted);
+    }
+
+    dd {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-xs);
+      margin: 0;
+    }
+
+    s {
+      color: var(--color-text-muted);
+    }
+  }
+
+  &__saisie {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+
+    > stp-select {
+      flex: 1 1 10rem;
+      max-width: 13rem;
+    }
+  }
+}

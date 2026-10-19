@@ -128,6 +128,8 @@ class OpenApiContractTest {
         assertFileUpload(specification, "/employees/import");
         assertFileUpload(specification, "/functions/import");
         assertFileUpload(specification, "/paie/import");
+        assertFileUpload(specification, "/paie/import/analyse");
+        assertFileUpload(specification, "/paie/import/corrections");
         assertBinaryResponse(specification, "/employees/import/modele", "get", "200",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         assertBinaryResponse(specification, "/functions/import/modele", "get", "200",
@@ -146,8 +148,8 @@ class OpenApiContractTest {
                 .contains("EmployeeImportResultDto");
         assertThat(specification.path("paths").path("/functions/import").path("post").path("responses").path("400").toString())
                 .contains("FunctionImportResultDto");
-        assertThat(specification.path("paths").path("/paie/import").path("post").path("responses").path("400").toString())
-                .contains("PaieImportResultDto");
+        assertErrorResponse(specification, "/paie/import/analyse", "post", "400");
+        assertErrorResponse(specification, "/paie/import/corrections", "post", "400");
         assertErrorResponse(specification, "/paie/export", "post", "400");
         assertErrorResponse(specification, "/paie/report/pdf", "post", "400");
         assertErrorResponseSchemas(specification);

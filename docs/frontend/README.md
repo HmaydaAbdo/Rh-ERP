@@ -358,6 +358,15 @@ sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'ex
 des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko avant le 2026-10-10). **Résolu** : l'assistant est découpé en une coque, un store (`paie-export.store.ts`, fourni par la coque) et
 un composant par étape (`etapes/`, styles partagés dans `etapes/_commun.scss`) ; aucun composant ne dépasse le budget.
 
+## Assistant d'import de la paie
+
+`portail/paie/import/` : fichier, contrôle, départs, import (détail fonctionnel : `docs/paie/README.md`, « Import Excel
+(assistant) »). `paie-import.store.ts` porte l'état et les appels (analyse, corrections, import) ; la coque
+`paie-import-wizard.component.*` affiche les étapes Fichier, Départs et Import, et l'étape Contrôle est un composant à part
+(`etapes/controle-etape.component.*`, budget de style) ; leurs styles communs sont dans `import/_commun.scss`. Les deux assistants de la paie partagent leur **cadre** (bandeau
+d'étapes, corps, attente, fin, pied) par le mixin `cadre-assistant($bloc)` de `paie/assistant/_cadre-assistant.scss`,
+inclus sous le nom de bloc de chacun (`.export-wizard`, `.import-wizard`).
+
 ## Formulaires, notifications et erreurs
 
 - **Signal Forms** pour tous les formulaires (2026-10-10) : modèle `signal` typé, `form(modele, schema, { submission })`, `<form [formRoot]>`,

@@ -54,6 +54,10 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @Query("SELECT p.employee.id FROM Paie p WHERE p.periode = :periode")
     Set<Long> findEmployeeIdsByPeriode(@Param("periode") YearMonth periode);
 
+    /** Le dernier mois importé ({@code null} sans aucune paie) : l'import n'accepte que le mois qui le suit. */
+    @Query("SELECT MAX(p.periode) FROM Paie p")
+    YearMonth findDernierePeriode();
+
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
 

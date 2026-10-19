@@ -85,9 +85,9 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   `shared/components/vue-switcher/` (Paie l'utilise), coque `portail/employee/vues/` (titre, actions, barre de filtres dans
   l'URL) et vue Tabulaire. Lot 2 fait : fiche = état du dernier mois de paie (équipe, salaire et type, réservés à
   `PAIE_READ`), table `employe_sortie`, reprise V30 (ADR 0010). **À vérifier avant le déploiement** : sauvegarde de la base
-  de production (V30 supprime les employés sans aucun bulletin). Restent : 3. assistant d'import de la paie en
-  boucle (écarts avec la base, CIN inconnu créé sur place, sorties confirmées, mois suivant uniquement) ; 4. fiche et parcours
-  de l'employé ; 5. Cartes et Analytique des employés.
+  de production (V30 supprime les employés sans aucun bulletin). Lot 3 fait : assistant d'import de la paie (analyse,
+  corrections des fiches, départs confirmés, mois suivant uniquement, salaire à 0 refusé) ; à essayer sur le vrai fichier
+  d'octobre 2026. Restent : 4. fiche et parcours de l'employé ; 5. Cartes et Analytique des employés.
 - **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.

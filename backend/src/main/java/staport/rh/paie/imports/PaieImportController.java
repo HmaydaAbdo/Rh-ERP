@@ -6,10 +6,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,8 +17,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import staport.rh.common.dtos.ErrorResponseDto;
 import staport.rh.paie.exceptions.InvalidPeriodeException;
 
 import java.io.ByteArrayInputStream;
@@ -36,23 +38,43 @@ public class PaieImportController {
         this.importService = importService;
     }
 
+    @PostMapping(value = "/analyse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Analyser un fichier de paie sans rien enregistrer : erreurs du fichier, CIN inconnus, écarts avec les " +
+            "fiches employés, départs (STC, actifs absents) et retours (inactifs présents). Le fichier s'importe quand l'analyse est prête.")
+    @ApiResponse(responseCode = "200", description = "Analyse du fichier")
+    @ApiResponse(responseCode = "400", description = "Mois refusé (seul le mois qui suit le dernier importé est accepté) ou fichier illisible", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
+    @PreAuthorize("hasAuthority('PAIE_IMPORT') and hasAuthority('PAIE_READ')")
+    public ResponseEntity<PaieImportAnalyseDto> analyser(
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Mois au format aaaa-MM, ex. 2026-10", example = "2026-10") @RequestParam("periode") String periode) {
+        return ResponseEntity.ok(importService.analyser(file, parsePeriode(periode)));
+    }
+
+    @PostMapping(value = "/corrections", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Corriger les fiches employés à partir du fichier : aligner des fiches en écart, créer les employés des " +
+            "CIN inconnus. Renvoie la nouvelle analyse du fichier.")
+    @ApiResponse(responseCode = "200", description = "Nouvelle analyse, après les corrections")
+    @ApiResponse(responseCode = "400", description = "Mois refusé, fichier illisible, correction impossible (type de salaire manquant, ligne qui n'est pas un CIN inconnu…)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
+    @PreAuthorize("hasAuthority('PAIE_IMPORT') and hasAuthority('EMPLOYEE_WRITE') and hasAuthority('PAIE_READ')")
+    public ResponseEntity<PaieImportAnalyseDto> corriger(
+            @Parameter(description = "Le même classeur Excel XLSX que celui analysé, maximum 20 Mo") @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Mois au format aaaa-MM, ex. 2026-10", example = "2026-10") @RequestParam("periode") String periode,
+            @Valid @RequestPart("corrections") PaieImportCorrectionsDto corrections) {
+        return ResponseEntity.ok(importService.corriger(file, parsePeriode(periode), corrections));
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Importer des bulletins de paie pour une période depuis un fichier Excel. " +
-            "Import atomique : une seule ligne invalide rejette tout le fichier. Une fonction absente du " +
-            "référentiel est créée automatiquement (jamais l'employé ni le chantier). Un bulletin déjà existant " +
-            "pour l'employé et la période rejette la ligne : l'import ne modifie jamais un bulletin.")
-    @ApiResponse(responseCode = "200", description = "Résultat de l'import", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PaieImportResultDto.class)))
-    @ApiResponse(responseCode = "400", description = "Période invalide, fichier XLSX illisible, ou ligne invalide (voir lignesIgnorees) — rien n'a été créé",
-            content = @Content(mediaType = "application/json", schema = @Schema(oneOf = {PaieImportResultDto.class, staport.rh.common.dtos.ErrorResponseDto.class})))
+    @Operation(summary = "Importer un fichier de paie prêt (sans erreur, CIN inconnu ni écart) : crée les bulletins du mois, " +
+            "repasse ACTIF les employés revenus et enregistre les départs confirmés. Tout ou rien.")
+    @ApiResponse(responseCode = "200", description = "Bilan de l'import", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PaieImportResultDto.class)))
+    @ApiResponse(responseCode = "400", description = "Mois refusé, fichier illisible ou pas prêt, départ non proposé par l'analyse — rien n'a été enregistré", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
     @PreAuthorize("hasAuthority('PAIE_IMPORT')")
     public ResponseEntity<PaieImportResultDto> importer(
-            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo. Import atomique : aucune ligne n'est créée si une ligne est invalide.")
-            @RequestParam("file") MultipartFile file,
-            @Parameter(description = "Période au format aaaa-MM, ex. 2026-08", example = "2026-08")
-            @RequestParam("periode") String periode) {
-        PaieImportResultDto resultat = importService.importer(file, parsePeriode(periode));
-        HttpStatus statut = resultat.ignores() > 0 ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
-        return ResponseEntity.status(statut).body(resultat);
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Mois au format aaaa-MM, ex. 2026-10", example = "2026-10") @RequestParam("periode") String periode,
+            @Valid @RequestPart(value = "departs", required = false) PaieImportDepartsDto departs) {
+        PaieImportDepartsDto confirmes = departs != null ? departs : new PaieImportDepartsDto(null);
+        return ResponseEntity.ok(importService.importer(file, parsePeriode(periode), confirmes));
     }
 
     @GetMapping("/modele")

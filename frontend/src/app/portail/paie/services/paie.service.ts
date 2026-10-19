@@ -11,6 +11,8 @@ import {
   PaieChantierPeriode,
   PaieCreateRequest,
   PaieExportRequest,
+  PaieImportAnalyse,
+  PaieImportCorrections,
   PaieImportResult,
   PaieMaterielTableau,
   PaiePeriodeResume,
@@ -84,11 +86,35 @@ export class PaieService {
     return this.http.post<PaieRestauration>(`${this.baseUrl}/restauration/${idEntreeAudit}`, {});
   }
 
-  importer(file: File, periode: string): Observable<PaieImportResult> {
+  /** Analyse un fichier de paie sans rien enregistrer : erreurs, CIN inconnus, écarts avec les fiches, départs, retours. */
+  analyserImport(file: File, periode: string): Observable<PaieImportAnalyse> {
+    return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/analyse`, this.formulaireImport(file), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Corrige les fiches à partir du fichier (alignements, créations) et renvoie la nouvelle analyse. */
+  corrigerImport(file: File, periode: string, corrections: PaieImportCorrections): Observable<PaieImportAnalyse> {
+    return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/corrections`, this.formulaireImport(file, { corrections }), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif). */
+  importer(file: File, periode: string, departs: { employeId: number; motif: string }[]): Observable<PaieImportResult> {
+    return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, this.formulaireImport(file, { departs: { departs } }), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Le fichier, et chaque partie JSON en Blob `application/json` (attendu par `@RequestPart` côté serveur). */
+  private formulaireImport(file: File, parties: Record<string, unknown> = {}): FormData {
     const formData = new FormData();
     formData.append('file', file);
-    const params = new HttpParams().set('periode', periode);
-    return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, formData, { params });
+    for (const [nom, valeur] of Object.entries(parties)) {
+      formData.append(nom, new Blob([JSON.stringify(valeur)], { type: 'application/json' }));
+    }
+    return formData;
   }
 
   telechargerModele(): Observable<Blob> {

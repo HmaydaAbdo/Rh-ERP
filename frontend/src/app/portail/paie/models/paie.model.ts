@@ -1,3 +1,5 @@
+import { TypeSalaire } from '../../employee/models/employee.model';
+
 export interface PaieEmployeeSummary {
   id: number;
   nomPrenom: string;
@@ -226,20 +228,70 @@ export interface PaieExportRequest {
   materiel: Record<string, number> | null;
 }
 
-export interface PaieImportLigneIgnoree {
+/** Une ligne que seul le fichier peut corriger. */
+export interface PaieImportErreur {
   numeroLigne: number;
   cin: string | null;
   nomPrenom: string | null;
   raison: string;
 }
 
-export interface PaieImportResult {
+/** Un CIN sans fiche : à créer depuis l'assistant, ou à corriger dans le fichier. */
+export interface PaieImportCinInconnu {
+  numeroLigne: number;
+  cin: string;
+  nomPrenom: string | null;
+  fonction: string | null;
+  chantier: string | null;
+  equipe: string | null;
+  salaire: number;
+}
+
+/** Codes des champs comparés entre la fiche et le fichier. */
+export type PaieImportChamp = 'nomPrenom' | 'fonction' | 'chantier' | 'equipe' | 'salaire';
+
+/** Une fiche qui ne dit pas la même chose que sa ligne ; `typeSalaire` est le type actuel de la fiche. */
+export interface PaieImportEcart {
+  employeId: number;
+  numeroLigne: number;
+  cin: string;
+  nomPrenom: string;
+  champs: { champ: PaieImportChamp; base: string | null; fichier: string | null }[];
+  typeSalaire: TypeSalaire | null;
+}
+
+/** Un départ proposé : STC ou sortie du fichier (`motif` « STC » / « Sortie »), ou actif absent du fichier (`motif` null). */
+export interface PaieImportDepart {
+  employeId: number;
+  cin: string;
+  nomPrenom: string;
+  motif: string | null;
+}
+
+/** Ce que l'analyse d'un fichier de paie a trouvé, sans rien enregistrer (POST /paie/import/analyse). */
+export interface PaieImportAnalyse {
   periode: string;
   totalLignes: number;
+  erreurs: PaieImportErreur[];
+  cinInconnus: PaieImportCinInconnu[];
+  ecarts: PaieImportEcart[];
+  departs: PaieImportDepart[];
+  retours: { employeId: number; cin: string; nomPrenom: string }[];
+  pret: boolean;
+}
+
+/** Corrections des fiches depuis l'assistant (POST /paie/import/corrections). */
+export interface PaieImportCorrections {
+  aligner: { employeId: number; typeSalaire: TypeSalaire | null }[];
+  creer: { numeroLigne: number; dateNaissance: string; dateEmbauche: string; typeSalaire: TypeSalaire }[];
+}
+
+/** Bilan d'un import réussi (POST /paie/import). */
+export interface PaieImportResult {
+  periode: string;
   crees: number;
-  ignores: number;
-  lignesIgnorees: PaieImportLigneIgnoree[];
-  fonctionsCreees: string[];
+  departs: number;
+  retours: number;
 }
 
 /** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir docs/report/README.md), pas un export

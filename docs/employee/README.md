@@ -106,6 +106,12 @@ l'import comme l'API exigent déjà ces deux dates).
   tracée dans le journal d'audit (échec).
 - Un employé `INACTIF` reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
   employés `ACTIF`.
+- **Le statut suit la paie** : l'assistant d'import de la paie (voir [../paie/README.md](../paie/README.md), « Import Excel
+  (assistant) ») repasse ACTIF un inactif présent dans le fichier, et enregistre les **départs confirmés** par
+  `IEmployeeService.enregistrerSortie(id, mois, motif)` : l'employé passe INACTIF et le départ (mois, motif « STC » ou saisi)
+  rejoint `employe_sortie` — un seul par mois (sinon 400), motif obligatoire de 255 caractères au plus. Action d'audit
+  `EMPLOYE_SORTIE`. Depuis l'assistant, l'utilisateur peut aussi aligner une fiche sur le fichier ou créer un CIN inconnu
+  (ce sont les `update` et `create` habituels, appelés par le domaine Paie).
 
 ---
 
