@@ -1,0 +1,102 @@
+@if (store.analyse(); as analyse) {
+  <section class="controle">
+    <div class="controle__bilan">
+      <span class="controle__fichier"><stp-icon name="file-spreadsheet" /> {{ store.fichier()?.name }} — {{ analyse.totalLignes }} ligne(s)</span>
+      <button stp-button variant="secondary" icon="refresh-cw" type="button" [disabled]="store.occupe()" (click)="fichierCorrige.click()">Réimporter le fichier corrigé</button>
+      <input #fichierCorrige class="controle__cache" type="file" accept=".xlsx" tabindex="-1" aria-hidden="true" (change)="surFichier($event)" />
+    </div>
+
+    @if (analyse.pret) {
+      <div class="controle__ok" role="status">
+        <stp-icon name="circle-check" size="1.5rem" />
+        <div>
+          <strong>Aucun problème</strong>
+          <p>Les {{ analyse.totalLignes }} ligne(s) concordent avec les fiches des employés. Passez aux départs.</p>
+        </div>
+      </div>
+    } @else {
+      <p class="import-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer.
+        @if (!store.peutCorriger()) {
+          Vous ne pouvez pas modifier les fiches des employés : corrigez le fichier, puis réimportez-le.
+        }
+      </p>
+    }
+
+    @if (analyse.erreurs.length > 0) {
+      <h3 class="import-wizard__titre"><stp-icon name="file-x" /> À corriger dans le fichier <span class="import-wizard__nombre">{{ analyse.erreurs.length }}</span></h3>
+      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Erreurs du fichier">
+        <table class="app-static-table">
+          <thead><tr><th scope="col">Ligne</th><th scope="col">CIN</th><th scope="col">Nom</th><th scope="col">Problème</th></tr></thead>
+          <tbody>
+            @for (erreur of analyse.erreurs; track erreur.numeroLigne) {
+              <tr><td>{{ erreur.numeroLigne }}</td><td>{{ erreur.cin ?? '—' }}</td><td>{{ erreur.nomPrenom ?? '—' }}</td><td>{{ erreur.raison }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (analyse.cinInconnus.length > 0) {
+      <h3 class="import-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="import-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
+      <p class="import-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
+      <ul class="controle__cartes">
+        @for (inconnu of analyse.cinInconnus; track inconnu.numeroLigne) {
+          <li class="controle__carte">
+            <div class="controle__qui">
+              <strong>{{ inconnu.nomPrenom ?? 'Sans nom' }}</strong>
+              <span>CIN {{ inconnu.cin }} · ligne {{ inconnu.numeroLigne }}</span>
+              <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.2-2' }}</span>
+            </div>
+            @if (store.peutCorriger()) {
+              <div class="controle__saisie">
+                <label class="controle__champ"><span>Date de naissance</span>
+                <stp-date-input [ariaLabel]="'Date de naissance de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateNaissance ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateNaissance: $event })" /></label>
+                <label class="controle__champ"><span>Date d’embauche</span>
+                <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
+                <label class="controle__champ"><span>Type de salaire</span>
+                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
+                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne) || store.occupe()" (click)="store.creer(inconnu.numeroLigne)">Créer l'employé</button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    @if (analyse.ecarts.length > 0) {
+      <div class="controle__entete-section">
+        <h3 class="import-wizard__titre"><stp-icon name="git-compare" /> Fiches différentes du fichier <span class="import-wizard__nombre">{{ analyse.ecarts.length }}</span></h3>
+        @if (store.peutCorriger() && analyse.ecarts.length > 1) {
+          <button stp-button variant="secondary" icon="check-check" type="button" [disabled]="store.occupe()" (click)="store.alignerTout()">Tout mettre à jour</button>
+        }
+      </div>
+      <p class="import-wizard__legende">Mettez la fiche à jour avec les valeurs du fichier — ou corrigez le fichier si l'erreur vient de lui.</p>
+      <ul class="controle__cartes">
+        @for (ecart of analyse.ecarts; track ecart.employeId) {
+          <li class="controle__carte">
+            <div class="controle__qui">
+              <strong>{{ ecart.nomPrenom }}</strong>
+              <span>CIN {{ ecart.cin }} · ligne {{ ecart.numeroLigne }}</span>
+            </div>
+            <dl class="controle__ecarts">
+              @for (champ of ecart.champs; track champ.champ) {
+                <div>
+                  <dt>{{ libellesChamps[champ.champ] }}</dt>
+                  <dd><s>{{ valeur(champ.champ, champ.base) }}</s><stp-icon name="arrow-right" /><span class="app-lecteur"> devient </span><strong>{{ valeur(champ.champ, champ.fichier) }}</strong></dd>
+                </div>
+              }
+            </dl>
+            @if (store.peutCorriger()) {
+              <div class="controle__saisie">
+                @if (salaireChange(ecart.champs)) {
+                  <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typesChoisis()[ecart.employeId] ?? ecart.typeSalaire" (valueChange)="store.choisirType(ecart.employeId, $any($event))" />
+                }
+                <button stp-button icon="check" type="button" [disabled]="store.occupe()" [attr.aria-label]="'Mettre à jour la fiche de ' + ecart.nomPrenom" (click)="store.aligner([ecart.employeId])">Mettre à jour la fiche</button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

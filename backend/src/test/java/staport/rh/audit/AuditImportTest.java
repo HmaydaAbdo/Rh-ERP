@@ -12,6 +12,11 @@ import staport.rh.employee.imports.EmployeeImportResultDto;
 import staport.rh.employee.imports.EmployeeImportService;
 import staport.rh.function.imports.FunctionImportResultDto;
 import staport.rh.function.imports.FunctionImportService;
+import staport.rh.employee.entities.TypeSalaire;
+import staport.rh.paie.imports.PaieImportAnalyseDto;
+import staport.rh.paie.imports.PaieImportCorrectionsDto;
+import staport.rh.paie.imports.PaieImportDepartsDto;
+import staport.rh.paie.imports.PaieImportException;
 import staport.rh.paie.imports.PaieImportResultDto;
 import staport.rh.paie.imports.PaieImportService;
 
@@ -20,11 +25,13 @@ import java.io.IOException;
 import java.time.YearMonth;
 import java.time.LocalDate;
 import java.sql.Date;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Scénarios S2 et S3 : un import réussi, un import rejeté (qui ne lève pas d'exception) — sur la vraie chaîne. */
+/** Scénarios S2 et S3 : un import réussi, un import refusé, et les corrections de l'assistant — sur la vraie chaîne. */
 class AuditImportTest extends AuditIntegrationTestBase {
 
     @Autowired
@@ -37,14 +44,14 @@ class AuditImportTest extends AuditIntegrationTestBase {
     private FunctionImportService functionImportService;
 
     /** Fichier de paie au format attendu : trois lignes d'en-tête, puis une ligne par bulletin. */
-    private static MockMultipartFile fichier(String cin, String fonction, String chantierCode) throws IOException {
+    private static MockMultipartFile fichier(String nomPrenom, String cin, String fonction, String chantierCode) throws IOException {
         try (XSSFWorkbook classeur = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             Sheet feuille = classeur.createSheet("Paie");
             feuille.createRow(0);
             feuille.createRow(1);
             feuille.createRow(2);
             Row ligne = feuille.createRow(3);
-            ligne.createCell(0).setCellValue("Nom Prénom");
+            ligne.createCell(0).setCellValue(nomPrenom);
             ligne.createCell(1).setCellValue(fonction);
             ligne.createCell(2).setCellValue(cin);
             ligne.createCell(3).setCellValue(26);
@@ -88,45 +95,67 @@ class AuditImportTest extends AuditIntegrationTestBase {
         }
     }
 
+    /** La paie s'importe mois après mois : le mois qui suit le dernier présent dans la base partagée. */
+    private YearMonth moisSuivant() {
+        Integer dernier = jdbc.queryForObject("SELECT max(periode) FROM paie", Integer.class);
+        return dernier == null ? YearMonth.of(2032, 1) : YearMonth.of(dernier / 100, dernier % 100).plusMonths(1);
+    }
+
+    /** La fiche du référentiel de test, avec le salaire de la ligne du fichier : le fichier concorde avec elle. */
+    private void aligner(Referentiel ref) {
+        jdbc.update("UPDATE employe SET salaire = 3000, type_salaire = 'MENSUEL' WHERE id = ?", ref.employeId());
+    }
+
     @Test
     void un_import_reussi_laisse_une_seule_entree_avec_l_empreinte_du_fichier_et_toutes_les_lignes_dans_sa_revision() throws IOException {
         Referentiel ref = donnees.creerReferentiel();
-        String nouvelleFonction = "FIMP-" + ref.suffixe();
-        MockMultipartFile fichier = fichier("CIN" + ref.suffixe(), nouvelleFonction, "C-" + ref.suffixe());
+        aligner(ref);
+        YearMonth mois = moisSuivant();
+        MockMultipartFile fichier = fichier("Nom " + ref.suffixe(), "CIN" + ref.suffixe(), "F-" + ref.suffixe(), "C-" + ref.suffixe());
 
-        PaieImportResultDto resultat = importService.importer(fichier, YearMonth.of(2032, 1));
+        PaieImportResultDto resultat = importService.importer(fichier, mois, new PaieImportDepartsDto(null));
 
         assertThat(resultat.crees()).isEqualTo(1);
-        assertThat(resultat.fonctionsCreees()).containsExactly(nouvelleFonction);
         Map<String, Object> entree = jdbc.queryForMap("SELECT * FROM audit_journal WHERE action = 'PAIE_IMPORT' ORDER BY id DESC LIMIT 1");
         assertThat(entree.get("resultat")).isEqualTo("SUCCES");
         assertThat(((Number) entree.get("nombre_elements")).intValue()).isEqualTo(1);
         String perimetre = entree.get("perimetre").toString();
-        assertThat(perimetre).contains("paie-test.xlsx").contains("2032-01").contains("fichierSha256");
+        assertThat(perimetre).contains("paie-test.xlsx").contains(mois.toString()).contains("fichierSha256");
         assertThat(perimetre).as("jamais le contenu du fichier").doesNotContain(ref.suffixe());
-        // La révision contient le bulletin ET la fonction créée au passage : une seule entrée, rien de perdu.
-        long revision = revisionDe(entree);
-        assertThat(lignesAud("paie_aud", revision, (short) 0)).isEqualTo(1);
-        assertThat(lignesAud("fonction_aud", revision, (short) 0)).isEqualTo(1);
-        Long fonctionId = jdbc.queryForObject("SELECT id FROM fonction WHERE libelle = ?", Long.class, nouvelleFonction);
-        assertThat(entrees("FONCTION_CREATION", fonctionId)).as("action imbriquée : pas de seconde entrée").isEmpty();
+        assertThat(lignesAud("paie_aud", revisionDe(entree), (short) 0)).isEqualTo(1);
     }
 
     @Test
-    void un_import_rejete_est_trace_comme_echec_alors_que_le_service_ne_leve_aucune_exception() throws IOException {
+    void un_fichier_pas_pret_est_refuse_et_trace_comme_echec_sans_rien_enregistrer() throws IOException {
         Referentiel ref = donnees.creerReferentiel();
+        YearMonth mois = moisSuivant();
         long avant = jdbc.queryForObject("SELECT COALESCE(max(id), 0) FROM audit_journal", Long.class);
 
-        PaieImportResultDto resultat = importService.importer(fichier("CIN-INCONNU-" + ref.suffixe(), "F", "C-" + ref.suffixe()),
-                YearMonth.of(2032, 2));
+        assertThatThrownBy(() -> importService.importer(fichier("Nom", "CIN-INCONNU-" + ref.suffixe(), "F", "C-" + ref.suffixe()),
+                mois, new PaieImportDepartsDto(null))).isInstanceOf(PaieImportException.class);
 
-        assertThat(resultat.ignores()).isEqualTo(1);
         Map<String, Object> entree = jdbc.queryForMap("SELECT * FROM audit_journal WHERE id > ? AND action = 'PAIE_IMPORT'", avant);
         assertThat(entree.get("resultat")).isEqualTo("ECHEC");
-        assertThat(entree.get("motif")).isEqualTo("1 ligne(s) rejetée(s) sur 1");
         assertThat(entree.get("revision_id")).isNull();
         assertThat(entree.get("perimetre").toString()).contains("fichierSha256");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM paie WHERE periode = 203202", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM paie WHERE periode = ?", Long.class,
+                mois.getYear() * 100 + mois.getMonthValue())).isZero();
+    }
+
+    @Test
+    void les_corrections_de_l_assistant_alignent_la_fiche_en_une_entree_dont_la_revision_garde_la_nouvelle_version() throws IOException {
+        Referentiel ref = donnees.creerReferentiel();
+        MockMultipartFile fichier = fichier("Nom " + ref.suffixe(), "CIN" + ref.suffixe(), "F-" + ref.suffixe(), "C-" + ref.suffixe());
+
+        PaieImportAnalyseDto apres = importService.corriger(fichier, moisSuivant(), new PaieImportCorrectionsDto(
+                List.of(new PaieImportCorrectionsDto.Alignement(ref.employeId(), TypeSalaire.MENSUEL)), null));
+
+        assertThat(apres.pret()).isTrue();
+        Map<String, Object> entree = uneEntree("PAIE_IMPORT_CORRECTION", null);
+        assertThat(entree.get("resultat")).isEqualTo("SUCCES");
+        assertThat(entree.get("perimetre").toString()).contains("\"fichesAlignees\": 1");
+        assertThat(jdbc.queryForObject("SELECT type_salaire FROM employe_aud WHERE id = ? AND rev = ? AND revtype = 1", String.class,
+                ref.employeId(), revisionDe(entree))).isEqualTo("MENSUEL");
     }
 
     @Test

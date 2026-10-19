@@ -28,9 +28,10 @@ paie/
 ├── services/ (PaieService + IPaieService)
 ├── specifications/PaieSpecification.java
 ├── imports/
-│   ├── PaieImportService.java       ← lecture du fichier, résolution CIN/fonction/chantier/équipe, création des bulletins, création des fonctions manquantes, génération du modèle
-│   ├── PaieImportController.java    ← POST /paie/import?periode=aaaa-MM, GET /paie/import/modele
-│   └── PaieImportResultDto.java, PaieImportException.java
+│   ├── PaieImportService.java       ← assistant d'import : analyse, corrections des fiches, import (voir « Import Excel »)
+│   ├── LecteurFichierPaie.java      ← lecture du fichier (LigneFichierPaie) et génération du modèle
+│   ├── PaieImportController.java    ← POST /paie/import/analyse, /paie/import/corrections, /paie/import ; GET /paie/import/modele
+│   └── PaieImportAnalyseDto, PaieImportCorrectionsDto, PaieImportDepartsDto, PaieImportResultDto, PaieImportException
 ├── export/
 │   ├── PaieExportService.java       ← orchestration (regroupement, totaux, période précédente)
 │   ├── PaieSheetWriter.java         ← mise en page d'une feuille (partagée GLB/chantier/équipe)
@@ -126,7 +127,9 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
-| `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier Excel pour une période | 200, 400 |
+| `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
+| `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |
+| `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier prêt, avec les départs confirmés | 200, 400 |
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
 | `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export) | 200 |
@@ -148,95 +151,86 @@ permission et `conventions/security.md` pour la conception du RBAC.
 
 ---
 
-## Import Excel
+## Import Excel (assistant)
+
+L'import se fait dans un **assistant** qui ne laisse passer qu'un fichier **en accord avec les fiches des employés** :
+la fiche porte l'état du dernier mois de paie, et un import la tient à jour (décision du 2026-10-18, voir
+[ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md)). Le serveur ne garde rien entre les étapes : chacune
+reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `LecteurFichierPaie`).
+
+| Étape | Route | Ce qui se passe |
+|---|---|---|
+| 1. Fichier | — | Le mois est **imposé** : celui qui suit exactement le dernier mois importé (au tout premier import, l'utilisateur le choisit). |
+| 2. Contrôle | `POST /paie/import/analyse` | Analyse **sans rien enregistrer**. Trois sortes de problèmes, chacune avec sa solution (ci-dessous). On corrige, on réimporte le fichier corrigé, et on recommence jusqu'à **zéro problème**. |
+| — | `POST /paie/import/corrections` | Depuis le contrôle : met à jour des fiches avec les valeurs du fichier, ou crée les employés des CIN inconnus. Renvoie la nouvelle analyse. |
+| 3. Départs | — | Les employés qui quittent Staport, **tous cochés** : ceux marqués STC ou « sortie » dans le fichier (motif « STC » / « Sortie » prérempli) et les actifs **absents** du fichier (motif à saisir). Décoché = l'employé reste actif. Les inactifs présents dans le fichier sont annoncés comme **retours**. |
+| 4. Import | `POST /paie/import` | Refait l'analyse : refus (`400`) si le fichier n'est pas prêt ou si un départ envoyé n'a pas été proposé. Sinon, en une transaction : les bulletins, les retours (ACTIF), les départs confirmés (INACTIF + départ du mois dans `employe_sortie`). |
+
+### Les problèmes du contrôle
+
+| Sorte | Exemples | Se règle |
+|---|---|---|
+| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier inconnu ou inactif ; équipe inconnue ; bulletin déjà présent pour l'employé ce mois-ci | Dans le fichier, puis réimport |
+| **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
+| **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
+
+Le **type de salaire** (mensuel ou journalier) n'est pas dans le fichier : quand le salaire change, l'assistant propose
+celui de la fiche ; il est obligatoire si la fiche n'en a pas encore. Une **fonction** inconnue du référentiel n'est
+pas une erreur : elle est créée quand une fiche est mise à jour ou créée avec elle (mêmes règles qu'un import Function).
+Les corrections demandent `PAIE_IMPORT`, `EMPLOYEE_WRITE` et `PAIE_READ` ; sans `EMPLOYEE_WRITE`, l'assistant n'offre que de
+corriger le fichier.
+
+Le bulletin reprend les valeurs du fichier, qui sont alors celles de la fiche ; `salaireTotal` est repris de la colonne J
+**tel quel**, jamais recalculé. L'import ne modifie jamais un bulletin existant : pour réimporter un mois, supprimer
+d'abord ses bulletins (le dernier mois redevient alors celui d'avant, et c'est lui qui est attendu).
 
 ### Modèle téléchargeable
 
-`GET /paie/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI) renvoie un fichier `.xlsx` vierge avec
-les trois lignes d'en-tête et les 13 colonnes dans l'ordre attendu, généré par
-`PaieImportService.genererModele()` — pour que l'utilisateur parte d'un fichier au bon format plutôt
-que de deviner ou de réutiliser un fichier dont la structure a pu changer. La colonne « Total » est
-lue telle quelle (voir « Règles métier »).
+`GET /paie/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer ») renvoie un
+fichier `.xlsx` vierge avec les trois lignes d'en-tête et les 13 colonnes dans l'ordre attendu
+(`LecteurFichierPaie.genererModele()`).
 
 ### Format attendu
 
-Fichier `.xlsx`, **trois lignes d'en-tête** (ignorées quel que soit leur contenu), colonnes dans cet
-ordre exact :
+Fichier `.xlsx`, **trois lignes d'en-tête** (ignorées quel que soit leur contenu), colonnes dans cet ordre exact :
 
 | Colonne | Contenu |
 |---|---|
-| A | Nom & prénom (informatif — l'employé est résolu par CIN, colonne C) |
-| B | Fonction (libellé — **créée automatiquement si elle n'existe pas**, voir plus bas) |
-| C | CIN (doit correspondre à un employé existant) |
+| A | Nom & prénom (comparé à la fiche ; obligatoire pour créer un CIN inconnu) |
+| B | Fonction (libellé) |
+| C | CIN (clé de l'employé) |
 | D | Nombre de jours travaillés |
 | E | Jours récupération ouvrable |
 | F | Jours récupération dimanche |
-| G | Salaire mensuel |
+| G | Salaire (montant mensuel, ou tarif d'une journée) — jamais 0 |
 | H | Prime roulage ordinaire |
 | I | Prime roulage dimanche |
 | J | Total — repris **tel quel** dans `salaireTotal` (obligatoire, jamais recalculé) |
-| K | Observation |
+| K | Observation (« STC » ou « sortie » : départ proposé) |
 | L | Chantier (code, doit exister et être actif) |
-| M | Équipe (code d'une équipe **existante**, facultative — un code inconnu rejette la ligne, l'équipe n'est jamais créée par l'import) |
+| M | Équipe (code d'une équipe **existante**, facultative — jamais créée par l'import) |
 
-La **période s'applique à tout le fichier** — c'est un paramètre de la requête
-(`?periode=aaaa-MM`), pas une colonne : un fichier = la paie d'un mois pour tous les employés
-concernés.
+Le **mois s'applique à tout le fichier** — c'est un paramètre de la requête (`?periode=aaaa-MM`), pas une colonne.
 
-**Contrairement à l'import Employee** (qui crée les employés), l'import Paie exige que l'**employé**
-(CIN) et le **chantier** existent déjà — il ne fait que constater une paie, jamais créer ces deux
-référentiels. La **fonction** fait exception : une fonction inconnue n'est **plus une erreur**, elle
-est créée automatiquement, exactement comme le ferait un import Function (même règles : un libellé
-par fonction, la casse de la première occurrence est conservée). Ce traitement asymétrique est
-volontaire — un import de paie mensuel de plusieurs centaines de lignes ne doit pas échouer pour un
-intitulé de fonction qui n'a simplement pas encore été saisi dans le référentiel, alors qu'un CIN ou
-un chantier inconnu reste le signe d'une vraie erreur de saisie à corriger.
+### Réponses
 
-### Comportement
+- `PaieImportAnalyseDto` (analyse et corrections) : `periode`, `totalLignes`, `erreurs[]` (`numeroLigne`, `cin`,
+  `nomPrenom`, `raison`), `cinInconnus[]` (ligne, CIN, nom, fonction, chantier, équipe, salaire), `ecarts[]` (`employeId`,
+  ligne, CIN, nom de la fiche, `champs[]` = `champ`/`base`/`fichier`, `typeSalaire` de la fiche), `departs[]` (`employeId`,
+  CIN, nom, `motif` « STC »/« Sortie » ou `null`), `retours[]`, `pret`.
+- `PaieImportCorrectionsDto` (partie JSON `corrections`) : `aligner[]` (`employeId`, `typeSalaire` ou `null` pour garder
+  celui de la fiche), `creer[]` (`numeroLigne`, `dateNaissance`, `dateEmbauche`, `typeSalaire`).
+- `PaieImportDepartsDto` (partie JSON `departs`, facultative) : `departs[]` (`employeId`, `motif`).
+- `PaieImportResultDto` : `periode`, `crees`, `departs`, `retours`.
 
-Import **atomique** (tout ou rien) — une seule ligne invalide rejette tout le fichier, rien n'est
-créé, **aucune fonction n'est créée non plus** :
-
-| Cas | Message affiché |
-|---|---|
-| Champ obligatoire manquant (CIN, fonction, jours, salaire, total, chantier) | `Champs obligatoires manquants ou invalides : ...` |
-| Jour fractionnaire, valeur négative pour jours/salaires/primes, ou observation de plus de 255 caractères | `400 Bad Request`, ligne détaillée dans `lignesIgnorees` |
-| CIN sans employé correspondant | `Employé introuvable avec ce CIN` |
-| CIN présent plus d'une fois dans le fichier | `CIN en doublon dans le fichier` |
-| Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |
-| Bulletin déjà existant pour cet employé et cette période | `Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)` |
-| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, détail complet dans `lignesIgnorees` |
-| Toutes les lignes valides | `200 OK`, tous les bulletins créés, fonctions manquantes créées |
-
-**L'import ne modifie jamais un bulletin existant** (décision du 2026-10-03) : si un bulletin existe déjà
-pour (employé, période), la ligne est rejetée — donc tout le fichier. La correction d'un bulletin se
-fait uniquement depuis l'écran Paie (`PUT /paie/{id}`). Pour ré-importer un mois, supprimer d'abord les
-bulletins concernés.
-
-Toutes les lignes sont d'abord validées, en ne gardant en mémoire que les valeurs brutes de chaque
-ligne (pas d'entité JPA, pas de libellé de fonction résolu) : voir [../imports.md](../imports.md) pour le
-principe commun. La création des fonctions manquantes et celle des bulletins n'ont lieu qu'une fois la totalité
-du fichier confirmée valide : créer une fonction plus tôt la laisserait en base même si l'import est finalement
-rejeté à cause d'une autre ligne. Les fonctions manquantes sont dédupliquées avant création : si dix lignes du
-même fichier référencent un même libellé inédit, il n'est créé qu'une fois.
-
-`salaireTotal` est repris de la colonne J du fichier, sans recalcul ; une ligne sans total valide est
-rejetée (champ obligatoire).
-
-`PaieImportResultDto` : `periode`, `totalLignes`, `crees`, `ignores`, `lignesIgnorees[]`
-(`numeroLigne`, `cin`, `nomPrenom`, `raison`), `fonctionsCreees[]` (libellés des fonctions créées par
-cet import, pour transparence — l'UI les affiche explicitement dans le toast et le détail du
-résultat). Le corps de réponse a la même forme en succès (`200`) qu'en rejet (`400`) — seul le code
-HTTP change.
+Un mois refusé, un fichier illisible ou pas prêt, une correction impossible : `400` avec `ErrorResponseDto`, rien n'est
+enregistré.
 
 ### Performance
 
-Employés (par CIN), chantiers actifs, équipes (par code) et l'ensemble des employés qui ont déjà un bulletin
-pour la période (`PaieRepository.findEmployeeIdsByPeriode`) sont chargés **une seule fois** avant la boucle de
-lecture (aucune requête par ligne), conformément à `conventions/performance.md`. Le référentiel
-Function est chargé une seconde fois, séparément, dans la phase de persistance (après confirmation
-que le fichier est entièrement valide) — nécessaire pour disposer d'un état à jour incluant les
-fonctions qui viennent d'être créées, avant de résoudre l'id de chaque ligne.
+Employés, chantiers actifs, équipes, fonctions et employés déjà payés ce mois-là sont chargés **une seule fois** par
+analyse, avant la lecture des lignes (aucune requête par ligne), conformément à `conventions/performance.md`. Les
+corrections rechargent ces référentiels une fois, après avoir écrit, pour rendre la nouvelle analyse.
 
 ---
 
@@ -275,8 +269,8 @@ base) : `"ch"` et `"CH"` ne peuvent plus produire deux équipes distinctes, ce q
 source d'erreur silencieuse du texte libre.
 
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
-contre le référentiel ; un code inconnu rejette la ligne (`« Équipe introuvable : X »`), donc tout le
-fichier (import atomique). Une cellule vide laisse le bulletin sans équipe.
+contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne
+s'importe pas tant qu'elle n'est pas corrigée. Une cellule vide laisse le bulletin sans équipe.
 
 Le détail des règles de mise en page (total du mois précédent, colonne STC, squelette matériel
 C168, cas des feuilles sans ligne) et du rapport PDF est dans `docs/report/README.md`.
@@ -289,7 +283,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression, téléchargement du modèle, import (avec sélecteur de période). Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
+| `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression. « Importer » ouvre `PaieImportWizardComponent`, l'**assistant d'import** (fichier, contrôle, départs, import — voir « Import Excel »), et son menu le modèle Excel. Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
 | `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** en quatre niveaux de descente, voir « Vue Cartes » ci-dessous |
 | `/paie/analytique` | `PaieAnalytiqueComponent` | Vue **Analytique** : tableau de bord interactif, voir « Vue Analytique » ci-dessous |
 | `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
@@ -308,8 +302,8 @@ Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **co
 **actions** du moins au plus important : **Exporter**, **Importer** (bouton fractionné dont le menu propose le **modèle Excel**,
 le fichier que l'import attend) et **Nouveau bulletin** (bouton plein) — les mêmes dans les trois vues, chacun avec sa permission
 (`PAIE_EXPORT`, `PAIE_IMPORT`, `PAIE_WRITE`). Dessous, la **barre de filtres** ; dessous, le contenu de la vue. Dans le tabulaire,
-une **barre du tableau** porte le total (« 972 bulletins ») à gauche et l'outil **Colonnes** à droite. Un import réussi (ou
-partiel) **recrée la vue affichée** (`PaieVuesComponent.rafraichirVue`) : elle recharge ses données et les mois de la barre.
+une **barre du tableau** porte le total (« 972 bulletins ») à gauche et l'outil **Colonnes** à droite. Un import réussi
+**recrée la vue affichée** (`PaieVuesComponent.rafraichirVue`) : elle recharge ses données et les mois de la barre.
 
 `PaieFiltresComponent` (`filtres/`) est **la même barre dans les trois vues, sur une seule ligne et entièrement visible dès
 l'arrivée** — aucun bouton « Filtres » à ouvrir. Contrôles de même hauteur (`--control-height`), posés à plat sur la page : le

@@ -18,6 +18,7 @@ const LIBELLES_ACTIONS: Record<string, string> = {
   PAIE_SUPPRESSION: 'Bulletin supprimé',
   PAIE_SUPPRESSION_GROUPE: 'Suppression en groupe de bulletins',
   PAIE_IMPORT: 'Import de bulletins',
+  PAIE_IMPORT_CORRECTION: 'Fiches corrigées depuis l’import de paie',
   PAIE_EXPORT_EXCEL: 'Export Excel de la paie',
   PAIE_RAPPORT_PDF: 'Rapport PDF de la paie',
   PAIE_RESTAURATION_GROUPE: 'Restauration en groupe de bulletins',
