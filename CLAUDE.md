@@ -32,6 +32,9 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 # Ordre de lecture
 
+Pour reprendre le travail en cours (état du projet, règles du propriétaire, déploiement, sujets ouverts), lire
+d'abord `docs/handoff/etat-du-projet.md`.
+
 0. Les conventions de référence résident dans `conventions/` à la racine. Elles constituent le
    blueprint ERP-RH ; lire les documents applicables dans l'ordre ci-dessous.
 1. `conventions/architecture.md`
