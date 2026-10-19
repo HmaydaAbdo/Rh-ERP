@@ -13,4 +13,6 @@ public interface EmployeeSortieRepository extends JpaRepository<EmployeeSortie, 
     boolean existsByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
 
     List<EmployeeSortie> findByEmployee_IdOrderByPeriodeAsc(Long employeeId);
+
+    List<EmployeeSortie> findAllByOrderByPeriodeAsc();
 }

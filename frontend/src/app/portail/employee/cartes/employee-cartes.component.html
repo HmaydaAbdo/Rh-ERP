@@ -1,0 +1,83 @@
+<div class="cartes-employes">
+  <div class="cartes-employes__barre">
+    <nav class="cartes-employes__fil" aria-label="Position dans l'effectif">
+      <button type="button" class="cartes-employes__racine" [disabled]="etapes().length === 0" (click)="toutRetirer()">
+        <stp-icon name="users" /> Tous les employés
+      </button>
+      @for (etape of etapes(); track etape.dimension) {
+        <stp-icon name="chevron-right" class="cartes-employes__separateur" />
+        <span class="cartes-employes__etape">
+          <span class="cartes-employes__dimension">{{ libelles[etape.dimension] }}</span>
+          {{ nom(etape.dimension, etape.id) }}
+          <button type="button" class="cartes-employes__retirer" [attr.aria-label]="'Retirer l’étape ' + libelles[etape.dimension]" (click)="retirer(etape.dimension)">
+            <stp-icon name="x" />
+          </button>
+        </span>
+      }
+    </nav>
+
+    <a stp-button variant="secondary" icon="table" routerLink="/employees" [queryParams]="parametresListe()">Voir la liste</a>
+  </div>
+
+  <div class="cartes-employes__choix" role="group" aria-label="Regrouper par">
+    <span>Regrouper par</span>
+    @for (dimension of ordre; track dimension) {
+      <button type="button" [attr.aria-pressed]="niveau() === dimension" [disabled]="!possible(dimension)" (click)="regrouperPar(dimension)">
+        {{ libelles[dimension] }}
+      </button>
+    }
+    <button type="button" [attr.aria-pressed]="niveau() === 'EMPLOYES'" (click)="regrouperPar('EMPLOYES')">Employés</button>
+  </div>
+
+  <div class="cartes-employes__contenu" [attr.aria-busy]="chargement()">
+    @if (niveau() !== 'EMPLOYES') {
+      @if (groupes(); as liste) {
+        <p class="cartes-employes__resume" role="status">
+          {{ total() }} employé(s) · {{ actifs() }} actif(s) · {{ liste.length }} {{ libelles[niveau()].toLowerCase() }}(s)
+        </p>
+        @if (liste.length === 0) {
+          <p class="cartes-employes__vide">Aucun employé ne correspond à ce périmètre.</p>
+        }
+        <ul class="cartes-employes__grille">
+          @for (groupe of liste; track groupe.id; let i = $index) {
+            <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
+              <button type="button" class="cartes-employes__carte" (click)="ouvrir(groupe)">
+                <span class="cartes-employes__code">{{ libelleGroupe($any(niveau()), groupe) }}</span>
+                @if (groupe.code && groupe.libelle !== groupe.code) {
+                  <span class="cartes-employes__libelle">{{ groupe.libelle }}</span>
+                }
+                <strong class="cartes-employes__effectif">{{ groupe.effectif }}</strong>
+                <span class="cartes-employes__jauge" aria-hidden="true"><span [style.width.%]="(groupe.actifs / groupe.effectif) * 100"></span></span>
+                <span class="cartes-employes__detail">{{ groupe.actifs }} actif(s) · {{ groupe.effectif - groupe.actifs }} inactif(s) · {{ part(groupe) }} %</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <p class="cartes-employes__resume" role="status">{{ totalEmployes() }} employé(s)</p>
+      @if (!chargement() && employes().length === 0) {
+        <p class="cartes-employes__vide">Aucun employé ne correspond à ce périmètre.</p>
+      }
+      <ul class="cartes-employes__grille cartes-employes__grille--fiches">
+        @for (employe of employes(); track employe.id) {
+          <li>
+            <a class="cartes-employes__fiche" [routerLink]="['/employees', employe.id]">
+              <span class="cartes-employes__initiales" aria-hidden="true">{{ initiales(employe) }}</span>
+              <span class="cartes-employes__qui">
+                <strong>{{ employe.nomPrenom }}</strong>
+                <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.code }} }</small>
+              </span>
+              <stp-badge [value]="employe.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employe.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
+            </a>
+          </li>
+        }
+      </ul>
+      @if (employes().length < totalEmployes()) {
+        <div class="cartes-employes__plus">
+          <button stp-button variant="secondary" type="button" (click)="afficherPlus()">Afficher plus ({{ totalEmployes() - employes().length }} restants)</button>
+        </div>
+      }
+    }
+  </div>
+</div>

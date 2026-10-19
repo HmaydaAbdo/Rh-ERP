@@ -122,7 +122,9 @@ l'import comme l'API exigent déjà ces deux dates).
 | `POST` | `/employees` | Créer un employé | 201, 400, 409 |
 | `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
 | `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
-| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `statut`) — `fonctionIds`/`chantierIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension | 200 |
+| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` = sans équipe | 200 |
+| `POST` | `/employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | Employés du périmètre (mêmes critères) regroupés par la dimension : `id` (0 = sans équipe), `code`, `libelle`, `effectif`, `actifs`, du groupe le plus grand au plus petit (vue Cartes, répartition de l'Analytique) | 200 |
+| `POST` | `/employees/analytique` | Chiffres clés du périmètre : effectif, actifs, inactifs, âge et ancienneté moyens (années, une décimale), embauches des 12 derniers mois, tranches d'âge et d'ancienneté (vue Analytique) | 200 |
 | `DELETE` | `/employees/{id}` | Supprimer | 204, 404, 409 (bulletins ou compte liés) |
 | `POST` | `/employees/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
 | `GET` | `/employees/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
@@ -243,8 +245,29 @@ chacune avec sa permission) et la **barre de filtres** (`EmployeeFiltresComponen
 statut, « Réinitialiser »), une seule fois pour toutes les vues. Les écrans de saisie et de consultation n'en font pas partie.
 Les **filtres vivent dans l'URL** (`?nom=ali&cin=AB1&fonctionIds=7&chantierIds=3,4&statut=ACTIF`, voir `filtres/employee-filtres.ts`) :
 la barre les écrit (nom et CIN après un court délai), chaque vue les lit ; lien direct et retour navigateur les conservent, une
-valeur invalide est ignorée. Un import réussi recrée la vue affichée, qui recharge ses données. Les vues Cartes et Analytique,
-et leurs onglets (`VueSwitcherComponent` partagé avec la Paie), arrivent avec les données d'historique (voir `TODO.md`).
+valeur invalide est ignorée. Un import réussi recrée la vue affichée, qui recharge ses données. Les onglets (`VueSwitcherComponent`, partagé avec la Paie)
+mènent aux trois vues ; l'en-tête à onglets est le style global `.app-vues` (`styles/_page.scss`), commun avec la Paie.
+
+### Vues Cartes et Analytique
+
+**Cartes** (`cartes/`, lecture seule, `POST /employees/regroupements`). On descend dans l'effectif en choisissant soi-même par
+quoi regrouper : **chantier, équipe, fonction** dans cet ordre par défaut, ou dans un autre — les boutons « Regrouper par »
+proposent à tout moment chaque dimension pas encore choisie, et « Employés » pour voir directement les fiches. Ouvrir une
+carte en fait une **étape du fil** (filtre de la barre à une valeur) ; chaque étape se retire seule. Au bout, une fiche par
+employé (pagination « Afficher plus », 24 par page) ouvre sa fiche. **« Voir la liste »** ouvre la vue Tabulaire sur le même
+périmètre, à n'importe quel niveau. Tout est dans l'URL : les étapes sont `chantierIds`, `equipeIds` (0 = sans équipe) et
+`fonctionIds`, le regroupement courant `?par=chantier|equipe|fonction|employes`. Chaque carte montre l'effectif, la part des
+actifs (jauge) et la part du périmètre. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
+
+**Analytique** (`analytique/`). Six chiffres clés (effectif, actifs, inactifs, âge moyen, ancienneté moyenne, embauches sur
+12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** actifs/inactifs par chantier, équipe ou
+fonction (les 12 plus grands groupes ; tous dans le tableau de données), et — avec `PAIE_READ` — les **mouvements mois par
+mois** tirés de la paie (`POST /paie/effectifs` : employés payés, entrées, sorties, mutations de chantier). Chaque graphique a
+son tableau de données (« Voir les données »). Les mouvements suivent le chantier, l'équipe et la fonction **du bulletin du
+mois** ; le nom, le CIN et le statut de la barre ne s'y appliquent pas (l'écran le dit).
+
+Tranches retenues par le propriétaire (2026-10-19) : âge **moins de 25, 25-34, 35-44, 45-54, 55 ans et plus** (années pleines) ;
+ancienneté **moins d'un an, 1-3, 3-5, 5-10, 10 ans et plus** (de borne à borne : 1-3 = d'un an à moins de trois).
 
 Fonction et chantier utilisent le sélecteur générique (`shared/components/lazy-select`, recherche
 serveur + chargement différé — voir `conventions/frontend.md`, section Sélecteurs) : sélection

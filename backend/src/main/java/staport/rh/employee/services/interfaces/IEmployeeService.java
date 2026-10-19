@@ -38,4 +38,7 @@ public interface IEmployeeService {
 
     /** Les départs de l'employé, du plus ancien au plus récent (son parcours, avec ses bulletins). */
     List<EmployeeSortieDto> listerSorties(Long id);
+
+    /** Tous les départs enregistrés, du plus ancien au plus récent (tendances mois par mois de l'Analytique). */
+    List<EmployeeSortieDto> listerToutesLesSorties();
 }

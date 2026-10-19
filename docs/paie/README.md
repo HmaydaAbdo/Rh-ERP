@@ -127,6 +127,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
+| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Calculés en mémoire sur une projection de cinq colonnes (`listerEffectifs`) : les comparaisons d'un mois au précédent ne s'écrivent pas en JPQL | 200 |
 | `GET` | `/paie/employes/{id}/parcours` | Parcours d'un employé (voir « Parcours d'un employé ») | 200, 404 |
 | `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
 | `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |
@@ -431,7 +432,7 @@ bornes lisibles qui suivent les données.
 
 **Graphiques** : Chart.js via `stp-chart` du kit Staport (dépendance `chart.js`, chargée à la demande à la création du premier graphique). Chart.js dessine
 dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles viennent des jetons, lus à l'exécution
-(`paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
+(`shared/ui/chart/chart-theme.ts`, mesures de la paie dans `paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
 couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
 **Les valeurs de l'évolution sont inscrites au-dessus de chaque point** ; l'infobulle et le tableau de données restent
 disponibles pour une lecture détaillée. Les montants gardent deux décimales et les effectifs sont affichés comme des entiers.

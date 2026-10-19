@@ -46,6 +46,7 @@ export interface EmployeeSearchCriteria {
   cin?: string;
   fonctionIds?: number[];
   chantierIds?: number[];
+  equipeIds?: number[];
   statut?: EmployeeStatut;
 }
 
@@ -61,4 +62,35 @@ export interface EmployeeImportResult {
   crees: number;
   ignores: number;
   lignesIgnorees: EmployeeImportLigneIgnoree[];
+}
+
+/** Ce par quoi la vue Cartes regroupe les employés. */
+export type DimensionEmployes = 'CHANTIER' | 'EQUIPE' | 'FONCTION';
+
+/** Un groupe de la vue Cartes ; pour l'équipe, `id` 0 = sans équipe. */
+export interface EmployeeRegroupement {
+  id: number;
+  code: string | null;
+  libelle: string;
+  effectif: number;
+  actifs: number;
+}
+
+/** Une tranche [min, max[ en années ; `max` null pour la dernière (« et plus »). */
+export interface EmployeeTranche {
+  min: number;
+  max: number | null;
+  effectif: number;
+}
+
+/** Chiffres clés des employés du périmètre (POST /employees/analytique). */
+export interface EmployeeAnalytique {
+  effectif: number;
+  actifs: number;
+  inactifs: number;
+  ageMoyen: number | null;
+  ancienneteMoyenne: number | null;
+  embauchesDouzeMois: number;
+  parAge: EmployeeTranche[];
+  parAnciennete: EmployeeTranche[];
 }

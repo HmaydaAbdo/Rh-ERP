@@ -116,7 +116,7 @@ describe('PaieVuesComponent', () => {
         for (const url of ['/paie', '/paie/cartes', '/paie/analytique']) {
             await harness.navigateByUrl(url, PaieVuesComponent);
 
-            const entete = (harness.routeNativeElement as HTMLElement).querySelector('.paie-vues__header');
+            const entete = (harness.routeNativeElement as HTMLElement).querySelector('.app-vues__header');
             expect(entete?.querySelector('app-paie-actions'), url).not.toBeNull();
             expect(entete?.querySelector('app-vue-switcher'), url).not.toBeNull();
         }

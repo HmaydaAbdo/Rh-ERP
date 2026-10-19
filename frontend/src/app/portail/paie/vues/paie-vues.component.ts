@@ -27,8 +27,7 @@ const VUES_PAIE: VueOnglet[] = [
   selector: 'app-paie-vues',
   imports: [RouterOutlet, VueSwitcherComponent, PaieActionsComponent, PaieFiltresComponent],
   templateUrl: './paie-vues.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './paie-vues.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieVuesComponent {
   protected readonly vues = VUES_PAIE;

@@ -67,7 +67,7 @@ src/app/
     │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé (sur `ui/select`)
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
     │   ├── column-chooser/  Choix des colonnes visibles d'un tableau
-    │   └── vue-switcher/    Onglets de vue d'un module à plusieurs vues (Paie) ; conserve les filtres de l'URL
+    │   └── vue-switcher/    Onglets de vue d'un module à plusieurs vues (Paie, Employés) ; conserve les filtres de l'URL
     ├── text/recherche.ts    Comparaison sans casse ni accents (filtres côté client, filtre des sélecteurs)
     ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
     ├── models/page.model.ts Forme d'une page du serveur : `content` et `page` (size, number, totalElements, totalPages)
@@ -105,7 +105,7 @@ sont en français : `stp-date-input` s'appuie sur le champ date natif du navigat
 
 ### Graphiques et mouvement
 
-Graphiques : habillage commun `paie-chart-theme.ts` (couleurs, police et infobulle lues dans les jetons), redessinés à la
+Graphiques : habillage commun `shared/ui/chart/chart-theme.ts` (couleurs, police, grille et infobulle lues dans les jetons ; les mesures de la paie dans `paie-chart-theme.ts`), redessinés à la
 bascule de thème, une seule mesure par axe, tableau de données accessible. `stp-chart` est aussi focalisable : flèches gauche/droite
 (ou haut/bas) et Début/Fin parcourent ses points, Entrée/Espace sélectionne le point et l'annonce aux technologies d'assistance — voir
 `docs/paie/README.md` (Vue Analytique) et

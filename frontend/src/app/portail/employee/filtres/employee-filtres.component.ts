@@ -3,6 +3,7 @@ import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
@@ -17,7 +18,7 @@ const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
 const DEBOUNCE_RECHERCHE_MS = 300;
 
 /**
- * Barre de filtres commune aux vues des employés : nom, CIN, fonctions, chantiers et statut. Le composant n'a pas d'état propre
+ * Barre de filtres commune aux vues des employés : nom, CIN, fonctions, chantiers, équipes et statut. Le composant n'a pas d'état propre
  * au-delà de ce qu'il affiche : la valeur vient de la page (`value`, l'URL), chaque changement est émis (`valueChange`, les
  * saisies de texte après un court délai) et c'est la page qui le met dans l'URL.
  */
@@ -47,6 +48,15 @@ const DEBOUNCE_RECHERCHE_MS = 300;
         placeholder="Chantier"
       ></app-lazy-select>
 
+      <app-lazy-select
+        [formField]="formulaire.equipeIds"
+        [multiple]="true"
+        [source]="equipeReferenceService"
+        optionLabel="code"
+        ariaLabel="Équipe"
+        placeholder="Équipe"
+      ></app-lazy-select>
+
       <stp-select [formField]="formulaire.statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
 
       <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="reinitialiser()">Réinitialiser</button>
@@ -57,6 +67,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
 export class EmployeeFiltresComponent {
   protected readonly functionReferenceService = inject(FunctionReferenceService);
   protected readonly chantierReferenceService = inject(ChantierReferenceService);
+  protected readonly equipeReferenceService = inject(EquipeReferenceService);
 
   /** Les filtres affichés : ils viennent de la page (l'URL), le composant les émet à chaque changement (`valueChange`). */
   readonly value = input<EmployeeFiltres>(AUCUN_FILTRE);
