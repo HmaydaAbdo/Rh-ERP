@@ -15,6 +15,7 @@ import {
   PaieImportCorrections,
   PaieImportResult,
   PaieMaterielTableau,
+  PaieParcours,
   PaiePeriodeResume,
   PaieSearchCriteria,
   PaieSuppression,
@@ -84,6 +85,11 @@ export class PaieService {
   /** Restaure un groupe supprimé depuis son entrée d'audit ; tout le groupe est refusé en cas de conflit. */
   restaurerDepuisAudit(idEntreeAudit: number): Observable<PaieRestauration> {
     return this.http.post<PaieRestauration>(`${this.baseUrl}/restauration/${idEntreeAudit}`, {});
+  }
+
+  /** Parcours d'un employé : indicateurs, mois de paie et événements (entrée, changements, départs, retours). */
+  parcours(employeId: number): Observable<PaieParcours> {
+    return this.http.get<PaieParcours>(`${this.baseUrl}/employes/${employeId}/parcours`);
   }
 
   /** Analyse un fichier de paie sans rien enregistrer : erreurs, CIN inconnus, écarts avec les fiches, départs, retours. */

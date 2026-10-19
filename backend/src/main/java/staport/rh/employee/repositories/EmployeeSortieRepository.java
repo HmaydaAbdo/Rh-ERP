@@ -5,9 +5,12 @@ import org.springframework.stereotype.Repository;
 import staport.rh.employee.entities.EmployeeSortie;
 
 import java.time.YearMonth;
+import java.util.List;
 
 @Repository
 public interface EmployeeSortieRepository extends JpaRepository<EmployeeSortie, Long> {
 
     boolean existsByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
+
+    List<EmployeeSortie> findByEmployee_IdOrderByPeriodeAsc(Long employeeId);
 }

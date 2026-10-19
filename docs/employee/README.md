@@ -234,7 +234,7 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 |---|---|---|
 | `/employees` | `EmployeeListComponent` | **Vue Tabulaire** : tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) filtré par la barre commune, avec les colonnes Équipe et, pour `PAIE_READ`, Salaire (« / mois » ou « / jour ») ; consultation, modification, suppression |
 | `/employees/new` | `EmployeeFormComponent` | Création ; équipe facultative ; salaire et type (mensuel ou journalier) ensemble, proposés seulement avec `PAIE_READ` |
-| `/employees/:id` | `EmployeeDetailComponent` | Consultation : identité, affectation, équipe ; salaire « par mois » ou « par jour » avec `PAIE_READ` |
+| `/employees/:id` | `EmployeeDetailComponent` | **Fiche de l'employé** : initiales, nom, CIN et statut ; situation actuelle (fonction, chantier, équipe, ancienneté depuis l'embauche, âge) ; avec `PAIE_READ`, le salaire (« par mois » ou « par jour ») et le **parcours** (`PaieParcoursComponent`, domaine Paie : chiffres, chronologie des changements, total perçu par mois, bulletins) |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut, équipe, et salaire avec `PAIE_READ`) |
 
 Les vues des employés sont les routes filles d'une **coque commune**, `EmployeeVuesComponent` (`vues/`) : le titre, les

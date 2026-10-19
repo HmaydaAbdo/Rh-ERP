@@ -100,6 +100,7 @@ class EndpointSecurityTest {
             Map.entry("PaieController.rechercherPeriodes", "PAIE_READ"),
             Map.entry("PaieController.rechercherChantiersDeLaPeriode", "PAIE_READ"),
             Map.entry("PaieExportController.exporter", "PAIE_EXPORT"),
+            Map.entry("PaieParcoursController.parcours", "PAIE_READ"),
             Map.entry("PaieImportController.analyser", "PAIE_IMPORT&PAIE_READ"),
             Map.entry("PaieImportController.corriger", "PAIE_IMPORT&EMPLOYEE_WRITE&PAIE_READ"),
             Map.entry("PaieImportController.importer", "PAIE_IMPORT"),

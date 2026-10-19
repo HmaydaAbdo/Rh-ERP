@@ -6,8 +6,10 @@ import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.EmployeeSortieDto;
 
 import java.time.YearMonth;
+import java.util.List;
 
 /**
  * Façade publique du module Employee — seule cette interface peut être injectée
@@ -33,4 +35,7 @@ public interface IEmployeeService {
      * absence confirmée) : il passe INACTIF et le départ rejoint son parcours. Un seul départ par mois.
      */
     void enregistrerSortie(Long id, YearMonth periode, String motif);
+
+    /** Les départs de l'employé, du plus ancien au plus récent (son parcours, avec ses bulletins). */
+    List<EmployeeSortieDto> listerSorties(Long id);
 }

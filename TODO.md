@@ -87,7 +87,8 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   `PAIE_READ`), table `employe_sortie`, reprise V30 (ADR 0010). **À vérifier avant le déploiement** : sauvegarde de la base
   de production (V30 supprime les employés sans aucun bulletin). Lot 3 fait : assistant d'import de la paie (analyse,
   corrections des fiches, départs confirmés, mois suivant uniquement, salaire à 0 refusé) ; à essayer sur le vrai fichier
-  d'octobre 2026. Restent : 4. fiche et parcours de l'employé ; 5. Cartes et Analytique des employés.
+  d'octobre 2026. Lot 4 fait : fiche de l'employé (situation, ancienneté, âge) et parcours calculé depuis la paie
+  (`GET /paie/employes/{id}/parcours`). Reste : 5. Cartes et Analytique des employés.
 - **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.

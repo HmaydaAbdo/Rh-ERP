@@ -7,6 +7,7 @@ import {
   LucideArrowUpDown,
   LucideArrowUpRight,
   LucideBox,
+  LucideBriefcase,
   LucideBuilding,
   LucideCalendar,
   LucideChartColumn,
@@ -37,6 +38,7 @@ import {
   LucideLayers,
   LucideLayoutGrid,
   LucideLoaderCircle,
+  LucideLogOut,
   LucideMap,
   LucideMinus,
   LucideMountain,
@@ -56,6 +58,7 @@ import {
   LucideUserCheck,
   LucideUserPlus,
   LucideUsers,
+  LucideWallet,
   LucideX,
   provideLucideIcons
 } from '@lucide/angular';
@@ -75,6 +78,7 @@ export function provideStaportIcons() {
     LucideArrowUpDown,
     LucideArrowUpRight,
     LucideBox,
+    LucideBriefcase,
     LucideBuilding,
     LucideCalendar,
     LucideChartColumn,
@@ -105,6 +109,7 @@ export function provideStaportIcons() {
     LucideLayers,
     LucideLayoutGrid,
     LucideLoaderCircle,
+    LucideLogOut,
     LucideMap,
     LucideMinus,
     LucideMountain,
@@ -124,6 +129,7 @@ export function provideStaportIcons() {
     LucideUserCheck,
     LucideUserPlus,
     LucideUsers,
+    LucideWallet,
     LucideX
   );
 }

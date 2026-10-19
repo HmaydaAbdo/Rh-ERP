@@ -1,8 +1,16 @@
 @if (employee(); as employee) {
-  <div class="employee-detail app-page app-page--narrow">
+  <div class="employee-fiche app-page">
     <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
-    <div class="app-page__header">
-      <h1>{{ employee.nomPrenom }}</h1>
+
+    <header class="employee-fiche__entete">
+      <span class="employee-fiche__initiales" aria-hidden="true">{{ initiales() }}</span>
+      <div class="employee-fiche__identite">
+        <h1>{{ employee.nomPrenom }}</h1>
+        <p>
+          <span>CIN {{ employee.cin }}</span>
+          <stp-badge [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
+        </p>
+      </div>
       <div class="app-page__actions">
         @if (canViewHistory()) {
           <button stp-button variant="secondary" icon="history" type="button" (click)="historiqueOuvert.set(true)">Historique</button>
@@ -11,52 +19,49 @@
           <a stp-button [routerLink]="['/employees', employee.id, 'edit']">Modifier</a>
         }
       </div>
-    </div>
+    </header>
 
-    <dl class="app-detail">
-      <div>
-        <dt>CIN</dt>
-        <dd>{{ employee.cin }}</dd>
-      </div>
-      <div>
-        <dt>Statut</dt>
-        <dd>
-          <stp-badge [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
-        </dd>
-      </div>
-      <div>
-        <dt>Date de naissance</dt>
-        <dd>{{ employee.dateNaissance | date: 'dd/MM/yyyy' }}</dd>
-      </div>
-      <div>
-        <dt>Date d'embauche</dt>
-        <dd>{{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}</dd>
-      </div>
-      <div>
-        <dt>Fonction</dt>
-        <dd>{{ employee.fonction.libelle }}</dd>
-      </div>
-      <div>
-        <dt>Chantier</dt>
-        <dd>{{ employee.chantier.code }}</dd>
-      </div>
-      <div>
-        <dt>Équipe</dt>
-        <dd>{{ employee.equipe ? employee.equipe.code + ' — ' + employee.equipe.libelle : 'Sans équipe' }}</dd>
-      </div>
-      @if (voitLaPaie()) {
+    <section aria-labelledby="fiche-situation">
+      <h2 id="fiche-situation" class="employee-fiche__titre">Situation actuelle</h2>
+      <dl class="employee-fiche__situation">
         <div>
-          <dt>Salaire</dt>
-          <dd>
-            @if (employee.salaire !== null) {
-              {{ employee.salaire | number: '1.2-2' }} {{ employee.typeSalaire === 'JOURNALIER' ? 'par jour' : 'par mois' }}
-            } @else {
-              Non renseigné
-            }
-          </dd>
+          <dt>Fonction</dt>
+          <dd>{{ employee.fonction.libelle }}</dd>
         </div>
-      }
-    </dl>
+        <div>
+          <dt>Chantier</dt>
+          <dd>{{ employee.chantier.code }}</dd>
+        </div>
+        <div>
+          <dt>Équipe</dt>
+          <dd>{{ employee.equipe ? employee.equipe.code + ' — ' + employee.equipe.libelle : 'Sans équipe' }}</dd>
+        </div>
+        @if (voitLaPaie()) {
+          <div>
+            <dt>Salaire</dt>
+            <dd>
+              @if (employee.salaire !== null) {
+                {{ employee.salaire | number: '1.2-2' }} {{ employee.typeSalaire === 'JOURNALIER' ? 'par jour' : 'par mois' }}
+              } @else {
+                Non renseigné
+              }
+            </dd>
+          </div>
+        }
+        <div>
+          <dt>Ancienneté</dt>
+          <dd>{{ anciennete() }} <small>depuis le {{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}</small></dd>
+        </div>
+        <div>
+          <dt>Âge</dt>
+          <dd>{{ age() }} ans <small>né le {{ employee.dateNaissance | date: 'dd/MM/yyyy' }}</small></dd>
+        </div>
+      </dl>
+    </section>
+
+    @if (voitLaPaie()) {
+      <app-paie-parcours [employeId]="employee.id" />
+    }
   </div>
 }
 

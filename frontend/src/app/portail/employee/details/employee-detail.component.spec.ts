@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 
 import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans';
 import { AuditService } from '../../audit/services/audit.service';
+import { PaieService } from '../../paie/services/paie.service';
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 import { EmployeeDetailComponent } from './employee-detail.component';
@@ -31,9 +32,14 @@ const EMPLOYE: Employee = {
 describe('EmployeeDetailComponent', () => {
   const service = { getById: vi.fn() };
   const audit = { historique: vi.fn() };
+  const paie = { parcours: vi.fn() };
+
+  beforeEach(() => vi.useFakeTimers({ now: new Date(2026, 9, 19), toFake: ['Date'] }));
+  afterEach(() => vi.useRealTimers());
 
   function afficher(permissions: string[], employe: Employee = EMPLOYE) {
     service.getById.mockReset().mockReturnValue(of(employe));
+    paie.parcours.mockReset().mockReturnValue(of({ employeId: 9, indicateurs: { moisPayes: 0, totalPercu: 0, joursTravailles: 0, premierMois: null, dernierMois: null }, mois: [], evenements: [] }));
     audit.historique.mockReset().mockReturnValue(of({ content: [], page: { size: 10, number: 0, totalElements: 0, totalPages: 0 } }));
     TestBed.configureTestingModule({
       providers: [
@@ -42,7 +48,8 @@ describe('EmployeeDetailComponent', () => {
         fournirRoute({ id: '9' }),
         fournirPermissions(permissions).providers,
         { provide: EmployeeService, useValue: service },
-        { provide: AuditService, useValue: audit }
+        { provide: AuditService, useValue: audit },
+        { provide: PaieService, useValue: paie }
       ]
     });
     const fixture = TestBed.createComponent(EmployeeDetailComponent);
@@ -50,28 +57,38 @@ describe('EmployeeDetailComponent', () => {
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
 
-  const valeurs = (page: HTMLElement) => Array.from(page.querySelectorAll('dd')).map((d) => d.textContent?.trim());
+  const valeurs = (page: HTMLElement) => Array.from(page.querySelectorAll('.employee-fiche__situation dd')).map((d) => d.textContent?.replace(/\s+/g, ' ').trim());
 
-  it('charge l’employé de l’adresse et affiche son identité, ses dates (jj/mm/aaaa), sa fonction et son chantier', () => {
+  it('montre l’identité, la situation actuelle, l’ancienneté et l’âge', () => {
     const { page } = afficher(['EMPLOYEE_READ']);
 
     expect(service.getById).toHaveBeenCalledWith(9);
     expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
-    expect(valeurs(page)).toEqual(['AB123', 'Actif', '07/03/1990', '02/11/2020', 'MACON', 'C196', 'Sans équipe']);
+    expect(page.querySelector('.employee-fiche__initiales')?.textContent).toBe('AA');
+    expect(page.querySelector('.employee-fiche__identite p span')?.textContent).toBe('CIN AB123');
+    expect(valeurs(page)).toEqual(['MACON', 'C196', 'Sans équipe', '5 ans et 11 mois depuis le 02/11/2020', '36 ans né le 07/03/1990']);
   });
 
-  it('montre l’équipe, et le salaire avec son unité à qui peut lire la paie seulement', () => {
+  it('montre l’équipe, puis le salaire et le parcours à qui peut lire la paie seulement', () => {
     const employe: Employee = { ...EMPLOYE, equipe: { id: 5, code: 'OP', libelle: 'Opérateurs' }, salaire: 120, typeSalaire: 'JOURNALIER' };
 
-    expect(valeurs(afficher(['EMPLOYEE_READ'], employe).page)).toEqual(['AB123', 'Actif', '07/03/1990', '02/11/2020', 'MACON', 'C196', 'OP — Opérateurs']);
+    const sans = afficher(['EMPLOYEE_READ'], employe).page;
+    expect(valeurs(sans)[2]).toBe('OP — Opérateurs');
+    expect(valeurs(sans).some((v) => v?.includes('par jour'))).toBe(false);
+    expect(sans.querySelector('app-paie-parcours')).toBeNull();
+    expect(paie.parcours).not.toHaveBeenCalled();
+
     TestBed.resetTestingModule();
-    expect(valeurs(afficher(['EMPLOYEE_READ', 'PAIE_READ'], employe).page).at(-1)?.replace(/\s+/g, ' ')).toBe('120,00 par jour');
+    const avec = afficher(['EMPLOYEE_READ', 'PAIE_READ'], employe).page;
+    expect(valeurs(avec)[3]?.replace(/\s+/g, ' ')).toBe('120,00 par jour');
+    expect(avec.querySelector('app-paie-parcours')).not.toBeNull();
+    expect(paie.parcours).toHaveBeenCalledWith(9);
   });
 
   it('signale un employé inactif', () => {
     const { page } = afficher(['EMPLOYEE_READ'], { ...EMPLOYE, statut: 'INACTIF' });
 
-    expect(valeurs(page)[1]).toBe('Inactif');
+    expect(page.querySelector('stp-badge')?.textContent?.trim()).toBe('Inactif');
   });
 
   it('propose « Modifier » seulement à qui peut écrire', () => {
