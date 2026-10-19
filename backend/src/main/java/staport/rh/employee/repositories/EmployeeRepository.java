@@ -15,11 +15,11 @@ import java.util.Set;
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
 
-    @EntityGraph(attributePaths = {"fonction", "chantier"})
+    @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
     @Query("SELECT e FROM Employee e WHERE e.id = :id")
     Optional<Employee> findWithReferencesById(Long id);
 
-    @EntityGraph(attributePaths = {"fonction", "chantier"})
+    @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
     @Override
     Page<Employee> findAll(org.springframework.data.jpa.domain.Specification<Employee> spec, Pageable pageable);
 

@@ -1,0 +1,178 @@
+@use 'breakpoints' as bp;
+
+// Cadre des assistants de la paie (export, import) : bandeau d'étapes, corps, écrans d'attente et de fin, pied de navigation.
+// Chaque assistant l'inclut sous son propre nom de bloc : `@include cadre-assistant('.export-wizard');`.
+@mixin cadre-assistant($bloc) {
+  #{$bloc} {
+    &__sous-titre {
+      margin: 0 0 var(--space-sm);
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    // ---- Bandeau d'étapes ----
+    &__etapes {
+      display: flex;
+      align-items: center;
+      padding: var(--space-sm) 0 var(--space-md);
+    }
+
+    &__etape {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      border: none;
+      background: none;
+      padding: 0;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      cursor: default;
+      white-space: nowrap;
+      transition: color var(--duration-base);
+      &--active {
+        color: var(--color-text);
+      }
+      &--faite {
+        color: var(--color-text-muted);
+        cursor: pointer;
+      }
+    }
+
+    // Téléphone : seule l'étape en cours garde son libellé, les autres se réduisent à leur pastille
+    &__libelle {
+      @include bp.phone {
+        #{$bloc}__etape:not(#{$bloc}__etape--active) & {
+          display: none;
+        }
+      }
+    }
+
+    &__pastille {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      font-size: var(--text-xs);
+      transition: background-color var(--duration-base), color var(--duration-base), border-color var(--duration-base), transform var(--duration-base);
+      #{$bloc}__etape--active & {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+        transform: scale(1.1);
+      }
+      #{$bloc}__etape--faite & {
+        background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+        border-color: var(--color-success);
+        color: color-mix(in srgb, var(--color-success) 62%, var(--color-text));
+      }
+    }
+
+    &__trait {
+      position: relative;
+      flex: 1;
+      height: 2px;
+      min-width: 0.75rem;
+      margin: 0 var(--space-sm);
+      background: var(--color-border);
+      overflow: hidden;
+      // Le remplissage grandit par `transform` (jamais par `width`) : aucune mise en page recalculée
+      span {
+        position: absolute;
+        inset: 0;
+        background: var(--color-primary);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform var(--duration-slow) var(--ease-out);
+      }
+      &--plein span {
+        transform: none;
+      }
+    }
+
+    // ---- Panneaux ----
+    &__corps {
+      min-height: 320px;
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--color-border);
+    }
+
+    // ---- Génération et fin ----
+    &__generation,
+    &__termine {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-xl) 0;
+      text-align: center;
+      p {
+        margin: var(--space-xs) 0 var(--space-md);
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+      }
+    }
+
+    &__indetermine {
+      width: 60%;
+      height: 6px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-alt);
+      overflow: hidden;
+      span {
+        display: block;
+        width: 30%;
+        height: 100%;
+        background: var(--color-primary);
+        animation: export-wizard-indetermine var(--duration-slowest) var(--ease-in-out) infinite;
+      }
+    }
+
+    &__termine svg {
+      width: 4rem;
+      height: 4rem;
+      margin-bottom: var(--space-sm);
+      circle {
+        fill: none;
+        stroke: var(--color-success);
+        stroke-width: 3;
+        animation: export-wizard-confirme var(--duration-slow) var(--ease-out) backwards;
+      }
+      path {
+        fill: none;
+        stroke: var(--color-success);
+        stroke-width: 3.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        animation: export-wizard-confirme var(--duration-slow) var(--ease-out) var(--duration-fast) backwards;
+      }
+    }
+
+    &__boutons-fin {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    // ---- Pied ----
+    &__pied {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--color-border);
+    }
+
+    &__indice {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    &__generation stp-icon {
+      margin-bottom: var(--space-sm);
+      color: var(--color-primary);
+    }
+  }
+}

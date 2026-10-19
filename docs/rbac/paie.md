@@ -16,6 +16,10 @@
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | `POST /paie/suppression` | `PAIE_PURGE` (un mois, un chantier ou une équipe d'un coup : permission distincte de `PAIE_DELETE`) |
 | `POST /paie/restauration/{idEntreeAudit}` | `PAIE_RESTORE` (restauration atomique depuis une suppression de groupe auditée) |
+| `POST /paie/effectifs` | `PAIE_READ` (mouvements de l'Analytique des employés, affichés seulement avec cette permission) |
+| `GET /paie/employes/{id}/parcours` | `PAIE_READ` |
+| `POST /paie/import/analyse` | `PAIE_IMPORT` **et** `PAIE_READ` (l'analyse montre les salaires des fiches) |
+| `POST /paie/import/corrections` | `PAIE_IMPORT` **et** `EMPLOYEE_WRITE` **et** `PAIE_READ` (met à jour ou crée des fiches employés) |
 | `POST /paie/import` | `PAIE_IMPORT` |
 | `GET /paie/import/modele` | `PAIE_IMPORT` |
 | `GET /paie/periodes` | `PAIE_READ` |
@@ -43,7 +47,8 @@
 | Routes `/paie`, `/paie/cartes`, `/paie/analytique` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) — les trois vues partagent la barre de filtres (sélecteurs visibles selon `CHANTIER_READ`, `FUNCTION_READ`, `EQUIPE_READ`) ; pour un mois choisi, les menus Chantiers/Équipes paginent via `/paie/options/chantiers` et `/paie/options/equipes` (`PAIE_READ`), et leurs options sont cherchées dans le périmètre mois/chantier ; sans mois ils utilisent les référentiels voisins. La vue Cartes appelle également `/paie/periodes/search` et `/paie/chantiers/search`, Analytique `/paie/analytique`, et la barre `/paie/periodes` pour griser les mois sans paie |
 | Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
 | Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
-| Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` — `canImport()` |
+| Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` et `PAIE_READ` — `canImport()` (l'assistant commence par l'analyse) |
+| Assistant d'import : « Mettre à jour la fiche », « Tout mettre à jour », « Créer l'employé » | `EMPLOYEE_WRITE` — `peutCorriger()` ; sans elle, l'assistant invite à corriger le fichier |
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
 | Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_PURGE` — `canPurge()` |

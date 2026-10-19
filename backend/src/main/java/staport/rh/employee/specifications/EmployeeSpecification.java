@@ -1,5 +1,6 @@
 package staport.rh.employee.specifications;
 
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import staport.rh.common.recherche.MotifRecherche;
@@ -44,6 +45,20 @@ public class EmployeeSpecification {
 
             if (criteria.chantierIds() != null && !criteria.chantierIds().isEmpty()) {
                 predicates.add(root.get("chantier").get("id").in(criteria.chantierIds()));
+            }
+
+            if (criteria.equipeIds() != null && !criteria.equipeIds().isEmpty()) {
+                // 0 = sans équipe : jointure externe pour garder les employés sans équipe
+                var equipe = root.join("equipe", JoinType.LEFT);
+                List<Long> ids = criteria.equipeIds().stream().filter(id -> id != 0).toList();
+                List<Predicate> equipes = new ArrayList<>();
+                if (criteria.equipeIds().contains(0L)) {
+                    equipes.add(criteriaBuilder.isNull(equipe.get("id")));
+                }
+                if (!ids.isEmpty()) {
+                    equipes.add(equipe.get("id").in(ids));
+                }
+                predicates.add(criteriaBuilder.or(equipes.toArray(new Predicate[0])));
             }
 
             if (criteria.statut() != null) {

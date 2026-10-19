@@ -1,0 +1,103 @@
+@if (parcours(); as p) {
+  <div class="parcours">
+    @if (p.indicateurs.moisPayes === 0) {
+      <div class="parcours__vide" role="status">
+        <stp-icon name="wallet" size="1.5rem" />
+        <div>
+          <strong>Aucune paie pour cet employé</strong>
+          <p>Son parcours apparaîtra avec sa première paie importée.</p>
+        </div>
+      </div>
+    } @else {
+      <section class="parcours__tuiles" aria-label="Chiffres de la paie">
+        <div class="parcours__tuile">
+          <span>Mois payés</span>
+          <strong>{{ p.indicateurs.moisPayes }}</strong>
+          <small>{{ libellePeriode(p.indicateurs.premierMois) }} → {{ libellePeriode(p.indicateurs.dernierMois) }}</small>
+        </div>
+        <div class="parcours__tuile">
+          <span>Total perçu</span>
+          <strong>{{ p.indicateurs.totalPercu | number: '1.2-2' }}</strong>
+          <small>sur toute la période</small>
+        </div>
+        <div class="parcours__tuile">
+          <span>Jours travaillés</span>
+          <strong>{{ p.indicateurs.joursTravailles | number: '1.0-2' }}</strong>
+          <small>soit {{ p.indicateurs.joursTravailles / p.indicateurs.moisPayes | number: '1.0-1' }} par mois</small>
+        </div>
+        <div class="parcours__tuile">
+          <span>Dernière paie</span>
+          <strong class="parcours__mois">{{ libellePeriode(p.indicateurs.dernierMois) }}</strong>
+          <small>{{ p.mois[0].chantier }} · {{ p.mois[0].fonction }}</small>
+        </div>
+      </section>
+
+      <div class="parcours__colonnes">
+        <section class="parcours__section" aria-labelledby="parcours-chronologie">
+          <h2 id="parcours-chronologie">Parcours</h2>
+          <ol class="parcours__chronologie">
+            @for (groupe of chronologie(); track groupe.periode) {
+              <li>
+                <span class="parcours__date">{{ libellePeriode(groupe.periode) }}</span>
+                <ul>
+                  @for (evenement of groupe.evenements; track $index) {
+                    <li class="parcours__evenement" [attr.data-type]="evenement.type">
+                      <span class="parcours__puce"><stp-icon [name]="icones[evenement.type]" /></span>
+                      {{ phrase(evenement) }}
+                    </li>
+                  }
+                </ul>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <section class="parcours__section" aria-labelledby="parcours-evolution">
+          <h2 id="parcours-evolution">Total perçu par mois</h2>
+          <div class="parcours__graphique">
+            <stp-chart
+              type="line"
+              [ariaLabel]="'Total perçu sur ' + p.mois.length + ' mois ; le détail est dans le tableau des bulletins.'"
+              [data]="graphique().data"
+              [options]="graphique().options"
+            ></stp-chart>
+          </div>
+        </section>
+      </div>
+
+      <section class="parcours__section" aria-labelledby="parcours-bulletins">
+        <h2 id="parcours-bulletins">Bulletins</h2>
+        <div class="app-static-table-scroll" role="region" tabindex="0" aria-labelledby="parcours-bulletins">
+          <table class="app-static-table">
+            <thead>
+              <tr>
+                <th scope="col">Mois</th>
+                <th scope="col">Chantier</th>
+                <th scope="col">Fonction</th>
+                <th scope="col">Équipe</th>
+                <th scope="col" class="parcours__nombre">Jours</th>
+                <th scope="col" class="parcours__nombre">Salaire</th>
+                <th scope="col" class="parcours__nombre">Total</th>
+                <th scope="col">Observation</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (mois of p.mois; track mois.bulletinId) {
+                <tr>
+                  <td><a [routerLink]="['/paie', mois.bulletinId]">{{ libellePeriode(mois.periode) }}</a></td>
+                  <td>{{ mois.chantier }}</td>
+                  <td>{{ mois.fonction }}</td>
+                  <td>{{ mois.equipe ?? '—' }}</td>
+                  <td class="parcours__nombre">{{ mois.nombreJoursTravailles | number: '1.0-2' }}</td>
+                  <td class="parcours__nombre">{{ mois.salaireMensuel | number: '1.2-2' }}</td>
+                  <td class="parcours__nombre"><strong>{{ mois.salaireTotal | number: '1.2-2' }}</strong></td>
+                  <td>{{ mois.observation ?? '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </div>
+}

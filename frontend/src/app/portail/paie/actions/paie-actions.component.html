@@ -3,70 +3,13 @@
     <button stp-button variant="secondary" icon="download" type="button" (click)="showExportDialog.set(true)">Exporter</button>
   }
   @if (canImport()) {
-    <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" (clicked)="onOpenImportDialog()"></stp-split-button>
+    <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" (clicked)="showImportDialog.set(true)"></stp-split-button>
   }
   @if (canWrite()) {
     <button stp-button icon="plus" type="button" routerLink="/paie/new">Nouveau bulletin</button>
   }
 </div>
 
-<stp-dialog header="Importer des bulletins de paie" width="480px" [(open)]="showImportDialog">
-  <form [formRoot]="importForm">
-    <div class="paie-actions__dialog-field">
-      <label for="importPeriode">Période <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-month-input inputId="importPeriode" [formField]="importForm.periode" placeholder="Sélectionner un mois" />
-    </div>
-    <p class="paie-actions__dialog-hint">Le fichier s'applique à tout le mois sélectionné — la période n'est pas une colonne du fichier.</p>
-    <input
-      type="file"
-      accept=".xlsx"
-      [disabled]="!importForm.periode().value() || importing()"
-      (change)="onImportFileSelected($event)"
-    />
-  </form>
-</stp-dialog>
+<app-paie-import-wizard [(visible)]="showImportDialog" [periodes]="periodes()" (importe)="importe.emit()"></app-paie-import-wizard>
 
 <app-paie-export-wizard [(visible)]="showExportDialog"></app-paie-export-wizard>
-
-<stp-dialog header="Résultat de l'import" width="640px" [(open)]="showImportResultDialog">
-  @if (importResult(); as result) {
-    <p>
-      Période <strong>{{ result.periode }}</strong> —
-      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
-      <strong>{{ result.crees }}</strong> créé(s),
-      <strong>{{ result.ignores }}</strong> ignoré(s).
-    </p>
-
-    @if (result.fonctionsCreees.length > 0) {
-      <p class="paie-actions__dialog-hint">
-        Fonction(s) créée(s) automatiquement : <strong>{{ result.fonctionsCreees.join(', ') }}</strong>
-      </p>
-    }
-
-    @if (result.lignesIgnorees.length > 0) {
-      <div class="paie-actions__dialog-table-scroll app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes de paie ignorées à l’import">
-        <table class="app-static-table">
-          <caption class="app-lecteur">Détail des lignes de paie ignorées pendant l'import</caption>
-          <thead>
-            <tr>
-              <th scope="col">Ligne</th>
-              <th scope="col">CIN</th>
-              <th scope="col">Nom &amp; prénom</th>
-              <th scope="col">Raison</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
-              <tr>
-                <td>{{ ligne.numeroLigne }}</td>
-                <td>{{ ligne.cin }}</td>
-                <td>{{ ligne.nomPrenom }}</td>
-                <td>{{ ligne.raison }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  }
-</stp-dialog>

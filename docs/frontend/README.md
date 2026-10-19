@@ -66,7 +66,8 @@ src/app/
     ├── components/
     │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé (sur `ui/select`)
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
-    │   └── column-chooser/  Choix des colonnes visibles d'un tableau
+    │   ├── column-chooser/  Choix des colonnes visibles d'un tableau
+    │   └── vue-switcher/    Onglets de vue d'un module à plusieurs vues (Paie, Employés) ; conserve les filtres de l'URL
     ├── text/recherche.ts    Comparaison sans casse ni accents (filtres côté client, filtre des sélecteurs)
     ├── directives/          count-up : affiche un nombre en l'animant (compteurs des résumés)
     ├── models/page.model.ts Forme d'une page du serveur : `content` et `page` (size, number, totalElements, totalPages)
@@ -104,7 +105,7 @@ sont en français : `stp-date-input` s'appuie sur le champ date natif du navigat
 
 ### Graphiques et mouvement
 
-Graphiques : habillage commun `paie-chart-theme.ts` (couleurs, police et infobulle lues dans les jetons), redessinés à la
+Graphiques : habillage commun `shared/ui/chart/chart-theme.ts` (couleurs, police, grille et infobulle lues dans les jetons ; les mesures de la paie dans `paie-chart-theme.ts`), redessinés à la
 bascule de thème, une seule mesure par axe, tableau de données accessible. `stp-chart` est aussi focalisable : flèches gauche/droite
 (ou haut/bas) et Début/Fin parcourent ses points, Entrée/Espace sélectionne le point et l'annonce aux technologies d'assistance — voir
 `docs/paie/README.md` (Vue Analytique) et
@@ -356,6 +357,15 @@ sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'ex
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
 des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko avant le 2026-10-10). **Résolu** : l'assistant est découpé en une coque, un store (`paie-export.store.ts`, fourni par la coque) et
 un composant par étape (`etapes/`, styles partagés dans `etapes/_commun.scss`) ; aucun composant ne dépasse le budget.
+
+## Assistant d'import de la paie
+
+`portail/paie/import/` : fichier, contrôle, départs, import (détail fonctionnel : `docs/paie/README.md`, « Import Excel
+(assistant) »). `paie-import.store.ts` porte l'état et les appels (analyse, corrections, import) ; la coque
+`paie-import-wizard.component.*` affiche les étapes Fichier, Départs et Import, et l'étape Contrôle est un composant à part
+(`etapes/controle-etape.component.*`, budget de style) ; leurs styles communs sont dans `import/_commun.scss`. Les deux assistants de la paie partagent leur **cadre** (bandeau
+d'étapes, corps, attente, fin, pied) par le mixin `cadre-assistant($bloc)` de `paie/assistant/_cadre-assistant.scss`,
+inclus sous le nom de bloc de chacun (`.export-wizard`, `.import-wizard`).
 
 ## Formulaires, notifications et erreurs
 

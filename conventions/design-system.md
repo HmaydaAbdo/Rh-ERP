@@ -149,7 +149,7 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
 
 # Graphiques
 
-Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`paie-chart-theme.ts`) et lit les jetons.
+Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`shared/ui/chart/chart-theme.ts`) et lit les jetons.
 Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
 son interprétation.
 

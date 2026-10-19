@@ -24,7 +24,7 @@ export type Handler = (request: Request, route: Route) => unknown;
 export interface Mock {
   /** Appels reçus, dans l'ordre : « METHODE /chemin ». */
   calls: string[];
-  /** Corps JSON des requêtes d'écriture reçues, par « METHODE /chemin ». */
+  /** Corps JSON des requêtes d'écriture reçues, par « METHODE /chemin » (texte brut pour un envoi multipart). */
   bodies: Record<string, unknown[]>;
 }
 
@@ -66,7 +66,9 @@ export async function mockApi(cible: Page, user: MockUser | null, routes: Record
       const key = `${request.method()} ${path}`;
       mock.calls.push(key);
       if (request.postData()) {
-        (mock.bodies[key] ??= []).push(request.postDataJSON());
+        // Un envoi de fichier (multipart) est gardé brut : ses parties JSON s'y lisent en texte.
+        const multipart = (request.headers()['content-type'] ?? '').includes('multipart/form-data');
+        (mock.bodies[key] ??= []).push(multipart ? request.postData() : request.postDataJSON());
       }
 
       if (key === 'POST /auth/refresh') {

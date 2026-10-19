@@ -261,3 +261,54 @@
     background: var(--table-row-hover-bg);
   }
 }
+
+// ---- Écran à plusieurs vues (Paie, Employés) ----
+// La carte de page, puis un en-tête qui porte sur une ligne le titre, les onglets de vue (`app-vue-switcher`) posés sur le filet,
+// et les actions à droite (`.app-vues__actions`, sur l'hôte du composant d'actions).
+.app-vues {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
+}
+
+.app-vues__header {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-xl);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+
+  h1 {
+    margin: 0;
+    padding-bottom: var(--space-sm);
+    font-size: var(--text-page-title);
+    font-weight: 600;
+    line-height: 1.15;
+  }
+
+  // Les actions à droite, au niveau du titre et des onglets, sans toucher au filet qui porte les onglets
+  .app-vues__actions {
+    margin-left: auto;
+    align-self: center;
+    padding-bottom: var(--space-xs);
+  }
+
+  // Téléphone : le titre au-dessus, les onglets se partagent la largeur, puis les actions
+  @include bp.phone {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+
+    .app-vues__actions {
+      margin-left: 0;
+      align-self: stretch;
+    }
+  }
+}

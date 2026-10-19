@@ -7,7 +7,7 @@
 |---|---|---|---|
 | Fonctions | `POST /functions/import` | `FUNCTION_IMPORT` | [function/README.md](function/README.md) |
 | Employés | `POST /employees/import` | `EMPLOYEE_IMPORT` | [employee/README.md](employee/README.md) |
-| Paie | `POST /paie/import?periode=aaaa-MM` | `PAIE_IMPORT` | [paie/README.md](paie/README.md) |
+| Paie | assistant : `POST /paie/import/analyse`, `/paie/import/corrections`, `/paie/import` (`?periode=aaaa-MM`) | `PAIE_IMPORT` (+ `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE`) | [paie/README.md](paie/README.md), « Import Excel (assistant) » |
 
 Il n'existe pas d'import pour les chantiers (alimentés par la [synchronisation ERP](chantier/README.md)) ni pour
 les équipes (écran dédié).
@@ -29,6 +29,10 @@ encore**. Toute modification d'une donnée existante se fait depuis l'interface.
 
 Pour **ré-importer un mois de paie**, supprimer d'abord les bulletins concernés depuis l'écran Paie.
 
+**Exception — la Paie et les fiches employés** (décision du 2026-10-18, ADR 0010) : l'import de la paie ne crée ni ne
+modifie un bulletin existant, mais son assistant **met à jour les fiches employés** que l'utilisateur choisit d'aligner
+sur le fichier (et crée les CIN inconnus). Ces écritures sont des choix explicites de l'utilisateur, faites avant l'import.
+
 ### 2. Tout ou rien (atomique)
 
 Toutes les lignes sont **validées avant la moindre écriture**. Une seule ligne invalide rejette **tout** le
@@ -48,9 +52,10 @@ réimporter peut donc révéler une seconde erreur qui n'était pas visible au p
 ### 4. Même forme de réponse en succès et en rejet
 
 Succès (`200`) comme rejet (`400`), le corps est un objet de résultat : `totalLignes`, `crees`, `ignores`,
-`lignesIgnorees[]` (numéro de ligne, identifiant de la ligne — CIN ou libellé —, raison), plus selon l'import
-`periode` (Paie) et `fonctionsCreees[]` (Paie). Seul le code HTTP change ; l'interface affiche le même détail
-dans les deux cas. Un fichier **illisible ou au mauvais format** est un rejet global (`400`, message explicite).
+`lignesIgnorees[]` (numéro de ligne, identifiant de la ligne — CIN ou libellé —, raison). Seul le code HTTP change ;
+l'interface affiche le même détail dans les deux cas. Un fichier **illisible ou au mauvais format** est un rejet global
+(`400`, message explicite). **La Paie fait autrement** : son assistant rend d'abord une **analyse** (erreurs, CIN inconnus,
+écarts avec les fiches), et l'import n'accepte qu'un fichier sans problème (sinon `400`, rien n'est enregistré).
 
 ### 5. Modèle téléchargeable
 

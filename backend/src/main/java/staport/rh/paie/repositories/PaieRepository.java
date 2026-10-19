@@ -54,8 +54,21 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @Query("SELECT p.employee.id FROM Paie p WHERE p.periode = :periode")
     Set<Long> findEmployeeIdsByPeriode(@Param("periode") YearMonth periode);
 
+    /** Le dernier mois importé ({@code null} sans aucune paie) : l'import n'accepte que le mois qui le suit. */
+    @Query("SELECT MAX(p.periode) FROM Paie p")
+    YearMonth findDernierePeriode();
+
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
+
+    /** Tous les bulletins réduits à qui, quand et où (tendances des effectifs) ; cinq colonnes, aucune entité chargée. */
+    @Query("SELECT p.employee.id AS employeId, p.periode AS periode, p.chantier.id AS chantierId, p.fonction.id AS fonctionId, "
+            + "e.id AS equipeId FROM Paie p LEFT JOIN p.equipe e ORDER BY p.periode")
+    List<EffectifBulletinProjection> listerEffectifs();
+
+    /** Les bulletins d'un employé, du plus ancien au plus récent : son parcours. */
+    @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
+    List<Paie> findByEmployee_IdOrderByPeriodeAsc(Long employeeId);
 
     /** Un résumé par mois qui contient de la paie, du plus récent au plus ancien — une seule requête groupée,
      * pour que l'assistant d'export et la vue Cartes connaissent d'un coup les mois disponibles et leur contenu (sur le périmètre filtré, ou {@link FiltresPaie#AUCUN}). Le décompte STC

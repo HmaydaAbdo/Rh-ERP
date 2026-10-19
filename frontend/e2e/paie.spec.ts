@@ -178,4 +178,39 @@ test.describe('Paie', () => {
 
     await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierIds: [3], sansVueEnsemble: true });
   });
+  test('importe la paie du mois suivant : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
+    const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim', typeSalaire: 'MENSUEL',
+      champs: [{ champ: 'chantier', base: 'C059', fichier: 'C168' }] };
+    const analyse = { periode: '2026-09', totalLignes: 1, erreurs: [], cinInconnus: [], ecarts: [ecart],
+      departs: [{ employeId: 7, cin: 'CD5678', nomPrenom: 'BENNANI Omar', motif: null }], retours: [], pret: false };
+    const mock = await mockApi(page, { username: 'paie', permissions: [...DROITS, 'EMPLOYEE_WRITE'] }, {
+      ...routes(),
+      'POST /paie/import/analyse': () => analyse,
+      'POST /paie/import/corrections': () => ({ ...analyse, ecarts: [], pret: true }),
+      'POST /paie/import': () => ({ periode: '2026-09', crees: 1, departs: 1, retours: 0 })
+    });
+    await page.goto('/paie');
+
+    await page.getByRole('button', { name: 'Importer', exact: true }).click();
+    const dialogue = page.getByRole('dialog', { name: 'Importer la paie' });
+    await expect(dialogue.getByText('septembre 2026')).toBeVisible();
+    await dialogue.locator('input[type="file"]').setInputFiles({ name: 'paie-09.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
+
+    await expect(dialogue.getByText('Fiches différentes du fichier')).toBeVisible();
+    await expect(dialogue.getByRole('button', { name: 'Continuer' })).toBeDisabled();
+    const accessibilite = await new AxeBuilder({ page }).include('.import-wizard').analyze();
+    expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
+    await dialogue.getByRole('button', { name: 'Mettre à jour la fiche de ALAMI Karim' }).click();
+    await expect(dialogue.getByText('Aucun problème')).toBeVisible();
+    await dialogue.getByRole('button', { name: 'Continuer' }).click();
+
+    await expect(dialogue.getByRole('button', { name: 'Continuer' })).toBeDisabled();
+    await dialogue.getByLabel('Motif du départ de BENNANI Omar').fill('Démission');
+    await dialogue.getByRole('button', { name: 'Continuer' }).click();
+    await dialogue.getByRole('button', { name: 'Importer la paie' }).click();
+
+    await expect(dialogue.getByText('Paie de septembre 2026 importée')).toBeVisible();
+    expect(String(mock.bodies['POST /paie/import/corrections']?.[0])).toContain('{"aligner":[{"employeId":4,"typeSalaire":null}],"creer":[]}');
+    expect(String(mock.bodies['POST /paie/import']?.[0])).toContain('{"departs":[{"employeId":7,"motif":"Démission"}]}');
+  });
 });

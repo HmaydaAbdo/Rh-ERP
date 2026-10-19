@@ -149,8 +149,9 @@ class PerformanceProfileTest {
             Future<List<Long>> recherches = lancerRecherches(criteres, erreurs);
             Future<List<Long>> importations = lourds.submit(() -> mesurerEnSerie(ECHANTILLONS_LOURDS, index -> {
                 AuthentificationDeTest.connecter(4242L, "testeur");
-                YearMonth periode = PERIODE_COURANTE.plusMonths(index + 1L);
-                return mesurer(() -> paieImportService.importer(fichierImport, periode).crees());
+                // L'analyse est l'étape lourde de l'import (lecture du fichier, rapprochement avec toutes les fiches) ; elle
+                // n'écrit rien, elle porte donc toujours sur le mois qui suit PERIODE_COURANTE.
+                return mesurer(() -> paieImportService.analyser(fichierImport, PERIODE_COURANTE.plusMonths(1)).totalLignes());
             }, imports, erreurs));
             Future<List<Long>> exports = lourds.submit(() -> mesurerEnSerie(ECHANTILLONS_LOURDS, index -> {
                 AuthentificationDeTest.connecter(4242L, "testeur");

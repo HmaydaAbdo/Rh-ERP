@@ -1,4 +1,4 @@
-package staport.rh.paie.entities;
+package staport.rh.common;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

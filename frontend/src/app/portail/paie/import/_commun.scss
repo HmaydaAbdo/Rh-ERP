@@ -1,0 +1,33 @@
+// Styles partagés par l'assistant d'import et son étape Contrôle (consigne, légende, titre de section, compteur).
+// Chacun les inclut par `@use` : une feuille de composant ne voit pas celles des autres.
+.import-wizard {
+  &__consigne {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+  }
+
+  &__legende {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  &__titre {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: var(--space-lg) 0 var(--space-xs);
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+
+  &__nombre {
+    min-width: 1.5rem;
+    padding: 0 var(--space-xs);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-alt);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+}

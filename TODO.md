@@ -81,7 +81,16 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 - **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
   (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
-- **À faire — autres domaines** : pour **Employés, Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
+- **Fait (2026-10-19) — domaine Employés** : plan validé en 5 lots. Lot 1 fait : sélecteur de vue extrait dans
+  `shared/components/vue-switcher/` (Paie l'utilise), coque `portail/employee/vues/` (titre, actions, barre de filtres dans
+  l'URL) et vue Tabulaire. Lot 2 fait : fiche = état du dernier mois de paie (équipe, salaire et type, réservés à
+  `PAIE_READ`), table `employe_sortie`, reprise V30 (ADR 0010). **À vérifier avant le déploiement** : sauvegarde de la base
+  de production (V30 supprime les employés sans aucun bulletin). Lot 3 fait : assistant d'import de la paie (analyse,
+  corrections des fiches, départs confirmés, mois suivant uniquement, salaire à 0 refusé) ; à essayer sur le vrai fichier
+  d'octobre 2026. Lot 4 fait : fiche de l'employé (situation, ancienneté, âge) et parcours calculé depuis la paie
+  (`GET /paie/employes/{id}/parcours`). Lot 5 fait : vues Cartes (descente libre chantier / équipe / fonction / employés,
+  liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
+- **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 

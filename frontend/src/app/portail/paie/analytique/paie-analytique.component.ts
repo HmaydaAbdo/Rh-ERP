@@ -15,7 +15,8 @@ import { lireFiltres, PaieFiltres, versCriteres, versParametres } from '../filtr
 import { PaieAnalytique, PaieChantierMasse, PaieEquipeMasse, PaieFonctionMasse, PaieTranche } from '../models/paie.model';
 import { formaterMontant, formaterPart, formaterVariation, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
-import { animationGraphique, couleurEvolution, couleurMesure, grille, infobulle, jeton, libelleEvolutionMesure, libelleMesure, MesureEvolution, MesureGraphique, police, valeursSurPoints } from './paie-chart-theme';
+import { animationGraphique, grille, infobulle, jeton, police, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
+import { couleurEvolution, couleurMesure, libelleEvolutionMesure, libelleMesure, MesureEvolution, MesureGraphique } from './paie-chart-theme';
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 /** Hauteur d'une ligne de barre horizontale, en rem : le graphique grandit avec le nombre de catégories visibles. */

@@ -15,35 +15,50 @@ import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.entities.EmployeeSortie;
+import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.exceptions.CinAlreadyExistsException;
 import staport.rh.employee.exceptions.EmployeeNotFoundException;
 import staport.rh.employee.exceptions.InvalidReferenceException;
 import staport.rh.employee.mappers.EmployeeMapper;
 import staport.rh.employee.repositories.EmployeeRepository;
+import staport.rh.employee.repositories.EmployeeSortieRepository;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.employee.specifications.EmployeeSpecification;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
+
+import java.time.YearMonth;
+import java.util.List;
 
 @Service
 public class EmployeeService implements IEmployeeService {
 
     private final EmployeeRepository repository;
+    private final EmployeeSortieRepository sortieRepository;
     private final EmployeeMapper mapper;
     private final IFunctionService functionService;
     private final IChantierService chantierService;
+    private final IEquipeService equipeService;
     private final EntityManager entityManager;
 
     public EmployeeService(EmployeeRepository repository,
+                            EmployeeSortieRepository sortieRepository,
                             EmployeeMapper mapper,
                             IFunctionService functionService,
                             IChantierService chantierService,
+                            IEquipeService equipeService,
                             EntityManager entityManager) {
         this.repository = repository;
+        this.sortieRepository = sortieRepository;
         this.mapper = mapper;
         this.functionService = functionService;
         this.chantierService = chantierService;
+        this.equipeService = equipeService;
         this.entityManager = entityManager;
     }
 
@@ -60,6 +75,7 @@ public class EmployeeService implements IEmployeeService {
         entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Employee saved = repository.save(entity);
         return mapper.toDto(saved);
@@ -83,6 +99,7 @@ public class EmployeeService implements IEmployeeService {
         entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Employee updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
@@ -117,6 +134,41 @@ public class EmployeeService implements IEmployeeService {
         return repository.existsById(id);
     }
 
+    @Override
+    @Transactional
+    @AuditableAction(action = "EMPLOYE_SORTIE", type = TypeOperation.UPDATE, entite = Employee.class)
+    public void enregistrerSortie(Long id, YearMonth periode, String motif) {
+        Employee entity = getEntityById(id);
+        if (motif == null || motif.isBlank() || motif.strip().length() > 255) {
+            throw new InvalidReferenceException("Le motif du départ est obligatoire (255 caractères au plus)");
+        }
+        if (sortieRepository.existsByEmployee_IdAndPeriode(id, periode)) {
+            throw new InvalidReferenceException("Un départ est déjà enregistré pour cet employé ce mois-ci : " + periode);
+        }
+        EmployeeSortie sortie = new EmployeeSortie();
+        sortie.setEmployee(entity);
+        sortie.setPeriode(periode);
+        sortie.setMotif(motif.strip());
+        sortieRepository.save(sortie);
+        entity.setStatut(EmployeeStatut.INACTIF);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeSortieDto> listerSorties(Long id) {
+        return sortieRepository.findByEmployee_IdOrderByPeriodeAsc(id).stream().map(EmployeeService::sortieDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeSortieDto> listerToutesLesSorties() {
+        return sortieRepository.findAllByOrderByPeriodeAsc().stream().map(EmployeeService::sortieDto).toList();
+    }
+
+    private static EmployeeSortieDto sortieDto(EmployeeSortie sortie) {
+        return new EmployeeSortieDto(sortie.getEmployee().getId(), sortie.getPeriode(), sortie.getMotif());
+    }
+
     private Employee getEntityById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
@@ -139,5 +191,16 @@ public class EmployeeService implements IEmployeeService {
             throw new InvalidReferenceException("Chantier introuvable avec l'id : " + chantierId);
         }
         return entityManager.getReference(Chantier.class, chantierId);
+    }
+
+    /** L'équipe est facultative : {@code null} = sans équipe. */
+    private Equipe resolveEquipeReference(Long equipeId) {
+        if (equipeId == null) {
+            return null;
+        }
+        if (!equipeService.existsById(equipeId)) {
+            throw new InvalidReferenceException("Équipe introuvable avec l'id : " + equipeId);
+        }
+        return entityManager.getReference(Equipe.class, equipeId);
     }
 }

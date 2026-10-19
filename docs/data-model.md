@@ -39,7 +39,8 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 | `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
 | `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
 | `equipe` | `code` et `libelle` (uniques après trim et mise en majuscules, V25 ; espaces extérieurs refusés en base par V27) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` | `fonction_id`, `chantier_id` (non nuls) |
+| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — l'état du dernier mois de paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
+| `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC » ou saisi), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 
 Détail et règles métier : [function](function/README.md), [chantier](chantier/README.md),
@@ -76,7 +77,7 @@ Détail : [auth/README.md](auth/README.md).
 |---|---|
 | `audit_revision` | Une ligne par transaction qui modifie des données auditées : `horodatage` (`TIMESTAMPTZ`), `utilisateur_id` (**sans clé étrangère** : l'historique survit au compte), `utilisateur_nom` (figé), `origine` (`API`, `TACHE_PLANIFIEE`, `DEMARRAGE`, `MIGRATION`, `INCONNUE`), `request_id`, `adresse_ip` |
 | `audit_revision_entite` | Types d'entités modifiés par chaque révision (clé `(revision_id, entite)`) |
-| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `paie_aud`, `parametre_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
+| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `employe_sortie_aud`, `paie_aud`, `parametre_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
 | `audit_journal` | Le journal unique : `categorie` (`OPERATION`, `SECURITE`, `ACCES`), `action`, `type_operation`, `resultat` (`SUCCES`, `ECHEC`), identité et contexte, cible (`entite_type`, `entite_id`), `nombre_elements`, `perimetre` (`JSONB`), `motif`, `revision_id` (→ `audit_revision`), `hash_precedent` et `hash_entree` (chaîne SHA-256 locale). Index sur l'horodatage, l'utilisateur, la catégorie et l'action, la cible, l'identifiant de requête et la révision |
 
 Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMigrate.sql` ci-dessous et
@@ -127,7 +128,7 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 
 - Montants en `NUMERIC(10,2)`, jours travaillés et jours de récupération en `NUMERIC(5,2)`.
 - La période est un `YearMonth` Java stocké en entier `aaaaMM` (ex. `202609`) par
-  `YearMonthAttributeConverter` ; l'API l'expose au format `aaaa-MM`.
+  `YearMonthAttributeConverter` (`common/`, partagé avec `employe_sortie.periode`) ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.
 
 ---
@@ -168,6 +169,8 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V26` | `paie.nombre_jours_travailles` en `NUMERIC(5,2)` (jours travaillés fractionnaires), table `paie_aud` comprise |
 | `V27` | Unicité des identifiants textuels (CIN, libellé de fonction, code de chantier, nom d'utilisateur, e-mail, nom de rôle) après trim et sans casse, et refus des espaces extérieurs en base ; les prérequis sont contrôlés avant de remplacer les index |
 | `V28` | Permission `CARTE_READ` et rôle `DIRECTION`. `CARTE_READ` est attribuée à `SYSTEM_ADMIN` et à `DIRECTION`, pas à `PAIE_MANAGER` ; un rôle `DIRECTION` déjà existant est conservé. Écrit sa révision d'audit (une révision, deux entrées de journal) |
+| `V29` | `employe.equipe_id`, `employe.salaire`, `employe.type_salaire` (nullables) et table `employe_sortie` (départs), avec leurs tables `_aud` |
+| `V30` | **Reprise des employés depuis la paie** ([ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md)) : fiche alignée sur le dernier bulletin, départs (STC, absence), statut, suppression des employés sans aucun bulletin (sauf ceux liés à un compte). Une révision d'audit et trois entrées de journal (`EMPLOYE_SORTIE`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`) ; sans aucune paie en base, ne fait rien |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration

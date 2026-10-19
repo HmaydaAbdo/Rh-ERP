@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,16 +15,23 @@ import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.entities.EmployeeSortie;
 import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.exceptions.CinAlreadyExistsException;
 import staport.rh.employee.exceptions.EmployeeNotFoundException;
 import staport.rh.employee.exceptions.InvalidReferenceException;
 import staport.rh.employee.mappers.EmployeeMapper;
 import staport.rh.employee.repositories.EmployeeRepository;
+import staport.rh.employee.repositories.EmployeeSortieRepository;
+import staport.rh.employee.entities.TypeSalaire;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,6 +57,12 @@ class EmployeeServiceTest {
     private IChantierService chantierService;
 
     @Mock
+    private IEquipeService equipeService;
+
+    @Mock
+    private EmployeeSortieRepository sortieRepository;
+
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
@@ -62,7 +76,7 @@ class EmployeeServiceTest {
         createDto = new EmployeeCreateRequestDto(
                 "BOULJIHEL SALH", "PB85747",
                 LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14),
-                10L, 20L
+                10L, 20L, null, null, null
         );
 
         entity = new Employee();
@@ -88,7 +102,7 @@ class EmployeeServiceTest {
         when(repository.save(entity)).thenReturn(entity);
         when(mapper.toDto(entity)).thenReturn(new EmployeeResponseDto(
                 1L, 0L, "BOULJIHEL SALH", "PB85747", createDto.dateNaissance(), createDto.dateEmbauche(),
-                null, null, EmployeeStatut.ACTIF));
+                null, null, null, null, null, EmployeeStatut.ACTIF));
 
         EmployeeResponseDto result = employeeService.create(createDto);
 
@@ -133,6 +147,86 @@ class EmployeeServiceTest {
     }
 
     @Test
+    void create_devraitRattacherLEquipeEtLeSalaireQuandIlsSontFournis() {
+        EmployeeCreateRequestDto dto = new EmployeeCreateRequestDto("BOULJIHEL SALH", "PB85747",
+                LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14), 10L, 20L, 30L, new BigDecimal("120.00"), TypeSalaire.JOURNALIER);
+        Equipe equipe = new Equipe();
+        when(repository.existsByCinIgnoreCase("PB85747")).thenReturn(false);
+        when(mapper.toEntity(dto)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(equipeService.existsById(30L)).thenReturn(true);
+        when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
+        when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
+        when(entityManager.getReference(Equipe.class, 30L)).thenReturn(equipe);
+        when(repository.save(entity)).thenReturn(entity);
+
+        employeeService.create(dto);
+
+        assertThat(entity.getEquipe()).isSameAs(equipe);
+    }
+
+    @Test
+    void create_devraitEchouerQuandLEquipeEstIntrouvable() {
+        EmployeeCreateRequestDto dto = new EmployeeCreateRequestDto("BOULJIHEL SALH", "PB85747",
+                LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14), 10L, 20L, 30L, null, null);
+        when(repository.existsByCinIgnoreCase("PB85747")).thenReturn(false);
+        when(mapper.toEntity(dto)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(equipeService.existsById(30L)).thenReturn(false);
+
+        assertThatThrownBy(() -> employeeService.create(dto))
+                .isInstanceOf(InvalidReferenceException.class)
+                .hasMessageContaining("Équipe introuvable");
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void create_devraitLaisserLEquipeVideQuandElleNEstPasFournie() {
+        when(repository.existsByCinIgnoreCase("PB85747")).thenReturn(false);
+        when(mapper.toEntity(createDto)).thenReturn(entity);
+        when(functionService.existsById(10L)).thenReturn(true);
+        when(chantierService.existsById(20L)).thenReturn(true);
+        when(repository.save(entity)).thenReturn(entity);
+
+        employeeService.create(createDto);
+
+        assertThat(entity.getEquipe()).isNull();
+        verify(equipeService, never()).existsById(any());
+    }
+
+    @Test
+    void enregistrerSortie_devraitPasserLEmployeInactifEtGarderLeDepart() {
+        entity.setStatut(EmployeeStatut.ACTIF);
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(sortieRepository.existsByEmployee_IdAndPeriode(1L, YearMonth.of(2026, 10))).thenReturn(false);
+
+        employeeService.enregistrerSortie(1L, YearMonth.of(2026, 10), " Démission ");
+
+        ArgumentCaptor<EmployeeSortie> sortie =
+                ArgumentCaptor.forClass(EmployeeSortie.class);
+        verify(sortieRepository).save(sortie.capture());
+        assertThat(sortie.getValue().getMotif()).isEqualTo("Démission");
+        assertThat(sortie.getValue().getPeriode()).isEqualTo(YearMonth.of(2026, 10));
+        assertThat(entity.getStatut()).isEqualTo(EmployeeStatut.INACTIF);
+    }
+
+    @Test
+    void enregistrerSortie_devraitRefuserUnMotifVideOuUnSecondDepartLeMemeMois() {
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(sortieRepository.existsByEmployee_IdAndPeriode(1L, YearMonth.of(2026, 10))).thenReturn(true);
+
+        assertThatThrownBy(() -> employeeService.enregistrerSortie(1L, YearMonth.of(2026, 10), "  "))
+                .isInstanceOf(InvalidReferenceException.class);
+        assertThatThrownBy(() -> employeeService.enregistrerSortie(1L, YearMonth.of(2026, 10), "STC"))
+                .isInstanceOf(InvalidReferenceException.class)
+                .hasMessageContaining("déjà enregistré");
+        verify(sortieRepository, never()).save(any());
+    }
+
+    @Test
     void findById_devraitLeverNotFoundQuandAbsent() {
         when(repository.findWithReferencesById(99L)).thenReturn(Optional.empty());
 
@@ -149,7 +243,7 @@ class EmployeeServiceTest {
         EmployeeUpdateRequestDto dto = new EmployeeUpdateRequestDto(0L,
                 "AUTRE NOM", "PB85747",
                 LocalDate.of(1990, 1, 1), LocalDate.of(2020, 1, 1),
-                10L, 20L, EmployeeStatut.ACTIF
+                10L, 20L, null, null, null, EmployeeStatut.ACTIF
         );
 
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
