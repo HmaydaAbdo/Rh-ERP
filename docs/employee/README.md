@@ -53,9 +53,28 @@ Table `employe` :
 | `date_embauche` | `DATE` | `NOT NULL` | Date d'embauche |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | Fonction occupée |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | Chantier d'affectation |
+| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe du dernier mois de paie (`NULL` = sans équipe) |
+| `salaire` | `NUMERIC(10,2)` | nullable, ≥ 0 | Salaire du dernier mois de paie : montant mensuel, ou tarif d'une journée |
+| `type_salaire` | `VARCHAR(20)` | nullable, `MENSUEL` ou `JOURNALIER` | Comment lire `salaire` ; renseigné avec lui ou pas du tout |
 | `statut` | `ENUM('ACTIF','INACTIF')` | `NOT NULL`, défaut `ACTIF` | Statut de l'employé |
 
-Index : `idx_employe_fonction`, `idx_employe_chantier`, `idx_employe_statut`, `idx_employe_date_embauche`.
+La fiche porte **l'état du dernier mois de paie importé** ; l'historique (affectations, salaires) se lit dans les bulletins,
+qui en sont les instantanés — voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md). Équipe, salaire et type
+restent vides tant qu'aucune paie ne les a renseignés.
+
+Table `employe_sortie` — les **départs** de l'entreprise (entité `EmployeeSortie`, auditée) :
+
+| Colonne | Type | Contrainte | Description |
+|---|---|---|---|
+| `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
+| `employee_id` | `BIGINT` | `NOT NULL`, FK → `employe.id` | Employé parti |
+| `periode` | `INT` | `NOT NULL` | Mois (`aaaaMM`) de la paie qui constate le départ |
+| `motif` | `VARCHAR(255)` | `NOT NULL` | « STC », ou le motif saisi |
+
+Unique `(employee_id, periode)` : un départ par mois au plus ; un employé qui revient puis repart en a plusieurs. La reprise
+des données existantes (migration V30, décidée le 2026-10-18) est décrite dans l'ADR 0010.
+
+Index : `idx_employe_fonction`, `idx_employe_chantier`, `idx_employe_equipe`, `idx_employe_statut`, `idx_employe_date_embauche`.
 
 `dateNaissance`/`dateEmbauche` sont `NOT NULL` à la fois au niveau entité et via la validation des
 DTO (`@NotNull` sur `EmployeeCreateRequestDto`/`EmployeeUpdateRequestDto`) — la contrainte base et la
@@ -74,7 +93,11 @@ l'import comme l'API exigent déjà ces deux dates).
 - `fonction` et `chantier` sont résolus via `IFunctionService`/`IChantierService` (jamais leur
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
-  lève `InvalidReferenceException` (400).
+  lève `InvalidReferenceException` (400). L'`équipe` est facultative et résolue de même par `IEquipeService`.
+- `salaire` et `typeSalaire` se renseignent **ensemble** ou pas du tout (`@AssertTrue` sur les DTO, 400 sinon) ; le salaire
+  n'est jamais négatif. Ce sont des **données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas (`null`), ignore ceux
+  qu'on saisit (la fiche garde les siens) et retire un tri par salaire — masquage fait par `EmployeeController`, pour que
+  les autres domaines lisent le vrai salaire par `IEmployeeService`.
 - La suppression (`DELETE /employees/{id}`) supprime l'employé. **Un employé référencé par au moins un bulletin de paie**
   (`paie.employee_id`) **ou lié à un compte utilisateur** (`utilisateur.employee_id`) **n'est pas supprimable** : la base refuse
   et l'API répond `409` avec un message explicite (`EmployeeExceptionHandler`, comme pour fonction, chantier et équipe — un
@@ -100,7 +123,9 @@ l'import comme l'API exigent déjà ces deux dates).
 
 `EmployeeResponseDto` : `id`, `nomPrenom`, `cin`, `dateNaissance`, `dateEmbauche`,
 `fonction` (`FunctionSummaryDto` : `id`, `libelle`), `chantier` (`ChantierSummaryDto` : `id`, `code`,
-`designation`), `statut`.
+`designation`), `equipe` (`EquipeSummaryDto` : `id`, `code`, `libelle`, ou `null`), `salaire` et `typeSalaire` (`null` sans
+`PAIE_READ` ou tant qu'aucune paie ne les a renseignés), `statut`. Les requêtes de création et de modification acceptent
+`equipeId`, `salaire` et `typeSalaire`, facultatifs.
 
 Authentification JWT + permissions requises sur chaque endpoint (`EMPLOYEE_READ`/
 `EMPLOYEE_WRITE`/`EMPLOYEE_DELETE`/`EMPLOYEE_IMPORT`) — voir `docs/rbac/employee.md` pour le
@@ -201,10 +226,10 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/employees` | `EmployeeListComponent` | **Vue Tabulaire** : tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) filtré par la barre commune, consultation, modification, suppression |
-| `/employees/new` | `EmployeeFormComponent` | Création |
-| `/employees/:id` | `EmployeeDetailComponent` | Consultation |
-| `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut) |
+| `/employees` | `EmployeeListComponent` | **Vue Tabulaire** : tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) filtré par la barre commune, avec les colonnes Équipe et, pour `PAIE_READ`, Salaire (« / mois » ou « / jour ») ; consultation, modification, suppression |
+| `/employees/new` | `EmployeeFormComponent` | Création ; équipe facultative ; salaire et type (mensuel ou journalier) ensemble, proposés seulement avec `PAIE_READ` |
+| `/employees/:id` | `EmployeeDetailComponent` | Consultation : identité, affectation, équipe ; salaire « par mois » ou « par jour » avec `PAIE_READ` |
+| `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut, équipe, et salaire avec `PAIE_READ`) |
 
 Les vues des employés sont les routes filles d'une **coque commune**, `EmployeeVuesComponent` (`vues/`) : le titre, les
 **actions** (`EmployeeActionsComponent`, `actions/` : « Importer », avec le modèle Excel dans son menu, et « Nouvel employé »,

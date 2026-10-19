@@ -6,7 +6,8 @@ import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirSignalForms } from '../../../shared/forms/signal-forms.config';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { fournirRoute } from '../../../shared/testing/ecrans';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
+import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans';
 import { saisir, soumettre } from '../../../shared/testing/formulaire';
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -34,6 +35,9 @@ const EMPLOYE: Employee = {
   dateEmbauche: '2020-11-02',
   fonction: { id: 1, libelle: 'MACON' },
   chantier: { id: 2, code: 'C196' },
+  equipe: null,
+  salaire: null,
+  typeSalaire: null,
   statut: 'ACTIF'
 };
 
@@ -51,7 +55,7 @@ describe('EmployeeFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string): Promise<void> {
+  async function afficher(id?: string, permissions: string[] = ['EMPLOYEE_WRITE']): Promise<void> {
     service = {
       getById: vi.fn().mockReturnValue(of(EMPLOYE)),
       create: vi.fn().mockReturnValue(of({ id: 15 })),
@@ -62,6 +66,8 @@ describe('EmployeeFormComponent', () => {
         provideRouter([]),
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
+        fournirPermissions(permissions).providers,
+        { provide: EquipeReferenceService, useValue: referentiel([{ id: 5, code: 'OP', libelle: 'Opérateurs' }]) },
         { provide: EmployeeService, useValue: service },
         { provide: FunctionReferenceService, useValue: referentiel(FONCTIONS) },
         { provide: ChantierReferenceService, useValue: referentiel(CHANTIERS) }
@@ -144,7 +150,10 @@ describe('EmployeeFormComponent', () => {
         dateNaissance: '1985-01-31',
         dateEmbauche: '2018-05-14',
         fonctionId: 3,
-        chantierId: 4
+        chantierId: 4,
+        equipeId: null,
+        salaire: null,
+        typeSalaire: null
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé créé');
       expect(navigation).toHaveBeenCalledWith(['/employees', 15]);
@@ -168,6 +177,34 @@ describe('EmployeeFormComponent', () => {
 
       expect(navigation).not.toHaveBeenCalled();
       expect(formulaire()().dirty()).toBe(true);
+    });
+  });
+
+  describe('équipe et salaire', () => {
+    it('ne propose le salaire qu’à qui peut lire la paie', async () => {
+      await afficher();
+      expect(racine().querySelector('#equipeId')).not.toBeNull();
+      expect(racine().querySelector('#salaire')).toBeNull();
+
+      TestBed.resetTestingModule();
+      await afficher(undefined, ['EMPLOYEE_WRITE', 'PAIE_READ']);
+      expect(racine().querySelector('#salaire')).not.toBeNull();
+      expect(racine().querySelector('#typeSalaire')).not.toBeNull();
+    });
+
+    it('refuse un salaire sans son type, puis envoie l’équipe, le salaire et le type ensemble', async () => {
+      await afficher(undefined, ['EMPLOYEE_WRITE', 'PAIE_READ']);
+      await remplir();
+      formulaire().salaire().value.set(120);
+
+      await envoyer();
+      expect(service.create).not.toHaveBeenCalled();
+      expect(erreurs()).toContain('Renseignez le salaire et son type ensemble.');
+
+      formulaire().typeSalaire().value.set('JOURNALIER');
+      formulaire().equipeId().value.set(5);
+      await envoyer();
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: 5, salaire: 120, typeSalaire: 'JOURNALIER' }));
     });
   });
 
@@ -201,6 +238,9 @@ describe('EmployeeFormComponent', () => {
         dateEmbauche: '2020-11-02',
         fonctionId: 1,
         chantierId: 2,
+        equipeId: null,
+        salaire: null,
+        typeSalaire: null,
         statut: 'INACTIF'
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé modifié');

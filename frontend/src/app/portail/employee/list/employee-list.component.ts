@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,16 +18,28 @@ import { EmployeeService } from '../services/employee.service';
 /** Vue Tabulaire des employés : le tableau standard, filtré par la barre commune de la coque (voir `EmployeeVuesComponent`). */
 @Component({
   selector: 'app-employee-list',
-  imports: [ColumnChooserComponent, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective, DatePipe],
+  imports: [ColumnChooserComponent, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
   templateUrl: './employee-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    // Unité du salaire (« / mois », « / jour ») : discrète à côté du montant
+    .employee-list__unite {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+  `
 })
 export class EmployeeListComponent {
+  private readonly authService = inject(AuthService);
+
+  /** Le salaire est une donnée de paie : sa colonne n'existe que pour qui a `PAIE_READ` (le serveur ne l'envoie qu'à lui). */
   protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom' },
     { field: 'cin', header: 'CIN' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
+    { field: 'equipe', header: 'Équipe', sortField: 'equipe.code' },
+    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-right' }] : []),
     { field: 'dateEmbauche', header: "Date d'embauche" },
     { field: 'statut', header: 'Statut' }
   ]);
@@ -37,7 +49,6 @@ export class EmployeeListComponent {
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));

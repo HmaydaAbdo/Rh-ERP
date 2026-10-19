@@ -53,6 +53,31 @@
       <stp-field-error [field]="form.chantierId" />
     </div>
 
+    <div class="field">
+      <label for="equipeId">Équipe</label>
+      <app-lazy-select
+        ariaLabel="Équipe" inputId="equipeId"
+        [formField]="form.equipeId"
+        [source]="equipeReferenceService"
+        optionLabel="code"
+        placeholder="Sans équipe"
+      ></app-lazy-select>
+    </div>
+
+    @if (voitLaPaie()) {
+      <div class="field">
+        <label for="salaire">Salaire</label>
+        <stp-number-input inputId="salaire" [formField]="form.salaire" [minFractionDigits]="2" />
+        <stp-field-error [field]="form.salaire" />
+      </div>
+
+      <div class="field">
+        <label for="typeSalaire">Type de salaire</label>
+        <stp-select ariaLabel="Type de salaire" inputId="typeSalaire" [formField]="form.typeSalaire" [options]="typeSalaireOptions" placeholder="Non renseigné"></stp-select>
+        <stp-field-error [field]="form.typeSalaire" />
+      </div>
+    }
+
     @if (isEditMode()) {
       <div class="field">
         <label for="statut">Statut <span class="field__req" aria-hidden="true">*</span></label>

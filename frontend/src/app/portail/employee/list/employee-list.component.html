@@ -36,6 +36,16 @@
         @case ('chantier') {
           {{ employee.chantier.code }}
         }
+        @case ('equipe') {
+          {{ employee.equipe?.code ?? '-' }}
+        }
+        @case ('salaire') {
+          @if (employee.salaire !== null) {
+            {{ employee.salaire | number: '1.2-2' }} <span class="employee-list__unite">{{ employee.typeSalaire === 'JOURNALIER' ? '/ jour' : '/ mois' }}</span>
+          } @else {
+            -
+          }
+        }
         @case ('dateEmbauche') {
           {{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}
         }

@@ -23,6 +23,8 @@ import staport.rh.employee.mappers.EmployeeMapper;
 import staport.rh.employee.repositories.EmployeeRepository;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.employee.specifications.EmployeeSpecification;
+import staport.rh.equipe.entities.Equipe;
+import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 
@@ -33,17 +35,20 @@ public class EmployeeService implements IEmployeeService {
     private final EmployeeMapper mapper;
     private final IFunctionService functionService;
     private final IChantierService chantierService;
+    private final IEquipeService equipeService;
     private final EntityManager entityManager;
 
     public EmployeeService(EmployeeRepository repository,
                             EmployeeMapper mapper,
                             IFunctionService functionService,
                             IChantierService chantierService,
+                            IEquipeService equipeService,
                             EntityManager entityManager) {
         this.repository = repository;
         this.mapper = mapper;
         this.functionService = functionService;
         this.chantierService = chantierService;
+        this.equipeService = equipeService;
         this.entityManager = entityManager;
     }
 
@@ -60,6 +65,7 @@ public class EmployeeService implements IEmployeeService {
         entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Employee saved = repository.save(entity);
         return mapper.toDto(saved);
@@ -83,6 +89,7 @@ public class EmployeeService implements IEmployeeService {
         entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
+        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
 
         Employee updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
@@ -139,5 +146,16 @@ public class EmployeeService implements IEmployeeService {
             throw new InvalidReferenceException("Chantier introuvable avec l'id : " + chantierId);
         }
         return entityManager.getReference(Chantier.class, chantierId);
+    }
+
+    /** L'équipe est facultative : {@code null} = sans équipe. */
+    private Equipe resolveEquipeReference(Long equipeId) {
+        if (equipeId == null) {
+            return null;
+        }
+        if (!equipeService.existsById(equipeId)) {
+            throw new InvalidReferenceException("Équipe introuvable avec l'id : " + equipeId);
+        }
+        return entityManager.getReference(Equipe.class, equipeId);
     }
 }
