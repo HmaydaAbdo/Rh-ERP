@@ -32,7 +32,7 @@ Le salaire et son type (`salaire`, `typeSalaire`) ne sont visibles et modifiable
 permission de l'endpoint. Sans elle, `EmployeeController` renvoie ces champs à `null` (consultation, recherche, réponse
 d'une écriture), ignore ceux qui sont saisis (la fiche garde les siens) et retire un tri par salaire, qui dévoilerait leur
 ordre. Le frontend suit la même règle : colonne Salaire de la liste, champs du formulaire et ligne de la consultation
-n'apparaissent qu'avec `PAIE_READ`. Les changements de salaire restent visibles dans l'historique d'audit (`AUDIT_READ`),
+n'apparaissent qu'avec `PAIE_READ` — tout comme le **parcours** de la fiche (`GET /paie/employes/{id}/parcours`, `PAIE_READ`). Les changements de salaire restent visibles dans l'historique d'audit (`AUDIT_READ`),
 comme ceux d'un bulletin.
 
 ## Note — sélecteurs du formulaire

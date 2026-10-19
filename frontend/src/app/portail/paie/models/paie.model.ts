@@ -315,3 +315,31 @@ export interface PaieRapportPdfRequest {
   /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
   materiel?: Record<string, number> | null;
 }
+
+/** Événement du parcours d'un employé, au mois où la paie le constate. */
+export type PaieParcoursEvenementType =
+  | 'ENTREE'
+  | 'CHANGEMENT_CHANTIER'
+  | 'CHANGEMENT_FONCTION'
+  | 'CHANGEMENT_EQUIPE'
+  | 'CHANGEMENT_SALAIRE'
+  | 'DEPART'
+  | 'RETOUR';
+
+/** Parcours d'un employé tel que sa paie le raconte (GET /paie/employes/{id}/parcours), du plus récent au plus ancien. */
+export interface PaieParcours {
+  employeId: number;
+  indicateurs: { moisPayes: number; totalPercu: number; joursTravailles: number; premierMois: string | null; dernierMois: string | null };
+  mois: {
+    bulletinId: number;
+    periode: string;
+    fonction: string;
+    chantier: string;
+    equipe: string | null;
+    nombreJoursTravailles: number;
+    salaireMensuel: number;
+    salaireTotal: number;
+    observation: string | null;
+  }[];
+  evenements: { periode: string; type: PaieParcoursEvenementType; avant: string | null; apres: string | null; motif: string | null }[];
+}

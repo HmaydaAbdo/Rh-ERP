@@ -61,6 +61,10 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
 
+    /** Les bulletins d'un employé, du plus ancien au plus récent : son parcours. */
+    @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
+    List<Paie> findByEmployee_IdOrderByPeriodeAsc(Long employeeId);
+
     /** Un résumé par mois qui contient de la paie, du plus récent au plus ancien — une seule requête groupée,
      * pour que l'assistant d'export et la vue Cartes connaissent d'un coup les mois disponibles et leur contenu (sur le périmètre filtré, ou {@link FiltresPaie#AUCUN}). Le décompte STC
      * reproduit {@code ObservationStc.estStcOuSortie} en JPQL (même définition que le rapport). */

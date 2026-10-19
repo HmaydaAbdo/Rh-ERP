@@ -16,6 +16,7 @@
 | `DELETE /paie/{id}` | `PAIE_DELETE` |
 | `POST /paie/suppression` | `PAIE_PURGE` (un mois, un chantier ou une équipe d'un coup : permission distincte de `PAIE_DELETE`) |
 | `POST /paie/restauration/{idEntreeAudit}` | `PAIE_RESTORE` (restauration atomique depuis une suppression de groupe auditée) |
+| `GET /paie/employes/{id}/parcours` | `PAIE_READ` |
 | `POST /paie/import/analyse` | `PAIE_IMPORT` **et** `PAIE_READ` (l'analyse montre les salaires des fiches) |
 | `POST /paie/import/corrections` | `PAIE_IMPORT` **et** `EMPLOYEE_WRITE` **et** `PAIE_READ` (met à jour ou crée des fiches employés) |
 | `POST /paie/import` | `PAIE_IMPORT` |

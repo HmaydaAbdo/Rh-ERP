@@ -15,6 +15,7 @@ import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.entities.EmployeeSortie;
 import staport.rh.employee.entities.EmployeeStatut;
@@ -32,6 +33,7 @@ import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 
 import java.time.YearMonth;
+import java.util.List;
 
 @Service
 public class EmployeeService implements IEmployeeService {
@@ -149,6 +151,14 @@ public class EmployeeService implements IEmployeeService {
         sortie.setMotif(motif.strip());
         sortieRepository.save(sortie);
         entity.setStatut(EmployeeStatut.INACTIF);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeSortieDto> listerSorties(Long id) {
+        return sortieRepository.findByEmployee_IdOrderByPeriodeAsc(id).stream()
+                .map(sortie -> new EmployeeSortieDto(sortie.getPeriode(), sortie.getMotif()))
+                .toList();
     }
 
     private Employee getEntityById(Long id) {

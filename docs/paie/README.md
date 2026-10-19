@@ -127,6 +127,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
+| `GET` | `/paie/employes/{id}/parcours` | Parcours d'un employé (voir « Parcours d'un employé ») | 200, 404 |
 | `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
 | `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |
 | `POST` | `/paie/import?periode=aaaa-MM` | Importer un fichier prêt, avec les départs confirmés | 200, 400 |
@@ -233,6 +234,22 @@ analyse, avant la lecture des lignes (aucune requête par ligne), conformément 
 corrections rechargent ces référentiels une fois, après avoir écrit, pour rendre la nouvelle analyse.
 
 ---
+
+## Parcours d'un employé
+
+`GET /paie/employes/{id}/parcours` (`PAIE_READ`, `parcours/PaieParcoursService`) raconte le parcours d'un employé à partir de
+ses bulletins — instantanés du mois — et de ses départs (`IEmployeeService.listerSorties`) : rien n'est recopié dans une table
+d'historique ([ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md)).
+
+| Partie | Contenu |
+|---|---|
+| `indicateurs` | Mois payés, total perçu (somme des `salaireTotal`), jours travaillés, premier et dernier mois de paie |
+| `mois` | Un élément par bulletin, du plus récent au plus ancien : fonction, chantier et équipe du mois, jours, salaire, total, observation |
+| `evenements` | Du plus récent au plus ancien : `ENTREE` (première paie), `CHANGEMENT_CHANTIER`, `CHANGEMENT_FONCTION`, `CHANGEMENT_EQUIPE`, `CHANGEMENT_SALAIRE` (différence entre deux bulletins qui se suivent, avec `avant` et `apres`), `DEPART` (avec son motif), `RETOUR` (une paie après un départ) |
+
+Un employé inconnu : `404`. Un employé sans paie : indicateurs à zéro, listes vides. Le frontend l'affiche sur la fiche de
+l'employé (`parcours/paie-parcours.component.*`) : quatre chiffres, la chronologie groupée par mois, le total perçu par mois
+(courbe monotone : elle ne passe jamais par un montant non perçu) et le tableau des bulletins, chacun ouvrant sa fiche.
 
 ## Export Excel et Rapport PDF
 
