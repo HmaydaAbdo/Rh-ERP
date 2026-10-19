@@ -10,6 +10,7 @@ import {
   PaieAnalytique,
   PaieChantierPeriode,
   PaieCreateRequest,
+  PaieEffectifMois,
   PaieExportRequest,
   PaieImportAnalyse,
   PaieImportCorrections,
@@ -85,6 +86,11 @@ export class PaieService {
   /** Restaure un groupe supprimé depuis son entrée d'audit ; tout le groupe est refusé en cas de conflit. */
   restaurerDepuisAudit(idEntreeAudit: number): Observable<PaieRestauration> {
     return this.http.post<PaieRestauration>(`${this.baseUrl}/restauration/${idEntreeAudit}`, {});
+  }
+
+  /** Effectifs mois par mois (payés, entrées, sorties, mutations) ; chantiers, fonctions et équipes du bulletin du mois. */
+  effectifs(criteres: { chantierIds?: number[]; fonctionIds?: number[]; equipeIds?: number[] }): Observable<PaieEffectifMois[]> {
+    return this.http.post<PaieEffectifMois[]>(`${this.baseUrl}/effectifs`, criteres);
   }
 
   /** Parcours d'un employé : indicateurs, mois de paie et événements (entrée, changements, départs, retours). */

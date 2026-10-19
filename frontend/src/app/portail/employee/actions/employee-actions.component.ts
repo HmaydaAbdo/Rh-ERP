@@ -23,18 +23,6 @@ import { EmployeeService } from '../services/employee.service';
   templateUrl: './employee-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
-    @use 'breakpoints' as bp;
-
-    // À droite du titre ; sur téléphone, sous lui en pleine largeur (voir \`.app-page__actions--liste\`)
-    :host {
-      margin-left: auto;
-
-      @include bp.phone {
-        flex: 1 1 100%;
-        margin-left: 0;
-      }
-    }
-
     .employee-actions__fichier {
       display: none;
     }

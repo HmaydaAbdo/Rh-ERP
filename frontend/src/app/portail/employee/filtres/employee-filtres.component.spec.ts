@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { saisir } from '../../../shared/testing/formulaire';
 import { AUCUN_FILTRE, EmployeeFiltres } from './employee-filtres';
@@ -19,7 +20,8 @@ describe('EmployeeFiltresComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: FunctionReferenceService, useValue: REFERENTIEL },
-        { provide: ChantierReferenceService, useValue: REFERENTIEL }
+        { provide: ChantierReferenceService, useValue: REFERENTIEL },
+        { provide: EquipeReferenceService, useValue: REFERENTIEL }
       ]
     });
     fixture = TestBed.createComponent(EmployeeFiltresComponent);

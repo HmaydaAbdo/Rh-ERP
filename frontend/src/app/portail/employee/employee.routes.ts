@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 import { permissionGuard } from '../../core/auth/guards/auth.guard';
 import { unsavedChangesGuard } from '../../shared/forms/unsaved-changes.guard';
 
-/** Les vues des employés partagent une coque — titre, actions et barre de filtres, voir `EmployeeVuesComponent`. Les écrans de
+/** Les trois vues des employés (tabulaire, cartes, analytique) partagent une coque — titre, actions et barre de filtres, voir `EmployeeVuesComponent`. Les écrans de
  * saisie et de consultation d'un employé n'en font pas partie. */
 export const EMPLOYEE_ROUTES: Routes = [
   {
@@ -15,6 +15,14 @@ export const EMPLOYEE_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () => import('./list/employee-list.component').then((m) => m.EmployeeListComponent)
+      },
+      {
+        path: 'cartes',
+        loadComponent: () => import('./cartes/employee-cartes.component').then((m) => m.EmployeeCartesComponent)
+      },
+      {
+        path: 'analytique',
+        loadComponent: () => import('./analytique/employee-analytique.component').then((m) => m.EmployeeAnalytiqueComponent)
       }
     ]
   },

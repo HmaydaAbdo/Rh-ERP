@@ -4,17 +4,19 @@ import { EmployeeSearchCriteria, EmployeeStatut } from '../models/employee.model
 
 /**
  * Filtres de la barre commune aux vues des employés. Ils vivent dans l'URL (`?nom=ali&cin=ab1&fonctionIds=7&chantierIds=3,4
- * &statut=ACTIF`) : tout lien et retour navigateur les conserve, et chaque vue les lit sans passer par un état partagé.
+ * &equipeIds=2&statut=ACTIF`) : tout lien et retour navigateur les conserve, et chaque vue les lit sans passer par un état partagé.
  */
 export interface EmployeeFiltres {
   nomPrenom: string;
   cin: string;
   fonctionIds: number[];
   chantierIds: number[];
+  /** `0` = sans équipe (comme dans la paie). */
+  equipeIds: number[];
   statut: EmployeeStatut | null;
 }
 
-export const AUCUN_FILTRE: EmployeeFiltres = { nomPrenom: '', cin: '', fonctionIds: [], chantierIds: [], statut: null };
+export const AUCUN_FILTRE: EmployeeFiltres = { nomPrenom: '', cin: '', fonctionIds: [], chantierIds: [], equipeIds: [], statut: null };
 
 const STATUTS: readonly EmployeeStatut[] = ['ACTIF', 'INACTIF'];
 
@@ -31,13 +33,14 @@ export function lireFiltres(params: ParamMap): EmployeeFiltres {
       .map((valeur) => valeur.trim())
       .filter((valeur) => valeur !== '')
       .map(Number)
-      .filter((id) => Number.isInteger(id) && id > 0);
+      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' ? id >= 0 : id > 0));
   const statut = params.get('statut');
   return {
     nomPrenom: params.get('nom') ?? '',
     cin: params.get('cin') ?? '',
     fonctionIds: ids('fonctionIds'),
     chantierIds: ids('chantierIds'),
+    equipeIds: ids('equipeIds'),
     statut: STATUTS.find((s) => s === statut) ?? null
   };
 }
@@ -50,6 +53,7 @@ export function versParametres(filtres: EmployeeFiltres): Params {
     cin: filtres.cin.trim() || null,
     fonctionIds: liste(filtres.fonctionIds),
     chantierIds: liste(filtres.chantierIds),
+    equipeIds: liste(filtres.equipeIds),
     statut: filtres.statut
   };
 }
@@ -62,6 +66,7 @@ export function versCriteres(filtres: EmployeeFiltres): EmployeeSearchCriteria {
     cin: filtres.cin.trim() || undefined,
     fonctionIds: ids(filtres.fonctionIds),
     chantierIds: ids(filtres.chantierIds),
+    equipeIds: ids(filtres.equipeIds),
     statut: filtres.statut ?? undefined
   };
 }

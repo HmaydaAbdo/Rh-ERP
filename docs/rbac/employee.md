@@ -11,6 +11,8 @@
 | `PUT /employees/{id}` | `EMPLOYEE_WRITE` |
 | `GET /employees/{id}` | `EMPLOYEE_READ` |
 | `POST /employees/search` | `EMPLOYEE_READ` |
+| `POST /employees/regroupements` | `EMPLOYEE_READ` (aucun salaire) |
+| `POST /employees/analytique` | `EMPLOYEE_READ` (aucun salaire) |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` |

@@ -156,9 +156,17 @@ public class EmployeeService implements IEmployeeService {
     @Override
     @Transactional(readOnly = true)
     public List<EmployeeSortieDto> listerSorties(Long id) {
-        return sortieRepository.findByEmployee_IdOrderByPeriodeAsc(id).stream()
-                .map(sortie -> new EmployeeSortieDto(sortie.getPeriode(), sortie.getMotif()))
-                .toList();
+        return sortieRepository.findByEmployee_IdOrderByPeriodeAsc(id).stream().map(EmployeeService::sortieDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeSortieDto> listerToutesLesSorties() {
+        return sortieRepository.findAllByOrderByPeriodeAsc().stream().map(EmployeeService::sortieDto).toList();
+    }
+
+    private static EmployeeSortieDto sortieDto(EmployeeSortie sortie) {
+        return new EmployeeSortieDto(sortie.getEmployee().getId(), sortie.getPeriode(), sortie.getMotif());
     }
 
     private Employee getEntityById(Long id) {

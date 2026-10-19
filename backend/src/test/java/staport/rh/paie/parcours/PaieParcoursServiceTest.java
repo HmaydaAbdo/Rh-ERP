@@ -42,7 +42,7 @@ class PaieParcoursServiceTest {
                 bulletin(2L, "2026-06", "C168", "OPERATEUR", "OP", "4000", "4000", null),
                 bulletin(3L, "2026-07", "C168", "CHAUFFEUR", null, "4500", "4500", "STC"),
                 bulletin(4L, "2026-09", "C168", "CHAUFFEUR", null, "4500", "4200", null)));
-        when(employeeService.listerSorties(7L)).thenReturn(List.of(new EmployeeSortieDto(YearMonth.of(2026, 7), "STC")));
+        when(employeeService.listerSorties(7L)).thenReturn(List.of(new EmployeeSortieDto(7L, YearMonth.of(2026, 7), "STC")));
 
         ParcoursEmployeDto parcours = service.parcours(7L);
 

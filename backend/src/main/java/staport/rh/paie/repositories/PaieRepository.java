@@ -61,6 +61,11 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     List<Paie> findByPeriode(YearMonth periode);
 
+    /** Tous les bulletins réduits à qui, quand et où (tendances des effectifs) ; cinq colonnes, aucune entité chargée. */
+    @Query("SELECT p.employee.id AS employeId, p.periode AS periode, p.chantier.id AS chantierId, p.fonction.id AS fonctionId, "
+            + "e.id AS equipeId FROM Paie p LEFT JOIN p.equipe e ORDER BY p.periode")
+    List<EffectifBulletinProjection> listerEffectifs();
+
     /** Les bulletins d'un employé, du plus ancien au plus récent : son parcours. */
     @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
     List<Paie> findByEmployee_IdOrderByPeriodeAsc(Long employeeId);

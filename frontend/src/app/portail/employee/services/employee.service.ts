@@ -5,8 +5,11 @@ import { Observable } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import {
   Employee,
+  DimensionEmployes,
+  EmployeeAnalytique,
   EmployeeCreateRequest,
   EmployeeImportResult,
+  EmployeeRegroupement,
   EmployeeSearchCriteria,
   EmployeeUpdateRequest
 } from '../models/employee.model';
@@ -21,6 +24,16 @@ export interface EmployeePageRequest {
 export class EmployeeService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'employees';
+
+  /** Les employés du périmètre regroupés par chantier, équipe ou fonction (vue Cartes). */
+  regrouper(criteria: EmployeeSearchCriteria, dimension: DimensionEmployes): Observable<EmployeeRegroupement[]> {
+    return this.http.post<EmployeeRegroupement[]>(`${this.baseUrl}/regroupements`, criteria, { params: new HttpParams().set('dimension', dimension) });
+  }
+
+  /** Chiffres clés et tranches d'âge et d'ancienneté du périmètre (vue Analytique). */
+  analyser(criteria: EmployeeSearchCriteria): Observable<EmployeeAnalytique> {
+    return this.http.post<EmployeeAnalytique>(`${this.baseUrl}/analytique`, criteria);
+  }
 
   search(criteria: EmployeeSearchCriteria, pageRequest: EmployeePageRequest): Observable<Page<Employee>> {
     let params = new HttpParams().set('page', pageRequest.page).set('size', pageRequest.size);

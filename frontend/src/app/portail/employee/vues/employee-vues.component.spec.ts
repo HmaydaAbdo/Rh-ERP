@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { AUCUN_FILTRE } from '../filtres/employee-filtres';
@@ -26,7 +27,8 @@ describe('EmployeeVuesComponent', () => {
         fournirPermissions(['EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'EMPLOYEE_IMPORT']).providers,
         { provide: EmployeeService, useValue: {} },
         { provide: FunctionReferenceService, useValue: REFERENTIEL },
-        { provide: ChantierReferenceService, useValue: REFERENTIEL }
+        { provide: ChantierReferenceService, useValue: REFERENTIEL },
+        { provide: EquipeReferenceService, useValue: REFERENTIEL }
       ]
     });
     harness = await RouterTestingHarness.create();
@@ -49,12 +51,17 @@ describe('EmployeeVuesComponent', () => {
     expect(TestBed.inject(Router).url).toBe('/employees?fonctionIds=2,5&statut=INACTIF');
   });
 
-  it("porte le titre et les actions dans l'en-tête, la barre de filtres au-dessus de la vue", async () => {
+  it("porte le titre, les trois onglets de vue et les actions dans l'en-tête, la barre de filtres au-dessus de la vue", async () => {
     await harness.navigateByUrl('/employees', EmployeeVuesComponent);
     const page = harness.routeNativeElement as HTMLElement;
 
-    expect(page.querySelector('.app-page__header h1')?.textContent).toBe('Employés');
-    expect(page.querySelector('.app-page__header app-employee-actions')).not.toBeNull();
+    expect(page.querySelector('.app-vues__header h1')?.textContent).toBe('Employés');
+    expect(Array.from(page.querySelectorAll('nav[aria-label="Vue des employés"] a')).map((a) => a.getAttribute('href'))).toEqual([
+      '/employees',
+      '/employees/cartes',
+      '/employees/analytique'
+    ]);
+    expect(page.querySelector('.app-vues__header app-employee-actions.app-vues__actions')).not.toBeNull();
     expect(page.querySelector('app-employee-filtres + router-outlet')).not.toBeNull();
   });
 
