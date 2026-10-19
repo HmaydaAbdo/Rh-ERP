@@ -6,6 +6,10 @@ import staport.rh.employee.dtos.request.EmployeeCreateRequestDto;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.EmployeeSortieDto;
+
+import java.time.YearMonth;
+import java.util.List;
 
 /**
  * Façade publique du module Employee — seule cette interface peut être injectée
@@ -25,4 +29,16 @@ public interface IEmployeeService {
     void delete(Long id);
 
     boolean existsById(Long id);
+
+    /**
+     * Enregistre le départ de l'employé de l'entreprise, constaté par la paie du mois {@code periode} (STC du fichier, ou
+     * absence confirmée) : il passe INACTIF et le départ rejoint son parcours. Un seul départ par mois.
+     */
+    void enregistrerSortie(Long id, YearMonth periode, String motif);
+
+    /** Les départs de l'employé, du plus ancien au plus récent (son parcours, avec ses bulletins). */
+    List<EmployeeSortieDto> listerSorties(Long id);
+
+    /** Tous les départs enregistrés, du plus ancien au plus récent (tendances mois par mois de l'Analytique). */
+    List<EmployeeSortieDto> listerToutesLesSorties();
 }

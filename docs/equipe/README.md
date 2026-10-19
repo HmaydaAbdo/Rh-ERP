@@ -77,7 +77,7 @@ via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'�
   agrégation BI) ; le **libellé** ne sert qu'à l'affichage (titres de section/feuille, graphique
   « Répartition par équipe »).
 - La suppression (`DELETE /equipes/{id}`) est bloquée (409) si l'équipe est référencée par au moins
-  un bulletin de paie (contrainte de clé étrangère `paie.equipe_id`).
+  un bulletin de paie ou par un employé (clés étrangères `paie.equipe_id` et `employe.equipe_id`).
 - Pas de notion actif/inactif : une équipe existe ou n'existe pas.
 
 ---
@@ -90,7 +90,7 @@ via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'�
 | `PUT` | `/equipes/{id}` | Modifier une équipe | 200, 400, 404, 409 |
 | `GET` | `/equipes/{id}` | Consulter une équipe | 200, 404 |
 | `POST` | `/equipes/search` | Rechercher (paginé, triable) — body `EquipeSearchCriteria` (`code`, `libelle`, `recherche`) | 200 |
-| `DELETE` | `/equipes/{id}` | Supprimer (bloqué si utilisée par un bulletin) | 204, 404, 409 |
+| `DELETE` | `/equipes/{id}` | Supprimer (bloqué si utilisée par un bulletin ou un employé) | 204, 404, 409 |
 
 `EquipeResponseDto` : `id`, `code`, `libelle`. `code`/`libelle` sont des filtres précis combinés en
 ET (liste d'administration) ; `recherche` est la recherche libre du sélecteur, en OU entre code et

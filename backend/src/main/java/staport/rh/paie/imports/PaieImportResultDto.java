@@ -1,21 +1,12 @@
 package staport.rh.paie.imports;
 
 import java.time.YearMonth;
-import java.util.List;
 
+/** Bilan d'un import réussi : les bulletins créés, les départs enregistrés, les employés revenus (repassés ACTIF). */
 public record PaieImportResultDto(
         YearMonth periode,
-        int totalLignes,
         int crees,
-        int ignores,
-        List<LigneIgnoreeDto> lignesIgnorees,
-        List<String> fonctionsCreees
+        int departs,
+        int retours
 ) {
-    public record LigneIgnoreeDto(
-            int numeroLigne,
-            String cin,
-            String nomPrenom,
-            String raison
-    ) {
-    }
 }

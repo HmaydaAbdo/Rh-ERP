@@ -100,6 +100,12 @@ class EndpointSecurityTest {
             Map.entry("PaieController.rechercherPeriodes", "PAIE_READ"),
             Map.entry("PaieController.rechercherChantiersDeLaPeriode", "PAIE_READ"),
             Map.entry("PaieExportController.exporter", "PAIE_EXPORT"),
+            Map.entry("PaieParcoursController.parcours", "PAIE_READ"),
+            Map.entry("PaieEffectifsController.tendances", "PAIE_READ"),
+            Map.entry("EmployeeAnalytiqueController.regrouper", "EMPLOYEE_READ"),
+            Map.entry("EmployeeAnalytiqueController.analyser", "EMPLOYEE_READ"),
+            Map.entry("PaieImportController.analyser", "PAIE_IMPORT&PAIE_READ"),
+            Map.entry("PaieImportController.corriger", "PAIE_IMPORT&EMPLOYEE_WRITE&PAIE_READ"),
             Map.entry("PaieImportController.importer", "PAIE_IMPORT"),
             Map.entry("PaieImportController.telechargerModele", "PAIE_IMPORT"),
             Map.entry("PaieReportController.telecharger", "PAIE_EXPORT"),
@@ -200,7 +206,8 @@ class EndpointSecurityTest {
     void lesPermissionsCorrespondentALaTableDeReference() {
         Map<String, String> reelles = new TreeMap<>();
         for (Method endpoint : endpoints()) {
-            reelles.put(nom(endpoint), String.join("|", autorites(preAuthorize(endpoint))));
+            PreAuthorize annotation = preAuthorize(endpoint);
+            reelles.put(nom(endpoint), String.join(exigeToutes(annotation) ? "&" : "|", autorites(annotation)));
         }
 
         assertThat(reelles).as("endpoints et permissions (table de référence du test)")
@@ -228,11 +235,31 @@ class EndpointSecurityTest {
         for (Method endpoint : endpoints()) {
             authentifierAvec(autorites(preAuthorize(endpoint)).toArray(String[]::new));
             if (estRefuse(endpoint)) {
-                accesRefuses.add(nom(endpoint) + " avec " + String.join(" ou ", autorites(preAuthorize(endpoint))));
+                accesRefuses.add(nom(endpoint) + " avec " + String.join(", ", autorites(preAuthorize(endpoint))));
             }
         }
 
         assertThat(accesRefuses).as("endpoints refusés malgré la permission requise").isEmpty();
+    }
+
+    @Test
+    void uneExigenceCombineeRefuseChaquePermissionPriseSeule() {
+        List<String> accesPartiels = new ArrayList<>();
+
+        for (Method endpoint : endpoints()) {
+            PreAuthorize annotation = preAuthorize(endpoint);
+            if (!exigeToutes(annotation)) {
+                continue;
+            }
+            for (String seule : autorites(annotation)) {
+                authentifierAvec(seule);
+                if (!estRefuse(endpoint)) {
+                    accesPartiels.add(nom(endpoint) + " accessible avec " + seule + " seule");
+                }
+            }
+        }
+
+        assertThat(accesPartiels).as("endpoints accessibles sans toutes les permissions exigées").isEmpty();
     }
 
     @Test
@@ -276,8 +303,20 @@ class EndpointSecurityTest {
                 : AnnotatedElementUtils.findMergedAnnotation(endpoint.getDeclaringClass(), PreAuthorize.class);
     }
 
+    /** {@code hasAuthority('A') and hasAuthority('B')} : toutes les permissions sont exigées ensemble. */
+    private static boolean exigeToutes(PreAuthorize annotation) {
+        return annotation.value().contains(" and ");
+    }
+
     private List<String> autorites(PreAuthorize annotation) {
         Matcher simple = HAS_AUTHORITY.matcher(annotation.value());
+        if (exigeToutes(annotation)) {
+            List<String> toutes = new ArrayList<>();
+            while (simple.find()) {
+                toutes.add(simple.group(1));
+            }
+            return toutes;
+        }
         if (simple.find()) {
             return List.of(simple.group(1));
         }

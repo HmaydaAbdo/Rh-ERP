@@ -29,7 +29,7 @@ describe('EmployeeService', () => {
     service.getById(9).subscribe();
     requete(http, 'GET', 'employees/9').flush({ id: 9 });
 
-    const dto = { nomPrenom: 'Ali Alaoui', cin: 'AB1', dateNaissance: '1990-01-01', dateEmbauche: '2020-02-02', fonctionId: 1, chantierId: 2 };
+    const dto = { nomPrenom: 'Ali Alaoui', cin: 'AB1', dateNaissance: '1990-01-01', dateEmbauche: '2020-02-02', fonctionId: 1, chantierId: 2, equipeId: null, salaire: null, typeSalaire: null };
     service.create(dto).subscribe();
     const creation = requete(http, 'POST', 'employees');
     creation.flush({ id: 10 });

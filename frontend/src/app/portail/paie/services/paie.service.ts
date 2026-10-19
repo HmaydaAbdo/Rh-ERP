@@ -10,9 +10,13 @@ import {
   PaieAnalytique,
   PaieChantierPeriode,
   PaieCreateRequest,
+  PaieEffectifMois,
   PaieExportRequest,
+  PaieImportAnalyse,
+  PaieImportCorrections,
   PaieImportResult,
   PaieMaterielTableau,
+  PaieParcours,
   PaiePeriodeResume,
   PaieSearchCriteria,
   PaieSuppression,
@@ -84,11 +88,45 @@ export class PaieService {
     return this.http.post<PaieRestauration>(`${this.baseUrl}/restauration/${idEntreeAudit}`, {});
   }
 
-  importer(file: File, periode: string): Observable<PaieImportResult> {
+  /** Effectifs mois par mois (payés, entrées, sorties, mutations) ; chantiers, fonctions et équipes du bulletin du mois. */
+  effectifs(criteres: { chantierIds?: number[]; fonctionIds?: number[]; equipeIds?: number[] }): Observable<PaieEffectifMois[]> {
+    return this.http.post<PaieEffectifMois[]>(`${this.baseUrl}/effectifs`, criteres);
+  }
+
+  /** Parcours d'un employé : indicateurs, mois de paie et événements (entrée, changements, départs, retours). */
+  parcours(employeId: number): Observable<PaieParcours> {
+    return this.http.get<PaieParcours>(`${this.baseUrl}/employes/${employeId}/parcours`);
+  }
+
+  /** Analyse un fichier de paie sans rien enregistrer : erreurs, CIN inconnus, écarts avec les fiches, départs, retours. */
+  analyserImport(file: File, periode: string): Observable<PaieImportAnalyse> {
+    return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/analyse`, this.formulaireImport(file), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Corrige les fiches à partir du fichier (alignements, créations) et renvoie la nouvelle analyse. */
+  corrigerImport(file: File, periode: string, corrections: PaieImportCorrections): Observable<PaieImportAnalyse> {
+    return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/corrections`, this.formulaireImport(file, { corrections }), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif). */
+  importer(file: File, periode: string, departs: { employeId: number; motif: string }[]): Observable<PaieImportResult> {
+    return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, this.formulaireImport(file, { departs: { departs } }), {
+      params: new HttpParams().set('periode', periode)
+    });
+  }
+
+  /** Le fichier, et chaque partie JSON en Blob `application/json` (attendu par `@RequestPart` côté serveur). */
+  private formulaireImport(file: File, parties: Record<string, unknown> = {}): FormData {
     const formData = new FormData();
     formData.append('file', file);
-    const params = new HttpParams().set('periode', periode);
-    return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, formData, { params });
+    for (const [nom, valeur] of Object.entries(parties)) {
+      formData.append(nom, new Blob([JSON.stringify(valeur)], { type: 'application/json' }));
+    }
+    return formData;
   }
 
   telechargerModele(): Observable<Blob> {

@@ -1,88 +1,57 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
-import { Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
-import { surChangementDesFiltres } from '../../../shared/forms/filtres';
-import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
-import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
-import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
-import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
-import { Employee, EmployeeImportResult, EmployeeStatut } from '../models/employee.model';
+import { EmployeeFiltres, lireFiltres, memesFiltres, versCriteres } from '../filtres/employee-filtres';
+import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 
-const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
-  { label: 'Actif', value: 'ACTIF' },
-  { label: 'Inactif', value: 'INACTIF' }
-];
-
-const DEBOUNCE_RECHERCHE_MS = 300;
-
-const filtresVides = () => ({
-  nomPrenom: '',
-  cin: '',
-  fonctionIds: [] as number[],
-  chantierIds: [] as number[],
-  statut: null as EmployeeStatut | null
-});
-
+/** Vue Tabulaire des employés : le tableau standard, filtré par la barre commune de la coque (voir `EmployeeVuesComponent`). */
 @Component({
   selector: 'app-employee-list',
-  imports: [
-    ColumnChooserComponent,
-    RouterLink,
-    LazySelectComponent,
-    ButtonComponent,
-    BadgeComponent,
-    SelectComponent,
-    DialogComponent,
-    SplitButtonComponent,
-    TableComponent,
-    TableCellDirective,
-    TableRowActionsDirective,
-    DatePipe,
-    FormField,
-    FormRoot
-  ],
+  imports: [ColumnChooserComponent, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
   templateUrl: './employee-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './employee-list.component.scss'
+  styles: `
+    // Unité du salaire (« / mois », « / jour ») : discrète à côté du montant
+    .employee-list__unite {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+  `
 })
 export class EmployeeListComponent {
+  private readonly authService = inject(AuthService);
+
+  /** Le salaire est une donnée de paie : sa colonne n'existe que pour qui a `PAIE_READ` (le serveur ne l'envoie qu'à lui). */
   protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom' },
     { field: 'cin', header: 'CIN' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
+    { field: 'equipe', header: 'Équipe', sortField: 'equipe.code' },
+    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-right' }] : []),
     { field: 'dateEmbauche', header: "Date d'embauche" },
     { field: 'statut', header: 'Statut' }
   ]);
 
   private readonly employeeService = inject(EmployeeService);
-  protected readonly functionReferenceService = inject(FunctionReferenceService);
-  protected readonly chantierReferenceService = inject(ChantierReferenceService);
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly authService = inject(AuthService);
-
-  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
-
-  protected readonly canImport = computed(() => this.authService.hasPermission('EMPLOYEE_IMPORT'));
 
   protected readonly canDelete = computed(() => this.authService.hasPermission('EMPLOYEE_DELETE'));
 
@@ -90,38 +59,25 @@ export class EmployeeListComponent {
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
   protected readonly deletingId = signal<number | null>(null);
-  protected readonly importing = signal(false);
-  protected readonly importResult = signal<EmployeeImportResult | null>(null);
-  protected readonly showImportResultDialog = signal(false);
-  protected readonly downloadingTemplate = signal(false);
 
-  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
-  protected readonly menuImport: MenuAction[] = [
-    {
-      label: 'Télécharger le modèle Excel',
-      icon: 'file-spreadsheet',
-      command: () => {
-        if (!this.downloadingTemplate()) {
-          this.onDownloadTemplate();
-        }
-      }
-    }
-  ];
+  /** Filtres de la barre commune, lus dans l'URL (voir `filtres/employee-filtres.ts`). */
+  private filtres: EmployeeFiltres = lireFiltres(this.route.snapshot.queryParamMap);
 
-  protected readonly statutOptions = STATUT_OPTIONS;
-
-  protected readonly filtres = signal(filtresVides());
-  protected readonly filterForm = form(this.filtres, (chemin) => {
-    debounce(chemin.nomPrenom, DEBOUNCE_RECHERCHE_MS);
-    debounce(chemin.cin, DEBOUNCE_RECHERCHE_MS);
-  });
+  /** Première ligne de la page affichée, liée au tableau pour qu'un changement de filtres le ramène à la première page. */
+  protected readonly first = signal(0);
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'nomPrenom,asc';
 
   constructor() {
-    surChangementDesFiltres(this.filtres, () => this.onSearch());
+    // La première émission est celle de l'URL déjà lue ci-dessus : le premier chargement vient du tableau (`onLazyLoad`).
+    this.route.queryParamMap
+      .pipe(map(lireFiltres), skip(1), distinctUntilChanged(memesFiltres), takeUntilDestroyed(this.destroyRef))
+      .subscribe((filtres) => {
+        this.filtres = filtres;
+        this.onSearch();
+      });
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
@@ -135,11 +91,8 @@ export class EmployeeListComponent {
 
   protected onSearch(): void {
     this.lastPage = 0;
+    this.first.set(0);
     this.fetchPage();
-  }
-
-  protected onResetFilters(): void {
-    this.filterForm().reset(filtresVides());
   }
 
   protected onView(employee: Employee): void {
@@ -160,59 +113,6 @@ export class EmployeeListComponent {
     });
   }
 
-  protected onTriggerImport(): void {
-    this.fileInput().nativeElement.click();
-  }
-
-  protected onDownloadTemplate(): void {
-    this.downloadingTemplate.set(true);
-    this.employeeService
-      .telechargerModele()
-      .pipe(finalize(() => this.downloadingTemplate.set(false)))
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = 'Modele_Import_Employes.xlsx';
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      });
-  }
-
-  protected onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) {
-      return;
-    }
-
-    this.importing.set(true);
-    this.employeeService
-      .importer(file)
-      .pipe(finalize(() => this.importing.set(false)))
-      .subscribe({
-        next: (result) => {
-          this.importResult.set(result);
-          this.showImportResultDialog.set(true);
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Import terminé',
-            detail: `${result.crees} créé(s) sur ${result.totalLignes} ligne(s)`,
-            life: 6000
-          });
-          this.fetchPage();
-        },
-        error: (err: HttpErrorResponse) => {
-          const result = err.error as EmployeeImportResult | null;
-          if (result && Array.isArray(result.lignesIgnorees)) {
-            this.importResult.set(result);
-            this.showImportResultDialog.set(true);
-          }
-        }
-      });
-  }
-
   private deleteEmployee(employee: Employee): void {
     this.deletingId.set(employee.id);
     this.employeeService
@@ -226,19 +126,9 @@ export class EmployeeListComponent {
 
   private fetchPage(): void {
     this.loading.set(true);
-    const criteria = this.filtres();
 
     this.employeeService
-      .search(
-        {
-          nomPrenom: criteria.nomPrenom || undefined,
-          cin: criteria.cin || undefined,
-          fonctionIds: criteria.fonctionIds?.length ? criteria.fonctionIds : undefined,
-          chantierIds: criteria.chantierIds?.length ? criteria.chantierIds : undefined,
-          statut: criteria.statut ?? undefined
-        },
-        { page: this.lastPage, size: this.lastSize, sort: this.lastSort }
-      )
+      .search(versCriteres(this.filtres), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe((result) => {
         this.employees.set(result.content);

@@ -227,6 +227,10 @@ fenêtre d'incident, préserver le volume courant, puis appliquer une correction
 la sauvegarde vers un nouveau volume après décision de l'exploitant et analyse des écritures à réconcilier.
 Les migrations majeures PostgreSQL suivent la procédure de retour arrière dédiée ci-dessous.
 
+**Migration de données irréversible — V30 (reprise des employés depuis la paie, ADR 0010).** Elle supprime les employés
+sans aucun bulletin de paie et réaligne toutes les fiches. Avant la mise à jour qui l'apporte, faire une sauvegarde
+manuelle et vérifier qu'elle est restaurable ; le retour aux images précédentes ne fait pas revenir les employés supprimés.
+
 ### Migration majeure PG17 → PG18 en production
 
 La migration se fait par export/restauration logique : un volume PostgreSQL 17 ne peut pas être

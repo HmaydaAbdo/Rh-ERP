@@ -1,8 +1,8 @@
-<div class="paie-vues">
-  <div class="paie-vues__header">
+<div class="app-vues">
+  <div class="app-vues__header">
     <h1>Paie</h1>
-    <app-paie-vue-switcher></app-paie-vue-switcher>
-    <app-paie-actions class="paie-vues__actions" (importe)="rafraichirVue()"></app-paie-actions>
+    <app-vue-switcher label="Vue de la paie" [vues]="vues"></app-vue-switcher>
+    <app-paie-actions class="app-vues__actions" [periodes]="periodes()" (importe)="rafraichirVue()"></app-paie-actions>
   </div>
 
   <app-paie-filtres

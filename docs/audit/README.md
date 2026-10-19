@@ -93,12 +93,13 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Paie | `PAIE_CREATION`, `PAIE_MODIFICATION`, `PAIE_SUPPRESSION` | `OPERATION` | — |
 | Paie | `PAIE_SUPPRESSION_GROUPE` | `OPERATION` | Critères du groupe (mois, chantiers, équipes, fonctions, filtres de texte), nombre confirmé ; nombre supprimé. **Chaque bulletin** est supprimé entité par entité : tout leur contenu est dans la révision |
 | Paie | `PAIE_RESTAURATION_GROUPE` | `OPERATION` | Identifiant de l'entrée source et nombre recréé ; les données restaurées sont dans la révision des nouveaux bulletins |
-| Paie | `PAIE_IMPORT` | `OPERATION` | Nom, taille et **empreinte SHA-256** du fichier (jamais son contenu), mois, lignes, fonctions créées ; `ECHEC` si des lignes sont rejetées |
+| Paie | `PAIE_IMPORT` | `OPERATION` | Nom, taille et **empreinte SHA-256** du fichier (jamais son contenu), mois, bulletins créés, départs et retours ; `ECHEC` (motif `PaieImportException`) si le fichier n'est pas prêt — rien n'est alors enregistré. Les départs (`EMPLOYE_SORTIE`) et retours sont des actions imbriquées : leurs versions sont dans la révision de l'import |
+| Paie | `PAIE_IMPORT_CORRECTION` | `OPERATION` | Corrections de l'assistant d'import : le fichier de référence (nom, taille, empreinte), le mois, le nombre de fiches alignées et d'employés créés ; chaque version de fiche (et fonction créée) est dans la révision de l'entrée |
 | Paie | `PAIE_EXPORT_EXCEL`, `PAIE_RAPPORT_PDF` | `ACCES` | Mois, format, chantiers / filtres demandés — aucun contenu |
 | API métier | `LECTURE_METIER` | `ACCES` | Chaque réponse HTTP métier réussie ou en erreur de lecture : modèle de route, méthode, statut HTTP, nombre d'éléments ; période valide si fournie en paramètre. Aucun corps, montant, filtre nominatif, identifiant d'URL ou paramètre libre n'est copié |
 | API métier | `ECRITURE_HTTP_SANS_TRACE_METIER`, `TENTATIVE_ECRITURE_HTTP_REJETEE` | `OPERATION` | Garde-fou pour une écriture HTTP sans annotation métier ; méthode, route et statut, sans corps |
 | API sécurité | `TENTATIVE_HTTP_REJETEE` | `SECURITE` | Écriture HTTP d’authentification rejetée ; méthode, route et statut, sans secret |
-| Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` | `OPERATION` | Import : le fichier |
+| Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` ; `EMPLOYE_SORTIE` (départs enregistrés — première écriture : la reprise `V30`, origine `MIGRATION`, qui écrit aussi une `EMPLOYE_MODIFICATION` et une `EMPLOYE_SUPPRESSION` groupées) | `OPERATION` | Import : le fichier ; `V30` : la migration, le dernier mois de paie, le nombre de lignes |
 | Fonction | `FONCTION_CREATION`, `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`, `FONCTION_IMPORT` | `OPERATION` | Import : le fichier |
 | Chantier | `CHANTIER_CREATION`, `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`, `CHANTIER_SYNCHRONISATION` | `OPERATION` | Synchronisation : reçus, déjà présents, ignorés ; créés |
 | Équipe | `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` | `OPERATION` | — |
