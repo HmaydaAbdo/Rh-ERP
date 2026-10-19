@@ -77,7 +77,7 @@ class PaieImportServiceTest {
 
     private void stubReferentiels() {
         Page<EmployeeResponseDto> employees = new PageImpl<>(List.of(
-                new EmployeeResponseDto(1L, 0L, "BOULJIHEL SALH", "PB85747", null, null, null, null, null)));
+                new EmployeeResponseDto(1L, 0L, "BOULJIHEL SALH", "PB85747", null, null, null, null, null, null, null, null)));
         Page<FunctionResponseDto> functions = new PageImpl<>(List.of(
                 new FunctionResponseDto(10L, 0L, "OPERATEUR")));
         Page<ChantierResponseDto> chantiers = new PageImpl<>(List.of(

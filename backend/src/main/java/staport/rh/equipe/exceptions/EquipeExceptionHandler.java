@@ -29,7 +29,7 @@ public class EquipeExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
         if ("DELETE".equalsIgnoreCase(request.getMethod())) {
-            return build(HttpStatus.CONFLICT, "Cette équipe est utilisée par au moins un bulletin de paie et ne peut pas être supprimée.", request);
+            return build(HttpStatus.CONFLICT, "Cette équipe est utilisée par au moins un bulletin de paie ou un employé et ne peut pas être supprimée.", request);
         }
         return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }

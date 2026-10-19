@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -13,7 +13,7 @@ import { EmployeeService } from '../services/employee.service';
 
 @Component({
   selector: 'app-employee-detail',
-  imports: [DatePipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent],
+  imports: [DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-detail.component.html'
 })
@@ -21,6 +21,9 @@ export class EmployeeDetailComponent {
   private readonly authService = inject(AuthService);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
+
+  /** Le salaire est une donnée de paie (le serveur ne l'envoie qu'à qui a `PAIE_READ`). */
+  protected readonly voitLaPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
 
   protected readonly canViewHistory = computed(() => this.authService.hasPermission('AUDIT_READ'));
 

@@ -15,8 +15,8 @@ import { EmployeeListComponent } from './employee-list.component';
 registerLocaleData(localeFr);
 
 const EMPLOYES: Employee[] = [
-  { id: 1, version: 0, nomPrenom: 'Ali Alaoui', cin: 'AB123', dateNaissance: '1990-03-07', dateEmbauche: '2020-11-02', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 2, code: 'C196' }, statut: 'ACTIF' },
-  { id: 2, version: 0, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-01', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, statut: 'INACTIF' }
+  { id: 1, version: 0, nomPrenom: 'Ali Alaoui', cin: 'AB123', dateNaissance: '1990-03-07', dateEmbauche: '2020-11-02', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 2, code: 'C196' }, equipe: { id: 5, code: 'OP', libelle: 'Opérateurs' }, salaire: 4000, typeSalaire: 'MENSUEL', statut: 'ACTIF' },
+  { id: 2, version: 0, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-01', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, equipe: null, salaire: 120, typeSalaire: 'JOURNALIER', statut: 'INACTIF' }
 ];
 
 const page = (content: Employee[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });
@@ -50,10 +50,22 @@ describe('EmployeeListComponent', () => {
     await afficher();
 
     expect(service.search.mock.lastCall![1]).toEqual({ page: 0, size: 10, sort: 'nomPrenom,asc' });
-    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 6).map((td) => td.textContent?.trim());
-    expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', '02/11/2020', 'Actif']);
-    expect(ligne(1)).toEqual(['Zahra Idrissi', 'CD456', 'CHAUFFEUR', 'C168', '14/05/2018', 'Inactif']);
+    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 7).map((td) => td.textContent?.trim());
+    expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', 'OP', '02/11/2020', 'Actif']);
+    expect(ligne(1)).toEqual(['Zahra Idrissi', 'CD456', 'CHAUFFEUR', 'C168', '-', '14/05/2018', 'Inactif']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 employés');
+  });
+
+  it('montre le salaire et son unité à qui peut lire la paie, et seulement à lui', async () => {
+    await afficher('/employees', [...TOUTES, 'PAIE_READ']);
+    const salaires = () => Array.from(racine().querySelectorAll('tbody tr')).map((tr) => tr.querySelectorAll('td')[5].textContent?.replace(/\s+/g, ' ').trim());
+
+    expect(Array.from(racine().querySelectorAll('thead th')).map((th) => th.textContent?.trim())).toContain('Salaire');
+    expect(salaires()).toEqual(['4 000,00 / mois', '120,00 / jour']);
+
+    TestBed.resetTestingModule();
+    await afficher();
+    expect(Array.from(racine().querySelectorAll('thead th')).map((th) => th.textContent?.trim())).not.toContain('Salaire');
   });
 
   describe('filtres de l’URL', () => {

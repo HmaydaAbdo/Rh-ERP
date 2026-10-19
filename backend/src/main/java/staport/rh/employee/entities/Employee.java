@@ -15,8 +15,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.hibernate.envers.Audited;
 import staport.rh.chantier.entities.Chantier;
+import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -25,10 +27,16 @@ import java.time.LocalDate;
         indexes = {
                 @Index(name = "idx_employe_fonction", columnList = "fonction_id"),
                 @Index(name = "idx_employe_chantier", columnList = "chantier_id"),
+                @Index(name = "idx_employe_equipe", columnList = "equipe_id"),
                 @Index(name = "idx_employe_statut", columnList = "statut"),
                 @Index(name = "idx_employe_date_embauche", columnList = "date_embauche")
         }
 )
+/**
+ * Fiche d'un employé : son identité et son état actuel, celui du dernier mois de paie importé (fonction, chantier, équipe,
+ * salaire et type de salaire) — voir docs/adr/0010-employe-etat-du-dernier-mois-de-paie.md. Équipe, salaire et type restent
+ * vides tant qu'aucune paie ne les a renseignés.
+ */
 @Audited
 public class Employee {
 
@@ -59,6 +67,17 @@ public class Employee {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chantier_id", nullable = false)
     private Chantier chantier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipe_id")
+    private Equipe equipe;
+
+    @Column(name = "salaire", precision = 10, scale = 2)
+    private BigDecimal salaire;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_salaire", length = 20)
+    private TypeSalaire typeSalaire;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false, length = 20)
@@ -125,6 +144,30 @@ public class Employee {
 
     public void setChantier(Chantier chantier) {
         this.chantier = chantier;
+    }
+
+    public Equipe getEquipe() {
+        return equipe;
+    }
+
+    public void setEquipe(Equipe equipe) {
+        this.equipe = equipe;
+    }
+
+    public BigDecimal getSalaire() {
+        return salaire;
+    }
+
+    public void setSalaire(BigDecimal salaire) {
+        this.salaire = salaire;
+    }
+
+    public TypeSalaire getTypeSalaire() {
+        return typeSalaire;
+    }
+
+    public void setTypeSalaire(TypeSalaire typeSalaire) {
+        this.typeSalaire = typeSalaire;
     }
 
     public EmployeeStatut getStatut() {

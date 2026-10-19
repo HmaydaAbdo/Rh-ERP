@@ -1,3 +1,6 @@
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -8,6 +11,8 @@ import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 import { EmployeeDetailComponent } from './employee-detail.component';
 
+registerLocaleData(localeFr);
+
 const EMPLOYE: Employee = {
   id: 9,
   version: 0,
@@ -17,6 +22,9 @@ const EMPLOYE: Employee = {
   dateEmbauche: '2020-11-02',
   fonction: { id: 1, libelle: 'MACON' },
   chantier: { id: 2, code: 'C196' },
+  equipe: null,
+  salaire: null,
+  typeSalaire: null,
   statut: 'ACTIF'
 };
 
@@ -30,6 +38,7 @@ describe('EmployeeDetailComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        { provide: LOCALE_ID, useValue: 'fr-FR' },
         fournirRoute({ id: '9' }),
         fournirPermissions(permissions).providers,
         { provide: EmployeeService, useValue: service },
@@ -48,7 +57,15 @@ describe('EmployeeDetailComponent', () => {
 
     expect(service.getById).toHaveBeenCalledWith(9);
     expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
-    expect(valeurs(page)).toEqual(['AB123', 'Actif', '07/03/1990', '02/11/2020', 'MACON', 'C196']);
+    expect(valeurs(page)).toEqual(['AB123', 'Actif', '07/03/1990', '02/11/2020', 'MACON', 'C196', 'Sans équipe']);
+  });
+
+  it('montre l’équipe, et le salaire avec son unité à qui peut lire la paie seulement', () => {
+    const employe: Employee = { ...EMPLOYE, equipe: { id: 5, code: 'OP', libelle: 'Opérateurs' }, salaire: 120, typeSalaire: 'JOURNALIER' };
+
+    expect(valeurs(afficher(['EMPLOYEE_READ'], employe).page)).toEqual(['AB123', 'Actif', '07/03/1990', '02/11/2020', 'MACON', 'C196', 'OP — Opérateurs']);
+    TestBed.resetTestingModule();
+    expect(valeurs(afficher(['EMPLOYEE_READ', 'PAIE_READ'], employe).page).at(-1)?.replace(/\s+/g, ' ')).toBe('120,00 par jour');
   });
 
   it('signale un employé inactif', () => {

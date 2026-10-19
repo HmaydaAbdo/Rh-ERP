@@ -98,7 +98,7 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | API métier | `LECTURE_METIER` | `ACCES` | Chaque réponse HTTP métier réussie ou en erreur de lecture : modèle de route, méthode, statut HTTP, nombre d'éléments ; période valide si fournie en paramètre. Aucun corps, montant, filtre nominatif, identifiant d'URL ou paramètre libre n'est copié |
 | API métier | `ECRITURE_HTTP_SANS_TRACE_METIER`, `TENTATIVE_ECRITURE_HTTP_REJETEE` | `OPERATION` | Garde-fou pour une écriture HTTP sans annotation métier ; méthode, route et statut, sans corps |
 | API sécurité | `TENTATIVE_HTTP_REJETEE` | `SECURITE` | Écriture HTTP d’authentification rejetée ; méthode, route et statut, sans secret |
-| Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` | `OPERATION` | Import : le fichier |
+| Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` ; `EMPLOYE_SORTIE` (départs enregistrés — première écriture : la reprise `V30`, origine `MIGRATION`, qui écrit aussi une `EMPLOYE_MODIFICATION` et une `EMPLOYE_SUPPRESSION` groupées) | `OPERATION` | Import : le fichier ; `V30` : la migration, le dernier mois de paie, le nombre de lignes |
 | Fonction | `FONCTION_CREATION`, `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`, `FONCTION_IMPORT` | `OPERATION` | Import : le fichier |
 | Chantier | `CHANTIER_CREATION`, `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`, `CHANTIER_SYNCHRONISATION` | `OPERATION` | Synchronisation : reçus, déjà présents, ignorés ; créés |
 | Équipe | `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` | `OPERATION` | — |

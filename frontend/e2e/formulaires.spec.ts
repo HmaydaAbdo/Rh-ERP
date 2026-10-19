@@ -26,6 +26,7 @@ test.describe('Formulaires (Signal Forms)', () => {
     const routes = {
       'POST /functions/search': () => FONCTIONS,
       'POST /chantiers/search': () => CHANTIERS,
+      'POST /equipes/search': () => pageDe([]),
       'GET /functions/*': () => ({ id: 3, libelle: 'CHAUFFEUR' }),
       'GET /chantiers/*': () => ({ id: 4, code: 'C168', designation: 'Nador', actif: true })
     };
@@ -47,7 +48,7 @@ test.describe('Formulaires (Signal Forms)', () => {
       const mock = await mockApi(page, { username: 'rh', permissions: DROITS }, {
         ...routes,
         'POST /employees': () => ({ id: 15 }),
-        'GET /employees/15': () => ({ id: 15, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, statut: 'ACTIF' })
+        'GET /employees/15': () => ({ id: 15, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, equipe: null, salaire: null, typeSalaire: null, statut: 'ACTIF' })
       });
       await page.goto('/employees/new');
 
@@ -62,7 +63,7 @@ test.describe('Formulaires (Signal Forms)', () => {
 
       await expect(page).toHaveURL(/\/employees\/15$/);
       expect(mock.bodies['POST /employees']).toEqual([
-        { nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonctionId: 3, chantierId: 4 }
+        { nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonctionId: 3, chantierId: 4, equipeId: null, salaire: null, typeSalaire: null }
       ]);
     });
 

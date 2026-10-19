@@ -21,7 +21,7 @@ paie/
 ├── dtos/
 │   ├── request/ (Create, Update, SearchCriteria)
 │   └── response/ (PaieResponseDto, EmployeeSummaryDto, FunctionSummaryDto, ChantierSummaryDto)
-├── entities/ (Paie, YearMonthAttributeConverter)
+├── entities/ (Paie)
 ├── exceptions/ (NotFound, AlreadyExists, InvalidReference, InvalidPeriode, ExceptionHandler)
 ├── mappers/PaieMapper.java
 ├── repositories/PaieRepository.java
@@ -52,7 +52,7 @@ Table `paie` :
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
 | `employee_id` | `BIGINT` | `NOT NULL`, FK → `employe.id` | Employé concerné |
-| `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) via `YearMonthAttributeConverter` |
+| `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) via `YearMonthAttributeConverter` (`common/`) |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | **Snapshot** — chantier d'affectation ce mois-là |
 | `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | **Snapshot** — équipe ce mois-là (voir `docs/equipe/README.md`) ; `NULL` = employé sans équipe |

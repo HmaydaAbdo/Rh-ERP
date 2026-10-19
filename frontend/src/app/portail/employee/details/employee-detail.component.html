@@ -40,6 +40,22 @@
         <dt>Chantier</dt>
         <dd>{{ employee.chantier.code }}</dd>
       </div>
+      <div>
+        <dt>Équipe</dt>
+        <dd>{{ employee.equipe ? employee.equipe.code + ' — ' + employee.equipe.libelle : 'Sans équipe' }}</dd>
+      </div>
+      @if (voitLaPaie()) {
+        <div>
+          <dt>Salaire</dt>
+          <dd>
+            @if (employee.salaire !== null) {
+              {{ employee.salaire | number: '1.2-2' }} {{ employee.typeSalaire === 'JOURNALIER' ? 'par jour' : 'par mois' }}
+            } @else {
+              Non renseigné
+            }
+          </dd>
+        </div>
+      }
     </dl>
   </div>
 }
