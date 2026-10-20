@@ -62,7 +62,7 @@
           }
         }
         @case ('actif') {
-          <stp-badge [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></stp-badge>
+          <stp-badge [value]="libelleStatut(chantier.actif)" [severity]="chantier.actif ? 'success' : 'neutral'"></stp-badge>
         }
       }
     </ng-template>
@@ -71,6 +71,7 @@
       <button stp-button variant="text" icon="eye" iconOnly type="button" [attr.aria-label]="'Voir le chantier ' + chantier.code" (click)="onView(chantier)"></button>
       @if (canWrite()) {
         <button stp-button variant="text" icon="pencil" iconOnly type="button" [attr.aria-label]="'Modifier le chantier ' + chantier.code" (click)="onEdit(chantier)"></button>
+        <button stp-button variant="text" [icon]="chantier.actif ? 'archive' : 'archive-restore'" iconOnly type="button" [loading]="statutEnCoursId() === chantier.id" [attr.aria-label]="(chantier.actif ? 'Clôturer le chantier ' : 'Rouvrir le chantier ') + chantier.code" (click)="onChangerStatut(chantier)"></button>
       }
       @if (canDelete()) {
         <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === chantier.id" [attr.aria-label]="'Supprimer le chantier ' + chantier.code" (click)="onDelete(chantier)"></button>

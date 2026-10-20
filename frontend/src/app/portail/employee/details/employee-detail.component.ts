@@ -10,6 +10,7 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 import { PaieParcoursComponent } from '../../paie/parcours/paie-parcours.component';
 import { Employee } from '../models/employee.model';
+import { libelleStatutEmploye } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
 
 /** Années et mois pleins entre deux dates (`aaaa-mm-jj`) et aujourd'hui. */
@@ -35,6 +36,7 @@ function duree(depuis: string, aujourdhui: Date): { annees: number; mois: number
   styleUrl: './employee-detail.component.scss'
 })
 export class EmployeeDetailComponent {
+  protected readonly libelleStatut = libelleStatutEmploye;
   private readonly authService = inject(AuthService);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));

@@ -104,7 +104,9 @@ l'import comme l'API exigent déjà ces deux dates).
   contrôle dans le service créerait une dépendance circulaire avec les domaines Paie et Auth). Le message invite à passer
   l'employé à `INACTIF`, qui conserve son historique ; l'écran le rappelle dans la confirmation. La tentative refusée reste
   tracée dans le journal d'audit (échec).
-- Un employé `INACTIF` reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
+- **Libellés** (décision du propriétaire, 2026-10-19) : l'interface dit **« En poste »** (`ACTIF`) et **« Sorti »**
+  (`INACTIF`) ; l'API et la base gardent `ACTIF` / `INACTIF`.
+- Un employé `INACTIF` (« Sorti ») reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
   employés `ACTIF`.
 - **Le statut suit la paie** : l'assistant d'import de la paie (voir [../paie/README.md](../paie/README.md), « Import Excel
   (assistant) ») repasse ACTIF un inactif présent dans le fichier, et enregistre les **départs confirmés** par
@@ -257,10 +259,10 @@ carte en fait une **étape du fil** (filtre de la barre à une valeur) ; chaque 
 employé (pagination « Afficher plus », 24 par page) ouvre sa fiche. **« Voir la liste »** ouvre la vue Tabulaire sur le même
 périmètre, à n'importe quel niveau. Tout est dans l'URL : les étapes sont `chantierIds`, `equipeIds` (0 = sans équipe) et
 `fonctionIds`, le regroupement courant `?par=chantier|equipe|fonction|employes`. Chaque carte montre l'effectif, la part des
-actifs (jauge) et la part du périmètre. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
+employés en poste (jauge) et la part du périmètre. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
 
-**Analytique** (`analytique/`). Six chiffres clés (effectif, actifs, inactifs, âge moyen, ancienneté moyenne, embauches sur
-12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** actifs/inactifs par chantier, équipe ou
+**Analytique** (`analytique/`). Six chiffres clés (effectif, en poste, sortis, âge moyen, ancienneté moyenne, embauches sur
+12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** en poste / sortis par chantier, équipe ou
 fonction (les 12 plus grands groupes ; tous dans le tableau de données), et — avec `PAIE_READ` — les **mouvements mois par
 mois** tirés de la paie (`POST /paie/effectifs` : employés payés, entrées, sorties, mutations de chantier). Chaque graphique a
 son tableau de données (« Voir les données »). Les mouvements suivent le chantier, l'équipe et la fonction **du bulletin du

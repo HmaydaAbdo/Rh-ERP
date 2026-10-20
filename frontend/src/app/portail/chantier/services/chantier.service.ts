@@ -43,6 +43,11 @@ export class ChantierService {
     return this.http.put<Chantier>(`${this.baseUrl}/${id}`, dto);
   }
 
+  /** Clôture un chantier en cours, ou rouvre un chantier clôturé : la mise à jour garde tous ses autres champs. */
+  changerStatut(chantier: Chantier, actif: boolean): Observable<Chantier> {
+    return this.update(chantier.id, { code: chantier.code, designation: chantier.designation, nom: chantier.nom, actif, version: chantier.version });
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

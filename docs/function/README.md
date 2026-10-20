@@ -53,7 +53,8 @@ Table `fonction` :
 | `libelle` | `VARCHAR(100)` | `NOT NULL`, **unique** | Nom de la fonction (ex. `CHEF CHANTIER`) |
 
 Pas de notion de statut actif/inactif : une fonction existe ou n'existe pas (contrairement à
-Chantier, où un chantier peut être désactivé sans être supprimé). Ce champ a été retiré le
+Chantier, où un chantier peut être clôturé sans être supprimé). La migration `V31` (2026-10-19) a supprimé une fois pour
+toutes les fonctions qu'aucun bulletin de paie ni aucune fiche employé ne citait. Ce champ a été retiré le
 2026-09-22 — il n'avait pas de sens métier pour ce référentiel (voir [TODO.md](../../TODO.md)).
 
 ---

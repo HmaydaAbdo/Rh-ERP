@@ -1,6 +1,6 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-19, à la reprise du projet par un nouvel agent (Codex).
+Dernière mise à jour : 2026-10-20 (libellés RH, migration V31, rouvrir un chantier depuis l'assistant d'import).
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
@@ -25,6 +25,8 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 | 2026-10-18 | #73 | **Carte des chantiers** « niveau Google Maps » : monde en globe, relief et terrain 3D, bâtiments 3D, satellite Esri via une clé ArcGIS gratuite et obligatoire, avec secours automatique. Fond auto-hébergé dans `carte-fond/` à côté de `docker-compose.yml`. Voir `docs/chantier/carte.md`. |
 | 2026-10-19 | #74 | **Employés en cinq lots** : (1) coque à onglets Tabulaire / Cartes / Analytique, filtres dans l'URL ; (2) fiche = état du dernier mois de paie (équipe, salaire et type, table `employe_sortie`, reprise **V30**) ; (3) **assistant d'import de la paie** (analyse, corrections des fiches, départs) ; (4) fiche et **parcours** de l'employé ; (5) vues **Cartes** et **Analytique**. Voir `docs/employee/README.md` et `docs/paie/README.md`, « Import Excel (assistant) ». |
 
+| 2026-10-20 | (cette PR) | **Vocabulaire RH et nettoyage** : l'interface dit « En poste / Sorti » pour les employés et « En cours / Clôturé » pour les chantiers (API et base inchangées : `ACTIF`/`INACTIF`, `actif`) ; boutons **Clôturer / Rouvrir** sur la liste et la fiche d'un chantier ; l'assistant d'import de la paie signale à part un chantier clôturé et propose de le rouvrir ; migration **V31** : supprime les fonctions sans bulletin ni fiche, clôture les chantiers sans bulletin (sur la base de développement : 48 fonctions, 183 chantiers, 29 restent en cours). |
+
 À la fusion de #74 : 410 tests backend, 762 tests frontend, 54 E2E, CI complète verte ; images Docker publiées par la CI au
 tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 
@@ -36,7 +38,8 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
   contrôles d'intégrité OK. Elle est chiffrée avec `age` ; la clé privée est hors serveur (voir `docs/deployment.md`).
 - **À faire par le propriétaire** : `docker compose pull` puis `docker compose up -d`. Au démarrage, Flyway applique **V29**
   (colonnes de la fiche, table des départs) et **V30** (reprise : fiches alignées sur le dernier bulletin, statut, départs,
-  **suppression des employés sans aucun bulletin**). V30 est irréversible sans la sauvegarde.
+  **suppression des employés sans aucun bulletin**) puis **V31** (fonctions sans bulletin supprimées, chantiers sans bulletin
+  clôturés). V30 et la suppression des fonctions de V31 sont irréversibles sans la sauvegarde.
 - **Ensuite** : essayer l'assistant d'import avec le vrai fichier de paie d'**octobre 2026** (premier vrai usage).
 
 ---
@@ -65,6 +68,8 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
   l'import de la paie n'accepte que le **mois qui suit exactement** le dernier ; un fichier ne s'importe que s'il concorde avec
   les fiches (pas de bulletin qui diverge de la fiche) ; **salaire à 0 = erreur du fichier** ; départs (STC, absents) tous
   cochés, motif obligatoire ; le salaire est réservé à `PAIE_READ`.
+- Vocabulaire (2026-10-19) : jamais « actif / inactif » dans l'interface — « En poste / Sorti » pour un employé, « En cours / Clôturé »
+  pour un chantier. Un chantier clôturé est refusé par l'import de la paie jusqu'à ce qu'on le rouvre (bouton dans l'assistant).
 - Tranches de l'Analytique des employés : âge < 25, 25-34, 35-44, 45-54, 55+ ; ancienneté < 1 an, 1-3, 3-5, 5-10, 10+.
 - Cartes des employés : descente **libre** (chantier, équipe, fonction, dans l'ordre choisi) et accès à la liste à tout moment.
 - Ne plus demander si la production a les mêmes données que le développement : tout se règle sur la **dernière paie

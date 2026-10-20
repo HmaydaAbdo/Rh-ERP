@@ -112,8 +112,8 @@ export class EmployeeAnalytiqueComponent {
       data: {
         labels: groupes.map((g) => this.libelleGroupe(g)),
         datasets: [
-          { label: 'Actifs', data: groupes.map((g) => g.actifs), backgroundColor: jeton('--chart-1'), borderRadius: 4, stack: 'effectif' },
-          { label: 'Inactifs', data: groupes.map((g) => g.effectif - g.actifs), backgroundColor: jeton('--chart-4'), borderRadius: 4, stack: 'effectif' }
+          { label: 'En poste', data: groupes.map((g) => g.actifs), backgroundColor: jeton('--chart-1'), borderRadius: 4, stack: 'effectif' },
+          { label: 'Sortis', data: groupes.map((g) => g.effectif - g.actifs), backgroundColor: jeton('--chart-4'), borderRadius: 4, stack: 'effectif' }
         ]
       },
       options: this.optionsBarres({ indexAxis: 'y', empile: true, legende: true })

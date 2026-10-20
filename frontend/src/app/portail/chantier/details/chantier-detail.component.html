@@ -5,6 +5,7 @@
       <h1>{{ chantier.code }}</h1>
       <div class="app-page__actions">
         @if (canWrite()) {
+          <button stp-button variant="secondary" [icon]="chantier.actif ? 'archive' : 'archive-restore'" type="button" [loading]="changement()" (click)="onChangerStatut(chantier)">{{ chantier.actif ? 'Clôturer' : 'Rouvrir' }}</button>
           <a stp-button [routerLink]="['/chantiers', chantier.id, 'edit']">Modifier</a>
         }
       </div>
@@ -22,7 +23,7 @@
       <div>
         <dt>Statut</dt>
         <dd>
-          <stp-badge [value]="chantier.actif ? 'Actif' : 'Inactif'" [severity]="chantier.actif ? 'success' : 'danger'"></stp-badge>
+          <stp-badge [value]="libelleStatut(chantier.actif)" [severity]="chantier.actif ? 'success' : 'neutral'"></stp-badge>
         </dd>
       </div>
       <div>

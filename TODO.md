@@ -90,6 +90,8 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   d'octobre 2026. Lot 4 fait : fiche de l'employé (situation, ancienneté, âge) et parcours calculé depuis la paie
   (`GET /paie/employes/{id}/parcours`). Lot 5 fait : vues Cartes (descente libre chantier / équipe / fonction / employés,
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
+  Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
+  V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
 - **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.

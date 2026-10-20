@@ -82,11 +82,19 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 - `actif` et `nom` ne sont donc modifiables que par la saisie manuelle (`PUT /chantiers/{id}`,
   formulaire `ChantierFormComponent`) ; l'ERP n'expose de toute façon ni statut ni `nom`
   (seulement `id_chantier`, `code`, `designation`, `CodeErreur`).
-- Seuls les chantiers **actifs** sont proposés à l'import Excel des employés et de la paie (un chantier
-  inactif reste consultable et reste référencé par l'historique).
+- **Statut** (décision du propriétaire, 2026-10-19). L'interface dit **« En cours »** (`actif = true`) et **« Clôturé »**
+  (`actif = false`) ; l'API et la base gardent le booléen `actif`. Depuis la liste et depuis la fiche, **« Clôturer »** et
+  **« Rouvrir »** (avec confirmation, droit `CHANTIER_WRITE`) changent le statut ; le formulaire de modification garde aussi le
+  champ. Un chantier clôturé reste consultable et reste référencé par l'historique.
+- Seuls les chantiers **en cours** sont acceptés par l'import Excel des employés. L'assistant d'import de la paie signale à
+  part un chantier **clôturé** que le fichier cite (« Chantiers clôturés ») et propose **« Rouvrir le chantier »**
+  (`CHANTIER_READ` et `CHANTIER_WRITE`) : le chantier est rouvert puis le même fichier est réanalysé, sans le corriger.
+- **Reprise V31 (2026-10-19)** : les chantiers qu'aucun bulletin de paie ne cite sont passés « Clôturés » une fois pour
+  toutes (voir [../data-model.md](../data-model.md)). Ce n'est pas une règle permanente : un chantier créé ensuite reste en
+  cours tant qu'on ne le clôture pas.
 - La suppression (`DELETE /chantiers/{id}`) est bloquée (409) si le chantier est référencé par au
   moins un employé ou un bulletin de paie (clés étrangères `employe.chantier_id` et `paie.chantier_id`) :
-  désactiver (`actif = false`) est l'alternative.
+  clôturer (`actif = false`) est l'alternative.
 
 ---
 

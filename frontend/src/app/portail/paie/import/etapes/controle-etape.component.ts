@@ -24,7 +24,7 @@ const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
 
 /**
  * Étape « Contrôle » de l'assistant d'import (voir `PaieImportWizardComponent`) : chaque problème est rangé avec la façon de
- * le régler — erreurs à corriger dans le fichier (qu'on réimporte d'ici), CIN sans fiche à créer, fiches différentes du
+ * le régler — erreurs à corriger dans le fichier (qu'on réimporte d'ici), chantiers clôturés à rouvrir, CIN sans fiche à créer, fiches différentes du
  * fichier à mettre à jour. L'état et les appels sont dans `PaieImportStore`.
  */
 @Component({
