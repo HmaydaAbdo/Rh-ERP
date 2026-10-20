@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, finalize } from 'rxjs';
+import { Observable, finalize, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ChantierService } from '../../chantier/services/chantier.service';
 import { TypeSalaire } from '../../employee/models/employee.model';
 import { PaieImportAnalyse, PaieImportResult } from '../models/paie.model';
 import { libellePeriode, periodeSuivante } from '../paie-format';
@@ -47,13 +48,14 @@ function dateIso(date: Date): string {
 /**
  * État et logique de l'assistant d'import de la paie (voir `PaieImportWizardComponent` et
  * docs/adr/0010-employe-etat-du-dernier-mois-de-paie.md). Le fichier est analysé sans rien enregistrer ; les écarts avec les
- * fiches se corrigent ici (mettre à jour la fiche, créer un CIN inconnu) ou dans le fichier, qu'on réimporte — autant de
- * fois qu'il faut. L'import n'est possible qu'une fois l'analyse prête ; les départs proposés sont cochés d'office.
+ * fiches se corrigent ici (mettre à jour la fiche, créer un CIN inconnu, rouvrir un chantier clôturé) ou dans le fichier,
+ * qu'on réimporte — autant de fois qu'il faut. L'import n'est possible qu'une fois l'analyse prête ; les départs proposés sont cochés d'office.
  */
 @Injectable()
 export class PaieImportStore {
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
+  private readonly chantierService = inject(ChantierService);
 
   readonly etapes = ETAPES;
   readonly libelleEtapes = LIBELLES_ETAPES;
@@ -61,6 +63,8 @@ export class PaieImportStore {
 
   /** Corriger les fiches depuis l'assistant demande en plus le droit d'écrire les employés. */
   readonly peutCorriger = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
+  /** Rouvrir un chantier clôturé demande le droit de lire et d'écrire les chantiers (domaine Chantier). */
+  readonly peutRouvrir = computed(() => this.authService.hasPermission('CHANTIER_READ') && this.authService.hasPermission('CHANTIER_WRITE'));
 
   readonly etape = signal<EtapeImport>('fichier');
   readonly etat = signal<EtatImport>('saisie');
@@ -85,7 +89,7 @@ export class PaieImportStore {
   readonly pret = computed(() => this.analyse()?.pret ?? false);
   readonly nombreProblemes = computed(() => {
     const a = this.analyse();
-    return a ? a.erreurs.length + a.cinInconnus.length + a.ecarts.length : 0;
+    return a ? a.erreurs.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
   });
   readonly departsConfirmes = computed(() =>
     (this.analyse()?.departs ?? [])
@@ -177,6 +181,22 @@ export class PaieImportStore {
       aligner: [],
       creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire: saisie.typeSalaire }]
     });
+  }
+
+  /** Rouvre un chantier clôturé que le fichier cite, puis réanalyse le fichier (inchangé). */
+  rouvrir(chantierId: number): void {
+    const fichier = this.fichier();
+    const mois = this.mois();
+    if (!fichier || !mois) {
+      return;
+    }
+    this.envoyer(
+      this.chantierService.getById(chantierId).pipe(
+        switchMap((chantier) => this.chantierService.changerStatut(chantier, true)),
+        switchMap(() => this.paieService.analyserImport(fichier, mois))
+      ),
+      (analyse) => this.recevoir(analyse)
+    );
   }
 
   saisirDepart(employeId: number, saisie: Partial<DepartSaisi>): void {

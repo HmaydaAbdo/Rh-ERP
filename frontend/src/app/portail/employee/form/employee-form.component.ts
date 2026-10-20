@@ -17,12 +17,8 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeStatut, TypeSalaire } from '../models/employee.model';
+import { STATUT_EMPLOYE_OPTIONS } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
-
-const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
-  { label: 'Actif', value: 'ACTIF' },
-  { label: 'Inactif', value: 'INACTIF' }
-];
 
 const TYPE_SALAIRE_OPTIONS: { label: string; value: TypeSalaire }[] = [
   { label: 'Mensuel', value: 'MENSUEL' },
@@ -70,7 +66,7 @@ export class EmployeeFormComponent {
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
 
-  protected readonly statutOptions = STATUT_OPTIONS;
+  protected readonly statutOptions = STATUT_EMPLOYE_OPTIONS;
   protected readonly typeSalaireOptions = TYPE_SALAIRE_OPTIONS;
   /** Le salaire est une donnée de paie : ses champs ne sont proposés qu'à qui a `PAIE_READ` (le serveur ignore sinon ce qui est saisi). */
   protected readonly voitLaPaie = computed(() => this.authService.hasPermission('PAIE_READ'));

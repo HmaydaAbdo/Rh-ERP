@@ -64,7 +64,7 @@
             @if (store.analyse(); as analyse) {
               <section class="import-wizard__panneau">
                 @if (analyse.departs.length === 0) {
-                  <p class="import-wizard__consigne">Aucun départ ce mois-ci : tous les employés actifs sont dans le fichier, sans STC.</p>
+                  <p class="import-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans STC.</p>
                 } @else {
                   <p class="import-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé.</p>
                   <ul class="import-wizard__departs">
@@ -90,7 +90,7 @@
                 }
                 @if (analyse.retours.length > 0) {
                   <h3 class="import-wizard__titre"><stp-icon name="user-check" /> Retours <span class="import-wizard__nombre">{{ analyse.retours.length }}</span></h3>
-                  <p class="import-wizard__legende">Inactifs présents dans le fichier : ils redeviennent actifs à l'import.</p>
+                  <p class="import-wizard__legende">Employés sortis présents dans le fichier : ils repassent en poste à l'import.</p>
                   <ul class="import-wizard__liste">
                     @for (retour of analyse.retours; track retour.employeId) {
                       <li>{{ retour.nomPrenom }} <small>CIN {{ retour.cin }}</small></li>

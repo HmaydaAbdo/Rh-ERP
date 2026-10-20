@@ -163,16 +163,17 @@ reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `Lecteu
 | Étape | Route | Ce qui se passe |
 |---|---|---|
 | 1. Fichier | — | Le mois est **imposé** : celui qui suit exactement le dernier mois importé (au tout premier import, l'utilisateur le choisit). |
-| 2. Contrôle | `POST /paie/import/analyse` | Analyse **sans rien enregistrer**. Trois sortes de problèmes, chacune avec sa solution (ci-dessous). On corrige, on réimporte le fichier corrigé, et on recommence jusqu'à **zéro problème**. |
-| — | `POST /paie/import/corrections` | Depuis le contrôle : met à jour des fiches avec les valeurs du fichier, ou crée les employés des CIN inconnus. Renvoie la nouvelle analyse. |
-| 3. Départs | — | Les employés qui quittent Staport, **tous cochés** : ceux marqués STC ou « sortie » dans le fichier (motif « STC » / « Sortie » prérempli) et les actifs **absents** du fichier (motif à saisir). Décoché = l'employé reste actif. Les inactifs présents dans le fichier sont annoncés comme **retours**. |
+| 2. Contrôle | `POST /paie/import/analyse` | Analyse **sans rien enregistrer**. Quatre sortes de problèmes, chacune avec sa solution (ci-dessous). On corrige, on réimporte le fichier corrigé, et on recommence jusqu'à **zéro problème**. |
+| — | `POST /paie/import/corrections` | Depuis le contrôle : met à jour des fiches avec les valeurs du fichier, ou crée les employés des CIN inconnus. Renvoie la nouvelle analyse. (Rouvrir un chantier clôturé passe par `PUT /chantiers/{id}`, puis le fichier est réanalysé.) |
+| 3. Départs | — | Les employés qui quittent Staport, **tous cochés** : ceux marqués STC ou « sortie » dans le fichier (motif « STC » / « Sortie » prérempli) et les actifs **absents** du fichier (motif à saisir). Décoché = l'employé reste en poste. Les employés sortis présents dans le fichier sont annoncés comme **retours** (ils repassent en poste). |
 | 4. Import | `POST /paie/import` | Refait l'analyse : refus (`400`) si le fichier n'est pas prêt ou si un départ envoyé n'a pas été proposé. Sinon, en une transaction : les bulletins, les retours (ACTIF), les départs confirmés (INACTIF + départ du mois dans `employe_sortie`). |
 
 ### Les problèmes du contrôle
 
 | Sorte | Exemples | Se règle |
 |---|---|---|
-| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier inconnu ou inactif ; équipe inconnue ; bulletin déjà présent pour l'employé ce mois-ci | Dans le fichier, puis réimport |
+| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier inconnu ; équipe inconnue ; bulletin déjà présent pour l'employé ce mois-ci | Dans le fichier, puis réimport |
+| **Chantier clôturé** | Une ou plusieurs lignes citent un chantier clôturé (le message liste les lignes) | Ici : « Rouvrir le chantier » (droits `CHANTIER_READ` et `CHANTIER_WRITE`), le fichier est réanalysé tel quel — ou corriger le chantier dans le fichier |
 | **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 

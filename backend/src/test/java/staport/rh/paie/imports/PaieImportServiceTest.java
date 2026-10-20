@@ -157,11 +157,29 @@ class PaieImportServiceTest {
         PaieImportAnalyseDto analyse = importService.analyser(fichier(chantierInconnu, equipeInconnue, sansTotal, negatif, ligne("CD456")), SEPTEMBRE);
 
         assertThat(analyse.erreurs()).extracting(PaieImportAnalyseDto.ErreurDto::raison).containsExactly(
-                "Chantier introuvable ou inactif : C999",
+                "Chantier introuvable : C999",
                 "Équipe introuvable : EQUIPE Z",
                 "Champs obligatoires manquants ou invalides : Total",
                 "Les jours, salaires et primes doivent être positifs ou nuls");
         assertThat(analyse.cinInconnus()).as("le CD456 de la dernière ligne, valide").hasSize(1);
+    }
+
+    @Test
+    void signale_a_part_un_chantier_cloture_a_rouvrir_sans_toucher_au_fichier() throws IOException {
+        when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(
+                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, false))));
+        Object[] autre = ligne("CD456");
+
+        PaieImportAnalyseDto analyse = importService.analyser(fichier(ligne("PB85747"), autre), SEPTEMBRE);
+
+        assertThat(analyse.erreurs()).isEmpty();
+        assertThat(analyse.chantiersClotures()).singleElement().satisfies(cloture -> {
+            assertThat(cloture.chantierId()).isEqualTo(20L);
+            assertThat(cloture.code()).isEqualTo("C059");
+            assertThat(cloture.lignes()).containsExactly(4, 5);
+        });
+        assertThat(analyse.ecarts()).as("la ligne est examinée comme les autres").isEmpty();
+        assertThat(analyse.pret()).isFalse();
     }
 
     @Test

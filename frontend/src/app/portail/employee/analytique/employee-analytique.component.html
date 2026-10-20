@@ -6,12 +6,12 @@
         <strong>{{ a.effectif }}</strong>
       </div>
       <div class="analytique-employes__tuile">
-        <span>Actifs</span>
+        <span>En poste</span>
         <strong>{{ a.actifs }}</strong>
         <small>{{ a.effectif > 0 ? (a.actifs / a.effectif * 100 | number: '1.0-0') + ' % de l’effectif' : '—' }}</small>
       </div>
       <div class="analytique-employes__tuile">
-        <span>Inactifs</span>
+        <span>Sortis</span>
         <strong>{{ a.inactifs }}</strong>
       </div>
       <div class="analytique-employes__tuile">
@@ -79,12 +79,12 @@
           </div>
         </div>
         <div class="analytique-employes__graphique analytique-employes__graphique--haut">
-          <stp-chart type="bar" [ariaLabel]="'Actifs et inactifs par ' + libellesDimensions[dimension()].toLowerCase() + ' ; le détail est dans le tableau des données.'" [data]="graphiqueRepartition().data" [options]="graphiqueRepartition().options"></stp-chart>
+          <stp-chart type="bar" [ariaLabel]="'En poste et sortis par ' + libellesDimensions[dimension()].toLowerCase() + ' ; le détail est dans le tableau des données.'" [data]="graphiqueRepartition().data" [options]="graphiqueRepartition().options"></stp-chart>
         </div>
         <details class="analytique-employes__donnees">
           <summary>Voir les données ({{ repartition().length }})</summary>
           <table class="app-static-table">
-            <thead><tr><th scope="col">{{ libellesDimensions[dimension()] }}</th><th scope="col">Employés</th><th scope="col">Actifs</th></tr></thead>
+            <thead><tr><th scope="col">{{ libellesDimensions[dimension()] }}</th><th scope="col">Employés</th><th scope="col">En poste</th></tr></thead>
             <tbody>
               @for (groupe of repartition(); track groupe.id) {
                 <tr><td>{{ libelleGroupe(groupe) }}</td><td>{{ groupe.effectif }}</td><td>{{ groupe.actifs }}</td></tr>

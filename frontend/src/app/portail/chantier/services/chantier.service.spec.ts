@@ -25,6 +25,16 @@ describe('ChantierService', () => {
     expect(r.request.params.get('sort')).toBe('code,asc');
   });
 
+  it('clôture ou rouvre un chantier en renvoyant tous ses autres champs', () => {
+    const chantier = { id: 3, version: 4, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: true, actif: true };
+
+    service.changerStatut(chantier, false).subscribe();
+
+    const r = requete(http, 'PUT', 'chantiers/3');
+    r.flush({ id: 3 });
+    expect(r.request.body).toEqual({ code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false, version: 4 });
+  });
+
   it('lit, crée, modifie et supprime un chantier', () => {
     service.getById(2).subscribe();
     requete(http, 'GET', 'chantiers/2').flush({ id: 2 });

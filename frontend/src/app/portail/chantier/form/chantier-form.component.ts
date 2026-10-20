@@ -9,12 +9,9 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
+import { STATUT_CHANTIER_OPTIONS } from '../models/chantier-statut';
 import { ChantierService } from '../services/chantier.service';
 
-const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
-  { label: 'Actif', value: true },
-  { label: 'Inactif', value: false }
-];
 
 @Component({
   selector: 'app-chantier-form',
@@ -28,7 +25,7 @@ export class ChantierFormComponent {
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
 
-  protected readonly actifOptions = ACTIF_OPTIONS;
+  protected readonly actifOptions = STATUT_CHANTIER_OPTIONS;
 
   private readonly chantierId = signal<number | null>(null);
   private readonly version = signal<number | null>(null);
