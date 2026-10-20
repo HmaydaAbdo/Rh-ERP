@@ -231,6 +231,12 @@ Les migrations majeures PostgreSQL suivent la procédure de retour arrière déd
 sans aucun bulletin de paie et réaligne toutes les fiches. Avant la mise à jour qui l'apporte, faire une sauvegarde
 manuelle et vérifier qu'elle est restaurable ; le retour aux images précédentes ne fait pas revenir les employés supprimés.
 
+**Migration de données — V31 (fonctions et chantiers sans paie).** Elle supprime les fonctions qu'aucun bulletin ni
+aucune fiche employé ne cite, et clôture les chantiers qu'aucun bulletin ne cite (ils restent en base et se rouvrent depuis
+l'écran Chantiers). Elle suit V30 dans la même mise à jour ; la même sauvegarde la couvre. Les chantiers se rouvrent à la
+main, mais les fonctions supprimées ne reviennent qu'en restaurant la sauvegarde (l'import de la paie recrée une fonction
+inconnue).
+
 ### Migration majeure PG17 → PG18 en production
 
 La migration se fait par export/restauration logique : un volume PostgreSQL 17 ne peut pas être

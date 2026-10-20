@@ -7,13 +7,8 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
-import { EmployeeStatut } from '../models/employee.model';
+import { STATUT_EMPLOYE_OPTIONS } from '../models/employee-statut';
 import { AUCUN_FILTRE, EmployeeFiltres, memesFiltres } from './employee-filtres';
-
-const STATUT_OPTIONS: { label: string; value: EmployeeStatut }[] = [
-  { label: 'Actif', value: 'ACTIF' },
-  { label: 'Inactif', value: 'INACTIF' }
-];
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
@@ -73,7 +68,7 @@ export class EmployeeFiltresComponent {
   readonly value = input<EmployeeFiltres>(AUCUN_FILTRE);
   readonly valueChange = output<EmployeeFiltres>();
 
-  protected readonly statutOptions = STATUT_OPTIONS;
+  protected readonly statutOptions = STATUT_EMPLOYE_OPTIONS;
 
   /** Les filtres courants : ceux de la page, tant que l'utilisateur n'en a pas changé un. */
   private readonly courant = linkedSignal<EmployeeFiltres>(() => this.value());

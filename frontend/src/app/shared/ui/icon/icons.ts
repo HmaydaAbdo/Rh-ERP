@@ -1,4 +1,6 @@
 import {
+  LucideArchive,
+  LucideArchiveRestore,
   LucideArrowDown,
   LucideArrowDownRight,
   LucideArrowLeft,
@@ -70,6 +72,8 @@ import {
  */
 export function provideStaportIcons() {
   return provideLucideIcons(
+    LucideArchive,
+    LucideArchiveRestore,
     LucideArrowDown,
     LucideArrowDownRight,
     LucideArrowLeft,

@@ -63,9 +63,9 @@ describe('EmployeeCartesComponent', () => {
     await afficher('/employees/cartes');
 
     expect(service.regrouper).toHaveBeenLastCalledWith(expect.anything(), 'CHANTIER');
-    expect(texte('.cartes-employes__resume')).toEqual(['40 employé(s) · 37 actif(s) · 2 chantier(s)']);
+    expect(texte('.cartes-employes__resume')).toEqual(['40 employé(s) · 37 en poste · 2 chantier(s)']);
     expect(texte('.cartes-employes__code')).toEqual(['C168', 'C059']);
-    expect(texte('.cartes-employes__detail')[0]).toBe('27 actif(s) · 3 inactif(s) · 75 %');
+    expect(texte('.cartes-employes__detail')[0]).toBe('27 en poste · 3 sorti(s) · 75 %');
   });
 
   it('ouvrir un chantier en fait une étape du fil et descend aux équipes, « Sans équipe » compris', async () => {

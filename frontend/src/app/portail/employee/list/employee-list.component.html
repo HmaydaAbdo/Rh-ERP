@@ -50,7 +50,7 @@
           {{ employee.dateEmbauche | date: 'dd/MM/yyyy' }}
         }
         @case ('statut') {
-          <stp-badge [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
+          <stp-badge [value]="libelleStatut(employee.statut)" [severity]="employee.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
         }
       }
     </ng-template>

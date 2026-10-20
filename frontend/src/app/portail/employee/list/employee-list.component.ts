@@ -13,6 +13,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { EmployeeFiltres, lireFiltres, memesFiltres, versCriteres } from '../filtres/employee-filtres';
 import { Employee } from '../models/employee.model';
+import { libelleStatutEmploye } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
 
 /** Vue Tabulaire des employés : le tableau standard, filtré par la barre commune de la coque (voir `EmployeeVuesComponent`). */
@@ -30,6 +31,7 @@ import { EmployeeService } from '../services/employee.service';
   `
 })
 export class EmployeeListComponent {
+  protected readonly libelleStatut = libelleStatutEmploye;
   private readonly authService = inject(AuthService);
 
   /** Le salaire est une donnée de paie : sa colonne n'existe que pour qui a `PAIE_READ` (le serveur ne l'envoie qu'à lui). */
@@ -106,7 +108,7 @@ export class EmployeeListComponent {
   protected onDelete(employee: Employee): void {
     this.confirmationService.confirm({
       header: 'Supprimer cet employé',
-      message: `Confirmez-vous la suppression de ${employee.nomPrenom} ? Un employé qui a des bulletins de paie ou un compte utilisateur ne peut pas être supprimé : passez-le à INACTIF pour conserver son historique.`,
+      message: `Confirmez-vous la suppression de ${employee.nomPrenom} ? Un employé qui a des bulletins de paie ou un compte utilisateur ne peut pas être supprimé : passez-le « Sorti » pour conserver son historique.`,
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteEmployee(employee)

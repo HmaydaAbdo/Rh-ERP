@@ -36,6 +36,31 @@
       </div>
     }
 
+    @if (analyse.chantiersClotures.length > 0) {
+      <h3 class="import-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="import-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
+      <p class="import-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.
+        @if (!store.peutRouvrir()) {
+          Vous ne pouvez pas modifier les chantiers.
+        }
+      </p>
+      <ul class="controle__cartes">
+        @for (cloture of analyse.chantiersClotures; track cloture.chantierId) {
+          <li class="controle__carte">
+            <div class="controle__qui">
+              <strong>{{ cloture.code }}</strong>
+              <span>{{ cloture.designation }}</span>
+              <span>{{ cloture.lignes.length }} ligne(s) : {{ cloture.lignes.join(', ') }}</span>
+            </div>
+            @if (store.peutRouvrir()) {
+              <div class="controle__saisie">
+                <button stp-button icon="archive-restore" type="button" [disabled]="store.occupe()" [attr.aria-label]="'Rouvrir le chantier ' + cloture.code" (click)="store.rouvrir(cloture.chantierId)">Rouvrir le chantier</button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+
     @if (analyse.cinInconnus.length > 0) {
       <h3 class="import-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="import-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
       <p class="import-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>

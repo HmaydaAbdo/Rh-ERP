@@ -8,7 +8,7 @@
         <h1>{{ employee.nomPrenom }}</h1>
         <p>
           <span>CIN {{ employee.cin }}</span>
-          <stp-badge [value]="employee.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employee.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
+          <stp-badge [value]="libelleStatut(employee.statut)" [severity]="employee.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
         </p>
       </div>
       <div class="app-page__actions">

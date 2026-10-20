@@ -22,6 +22,7 @@
 | Routes `/chantiers` et `/chantiers/:id` | `authGuard` + `permissionGuard` (`CHANTIER_READ`) |
 | Routes `/chantiers/new` et `/chantiers/:id/edit` | `authGuard` + `permissionGuard` (`CHANTIER_WRITE`) |
 | Boutons « Nouveau chantier » et « Modifier » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` |
+| Boutons « Clôturer » / « Rouvrir » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` ; mise à jour par `PUT /chantiers/{id}` |
 | Bouton « Synchroniser maintenant » | `CHANTIER_SYNC` — `ChantierListComponent.canSync()` |
 | Bouton « Supprimer » (liste) | `CHANTIER_DELETE` — `canDelete()` |
 

@@ -8,13 +8,14 @@ import java.util.List;
 
 /**
  * Ce que l'analyse d'un fichier de paie a trouvé, sans rien enregistrer. Le fichier ne s'importe que {@code pret} : aucune
- * erreur, aucun CIN inconnu, aucun écart avec les fiches. {@code departs} et {@code retours} ne bloquent pas : ce sont les
+ * erreur, aucun chantier clôturé, aucun CIN inconnu, aucun écart avec les fiches. {@code departs} et {@code retours} ne bloquent pas : ce sont les
  * changements de statut que l'import appliquera (les départs, seulement ceux que l'utilisateur confirme).
  */
 public record PaieImportAnalyseDto(
         YearMonth periode,
         int totalLignes,
         List<ErreurDto> erreurs,
+        List<ChantierClotureDto> chantiersClotures,
         List<CinInconnuDto> cinInconnus,
         List<EcartDto> ecarts,
         List<DepartDto> departs,
@@ -24,6 +25,10 @@ public record PaieImportAnalyseDto(
 
     /** Une ligne que seul le fichier peut corriger (champ manquant, valeur invalide, référence inconnue…). */
     public record ErreurDto(int numeroLigne, String cin, String nomPrenom, String raison) {
+    }
+
+    /** Un chantier clôturé que des lignes citent : à rouvrir (domaine Chantier), ou à corriger dans le fichier. */
+    public record ChantierClotureDto(long chantierId, String code, String designation, List<Integer> lignes) {
     }
 
     /** Un CIN sans fiche : à créer depuis l'assistant (avec les dates que le fichier n'a pas), ou à corriger dans le fichier. */
