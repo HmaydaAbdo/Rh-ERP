@@ -10,7 +10,8 @@ import { PaieImportStore } from './paie-import.store';
 const ANALYSE: PaieImportAnalyse = {
   periode: '2026-10',
   totalLignes: 3,
-  erreurs: [{ numeroLigne: 4, cin: 'XX1', nomPrenom: 'INCONNU', raison: 'Chantier introuvable ou inactif : C999' }],
+  erreurs: [{ numeroLigne: 4, cin: 'XX1', nomPrenom: 'INCONNU', raison: 'Chantier introuvable : C999' }],
+  chantiersClotures: [{ chantierId: 8, code: 'C059', designation: 'Voirie', lignes: [6] }],
   cinInconnus: [{ numeroLigne: 5, cin: 'NV2', nomPrenom: 'NOUVEAU', fonction: 'MACON', chantier: 'C059', equipe: null, salaire: 4000 }],
   ecarts: [
     {
@@ -63,13 +64,15 @@ describe('PaieImportWizardComponent', () => {
     expect(dialogue().querySelector('.import-wizard__depot input[type="file"]')).not.toBeNull();
   });
 
-  it('range chaque problème avec sa solution : fichier, fiche à créer, fiche à mettre à jour', async () => {
-    await ouvrir(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE']);
+  it('range chaque problème avec sa solution : fichier, chantier à rouvrir, fiche à créer, fiche à mettre à jour', async () => {
+    await ouvrir(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE', 'CHANTIER_READ', 'CHANTIER_WRITE']);
     await analyser();
 
     const texte = dialogue().textContent ?? '';
-    expect(texte).toContain('3 problème(s) à régler');
-    expect(texte).toContain('Chantier introuvable ou inactif : C999');
+    expect(texte).toContain('4 problème(s) à régler');
+    expect(texte).toContain('Chantier introuvable : C999');
+    expect(texte).toContain('Chantiers clôturés');
+    expect(dialogue().querySelector('button[aria-label="Rouvrir le chantier C059"]')).not.toBeNull();
     expect(texte).toContain('NOUVEAU');
     expect(Array.from(dialogue().querySelectorAll('.controle__ecarts dd')).map((dd) => dd.textContent?.replace(/\s+/g, ' ').trim()))
       .toEqual(['C059 devient C168', '4 000,00 devient 4 500,00']);
@@ -86,6 +89,8 @@ describe('PaieImportWizardComponent', () => {
 
     expect(dialogue().textContent).toContain('Vous ne pouvez pas modifier les fiches des employés');
     expect(dialogue().querySelector('button[aria-label^="Mettre à jour la fiche"]')).toBeNull();
+    expect(dialogue().querySelector('button[aria-label^="Rouvrir le chantier"]')).toBeNull();
+    expect(dialogue().textContent).toContain('Vous ne pouvez pas modifier les chantiers');
     expect(Array.from(dialogue().querySelectorAll('button')).some((b) => b.textContent?.includes('Créer l’employé') || b.textContent?.includes("Créer l'employé"))).toBe(false);
   });
 });

@@ -33,7 +33,7 @@
     @if (niveau() !== 'EMPLOYES') {
       @if (groupes(); as liste) {
         <p class="cartes-employes__resume" role="status">
-          {{ total() }} employé(s) · {{ actifs() }} actif(s) · {{ liste.length }} {{ libelles[niveau()].toLowerCase() }}(s)
+          {{ total() }} employé(s) · {{ actifs() }} en poste · {{ liste.length }} {{ libelles[niveau()].toLowerCase() }}(s)
         </p>
         @if (liste.length === 0) {
           <p class="cartes-employes__vide">Aucun employé ne correspond à ce périmètre.</p>
@@ -48,7 +48,7 @@
                 }
                 <strong class="cartes-employes__effectif">{{ groupe.effectif }}</strong>
                 <span class="cartes-employes__jauge" aria-hidden="true"><span [style.width.%]="(groupe.actifs / groupe.effectif) * 100"></span></span>
-                <span class="cartes-employes__detail">{{ groupe.actifs }} actif(s) · {{ groupe.effectif - groupe.actifs }} inactif(s) · {{ part(groupe) }} %</span>
+                <span class="cartes-employes__detail">{{ groupe.actifs }} en poste · {{ groupe.effectif - groupe.actifs }} sorti(s) · {{ part(groupe) }} %</span>
               </button>
             </li>
           }
@@ -68,7 +68,7 @@
                 <strong>{{ employe.nomPrenom }}</strong>
                 <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.code }} }</small>
               </span>
-              <stp-badge [value]="employe.statut === 'ACTIF' ? 'Actif' : 'Inactif'" [severity]="employe.statut === 'ACTIF' ? 'success' : 'danger'"></stp-badge>
+              <stp-badge [value]="libelleStatut(employe.statut)" [severity]="employe.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
             </a>
           </li>
         }

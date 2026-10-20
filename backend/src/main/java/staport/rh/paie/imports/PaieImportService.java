@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.audit.entities.TypeOperation;
+import staport.rh.chantier.dtos.response.ChantierResponseDto;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.common.recherche.PageLoader;
@@ -27,6 +28,7 @@ import staport.rh.paie.audit.PerimetreCorrectionImportPaie;
 import staport.rh.paie.audit.PerimetreImportPaie;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.imports.PaieImportAnalyseDto.ChampDto;
+import staport.rh.paie.imports.PaieImportAnalyseDto.ChantierClotureDto;
 import staport.rh.paie.imports.PaieImportAnalyseDto.CinInconnuDto;
 import staport.rh.paie.imports.PaieImportAnalyseDto.DepartDto;
 import staport.rh.paie.imports.PaieImportAnalyseDto.EcartDto;
@@ -42,6 +44,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -53,10 +56,12 @@ import java.util.Set;
  * fiches employés doivent dire la même chose avant que les bulletins soient créés.
  *
  * <ol>
- *   <li>{@link #analyser} lit le fichier sans rien enregistrer et rend les problèmes : erreurs du fichier, CIN inconnus,
- *   écarts avec les fiches ; puis les départs (STC, actifs absents) et les retours (inactifs présents).</li>
+ *   <li>{@link #analyser} lit le fichier sans rien enregistrer et rend les problèmes : erreurs du fichier, chantiers
+ *   clôturés, CIN inconnus, écarts avec les fiches ; puis les départs (STC, actifs absents) et les retours (inactifs
+ *   présents).</li>
  *   <li>{@link #corriger} aligne les fiches choisies sur leur ligne et crée les employés des CIN inconnus ; ce qui reste se
- *   corrige dans le fichier, qu'on réanalyse — autant de fois qu'il faut.</li>
+ *   corrige dans le fichier, qu'on réanalyse — autant de fois qu'il faut. Un chantier clôturé se rouvre depuis le domaine
+ *   Chantier (droit d'écrire les chantiers), puis on réanalyse.</li>
  *   <li>{@link #importer} n'accepte qu'un fichier sans problème : il crée les bulletins, repasse ACTIF les employés revenus et
  *   enregistre les départs confirmés.</li>
  * </ol>
@@ -140,6 +145,7 @@ public class PaieImportService {
         PaieImportAnalyseDto analyse = examiner(periode, contexte).analyse();
         if (!analyse.pret()) {
             throw new PaieImportException("Le fichier n'est pas prêt : " + analyse.erreurs().size() + " erreur(s), "
+                    + analyse.chantiersClotures().size() + " chantier(s) clôturé(s), "
                     + analyse.cinInconnus().size() + " CIN inconnu(s), " + analyse.ecarts().size()
                     + " écart(s) avec les fiches. Réanalysez-le.");
         }
@@ -183,7 +189,8 @@ public class PaieImportService {
     // ---- Analyse ----
 
     private record Contexte(List<LigneFichierPaie> lignes, Map<String, EmployeeResponseDto> employesParCin,
-                            Map<String, Long> chantiersParCode, Map<String, Long> equipesParCode,
+                            Map<String, Long> chantiersParCode, Map<Long, ChantierResponseDto> chantiersClotures,
+                            Map<String, Long> equipesParCode,
                             Map<String, Long> fonctionsParLibelle, Set<Long> employesAvecBulletin) {
     }
 
@@ -191,25 +198,31 @@ public class PaieImportService {
                           Map<Integer, CinInconnuDto> inconnusParLigne, Map<Integer, LigneFichierPaie> lignesParNumero) {
     }
 
-    /** Les référentiels sont chargés une seule fois, avant la lecture des lignes (aucune requête par ligne). */
+    /**
+     * Les référentiels sont chargés une seule fois, avant la lecture des lignes (aucune requête par ligne). Les chantiers
+     * clôturés y figurent aussi : une ligne qui en cite un est signalée à part, pour rouvrir le chantier sans toucher au fichier.
+     */
     private Contexte charger(List<LigneFichierPaie> lignes, YearMonth periode) {
         Map<String, EmployeeResponseDto> employes = new HashMap<>();
         PageLoader.forEach(pageable -> employeeService.search(null, pageable), employe -> employes.put(cle(employe.cin()), employe));
         Map<String, Long> chantiers = new HashMap<>();
+        Map<Long, ChantierResponseDto> clotures = new HashMap<>();
         PageLoader.forEach(pageable -> chantierService.search(null, pageable), chantier -> {
-            if (chantier.actif()) {
-                chantiers.put(cle(chantier.code()), chantier.id());
+            chantiers.put(cle(chantier.code()), chantier.id());
+            if (!chantier.actif()) {
+                clotures.put(chantier.id(), chantier);
             }
         });
         Map<String, Long> equipes = new HashMap<>();
         PageLoader.forEach(pageable -> equipeService.search(null, pageable), equipe -> equipes.put(cle(equipe.code()), equipe.id()));
         Map<String, Long> fonctions = new HashMap<>();
         PageLoader.forEach(pageable -> functionService.search(null, pageable), fonction -> fonctions.put(cle(fonction.libelle()), fonction.id()));
-        return new Contexte(lignes, employes, chantiers, equipes, fonctions, repository.findEmployeeIdsByPeriode(periode));
+        return new Contexte(lignes, employes, chantiers, clotures, equipes, fonctions, repository.findEmployeeIdsByPeriode(periode));
     }
 
     private Examen examiner(YearMonth periode, Contexte contexte) {
         List<ErreurDto> erreurs = new ArrayList<>();
+        Map<Long, List<Integer>> lignesParChantierCloture = new LinkedHashMap<>();
         List<CinInconnuDto> inconnus = new ArrayList<>();
         List<EcartDto> ecarts = new ArrayList<>();
         List<DepartDto> departs = new ArrayList<>();
@@ -229,6 +242,10 @@ public class PaieImportService {
                 continue;
             }
             cinsTraites.add(cle(ligne.cin()));
+            Long chantierId = contexte.chantiersParCode().get(cle(ligne.chantier()));
+            if (contexte.chantiersClotures().containsKey(chantierId)) {
+                lignesParChantierCloture.computeIfAbsent(chantierId, id -> new ArrayList<>()).add(ligne.numeroLigne());
+            }
 
             EmployeeResponseDto employe = contexte.employesParCin().get(cle(ligne.cin()));
             if (employe == null) {
@@ -254,9 +271,15 @@ public class PaieImportService {
                 .sorted((a, b) -> a.nomPrenom().compareToIgnoreCase(b.nomPrenom()))
                 .forEach(employe -> departs.add(new DepartDto(employe.id(), employe.cin(), employe.nomPrenom(), null)));
 
-        boolean pret = erreurs.isEmpty() && inconnus.isEmpty() && ecarts.isEmpty();
-        PaieImportAnalyseDto analyse = new PaieImportAnalyseDto(periode, contexte.lignes().size(), erreurs, inconnus, ecarts,
-                departs, retours, pret);
+        List<ChantierClotureDto> chantiersClotures = new ArrayList<>();
+        lignesParChantierCloture.forEach((id, numeros) -> {
+            ChantierResponseDto chantier = contexte.chantiersClotures().get(id);
+            chantiersClotures.add(new ChantierClotureDto(id, chantier.code(), chantier.designation(), numeros));
+        });
+
+        boolean pret = erreurs.isEmpty() && chantiersClotures.isEmpty() && inconnus.isEmpty() && ecarts.isEmpty();
+        PaieImportAnalyseDto analyse = new PaieImportAnalyseDto(periode, contexte.lignes().size(), erreurs, chantiersClotures,
+                inconnus, ecarts, departs, retours, pret);
         Map<Long, EcartDto> ecartsParEmploye = new HashMap<>();
         ecarts.forEach(ecart -> ecartsParEmploye.put(ecart.employeId(), ecart));
         Map<Integer, CinInconnuDto> inconnusParLigne = new HashMap<>();
@@ -316,7 +339,7 @@ public class PaieImportService {
             return "Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie)";
         }
         if (!contexte.chantiersParCode().containsKey(cle(ligne.chantier()))) {
-            return "Chantier introuvable ou inactif : " + ligne.chantier().strip();
+            return "Chantier introuvable : " + ligne.chantier().strip();
         }
         if (ligne.equipe() != null && !contexte.equipesParCode().containsKey(cle(ligne.equipe()))) {
             return "Équipe introuvable : " + ligne.equipe().strip();

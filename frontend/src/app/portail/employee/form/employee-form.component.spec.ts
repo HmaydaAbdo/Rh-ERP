@@ -219,7 +219,7 @@ describe('EmployeeFormComponent', () => {
       expect((racine().querySelector('input#dateEmbauche') as HTMLInputElement).value).toBe('2020-11-02');
       expect((racine().querySelector('input#fonctionId') as HTMLInputElement).value).toBe('MACON');
       expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C196');
-      expect((racine().querySelector('input#statut') as HTMLInputElement).value).toBe('Actif');
+      expect((racine().querySelector('input#statut') as HTMLInputElement).value).toBe('En poste');
       expect(formulaire()().dirty()).toBe(false);
     });
 

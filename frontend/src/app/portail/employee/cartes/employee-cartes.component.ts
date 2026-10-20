@@ -11,6 +11,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { EmployeeFiltres, lireFiltres, versCriteres, versParametres } from '../filtres/employee-filtres';
 import { DimensionEmployes, Employee, EmployeeRegroupement } from '../models/employee.model';
+import { libelleStatutEmploye } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
 
 /** Niveau affiché : des groupes (par chantier, équipe ou fonction) ou les employés eux-mêmes. */
@@ -47,6 +48,7 @@ function choisie(filtres: EmployeeFiltres, dimension: DimensionEmployes): number
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeCartesComponent {
+  protected readonly libelleStatut = libelleStatutEmploye;
   private readonly employeeService = inject(EmployeeService);
   private readonly chantiers = inject(ChantierReferenceService);
   private readonly equipes = inject(EquipeReferenceService);

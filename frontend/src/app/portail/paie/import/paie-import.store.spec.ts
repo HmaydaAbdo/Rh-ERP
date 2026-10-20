@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { PaieImportAnalyse } from '../models/paie.model';
+import { ChantierService } from '../../chantier/services/chantier.service';
 import { PaieService } from '../services/paie.service';
 import { PaieImportStore } from './paie-import.store';
 
@@ -11,6 +12,7 @@ const PRETE: PaieImportAnalyse = {
   periode: '2026-10',
   totalLignes: 2,
   erreurs: [],
+  chantiersClotures: [],
   cinInconnus: [],
   ecarts: [],
   departs: [
@@ -29,15 +31,36 @@ const AVEC_ECART: PaieImportAnalyse = {
 
 describe('PaieImportStore', () => {
   let store: PaieImportStore;
+  let chantiers: { getById: ReturnType<typeof vi.fn>; changerStatut: ReturnType<typeof vi.fn> };
   let service: { analyserImport: ReturnType<typeof vi.fn>; corrigerImport: ReturnType<typeof vi.fn>; importer: ReturnType<typeof vi.fn> };
   const fichier = new File(['x'], 'paie.xlsx');
 
   beforeEach(() => {
     service = { analyserImport: vi.fn(), corrigerImport: vi.fn(), importer: vi.fn() };
+    chantiers = { getById: vi.fn(), changerStatut: vi.fn() };
     TestBed.configureTestingModule({
-      providers: [PaieImportStore, fournirPermissions(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE']).providers, { provide: PaieService, useValue: service }]
+      providers: [PaieImportStore, fournirPermissions(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE', 'CHANTIER_READ', 'CHANTIER_WRITE']).providers,
+        { provide: PaieService, useValue: service }, { provide: ChantierService, useValue: chantiers }]
     });
     store = TestBed.inject(PaieImportStore);
+  });
+
+  it('rouvre un chantier clôturé puis réanalyse le même fichier', () => {
+    const cloture = { chantierId: 8, code: 'C059', designation: 'Voirie', lignes: [4, 5] };
+    service.analyserImport.mockReturnValueOnce(of({ ...PRETE, chantiersClotures: [cloture], pret: false })).mockReturnValueOnce(of(PRETE));
+    const chantier = { id: 8, version: 3, code: 'C059', designation: 'Voirie', nom: null, sourceErp: true, actif: false };
+    chantiers.getById.mockReturnValue(of(chantier));
+    chantiers.changerStatut.mockReturnValue(of({ ...chantier, actif: true }));
+    store.ouvrir(['2026-09']);
+    store.analyser(fichier);
+    expect(store.nombreProblemes()).toBe(1);
+
+    store.rouvrir(8);
+
+    expect(chantiers.changerStatut).toHaveBeenCalledWith(chantier, true);
+    expect(service.analyserImport).toHaveBeenLastCalledWith(fichier, '2026-10');
+    expect(store.nombreProblemes()).toBe(0);
+    expect(store.peutRouvrir()).toBe(true);
   });
 
   it('impose le mois qui suit le dernier importé, et laisse choisir au premier import', () => {

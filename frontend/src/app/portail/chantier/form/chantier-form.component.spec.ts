@@ -106,14 +106,14 @@ describe('ChantierFormComponent', () => {
   });
 
   describe('modification', () => {
-    it('charge le chantier, propose le statut actif/inactif et enregistre', async () => {
+    it('charge le chantier, propose le statut en cours/clôturé et enregistre', async () => {
       await afficher('3');
 
       expect(service.getById).toHaveBeenCalledWith(3);
       expect(racine().querySelector('h1')?.textContent).toBe('Modifier le chantier');
       expect((racine().querySelector('#code') as HTMLInputElement).value).toBe('C196');
       expect((racine().querySelector('#nom') as HTMLInputElement).value).toBe('Nord');
-      expect((racine().querySelector('#actif') as HTMLInputElement).value).toBe('Actif');
+      expect((racine().querySelector('#actif') as HTMLInputElement).value).toBe('En cours');
       expect(fixture.componentInstance['form']().dirty()).toBe(false);
 
       fixture.componentInstance['form'].actif().value.set(false);

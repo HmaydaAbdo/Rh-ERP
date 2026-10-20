@@ -48,6 +48,7 @@
 | Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
 | Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` et `PAIE_READ` — `canImport()` (l'assistant commence par l'analyse) |
+| Assistant d'import : « Rouvrir le chantier » (chantier clôturé cité par le fichier) | `CHANTIER_READ` **et** `CHANTIER_WRITE` — `peutRouvrir()` ; il lit puis met à jour le chantier par `GET` / `PUT /chantiers/{id}` ; sans ces droits, l'assistant invite à corriger le fichier |
 | Assistant d'import : « Mettre à jour la fiche », « Tout mettre à jour », « Créer l'employé » | `EMPLOYEE_WRITE` — `peutCorriger()` ; sans elle, l'assistant invite à corriger le fichier |
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |

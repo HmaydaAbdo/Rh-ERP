@@ -13,12 +13,8 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Chantier } from '../models/chantier.model';
+import { confirmationStatutChantier, libelleStatutChantier, STATUT_CHANTIER_OPTIONS } from '../models/chantier-statut';
 import { ChantierService } from '../services/chantier.service';
-
-const ACTIF_OPTIONS: { label: string; value: boolean }[] = [
-  { label: 'Actif', value: true },
-  { label: 'Inactif', value: false }
-];
 
 const DEBOUNCE_RECHERCHE_MS = 300;
 
@@ -67,8 +63,10 @@ export class ChantierListComponent {
   protected readonly loading = signal(false);
   protected readonly deletingId = signal<number | null>(null);
   protected readonly syncing = signal(false);
+  protected readonly statutEnCoursId = signal<number | null>(null);
 
-  protected readonly actifOptions = ACTIF_OPTIONS;
+  protected readonly actifOptions = STATUT_CHANTIER_OPTIONS;
+  protected readonly libelleStatut = libelleStatutChantier;
 
   protected readonly filtres = signal(filtresVides());
   protected readonly filterForm = form(this.filtres, (chemin) => {
@@ -117,6 +115,24 @@ export class ChantierListComponent {
       acceptLabel: 'Supprimer',
       rejectLabel: 'Annuler',
       accept: () => this.deleteChantier(chantier)
+    });
+  }
+
+  /** Clôture un chantier en cours, ou rouvre un chantier clôturé, après confirmation. */
+  protected onChangerStatut(chantier: Chantier): void {
+    this.confirmationService.confirm({
+      ...confirmationStatutChantier(chantier),
+      rejectLabel: 'Annuler',
+      accept: () => {
+        this.statutEnCoursId.set(chantier.id);
+        this.chantierService
+          .changerStatut(chantier, !chantier.actif)
+          .pipe(finalize(() => this.statutEnCoursId.set(null)))
+          .subscribe((modifie) => {
+            this.messageService.add({ severity: 'success', summary: `Chantier ${modifie.code} : ${libelleStatutChantier(modifie.actif).toLowerCase()}`, life: 4000 });
+            this.fetchPage();
+          });
+      }
     });
   }
 

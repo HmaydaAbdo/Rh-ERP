@@ -269,10 +269,19 @@ export interface PaieImportDepart {
 }
 
 /** Ce que l'analyse d'un fichier de paie a trouvé, sans rien enregistrer (POST /paie/import/analyse). */
+/** Un chantier clôturé cité par des lignes du fichier : à rouvrir, ou à corriger dans le fichier. */
+export interface PaieImportChantierCloture {
+  chantierId: number;
+  code: string;
+  designation: string;
+  lignes: number[];
+}
+
 export interface PaieImportAnalyse {
   periode: string;
   totalLignes: number;
   erreurs: PaieImportErreur[];
+  chantiersClotures: PaieImportChantierCloture[];
   cinInconnus: PaieImportCinInconnu[];
   ecarts: PaieImportEcart[];
   departs: PaieImportDepart[];

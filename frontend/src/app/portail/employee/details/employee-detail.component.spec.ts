@@ -85,10 +85,10 @@ describe('EmployeeDetailComponent', () => {
     expect(paie.parcours).toHaveBeenCalledWith(9);
   });
 
-  it('signale un employé inactif', () => {
+  it('signale un employé sorti', () => {
     const { page } = afficher(['EMPLOYEE_READ'], { ...EMPLOYE, statut: 'INACTIF' });
 
-    expect(page.querySelector('stp-badge')?.textContent?.trim()).toBe('Inactif');
+    expect(page.querySelector('stp-badge')?.textContent?.trim()).toBe('Sorti');
   });
 
   it('propose « Modifier » seulement à qui peut écrire', () => {
