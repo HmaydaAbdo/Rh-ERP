@@ -76,7 +76,9 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     });
   }
 
-  await page.goto(`/equipes/cartes?periode=${moisCourant}`);
+  // Isoler l’équipe créée : le catalogue CI peut dépasser la première page.
+  const filtreEquipe = `libelle=${encodeURIComponent(`Équipe e2e ${suffixe}`)}`;
+  await page.goto(`/equipes/cartes?${filtreEquipe}`);
   const carteEquipe = page.locator('.equipe-carte').filter({ hasText: `Équipe e2e ${suffixe}` });
   await expect(carteEquipe).toContainText('Employés sur les fiches récentes');
   await expect(carteEquipe).toContainText('Payés');
@@ -126,7 +128,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     const sessionLimitee = await (await connexionLimitee).json() as { accessToken: string; utilisateur: { permissionsEffectives: string[] } };
     expect(sessionLimitee.utilisateur.permissionsEffectives).not.toContain('PAIE_READ');
 
-    await pageLimitee.goto('/equipes/cartes');
+    await pageLimitee.goto(`/equipes/cartes?${filtreEquipe}`);
     const carteLimitee = pageLimitee.locator('.equipe-carte').filter({ hasText: `Équipe e2e ${suffixe}` });
     await expect(carteLimitee).toContainText('Employés sur les fiches récentes');
     await expect(carteLimitee).not.toContainText('Payés');
