@@ -60,6 +60,23 @@ interaction. Un changement transversal (authentification, permissions, audit, co
 composants communs, schéma ou données) vérifie aussi les domaines consommateurs pertinents, et pas seulement le
 module modifié.
 
+## Traçabilité des règles et résultat compréhensible
+
+Pour tout changement soumis à validation métier, établir une matrice d'acceptation qui relie chaque règle approuvée à :
+
+- sa source et la personne métier qui peut la confirmer;
+- le cas attendu, un exemple concret et le résultat visible pour l'utilisateur;
+- les tests ou vérifications qui en apportent la preuve;
+- le résultat observé, le lien vers le rapport et l'état de validation.
+
+Une règle du périmètre validé ne peut pas être déclarée respectée parce qu'un autre test voisin passe. Chaque règle doit disposer d'une preuve adaptée à son risque; les liens, permissions et échanges entre domaines ont des contrôles propres. Si la preuve manque, le statut reste « à vérifier » et le bloc ne reçoit pas d'accord final.
+
+Les échecs doivent aider à agir. Le résultat destiné au métier décrit l'action ou le cas vérifié, ce qui était attendu, ce qui s'est produit et l'étape à suivre. Les détails techniques peuvent figurer dans le rapport destiné à l'équipe de réalisation, mais ne remplacent pas l'explication métier. Pour un refus de saisie, vérifier également que le message indique le champ ou la règle à corriger, sans dévoiler de données auxquelles l'utilisateur n'a pas droit.
+
+Une exception ne se traduit jamais par l'affaiblissement silencieux d'un test. Elle possède un enregistrement distinct indiquant la règle concernée, le motif, le périmètre, le risque, la mesure compensatoire, le responsable, l'approbateur autorisé et une date d'expiration ou de réexamen. La règle initiale reste testée dans les cas non dérogés; un test séparé décrit l'exception autorisée et ses limites. Tant que l'approbation explicite manque, l'exception est refusée et la règle originale demeure applicable. Les exigences critiques de sécurité, confidentialité et intégrité des données ne sont pas dérogeables.
+
+Pour un PV, dossier de validation ou document destiné à des intervenants, les règles de cette matrice sont lisibles dans le document : les faits établis, les décisions du propriétaire, les accords métier attendus, les réserves, rejets, exceptions et preuves ont des statuts séparés. Le document ne déclare jamais un consensus tant que les avis requis ne sont pas recueillis.
+
 ## Attentes par type de changement
 
 | Changement | Tests à ajouter ou mettre à jour |

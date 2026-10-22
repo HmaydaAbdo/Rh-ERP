@@ -78,6 +78,14 @@ une convention ou le produit avant que le propriétaire l'ait approuvée. Cette 
 notamment aux changements de règle métier et aux choix d'architecture. Une fois approuvée, la décision
 est consignée dans le document de référence approprié et mise en œuvre dans le périmètre autorisé.
 
+Lorsqu'un livrable doit être partagé avec des intervenants, signé, approuvé ou rejeté, l'agent prépare
+d'abord une version complète pour revue du propriétaire. Elle sépare les faits vérifiés, les décisions
+déjà approuvées par le propriétaire, les demandes d'accord, les questions ouvertes, les risques, les
+exceptions et les preuves. Un projet non validé est marqué clairement comme tel; il ne présente pas
+les choix du propriétaire comme un consensus des intervenants. L'agent ne transmet, ne publie et ne
+rend visible le livrable à des tiers qu'après validation explicite du propriétaire. Il conserve ensuite
+les accords, réserves et rejets sans les reformuler en approbation générale.
+
 Les conseils restent pertinents pour l'objectif en cours : ne pas multiplier les suggestions
 secondaires ni interrompre une tâche pour des possibilités sans bénéfice concret.
 
