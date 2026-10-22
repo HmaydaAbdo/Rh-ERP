@@ -1,0 +1,30 @@
+.equipe-analytique {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+
+  h2 { margin: 0; font-size: var(--text-lg); }
+  h3 { margin: 0 0 var(--space-sm); font-size: var(--text-base); }
+  &__entete { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--space-md); }
+  &__entete p, &__aide { margin: var(--space-2xs) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+  &__periode { display: grid; gap: var(--space-xs); font-size: var(--text-sm); font-weight: 600; }
+  &__periode select { min-width: 11rem; }
+  &__retour { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-sm); }
+  &__lien { border: 0; padding: 0; background: transparent; color: var(--color-primary); font: inherit; cursor: pointer; }
+  &__section { min-width: 0; padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+  &__note { margin: 0; padding: var(--space-md); border-radius: var(--radius-md); background: var(--color-surface-alt); color: var(--color-text-muted); }
+  &__effectif { display: block; margin-top: var(--space-sm); font-size: var(--text-xl); font-variant-numeric: tabular-nums; }
+  &__effectif span { color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 400; }
+  &__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-sm); }
+  &__kpis article { display: grid; align-content: start; gap: var(--space-xs); min-width: 0; padding: var(--space-md); border-radius: var(--radius-sm); background: var(--color-primary-soft); }
+  &__kpis span { color: var(--color-text-muted); font-size: var(--text-xs); }
+  &__kpis strong { overflow-wrap: anywhere; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+  &__graphique { height: 19rem; margin: var(--space-md) 0; }
+  &__barres { display: grid; gap: var(--space-xs); margin-top: var(--space-md); }
+  &__barre { display: flex; justify-content: space-between; gap: var(--space-md); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border); }
+  &__barre strong { font-variant-numeric: tabular-nums; }
+  .app-table-wrap { overflow-x: auto; }
+  .app-static-table { min-width: 44rem; }
+  a { color: var(--color-primary); }
+}
