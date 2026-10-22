@@ -43,12 +43,15 @@
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
-    "@vitest/browser-playwright": "^5.0.4",
-    "@vitest/coverage-v8": "^5.0.3",
+    "@vitest/browser-playwright": "^5.0.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "license-checker-rseidelsohn": "^5.0.1",
     "playwright": "^1.64.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "vite": "8.3.4"
   }
 }

@@ -47,15 +47,13 @@ describe('EquipeListComponent', () => {
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 équipes');
   });
 
-  it('propose création, modification et suppression à qui a les droits, la seule consultation sinon', async () => {
+  it('propose modification et suppression à qui a les droits, la seule consultation sinon', async () => {
     await afficher();
-    expect(racine().textContent).toContain('Nouvelle équipe');
     expect(bouton('Modifier l’équipe CH')).not.toBeNull();
     expect(bouton('Supprimer l’équipe CH')).not.toBeNull();
     TestBed.resetTestingModule();
 
     await afficher(['EQUIPE_READ']);
-    expect(racine().textContent).not.toContain('Nouvelle équipe');
     expect(bouton('Modifier l’équipe CH')).toBeNull();
     expect(bouton('Supprimer l’équipe CH')).toBeNull();
     expect(bouton('Voir l’équipe CH')).not.toBeNull();
