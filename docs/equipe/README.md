@@ -107,15 +107,28 @@ Routes sous `/equipes` (lazy loading, `equipe.routes.ts`, protégées par `permi
 
 | Route | Composant | Description |
 |---|---|---|
-| `/equipes` | `EquipeListComponent` | Liste paginée, filtres code/libellé, tri, suppression |
+| `/equipes` | `EquipeVuesComponent` + `EquipeListComponent` | Coque commune, filtres code/libellé dans l'URL, liste paginée et tri |
+| `/equipes/cartes` | `EquipeCartesComponent` | Cartes paginées avec situation Employé récente et résumé Paie du dernier mois disponible |
+| `/equipes/analytique` | `EquipeAnalytiqueComponent` | Indicateurs Paie par période, répartition et historique par équipe; situation Employé présentée séparément |
 | `/equipes/new` | `EquipeFormComponent` | Création |
 | `/equipes/:id` | `EquipeDetailComponent` | Consultation |
 | `/equipes/:id/edit` | `EquipeFormComponent` | Modification |
 
-Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. La liste est un
-tableau standard (tri, colonnes, pagination, filtres code/libellé en temps réel, voir
-[../frontend/README.md](../frontend/README.md)) ; les boutons de création, modification et suppression sont
-conditionnés par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
+Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. Les trois
+vues utilisent le sélecteur partagé et la composition propre au domaine, selon le
+[pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code/libellé restent dans l'URL et
+s'appliquent aux vues Tabulaire et Cartes. Les boutons de création, modification et suppression sont conditionnés
+par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
+
+La vue Cartes et la vue Analytique relient les domaines au moyen de leurs services existants :
+
+- les effectifs viennent du regroupement des fiches Employé par équipe et représentent le dernier état importé
+  (`EMPLOYEE_READ`) ;
+- les sommes, effectifs payés, coûts moyens, STC, chantiers et historique viennent des analyses Paie par période
+  (`PAIE_READ`) ;
+- les vues gardent ces deux temporalités séparées et n'affichent pas les montants Paie sans le droit Paie ;
+- en Analytique, la liste comprend aussi les équipes sans bulletin pour le mois choisi. Les filtres partagés sont
+  conservés en changeant de vue; la période et l'équipe sélectionnées dans l'analyse sont également partageables par URL.
 
 Le référentiel est consommé par Paie via `shared/reference-data/equipe-reference.service.ts`
 (contrat du sélecteur générique `shared/components/lazy-select`, voir `conventions/frontend.md`) :

@@ -75,3 +75,9 @@ La maquette de travail est disponible ici : [maquette des trois vues Équipe](ma
 Le travail commence par le module Équipe, puis la même démarche sera appliquée à Chantier et Fonction. Les questions métier encore ouvertes seront décidées avant de modifier les comportements concernés.
 
 La convention de navigation figure dans [`conventions/frontend.md`](../../conventions/frontend.md). La description actuelle du module est dans [`docs/equipe/README.md`](../equipe/README.md), et les sujets encore ouverts sont suivis dans [`TODO.md`](../../TODO.md).
+
+## Première livraison
+
+Les trois vues Équipe sont maintenant réalisées : le tableau conserve ses filtres, les cartes montrent le référentiel avec les chiffres autorisés, et l'Analytique relie les équipes aux indicateurs Paie par période et à l'état Employé le plus récent. Une équipe sans bulletin sur le mois choisi reste visible dans la répartition. Les chiffres des deux domaines restent séparés et suivent les accès déjà en place.
+
+La compilation de l'application frontend a réussi. La vérification complète des tests attend le résultat de la CI : l'environnement de travail local ne dispose pas du navigateur requis pour exécuter les tests d'interface.

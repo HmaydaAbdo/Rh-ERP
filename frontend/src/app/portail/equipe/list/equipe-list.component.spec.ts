@@ -4,7 +4,6 @@ import { of } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
-import { saisir } from '../../../shared/testing/formulaire';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
 import { EquipeListComponent } from './equipe-list.component';
@@ -62,20 +61,8 @@ describe('EquipeListComponent', () => {
     expect(bouton('Voir l’équipe CH')).not.toBeNull();
   });
 
-  it('cherche par code et par libellé après un court délai, puis se réinitialise', async () => {
+  it('charge sans filtre quand la vue est ouverte sans critères dans l’URL', async () => {
     await afficher();
-    vi.useFakeTimers();
-    service.search.mockClear();
-
-    saisir(racine(), 'input[aria-label="Code"]', 'CH');
-    saisir(racine(), 'input[aria-label="Libellé"]', 'chauf');
-    await vi.advanceTimersByTimeAsync(350);
-    TestBed.tick();
-    expect(service.search).toHaveBeenCalledTimes(1);
-    expect(criteres()).toEqual({ code: 'CH', libelle: 'chauf' });
-
-    (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réinitialiser')) as HTMLButtonElement).click();
-    TestBed.tick();
     expect(criteres()).toEqual({ code: undefined, libelle: undefined });
   });
 
