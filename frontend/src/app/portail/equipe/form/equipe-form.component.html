@@ -7,14 +7,15 @@
   <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="code">Code <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" [formField]="form.code" />
-      <small>Enregistré en majuscules — c'est le code utilisé par l'import Excel de la paie.</small>
+      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" aria-describedby="code-aide" [formField]="form.code" />
+      <small id="code-aide">Obligatoire · 50 caractères maximum · les espaces autour sont retirés et le code est enregistré en majuscules. Chaque code doit être unique. Il sert à reconnaître l’équipe dans les fichiers de paie.</small>
       <stp-field-error [field]="form.code" />
     </div>
 
     <div class="field">
       <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="libelle" type="text" [formField]="form.libelle" />
+      <input class="stp-input" autocomplete="off" id="libelle" type="text" aria-describedby="libelle-aide" [formField]="form.libelle" />
+      <small id="libelle-aide">Obligatoire · 100 caractères maximum · les espaces autour sont retirés. Chaque libellé doit être unique.</small>
       <stp-field-error [field]="form.libelle" />
     </div>
 

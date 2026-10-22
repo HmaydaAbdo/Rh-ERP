@@ -121,6 +121,8 @@ Le référentiel est consommé par Paie via `shared/reference-data/equipe-refere
 (contrat du sélecteur générique `shared/components/lazy-select`, voir `conventions/frontend.md`) :
 sélection simple dans le formulaire d'un bulletin, sélection multiple dans le filtre de la liste.
 
+Le formulaire explique les règles avant la saisie, en langage utilisateur : code obligatoire (50 caractères maximum, espaces extérieurs retirés, enregistré en majuscules et unique) et libellé obligatoire (100 caractères maximum, espaces extérieurs retirés et unique).
+
 ---
 
 ## Limites connues

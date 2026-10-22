@@ -79,6 +79,7 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 ## Vues Cartes, Tabulaire et Analytique
 
+- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern de composition par domaine défini dans `conventions/frontend.md` (« Pattern des trois vues métier »). Le sélecteur est partagé; coque, routes, filtres et contenus restent propres à chaque domaine.
 - **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
   (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
 - **Fait (2026-10-19) — domaine Employés** : plan validé en 5 lots. Lot 1 fait : sélecteur de vue extrait dans
@@ -92,7 +93,8 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
+- **À faire — ordre de traitement** : commencer par **Équipes**, puis traiter **Chantiers** et **Fonctions**. Seule la vue tabulaire existe encore pour ces trois référentiels.
+  **Équipes** : maquette des trois vues préparée dans `docs/handoff/maquette-equipe-vues.html` (voir le [PV de cadrage](docs/handoff/pv-cadrage-stabilisation-equipe-2026-10-22.md)). Le module doit articuler le référentiel, l'état des fiches Employé au dernier mois importé et les snapshots historiques de Paie par période; les indicateurs Paie sont réservés à `PAIE_READ`. Les contrats inter-domaines restent à valider. Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 

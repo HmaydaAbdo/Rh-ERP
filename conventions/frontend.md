@@ -295,6 +295,38 @@ Ne jamais importer directement une page dans les routes.
 
 ---
 
+# Pattern des trois vues métier
+
+Tout domaine métier qui présente une collection consultable propose trois vues du même périmètre : **Tabulaire**,
+**Cartes** et **Analytique**. Elles offrent trois façons de lire les données du domaine; elles ne créent pas trois
+sources de vérité ni trois règles métier.
+
+* Chaque domaine garde la responsabilité de sa coque, de ses routes, de ses filtres et du contenu de ses vues.
+  Réutiliser le composant partagé de sélection de vue et les primitives Staport; ne pas créer une coque générique
+  configurable ni une classe de base commune.
+* Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
+  `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
+  modification restent hors de cette coque.
+* Le sélecteur, le titre et les actions communes gardent la même place dans les trois vues. Les filtres sont propres
+  au domaine; lorsqu’ils s’appliquent à plusieurs vues, ils sont visibles au même endroit et leurs valeurs sont
+  synchronisées avec les paramètres d’URL afin de permettre le lien direct, le rechargement et le retour navigateur.
+  Un filtre n’est partagé entre des vues que s’il a le même sens métier dans chacune.
+* Chaque vue charge son propre contenu par une route lazy-loaded. Cartes représente les enregistrements du domaine
+  avec une organisation adaptée à leur lecture; Analytique définit explicitement ses indicateurs, périodes, filtres
+  et autorisations. Une projection provenant d’un autre domaine passe par son contrat public et ne redéfinit pas
+  ses règles métier.
+* Les trois vues appliquent la même permission de lecture du domaine et conservent les permissions d’écriture sur
+  les seules actions et routes qui les exigent. Les différences d’affichage ne remplacent jamais les contrôles
+  d’accès backend.
+* La navigation entre vues conserve les filtres et le contexte métier communs. Les états de chargement, erreur,
+  absence de données, clavier, lecteur d’écran, responsive et thèmes sont vérifiés pour chaque vue.
+
+Avant de livrer un domaine, documenter dans son README le rôle des trois vues et la définition de ses indicateurs;
+ajouter les routes et permissions à son document RBAC lorsqu’elles changent. Ne pas afficher un onglet « disponible
+prochainement » sans parcours livré.
+
+---
+
 # Performance des écrans
 
 * Contrôler la taille du bundle et charger les routes et composants coûteux à la demande ; justifier une dépendance par
