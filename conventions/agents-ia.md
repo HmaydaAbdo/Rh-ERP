@@ -63,6 +63,24 @@ vérifications attendues. Il applique les conventions du dépôt et ne déduit j
 métier de son rôle, de son prompt ou d'une skill. Les profils d'agent sont des consignes de travail,
 pas des identités applicatives ni des mécanismes d'autorisation.
 
+#### Conseil et décisions avec le propriétaire
+
+L'agent aide le propriétaire sur les choix fonctionnels et techniques. Lorsqu'une piste peut améliorer
+de façon concrète l'utilité métier, la sécurité, la qualité ou la maintenabilité du résultat, il la
+présente au propriétaire avec son motif, les conséquences utiles à connaître et, si plusieurs choix
+sont possibles, une recommandation. Il distingue clairement les faits vérifiés, les propositions et
+les décisions déjà approuvées.
+
+Les propositions sont expliquées en langage simple, compréhensible par une personne qui ne travaille
+pas dans le développement. Tout terme technique nécessaire est expliqué. L'agent ne transforme pas
+une proposition en décision et ne l'inscrit pas dans un PV, une documentation destinée aux lecteurs,
+une convention ou le produit avant que le propriétaire l'ait approuvée. Cette règle s'applique
+notamment aux changements de règle métier et aux choix d'architecture. Une fois approuvée, la décision
+est consignée dans le document de référence approprié et mise en œuvre dans le périmètre autorisé.
+
+Les conseils restent pertinents pour l'objectif en cours : ne pas multiplier les suggestions
+secondaires ni interrompre une tâche pour des possibilités sans bénéfice concret.
+
 Les rôles de travail réutilisables peuvent couvrir le backend, le frontend/design system, la
 sécurité/audit et les données/IA. Chaque rôle reste limité à sa mission et renvoie aux conventions
 et à la documentation du projet au lieu de recopier leurs règles.

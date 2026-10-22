@@ -48,7 +48,8 @@ Si un code ou un libellé existe déjà, l’enregistrement est refusé afin d�
 
 - Le travail commence par Équipe, puis continuera avec Chantier et Fonction.
 - Le frontend suit un modèle commun de trois vues : Tabulaire, Cartes et Analytique.
-- Le module Équipe doit présenter les employés rattachés et l’historique Paie avec ses indicateurs. Chaque information respecte les droits du domaine concerné.
+- Les vues Équipe présenteront séparément le nombre d’employés rattachés au dernier mois importé et l’historique des indicateurs Paie par mois. Cela évite de confondre la situation la plus récente avec les anciennes périodes.
+- Chaque partie respecte les droits habituels : les informations d’employés et les chiffres de paie ne s’affichent qu’aux personnes autorisées pour ces domaines.
 - La version stable visée est `1.0.0` pour le frontend et le backend. Elle sera annoncée quand les critères de stabilité seront atteints.
 - Les libellés provisoires `A`, `LABO`, `ASPHALET` et `8` doivent être clarifiés par la RH. Ils ne représentent pas un statut d’équipe.
 
