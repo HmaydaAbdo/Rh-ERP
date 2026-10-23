@@ -158,7 +158,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/playwright-browsers
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.angular/playwright-browsers
 
     steps:
       - uses: actions/checkout@v7
@@ -234,7 +234,7 @@ jobs:
     needs: [backend]
     runs-on: ubuntu-latest
     env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/playwright-browsers
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.angular/playwright-browsers
     services:
       postgres:
         image: pgvector/pgvector:0.8.7-pg18

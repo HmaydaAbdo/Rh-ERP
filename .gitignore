@@ -95,6 +95,3 @@ backups/
 /frontend/carte-fond
 # Dossier de travail de scripts/carte/preparer-fond-carte.sh (gardé après un échec pour reprendre, supprimé en cas de succès).
 carte-fond.preparation/
-
-# Navigateur Playwright installé pour les tests E2E locaux
-/.cache/playwright-browsers/
