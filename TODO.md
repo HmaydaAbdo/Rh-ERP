@@ -93,26 +93,26 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **À faire — ordre de traitement** : les lots Équipes, Fonctions et Chantiers sont implémentés.
+- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont implémentées dans la PR #80, non fusionnée.
   **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
   Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
-  suppression en groupe de la paie reste, sur chaque carte. À confirmer en CI : tests d'intégration backend (requête `sommerParFonction`) et
-  parcours `full-stack`. Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
+  suppression en groupe de la paie reste, sur chaque carte. La CI complète #390 est verte (tests backend, frontend, full-stack et profil de performance).
+  Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
   **Chantiers (implémenté, 2026-10-23)** : mêmes trois vues que Équipes et Fonctions (Tabulaire, Cartes, Analytique) sous une coque commune
   (`ChantierVuesComponent`), synchronisation et création dans l'en-tête; filtres code, désignation et statut dans l'URL, appliqués de la même
   façon aux trois vues; Cartes et Analytique relient le chantier aux effectifs Employé (dernier état importé) et aux indicateurs/historiques
   Paie (STC compris), sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ` vérifiés séparément. La carte géographique reste séparée.
   Décision du propriétaire (2026-10-23) : la modification du code d'un chantier (code changé partout, historique compris) est conservée.
-  Tests unitaires frontend et E2E mockés verts en local, ajout au parcours `full-stack` (à confirmer en CI). Voir le
+  Tests unitaires frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte. Voir le
   [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) (section 10) et le [README Chantier](docs/chantier/README.md).
   **Fonctions (implémenté, 2026-10-23)** : mêmes trois vues que Équipes (Tabulaire, Cartes, Analytique) sous une coque commune
   (`FunctionVuesComponent`), import Excel et création déplacés dans l'en-tête; filtre libellé dans l'URL, appliqué de la même façon aux trois vues; la répartition par fonction de `POST /paie/analytique` porte désormais les STC (`stc`, `stcMontant`); Cartes et Analytique relient la fonction
   aux effectifs Employé (dernier état importé) et aux indicateurs/historiques Paie, sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ`
-  vérifiés séparément. Tests unitaires frontend et E2E mockés verts en local, ajout au parcours `full-stack` (à confirmer en CI).
+  vérifiés séparément. Tests frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte.
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
   fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
-  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous la coque configurable partagée, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. Build, 805 tests frontend et 63 E2E passent localement; CI de la révision poussée à confirmer. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
+  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous la coque configurable partagée, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
   Le PV couvre toute l'application; seuls les blocs Équipe, Fonction et Chantier sont actuellement renseignés. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
   Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de

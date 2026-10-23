@@ -37,8 +37,9 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 code conservée) et le partage des composants pour les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) : Cartes et
 Analytique (`frontend/src/app/portail/perimetre/`, ADR 0011), coque et Tabulaire configurables (`shared/components/`, ADR 0012).
 Les anciennes Cartes et Analytique propres à chaque module sont supprimées; filtres, données, colonnes, cellules, actions et règles
-métier restent dans les domaines. Build, 805 tests frontend et 63 E2E passent localement; l'état CI reste à confirmer sur la révision
-poussée. Références : `docs/frontend/vues-perimetre.md` et `docs/frontend/README.md`.
+métier restent dans les domaines. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte sur le commit
+`28275e8` (frontend, backend, full-stack et profil de performance). Références : `docs/frontend/vues-perimetre.md` et
+`docs/frontend/README.md`.
 
 À la fusion de #74 : 410 tests backend, 762 tests frontend, 54 E2E, CI complète verte ; images Docker publiées par la CI au
 tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.

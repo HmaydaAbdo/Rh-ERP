@@ -102,7 +102,7 @@ Les libellés `A`, `LABO`, `ASPHALET` et `8` ont été initialisés provisoireme
 
 ## 4. État de réalisation du premier bloc
 
-Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). La PR #80 porte le passage aux vues Cartes/Analytique partagées (ADR 0011) et à la coque/tableau communs (ADR 0012) pour Chantier, Équipe, Fonction, Employé et Paie. Sur le code local de cette mise à jour, `npm run build` passe, les 805 tests frontend passent et les 63 parcours Playwright passent; la CI de la révision poussée reste la preuve distante à enregistrer. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
+Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). La PR #80 porte le passage aux vues Cartes/Analytique partagées (ADR 0011) et à la coque/tableau communs (ADR 0012) pour Chantier, Équipe, Fonction, Employé et Paie. Sur le code local, `npm run build` passe, les 805 tests frontend passent et les 63 parcours Playwright passent. La CI complète **#390** est verte pour le commit `28275e8` (frontend, backend, full-stack et profil de performance). Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
 
 Les contrôles couvrent les règles de ce PV et leurs résultats doivent être examinés avant la signature. Un contrôle en cours, une vérification locale isolée ou un résultat technique seul ne prouve pas que toutes les règles de ce PV sont respectées.
 
@@ -119,7 +119,7 @@ Chaque règle présentée aux intervenants doit avoir une preuve compréhensible
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Tests frontend (805) et E2E (63) verts localement pour le code de cette mise à jour; CI PR #80 à confirmer, puis revue des intervenants |
+| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Tests frontend (805) et E2E (63) verts localement; CI #390 verte pour le commit `28275e8`; revue des intervenants à mener |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement d’équipe entre deux mois, vérifié sur les deux affichages | À confirmer |
 | Indicateurs Paie et période affichée | Valeurs comparées à des exemples Paie vérifiés, y compris une équipe sans bulletin sur le mois | À confirmer |
 | Accès par domaine | Essai avec un compte autorisé et un compte non autorisé pour Employé et Paie | À confirmer |
@@ -232,10 +232,10 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Vert en CI pour la version fusionnée (PR #79); version partagée (PR #80) à confirmer en CI |
+| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | CI #390 verte pour le commit `28275e8`; revue métier des intervenants attendue |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de fonction entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; fonction sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests, vert en CI pour la version fusionnée (PR #79); version partagée (PR #80) à confirmer en CI |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #390 verte; validation métier des intervenants attendue |
 | Libellé : validations | Cas valides, doublons, champs vides, espaces extérieurs, limites de longueur | Tests existants; messages à confirmer |
 | Renommage et suppression d’une fonction utilisée | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
@@ -250,7 +250,7 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
 ## 10. Troisième bloc — domaine Chantier
 
-**État du bloc :** version de travail réalisée le 23 octobre 2026 dans la PR #80 (intégration continue en cours, pas encore fusionnée), non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** version de travail réalisée le 23 octobre 2026 dans la PR #80 (CI #390 verte sur le commit `28275e8`, pas encore fusionnée), non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Les règles ci-dessous restent à valider par le propriétaire avant transmission aux intervenants.
 
 ### 10.1 Rôle du domaine et liens avec l’application
 
@@ -286,10 +286,10 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Tests unitaires et E2E locaux réussis; parcours intégré à confirmer en CI |
+| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Tests frontend et E2E locaux réussis; CI #390 et parcours intégré verts pour le commit `28275e8` |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de chantier entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; chantier sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests; parcours intégré à confirmer en CI |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #390 verte; validation métier à recueillir |
 | Statut En cours / Clôturé | Filtre par statut, clôture et réouverture avec confirmation | Couvert par tests |
 | Modification du code d’un chantier utilisé | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
