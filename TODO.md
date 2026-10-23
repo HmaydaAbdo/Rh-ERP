@@ -93,33 +93,31 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont implémentées dans la PR #80, non fusionnée.
+- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont fusionnées dans `main` (PR #80, squash `c0ecbe5`). Les points et validations Équipe sont centralisés dans [docs/equipe/TODO.md](docs/equipe/TODO.md).
   **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
   Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
-  suppression en groupe de la paie reste, sur chaque carte. La CI complète #390 est verte (tests backend, frontend, full-stack et profil de performance).
+  suppression en groupe de la paie reste, sur chaque carte. La CI #391 est verte sur la tête de PR; les statuts du commit de fusion doivent être vérifiés avant la revue propriétaire.
   Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
   **Chantiers (implémenté, 2026-10-23)** : mêmes trois vues que Équipes et Fonctions (Tabulaire, Cartes, Analytique) sous une coque commune
   (`ChantierVuesComponent`), synchronisation et création dans l'en-tête; filtres code, désignation et statut dans l'URL, appliqués de la même
   façon aux trois vues; Cartes et Analytique relient le chantier aux effectifs Employé (dernier état importé) et aux indicateurs/historiques
   Paie (STC compris), sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ` vérifiés séparément. La carte géographique reste séparée.
   Décision du propriétaire (2026-10-23) : la modification du code d'un chantier (code changé partout, historique compris) est conservée.
-  Tests unitaires frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte. Voir le
+  Tests unitaires frontend et E2E mockés verts localement; la CI #391 est verte sur la tête de PR, tandis que le statut du commit de fusion doit être vérifié avant revue. Voir le
   [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) (section 10) et le [README Chantier](docs/chantier/README.md).
   **Fonctions (implémenté, 2026-10-23)** : mêmes trois vues que Équipes (Tabulaire, Cartes, Analytique) sous une coque commune
   (`FunctionVuesComponent`), import Excel et création déplacés dans l'en-tête; filtre libellé dans l'URL, appliqué de la même façon aux trois vues; la répartition par fonction de `POST /paie/analytique` porte désormais les STC (`stc`, `stcMontant`); Cartes et Analytique relient la fonction
   aux effectifs Employé (dernier état importé) et aux indicateurs/historiques Paie, sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ`
-  vérifiés séparément. Tests frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte.
+  vérifiés séparément. Tests frontend et E2E mockés verts localement; la CI #391 est verte sur la tête de PR, tandis que le statut du commit de fusion doit être vérifié avant revue.
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
   fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
-  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous la coque configurable partagée, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
-  Le PV couvre toute l'application; seuls les blocs Équipe, Fonction et Chantier sont actuellement renseignés. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
-  Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
+  Le PV couvre toute l'application et sera complété domaine par domaine. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 
 Tous les cinq domaines sont configurés avec les vues, la coque et le Tabulaire partagés. Prochaine étape : revue propriétaire
-dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après confirmation que la CI complète de la PR #80 est verte.
+dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après vérification des contrôles sur le commit `main` examiné.
 
 ---
 
@@ -143,7 +141,7 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   `C157A` ci-dessous reste à instruire séparément.
 
 - **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
-  équipe en base), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
+  équipe en base; décision Équipe suivie dans [son TODO](docs/equipe/TODO.md)), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
   pour Utilisateur `employeeId`. « Tous obligatoires » est-il voulu pour chacun (ex. une prime à 0 est-elle
   une saisie) ?
 - **Nettoyer les doublons du référentiel Fonction** : 114 fonctions dont 9 paires très proches (fautes de
@@ -156,8 +154,6 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 - **Vérifier le doublon apparent du chantier `C157A`** : il apparaît deux fois dans le filtre Chantiers
   « Tous les mois » avec deux options distinctes. Confirmer s'il s'agit de deux enregistrements en base,
   puis décider avec la RH s'il faut corriger les données ou différencier les libellés.
-- **Libellés des équipes `A`, `LABO`, `ASPHALET`, `8`** (créées avec libellé = code le 2026-10-03) : à
-  compléter avec la RH via l'écran Équipes.
 - **Traiter les quasi-doublons sémantiques à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs
   « THECNICIEN DE QUALITE ») : la normalisation trim/casse de V27 ne détecte pas les fautes de frappe ;
   toute fusion ou règle de similarité doit être instruite avec la RH.

@@ -281,11 +281,9 @@ groupée**) :
 
 ### Regroupement par équipe : par code du référentiel Équipe
 
-`Paie.equipe` référence le domaine **Équipe** (`docs/equipe/README.md`). Le regroupement pour les
-sous-feuilles équipe (`PaieExportService.ecrireFeuillesEquipes`) et le rapprochement avec le mois
-précédent se font par **code d'équipe** (`Equipe.code`, normalisé trim + majuscules et unique en
-base) : `"ch"` et `"CH"` ne peuvent plus produire deux équipes distinctes, ce qui supprime l'ancienne
-source d'erreur silencieuse du texte libre.
+`Paie.equipe` référence le domaine **Équipe** ([dossier du domaine](../equipe/README.md)). Les
+sous-feuilles et rapprochements d'export utilisent son code métier; sa normalisation, son unicité et
+ses effets sur l'historique sont définis dans le dossier Équipe.
 
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
 contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne

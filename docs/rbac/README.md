@@ -2,14 +2,14 @@
 
 > Qui a le droit de faire quoi. Ce fichier donne la vue d'ensemble (les 28 permissions, les rôles de départ,
 > la matrice endpoint ↔ permission). Le détail par domaine, avec les guards et boutons du frontend, est dans
-> un fichier dédié. Le fonctionnement du modèle (rôles, refus individuels, jetons) est dans
+> le dossier documentaire du domaine. Le fonctionnement du modèle (rôles, refus individuels, jetons) est dans
 > [../auth/README.md](../auth/README.md), sa conception dans `conventions/security.md`.
 
 | Domaine | Fichier détaillé |
 |---|---|
 | Fonction | [function.md](function.md) |
 | Chantier | [chantier.md](chantier.md) |
-| Équipe | [equipe.md](equipe.md) |
+| Équipe | [Dossier Équipe — autorisations](../equipe/README.md#autorisations-et-dépendances-de-droits) |
 | Employé | [employee.md](employee.md) |
 | Paie (et rapport) | [paie.md](paie.md) |
 | Auth (comptes, rôles) | [auth.md](auth.md) |
@@ -77,8 +77,8 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 
 | Pour… | Il faut aussi… | Pourquoi |
 |---|---|---|
-| Saisir un bulletin (`PAIE_WRITE`) | `EMPLOYEE_READ`, `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ` | Les sélecteurs du formulaire interrogent ces domaines |
-| Filtrer la liste Paie par fonction, chantier ou équipe | `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ` | Mêmes sélecteurs. **Sans l'une de ces permissions, le sélecteur correspondant n'est pas proposé** (un refus `403` serait un faux refus dans le journal d'audit) |
+| Saisir un bulletin (`PAIE_WRITE`) | `EMPLOYEE_READ`, `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ` | Les sélecteurs interrogent les domaines concernés; contrat Équipe dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) |
+| Filtrer la liste Paie par fonction, chantier ou équipe | `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ` | **Sans la permission correspondante, le sélecteur n'est pas proposé**; voir le contrat Équipe dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) |
 | Voir le bouton « Historique » d'un bulletin ou d'un employé | `AUDIT_READ` | Il appelle `/logs/historique/...` |
 | Saisir un employé (`EMPLOYEE_WRITE`) | `FUNCTION_READ`, `CHANTIER_READ` | Sélecteurs fonction et chantier |
 | Associer un employé à un compte (`USER_MANAGE`) | `EMPLOYEE_READ` | Sélecteur d'employé |
@@ -114,9 +114,7 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `GET /chantiers/{id}` · `POST /chantiers/search` | `CHANTIER_READ` |
 | | `DELETE /chantiers/{id}` | `CHANTIER_DELETE` |
 | | `POST /chantiers/sync` | `CHANTIER_SYNC` |
-| Équipe | `POST /equipes` · `PUT /equipes/{id}` | `EQUIPE_WRITE` |
-| | `GET /equipes/{id}` · `POST /equipes/search` | `EQUIPE_READ` |
-| | `DELETE /equipes/{id}` | `EQUIPE_DELETE` |
+| Équipe | Voir la matrice complète dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) | `EQUIPE_READ` · `EQUIPE_WRITE` · `EQUIPE_DELETE` |
 | Employé | `POST /employees` · `PUT /employees/{id}` | `EMPLOYEE_WRITE` |
 | | `GET /employees/{id}` · `POST /employees/search` | `EMPLOYEE_READ` |
 | | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |

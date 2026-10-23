@@ -8,7 +8,7 @@ description: Use when changing the ERP-RH Equipe reference domain or its consump
 ## Lire avant d'agir
 
 - [README métier](../README.md)
-- [Permissions et routes](../../rbac/equipe.md)
+- [Autorisations et dépendances de droits](../README.md#autorisations-et-dépendances-de-droits)
 - [README Paie](../../paie/README.md) lorsque la consommation par la paie est concernée
 - `conventions/architecture.md` et `conventions/database.md` selon le changement
 
@@ -23,7 +23,8 @@ une référence d'équipe dans son bulletin selon le modèle documenté.
 - Ne pas introduire un état actif/inactif ni modifier les règles de suppression sans décision métier.
 - Les formulaires Paie peuvent exiger `EQUIPE_READ` en plus de leur permission Paie ; vérifier la
   matrice RBAC lorsque l'accès frontend ou les appels changent.
-- Mettre à jour les documents RBAC et modèle de données avec tout changement correspondant.
+- Mettre à jour la section Autorisations de [../README.md](../README.md) et les documents transverses
+  concernés (catalogue RBAC, modèle de données) avec tout changement correspondant.
 
 ## Vérification
 
