@@ -32,14 +32,11 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 
 | 2026-10-23 | #77 | **Équipe, premier bloc de stabilisation** : trois vues Tabulaire / Cartes / Analytique reliées aux fiches Employé et à la Paie ; PV de stabilisation (`pv-stabilisation-erp-rh-2026-10-22.md`) ; l'historique d'une équipe reste affiché quand le mois choisi n'a aucun bulletin. |
 | 2026-10-23 | #79 | **Fonction** : mêmes trois vues, import et création dans l'en-tête ; la répartition par fonction de `POST /paie/analytique` porte les STC (`stc`, `stcMontant`). Décisions du propriétaire : renommage actuel et refus de suppression conservés. |
+| 2026-10-23 | #80 | **Vues ERP partagées et Chantier** : Cartes, Analytique, coque et Tabulaire configurables partagés par les cinq domaines; PR fusionnée par squash dans `main` au commit `c0ecbe5`. CI #391 verte sur la tête de PR `3e2058b`; statuts combinés sur le commit de fusion à vérifier avant revue propriétaire. |
 
-**Pas encore fusionné — PR #80** : **Chantier** (trois vues, synchronisation et création dans l'en-tête ; décision : modification du
-code conservée) et le partage des composants pour les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) : Cartes et
-Analytique (`frontend/src/app/portail/perimetre/`, ADR 0011), coque et Tabulaire configurables (`shared/components/`, ADR 0012).
-Les anciennes Cartes et Analytique propres à chaque module sont supprimées; filtres, données, colonnes, cellules, actions et règles
-métier restent dans les domaines. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte sur le commit
-`28275e8` (frontend, backend, full-stack et profil de performance). Références : `docs/frontend/vues-perimetre.md` et
-`docs/frontend/README.md`.
+La PR #80 est fusionnée. Les composants partagés sont décrits dans `docs/frontend/vues-perimetre.md` et `docs/frontend/README.md`;
+les filtres, données, colonnes, cellules, actions et règles métier restent dans chaque domaine. Les preuves locales et de CI sont
+consignées selon leur commit; elles ne prouvent pas à elles seules le déploiement ni l'accord métier.
 
 À la fusion de #74 : 410 tests backend, 762 tests frontend, 54 E2E, CI complète verte ; images Docker publiées par la CI au
 tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
@@ -118,11 +115,11 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 
 ## 6. Sujets ouverts
 
-Le détail est dans `TODO.md`. Les principaux :
+Le détail transversal est dans `TODO.md`; les tâches propres à un domaine sont dans `docs/<domaine>/TODO.md`. Principaux sujets :
 
 - **Assistant d'import** : premier usage réel sur le fichier d'octobre 2026, à suivre.
-- **Stabilisation** : valider le PV de stabilisation avant de le transmettre aux intervenants ; fusionner la PR #80 ; décisions
-  restantes (nettoyage des quasi-doublons de fonctions, suivi dans « Qualité des données » ; libellés `A`, `LABO`, `ASPHALET`, `8`).
+- **Stabilisation** : valider le PV de stabilisation avant de le transmettre aux intervenants; suivre les tâches Équipe dans
+  `docs/equipe/TODO.md` et les quasi-doublons de fonctions dans « Qualité des données ».
 - **Qualité des données** (« Prochaine tâche ») : tous les champs obligatoires et aucun doublon, dans tous les domaines.
 - **Conformité backend** (`docs/conformite/README.md`) : G3 (paramètres métier administrables), G5, G6, G10 en attente de
   décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.

@@ -53,7 +53,7 @@ Table `employe` :
 | `date_embauche` | `DATE` | `NOT NULL` | Date d'embauche |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | Fonction occupée |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | Chantier d'affectation |
-| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe du dernier mois de paie (`NULL` = sans équipe) |
+| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe du dernier mois de paie (`NULL` = sans équipe); règles du référentiel dans le [dossier Équipe](../equipe/README.md) |
 | `salaire` | `NUMERIC(10,2)` | nullable, ≥ 0 | Salaire du dernier mois de paie : montant mensuel, ou tarif d'une journée |
 | `type_salaire` | `VARCHAR(20)` | nullable, `MENSUEL` ou `JOURNALIER` | Comment lire `salaire` ; renseigné avec lui ou pas du tout |
 | `statut` | `ENUM('ACTIF','INACTIF')` | `NOT NULL`, défaut `ACTIF` | Statut de l'employé |

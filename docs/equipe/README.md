@@ -42,11 +42,20 @@ Table `equipe` (migration `V7__create_equipe.sql`) :
 | Colonne | Type | Contrainte | Description |
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
-| `code` | `VARCHAR(50)` | `NOT NULL`, **unique** (aussi sur `UPPER(code)`) | Clé métier : `CH`, `OP`, `R CONT`... |
-| `libelle` | `VARCHAR(100)` | `NOT NULL`, **unique** | Nom d'affichage : `CHAUFFEURS`, `OPERATEURS`... |
+| `version` | `BIGINT` | `NOT NULL`, défaut `0`, `@Version` | Détecte les modifications concurrentes (ajoutée en V18) |
+| `code` | `VARCHAR(50)` | `NOT NULL`, unique après `trim` et sans casse | Clé métier : `CH`, `OP`, `R CONT`... |
+| `libelle` | `VARCHAR(100)` | `NOT NULL`, unique après `trim` et sans casse | Nom d'affichage : `CHAUFFEURS`, `OPERATEURS`... |
 
-Le lien avec la paie est `paie.equipe_id` (nullable, FK → `equipe.id`, index `idx_paie_equipe`,
-migration `V8__paie_equipe_fk.sql`) — voir `docs/paie/README.md`.
+L'unicité normalisée est garantie en base par les index `uk_equipe_code_normalise` et
+`uk_equipe_libelle_normalise` (V25). V27 ajoute des contraintes empêchant les espaces extérieurs
+sur les nouvelles écritures. La version optimiste est ajoutée en V18. L'audit Envers utilise
+`equipe_aud` (V11) et l'état initial est capturé en V14. Les scripts V7/V8/V9, V11, V14, V18, V25,
+V27 et V29/V30 forment l'historique du schéma et des reprises liées au domaine.
+
+La paie stocke une FK nullable `paie.equipe_id` avec l'index `idx_paie_equipe` (V8). La fiche
+Employé stocke l'équipe de son dernier état importé dans `employe.equipe_id` (nullable, index
+`idx_employe_equipe`, V29/V30). Les contrats consommateurs sont détaillés plus bas et dans les
+README Paie/Employé.
 
 ### Données de départ (seed V7)
 
@@ -92,12 +101,16 @@ via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'�
 | `POST` | `/equipes/search` | Rechercher (paginé, triable) — body `EquipeSearchCriteria` (`code`, `libelle`, `recherche`) | 200 |
 | `DELETE` | `/equipes/{id}` | Supprimer (bloqué si utilisée par un bulletin ou un employé) | 204, 404, 409 |
 
-`EquipeResponseDto` : `id`, `code`, `libelle`. `code`/`libelle` sont des filtres précis combinés en
-ET (liste d'administration) ; `recherche` est la recherche libre du sélecteur, en OU entre code et
-libellé.
+`EquipeResponseDto` : `id`, `version`, `code`, `libelle`. Les critères `code` et `libelle` filtrent
+par sous-chaîne et se combinent en ET dans la liste d'administration ; `recherche` filtre par
+sous-chaîne en OU entre code et libellé pour le sélecteur. La recherche échappe les caractères de
+motif spéciaux.
+
+La modification exige la `version` retournée par l'API : une version obsolète déclenche un conflit
+de modification (`409`). La suppression renvoie `409` lorsqu'une contrainte FK empêche la suppression.
 
 Authentification JWT + permissions requises sur chaque endpoint (`EQUIPE_READ`/`EQUIPE_WRITE`/
-`EQUIPE_DELETE`) — voir `docs/rbac/equipe.md`.
+`EQUIPE_DELETE`) — voir [Autorisations](#autorisations-et-dépendances-de-droits).
 
 ---
 
@@ -118,7 +131,7 @@ Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`),
 vues utilisent la coque configurable partagée (`app-collection-shell`) et le tableau commun (`app-collection-table`), avec filtres et configuration propres au domaine, selon le
 [pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code et libellé restent dans l'URL et
 **agissent de la même façon dans les trois vues**. Les boutons de création, modification et suppression sont conditionnés
-par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
+par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [Autorisations et dépendances de droits](#autorisations-et-dépendances-de-droits)).
 
 **Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `EquipeCartesComponent` et
 `EquipeAnalytiqueComponent` ne sont que des hôtes minces ; `equipe-module.ts` décrit le module (référentiel d'équipes, filtres code et
@@ -141,15 +154,87 @@ Le formulaire explique les règles avant la saisie, en langage utilisateur : cod
 
 ---
 
+## Autorisations et dépendances de droits
+
+Le contrôle serveur est la référence; le masquage des routes et boutons côté frontend améliore le
+parcours, mais ne remplace pas `@PreAuthorize`.
+
+| Opération | Permission |
+|---|---|
+| `POST /equipes`, `PUT /equipes/{id}` | `EQUIPE_WRITE` |
+| `GET /equipes/{id}`, `POST /equipes/search` | `EQUIPE_READ` |
+| `DELETE /equipes/{id}` | `EQUIPE_DELETE` |
+| Routes collection, Cartes, Analytique, détail | `EQUIPE_READ` |
+| Routes création et modification | `EQUIPE_WRITE` |
+| Bouton supprimer | `EQUIPE_DELETE` |
+
+Le menu Équipes apparaît sous `EQUIPE_READ`. V9 a accordé les permissions Équipe aux rôles qui
+avaient déjà les permissions Chantier correspondantes (initialement `SYSTEM_ADMIN` et
+`PAIE_MANAGER`); les attributions actuelles sont administrables dans `/admin/roles`.
+
+| Consommation | Accès demandé |
+|---|---|
+| Formulaire / filtre Paie utilisant le sélecteur d'équipe | `EQUIPE_READ` en plus du droit Paie nécessaire à l'écran |
+| Import Excel Paie résolvant les codes côté serveur via `IEquipeService` | `PAIE_IMPORT`; aucun appel HTTP `/equipes` par l'utilisateur |
+| Formulaire ou filtre Employé qui charge le référentiel Équipe | `EQUIPE_READ` en plus des droits Employé |
+| Fiches Employé montrées dans Cartes / Analytique | `EMPLOYEE_READ`; aucun appel Employé sans ce droit |
+| Indicateurs et montants Paie montrés dans Cartes / Analytique | `PAIE_READ`; aucun appel Paie sans ce droit |
+
+Le détail des autorisations de lecture des fiches et bulletins reste la propriété de leurs domaines;
+les dépendances au référentiel Équipe sont documentées ici comme contrat inter-domaines.
+
+---
+
+## Vérifications et tests
+
+Les tests spécifiques du domaine couvrent les règles suivantes :
+
+| Couche | Fichier / parcours | Vérifications présentes |
+|---|---|---|
+| Backend | `backend/src/test/java/staport/rh/equipe/services/EquipeServiceTest.java` | Normalisation du code, doublon de code sans casse, doublon de libellé, mise à jour sans auto-doublon, rejet d'un code déjà utilisé, absence (404) et suppression d'une équipe non référencée |
+| Frontend — formulaire | `form/equipe-form.component.spec.ts` | Aide de saisie, champs requis, bornes, création, erreur serveur et modification |
+| Frontend — liste | `list/equipe-list.component.spec.ts` | Première page et tri, permissions, filtres URL, consultation/modification, suppression confirmée ou annulée |
+| Frontend — coque | `vues/equipe-vues.component.spec.ts` | Trois vues, filtres conservés, fusion URL avec périmètre/mois/regroupement, bouton de création protégé |
+| Frontend — intégration des vues partagées | `equipe-module.spec.ts` | Référentiel filtré, ordre de descente, retour à Tabulaire, critères Employé et Paie |
+| E2E | `frontend/e2e/equipes.spec.ts` | Parcours des vues, filtres et périmètre, droits Employé/Paie séparés et absence d'appels sans droit |
+| Sécurité backend | `EndpointSecurityTest` | Vérifie que les endpoints portent un contrôle d'accès explicite; l'état détaillé des permissions reste dans la matrice ci-dessus |
+
+La CI #391 a réussi sur la tête de PR `3e2058b` (frontend, backend, full-stack, profil de performance;
+publication d'images ignorée). La PR #80 a été fusionnée par squash dans `main` au commit
+`c0ecbe5`. Au début de cette revue, les checks `backend` et `performance-profile` du commit de
+fusion étaient verts; `frontend` et `full-stack` étaient encore en cours. Un résultat CI du commit
+de fusion ne sera confirmé qu'après la fin de ces deux jobs.
+
+Les résultats techniques ne valent pas accord métier. Le bloc n'est pas déclaré en production et
+les validations métier suivantes restent à recueillir :
+
+- confirmer que les trois vues et les indicateurs présentés répondent au besoin RH/Paie;
+- confirmer la signification des codes/libellés provisoires `A`, `LABO`, `ASPHALET` et `8`;
+- décider si l'équipe peut rester facultative sur un bulletin;
+- confirmer l'effet du changement de code sur tous les bulletins historiques;
+- confirmer le refus actuel de supprimer une équipe référencée par un employé ou un bulletin;
+- comparer des indicateurs à des exemples métier et vérifier la distinction entre la situation
+  récente Employé et les bulletins de périodes antérieures;
+- recueillir les avis des responsables métier Équipe/RH, Paie et réalisation/livraison.
+
+| Intervenant | Avis | Commentaire / signature / date |
+|---|---|---|
+| Propriétaire de l'application | À compléter après revue |  |
+| Responsable métier Équipe / RH | À compléter |  |
+| Responsable métier Paie | À compléter |  |
+| Responsable de réalisation / livraison | À compléter |  |
+| Autre intervenant concerné | À compléter |  |
+
+---
+
 ## Limites connues
 
-Voir [TODO.md](../../TODO.md) :
+Consulter le [TODO du domaine Équipe](TODO.md) pour les validations métier restantes. Le référentiel se gère
+uniquement par l'écran Équipes : il n'a pas d'import Excel ni de synchronisation. Les écritures sont auditées
+(voir [../audit/README.md](../audit/README.md)).
 
-- **Libellés provisoires** : `A`, `LABO`, `ASPHALET` et `8` ont pour libellé leur propre code. À compléter avec la
-  RH depuis l'écran Équipes.
-- **Équipe facultative sur un bulletin** : un bulletin peut ne pas avoir d'équipe (`equipe_id` nul). Savoir si
-  elle doit devenir obligatoire fait partie de la tâche « Qualité des données ».
-- **Modifier le code d'une équipe** (`PUT`) le change pour tous les bulletins qui la référencent, historique
-  compris ; le regroupement des exports se fait par code.
-- Pas d'import Excel ni de synchronisation : le référentiel se gère uniquement par l'écran Équipes.
-- Audité : voir [../audit/README.md](../audit/README.md).
+## Documents du domaine
+
+- [TODO et décisions restantes](TODO.md)
+- [Validation métier et technique / partie Équipe du PV](validation.md)
+- [Maquette historique des vues](maquette-vues.html) — référence visuelle, le code actuel reste la source du comportement.
