@@ -2,7 +2,7 @@
 
 **Date de préparation :** 22 octobre 2026  
 **Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
-**Premier bloc examiné :** Équipe  
+**Blocs examinés :** Équipe (premier), Fonction (deuxième)  
 **Version stable visée :** `1.0.0` pour le frontend et le backend  
 **État du document :** projet interne à valider par le propriétaire avant toute transmission aux intervenants. Il ne constate pas encore un accord collectif.
 
@@ -12,7 +12,7 @@
 
 Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
 
-Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
+Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
 
 La version stable `1.0.0` sera annoncée lorsque les blocs prévus auront été examinés, que les décisions requises auront été enregistrées et que les contrôles de livraison applicables auront réussi.
 
@@ -148,7 +148,8 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 - Stabiliser ERP-RH domaine par domaine, avec Équipe comme premier bloc.
 - Viser `1.0.0` pour le frontend et le backend lorsque les critères de stabilité sont satisfaits.
 - Appliquer un modèle commun de trois vues aux domaines concernés, avec un contenu adapté à chaque métier.
-- Pour Équipe, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Pour Équipe et Fonction, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Pour Fonction, conserver le renommage actuel (libellé modifié partout, historique compris) et le refus de suppression d’une fonction utilisée (23 octobre 2026).
 - Garder les droits Employé, Paie et Équipe séparés.
 - Expliquer les validations et les erreurs aux utilisateurs en langage simple.
 - Obtenir l’accord du propriétaire sur la version complète du PV avant toute transmission aux intervenants.
@@ -182,7 +183,68 @@ Un résultat collectif n’est renseigné comme accepté que si les personnes co
 | Responsable de réalisation / livraison | À compléter |  |  |  |
 | Autre intervenant concerné | À compléter |  |  |  |
 
-## 9. Blocs suivants
+## 9. Deuxième bloc — domaine Fonction
+
+**État du bloc :** version de travail réalisée le 23 octobre 2026, non déclarée en production et sans accord métier. Ce bloc applique au domaine Fonction le cadre des sections 2 et 6 et le modèle de trois vues du bloc Équipe. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+
+### 9.1 Rôle du domaine et liens avec l’application
+
+Le référentiel Fonction fournit le libellé du poste occupé. Il relie trois informations distinctes :
+
+- **Référentiel Fonction :** les fonctions connues, chacune avec un libellé.
+- **Situation Employé :** la fonction enregistrée sur la fiche Employé au dernier mois de paie importé.
+- **Historique Paie :** la fonction portée par chaque bulletin de sa période, qui reste lisible même si la fiche Employé change ensuite.
+
+Comme pour Équipe, la situation Employé récente et l’historique Paie ne sont jamais présentés comme décrivant la même période.
+
+### 9.2 Parcours, indicateurs et accès
+
+| Vue | Contenu |
+|---|---|
+| **Tabulaire** | Liste paginée, recherche par libellé, consultation, modification et suppression selon les droits; import Excel et création dans l’en-tête commun. |
+| **Cartes** | Une carte par fonction avec l’effectif des fiches Employé récentes et, pour le dernier mois avec bulletins, l’effectif payé et la masse salariale. |
+| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par fonction (les fonctions sans bulletin restent visibles, à zéro) et historique mensuel d’une fonction sélectionnée. |
+
+Les indicateurs sont ceux de la section 3.3, et la répartition par fonction indique aussi le nombre et le montant des soldes de tout compte (STC) de chaque fonction. Le filtre par libellé agit de la même façon dans les trois vues. Les droits restent séparés : `FUNCTION_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
+
+### 9.3 Règles déjà appliquées, constats et points à décider
+
+Faits vérifiés dans la version actuelle :
+
+- le libellé est obligatoire, limité à 100 caractères, sans espaces en début et en fin, et unique sans tenir compte de la casse;
+- supprimer une fonction référencée par une fiche Employé ou un bulletin est refusé;
+- renommer une fonction change son libellé partout, historique compris;
+- le référentiel ne comporte pas de statut actif ou inactif;
+- l’import Excel est atomique : une ligne invalide rejette tout le fichier.
+
+**Aucune règle nouvelle n’est introduite par ce bloc.** Décisions du propriétaire du 23 octobre 2026, à présenter aux intervenants pour avis :
+
+- **Renommage :** le comportement actuel est conservé. Le nouveau libellé s’applique partout, historique de paie compris; c’est le moyen de corriger une faute de frappe.
+- **Suppression :** le refus actuel est conservé. Une fonction référencée par une fiche Employé ou un bulletin ne peut pas être supprimée.
+
+Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés très proches ont été inventoriées, toutes utilisées) est suivi dans le sujet « Qualité des données » du [TODO](../../TODO.md). Il suppose le choix du libellé conservé et le rattachement des fiches et bulletins concernés, par migration auditée; il n’est pas traité ici.
+
+### 9.4 Preuves et accords à recueillir
+
+| Sujet à vérifier | Preuve attendue | État avant signature |
+|---|---|---|
+| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Tests unitaires et E2E locaux réussis; parcours intégré à confirmer en CI |
+| Situation Employé distincte de l’historique Paie | Exemple avec changement de fonction entre deux mois | À confirmer |
+| Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; fonction sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests; parcours intégré à confirmer en CI |
+| Libellé : validations | Cas valides, doublons, champs vides, espaces extérieurs, limites de longueur | Tests existants; messages à confirmer |
+| Renommage et suppression d’une fonction utilisée | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
+
+| Décision attendue | Accord | Réserve ou rejet et motif |
+|---|---|---|
+| Les trois vues et leur contenu représentent correctement le besoin Fonction. | À compléter | À compléter |
+| Les indicateurs Paie de la section 9.2 sont ceux attendus, STC compris dans la répartition par fonction. | À compléter | À compléter |
+| Le renommage d’une fonction utilisée change son libellé partout, historique compris (décision du propriétaire). | À compléter | À compléter |
+| Le refus de suppression d’une fonction utilisée est maintenu (décision du propriétaire). | À compléter | À compléter |
+
+Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
+
+## 10. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
 

@@ -20,11 +20,13 @@
 | Élément | Condition |
 |---|---|
 | Lien sidebar « Fonctions » | `FUNCTION_READ` (`NAV_ITEMS`) |
-| Routes `/functions` et `/functions/:id` | `authGuard` + `permissionGuard` (`FUNCTION_READ`) |
+| Routes `/functions`, `/functions/cartes`, `/functions/analytique` et `/functions/:id` | `authGuard` + `permissionGuard` (`FUNCTION_READ`) |
 | Routes `/functions/new` et `/functions/:id/edit` | `authGuard` + `permissionGuard` (`FUNCTION_WRITE`) |
 | Boutons « Nouvelle fonction » et « Modifier » (liste, détail) | `FUNCTION_WRITE` — `canWrite()` |
-| Boutons « Importer » / « Modèle Excel » | `FUNCTION_IMPORT` — `canImport()` |
+| Boutons « Importer » / « Modèle Excel » (en-tête commun aux trois vues) | `FUNCTION_IMPORT` — `canImport()` |
 | Bouton « Supprimer » (liste) | `FUNCTION_DELETE` — `canDelete()` |
+| Effectifs des fiches Employé dans Cartes et Analytique | Appel au service Employé uniquement avec `EMPLOYEE_READ` |
+| Indicateurs et montants Paie dans Cartes et Analytique | Appel au service Paie uniquement avec `PAIE_READ` |
 
 ## Note — import automatique de fonctions depuis Paie
 
