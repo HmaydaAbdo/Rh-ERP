@@ -36,6 +36,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     code: `T${suffixe}`,
     libelle: `Équipe e2e ${suffixe}`
   });
+  const equipeHistorique = await api<{ id: number }>(page, adminToken, 'POST', '/equipes', {
+    code: `H${suffixe}`,
+    libelle: `Équipe historique e2e ${suffixe}`
+  });
   const fonction = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Fonction e2e ${suffixe}` });
   const chantier = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
     code: `T${suffixe}`,
@@ -49,7 +53,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     dateEmbauche: '2020-01-01',
     fonctionId: fonction.id,
     chantierId: chantier.id,
-    equipeId: equipe.id,
+    equipeId: equipeHistorique.id,
     salaire: null,
     typeSalaire: null
   });
@@ -58,7 +62,40 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisCourant = `${maintenant.getUTCFullYear()}-${String(maintenant.getUTCMonth() + 1).padStart(2, '0')}`;
   const moisPrecedentDate = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - 1, 1));
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
-  for (const [periode, salaire] of [[moisPrecedent, 4000], [moisCourant, 4500]] as const) {
+  await api(page, adminToken, 'POST', '/paie', {
+    employeeId: employe.id,
+    periode: moisPrecedent,
+    fonctionId: fonction.id,
+    chantierId: chantier.id,
+    equipeId: equipeHistorique.id,
+    nombreJoursTravailles: 26,
+    joursRecuperationOuvrable: null,
+    joursRecuperationDimanche: null,
+    salaireMensuel: 4000,
+    primeRoulageOrdinaire: null,
+    primeRoulageDimanche: null,
+    salaireTotal: 4000,
+    observation: `Historique Équipe e2e ${suffixe}`
+  });
+
+  const ficheEmployee = await api<{ version: number; nomPrenom: string; cin: string; dateNaissance: string; dateEmbauche: string; fonction: { id: number }; chantier: { id: number }; statut: string }>(
+    page, adminToken, 'GET', `/employees/${employe.id}`
+  );
+  await api(page, adminToken, 'PUT', `/employees/${employe.id}`, {
+    version: ficheEmployee.version,
+    nomPrenom: ficheEmployee.nomPrenom,
+    cin: ficheEmployee.cin,
+    dateNaissance: ficheEmployee.dateNaissance,
+    dateEmbauche: ficheEmployee.dateEmbauche,
+    fonctionId: ficheEmployee.fonction.id,
+    chantierId: ficheEmployee.chantier.id,
+    equipeId: equipe.id,
+    salaire: null,
+    typeSalaire: null,
+    statut: ficheEmployee.statut
+  });
+
+  for (const [periode, salaire] of [[moisCourant, 4500]] as const) {
     await api(page, adminToken, 'POST', '/paie', {
       employeeId: employe.id,
       periode,
@@ -87,7 +124,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await page.goto(`/equipes/analytique?equipeId=${equipe.id}&periode=${moisCourant}`);
   await expect(page.getByRole('heading', { name: /Paie · Équipe e2e/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle de la masse' })).toBeVisible();
-  await expect(page.locator('table tbody tr')).toHaveCount(2);
+  await expect(page.locator('table tbody tr')).toHaveCount(1);
   const synthesePaie = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
     page,
     adminToken,
@@ -96,7 +133,19 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     { periode: moisCourant, equipeIds: [equipe.id] }
   );
   expect(synthesePaie.kpis).toMatchObject({ effectif: 1, masse: 4500 });
-  expect(synthesePaie.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent, moisCourant]);
+  expect(synthesePaie.evolution.map((ligne) => ligne.periode)).toEqual([moisCourant]);
+  const syntheseHistorique = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
+    page,
+    adminToken,
+    'POST',
+    '/paie/analytique',
+    { periode: moisCourant, equipeIds: [equipeHistorique.id] }
+  );
+  expect(syntheseHistorique.kpis).toMatchObject({ effectif: 0, masse: 0 });
+  expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
+  await page.goto(`/equipes/analytique?equipeId=${equipeHistorique.id}&periode=${moisCourant}`);
+  await expect(page.getByRole('heading', { name: /Paie · Équipe historique e2e/ })).toBeVisible();
+  await expect(page.locator('table tbody tr')).toHaveCount(1);
 
   const roles = await api<{ content: Array<{ id: number; nom: string }> }>(page, adminToken, 'POST', '/roles/search', {});
   const roleMetier = roles.content.find((role) => role.nom === 'PAIE_MANAGER');
@@ -104,6 +153,8 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const permissions = await api<Array<{ id: number; code: string }>>(page, adminToken, 'GET', '/permissions');
   const permissionPaie = permissions.find((permission) => permission.code === 'PAIE_READ');
   expect(permissionPaie, 'La permission PAIE_READ doit exister après les migrations').toBeTruthy();
+  const permissionEmployee = permissions.find((permission) => permission.code === 'EMPLOYEE_READ');
+  expect(permissionEmployee, 'La permission EMPLOYEE_READ doit exister après les migrations').toBeTruthy();
   const suffixeCompte = `${suffixe}`;
   const compteLimite = await api<{ id: number; version: number }>(page, adminToken, 'POST', '/users', {
     username: `e2e-${suffixeCompte}`,
@@ -114,7 +165,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   });
   await api(page, adminToken, 'PUT', `/users/${compteLimite.id}/permissions-refusees`, {
     version: compteLimite.version,
-    permissionIds: [permissionPaie!.id]
+    permissionIds: [permissionPaie!.id, permissionEmployee!.id]
   });
 
   const contexteLimite = await browser.newContext({ baseURL: 'http://localhost:4300', locale: 'fr-FR', timezoneId: 'Africa/Casablanca' });
@@ -127,10 +178,11 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await pageLimitee.getByRole('button', { name: 'Se connecter' }).click();
     const sessionLimitee = await (await connexionLimitee).json() as { accessToken: string; utilisateur: { permissionsEffectives: string[] } };
     expect(sessionLimitee.utilisateur.permissionsEffectives).not.toContain('PAIE_READ');
+    expect(sessionLimitee.utilisateur.permissionsEffectives).not.toContain('EMPLOYEE_READ');
 
     await pageLimitee.goto(`/equipes/cartes?${filtreEquipe}`);
     const carteLimitee = pageLimitee.locator('.equipe-carte').filter({ hasText: `Équipe e2e ${suffixe}` });
-    await expect(carteLimitee).toContainText('Employés sur les fiches récentes');
+    await expect(carteLimitee).not.toContainText('Employés sur les fiches récentes');
     await expect(carteLimitee).not.toContainText('Payés');
     await expect(carteLimitee).not.toContainText('Masse');
 
