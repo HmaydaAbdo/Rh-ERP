@@ -12,6 +12,8 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
+import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
 import { EmployeeAnalytique, EmployeeRegroupement } from '../../employee/models/employee.model';
 import { EmployeeService } from '../../employee/services/employee.service';
@@ -57,7 +59,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, RouterLink, ChartComponent, IconComponent],
+  imports: [DecimalPipe, RouterLink, ChartComponent, IconComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -260,6 +262,69 @@ export class AnalytiquePerimetreComponent {
       options: optionsBarres({ legende: true })
     };
   });
+
+  protected documentKpis(): PdfImpressionDocument {
+    return this.documentPdf('Indicateurs clés · Paie', ['Indicateur', 'Valeur', 'Variation'],
+      this.tuiles().map((tuile) => [tuile.libelle, tuile.valeur, tuile.variation ?? '']));
+  }
+
+  protected documentEvolution(): PdfImpressionDocument {
+    const evolution = this.paie()?.evolution ?? [];
+    const mesure = this.mesureEvolution();
+    return this.documentPdf(`Évolution mensuelle · ${libelleEvolutionMesure(mesure)}`,
+      ['Mois', libelleEvolutionMesure(mesure)],
+      evolution.map((ligne) => [libellePeriode(ligne.periode), ligne[mesure]]));
+  }
+
+  protected documentRepartitionPaie(): PdfImpressionDocument {
+    return this.documentPdf(`Répartition Paie · ${this.libelles[this.dimension()]} · ${this.libellePeriode(this.periode() ?? '')}`,
+      [this.libelles[this.dimension()], 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
+      this.lignesRepartitionPaie().map((ligne) => [this.nomLigne(ligne), ligne.effectif, ligne.masse, ligne.stc, ligne.stcMontant]));
+  }
+
+  protected documentTranchesPaie(): PdfImpressionDocument {
+    return this.documentPdf('Bulletins par tranche de total', ['Tranche', 'Bulletins'],
+      (this.paie()?.tranches ?? []).map((tranche) => [libelleTrancheTotal(tranche), tranche.effectif]));
+  }
+
+  protected documentMouvementsPaye(): PdfImpressionDocument {
+    return this.documentPdf('Effectif payé · évolution mensuelle', ['Mois', 'Employés payés'],
+      this.mouvements().map((mois) => [libellePeriode(mois.periode), mois.effectif]));
+  }
+
+  protected documentMouvements(): PdfImpressionDocument {
+    return this.documentPdf('Entrées, sorties et mutations', ['Mois', 'Entrées', 'Sorties', 'Mutations'],
+      this.mouvements().slice(1).map((mois) => [libellePeriode(mois.periode), mois.entrees ?? '—', mois.sorties, mois.mutations ?? '—']));
+  }
+
+  protected documentKpisFiches(): PdfImpressionDocument {
+    const f = this.fiches();
+    return this.documentPdf('Indicateurs clés · Employés', ['Indicateur', 'Valeur'], f ? [
+      ['Effectif', f.effectif], ['En poste', f.actifs], ['Sortis', f.inactifs], ['Âge moyen (ans)', f.ageMoyen ?? '—'],
+      ['Ancienneté moyenne (ans)', f.ancienneteMoyenne ?? '—'], ['Embauches sur 12 mois', f.embauchesDouzeMois]
+    ] : []);
+  }
+
+  protected documentAges(): PdfImpressionDocument {
+    return this.documentPdf('Pyramide des âges', ['Âge', 'Employés'],
+      (this.fiches()?.parAge ?? []).map((tranche) => [libelleTranche(tranche, 'age'), tranche.effectif]));
+  }
+
+  protected documentAnciennete(): PdfImpressionDocument {
+    return this.documentPdf('Ancienneté', ['Ancienneté', 'Employés'],
+      (this.fiches()?.parAnciennete ?? []).map((tranche) => [libelleTranche(tranche, 'anciennete'), tranche.effectif]));
+  }
+
+  protected documentRepartitionFiches(): PdfImpressionDocument {
+    return this.documentPdf(`Employés par ${this.libelles[this.dimension()].toLowerCase()}`,
+      [this.libelles[this.dimension()], 'Employés', 'En poste'],
+      this.repartitionFiches().map((groupe) => [this.nomLigne(groupe), groupe.effectif, groupe.actifs]));
+  }
+
+  private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][]): PdfImpressionDocument {
+    const periode = this.periode();
+    return { titre, contexte: `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
+  }
 
   constructor() {
     if (this.voitPaie()) {

@@ -201,7 +201,7 @@ public class PaieService implements IPaieService {
     @Override
     @Transactional(readOnly = true)
     public Page<PaieEquipeOptionDto> rechercherOptionsEquipes(PaieOptionsEquipeRequest requete, Pageable pageable) {
-        Pageable trie = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("code").ascending());
+        Pageable trie = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("libelle").ascending());
         String motif = motifOption(requete.recherche());
         return repository.rechercherOptionsEquipes(requete.periode(), requete.chantierIds(), motif, trie)
                 .map(e -> new PaieEquipeOptionDto(e.getId(), e.getCode(), e.getLibelle()));

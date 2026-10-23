@@ -245,13 +245,14 @@ class PaieExportServiceTest {
         YearMonth periode = YearMonth.of(2026, 8);
         Paie paieEquipeA = construirePaie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A");
         Paie paieEquipeB = construirePaie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE B");
+        paieEquipeA.getEquipe().setLibelle("Chauffeurs");
 
         when(repository.findByPeriode(periode)).thenReturn(List.of(paieEquipeA, paieEquipeB));
         when(repository.findByPeriode(periode.minusMonths(1))).thenReturn(List.of());
 
         PaieExportRequestDto requete = new PaieExportRequestDto(periode.toString(),
                 FeuillesEquipeMode.PERSONNALISE,
-                Map.of("C059", List.of("EQUIPE A")),
+                Map.of("C059", List.of("Chauffeurs")),
                 null,
                 null,
                 null);

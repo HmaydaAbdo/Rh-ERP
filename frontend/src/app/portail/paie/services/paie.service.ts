@@ -56,7 +56,7 @@ export class PaieService {
 
   /** Page des équipes des chantiers choisis pour le mois sélectionné dans les filtres. */
   rechercherOptionsEquipes(periode: string, chantierIds: number[], page: number, size: number, recherche: string): Observable<Page<EquipeReference>> {
-    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'code,asc');
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'libelle,asc');
     return this.http.post<Page<EquipeReference>>(
       `${this.baseUrl}/options/equipes`, { periode, chantierIds, recherche: recherche || null }, { params }
     );

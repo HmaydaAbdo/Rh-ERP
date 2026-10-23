@@ -48,7 +48,7 @@ export class PaieListComponent {
     { field: 'observation', header: 'Observation', shortHeader: 'Obs' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code', align: 'text-center' },
     { field: 'chantierDesignation', header: 'Désignation du chantier', shortHeader: 'Désign. chantier', sortField: 'chantier.designation' },
-    { field: 'equipe', header: 'Équipe', sortField: 'equipe.code', align: 'text-center' },
+    { field: 'equipe', header: 'Équipe', sortField: 'equipe.libelle', align: 'text-center' },
     { field: 'equipeLibelle', header: 'Libellé de l’équipe', shortHeader: 'Libellé équipe', sortField: 'equipe.libelle' },
     { field: 'periode', header: 'Période', align: 'text-center' }
   ]);

@@ -97,8 +97,8 @@ public class EquipeService implements IEquipeService {
                 .orElseThrow(() -> new EquipeNotFoundException(id));
     }
 
-    /** Le code sert de clé de sélection/regroupement : toujours stocké trimé et en majuscules, pour
-     * que "ch" et "CH " ne produisent jamais deux équipes distinctes. */
+    /** Le code d'échange est stocké trimé et en majuscules, pour que "ch" et "CH " ne produisent
+     * jamais deux équipes distinctes. La sélection utilisateur privilégie le libellé. */
     private static String normaliserCode(String code) {
         return code.strip().toUpperCase(Locale.ROOT);
     }

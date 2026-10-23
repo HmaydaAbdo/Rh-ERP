@@ -115,7 +115,7 @@ describe('PaieCartesComponent', () => {
     const page = await ouvrir('/paie/cartes?periode=2026-08&nom=ali&cin=AB1&fonctionIds=5&chantierIds=1&par=equipe');
 
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', fonctionIds: [5], chantierIds: [1] }));
-    expect(Array.from(page.querySelectorAll('.perimetre-carte__code')).map((c) => c.textContent?.trim())).toEqual(['CH', 'Sans équipe']);
+    expect(Array.from(page.querySelectorAll('.perimetre-carte__code')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Sans équipe']);
   });
 
   describe('suppression en groupe', () => {
@@ -202,7 +202,7 @@ describe('PaieCartesComponent', () => {
     it('ne cible pas les bulletins sans équipe : l’API ne sait pas les isoler', async () => {
       const page = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1&par=equipe');
 
-      expect(bouton(page, 'Supprimer les bulletins de équipe CH')).not.toBeNull();
+      expect(bouton(page, 'Supprimer les bulletins de équipe Chauffeurs')).not.toBeNull();
       expect(bouton(page, 'Supprimer les bulletins de équipe Sans équipe')).toBeNull();
     });
 

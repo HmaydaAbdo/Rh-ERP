@@ -58,7 +58,7 @@ describe('PaieExportEtapeEquipesComponent', () => {
     pastille(racine, 'Chauffeurs').click();
     await stabiliser(fixture);
 
-    expect(store.equipesChoisies('C168')).toEqual(['CH']);
+    expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs']);
     expect(pastille(racine, 'Chauffeurs').getAttribute('aria-pressed')).toBe('true');
     expect(racine.querySelector('.export-wizard__badge')?.textContent).toBe('1 / 2 équipes');
   });
@@ -69,7 +69,7 @@ describe('PaieExportEtapeEquipesComponent', () => {
 
     boutons('Toutes')[0].click();
     await stabiliser(fixture);
-    expect(store.equipesChoisies('C168')).toEqual(['CH', 'OP']);
+    expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs', 'Opérateurs']);
 
     boutons('Aucune')[0].click();
     await stabiliser(fixture);
@@ -78,7 +78,7 @@ describe('PaieExportEtapeEquipesComponent', () => {
 
   it('en Excel, propose de retirer une équipe cochée de la feuille du chantier ; pas en PDF', async () => {
     const { fixture, store, racine } = await monter();
-    store.basculerEquipe('C168', 'CH');
+    store.basculerEquipe('C168', 'Chauffeurs');
     await stabiliser(fixture);
     expect(racine.querySelector('.export-wizard__retrait')).toBeNull();
 
@@ -90,7 +90,7 @@ describe('PaieExportEtapeEquipesComponent', () => {
 
     retrait.click();
     await stabiliser(fixture);
-    expect(store.estRetiree('C168', 'CH')).toBe(true);
+    expect(store.estRetiree('C168', 'Chauffeurs')).toBe(true);
     expect(retrait.getAttribute('aria-pressed')).toBe('true');
   });
 

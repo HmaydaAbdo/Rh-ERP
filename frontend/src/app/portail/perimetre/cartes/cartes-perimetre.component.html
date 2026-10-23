@@ -67,6 +67,9 @@
           @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()) }} · {{ totaux().masse | number: '1.2-2' }} DH }
           @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
         </p>
+        @if (liste.length > 0) {
+          <app-pdf-export-button [document]="documentGroupes()" />
+        }
         @if (liste.length === 0 && !chargement()) {
           <p class="perimetre-cartes__vide">Aucun élément ne correspond à ce périmètre.</p>
         }
@@ -141,6 +144,9 @@
       }
     } @else {
       <p class="perimetre-cartes__resume" role="status">{{ resultat().totalEmployes }} employé(s)</p>
+      @if (resultat().totalEmployes > 0) {
+        <app-pdf-export-button [document]="documentEmployesVide" [chargerDocument]="chargerExportEmployes" />
+      }
       @if (!chargement() && resultat().employes.length === 0) {
         <p class="perimetre-cartes__vide">Aucun employé ne correspond à ce périmètre.</p>
       }
@@ -151,7 +157,7 @@
               <span class="perimetre-cartes__initiales" aria-hidden="true">{{ initiales(employe) }}</span>
               <span class="perimetre-cartes__qui">
                 <strong>{{ employe.nomPrenom }}</strong>
-                <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.code }} }</small>
+                <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.libelle }} }</small>
               </span>
               <stp-badge [value]="libelleStatutEmploye(employe.statut)" [severity]="employe.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
             </a>
@@ -159,7 +165,7 @@
         }
       </ul>
       @if (resultat().employes.length < resultat().totalEmployes) {
-        <div class="perimetre-cartes__plus">
+      <div class="perimetre-cartes__plus">
           <button stp-button variant="secondary" type="button" (click)="afficherPlusEmployes()">Afficher plus ({{ resultat().totalEmployes - resultat().employes.length }} restants)</button>
         </div>
       }

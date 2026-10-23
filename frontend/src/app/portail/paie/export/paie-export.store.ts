@@ -65,9 +65,9 @@ export class PaieExportStore {
   readonly sansVueEnsemble = signal(false);
   /** Chantiers dont la liste d'équipes est dépliée (simple état d'affichage). */
   readonly ouverts = signal<string[]>([]);
-  /** Chantier -> codes des équipes à détailler (liste vide ou absente : aucune équipe détaillée). */
+  /** Chantier -> libellés des équipes à détailler (liste vide ou absente : aucune équipe détaillée). */
   readonly detail = signal<Record<string, string[]>>({});
-  /** Chantier -> codes des équipes retirées de la feuille du chantier (Excel uniquement). */
+  /** Chantier -> libellés des équipes retirées de la feuille du chantier (Excel uniquement). */
   readonly retirees = signal<Record<string, string[]>>({});
 
   readonly tableauxMateriel = signal<PaieMaterielTableau[]>([]);
@@ -83,7 +83,9 @@ export class PaieExportStore {
   /** Tableaux matériel qui seront réellement imprimés : leur chantier est détaillé avec l'équipe qui les porte. */
   readonly tableauxConcernes = computed(() =>
     this.tableauxMateriel().filter((t) => this.chantiersPourEquipes().some((c) => c.code === t.chantierCode)
-      && this.detail()[t.chantierCode]?.includes(t.equipeCode))
+      && this.detail()[t.chantierCode]?.includes(
+        this.chantiers().find((c) => c.code === t.chantierCode)?.equipes.find((e) => e.code === t.equipeCode)?.libelle ?? ''
+      ))
   );
 
   /** Les marchés choisis ne restreignent que le rapport PDF, pas l'export Excel. */
@@ -257,6 +259,11 @@ export class PaieExportStore {
     return this.detail()[code] ?? [];
   }
 
+  libelleEquipe(chantierCode: string, equipeCode: string): string {
+    return this.chantiers().find((chantier) => chantier.code === chantierCode)?.equipes
+      .find((equipe) => equipe.code === equipeCode)?.libelle ?? equipeCode;
+  }
+
   basculerEquipe(code: string, equipe: string): void {
     const choisies = this.equipesChoisies(code);
     const suivantes = choisies.includes(equipe) ? choisies.filter((e) => e !== equipe) : [...choisies, equipe];
@@ -267,7 +274,7 @@ export class PaieExportStore {
   }
 
   toutesLesEquipes(chantier: PaieChantierPeriode, toutes: boolean): void {
-    this.detail.set({ ...this.detail(), [chantier.code]: toutes ? chantier.equipes.map((e) => e.code) : [] });
+    this.detail.set({ ...this.detail(), [chantier.code]: toutes ? chantier.equipes.map((e) => e.libelle) : [] });
     if (!toutes) {
       this.retirees.set({ ...this.retirees(), [chantier.code]: [] });
     }

@@ -127,7 +127,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
 | `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe | 200 |
 | `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; recherche serveur sur code et désignation | 200, 400 |
-| `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
+| `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
 | `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Calculés en mémoire sur une projection de cinq colonnes (`listerEffectifs`) : les comparaisons d'un mois au précédent ne s'écrivent pas en JPQL | 200 |
@@ -284,16 +284,17 @@ groupée**) :
 - `GET /paie/chantiers?periode=aaaa-MM` : les chantiers du mois du plus gros (masse) au plus petit, chacun avec
   `id`, `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
   `effectif`, `masse`). Les bulletins sans équipe comptent dans l'effectif du chantier mais n'ont pas d'équipe listée.
-  La sélection manipulée et envoyée au backend reste le **code** de l'équipe (voir section suivante).
+  La sélection utilisateur et les contrats PDF/Excel utilisent le **libellé** de l'équipe. Le code
+  reste disponible pour les imports et les traitements techniques.
 - `GET /paie/materiel` : les tableaux du parc matériel prévus (`chantierCode`, `equipeCode`, `titre`, `libelles`),
   lus dans `MaterielChantierCatalogue` pour que l'assistant sache quels nombres demander sans dupliquer la règle
   (voir `docs/report/README.md`, « Parc matériel »).
 
-### Regroupement par équipe : par code du référentiel Équipe
+### Sélection métier par libellé d'équipe
 
 `Paie.equipe` référence le domaine **Équipe** ([dossier du domaine](../equipe/README.md)). Les
-sous-feuilles et rapprochements d'export utilisent son code métier; sa normalisation, son unicité et
-ses effets sur l'historique sont définis dans le dossier Équipe.
+choix affichés, les regroupements métier et les sélections envoyées dans les contrats PDF/Excel
+utilisent son libellé. Le code identifie l'équipe pour les imports et les échanges techniques.
 
 Un bulletin garde l'identifiant de l'équipe associée à son mois, même si la fiche Employé change
 d'équipe ensuite. Le code et le libellé ne sont pas copiés dans le bulletin : renommer l'équipe

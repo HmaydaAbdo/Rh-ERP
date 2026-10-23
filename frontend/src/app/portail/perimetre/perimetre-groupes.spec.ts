@@ -20,8 +20,9 @@ describe('lignesPaie', () => {
 });
 
 describe('nomGroupe', () => {
-  it('préfère le code, nomme « Sans équipe » l’identifiant 0 d’une équipe', () => {
+  it('préfère le libellé pour les équipes et garde le code des autres référentiels', () => {
     expect(nomGroupe('CHANTIER', { id: 1, code: 'C168', libelle: 'Nador' })).toBe('C168');
+    expect(nomGroupe('EQUIPE', { id: 5, code: 'CH', libelle: 'Chauffeurs' })).toBe('Chauffeurs');
     expect(nomGroupe('FONCTION', { id: 7, code: null, libelle: 'MACON' })).toBe('MACON');
     expect(nomGroupe('EQUIPE', { id: 0, code: null, libelle: '' })).toBe('Sans équipe');
   });
@@ -60,7 +61,7 @@ describe('fusionnerGroupes', () => {
     expect(groupes[0].paie).not.toBeNull();
   });
 
-  it('trie par nom, les nombres dans l’ordre naturel', () => {
+  it('trie les codes des autres dimensions en ordre naturel', () => {
     const lignes = [{ id: 1, code: 'C10', libelle: '', effectif: 0, actifs: 0 }, { id: 2, code: 'C9', libelle: '', effectif: 0, actifs: 0 }];
 
     expect(fusionnerGroupes('CHANTIER', { catalogue: null, exhaustif: false, fiches: lignes, paie: null, paiePrecedente: null, lien: null }).map((g) => g.code)).toEqual(['C9', 'C10']);
