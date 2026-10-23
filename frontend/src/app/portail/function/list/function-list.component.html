@@ -1,65 +1,4 @@
-<input #fileInput type="file" accept=".xlsx" class="function-list__hidden-input" (change)="onFileSelected($event)" />
-
-<stp-dialog header="Résultat de l'import" width="520px" [(open)]="showImportResultDialog">
-  @if (importResult(); as result) {
-    <p>
-      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
-      <strong>{{ result.crees }}</strong> créée(s),
-      <strong>{{ result.ignores }}</strong> ignorée(s).
-    </p>
-
-    @if (result.lignesIgnorees.length > 0) {
-      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes de fonctions ignorées à l’import">
-        <table class="app-static-table">
-          <caption class="app-lecteur">Détail des lignes de fonctions ignorées pendant l'import</caption>
-          <thead>
-            <tr>
-              <th scope="col">Ligne</th>
-              <th scope="col">Libellé</th>
-              <th scope="col">Raison</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
-              <tr>
-                <td>{{ ligne.numeroLigne }}</td>
-                <td>{{ ligne.libelle }}</td>
-                <td>{{ ligne.raison }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  }
-</stp-dialog>
-
 <div class="function-list app-page">
-  <div class="app-page__header">
-    <h1>Fonctions</h1>
-    <div class="app-page__actions app-page__actions--liste">
-      @if (canImport()) {
-        <stp-split-button
-          label="Importer"
-          icon="upload"
-          moreLabel="Autres actions d’import"
-          [items]="menuImport"
-          [disabled]="importing()"
-          (clicked)="onTriggerImport()"
-        />
-      }
-      @if (canWrite()) {
-        <a stp-button icon="plus" routerLink="/functions/new">Nouvelle fonction</a>
-      }
-    </div>
-  </div>
-
-  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
-    <input class="stp-input" type="text" [formField]="filterForm.libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
-
-    <button stp-button variant="text" type="button" icon="x" class="app-toolbar__clear" (click)="onResetFilters()">Réinitialiser</button>
-  </form>
-
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
       @if (!loading()) {
@@ -83,30 +22,30 @@
     (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-fonction let-col="col">
-@switch (col.field) {
-  @case ('libelle') {
-    {{ fonction.libelle }}
-  }
-}
+      @switch (col.field) {
+        @case ('libelle') {
+          {{ fonction.libelle }}
+        }
+      }
     </ng-template>
 
     <ng-template stpRowActions let-fonction>
-  <button stp-button variant="text" iconOnly icon="eye" type="button" [attr.aria-label]="'Voir la fonction ' + fonction.libelle" (click)="onView(fonction)"></button>
-  @if (canWrite()) {
-    <button stp-button variant="text" iconOnly icon="pencil" type="button" [attr.aria-label]="'Modifier la fonction ' + fonction.libelle" (click)="onEdit(fonction)"></button>
-  }
-  @if (canDelete()) {
-    <button
-      stp-button
-      variant="danger-text"
-      iconOnly
-      icon="trash-2"
-      type="button"
-      [loading]="deletingId() === fonction.id"
-      [attr.aria-label]="'Supprimer la fonction ' + fonction.libelle"
-      (click)="onDelete(fonction)"
-    ></button>
-  }
+      <button stp-button variant="text" iconOnly icon="eye" type="button" [attr.aria-label]="'Voir la fonction ' + fonction.libelle" (click)="onView(fonction)"></button>
+      @if (canWrite()) {
+        <button stp-button variant="text" iconOnly icon="pencil" type="button" [attr.aria-label]="'Modifier la fonction ' + fonction.libelle" (click)="onEdit(fonction)"></button>
+      }
+      @if (canDelete()) {
+        <button
+          stp-button
+          variant="danger-text"
+          iconOnly
+          icon="trash-2"
+          type="button"
+          [loading]="deletingId() === fonction.id"
+          [attr.aria-label]="'Supprimer la fonction ' + fonction.libelle"
+          (click)="onDelete(fonction)"
+        ></button>
+      }
     </ng-template>
   </stp-table>
 </div>

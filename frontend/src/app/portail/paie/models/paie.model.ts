@@ -166,6 +166,8 @@ export interface PaieFonctionMasse {
   libelle: string;
   masse: number;
   effectif: number;
+  stc: number;
+  stcMontant: number;
 }
 
 /** Tranche de total : de `min` (inclus) à `max` (exclu) ; `max` est nul pour la dernière tranche, ouverte. */

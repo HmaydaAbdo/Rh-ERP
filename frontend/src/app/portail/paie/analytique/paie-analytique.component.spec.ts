@@ -30,7 +30,7 @@ function donnees(surcharge: Partial<PaieAnalytique> = {}): PaieAnalytique {
             { id: 21, code: 'EQ-A', libelle: 'Équipe A', masse: 28000, effectif: 6, stc: 1, stcMontant: 4000 },
             { id: null, code: null, libelle: null, masse: 12000, effectif: 4, stc: 0, stcMontant: 0 }
         ],
-        parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10 }],
+        parFonction: [{ id: 1, libelle: 'CH. CAMION', masse: 40000, effectif: 10, stc: 0, stcMontant: 0 }],
         tranches: [{ min: 0, max: 5000, effectif: 6 }, { min: 5000, max: null, effectif: 4 }],
         evolution: [{ periode: '2026-07', masse: 32000, effectif: 8, stc: 0, stcMontant: 0 }, { periode: '2026-08', masse: 40000, effectif: 10, stc: 1, stcMontant: 4000 }],
         qualite: { sansEquipe: 4, sansObservation: 5 },
@@ -272,7 +272,7 @@ describe('PaieAnalytiqueComponent', () => {
     it('montre toutes les catégories positives, sans plafond ni « Autres »', async () => {
         service.analyser.mockReturnValue(of(donnees({
             parChantier: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, code: `C${i + 1}`, libelle: null, masse: 100 + i, effectif: 1, stc: 0, stcMontant: 0 })),
-            parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1 }))
+            parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `FONCTION ${i + 1}`, masse: 10 + i, effectif: 1, stc: 0, stcMontant: 0 }))
         })));
 
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
@@ -289,8 +289,8 @@ describe('PaieAnalytiqueComponent', () => {
                 { id: 2, code: 'VIDE', libelle: null, masse: 0, effectif: 0, stc: 0, stcMontant: 0 }
             ],
             parFonction: [
-                { id: 1, libelle: 'ACTIVE', masse: 10, effectif: 1 },
-                { id: 2, libelle: 'VIDE', masse: 0, effectif: 0 }
+                { id: 1, libelle: 'ACTIVE', masse: 10, effectif: 1, stc: 0, stcMontant: 0 },
+                { id: 2, libelle: 'VIDE', masse: 0, effectif: 0, stc: 0, stcMontant: 0 }
             ]
         })));
 
@@ -304,7 +304,7 @@ describe('PaieAnalytiqueComponent', () => {
     });
 
     it('agrandit les graphiques avec le nombre de catégories pour que chaque ligne reste lisible', async () => {
-        service.analyser.mockReturnValue(of(donnees({ parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `F${i}`, masse: 1, effectif: 1 })) })));
+        service.analyser.mockReturnValue(of(donnees({ parFonction: Array.from({ length: 114 }, (_, i) => ({ id: i + 1, libelle: `F${i}`, masse: 1, effectif: 1, stc: 0, stcMontant: 0 })) })));
 
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
 
@@ -331,8 +331,8 @@ describe('PaieAnalytiqueComponent', () => {
     it('filtre sur la fonction d\'une barre cliquée, dans l\'ordre affiché', async () => {
         service.analyser.mockReturnValue(of(donnees({
             parFonction: [
-                { id: 4, libelle: 'PETITE', masse: 10, effectif: 1 },
-                { id: 8, libelle: 'GRANDE', masse: 900, effectif: 1 }
+                { id: 4, libelle: 'PETITE', masse: 10, effectif: 1, stc: 0, stcMontant: 0 },
+                { id: 8, libelle: 'GRANDE', masse: 900, effectif: 1, stc: 0, stcMontant: 0 }
             ]
         })));
         const composant = await ouvrir('/paie/analytique?periode=2026-08');
