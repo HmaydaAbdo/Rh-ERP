@@ -31,7 +31,7 @@ export class PaieActionsComponent {
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
 
-  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE') && this.authService.hasPermission('EMPLOYEE_WRITE'));
   /** L'assistant analyse le fichier en le comparant aux fiches (salaires compris) : il demande aussi la lecture de la paie. */
   protected readonly canImport = computed(() => this.authService.hasPermission('PAIE_IMPORT') && this.authService.hasPermission('PAIE_READ'));
   protected readonly canExport = computed(() => this.authService.hasPermission('PAIE_EXPORT'));

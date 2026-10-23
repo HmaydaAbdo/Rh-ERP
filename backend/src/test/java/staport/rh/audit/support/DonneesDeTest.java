@@ -56,6 +56,7 @@ public class DonneesDeTest {
             employe.setDateEmbauche(LocalDate.of(2020, 1, 1));
             employe.setFonction(fonction);
             employe.setChantier(chantier);
+            employe.setEquipe(equipe);
             entityManager.persist(employe);
             return new Referentiel(fonction.getId(), chantier.getId(), equipe.getId(), employe.getId(), s);
         });

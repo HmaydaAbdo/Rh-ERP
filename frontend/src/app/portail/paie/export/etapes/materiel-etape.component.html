@@ -21,7 +21,7 @@
             (click)="store.basculerVide(t)"
           ></button>
         </div>
-        <p class="export-wizard__legende">Équipe {{ t.equipeCode }} · laisser vide pour remplir au stylo</p>
+        <p class="export-wizard__legende">Équipe {{ store.libelleEquipe(t.chantierCode, t.equipeCode) }} · laisser vide pour remplir au stylo</p>
         <div class="export-wizard__progression">
           <span>{{ store.estVide(t) ? 'Laissé vide' : store.renseignees(t) + ' sur ' + t.libelles.length + ' renseignées' }}</span>
           <span class="export-wizard__barre"><span [style.transform]="'scaleX(' + (store.estVide(t) ? 0 : store.renseignees(t) / t.libelles.length) + ')'"></span></span>

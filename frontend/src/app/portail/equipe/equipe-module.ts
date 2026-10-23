@@ -22,7 +22,7 @@ export function moduleEquipe(equipeService: EquipeService): ModulePerimetre {
       filtreActif: (params) => filtreEquipeActif(lireFiltresEquipe(params)),
       charger: (params) => {
         const criteres = versCriteresEquipe(lireFiltresEquipe(params));
-        return chargerToutLeReferentiel((page, taille) => equipeService.search(criteres, { page, size: taille, sort: 'code,asc' })).pipe(
+        return chargerToutLeReferentiel((page, taille) => equipeService.search(criteres, { page, size: taille, sort: 'libelle,asc' })).pipe(
           map((equipes) => equipes.map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, detail: null, statut: null })))
         );
       },

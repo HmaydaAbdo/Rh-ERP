@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 
 import { mockApi, page as pageDe } from './support/api-mock';
 
-const DROITS = ['EQUIPE_READ', 'EQUIPE_WRITE', 'EQUIPE_DELETE'];
+const DROITS = ['EQUIPE_READ', 'EQUIPE_WRITE', 'EQUIPE_DELETE', 'EQUIPE_IMPORT'];
 
 const CHAUFFEURS = { id: 5, version: 0, code: 'CH', libelle: 'Chauffeurs' };
 const OPERATEURS = { id: 6, version: 0, code: 'OP', libelle: 'Opérateurs' };
@@ -23,11 +23,29 @@ const FICHES = {
 };
 
 test.describe('Équipes', () => {
+  test('importe un fichier autorisé, présente son bilan et recharge la vue Tabulaire', async ({ page }) => {
+    const mock = await mockApi(page, { username: 'gestionnaire', permissions: ['EQUIPE_READ', 'EQUIPE_IMPORT'] }, {
+      'POST /equipes/search': () => pageDe([CHAUFFEURS]),
+      'POST /equipes/import': () => ({ totalLignes: 1, crees: 1, ignores: 0, lignesIgnorees: [] })
+    });
+    await page.goto('/equipes');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'equipes.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: Buffer.from('fichier simulé')
+    });
+
+    await expect(page.getByRole('dialog', { name: "Résultat de l'import" })).toContainText('1 créée(s)');
+    expect(mock.calls).toContain('POST /equipes/import');
+    await expect.poll(() => mock.calls.filter((appel) => appel === 'POST /equipes/search').length).toBe(2);
+  });
+
   test('parcourt les trois vues en conservant les filtres et relie les fiches Employé à la Paie', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
       'POST /equipes/search': () => pageDe([CHAUFFEURS, OPERATEURS]),
       'GET /equipes/5': () => CHAUFFEURS,
-      'POST /employees/regroupements': () => [{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 3, actifs: 2 }],
+      // Les fiches courantes sont affectées à OP; le bulletin d'août reste rattaché à CH.
+      'POST /employees/regroupements': () => [{ id: 6, code: 'OP', libelle: 'Opérateurs', effectif: 3, actifs: 2 }],
       'GET /paie/periodes': () => PERIODES,
       'POST /paie/analytique': () => ANALYSE,
       'POST /paie/effectifs': () => [{ periode: '2026-08', effectif: 3, entrees: null, sorties: 0, mutations: null }],
@@ -41,6 +59,8 @@ test.describe('Équipes', () => {
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'Chauffeurs' });
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
+    await expect(carte.locator('dt').filter({ hasText: 'Employés sur les fiches récentes' }).locator('xpath=..').locator('dd')).toHaveText('0');
+    await expect(carte.locator('dt').filter({ hasText: 'Payés · août 2026' }).locator('xpath=..').locator('dd')).toContainText('1');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre suit dans l'Analytique et borne le périmètre analysé (mêmes équipes que les deux autres vues).

@@ -33,7 +33,7 @@ export const PAIE_ROUTES: Routes = [
     path: 'new',
     canActivate: [permissionGuard],
     canDeactivate: [unsavedChangesGuard],
-    data: { permission: 'PAIE_WRITE' },
+    data: { permission: 'PAIE_WRITE', permissions: ['EMPLOYEE_WRITE'] },
     loadComponent: () => import('./form/paie-form.component').then((m) => m.PaieFormComponent)
   },
   {
@@ -46,7 +46,7 @@ export const PAIE_ROUTES: Routes = [
     path: ':id/edit',
     canActivate: [permissionGuard],
     canDeactivate: [unsavedChangesGuard],
-    data: { permission: 'PAIE_WRITE' },
+    data: { permission: 'PAIE_WRITE', permissions: ['EMPLOYEE_WRITE'] },
     loadComponent: () => import('./form/paie-form.component').then((m) => m.PaieFormComponent)
   }
 ];

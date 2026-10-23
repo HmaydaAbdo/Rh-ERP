@@ -13,6 +13,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.entities.EmployeeStatut;
+import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.ChantierSummaryDto;
+import staport.rh.employee.dtos.response.FunctionSummaryDto;
+import staport.rh.employee.entities.TypeSalaire;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.equipe.services.interfaces.IEquipeService;
@@ -38,6 +43,7 @@ import staport.rh.paie.repositories.PaieRepository;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -91,6 +97,7 @@ class PaieServiceTest {
                 new BigDecimal("5000"), new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"),
                 null
         );
+        lenient().when(employeeService.findById(1L)).thenReturn(employeeAvecEquipe(29L));
 
         entity = new Paie();
         entity.setId(1L);
@@ -120,6 +127,7 @@ class PaieServiceTest {
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(entity.getEquipe()).isSameAs(equipe);
+        verify(employeeService).update(eq(1L), org.mockito.ArgumentMatchers.argThat(dto -> dto.equipeId().equals(30L)));
     }
 
     @Test
@@ -131,6 +139,7 @@ class PaieServiceTest {
                 null);
         when(employeeService.existsById(1L)).thenReturn(true);
         when(repository.existsByEmployee_IdAndPeriode(1L, sansEquipe.periode())).thenReturn(false);
+        when(employeeService.findById(1L)).thenReturn(employeeAvecEquipe(29L));
         when(mapper.toEntity(sansEquipe)).thenReturn(entity);
         when(functionService.existsById(10L)).thenReturn(true);
         when(chantierService.existsById(20L)).thenReturn(true);
@@ -143,6 +152,7 @@ class PaieServiceTest {
         paieService.create(sansEquipe);
 
         assertThat(entity.getEquipe()).isNull();
+        verify(employeeService).update(eq(1L), org.mockito.ArgumentMatchers.argThat(dto -> dto.equipeId() == null));
         verify(equipeService, never()).existsById(any());
     }
 
@@ -150,12 +160,6 @@ class PaieServiceTest {
     void create_devraitEchouerQuandLEquipeEstIntrouvable() {
         when(employeeService.existsById(1L)).thenReturn(true);
         when(repository.existsByEmployee_IdAndPeriode(1L, createDto.periode())).thenReturn(false);
-        when(mapper.toEntity(createDto)).thenReturn(entity);
-        when(functionService.existsById(10L)).thenReturn(true);
-        when(chantierService.existsById(20L)).thenReturn(true);
-        when(entityManager.getReference(Employee.class, 1L)).thenReturn(new Employee());
-        when(entityManager.getReference(Function.class, 10L)).thenReturn(new Function());
-        when(entityManager.getReference(Chantier.class, 20L)).thenReturn(new Chantier());
         when(equipeService.existsById(30L)).thenReturn(false);
 
         assertThatThrownBy(() -> paieService.create(createDto))
@@ -188,7 +192,10 @@ class PaieServiceTest {
     @Test
     void create_devraitEchouerQuandLaFonctionEstIntrouvable() {
         when(employeeService.existsById(1L)).thenReturn(true);
+        when(employeeService.findById(1L)).thenReturn(employeeAvecEquipe(29L));
         when(repository.existsByEmployee_IdAndPeriode(1L, createDto.periode())).thenReturn(false);
+        when(equipeService.existsById(30L)).thenReturn(true);
+        when(entityManager.getReference(Equipe.class, 30L)).thenReturn(new Equipe());
         when(mapper.toEntity(createDto)).thenReturn(entity);
         when(entityManager.getReference(eq(Employee.class), any())).thenReturn(new Employee());
         when(functionService.existsById(10L)).thenReturn(false);
@@ -364,5 +371,14 @@ class PaieServiceTest {
                 new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"),
                 BigDecimal.valueOf(26), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("5000"),
                 new BigDecimal("200"), new BigDecimal("100"), new BigDecimal("5300"), null);
+    }
+
+    private EmployeeResponseDto employeeAvecEquipe(Long equipeId) {
+        staport.rh.employee.dtos.response.EquipeSummaryDto equipe = equipeId == null ? null
+                : new staport.rh.employee.dtos.response.EquipeSummaryDto(equipeId, "E" + equipeId, "Equipe " + equipeId);
+        return new EmployeeResponseDto(1L, 0L, "Employé Test", "CIN-1",
+                LocalDate.of(1990, 1, 1), LocalDate.of(2020, 1, 1),
+                new FunctionSummaryDto(10L, "FONCTION"), new ChantierSummaryDto(20L, "C20", "Chantier"),
+                equipe, null, null, EmployeeStatut.ACTIF);
     }
 }

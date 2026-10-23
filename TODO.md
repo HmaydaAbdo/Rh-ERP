@@ -1,7 +1,7 @@
 # TODO — points ouverts
 
 > Suivi des sujets encore à traiter. Les sujets livrés et vérifiés dans le code (imports atomiques,
-> PostgreSQL + Flyway, JWT/RBAC et sécurité, déploiement Docker + CI, synchronisation chantiers, rapport
+> PostgreSQL + Flyway, JWT/RBAC et sécurité, déploiement Docker et contrôles automatisés, synchronisation chantiers, rapport
 > PDF en HTML, domaine Équipe, tableaux, etc.) ont été retirés de ce fichier : leur description détaillée
 > vit dans `docs/` et leur historique dans git.
 
@@ -13,7 +13,7 @@ Les conventions racine constituent le blueprint réutilisable ; l'ADR historique
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
 Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (653, couverture complète) et E2E Playwright + axe (39),
-audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
+audit npm sans aucune vulnérabilité, licences contrôlées et SBOM produits par les contrôles automatisés.
 Restent à faire :
 
 ### Chantier séparé — appliquer les concepts IA, Agent UI, MCP et RAG à ERP-RH
@@ -21,11 +21,29 @@ Restent à faire :
 Ce chantier est distinct de l'audit des conventions actuellement en cours. Il vise à étudier puis
 intégrer ces capacités dans l'application à partir de besoins RH concrets.
 
-**Terrain préparé (2026-10-18)** : le socle cible est fixé par l'[ADR 0008](docs/adr/0008-plateforme-ia-passerelle-agents-memoire-graphrag.md)
-et les conventions `agents-ia.md`, `rag.md`, `mcp.md`, `database.md`, `testing.md` : passerelle LiteLLM (alias,
-bascule entre offres gratuites, budgets), agents de domaine sous un superviseur, mémoire courte/compactée/longue,
-pgvector puis GraphRAG Neo4j si l'évaluation le justifie, serveur MCP Spring AI, A2A entre applications. Aucun
-code ni dépendance n'est ajouté ; les versions seront vérifiées au premier cas d'usage. Données actuelles : fictives.
+**Cadrage du 2026-10-23 sur branche dédiée `codex/integration-ia-mcp-rag`** :
+conventions actualisées, [analyse critique](docs/ia/analyse-architecture.md),
+[ADR 0013](docs/adr/0013-integration-ia-mcp-langgraph-rag.md),
+[plan détaillé en quatre phases](docs/ia/plan-integration.md),
+[conception RAG](docs/ia/rag.md) et [matrice des protocoles/innovations](docs/ia/protocoles-et-innovations.md).
+Reprise obligatoire par le [handoff IA](docs/handoff/integration-ia.md).
+L’orientation demandée remplace Spring AI par des adaptateurs MCP Java sans framework LLM et une
+orchestration TypeScript/LangGraph.js. LiteLLM, classification et garde-fous de l’ADR 0008 restent
+applicables. Ne pas supposer les données fictives. Le prototype P1.1 introduit seulement un
+profil de tests MCP isolé ; aucune dépendance IA ni route MCP métier dans le runtime normal.
+
+- [x] Préparer conventions, stress-test des neuf piliers, plan RAG et registre de reprise.
+- [x] Autorisation initiale limitée à P1.1 reçue ; choix métier et D1–D8 encore ouverts.
+- [ ] **P1.1 — revue propriétaire** : [prototype testé et documenté](docs/ia/validation-p1-1.md), attente de validation avant P1.2.
+- [ ] P1.2 — identité déléguée : non commencée, bloquée par la validation précédente.
+- [ ] Phase 1 : MCP Spring, identité déléguée, RBAC/projections et audit (G1).
+- [ ] Phase 2 : runtime LangGraph.js, client MCP et checkpoints durables (G2).
+- [ ] Phase 3 : CopilotKit Runtime / AG-UI Angular et vérification réelle du parcours (G3).
+- [ ] Phase 4 : corpus approuvé, recherche hybride évaluée, mémoire et compactage (G4).
+- [ ] Progression UI par domaine : suivre [les cinq modes et leurs critères](docs/ia/progression-ui.md), sans retirer les parcours classiques.
+
+Les principes ci-dessous restent applicables ; le détail des lots et preuves n’est tenu que dans
+le plan et le handoff dédiés.
 
 1. **Préparer les données et le besoin** : instrumenter le catalogue de KPI existant, puis choisir
    avec la RH un premier cas d'usage, ses utilisateurs, ses données autorisées et le résultat attendu.
@@ -93,41 +111,42 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont implémentées dans la PR #80, non fusionnée.
+- **Revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les dossiers de chaque domaine décrivent le fonctionnement et les scénarios de contrôle. Équipe est documenté dans [son README](docs/equipe/README.md); les choix confirmés et les preuves à jour y sont consignés avec les tests concernés.
   **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
   Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
-  suppression en groupe de la paie reste, sur chaque carte. La CI complète #390 est verte (tests backend, frontend, full-stack et profil de performance).
+  suppression en groupe de la paie reste, sur chaque carte.
   Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
   **Chantiers (implémenté, 2026-10-23)** : mêmes trois vues que Équipes et Fonctions (Tabulaire, Cartes, Analytique) sous une coque commune
   (`ChantierVuesComponent`), synchronisation et création dans l'en-tête; filtres code, désignation et statut dans l'URL, appliqués de la même
   façon aux trois vues; Cartes et Analytique relient le chantier aux effectifs Employé (dernier état importé) et aux indicateurs/historiques
   Paie (STC compris), sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ` vérifiés séparément. La carte géographique reste séparée.
   Décision du propriétaire (2026-10-23) : la modification du code d'un chantier (code changé partout, historique compris) est conservée.
-  Tests unitaires frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte. Voir le
+  Tests unitaires frontend et E2E mockés verts localement. Voir le
   [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) (section 10) et le [README Chantier](docs/chantier/README.md).
   **Fonctions (implémenté, 2026-10-23)** : mêmes trois vues que Équipes (Tabulaire, Cartes, Analytique) sous une coque commune
   (`FunctionVuesComponent`), import Excel et création déplacés dans l'en-tête; filtre libellé dans l'URL, appliqué de la même façon aux trois vues; la répartition par fonction de `POST /paie/analytique` porte désormais les STC (`stc`, `stcMontant`); Cartes et Analytique relient la fonction
   aux effectifs Employé (dernier état importé) et aux indicateurs/historiques Paie, sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ`
-  vérifiés séparément. Tests frontend et E2E mockés verts localement; la CI complète #390, y compris `full-stack`, est verte.
+  vérifiés séparément. Tests frontend et E2E mockés verts localement.
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
   fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
-  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous la coque configurable partagée, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
-  Le PV couvre toute l'application; seuls les blocs Équipe, Fonction et Chantier sont actuellement renseignés. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
-  Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
+  Le PV couvre toute l'application et sera complété domaine par domaine. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 
 Tous les cinq domaines sont configurés avec les vues, la coque et le Tabulaire partagés. Prochaine étape : revue propriétaire
-dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après confirmation que la CI complète de la PR #80 est verte.
+dans l'ordre Équipe, Fonction, Chantier, Employé, Paie.
+
+- [ ] **Équipe — support de formation** : préparer ultérieurement une présentation et une vidéo de démonstration du domaine. Ce travail n'est pas planifié pour le moment.
 
 ---
 
 ## Prochaine tâche — Qualité des données (une seule tâche, tous les domaines)
 
-**Règles voulues (2026-10-03)** : dans **tous** les domaines, **tous les champs sont obligatoires** et
-**aucun doublon ne peut exister**. À vérifier domaine par domaine (Employé, Chantier, Fonction, Équipe,
-Paie, Utilisateur, Rôle), à quatre niveaux — base (`NOT NULL`, contraintes `UNIQUE`), API (validation des
+**Cible qualité de données (2026-10-03)** : les champs définis comme obligatoires doivent l'être à
+tous les niveaux et **aucun doublon ne peut exister**, sous réserve des décisions métier récentes
+documentées dans les dossiers de domaine. À vérifier domaine par domaine (Employé, Chantier, Fonction,
+Équipe, Paie, Utilisateur, Rôle), à quatre niveaux — base (`NOT NULL`, contraintes `UNIQUE`), API (validation des
 DTO et contrôle d'unicité dans les services, insensible à la casse et aux espaces), interface (champs
 marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou doublon) — puis sur les
 **données existantes** (champs vides, doublons), avec correction par migration Flyway.
@@ -142,8 +161,7 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   restent à inventorier et nettoyer avant validation complète des contraintes. Le doublon apparent
   `C157A` ci-dessous reste à instruire séparément.
 
-- **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
-  équipe en base), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
+- **Autres champs aujourd'hui facultatifs** à trancher un par un : pour Paie `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
   pour Utilisateur `employeeId`. « Tous obligatoires » est-il voulu pour chacun (ex. une prime à 0 est-elle
   une saisie) ?
 - **Nettoyer les doublons du référentiel Fonction** : 114 fonctions dont 9 paires très proches (fautes de
@@ -156,8 +174,8 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 - **Vérifier le doublon apparent du chantier `C157A`** : il apparaît deux fois dans le filtre Chantiers
   « Tous les mois » avec deux options distinctes. Confirmer s'il s'agit de deux enregistrements en base,
   puis décider avec la RH s'il faut corriger les données ou différencier les libellés.
-- **Libellés des équipes `A`, `LABO`, `ASPHALET`, `8`** (créées avec libellé = code le 2026-10-03) : à
-  compléter avec la RH via l'écran Équipes.
+- **Confirmer avec la RH la signification et le libellé des équipes `A`, `LABO`, `ASPHALET` et `8`** : créées
+  avec un libellé identique au code; après décision, mettre à jour le référentiel depuis l'écran Équipes.
 - **Traiter les quasi-doublons sémantiques à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs
   « THECNICIEN DE QUALITE ») : la normalisation trim/casse de V27 ne détecte pas les fautes de frappe ;
   toute fusion ou règle de similarité doit être instruite avec la RH.
@@ -190,17 +208,17 @@ procédures propres à chaque opération dans `docs/deployment.md` avant toute a
    fenêtre de 15 minutes ; sauvegarde unhealthy ou archive de plus de 24 heures. Confirmer ces seuils
    avec l'exploitation, tester la collecte et le routage des alertes avant la mise en service.
 
-Le propriétaire n'utilisera pas SSH. Le CD manuel a été confirmé le 2026-10-16 : aucun staging ni
-déploiement GitHub Actions vers le serveur. La production utilisera `latest` pour les quatre images
-après réussite de la CI sur `main` (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
+Le propriétaire n'utilisera pas SSH. Le déploiement manuel a été confirmé le 2026-10-16 : aucun staging
+ni déploiement automatisé vers le serveur. La production utilisera `latest` pour les quatre images
+après réussite des contrôles automatisés du projet (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
 inclure automatiquement les services de sauvegarde et de rétention pgAudit, le `.env` de production doit contenir
 `COMPOSE_PROFILES=backup`. La revue de l'extrait Nginx outer a été faite ; les contrôles restants sont
 détaillés ci-dessus.
 
 ## Performance — arbitrages et mesures à terminer
 
-Le contrôle du dépôt est conforme à 100 % : le profil PostgreSQL synthétique possède une porte CI
-obligatoire et le CI #38715644287 l'a passé. Cela ne valide pas les capacités de l'hôte de production.
+Le contrôle automatisé du dépôt est conforme à 100 % : le profil PostgreSQL synthétique passe les
+contrôles du projet. Cela ne valide pas les capacités de l'hôte de production.
 Pour compléter la validation opérationnelle :
 
 - rejouer le profil à 20 échantillons par opération lourde sur un hôte représentatif et comparer les

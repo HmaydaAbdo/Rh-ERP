@@ -5,6 +5,12 @@ contribuent à leur développement. Elle fixe les règles communes ; chaque appl
 cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans `docs/` et ses
 ADR.
 
+Pour ERP-RH, le cadrage et le suivi de l'intégration sont dans [`docs/ia/README.md`](../docs/ia/README.md)
+et l'[ADR 0013](../docs/adr/0013-integration-ia-mcp-langgraph-rag.md). L'orientation demandée par le
+propriétaire sépare le métier Spring de l'orchestration IA TypeScript. Les options nouvelles de cet
+ADR restent des propositions jusqu'à leur validation ; ce document ne déclare pas ces composants
+implémentés ni déployés.
+
 ## Choisir la famille de solution IA
 
 Le choix se fait à partir du problème, de son résultat attendu et de ses contraintes, avant de
@@ -122,35 +128,70 @@ Les procédures réutilisables entre applications ne doivent pas embarquer de r�
 un domaine. Le contexte présenté à l'agent et les sorties récupérées sont des données non fiables ;
 ils ne peuvent pas modifier les permissions, les instructions de sécurité ou les validations serveur.
 
-## IA dans les applications Java
+## Frontière entre métier Java et orchestration IA
 
-Pour une application Spring Boot, Spring AI est le choix d'intégration par défaut. LangChain4j peut
-être retenu lorsqu'un besoin vérifié le justifie ; employer les deux dans la même application
-requiert une raison documentée dans un ADR. Vérifier les versions stables, leur compatibilité avec
-le JDK et Spring Boot du projet, et verrouiller les dépendances. ERP-RH est en Spring Boot 4 : retenir
-la ligne de Spring AI qui le prend en charge officiellement, jamais une ligne prévue pour Spring Boot 3.
+Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. ERP-RH conserve son
+monolithe modulaire Spring Boot, ses services, transactions, API REST, permissions et audits. Le
+backend expose seulement des capacités métier ciblées par des adaptateurs MCP ; il n'héberge pas
+les appels de modèles ni les graphes d'agents. Ne pas introduire Spring AI, LangChain4j ou
+LangGraph4j dans ERP-RH pour cette intégration.
 
-Avec Spring AI :
+L'orientation ERP-RH est un runtime distinct **TypeScript/Node.js**, avec **LangGraph.js** pour les
+workflows à état explicite et **CopilotKit Runtime** pour la frontière avec l'interface **AG-UI**.
+Angular reste le client ; un runtime CopilotKit serveur ne suppose pas l'adoption de composants
+React dans Angular. Les versions exactes, l'intégration Angular et les contrats compatibles sont
+vérifiés au lot de compatibilité, puis verrouillés ; ne pas recopier une pile Java 17/Spring Boot 3
+issue d'un exemple. L'audit de la pile réelle et les points ouverts sont dans `docs/ia/`.
 
-* chaque agent est un bean `ChatClient` construit à partir d'un `ChatClient.Builder`, avec ses
-  instructions système, ses outils et ses advisors propres ; aucun agent ne partage par défaut les
-  outils ou la mémoire d'un autre ;
-* les outils sont des méthodes `@Tool` d'adaptateurs qui appellent les cas d'usage publics du
-  domaine (même règle que [`mcp.md`](mcp.md)) ; jamais un repository ni une requête SQL ;
-* la mémoire, la récupération documentaire, la journalisation et les garde-fous passent par des
-  advisors explicitement configurés, dans un ordre documenté ;
-* le client de modèle pointe vers la passerelle de modèles (section suivante), jamais directement
-  vers un fournisseur.
+* Les nœuds du graphe orchestrent des outils MCP autorisés, la recherche documentaire et les appels
+  de modèles via la passerelle. Ils ne dupliquent pas les règles métier et n'accèdent pas aux tables
+  transactionnelles ERP-RH.
+* Le runtime possède uniquement ses données techniques autorisées : exécutions, checkpoints et
+  conversations. Chaque corpus et projection documentaire a un propriétaire et une frontière
+  d'accès définis dans l'ADR ; le runtime ne s'attribue pas un accès direct à son stockage.
+  Les comptes et migrations sont séparés de la propriété des données métier ; le partage éventuel
+  d'une instance PostgreSQL ne donne aucun droit sur les tables du monolithe.
+* Chaque graphe déclare son état typé, ses transitions, ses outils, ses politiques de reprise, ses
+  limites, ses interruptions et ses sorties. Un enchaînement simple reste simple ; un graphe n'est
+  pas un motif pour multiplier les agents.
+* Dans ERP-RH, ne pas remplacer ce graphe explicite par un framework d'agents autonome opaque,
+  notamment Deep Agents. Le contrôle des transitions est explicite ; les appels de modèles restent
+  probabilistes. Valider les arguments et sorties par schéma côté runtime (par exemple Zod), puis
+  refaire les validations métier côté Spring. Une erreur retournée au graphe est structurée et
+  minimisée ; elle n'expose ni stacktrace ni données interdites.
+* Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
+  et Spring Boot réellement déclarés par le projet, sans ajouter de framework LLM au monolithe.
+* Tout composant supplémentaire, notamment Python, file de messages ou moteur de workflow, exige
+  un besoin vérifié, un contrat authentifié et la décision d'architecture correspondante.
 
-Un graphe d'orchestration Java tel que LangGraph4j n'est pertinent que pour un workflow ayant un
-état explicite, des branches, des reprises, des étapes parallèles ou une validation humaine. Un
-enchaînement linéaire reste un service ou un workflow simple. Le choix d'un graphe ne donne aucun
-droit supplémentaire aux outils.
+Cette orientation remplace la prescription d'orchestration Java de l'ADR 0008 pour ERP-RH ; elle ne
+supprime pas ses exigences de passerelle, de confidentialité, d'autorisation et d'évaluation.
 
-Si une capacité requise n'est pas raisonnablement disponible dans l'écosystème Java retenu, un
-composant Python séparé peut être proposé. Il communique au travers d'un contrat authentifié et ne
-duplique pas les règles métier ni la propriété des données de l'application Java. Ce choix et son
-périmètre sont justifiés par un ADR.
+### Reprise durable et effets métier
+
+Un checkpoint durable permet de reprendre un état ; il ne garantit pas une exécution « exactement
+une fois ». Une reprise peut réexécuter une étape située après le dernier checkpoint. Séparer les
+calculs sans effet des appels qui produisent un effet, et définir pour chaque outil son comportement
+après délai dépassé, perte de réponse, interruption ou redémarrage.
+
+* Une écriture rejouable utilise un identifiant de commande stable et une déduplication durable
+  dans le domaine propriétaire, avec restitution du résultat déjà enregistré. Sans cette garantie,
+  ne pas rejouer automatiquement une écriture dont l'issue est incertaine ; rechercher son état
+  avant toute nouvelle tentative.
+* Une confirmation humaine est liée à une action, ses arguments, son utilisateur et son périmètre.
+  Les droits et la validité de la confirmation sont revérifiés à la reprise et avant l'effet ; un
+  checkpoint, un résumé ou un ancien jeton ne tient pas lieu d'autorisation actuelle.
+* Définir une politique de retries par frontière responsable, avec nombre d'essais, durée totale,
+  délais et budget global bornés. Éviter la multiplication des retries entre runtime, client MCP et
+  passerelle. Réessayer seulement les erreurs transitoires admissibles ; un refus d'autorisation,
+  une validation ou une erreur métier ne déclenche pas de boucle de correction illimitée.
+* Les schémas d'état, graphes, prompts et versions de contrat sont traçables. Une nouvelle version
+  précise comment migrer, terminer ou refuser les exécutions anciennes. Les migrations de stockage
+  passent par le processus versionné ; ne pas lancer une création automatique de tables depuis le
+  runtime, par exemple un `PostgresSaver.setup()` non contrôlé en production.
+
+Les valeurs des limites, la rétention et les objectifs de reprise sont proposés avec des mesures
+et validés avant activation ; une convention ne fournit pas de seuil métier inventé.
 
 ## Passerelle de modèles
 
@@ -198,9 +239,11 @@ donnée réelle d'une classe supérieure à « publique ou synthétique ». La c
 de la donnée la plus sensible qu'elle contient, résultats d'outils et mémoire compris. Le routage par
 classe est configuré dans la passerelle et vérifié par des tests ; il n'est jamais laissé au modèle.
 
-ERP-RH ne contient aujourd'hui que des données fictives : toutes les classes peuvent être testées avec
-les offres gratuites. Le passage à des données réelles exige de revoir les alias et leurs fournisseurs
-avant la mise en service.
+Ne jamais supposer que les données d'un environnement sont fictives. Les jeux de test explicitement
+synthétiques peuvent utiliser les offres admises pour cette classe ; toute donnée inconnue conserve
+la classification protectrice applicable à son contenu. L'activation sur des données réelles exige
+la validation documentée des fournisseurs et du routage avant la mise en service. Un repli de modèle
+ne peut jamais envoyer les données vers un fournisseur interdit pour leur classe.
 
 ## Orchestration multi-agents
 
@@ -221,11 +264,12 @@ coût (tokens, latence, erreurs de routage) sans bénéfice.
 
 ### Agents de domaine
 
-Un agent de domaine (« micro-agent ») appartient à un domaine du monolithe modulaire et ne travaille
-que sur ses outils, ses skills (`docs/<domaine>/skills/`) et son contexte. Il réside dans le package de
-son domaine, déclare son nom, sa mission, ses outils, son alias de modèle et son budget, et n'importe
-aucun outil d'un autre domaine. Un besoin d'un autre domaine passe par l'agent ou par les outils publics
-de ce domaine.
+Un agent de domaine (« micro-agent ») possède un périmètre métier explicite et ne travaille que sur
+ses outils, ses skills (`docs/<domaine>/skills/`) et son contexte. Dans ERP-RH, sa définition reste
+dans le runtime TypeScript, organisée par domaine ; les règles métier et les adaptateurs MCP restent
+dans leurs domaines Spring propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
+modèle et son budget. Un besoin d'un autre domaine passe par une délégation explicite du superviseur
+ou un outil public autorisé, sans accès implicite à son contexte.
 
 ### Superviseur et agents exposés comme outils
 
@@ -243,7 +287,7 @@ Le modèle de collaboration de référence est le **superviseur** (orchestrateur
 La chorégraphie pair-à-pair (agents qui s'appellent librement ou réagissent à des événements entre eux)
 n'est pas retenue : elle rend les boucles, les coûts et la responsabilité d'une action difficiles à
 contrôler et à auditer. Un workflow à état explicite, avec reprises, branches ou validation humaine,
-peut utiliser un graphe d'orchestration (voir LangGraph4j plus haut), sous les mêmes règles.
+peut utiliser LangGraph.js dans le runtime TypeScript d'ERP-RH, sous les mêmes règles.
 
 ### Règles communes à toute délégation
 
@@ -264,14 +308,14 @@ métier (salaire, effectif, statut) est toujours relue dans son domaine au momen
 
 | Niveau | Contenu | Stockage | Durée |
 |---|---|---|---|
-| Courte | Derniers échanges de la conversation, en fenêtre glissante bornée en messages et en tokens | Base de l'application (PostgreSQL), par conversation et par utilisateur | La conversation, puis la rétention définie |
+| Courte | Derniers échanges de la conversation, en fenêtre glissante bornée en messages et en tokens | Stockage technique du runtime IA, par conversation et par utilisateur | La conversation, puis la rétention définie |
 | Compactée | Résumé des échanges sortis de la fenêtre, produit en arrière-plan quand le budget de contexte est dépassé | Même stockage, lié à la conversation, avec la version du modèle et du prompt de résumé | Comme la conversation |
-| Longue | Préférences de l'utilisateur, procédures apprises et faits validés, avec provenance | Base de l'application ; graphe de connaissances seulement selon [`rag.md`](rag.md) | Jusqu'à suppression par l'utilisateur ou fin de la rétention |
+| Longue | Préférences de l'utilisateur, procédures apprises et faits validés, avec provenance | Stockage technique du runtime IA ; graphe de connaissances seulement selon [`rag.md`](rag.md) | Jusqu'à suppression par l'utilisateur ou fin de la rétention |
 
-* **Courte.** Utiliser la mémoire de conversation de Spring AI (`ChatMemory`, fenêtre de messages) avec
-  un dépôt JDBC sur la base existante, injectée par un advisor. La conversation est rattachée à
-  l'utilisateur authentifié : un utilisateur ne peut jamais lire ni poursuivre la conversation d'un
-  autre.
+* **Courte.** Une fenêtre de messages et un stockage durable sont configurés explicitement dans le
+  runtime IA. Un checkpoint LangGraph n'est pas, à lui seul, une politique de mémoire ou de rétention.
+  La conversation est rattachée à l'utilisateur authentifié : un utilisateur ne peut jamais lire ni
+  poursuivre la conversation d'un autre, même en connaissant son `threadId`.
 * **Compactée.** Le résumé conserve, sans les reformuler, les consignes obligatoires, les permissions,
   les confirmations en attente, les décisions prises et la provenance des informations (voir
   « Sobriété du contexte »). Les messages d'origine restent consultables pendant leur rétention pour
@@ -284,16 +328,19 @@ métier (salaire, effectif, statut) est toujours relue dans son domaine au momen
 
 Chaque niveau a une taille maximale et une règle de rétention et de suppression documentées. Les tests
 vérifient l'isolation entre utilisateurs, la conservation des éléments obligatoires après compactage et
-la suppression effective.
+la suppression effective. Une révocation ou suppression de source doit aussi empêcher sa réutilisation
+depuis les résumés, checkpoints, conversations et caches encore actifs ; voir [`rag.md`](rag.md).
 
 ## Interopérabilité entre agents d'applications différentes
 
 MCP expose des **outils** et des ressources (voir [`mcp.md`](mcp.md)). Pour qu'un agent d'une
-application délègue une tâche à l'agent d'une autre application (cible « application IA d'entreprise »
-ci-dessous), utiliser le protocole **A2A** (Agent2Agent) : chaque agent publie une carte décrivant ses
-compétences, et les tâches s'échangent avec leur état. A2A ne remplace ni l'authentification, ni la
-revérification des permissions par l'application qui exécute la tâche. À l'intérieur d'une même
-application, la délégation reste un appel Java (agent exposé comme outil), sans protocole réseau.
+application délègue une tâche à l'agent d'une autre application, **A2A** (Agent2Agent) est une option à
+évaluer si un cycle de tâche inter-applications est effectivement nécessaire. Il ne remplace ni
+l'authentification ni la revérification des permissions par l'application qui exécute la tâche. A2A
+externe ne fait pas partie du MVP ERP-RH. Dans le runtime IA d'une même application, une délégation
+reste un appel local typé ou une transition du graphe ; ne pas ajouter un protocole réseau interne
+pour simuler une équipe d'agents. Le choix entre appel d'outil, tâche déléguée et autres transports
+suit [`integrations.md`](integrations.md).
 
 ## Exploitation des agents
 
@@ -389,12 +436,11 @@ couvertes par des contrôles déterministes et des sources métier faisant autor
 Les bibliothèques et protocoles évoluent. Vérifier les versions stables et les guides officiels au
 moment de l'adoption ou d'une mise à niveau :
 
-* [Spring AI](https://docs.spring.io/spring-ai/reference/)
-* [LangChain4j](https://docs.langchain4j.dev/)
-* [LangGraph4j](https://langgraph4j.github.io/langgraph4j/)
+* [LangGraph.js — présentation et concepts](https://docs.langchain.com/oss/javascript/langgraph/overview)
+* [LangGraph.js — persistance et mémoire](https://docs.langchain.com/oss/javascript/langgraph/persistence)
+* [CopilotKit](https://docs.copilotkit.ai/)
 * [Spécification MCP](https://modelcontextprotocol.io/specification/)
 * [Protocole A2A](https://a2a-protocol.org/)
 * [LiteLLM](https://docs.litellm.ai/)
-* [Spring AI — Neo4j Vector Store](https://docs.spring.io/spring-ai/reference/api/vectordbs/neo4j.html)
 * [Langfuse](https://langfuse.com/docs)
 * [Building effective agents (Anthropic)](https://www.anthropic.com/engineering/building-effective-agents)

@@ -1,0 +1,25 @@
+<div class="app-page__actions app-page__actions--liste">
+  @if (canImport()) {
+    <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="importing()" (clicked)="choisirFichier()"></stp-split-button>
+  }
+  @if (canWrite()) {
+    <a stp-button icon="plus" routerLink="/equipes/new">Nouvelle équipe</a>
+  }
+</div>
+<input #fileInput type="file" accept=".xlsx" class="equipe-actions__fichier" (change)="fichierSelectionne($event)" />
+<stp-dialog header="Résultat de l'import" width="560px" [(open)]="resultOpen">
+  @if (result(); as rapport) {
+    <p><strong>{{ rapport.totalLignes }}</strong> ligne(s) traitée(s) — <strong>{{ rapport.crees }}</strong> créée(s), <strong>{{ rapport.ignores }}</strong> rejetée(s).</p>
+    @if (rapport.lignesIgnorees.length > 0) {
+      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes d'équipes rejetées à l’import">
+        <table class="app-static-table">
+          <caption class="app-lecteur">Détail des lignes d'équipes rejetées pendant l'import</caption>
+          <thead><tr><th scope="col">Ligne</th><th scope="col">Code</th><th scope="col">Libellé</th><th scope="col">Raison</th></tr></thead>
+          <tbody>@for (ligne of rapport.lignesIgnorees; track ligne.numeroLigne) {
+            <tr><td>{{ ligne.numeroLigne }}</td><td>{{ ligne.code }}</td><td>{{ ligne.libelle }}</td><td>{{ ligne.raison }}</td></tr>
+          }</tbody>
+        </table>
+      </div>
+    }
+  }
+</stp-dialog>

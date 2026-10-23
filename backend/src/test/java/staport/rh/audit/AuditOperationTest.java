@@ -16,6 +16,7 @@ import staport.rh.auth.exceptions.RoleInUseException;
 import staport.rh.auth.services.interfaces.IRoleService;
 import staport.rh.auth.services.interfaces.IUserService;
 import staport.rh.equipe.dtos.request.EquipeCreateRequestDto;
+import staport.rh.equipe.dtos.request.EquipeUpdateRequestDto;
 import staport.rh.equipe.dtos.response.EquipeResponseDto;
 import staport.rh.equipe.services.interfaces.IEquipeService;
 import staport.rh.function.dtos.request.FunctionCreateRequestDto;
@@ -34,6 +35,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -95,6 +97,21 @@ class AuditOperationTest extends AuditIntegrationTestBase {
         Map<String, Object> suppression = uneEntree("PAIE_SUPPRESSION", cree.id());
         assertThat(suppression.get("type_operation")).isEqualTo("DELETE");
         assertThat(lignesAud("paie_aud", revisionDe(suppression), (short) 2)).isEqualTo(1);
+    }
+
+    @Test
+    void creer_un_bulletin_synchronise_l_equipe_choisie_avec_la_fiche_employe() {
+        Referentiel ref = donnees.creerReferentiel();
+        EquipeResponseDto equipe = equipeService.create(new EquipeCreateRequestDto(
+                "SYNC-" + Long.toHexString(System.nanoTime()), "Équipe synchronisée"));
+
+        PaieResponseDto bulletin = paieService.create(new PaieCreateRequestDto(ref.employeId(), YearMonth.of(2031, 7),
+                ref.fonctionId(), ref.chantierId(), equipe.id(), BigDecimal.valueOf(26), null, null,
+                new BigDecimal("3000"), null, null, new BigDecimal("3000"), null));
+
+        assertThat(jdbc.queryForObject("SELECT equipe_id FROM employe WHERE id = ?", Long.class, ref.employeId()))
+                .isEqualTo(equipe.id());
+        assertThat(paieService.findById(bulletin.id()).equipe().id()).isEqualTo(equipe.id());
     }
 
     @Test
@@ -199,6 +216,31 @@ class AuditOperationTest extends AuditIntegrationTestBase {
         assertThat(entree.get("resultat")).isEqualTo("ECHEC");
         assertThat(entree.get("motif")).isEqualTo("DataIntegrityViolationException");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM equipe WHERE id = ?", Long.class, ref.equipeId())).isEqualTo(1L);
+    }
+
+    @Test
+    void supprimer_une_equipe_referencee_par_une_fiche_employe_est_refuse() {
+        Referentiel ref = donnees.creerReferentiel();
+        jdbc.update("UPDATE employe SET equipe_id = ? WHERE id = ?", ref.equipeId(), ref.employeId());
+
+        assertThatThrownBy(() -> equipeService.delete(ref.equipeId()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipe WHERE id = ?", Long.class, ref.equipeId())).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT equipe_id FROM employe WHERE id = ?", Long.class, ref.employeId())).isEqualTo(ref.equipeId());
+        assertThat(uneEntree("EQUIPE_SUPPRESSION", ref.equipeId()).get("resultat")).isEqualTo("ECHEC");
+    }
+
+    @Test
+    void modifier_le_code_d_une_equipe_actualise_le_code_affiche_sur_ses_bulletins_existants() {
+        Referentiel ref = donnees.creerReferentiel();
+        long bulletinId = donnees.creerBulletin(ref, YearMonth.of(2031, 6));
+        EquipeResponseDto equipe = equipeService.findById(ref.equipeId());
+        String nouveauCode = ("NOUVEAU-" + ref.suffixe()).toUpperCase(Locale.ROOT);
+
+        equipeService.update(equipe.id(), new EquipeUpdateRequestDto(equipe.version(), nouveauCode, equipe.libelle()));
+
+        assertThat(paieService.findById(bulletinId).equipe().code()).isEqualTo(nouveauCode);
     }
 
     @Test

@@ -47,7 +47,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
         [formField]="formulaire.equipeIds"
         [multiple]="true"
         [source]="equipeReferenceService"
-        optionLabel="code"
+        optionLabel="libelle"
         ariaLabel="Équipe"
         placeholder="Équipe"
       ></app-lazy-select>

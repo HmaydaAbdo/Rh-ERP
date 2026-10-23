@@ -1,5 +1,10 @@
 
 <div class="equipe-list">
+  @if (totalRecords() > 0) {
+    <div class="flex justify-end pb-3">
+      <app-pdf-export-button [document]="documentVide" [chargerDocument]="chargerExport" />
+    </div>
+  }
   <app-collection-table
     [configuration]="tableConfiguration"
     [columnState]="columns"

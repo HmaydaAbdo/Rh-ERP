@@ -10,8 +10,8 @@ import java.util.Map;
 /**
  * Configuration de l'export : période, et pour les feuilles par équipe soit aucune, soit toutes
  * les équipes trouvées pour chaque chantier, soit une sélection explicite par chantier
- * ({@code equipesParChantier}, ignoré hors mode {@code PERSONNALISE}). Indépendamment, pour
- * chaque chantier, les équipes listées dans {@code equipesExcluesFeuilleChantier} n'apparaissent
+ * ({@code equipesParChantier}, valeurs = libellés d'équipe, ignoré hors mode {@code PERSONNALISE}).
+ * Indépendamment, pour chaque chantier, les libellés listés dans {@code equipesExcluesFeuilleChantier} n'apparaissent
  * pas sur la feuille globale de CE chantier (la feuille GLB tous chantiers n'est jamais filtrée par
  * cette exclusion). {@code chantiers}, lui, restreint tout l'export (GLB comprise) à la liste de
  * codes donnée — {@code null} ou vide exporte tous les chantiers de la période.

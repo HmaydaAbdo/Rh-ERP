@@ -12,6 +12,8 @@ import staport.rh.employee.imports.EmployeeImportResultDto;
 import staport.rh.employee.imports.EmployeeImportService;
 import staport.rh.function.imports.FunctionImportResultDto;
 import staport.rh.function.imports.FunctionImportService;
+import staport.rh.equipe.imports.EquipeImportResultDto;
+import staport.rh.equipe.imports.EquipeImportService;
 import staport.rh.employee.entities.TypeSalaire;
 import staport.rh.paie.imports.PaieImportAnalyseDto;
 import staport.rh.paie.imports.PaieImportCorrectionsDto;
@@ -42,6 +44,9 @@ class AuditImportTest extends AuditIntegrationTestBase {
 
     @Autowired
     private FunctionImportService functionImportService;
+
+    @Autowired
+    private EquipeImportService equipeImportService;
 
     /** Fichier de paie au format attendu : trois lignes d'en-tête, puis une ligne par bulletin. */
     private static MockMultipartFile fichier(String nomPrenom, String cin, String fonction, String chantierCode) throws IOException {
@@ -95,6 +100,21 @@ class AuditImportTest extends AuditIntegrationTestBase {
         }
     }
 
+    private static MockMultipartFile fichierEquipes(String code, String libelle) throws IOException {
+        try (XSSFWorkbook classeur = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
+            Sheet feuille = classeur.createSheet("Équipes");
+            Row entete = feuille.createRow(0);
+            entete.createCell(0).setCellValue("Code");
+            entete.createCell(1).setCellValue("Libellé");
+            Row ligne = feuille.createRow(1);
+            ligne.createCell(0).setCellValue(code);
+            ligne.createCell(1).setCellValue(libelle);
+            classeur.write(sortie);
+            return new MockMultipartFile("file", "equipes-test.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sortie.toByteArray());
+        }
+    }
+
     /** La paie s'importe mois après mois : le mois qui suit le dernier présent dans la base partagée. */
     private YearMonth moisSuivant() {
         Integer dernier = jdbc.queryForObject("SELECT max(periode) FROM paie", Integer.class);
@@ -103,7 +123,7 @@ class AuditImportTest extends AuditIntegrationTestBase {
 
     /** La fiche du référentiel de test, avec le salaire de la ligne du fichier : le fichier concorde avec elle. */
     private void aligner(Referentiel ref) {
-        jdbc.update("UPDATE employe SET salaire = 3000, type_salaire = 'MENSUEL' WHERE id = ?", ref.employeId());
+        jdbc.update("UPDATE employe SET salaire = 3000, type_salaire = 'MENSUEL', equipe_id = NULL WHERE id = ?", ref.employeId());
     }
 
     @Test
@@ -228,5 +248,23 @@ class AuditImportTest extends AuditIntegrationTestBase {
         assertThat(entree.get("resultat")).isEqualTo("ECHEC");
         assertThat(entree.get("revision_id")).isNull();
         assertThat(entree.get("motif")).isEqualTo("1 ligne(s) rejetée(s) sur 1");
+    }
+
+    @Test
+    void un_import_equipe_reussi_est_audite_sans_conserver_le_contenu_du_fichier() throws IOException {
+        Referentiel ref = donnees.creerReferentiel();
+        String code = "EQ" + ref.suffixe();
+        long avant = jdbc.queryForObject("SELECT COALESCE(max(id), 0) FROM audit_journal", Long.class);
+
+        EquipeImportResultDto resultat = equipeImportService.importer(fichierEquipes(code, "Equipe import " + ref.suffixe()));
+
+        assertThat(resultat.crees()).isEqualTo(1);
+        Map<String, Object> entree = jdbc.queryForMap(
+                "SELECT * FROM audit_journal WHERE id > ? AND action = 'EQUIPE_IMPORT'", avant);
+        assertThat(entree.get("resultat")).isEqualTo("SUCCES");
+        assertThat(entree.get("nombre_elements")).isEqualTo(1);
+        assertThat(entree.get("perimetre").toString()).contains("equipes-test.xlsx").contains("fichierSha256")
+                .doesNotContain(code).doesNotContain("Equipe import");
+        assertThat(lignesAud("equipe_aud", revisionDe(entree), (short) 0)).isEqualTo(1);
     }
 }

@@ -29,6 +29,7 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
     /** Le référentiel compte déjà un employé ACTIF, sans équipe, né le 01/01/1990 et embauché le 01/01/2020. */
     private Referentiel referentielAvecTroisEmployes() {
         Referentiel ref = donnees.creerReferentiel();
+        jdbc.update("UPDATE employe SET equipe_id = NULL WHERE id = ?", ref.employeId());
         LocalDate aujourdhui = LocalDate.now();
         employe(ref, "A", aujourdhui.minusYears(22), aujourdhui.minusMonths(3), ref.equipeId(), "ACTIF");
         employe(ref, "B", aujourdhui.minusYears(58), aujourdhui.minusYears(12), ref.equipeId(), "INACTIF");

@@ -1,155 +1,162 @@
-# Module Équipe
+# Domaine Équipe
 
-> Référentiel des équipes de travail (CHAUFFEURS, OPERATEURS, ATELIER...), partagé par tous les
-> chantiers. Remplace l'ancienne table de libellés codée en dur (`EquipeLibelleCatalogue`) et le
-> texte libre qui était saisi sur chaque bulletin de paie. Consommé par le domaine Paie (équipe d'un
-> bulletin, regroupement des exports Excel/PDF).
+## Rôle du domaine
 
----
+Le domaine gère le référentiel des équipes de travail et les règles qui s'appliquent à leur sélection,
+leur modification et leur utilisation par les domaines Employé et Paie. Il ne contient pas de catalogue
+de données métier dans cette documentation.
 
-## Vue d'ensemble
+La fiche Employé porte l'équipe courante. Chaque bulletin conserve séparément la référence à l'équipe
+associée à son mois. Une modification ultérieure de l'équipe de l'employé ne réécrit donc pas les bulletins
+antérieurs. Le bulletin référence le référentiel : modifier le libellé ou le code d'une équipe change la
+valeur affichée pour les bulletins qui référencent cette même équipe.
 
-| | |
-|---|---|
-| Backend | `backend/src/main/java/staport/rh/equipe/` |
-| Frontend | `frontend/src/app/portail/equipe/` |
-| Table | `equipe` |
-| Endpoints | `/equipes`, `/equipes/search` |
+## Analyse fonctionnelle et règles métier
 
-Le module suit l'architecture de référence du projet (`conventions/architecture.md`) :
-`entities → repositories → specifications → dtos → mappers → services → controller`.
-
-```text
-equipe/
-├── controller/EquipeController.java
-├── dtos/
-│   ├── request/ (Create, Update, SearchCriteria)
-│   └── response/EquipeResponseDto.java
-├── entities/Equipe.java
-├── exceptions/ (NotFound, AlreadyExists, ExceptionHandler)
-├── mappers/EquipeMapper.java
-├── repositories/EquipeRepository.java
-├── services/ (EquipeService + IEquipeService)
-└── specifications/EquipeSpecification.java
-```
-
----
+- Le **libellé** est le nom sémantique utilisé pour présenter, sélectionner et regrouper les équipes dans
+  les écrans, les filtres et les vues analytiques. Les choix proposés sont triés par libellé.
+- Le **code** identifie l'équipe dans les échanges de données et les imports. Il reste visible dans la
+  liste d'administration et peut être utilisé pour retrouver une équipe par recherche, mais il ne remplace
+  pas le libellé dans les choix et regroupements destinés aux utilisateurs.
+- Les relations persistées utilisent l'identifiant interne de l'équipe. Les identifiants ne sont pas les
+  libellés affichés aux utilisateurs.
+- Le code est obligatoire, limité à 50 caractères, retiré de ses espaces extérieurs et enregistré en
+  majuscules. Le libellé est obligatoire, limité à 100 caractères et retiré de ses espaces extérieurs.
+- Code et libellé sont chacun uniques sans tenir compte de la casse ni des espaces extérieurs. Un doublon
+  est refusé avec une erreur de conflit (`409`).
+- L'équipe est facultative sur la fiche Employé et le bulletin Paie. Dans une création ou modification
+  manuelle de bulletin, le choix de l'équipe met aussi à jour la fiche Employé pour garder les deux états
+  cohérents. L'équipe associée à chaque bulletin antérieur reste distincte.
+- La suppression est refusée (`409`) si une fiche Employé ou un bulletin référence l'équipe.
+- Une équipe a un état unique : il n'existe pas de statut actif/inactif.
+- L'import Excel ne crée que de nouvelles équipes. Il valide le fichier entier avant l'écriture; une ligne
+  invalide entraîne le rejet de tout le fichier, sans création partielle.
 
 ## Modèle de données
 
-Table `equipe` (migration `V7__create_equipe.sql`) :
+La table `equipe` porte le référentiel. Les tables Employé et Paie conservent chacune une relation
+facultative vers une équipe. La relation du bulletin porte l'équipe de son mois; elle n'est pas remplacée
+par une modification de l'équipe courante sur la fiche Employé.
 
-| Colonne | Type | Contrainte | Description |
+| Champ | Type | Contraintes | Rôle |
 |---|---|---|---|
-| `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
-| `code` | `VARCHAR(50)` | `NOT NULL`, **unique** (aussi sur `UPPER(code)`) | Clé métier : `CH`, `OP`, `R CONT`... |
-| `libelle` | `VARCHAR(100)` | `NOT NULL`, **unique** | Nom d'affichage : `CHAUFFEURS`, `OPERATEURS`... |
+| `id` | `Long` / `BIGINT` | Clé primaire, générée par la base | Référence technique des fiches et bulletins |
+| `version` | `Long` / `BIGINT` | Obligatoire, version optimiste | Détecte une modification concurrente |
+| `code` | `String` / `VARCHAR(50)` | Obligatoire, unique sans casse et espaces extérieurs | Identifiant d'échange et d'import |
+| `libelle` | `String` / `VARCHAR(100)` | Obligatoire, unique sans casse et espaces extérieurs | Nom sémantique affiché et utilisé dans les sélections/regroupements |
 
-Le lien avec la paie est `paie.equipe_id` (nullable, FK → `equipe.id`, index `idx_paie_equipe`,
-migration `V8__paie_equipe_fk.sql`) — voir `docs/paie/README.md`.
+## DTO exposés par le domaine
 
-### Données de départ (seed V7)
+Les contrôleurs exposent des DTO et jamais les entités JPA. Les types ci-dessous décrivent le contrat
+public actuel du domaine Équipe.
 
-La migration crée 17 équipes. Les 13 premières viennent de la table fournie par la direction (`EQUIPES.xlsx`, 2026-09-29) :
-`CH` CHAUFFEURS, `OP` OPERATEURS, `AT` ATELIER, `EE` ENROBE, `TER` TERASSEMENT, `GA` GARDIENS,
-`TOPO` TOPOGRAPHES, `ADMIN` ADMINISTRATION, `ENROCHEMENT` ENROCHEMENT, `R CONT` REMBLAIS CONTIGUE,
-`GABION` GABION, `PHS` PLAN HYGIENE ET SECURITE, `EB` BETON.
+| DTO | Champ | Type | Contraintes | Description |
+|---|---|---|---|---|
+| `EquipeCreateRequestDto` | `code` | `String` | Obligatoire, non blanc, 50 caractères maximum | Identifiant d'échange à créer |
+| `EquipeCreateRequestDto` | `libelle` | `String` | Obligatoire, non blanc, 100 caractères maximum | Nom sémantique à créer |
+| `EquipeUpdateRequestDto` | `version` | `Long` | Obligatoire | Version reçue lors de la lecture; prévient l'écrasement concurrent |
+| `EquipeUpdateRequestDto` | `code` | `String` | Obligatoire, non blanc, 50 caractères maximum | Nouveau code d'échange |
+| `EquipeUpdateRequestDto` | `libelle` | `String` | Obligatoire, non blanc, 100 caractères maximum | Nouveau nom sémantique |
+| `EquipeSearchCriteria` | `code` | `String?` | Facultatif, 50 caractères maximum | Filtre de liste sur le code |
+| `EquipeSearchCriteria` | `libelle` | `String?` | Facultatif, 100 caractères maximum | Filtre de liste sur le libellé |
+| `EquipeSearchCriteria` | `recherche` | `String?` | Facultatif, 100 caractères maximum | Recherche libre dans le code ou le libellé |
+| `EquipeResponseDto` | `id` | `Long` | Présent dans la réponse | Identifiant interne utilisé par les relations |
+| `EquipeResponseDto` | `version` | `Long` | Présent dans la réponse | Version à renvoyer lors d'une modification |
+| `EquipeResponseDto` | `code` | `String` | Présent dans la réponse | Identifiant d'échange |
+| `EquipeResponseDto` | `libelle` | `String` | Présent dans la réponse | Nom utilisé dans l'interface et les regroupements |
+| `EquipeImportResultDto` | `totalLignes` | `int` | Présent dans la réponse | Nombre de lignes du fichier traitées |
+| `EquipeImportResultDto` | `crees` | `int` | Présent dans la réponse | Nombre d'équipes créées |
+| `EquipeImportResultDto` | `ignores` | `int` | Présent dans la réponse | Nombre de lignes rejetées |
+| `EquipeImportResultDto` | `lignesIgnorees` | `List<LigneIgnoreeDto>` | Présent dans la réponse | Détail des lignes rejetées |
+| `LigneIgnoreeDto` | `numeroLigne` | `int` | Présent dans chaque ligne rejetée | Numéro de ligne dans le classeur |
+| `LigneIgnoreeDto` | `code`, `libelle`, `raison` | `String` | Présents dans chaque ligne rejetée | Valeurs lues et motif de rejet |
 
-L'ancien catalogue contenait à la fois `ENR` et `ENROCHEMENT` pour la même équipe : fusionnées sous
-le code **`ENROCHEMENT`** (valeur réellement présente sur les bulletins et dans les fichiers
-d'import). `ENR` n'est plus un code valide.
+Une recherche retourne une page de `EquipeResponseDto`. Les critères `code` et `libelle` se combinent;
+`recherche` trouve une correspondance dans l'un ou l'autre champ. Les champs sensibles à la casse sont
+normalisés selon les règles métier ci-dessus.
 
-Les 4 autres ont été créées d'après les valeurs trouvées sur les bulletins existants
-(diagnostic du 2026-10-03), absentes de l'ancien catalogue : `A` (45 bulletins), `LABO` (6),
-`ASPHALET` (5) et `8` (1). Leur **libellé est provisoirement égal au code** — à renseigner avec la RH
-via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'équipe restent sans équipe (`equipe_id` nul).
+## API et import
 
----
-
-## Règles métier
-
-- `code` est la **clé métier** : stocké **trimé et en majuscules** (`EquipeService.normaliserCode`),
-  donc `"ch"` et `"CH "` désignent la même équipe. V25 impose l'unicité après `trim` et sans casse;
-  V27 ajoute un contrôle de base qui refuse toute nouvelle valeur avec des espaces extérieurs.
-- `libelle` est aussi unique après `trim` et sans casse en base (migration V25, doublon → 409).
-  V27 ajoute le même contrôle contre les espaces extérieurs pour toute nouvelle valeur.
-- Le **code** reste la clé de sélection/regroupement partout (import Excel, dialog d'export,
-  agrégation BI) ; le **libellé** ne sert qu'à l'affichage (titres de section/feuille, graphique
-  « Répartition par équipe »).
-- La suppression (`DELETE /equipes/{id}`) est bloquée (409) si l'équipe est référencée par au moins
-  un bulletin de paie ou par un employé (clés étrangères `paie.equipe_id` et `employe.equipe_id`).
-- Pas de notion actif/inactif : une équipe existe ou n'existe pas.
-
----
-
-## API
-
-| Méthode | Route | Description | Codes |
-|---|---|---|---|
-| `POST` | `/equipes` | Créer une équipe | 201, 400, 409 |
-| `PUT` | `/equipes/{id}` | Modifier une équipe | 200, 400, 404, 409 |
-| `GET` | `/equipes/{id}` | Consulter une équipe | 200, 404 |
-| `POST` | `/equipes/search` | Rechercher (paginé, triable) — body `EquipeSearchCriteria` (`code`, `libelle`, `recherche`) | 200 |
-| `DELETE` | `/equipes/{id}` | Supprimer (bloqué si utilisée par un bulletin ou un employé) | 204, 404, 409 |
-
-`EquipeResponseDto` : `id`, `code`, `libelle`. `code`/`libelle` sont des filtres précis combinés en
-ET (liste d'administration) ; `recherche` est la recherche libre du sélecteur, en OU entre code et
-libellé.
-
-Authentification JWT + permissions requises sur chaque endpoint (`EQUIPE_READ`/`EQUIPE_WRITE`/
-`EQUIPE_DELETE`) — voir `docs/rbac/equipe.md`.
-
----
-
-## Frontend
-
-Routes sous `/equipes` (lazy loading, `equipe.routes.ts`, protégées par `permissionGuard`) :
-
-| Route | Composant | Description |
+| Méthode | Route | Contrat |
 |---|---|---|
-| `/equipes` | `EquipeVuesComponent` + `EquipeListComponent` | Coque commune, filtres code/libellé dans l'URL, liste paginée et tri |
-| `/equipes/cartes` | `EquipeCartesComponent` | **Cartes par descente libre** : une carte par équipe, puis « Regrouper par » chantier, fonction ou employés ; fiches Employé et paie du mois sur chaque carte |
-| `/equipes/analytique` | `EquipeAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie, évolution mensuelle, répartition, tranches, mouvements, et fiches Employé |
-| `/equipes/new` | `EquipeFormComponent` | Création |
-| `/equipes/:id` | `EquipeDetailComponent` | Consultation |
-| `/equipes/:id/edit` | `EquipeFormComponent` | Modification |
+| `POST` | `/equipes` | Création à partir de `EquipeCreateRequestDto` (`201`, `400`, `409`) |
+| `PUT` | `/equipes/{id}` | Modification à partir de `EquipeUpdateRequestDto` (`200`, `400`, `404`, `409`) |
+| `GET` | `/equipes/{id}` | Lecture d'une équipe (`200`, `404`) |
+| `POST` | `/equipes/search` | Recherche paginée et triable (`200`) |
+| `DELETE` | `/equipes/{id}` | Suppression protégée par les relations Employé et Paie (`204`, `404`, `409`) |
+| `POST` | `/equipes/import` | Import atomique XLSX, créations seulement (`200`, `400`) |
+| `GET` | `/equipes/import/modele` | Téléchargement du modèle XLSX vierge (`200`) |
 
-Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. Les trois
-vues utilisent la coque configurable partagée (`app-collection-shell`) et le tableau commun (`app-collection-table`), avec filtres et configuration propres au domaine, selon le
-[pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code et libellé restent dans l'URL et
-**agissent de la même façon dans les trois vues**. Les boutons de création, modification et suppression sont conditionnés
-par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
+Le classeur d'import attend les colonnes `Code` et `Libellé`. Le fichier est limité à 20 Mo. Les lignes
+vides sont ignorées; les autres sont toutes validées avant l'écriture. Le code est normalisé en majuscules
+et les deux valeurs sont nettoyées de leurs espaces extérieurs. Le résultat donne le nombre de lignes
+créées/rejetées et détaille chaque ligne rejetée.
 
-**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `EquipeCartesComponent` et
-`EquipeAnalytiqueComponent` ne sont que des hôtes minces ; `equipe-module.ts` décrit le module (référentiel d'équipes, filtres code et
-libellé, ordre de descente équipe → chantier → fonction). Les liens avec les autres domaines passent par les services
-existants, sans endpoint propre :
+## Permissions
 
-- les effectifs viennent du regroupement des fiches Employé et représentent le dernier état importé (`EMPLOYEE_READ`) ;
-- les sommes, effectifs payés, coûts moyens, STC, chantiers et historiques viennent des analyses Paie par période
-  (`PAIE_READ`) ;
-- la situation Employé récente et l'historique Paie sont deux informations distinctes, jamais présentées comme décrivant la
-  même période ; sans le droit correspondant, le bloc est masqué et son service n'est pas appelé ;
-- les équipes sans bulletin pour le mois choisi restent visibles, à zéro, et gardent l'historique de leurs autres mois ;
-- le périmètre (étapes du fil, mois, regroupement) est dans l'URL et se partage par lien.
+Le backend est la référence d'autorisation. Le masquage d'une route ou d'un bouton dans l'interface ne
+remplace pas le contrôle serveur.
 
-Le référentiel est consommé par Paie via `shared/reference-data/equipe-reference.service.ts`
-(contrat du sélecteur générique `shared/components/lazy-select`, voir `conventions/frontend.md`) :
-sélection simple dans le formulaire d'un bulletin, sélection multiple dans le filtre de la liste.
+| Permission | Accès accordé |
+|---|---|
+| `EQUIPE_READ` | Liste, détail, Tabulaire, Cartes, Analytique et chargement des équipes dans les sélecteurs Employé/Paie |
+| `EQUIPE_WRITE` | Créer et modifier une équipe; afficher les actions correspondantes |
+| `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
+| `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
+| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes et Analytique; sans ce droit, les données Employé ne sont pas chargées |
+| `PAIE_READ` | Lire la projection Paie affichée dans Cartes et Analytique; sans ce droit, les données Paie ne sont pas chargées |
 
-Le formulaire explique les règles avant la saisie, en langage utilisateur : code obligatoire (50 caractères maximum, espaces extérieurs retirés, enregistré en majuscules et unique) et libellé obligatoire (100 caractères maximum, espaces extérieurs retirés et unique).
+Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
+les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
+vers `/equipes`.
 
----
+## Les trois vues
 
-## Limites connues
+Les routes de collection sont `/equipes` (Tabulaire), `/equipes/cartes` (Cartes) et
+`/equipes/analytique` (Analytique). Elles utilisent les composants configurables partagés pour la coque
+et le tableau Tabulaire; Cartes et Analytique utilisent les vues partagées de `portail/perimetre/`.
+Équipe fournit sa configuration, ses filtres, ses colonnes et les critères de lecture transmis aux
+domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'URL lors du changement de vue.
 
-Voir [TODO.md](../../TODO.md) :
+- **Tabulaire** sert à retrouver, consulter et administrer les équipes. Le tableau présente le code et le
+  libellé; les filtres code/libellé suivent la même règle dans les trois vues.
+- **Cartes** permet de regrouper et parcourir le périmètre par équipe, chantier ou fonction. Le nom de
+  groupe affiché est le libellé; la carte peut réunir l'état courant des fiches Employé et les chiffres du
+  mois Paie choisi, avec les droits correspondants.
+- **Analytique** présente les indicateurs Paie par mois et dimension ainsi que les données d'effectif
+  Employé autorisées. Chaque graphique a son tableau de données accessible.
 
-- **Libellés provisoires** : `A`, `LABO`, `ASPHALET` et `8` ont pour libellé leur propre code. À compléter avec la
-  RH depuis l'écran Équipes.
-- **Équipe facultative sur un bulletin** : un bulletin peut ne pas avoir d'équipe (`equipe_id` nul). Savoir si
-  elle doit devenir obligatoire fait partie de la tâche « Qualité des données ».
-- **Modifier le code d'une équipe** (`PUT`) le change pour tous les bulletins qui la référencent, historique
-  compris ; le regroupement des exports se fait par code.
-- Pas d'import Excel ni de synchronisation : le référentiel se gère uniquement par l'écran Équipes.
-- Audité : voir [../audit/README.md](../audit/README.md).
+Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
+dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.
+La définition complète des vues et des comportements communs est dans
+[`conventions/frontend.md`](../../conventions/frontend.md).
+
+### Export
+
+Chaque composant qui expose des données peut être exporté séparément en PDF depuis son composant ou son
+conteneur. L'export contient uniquement les données de ce composant et respecte son périmètre et ses
+filtres : toutes les lignes du Tabulaire, toutes les cartes (y compris celles derrière « Afficher plus »),
+ou toutes les données représentées par un graphique. Un graphique est accompagné de son tableau de données.
+L'impression Angular partagée ouvre le dialogue d'impression du navigateur; l'utilisateur peut y enregistrer
+le document en PDF. Le modèle Excel téléchargeable reste un modèle d'import, pas un export.
+
+## Scénarios de vérification associés
+
+| Règle ou parcours | Suites qui portent les vérifications |
+|---|---|
+| Création, modification, normalisation et unicité | `EquipeServiceTest`, `ReferentielUniciteInsensibleCasseTest`, tests du formulaire Équipe |
+| Équipe facultative et synchronisation bulletin/fiche Employé | `PaieServiceTest`, tests du formulaire Paie |
+| Suppression bloquée si l'équipe est référencée | `PaieServiceTest`, tests d'audit, `EndpointSecurityTest` |
+| Import atomique et rejet des lignes invalides | `EquipeImportServiceTest`, `AuditImportTest`, tests d'actions d'import |
+| Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
+| Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
+| PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
+| Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
+
+Les commandes et prérequis des suites sont décrits dans [la documentation des tests](../testing.md).
+
+## Documents liés
+
+- [Domaine Employé](../employee/README.md) — équipe courante de la fiche.
+- [Domaine Paie](../paie/README.md) — équipe portée par le bulletin du mois.
+- [PV N°1 — proposition d'évolution](../handoff/pv-n1-erp-rh.md) — proposition de rendre l'équipe obligatoire sur un bulletin. Le comportement actuel reste facultatif.

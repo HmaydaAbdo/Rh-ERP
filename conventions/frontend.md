@@ -80,6 +80,14 @@ Signal Forms est le standard pour tous les formulaires. Utiliser les schémas ty
 état des champs et soumission ; les contrôles partagés implémentent les interfaces Signal Forms adaptées. Ne pas
 introduire Reactive Forms ou les formulaires pilotés par template (`ngModel`) dans un formulaire applicatif.
 
+Quand un domaine propose un import de données, le formulaire et l'import couvrent les mêmes champs métier dans
+les deux sens. Les valeurs de référence peuvent avoir une représentation adaptée au parcours (par exemple un
+sélecteur d'employé dans le formulaire et un CIN dans le fichier), mais le champ métier correspondant reste
+présent dans les deux. Les métadonnées propres au format d'import, comme le numéro de ligne, ne sont pas des
+champs métier. Le formulaire et l'import appliquent le même statut obligatoire ou facultatif. Le formulaire rend
+ce statut visible dans chaque libellé : marqueur `*` pour les champs requis, mention « (facultatif) » ou
+« (facultative) » pour les autres.
+
 ---
 
 # Injection de dépendances
@@ -123,6 +131,7 @@ Tous les formulaires, y compris les barres de filtres et les champs isolés (rec
 * **État** : charger un enregistrement = `modele.set(...)` (le formulaire reste intact) ; enregistrer = `form().reset()` avant de naviguer, de sorte que `unsavedChangesGuard` (qui lit `form().dirty()`) ne pose pas de question.
 * **Filtres de liste** : le modèle des filtres est un signal ; `debounce(chemin.champ, 300)` retarde les champs texte, `surChangementDesFiltres(filtres, () => this.onSearch())` relance la recherche (sauf à l'initialisation) ; « Réinitialiser » = `form().reset(valeursVides())`.
 * **Contrôles du kit** : un champ du kit est un `FormValueControl` (`value = model()`, `disabled = input()`, `touch = output()`, `focus()`), jamais un `ControlValueAccessor`. Ses bornes (`min`, `max`) viennent des règles du schéma.
+* **Parité avec les imports** : maintenir la même liste de champs métier et les mêmes statuts obligatoire/facultatif entre le contrat d'import et le formulaire du domaine, dans les deux sens ; afficher le statut dans le libellé et couvrir cette parité dans les tests du formulaire et de l'import.
 
 Interdictions :
 
@@ -306,8 +315,8 @@ sources de vérité ni trois règles métier.
   propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
   une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
   par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.
-  Le contenu des vues **Cartes** et **Analytique** est partagé par tous les modules : voir « Cartes par niveaux et
-  Analytique graphique » ci-dessous.
+  La coque et Tabulaire sont donc partagés eux aussi. Le contenu des vues **Cartes** et **Analytique** est partagé
+  par tous les modules : voir « Cartes par niveaux et Analytique graphique » ci-dessous.
 * Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
   `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
   modification restent hors de cette coque.
@@ -335,9 +344,18 @@ Les vues **Cartes** et **Analytique** de **tous** les modules — Paie, Employé
 module — sont les composants partagés de `portail/perimetre/` (ADR 0011). Il est interdit d'écrire une Cartes ou une
 Analytique propre à un module : on décrit le module, on ne copie pas la vue.
 
-**Ce qui reste propre au module** : sa configuration de coque et de tableau, ses routes, filtres, colonnes, cellules,
-actions, adaptateurs et règles métier. **Ce qui est partagé** : la structure de coque et de vue Tabulaire, ainsi que
-tout le contenu des Cartes et de l'Analytique.
+**Ce qui reste propre au module** : ses routes, filtres, colonnes, cellules, actions, adaptateurs et règles métier.
+**Ce qui est partagé et configuré par le module** : la coque, le tableau Tabulaire, tout le contenu des Cartes et
+de l'Analytique.
+
+### Exporter les données des vues
+
+Chaque composant de données des vues de collection — **Tabulaire, Cartes et Analytique** — fournit son propre export.
+L'export comprend tout le résultat du filtre actif, même lorsque la vue est paginée ou développe une liste par étapes;
+un graphique inclut aussi ses données sous forme de tableau. L'export suit le périmètre et les permissions actifs et
+ne révèle aucune donnée inaccessible à l'utilisateur. Les règles métier et les libellés sémantiques du domaine
+s'appliquent aussi au document. Chaque README de domaine précise le format et les limites de ses exports. Les tests
+vérifient la parité entre le document exporté et les données complètes de la vue.
 
 ### Brancher un module
 
