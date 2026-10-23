@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
@@ -59,7 +59,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, RouterLink, ChartComponent, IconComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -92,6 +92,7 @@ export class AnalytiquePerimetreComponent {
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
+  protected readonly ordreSources = computed(() => this.module().ordreAnalytique ?? ['PAIE', 'EMPLOYEE'] as const);
   protected readonly mois = signal<string[]>([]);
   protected readonly moisCharges = signal(false);
   /** Le mois analysé : celui de l'URL, à défaut le plus récent. */

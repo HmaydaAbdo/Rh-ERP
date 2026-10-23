@@ -20,7 +20,7 @@ import { PaiePeriodeResume } from '../../paie/models/paie.model';
 import { formaterMontant, libellePeriode, periodePrecedente } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
 import {
-  cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche, parametrePar,
+  cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
   Portee, porteeDe, porteeVide, versParametresPerimetre
 } from '../perimetre';
 import { fusionnerGroupes, GroupeCarte, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
@@ -46,8 +46,7 @@ interface Chargement {
 }
 
 /**
- * Vues Cartes des modules (lecture seule) — **descente libre** : on parcourt le périmètre en choisissant soi-même par quoi
- * regrouper (chantier, équipe, fonction, dans l'ordre proposé par le module ou dans un autre), jusqu'aux fiches des employés.
+ * Vues Cartes des modules (lecture seule) — **parcours guidé** selon l'ordre défini par le domaine, jusqu'aux fiches des employés.
  * Ouvrir une carte en fait une étape du fil ; chaque étape se retire seule. Chaque carte réunit les fiches Employé (dernier état
  * importé) et la paie du mois choisi, avec la variation de la masse par rapport au mois contigu ; une source n'est lue qu'avec son
  * droit (`EMPLOYEE_READ`, `PAIE_READ`). Tout vit dans l'URL (voir `perimetre.ts`). Le composant ne connaît aucun module : il lit
@@ -100,8 +99,16 @@ export class CartesPerimetreComponent {
   });
 
   protected readonly niveau = computed<Niveau>(() =>
-    niveauAffiche(this.params(), this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.voitEmployes())
+    niveauAffiche(this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.voitEmployes())
   );
+  protected readonly progression = computed(() => {
+    const niveau = this.niveau();
+    const decalageMois = this.module().niveauPeriode ? 1 : 0;
+    const total = this.module().ordre.length + (this.voitEmployes() ? 1 : 0) + decalageMois;
+    if (niveau === 'PERIODE') return { libelle: 'Mois', etape: 1, total };
+    if (niveau === 'EMPLOYES') return { libelle: 'Employés', etape: this.module().ordre.length + decalageMois + 1, total };
+    return { libelle: LIBELLES_DIMENSIONS[niveau], etape: this.module().ordre.indexOf(niveau) + decalageMois + 1, total };
+  });
   /** Les étapes du fil : chaque dimension choisie, dans l'ordre du module. */
   protected readonly etapes = computed(() =>
     this.module().ordre
@@ -189,23 +196,6 @@ export class CartesPerimetreComponent {
   /** Recharge le niveau affiché sans changer d'URL (le module Paie s'en sert après une suppression en groupe). */
   recharger(): void {
     this.version.update((n) => n + 1);
-  }
-
-  /** Le mois est un niveau possible tant qu'aucun mois n'est choisi (module Paie). */
-  protected moisPossible(): boolean {
-    return !!this.module().niveauPeriode && this.voitPaie() && this.perimetre().periode === null;
-  }
-
-  /** Une dimension se choisit si elle n'est pas déjà une étape et si une source la fournit. */
-  protected possible(dimension: Dimension): boolean {
-    if (etapeChoisie(this.perimetre(), dimension) !== null) {
-      return false;
-    }
-    return (this.module().dimension === dimension && !!this.module().catalogue) || this.voitEmployes() || this.voitPaie();
-  }
-
-  protected regrouperPar(niveau: Niveau): void {
-    this.naviguer({ par: parametrePar(niveau) });
   }
 
   /** Ouvrir un groupe : il devient une étape du fil, et l'on descend à la dimension suivante. Ouvrir un mois le choisit. */

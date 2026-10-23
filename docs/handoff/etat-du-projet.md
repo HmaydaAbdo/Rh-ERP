@@ -18,10 +18,12 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 
 1. `AGENTS.md`, puis les conventions dans l'ordre qu'il donne.
 2. `docs/README.md` (index de la documentation) et le README du domaine touché (`docs/<domaine>/README.md`).
-3. Les trois dernières décisions d'architecture :
+3. Les décisions récentes d'architecture :
    [ADR 0009 — carte : satellite, relief et 3D](../adr/0009-carte-satellite-relief-3d.md),
    [ADR 0010 — la fiche employé porte l'état du dernier mois de paie](../adr/0010-employe-etat-du-dernier-mois-de-paie.md) et
-   [ADR 0011 — Cartes et Analytique partagées par périmètre](../adr/0011-vues-cartes-analytique-par-perimetre.md).
+   [ADR 0011 — Cartes et Analytique partagées par périmètre](../adr/0011-vues-cartes-analytique-par-perimetre.md),
+   [ADR 0012 — coque et Tabulaire partagés](../adr/0012-coque-et-tabulaire-partages.md),
+   [ADR 0014 — parcours métier configurables dans les vues partagées](../adr/0014-vues-partagees-parcours-metier-configurables.md).
    Le cadrage par domaine suit le [PV N°1 — ERP-RH](pv-n1-erp-rh.md)
    (projet à valider par le propriétaire avant diffusion).
 4. `TODO.md` pour les sujets ouverts.
@@ -39,7 +41,7 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 
 | 2026-10-23 | Équipe | Référentiel d'équipes, trois vues partagées et import Excel; les règles et scénarios actuels sont centralisés dans [le dossier Équipe](../equipe/README.md). |
 | 2026-10-23 | Fonction | Trois vues, import et création dans l'en-tête; répartition par fonction porte les STC (`stc`, `stcMontant`). Les règles métier sont dans [le dossier Fonction](../function/README.md). |
-| 2026-10-23 | Vues partagées et Chantier | Cartes, Analytique, coque et Tabulaire configurables partagés par les cinq domaines. Les filtres, données, colonnes, cellules, actions et règles métier restent propres à chaque domaine. Voir [les vues de périmètre](../frontend/vues-perimetre.md). |
+| 2026-10-23 | Vues partagées et Chantier | Coque, Tabulaire, Cartes et Analytique partagés par les cinq domaines. Chaque domaine configure sa hiérarchie Cartes et l'ordre de priorité Analytique; filtres, données, colonnes, cellules, actions et règles métier restent propres au domaine. Voir [les vues de périmètre](../frontend/vues-perimetre.md). |
 
 Les composants transverses sont décrits dans `docs/frontend/vues-perimetre.md` et `docs/frontend/README.md`. Chaque dossier
 de domaine reste la source de ses règles, parcours et tests. Les preuves locales sont consignées avec le domaine concerné;
@@ -80,9 +82,9 @@ elles ne prouvent pas à elles seules un déploiement ni un accord métier.
 - Vocabulaire (2026-10-19) : jamais « actif / inactif » dans l'interface — « En poste / Sorti » pour un employé, « En cours / Clôturé »
   pour un chantier. Un chantier clôturé est refusé par l'import de la paie jusqu'à ce qu'on le rouvre (bouton dans l'assistant).
 - Tranches de l'Analytique des employés : âge < 25, 25-34, 35-44, 45-54, 55+ ; ancienneté < 1 an, 1-3, 3-5, 5-10, 10+.
-- Cartes de **tous les modules** : descente **libre** (chantier, équipe, fonction, dans l'ordre choisi) et accès à la liste à tout moment ;
-  Analytique **graphique** (paie et fiches Employé) ; les filtres d'un module agissent de la même façon dans ses trois vues
-  (décision du 2026-10-23, `conventions/frontend.md`). Ne plus écrire de Cartes ni d'Analytique propres à un module.
+- Cartes de **tous les modules** : parcours guidé selon la hiérarchie déclarée par le domaine et accès à la liste à tout moment ;
+  Analytique graphique (paie et fiches Employé), avec ordre de priorité et libellés configurés par domaine. Coque, Tabulaire,
+  Cartes et Analytique sont partagés ; les filtres et règles métier restent propres à chaque domaine (`conventions/frontend.md`, ADR 0014).
 - Ne plus demander si la production a les mêmes données que le développement : tout se règle sur la **dernière paie
   importée**, quel que soit l'état de la base.
 

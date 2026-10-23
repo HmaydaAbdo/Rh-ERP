@@ -120,11 +120,11 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 
 - **Tabulaire** sert à retrouver, consulter et administrer les équipes. Le tableau présente le code et le
   libellé; les filtres code/libellé suivent la même règle dans les trois vues.
-- **Cartes** permet de regrouper et parcourir le périmètre par équipe, chantier ou fonction. Le nom de
-  groupe affiché est le libellé; la carte peut réunir l'état courant des fiches Employé et les chiffres du
-  mois Paie choisi, avec les droits correspondants.
-- **Analytique** présente les indicateurs Paie par mois et dimension ainsi que les données d'effectif
-  Employé autorisées. Chaque graphique a son tableau de données accessible.
+- **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction → Employés**. Le libellé est le nom principal
+  des équipes; leur code reste un repère secondaire. Chaque carte peut réunir l'état courant des fiches
+  Employé et les chiffres du mois Paie choisi, avec les droits correspondants.
+- **Analytique** commence par les effectifs et leur répartition par équipe. Les indicateurs Paie du mois
+  sélectionné viennent ensuite comme contexte complémentaire. Chaque graphique a son tableau de données accessible.
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
 dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.

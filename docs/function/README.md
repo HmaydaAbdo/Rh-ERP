@@ -150,7 +150,7 @@ Routes sous `/functions` (lazy loading, `function.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/functions` | `FunctionVuesComponent` + `FunctionListComponent` | Coque commune (titre, onglets de vue, actions Importer / Nouvelle fonction, filtre libellé dans l'URL), tableau standard (tri, colonnes, pagination, voir [../frontend/README.md](../frontend/README.md)) et suppression |
-| `/functions/cartes` | `FunctionCartesComponent` | **Cartes par descente libre** : une carte par fonction, puis « Regrouper par » chantier, équipe ou employés ; fiches Employé et paie du mois sur chaque carte |
+| `/functions/cartes` | `FunctionCartesComponent` | **Cartes hiérarchiques** : fonction → chantier → équipe → employés ; fiches Employé et paie du mois sur chaque carte |
 | `/functions/analytique` | `FunctionAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie (STC compris), évolution mensuelle, répartition, tranches, mouvements, et fiches Employé |
 | `/functions/new` | `FunctionFormComponent` | Création |
 | `/functions/:id` | `FunctionDetailComponent` | Consultation |
@@ -161,7 +161,7 @@ Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` 
 recherche serveur (libellé contenant le texte, sans tenir compte de la casse). L'import Excel et la création vivent dans
 l'en-tête commun (`FunctionActionsComponent`) : un import réussi recrée la vue affichée pour qu'elle recharge ses données.
 
-**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `FunctionCartesComponent` et
+**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011 et 0014) : `FunctionCartesComponent` et
 `FunctionAnalytiqueComponent` ne sont que des hôtes minces ; `function-module.ts` décrit le module (référentiel de fonctions, filtre
 libellé, ordre de descente fonction → chantier → équipe). Les liens avec les autres domaines passent par les services existants,
 sans endpoint propre :

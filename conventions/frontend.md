@@ -341,12 +341,14 @@ prochainement » sans parcours livré.
 ## Cartes par niveaux et Analytique graphique (vues partagées)
 
 Les vues **Cartes** et **Analytique** de **tous** les modules — Paie, Employés, Équipes, Fonctions, Chantiers, et tout futur
-module — sont les composants partagés de `portail/perimetre/` (ADR 0011). Il est interdit d'écrire une Cartes ou une
+module — sont les composants partagés de `portail/perimetre/` (ADR 0011 et ADR 0014). Il est interdit d'écrire une Cartes ou une
 Analytique propre à un module : on décrit le module, on ne copie pas la vue.
 
-**Ce qui reste propre au module** : ses routes, filtres, colonnes, cellules, actions, adaptateurs et règles métier.
-**Ce qui est partagé et configuré par le module** : la coque, le tableau Tabulaire, tout le contenu des Cartes et
-de l'Analytique.
+**Ce qui reste propre au module** : ses routes, filtres, colonnes, cellules, actions, adaptateurs, règles métier, hiérarchie
+de navigation et priorité de ses indicateurs.
+**Ce qui est partagé et configuré par le module** : la coque, le tableau Tabulaire, le rendu des Cartes et les composants
+graphiques de l'Analytique. Le module déclare ses libellés et l'ordre des sources métier; le socle partagé n'identifie aucun
+domaine et ne contient pas de branche conditionnelle métier.
 
 ### Exporter les données des vues
 
@@ -360,9 +362,9 @@ vérifient la parité entre le document exporté et les données complètes de l
 ### Brancher un module
 
 1. Écrire `<module>-module.ts` : une fonction (ou une constante) qui renvoie un `ModulePerimetre` — clé, pluriel, début du
-   fil (« Tous les chantiers »), dimension du référentiel (`null` si le module n'en a pas : Employés, Paie), ordre de descente
-   proposé, route et permission, les paramètres de retour à la vue Tabulaire, les critères Employés et Paie que ses filtres
-   produisent, et son référentiel éventuel (`catalogue`).
+   fil (« Tous les chantiers »), dimension du référentiel (`null` si le module n'en a pas : Employés, Paie), hiérarchie
+   obligatoire des niveaux Cartes, ordre des sources analytiques, libellés métiers spécifiques, route et permission, les
+   paramètres de retour à la vue Tabulaire, les critères Employés et Paie que ses filtres produisent, et son référentiel éventuel.
 2. Écrire deux hôtes minces, `<module>-cartes.component.ts` et `<module>-analytique.component.ts`, dont le gabarit tient en
    une ligne (`<app-cartes-perimetre [module]="module" />`). Un hôte peut projeter `#actionsCarte` pour ajouter ses boutons
    propres à chaque carte ; il peut appeler `recharger()` après une action.
@@ -371,17 +373,20 @@ vérifient la parité entre le document exporté et les données complètes de l
 
 ### Le périmètre est dans l'URL
 
-`chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds`, `periode` (`AAAA-MM`) et, pour les Cartes, `par`
-(`chantier`, `equipe`, `fonction`, `employes`, `periode`). Les filtres propres au module s'y ajoutent et ne les remplacent
-jamais ; une valeur invalide est ignorée. La barre de filtres d'un module écrit ses paramètres **en fusion** avec l'URL
-(`queryParamsHandling: 'merge'`), pour ne pas perdre le regroupement ni le mois. Changer de vue conserve tous les paramètres.
+`chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds` et `periode` (`AAAA-MM`). L'ordre des dimensions Cartes est
+déclaré dans le module, et non dans l'URL : les anciens paramètres `par` sont ignorés. Les filtres propres au module s'y
+ajoutent et ne les remplacent jamais ; une valeur invalide est ignorée. La barre de filtres d'un module écrit ses paramètres
+**en fusion** avec l'URL (`queryParamsHandling: 'merge'`), pour ne pas perdre les étapes ni le mois. Changer de vue conserve
+tous les paramètres métier.
 
-### Cartes : descente libre
+### Cartes : parcours hiérarchique
 
-- On parcourt le périmètre en choisissant **soi-même** par quoi regrouper (« Regrouper par » : chantier, équipe, fonction,
-  employés) ; l'ordre proposé est celui du module, jamais imposé. Une dimension déjà choisie n'est plus proposée.
+- Chaque module définit une **hiérarchie métier fixe** de dimensions. La vue affiche le premier niveau disponible, puis avance au
+  niveau suivant lorsqu'une carte est ouverte; elle ne propose pas de sélecteur libre de regroupement. Le module Paie commence
+  par les mois, puis suit sa hiérarchie déclarée.
 - Ouvrir une carte en fait une **étape du fil** (le paramètre d'URL de sa dimension, une seule valeur) ; chaque étape se retire
-  seule ; le fil ne montre jamais un identifiant technique. Le dernier niveau est la liste des employés (« Afficher plus »).
+  seule ; le fil ne montre jamais un identifiant technique. Les fiches Employé forment le dernier niveau lorsque le droit de
+  lecture est accordé.
 - Chaque carte réunit les **fiches Employé** (dernier état importé) et la **paie du mois**, avec l'écart par rapport au **mois
   contigu** seulement (jamais un mois plus ancien, jamais un zéro ni une division par zéro). Le module Paie commence par la
   liste des mois tant qu'aucun mois n'est choisi.
@@ -393,6 +398,8 @@ jamais ; une valeur invalide est ignorée. La barre de filtres d'un module écri
 
 ### Analytique : un tableau de bord graphique
 
+- Chaque module déclare l'ordre de ses sources analytiques et ses libellés propres; la source principale vient en premier.
+  Les projections Employé et Paie restent chacune dans leur bloc et respectent leurs permissions.
 - Côté **Paie** : chiffres du mois avec leur variation, **évolution mensuelle** sur tout l'historique (une seule mesure à la
   fois, un seul axe : masse, effectif, STC en personnes, STC en dirhams ; le mois analysé est mis en valeur), **répartition**
   en barres par une autre dimension (un clic sur une barre approfondit le périmètre), tranches de total, mouvements mois par
@@ -407,7 +414,7 @@ jamais ; une valeur invalide est ignorée. La barre de filtres d'un module écri
 - **Droits** : chaque source n'est lue qu'avec son droit (`EMPLOYEE_READ`, `PAIE_READ`) et son bloc est remplacé par une phrase
   claire sinon. Une source en panne n'efface pas les autres.
 - **Accessibilité** : listes de définitions valides (`dt` / `dd`), contraste vérifié (axe) sur Cartes et Analytique, graphiques
-  accompagnés d'un tableau, fil et regroupements au clavier.
+  accompagnés d'un tableau, fil et parcours des cartes au clavier.
 
 ---
 

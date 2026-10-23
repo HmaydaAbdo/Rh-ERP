@@ -134,17 +134,15 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.perimetre-cartes__etape')?.textContent).toContain('C168');
     expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
-    expect(page.querySelector('button[aria-pressed="true"]')?.textContent).toContain('Équipe');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Équipe');
   });
 
-  it('laisse regrouper dans un autre ordre, sans proposer une dimension déjà choisie', async () => {
+  it('suit la hiérarchie du domaine et ignore le regroupement demandé par une ancienne URL', async () => {
     const page = await ouvrir('/chantiers/cartes?chantierIds=1&par=fonction');
 
-    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'FONCTION');
-    const boutons = Array.from(page.querySelectorAll('.perimetre-cartes__choix button')) as HTMLButtonElement[];
-    expect(boutons.find((b) => b.textContent?.includes('Chantier'))?.disabled).toBe(true);
-    expect(boutons.find((b) => b.textContent?.includes('Équipe'))?.disabled).toBe(false);
-    expect(boutons.find((b) => b.textContent?.includes('Fonction'))?.getAttribute('aria-pressed')).toBe('true');
+    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Équipe');
+    expect(page.querySelector('.perimetre-cartes__choix')).toBeNull();
   });
 
   it('retire une étape du fil sans toucher aux filtres du module', async () => {
@@ -159,9 +157,9 @@ describe('CartesPerimetreComponent', () => {
   });
 
   it('applique le filtre du module au périmètre des niveaux suivants', async () => {
-    await ouvrir('/chantiers/cartes?code=C1&par=equipe');
+    await ouvrir('/chantiers/cartes?code=C1');
 
-    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
+    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'CHANTIER');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ chantierIds: [1] }));
   });
 
@@ -179,9 +177,9 @@ describe('CartesPerimetreComponent', () => {
       content: [{ id: 9, nomPrenom: 'Zahra Idrissi', cin: 'CD456', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 1, code: 'C168' }, equipe: null, statut: 'ACTIF' }],
       page: { size: 24, number: 0, totalElements: 30, totalPages: 2 }
     }) as never);
-    const page = await ouvrir('/chantiers/cartes?par=employes&chantierIds=1');
+    const page = await ouvrir('/chantiers/cartes?chantierIds=1&equipeIds=5&fonctionIds=7');
 
-    expect(employes.search).toHaveBeenCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, { page: 0, size: 24, sort: 'nomPrenom,asc' });
+    expect(employes.search).toHaveBeenCalledWith({ chantierIds: [1], equipeIds: [5], fonctionIds: [7] }, { page: 0, size: 24, sort: 'nomPrenom,asc' });
     expect(page.textContent).toContain('Zahra Idrissi');
     expect(page.textContent).toContain('Afficher plus (29 restants)');
   });
@@ -196,7 +194,7 @@ describe('CartesPerimetreComponent', () => {
     expect(employes.regrouper).not.toHaveBeenCalled();
     expect(paie.listerPeriodes).not.toHaveBeenCalled();
     expect(paie.analyser).not.toHaveBeenCalled();
-    expect(Array.from(page.querySelectorAll('.perimetre-cartes__choix button')).some((b) => b.textContent?.includes('Employés'))).toBe(false);
+    expect(page.querySelector('.perimetre-cartes__niveau')).not.toBeNull();
   });
 
   it('signale l’absence de mois de paie sans inventer d’indicateurs', async () => {

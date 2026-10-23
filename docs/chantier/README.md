@@ -193,7 +193,7 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/chantiers` | `ChantierVuesComponent` + `ChantierListComponent` | Coque commune (titre, onglets de vue, actions Synchroniser maintenant / Nouveau chantier, filtres code, désignation et statut dans l'URL), tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)), clôture / réouverture et suppression |
-| `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes par descente libre** : une carte par chantier (code, nom ou désignation, statut), puis « Regrouper par » équipe, fonction ou employés ; fiches Employé et paie du mois sur chaque carte |
+| `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes hiérarchiques** : chantier → équipe → fonction → employés ; fiches Employé et paie du mois sur chaque carte |
 | `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie, évolution mensuelle, répartition (STC compris), tranches, mouvements, et fiches Employé |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
@@ -205,10 +205,11 @@ Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` 
 l'en-tête commun (`ChantierActionsComponent`) : une synchronisation réussie recrée la vue affichée. La carte géographique
 (`/carte`, droit `CARTE_READ`) reste un écran séparé, décrit dans [carte.md](carte.md).
 
-**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `ChantierCartesComponent` et
+**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011 et 0014) : `ChantierCartesComponent` et
 `ChantierAnalytiqueComponent` ne sont que des hôtes minces ; `chantier-module.ts` décrit le module (référentiel de chantiers avec
 leur statut, filtres code, désignation et statut, ordre de descente chantier → équipe → fonction). Les liens avec les autres
-domaines passent par les services existants, sans endpoint propre :
+domaines passent par les services existants, sans endpoint propre. Les vues partagées affichent d'abord les fiches Employé, puis
+les indicateurs Paie :
 
 - l'effectif vient du regroupement des fiches Employé et représente le **dernier état importé** de chaque fiche (`EMPLOYEE_READ`) ;
 - la masse, l'effectif payé, le coût moyen, les STC et l'historique mensuel viennent de l'analyse Paie par période

@@ -42,8 +42,14 @@ export interface ModulePerimetre {
   libelleRacine: string;
   /** Dimension du référentiel du module ; `null` pour Employés et Paie, qui n'ont pas de référentiel propre. */
   dimension: Dimension | null;
-  /** Ordre de descente proposé par défaut ; l'utilisateur peut regrouper dans un autre. */
+  /** Hiérarchie de navigation des Cartes, propre au domaine et suivie automatiquement. */
   ordre: readonly Dimension[];
+  /** Ordre des sources dans Analytique ; permet de faire commencer chaque domaine par sa question métier principale. */
+  ordreAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
+  /** Titre de la section Employé, adapté au domaine sans spécialiser le composant partagé. */
+  libelleSectionEmployes?: string;
+  /** Titre du graphique Employé lorsque sa dimension correspond au référentiel du domaine. */
+  libelleRepartitionPrincipale?: string;
   /** Route de la vue Tabulaire du module. */
   route: string;
   /** Permission qui ouvre le module. */

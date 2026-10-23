@@ -55,13 +55,13 @@ describe('EquipeVuesComponent', () => {
     expect(TestBed.inject(Router).url).toBe('/equipes?code=OP');
   });
 
-  it('garde le périmètre, le mois et le regroupement des Cartes quand un filtre de la barre change', async () => {
-    const composant = await harness.navigateByUrl('/equipes/cartes?equipeIds=5&periode=2026-08&par=chantier', EquipeVuesComponent);
+  it('garde le périmètre et le mois des Cartes quand un filtre de la barre change', async () => {
+    const composant = await harness.navigateByUrl('/equipes/cartes?equipeIds=5&periode=2026-08', EquipeVuesComponent);
 
     composant['appliquer']({ code: 'OP', libelle: '' });
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/equipes/cartes?equipeIds=5&periode=2026-08&par=chantier&code=OP');
+    expect(TestBed.inject(Router).url).toBe('/equipes/cartes?equipeIds=5&periode=2026-08&code=OP');
   });
 
   it('ne montre pas la création sans EQUIPE_WRITE', async () => {

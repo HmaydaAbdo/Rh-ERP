@@ -84,6 +84,21 @@ class HotePaieComponent {
   module: ModulePerimetre = { ...module(), cle: 'paie', dimension: null, catalogue: undefined, niveauPeriode: true, route: '/paie' };
 }
 
+@Component({
+  selector: 'app-hote-equipe',
+  imports: [AnalytiquePerimetreComponent],
+  template: '<app-analytique-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteEquipeComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['EMPLOYEE', 'PAIE'],
+    libelleSectionEmployes: 'Effectifs et organisation', libelleRepartitionPrincipale: 'Effectifs par équipe',
+    catalogue: undefined, route: '/equipes'
+  };
+}
+
 describe('AnalytiquePerimetreComponent', () => {
   let employes: MockedObject<EmployeeService>;
   let paie: MockedObject<PaieService>;
@@ -113,7 +128,11 @@ describe('AnalytiquePerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'chantiers/analytique', component: HoteComponent }, { path: 'paie/analytique', component: HotePaieComponent }]),
+        provideRouter([
+          { path: 'chantiers/analytique', component: HoteComponent },
+          { path: 'equipes/analytique', component: HoteEquipeComponent },
+          { path: 'paie/analytique', component: HotePaieComponent }
+        ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
@@ -136,6 +155,19 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: undefined }));
+  });
+
+  it('place les effectifs et leur répartition par équipe avant les indicateurs Paie selon la configuration du domaine', async () => {
+    await harness.navigateByUrl('/equipes/analytique', HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const page = harness.routeNativeElement as HTMLElement;
+    const titres = Array.from(page.querySelectorAll('.perimetre-analytique__titre')).map((element) => element.textContent?.trim());
+
+    expect(titres[0]).toBe('Effectifs et organisation');
+    expect(titres[1]).toBe('Paie · août 2026');
+    expect(page.textContent).toContain('Effectifs par équipe');
+    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {

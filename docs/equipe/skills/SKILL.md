@@ -24,6 +24,18 @@ code/libellé affiché dans les bulletins qui la référencent. Dans le formulai
 met à jour la fiche Employé et le bulletin dans la même transaction; ces opérations demandent
 `PAIE_WRITE` et `EMPLOYEE_WRITE`.
 
+### Vues de collection
+
+La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
+le parcours fixe des Cartes **Équipe → Chantier → Fonction → Employés**. Son Analytique commence par les effectifs et leur
+répartition par équipe, puis présente les indicateurs Paie du mois choisi. Ne pas créer de version propre au domaine ni
+permettre de changer librement l'ordre du parcours; suivre la
+[convention frontend](../../../conventions/frontend.md) et la
+[référence technique des vues partagées](../../frontend/vues-perimetre.md).
+
+Les cartes mettent le **libellé** en titre et le code en repère secondaire. Chaque composant qui expose des données conserve
+son export PDF séparé, borné au périmètre et aux permissions actifs.
+
 ## Garde-fous
 
 - Utiliser le libellé comme clé sémantique pour les sélections et regroupements présentés aux utilisateurs. Le code sert aux échanges et imports; les relations persistées restent fondées sur l'identifiant interne.

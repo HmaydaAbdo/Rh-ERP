@@ -13,6 +13,7 @@ export const MODULE_PAIE: ModulePerimetre = {
   libelleRacine: 'Toute la paie',
   dimension: null,
   ordre: ['CHANTIER', 'EQUIPE', 'FONCTION'],
+  ordreAnalytique: ['PAIE', 'EMPLOYEE'],
   route: '/paie',
   permission: 'PAIE_READ',
   niveauPeriode: true,

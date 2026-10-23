@@ -41,19 +41,10 @@
     </div>
   </div>
 
-  <div class="perimetre-cartes__choix" role="group" aria-label="Regrouper par">
-    <span>Regrouper par</span>
-    @if (module().niveauPeriode && voitPaie()) {
-      <button type="button" [attr.aria-pressed]="niveau() === 'PERIODE'" [disabled]="!moisPossible()" (click)="regrouperPar('PERIODE')">Mois</button>
-    }
-    @for (dimension of module().ordre; track dimension) {
-      <button type="button" [attr.aria-pressed]="niveau() === dimension" [disabled]="!possible(dimension)" (click)="regrouperPar(dimension)">
-        {{ libelles[dimension] }}
-      </button>
-    }
-    @if (voitEmployes()) {
-      <button type="button" [attr.aria-pressed]="niveau() === 'EMPLOYES'" (click)="regrouperPar('EMPLOYES')">Employés</button>
-    }
+  <div class="perimetre-cartes__niveau" aria-live="polite">
+    <span class="perimetre-cartes__niveau-repere">Étape {{ progression().etape }} sur {{ progression().total }}</span>
+    <h2>{{ progression().libelle }}</h2>
+    <p>Le parcours suit l’organisation définie pour le domaine {{ module().libellePluriel }}.</p>
   </div>
 
   <div class="perimetre-cartes__contenu" [attr.aria-busy]="chargement()">
@@ -79,12 +70,15 @@
               <article class="perimetre-carte">
                 <button type="button" class="perimetre-carte__corps" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
                   <span class="perimetre-carte__entete">
-                    <span class="perimetre-carte__code">{{ titre(groupe) }}</span>
+                    <span class="perimetre-carte__nom">{{ titre(groupe) }}</span>
                     @if (groupe.statut; as statut) {
                       <stp-badge [value]="statut.libelle" [severity]="statut.severite"></stp-badge>
                     }
                   </span>
-                  @if (niveau() !== 'PERIODE' && groupe.code && groupe.libelle !== groupe.code) {
+                  @if (niveau() === 'EQUIPE' && groupe.code) {
+                    <span class="perimetre-carte__code">{{ groupe.code }}</span>
+                  }
+                  @if (niveau() !== 'PERIODE' && niveau() !== 'EQUIPE' && groupe.code && groupe.libelle !== groupe.code) {
                     <span class="perimetre-carte__libelle">{{ groupe.libelle }}</span>
                   }
                   @if (groupe.detail) {
