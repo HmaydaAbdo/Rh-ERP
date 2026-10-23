@@ -188,6 +188,21 @@ class PaieAnalytiqueServiceTest {
     }
 
     @Test
+    void analyser_devraitRenvoyerLesStcDeChaqueFonction() {
+        when(repository.resumerKpi(any(), any())).thenReturn(kpi(1, "10", 1, 1, 0, 0));
+        lenient().when(repository.listerTotaux(any(), any())).thenReturn(List.of());
+        when(repository.sommerParFonction(any(), any())).thenReturn(List.of(fonction(1L, "MACON")));
+
+        PaieAnalytiqueDto resultat = service.analyser(criteres(AOUT, null, null, null));
+
+        assertThat(resultat.parFonction()).singleElement().satisfies(f -> {
+            assertThat(f.libelle()).isEqualTo("MACON");
+            assertThat(f.stc()).isEqualTo(1);
+            assertThat(f.stcMontant()).isEqualByComparingTo("10");
+        });
+    }
+
+    @Test
     void analyser_devraitRenvoyerTousLesChantiersEtToutesLesFonctionsSansPlafond() {
         when(repository.resumerKpi(any(), any())).thenReturn(kpi(60, "6000", 40, 0, 0, 0));
         lenient().when(repository.listerTotaux(any(), any())).thenReturn(List.of());
@@ -255,6 +270,8 @@ class PaieAnalytiqueServiceTest {
             public String getLibelle() { return libelle; }
             public BigDecimal getMasse() { return new BigDecimal("10"); }
             public Long getEffectif() { return 1L; }
+            public Long getStc() { return 1L; }
+            public BigDecimal getStcMontant() { return new BigDecimal("10"); }
         };
     }
 

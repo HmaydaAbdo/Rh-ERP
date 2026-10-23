@@ -74,7 +74,9 @@ toutes les fonctions qu'aucun bulletin de paie ni aucune fiche employé ne citai
   porte une fonction encore inconnue (voir [../paie/README.md](../paie/README.md)) : même règles de libellé,
   aucune permission `FUNCTION_*` requise pour ce cas.
 - La fonction d'un bulletin ou d'un employé est copiée par référence : renommer une fonction (`PUT`) change son
-  libellé partout, historique compris.
+  libellé partout, historique compris. **Décision du propriétaire (2026-10-23) : ce comportement est conservé** ; c'est le
+  moyen de corriger une faute de frappe. Le refus de supprimer une fonction utilisée (409) est lui aussi conservé : ni fusion
+  ni archivage n'existent ; le nettoyage des quasi-doublons est suivi dans la tâche « Qualité des données » du TODO.
 
 ---
 
@@ -147,10 +149,34 @@ Routes sous `/functions` (lazy loading, `function.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/functions` | `FunctionListComponent` | Tableau standard (tri, colonnes, pagination, voir [../frontend/README.md](../frontend/README.md)) avec filtre libellé en temps réel, suppression, téléchargement du modèle, import Excel |
+| `/functions` | `FunctionVuesComponent` + `FunctionListComponent` | Coque commune (titre, onglets de vue, actions Importer / Nouvelle fonction, filtre libellé dans l'URL), tableau standard (tri, colonnes, pagination, voir [../frontend/README.md](../frontend/README.md)) et suppression |
+| `/functions/cartes` | `FunctionCartesComponent` | Cartes paginées (12 par page) avec l'effectif des fiches Employé et le résumé Paie du dernier mois disponible |
+| `/functions/analytique` | `FunctionAnalytiqueComponent` | Indicateurs Paie d'une période, répartition par fonction et historique mensuel d'une fonction ; situation Employé présentée séparément |
 | `/functions/new` | `FunctionFormComponent` | Création |
 | `/functions/:id` | `FunctionDetailComponent` | Consultation |
 | `/functions/:id/edit` | `FunctionFormComponent` | Modification |
+
+Les trois vues (Tabulaire, Cartes, Analytique) suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
+[Équipe](../equipe/README.md). Le filtre libellé reste dans l'URL et **agit de la même façon dans les trois vues** : même
+recherche serveur (libellé contenant le texte, sans tenir compte de la casse). Dans l'Analytique il borne le catalogue, la
+répartition, les effectifs des fiches et les indicateurs Paie aux seules fonctions filtrées (le titre indique « fonctions
+filtrées ») ; si aucune fonction ne correspond, ni Employé ni Paie ne sont interrogés. L'import Excel et la création vivent dans l'en-tête commun
+(`FunctionActionsComponent`) : un import réussi recrée la vue affichée pour qu'elle recharge ses données.
+
+La vue Cartes et la vue Analytique relient la fonction aux autres domaines **sans nouvel endpoint**, au moyen des services existants :
+
+- l'effectif vient du regroupement des fiches Employé par fonction (`POST /employees/regroupements`, dimension `FONCTION`) et
+  représente le **dernier état importé** de chaque fiche (`EMPLOYEE_READ`) ;
+- la masse, l'effectif payé, le coût moyen, les STC, les chantiers et l'historique mensuel viennent de l'analyse Paie par période
+  (`POST /paie/analytique`, `parFonction` pour la répartition, `fonctionIds` pour l'historique d'une fonction) (`PAIE_READ`) ;
+- la fonction d'une **fiche** (état le plus récent) et celle d'un **bulletin** (fonction du mois) sont deux informations
+  distinctes : une fonction renommée change son libellé partout, mais un employé qui change de fonction n'altère pas ses anciens
+  bulletins ; les vues ne les présentent jamais comme décrivant la même période ;
+- un mois sans bulletin pour la fonction choisie affiche des indicateurs à zéro avec le message « Aucun bulletin… » et conserve
+  l'historique des autres mois (`evolution`) ;
+- sans `EMPLOYEE_READ` ou sans `PAIE_READ`, le bloc concerné est masqué et son service n'est pas appelé .
+- la répartition par fonction affiche, pour le mois choisi, l'effectif payé, la masse et les **STC** (nombre et montant, même
+  définition que pour les équipes) : `parFonction` de `POST /paie/analytique` porte `stc` et `stcMontant`.
 
 L'entrée « Télécharger le modèle Excel » du bouton « Importer » télécharge le fichier vierge (`GET /functions/import/modele`) via un lien
 `<a download>` généré dynamiquement à partir du `Blob` reçu. Le bouton "Importer" déclenche un

@@ -1,0 +1,44 @@
+<div class="app-page__actions app-page__actions--liste">
+  @if (canImport()) {
+    <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="importing()" (clicked)="onTriggerImport()"></stp-split-button>
+  }
+  @if (canWrite()) {
+    <a stp-button icon="plus" routerLink="/functions/new">Nouvelle fonction</a>
+  }
+</div>
+
+<input #fileInput type="file" accept=".xlsx" class="function-actions__fichier" (change)="onFileSelected($event)" />
+
+<stp-dialog header="Résultat de l'import" width="520px" [(open)]="showImportResultDialog">
+  @if (importResult(); as result) {
+    <p>
+      <strong>{{ result.totalLignes }}</strong> ligne(s) traitée(s) —
+      <strong>{{ result.crees }}</strong> créée(s),
+      <strong>{{ result.ignores }}</strong> ignorée(s).
+    </p>
+
+    @if (result.lignesIgnorees.length > 0) {
+      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes de fonctions ignorées à l’import">
+        <table class="app-static-table">
+          <caption class="app-lecteur">Détail des lignes de fonctions ignorées pendant l'import</caption>
+          <thead>
+            <tr>
+              <th scope="col">Ligne</th>
+              <th scope="col">Libellé</th>
+              <th scope="col">Raison</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
+              <tr>
+                <td>{{ ligne.numeroLigne }}</td>
+                <td>{{ ligne.libelle }}</td>
+                <td>{{ ligne.raison }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</stp-dialog>

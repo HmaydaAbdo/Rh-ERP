@@ -147,6 +147,29 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(page.getByRole('heading', { name: /Paie · Équipe historique e2e/ })).toBeVisible();
   await expect(page.locator('table tbody tr')).toHaveCount(1);
 
+  // Fonctions : mêmes trois vues, la fonction est portée par la fiche Employé (dernier état) et par chaque bulletin.
+  const filtreFonction = `libelle=${encodeURIComponent(`Fonction e2e ${suffixe}`)}`;
+  await page.goto(`/functions/cartes?${filtreFonction}`);
+  const carteFonction = page.locator('.function-carte').filter({ hasText: `Fonction e2e ${suffixe}` });
+  await expect(carteFonction).toContainText('Employés sur les fiches récentes');
+  await expect(carteFonction).toContainText('Payés');
+  await expect(carteFonction).toContainText('Masse');
+
+  const syntheseFonction = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
+    page,
+    adminToken,
+    'POST',
+    '/paie/analytique',
+    { periode: moisCourant, fonctionIds: [fonction.id] }
+  );
+  expect(syntheseFonction.kpis).toMatchObject({ effectif: 1, masse: 4500 });
+  expect(syntheseFonction.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent, moisCourant]);
+  await page.goto(`/functions/analytique?fonctionId=${fonction.id}&periode=${moisCourant}`);
+  await expect(page.getByRole('heading', { name: /Paie · Fonction e2e/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+  await expect(page.getByText(/1\s+employés/)).toBeVisible();
+  await expect(page.locator('table tbody tr')).toHaveCount(2);
+
   const roles = await api<{ content: Array<{ id: number; nom: string }> }>(page, adminToken, 'POST', '/roles/search', {});
   const roleMetier = roles.content.find((role) => role.nom === 'PAIE_MANAGER');
   expect(roleMetier, 'Le rôle métier PAIE_MANAGER doit exister après les migrations').toBeTruthy();
@@ -187,6 +210,15 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteLimitee).not.toContainText('Masse');
 
     await pageLimitee.goto(`/equipes/analytique?equipeId=${equipe.id}&periode=${moisCourant}`);
+    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
+    await pageLimitee.goto(`/functions/cartes?${filtreFonction}`);
+    const carteFonctionLimitee = pageLimitee.locator('.function-carte').filter({ hasText: `Fonction e2e ${suffixe}` });
+    await expect(carteFonctionLimitee).toBeVisible();
+    await expect(carteFonctionLimitee).not.toContainText('Employés sur les fiches récentes');
+    await expect(carteFonctionLimitee).not.toContainText('Payés');
+    await expect(carteFonctionLimitee).not.toContainText('Masse');
+    await pageLimitee.goto(`/functions/analytique?fonctionId=${fonction.id}&periode=${moisCourant}`);
     await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     const reponseInterdite = await pageLimitee.request.get(`${BACKEND_URL}/paie/periodes`, {
