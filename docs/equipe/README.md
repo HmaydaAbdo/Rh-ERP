@@ -38,56 +38,51 @@ equipe/
 
 ## Modèle de données
 
-Table `equipe` (migration `V7__create_equipe.sql`) :
+Table `equipe` :
 
 | Colonne | Type | Contrainte | Description |
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
-| `version` | `BIGINT` | `NOT NULL`, défaut `0`, `@Version` | Détecte les modifications concurrentes (ajoutée en V18) |
+| `version` | `BIGINT` | `NOT NULL`, défaut `0`, `@Version` | Détecte les modifications concurrentes |
 | `code` | `VARCHAR(50)` | `NOT NULL`, unique après `trim` et sans casse | Clé métier : `CH`, `OP`, `R CONT`... |
 | `libelle` | `VARCHAR(100)` | `NOT NULL`, unique après `trim` et sans casse | Nom d'affichage : `CHAUFFEURS`, `OPERATEURS`... |
 
-L'unicité normalisée est garantie en base par les index `uk_equipe_code_normalise` et
-`uk_equipe_libelle_normalise` (V25). V27 ajoute des contraintes empêchant les espaces extérieurs
-sur les nouvelles écritures. La version optimiste est ajoutée en V18. L'audit Envers utilise
-`equipe_aud` (V11) et l'état initial est capturé en V14. Les scripts V7/V8/V9, V11, V14, V18, V25,
-V27 et V29/V30 forment l'historique du schéma et des reprises liées au domaine.
+Les codes et libellés sont uniques sans tenir compte de la casse ni des espaces extérieurs. Le code est
+enregistré en majuscules et les espaces extérieurs sont retirés. La table conserve aussi une version
+optimiste et un historique d'audit des modifications.
 
-La fiche Employé porte l'équipe courante dans `employe.equipe_id` (nullable, index
-`idx_employe_equipe`, V29/V30), au même titre que les autres éléments de son état courant. Chaque
-bulletin porte séparément `paie.equipe_id` (nullable, index `idx_paie_equipe`, V8) : changer
-l'affectation de l'employé ne réécrit donc pas ses bulletins antérieurs. Les deux colonnes référencent
-le même référentiel d'équipes; le code et le libellé affichés dans un bulletin suivent donc les
-modifications ultérieures de l'équipe référencée. Les contrats consommateurs sont détaillés dans les
-README Employé et Paie.
+La fiche Employé porte l'équipe courante dans `employe.equipe_id`, qui peut être vide. Chaque bulletin
+porte séparément l'équipe associée à son mois dans `paie.equipe_id`, qui peut aussi être vide. Changer
+l'affectation de l'employé ne réécrit pas ses bulletins antérieurs.
 
-### Données de départ (seed V7)
+Les deux champs référencent la même équipe par son identifiant. Le bulletin conserve donc l'identité de
+l'équipe du mois, mais pas une copie figée de son code et de son libellé. Si le code ou le libellé de
+cette équipe est modifié, les bulletins qui la référencent affichent les nouvelles valeurs. En revanche,
+si l'employé est ensuite affecté à une autre équipe, ses bulletins antérieurs gardent l'identifiant de
+l'équipe qui leur était associée. Les usages dans les domaines Employé et Paie sont détaillés dans leurs
+README.
 
-La migration crée 17 équipes. Les 13 premières viennent de la table fournie par la direction (`EQUIPES.xlsx`, 2026-09-29) :
+### Équipes disponibles
+
+Le référentiel contient 17 équipes :
 `CH` CHAUFFEURS, `OP` OPERATEURS, `AT` ATELIER, `EE` ENROBE, `TER` TERASSEMENT, `GA` GARDIENS,
 `TOPO` TOPOGRAPHES, `ADMIN` ADMINISTRATION, `ENROCHEMENT` ENROCHEMENT, `R CONT` REMBLAIS CONTIGUE,
 `GABION` GABION, `PHS` PLAN HYGIENE ET SECURITE, `EB` BETON.
 
-L'ancien catalogue contenait à la fois `ENR` et `ENROCHEMENT` pour la même équipe : fusionnées sous
-le code **`ENROCHEMENT`** (valeur réellement présente sur les bulletins et dans les fichiers
-d'import). `ENR` n'est plus un code valide.
-
-Les 4 autres ont été créées d'après les valeurs trouvées sur les bulletins existants
-(diagnostic du 2026-10-03), absentes de l'ancien catalogue : `A` (45 bulletins), `LABO` (6),
-`ASPHALET` (5) et `8` (1). Leur **libellé est provisoirement égal au code** — à renseigner avec la RH
-via l'écran Équipes (`PUT /equipes/{id}`); leur signification et leur libellé restent suivis dans la
-tâche globale « Qualité des données » de [`TODO.md`](../../TODO.md). Les bulletins qui n'avaient pas
-d'équipe restent sans équipe (`equipe_id` nul).
+Quatre équipes ont pour le moment un libellé identique à leur code : `A`, `LABO`, `ASPHALET` et `8`.
+Leur signification et leur libellé restent à clarifier avec la RH dans la tâche globale « Qualité des
+données » de [`TODO.md`](../../TODO.md). `ENROCHEMENT` est le code valide de l'équipe correspondante;
+`ENR` n'est pas un code disponible. Les bulletins sans équipe gardent `equipe_id` vide.
 
 ---
 
 ## Règles métier
 
 - `code` est la **clé métier** : stocké **trimé et en majuscules** (`EquipeService.normaliserCode`),
-  donc `"ch"` et `"CH "` désignent la même équipe. V25 impose l'unicité après `trim` et sans casse;
-  V27 ajoute un contrôle de base qui refuse toute nouvelle valeur avec des espaces extérieurs.
-- `libelle` est aussi unique après `trim` et sans casse en base (migration V25, doublon → 409).
-  V27 ajoute le même contrôle contre les espaces extérieurs pour toute nouvelle valeur.
+  donc `"ch"` et `"CH "` désignent la même équipe. Il est unique sans tenir compte de la casse ni
+  des espaces extérieurs.
+- `libelle` est aussi unique sans tenir compte de la casse ni des espaces extérieurs (doublon → 409).
+  Les espaces extérieurs sont retirés lors de l'enregistrement.
 - Le **code** reste la clé de sélection/regroupement partout (import Excel, dialog d'export,
   agrégation BI) ; le **libellé** ne sert qu'à l'affichage (titres de section/feuille, graphique
   « Répartition par équipe »).
@@ -199,9 +194,8 @@ parcours, mais ne remplace pas `@PreAuthorize`.
 | Bouton supprimer | `EQUIPE_DELETE` |
 | Bouton Importer et modèle Excel | `EQUIPE_IMPORT` |
 
-Le menu Équipes apparaît sous `EQUIPE_READ`. V9 a accordé les permissions Équipe aux rôles qui
-avaient déjà les permissions Chantier correspondantes (initialement `SYSTEM_ADMIN` et
-`PAIE_MANAGER`); les attributions actuelles sont administrables dans `/admin/roles`.
+Le menu Équipes apparaît sous `EQUIPE_READ`. Les attributions de permissions sont administrables
+dans `/admin/roles`.
 
 | Consommation | Accès demandé |
 |---|---|
@@ -242,10 +236,9 @@ des comportements constatés et couverts par les suites indiquées.
 
 ### Dernière vérification locale — 23 octobre 2026
 
-- **Backend :** 61 tests réussis dans 7 classes ciblant Équipe, Paie, l'audit et l'unicité PostgreSQL. Le démarrage de la suite a créé une base PostgreSQL 18 jetable et validé les migrations V1 à V32.
-- **Frontend :** 77 tests réussis dans 12 fichiers, pour Équipe et les vues partagées.
-- **Parcours navigateur :** 3 scénarios Équipe réussis avec Playwright, dont la distinction entre l'équipe de la fiche Employé récente et celle du bulletin historique.
-- **Build frontend de production :** réussi.
+- **Backend :** 56 tests réussis : Paie, import, sécurité des endpoints et audit, dont les scénarios de synchronisation de l'équipe entre bulletin et fiche Employé. Les tests d'intégration ont utilisé PostgreSQL 18 sous Docker.
+- **Frontend :** 183 tests réussis dans 23 fichiers pour Paie et ses permissions, dont le formulaire et l'affichage du caractère facultatif de l'équipe.
+- **Parcours navigateur et build de production :** non exécutés lors de cette dernière vérification.
 
 Les commandes générales et prérequis sont décrits dans [la documentation des tests](../testing.md). Les tests backend d'intégration nécessitent Docker; le parcours navigateur utilise un serveur de test local.
 
@@ -261,4 +254,4 @@ Les écritures sont auditées (voir [../audit/README.md](../audit/README.md)).
 
 ## Documents du domaine
 
-- [Maquette historique des vues](maquette-vues.html) — référence visuelle, le code actuel reste la source du comportement.
+- [Guide de travail du domaine](skills/SKILL.md)

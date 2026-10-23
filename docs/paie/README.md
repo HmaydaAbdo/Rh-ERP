@@ -295,6 +295,10 @@ groupée**) :
 sous-feuilles et rapprochements d'export utilisent son code métier; sa normalisation, son unicité et
 ses effets sur l'historique sont définis dans le dossier Équipe.
 
+Un bulletin garde l'identifiant de l'équipe associée à son mois, même si la fiche Employé change
+d'équipe ensuite. Le code et le libellé ne sont pas copiés dans le bulletin : renommer l'équipe
+référencée change donc aussi son affichage sur les bulletins historiques.
+
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
 contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne
 s'importe pas tant qu'elle n'est pas corrigée. Une cellule vide laisse le bulletin sans équipe.

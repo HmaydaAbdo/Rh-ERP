@@ -203,6 +203,6 @@ Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le
 
 ### Évolution proposée — équipe obligatoire sur chaque bulletin
 
-L'équipe reste facultative sur un bulletin dans le fonctionnement actuel. Pour améliorer l'organisation des ressources, il est proposé d'en faire une donnée obligatoire dans une évolution ultérieure. Cette proposition n'est pas une règle appliquée et n'autorise aucune modification de code ou de données à ce stade. Une décision ultérieure devra traiter les bulletins existants sans équipe avant tout changement technique.
+Aujourd'hui, l'équipe reste facultative sur un bulletin. Pour mieux maîtriser et organiser les ressources humaines, il est proposé de rendre l'équipe obligatoire dans une évolution ultérieure. Il s'agit uniquement d'une proposition : la règle actuelle et le code ne changent pas. Avant toute mise en œuvre, il faudra décider comment traiter les bulletins existants qui n'ont pas d'équipe.
 
 À chaque ajout, le propriétaire relira et validera la version complète avant sa transmission aux intervenants. La version finale conservera la trace des accords, réserves, rejets, décisions et exceptions acceptées.
