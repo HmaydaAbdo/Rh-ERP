@@ -122,6 +122,10 @@ describe('CartesPerimetreComponent', () => {
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(page.querySelector('a[href="/chantiers/1"]')).not.toBeNull();
     expect(page.querySelector('a[href^="/chantiers/analytique?chantierIds=1"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete app-pdf-export-button button[aria-label="Exporter les résultats de ce périmètre en PDF"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete app-pdf-export-button button[title]')).not.toBeNull();
+    expect(page.textContent).not.toContain('Étape 1 sur 4');
+    expect(page.textContent).not.toContain('Le parcours suit l’organisation définie');
   });
 
   it('ouvrir une carte l’ajoute au fil et descend à la dimension suivante dans le périmètre choisi', async () => {

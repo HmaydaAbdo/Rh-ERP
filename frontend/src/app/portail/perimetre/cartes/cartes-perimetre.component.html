@@ -42,9 +42,7 @@
   </div>
 
   <div class="perimetre-cartes__niveau" aria-live="polite">
-    <span class="perimetre-cartes__niveau-repere">Étape {{ progression().etape }} sur {{ progression().total }}</span>
     <h2>{{ progression().libelle }}</h2>
-    <p>Le parcours suit l’organisation définie pour le domaine {{ module().libellePluriel }}.</p>
   </div>
 
   <div class="perimetre-cartes__contenu" [attr.aria-busy]="chargement()">
@@ -52,117 +50,125 @@
       <p class="perimetre-cartes__vide">Aucune donnée n’est disponible pour votre compte.</p>
     } @else if (niveau() !== 'EMPLOYES') {
       @if (groupes(); as liste) {
-        <p class="perimetre-cartes__resume" role="status">
-          {{ liste.length }} {{ pluriel(niveau()) }}
-          @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-          @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()) }} · {{ totaux().masse | number: '1.2-2' }} DH }
-          @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
-        </p>
-        @if (liste.length > 0) {
-          <app-pdf-export-button [document]="documentGroupes()" />
-        }
-        @if (liste.length === 0 && !chargement()) {
-          <p class="perimetre-cartes__vide">Aucun élément ne correspond à ce périmètre.</p>
-        }
-        <ul class="perimetre-cartes__grille">
-          @for (groupe of groupesVisibles(); track groupe.id; let i = $index) {
-            <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
-              <article class="perimetre-carte">
-                <button type="button" class="perimetre-carte__corps" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
-                  <span class="perimetre-carte__entete">
-                    <span class="perimetre-carte__nom">{{ titre(groupe) }}</span>
-                    @if (groupe.statut; as statut) {
-                      <stp-badge [value]="statut.libelle" [severity]="statut.severite"></stp-badge>
-                    }
-                  </span>
-                  @if (niveau() === 'EQUIPE' && groupe.code) {
-                    <span class="perimetre-carte__code">{{ groupe.code }}</span>
-                  }
-                  @if (niveau() !== 'PERIODE' && niveau() !== 'EQUIPE' && groupe.code && groupe.libelle !== groupe.code) {
-                    <span class="perimetre-carte__libelle">{{ groupe.libelle }}</span>
-                  }
-                  @if (groupe.detail) {
-                    <span class="perimetre-carte__libelle">{{ groupe.detail }}</span>
-                  }
-                  <dl class="perimetre-carte__mesures">
-                    @if (groupe.fiches; as fiches) {
-                      <div><dt>Employés sur les fiches récentes</dt><dd>{{ fiches.effectif }}</dd></div>
-                      @if (fiches.effectif > 0) {
-                        <div class="perimetre-carte__jauge-ligne">
-                          <dt class="app-lecteur">Part des employés en poste</dt>
-                          <dd>
-                            <span class="perimetre-carte__jauge" aria-hidden="true"><span [style.width.%]="(fiches.actifs / fiches.effectif) * 100"></span></span>
-                            <small>{{ fiches.actifs }} en poste</small>
-                          </dd>
-                        </div>
+        <section class="perimetre-cartes__resultats" aria-label="Résultats du périmètre">
+          <div class="perimetre-cartes__resultats-entete">
+            <p class="perimetre-cartes__resume" role="status">
+              {{ liste.length }} {{ pluriel(niveau()) }}
+              @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+              @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+              @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
+            </p>
+            @if (liste.length > 0) {
+              <app-pdf-export-button [document]="documentGroupes()" [iconOnly]="true" ariaLabel="Exporter les résultats de ce périmètre en PDF" />
+            }
+          </div>
+          @if (liste.length === 0 && !chargement()) {
+            <p class="perimetre-cartes__vide">Aucun élément ne correspond à ce périmètre.</p>
+          }
+          <ul class="perimetre-cartes__grille">
+            @for (groupe of groupesVisibles(); track groupe.id; let i = $index) {
+              <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
+                <article class="perimetre-carte">
+                  <button type="button" class="perimetre-carte__corps" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
+                    <span class="perimetre-carte__entete">
+                      <span class="perimetre-carte__nom">{{ titre(groupe) }}</span>
+                      @if (groupe.statut; as statut) {
+                        <stp-badge [value]="statut.libelle" [severity]="statut.severite"></stp-badge>
                       }
+                    </span>
+                    @if (niveau() === 'EQUIPE' && groupe.code) {
+                      <span class="perimetre-carte__code">{{ groupe.code }}</span>
                     }
-                    @if (voitPaie()) {
-                      @if (moisDe(groupe); as mois) {
-                        @let ecarts = variations(groupe);
-                        <div><dt>Payés · {{ libellePeriode(mois) }}</dt><dd>{{ groupe.paie?.effectif ?? 0 }} @if (ecarts?.effectif; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd></div>
-                        <div>
-                          <dt>Masse · {{ libellePeriode(mois) }}</dt>
-                          <dd>{{ (groupe.paie?.masse ?? 0) | number: '1.2-2' }} DH @if (ecarts?.masse; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd>
-                        </div>
-                        <div>
-                          <dt>STC · {{ libellePeriode(mois) }}</dt>
-                          <dd>{{ groupe.paie?.stc ?? 0 }} @if (ecarts?.stc; as v) { <small class="perimetre-carte__variation">{{ v }}</small> } · {{ (groupe.paie?.stcMontant ?? 0) | number: '1.2-2' }} DH @if (ecarts?.stcMontant; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd>
-                        </div>
-                      } @else {
-                        <div><dt>Paie</dt><dd class="perimetre-carte__indisponible">Aucun mois disponible</dd></div>
+                    @if (niveau() !== 'PERIODE' && niveau() !== 'EQUIPE' && groupe.code && groupe.libelle !== groupe.code) {
+                      <span class="perimetre-carte__libelle">{{ groupe.libelle }}</span>
+                    }
+                    @if (groupe.detail) {
+                      <span class="perimetre-carte__libelle">{{ groupe.detail }}</span>
+                    }
+                    <dl class="perimetre-carte__mesures">
+                      @if (groupe.fiches; as fiches) {
+                        <div><dt>Employés sur les fiches récentes</dt><dd>{{ fiches.effectif }}</dd></div>
+                        @if (fiches.effectif > 0) {
+                          <div class="perimetre-carte__jauge-ligne">
+                            <dt class="app-lecteur">Part des employés en poste</dt>
+                            <dd>
+                              <span class="perimetre-carte__jauge" aria-hidden="true"><span [style.width.%]="(fiches.actifs / fiches.effectif) * 100"></span></span>
+                              <small>{{ fiches.actifs }} en poste</small>
+                            </dd>
+                          </div>
+                        }
                       }
+                      @if (voitPaie()) {
+                        @if (moisDe(groupe); as mois) {
+                          @let ecarts = variations(groupe);
+                          <div><dt>Payés · {{ libellePeriode(mois) }}</dt><dd>{{ groupe.paie?.effectif ?? 0 }} @if (ecarts?.effectif; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd></div>
+                          <div>
+                            <dt>Masse · {{ libellePeriode(mois) }}</dt>
+                            <dd>{{ (groupe.paie?.masse ?? 0) | number: '1.2-2' }} DH @if (ecarts?.masse; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd>
+                          </div>
+                          <div>
+                            <dt>STC · {{ libellePeriode(mois) }}</dt>
+                            <dd>{{ groupe.paie?.stc ?? 0 }} @if (ecarts?.stc; as v) { <small class="perimetre-carte__variation">{{ v }}</small> } · {{ (groupe.paie?.stcMontant ?? 0) | number: '1.2-2' }} DH @if (ecarts?.stcMontant; as v) { <small class="perimetre-carte__variation">{{ v }}</small> }</dd>
+                          </div>
+                        } @else {
+                          <div><dt>Paie</dt><dd class="perimetre-carte__indisponible">Aucun mois disponible</dd></div>
+                        }
+                      }
+                    </dl>
+                  </button>
+                  <div class="perimetre-carte__pied">
+                    @if (groupe.lien; as lien) {
+                      <a [routerLink]="lien" [attr.aria-label]="'Consulter ' + titre(groupe)">Consulter</a>
                     }
-                  </dl>
-                </button>
-                <div class="perimetre-carte__pied">
-                  @if (groupe.lien; as lien) {
-                    <a [routerLink]="lien" [attr.aria-label]="'Consulter ' + titre(groupe)">Consulter</a>
-                  }
-                  <a [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge">
-                    {{ voitPaie() && periode() ? 'Voir l’historique Paie' : 'Voir l’analyse' }}
-                  </a>
-                  @if (actionsCarte(); as modele) {
-                    <ng-container [ngTemplateOutlet]="modele" [ngTemplateOutletContext]="{ $implicit: groupe, niveau: niveau(), periode: moisDe(groupe), portee: resultat().portee }"></ng-container>
-                  }
-                </div>
-              </article>
+                    <a [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge">
+                      {{ voitPaie() && periode() ? 'Voir l’historique Paie' : 'Voir l’analyse' }}
+                    </a>
+                    @if (actionsCarte(); as modele) {
+                      <ng-container [ngTemplateOutlet]="modele" [ngTemplateOutletContext]="{ $implicit: groupe, niveau: niveau(), periode: moisDe(groupe), portee: resultat().portee }"></ng-container>
+                    }
+                  </div>
+                </article>
+              </li>
+            }
+          </ul>
+          @if (visibles() < liste.length) {
+            <div class="perimetre-cartes__plus">
+              <button stp-button variant="secondary" type="button" (click)="afficherPlus()">Afficher plus ({{ liste.length - visibles() }} restants)</button>
+            </div>
+          }
+        </section>
+      }
+    } @else {
+      <section class="perimetre-cartes__resultats" aria-label="Résultats du périmètre">
+        <div class="perimetre-cartes__resultats-entete">
+          <p class="perimetre-cartes__resume" role="status">{{ resultat().totalEmployes }} employé(s)</p>
+          @if (resultat().totalEmployes > 0) {
+            <app-pdf-export-button [document]="documentEmployesVide" [chargerDocument]="chargerExportEmployes" [iconOnly]="true" ariaLabel="Exporter les employés affichés en PDF" />
+          }
+        </div>
+        @if (!chargement() && resultat().employes.length === 0) {
+          <p class="perimetre-cartes__vide">Aucun employé ne correspond à ce périmètre.</p>
+        }
+        <ul class="perimetre-cartes__grille perimetre-cartes__grille--fiches">
+          @for (employe of resultat().employes; track employe.id) {
+            <li>
+              <a class="perimetre-cartes__fiche" [routerLink]="['/employees', employe.id]">
+                <span class="perimetre-cartes__initiales" aria-hidden="true">{{ initiales(employe) }}</span>
+                <span class="perimetre-cartes__qui">
+                  <strong>{{ employe.nomPrenom }}</strong>
+                  <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.libelle }} }</small>
+                </span>
+                <stp-badge [value]="libelleStatutEmploye(employe.statut)" [severity]="employe.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
+              </a>
             </li>
           }
         </ul>
-        @if (visibles() < liste.length) {
+        @if (resultat().employes.length < resultat().totalEmployes) {
           <div class="perimetre-cartes__plus">
-            <button stp-button variant="secondary" type="button" (click)="afficherPlus()">Afficher plus ({{ liste.length - visibles() }} restants)</button>
+            <button stp-button variant="secondary" type="button" (click)="afficherPlusEmployes()">Afficher plus ({{ resultat().totalEmployes - resultat().employes.length }} restants)</button>
           </div>
         }
-      }
-    } @else {
-      <p class="perimetre-cartes__resume" role="status">{{ resultat().totalEmployes }} employé(s)</p>
-      @if (resultat().totalEmployes > 0) {
-        <app-pdf-export-button [document]="documentEmployesVide" [chargerDocument]="chargerExportEmployes" />
-      }
-      @if (!chargement() && resultat().employes.length === 0) {
-        <p class="perimetre-cartes__vide">Aucun employé ne correspond à ce périmètre.</p>
-      }
-      <ul class="perimetre-cartes__grille perimetre-cartes__grille--fiches">
-        @for (employe of resultat().employes; track employe.id) {
-          <li>
-            <a class="perimetre-cartes__fiche" [routerLink]="['/employees', employe.id]">
-              <span class="perimetre-cartes__initiales" aria-hidden="true">{{ initiales(employe) }}</span>
-              <span class="perimetre-cartes__qui">
-                <strong>{{ employe.nomPrenom }}</strong>
-                <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.libelle }} }</small>
-              </span>
-              <stp-badge [value]="libelleStatutEmploye(employe.statut)" [severity]="employe.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
-            </a>
-          </li>
-        }
-      </ul>
-      @if (resultat().employes.length < resultat().totalEmployes) {
-      <div class="perimetre-cartes__plus">
-          <button stp-button variant="secondary" type="button" (click)="afficherPlusEmployes()">Afficher plus ({{ resultat().totalEmployes - resultat().employes.length }} restants)</button>
-        </div>
-      }
+      </section>
     }
   </div>
 </div>

@@ -53,9 +53,19 @@ test.describe('Équipes', () => {
     });
     await page.goto('/equipes?code=C');
     await expect(page.getByRole('cell', { name: 'CH', exact: true })).toBeVisible();
+    const exportTable = page.getByRole('button', { name: 'Exporter les équipes filtrées en PDF' });
+    await expect(exportTable).toBeVisible();
+    await expect(page.locator('.app-table-bar__tools [table-export]')).toBeVisible();
+    const tableFrame = page.locator('.app-collection-table__surface .stp-table__scroll');
+    const bordureRepos = await tableFrame.evaluate((element) => getComputedStyle(element).borderColor);
+    await exportTable.focus();
+    await expect.poll(() => tableFrame.evaluate((element) => getComputedStyle(element).borderColor)).not.toBe(bordureRepos);
 
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/equipes\/cartes\?code=C$/);
+    await expect(page.getByText('Étape 1 sur 4')).toHaveCount(0);
+    await expect(page.getByText('Le parcours suit l’organisation définie')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Exporter les résultats de ce périmètre en PDF' })).toBeVisible();
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'Chauffeurs' });
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
@@ -68,6 +78,8 @@ test.describe('Équipes', () => {
     await expect(page).toHaveURL(/\/equipes\/analytique\?code=C(&periode=2026-08)?$/);
     await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
     await expect(page.getByText('Répartition par équipe')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Exporter les indicateurs de paie en PDF' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Exporter les indicateurs des fiches Employé en PDF' })).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', equipeIds: [5, 6] });
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
 

@@ -38,4 +38,18 @@ describe('PdfExportButtonComponent', () => {
     expect(chargerDocument).toHaveBeenCalledOnce();
     expect(impression.imprimer).toHaveBeenCalledWith(expect.anything(), document);
   });
+
+  it('expose une action PDF en icône avec un nom accessible et une info-bulle', () => {
+    fixture = TestBed.createComponent(PdfExportButtonComponent);
+    fixture.componentRef.setInput('document', document);
+    fixture.componentRef.setInput('iconOnly', true);
+    fixture.componentRef.setInput('ariaLabel', 'Exporter les résultats en PDF');
+    fixture.detectChanges();
+
+    const bouton = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+    expect(bouton.getAttribute('aria-label')).toBe('Exporter les résultats en PDF');
+    expect(bouton.title).toBe('Exporter les résultats en PDF');
+    expect(bouton.classList).toContain('stp-button--icon-only');
+    expect(bouton.textContent?.trim()).toBe('');
+  });
 });

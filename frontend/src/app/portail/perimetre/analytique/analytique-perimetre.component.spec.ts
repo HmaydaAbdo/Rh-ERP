@@ -154,6 +154,9 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
+    expect(page.querySelectorAll('.perimetre-analytique__section--exportable > app-pdf-export-button').length).toBeGreaterThanOrEqual(4);
+    expect(page.querySelector('.perimetre-analytique__section--exportable app-pdf-export-button button[aria-label="Exporter l’évolution mensuelle en PDF"]')).not.toBeNull();
+    expect(page.querySelector('a.stp-button[href="/chantiers/cartes"]')).not.toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: undefined }));
   });
 

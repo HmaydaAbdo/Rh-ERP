@@ -12,6 +12,7 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
@@ -59,7 +60,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, ButtonComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

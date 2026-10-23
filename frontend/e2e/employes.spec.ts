@@ -44,6 +44,8 @@ function routes() {
     ],
     'POST /employees/search': () => pageDe([EMPLOYE]),
     'GET /chantiers/3': () => ({ id: 3, code: 'C168', designation: 'Nador', actif: true }),
+    'GET /equipes/5': () => ({ id: 5, code: 'OP', libelle: 'Opérateurs', actif: true }),
+    'GET /functions/2': () => ({ id: 2, libelle: 'CH. CAMION', actif: true }),
     'POST /chantiers/search': () => pageDe([]),
     'POST /equipes/search': () => pageDe([]),
     'POST /functions/search': () => pageDe([])
@@ -56,6 +58,11 @@ test.describe('Employés — Cartes et Analytique', () => {
     await page.goto('/employees/cartes');
 
     await expect(page.getByRole('navigation', { name: 'Vue des employés' }).getByRole('link')).toHaveCount(3);
+    const exportPdf = page.getByRole('button', { name: 'Exporter les résultats de ce périmètre en PDF' });
+    await expect(exportPdf).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(exportPdf).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await page.getByRole('button', { name: 'Ouvrir C168' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3$/);
     await expect(page.getByRole('navigation', { name: /Position dans les employés/ })).toContainText('Chantier C168');
@@ -70,7 +77,7 @@ test.describe('Employés — Cartes et Analytique', () => {
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
 
     await page.getByRole('link', { name: 'Voir la liste' }).click();
-    await expect(page).toHaveURL(/\/employees\?chantierIds=3&equipeIds=5&fonctionIds=2$/);
+    await expect(page).toHaveURL(/\/employees\?(?=.*chantierIds=3)(?=.*equipeIds=5)(?=.*fonctionIds=2).*$/);
   });
 
   test('l’Analytique montre les chiffres clés, les tranches et les mouvements de la paie', async ({ page }) => {
@@ -80,6 +87,12 @@ test.describe('Employés — Cartes et Analytique', () => {
     await expect(page.getByText('37,4 ans')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Pyramide des âges' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mouvements mois par mois' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Exporter la pyramide des âges en PDF' })).toBeVisible();
+    expect(await page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button').count()).toBeGreaterThanOrEqual(5);
+    await expect(page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button button[aria-label^="Exporter"]')).toHaveCount(await page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button').count());
+    await expect(page.locator('a.stp-button', { hasText: 'Voir les cartes' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     const accessibilite = await new AxeBuilder({ page }).include('.perimetre-analytique').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
   });

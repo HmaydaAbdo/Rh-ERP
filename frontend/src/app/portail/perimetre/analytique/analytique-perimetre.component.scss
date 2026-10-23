@@ -7,7 +7,7 @@
 
   &__tuiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
     gap: var(--space-md);
   }
 
@@ -55,16 +55,50 @@
   }
 
   &__section {
+    position: relative;
     min-width: 0;
     padding: var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+
+    &:hover,
+    &:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
 
     h4 {
       margin: 0 0 var(--space-sm);
       font-size: var(--text-base);
       font-weight: 600;
+    }
+
+    > app-pdf-export-button {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: var(--space-xs);
+      inset-inline-end: var(--space-xs);
+    }
+  }
+
+  &__section--synthese {
+    padding-block-start: var(--space-sm);
+
+    > app-pdf-export-button {
+      inset-block-start: var(--space-xs);
+    }
+
+    .perimetre-analytique__tuiles {
+      padding-block-start: var(--control-height);
+    }
+  }
+
+  &__section--exportable {
+    > h4,
+    .perimetre-analytique__entete-section h4 {
+      padding-inline-end: var(--control-height);
     }
   }
 
@@ -108,6 +142,27 @@
 
     &--haut {
       height: 22rem;
+    }
+
+    &--exportable {
+      position: relative;
+      padding: var(--control-height) var(--space-xs) var(--space-xs);
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+
+      &:hover,
+      &:focus-within {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+      }
+
+      app-pdf-export-button {
+        position: absolute;
+        z-index: 1;
+        inset-block-start: var(--space-2xs);
+        inset-inline-end: var(--space-2xs);
+      }
     }
   }
 
@@ -161,7 +216,6 @@
     select { min-width: 11rem; }
   }
 
-  &__lien-vue,
   &__lien {
     border: 0;
     padding: 0;
@@ -267,6 +321,16 @@
 
   .app-static-table {
     min-width: 28rem;
+  }
+
+  @include bp.phone {
+    &__tuiles {
+      gap: var(--space-xs);
+    }
+
+    &__tuile {
+      padding: var(--space-sm);
+    }
   }
 }
 
