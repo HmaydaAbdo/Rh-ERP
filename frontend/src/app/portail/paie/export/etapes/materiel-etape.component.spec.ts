@@ -9,7 +9,7 @@ describe('PaieExportEtapeMaterielComponent', () => {
     return monterEtape(PaieExportEtapeMaterielComponent, (store) => {
       store.chantiers.set(CHANTIERS);
       store.tableauxMateriel.set(TABLEAUX);
-      store.basculerEquipe('C168', 'CH');
+      store.basculerEquipe('C168', 'Chauffeurs');
     });
   }
 
@@ -18,7 +18,7 @@ describe('PaieExportEtapeMaterielComponent', () => {
 
     expect(racine.querySelector('.export-wizard__contexte')?.textContent).toContain('Chantier C168');
     expect(racine.querySelector('.export-wizard__tableau-tete h4')?.textContent).toBe('Camions C168');
-    expect(racine.textContent).toContain('Équipe CH');
+    expect(racine.textContent).toContain('Équipe Chauffeurs');
     expect(Array.from(racine.querySelectorAll('.export-wizard__ligne label')).map((l) => l.textContent)).toEqual(['Camion benne', 'Camion citerne']);
   });
 

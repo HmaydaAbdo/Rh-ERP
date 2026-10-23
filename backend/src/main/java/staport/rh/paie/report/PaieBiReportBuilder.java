@@ -170,6 +170,10 @@ class PaieBiReportBuilder {
         BigDecimal montantStcCourant = montantStc(lignesChantier);
         BigDecimal montantStcPrecedent = lignesChantierPrecedent.isEmpty() ? null : montantStc(lignesChantierPrecedent);
         boolean avecDetailEquipe = !equipesSelectionnees.isEmpty();
+        Set<String> codesEquipesSelectionnees = lignesChantier.stream()
+                .filter(p -> p.getEquipe() != null && equipesSelectionnees.contains(p.getEquipe().getLibelle()))
+                .map(p -> p.getEquipe().getCode())
+                .collect(Collectors.toSet());
         String identifiantChantier = identifiantChantier(code, lignesChantier);
         String titreChantier = "CHANTIER : " + identifiantChantier;
 
@@ -183,14 +187,14 @@ class PaieBiReportBuilder {
             // voir le Javadoc de EquipeBiVue) mais portant le nom du chantier.
             agregatEquipe.stream()
                     .map(Agregat::cle)
-                    .filter(equipesSelectionnees::contains)
+                    .filter(codesEquipesSelectionnees::contains)
                     .forEach(nom -> equipes.add(equipeVue(
                             nom, titreEquipe(nom, libellesEquipes), libellesEquipes.getOrDefault(nom, nom),
                             filtrerParEquipe(lignesChantier, nom), filtrerParEquipe(lignesChantierPrecedent, nom),
                             evolutions.pourEquipe(code, nom), materiel(code, nom, nombresMateriel), false)));
-            List<Paie> reste = filtrerHorsEquipes(lignesChantier, equipesSelectionnees);
+            List<Paie> reste = filtrerHorsEquipes(lignesChantier, codesEquipesSelectionnees);
             if (!reste.isEmpty()) {
-                List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, equipesSelectionnees);
+                List<Paie> restePrecedent = filtrerHorsEquipes(lignesChantierPrecedent, codesEquipesSelectionnees);
                 equipes.add(equipeVue(code, titreChantier, code, reste, restePrecedent, List.of(), List.of(), true));
             }
         } else {
@@ -338,10 +342,10 @@ class PaieBiReportBuilder {
                 afficherEquipeReelle ? libelleAfficheEquipe(paie) : "");
     }
 
-    /** Code de l'équipe pour la colonne "Équipe", ou {@code ""} (jamais "Sans équipe" — demande
-     * explicite de direction, 2026-09-29) quand l'employé n'a aucune équipe renseignée. */
+    /** Libellé de l'équipe pour la colonne "Équipe", ou {@code ""} quand l'employé n'a aucune
+     * équipe renseignée. */
     private String libelleAfficheEquipe(Paie paie) {
-        return paie.getEquipe() == null ? "" : paie.getEquipe().getCode();
+        return paie.getEquipe() == null ? "" : paie.getEquipe().getLibelle();
     }
 
     /** Regroupe par {@code cle} (code chantier, libellé fonction, ou libellé équipe avec "Sans

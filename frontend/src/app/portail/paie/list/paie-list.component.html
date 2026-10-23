@@ -51,7 +51,7 @@
           {{ paie.chantier?.designation || '-' }}
         }
         @case ('equipe') {
-          {{ paie.equipe?.code || '-' }}
+          {{ paie.equipe?.libelle || '-' }}
         }
         @case ('equipeLibelle') {
           {{ paie.equipe?.libelle || '-' }}

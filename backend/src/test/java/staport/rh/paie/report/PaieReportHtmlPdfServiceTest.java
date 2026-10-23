@@ -126,6 +126,8 @@ class PaieReportHtmlPdfServiceTest {
     void generer_devraitProduireUnPdfValideAvecEquipeDetailleeEtSqueletteMateriel() throws IOException {
         Paie c168Ch = paie("EMPLOYE UN", "CIN1", "CHAUFFEUR", "C168", "CH", "5000", null);
         Paie c168Op = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR ENGIN", "C168", "OP", "4500", null);
+        c168Ch.getEquipe().setLibelle("Chauffeurs");
+        c168Op.getEquipe().setLibelle("Opérateurs");
         Paie c168AutreEquipe = paie("EMPLOYE TROIS", "CIN3", "MACON", "C168", "EQUIPE X", "3000", null);
 
         @SuppressWarnings("unchecked")
@@ -133,7 +135,7 @@ class PaieReportHtmlPdfServiceTest {
         when(repository.findAll(any(Specification.class))).thenReturn(courant, List.of());
 
         PaieReportPdfRequestDto requeteAvecDetail = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, null, Map.of("C168", List.of("CH", "OP")),
+                "2026-09", null, null, null, null, null, Map.of("C168", List.of("Chauffeurs", "Opérateurs")),
                 Map.of("CAMION CITERNE", 3, "PELLE PNEU", 2), null);
 
         byte[] pdf = service.generer(YearMonth.of(2026, 9), requeteAvecDetail);
@@ -144,7 +146,7 @@ class PaieReportHtmlPdfServiceTest {
             assertThat(document.getNumberOfPages()).isGreaterThan(2);
             String texte = new PDFTextStripper().getText(document);
             assertThat(texte).contains("4. Parc matériel — CAMION", "5. Liste des employés",
-                    "EMPLOYE UN", "EMPLOYE DEUX");
+                    "EMPLOYE UN", "EMPLOYE DEUX", "Chauffeurs", "Opérateurs");
             int pageRepartitionEquipe = pageContenantTexte(document, "3. Répartition par équipe");
             BufferedImage pageChantier = new PDFRenderer(document).renderImage(pageRepartitionEquipe);
             assertThat(nombrePixelsBleus(pageChantier))

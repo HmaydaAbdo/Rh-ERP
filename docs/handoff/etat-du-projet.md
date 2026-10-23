@@ -22,7 +22,7 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
    [ADR 0009 — carte : satellite, relief et 3D](../adr/0009-carte-satellite-relief-3d.md),
    [ADR 0010 — la fiche employé porte l'état du dernier mois de paie](../adr/0010-employe-etat-du-dernier-mois-de-paie.md) et
    [ADR 0011 — Cartes et Analytique partagées par périmètre](../adr/0011-vues-cartes-analytique-par-perimetre.md).
-   Le chantier en cours de **stabilisation par domaine** suit le [PV de stabilisation ERP-RH](pv-stabilisation-erp-rh-2026-10-22.md)
+   Le cadrage par domaine suit le [PV N°1 — ERP-RH](pv-n1-erp-rh.md)
    (projet à valider par le propriétaire avant diffusion).
 4. `TODO.md` pour les sujets ouverts.
 

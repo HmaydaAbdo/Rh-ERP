@@ -92,9 +92,17 @@ public class PaiePerimetreService {
                     .map(PaiePerimetreService::codeEquipe)
                     .distinct()
                     .toList();
-            case PERSONNALISE -> equipesParChantier == null
-                    ? List.of()
-                    : equipesParChantier.getOrDefault(chantierCode, List.of());
+            case PERSONNALISE -> {
+                List<String> libellesChoisis = equipesParChantier == null
+                        ? List.of()
+                        : equipesParChantier.getOrDefault(chantierCode, List.of());
+                Set<String> selection = new HashSet<>(libellesChoisis);
+                yield lignesChantier.stream()
+                        .filter(p -> p.getEquipe() != null && selection.contains(p.getEquipe().getLibelle()))
+                        .map(PaiePerimetreService::codeEquipe)
+                        .distinct()
+                        .toList();
+            }
         };
     }
 
@@ -107,11 +115,12 @@ public class PaiePerimetreService {
             return lignes;
         }
         Set<String> exclusionSet = new HashSet<>(exclues);
-        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(codeEquipe(p))).toList();
+        return lignes.stream().filter(p -> p.getEquipe() == null || !exclusionSet.contains(p.getEquipe().getLibelle())).toList();
     }
 
-    /** Code de l'équipe du bulletin — clé de sélection/regroupement partagée avec le dialog d'export
-     * ({@code equipesParChantier}). Ne doit être appelé que si {@code p.getEquipe() != null}. */
+    /** Identifiant technique de l'équipe du bulletin, conservé pour le regroupement interne des
+     * lignes après résolution du libellé reçu dans la requête. Ne doit être appelé que si
+     * {@code p.getEquipe() != null}. */
     private static String codeEquipe(Paie p) {
         return p.getEquipe().getCode();
     }
