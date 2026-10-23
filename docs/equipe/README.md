@@ -72,7 +72,9 @@ d'import). `ENR` n'est plus un code valide.
 Les 4 autres ont été créées d'après les valeurs trouvées sur les bulletins existants
 (diagnostic du 2026-10-03), absentes de l'ancien catalogue : `A` (45 bulletins), `LABO` (6),
 `ASPHALET` (5) et `8` (1). Leur **libellé est provisoirement égal au code** — à renseigner avec la RH
-via l'écran Équipes (`PUT /equipes/{id}`). Les bulletins qui n'avaient pas d'équipe restent sans équipe (`equipe_id` nul).
+via l'écran Équipes (`PUT /equipes/{id}`); leur signification et leur libellé restent suivis dans la
+tâche globale « Qualité des données » de [`TODO.md`](../../TODO.md). Les bulletins qui n'avaient pas
+d'équipe restent sans équipe (`equipe_id` nul).
 
 ---
 
@@ -217,49 +219,43 @@ Les tests spécifiques du domaine couvrent les règles suivantes :
 
 | Couche | Fichier / parcours | Vérifications présentes |
 |---|---|---|
-| Backend | `backend/src/test/java/staport/rh/equipe/services/EquipeServiceTest.java` | Normalisation du code, doublon de code sans casse, doublon de libellé, mise à jour sans auto-doublon, rejet d'un code déjà utilisé, absence (404) et suppression d'une équipe non référencée |
-| Backend — import | `backend/src/test/java/staport/rh/equipe/imports/EquipeImportServiceTest.java` | Création normalisée, doublons base/fichier, rejet atomique, champs requis, lignes vides, en-tête attendu et modèle vierge |
+| Backend — règles du référentiel | `backend/src/test/java/staport/rh/equipe/services/EquipeServiceTest.java`, `backend/src/test/java/staport/rh/referentiel/ReferentielUniciteInsensibleCasseTest.java` | Normalisation et unicité du code et du libellé, y compris les espaces/casse sur PostgreSQL, modification sans auto-doublon, doublons et équipe absente |
+| Backend — références et historique | `backend/src/test/java/staport/rh/audit/AuditOperationTest.java` | Suppression refusée si un bulletin Paie ou une fiche Employé référence l'équipe; le code modifié est relu sur un bulletin antérieur; l'échec de suppression est conservé et audité |
+| Backend — bulletin sans équipe | `backend/src/test/java/staport/rh/paie/services/PaieServiceTest.java`, scénario `create_devraitAccepterUnBulletinSansEquipe` | Création acceptée avec `equipeId` nul |
+| Backend — indicateurs et périodes | `backend/src/test/java/staport/rh/paie/services/PaieAnalytiqueServiceTest.java`, `backend/src/test/java/staport/rh/paie/effectifs/PaieEffectifsServiceTest.java`, tests des vues partagées dans `frontend/src/app/portail/perimetre/` | Répartition Paie par équipe, filtres, bulletins sans équipe, effectifs par période et comportement lorsqu'une équipe n'a aucun bulletin dans le mois retenu |
+| Backend — import Excel du référentiel | `backend/src/test/java/staport/rh/equipe/imports/EquipeImportServiceTest.java` | Modèle, en-têtes, lignes vides, champs obligatoires, limites, normalisation, doublons existants et dans le fichier, rejet complet sans écriture partielle |
 | Audit — import | `backend/src/test/java/staport/rh/audit/AuditImportTest.java` | Événement de succès, empreinte du fichier sans contenu, nombre créé et révision Envers |
 | Frontend — formulaire | `form/equipe-form.component.spec.ts` | Aide de saisie, champs requis, bornes, création, erreur serveur et modification |
 | Frontend — liste | `list/equipe-list.component.spec.ts` | Première page et tri, permissions, filtres URL, consultation/modification, suppression confirmée ou annulée |
-| Frontend — coque | `vues/equipe-vues.component.spec.ts` | Trois vues, filtres conservés, fusion URL avec périmètre/mois/regroupement, bouton de création protégé |
+| Frontend — coque et Tabulaire partagé | `vues/equipe-vues.component.spec.ts`, `list/equipe-list.component.spec.ts` | Trois vues, filtres conservés dans l'URL, assemblage de la coque et du tableau configurables, actions protégées |
 | Frontend — intégration des vues partagées | `equipe-module.spec.ts` | Référentiel filtré, ordre de descente, retour à Tabulaire, critères Employé et Paie |
-| E2E | `frontend/e2e/equipes.spec.ts` | Import autorisé et rafraîchissement, parcours des vues, filtres et périmètre, droits Employé/Paie séparés et absence d'appels sans droit |
-| Sécurité backend | `EndpointSecurityTest` | Vérifie la permission dédiée `EQUIPE_IMPORT` sur le dépôt et le téléchargement du modèle, ainsi que les autres endpoints |
+| Sécurité backend | `backend/src/test/java/staport/rh/auth/security/EndpointSecurityTest.java` | Chaque endpoint Équipe exige sa permission dédiée; le refus sans permission et l'accès autorisé sont vérifiés |
+| E2E navigateur | `frontend/e2e/equipes.spec.ts` | Import et rechargement, parcours des trois vues, filtres et périmètre, données Employé/Paie séparées et absence d'appels sans les droits correspondants |
 
-La CI #391 a réussi sur la tête de PR `3e2058b` (frontend, backend, full-stack, profil de performance;
-publication d'images ignorée). La PR #80 a été fusionnée par squash dans `main` au commit
-`c0ecbe5`. Au début de cette revue, les checks `backend` et `performance-profile` du commit de
-fusion étaient verts; `frontend` et `full-stack` étaient encore en cours. Un résultat CI du commit
-de fusion ne sera confirmé qu'après la fin de ces deux jobs.
+Les scénarios de ce tableau constituent la vérification exécutable des règles et parcours décrits
+dans ce README. Les libellés métier des quatre codes provisoires demeurent la seule confirmation RH
+à recueillir, suivie dans la tâche globale « Qualité des données »; les autres règles ci-dessus sont
+des comportements constatés et couverts par les suites indiquées.
 
-Les résultats techniques ne valent pas accord métier. Le bloc n'est pas déclaré en production et
-les validations métier suivantes restent à recueillir :
+### Dernière vérification locale — 23 octobre 2026
 
-- confirmer que les trois vues et les indicateurs présentés répondent au besoin RH/Paie;
-- confirmer la signification des codes/libellés provisoires `A`, `LABO`, `ASPHALET` et `8`;
-- comparer des indicateurs à des exemples métier et vérifier la distinction entre la situation
-  récente Employé et les bulletins de périodes antérieures;
-- recueillir les avis des responsables métier Équipe/RH, Paie et réalisation/livraison.
+- **Backend :** 61 tests réussis dans 7 classes ciblant Équipe, Paie, l'audit et l'unicité PostgreSQL. Le démarrage de la suite a créé une base PostgreSQL 18 jetable et validé les migrations V1 à V32.
+- **Frontend :** 77 tests réussis dans 12 fichiers, pour Équipe et les vues partagées.
+- **Parcours navigateur :** 3 scénarios Équipe réussis avec Playwright, dont la distinction entre l'équipe de la fiche Employé récente et celle du bulletin historique.
+- **Build frontend de production :** réussi.
 
-| Intervenant | Avis | Commentaire / signature / date |
-|---|---|---|
-| Propriétaire de l'application | À compléter après revue |  |
-| Responsable métier Équipe / RH | À compléter |  |
-| Responsable métier Paie | À compléter |  |
-| Responsable de réalisation / livraison | À compléter |  |
-| Autre intervenant concerné | À compléter |  |
+Les commandes générales et prérequis sont décrits dans [la documentation des tests](../testing.md). Les tests backend d'intégration nécessitent Docker; le parcours navigateur utilise un serveur de test local.
 
 ---
 
 ## Limites connues
 
-Les remarques de présentation et les validations métier finales sont consignées dans [Validation Équipe](validation.md).
-L'import Excel respecte le contrat commun des [Imports Excel](../imports.md). Il n'y a pas de
+Une présentation et une vidéo de démonstration sont prévues ultérieurement comme supports de
+formation; elles ne sont pas planifiées pour le moment (voir le TODO global). L'import Excel respecte
+le contrat commun des [Imports Excel](../imports.md). Il n'y a pas de
 synchronisation du référentiel Équipe.
 Les écritures sont auditées (voir [../audit/README.md](../audit/README.md)).
 
 ## Documents du domaine
 
-- [Validation métier et technique / partie Équipe du PV](validation.md)
 - [Maquette historique des vues](maquette-vues.html) — référence visuelle, le code actuel reste la source du comportement.

@@ -44,7 +44,8 @@ test.describe('Équipes', () => {
     const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
       'POST /equipes/search': () => pageDe([CHAUFFEURS, OPERATEURS]),
       'GET /equipes/5': () => CHAUFFEURS,
-      'POST /employees/regroupements': () => [{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 3, actifs: 2 }],
+      // Les fiches courantes sont affectées à OP; le bulletin d'août reste rattaché à CH.
+      'POST /employees/regroupements': () => [{ id: 6, code: 'OP', libelle: 'Opérateurs', effectif: 3, actifs: 2 }],
       'GET /paie/periodes': () => PERIODES,
       'POST /paie/analytique': () => ANALYSE,
       'POST /paie/effectifs': () => [{ periode: '2026-08', effectif: 3, entrees: null, sorties: 0, mutations: null }],
@@ -58,6 +59,8 @@ test.describe('Équipes', () => {
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'Chauffeurs' });
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
+    await expect(carte.locator('dt').filter({ hasText: 'Employés sur les fiches récentes' }).locator('xpath=..').locator('dd')).toHaveText('0');
+    await expect(carte.locator('dt').filter({ hasText: 'Payés · août 2026' }).locator('xpath=..').locator('dd')).toContainText('1');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre suit dans l'Analytique et borne le périmètre analysé (mêmes équipes que les deux autres vues).

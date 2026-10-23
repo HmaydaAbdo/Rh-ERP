@@ -21,25 +21,22 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 
 ---
 
-## 2. Travail récent (fusionné dans `main`)
+## 2. Travail récent livré
 
-| Date | PR | Contenu |
+| Date | Domaine / lot | Contenu |
 |---|---|---|
-| 2026-10-18 | #73 | **Carte des chantiers** « niveau Google Maps » : monde en globe, relief et terrain 3D, bâtiments 3D, satellite Esri via une clé ArcGIS gratuite et obligatoire, avec secours automatique. Fond auto-hébergé dans `carte-fond/` à côté de `docker-compose.yml`. Voir `docs/chantier/carte.md`. |
-| 2026-10-19 | #74 | **Employés en cinq lots** : (1) coque à onglets Tabulaire / Cartes / Analytique, filtres dans l'URL ; (2) fiche = état du dernier mois de paie (équipe, salaire et type, table `employe_sortie`, reprise **V30**) ; (3) **assistant d'import de la paie** (analyse, corrections des fiches, départs) ; (4) fiche et **parcours** de l'employé ; (5) vues **Cartes** et **Analytique**. Voir `docs/employee/README.md` et `docs/paie/README.md`, « Import Excel (assistant) ». |
+| 2026-10-18 | Carte | **Carte des chantiers** « niveau Google Maps » : monde en globe, relief et terrain 3D, bâtiments 3D, satellite Esri via une clé ArcGIS gratuite et obligatoire, avec secours automatique. Fond auto-hébergé dans `carte-fond/` à côté de `docker-compose.yml`. Voir `docs/chantier/carte.md`. |
+| 2026-10-19 | Employés | **Employés en cinq lots** : (1) coque à onglets Tabulaire / Cartes / Analytique, filtres dans l'URL ; (2) fiche = état du dernier mois de paie (équipe, salaire et type, table `employe_sortie`, reprise **V30**) ; (3) **assistant d'import de la paie** (analyse, corrections des fiches, départs) ; (4) fiche et **parcours** de l'employé ; (5) vues **Cartes** et **Analytique**. Voir `docs/employee/README.md` et `docs/paie/README.md`, « Import Excel (assistant) ». |
 
-| 2026-10-20 | (cette PR) | **Vocabulaire RH et nettoyage** : l'interface dit « En poste / Sorti » pour les employés et « En cours / Clôturé » pour les chantiers (API et base inchangées : `ACTIF`/`INACTIF`, `actif`) ; boutons **Clôturer / Rouvrir** sur la liste et la fiche d'un chantier ; l'assistant d'import de la paie signale à part un chantier clôturé et propose de le rouvrir ; migration **V31** : supprime les fonctions sans bulletin ni fiche, clôture les chantiers sans bulletin (sur la base de développement : 48 fonctions, 183 chantiers, 29 restent en cours). |
+| 2026-10-20 | Vocabulaire RH | L'interface dit « En poste / Sorti » pour les employés et « En cours / Clôturé » pour les chantiers (API et base inchangées : `ACTIF`/`INACTIF`, `actif`) ; boutons **Clôturer / Rouvrir** sur la liste et la fiche d'un chantier ; l'assistant d'import de la paie signale à part un chantier clôturé et propose de le rouvrir ; migration **V31** : supprime les fonctions sans bulletin ni fiche, clôture les chantiers sans bulletin (sur la base de développement : 48 fonctions, 183 chantiers, 29 restent en cours). |
 
-| 2026-10-23 | #77 | **Équipe, premier bloc de stabilisation** : trois vues Tabulaire / Cartes / Analytique reliées aux fiches Employé et à la Paie ; PV de stabilisation (`pv-stabilisation-erp-rh-2026-10-22.md`) ; l'historique d'une équipe reste affiché quand le mois choisi n'a aucun bulletin. |
-| 2026-10-23 | #79 | **Fonction** : mêmes trois vues, import et création dans l'en-tête ; la répartition par fonction de `POST /paie/analytique` porte les STC (`stc`, `stcMontant`). Décisions du propriétaire : renommage actuel et refus de suppression conservés. |
-| 2026-10-23 | #80 | **Vues ERP partagées et Chantier** : Cartes, Analytique, coque et Tabulaire configurables partagés par les cinq domaines; PR fusionnée par squash dans `main` au commit `c0ecbe5`. CI #391 verte sur la tête de PR `3e2058b`; statuts combinés sur le commit de fusion à vérifier avant revue propriétaire. |
+| 2026-10-23 | Équipe | Référentiel d'équipes, trois vues partagées et import Excel; les règles et scénarios actuels sont centralisés dans [le dossier Équipe](../equipe/README.md). |
+| 2026-10-23 | Fonction | Trois vues, import et création dans l'en-tête; répartition par fonction porte les STC (`stc`, `stcMontant`). Les règles métier sont dans [le dossier Fonction](../function/README.md). |
+| 2026-10-23 | Vues partagées et Chantier | Cartes, Analytique, coque et Tabulaire configurables partagés par les cinq domaines. Les filtres, données, colonnes, cellules, actions et règles métier restent propres à chaque domaine. Voir [les vues de périmètre](../frontend/vues-perimetre.md). |
 
-La PR #80 est fusionnée. Les composants partagés sont décrits dans `docs/frontend/vues-perimetre.md` et `docs/frontend/README.md`;
-les filtres, données, colonnes, cellules, actions et règles métier restent dans chaque domaine. Les preuves locales et de CI sont
-consignées selon leur commit; elles ne prouvent pas à elles seules le déploiement ni l'accord métier.
-
-À la fusion de #74 : 410 tests backend, 762 tests frontend, 54 E2E, CI complète verte ; images Docker publiées par la CI au
-tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
+Les composants transverses sont décrits dans `docs/frontend/vues-perimetre.md` et `docs/frontend/README.md`. Chaque dossier
+de domaine reste la source de ses règles, parcours et tests. Les preuves locales sont consignées avec le domaine concerné;
+elles ne prouvent pas à elles seules un déploiement ni un accord métier.
 
 ---
 
@@ -65,12 +62,6 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 - Une fois un plan validé, il veut une exécution autonome de bout en bout (code, tests, vérification à l'écran, docs) et un
   seul bilan à la fin.
 - Il juge l'interface sur captures : « premium », fluide, lisible sur téléphone. Vérifier soi-même à l'écran.
-
-**Git**
-- `main` est **protégée** : un push direct est refusé. Le circuit : une branche, une PR, la CI verte, la fusion, puis la
-  **suppression de la branche** et la synchronisation de `main` en local. À la fin, il ne doit rester **que `main`** et
-  **aucune PR ouverte**.
-- Un commit par lot cohérent, message en français ; ne jamais mélanger ses propres modifications en cours.
 
 **Décisions déjà prises**
 - Carte : **gratuité absolue**, sans rien payer ni maintenant ni plus tard, même en pic ; le monde entier ; lancement possible
@@ -98,7 +89,7 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
   migration sur de vraies données : copier la base dans une base jetable (`pg_dump | psql` dans le conteneur postgres), puis la
   supprimer.
 - **Tests backend** : `./mvnw -B -o test` ; les tests d'intégration démarrent leur propre PostgreSQL (Testcontainers, Docker
-  doit tourner). Exporter les variables du job `backend` de `.github/workflows/ci.yml` (`JWT_SECRET`, `FRONTEND_URL`,
+  doit tourner). Définir les variables d'environnement du backend requises localement (`JWT_SECRET`, `FRONTEND_URL`,
   `COOKIE_SECURE`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM`, `CHANTIER_SYNC_BASE_URL`).
 - **Tests frontend** : `npm test` (navigateur ChromiumHeadless) ; un sous-ensemble avec
   `npx ng test --watch=false --browsers=ChromiumHeadless --include='src/app/…/*.spec.ts'` ; contrôle de types rapide
@@ -115,10 +106,10 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 
 ## 6. Sujets ouverts
 
-Le détail transversal est dans `TODO.md`; les tâches propres à un domaine sont dans `docs/<domaine>/TODO.md` lorsqu'un suivi opérationnel est ouvert. Pour Équipe, les décisions et remarques à recueillir sont dans `docs/equipe/validation.md` et aucun TODO de domaine n'est ouvert une fois l'import Excel terminé. Principaux sujets :
+Le détail transversal est dans `TODO.md`; les tâches propres à un domaine sont dans `docs/<domaine>/TODO.md` lorsqu'un suivi opérationnel est ouvert. Pour Équipe, les règles, les décisions confirmées et la couverture de test sont regroupées dans [le README du domaine](../equipe/README.md). La revue locale des parcours est terminée; la préparation d'une présentation et d'une vidéo de formation reste différée et figure dans le TODO global. Aucun TODO de réalisation n'est ouvert pour le domaine. Principaux sujets :
 
 - **Assistant d'import** : premier usage réel sur le fichier d'octobre 2026, à suivre.
-- **Stabilisation** : revue Équipe dans le parcours propriétaire, puis consignation des remarques dans la fiche de validation et validation du PV avant diffusion; les quasi-doublons de fonctions restent dans « Qualité des données ».
+- **Stabilisation** : revue propriétaire des domaines dans l'ordre indiqué, puis consignation des remarques dans le PV global avant diffusion; les quasi-doublons de fonctions restent dans « Qualité des données ».
 - **Qualité des données** (« Prochaine tâche ») : tous les champs obligatoires et aucun doublon, dans tous les domaines.
 - **Conformité backend** (`docs/conformite/README.md`) : G3 (paramètres métier administrables), G5, G6, G10 en attente de
   décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.
