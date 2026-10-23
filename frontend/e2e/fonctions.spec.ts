@@ -96,30 +96,36 @@ test.describe('Fonctions', () => {
       'GET /functions/1': () => ({ id: 1, version: 0, libelle: 'MACON' }),
       'POST /employees/regroupements': () => [{ id: 1, code: 'MACON', libelle: 'MACON', effectif: 3, actifs: 3 }],
       'GET /paie/periodes': () => periodes,
-      'POST /paie/analytique': () => analyse
+      'POST /paie/analytique': () => analyse,
+      'POST /paie/effectifs': () => [{ periode: '2026-08', effectif: 3, entrees: null, sorties: 0, mutations: null }],
+      'POST /employees/analytique': () => ({
+        effectif: 3, actifs: 2, inactifs: 1, ageMoyen: 35.5, ancienneteMoyenne: 4.2, embauchesDouzeMois: 1,
+        parAge: [{ min: 0, max: 25, effectif: 1 }, { min: 25, max: null, effectif: 2 }],
+        parAnciennete: [{ min: 0, max: 1, effectif: 1 }, { min: 1, max: null, effectif: 2 }]
+      })
     });
     await page.goto('/functions?libelle=mac');
 
-    await page.getByRole('link', { name: 'Cartes' }).click();
+    await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
-    const carte = page.locator('.function-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre libellé suit dans l'Analytique et borne le périmètre analysé (mêmes fonctions que les deux autres vues).
-    await page.getByRole('link', { name: 'Analytique' }).click();
+    await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Analytique' }).click();
     await expect(page).toHaveURL(/\/functions\/analytique\?libelle=mac$/);
-    await expect(page.getByRole('heading', { name: /Paie · fonctions filtrées/ })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'STC' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
+    await expect(page.getByText('Répartition par fonction')).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', fonctionIds: [1, 2] });
-    await page.getByRole('link', { name: 'Cartes' }).click();
+    await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
 
     await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
-    await expect(page).toHaveURL(/\/functions\/analytique\?fonctionId=1&periode=2026-08/);
-    await expect(page.getByRole('heading', { name: 'Évolution mensuelle de la masse' })).toBeVisible();
-    await expect(page.getByText('3 employés')).toBeVisible();
+    await expect(page).toHaveURL(/\/functions\/analytique\?libelle=mac&fonctionIds=1/);
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', fonctionIds: [1] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
 
@@ -129,7 +135,7 @@ test.describe('Fonctions', () => {
     });
     await page.goto('/functions/cartes');
 
-    const carte = page.locator('.function-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
     await expect(carte).toBeVisible();
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');

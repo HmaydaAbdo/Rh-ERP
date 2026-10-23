@@ -78,6 +78,17 @@ describe('PaieVuesComponent', () => {
         expect(url).toContain('equipeIds=2,5');
     });
 
+    it('garde le regroupement des Cartes quand un filtre de la barre change', async () => {
+        const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-07&par=fonction', PaieVuesComponent);
+
+        composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-07', cin: 'AB1' });
+        await harness.fixture.whenStable();
+
+        const url = TestBed.inject(Router).url;
+        expect(url).toContain('par=fonction');
+        expect(url).toContain('cin=AB1');
+    });
+
     it('retire de l\'URL un filtre vidé', async () => {
         const composant = await harness.navigateByUrl('/paie?cin=AB1&periode=2026-08', PaieVuesComponent);
 
@@ -104,20 +115,14 @@ describe('PaieVuesComponent', () => {
         expect(composant['moisRequis']()).toBe(true);
     });
 
-    it('ajoute le fil de navigation à la barre dans les cartes seulement', async () => {
-        const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
-        expect(composant['cartes']()).toBe(false);
-
-        await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
-        expect(composant['cartes']()).toBe(true);
-    });
-
     it("porte les actions dans l'en-tête, avec le titre et les onglets, dans chaque vue", async () => {
         for (const url of ['/paie', '/paie/cartes', '/paie/analytique']) {
             await harness.navigateByUrl(url, PaieVuesComponent);
 
             const entete = (harness.routeNativeElement as HTMLElement).querySelector('.app-vues__header');
             expect(entete?.querySelector('app-paie-actions'), url).not.toBeNull();
+            expect((harness.routeNativeElement as HTMLElement).querySelector('app-collection-shell router-outlet'), url).not.toBeNull();
+            expect((harness.routeNativeElement as HTMLElement).querySelector('app-collection-shell router-outlet'), url).not.toBeNull();
             expect(entete?.querySelector('app-vue-switcher'), url).not.toBeNull();
         }
     });

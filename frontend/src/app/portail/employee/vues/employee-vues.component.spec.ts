@@ -51,6 +51,15 @@ describe('EmployeeVuesComponent', () => {
     expect(TestBed.inject(Router).url).toBe('/employees?fonctionIds=2,5&statut=INACTIF');
   });
 
+  it('garde le regroupement et le mois des Cartes quand un filtre de la barre change', async () => {
+    const composant = await harness.navigateByUrl('/employees?par=fonction&periode=2026-08&chantierIds=3', EmployeeVuesComponent);
+
+    composant['appliquer']({ ...AUCUN_FILTRE, chantierIds: [3], nomPrenom: 'ali' });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/employees?par=fonction&periode=2026-08&chantierIds=3&nom=ali');
+  });
+
   it("porte le titre, les trois onglets de vue et les actions dans l'en-tête, la barre de filtres au-dessus de la vue", async () => {
     await harness.navigateByUrl('/employees', EmployeeVuesComponent);
     const page = harness.routeNativeElement as HTMLElement;
@@ -61,8 +70,9 @@ describe('EmployeeVuesComponent', () => {
       '/employees/cartes',
       '/employees/analytique'
     ]);
-    expect(page.querySelector('.app-vues__header app-employee-actions.app-vues__actions')).not.toBeNull();
-    expect(page.querySelector('app-employee-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('.app-vues__header .app-vues__actions app-employee-actions')).not.toBeNull();
+    expect(page.querySelector('app-employee-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('recrée la vue affichée après un import', async () => {

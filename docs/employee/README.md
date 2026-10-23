@@ -241,7 +241,7 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 | `/employees/:id` | `EmployeeDetailComponent` | **Fiche de l'employé** : initiales, nom, CIN et statut ; situation actuelle (fonction, chantier, équipe, ancienneté depuis l'embauche, âge) ; avec `PAIE_READ`, le salaire (« par mois » ou « par jour ») et le **parcours** (`PaieParcoursComponent`, domaine Paie : chiffres, chronologie des changements, total perçu par mois, bulletins) |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut, équipe, et salaire avec `PAIE_READ`) |
 
-Les vues des employés sont les routes filles d'une **coque commune**, `EmployeeVuesComponent` (`vues/`) : le titre, les
+Les vues des employés sont les routes filles de `EmployeeVuesComponent` (`vues/`), qui configure la coque partagée `app-collection-shell`; la liste utilise également `app-collection-table`. Le domaine fournit le titre, les
 **actions** (`EmployeeActionsComponent`, `actions/` : « Importer », avec le modèle Excel dans son menu, et « Nouvel employé »,
 chacune avec sa permission) et la **barre de filtres** (`EmployeeFiltresComponent`, `filtres/` : nom, CIN, fonctions, chantiers,
 statut, « Réinitialiser »), une seule fois pour toutes les vues. Les écrans de saisie et de consultation n'en font pas partie.
@@ -252,21 +252,25 @@ mènent aux trois vues ; l'en-tête à onglets est le style global `.app-vues` (
 
 ### Vues Cartes et Analytique
 
-**Cartes** (`cartes/`, lecture seule, `POST /employees/regroupements`). On descend dans l'effectif en choisissant soi-même par
-quoi regrouper : **chantier, équipe, fonction** dans cet ordre par défaut, ou dans un autre — les boutons « Regrouper par »
-proposent à tout moment chaque dimension pas encore choisie, et « Employés » pour voir directement les fiches. Ouvrir une
-carte en fait une **étape du fil** (filtre de la barre à une valeur) ; chaque étape se retire seule. Au bout, une fiche par
-employé (pagination « Afficher plus », 24 par page) ouvre sa fiche. **« Voir la liste »** ouvre la vue Tabulaire sur le même
-périmètre, à n'importe quel niveau. Tout est dans l'URL : les étapes sont `chantierIds`, `equipeIds` (0 = sans équipe) et
-`fonctionIds`, le regroupement courant `?par=chantier|equipe|fonction|employes`. Chaque carte montre l'effectif, la part des
-employés en poste (jauge) et la part du périmètre. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
+Les deux vues sont les **vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `EmployeeCartesComponent` et
+`EmployeeAnalytiqueComponent` ne sont que des hôtes minces, `employee-module.ts` décrit le module (pas de référentiel propre ;
+périmètre = barre de filtres : chantiers, équipes, fonctions, nom, CIN, statut).
 
-**Analytique** (`analytique/`). Six chiffres clés (effectif, en poste, sortis, âge moyen, ancienneté moyenne, embauches sur
-12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** en poste / sortis par chantier, équipe ou
-fonction (les 12 plus grands groupes ; tous dans le tableau de données), et — avec `PAIE_READ` — les **mouvements mois par
-mois** tirés de la paie (`POST /paie/effectifs` : employés payés, entrées, sorties, mutations de chantier). Chaque graphique a
-son tableau de données (« Voir les données »). Les mouvements suivent le chantier, l'équipe et la fonction **du bulletin du
-mois** ; le nom, le CIN et le statut de la barre ne s'y appliquent pas (l'écran le dit).
+**Cartes** (lecture seule). On descend dans l'effectif en choisissant soi-même par quoi regrouper : **chantier, équipe, fonction**
+dans cet ordre par défaut, ou dans un autre — les boutons « Regrouper par » proposent à tout moment chaque dimension pas
+encore choisie, et « Employés » pour voir directement les fiches (« Afficher plus », 24 par page). Ouvrir une carte en fait une
+**étape du fil** ; chaque étape se retire seule. **« Voir la liste »** ouvre la vue Tabulaire sur le même périmètre. Tout est dans
+l'URL : les étapes sont `chantierIds`, `equipeIds` (0 = sans équipe) et `fonctionIds`, le regroupement courant `?par=`.
+Chaque carte montre l'effectif, la part des employés en poste (jauge) et, avec `PAIE_READ`, la paie du mois (payés, masse, STC)
+avec l'écart sur le mois contigu. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
+
+**Analytique** (graphiques). Avec `EMPLOYEE_READ` : six chiffres clés (effectif, en poste, sortis, âge moyen, ancienneté
+moyenne, embauches sur 12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** en poste / sortis
+par chantier, équipe ou fonction (les 12 plus grands groupes ; tous dans le tableau de données). Avec `PAIE_READ` : les chiffres
+du mois, l'évolution mensuelle, la répartition de la paie, les tranches de total et les **mouvements mois par mois**
+(`POST /paie/effectifs` : employés payés, entrées, sorties, mutations). Chaque graphique a son tableau de données (« Voir les
+données »). Les mouvements suivent le chantier, l'équipe et la fonction **du bulletin du mois** ; le nom, le CIN et le statut de
+la barre ne s'y appliquent pas (l'écran le dit).
 
 Tranches retenues par le propriétaire (2026-10-19) : âge **moins de 25, 25-34, 35-44, 45-54, 55 ans et plus** (années pleines) ;
 ancienneté **moins d'un an, 1-3, 3-5, 5-10, 10 ans et plus** (de borne à borne : 1-3 = d'un an à moins de trois).

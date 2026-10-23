@@ -23,8 +23,8 @@ const DEBOUNCE_FILTRES_MS = 300;
  * Barre de filtres commune aux trois vues de la paie, **identique dans chacune** et **entièrement visible dès l'arrivée** :
  * le mois (flèches vers le mois précédent / suivant qui contient de la paie, grille de mois dans un panneau), la recherche
  * par nom et par CIN, puis les sélecteurs de chantiers, d'équipes et de fonctions — jamais cachés derrière un bouton. Un
- * sélecteur ne montre que quelques valeurs puis un compteur, quel que soit le nombre de valeurs choisies. Dans les Cartes
- * (`avecFil`), un fil de navigation montre la position (mois, chantier) et permet de remonter.
+ * sélecteur ne montre que quelques valeurs puis un compteur, quel que soit le nombre de valeurs choisies. Dans les Cartes,
+ * le fil de navigation est celui des vues partagées (voir `portail/perimetre/`).
  *
  * **Cascade** : avec un mois, les chantiers proposés sont ceux qui ont de la paie ce mois-là ; avec des chantiers choisis,
  * les équipes proposées sont celles de ces chantiers ce mois-là. Sans mois, les listes complètes du référentiel.
@@ -58,15 +58,12 @@ export class PaieFiltresComponent {
   readonly periodes = input<string[]>([]);
   /** Vrai en analytique : un mois est indispensable, on ne propose donc pas de l'effacer. */
   readonly moisRequis = input(false);
-  /** Vrai dans les Cartes : affiche le fil de navigation sous la barre. */
-  readonly avecFil = input(false);
   /** Les filtres affichés : ils viennent de la page (l'URL), le composant les émet à chaque changement (`valueChange`). */
   readonly value = input<PaieFiltres>(AUCUN_FILTRE);
   readonly valueChange = output<PaieFiltres>();
 
   protected readonly disponibles = computed(() => this.periodes());
   protected readonly moisObligatoire = computed(() => this.moisRequis());
-  protected readonly fil = computed(() => this.avecFil());
   /** Les filtres courants : ceux de la page, tant que l'utilisateur n'en a pas changé un. */
   protected readonly courant = linkedSignal<PaieFiltres>(() => this.value());
   protected readonly panneauMoisOuvert = signal(false);
@@ -100,21 +97,6 @@ export class PaieFiltresComponent {
   protected readonly nombreSecondaires = computed(() => {
     const f = this.courant();
     return (f.cin.trim() ? 1 : 0) + (f.chantierIds.length > 0 ? 1 : 0) + (f.equipeIds.length > 0 ? 1 : 0) + (f.fonctionIds.length > 0 ? 1 : 0);
-  });
-
-  /** Chantier choisi du fil de navigation, sans charger toute la liste du mois. */
-  protected readonly chantierOuvert = computed(() => {
-    const ids = this.courant().chantierIds;
-    if (ids.length !== 1) {
-      return null;
-    }
-    // Le fil ne doit jamais exposer un identifiant technique : le nom détaillé reste visible dans la carte ouverte.
-    return 'Chantier sélectionné';
-  });
-  /** Équipe sélectionnée au niveau détaillé des Cartes. */
-  protected readonly equipeOuverte = computed(() => {
-    const ids = this.courant().equipeIds;
-    return ids.length === 1 ? (ids[0] === 0 ? 'Sans équipe' : 'Équipe sélectionnée') : null;
   });
 
   /** Les sources sont dans un tableau d'un élément pour que `@for … track` recrée le sélecteur quand la source change. */
@@ -157,30 +139,6 @@ export class PaieFiltresComponent {
 
   protected basculerSecondaires(): void {
     this.secondairesOuverts.update((ouverts) => !ouverts);
-  }
-
-  /** Fil de navigation (Cartes) : revient au mois, à la vue d'ensemble, ou au chantier. */
-  protected allerAuNiveau(niveau: 1 | 2 | 3): void {
-    const f = this.courant();
-    if (niveau === 1) {
-      this.emettreFiltres({ ...f, periode: null, chantierIds: [], equipeIds: [] });
-    } else if (niveau === 2) {
-      this.emettreFiltres({ ...f, chantierIds: [], equipeIds: [] });
-    } else {
-      this.emettreFiltres({ ...f, equipeIds: [] });
-    }
-  }
-
-  /** Un pas en arrière dans le fil de navigation : d'abord l'équipe, puis le chantier, puis le mois. */
-  protected remonter(): void {
-    const f = this.courant();
-    if (f.equipeIds.length > 0) {
-      this.emettreFiltres({ ...f, equipeIds: [] });
-    } else if (f.chantierIds.length > 0) {
-      this.emettreFiltres({ ...f, chantierIds: [] });
-    } else {
-      this.emettreFiltres({ ...f, periode: null });
-    }
   }
 
   protected reinitialiser(): void {

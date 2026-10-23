@@ -1,47 +1,12 @@
 
-<div class="chantier-list app-page">
-  <div class="app-page__header">
-    <h1>Chantiers</h1>
-    <div class="app-page__actions app-page__actions--liste">
-      @if (canSync()) {
-        <button stp-button variant="secondary" icon="refresh-cw" type="button" [loading]="syncing()" (click)="onSynchroniser()">Synchroniser maintenant</button>
-      }
-      @if (canWrite()) {
-        <button stp-button icon="plus" type="button" routerLink="/chantiers/new">Nouveau chantier</button>
-      }
-    </div>
-  </div>
-
-  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
-    <input class="stp-input" type="text" [formField]="filterForm.code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
-    <input class="stp-input" type="text" [formField]="filterForm.designation" aria-label="Désignation" autocomplete="off" placeholder="Désignation" />
-
-    <stp-select [formField]="filterForm.actif" [options]="actifOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
-
-    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
-  </form>
-
-  <div class="app-table-bar">
-    <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
-        {{ totalRecords() }} chantier{{ totalRecords() > 1 ? 's' : '' }}
-      }
-    </p>
-    <div class="app-table-bar__tools">
-      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-    </div>
-  </div>
-
-  <stp-table
-    label="Liste : Chantiers"
-    emptyMessage="Aucun chantier ne correspond à ces critères."
-    [lazy]="true"
+<div class="chantier-list">
+  <app-collection-table
+    [configuration]="tableConfiguration"
+    [columnState]="columns"
     [value]="chantiers()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
-    [columns]="columns.visible"
     (lazyLoad)="onLazyLoad($event)"
-    (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-chantier let-col="col">
       @switch (col.field) {
@@ -77,5 +42,5 @@
         <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === chantier.id" [attr.aria-label]="'Supprimer le chantier ' + chantier.code" (click)="onDelete(chantier)"></button>
       }
     </ng-template>
-  </stp-table>
+  </app-collection-table>
 </div>
