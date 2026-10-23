@@ -8,7 +8,12 @@ export const CHANTIER_ROUTES: Routes = [
     path: '',
     canActivate: [permissionGuard],
     data: { permission: 'CHANTIER_READ' },
-    loadComponent: () => import('./list/chantier-list.component').then((m) => m.ChantierListComponent)
+    loadComponent: () => import('./vues/chantier-vues.component').then((m) => m.ChantierVuesComponent),
+    children: [
+      { path: '', loadComponent: () => import('./list/chantier-list.component').then((m) => m.ChantierListComponent) },
+      { path: 'cartes', loadComponent: () => import('./cartes/chantier-cartes.component').then((m) => m.ChantierCartesComponent) },
+      { path: 'analytique', loadComponent: () => import('./analytique/chantier-analytique.component').then((m) => m.ChantierAnalytiqueComponent) }
+    ]
   },
   {
     path: 'new',

@@ -2,7 +2,7 @@
 
 **Date de préparation :** 22 octobre 2026  
 **Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
-**Blocs examinés :** Équipe (premier), Fonction (deuxième)  
+**Blocs examinés :** Équipe (premier), Fonction (deuxième), Chantier (troisième)  
 **Version stable visée :** `1.0.0` pour le frontend et le backend  
 **État du document :** projet interne à valider par le propriétaire avant toute transmission aux intervenants. Il ne constate pas encore un accord collectif.
 
@@ -12,7 +12,7 @@
 
 Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
 
-Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
+Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction, et un troisième, consacré au domaine Chantier.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
 
 La version stable `1.0.0` sera annoncée lorsque les blocs prévus auront été examinés, que les décisions requises auront été enregistrées et que les contrôles de livraison applicables auront réussi.
 
@@ -149,6 +149,7 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 - Viser `1.0.0` pour le frontend et le backend lorsque les critères de stabilité sont satisfaits.
 - Appliquer un modèle commun de trois vues aux domaines concernés, avec un contenu adapté à chaque métier.
 - Pour Équipe et Fonction, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Pour Chantier, conserver la modification actuelle du code (code modifié partout, historique compris) (23 octobre 2026).
 - Pour Fonction, conserver le renommage actuel (libellé modifié partout, historique compris) et le refus de suppression d’une fonction utilisée (23 octobre 2026).
 - Garder les droits Employé, Paie et Équipe séparés.
 - Expliquer les validations et les erreurs aux utilisateurs en langage simple.
@@ -244,7 +245,60 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
-## 10. Blocs suivants
+## 10. Troisième bloc — domaine Chantier
+
+**État du bloc :** version de travail réalisée le 23 octobre 2026, non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+
+### 10.1 Rôle du domaine et liens avec l’application
+
+Le référentiel Chantier fournit le code, la désignation, le nom éventuel et le statut (« En cours » ou « Clôturé ») des chantiers. Il relie trois informations distinctes :
+
+- **Référentiel Chantier :** les chantiers connus, ajoutés par la synchronisation avec l’ERP ou saisis à la main.
+- **Situation Employé :** le chantier enregistré sur la fiche Employé au dernier mois de paie importé.
+- **Historique Paie :** le chantier porté par chaque bulletin de sa période, qui reste lisible même si la fiche Employé change ensuite.
+
+La situation Employé récente et l’historique Paie ne sont jamais présentés comme décrivant la même période. La **carte géographique** reste un écran à part, avec son droit propre.
+
+### 10.2 Parcours, indicateurs et accès
+
+| Vue | Contenu |
+|---|---|
+| **Tabulaire** | Liste paginée, recherche par code, désignation et statut, consultation, modification, clôture ou réouverture, suppression selon les droits; synchronisation et création dans l’en-tête commun. |
+| **Cartes** | Une carte par chantier avec son statut, l’effectif des fiches Employé récentes et, pour le dernier mois avec bulletins, l’effectif payé et la masse salariale. |
+| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par chantier avec les soldes de tout compte (les chantiers sans bulletin restent visibles, à zéro) et historique mensuel d’un chantier sélectionné. |
+
+Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le nombre de chantiers concernés n’est pas répété) et la répartition indique le nombre et le montant des soldes de tout compte de chaque chantier. Les filtres par code, désignation et statut agissent de la même façon dans les trois vues. Les droits restent séparés : `CHANTIER_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
+
+### 10.3 Règles déjà appliquées et constats
+
+- le code et la désignation sont obligatoires à la création manuelle; le code est unique sans tenir compte de la casse ni des espaces extérieurs;
+- la synchronisation avec l’ERP n’ajoute que les chantiers manquants : elle ne modifie, ne clôture ni ne supprime jamais un chantier existant;
+- clôturer un chantier ne le supprime pas : il reste consultable et référencé par l’historique, mais n’est plus accepté par l’import des employés et l’assistant d’import de la paie propose de le rouvrir (décision du propriétaire du 19 octobre 2026);
+- supprimer un chantier référencé par une fiche Employé ou un bulletin est refusé; la clôture est l’alternative;
+- modifier le code d’un chantier le change pour tous les bulletins et fiches qui le référencent, historique compris : **décision du propriétaire du 23 octobre 2026, ce comportement est conservé**, c’est le moyen de corriger une faute de saisie.
+
+**Aucune règle nouvelle n’est introduite par ce bloc.** Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans le [TODO](../../TODO.md).
+
+### 10.4 Preuves et accords à recueillir
+
+| Sujet à vérifier | Preuve attendue | État avant signature |
+|---|---|---|
+| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Tests unitaires et E2E locaux réussis; parcours intégré à confirmer en CI |
+| Situation Employé distincte de l’historique Paie | Exemple avec changement de chantier entre deux mois | À confirmer |
+| Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; chantier sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests; parcours intégré à confirmer en CI |
+| Statut En cours / Clôturé | Filtre par statut, clôture et réouverture avec confirmation | Couvert par tests |
+| Modification du code d’un chantier utilisé | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
+
+| Décision attendue | Accord | Réserve ou rejet et motif |
+|---|---|---|
+| Les trois vues et leur contenu représentent correctement le besoin Chantier. | À compléter | À compléter |
+| Les indicateurs Paie de la section 10.2 sont ceux attendus, STC compris dans la répartition par chantier. | À compléter | À compléter |
+| La modification du code d’un chantier utilisé change le code partout, historique compris (décision du propriétaire). | À compléter | À compléter |
+
+Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
+
+## 11. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
 

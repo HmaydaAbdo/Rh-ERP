@@ -1,0 +1,107 @@
+<section class="chantier-analytique app-page" aria-labelledby="chantier-analytique-titre">
+  <div class="chantier-analytique__entete">
+    <div>
+      <h2 id="chantier-analytique-titre">Analyse des chantiers</h2>
+      @if (chantier(); as selection) {
+        <p>Historique Paie de {{ selection.code }} · les fiches Employé ci-dessous décrivent le dernier mois importé.</p>
+      } @else {
+        <p>La Paie décrit le mois choisi. Les fiches Employé reflètent le dernier mois importé.</p>
+      }
+    </div>
+    @if (voitPaie() && periodes().length > 0) {
+      <label class="chantier-analytique__periode">Période Paie
+        <select class="stp-input" [value]="periode() ?? ''" (change)="changerPeriode($event)">
+          @for (mois of periodes(); track mois) { <option [value]="mois">{{ libellePeriode(mois) }}</option> }
+        </select>
+      </label>
+    }
+  </div>
+
+  @if (aucunChantierFiltre()) {
+    <p class="chantier-analytique__note" role="status">Aucun chantier ne correspond à ces critères.</p>
+  }
+
+  @if (chantier(); as selection) {
+    <div class="chantier-analytique__retour"><button type="button" class="chantier-analytique__lien" (click)="retourVueEnsemble()">← Tous les chantiers</button><span>{{ selection.code }} · {{ selection.nom || selection.designation }}</span></div>
+    @if (voitEmployes()) {
+      <section class="chantier-analytique__section" aria-labelledby="effectif-fiches-titre">
+        <h3 id="effectif-fiches-titre">Situation des fiches Employé</h3>
+        <p class="chantier-analytique__aide">Effectif affecté à ce chantier au dernier mois de paie importé.</p>
+        <strong class="chantier-analytique__effectif">{{ effectifsFiches().get(selection.id) ?? 0 }} <span>employés</span></strong>
+      </section>
+    }
+  } @else if (voitEmployes() && effectifsFiches().size > 0) {
+    <section class="chantier-analytique__section" aria-labelledby="effectifs-actuels-titre">
+      <h3 id="effectifs-actuels-titre">Employés par chantier</h3>
+      <p class="chantier-analytique__aide">Situation la plus récente des fiches, au dernier mois de paie importé.</p>
+      <div class="chantier-analytique__barres">
+        @for (ligne of lignes(); track ligne.id) {
+          @if (effectifsFiches().has(ligne.id)) {
+            <div class="chantier-analytique__barre"><span>{{ ligne.code }} · {{ ligne.libelle }}</span><strong>{{ effectifsFiches().get(ligne.id) }}</strong></div>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (!voitEmployes()) {
+    <p class="chantier-analytique__note">Les effectifs des fiches Employé ne sont pas disponibles pour votre compte.</p>
+  }
+
+  @if (voitPaie()) {
+    @if (chargementPaie()) {
+      <p role="status">Chargement des indicateurs Paie…</p>
+    } @else if (periodes().length === 0) {
+      <p class="chantier-analytique__note" role="status">Aucun mois de paie n’est disponible.</p>
+    } @else if (analyse(); as a) {
+      @if (aucunePaie()) {
+        <p class="chantier-analytique__note" role="status">Aucun bulletin pour {{ chantier()?.code ?? (filtreActif() ? 'les chantiers filtrés' : 'les chantiers') }} en {{ libellePeriode(a.periode) }}. Les indicateurs ci-dessous valent zéro pour ce mois.</p>
+      }
+      <section class="chantier-analytique__section" aria-labelledby="indicateurs-paie-titre">
+        <h3 id="indicateurs-paie-titre">Paie · {{ perimetre() }} · {{ libellePeriode(a.periode) }}</h3>
+        <div class="chantier-analytique__kpis">
+          <article><span>Masse salariale</span><strong>{{ formaterMontant(a.kpis.masse) }} DH</strong></article>
+          <article><span>Effectif payé</span><strong>{{ a.kpis.effectif }}</strong></article>
+          <article><span>Coût moyen par personne</span><strong>{{ a.kpis.coutMoyen === null ? '—' : formaterMontant(a.kpis.coutMoyen) + ' DH' }}</strong></article>
+          <article><span>Soldes de tout compte</span><strong>{{ a.kpis.stc }} · {{ formaterMontant(a.kpis.stcMontant) }} DH</strong></article>
+          @if (!chantier()) {
+            <article><span>Chantiers concernés</span><strong>{{ a.kpis.nombreChantiers }}</strong></article>
+          }
+        </div>
+      </section>
+
+      @if (chantier()) {
+        <section class="chantier-analytique__section" aria-labelledby="evolution-paie-titre">
+          <h3 id="evolution-paie-titre">Évolution mensuelle de la masse</h3>
+          <p class="chantier-analytique__aide">Chaque point correspond à un mois avec des bulletins pour ce chantier. Les autres indicateurs restent consultables dans le tableau.</p>
+          <div class="chantier-analytique__graphique">
+            <stp-chart type="line" [ariaLabel]="'Évolution mensuelle de la masse salariale du chantier ' + chantier()!.code" [data]="graphiqueMasse().data" [options]="graphiqueMasse().options" [plugins]="graphiqueMasse().plugins"></stp-chart>
+          </div>
+          <div class="app-table-wrap">
+            <table class="app-static-table">
+              <thead><tr><th scope="col">Mois</th><th scope="col">Masse (DH)</th><th scope="col">Effectif payé</th><th scope="col">STC</th><th scope="col">Montant STC (DH)</th></tr></thead>
+              <tbody>@for (mois of a.evolution; track mois.periode) {
+                <tr><td>{{ libellePeriode(mois.periode) }}</td><td>{{ formaterMontant(mois.masse) }}</td><td>{{ mois.effectif }}</td><td>{{ mois.stc }}</td><td>{{ formaterMontant(mois.stcMontant) }}</td></tr>
+              }</tbody>
+            </table>
+          </div>
+        </section>
+      } @else {
+        <section class="chantier-analytique__section" aria-labelledby="repartition-paie-titre">
+          <h3 id="repartition-paie-titre">Répartition par chantier · {{ libellePeriode(a.periode) }}</h3>
+          <p class="chantier-analytique__aide">Choisissez un chantier pour consulter son historique complet.</p>
+          <div class="app-table-wrap">
+            <table class="app-static-table">
+              <thead><tr><th scope="col">Chantier</th>@if (voitEmployes()) { <th scope="col">Employés sur les fiches récentes</th> }<th scope="col">Payés</th><th scope="col">Masse (DH)</th><th scope="col">STC</th><th scope="col">Historique</th></tr></thead>
+              <tbody>@for (ligne of lignes(); track ligne.id) {
+                <tr><td>{{ ligne.code }} · {{ ligne.libelle }}</td>@if (voitEmployes()) { <td>{{ ligne.effectifFiches ?? 0 }}</td> }<td>{{ ligne.effectif }}</td><td>{{ formaterMontant(ligne.masse) }}</td><td>{{ ligne.stc }} · {{ formaterMontant(ligne.stcMontant) }} DH</td><td><a [routerLink]="['/chantiers/analytique']" [queryParams]="{ chantierId: ligne.id, periode: a.periode }">Voir</a></td></tr>
+              }</tbody>
+            </table>
+          </div>
+        </section>
+      }
+    }
+  } @else {
+    <p class="chantier-analytique__note">Les indicateurs de paie ne sont pas disponibles pour votre compte.</p>
+  }
+</section>
