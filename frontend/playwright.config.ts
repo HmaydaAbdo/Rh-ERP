@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+// Garde le navigateur téléchargé dans le workspace entre les sessions locales.
+process.env['PLAYWRIGHT_BROWSERS_PATH'] ??= fileURLToPath(new URL('../.cache/playwright-browsers', import.meta.url));
 
 /**
  * Parcours E2E du frontend contre une API simulée (voir `e2e/support/api-mock.ts`) : rapides, déterministes, sans backend.
@@ -7,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Hors CI, le Chrome installé sur la machine est utilisé ; en CI, `npx playwright install chromium`.
  */
 const PORT = 4300;
-const channel = process.env['CI'] ? undefined : 'chrome';
+const channel = undefined;
 const fullStack = !!process.env['E2E_FULL_STACK'];
 
 export default defineConfig({
