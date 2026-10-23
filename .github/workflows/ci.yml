@@ -98,7 +98,7 @@ jobs:
 
       - name: Scan dependencies for known vulnerabilities
         working-directory: backend
-        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml -L /src/target/bom.json
+        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml --sbom=/src/target/bom.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v7
@@ -130,7 +130,7 @@ jobs:
 
       - name: Scan MCP test dependencies for known vulnerabilities
         working-directory: backend
-        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml -L /src/target/mcp-compatibility/mcp-compatibility-bom.json
+        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml --sbom=/src/target/mcp-compatibility/mcp-compatibility-bom.json
 
       - name: Upload MCP compatibility results
         if: always()
