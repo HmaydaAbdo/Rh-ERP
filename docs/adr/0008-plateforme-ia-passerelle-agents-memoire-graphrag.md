@@ -1,11 +1,17 @@
 # ADR 0008 — Socle IA : passerelle de modèles, agents de domaine, mémoire et GraphRAG
 
-- **Statut** : accepté (conventions) ; aucune implémentation engagée
+- **Statut** : accepté historiquement (conventions), remplacé partiellement le 2026-10-23 pour
+  l’orchestration Java et l’implémentation MCP par l’orientation de l’[ADR 0013](0013-integration-ia-mcp-langgraph-rag.md) ; aucune implémentation engagée
 - **Date** : 2026-10-18
 - **Décideur** : propriétaire du projet
 - **Périmètre** : conventions réutilisables ; ERP-RH prépare le terrain, l'IA applicative n'est pas encore commencée
 
 ## Contexte
+
+**Lecture actuelle :** les mentions Spring AI et données fictives ci-dessous décrivent le contexte
+de la décision du 2026-10-18. Elles ne constituent ni la pile cible actuelle ni une qualification
+des données de tous les environnements. La passerelle, la classification, les budgets et les
+garde-fous restent applicables ; les choix détaillés du nouveau plan restent à valider.
 
 Le projet prévoit une plateforme IA avec Spring AI, une passerelle LiteLLM vers plusieurs fournisseurs
 (dont leurs offres gratuites), des agents spécialisés par domaine qui collaborent, une mémoire à trois

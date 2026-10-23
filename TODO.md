@@ -21,11 +21,25 @@ Restent à faire :
 Ce chantier est distinct de l'audit des conventions actuellement en cours. Il vise à étudier puis
 intégrer ces capacités dans l'application à partir de besoins RH concrets.
 
-**Terrain préparé (2026-10-18)** : le socle cible est fixé par l'[ADR 0008](docs/adr/0008-plateforme-ia-passerelle-agents-memoire-graphrag.md)
-et les conventions `agents-ia.md`, `rag.md`, `mcp.md`, `database.md`, `testing.md` : passerelle LiteLLM (alias,
-bascule entre offres gratuites, budgets), agents de domaine sous un superviseur, mémoire courte/compactée/longue,
-pgvector puis GraphRAG Neo4j si l'évaluation le justifie, serveur MCP Spring AI, A2A entre applications. Aucun
-code ni dépendance n'est ajouté ; les versions seront vérifiées au premier cas d'usage. Données actuelles : fictives.
+**Cadrage du 2026-10-23 sur branche dédiée `codex/integration-ia-mcp-rag`** :
+conventions actualisées, [analyse critique](docs/ia/analyse-architecture.md),
+[ADR 0013](docs/adr/0013-integration-ia-mcp-langgraph-rag.md),
+[plan détaillé en quatre phases](docs/ia/plan-integration.md),
+[conception RAG](docs/ia/rag.md) et [matrice des protocoles/innovations](docs/ia/protocoles-et-innovations.md).
+Reprise obligatoire par le [handoff IA](docs/handoff/integration-ia.md).
+L’orientation demandée remplace Spring AI par des adaptateurs MCP Java sans framework LLM et une
+orchestration TypeScript/LangGraph.js. LiteLLM, classification et garde-fous de l’ADR 0008 restent
+applicables. Ne pas supposer les données fictives. Aucun code ni dépendance IA ajouté.
+
+- [x] Préparer conventions, stress-test des neuf piliers, plan RAG et registre de reprise.
+- [ ] Accord initial propriétaire : périmètre du pilote, objectifs et spikes isolés (P0.4).
+- [ ] Phase 1 : MCP Spring, identité déléguée, RBAC/projections et audit (G1).
+- [ ] Phase 2 : runtime LangGraph.js, client MCP et checkpoints durables (G2).
+- [ ] Phase 3 : CopilotKit Runtime / AG-UI Angular et vérification réelle du parcours (G3).
+- [ ] Phase 4 : corpus approuvé, recherche hybride évaluée, mémoire et compactage (G4).
+
+Les principes ci-dessous restent applicables ; le détail des lots et preuves n’est tenu que dans
+le plan et le handoff dédiés.
 
 1. **Préparer les données et le besoin** : instrumenter le catalogue de KPI existant, puis choisir
    avec la RH un premier cas d'usage, ses utilisateurs, ses données autorisées et le résultat attendu.
