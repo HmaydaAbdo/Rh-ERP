@@ -74,7 +74,7 @@ test.describe('Équipes', () => {
     await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
     await expect(page).toHaveURL(/\/equipes\/analytique\?code=C&equipeIds=5/);
     await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Effectifs et organisation' })).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', equipeIds: [5] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
