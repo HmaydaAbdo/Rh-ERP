@@ -1,0 +1,189 @@
+# Procès-verbal de cadrage et de validation — stabilisation d’ERP-RH
+
+**Date de préparation :** 22 octobre 2026  
+**Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
+**Premier bloc examiné :** Équipe  
+**Version stable visée :** `1.0.0` pour le frontend et le backend  
+**État du document :** projet interne à valider par le propriétaire avant toute transmission aux intervenants. Il ne constate pas encore un accord collectif.
+
+> **Règle de lecture :** ce document sépare les règles et faits déjà vérifiés, les décisions proposées aux intervenants, les sujets encore ouverts et les preuves de réalisation. Une décision ne sera qualifiée d’« accord collectif » qu’après validation explicite des personnes concernées. Une réserve ou un rejet restera visible dans le compte rendu.
+
+## 1. Objet du PV
+
+Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
+
+Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
+
+La version stable `1.0.0` sera annoncée lorsque les blocs prévus auront été examinés, que les décisions requises auront été enregistrées et que les contrôles de livraison applicables auront réussi.
+
+## 2. Principes communs soumis à accord
+
+Les principes suivants forment le cadre proposé pour tous les futurs blocs :
+
+1. **Chaque domaine est décrit avant sa modification.** Le dossier expose le rôle du domaine, ses données, ses règles, ses liens avec les autres domaines, ses accès, ses parcours et ses limites connues.
+2. **Les règles sont dites clairement.** Chaque règle métier est formulée en langage compréhensible, avec des exemples utiles et le résultat attendu lorsque la règle est respectée ou non.
+3. **Toute règle importante est vérifiée.** Les contrôles doivent couvrir le cas normal, les limites, les erreurs, les droits d’accès et les interactions entre domaines concernées. Les résultats et les éventuels échecs sont présentés sans les masquer.
+4. **Une exception est examinée, pas dissimulée.** Elle indique la règle concernée, la raison, les personnes et données touchées, le risque, la mesure temporaire, la personne responsable et la date de réexamen. Elle ne devient une décision qu’après approbation explicite.
+5. **Les trois vues forment le modèle de consultation des domaines concernés.** Tabulaire pour retrouver et comparer, Cartes pour parcourir, Analytique pour comprendre les volumes et leur évolution. Le contenu et les filtres restent adaptés au métier; le passage d’une vue à l’autre conserve le contexte utile.
+6. **Les droits restent attachés aux données de leur domaine.** Une vue qui rassemble plusieurs domaines n’élargit pas les accès. Elle présente chaque information seulement aux personnes habilitées pour cette information.
+7. **Une proposition n’est pas un accord.** Les faits vérifiés, décisions déjà approuvées, propositions, points ouverts, réserves et rejets sont identifiés séparément.
+8. **Aucun document de décision n’est diffusé sans validation du propriétaire.** Avant transmission aux intervenants, le propriétaire reçoit la version complète, avec les faits, règles, risques, décisions attendues et preuves disponibles, puis valide explicitement sa diffusion.
+
+## 3. Premier bloc — domaine Équipe
+
+### 3.1 Rôle du domaine et liens avec l’application
+
+Le référentiel Équipe fournit le code et le libellé utilisés pour rattacher des personnes et des bulletins de paie à une équipe. Pour que le module soit utile au métier, ses vues relient donc trois informations différentes :
+
+- **Référentiel Équipe :** les équipes connues de l’application, chacune avec un code et un libellé.
+- **Situation Employé :** l’équipe enregistrée sur la fiche Employé au dernier mois de paie importé. Elle décrit la situation la plus récente connue dans cette fiche.
+- **Historique Paie :** l’équipe portée par chaque bulletin de sa période. Cet historique permet de consulter les indicateurs d’un mois donné même si la situation Employé a changé ensuite.
+
+La situation Employé récente et l’historique Paie sont deux informations distinctes. Elles ne doivent pas être présentées comme si elles décrivaient la même période.
+
+### 3.2 Parcours et contenu attendus
+
+Les personnes autorisées doivent pouvoir consulter le référentiel dans les trois vues :
+
+| Vue | Contenu attendu |
+|---|---|
+| **Tabulaire** | Liste paginée des équipes, recherche par code ou libellé, consultation et actions permises. |
+| **Cartes** | Une carte par équipe, avec l’effectif des fiches Employé récent et les indicateurs Paie du dernier mois disponible lorsque la personne a accès à ces domaines. |
+| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par équipe et consultation de l’historique d’une équipe. Les équipes sans bulletin durant la période restent visibles dans la répartition. |
+
+Les filtres utiles restent présents lorsqu’on change de vue. La période et l’équipe sélectionnées dans l’Analytique peuvent être conservées dans l’adresse de la page afin de permettre de retrouver le même affichage.
+
+### 3.3 Indicateurs Paie
+
+Pour la période consultée, les indicateurs retenus pour ce premier bloc sont :
+
+- masse salariale;
+- effectif payé;
+- coût moyen par personne;
+- nombre et montant des soldes de tout compte (STC);
+- nombre de chantiers concernés;
+- évolution mensuelle de la masse, de l’effectif payé et des STC pour une équipe sélectionnée.
+
+Les définitions et calculs déjà utilisés dans le domaine Paie font référence. La période est affichée à côté des chiffres. Un résultat égal à zéro signifie qu’aucun bulletin n’est compté pour ce périmètre et cette période; une information réellement indisponible doit être signalée comme telle.
+
+### 3.4 Règles de saisie et de validation déjà appliquées
+
+Le formulaire présente les règles avant la saisie et explique comment corriger une erreur.
+
+| Champ | Règle à respecter | Résultat attendu |
+|---|---|---|
+| **Code** | Obligatoire, au plus 50 caractères, unique; les espaces en début et en fin sont retirés; le code est enregistré en majuscules. | Enregistrement accepté si la valeur est correcte. En cas de doublon ou de valeur invalide, l’enregistrement est refusé avec une explication compréhensible et le champ à corriger. |
+| **Libellé** | Obligatoire, au plus 100 caractères, unique; les espaces en début et en fin sont retirés. | Enregistrement accepté si la valeur est correcte. En cas de doublon ou de valeur invalide, l’enregistrement est refusé avec une explication compréhensible et le champ à corriger. |
+
+Un test de validation ne se limite pas à constater un refus : il doit aussi confirmer que la personne comprend la règle en cause et sait quelle action entreprendre. Les contrôles techniques peuvent détailler le diagnostic; les messages destinés aux utilisateurs restent en langage métier.
+
+### 3.5 Accès aux informations
+
+Les droits applicatifs déjà en place s’appliquent séparément :
+
+- l’accès au référentiel et aux vues Équipe dépend de l’autorisation de consulter les équipes;
+- l’effectif et les informations issues des fiches Employé ne sont affichés qu’aux personnes autorisées à consulter les employés;
+- les indicateurs et montants Paie ne sont affichés qu’aux personnes autorisées à consulter la Paie.
+
+Le fait d’avoir accès à un écran Équipe n’accorde pas, à lui seul, l’accès aux montants Paie ou aux informations Employé.
+
+### 3.6 Modifications, suppression et cycle de vie
+
+Les comportements suivants sont constatés dans la version actuelle et doivent être examinés par les intervenants avant de les considérer comme les règles métier finales :
+
+- modifier le libellé change le nom affiché par l’application et les documents qui reprennent ce nom;
+- modifier le code change le code consulté sur les bulletins historiques qui pointent vers cette équipe;
+- supprimer une équipe référencée par une fiche Employé ou un bulletin est actuellement refusé;
+- le référentiel ne comporte pas de statut « active » ou « inactive ».
+
+**Aucun nouveau statut, archivage ou comportement de remplacement n’est décidé dans ce PV.** Le comportement d’une équipe utilisée doit être confirmé avant toute modification à cette règle. Les anciennes données ne sont pas réécrites par le présent bloc.
+
+Les libellés `A`, `LABO`, `ASPHALET` et `8` ont été initialisés provisoirement à la même valeur que leur code. Ils ne portent aucune signification de statut. Leur signification et leur libellé doivent être confirmés par la RH.
+
+## 4. État de réalisation du premier bloc
+
+Les trois vues Équipe et leur liaison aux données Employé et Paie sont réalisées dans une version de travail. La vérification de la partie visible de l’application a réussi localement. Les contrôles automatisés complets restent à examiner avant de déclarer le bloc terminé. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
+
+Les contrôles couvrent les règles de ce PV et leurs résultats doivent être examinés avant la signature. Un contrôle en cours, une vérification locale isolée ou un résultat technique seul ne prouve pas que toutes les règles de ce PV sont respectées.
+
+Les documents de suivi du bloc sont disponibles pour le propriétaire et seront actualisés avant validation de la version destinée aux intervenants :
+
+- [Description du module Équipe](../equipe/README.md)
+- [Conventions de vérification](../../conventions/testing.md)
+
+## 5. Tableau de vérification avant accord
+
+Chaque règle présentée aux intervenants doit avoir une preuve compréhensible. Les preuves peuvent être un test automatisé, une vérification de parcours dans l’application, un exemple contrôlé ou une décision écrite de la personne métier responsable, selon la nature de la règle.
+
+| Sujet à vérifier | Preuve attendue | État avant signature |
+|---|---|---|
+| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | À confirmer par la CI et la revue des intervenants |
+| Situation Employé distincte de l’historique Paie | Exemple avec changement d’équipe entre deux mois, vérifié sur les deux affichages | À confirmer |
+| Indicateurs Paie et période affichée | Valeurs comparées à des exemples Paie vérifiés, y compris une équipe sans bulletin sur le mois | À confirmer |
+| Accès par domaine | Essai avec un compte autorisé et un compte non autorisé pour Employé et Paie | À confirmer |
+| Code et libellé | Cas valides, doublons, champs vides, espaces extérieurs et limites de longueur | Compilation locale vérifiée; tests et messages à confirmer |
+| Modification du code et historique | Décision écrite sur l’effet visible dans les bulletins historiques | Décision des intervenants attendue |
+| Suppression d’une équipe utilisée | Confirmation du refus actuel ou décision signée sur un autre comportement | Décision des intervenants attendue |
+| Quatre libellés provisoires | Signification et libellé confirmés ou action attribuée avec échéance | Réponse RH attendue |
+
+Le statut « À confirmer » ne signifie pas que le contrôle a échoué ou réussi : il signifie que la preuve n’a pas encore été examinée pour l’accord du présent PV.
+
+## 6. Traitement d’une exception
+
+Si une règle ne peut pas être respectée dans un cas précis, l’exception est présentée séparément. Elle contient au minimum :
+
+1. la règle et le cas concernés;
+2. la raison vérifiée et la portée de l’exception;
+3. les utilisateurs, données et opérations touchés;
+4. le risque et la mesure qui limite ce risque;
+5. la personne responsable, la date d’expiration ou de réexamen;
+6. l’avis des intervenants concernés et la validation explicite du propriétaire.
+
+Une exception ne sera pas cachée dans une note, un test désactivé ou une formulation générale. Les règles de sécurité, de confidentialité et d’intégrité des données ne peuvent pas être écartées par une simple dérogation. Tant que l’exception n’est pas approuvée, la règle initiale reste la référence et le PV indique le point comme non résolu.
+
+## 7. Décisions et accords des intervenants
+
+### Décisions déjà approuvées par le propriétaire pour le cadrage
+
+- Stabiliser ERP-RH domaine par domaine, avec Équipe comme premier bloc.
+- Viser `1.0.0` pour le frontend et le backend lorsque les critères de stabilité sont satisfaits.
+- Appliquer un modèle commun de trois vues aux domaines concernés, avec un contenu adapté à chaque métier.
+- Pour Équipe, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Garder les droits Employé, Paie et Équipe séparés.
+- Expliquer les validations et les erreurs aux utilisateurs en langage simple.
+- Obtenir l’accord du propriétaire sur la version complète du PV avant toute transmission aux intervenants.
+
+Ces décisions cadrent le travail; elles ne signifient pas que les intervenants métier ont déjà signé leur accord.
+
+### Accords métier à recueillir pour le bloc Équipe
+
+Chaque intervenant indique son avis, les réserves éventuelles et les corrections demandées. Les points non concernés peuvent être marqués « sans objet » avec une explication.
+
+| Décision attendue | Accord | Réserve ou rejet et motif |
+|---|---|---|
+| Les trois vues et leur contenu représentent correctement le besoin Équipe. | À compléter | À compléter |
+| Les indicateurs Paie listés en section 3.3 sont ceux attendus pour la consultation par équipe. | À compléter | À compléter |
+| La fiche Employé exprime la situation la plus récente connue, distincte des anciens bulletins. | À compléter | À compléter |
+| Le comportement actuel de modification du code dans l’historique est accepté ou doit évoluer. | À compléter | À compléter |
+| Le refus de suppression d’une équipe encore utilisée est accepté ou doit évoluer. | À compléter | À compléter |
+| Les libellés `A`, `LABO`, `ASPHALET` et `8` sont compris et une action de clarification est attribuée. | À compléter | À compléter |
+
+## 8. Compte rendu de signature
+
+**Résultat collectif du bloc Équipe :** à renseigner après réception de tous les avis : `Accepté` / `Accepté avec réserves` / `À corriger et représenter` / `Rejeté`.
+
+Un résultat collectif n’est renseigné comme accepté que si les personnes concernées ont donné leur avis et que les réserves bloquantes ont été levées ou explicitement traitées selon la section 6. Les avis individuels restent conservés même en cas de désaccord.
+
+| Intervenant et rôle | Avis (accord / réserve / rejet) | Commentaire ou décision associée | Signature | Date |
+|---|---|---|---|---|
+| Propriétaire de l’application | À compléter après revue du présent projet |  |  |  |
+| Responsable métier Équipe / RH | À compléter |  |  |  |
+| Responsable métier Paie | À compléter |  |  |  |
+| Responsable de réalisation / livraison | À compléter |  |  |  |
+| Autre intervenant concerné | À compléter |  |  |  |
+
+## 9. Blocs suivants
+
+Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
+
+À chaque ajout, le propriétaire relira et validera la version complète avant sa transmission aux intervenants. La version finale conservera la trace des accords, réserves, rejets, décisions et exceptions acceptées.

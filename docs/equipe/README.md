@@ -127,7 +127,7 @@ La vue Cartes et la vue Analytique relient les domaines au moyen de leurs servic
 - les sommes, effectifs payés, coûts moyens, STC, chantiers et historique viennent des analyses Paie par période
   (`PAIE_READ`) ;
 - les vues gardent ces deux temporalités séparées et n'affichent pas les montants Paie sans le droit Paie ;
-- en Analytique, la liste comprend aussi les équipes sans bulletin pour le mois choisi. Les filtres partagés sont
+- en Analytique, la liste comprend aussi les équipes sans bulletin pour le mois choisi, dont l'historique des autres mois reste consultable (indicateurs à zéro pour le mois choisi). Les filtres partagés sont
   conservés en changeant de vue; la période et l'équipe sélectionnées dans l'analyse sont également partageables par URL.
 
 Le référentiel est consommé par Paie via `shared/reference-data/equipe-reference.service.ts`
