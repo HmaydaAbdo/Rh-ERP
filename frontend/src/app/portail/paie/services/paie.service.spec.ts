@@ -38,7 +38,7 @@ describe('PaieService', () => {
     const equipes = requete(http, 'POST', 'paie/options/equipes');
     equipes.flush(PAGE_VIDE);
     expect(equipes.request.body).toEqual({ periode: '2026-08', chantierIds: [3, 8], recherche: 'chauff' });
-    expect(equipes.request.params.toString()).toBe('page=2&size=30&sort=code,asc');
+    expect(equipes.request.params.toString()).toBe('page=2&size=30&sort=libelle,asc');
   });
 
   it('lit, modifie et supprime un bulletin', () => {

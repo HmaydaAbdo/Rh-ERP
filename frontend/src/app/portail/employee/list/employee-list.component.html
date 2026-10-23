@@ -23,7 +23,7 @@
           {{ employee.chantier.code }}
         }
         @case ('equipe') {
-          {{ employee.equipe?.code ?? '-' }}
+          {{ employee.equipe?.libelle ?? '-' }}
         }
         @case ('salaire') {
           @if (employee.salaire !== null) {

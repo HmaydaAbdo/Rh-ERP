@@ -54,20 +54,20 @@
                 </span>
               </div>
               <div class="export-wizard__pastilles">
-                @for (e of c.equipes; track e.code) {
-                  <span class="export-wizard__equipe" [class.export-wizard__equipe--choisie]="store.equipesChoisies(c.code).includes(e.code)">
-                    <button type="button" (click)="store.basculerEquipe(c.code, e.code)" [attr.aria-pressed]="store.equipesChoisies(c.code).includes(e.code)">
+                @for (e of c.equipes; track e.id) {
+                  <span class="export-wizard__equipe" [class.export-wizard__equipe--choisie]="store.equipesChoisies(c.code).includes(e.libelle)">
+                    <button type="button" (click)="store.basculerEquipe(c.code, e.libelle)" [attr.aria-pressed]="store.equipesChoisies(c.code).includes(e.libelle)">
                       {{ e.libelle }}<small>{{ e.effectif }}</small>
                     </button>
-                    @if (store.format() === 'EXCEL' && store.equipesChoisies(c.code).includes(e.code)) {
+                    @if (store.format() === 'EXCEL' && store.equipesChoisies(c.code).includes(e.libelle)) {
                       <button
                         type="button"
                         class="export-wizard__retrait"
-                        [class.export-wizard__retrait--actif]="store.estRetiree(c.code, e.code)"
-                        [attr.aria-pressed]="store.estRetiree(c.code, e.code)"
+                        [class.export-wizard__retrait--actif]="store.estRetiree(c.code, e.libelle)"
+                        [attr.aria-pressed]="store.estRetiree(c.code, e.libelle)"
                         [attr.aria-label]="'Retirer ' + e.libelle + ' de la feuille du chantier'"
                         title="Retirer cette équipe de la feuille du chantier"
-                        (click)="store.basculerRetrait(c.code, e.code)"
+                        (click)="store.basculerRetrait(c.code, e.libelle)"
                       >
                         <stp-icon name="eye-off" />
                       </button>

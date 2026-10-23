@@ -303,8 +303,8 @@ interprétés par `PaiePerimetreService.calculer` :
 | Champ | Rôle |
 |---|---|
 | `feuillesEquipeMode` | `AUCUNE` (aucune sous-feuille équipe) ou `PERSONNALISE` (liste explicite via `equipesParChantier`). `TOUTES` existe dans l'enum et reste supportée par le backend (une sous-feuille par équipe trouvée, pour chaque chantier), mais n'est **plus produite par le dialog actuel** — conservée pour compatibilité API. |
-| `equipesParChantier` | `Map<code chantier, équipes>` — uniquement en mode `PERSONNALISE` : pour chaque chantier listé, exactement les équipes indiquées obtiennent leur propre sous-feuille. Un chantier absent de la map n'a aucune sous-feuille équipe. Activer un chantier dans l'assistant **ne coche aucune équipe** (décision du 2026-10-03) : la sélection est toujours explicite, comme côté API où seules les équipes envoyées sont détaillées. Même map envoyée au PDF (voir « Export unifié »). |
-| `equipesExcluesFeuilleChantier` | `Map<code chantier, équipes>` — indépendant du champ précédent : pour un chantier donné, les équipes listées ici n'apparaissent pas sur **la feuille de ce chantier** (le total du mois précédent affiché sur cette feuille applique la même exclusion, pour rester comparable). Spécifique à l'Excel, ignoré par le PDF. |
+| `equipesParChantier` | `Map<code chantier, libellés d'équipe>` — uniquement en mode `PERSONNALISE` : pour chaque chantier listé, exactement les équipes désignées par leur libellé obtiennent leur propre sous-feuille. Un chantier absent de la map n'a aucune sous-feuille équipe. La sélection est toujours explicite. Même map envoyée au PDF (voir « Export unifié »). |
+| `equipesExcluesFeuilleChantier` | `Map<code chantier, libellés d'équipe>` — indépendant du champ précédent : pour un chantier donné, les équipes listées ici n'apparaissent pas sur **la feuille de ce chantier** (le total du mois précédent affiché sur cette feuille applique la même exclusion, pour rester comparable). Spécifique à l'Excel, ignoré par le PDF. |
 
 L'assistant (`PaieExportWizardComponent`) construit ces champs à partir d'une UX à trois niveaux,
 plus simple que la structure `AUCUNE`/`TOUTES`/`PERSONNALISE` brute :
@@ -476,18 +476,11 @@ colonne "Équipe" de la section "reste" en revanche (par ligne, pas par section)
 
 Partout où le rapport affiche une équipe (titre de section "ÉQUIPE : ...", bandeau
 `pageHeader`/`pageFooter` "CHANTIER : ... · ÉQUIPE : ...", graphique "Répartition par équipe", titres
-de feuille Excel) : le **libellé** de l'équipe ("CHAUFFEURS", `Equipe.libelle` du référentiel Équipe,
-voir `docs/equipe/README.md`), jamais son code ("CH") — demande explicite de direction, 2026-09-29.
-Il est lu sur l'entité `Equipe` des bulletins (`PaieBiReportBuilder.libellesParCode`,
-`PaieExportService.ecrireFeuillesEquipes`), plus aucune table codée en dur. La colonne « Équipe » du
-tableau employé affiche en revanche le **code** (demande de direction du 2026-10-03).
-
-Le libellé est **strictement un habillage d'affichage** : le code reste la clé utilisée partout
-ailleurs — sélection manuelle des équipes à détailler dans le dialog d'export
-(`PaieReportPdfRequestDto.equipesParChantier`/`PaieExportRequestDto.equipesParChantier`, qui
-manipulent les codes), agrégation BI, détection de la section "reste". Même principe que
-`chantierCode` vs `identifiantChantier` pour les chantiers (voir ci-dessous) : `EquipeBiVue.nom` reste
-le code à usage interne, `EquipeBiVue.libelleAffiche` porte le libellé, réservé à l'affichage.
+de feuille Excel et colonne « Équipe » des tableaux employés) : le **libellé** de l'équipe
+(`Equipe.libelle` du référentiel Équipe, voir `docs/equipe/README.md`). La sélection manuelle dans
+les contrats PDF et Excel utilise aussi les libellés (`equipesParChantier` et
+`equipesExcluesFeuilleChantier`). Le code reste un identifiant d'intégration et une clé interne aux
+traitements qui en ont besoin; il ne constitue pas le choix métier présenté à l'utilisateur.
 
 ### Identifiant chantier (nom + code)
 

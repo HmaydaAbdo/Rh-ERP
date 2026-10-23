@@ -50,7 +50,7 @@ describe('PaieExportEtapeRecapComponent', () => {
   it('liste les équipes détaillées et les tableaux de matériel imprimés', async () => {
     const { fixture, store, racine } = await monter();
     store.tableauxMateriel.set(TABLEAUX);
-    store.basculerEquipe('C168', 'CH');
+    store.basculerEquipe('C168', 'Chauffeurs');
     store.saisirNombre('Camion benne', '4');
     await stabiliser(fixture);
 

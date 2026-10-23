@@ -62,13 +62,13 @@ describe('sources des sélecteurs (référentiels)', () => {
   });
 
   describe('EquipeReferenceService', () => {
-    it('cherche une équipe par code ou libellé, triée par code', () => {
+    it('cherche une équipe par code ou libellé, triée et présentée par libellé', () => {
       TestBed.inject(EquipeReferenceService).fetchPage(2, 30, 'chauf').subscribe();
 
       const r = requete(http, 'POST', 'equipes/search');
       r.flush(page([]));
       expect(r.request.body).toEqual({ recherche: 'chauf' });
-      expect(r.request.params.toString()).toBe('page=2&size=30&sort=code,asc');
+      expect(r.request.params.toString()).toBe('page=2&size=30&sort=libelle,asc');
     });
 
     it('résout un identifiant', () => {

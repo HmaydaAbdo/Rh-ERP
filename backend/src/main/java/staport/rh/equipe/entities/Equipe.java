@@ -11,8 +11,9 @@ import org.hibernate.envers.Audited;
 
 /**
  * Équipe de travail (CHAUFFEURS, OPERATEURS...) — référentiel global, partagé par tous les chantiers.
- * {@code code} est stocké normalisé (trim + majuscules, voir {@code EquipeService}) et sert de clé de
- * sélection/regroupement (import Excel, export, rapport BI) ; {@code libelle} est le nom d'affichage.
+ * {@code libelle} est la clé sémantique de sélection et de regroupement présentée aux utilisateurs.
+ * {@code code} est un identifiant d'échange (import et intégrations), stocké normalisé (trim +
+ * majuscules, voir {@code EquipeService}). Les relations en base utilisent l'identifiant technique.
  */
 @Entity
 @Table(name = "equipe")

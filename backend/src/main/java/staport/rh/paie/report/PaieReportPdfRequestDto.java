@@ -16,9 +16,8 @@ import java.util.Map;
  * optionnels. Le mois précédent est recalculé automatiquement avec le même périmètre (hors
  * période) pour la comparaison — voir {@code PaieBiReportBuilder}.
  *
- * <p>{@code equipesParChantier} : même forme et même sélection que {@code
- * PaieExportRequestDto.equipesParChantier} (demande explicite de direction, 2026-09-29 : export
- * PDF/Excel unifiés derrière un seul dialog, une seule sélection manuelle d'équipes à détailler) — un
+ * <p>{@code equipesParChantier} : la clé de chaque entrée est le code du chantier et ses valeurs sont
+ * les libellés des équipes choisies. La même sélection alimente l'export PDF et Excel — un
  * chantier absent de cette map, ou dont la liste est vide, n'a aucune équipe détaillée séparément
  * (voir {@code ChantierBiVue.avecDetailEquipe}) : tous ses employés sont alors réunis dans une seule
  * section. {@code null} ou vide : aucun chantier détaillé par équipe.

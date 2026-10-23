@@ -315,8 +315,8 @@ sources de vérité ni trois règles métier.
   propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
   une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
   par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.
-  Le contenu des vues **Cartes** et **Analytique** est partagé par tous les modules : voir « Cartes par niveaux et
-  Analytique graphique » ci-dessous.
+  La coque et Tabulaire sont donc partagés eux aussi. Le contenu des vues **Cartes** et **Analytique** est partagé
+  par tous les modules : voir « Cartes par niveaux et Analytique graphique » ci-dessous.
 * Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
   `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
   modification restent hors de cette coque.
@@ -344,9 +344,18 @@ Les vues **Cartes** et **Analytique** de **tous** les modules — Paie, Employé
 module — sont les composants partagés de `portail/perimetre/` (ADR 0011). Il est interdit d'écrire une Cartes ou une
 Analytique propre à un module : on décrit le module, on ne copie pas la vue.
 
-**Ce qui reste propre au module** : sa configuration de coque et de tableau, ses routes, filtres, colonnes, cellules,
-actions, adaptateurs et règles métier. **Ce qui est partagé** : la structure de coque et de vue Tabulaire, ainsi que
-tout le contenu des Cartes et de l'Analytique.
+**Ce qui reste propre au module** : ses routes, filtres, colonnes, cellules, actions, adaptateurs et règles métier.
+**Ce qui est partagé et configuré par le module** : la coque, le tableau Tabulaire, tout le contenu des Cartes et
+de l'Analytique.
+
+### Exporter les données des vues
+
+Chaque composant de données des vues de collection — **Tabulaire, Cartes et Analytique** — fournit son propre export.
+L'export comprend tout le résultat du filtre actif, même lorsque la vue est paginée ou développe une liste par étapes;
+un graphique inclut aussi ses données sous forme de tableau. L'export suit le périmètre et les permissions actifs et
+ne révèle aucune donnée inaccessible à l'utilisateur. Les règles métier et les libellés sémantiques du domaine
+s'appliquent aussi au document. Chaque README de domaine précise le format et les limites de ses exports. Les tests
+vérifient la parité entre le document exporté et les données complètes de la vue.
 
 ### Brancher un module
 

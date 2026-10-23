@@ -221,8 +221,10 @@ class PaieBiReportBuilderTest {
     void construireDepuis_devraitPorterLesNombresDuParcMaterielSurLesSectionsC168ChEtOp() {
         Paie camion = paie("EMPLOYE UN", "CIN1", "CHAUFFEUR", "C168", "CH", "1000");
         Paie engin = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C168", "OP", "1000");
+        camion.getEquipe().setLibelle("Chauffeurs");
+        engin.getEquipe().setLibelle("Opérateurs");
         PaieReportPdfRequestDto requete = new PaieReportPdfRequestDto("2026-09", null, null, null, null,
-                Map.of("C168", List.of("CH", "OP")), Map.of("CAMION CITERNE", 3, "BULL", 0));
+                Map.of("C168", List.of("Chauffeurs", "Opérateurs")), Map.of("CAMION CITERNE", 3, "BULL", 0));
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requete, List.of(camion, engin), List.of());
 
@@ -243,10 +245,11 @@ class PaieBiReportBuilderTest {
     void construireDepuis_devraitDetaillerUniquementLesEquipesSelectionnees() {
         Paie equipeA = paie("EMPLOYE UN", "CIN1", "OPERATEUR", "C059", "EQUIPE A", "3000");
         Paie equipeB = paie("EMPLOYE DEUX", "CIN2", "OPERATEUR", "C059", "EQUIPE B", "2000");
+        equipeA.getEquipe().setLibelle("Chauffeurs");
         Paie sansEquipe = paie("EMPLOYE TROIS", "CIN3", "OPERATEUR", "C059", null, "1000");
 
         PaieReportPdfRequestDto requeteAvecSelection = new PaieReportPdfRequestDto(
-                "2026-09", null, null, null, null, Map.of("C059", List.of("EQUIPE A")), null);
+                "2026-09", null, null, null, null, Map.of("C059", List.of("Chauffeurs")), null);
 
         RapportBiVue vue = builder.construireDepuis(YearMonth.of(2026, 9), requeteAvecSelection,
                 List.of(equipeA, equipeB, sansEquipe), List.of());
