@@ -1,4 +1,4 @@
-# Procès-verbal de cadrage et de validation — stabilisation d’ERP-RH
+# PV N°1 — Cadrage et évolutions d’ERP-RH
 
 **Date de préparation :** 22 octobre 2026  
 **Objet :** trajectoire de stabilisation de toute l’application ERP-RH  

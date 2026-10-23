@@ -177,6 +177,26 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 
 ## Limites connues
 
+### Chantier IA séparé — conception du 2026-10-23
+
+L’orientation demandée conserve le métier dans Spring et place l’orchestration dans un runtime
+TypeScript/Node avec LangGraph.js ; les outils métier IA passent par des adaptateurs MCP.
+Les API REST et le kit Angular Staport restent les interfaces actuelles. Aucun code IA n’est
+introduit par le lot documentaire. L’[ADR 0013](adr/0013-integration-ia-mcp-langgraph-rag.md)
+remplace la prescription Spring AI de l’ADR 0008 pour cette orientation et expose les choix
+détaillés encore à valider. Voir le [dossier IA](ia/README.md), le [plan](ia/plan-integration.md)
+et le [handoff dédié](handoff/integration-ia.md).
+
+Les jetons par audience, le masquage de champs et l’audit de chaque outil sont des prérequis : les
+protections actuelles des contrôleurs REST ne sont pas héritées par un appel direct aux services.
+Le corpus documentaire et les données transactionnelles restent séparés ; le RAG ne recopie pas
+les employés ou la paie. L’emplacement physique et les comptes de ses stockages restent à valider.
+La première preuve [P1.1](ia/validation-p1-1.md) exerce désormais un serveur/client MCP synthétique
+dans un profil de tests opt-in, sur le classpath réel. Elle n'ajoute aucun adaptateur métier au
+runtime et reste en revue propriétaire avant l'étude d'identité.
+
+### Autres limites
+
 Voir [../TODO.md](../TODO.md) : domaine Pointage non construit, sauvegarde hors hôte et tests périodiques
 de restauration à organiser, déploiement continu manuel, qualité des données (champs obligatoires et
 doublons) à traiter en une tâche dédiée.

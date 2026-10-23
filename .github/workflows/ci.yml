@@ -106,6 +106,44 @@ jobs:
           name: sbom-backend
           path: backend/target/bom.json
 
+      # P1.1 : profil opt-in, sorties séparées, aucune base ni configuration applicative.
+      - name: Verify normal runtime excludes MCP
+        working-directory: backend
+        run: |
+          ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/mcp-default-runtime-dependencies.txt
+          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/mcp-default-runtime-dependencies.txt", "utf8"); if (/io\.modelcontextprotocol\.sdk:|org\.springframework\.ai:/.test(tree)) throw new Error("MCP or Spring AI in production runtime");'
+
+      - name: Install and validate MCP test client
+        working-directory: scripts/ia/mcp-compatibility
+        run: |
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm audit --audit-level=moderate
+
+      - name: Verify MCP Java TypeScript interoperability
+        working-directory: backend
+        run: ./mvnw -B -ntp -P mcp-compatibility -Dtest=McpCompatibilityTest test
+
+      - name: Generate MCP test dependency SBOM
+        working-directory: backend
+        run: ./mvnw -B -ntp -P mcp-compatibility -DskipTests cyclonedx:makeBom
+
+      - name: Scan MCP test dependencies for known vulnerabilities
+        working-directory: backend
+        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0 scan source --config=/src/osv-scanner.toml -L /src/target/mcp-compatibility/mcp-compatibility-bom.json
+
+      - name: Upload MCP compatibility results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mcp-compatibility-results
+          path: |
+            backend/target/mcp-compatibility/surefire-reports
+            backend/target/mcp-compatibility/client.tap
+            backend/target/mcp-compatibility/mcp-compatibility-bom.json
+          if-no-files-found: warn
+          retention-days: 14
+
   performance-profile:
     runs-on: ubuntu-latest
     timeout-minutes: 20

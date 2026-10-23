@@ -2,6 +2,13 @@
 
 Dernière mise à jour : 2026-10-23 (stabilisation par domaine : Équipe, Fonction, Chantier ; Cartes et Analytique partagées par les cinq modules).
 
+**Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, plan renforcé et
+prototype MCP P1.1 testé en profil isolé ; validation propriétaire attendue avant P1.2.
+Aucune route MCP métier ni livraison IA. Reprendre par le
+[handoff IA](integration-ia.md), le [plan détaillé](../ia/plan-integration.md) et
+l’[ADR 0013 proposé](../adr/0013-integration-ia-mcp-langgraph-rag.md). La demande récente de branche
+dédiée s’applique à ce chantier ; ne pas intégrer son contenu à `main` par une ancienne consigne.
+
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
 
@@ -15,7 +22,7 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
    [ADR 0009 — carte : satellite, relief et 3D](../adr/0009-carte-satellite-relief-3d.md),
    [ADR 0010 — la fiche employé porte l'état du dernier mois de paie](../adr/0010-employe-etat-du-dernier-mois-de-paie.md) et
    [ADR 0011 — Cartes et Analytique partagées par périmètre](../adr/0011-vues-cartes-analytique-par-perimetre.md).
-   Le chantier en cours de **stabilisation par domaine** suit le [PV de stabilisation ERP-RH](pv-stabilisation-erp-rh-2026-10-22.md)
+   Le cadrage par domaine suit le [PV N°1 — ERP-RH](pv-n1-erp-rh.md)
    (projet à valider par le propriétaire avant diffusion).
 4. `TODO.md` pour les sujets ouverts.
 
@@ -97,7 +104,7 @@ elles ne prouvent pas à elles seules un déploiement ni un accord métier.
 - **E2E instables sous charge** : avec 4 workers, quelques tests (écrans d'administration, axe des Fonctions) dépassent les
   30 s pendant que `ng serve` compile à froid. Relancer avec `--workers=1` avant de soupçonner une régression.
 - Les fichiers du dépôt sont en partie en CRLF : normaliser avant un remplacement de texte par script.
-- Pièges de code connus : Java 17 à la compilation (pas de `switch` à motifs) ; pas de `${VAR:defaut}` dans les `yml` ; toute
+- Pièges de code connus : Java **21** dans le `pom.xml` actuel (ancienne mention Java17 obsolète) ; pas de `${VAR:defaut}` dans les `yml` ; toute
   méthode d'écriture d'un service porte `@AuditableAction` (test d'architecture) ; une migration qui modifie des données
   auditées suit le gabarit de `conventions/database.md` ; `EndpointSecurityTest` tient la table de référence des permissions
   de chaque route (la compléter pour toute nouvelle route).

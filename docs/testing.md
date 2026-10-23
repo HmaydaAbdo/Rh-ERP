@@ -18,6 +18,12 @@ après un échec lorsque les fichiers ont été produits. Les rapports E2E et fu
 
 ## Lancer les tests
 
+Le prototype IA P1.1 possède un profil opt-in et des sorties séparées. Voir le
+[README du client de test](../scripts/ia/mcp-compatibility/README.md) et la
+[preuve de validation P1.1](ia/validation-p1-1.md). Ses dépendances SDK restent de portée `test`,
+sans route MCP dans le backend normal ; il démarre un serveur loopback éphémère sans base.
+La CI vérifie ce profil et scanne son SBOM incluant la portée test séparément du SBOM de production.
+
 ```bash
 # Backend — Docker doit tourner : les tests d'intégration démarrent leur propre PostgreSQL jetable (Testcontainers) et ne
 # touchent jamais la base de développement. Les autres variables (JWT_SECRET, SMTP_*…) viennent de backend/.env.
