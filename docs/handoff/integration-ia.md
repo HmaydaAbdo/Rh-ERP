@@ -1,6 +1,6 @@
 # Handoff — intégration IA ERP-RH
 
-**Mis à jour : 2026-10-23. État : dossier de conception préparé, implémentation non commencée.**
+**Mis à jour : 2026-10-23. État : P1.1 testée localement, en revue propriétaire ; P1.2 non commencée.**
 Ce fichier est le registre de reprise du chantier IA. Le [handoff général](etat-du-projet.md)
 reste la porte d’entrée de l’application ; le [dossier IA](../ia/README.md) regroupe la conception.
 
@@ -15,6 +15,8 @@ reste la porte d’entrée de l’application ; le [dossier IA](../ia/README.md)
   UDP, A2A ; ne pas transformer cette ouverture en installation systématique.
 - Choix encore ouverts D1–D8 dans l’[ADR 0013](../adr/0013-integration-ia-mcp-langgraph-rag.md).
   Ne pas les déclarer approuvés à la prochaine session sans réponse explicite du propriétaire.
+- Nouvelle consigne : progression Classic/Chat/Controlled/A2UI/Open-ended documentée par domaine ;
+  une tâche à la fois. La demande autorise P1.1, **pas P1.2 après les tests sans nouvel accord**.
 
 ## Repère Git
 
@@ -34,6 +36,9 @@ synchronisation avec le propriétaire. L’IA ne justifie ni reset ni suppressio
 
 Le commit documentaire se retrouve par `git log` après la base ; son propre identifiant n’est pas
 recopié dans ce fichier pour éviter un handoff périmé à chaque correction documentaire.
+La présente tâche a repris depuis `f2a3b45`. À cette reprise, `main` pointait sur `341c5aa`
+(six commits devant son repère distant local) ; ce commit de documentation Équipe n'a pas été
+fusionné dans la branche IA et n'a pas été modifié par ce travail.
 
 ## Livrables et limites
 
@@ -42,7 +47,10 @@ recopié dans ce fichier pour éviter un handoff périmé à chaque correction d
 - [Plan P0–P4 avec portes G1–G4](../ia/plan-integration.md), [RAG](../ia/rag.md) et
   [matrice des protocoles/innovations](../ia/protocoles-et-innovations.md).
 - Index, TODO et documents historiques reliés à cette nouvelle orientation.
-- Aucun code applicatif, migration, permission, dépendance, conteneur ou donnée modifié.
+- [Progression UI par domaine](../ia/progression-ui.md), critères d'activation et validation séquentielle.
+- Prototype MCP limité au profil Maven `mcp-compatibility` et au client de test TypeScript ;
+  sources et sorties dédiées, dépendances uniquement de test et lockfile versionné.
+- Aucun code `src/main`, migration, permission, conteneur de la pile du propriétaire ou donnée métier modifié.
 
 ## Registre de réalisation
 
@@ -51,8 +59,10 @@ recopié dans ce fichier pour éviter un handoff périmé à chaque correction d
 | P0.1 — audit | Terminé documentairement | Sources du dépôt dans l’analyse ; pas de mesure de production |
 | P0.2 — conventions | Préparé pour revue | Diff Git limité à la documentation |
 | P0.3 — ADR/plan/RAG/handoff | Préparé pour revue | Dossier IA et ADR 0013 |
-| P0.4 — accord initial | En attente propriétaire | Périmètre et spikes isolés ; décisions D1–D8 confirmées progressivement après preuves |
-| Phase 1 — MCP et identité | Non commencée | Après accord P0.4 ; D2/D3 avant exposition ; aucun endpoint MCP actif |
+| P0.4 — accord initial | Autorisation de P1.1 reçue | Les décisions D1–D8 restent ouvertes ; accord limité à la première tâche |
+| P1.1 — compatibilité MCP | **En revue propriétaire** | [Rapport de validation](../ia/validation-p1-1.md) : prototype testé, limites et commandes |
+| P1.2 — identité déléguée | **Non commencée** | Attendre validation explicite de P1.1 ; aucune option d'identité adoptée |
+| Reste de la phase 1 | Non commencé | Aucun endpoint MCP métier actif ; D2/D3 avant exposition |
 | Phase 2 — runtime et checkpoints | Non commencée | Après G1 ; aucun runtime/saver installé |
 | Phase 3 — interface | Non commencée | Après G2 ; aucune preuve UI IA |
 | Phase 4 — RAG/mémoire | Non commencée | Gouvernance à préparer dès D1 ; aucun corpus indexé |
@@ -72,9 +82,9 @@ recopié dans ce fichier pour éviter un handoff périmé à chaque correction d
 
 3. Si la branche n’est pas celle de l’IA, ou si des changements non identifiés existent, les
    examiner et préserver. Ne pas changer de branche, nettoyer, stash ou reset aveuglément.
-4. Lire les approbations consignées. Sans accord initial P0.4, préparer sa revue. Si un spike
-   isolé est autorisé, l’exécuter dans ses limites même si le choix définitif qu’il éclaire est
-   encore ouvert ; obtenir cette décision avant adoption, selon les portes du plan.
+4. Lire les approbations consignées. P1.1 est autorisée et testée, mais sa validation propriétaire
+   est encore attendue. Présenter les preuves ou corriger ses réserves. Ne pas commencer P1.2
+   parce que la compilation est verte ou qu'une nouvelle session a commencé.
 5. Pour un lot autorisé : vérifier versions et sources officielles actuelles, puis créer une
    unité de travail bornée avec tests/critères de sortie. Les exemples de documentation externe
    ne remplacent pas les conventions, notamment pour OAuth, DDL ou audit.
@@ -82,7 +92,7 @@ recopié dans ce fichier pour éviter un handoff périmé à chaque correction d
    mettre les docs à jour et sauvegarder un commit cohérent lorsque possible. Si une opération
    est en cours, noter son état réel et un moyen de vérifier le résultat avant de la relancer.
 
-## Registre de validation du lot documentaire
+## Registre historique du lot documentaire initial
 
 Résultats locaux du 2026-10-23 ; ils ne constituent pas une validation d’une implémentation IA.
 
@@ -108,6 +118,21 @@ $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
 
 Ce chemin est propre au poste et doit être revérifié à la reprise. Ne pas modifier le wrapper
 versionné pour contourner un problème de cache local.
+
+## Registre courant — première tâche P1.1
+
+Le [rapport versionné](../ia/validation-p1-1.md) est la preuve détaillée. SDK Java 2.1.0 et
+client TS 1.32.1 négocient MCP 2025-11-25 sur le classpath Boot 4.1.1 / Java 21 réel. Dix cas client,
+un test Java et 44 tests existants ciblés sont verts. Les sorties MCP sont isolées dans
+`backend/target/mcp-compatibility` ; le runtime normal ne contient aucun SDK MCP ni Spring AI.
+Audit npm sans vulnérabilité, licences contrôlées et OSV sur 267 coordonnées Maven sans résultat
+signalé. La CI est enrichie du profil et de son SBOM de test distinct ; elle n'a pas été lancée
+à distance. Aucun résultat OAuth/RBAC/audit métier ou production n'en découle.
+
+Commandes du prototype : [README exécutable](../../scripts/ia/mcp-compatibility/README.md).
+Sur Windows, citer les arguments Maven contenant points, chemins ou virgules ; par exemple
+`'-Dtest=ArchitectureConventionsTest,AuditArchitectureTest,EndpointSecurityTest,JwtSecurityChainTest'`.
+Ne pas lancer le client contre l'API applicative ni laisser le serveur de fixture actif.
 
 ## Modèle de point de reprise à remplir pour les prochains lots
 
@@ -139,4 +164,5 @@ Une conversation interrompue n’est pas une raison de relancer une écriture sa
   liens comme des preuves actuelles.
 - Le port 4200 et la pile Docker du propriétaire restent réservés ; les E2E utilisent 4300.
 
-**Prochaine action :** revue de l’ADR 0013, choix du pilote et accord sur les spikes isolés P1.
+**Prochaine action :** revue propriétaire de P1.1. Consigner l'accord ou les réserves, puis
+seulement après accord autoriser P1.2. Aucune tâche suivante n'a commencé.

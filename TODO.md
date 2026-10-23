@@ -29,14 +29,18 @@ conventions actualisées, [analyse critique](docs/ia/analyse-architecture.md),
 Reprise obligatoire par le [handoff IA](docs/handoff/integration-ia.md).
 L’orientation demandée remplace Spring AI par des adaptateurs MCP Java sans framework LLM et une
 orchestration TypeScript/LangGraph.js. LiteLLM, classification et garde-fous de l’ADR 0008 restent
-applicables. Ne pas supposer les données fictives. Aucun code ni dépendance IA ajouté.
+applicables. Ne pas supposer les données fictives. Le prototype P1.1 introduit seulement un
+profil de tests MCP isolé ; aucune dépendance IA ni route MCP métier dans le runtime normal.
 
 - [x] Préparer conventions, stress-test des neuf piliers, plan RAG et registre de reprise.
-- [ ] Accord initial propriétaire : périmètre du pilote, objectifs et spikes isolés (P0.4).
+- [x] Autorisation initiale limitée à P1.1 reçue ; choix métier et D1–D8 encore ouverts.
+- [ ] **P1.1 — revue propriétaire** : [prototype testé et documenté](docs/ia/validation-p1-1.md), attente de validation avant P1.2.
+- [ ] P1.2 — identité déléguée : non commencée, bloquée par la validation précédente.
 - [ ] Phase 1 : MCP Spring, identité déléguée, RBAC/projections et audit (G1).
 - [ ] Phase 2 : runtime LangGraph.js, client MCP et checkpoints durables (G2).
 - [ ] Phase 3 : CopilotKit Runtime / AG-UI Angular et vérification réelle du parcours (G3).
 - [ ] Phase 4 : corpus approuvé, recherche hybride évaluée, mémoire et compactage (G4).
+- [ ] Progression UI par domaine : suivre [les cinq modes et leurs critères](docs/ia/progression-ui.md), sans retirer les parcours classiques.
 
 Les principes ci-dessous restent applicables ; le détail des lots et preuves n’est tenu que dans
 le plan et le handoff dédiés.
