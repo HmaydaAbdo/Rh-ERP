@@ -32,7 +32,7 @@ public record PaieAnalytiqueDto(
     public record EquipeMasse(Long id, String code, String libelle, BigDecimal masse, long effectif, long stc, BigDecimal stcMontant) {
     }
 
-    public record FonctionMasse(Long id, String libelle, BigDecimal masse, long effectif) {
+    public record FonctionMasse(Long id, String libelle, BigDecimal masse, long effectif, long stc, BigDecimal stcMontant) {
     }
 
     /** Tranche de {@code salaireTotal} : de {@code min} (inclus) à {@code max} (exclu) ; {@code max} nul pour la dernière

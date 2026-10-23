@@ -75,11 +75,67 @@ test.describe('Fonctions', () => {
     await page.goto('/functions');
     await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toBeVisible();
 
-    await page.getByRole('textbox', { name: 'Libellé' }).fill('mac');
+    await page.getByRole('searchbox', { name: 'Libellé' }).fill('mac');
     await expect.poll(() => (mock.bodies['POST /functions/search'] ?? []).at(-1)).toEqual({ libelle: 'mac' });
 
     await page.getByRole('button', { name: /Libellé/ }).click();
     await expect(page.getByRole('columnheader', { name: /Libellé/ })).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  test('parcourt les trois vues en conservant le filtre et relie les fiches Employé à la Paie', async ({ page }) => {
+    const periodes = [{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 }];
+    const analyse = {
+      periode: '2026-08',
+      kpis: { masse: 4500, effectif: 1, coutMoyen: 4500, nombreChantiers: 1, stc: 0, stcMontant: 0 },
+      moisPrecedent: null, parChantier: [], parEquipe: [], tranches: [], qualite: { sansEquipe: 0, sansObservation: 0 },
+      parFonction: [{ id: 1, libelle: 'MACON', masse: 4500, effectif: 1, stc: 0, stcMontant: 0 }],
+      evolution: [{ periode: '2026-08', masse: 4500, effectif: 1, stc: 0, stcMontant: 0 }]
+    };
+    const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
+      'POST /functions/search': () => pageDe([{ id: 1, libelle: 'MACON' }, { id: 2, libelle: 'PLOMBIER' }]),
+      'GET /functions/1': () => ({ id: 1, version: 0, libelle: 'MACON' }),
+      'POST /employees/regroupements': () => [{ id: 1, code: 'MACON', libelle: 'MACON', effectif: 3, actifs: 3 }],
+      'GET /paie/periodes': () => periodes,
+      'POST /paie/analytique': () => analyse
+    });
+    await page.goto('/functions?libelle=mac');
+
+    await page.getByRole('link', { name: 'Cartes' }).click();
+    await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
+    const carte = page.locator('.function-carte').filter({ hasText: 'MACON' });
+    await expect(carte).toContainText('Employés sur les fiches récentes');
+    await expect(carte).toContainText('Payés · août 2026');
+    expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+    // Le filtre libellé suit dans l'Analytique et borne le périmètre analysé (mêmes fonctions que les deux autres vues).
+    await page.getByRole('link', { name: 'Analytique' }).click();
+    await expect(page).toHaveURL(/\/functions\/analytique\?libelle=mac$/);
+    await expect(page.getByRole('heading', { name: /Paie · fonctions filtrées/ })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'STC' })).toBeVisible();
+    expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', fonctionIds: [1, 2] });
+    await page.getByRole('link', { name: 'Cartes' }).click();
+
+    await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
+    await expect(page).toHaveURL(/\/functions\/analytique\?fonctionId=1&periode=2026-08/);
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle de la masse' })).toBeVisible();
+    await expect(page.getByText('3 employés')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  });
+
+  test('masque Employé et Paie dans les vues sans les droits correspondants', async ({ page }) => {
+    const mock = await mockApi(page, { username: 'lecteur', permissions: ['FUNCTION_READ'] }, {
+      'POST /functions/search': () => pageDe([{ id: 1, libelle: 'MACON' }])
+    });
+    await page.goto('/functions/cartes');
+
+    const carte = page.locator('.function-carte').filter({ hasText: 'MACON' });
+    await expect(carte).toBeVisible();
+    await expect(carte).not.toContainText('Employés sur les fiches récentes');
+    await expect(carte).not.toContainText('Payés');
+    await page.goto('/functions/analytique');
+    await expect(page.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    expect(mock.calls.filter((appel) => appel.includes('/paie') || appel.includes('/employees'))).toEqual([]);
   });
 
   test('un lien « Retour » du formulaire modifié demande confirmation avant de quitter', async ({ page }) => {

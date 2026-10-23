@@ -63,7 +63,7 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
                         .map(this::versEquipe)
                         .toList(),
                 repository.sommerParFonction(periode, filtres).stream()
-                        .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif()))
+                        .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif(), f.getStc(), f.getStcMontant()))
                         .toList(),
                 repartirParTranche(repository.listerTotaux(periode, filtres)),
                 evolution(filtres),

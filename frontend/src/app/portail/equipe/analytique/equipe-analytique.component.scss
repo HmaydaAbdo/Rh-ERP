@@ -18,7 +18,7 @@
   &__effectif span { color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 400; }
   &__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-sm); }
   &__kpis article { display: grid; align-content: start; gap: var(--space-xs); min-width: 0; padding: var(--space-md); border-radius: var(--radius-sm); background: var(--color-primary-soft); }
-  &__kpis span { color: var(--color-text-muted); font-size: var(--text-xs); }
+  &__kpis span { color: var(--color-text); font-size: var(--text-xs); }
   &__kpis strong { overflow-wrap: anywhere; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
   &__graphique { height: 19rem; margin: var(--space-md) 0; }
   &__barres { display: grid; gap: var(--space-xs); margin-top: var(--space-md); }

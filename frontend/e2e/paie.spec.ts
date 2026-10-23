@@ -36,7 +36,7 @@ const ANALYTIQUE = {
   kpis: { masse: 4800, effectif: 1, coutMoyen: 4800, nombreChantiers: 1, stc: 0 },
   moisPrecedent: null,
   parChantier: [{ id: 3, code: 'C168', libelle: 'Nador', masse: 4800, effectif: 1, stc: 0 }],
-  parFonction: [{ id: 2, libelle: 'CH. CAMION', masse: 4800, effectif: 1 }],
+  parFonction: [{ id: 2, libelle: 'CH. CAMION', masse: 4800, effectif: 1, stc: 0, stcMontant: 0 }],
   tranches: [{ min: 0, max: null, effectif: 1 }],
   evolution: [{ periode: '2026-08', masse: 4800, effectif: 1 }],
   qualite: { sansEquipe: 0, sansObservation: 0 }
