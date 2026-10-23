@@ -1,7 +1,7 @@
 # TODO — points ouverts
 
 > Suivi des sujets encore à traiter. Les sujets livrés et vérifiés dans le code (imports atomiques,
-> PostgreSQL + Flyway, JWT/RBAC et sécurité, déploiement Docker + CI, synchronisation chantiers, rapport
+> PostgreSQL + Flyway, JWT/RBAC et sécurité, déploiement Docker et contrôles automatisés, synchronisation chantiers, rapport
 > PDF en HTML, domaine Équipe, tableaux, etc.) ont été retirés de ce fichier : leur description détaillée
 > vit dans `docs/` et leur historique dans git.
 
@@ -13,7 +13,7 @@ Les conventions racine constituent le blueprint réutilisable ; l'ADR historique
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
 Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retirés, tests Vitest (653, couverture complète) et E2E Playwright + axe (39),
-audit npm sans aucune vulnérabilité, licences contrôlées et SBOM en CI.
+audit npm sans aucune vulnérabilité, licences contrôlées et SBOM produits par les contrôles automatisés.
 Restent à faire :
 
 ### Chantier séparé — appliquer les concepts IA, Agent UI, MCP et RAG à ERP-RH
@@ -93,23 +93,23 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont fusionnées dans `main` (PR #80, squash `c0ecbe5`). Les preuves et décisions Équipe sont centralisées dans [Validation Équipe](docs/equipe/validation.md).
+- **Revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les dossiers de chaque domaine décrivent le fonctionnement et les scénarios de contrôle. Équipe est documenté dans [son README](docs/equipe/README.md); les choix confirmés et les preuves à jour y sont consignés avec les tests concernés.
   **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
   Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
-  suppression en groupe de la paie reste, sur chaque carte. La CI #391 est verte sur la tête de PR; les statuts du commit de fusion doivent être vérifiés avant la revue propriétaire.
+  suppression en groupe de la paie reste, sur chaque carte.
   Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
   **Chantiers (implémenté, 2026-10-23)** : mêmes trois vues que Équipes et Fonctions (Tabulaire, Cartes, Analytique) sous une coque commune
   (`ChantierVuesComponent`), synchronisation et création dans l'en-tête; filtres code, désignation et statut dans l'URL, appliqués de la même
   façon aux trois vues; Cartes et Analytique relient le chantier aux effectifs Employé (dernier état importé) et aux indicateurs/historiques
   Paie (STC compris), sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ` vérifiés séparément. La carte géographique reste séparée.
   Décision du propriétaire (2026-10-23) : la modification du code d'un chantier (code changé partout, historique compris) est conservée.
-  Tests unitaires frontend et E2E mockés verts localement; la CI #391 est verte sur la tête de PR, tandis que le statut du commit de fusion doit être vérifié avant revue. Voir le
+  Tests unitaires frontend et E2E mockés verts localement. Voir le
   [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) (section 10) et le [README Chantier](docs/chantier/README.md).
   **Fonctions (implémenté, 2026-10-23)** : mêmes trois vues que Équipes (Tabulaire, Cartes, Analytique) sous une coque commune
   (`FunctionVuesComponent`), import Excel et création déplacés dans l'en-tête; filtre libellé dans l'URL, appliqué de la même façon aux trois vues; la répartition par fonction de `POST /paie/analytique` porte désormais les STC (`stc`, `stcMontant`); Cartes et Analytique relient la fonction
   aux effectifs Employé (dernier état importé) et aux indicateurs/historiques Paie, sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ`
-  vérifiés séparément. Tests frontend et E2E mockés verts localement; la CI #391 est verte sur la tête de PR, tandis que le statut du commit de fusion doit être vérifié avant revue.
+  vérifiés séparément. Tests frontend et E2E mockés verts localement.
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
   fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
   Le PV couvre toute l'application et sera complété domaine par domaine. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
@@ -117,7 +117,9 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   conformité ; aucun parcours utilisateur n'y était relié.
 
 Tous les cinq domaines sont configurés avec les vues, la coque et le Tabulaire partagés. Prochaine étape : revue propriétaire
-dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après vérification des contrôles sur le commit `main` examiné.
+dans l'ordre Équipe, Fonction, Chantier, Employé, Paie.
+
+- [ ] **Équipe — support de formation** : préparer ultérieurement une présentation et une vidéo de démonstration du domaine. Ce travail n'est pas planifié pour le moment.
 
 ---
 
@@ -188,17 +190,17 @@ procédures propres à chaque opération dans `docs/deployment.md` avant toute a
    fenêtre de 15 minutes ; sauvegarde unhealthy ou archive de plus de 24 heures. Confirmer ces seuils
    avec l'exploitation, tester la collecte et le routage des alertes avant la mise en service.
 
-Le propriétaire n'utilisera pas SSH. Le CD manuel a été confirmé le 2026-10-16 : aucun staging ni
-déploiement GitHub Actions vers le serveur. La production utilisera `latest` pour les quatre images
-après réussite de la CI sur `main` (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
+Le propriétaire n'utilisera pas SSH. Le déploiement manuel a été confirmé le 2026-10-16 : aucun staging
+ni déploiement automatisé vers le serveur. La production utilisera `latest` pour les quatre images
+après réussite des contrôles automatisés du projet (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
 inclure automatiquement les services de sauvegarde et de rétention pgAudit, le `.env` de production doit contenir
 `COMPOSE_PROFILES=backup`. La revue de l'extrait Nginx outer a été faite ; les contrôles restants sont
 détaillés ci-dessus.
 
 ## Performance — arbitrages et mesures à terminer
 
-Le contrôle du dépôt est conforme à 100 % : le profil PostgreSQL synthétique possède une porte CI
-obligatoire et le CI #38715644287 l'a passé. Cela ne valide pas les capacités de l'hôte de production.
+Le contrôle automatisé du dépôt est conforme à 100 % : le profil PostgreSQL synthétique passe les
+contrôles du projet. Cela ne valide pas les capacités de l'hôte de production.
 Pour compléter la validation opérationnelle :
 
 - rejouer le profil à 20 échantillons par opération lourde sur un hôte représentatif et comparer les

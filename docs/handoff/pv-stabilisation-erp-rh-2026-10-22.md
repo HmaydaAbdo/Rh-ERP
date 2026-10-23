@@ -31,37 +31,29 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 
 ## 3. Premier bloc — domaine Équipe
 
-Le domaine Équipe est le premier domaine soumis à revue. Son rôle, les règles constatées, les vues,
-les liens Employé/Paie, les API, les droits, les vérifications, les décisions attendues et les avis
-sont centralisés dans le [dossier Équipe](../equipe/README.md) et sa [fiche de validation](../equipe/validation.md).
-Ces documents constituent la source de revue du domaine et évoluent avec le code.
+Le domaine Équipe est le premier domaine examiné. Son rôle, les règles, les vues, les liens Employé/Paie,
+les API, les droits et les scénarios de test sont centralisés dans le [dossier Équipe](../equipe/README.md),
+qui évolue avec le comportement de l'application.
 
-Les décisions du propriétaire du 23 octobre 2026 sont consignées dans la fiche de validation : le code renommé suit
-l'équipe référencée jusque dans les bulletins historiques, une équipe référencée par Paie ou Employé ne peut pas être
-supprimée, et le rattachement d'équipe reste facultatif sur les bulletins actuels.
+Décisions du propriétaire du 23 octobre 2026, confirmées par les scénarios locaux décrits dans le README :
+le code renommé s'affiche sur les bulletins historiques qui référencent l'équipe; la suppression d'une
+équipe utilisée par Paie ou Employé est refusée; le rattachement d'équipe reste facultatif sur les bulletins.
 
 ## 4. État de réalisation du premier bloc
 
-Le partage des vues et de la coque est fusionné dans `main` par squash de la PR #80 au commit
-`c0ecbe5f9d718b079a486b8b8514ae7197ae8b8b`. La CI #391 est verte sur la tête de PR `3e2058b`
-(frontend, backend, full-stack et profil de performance; publication d'images ignorée). Le statut
-combiné des contrôles attachés au commit de fusion n'est pas disponible dans le présent dossier;
-il doit être vérifié sur le SHA `main` retenu avant la revue propriétaire. La version n'est pas
-présentée comme déployée en production et l'accord métier reste à recueillir selon la fiche de
-validation Équipe.
-
-L'import Excel Équipe et la migration V32 sont présents dans le travail local sur `main` : compilation
-backend, 28 tests backend ciblés, 29 tests frontend Équipe et 3 E2E Équipe réussis. Le changement
-reste à pousser; aucune preuve CI ni de déploiement n'est attribuée à l'import.
+Les vues métier utilisent la coque et le Tabulaire configurables partagés, ainsi que les vues Cartes
+et Analytique partagées décrites dans les ADR 0011/0012. L'import Excel du référentiel est livré avec
+la migration V32. Les scénarios de code, interface, autorisations et parcours sont décrits dans le
+README Équipe, qui donne aussi les commandes et résultats locaux à jour.
 
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
 
 ## 5. Source des preuves Équipe
 
-Les critères et preuves d'examen Équipe sont tenus dans [Validation Équipe](../equipe/validation.md).
-La description de l'implémentation, de ses contrats et de ses tests est tenue dans le [README Équipe](../equipe/README.md).
-Aucune table de critères Équipe n'est recopiée dans le PV global.
+La description métier, les règles confirmées et les scénarios de contrôle Équipe sont regroupés dans
+le [README Équipe](../equipe/README.md). Le PV global conserve uniquement le cadre commun et les
+décisions qui concernent plusieurs domaines.
 ## 6. Traitement d’une exception
 
 Si une règle ne peut pas être respectée dans un cas précis, l’exception est présentée séparément. Elle contient au minimum :
@@ -77,18 +69,17 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 
 ## 7. Décisions et accords des intervenants
 
-Les décisions de cadrage communes restent dans le présent PV. Les décisions et avis propres au
-bloc Équipe sont centralisés dans [Validation Équipe](../equipe/validation.md). Un cadrage ou une
-proposition n'est pas une signature.
+Les décisions de cadrage communes restent dans le présent PV. Les règles confirmées propres à Équipe
+sont décrites dans son [README](../equipe/README.md). La signification et le libellé des codes provisoires
+`A`, `LABO`, `ASPHALET` et `8` restent suivis dans la tâche globale « Qualité des données » de `TODO.md`.
 
 ## 8. Compte rendu de signature
 
-Le résultat collectif du bloc Équipe et les avis individuels seront consignés dans
-[Validation Équipe](../equipe/validation.md). Aucun accord n'est présumé avant que les intervenants
-concernés aient donné leur avis et que les réserves bloquantes soient traitées selon la section 6.
+Le compte rendu collectif et les avis des intervenants seront ajoutés au présent PV lors de la revue
+commune. Il n'y a pas de formulaire de validation technique distinct par domaine.
 ## 9. Deuxième bloc — domaine Fonction
 
-**État du bloc :** fusionné dans la branche principale (PR #79), puis porté par les composants partagés fusionnés dans `main` via PR #80. La CI #391 est verte sur la tête de PR #80 `3e2058b`; les statuts du commit de fusion sont à vérifier avant la revue propriétaire. Le domaine n’est pas déclaré en production et n’a pas reçu l’accord métier. Ce bloc applique le cadre commun des sections 2 et 6. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Fonction](../function/README.md). Ce bloc applique le cadre commun des sections 2 et 6.
 
 ### 9.1 Rôle du domaine et liens avec l’application
 
@@ -131,10 +122,10 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | CI #391 verte sur la tête de PR #80 `3e2058b`; statut du commit de fusion à vérifier, revue métier attendue |
+| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Scénarios frontend et navigateur; détails dans le README Fonction |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de fonction entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; fonction sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #391 verte sur la tête de PR #80; validation métier des intervenants attendue |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests d'autorisation et parcours navigateur; détails dans le README Fonction |
 | Libellé : validations | Cas valides, doublons, champs vides, espaces extérieurs, limites de longueur | Tests existants; messages à confirmer |
 | Renommage et suppression d’une fonction utilisée | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
@@ -149,7 +140,7 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
 ## 10. Troisième bloc — domaine Chantier
 
-**État du bloc :** version de travail fusionnée dans `main` par PR #80 (squash `c0ecbe5`). La CI #391 est verte sur la tête de PR `3e2058b`; le statut du commit de fusion reste à vérifier. Le domaine n’est pas déclaré en production et n’a pas reçu l’accord métier. Ce bloc applique le cadre commun des sections 2 et 6. Les règles ci-dessous restent à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Chantier](../chantier/README.md). Ce bloc applique le cadre commun des sections 2 et 6.
 
 ### 10.1 Rôle du domaine et liens avec l’application
 
@@ -185,10 +176,10 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Tests frontend et E2E locaux réussis; CI #391 verte sur la tête de PR #80 `3e2058b`; statut du commit de fusion à vérifier |
+| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Scénarios frontend et navigateur; détails dans le README Chantier |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de chantier entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; chantier sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #391 verte sur la tête de PR #80; validation métier à recueillir |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests d'autorisation et parcours navigateur; détails dans le README Chantier |
 | Statut En cours / Clôturé | Filtre par statut, clôture et réouverture avec confirmation | Couvert par tests |
 | Modification du code d’un chantier utilisé | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
