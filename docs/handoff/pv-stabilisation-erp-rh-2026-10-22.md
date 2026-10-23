@@ -24,7 +24,7 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 2. **Les règles sont dites clairement.** Chaque règle métier est formulée en langage compréhensible, avec des exemples utiles et le résultat attendu lorsque la règle est respectée ou non.
 3. **Toute règle importante est vérifiée.** Les contrôles doivent couvrir le cas normal, les limites, les erreurs, les droits d’accès et les interactions entre domaines concernées. Les résultats et les éventuels échecs sont présentés sans les masquer.
 4. **Une exception est examinée, pas dissimulée.** Elle indique la règle concernée, la raison, les personnes et données touchées, le risque, la mesure temporaire, la personne responsable et la date de réexamen. Elle ne devient une décision qu’après approbation explicite.
-5. **Les trois vues forment le modèle de consultation des domaines concernés.** Tabulaire pour retrouver et comparer, Cartes pour parcourir, Analytique pour comprendre les volumes et leur évolution. Le contenu et les filtres restent adaptés au métier; le passage d’une vue à l’autre conserve le contexte utile.
+5. **Les trois vues forment le modèle de consultation de tous les domaines.** Tabulaire pour retrouver et comparer; **Cartes par descente libre** pour parcourir (on choisit soi-même par quoi regrouper — chantier, équipe, fonction, puis les employés — et chaque carte ouverte devient une étape du fil); **Analytique graphique** pour comprendre les volumes et leur évolution (paie et fiches Employé). Les filtres propres au domaine agissent de la même façon dans les trois vues et leurs valeurs suivent quand on passe de l’une à l’autre. Les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) utilisent les mêmes composants, inscrits dans les conventions (décision du propriétaire du 23 octobre 2026, ADR 0011).
 6. **Les droits restent attachés aux données de leur domaine.** Une vue qui rassemble plusieurs domaines n’élargit pas les accès. Elle présente chaque information seulement aux personnes habilitées pour cette information.
 7. **Une proposition n’est pas un accord.** Les faits vérifiés, décisions déjà approuvées, propositions, points ouverts, réserves et rejets sont identifiés séparément.
 8. **Aucun document de décision n’est diffusé sans validation du propriétaire.** Avant transmission aux intervenants, le propriétaire reçoit la version complète, avec les faits, règles, risques, décisions attendues et preuves disponibles, puis valide explicitement sa diffusion.
@@ -48,8 +48,8 @@ Les personnes autorisées doivent pouvoir consulter le référentiel dans les tr
 | Vue | Contenu attendu |
 |---|---|
 | **Tabulaire** | Liste paginée des équipes, recherche par code ou libellé, consultation et actions permises. |
-| **Cartes** | Une carte par équipe, avec l’effectif des fiches Employé récent et les indicateurs Paie du dernier mois disponible lorsque la personne a accès à ces domaines. |
-| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par équipe et consultation de l’historique d’une équipe. Les équipes sans bulletin durant la période restent visibles dans la répartition. |
+| **Cartes** | Une carte par équipe, puis regroupement libre par chantier, fonction ou employés; sur chaque carte, l’effectif des fiches Employé récentes et la paie du mois avec l’écart sur le mois précédent lorsque la personne a accès à ces domaines. |
+| **Analytique** | Graphiques : choix d’une période Paie, indicateurs et leur variation, évolution mensuelle, répartition par une autre dimension (un clic approfondit), tranches, mouvements, et situation des fiches Employé. Les équipes sans bulletin durant la période restent visibles. |
 
 Les filtres utiles restent présents lorsqu’on change de vue. La période et l’équipe sélectionnées dans l’Analytique peuvent être conservées dans l’adresse de la page afin de permettre de retrouver le même affichage.
 
@@ -149,6 +149,7 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 - Viser `1.0.0` pour le frontend et le backend lorsque les critères de stabilité sont satisfaits.
 - Appliquer un modèle commun de trois vues aux domaines concernés, avec un contenu adapté à chaque métier.
 - Pour Équipe et Fonction, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Pour les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) : Cartes par descente libre, Analytique graphique (paie et fiches Employé), mêmes composants partagés, pattern inscrit dans `conventions/frontend.md` (23 octobre 2026).
 - Pour Chantier, conserver la modification actuelle du code (code modifié partout, historique compris) (23 octobre 2026).
 - Pour Fonction, conserver le renommage actuel (libellé modifié partout, historique compris) et le refus de suppression d’une fonction utilisée (23 octobre 2026).
 - Garder les droits Employé, Paie et Équipe séparés.
@@ -203,8 +204,8 @@ Comme pour Équipe, la situation Employé récente et l’historique Paie ne son
 | Vue | Contenu |
 |---|---|
 | **Tabulaire** | Liste paginée, recherche par libellé, consultation, modification et suppression selon les droits; import Excel et création dans l’en-tête commun. |
-| **Cartes** | Une carte par fonction avec l’effectif des fiches Employé récentes et, pour le dernier mois avec bulletins, l’effectif payé et la masse salariale. |
-| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par fonction (les fonctions sans bulletin restent visibles, à zéro) et historique mensuel d’une fonction sélectionnée. |
+| **Cartes** | Une carte par fonction, puis regroupement libre par chantier, équipe ou employés; fiches Employé et paie du mois sur chaque carte. |
+| **Analytique** | Graphiques : indicateurs de la période (STC compris dans la répartition), évolution mensuelle, répartition (les fonctions sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
 
 Les indicateurs sont ceux de la section 3.3, et la répartition par fonction indique aussi le nombre et le montant des soldes de tout compte (STC) de chaque fonction. Le filtre par libellé agit de la même façon dans les trois vues. Les droits restent séparés : `FUNCTION_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
 
@@ -264,8 +265,8 @@ La situation Employé récente et l’historique Paie ne sont jamais présentés
 | Vue | Contenu |
 |---|---|
 | **Tabulaire** | Liste paginée, recherche par code, désignation et statut, consultation, modification, clôture ou réouverture, suppression selon les droits; synchronisation et création dans l’en-tête commun. |
-| **Cartes** | Une carte par chantier avec son statut, l’effectif des fiches Employé récentes et, pour le dernier mois avec bulletins, l’effectif payé et la masse salariale. |
-| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par chantier avec les soldes de tout compte (les chantiers sans bulletin restent visibles, à zéro) et historique mensuel d’un chantier sélectionné. |
+| **Cartes** | Une carte par chantier avec son statut, puis regroupement libre par équipe, fonction ou employés; fiches Employé et paie du mois sur chaque carte. |
+| **Analytique** | Graphiques : indicateurs de la période, évolution mensuelle, répartition par chantier (STC compris; les chantiers sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
 
 Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le nombre de chantiers concernés n’est pas répété) et la répartition indique le nombre et le montant des soldes de tout compte de chaque chantier. Les filtres par code, désignation et statut agissent de la même façon dans les trois vues. Les droits restent séparés : `CHANTIER_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
 

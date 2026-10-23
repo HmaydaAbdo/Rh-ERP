@@ -108,27 +108,30 @@ Routes sous `/equipes` (lazy loading, `equipe.routes.ts`, protégées par `permi
 | Route | Composant | Description |
 |---|---|---|
 | `/equipes` | `EquipeVuesComponent` + `EquipeListComponent` | Coque commune, filtres code/libellé dans l'URL, liste paginée et tri |
-| `/equipes/cartes` | `EquipeCartesComponent` | Cartes paginées avec situation Employé récente et résumé Paie du dernier mois disponible |
-| `/equipes/analytique` | `EquipeAnalytiqueComponent` | Indicateurs Paie par période, répartition et historique par équipe; situation Employé présentée séparément |
+| `/equipes/cartes` | `EquipeCartesComponent` | **Cartes par descente libre** : une carte par équipe, puis « Regrouper par » chantier, fonction ou employés ; fiches Employé et paie du mois sur chaque carte |
+| `/equipes/analytique` | `EquipeAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie, évolution mensuelle, répartition, tranches, mouvements, et fiches Employé |
 | `/equipes/new` | `EquipeFormComponent` | Création |
 | `/equipes/:id` | `EquipeDetailComponent` | Consultation |
 | `/equipes/:id/edit` | `EquipeFormComponent` | Modification |
 
 Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. Les trois
 vues utilisent le sélecteur partagé et la composition propre au domaine, selon le
-[pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code/libellé restent dans l'URL et
-s'appliquent aux vues Tabulaire et Cartes. Les boutons de création, modification et suppression sont conditionnés
+[pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code et libellé restent dans l'URL et
+**agissent de la même façon dans les trois vues**. Les boutons de création, modification et suppression sont conditionnés
 par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).
 
-La vue Cartes et la vue Analytique relient les domaines au moyen de leurs services existants :
+**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `EquipeCartesComponent` et
+`EquipeAnalytiqueComponent` ne sont que des hôtes minces ; `equipe-module.ts` décrit le module (référentiel d'équipes, filtres code et
+libellé, ordre de descente équipe → chantier → fonction). Les liens avec les autres domaines passent par les services
+existants, sans endpoint propre :
 
-- les effectifs viennent du regroupement des fiches Employé par équipe et représentent le dernier état importé
-  (`EMPLOYEE_READ`) ;
-- les sommes, effectifs payés, coûts moyens, STC, chantiers et historique viennent des analyses Paie par période
+- les effectifs viennent du regroupement des fiches Employé et représentent le dernier état importé (`EMPLOYEE_READ`) ;
+- les sommes, effectifs payés, coûts moyens, STC, chantiers et historiques viennent des analyses Paie par période
   (`PAIE_READ`) ;
-- les vues gardent ces deux temporalités séparées et n'affichent pas les montants Paie sans le droit Paie ;
-- en Analytique, la liste comprend aussi les équipes sans bulletin pour le mois choisi, dont l'historique des autres mois reste consultable (indicateurs à zéro pour le mois choisi). Les filtres partagés sont
-  conservés en changeant de vue; la période et l'équipe sélectionnées dans l'analyse sont également partageables par URL.
+- la situation Employé récente et l'historique Paie sont deux informations distinctes, jamais présentées comme décrivant la
+  même période ; sans le droit correspondant, le bloc est masqué et son service n'est pas appelé ;
+- les équipes sans bulletin pour le mois choisi restent visibles, à zéro, et gardent l'historique de leurs autres mois ;
+- le périmètre (étapes du fil, mois, regroupement) est dans l'URL et se partage par lien.
 
 Le référentiel est consommé par Paie via `shared/reference-data/equipe-reference.service.ts`
 (contrat du sélecteur générique `shared/components/lazy-select`, voir `conventions/frontend.md`) :

@@ -108,7 +108,7 @@ sont en français : `stp-date-input` s'appuie sur le champ date natif du navigat
 Graphiques : habillage commun `shared/ui/chart/chart-theme.ts` (couleurs, police, grille et infobulle lues dans les jetons ; les mesures de la paie dans `paie-chart-theme.ts`), redessinés à la
 bascule de thème, une seule mesure par axe, tableau de données accessible. `stp-chart` est aussi focalisable : flèches gauche/droite
 (ou haut/bas) et Début/Fin parcourent ses points, Entrée/Espace sélectionne le point et l'annonce aux technologies d'assistance — voir
-`docs/paie/README.md` (Vue Analytique) et
+`docs/paie/README.md` (Vue Analytique), [vues-perimetre.md](vues-perimetre.md) (graphiques des vues partagées) et
 `conventions/design-system.md`. Mouvement : `styles/_motion.scss` (écran qui apparaît, bascule de thème en fondu, squelettes de
 chargement, appui sur un bouton), durées et courbe en jetons, supprimé par `prefers-reduced-motion`.
 

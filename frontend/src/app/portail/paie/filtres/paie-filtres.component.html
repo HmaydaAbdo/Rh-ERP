@@ -104,39 +104,3 @@
 
   <button stp-button variant="text" icon="x" class="paie-filtres__effacer" type="button" aria-label="Effacer les filtres" [disabled]="!aDesFiltres()" (click)="reinitialiser()"><span class="paie-filtres__effacer-libelle">Effacer</span></button>
 </form>
-
-@if (fil()) {
-  <div class="paie-filtres__navigation">
-    <nav class="paie-filtres__fil" aria-label="Position dans les cartes">
-      <button type="button" class="paie-filtres__segment" [class.paie-filtres__segment--courant]="!periode()" (click)="allerAuNiveau(1)">
-        Tous les mois
-      </button>
-      @if (periode()) {
-        <stp-icon name="chevron-right" />
-        <button
-          type="button"
-          class="paie-filtres__segment"
-          [class.paie-filtres__segment--courant]="!chantierOuvert()"
-          (click)="allerAuNiveau(2)"
-        >
-          <span class="paie-filtres__capitale">{{ libelle() }}</span>
-        </button>
-      }
-      @if (periode() && chantierOuvert(); as chantier) {
-        <stp-icon name="chevron-right" />
-        @if (equipeOuverte()) {
-          <button type="button" class="paie-filtres__segment" (click)="allerAuNiveau(3)">{{ chantier }}</button>
-        } @else {
-          <span class="paie-filtres__segment paie-filtres__segment--courant">{{ chantier }}</span>
-        }
-      }
-      @if (periode() && chantierOuvert() && equipeOuverte(); as equipe) {
-        <stp-icon name="chevron-right" />
-        <span class="paie-filtres__segment paie-filtres__segment--courant">{{ equipe }}</span>
-      }
-    </nav>
-    @if (periode()) {
-      <button stp-button variant="text" icon="arrow-up" type="button" (click)="remonter()">Remonter</button>
-    }
-  </div>
-}

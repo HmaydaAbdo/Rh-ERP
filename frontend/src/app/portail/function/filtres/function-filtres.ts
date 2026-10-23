@@ -1,5 +1,7 @@
 import { ParamMap, Params } from '@angular/router';
 
+import { FunctionSearchCriteria } from '../models/function.model';
+
 export interface FunctionFiltres {
   libelle: string;
 }
@@ -16,4 +18,14 @@ export function lireFiltresFunction(params: ParamMap): FunctionFiltres {
 
 export function versParametresFunction(filtres: FunctionFiltres): Params {
   return { libelle: filtres.libelle.trim() || null };
+}
+
+/** Les filtres sous forme de critères d'API (`undefined` = pas de filtre). */
+export function versCriteresFunction(filtres: FunctionFiltres): FunctionSearchCriteria {
+  return { libelle: filtres.libelle.trim() || undefined };
+}
+
+/** Vrai si un filtre restreint le référentiel. */
+export function filtreFunctionActif(filtres: FunctionFiltres): boolean {
+  return filtres.libelle.trim() !== '';
 }

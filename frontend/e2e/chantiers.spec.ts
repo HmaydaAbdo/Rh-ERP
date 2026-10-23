@@ -17,6 +17,12 @@ const ANALYSE = {
   evolution: [{ periode: '2026-08', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }]
 };
 
+const FICHES = {
+  effectif: 3, actifs: 2, inactifs: 1, ageMoyen: 35.5, ancienneteMoyenne: 4.2, embauchesDouzeMois: 1,
+  parAge: [{ min: 0, max: 25, effectif: 1 }, { min: 25, max: null, effectif: 2 }],
+  parAnciennete: [{ min: 0, max: 1, effectif: 1 }, { min: 1, max: null, effectif: 2 }]
+};
+
 test.describe('Chantiers', () => {
   test('parcourt les trois vues en conservant les filtres et relie les fiches Employé à la Paie', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
@@ -24,33 +30,35 @@ test.describe('Chantiers', () => {
       'GET /chantiers/1': () => NADOR,
       'POST /employees/regroupements': () => [{ id: 1, code: 'C168', libelle: 'Route de Nador', effectif: 3, actifs: 3 }],
       'GET /paie/periodes': () => PERIODES,
-      'POST /paie/analytique': () => ANALYSE
+      'POST /paie/analytique': () => ANALYSE,
+      'POST /paie/effectifs': () => [{ periode: '2026-08', effectif: 3, entrees: null, sorties: 0, mutations: null }],
+      'POST /employees/analytique': () => FICHES
     });
     await page.goto('/chantiers?code=C1');
     await expect(page.getByRole('cell', { name: 'C168', exact: true })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Cartes' }).click();
+    await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/chantiers\/cartes\?code=C1$/);
-    const carte = page.locator('.chantier-carte').filter({ hasText: 'C168' });
+    const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
     await expect(carte).toContainText('En cours');
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
-    await expect(page.locator('.chantier-carte').filter({ hasText: 'C196' })).toContainText('Clôturé');
+    await expect(page.locator('.perimetre-carte').filter({ hasText: 'C196' })).toContainText('Clôturé');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Les filtres suivent dans l'Analytique et bornent le périmètre analysé (mêmes chantiers que les deux autres vues).
-    await page.getByRole('link', { name: 'Analytique' }).click();
+    await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Analytique' }).click();
     await expect(page).toHaveURL(/\/chantiers\/analytique\?code=C1(&periode=2026-08)?$/);
-    await expect(page.getByRole('heading', { name: /Paie · chantiers filtrés/ })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'STC' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
+    await expect(page.getByText('Répartition par chantier')).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', chantierIds: [1, 2] });
-    await page.getByRole('link', { name: 'Cartes' }).click();
+    await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
 
     await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
-    await expect(page).toHaveURL(/\/chantiers\/analytique\?chantierId=1&periode=2026-08/);
-    await expect(page.getByRole('heading', { name: 'Évolution mensuelle de la masse' })).toBeVisible();
-    await expect(page.getByText('3 employés')).toBeVisible();
+    await expect(page).toHaveURL(/\/chantiers\/analytique\?code=C1&chantierIds=1/);
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', chantierIds: [1] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
 
@@ -60,7 +68,7 @@ test.describe('Chantiers', () => {
     });
     await page.goto('/chantiers/cartes');
 
-    const carte = page.locator('.chantier-carte').filter({ hasText: 'C168' });
+    const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
     await expect(carte).toBeVisible();
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');

@@ -193,29 +193,29 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/chantiers` | `ChantierVuesComponent` + `ChantierListComponent` | Coque commune (titre, onglets de vue, actions Synchroniser maintenant / Nouveau chantier, filtres code, désignation et statut dans l'URL), tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)), clôture / réouverture et suppression |
-| `/chantiers/cartes` | `ChantierCartesComponent` | Cartes paginées (12 par page) : code, nom ou désignation, statut, effectif des fiches Employé et résumé Paie du dernier mois disponible |
-| `/chantiers/analytique` | `ChantierAnalytiqueComponent` | Indicateurs Paie d'une période, répartition par chantier (STC compris) et historique mensuel d'un chantier ; situation Employé présentée séparément |
+| `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes par descente libre** : une carte par chantier (code, nom ou désignation, statut), puis « Regrouper par » équipe, fonction ou employés ; fiches Employé et paie du mois sur chaque carte |
+| `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie, évolution mensuelle, répartition (STC compris), tranches, mouvements, et fiches Employé |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
 | `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
 
 Les trois vues (Tabulaire, Cartes, Analytique) suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
 [Équipe](../equipe/README.md) et [Fonction](../function/README.md). Les filtres code, désignation et statut restent dans l'URL et
-**agissent de la même façon dans les trois vues** (même recherche serveur) ; dans l'Analytique ils bornent le catalogue, la
-répartition, les effectifs des fiches et les indicateurs Paie aux seuls chantiers filtrés (le titre indique « chantiers
-filtrés »), et si aucun chantier ne correspond ni Employé ni Paie ne sont interrogés. La synchronisation et la création vivent dans
+**agissent de la même façon dans les trois vues** (même recherche serveur). La synchronisation et la création vivent dans
 l'en-tête commun (`ChantierActionsComponent`) : une synchronisation réussie recrée la vue affichée. La carte géographique
 (`/carte`, droit `CARTE_READ`) reste un écran séparé, décrit dans [carte.md](carte.md).
 
-La vue Cartes et la vue Analytique relient le chantier aux autres domaines **sans nouvel endpoint** :
+**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `ChantierCartesComponent` et
+`ChantierAnalytiqueComponent` ne sont que des hôtes minces ; `chantier-module.ts` décrit le module (référentiel de chantiers avec
+leur statut, filtres code, désignation et statut, ordre de descente chantier → équipe → fonction). Les liens avec les autres
+domaines passent par les services existants, sans endpoint propre :
 
-- l'effectif vient du regroupement des fiches Employé par chantier (`POST /employees/regroupements`, dimension `CHANTIER`) et
-  représente le **dernier état importé** de chaque fiche (`EMPLOYEE_READ`) ;
+- l'effectif vient du regroupement des fiches Employé et représente le **dernier état importé** de chaque fiche (`EMPLOYEE_READ`) ;
 - la masse, l'effectif payé, le coût moyen, les STC et l'historique mensuel viennent de l'analyse Paie par période
-  (`POST /paie/analytique`, `parChantier` pour la répartition, `chantierIds` pour l'historique d'un chantier) (`PAIE_READ`) ;
+  (`POST /paie/analytique`) (`PAIE_READ`) ;
 - le chantier d'une **fiche** (état le plus récent) et celui d'un **bulletin** (chantier du mois) sont deux informations distinctes ;
-- un mois sans bulletin pour le chantier choisi affiche des indicateurs à zéro avec le message « Aucun bulletin… » et conserve
-  l'historique des autres mois ; pour un chantier sélectionné, l'indicateur « Chantiers concernés » n'est pas répété ;
+- un mois sans bulletin pour le chantier choisi affiche des indicateurs à zéro avec un message explicite et conserve l'historique
+  des autres mois ; un chantier clôturé reste une carte, avec sa pastille « Clôturé » ;
 - sans `EMPLOYEE_READ` ou sans `PAIE_READ`, le bloc concerné est masqué et son service n'est pas appelé.
 
 Colonnes du tableau : Code, Nom, Désignation, Source (ERP ou manuel), Statut. Accès via la barre latérale

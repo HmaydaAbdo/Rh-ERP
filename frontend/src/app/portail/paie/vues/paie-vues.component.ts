@@ -18,8 +18,7 @@ const VUES_PAIE: VueOnglet[] = [
 /**
  * Coque des trois vues de la paie (tabulaire, cartes, analytique) : le titre, le sélecteur de vue, les actions (Exporter,
  * Importer, Nouveau bulletin — à droite, au niveau du titre et des onglets) et la barre de filtres,
- * une seule fois pour toutes — la même barre, entièrement visible, dans les trois vues (les Cartes y ajoutent leur fil de
- * navigation). Les filtres sont dans l'URL (voir `filtres/paie-filtres.ts`) : la barre les écrit, chaque vue les lit — ce composant ne garde aucun état partagé de plus. Le sélecteur de vue
+ * une seule fois pour toutes — la même barre, entièrement visible, dans les trois vues. Les filtres sont dans l'URL (voir `filtres/paie-filtres.ts`) : la barre les écrit, chaque vue les lit — ce composant ne garde aucun état partagé de plus. Le sélecteur de vue
  * conserve les paramètres d'URL pour garder le même périmètre entre Cartes, Tabulaire et Analytique. Les écrans de saisie
  * (`/paie/new`, `/paie/:id`…) ne passent pas par lui.
  */
@@ -41,8 +40,6 @@ export class PaieVuesComponent {
   protected readonly filtres = signal<PaieFiltres>(AUCUN_FILTRE);
   /** L'analytique a besoin d'un mois : la barre ne propose pas de l'effacer. */
   protected readonly moisRequis = signal(false);
-  /** Les Cartes ajoutent à la barre un fil de navigation (mois, chantier). */
-  protected readonly cartes = signal(false);
   /** Faux le temps d'un tour d'écran pour recréer la vue affichée (voir `rafraichirVue`). */
   protected readonly vueAffichee = signal(true);
 
@@ -66,7 +63,6 @@ export class PaieVuesComponent {
   protected surActivation(): void {
     const vue = this.route.firstChild?.snapshot.data['vue'];
     this.moisRequis.set(vue === 'analytique');
-    this.cartes.set(vue === 'cartes');
     this.paieService.listerPeriodes().subscribe((periodes) => this.periodes.set(periodes.map((p) => p.periode)));
   }
 }

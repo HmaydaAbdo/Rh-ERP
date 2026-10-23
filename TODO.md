@@ -94,6 +94,12 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
 - **À faire — ordre de traitement** : les lots Équipes, Fonctions et Chantiers sont implémentés.
+  **Vues partagées (2026-10-23, décision du propriétaire)** : les Cartes (descente libre : on choisit par quoi regrouper, chaque carte
+  ouverte devient une étape du fil) et l'Analytique (graphiques de la paie et des fiches Employé) des cinq modules — Paie, Employés,
+  Équipes, Fonctions, Chantiers — sont les mêmes composants (`portail/perimetre/`, ADR 0011), inscrits dans `conventions/frontend.md`. Les
+  anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
+  suppression en groupe de la paie reste, sur chaque carte. À confirmer en CI : tests d'intégration backend (requête `sommerParFonction`) et
+  parcours `full-stack`. Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
   **Chantiers (implémenté, 2026-10-23)** : mêmes trois vues que Équipes et Fonctions (Tabulaire, Cartes, Analytique) sous une coque commune
   (`ChantierVuesComponent`), synchronisation et création dans l'en-tête; filtres code, désignation et statut dans l'URL, appliqués de la même
   façon aux trois vues; Cartes et Analytique relient le chantier aux effectifs Employé (dernier état importé) et aux indicateurs/historiques

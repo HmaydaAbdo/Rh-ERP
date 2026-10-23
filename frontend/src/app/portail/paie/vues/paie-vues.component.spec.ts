@@ -104,14 +104,6 @@ describe('PaieVuesComponent', () => {
         expect(composant['moisRequis']()).toBe(true);
     });
 
-    it('ajoute le fil de navigation à la barre dans les cartes seulement', async () => {
-        const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
-        expect(composant['cartes']()).toBe(false);
-
-        await harness.navigateByUrl('/paie/cartes', PaieVuesComponent);
-        expect(composant['cartes']()).toBe(true);
-    });
-
     it("porte les actions dans l'en-tête, avec le titre et les onglets, dans chaque vue", async () => {
         for (const url of ['/paie', '/paie/cartes', '/paie/analytique']) {
             await harness.navigateByUrl(url, PaieVuesComponent);
