@@ -418,7 +418,7 @@ public class PaieImportService {
 
     private Paie bulletin(LigneFichierPaie ligne, YearMonth periode, Contexte contexte) {
         EmployeeResponseDto employe = contexte.employesParCin().get(cle(ligne.cin()));
-        Long equipeId = equipeId(ligne, contexte);
+        Long equipeId = employe.equipe() == null ? null : employe.equipe().id();
         Paie paie = new Paie();
         paie.setEmployee(entityManager.getReference(Employee.class, employe.id()));
         paie.setPeriode(periode);

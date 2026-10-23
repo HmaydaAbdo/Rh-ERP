@@ -53,14 +53,16 @@ Table `employe` :
 | `date_embauche` | `DATE` | `NOT NULL` | Date d'embauche |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | Fonction occupée |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | Chantier d'affectation |
-| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe du dernier mois de paie (`NULL` = sans équipe); règles du référentiel dans le [dossier Équipe](../equipe/README.md) |
+| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe courante de l'employé, alignée sur le dernier mois de paie importé (`NULL` = sans équipe); référentiel partagé décrit dans le [dossier Équipe](../equipe/README.md) |
 | `salaire` | `NUMERIC(10,2)` | nullable, ≥ 0 | Salaire du dernier mois de paie : montant mensuel, ou tarif d'une journée |
 | `type_salaire` | `VARCHAR(20)` | nullable, `MENSUEL` ou `JOURNALIER` | Comment lire `salaire` ; renseigné avec lui ou pas du tout |
 | `statut` | `ENUM('ACTIF','INACTIF')` | `NOT NULL`, défaut `ACTIF` | Statut de l'employé |
 
-La fiche porte **l'état du dernier mois de paie importé** ; l'historique (affectations, salaires) se lit dans les bulletins,
-qui en sont les instantanés — voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md). Équipe, salaire et type
-restent vides tant qu'aucune paie ne les a renseignés.
+La fiche porte **l'état courant de l'employé**, aligné sur le dernier mois de paie importé : notamment fonction, chantier,
+équipe, salaire et type de salaire. L'équipe est une donnée de l'état Employé courant, comme le salaire; sa liste de valeurs
+reste gérée par le référentiel partagé Équipe. Chaque bulletin conserve séparément les affectations de son mois : changer
+l'équipe sur la fiche ne modifie donc pas les bulletins antérieurs. Voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md).
+Équipe, salaire et type restent vides tant qu'aucune paie ne les a renseignés.
 
 Table `employe_sortie` — les **départs** de l'entreprise (entité `EmployeeSortie`, auditée) :
 
@@ -94,6 +96,9 @@ l'import comme l'API exigent déjà ces deux dates).
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
   lève `InvalidReferenceException` (400). L'`équipe` est facultative et résolue de même par `IEquipeService`.
+- Lorsqu'un bulletin est créé ou corrigé depuis le formulaire Paie, l'équipe choisie sur le bulletin
+  met aussi à jour l'affectation courante de la fiche Employé, dans la même transaction. L'équipe des
+  autres bulletins mensuels reste inchangée.
 - `salaire` et `typeSalaire` se renseignent **ensemble** ou pas du tout (`@AssertTrue` sur les DTO, 400 sinon) ; le salaire
   n'est jamais négatif. Ce sont des **données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas (`null`), ignore ceux
   qu'on saisit (la fiche garde les siens) et retire un tri par salaire — masquage fait par `EmployeeController`, pour que
