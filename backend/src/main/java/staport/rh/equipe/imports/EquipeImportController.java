@@ -24,7 +24,7 @@ import java.io.ByteArrayInputStream;
 
 @RestController
 @RequestMapping("/equipes/import")
-@Tag(name = "Équipes", description = "Import Excel du référentiel des équipes")
+@Tag(name = "Import des équipes", description = "Import Excel du référentiel des équipes")
 public class EquipeImportController {
     private final EquipeImportService importService;
 

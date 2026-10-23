@@ -123,7 +123,7 @@ class AuditImportTest extends AuditIntegrationTestBase {
 
     /** La fiche du référentiel de test, avec le salaire de la ligne du fichier : le fichier concorde avec elle. */
     private void aligner(Referentiel ref) {
-        jdbc.update("UPDATE employe SET salaire = 3000, type_salaire = 'MENSUEL' WHERE id = ?", ref.employeId());
+        jdbc.update("UPDATE employe SET salaire = 3000, type_salaire = 'MENSUEL', equipe_id = NULL WHERE id = ?", ref.employeId());
     }
 
     @Test
