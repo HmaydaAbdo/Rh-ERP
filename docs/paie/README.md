@@ -427,7 +427,7 @@ plus récent est ouvert (et inscrit dans la barre).
 **Backend** : `PaieAnalytiqueService` (façade `IPaieAnalytiqueService`), appelé par `POST /paie/analytique` (`PAIE_READ`).
 Tout est agrégé en base par des requêtes JPQL de `PaieRepository` qui partagent le même fragment de filtres (`FiltresPaie`) ; le
 STC reprend la définition de `ObservationStc` (comme `/paie/periodes`) et la masse est `SUM(salaireTotal)` comme partout. Le
-mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas de paie. **Les tranches** n'ont pas de seuil
+mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas de paie. Si le mois choisi n'a aucun bulletin sur le périmètre, la réponse porte des indicateurs à zéro et des listes vides, **sauf l'historique mensuel (`evolution`)**, qui reste celui du périmètre (ex. une équipe qui a payé un autre mois). **Les tranches** n'ont pas de seuil
 métier : la largeur est celle qui couvre le plus gros total du périmètre en 6 tranches, arrondie à 500 DH au-dessus, donc des
 bornes lisibles qui suivent les données.
 

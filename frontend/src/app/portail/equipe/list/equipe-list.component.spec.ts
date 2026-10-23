@@ -4,7 +4,6 @@ import { of } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
-import { saisir } from '../../../shared/testing/formulaire';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
 import { EquipeListComponent } from './equipe-list.component';
@@ -48,34 +47,20 @@ describe('EquipeListComponent', () => {
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 équipes');
   });
 
-  it('propose création, modification et suppression à qui a les droits, la seule consultation sinon', async () => {
+  it('propose modification et suppression à qui a les droits, la seule consultation sinon', async () => {
     await afficher();
-    expect(racine().textContent).toContain('Nouvelle équipe');
     expect(bouton('Modifier l’équipe CH')).not.toBeNull();
     expect(bouton('Supprimer l’équipe CH')).not.toBeNull();
     TestBed.resetTestingModule();
 
     await afficher(['EQUIPE_READ']);
-    expect(racine().textContent).not.toContain('Nouvelle équipe');
     expect(bouton('Modifier l’équipe CH')).toBeNull();
     expect(bouton('Supprimer l’équipe CH')).toBeNull();
     expect(bouton('Voir l’équipe CH')).not.toBeNull();
   });
 
-  it('cherche par code et par libellé après un court délai, puis se réinitialise', async () => {
+  it('charge sans filtre quand la vue est ouverte sans critères dans l’URL', async () => {
     await afficher();
-    vi.useFakeTimers();
-    service.search.mockClear();
-
-    saisir(racine(), 'input[aria-label="Code"]', 'CH');
-    saisir(racine(), 'input[aria-label="Libellé"]', 'chauf');
-    await vi.advanceTimersByTimeAsync(350);
-    TestBed.tick();
-    expect(service.search).toHaveBeenCalledTimes(1);
-    expect(criteres()).toEqual({ code: 'CH', libelle: 'chauf' });
-
-    (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réinitialiser')) as HTMLButtonElement).click();
-    TestBed.tick();
     expect(criteres()).toEqual({ code: undefined, libelle: undefined });
   });
 

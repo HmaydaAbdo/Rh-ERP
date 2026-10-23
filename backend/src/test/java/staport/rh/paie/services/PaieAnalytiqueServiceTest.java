@@ -53,8 +53,9 @@ class PaieAnalytiqueServiceTest {
     }
 
     @Test
-    void analyser_devraitRenvoyerUnTableauVideSansInterrogerLeResteQuandLeMoisNaAucunBulletin() {
+    void analyser_devraitNeRenvoyerQueLHistoriqueQuandLeMoisNaAucunBulletin() {
         when(repository.resumerKpi(any(), any())).thenReturn(kpi(0, "0", 0, 0, 0, 0));
+        when(repository.sommerParPeriode(any())).thenReturn(List.of(evolution(JUILLET, "900", 5)));
 
         PaieAnalytiqueDto resultat = service.analyser(criteres(AOUT, null, null, null));
 
@@ -63,6 +64,7 @@ class PaieAnalytiqueServiceTest {
         assertThat(resultat.moisPrecedent()).isNull();
         assertThat(resultat.parChantier()).isEmpty();
         assertThat(resultat.tranches()).isEmpty();
+        assertThat(resultat.evolution()).extracting(PaieAnalytiqueDto.Evolution::periode).containsExactly("2026-07");
         verify(repository, never()).sommerParChantier(any(), any());
     }
 

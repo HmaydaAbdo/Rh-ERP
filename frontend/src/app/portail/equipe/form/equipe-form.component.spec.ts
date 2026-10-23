@@ -40,7 +40,7 @@ describe('EquipeFormComponent', () => {
     await afficher();
 
     expect(racine().querySelector('h1')?.textContent).toBe('Nouvelle équipe');
-    expect(racine().textContent).toContain('Enregistré en majuscules');
+    expect(racine().textContent).toContain('le code est enregistré en majuscules');
   });
 
   it('refuse un formulaire vide : les deux champs sont signalés, le focus va au premier', async () => {

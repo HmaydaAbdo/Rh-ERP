@@ -1,21 +1,5 @@
 
 <div class="equipe-list app-page">
-  <div class="app-page__header">
-    <h1>Équipes</h1>
-    <div class="app-page__actions app-page__actions--liste">
-      @if (canWrite()) {
-        <button stp-button icon="plus" type="button" routerLink="/equipes/new">Nouvelle équipe</button>
-      }
-    </div>
-  </div>
-
-  <form [formRoot]="filterForm" class="app-toolbar" (submit)="onSearch()">
-    <input class="stp-input" type="text" [formField]="filterForm.code" aria-label="Code" autocomplete="off" spellcheck="false" placeholder="Code" />
-    <input class="stp-input" type="text" [formField]="filterForm.libelle" aria-label="Libellé" autocomplete="off" placeholder="Libellé" />
-
-    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="onResetFilters()">Réinitialiser</button>
-  </form>
-
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
       @if (!loading()) {

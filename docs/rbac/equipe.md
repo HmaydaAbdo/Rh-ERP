@@ -18,10 +18,12 @@
 | Élément | Condition |
 |---|---|
 | Lien sidebar « Équipes » | `EQUIPE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
-| Route `/equipes` (liste) et `/equipes/:id` (détail) | `authGuard` + `permissionGuard` (`EQUIPE_READ`) |
+| Routes `/equipes`, `/equipes/cartes`, `/equipes/analytique` et `/equipes/:id` | `authGuard` + `permissionGuard` (`EQUIPE_READ`) |
 | Route `/equipes/new` et `/equipes/:id/edit` | `authGuard` + `permissionGuard` (`EQUIPE_WRITE`) |
 | Bouton « Nouvelle équipe » et « Modifier » (liste, détail) | `authService.hasPermission('EQUIPE_WRITE')` — `canWrite()` |
 | Bouton « Supprimer » (liste) | `authService.hasPermission('EQUIPE_DELETE')` — `canDelete()` |
+| Effectifs des fiches Employé dans Cartes et Analytique | Appel au service Employé uniquement avec `EMPLOYEE_READ` |
+| Indicateurs et montants Paie dans Cartes et Analytique | Appel au service Paie uniquement avec `PAIE_READ` |
 
 ## Note — consommation depuis Paie
 

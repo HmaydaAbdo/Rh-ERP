@@ -1,25 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, map, skip } from 'rxjs';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
-import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
-
-const DEBOUNCE_RECHERCHE_MS = 300;
-
-const filtresVides = () => ({ code: '', libelle: '' });
+import { EquipeFiltres, lireFiltresEquipe, memesFiltresEquipe } from '../filtres/equipe-filtres';
 
 @Component({
   selector: 'app-equipe-list',
-  imports: [FormField, FormRoot, RouterLink, ButtonComponent, ColumnChooserComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [ButtonComponent, ColumnChooserComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './equipe-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -33,6 +30,8 @@ export class EquipeListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EQUIPE_WRITE'));
@@ -43,18 +42,19 @@ export class EquipeListComponent {
   protected readonly loading = signal(false);
   protected readonly deletingId = signal<number | null>(null);
 
-  protected readonly filtres = signal(filtresVides());
-  protected readonly filterForm = form(this.filtres, (chemin) => {
-    debounce(chemin.code, DEBOUNCE_RECHERCHE_MS);
-    debounce(chemin.libelle, DEBOUNCE_RECHERCHE_MS);
-  });
+  private filtres: EquipeFiltres = lireFiltresEquipe(this.route.snapshot.queryParamMap);
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'code,asc';
 
   constructor() {
-    surChangementDesFiltres(this.filtres, () => this.onSearch());
+    this.route.queryParamMap
+      .pipe(map(lireFiltresEquipe), skip(1), distinctUntilChanged(memesFiltresEquipe), takeUntilDestroyed(this.destroyRef))
+      .subscribe((filtres) => {
+        this.filtres = filtres;
+        this.onSearch();
+      });
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
@@ -69,10 +69,6 @@ export class EquipeListComponent {
   protected onSearch(): void {
     this.lastPage = 0;
     this.fetchPage();
-  }
-
-  protected onResetFilters(): void {
-    this.filterForm().reset(filtresVides());
   }
 
   protected onView(equipe: Equipe): void {
@@ -106,7 +102,7 @@ export class EquipeListComponent {
 
   private fetchPage(): void {
     this.loading.set(true);
-    const criteria = this.filtres();
+    const criteria = this.filtres;
 
     this.equipeService
       .search(
