@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 // Garde le navigateur téléchargé dans le workspace entre les sessions locales.
-process.env['PLAYWRIGHT_BROWSERS_PATH'] ??= fileURLToPath(new URL('./.angular/playwright-browsers', import.meta.url));
+process.env['PLAYWRIGHT_BROWSERS_PATH'] ??= resolve(process.cwd(), '.angular', 'playwright-browsers');
 
 /**
  * Parcours E2E du frontend contre une API simulée (voir `e2e/support/api-mock.ts`) : rapides, déterministes, sans backend.
