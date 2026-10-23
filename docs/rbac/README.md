@@ -1,6 +1,6 @@
 # RBAC — Catalogue des permissions
 
-> Qui a le droit de faire quoi. Ce fichier donne la vue d'ensemble (les 28 permissions, les rôles de départ,
+> Qui a le droit de faire quoi. Ce fichier donne la vue d'ensemble (les 29 permissions, les rôles de départ,
 > la matrice endpoint ↔ permission). Le détail par domaine, avec les guards et boutons du frontend, est dans
 > le dossier documentaire du domaine. Le fonctionnement du modèle (rôles, refus individuels, jetons) est dans
 > [../auth/README.md](../auth/README.md), sa conception dans `conventions/security.md`.
@@ -38,7 +38,7 @@
 
 ---
 
-## Catalogue des 28 permissions
+## Catalogue des 29 permissions
 
 | Domaine | Permission | Action autorisée | Migration |
 |---|---|---|---|
@@ -64,6 +64,7 @@
 | Équipe | `EQUIPE_READ` | Consulter | V9 |
 | | `EQUIPE_WRITE` | Créer, modifier | V9 |
 | | `EQUIPE_DELETE` | Supprimer | V9 |
+| | `EQUIPE_IMPORT` | Importer depuis Excel (et télécharger le modèle) | V32 |
 | Administration | `USER_MANAGE` | Gérer les comptes (création, rôles, refus individuels, mot de passe) | V4 |
 | | `ROLE_MANAGE` | Gérer les rôles et consulter le catalogue des permissions | V4 |
 | Paramètres | `PARAMETRE_READ` | Consulter les valeurs et métadonnées des paramètres de fonctionnement | V16 |
@@ -91,8 +92,8 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 
 | Rôle | Permissions |
 |---|---|
-| `SYSTEM_ADMIN` | Les 28 |
-| `PAIE_MANAGER` | Les 21 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `PAIE_RESTORE` et `PARAMETRE_*`) |
+| `SYSTEM_ADMIN` | Les 29 |
+| `PAIE_MANAGER` | Les 22 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `PAIE_RESTORE` et `PARAMETRE_*`) |
 | `DIRECTION` (V28) | `CARTE_READ` seulement ; le Président et les directeurs |
 
 D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans toucher au code.
@@ -114,7 +115,8 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `GET /chantiers/{id}` · `POST /chantiers/search` | `CHANTIER_READ` |
 | | `DELETE /chantiers/{id}` | `CHANTIER_DELETE` |
 | | `POST /chantiers/sync` | `CHANTIER_SYNC` |
-| Équipe | Voir la matrice complète dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) | `EQUIPE_READ` · `EQUIPE_WRITE` · `EQUIPE_DELETE` |
+| Équipe | `POST /equipes/import` · `GET /equipes/import/modele` | `EQUIPE_IMPORT` |
+| | Voir les autres routes dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) | `EQUIPE_READ` · `EQUIPE_WRITE` · `EQUIPE_DELETE` |
 | Employé | `POST /employees` · `PUT /employees/{id}` | `EMPLOYEE_WRITE` |
 | | `GET /employees/{id}` · `POST /employees/search` | `EMPLOYEE_READ` |
 | | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |

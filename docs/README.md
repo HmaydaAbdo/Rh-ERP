@@ -44,7 +44,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 |---|---|---|---|
 | **Fonction** | Référentiel des fonctions occupées | [README](function/README.md) · [skill IA](function/skills/SKILL.md) | [rbac/function.md](rbac/function.md) |
 | **Chantier** | Référentiel des chantiers, ajout automatique depuis l'ERP | [README](chantier/README.md) · [carte](chantier/carte.md) · [skill IA](chantier/skills/SKILL.md) | [rbac/chantier.md](rbac/chantier.md) |
-| **Équipe** | Référentiel des équipes de travail | [README](equipe/README.md) · [TODO](equipe/TODO.md) · [Validation / PV](equipe/validation.md) · [maquette](equipe/maquette-vues.html) · [skill IA](equipe/skills/SKILL.md) | [Autorisations](equipe/README.md#autorisations-et-dépendances-de-droits) |
+| **Équipe** | Référentiel des équipes de travail | [README](equipe/README.md) · [Validation / PV](equipe/validation.md) · [maquette](equipe/maquette-vues.html) · [skill IA](equipe/skills/SKILL.md) | [Autorisations](equipe/README.md#autorisations-et-dépendances-de-droits) |
 | **Employé** | Fiche d'identité, affectation fonction/chantier | [README](employee/README.md) · [skill IA](employee/skills/SKILL.md) | [rbac/employee.md](rbac/employee.md) |
 | **Paie** | Bulletins mensuels (saisie, import, export) | [README](paie/README.md) · [skill IA](paie/skills/SKILL.md) | [rbac/paie.md](rbac/paie.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
