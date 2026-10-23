@@ -411,7 +411,7 @@
 						<artifactId>cyclonedx-maven-plugin</artifactId>
 						<configuration>
 							<includeTestScope>true</includeTestScope>
-							<outputName>mcp-compatibility-bom</outputName>
+							<outputName>bom</outputName>
 						</configuration>
 					</plugin>
 					<plugin>
