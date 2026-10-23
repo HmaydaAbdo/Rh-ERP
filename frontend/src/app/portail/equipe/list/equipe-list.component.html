@@ -1,26 +1,12 @@
 
-<div class="equipe-list app-page">
-  <div class="app-table-bar">
-    <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
-        {{ totalRecords() }} équipe{{ totalRecords() > 1 ? 's' : '' }}
-      }
-    </p>
-    <div class="app-table-bar__tools">
-      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-    </div>
-  </div>
-
-  <stp-table
-    label="Liste : Équipes"
-    emptyMessage="Aucune équipe ne correspond à ces critères."
-    [lazy]="true"
+<div class="equipe-list">
+  <app-collection-table
+    [configuration]="tableConfiguration"
+    [columnState]="columns"
     [value]="equipes()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
-    [columns]="columns.visible"
     (lazyLoad)="onLazyLoad($event)"
-    (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-equipe let-col="col">
       @switch (col.field) {
@@ -42,5 +28,5 @@
         <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === equipe.id" [attr.aria-label]="'Supprimer l’équipe ' + equipe.code" (click)="onDelete(equipe)"></button>
       }
     </ng-template>
-  </stp-table>
+  </app-collection-table>
 </div>

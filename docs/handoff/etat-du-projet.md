@@ -1,6 +1,6 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-20 (libellés RH, migration V31, rouvrir un chantier depuis l'assistant d'import).
+Dernière mise à jour : 2026-10-23 (stabilisation par domaine : Équipe, Fonction, Chantier ; Cartes et Analytique partagées par les cinq modules).
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
@@ -11,9 +11,12 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 
 1. `AGENTS.md`, puis les conventions dans l'ordre qu'il donne.
 2. `docs/README.md` (index de la documentation) et le README du domaine touché (`docs/<domaine>/README.md`).
-3. Les deux dernières décisions d'architecture :
-   [ADR 0009 — carte : satellite, relief et 3D](../adr/0009-carte-satellite-relief-3d.md) et
-   [ADR 0010 — la fiche employé porte l'état du dernier mois de paie](../adr/0010-employe-etat-du-dernier-mois-de-paie.md).
+3. Les trois dernières décisions d'architecture :
+   [ADR 0009 — carte : satellite, relief et 3D](../adr/0009-carte-satellite-relief-3d.md),
+   [ADR 0010 — la fiche employé porte l'état du dernier mois de paie](../adr/0010-employe-etat-du-dernier-mois-de-paie.md) et
+   [ADR 0011 — Cartes et Analytique partagées par périmètre](../adr/0011-vues-cartes-analytique-par-perimetre.md).
+   Le chantier en cours de **stabilisation par domaine** suit le [PV de stabilisation ERP-RH](pv-stabilisation-erp-rh-2026-10-22.md)
+   (projet à valider par le propriétaire avant diffusion).
 4. `TODO.md` pour les sujets ouverts.
 
 ---
@@ -26,6 +29,17 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 | 2026-10-19 | #74 | **Employés en cinq lots** : (1) coque à onglets Tabulaire / Cartes / Analytique, filtres dans l'URL ; (2) fiche = état du dernier mois de paie (équipe, salaire et type, table `employe_sortie`, reprise **V30**) ; (3) **assistant d'import de la paie** (analyse, corrections des fiches, départs) ; (4) fiche et **parcours** de l'employé ; (5) vues **Cartes** et **Analytique**. Voir `docs/employee/README.md` et `docs/paie/README.md`, « Import Excel (assistant) ». |
 
 | 2026-10-20 | (cette PR) | **Vocabulaire RH et nettoyage** : l'interface dit « En poste / Sorti » pour les employés et « En cours / Clôturé » pour les chantiers (API et base inchangées : `ACTIF`/`INACTIF`, `actif`) ; boutons **Clôturer / Rouvrir** sur la liste et la fiche d'un chantier ; l'assistant d'import de la paie signale à part un chantier clôturé et propose de le rouvrir ; migration **V31** : supprime les fonctions sans bulletin ni fiche, clôture les chantiers sans bulletin (sur la base de développement : 48 fonctions, 183 chantiers, 29 restent en cours). |
+
+| 2026-10-23 | #77 | **Équipe, premier bloc de stabilisation** : trois vues Tabulaire / Cartes / Analytique reliées aux fiches Employé et à la Paie ; PV de stabilisation (`pv-stabilisation-erp-rh-2026-10-22.md`) ; l'historique d'une équipe reste affiché quand le mois choisi n'a aucun bulletin. |
+| 2026-10-23 | #79 | **Fonction** : mêmes trois vues, import et création dans l'en-tête ; la répartition par fonction de `POST /paie/analytique` porte les STC (`stc`, `stcMontant`). Décisions du propriétaire : renommage actuel et refus de suppression conservés. |
+
+**Pas encore fusionné — PR #80** : **Chantier** (trois vues, synchronisation et création dans l'en-tête ; décision : modification du
+code conservée) et le partage des composants pour les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) : Cartes et
+Analytique (`frontend/src/app/portail/perimetre/`, ADR 0011), coque et Tabulaire configurables (`shared/components/`, ADR 0012).
+Les anciennes Cartes et Analytique propres à chaque module sont supprimées; filtres, données, colonnes, cellules, actions et règles
+métier restent dans les domaines. Build, 805 tests frontend et 63 E2E passent localement; la CI complète #390 est verte sur le commit
+`28275e8` (frontend, backend, full-stack et profil de performance). Références : `docs/frontend/vues-perimetre.md` et
+`docs/frontend/README.md`.
 
 À la fusion de #74 : 410 tests backend, 762 tests frontend, 54 E2E, CI complète verte ; images Docker publiées par la CI au
 tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
@@ -71,7 +85,9 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 - Vocabulaire (2026-10-19) : jamais « actif / inactif » dans l'interface — « En poste / Sorti » pour un employé, « En cours / Clôturé »
   pour un chantier. Un chantier clôturé est refusé par l'import de la paie jusqu'à ce qu'on le rouvre (bouton dans l'assistant).
 - Tranches de l'Analytique des employés : âge < 25, 25-34, 35-44, 45-54, 55+ ; ancienneté < 1 an, 1-3, 3-5, 5-10, 10+.
-- Cartes des employés : descente **libre** (chantier, équipe, fonction, dans l'ordre choisi) et accès à la liste à tout moment.
+- Cartes de **tous les modules** : descente **libre** (chantier, équipe, fonction, dans l'ordre choisi) et accès à la liste à tout moment ;
+  Analytique **graphique** (paie et fiches Employé) ; les filtres d'un module agissent de la même façon dans ses trois vues
+  (décision du 2026-10-23, `conventions/frontend.md`). Ne plus écrire de Cartes ni d'Analytique propres à un module.
 - Ne plus demander si la production a les mêmes données que le développement : tout se règle sur la **dernière paie
   importée**, quel que soit l'état de la base.
 
@@ -105,8 +121,8 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 Le détail est dans `TODO.md`. Les principaux :
 
 - **Assistant d'import** : premier usage réel sur le fichier d'octobre 2026, à suivre.
-- **Vues Cartes et Analytique** pour Chantiers, Fonctions et Équipes : seule la vue tabulaire existe (section « Vues Cartes,
-  Tabulaire et Analytique »).
+- **Stabilisation** : valider le PV de stabilisation avant de le transmettre aux intervenants ; fusionner la PR #80 ; décisions
+  restantes (nettoyage des quasi-doublons de fonctions, suivi dans « Qualité des données » ; libellés `A`, `LABO`, `ASPHALET`, `8`).
 - **Qualité des données** (« Prochaine tâche ») : tous les champs obligatoires et aucun doublon, dans tous les domaines.
 - **Conformité backend** (`docs/conformite/README.md`) : G3 (paramètres métier administrables), G5, G6, G10 en attente de
   décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.

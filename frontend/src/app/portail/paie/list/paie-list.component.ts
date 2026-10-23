@@ -5,22 +5,27 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
 import { Paie } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
+const CONFIGURATION_TABLE_PAIE: CollectionTableConfig = {
+  countLabel: (total) => `${total} bulletin${total > 1 ? 's' : ''}`,
+  accessibleLabel: 'Liste des bulletins de paie',
+  emptyMessage: 'Aucun bulletin ne correspond à ces critères.'
+};
+
 @Component({
   selector: 'app-paie-list',
   imports: [
-    ColumnChooserComponent,
+    CollectionTableComponent,
     DecimalPipe,
     ButtonComponent,
-    TableComponent,
     TableCellDirective,
     TableRowActionsDirective
   ],
@@ -28,6 +33,7 @@ import { PaieService } from '../services/paie.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieListComponent {
+  protected readonly tableConfiguration = CONFIGURATION_TABLE_PAIE;
   protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom', sortField: 'employee.nomPrenom', cellClass: 'font-semibold' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },

@@ -52,7 +52,7 @@
 | Assistant d'import : « Mettre à jour la fiche », « Tout mettre à jour », « Créer l'employé » | `EMPLOYEE_WRITE` — `peutCorriger()` ; sans elle, l'assistant invite à corriger le fichier |
 | Bouton « Exporter » (assistant d'export, Excel et PDF) | `PAIE_EXPORT` — `canExport()` ; l'assistant lit aussi `/paie/periodes`, `/paie/chantiers` et `/paie/materiel` (`PAIE_READ`) |
 | Bouton « Supprimer » (liste) | `PAIE_DELETE` — `canDelete()` |
-| Boutons de suppression en groupe (cartes de mois et de chantier, lignes d'équipe, « Supprimer ce chantier » de la vue Cartes) | `PAIE_PURGE` — `canPurge()` |
+| Bouton de suppression en groupe sur chaque carte de la vue Cartes (mois, chantier, équipe, fonction ; pas pour « Sans équipe ») | `PAIE_PURGE` — `canPurge()` |
 | Action « Restaurer ce groupe » dans le détail d'une suppression de groupe du journal d'audit | `PAIE_RESTORE` — distincte de `AUDIT_READ` |
 | Bouton « Historique » (détail d'un bulletin) | `AUDIT_READ` — `canViewHistory()` |
 | Colonnes Chantiers / Équipes / Fonctions du panneau de filtres | `CHANTIER_READ` / `EQUIPE_READ` / `FUNCTION_READ` |

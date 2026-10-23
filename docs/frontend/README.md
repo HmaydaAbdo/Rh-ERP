@@ -64,6 +64,8 @@ src/app/
     ├── ui/                  Kit Staport (icon, button, badge, dialog, menu, select, table, champs, message, chart, catalogue)
     ├── feedback/            Notifications et confirmations (Signals + CDK A11y)
     ├── components/
+    │   ├── collection-shell/  En-tête, sélecteur de vues, slots d'actions/filtres et RouterOutlet (ADR 0012)
+    │   ├── collection-table/  Barre de liste, choix des colonnes et stp-table; cellules/actions projetées
     │   ├── lazy-select/     Sélecteur générique à recherche serveur et chargement différé (sur `ui/select`)
     │   ├── month-picker/    Sélecteur de mois en un champ (flèches d'année, 12 tuiles, mois indisponibles grisés)
     │   ├── column-chooser/  Choix des colonnes visibles d'un tableau
@@ -82,6 +84,11 @@ alignés sur les jetons) ; le style des tableaux est dans `ui/table/table.compon
 Aucune valeur de design ne doit être écrite en dur. Règles : `conventions/design-system.md`.
 
 ### Mise en page des écrans de liste
+
+Pour les collections Équipe, Fonction, Chantier, Employé et Paie, la coque utilise `app-collection-shell` et la vue
+Tabulaire `app-collection-table` (ADR 0012). Chaque hôte domaine configure titre/vues et libellés de tableau, puis
+projette ses actions et filtres, ses colonnes, cellules et actions de ligne. Les composants partagés portent la structure
+et les interactions communes; les appels API, critères, permissions et règles de chaque domaine restent dans son hôte.
 
 Tous les écrans de liste (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, et le tabulaire de la Paie)
 ont **la même structure** : titre éditorial, panneau de filtres, barre du tableau, tableau. Pour **Employés, Chantiers, Fonctions,
@@ -108,7 +115,7 @@ sont en français : `stp-date-input` s'appuie sur le champ date natif du navigat
 Graphiques : habillage commun `shared/ui/chart/chart-theme.ts` (couleurs, police, grille et infobulle lues dans les jetons ; les mesures de la paie dans `paie-chart-theme.ts`), redessinés à la
 bascule de thème, une seule mesure par axe, tableau de données accessible. `stp-chart` est aussi focalisable : flèches gauche/droite
 (ou haut/bas) et Début/Fin parcourent ses points, Entrée/Espace sélectionne le point et l'annonce aux technologies d'assistance — voir
-`docs/paie/README.md` (Vue Analytique) et
+`docs/paie/README.md` (Vue Analytique), [vues-perimetre.md](vues-perimetre.md) (graphiques des vues partagées) et
 `conventions/design-system.md`. Mouvement : `styles/_motion.scss` (écran qui apparaît, bascule de thème en fondu, squelettes de
 chargement, appui sur un bouton), durées et courbe en jetons, supprimé par `prefers-reduced-motion`.
 
@@ -165,7 +172,7 @@ de rôle).
 | `/paie/new`, `/paie/:id/edit` | Création, modification | `PAIE_WRITE` |
 | `/employees`, `/employees/:id` | Employés | `EMPLOYEE_READ` |
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
-| `/chantiers`, `/chantiers/:id` | Chantiers | `CHANTIER_READ` |
+| `/chantiers`, `/chantiers/cartes`, `/chantiers/analytique`, `/chantiers/:id` | Chantiers | `CHANTIER_READ` |
 | `/chantiers/new`, `/chantiers/:id/edit` | | `CHANTIER_WRITE` |
 | `/carte` | Carte des chantiers (le Maroc, sans donnée de chantier pour l'instant — voir [../chantier/carte.md](../chantier/carte.md)) | `CARTE_READ` |
 | `/functions`, `/functions/:id` | Fonctions | `FUNCTION_READ` |

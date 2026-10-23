@@ -7,7 +7,8 @@
   <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="libelle">Libellé <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="libelle" type="text" [formField]="form.libelle" />
+      <input class="stp-input" autocomplete="off" id="libelle" type="text" aria-describedby="libelle-aide" [formField]="form.libelle" />
+      <small id="libelle-aide">Obligatoire · 100 caractères maximum · les espaces autour sont retirés. Chaque libellé doit être unique, sans distinguer majuscules et minuscules.</small>
       <stp-field-error [field]="form.libelle" />
     </div>
 

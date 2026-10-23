@@ -5,22 +5,29 @@ import { distinctUntilChanged, map, skip } from 'rxjs';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
 import { EquipeFiltres, lireFiltresEquipe, memesFiltresEquipe } from '../filtres/equipe-filtres';
 
+const CONFIGURATION_TABLE_EQUIPE: CollectionTableConfig = {
+  countLabel: (total) => `${total} équipe${total > 1 ? 's' : ''}`,
+  accessibleLabel: 'Liste : Équipes',
+  emptyMessage: 'Aucune équipe ne correspond à ces critères.'
+};
+
 @Component({
   selector: 'app-equipe-list',
-  imports: [ButtonComponent, ColumnChooserComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './equipe-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquipeListComponent {
+  protected readonly tableConfiguration = CONFIGURATION_TABLE_EQUIPE;
   readonly columns = new ColumnState([
     { field: 'code', header: 'Code' },
     { field: 'libelle', header: 'Libellé' }

@@ -2,7 +2,7 @@
 
 **Date de préparation :** 22 octobre 2026  
 **Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
-**Blocs examinés :** Équipe (premier), Fonction (deuxième)  
+**Blocs examinés :** Équipe (premier), Fonction (deuxième), Chantier (troisième)  
 **Version stable visée :** `1.0.0` pour le frontend et le backend  
 **État du document :** projet interne à valider par le propriétaire avant toute transmission aux intervenants. Il ne constate pas encore un accord collectif.
 
@@ -12,7 +12,7 @@
 
 Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
 
-Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
+Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction, et un troisième, consacré au domaine Chantier.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
 
 La version stable `1.0.0` sera annoncée lorsque les blocs prévus auront été examinés, que les décisions requises auront été enregistrées et que les contrôles de livraison applicables auront réussi.
 
@@ -24,7 +24,7 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 2. **Les règles sont dites clairement.** Chaque règle métier est formulée en langage compréhensible, avec des exemples utiles et le résultat attendu lorsque la règle est respectée ou non.
 3. **Toute règle importante est vérifiée.** Les contrôles doivent couvrir le cas normal, les limites, les erreurs, les droits d’accès et les interactions entre domaines concernées. Les résultats et les éventuels échecs sont présentés sans les masquer.
 4. **Une exception est examinée, pas dissimulée.** Elle indique la règle concernée, la raison, les personnes et données touchées, le risque, la mesure temporaire, la personne responsable et la date de réexamen. Elle ne devient une décision qu’après approbation explicite.
-5. **Les trois vues forment le modèle de consultation des domaines concernés.** Tabulaire pour retrouver et comparer, Cartes pour parcourir, Analytique pour comprendre les volumes et leur évolution. Le contenu et les filtres restent adaptés au métier; le passage d’une vue à l’autre conserve le contexte utile.
+5. **Les trois vues forment le modèle de consultation de tous les domaines.** Tabulaire pour retrouver et comparer; **Cartes par descente libre** pour parcourir (on choisit soi-même par quoi regrouper — chantier, équipe, fonction, puis les employés — et chaque carte ouverte devient une étape du fil); **Analytique graphique** pour comprendre les volumes et leur évolution (paie et fiches Employé). Les filtres propres au domaine agissent de la même façon dans les trois vues et leurs valeurs suivent quand on passe de l’une à l’autre. Les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) utilisent Cartes et Analytique partagées (ADR 0011), ainsi que la coque et la vue Tabulaire configurables `app-collection-shell` et `app-collection-table` (ADR 0012, décision du propriétaire du 23 octobre 2026).
 6. **Les droits restent attachés aux données de leur domaine.** Une vue qui rassemble plusieurs domaines n’élargit pas les accès. Elle présente chaque information seulement aux personnes habilitées pour cette information.
 7. **Une proposition n’est pas un accord.** Les faits vérifiés, décisions déjà approuvées, propositions, points ouverts, réserves et rejets sont identifiés séparément.
 8. **Aucun document de décision n’est diffusé sans validation du propriétaire.** Avant transmission aux intervenants, le propriétaire reçoit la version complète, avec les faits, règles, risques, décisions attendues et preuves disponibles, puis valide explicitement sa diffusion.
@@ -48,8 +48,8 @@ Les personnes autorisées doivent pouvoir consulter le référentiel dans les tr
 | Vue | Contenu attendu |
 |---|---|
 | **Tabulaire** | Liste paginée des équipes, recherche par code ou libellé, consultation et actions permises. |
-| **Cartes** | Une carte par équipe, avec l’effectif des fiches Employé récent et les indicateurs Paie du dernier mois disponible lorsque la personne a accès à ces domaines. |
-| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par équipe et consultation de l’historique d’une équipe. Les équipes sans bulletin durant la période restent visibles dans la répartition. |
+| **Cartes** | Une carte par équipe, puis regroupement libre par chantier, fonction ou employés; sur chaque carte, l’effectif des fiches Employé récentes et la paie du mois avec l’écart sur le mois précédent lorsque la personne a accès à ces domaines. |
+| **Analytique** | Graphiques : choix d’une période Paie, indicateurs et leur variation, évolution mensuelle, répartition par une autre dimension (un clic approfondit), tranches, mouvements, et situation des fiches Employé. Les équipes sans bulletin durant la période restent visibles. |
 
 Les filtres utiles restent présents lorsqu’on change de vue. La période et l’équipe sélectionnées dans l’Analytique peuvent être conservées dans l’adresse de la page afin de permettre de retrouver le même affichage.
 
@@ -102,9 +102,11 @@ Les libellés `A`, `LABO`, `ASPHALET` et `8` ont été initialisés provisoireme
 
 ## 4. État de réalisation du premier bloc
 
-Les trois vues Équipe et leur liaison aux données Employé et Paie sont réalisées dans une version de travail. La vérification de la partie visible de l’application a réussi localement. Les contrôles automatisés complets restent à examiner avant de déclarer le bloc terminé. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
+Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). La PR #80 porte le passage aux vues Cartes/Analytique partagées (ADR 0011) et à la coque/tableau communs (ADR 0012) pour Chantier, Équipe, Fonction, Employé et Paie. Sur le code local, `npm run build` passe, les 805 tests frontend passent et les 63 parcours Playwright passent. La CI complète **#390** est verte pour le commit `28275e8` (frontend, backend, full-stack et profil de performance). Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
 
 Les contrôles couvrent les règles de ce PV et leurs résultats doivent être examinés avant la signature. Un contrôle en cours, une vérification locale isolée ou un résultat technique seul ne prouve pas que toutes les règles de ce PV sont respectées.
+
+Après le vert de la CI sur la révision poussée, la revue propriétaire de cette livraison suivra l'ordre : **Équipe → Fonction → Chantier → Employé → Paie**. L'ordre de revue ne vaut pas accord métier ni validation de production.
 
 Les documents de suivi du bloc sont disponibles pour le propriétaire et seront actualisés avant validation de la version destinée aux intervenants :
 
@@ -117,11 +119,11 @@ Chaque règle présentée aux intervenants doit avoir une preuve compréhensible
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | À confirmer par la CI et la revue des intervenants |
+| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Tests frontend (805) et E2E (63) verts localement; CI #390 verte pour le commit `28275e8`; revue des intervenants à mener |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement d’équipe entre deux mois, vérifié sur les deux affichages | À confirmer |
 | Indicateurs Paie et période affichée | Valeurs comparées à des exemples Paie vérifiés, y compris une équipe sans bulletin sur le mois | À confirmer |
 | Accès par domaine | Essai avec un compte autorisé et un compte non autorisé pour Employé et Paie | À confirmer |
-| Code et libellé | Cas valides, doublons, champs vides, espaces extérieurs et limites de longueur | Compilation locale vérifiée; tests et messages à confirmer |
+| Code et libellé | Cas valides, doublons, champs vides, espaces extérieurs et limites de longueur | Tests automatisés verts en CI; messages à confirmer avec les intervenants |
 | Modification du code et historique | Décision écrite sur l’effet visible dans les bulletins historiques | Décision des intervenants attendue |
 | Suppression d’une équipe utilisée | Confirmation du refus actuel ou décision signée sur un autre comportement | Décision des intervenants attendue |
 | Quatre libellés provisoires | Signification et libellé confirmés ou action attribuée avec échéance | Réponse RH attendue |
@@ -149,6 +151,8 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 - Viser `1.0.0` pour le frontend et le backend lorsque les critères de stabilité sont satisfaits.
 - Appliquer un modèle commun de trois vues aux domaines concernés, avec un contenu adapté à chaque métier.
 - Pour Équipe et Fonction, distinguer la situation Employé la plus récente de l’historique mensuel Paie.
+- Pour les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) : Cartes par descente libre, Analytique graphique (paie et fiches Employé), mêmes composants partagés, pattern inscrit dans `conventions/frontend.md` (23 octobre 2026).
+- Pour Chantier, conserver la modification actuelle du code (code modifié partout, historique compris) (23 octobre 2026).
 - Pour Fonction, conserver le renommage actuel (libellé modifié partout, historique compris) et le refus de suppression d’une fonction utilisée (23 octobre 2026).
 - Garder les droits Employé, Paie et Équipe séparés.
 - Expliquer les validations et les erreurs aux utilisateurs en langage simple.
@@ -185,7 +189,7 @@ Un résultat collectif n’est renseigné comme accepté que si les personnes co
 
 ## 9. Deuxième bloc — domaine Fonction
 
-**État du bloc :** version de travail réalisée le 23 octobre 2026, non déclarée en production et sans accord métier. Ce bloc applique au domaine Fonction le cadre des sections 2 et 6 et le modèle de trois vues du bloc Équipe. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** fusionné dans la branche principale le 23 octobre 2026 (PR #79, intégration continue verte), non déclaré en production et sans accord métier; ses vues Cartes et Analytique sont remplacées par les composants partagés dans la PR #80, non encore fusionnée. Ce bloc applique au domaine Fonction le cadre des sections 2 et 6 et le modèle de trois vues du bloc Équipe. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
 
 ### 9.1 Rôle du domaine et liens avec l’application
 
@@ -202,8 +206,8 @@ Comme pour Équipe, la situation Employé récente et l’historique Paie ne son
 | Vue | Contenu |
 |---|---|
 | **Tabulaire** | Liste paginée, recherche par libellé, consultation, modification et suppression selon les droits; import Excel et création dans l’en-tête commun. |
-| **Cartes** | Une carte par fonction avec l’effectif des fiches Employé récentes et, pour le dernier mois avec bulletins, l’effectif payé et la masse salariale. |
-| **Analytique** | Choix d’une période Paie, indicateurs de cette période, répartition par fonction (les fonctions sans bulletin restent visibles, à zéro) et historique mensuel d’une fonction sélectionnée. |
+| **Cartes** | Une carte par fonction, puis regroupement libre par chantier, équipe ou employés; fiches Employé et paie du mois sur chaque carte. |
+| **Analytique** | Graphiques : indicateurs de la période (STC compris dans la répartition), évolution mensuelle, répartition (les fonctions sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
 
 Les indicateurs sont ceux de la section 3.3, et la répartition par fonction indique aussi le nombre et le montant des soldes de tout compte (STC) de chaque fonction. Le filtre par libellé agit de la même façon dans les trois vues. Les droits restent séparés : `FUNCTION_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
 
@@ -228,10 +232,10 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Tests unitaires et E2E locaux réussis; parcours intégré à confirmer en CI |
+| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | CI #390 verte pour le commit `28275e8`; revue métier des intervenants attendue |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de fonction entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; fonction sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests; parcours intégré à confirmer en CI |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #390 verte; validation métier des intervenants attendue |
 | Libellé : validations | Cas valides, doublons, champs vides, espaces extérieurs, limites de longueur | Tests existants; messages à confirmer |
 | Renommage et suppression d’une fonction utilisée | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
@@ -244,7 +248,60 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
-## 10. Blocs suivants
+## 10. Troisième bloc — domaine Chantier
+
+**État du bloc :** version de travail réalisée le 23 octobre 2026 dans la PR #80 (CI #390 verte sur le commit `28275e8`, pas encore fusionnée), non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Les règles ci-dessous restent à valider par le propriétaire avant transmission aux intervenants.
+
+### 10.1 Rôle du domaine et liens avec l’application
+
+Le référentiel Chantier fournit le code, la désignation, le nom éventuel et le statut (« En cours » ou « Clôturé ») des chantiers. Il relie trois informations distinctes :
+
+- **Référentiel Chantier :** les chantiers connus, ajoutés par la synchronisation avec l’ERP ou saisis à la main.
+- **Situation Employé :** le chantier enregistré sur la fiche Employé au dernier mois de paie importé.
+- **Historique Paie :** le chantier porté par chaque bulletin de sa période, qui reste lisible même si la fiche Employé change ensuite.
+
+La situation Employé récente et l’historique Paie ne sont jamais présentés comme décrivant la même période. La **carte géographique** reste un écran à part, avec son droit propre.
+
+### 10.2 Parcours, indicateurs et accès
+
+| Vue | Contenu |
+|---|---|
+| **Tabulaire** | Liste paginée, recherche par code, désignation et statut, consultation, modification, clôture ou réouverture, suppression selon les droits; synchronisation et création dans l’en-tête commun. |
+| **Cartes** | Une carte par chantier avec son statut, puis regroupement libre par équipe, fonction ou employés; fiches Employé et paie du mois sur chaque carte. |
+| **Analytique** | Graphiques : indicateurs de la période, évolution mensuelle, répartition par chantier (STC compris; les chantiers sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
+
+Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le nombre de chantiers concernés n’est pas répété) et la répartition indique le nombre et le montant des soldes de tout compte de chaque chantier. Les filtres par code, désignation et statut agissent de la même façon dans les trois vues. Les droits restent séparés : `CHANTIER_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
+
+### 10.3 Règles déjà appliquées et constats
+
+- le code et la désignation sont obligatoires à la création manuelle; le code est unique sans tenir compte de la casse ni des espaces extérieurs;
+- la synchronisation avec l’ERP n’ajoute que les chantiers manquants : elle ne modifie, ne clôture ni ne supprime jamais un chantier existant;
+- clôturer un chantier ne le supprime pas : il reste consultable et référencé par l’historique, mais n’est plus accepté par l’import des employés et l’assistant d’import de la paie propose de le rouvrir (décision du propriétaire du 19 octobre 2026);
+- supprimer un chantier référencé par une fiche Employé ou un bulletin est refusé; la clôture est l’alternative;
+- modifier le code d’un chantier le change pour tous les bulletins et fiches qui le référencent, historique compris : **décision du propriétaire du 23 octobre 2026, ce comportement est conservé**, c’est le moyen de corriger une faute de saisie.
+
+**Aucune règle nouvelle n’est introduite par ce bloc.** Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans le [TODO](../../TODO.md).
+
+### 10.4 Preuves et accords à recueillir
+
+| Sujet à vérifier | Preuve attendue | État avant signature |
+|---|---|---|
+| Trois vues et filtres conservés | Parcours des trois vues avec les mêmes filtres dans l’adresse | Tests frontend et E2E locaux réussis; CI #390 et parcours intégré verts pour le commit `28275e8` |
+| Situation Employé distincte de l’historique Paie | Exemple avec changement de chantier entre deux mois | À confirmer |
+| Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; chantier sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Tests et parcours intégré couverts; CI #390 verte; validation métier à recueillir |
+| Statut En cours / Clôturé | Filtre par statut, clôture et réouverture avec confirmation | Couvert par tests |
+| Modification du code d’un chantier utilisé | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
+
+| Décision attendue | Accord | Réserve ou rejet et motif |
+|---|---|---|
+| Les trois vues et leur contenu représentent correctement le besoin Chantier. | À compléter | À compléter |
+| Les indicateurs Paie de la section 10.2 sont ceux attendus, STC compris dans la répartition par chantier. | À compléter | À compléter |
+| La modification du code d’un chantier utilisé change le code partout, historique compris (décision du propriétaire). | À compléter | À compléter |
+
+Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
+
+## 11. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
 

@@ -301,13 +301,17 @@ Tout domaine métier qui présente une collection consultable propose trois vues
 **Cartes** et **Analytique**. Elles offrent trois façons de lire les données du domaine; elles ne créent pas trois
 sources de vérité ni trois règles métier.
 
-* Chaque domaine garde la responsabilité de sa coque, de ses routes, de ses filtres et du contenu de ses vues.
-  Réutiliser le composant partagé de sélection de vue et les primitives Staport; ne pas créer une coque générique
-  configurable ni une classe de base commune.
+* La coque et l'assemblage Tabulaire utilisent les composants configurables partagés de
+  `shared/components/collection-shell/` et `shared/components/collection-table/` (ADR 0012). Le domaine reste
+  propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
+  une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
+  par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.
+  Le contenu des vues **Cartes** et **Analytique** est partagé par tous les modules : voir « Cartes par niveaux et
+  Analytique graphique » ci-dessous.
 * Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
   `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
   modification restent hors de cette coque.
-* Le sélecteur, le titre et les actions communes gardent la même place dans les trois vues. Les filtres sont propres
+* Le sélecteur, le titre et l'emplacement des actions gardent la même place dans les trois vues. Les filtres sont propres
   au domaine; lorsqu’ils s’appliquent à plusieurs vues, ils sont visibles au même endroit et leurs valeurs sont
   synchronisées avec les paramètres d’URL afin de permettre le lien direct, le rechargement et le retour navigateur.
   Un filtre n’est partagé entre des vues que s’il a le même sens métier dans chacune.
@@ -324,6 +328,68 @@ sources de vérité ni trois règles métier.
 Avant de livrer un domaine, documenter dans son README le rôle des trois vues et la définition de ses indicateurs;
 ajouter les routes et permissions à son document RBAC lorsqu’elles changent. Ne pas afficher un onglet « disponible
 prochainement » sans parcours livré.
+
+## Cartes par niveaux et Analytique graphique (vues partagées)
+
+Les vues **Cartes** et **Analytique** de **tous** les modules — Paie, Employés, Équipes, Fonctions, Chantiers, et tout futur
+module — sont les composants partagés de `portail/perimetre/` (ADR 0011). Il est interdit d'écrire une Cartes ou une
+Analytique propre à un module : on décrit le module, on ne copie pas la vue.
+
+**Ce qui reste propre au module** : sa configuration de coque et de tableau, ses routes, filtres, colonnes, cellules,
+actions, adaptateurs et règles métier. **Ce qui est partagé** : la structure de coque et de vue Tabulaire, ainsi que
+tout le contenu des Cartes et de l'Analytique.
+
+### Brancher un module
+
+1. Écrire `<module>-module.ts` : une fonction (ou une constante) qui renvoie un `ModulePerimetre` — clé, pluriel, début du
+   fil (« Tous les chantiers »), dimension du référentiel (`null` si le module n'en a pas : Employés, Paie), ordre de descente
+   proposé, route et permission, les paramètres de retour à la vue Tabulaire, les critères Employés et Paie que ses filtres
+   produisent, et son référentiel éventuel (`catalogue`).
+2. Écrire deux hôtes minces, `<module>-cartes.component.ts` et `<module>-analytique.component.ts`, dont le gabarit tient en
+   une ligne (`<app-cartes-perimetre [module]="module" />`). Un hôte peut projeter `#actionsCarte` pour ajouter ses boutons
+   propres à chaque carte ; il peut appeler `recharger()` après une action.
+3. Router `/<module>/cartes` et `/<module>/analytique` sous la coque du module.
+4. Tester la description du module (`<module>-module.spec.ts`) et ajouter le parcours des trois vues aux tests E2E.
+
+### Le périmètre est dans l'URL
+
+`chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds`, `periode` (`AAAA-MM`) et, pour les Cartes, `par`
+(`chantier`, `equipe`, `fonction`, `employes`, `periode`). Les filtres propres au module s'y ajoutent et ne les remplacent
+jamais ; une valeur invalide est ignorée. La barre de filtres d'un module écrit ses paramètres **en fusion** avec l'URL
+(`queryParamsHandling: 'merge'`), pour ne pas perdre le regroupement ni le mois. Changer de vue conserve tous les paramètres.
+
+### Cartes : descente libre
+
+- On parcourt le périmètre en choisissant **soi-même** par quoi regrouper (« Regrouper par » : chantier, équipe, fonction,
+  employés) ; l'ordre proposé est celui du module, jamais imposé. Une dimension déjà choisie n'est plus proposée.
+- Ouvrir une carte en fait une **étape du fil** (le paramètre d'URL de sa dimension, une seule valeur) ; chaque étape se retire
+  seule ; le fil ne montre jamais un identifiant technique. Le dernier niveau est la liste des employés (« Afficher plus »).
+- Chaque carte réunit les **fiches Employé** (dernier état importé) et la **paie du mois**, avec l'écart par rapport au **mois
+  contigu** seulement (jamais un mois plus ancien, jamais un zéro ni une division par zéro). Le module Paie commence par la
+  liste des mois tant qu'aucun mois n'est choisi.
+- Au niveau de la dimension du module, **toutes** les entrées du référentiel sont des cartes, même sans fiche ni bulletin
+  (chiffres à zéro, jamais inventés). Dès qu'une autre dimension restreint le périmètre, seules les cartes qui ont des données
+  existent. Le statut métier du référentiel se montre en pastille.
+- Un lien « Voir la liste » (Tabulaire du module, avec ses filtres propres) et « Voir les employés » (périmètre courant) sont
+  toujours disponibles.
+
+### Analytique : un tableau de bord graphique
+
+- Côté **Paie** : chiffres du mois avec leur variation, **évolution mensuelle** sur tout l'historique (une seule mesure à la
+  fois, un seul axe : masse, effectif, STC en personnes, STC en dirhams ; le mois analysé est mis en valeur), **répartition**
+  en barres par une autre dimension (un clic sur une barre approfondit le périmètre), tranches de total, mouvements mois par
+  mois, qualité des données. Côté **fiches Employé** : chiffres clés, pyramide des âges, ancienneté, répartition en poste /
+  sortis. Chaque graphique est accompagné de son tableau de données (« Voir les données »).
+- Un mois sans bulletin garde l'historique du périmètre et affiche les indicateurs à zéro avec un message explicite.
+
+### Règles communes
+
+- **Filtres cohérents** : les filtres propres au module agissent de la même façon dans les trois vues. Quand ils restreignent
+  le référentiel, le référentiel filtré borne les fiches et la paie ; s'il est vide, aucune source n'est interrogée.
+- **Droits** : chaque source n'est lue qu'avec son droit (`EMPLOYEE_READ`, `PAIE_READ`) et son bloc est remplacé par une phrase
+  claire sinon. Une source en panne n'efface pas les autres.
+- **Accessibilité** : listes de définitions valides (`dt` / `dd`), contraste vérifié (axe) sur Cartes et Analytique, graphiques
+  accompagnés d'un tableau, fil et regroupements au clavier.
 
 ---
 

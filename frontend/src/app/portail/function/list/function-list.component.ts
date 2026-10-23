@@ -4,23 +4,30 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { FunctionFiltres, lireFiltresFunction, memesFiltresFunction } from '../filtres/function-filtres';
+
+const CONFIGURATION_TABLE_FUNCTION: CollectionTableConfig = {
+  countLabel: (total) => `${total} fonction${total > 1 ? 's' : ''}`,
+  accessibleLabel: 'Liste des fonctions',
+  emptyMessage: 'Aucune fonction ne correspond à ces critères.'
+};
 import { Function } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
 
 /** Vue tabulaire des fonctions. Le filtre vient de l'URL (voir `FunctionVuesComponent`) ; l'import et la création sont dans l'en-tête de la page. */
 @Component({
   selector: 'app-function-list',
-  imports: [ButtonComponent, ColumnChooserComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './function-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FunctionListComponent {
+  protected readonly tableConfiguration = CONFIGURATION_TABLE_FUNCTION;
   readonly columns = new ColumnState([{ field: 'libelle', header: 'Libellé' }]);
 
   private readonly functionService = inject(FunctionService);

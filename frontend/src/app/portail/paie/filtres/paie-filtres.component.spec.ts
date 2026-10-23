@@ -253,46 +253,4 @@ describe('PaieFiltresComponent', () => {
             expect(composant['secondairesOuverts']()).toBe(false);
         });
     });
-
-    describe('fil de navigation (cartes)', () => {
-        it("n'apparaît que dans les cartes", () => {
-            expect(fixture.nativeElement.querySelector('.paie-filtres__fil')).toBeNull();
-
-            fixture.componentRef.setInput('avecFil', true);
-            fixture.detectChanges();
-            fixture.detectChanges();
-            expect(fixture.nativeElement.querySelector('.paie-filtres__fil')).not.toBeNull();
-        });
-
-        it('revient aux mois, ou aux chantiers du mois, depuis le fil', () => {
-            composant['allerAuNiveau'](2);
-            expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [] });
-
-            afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3], fonctionIds: [5] });
-            composant['allerAuNiveau'](1);
-            expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: null, chantierIds: [], fonctionIds: [5] });
-        });
-
-        it("remonte d'un cran à la fois : le chantier d'abord, puis le mois", () => {
-            composant['remonter']();
-            expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [] });
-
-            afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
-            composant['remonter']();
-            expect(emis.at(-1)).toEqual(AUCUN_FILTRE);
-        });
-
-        it("identifie le chantier ouvert sans précharger la liste entière du mois", () => {
-            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
-
-            afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3, 4] });
-            expect(composant['chantierOuvert']()).toBeNull();
-        });
-
-        it("n'expose pas les identifiants techniques dans le fil", () => {
-            afficher({ ...AUCUN_FILTRE, periode: '2026-08', chantierIds: [3], equipeIds: [12] });
-            expect(composant['chantierOuvert']()).toBe('Chantier sélectionné');
-            expect(composant['equipeOuverte']()).toBe('Équipe sélectionnée');
-        });
-    });
 });

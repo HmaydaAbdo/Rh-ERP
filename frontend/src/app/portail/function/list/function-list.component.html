@@ -1,25 +1,11 @@
-<div class="function-list app-page">
-  <div class="app-table-bar">
-    <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
-        {{ totalRecords() }} fonction{{ totalRecords() > 1 ? 's' : '' }}
-      }
-    </p>
-    <div class="app-table-bar__tools">
-      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-    </div>
-  </div>
-
-  <stp-table
-    label="Liste des fonctions"
-    emptyMessage="Aucune fonction ne correspond à ces critères."
-    [lazy]="true"
+<div class="function-list">
+  <app-collection-table
+    [configuration]="tableConfiguration"
+    [columnState]="columns"
     [value]="functions()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
-    [columns]="columns.visible"
     (lazyLoad)="onLazyLoad($event)"
-    (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-fonction let-col="col">
       @switch (col.field) {
@@ -47,5 +33,5 @@
         ></button>
       }
     </ng-template>
-  </stp-table>
+  </app-collection-table>
 </div>

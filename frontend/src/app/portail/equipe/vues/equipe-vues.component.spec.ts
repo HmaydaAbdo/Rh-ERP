@@ -40,7 +40,8 @@ describe('EquipeVuesComponent', () => {
       '/equipes/cartes?code=CH&libelle=Chauffeurs',
       '/equipes/analytique?code=CH&libelle=Chauffeurs'
     ]);
-    expect(page.querySelector('app-equipe-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('app-equipe-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('affiche la création aux personnes autorisées et applique les filtres à la vue courante', async () => {
@@ -52,6 +53,15 @@ describe('EquipeVuesComponent', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/equipes?code=OP');
+  });
+
+  it('garde le périmètre, le mois et le regroupement des Cartes quand un filtre de la barre change', async () => {
+    const composant = await harness.navigateByUrl('/equipes/cartes?equipeIds=5&periode=2026-08&par=chantier', EquipeVuesComponent);
+
+    composant['appliquer']({ code: 'OP', libelle: '' });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/equipes/cartes?equipeIds=5&periode=2026-08&par=chantier&code=OP');
   });
 
   it('ne montre pas la création sans EQUIPE_WRITE', async () => {

@@ -52,6 +52,16 @@ describe('ChantierFormComponent', () => {
       expect(racine().querySelector('#actif')).toBeNull();
     });
 
+    it('présente les règles de chaque champ avant la saisie', async () => {
+      await afficher();
+
+      expect(racine().querySelector('#code')?.getAttribute('aria-describedby')).toBe('code-aide');
+      expect(racine().querySelector('#code-aide')?.textContent).toContain('Obligatoire · 100 caractères maximum');
+      expect(racine().querySelector('#code-aide')?.textContent).toContain('doit être unique');
+      expect(racine().querySelector('#designation-aide')?.textContent).toContain('Obligatoire · 500 caractères maximum');
+      expect(racine().querySelector('#nom-aide')?.textContent).toContain('Facultatif · 255 caractères maximum');
+    });
+
     it('refuse un formulaire vide : code et désignation signalés, focus sur le code', async () => {
       await afficher();
 

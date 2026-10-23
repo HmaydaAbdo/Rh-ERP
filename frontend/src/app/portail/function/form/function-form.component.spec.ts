@@ -50,6 +50,14 @@ describe('FunctionFormComponent', () => {
       expect(service.getById).not.toHaveBeenCalled();
     });
 
+    it('présente les règles du libellé avant la saisie', async () => {
+      await afficher();
+
+      expect(champ().getAttribute('aria-describedby')).toBe('libelle-aide');
+      expect(racine().querySelector('#libelle-aide')?.textContent).toContain('Obligatoire · 100 caractères maximum');
+      expect(racine().querySelector('#libelle-aide')?.textContent).toContain('doit être unique');
+    });
+
     it('refuse un libellé vide : aucun appel, message annoncé, focus sur le champ', async () => {
       await afficher();
 

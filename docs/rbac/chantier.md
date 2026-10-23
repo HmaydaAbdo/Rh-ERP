@@ -19,12 +19,14 @@
 | Élément | Condition |
 |---|---|
 | Lien sidebar « Chantiers » | `CHANTIER_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
-| Routes `/chantiers` et `/chantiers/:id` | `authGuard` + `permissionGuard` (`CHANTIER_READ`) |
+| Routes `/chantiers`, `/chantiers/cartes`, `/chantiers/analytique` et `/chantiers/:id` | `authGuard` + `permissionGuard` (`CHANTIER_READ`) |
 | Routes `/chantiers/new` et `/chantiers/:id/edit` | `authGuard` + `permissionGuard` (`CHANTIER_WRITE`) |
-| Boutons « Nouveau chantier » et « Modifier » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` |
+| Bouton « Nouveau chantier » (en-tête commun aux trois vues) et « Modifier » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` |
 | Boutons « Clôturer » / « Rouvrir » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` ; mise à jour par `PUT /chantiers/{id}` |
-| Bouton « Synchroniser maintenant » | `CHANTIER_SYNC` — `ChantierListComponent.canSync()` |
+| Bouton « Synchroniser maintenant » (en-tête commun aux trois vues) | `CHANTIER_SYNC` — `ChantierActionsComponent.canSync()` |
 | Bouton « Supprimer » (liste) | `CHANTIER_DELETE` — `canDelete()` |
+| Effectifs des fiches Employé dans Cartes et Analytique | Appel au service Employé uniquement avec `EMPLOYEE_READ` |
+| Indicateurs et montants Paie dans Cartes et Analytique | Appel au service Paie uniquement avec `PAIE_READ` |
 
 ## Note — synchronisation automatique
 
