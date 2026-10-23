@@ -47,6 +47,7 @@ describe('PaieListComponent — filtres de la barre commune', () => {
             'Nom & prénom', 'Fonction', 'CIN', 'Jours trav.', 'J.R.O', 'J.R.D', 'Salaire', 'Prime RO',
             'Prime RD', 'Total', 'Obs', 'Chantier', 'Désign. chantier', 'Équipe', 'Libellé équipe', 'Période'
         ]);
+        expect(harness.routeNativeElement?.querySelector('app-collection-table stp-table')).not.toBeNull();
 
         expect(service.search).toHaveBeenCalledTimes(1);
         expect(vi.mocked(service.search).mock.lastCall![0]).toEqual({

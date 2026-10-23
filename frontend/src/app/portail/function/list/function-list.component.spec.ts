@@ -55,6 +55,7 @@ describe('FunctionListComponent', () => {
 
       expect(lignes()).toEqual(['MACON', 'PLOMBIER']);
       expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 fonctions');
+      expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
     });
 
     it('accorde le singulier à une seule fonction', async () => {

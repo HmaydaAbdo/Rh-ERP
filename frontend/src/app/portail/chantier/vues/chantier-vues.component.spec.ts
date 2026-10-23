@@ -44,7 +44,8 @@ describe('ChantierVuesComponent', () => {
       '/chantiers/cartes?code=C1&designation=route&actif=false',
       '/chantiers/analytique?code=C1&designation=route&actif=false'
     ]);
-    expect(page.querySelector('app-chantier-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('app-chantier-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('affiche les actions aux personnes autorisées et applique les filtres à la vue courante', async () => {

@@ -1,26 +1,12 @@
 <div class="employee-list">
-  <div class="app-table-bar">
-    <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
-        {{ totalRecords() }} employé{{ totalRecords() > 1 ? 's' : '' }}
-      }
-    </p>
-    <div class="app-table-bar__tools">
-      <app-column-chooser class="en-ligne" [state]="columns"></app-column-chooser>
-    </div>
-  </div>
-
-  <stp-table
-    label="Liste : Employés"
-    emptyMessage="Aucun employé ne correspond à ces critères."
-    [lazy]="true"
+  <app-collection-table
+    [configuration]="tableConfiguration"
+    [columnState]="columns"
     [value]="employees()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
-    [columns]="columns.visible"
     [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
-    (columnsReorder)="columns.onReorder($event)"
   >
     <ng-template stpCell let-employee let-col="col">
       @switch (col.field) {
@@ -64,5 +50,5 @@
         <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" [loading]="deletingId() === employee.id" [attr.aria-label]="'Supprimer l’employé ' + employee.nomPrenom" (click)="onDelete(employee)"></button>
       }
     </ng-template>
-  </stp-table>
+  </app-collection-table>
 </div>

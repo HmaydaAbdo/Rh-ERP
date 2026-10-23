@@ -40,7 +40,8 @@ describe('EquipeVuesComponent', () => {
       '/equipes/cartes?code=CH&libelle=Chauffeurs',
       '/equipes/analytique?code=CH&libelle=Chauffeurs'
     ]);
-    expect(page.querySelector('app-equipe-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('app-equipe-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('affiche la création aux personnes autorisées et applique les filtres à la vue courante', async () => {

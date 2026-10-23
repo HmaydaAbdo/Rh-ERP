@@ -4,25 +4,32 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { ChantierFiltres, lireFiltresChantier, memesFiltresChantier, versCriteresChantier } from '../filtres/chantier-filtres';
 import { Chantier } from '../models/chantier.model';
 import { confirmationStatutChantier, libelleStatutChantier } from '../models/chantier-statut';
 import { ChantierService } from '../services/chantier.service';
 
+const CONFIGURATION_TABLE_CHANTIER: CollectionTableConfig = {
+  countLabel: (total) => `${total} chantier${total > 1 ? 's' : ''}`,
+  accessibleLabel: 'Liste : Chantiers',
+  emptyMessage: 'Aucun chantier ne correspond à ces critères.'
+};
+
 /** Vue tabulaire des chantiers. Les filtres viennent de l'URL (voir `ChantierVuesComponent`) ; la synchronisation et la création sont dans l'en-tête de la page. */
 @Component({
   selector: 'app-chantier-list',
-  imports: [ColumnChooserComponent, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [CollectionTableComponent, ButtonComponent, BadgeComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './chantier-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChantierListComponent {
+  protected readonly tableConfiguration = CONFIGURATION_TABLE_CHANTIER;
   protected readonly columns = new ColumnState([
     { field: 'code', header: 'Code' },
     { field: 'nom', header: 'Nom' },

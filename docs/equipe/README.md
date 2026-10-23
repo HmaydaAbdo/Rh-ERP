@@ -115,7 +115,7 @@ Routes sous `/equipes` (lazy loading, `equipe.routes.ts`, protégées par `permi
 | `/equipes/:id/edit` | `EquipeFormComponent` | Modification |
 
 Entrée « Équipes » dans la barre latérale (`core/navigation/nav-items.ts`), visible avec `EQUIPE_READ`. Les trois
-vues utilisent le sélecteur partagé et la composition propre au domaine, selon le
+vues utilisent la coque configurable partagée (`app-collection-shell`) et le tableau commun (`app-collection-table`), avec filtres et configuration propres au domaine, selon le
 [pattern frontend des trois vues](../../conventions/frontend.md). Les filtres code et libellé restent dans l'URL et
 **agissent de la même façon dans les trois vues**. Les boutons de création, modification et suppression sont conditionnés
 par `EQUIPE_WRITE` et `EQUIPE_DELETE` (voir [../rbac/equipe.md](../rbac/equipe.md)).

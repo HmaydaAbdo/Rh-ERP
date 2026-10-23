@@ -1,18 +1,22 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
-import { VueOnglet, VueSwitcherComponent } from '../../../shared/components/vue-switcher/vue-switcher.component';
+import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/components/collection-shell/collection-shell.component';
 import { EmployeeActionsComponent } from '../actions/employee-actions.component';
 import { AUCUN_FILTRE, EmployeeFiltres, lireFiltres, versParametres } from '../filtres/employee-filtres';
 import { EmployeeFiltresComponent } from '../filtres/employee-filtres.component';
 
 /** Les trois vues des employés, dans l'ordre des onglets (voir `employee.routes.ts`). */
-const VUES_EMPLOYES: VueOnglet[] = [
-  { libelle: 'Tabulaire', icone: 'table', lien: '/employees' },
-  { libelle: 'Cartes', icone: 'layout-grid', lien: '/employees/cartes' },
-  { libelle: 'Analytique', icone: 'chart-column', lien: '/employees/analytique' }
-];
+const CONFIGURATION_EMPLOYES: CollectionShellConfig = {
+  titre: 'Employés',
+  libelleVue: 'Vue des employés',
+  vues: [
+    { libelle: 'Tabulaire', icone: 'table', lien: '/employees' },
+    { libelle: 'Cartes', icone: 'layout-grid', lien: '/employees/cartes' },
+    { libelle: 'Analytique', icone: 'chart-column', lien: '/employees/analytique' }
+  ]
+};
 
 /**
  * Coque des trois vues des employés (tabulaire, cartes, analytique) : le titre, les onglets de vue, les actions (Importer,
@@ -22,26 +26,17 @@ const VUES_EMPLOYES: VueOnglet[] = [
  */
 @Component({
   selector: 'app-employee-vues',
-  imports: [RouterOutlet, VueSwitcherComponent, EmployeeActionsComponent, EmployeeFiltresComponent],
+  imports: [CollectionShellComponent, EmployeeActionsComponent, EmployeeFiltresComponent],
   template: `
-    <div class="app-vues">
-      <div class="app-vues__header">
-        <h1>Employés</h1>
-        <app-vue-switcher label="Vue des employés" [vues]="vues"></app-vue-switcher>
-        <app-employee-actions class="app-vues__actions" (importe)="rafraichirVue()"></app-employee-actions>
-      </div>
-
-      <app-employee-filtres [value]="filtres()" (valueChange)="appliquer($event)"></app-employee-filtres>
-
-      @if (vueAffichee()) {
-        <router-outlet></router-outlet>
-      }
-    </div>
+    <app-collection-shell [configuration]="configuration" [contentVisible]="vueAffichee()">
+      <app-employee-actions collection-actions (importe)="rafraichirVue()"></app-employee-actions>
+      <app-employee-filtres collection-filters [value]="filtres()" (valueChange)="appliquer($event)"></app-employee-filtres>
+    </app-collection-shell>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeVuesComponent {
-  protected readonly vues = VUES_EMPLOYES;
+  protected readonly configuration = CONFIGURATION_EMPLOYES;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);

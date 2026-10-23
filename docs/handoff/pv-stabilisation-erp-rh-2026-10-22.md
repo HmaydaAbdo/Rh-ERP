@@ -24,7 +24,7 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 2. **Les règles sont dites clairement.** Chaque règle métier est formulée en langage compréhensible, avec des exemples utiles et le résultat attendu lorsque la règle est respectée ou non.
 3. **Toute règle importante est vérifiée.** Les contrôles doivent couvrir le cas normal, les limites, les erreurs, les droits d’accès et les interactions entre domaines concernées. Les résultats et les éventuels échecs sont présentés sans les masquer.
 4. **Une exception est examinée, pas dissimulée.** Elle indique la règle concernée, la raison, les personnes et données touchées, le risque, la mesure temporaire, la personne responsable et la date de réexamen. Elle ne devient une décision qu’après approbation explicite.
-5. **Les trois vues forment le modèle de consultation de tous les domaines.** Tabulaire pour retrouver et comparer; **Cartes par descente libre** pour parcourir (on choisit soi-même par quoi regrouper — chantier, équipe, fonction, puis les employés — et chaque carte ouverte devient une étape du fil); **Analytique graphique** pour comprendre les volumes et leur évolution (paie et fiches Employé). Les filtres propres au domaine agissent de la même façon dans les trois vues et leurs valeurs suivent quand on passe de l’une à l’autre. Les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) utilisent les mêmes composants, inscrits dans les conventions (décision du propriétaire du 23 octobre 2026, ADR 0011).
+5. **Les trois vues forment le modèle de consultation de tous les domaines.** Tabulaire pour retrouver et comparer; **Cartes par descente libre** pour parcourir (on choisit soi-même par quoi regrouper — chantier, équipe, fonction, puis les employés — et chaque carte ouverte devient une étape du fil); **Analytique graphique** pour comprendre les volumes et leur évolution (paie et fiches Employé). Les filtres propres au domaine agissent de la même façon dans les trois vues et leurs valeurs suivent quand on passe de l’une à l’autre. Les cinq domaines (Paie, Employés, Équipes, Fonctions, Chantiers) utilisent Cartes et Analytique partagées (ADR 0011), ainsi que la coque et la vue Tabulaire configurables `app-collection-shell` et `app-collection-table` (ADR 0012, décision du propriétaire du 23 octobre 2026).
 6. **Les droits restent attachés aux données de leur domaine.** Une vue qui rassemble plusieurs domaines n’élargit pas les accès. Elle présente chaque information seulement aux personnes habilitées pour cette information.
 7. **Une proposition n’est pas un accord.** Les faits vérifiés, décisions déjà approuvées, propositions, points ouverts, réserves et rejets sont identifiés séparément.
 8. **Aucun document de décision n’est diffusé sans validation du propriétaire.** Avant transmission aux intervenants, le propriétaire reçoit la version complète, avec les faits, règles, risques, décisions attendues et preuves disponibles, puis valide explicitement sa diffusion.
@@ -102,9 +102,11 @@ Les libellés `A`, `LABO`, `ASPHALET` et `8` ont été initialisés provisoireme
 
 ## 4. État de réalisation du premier bloc
 
-Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). Les vues Cartes et Analytique y ont ensuite été remplacées par les **composants partagés par les cinq modules** (ADR 0011) : cette évolution est dans la PR #80, **pas encore fusionnée**, et ses contrôles complets sont à confirmer. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
+Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). La PR #80 porte le passage aux vues Cartes/Analytique partagées (ADR 0011) et à la coque/tableau communs (ADR 0012) pour Chantier, Équipe, Fonction, Employé et Paie. Sur le code local de cette mise à jour, `npm run build` passe, les 805 tests frontend passent et les 63 parcours Playwright passent; la CI de la révision poussée reste la preuve distante à enregistrer. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
 
 Les contrôles couvrent les règles de ce PV et leurs résultats doivent être examinés avant la signature. Un contrôle en cours, une vérification locale isolée ou un résultat technique seul ne prouve pas que toutes les règles de ce PV sont respectées.
+
+Après le vert de la CI sur la révision poussée, la revue propriétaire de cette livraison suivra l'ordre : **Équipe → Fonction → Chantier → Employé → Paie**. L'ordre de revue ne vaut pas accord métier ni validation de production.
 
 Les documents de suivi du bloc sont disponibles pour le propriétaire et seront actualisés avant validation de la version destinée aux intervenants :
 
@@ -117,7 +119,7 @@ Chaque règle présentée aux intervenants doit avoir une preuve compréhensible
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Vert en CI pour la version fusionnée (PR #77); version partagée (PR #80) à confirmer en CI, puis revue des intervenants |
+| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Tests frontend (805) et E2E (63) verts localement pour le code de cette mise à jour; CI PR #80 à confirmer, puis revue des intervenants |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement d’équipe entre deux mois, vérifié sur les deux affichages | À confirmer |
 | Indicateurs Paie et période affichée | Valeurs comparées à des exemples Paie vérifiés, y compris une équipe sans bulletin sur le mois | À confirmer |
 | Accès par domaine | Essai avec un compte autorisé et un compte non autorisé pour Employé et Paie | À confirmer |

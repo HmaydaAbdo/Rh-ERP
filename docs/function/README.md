@@ -156,7 +156,7 @@ Routes sous `/functions` (lazy loading, `function.routes.ts`) :
 | `/functions/:id` | `FunctionDetailComponent` | Consultation |
 | `/functions/:id/edit` | `FunctionFormComponent` | Modification |
 
-Les trois vues (Tabulaire, Cartes, Analytique) suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
+Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` et `app-collection-table` pour leur structure commune, puis suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
 [Équipe](../equipe/README.md). Le filtre libellé reste dans l'URL et **agit de la même façon dans les trois vues** : même
 recherche serveur (libellé contenant le texte, sans tenir compte de la casse). L'import Excel et la création vivent dans
 l'en-tête commun (`FunctionActionsComponent`) : un import réussi recrée la vue affichée pour qu'elle recharge ses données.

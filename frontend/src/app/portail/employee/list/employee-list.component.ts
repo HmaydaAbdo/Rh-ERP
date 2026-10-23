@@ -5,21 +5,27 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
-import { TableCellDirective, TableComponent, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { EmployeeFiltres, lireFiltres, memesFiltres, versCriteres } from '../filtres/employee-filtres';
 import { Employee } from '../models/employee.model';
 import { libelleStatutEmploye } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
 
+const CONFIGURATION_TABLE_EMPLOYE: CollectionTableConfig = {
+  countLabel: (total) => `${total} employé${total > 1 ? 's' : ''}`,
+  accessibleLabel: 'Liste : Employés',
+  emptyMessage: 'Aucun employé ne correspond à ces critères.'
+};
+
 /** Vue Tabulaire des employés : le tableau standard, filtré par la barre commune de la coque (voir `EmployeeVuesComponent`). */
 @Component({
   selector: 'app-employee-list',
-  imports: [ColumnChooserComponent, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
+  imports: [CollectionTableComponent, ButtonComponent, BadgeComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
   templateUrl: './employee-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -31,6 +37,7 @@ import { EmployeeService } from '../services/employee.service';
   `
 })
 export class EmployeeListComponent {
+  protected readonly tableConfiguration = CONFIGURATION_TABLE_EMPLOYE;
   protected readonly libelleStatut = libelleStatutEmploye;
   private readonly authService = inject(AuthService);
 

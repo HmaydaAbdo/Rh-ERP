@@ -54,6 +54,7 @@ describe('ChantierListComponent', () => {
     expect(ligne(0).slice(0, 5)).toEqual(['C168', '-', 'Nador', 'ERP', 'En cours']);
     expect(ligne(1).slice(0, 5)).toEqual(['C196', 'Nord', 'Marrakech', 'Manuel', 'Clôturé']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 chantiers');
+    expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
   });
 
   it('colore le statut : succès pour un chantier en cours, neutre pour un chantier clôturé', async () => {

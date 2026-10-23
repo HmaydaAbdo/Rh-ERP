@@ -199,7 +199,7 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
 | `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
 
-Les trois vues (Tabulaire, Cartes, Analytique) suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
+Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` et `app-collection-table` pour leur structure commune, puis suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
 [Équipe](../equipe/README.md) et [Fonction](../function/README.md). Les filtres code, désignation et statut restent dans l'URL et
 **agissent de la même façon dans les trois vues** (même recherche serveur). La synchronisation et la création vivent dans
 l'en-tête commun (`ChantierActionsComponent`) : une synchronisation réussie recrée la vue affichée. La carte géographique

@@ -79,7 +79,7 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 ## Vues Cartes, Tabulaire et Analytique
 
-- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern de composition par domaine défini dans `conventions/frontend.md` (« Pattern des trois vues métier »). Le sélecteur est partagé; coque, routes, filtres et contenus restent propres à chaque domaine.
+- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern défini dans `conventions/frontend.md` (« Pattern des trois vues métier ») et l'ADR 0012. Coque et assemblage Tabulaire configurables sont partagés; routes, filtres, données, colonnes, cellules, actions et règles métier restent propres à chaque domaine.
 - **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
   (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
 - **Fait (2026-10-19) — domaine Employés** : plan validé en 5 lots. Lot 1 fait : sélecteur de vue extrait dans
@@ -94,9 +94,8 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
 - **À faire — ordre de traitement** : les lots Équipes, Fonctions et Chantiers sont implémentés.
-  **Vues partagées (2026-10-23, décision du propriétaire)** : les Cartes (descente libre : on choisit par quoi regrouper, chaque carte
-  ouverte devient une étape du fil) et l'Analytique (graphiques de la paie et des fiches Employé) des cinq modules — Paie, Employés,
-  Équipes, Fonctions, Chantiers — sont les mêmes composants (`portail/perimetre/`, ADR 0011), inscrits dans `conventions/frontend.md`. Les
+  **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
+  Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
   suppression en groupe de la paie reste, sur chaque carte. À confirmer en CI : tests d'intégration backend (requête `sommerParFonction`) et
   parcours `full-stack`. Voir [docs/frontend/vues-perimetre.md](docs/frontend/vues-perimetre.md).
@@ -113,16 +112,14 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   vérifiés séparément. Tests unitaires frontend et E2E mockés verts en local, ajout au parcours `full-stack` (à confirmer en CI).
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
   fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
-  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous une coque commune, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. La compilation frontend passe; les tests navigateur locaux restent à confirmer dans CI, Chromium étant indisponible dans l'environnement local. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
+  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous la coque configurable partagée, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. Build, 805 tests frontend et 63 E2E passent localement; CI de la révision poussée à confirmer. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
   Le PV couvre toute l'application; seuls les blocs Équipe, Fonction et Chantier sont actuellement renseignés. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
   Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 
-Pour chaque domaine restant : concevoir et coder le contenu des vues Cartes et Analytique (avec leurs tests) ; ajouter une
-coque commune sur le modèle de `PaieVuesComponent` (titre, onglets de vue au même niveau que les actions déjà dans l'en-tête,
-filtres) ; déclarer les routes `cartes` et `analytique` dans `<domaine>.routes.ts` avec la permission de lecture ; documenter
-dans `docs/<domaine>/README.md`.
+Tous les cinq domaines sont configurés avec les vues, la coque et le Tabulaire partagés. Prochaine étape : revue propriétaire
+dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après confirmation que la CI complète de la PR #80 est verte.
 
 ---
 

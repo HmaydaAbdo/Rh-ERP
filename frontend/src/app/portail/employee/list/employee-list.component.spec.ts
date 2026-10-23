@@ -54,6 +54,7 @@ describe('EmployeeListComponent', () => {
     expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', 'OP', '02/11/2020', 'En poste']);
     expect(ligne(1)).toEqual(['Zahra Idrissi', 'CD456', 'CHAUFFEUR', 'C168', '-', '14/05/2018', 'Sorti']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 employés');
+    expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
   });
 
   it('montre le salaire et son unité à qui peut lire la paie, et seulement à lui', async () => {

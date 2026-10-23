@@ -1,18 +1,22 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
-import { VueOnglet, VueSwitcherComponent } from '../../../shared/components/vue-switcher/vue-switcher.component';
+import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/components/collection-shell/collection-shell.component';
 import { ChantierActionsComponent } from '../actions/chantier-actions.component';
 import { AUCUN_FILTRE_CHANTIER, ChantierFiltres, lireFiltresChantier, versParametresChantier } from '../filtres/chantier-filtres';
 import { ChantierFiltresComponent } from '../filtres/chantier-filtres.component';
 
 /** Les trois vues des chantiers, dans l'ordre des onglets (voir `chantier.routes.ts`). */
-const VUES_CHANTIER: VueOnglet[] = [
-  { libelle: 'Tabulaire', icone: 'table', lien: '/chantiers' },
-  { libelle: 'Cartes', icone: 'layout-grid', lien: '/chantiers/cartes' },
-  { libelle: 'Analytique', icone: 'chart-column', lien: '/chantiers/analytique' }
-];
+const CONFIGURATION_CHANTIER: CollectionShellConfig = {
+  titre: 'Chantiers',
+  libelleVue: 'Vues des chantiers',
+  vues: [
+    { libelle: 'Tabulaire', icone: 'table', lien: '/chantiers' },
+    { libelle: 'Cartes', icone: 'layout-grid', lien: '/chantiers/cartes' },
+    { libelle: 'Analytique', icone: 'chart-column', lien: '/chantiers/analytique' }
+  ]
+};
 
 /**
  * Coque des trois vues des chantiers (tabulaire, cartes, analytique) : le titre, les onglets de vue, les actions (Synchroniser,
@@ -22,24 +26,17 @@ const VUES_CHANTIER: VueOnglet[] = [
  */
 @Component({
   selector: 'app-chantier-vues',
-  imports: [RouterOutlet, VueSwitcherComponent, ChantierActionsComponent, ChantierFiltresComponent],
+  imports: [CollectionShellComponent, ChantierActionsComponent, ChantierFiltresComponent],
   template: `
-    <div class="app-vues">
-      <div class="app-vues__header">
-        <h1>Chantiers</h1>
-        <app-vue-switcher label="Vues des chantiers" [vues]="vues"></app-vue-switcher>
-        <app-chantier-actions class="app-vues__actions" (synchronise)="rafraichirVue()"></app-chantier-actions>
-      </div>
-      <app-chantier-filtres [value]="filtres()" (valueChange)="appliquer($event)"></app-chantier-filtres>
-      @if (vueAffichee()) {
-        <router-outlet></router-outlet>
-      }
-    </div>
+    <app-collection-shell [configuration]="configuration" [contentVisible]="vueAffichee()">
+      <app-chantier-actions collection-actions (synchronise)="rafraichirVue()"></app-chantier-actions>
+      <app-chantier-filtres collection-filters [value]="filtres()" (valueChange)="appliquer($event)"></app-chantier-filtres>
+    </app-collection-shell>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChantierVuesComponent {
-  protected readonly vues = VUES_CHANTIER;
+  protected readonly configuration = CONFIGURATION_CHANTIER;
   protected readonly filtres = signal<ChantierFiltres>(AUCUN_FILTRE_CHANTIER);
   /** Faux le temps d'un tour d'écran pour recréer la vue affichée (voir `rafraichirVue`). */
   protected readonly vueAffichee = signal(true);

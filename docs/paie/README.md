@@ -309,8 +309,8 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 
-Les trois vues (tabulaire, cartes, analytique) sont les routes filles d'une **coque commune**, `PaieVuesComponent`
-(`vues/`) : le titre, le sélecteur de vue (`VueSwitcherComponent` de `shared/components/`, qui **conserve les filtres** en changeant de vue), les
+Les trois vues (tabulaire, cartes, analytique) sont les routes filles de `PaieVuesComponent`
+(`vues/`), qui configure la coque partagée `app-collection-shell`; la liste utilise aussi `app-collection-table`. Le domaine fournit le titre, le sélecteur de vue (qui **conserve les filtres** en changeant de vue), les
 **actions** (`PaieActionsComponent`, `actions/`) et la **barre de filtres commune**, une seule fois pour les trois. Les écrans de saisie et de consultation d'un bulletin
 (`/paie/new`, `/paie/:id`…) n'en font pas partie.
 

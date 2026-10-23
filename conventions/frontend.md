@@ -301,14 +301,17 @@ Tout domaine métier qui présente une collection consultable propose trois vues
 **Cartes** et **Analytique**. Elles offrent trois façons de lire les données du domaine; elles ne créent pas trois
 sources de vérité ni trois règles métier.
 
-* Chaque domaine garde la responsabilité de sa coque, de ses routes, de ses filtres et de sa vue Tabulaire.
-  Réutiliser le composant partagé de sélection de vue et les primitives Staport; ne pas créer de coque générique ni de
-  classe de base commune. En revanche, le contenu des vues **Cartes** et **Analytique** est partagé par tous les
-  modules : voir « Cartes par niveaux et Analytique graphique » ci-dessous.
+* La coque et l'assemblage Tabulaire utilisent les composants configurables partagés de
+  `shared/components/collection-shell/` et `shared/components/collection-table/` (ADR 0012). Le domaine reste
+  propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
+  une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
+  par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.
+  Le contenu des vues **Cartes** et **Analytique** est partagé par tous les modules : voir « Cartes par niveaux et
+  Analytique graphique » ci-dessous.
 * Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
   `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
   modification restent hors de cette coque.
-* Le sélecteur, le titre et les actions communes gardent la même place dans les trois vues. Les filtres sont propres
+* Le sélecteur, le titre et l'emplacement des actions gardent la même place dans les trois vues. Les filtres sont propres
   au domaine; lorsqu’ils s’appliquent à plusieurs vues, ils sont visibles au même endroit et leurs valeurs sont
   synchronisées avec les paramètres d’URL afin de permettre le lien direct, le rechargement et le retour navigateur.
   Un filtre n’est partagé entre des vues que s’il a le même sens métier dans chacune.
@@ -332,8 +335,9 @@ Les vues **Cartes** et **Analytique** de **tous** les modules — Paie, Employé
 module — sont les composants partagés de `portail/perimetre/` (ADR 0011). Il est interdit d'écrire une Cartes ou une
 Analytique propre à un module : on décrit le module, on ne copie pas la vue.
 
-**Ce qui reste propre au module** : sa coque (titre, sélecteur de vue, actions, barre de filtres), ses routes, sa vue
-Tabulaire, ses filtres. **Ce qui est partagé** : tout le contenu des Cartes et de l'Analytique.
+**Ce qui reste propre au module** : sa configuration de coque et de tableau, ses routes, filtres, colonnes, cellules,
+actions, adaptateurs et règles métier. **Ce qui est partagé** : la structure de coque et de vue Tabulaire, ainsi que
+tout le contenu des Cartes et de l'Analytique.
 
 ### Brancher un module
 

@@ -44,7 +44,8 @@ describe('FunctionVuesComponent', () => {
       '/functions/cartes?libelle=CHEF',
       '/functions/analytique?libelle=CHEF'
     ]);
-    expect(page.querySelector('app-function-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('app-function-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('affiche la création aux personnes autorisées et applique le filtre à la vue courante', async () => {

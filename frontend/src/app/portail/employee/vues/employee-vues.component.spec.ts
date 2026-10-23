@@ -70,8 +70,9 @@ describe('EmployeeVuesComponent', () => {
       '/employees/cartes',
       '/employees/analytique'
     ]);
-    expect(page.querySelector('.app-vues__header app-employee-actions.app-vues__actions')).not.toBeNull();
-    expect(page.querySelector('app-employee-filtres + router-outlet')).not.toBeNull();
+    expect(page.querySelector('.app-vues__header .app-vues__actions app-employee-actions')).not.toBeNull();
+    expect(page.querySelector('app-employee-filtres')).not.toBeNull();
+    expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
   it('recrée la vue affichée après un import', async () => {

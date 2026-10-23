@@ -241,7 +241,7 @@ Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
 | `/employees/:id` | `EmployeeDetailComponent` | **Fiche de l'employé** : initiales, nom, CIN et statut ; situation actuelle (fonction, chantier, équipe, ancienneté depuis l'embauche, âge) ; avec `PAIE_READ`, le salaire (« par mois » ou « par jour ») et le **parcours** (`PaieParcoursComponent`, domaine Paie : chiffres, chronologie des changements, total perçu par mois, bulletins) |
 | `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut, équipe, et salaire avec `PAIE_READ`) |
 
-Les vues des employés sont les routes filles d'une **coque commune**, `EmployeeVuesComponent` (`vues/`) : le titre, les
+Les vues des employés sont les routes filles de `EmployeeVuesComponent` (`vues/`), qui configure la coque partagée `app-collection-shell`; la liste utilise également `app-collection-table`. Le domaine fournit le titre, les
 **actions** (`EmployeeActionsComponent`, `actions/` : « Importer », avec le modèle Excel dans son menu, et « Nouvel employé »,
 chacune avec sa permission) et la **barre de filtres** (`EmployeeFiltresComponent`, `filtres/` : nom, CIN, fonctions, chantiers,
 statut, « Réinitialiser »), une seule fois pour toutes les vues. Les écrans de saisie et de consultation n'en font pas partie.

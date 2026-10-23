@@ -121,6 +121,8 @@ describe('PaieVuesComponent', () => {
 
             const entete = (harness.routeNativeElement as HTMLElement).querySelector('.app-vues__header');
             expect(entete?.querySelector('app-paie-actions'), url).not.toBeNull();
+            expect((harness.routeNativeElement as HTMLElement).querySelector('app-collection-shell router-outlet'), url).not.toBeNull();
+            expect((harness.routeNativeElement as HTMLElement).querySelector('app-collection-shell router-outlet'), url).not.toBeNull();
             expect(entete?.querySelector('app-vue-switcher'), url).not.toBeNull();
         }
     });

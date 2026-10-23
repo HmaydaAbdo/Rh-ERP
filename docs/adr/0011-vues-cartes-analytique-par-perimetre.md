@@ -25,7 +25,7 @@ reportée cinq fois.
 1. **Deux composants partagés** — `CartesPerimetreComponent` et `AnalytiquePerimetreComponent`, dans `portail/perimetre/` —
    portent tout le contenu des vues Cartes et Analytique. Ils ne connaissent aucun module : ils lisent la description
    `ModulePerimetre` qu'on leur donne.
-2. **Chaque module garde sa coque, ses routes, ses filtres et son Tabulaire.** Il ajoute un fichier `<module>-module.ts`
+2. **Décision historique remplacée pour la coque et le Tabulaire par l'ADR 0012.** Chaque module garde ses routes, filtres, données et contrats métier, et configure les composants partagés de coque et de Tabulaire. Il ajoute un fichier `<module>-module.ts`
    (sa dimension et son référentiel éventuels, les critères que ses filtres produisent) et deux composants hôtes minces. Un
    hôte peut projeter un gabarit `#actionsCarte` pour ajouter ses propres boutons à chaque carte (suppression en groupe de la
    paie).

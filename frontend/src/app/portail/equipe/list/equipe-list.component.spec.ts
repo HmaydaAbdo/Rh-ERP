@@ -45,6 +45,7 @@ describe('EquipeListComponent', () => {
       ['OP', 'Opérateurs']
     ]);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 équipes');
+    expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
   });
 
   it('propose modification et suppression à qui a les droits, la seule consultation sinon', async () => {
