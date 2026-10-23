@@ -115,11 +115,10 @@ tag `latest` et au SHA `91033db77469d67e174e3992030e4f77c9f2a2fd`.
 
 ## 6. Sujets ouverts
 
-Le détail transversal est dans `TODO.md`; les tâches propres à un domaine sont dans `docs/<domaine>/TODO.md`. Principaux sujets :
+Le détail transversal est dans `TODO.md`; les tâches propres à un domaine sont dans `docs/<domaine>/TODO.md` lorsqu'un suivi opérationnel est ouvert. Pour Équipe, les décisions et remarques à recueillir sont dans `docs/equipe/validation.md` et aucun TODO de domaine n'est ouvert une fois l'import Excel terminé. Principaux sujets :
 
 - **Assistant d'import** : premier usage réel sur le fichier d'octobre 2026, à suivre.
-- **Stabilisation** : valider le PV de stabilisation avant de le transmettre aux intervenants; suivre les tâches Équipe dans
-  `docs/equipe/TODO.md` et les quasi-doublons de fonctions dans « Qualité des données ».
+- **Stabilisation** : revue Équipe dans le parcours propriétaire, puis consignation des remarques dans la fiche de validation et validation du PV avant diffusion; les quasi-doublons de fonctions restent dans « Qualité des données ».
 - **Qualité des données** (« Prochaine tâche ») : tous les champs obligatoires et aucun doublon, dans tous les domaines.
 - **Conformité backend** (`docs/conformite/README.md`) : G3 (paramètres métier administrables), G5, G6, G10 en attente de
   décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.

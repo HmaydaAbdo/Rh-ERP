@@ -77,6 +77,8 @@ class EndpointSecurityTest {
             Map.entry("EquipeController.lireParId", "EQUIPE_READ"),
             Map.entry("EquipeController.rechercher", "EQUIPE_READ"),
             Map.entry("EquipeController.supprimer", "EQUIPE_DELETE"),
+            Map.entry("EquipeImportController.importer", "EQUIPE_IMPORT"),
+            Map.entry("EquipeImportController.telechargerModele", "EQUIPE_IMPORT"),
             Map.entry("FunctionController.creer", "FUNCTION_WRITE"),
             Map.entry("FunctionController.modifier", "FUNCTION_WRITE"),
             Map.entry("FunctionController.lireParId", "FUNCTION_READ"),

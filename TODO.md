@@ -93,7 +93,7 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont fusionnées dans `main` (PR #80, squash `c0ecbe5`). Les points et validations Équipe sont centralisés dans [docs/equipe/TODO.md](docs/equipe/TODO.md).
+- **En attente — revue propriétaire dans l'ordre Équipe → Fonction → Chantier → Employé → Paie** : les vues partagées sont fusionnées dans `main` (PR #80, squash `c0ecbe5`). Les preuves et décisions Équipe sont centralisées dans [Validation Équipe](docs/equipe/validation.md).
   **Vues partagées (2026-10-23, décision du propriétaire)** : Cartes et Analytique partagées (`portail/perimetre/`, ADR 0011) et coque/Tabulaire configurables partagés (`shared/components/`, ADR 0012) pour les cinq modules — Paie, Employés,
   Équipes, Fonctions, Chantiers — inscrits dans `conventions/frontend.md`. Les
   anciennes Cartes / Analytique propres à chaque module sont supprimées, ainsi que le fil de navigation de la barre de filtres Paie ; la
@@ -123,9 +123,10 @@ dans l'ordre Équipe, Fonction, Chantier, Employé, Paie, après vérification d
 
 ## Prochaine tâche — Qualité des données (une seule tâche, tous les domaines)
 
-**Règles voulues (2026-10-03)** : dans **tous** les domaines, **tous les champs sont obligatoires** et
-**aucun doublon ne peut exister**. À vérifier domaine par domaine (Employé, Chantier, Fonction, Équipe,
-Paie, Utilisateur, Rôle), à quatre niveaux — base (`NOT NULL`, contraintes `UNIQUE`), API (validation des
+**Cible qualité de données (2026-10-03)** : les champs définis comme obligatoires doivent l'être à
+tous les niveaux et **aucun doublon ne peut exister**, sous réserve des décisions métier récentes
+documentées dans les dossiers de domaine. À vérifier domaine par domaine (Employé, Chantier, Fonction,
+Équipe, Paie, Utilisateur, Rôle), à quatre niveaux — base (`NOT NULL`, contraintes `UNIQUE`), API (validation des
 DTO et contrôle d'unicité dans les services, insensible à la casse et aux espaces), interface (champs
 marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou doublon) — puis sur les
 **données existantes** (champs vides, doublons), avec correction par migration Flyway.
@@ -140,8 +141,7 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
   restent à inventorier et nettoyer avant validation complète des contraintes. Le doublon apparent
   `C157A` ci-dessous reste à instruire séparément.
 
-- **Champs aujourd'hui facultatifs** à trancher un par un : pour Paie `equipe` (340 bulletins sans
-  équipe en base; décision Équipe suivie dans [son TODO](docs/equipe/TODO.md)), `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
+- **Autres champs aujourd'hui facultatifs** à trancher un par un : pour Paie `observation`, jours de récupération, primes ; pour Chantier `nom` et `designation` ;
   pour Utilisateur `employeeId`. « Tous obligatoires » est-il voulu pour chacun (ex. une prime à 0 est-elle
   une saisie) ?
 - **Nettoyer les doublons du référentiel Fonction** : 114 fonctions dont 9 paires très proches (fautes de
@@ -154,6 +154,8 @@ marqués obligatoires) et imports Excel (ligne rejetée si champ manquant ou dou
 - **Vérifier le doublon apparent du chantier `C157A`** : il apparaît deux fois dans le filtre Chantiers
   « Tous les mois » avec deux options distinctes. Confirmer s'il s'agit de deux enregistrements en base,
   puis décider avec la RH s'il faut corriger les données ou différencier les libellés.
+- **Confirmer avec la RH la signification et le libellé des équipes `A`, `LABO`, `ASPHALET` et `8`** : créées
+  avec un libellé identique au code; après décision, mettre à jour le référentiel depuis l'écran Équipes.
 - **Traiter les quasi-doublons sémantiques à la saisie** (ex. fonction « TECHNICIEN DE QUALITE » vs
   « THECNICIEN DE QUALITE ») : la normalisation trim/casse de V27 ne détecte pas les fautes de frappe ;
   toute fusion ou règle de similarité doit être instruite avec la RH.

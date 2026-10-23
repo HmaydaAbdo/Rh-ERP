@@ -40,4 +40,18 @@ describe('EquipeService', () => {
     service.delete(2).subscribe();
     requete(http, 'DELETE', 'equipes/2').flush(null);
   });
+
+  it('envoie le fichier au point d’import et télécharge le modèle', () => {
+    const file = new File(['xlsx'], 'equipes.xlsx');
+    service.importer(file).subscribe();
+    const importRequest = requete(http, 'POST', 'equipes/import');
+    expect(importRequest.request.body instanceof FormData).toBe(true);
+    expect((importRequest.request.body as FormData).get('file')).toBe(file);
+    importRequest.flush({ totalLignes: 1, crees: 1, ignores: 0, lignesIgnorees: [] });
+
+    service.telechargerModele().subscribe();
+    const modelRequest = requete(http, 'GET', 'equipes/import/modele');
+    expect(modelRequest.request.responseType).toBe('blob');
+    modelRequest.flush(new Blob(['modele']));
+  });
 });

@@ -34,8 +34,11 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 Le domaine Équipe est le premier domaine soumis à revue. Son rôle, les règles constatées, les vues,
 les liens Employé/Paie, les API, les droits, les vérifications, les décisions attendues et les avis
 sont centralisés dans le [dossier Équipe](../equipe/README.md) et sa [fiche de validation](../equipe/validation.md).
-Les actions non terminées sont suivies dans son [TODO](../equipe/TODO.md). Ces documents constituent
-la source de revue du domaine et doivent évoluer avec le code.
+Ces documents constituent la source de revue du domaine et évoluent avec le code.
+
+Les décisions du propriétaire du 23 octobre 2026 sont consignées dans la fiche de validation : le code renommé suit
+l'équipe référencée jusque dans les bulletins historiques, une équipe référencée par Paie ou Employé ne peut pas être
+supprimée, et le rattachement d'équipe reste facultatif sur les bulletins actuels.
 
 ## 4. État de réalisation du premier bloc
 
@@ -46,6 +49,10 @@ combiné des contrôles attachés au commit de fusion n'est pas disponible dans 
 il doit être vérifié sur le SHA `main` retenu avant la revue propriétaire. La version n'est pas
 présentée comme déployée en production et l'accord métier reste à recueillir selon la fiche de
 validation Équipe.
+
+L'import Excel Équipe et la migration V32 sont présents dans le travail local sur `main` : compilation
+backend, 28 tests backend ciblés, 29 tests frontend Équipe et 3 E2E Équipe réussis. Le changement
+reste à pousser; aucune preuve CI ni de déploiement n'est attribuée à l'import.
 
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
@@ -71,8 +78,8 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 ## 7. Décisions et accords des intervenants
 
 Les décisions de cadrage communes restent dans le présent PV. Les décisions et avis propres au
-bloc Équipe sont centralisés dans [Validation Équipe](../equipe/validation.md); leur collecte est
-suivie dans [TODO Équipe](../equipe/TODO.md). Un cadrage ou une proposition n'est pas une signature.
+bloc Équipe sont centralisés dans [Validation Équipe](../equipe/validation.md). Un cadrage ou une
+proposition n'est pas une signature.
 
 ## 8. Compte rendu de signature
 
@@ -196,5 +203,9 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 ## 11. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
+
+### Évolution proposée — équipe obligatoire sur chaque bulletin
+
+L'équipe reste facultative sur un bulletin dans le fonctionnement actuel. Pour améliorer l'organisation des ressources, il est proposé d'en faire une donnée obligatoire dans une évolution ultérieure. Cette proposition n'est pas une règle appliquée et n'autorise aucune modification de code ou de données à ce stade. Une décision ultérieure devra traiter les bulletins existants sans équipe avant tout changement technique.
 
 À chaque ajout, le propriétaire relira et validera la version complète avant sa transmission aux intervenants. La version finale conservera la trace des accords, réserves, rejets, décisions et exceptions acceptées.

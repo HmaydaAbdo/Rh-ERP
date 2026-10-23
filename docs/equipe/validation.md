@@ -2,8 +2,9 @@
 
 Ce document centralise la partie Équipe du PV de stabilisation. Le PV global fixe le cadre commun
 et renvoie ici pour éviter deux descriptions concurrentes. Les faits de code, règles détaillées,
-API, écrans, droits et tests sont décrits dans le [README Équipe](README.md); les actions ouvertes
-sont suivies dans [TODO Équipe](TODO.md).
+API, écrans, droits et tests sont décrits dans le [README Équipe](README.md). Aucun TODO de
+réalisation n'est ouvert pour le domaine; les remarques de la présentation et les signatures finales
+seront consignées ici.
 
 ## Objet de la revue
 
@@ -24,19 +25,27 @@ examiné avant de signer.
 Cette preuve de CI ne démontre ni l'accord métier ni une mise en production. Le statut de déploiement
 reste non confirmé dans ce dossier.
 
+L'import Excel Équipe et la migration V32 sont présents dans le travail local sur `main`; validation
+locale : compilation backend, 28 tests backend ciblés, 29 tests frontend Équipe et 3 E2E Équipe réussis.
+Ce changement n'est pas encore poussé et ne dispose donc pas de preuve CI ni de déploiement.
+
+Les parcours Équipe ont déjà été joués selon le propriétaire. Une présentation et une vidéo de
+démonstration seront préparées ultérieurement comme support de formation; ce travail n'est pas
+planifié pour le moment.
+
 ## Points soumis à validation
 
 | Sujet | Preuve ou décision attendue | État |
 |---|---|---|
-| Trois vues, filtres et parcours | Parcours Tabulaire, Cartes, Analytique et retour à la même sélection | À examiner avec les intervenants |
+| Trois vues, filtres et parcours | Parcours Tabulaire, Cartes, Analytique et retour à la même sélection | Parcours déjà joués; examen métier du contenu encore à recueillir |
 | Situation Employé et historique Paie | Exemple où l'équipe change entre deux périodes, vérifié sur les deux affichages | À confirmer |
 | Indicateurs Paie et période | Comparaison à des exemples Paie vérifiés, y compris une équipe sans bulletin durant le mois | À confirmer |
 | Accès par domaine | Essai autorisé/interdit pour les informations Employé et Paie | Couvert par tests; validation métier attendue |
 | Code et libellé | Valeurs valides, doublons, champs vides, espaces extérieurs et limites de longueur | Couvert techniquement; messages à examiner |
-| Modification du code et historique | Décision écrite sur le changement visible dans les anciens bulletins | À confirmer |
-| Suppression d'une équipe utilisée | Accord sur le refus de suppression lorsque Paie ou Employé la référence | À confirmer |
+| Modification du code et historique | Le code affiché dans les bulletins historiques suit l'équipe référencée; un renommage s'applique donc aussi aux anciennes périodes | Décision du propriétaire (2026-10-23) |
+| Suppression d'une équipe utilisée | Refus de supprimer une équipe référencée par Paie ou Employé | Décision du propriétaire (2026-10-23) |
 | Codes provisoires | Sens et libellé de `A`, `LABO`, `ASPHALET` et `8` confirmés ou action RH attribuée | À confirmer |
-| Équipe facultative sur bulletin | Décision sur le maintien de `equipe_id` nullable | À confirmer |
+| Équipe facultative sur bulletin | `paie.equipe_id` reste nullable pour le moment | Décision du propriétaire (2026-10-23) |
 
 Une preuve technique indique qu'un contrôle a été exécuté. Elle ne remplace pas l'examen métier du
 résultat. « À confirmer » ne signifie ni échec ni réussite.
@@ -45,6 +54,9 @@ résultat. « À confirmer » ne signifie ni échec ni réussite.
 
 - Examiner ERP-RH domaine par domaine, avec Équipe en premier.
 - Distinguer la situation Employé la plus récente des informations Paie historiques par période.
+- Conserver l'équipe facultative sur les bulletins pour le moment.
+- Le code d'équipe affiché sur un bulletin historique est celui de l'équipe actuellement référencée; modifier le code modifie donc aussi l'affichage historique.
+- Le référentiel refuse la suppression d'une équipe référencée par un bulletin de Paie ou une fiche Employé.
 - Garder distincts les droits Équipe, Employé et Paie; la présence d'une information dans une vue
   Équipe ne confère pas son autorisation.
 - Appliquer aux cinq domaines concernés les vues et composants partagés décrits dans
