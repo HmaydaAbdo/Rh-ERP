@@ -157,6 +157,8 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.angular/playwright-browsers
 
     steps:
       - uses: actions/checkout@v7
@@ -176,21 +178,6 @@ jobs:
       - name: Install Chromium for tests
         working-directory: frontend
         run: npx playwright install --with-deps chromium
-
-      # Sécurité de la chaîne d'approvisionnement : aucune vulnérabilité (niveau moyen et au-dessus), licences
-      # autorisées, et SBOM CycloneDX conservé comme artefact.
-      - name: Audit dependencies and licences
-        working-directory: frontend
-        run: |
-          npm run audit:deps
-          npm run audit:licences
-          npm sbom --omit=dev --sbom-format cyclonedx > sbom-frontend.cdx.json
-
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v7
-        with:
-          name: sbom-frontend
-          path: frontend/sbom-frontend.cdx.json
 
       - name: Run frontend tests
         working-directory: frontend
@@ -218,6 +205,20 @@ jobs:
         working-directory: frontend
         run: npm run e2e
 
+      # L'audit reste bloquant pour livrer, mais les tests, la compilation et les parcours tournent même en cas d'alerte.
+      - name: Audit dependencies and licences
+        working-directory: frontend
+        run: |
+          npm run audit:deps
+          npm run audit:licences
+          npm sbom --omit=dev --sbom-format cyclonedx > sbom-frontend.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-frontend
+          path: frontend/sbom-frontend.cdx.json
+
       # Traces et rapport des parcours en échec, pour comprendre un échec propre au CI sans le rejouer.
       - name: Upload E2E report on failure
         if: failure()
@@ -230,8 +231,10 @@ jobs:
           retention-days: 7
 
   full-stack:
-    needs: [backend, frontend]
+    needs: [backend]
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.angular/playwright-browsers
     services:
       postgres:
         image: pgvector/pgvector:0.8.7-pg18

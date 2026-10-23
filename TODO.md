@@ -79,6 +79,7 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 ## Vues Cartes, Tabulaire et Analytique
 
+- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern de composition par domaine défini dans `conventions/frontend.md` (« Pattern des trois vues métier »). Le sélecteur est partagé; coque, routes, filtres et contenus restent propres à chaque domaine.
 - **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
   (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
 - **Fait (2026-10-19) — domaine Employés** : plan validé en 5 lots. Lot 1 fait : sélecteur de vue extrait dans
@@ -92,7 +93,10 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   liste à tout moment) et Analytique (chiffres, tranches, répartition, mouvements de la paie) — voir docs/employee/README.md.
   Libellés RH (2026-10-19) : employé « En poste » / « Sorti », chantier « En cours » / « Clôturé » (boutons Clôturer / Rouvrir) ;
   V31 supprime les fonctions et clôture les chantiers sans bulletin ; l'assistant d'import propose de rouvrir un chantier clôturé.
-- **À faire — autres domaines** : pour **Chantiers, Fonctions et Équipes**, seule la vue tabulaire existe encore.
+- **À faire — ordre de traitement** : le lot Équipes est implémenté dans la PR de stabilisation; poursuivre ensuite avec **Chantiers** et **Fonctions**.
+  **Équipes (implémenté, 2026-10-22)** : vues Tabulaire, Cartes et Analytique sous une coque commune, filtres conservés dans l'URL; Cartes et Analytique relient le référentiel aux effectifs Employé du dernier état importé et aux indicateurs/historiques Paie. Les droits `EMPLOYEE_READ` et `PAIE_READ` sont vérifiés séparément. La compilation frontend passe; les tests navigateur locaux restent à confirmer dans CI, Chromium étant indisponible dans l'environnement local. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et [README Équipe](docs/equipe/README.md).
+  Le PV couvre toute l'application, mais seul le bloc Équipe est actuellement renseigné. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
+  Les quatre libellés provisoires restent à clarifier avec la RH; ils ne créent pas un statut du cycle de vie et ne sont pas suivis par un nouveau champ.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 

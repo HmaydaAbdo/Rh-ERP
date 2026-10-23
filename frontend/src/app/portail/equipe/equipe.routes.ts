@@ -8,7 +8,12 @@ export const EQUIPE_ROUTES: Routes = [
     path: '',
     canActivate: [permissionGuard],
     data: { permission: 'EQUIPE_READ' },
-    loadComponent: () => import('./list/equipe-list.component').then((m) => m.EquipeListComponent)
+    loadComponent: () => import('./vues/equipe-vues.component').then((m) => m.EquipeVuesComponent),
+    children: [
+      { path: '', loadComponent: () => import('./list/equipe-list.component').then((m) => m.EquipeListComponent) },
+      { path: 'cartes', loadComponent: () => import('./cartes/equipe-cartes.component').then((m) => m.EquipeCartesComponent) },
+      { path: 'analytique', loadComponent: () => import('./analytique/equipe-analytique.component').then((m) => m.EquipeAnalytiqueComponent) }
+    ]
   },
   {
     path: 'new',

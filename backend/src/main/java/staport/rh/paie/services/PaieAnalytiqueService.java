@@ -45,8 +45,9 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
 
         PaieKpiProjection courant = repository.resumerKpi(periode, filtres);
         if (courant.getEffectif() == 0) {
-            return new PaieAnalytiqueDto(periode.toString(), versKpi(courant), null, List.of(), List.of(), List.of(), List.of(), List.of(),
-                    new Qualite(0, 0));
+            // Le mois n'a aucun bulletin, mais l'historique du périmètre reste consultable (ex. équipe active un autre mois).
+            return new PaieAnalytiqueDto(periode.toString(), versKpi(courant), null, List.of(), List.of(), List.of(), List.of(),
+                    evolution(filtres), new Qualite(0, 0));
         }
 
         PaieKpiProjection precedent = repository.resumerKpi(periode.minusMonths(1), filtres);
@@ -65,10 +66,14 @@ public class PaieAnalytiqueService implements IPaieAnalytiqueService {
                         .map(f -> new FonctionMasse(f.getId(), f.getLibelle(), f.getMasse(), f.getEffectif()))
                         .toList(),
                 repartirParTranche(repository.listerTotaux(periode, filtres)),
-                repository.sommerParPeriode(filtres).stream()
-                        .map(e -> new Evolution(e.getPeriode().toString(), e.getMasse(), e.getEffectif(), e.getStc(), e.getStcMontant()))
-                        .toList(),
+                evolution(filtres),
                 new Qualite(courant.getSansEquipe(), courant.getSansObservation()));
+    }
+
+    private List<Evolution> evolution(FiltresPaie filtres) {
+        return repository.sommerParPeriode(filtres).stream()
+                .map(e -> new Evolution(e.getPeriode().toString(), e.getMasse(), e.getEffectif(), e.getStc(), e.getStcMontant()))
+                .toList();
     }
 
     private static Kpi versKpi(PaieKpiProjection projection) {
