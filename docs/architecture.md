@@ -191,6 +191,9 @@ Les jetons par audience, le masquage de champs et l’audit de chaque outil sont
 protections actuelles des contrôleurs REST ne sont pas héritées par un appel direct aux services.
 Le corpus documentaire et les données transactionnelles restent séparés ; le RAG ne recopie pas
 les employés ou la paie. L’emplacement physique et les comptes de ses stockages restent à valider.
+La première preuve [P1.1](ia/validation-p1-1.md) exerce désormais un serveur/client MCP synthétique
+dans un profil de tests opt-in, sur le classpath réel. Elle n'ajoute aucun adaptateur métier au
+runtime et reste en revue propriétaire avant l'étude d'identité.
 
 ### Autres limites
 

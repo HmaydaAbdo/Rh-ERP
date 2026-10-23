@@ -1,7 +1,8 @@
 # Analyse critique de l’intégration IA
 
-Revue du dépôt et de sources officielles au **2026-10-23**. Ce document établit les écarts ; il
-ne rapporte aucune mesure de production ni intégration de bibliothèque déjà réussie.
+Revue du dépôt et de sources officielles au **2026-10-23**. Ce document établit les écarts du
+cadrage initial ; il ne rapporte aucune mesure de production. La première preuve technique
+isolée est désormais dans le [rapport P1.1](validation-p1-1.md), sans valider les autres piliers.
 
 ## Socle réellement présent
 

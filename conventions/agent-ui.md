@@ -12,6 +12,26 @@ TypeScript, avec les capacités métier MCP côté Spring. Le cadrage est dans
 Le premier parcours proposé vise des messages, citations, états et cartes typées rendus avec les
 composants Staport existants. Le séquencement d'A2UI, d'une mascotte Rive ou d'une vue immersive
 reste à valider dans D8 de l'ADR 0013 ; ce cadrage ne constate pas leur abandon ni leur réalisation.
+La trajectoire par domaine est documentée dans
+[`docs/ia/progression-ui.md`](../docs/ia/progression-ui.md).
+
+## Progression des modes et contrôle utilisateur
+
+Une application peut proposer des modes coexistants : interface classique, chat, Controlled
+GenUI avec composants prédéfinis, A2UI déclaratif puis exploration plus libre. AG-UI est un
+contrat d'interaction transversal à ces modes, pas une étape remplacée par A2UI. Leur activation
+est progressive par domaine et par parcours, après preuves d'utilité, autorisation, accessibilité,
+fiabilité, performance et coût ; tous les modes ne sont pas obligatoires pour chaque usage.
+
+La liberté de présentation ne confère aucune autonomie d'action. Chaque mode conserve les
+mêmes contrôles serveur. Les filtres, période et sélection pertinents sont visibles et préservés
+au passage entre modes et au retour aux écrans classiques, sans devenir une source de droits.
+Partager le socle d'interaction et de rendu ; les règles et données restent dans leur domaine.
+
+L'exploration d'une UI ouverte compare d'abord une composition plus riche dans le catalogue.
+La génération/exécution de HTML, CSS ou JavaScript arbitraire n'est pas autorisée par cette
+convention, même dans une iframe. Un besoin de code UI isolé exige un ADR et une évolution
+normative approuvés avant prototype exécutable, avec isolation et échanges de données prouvés.
 
 ## Objectifs et frontières
 

@@ -28,6 +28,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
 | Préparer l’intégration IA, MCP, LangGraph.js et RAG | [Dossier IA](ia/README.md) · [plan détaillé](ia/plan-integration.md) · [ADR 0013 proposé](adr/0013-integration-ia-mcp-langgraph-rag.md) · [handoff IA](handoff/integration-ia.md) |
+| Suivre les cinq modes d’interface et valider la première tâche IA | [Progression par domaine](ia/progression-ui.md) · [preuve P1.1](ia/validation-p1-1.md) |
 | Choisir gRPC, MCP, A2A, AG-UI, UDP ou une autre solution selon le besoin | [Convention d’intégration](../conventions/integrations.md) · [matrice des protocoles et innovations](ia/protocoles-et-innovations.md) |
 | **Reprendre le projet** : état, règles du propriétaire, déploiement en cours, sujets ouverts | [handoff/etat-du-projet.md](handoff/etat-du-projet.md) |
 | **Suivre le cadrage de stabilisation de toute l’application** (Équipe est le premier bloc; les autres domaines seront ajoutés ensuite) | [PV de stabilisation ERP-RH — projet à valider avant diffusion](handoff/pv-stabilisation-erp-rh-2026-10-22.md) |

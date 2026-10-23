@@ -2,8 +2,9 @@
 
 Dernière mise à jour : 2026-10-23 (stabilisation par domaine : Équipe, Fonction, Chantier ; Cartes et Analytique partagées par les cinq modules).
 
-**Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, conventions et
-conception préparées, aucune implémentation ni livraison. Reprendre par le
+**Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, plan renforcé et
+prototype MCP P1.1 testé en profil isolé ; validation propriétaire attendue avant P1.2.
+Aucune route MCP métier ni livraison IA. Reprendre par le
 [handoff IA](integration-ia.md), le [plan détaillé](../ia/plan-integration.md) et
 l’[ADR 0013 proposé](../adr/0013-integration-ia-mcp-langgraph-rag.md). La demande récente de branche
 dédiée s’applique à ce chantier ; ne pas intégrer son contenu à `main` par une ancienne consigne.
