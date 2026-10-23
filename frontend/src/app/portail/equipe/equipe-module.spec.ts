@@ -23,7 +23,7 @@ describe('moduleEquipe', () => {
     let items: unknown;
     module.catalogue!.charger(params({ code: 'CH', libelle: 'chauf' })).subscribe((valeur) => (items = valeur));
 
-    expect(recherche).toHaveBeenCalledWith({ code: 'CH', libelle: 'chauf' }, { page: 0, size: 200, sort: 'code,asc' });
+    expect(recherche).toHaveBeenCalledWith({ code: 'CH', libelle: 'chauf' }, { page: 0, size: 200, sort: 'libelle,asc' });
     expect(items).toEqual([{ id: 5, code: 'CH', libelle: 'Chauffeurs', detail: null, statut: null }]);
   });
 

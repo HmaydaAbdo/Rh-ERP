@@ -6,17 +6,15 @@ import { LazySelectPage, LazySelectSource } from '../components/lazy-select/lazy
 import { Page } from '../models/page.model';
 import { EquipeReference } from './equipe-reference.model';
 
-/** Source de données du sélecteur générique (voir `shared/components/lazy-select`) pour les
- * équipes — recherche sur `recherche` (OU entre code et libellé côté backend, voir
- * `EquipeSpecification` : l'utilisateur tape ce qu'il voit, le libellé affiché ou le code des
- * tableaux). */
+/** Source du sélecteur générique des équipes. La recherche accepte le code ou le libellé,
+ * et les options sont présentées par libellé pour privilégier le nom sémantique. */
 @Injectable({ providedIn: 'root' })
 export class EquipeReferenceService implements LazySelectSource<EquipeReference> {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'equipes';
 
   fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<EquipeReference>> {
-    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'code,asc');
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'libelle,asc');
     const criteria = { recherche: search || undefined };
 
     return this.http

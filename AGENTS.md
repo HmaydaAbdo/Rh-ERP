@@ -57,6 +57,7 @@ d'abord `docs/handoff/etat-du-projet.md`.
 18. conventions/performance.md
 19. conventions/frontend.md
 20. conventions/design-system.md
+21. `conventions/integrations.md` (choix des protocoles et intégrations selon le besoin)
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,

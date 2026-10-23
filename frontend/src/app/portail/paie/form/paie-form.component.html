@@ -54,14 +54,15 @@
     </div>
 
     <div class="field">
-      <label for="equipeId">Équipe</label>
+      <label for="equipeId">Équipe (facultative)</label>
       <app-lazy-select
-        ariaLabel="Équipe" inputId="equipeId"
+        ariaLabel="Équipe (facultative)" inputId="equipeId"
         [formField]="form.equipeId"
         [source]="equipeReferenceService"
         optionLabel="libelle"
         placeholder="Sélectionner une équipe"
       ></app-lazy-select>
+      <small>Le choix met aussi à jour l'équipe sur la fiche de l'employé.</small>
     </div>
 
     <div class="app-form__section"><h2>Jours</h2></div>
@@ -73,12 +74,12 @@
     </div>
 
     <div class="field">
-      <label for="joursRecuperationOuvrable">Jours récup. ouvrable</label>
+      <label for="joursRecuperationOuvrable">Jours récup. ouvrable (facultatifs)</label>
       <stp-number-input inputId="joursRecuperationOuvrable" [formField]="form.joursRecuperationOuvrable" [maxFractionDigits]="2" />
     </div>
 
     <div class="field">
-      <label for="joursRecuperationDimanche">Jours récup. dimanche</label>
+      <label for="joursRecuperationDimanche">Jours récup. dimanche (facultatifs)</label>
       <stp-number-input inputId="joursRecuperationDimanche" [formField]="form.joursRecuperationDimanche" [maxFractionDigits]="2" />
     </div>
 
@@ -91,12 +92,12 @@
     </div>
 
     <div class="field">
-      <label for="primeRoulageOrdinaire">Prime roulage ordinaire</label>
+      <label for="primeRoulageOrdinaire">Prime roulage ordinaire (facultative)</label>
       <stp-number-input inputId="primeRoulageOrdinaire" [formField]="form.primeRoulageOrdinaire" [minFractionDigits]="2" />
     </div>
 
     <div class="field">
-      <label for="primeRoulageDimanche">Prime roulage dimanche</label>
+      <label for="primeRoulageDimanche">Prime roulage dimanche (facultative)</label>
       <stp-number-input inputId="primeRoulageDimanche" [formField]="form.primeRoulageDimanche" [minFractionDigits]="2" />
     </div>
 
@@ -107,7 +108,7 @@
     </div>
 
     <div class="field app-form__wide">
-      <label for="observation">Observation</label>
+      <label for="observation">Observation (facultative)</label>
       <input class="stp-input" autocomplete="off" id="observation" type="text" [formField]="form.observation" />
     </div>
 

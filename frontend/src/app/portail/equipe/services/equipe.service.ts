@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
-import { Equipe, EquipeCreateRequest, EquipeSearchCriteria, EquipeUpdateRequest } from '../models/equipe.model';
+import { Equipe, EquipeCreateRequest, EquipeImportResult, EquipeSearchCriteria, EquipeUpdateRequest } from '../models/equipe.model';
 
 export interface EquipePageRequest {
   page: number;
@@ -39,5 +39,15 @@ export class EquipeService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  importer(file: File): Observable<EquipeImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<EquipeImportResult>(`${this.baseUrl}/import`, formData);
+  }
+
+  telechargerModele(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/import/modele`, { responseType: 'blob' });
   }
 }

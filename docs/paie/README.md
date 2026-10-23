@@ -71,22 +71,25 @@ un bulletin par mois.
 
 Index : `idx_paie_employee`, `idx_paie_periode`, `idx_paie_chantier`, `idx_paie_equipe`.
 
-### Pourquoi fonction/chantier/équipe sont dupliqués depuis Employee ?
+### Pourquoi chaque bulletin garde l'affectation de son mois ?
 
-**Ce n'est pas une duplication accidentelle — c'est un snapshot volontaire.** `Employee.fonction` et
-`Employee.chantier` reflètent la situation *actuelle* de l'employé (ils changent quand l'employé est
-réaffecté). `Paie.fonction`/`Paie.chantier`/`Paie.equipe` figent la situation *du mois du bulletin* (l'équipe est une référence vers le référentiel Équipe, comme fonction et chantier).
-Sans ce choix, faire pointer `Paie` directement sur `Employee` pour lire fonction/chantier
-déformerait l'historique dès qu'un employé change d'affectation : un bulletin d'août afficherait le
-chantier de décembre.
+La fiche Employé porte l'affectation courante, dont l'équipe; chaque bulletin conserve séparément
+l'affectation de son mois. Le champ Équipe du formulaire Paie est la valeur utilisée pour le bulletin
+et met également à jour l'équipe courante sur la fiche Employé, dans la même transaction. Ainsi, les
+deux données restent cohérentes après une création ou une correction manuelle, tandis que les autres
+bulletins mensuels gardent leur affectation enregistrée.
 
-**Conséquence concrète** : `Paie.fonction`/`Paie.chantier` ne se mettent **jamais à jour
-automatiquement** quand l'affectation de l'employé change. Ils sont fixés au moment de la création ou
-de l'import du bulletin (valeur alors saisie/importée, généralement — mais pas nécessairement — celle
-de l'employé à cet instant), et ne bougent plus ensuite sauf modification manuelle explicite du
-bulletin (`PUT /paie/{id}`, `fonction`/`chantier` restent éditables après création pour corriger une
-erreur de saisie). Un employé réaffecté en cours de mois n'entraîne donc aucune mise à jour
-rétroactive ou automatique des bulletins déjà existants.
+`Paie.equipe` référence toutefois le référentiel partagé `Equipe` par son identifiant; le code et le
+libellé affichés dans un bulletin suivent les modifications faites à cette équipe. Cette règle est
+distincte d'un changement d'affectation de l'employé et correspond au comportement confirmé pour les
+bulletins historiques.
+
+**Conséquence concrète** : les affectations mensuelles du bulletin ne sont pas remplacées
+automatiquement lorsqu'un autre bulletin met à jour la fiche Employé. À la création ou à la correction
+manuelle d'un bulletin, l'équipe choisie est enregistrée sur le bulletin et recopiée sur la fiche
+Employé dans la même transaction. L'import mensuel aligne d'abord la fiche sur les données du mois;
+le bulletin reprend alors l'équipe présente sur cette fiche. Les changements ultérieurs de la fiche
+n'altèrent pas les affectations déjà conservées dans les bulletins.
 
 ---
 
@@ -124,7 +127,7 @@ rétroactive ou automatique des bulletins déjà existants.
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
 | `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe | 200 |
 | `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; recherche serveur sur code et désignation | 200, 400 |
-| `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par code des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
+| `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
 | `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Calculés en mémoire sur une projection de cinq colonnes (`listerEffectifs`) : les comparaisons d'un mois au précédent ne s'écrivent pas en JPQL | 200 |
@@ -183,8 +186,9 @@ pas une erreur : elle est créée quand une fiche est mise à jour ou créée av
 Les corrections demandent `PAIE_IMPORT`, `EMPLOYEE_WRITE` et `PAIE_READ` ; sans `EMPLOYEE_WRITE`, l'assistant n'offre que de
 corriger le fichier.
 
-Le bulletin reprend les valeurs du fichier, qui sont alors celles de la fiche ; `salaireTotal` est repris de la colonne J
-**tel quel**, jamais recalculé. L'import ne modifie jamais un bulletin existant : pour réimporter un mois, supprimer
+Le bulletin reprend les valeurs du fichier après alignement avec la fiche Employé; son équipe est l'équipe enregistrée
+sur la fiche au moment de l'import. `salaireTotal` est repris de la colonne J **tel quel**, jamais recalculé. L'import ne
+modifie jamais un bulletin existant : pour réimporter un mois, supprimer
 d'abord ses bulletins (le dernier mois redevient alors celui d'avant, et c'est lui qui est attendu).
 
 ### Modèle téléchargeable
@@ -197,21 +201,27 @@ fichier `.xlsx` vierge avec les trois lignes d'en-tête et les 13 colonnes dans 
 
 Fichier `.xlsx`, **trois lignes d'en-tête** (ignorées quel que soit leur contenu), colonnes dans cet ordre exact :
 
-| Colonne | Contenu |
-|---|---|
-| A | Nom & prénom (comparé à la fiche ; obligatoire pour créer un CIN inconnu) |
-| B | Fonction (libellé) |
-| C | CIN (clé de l'employé) |
-| D | Nombre de jours travaillés |
-| E | Jours récupération ouvrable |
-| F | Jours récupération dimanche |
-| G | Salaire (montant mensuel, ou tarif d'une journée) — jamais 0 |
-| H | Prime roulage ordinaire |
-| I | Prime roulage dimanche |
-| J | Total — repris **tel quel** dans `salaireTotal` (obligatoire, jamais recalculé) |
-| K | Observation (« STC » ou « sortie » : départ proposé) |
-| L | Chantier (code, doit exister et être actif) |
-| M | Équipe (code d'une équipe **existante**, facultative — jamais créée par l'import) |
+| Colonne | Contenu | Statut dans l'import |
+|---|---|---|
+| A | Nom & prénom (comparé à la fiche) | Facultatif pour un employé connu ; requis pour créer un CIN inconnu |
+| B | Fonction (libellé) | Requis |
+| C | CIN (clé de l'employé) | Requis |
+| D | Nombre de jours travaillés | Requis |
+| E | Jours récupération ouvrable | Facultatif |
+| F | Jours récupération dimanche | Facultatif |
+| G | Salaire (montant mensuel, ou tarif d'une journée) — jamais 0 | Requis |
+| H | Prime roulage ordinaire | Facultatif |
+| I | Prime roulage dimanche | Facultatif |
+| J | Total — repris **tel quel** dans `salaireTotal` (jamais recalculé) | Requis |
+| K | Observation (« STC » ou « sortie » : départ proposé) | Facultatif |
+| L | Chantier (code, doit exister et être actif) | Requis |
+| M | Équipe (code d'une équipe **existante**, jamais créée par l'import) | Facultatif |
+
+Le formulaire Paie propose les données du bulletin et les mêmes règles de saisie : employé, période, fonction,
+chantier, jours travaillés, salaire et total sont requis ; récupération, primes, observation et équipe sont
+facultatifs et leur libellé l'indique. Le formulaire sélectionne les références Employé/Fonction/Chantier/Équipe,
+tandis que le fichier utilise les valeurs métier permettant de les retrouver (CIN et codes/libellés). Lorsqu'un
+bulletin manuel change l'équipe, cette même valeur est enregistrée sur la fiche Employé dans la transaction.
 
 Le **mois s'applique à tout le fichier** — c'est un paramètre de la requête (`?periode=aaaa-MM`), pas une colonne.
 
@@ -274,18 +284,21 @@ groupée**) :
 - `GET /paie/chantiers?periode=aaaa-MM` : les chantiers du mois du plus gros (masse) au plus petit, chacun avec
   `id`, `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
   `effectif`, `masse`). Les bulletins sans équipe comptent dans l'effectif du chantier mais n'ont pas d'équipe listée.
-  La sélection manipulée et envoyée au backend reste le **code** de l'équipe (voir section suivante).
+  La sélection utilisateur et les contrats PDF/Excel utilisent le **libellé** de l'équipe. Le code
+  reste disponible pour les imports et les traitements techniques.
 - `GET /paie/materiel` : les tableaux du parc matériel prévus (`chantierCode`, `equipeCode`, `titre`, `libelles`),
   lus dans `MaterielChantierCatalogue` pour que l'assistant sache quels nombres demander sans dupliquer la règle
   (voir `docs/report/README.md`, « Parc matériel »).
 
-### Regroupement par équipe : par code du référentiel Équipe
+### Sélection métier par libellé d'équipe
 
-`Paie.equipe` référence le domaine **Équipe** (`docs/equipe/README.md`). Le regroupement pour les
-sous-feuilles équipe (`PaieExportService.ecrireFeuillesEquipes`) et le rapprochement avec le mois
-précédent se font par **code d'équipe** (`Equipe.code`, normalisé trim + majuscules et unique en
-base) : `"ch"` et `"CH"` ne peuvent plus produire deux équipes distinctes, ce qui supprime l'ancienne
-source d'erreur silencieuse du texte libre.
+`Paie.equipe` référence le domaine **Équipe** ([dossier du domaine](../equipe/README.md)). Les
+choix affichés, les regroupements métier et les sélections envoyées dans les contrats PDF/Excel
+utilisent son libellé. Le code identifie l'équipe pour les imports et les échanges techniques.
+
+Un bulletin garde l'identifiant de l'équipe associée à son mois, même si la fiche Employé change
+d'équipe ensuite. Le code et le libellé ne sont pas copiés dans le bulletin : renommer l'équipe
+référencée change donc aussi son affichage sur les bulletins historiques.
 
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
 contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne
@@ -320,7 +333,7 @@ Les trois vues (tabulaire, cartes, analytique) sont les routes filles de `PaieVu
 **onglets de vue** soulignés (Tabulaire, Cartes, Analytique) posés sur un filet, puis, **à droite, au même niveau**, les trois
 **actions** du moins au plus important : **Exporter**, **Importer** (bouton fractionné dont le menu propose le **modèle Excel**,
 le fichier que l'import attend) et **Nouveau bulletin** (bouton plein) — les mêmes dans les trois vues, chacun avec sa permission
-(`PAIE_EXPORT`, `PAIE_IMPORT`, `PAIE_WRITE`). Dessous, la **barre de filtres** ; dessous, le contenu de la vue. Dans le tabulaire,
+(`PAIE_EXPORT`, `PAIE_IMPORT`, `PAIE_WRITE` et `EMPLOYEE_WRITE` pour la création/modification). Dessous, la **barre de filtres** ; dessous, le contenu de la vue. Dans le tabulaire,
 une **barre du tableau** porte le total (« 972 bulletins ») à gauche et l'outil **Colonnes** à droite. Un import réussi
 **recrée la vue affichée** (`PaieVuesComponent.rafraichirVue`) : elle recharge ses données et les mois de la barre.
 
@@ -463,7 +476,7 @@ Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé �
 (décision du 2026-10-03).
 
 Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Paie », permission `PAIE_READ`). Les boutons
-de création, modification, suppression, import et export sont conditionnés par `PAIE_WRITE`, `PAIE_DELETE` (un bulletin), `PAIE_PURGE` (suppression en groupe),
+de création et modification demandent `PAIE_WRITE` et `EMPLOYEE_WRITE` car le choix d'équipe met aussi à jour la fiche Employé. Suppression, import et export sont conditionnés par `PAIE_DELETE` (un bulletin), `PAIE_PURGE` (suppression en groupe),
 `PAIE_IMPORT` et `PAIE_EXPORT` (voir [../rbac/paie.md](../rbac/paie.md)). Les sélecteurs du formulaire et des
 filtres (employé, fonction, chantier, équipe) interrogent les autres domaines : un rôle qui saisit des bulletins
 doit aussi pouvoir les lire.

@@ -84,7 +84,7 @@ describe('PaieDetailComponent', () => {
   });
 
   it('propose « Modifier » seulement à qui peut écrire', () => {
-    expect(afficher(['PAIE_READ', 'PAIE_WRITE']).page.querySelector('a[href="/paie/8/edit"]')).not.toBeNull();
+    expect(afficher(['PAIE_READ', 'PAIE_WRITE', 'EMPLOYEE_WRITE']).page.querySelector('a[href="/paie/8/edit"]')).not.toBeNull();
     TestBed.resetTestingModule();
     expect(afficher(['PAIE_READ']).page.querySelector('a[href="/paie/8/edit"]')).toBeNull();
   });

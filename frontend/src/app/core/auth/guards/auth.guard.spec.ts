@@ -66,4 +66,11 @@ describe('permissionGuard', () => {
     const resultat = TestBed.runInInjectionContext(() => permissionGuard(routeAvec({ permission: 'PAIE_WRITE' }), null as never));
     expect(url(resultat)).toBe('/acces-refuse');
   });
+
+  it('exige aussi la permission complémentaire lorsqu’une route combine permission et permissions', () => {
+    configurer(['PAIE_WRITE']);
+    const resultat = TestBed.runInInjectionContext(() => permissionGuard(
+      routeAvec({ permission: 'PAIE_WRITE', permissions: ['EMPLOYEE_WRITE'] }), null as never));
+    expect(url(resultat)).toBe('/acces-refuse');
+  });
 });

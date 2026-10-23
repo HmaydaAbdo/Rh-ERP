@@ -9,10 +9,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import staport.rh.common.dtos.ErrorResponseDto;
 import staport.rh.equipe.controller.EquipeController;
+import staport.rh.equipe.imports.EquipeImportController;
+import staport.rh.equipe.imports.EquipeImportException;
 
 import java.time.Instant;
 
-@RestControllerAdvice(assignableTypes = EquipeController.class)
+@RestControllerAdvice(assignableTypes = {EquipeController.class, EquipeImportController.class})
 @Order(0)
 public class EquipeExceptionHandler {
 
@@ -24,6 +26,11 @@ public class EquipeExceptionHandler {
     @ExceptionHandler(EquipeAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleAlreadyExists(EquipeAlreadyExistsException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EquipeImportException.class)
+    public ResponseEntity<ErrorResponseDto> handleImportException(EquipeImportException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

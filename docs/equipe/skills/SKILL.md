@@ -8,24 +8,37 @@ description: Use when changing the ERP-RH Equipe reference domain or its consump
 ## Lire avant d'agir
 
 - [README métier](../README.md)
-- [Permissions et routes](../../rbac/equipe.md)
+- [Permissions](../README.md#permissions)
 - [README Paie](../../paie/README.md) lorsque la consommation par la paie est concernée
 - `conventions/architecture.md` et `conventions/database.md` selon le changement
 
 ## Périmètre
 
-Référentiel partagé des équipes. Les autres domaines passent par `IEquipeService`. Paie conserve
-une référence d'équipe dans son bulletin selon le modèle documenté.
+La fiche Employé porte l'équipe courante, facultative, alignée sur le dernier mois de paie importé.
+Le référentiel partagé fournit les équipes sélectionnables et leur code/libellé. Le libellé est la
+valeur sémantique utilisée dans les choix et regroupements; les codes servent aux imports et échanges.
+Chaque bulletin
+conserve séparément l'équipe de son mois : changer l'affectation de l'employé ne modifie pas les
+bulletins antérieurs. Les bulletins gardent une référence au référentiel; renommer l'équipe change le
+code/libellé affiché dans les bulletins qui la référencent. Dans le formulaire Paie, le choix d'équipe
+met à jour la fiche Employé et le bulletin dans la même transaction; ces opérations demandent
+`PAIE_WRITE` et `EMPLOYEE_WRITE`.
 
 ## Garde-fous
 
-- Respecter la distinction entre code métier et libellé d'affichage décrite dans le README.
-- Ne pas introduire un état actif/inactif ni modifier les règles de suppression sans décision métier.
+- Utiliser le libellé comme clé sémantique pour les sélections et regroupements présentés aux utilisateurs. Le code sert aux échanges et imports; les relations persistées restent fondées sur l'identifiant interne.
+- Le code est normalisé en majuscules et le code comme le libellé sont uniques sans casse ni espaces extérieurs.
+- Ne pas introduire un état actif/inactif ni rendre obligatoire l'équipe sur les bulletins sans nouvelle décision métier.
+- Refuser la suppression si un bulletin Paie ou une fiche Employé référence l'équipe; la contrainte de base est la protection finale.
 - Les formulaires Paie peuvent exiger `EQUIPE_READ` en plus de leur permission Paie ; vérifier la
   matrice RBAC lorsque l'accès frontend ou les appels changent.
-- Mettre à jour les documents RBAC et modèle de données avec tout changement correspondant.
+- Le référentiel s'importe depuis un classeur Excel; l'import est une création atomique et une seule ligne invalide rejette le fichier entier.
+- Mettre à jour la section Autorisations de [../README.md](../README.md) et les documents transverses
+  concernés (catalogue RBAC, modèle de données) avec tout changement correspondant.
 
 ## Vérification
 
-Tester normalisation et unicité du code, unicité du libellé, références Paie et refus d'accès ;
-exécuter les tests d'intégration PostgreSQL si les contraintes ou migrations changent.
+Utiliser la matrice de scénarios et les fichiers de tests du [README Équipe](../README.md#scénarios-de-vérification-associés).
+Elle associe à chaque règle un test ciblé : normalisation/unicité, équipe facultative, indicateurs par
+période, code historique, suppression avec références Paie et Employé, import et droits. Exécuter
+les tests d'intégration PostgreSQL dès qu'une relation, une contrainte ou une migration change.

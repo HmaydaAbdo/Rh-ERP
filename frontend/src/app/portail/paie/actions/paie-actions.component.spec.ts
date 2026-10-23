@@ -53,7 +53,11 @@ describe('PaieActionsComponent', () => {
         expect(boutons()).toEqual(['Exporter']);
 
         fixture.destroy();
-        await creer(['PAIE_EXPORT', 'PAIE_IMPORT', 'PAIE_READ', 'PAIE_WRITE']);
+        await creer(['PAIE_EXPORT', 'PAIE_WRITE']);
+        expect(boutons()).not.toContain('Nouveau bulletin');
+
+        fixture.destroy();
+        await creer(['PAIE_EXPORT', 'PAIE_IMPORT', 'PAIE_READ', 'PAIE_WRITE', 'EMPLOYEE_WRITE']);
         const libelles = boutons();
         expect(libelles).toContain('Exporter');
         expect(libelles).toContain('Importer');

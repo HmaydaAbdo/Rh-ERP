@@ -49,12 +49,12 @@ export function lignesPaie(dimension: Dimension, analyse: PaieAnalytique | null)
   return analyse.parFonction.map((f) => ({ id: f.id, code: null, libelle: f.libelle, effectif: f.effectif, masse: f.masse, stc: f.stc, stcMontant: f.stcMontant }));
 }
 
-/** Le nom affiché d'un groupe : son code, à défaut son libellé ; « Sans équipe » pour l'identifiant 0 d'une équipe. */
+/** Les équipes sont nommées par leur libellé; les autres référentiels gardent le code. */
 export function nomGroupe(dimension: Dimension, groupe: { id: number; code: string | null; libelle: string }): string {
   if (dimension === 'EQUIPE' && groupe.id === 0) {
     return 'Sans équipe';
   }
-  return groupe.code ?? groupe.libelle;
+  return dimension === 'EQUIPE' ? (groupe.libelle || groupe.code || '') : (groupe.code || groupe.libelle);
 }
 
 export interface SourcesGroupes {
@@ -74,7 +74,7 @@ export interface SourcesGroupes {
 /**
  * Fusionne les trois sources en une carte par groupe. Avec un référentiel exhaustif, toute ligne du référentiel est une carte
  * (même sans fiche ni bulletin : les chiffres valent alors zéro, ils ne sont jamais inventés). Sinon, une carte existe pour
- * chaque groupe qui a au moins une fiche ou un bulletin, et le référentiel ne fait que la décorer. Les cartes sont triées par nom.
+ * chaque groupe qui a au moins une fiche ou un bulletin, et le référentiel ne fait que la décorer. Les équipes sont triées par libellé.
  */
 export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes): GroupeCarte[] {
   const parId = new Map<number, GroupeCarte>();

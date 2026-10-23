@@ -51,7 +51,7 @@ describe('EmployeeListComponent', () => {
 
     expect(service.search.mock.lastCall![1]).toEqual({ page: 0, size: 10, sort: 'nomPrenom,asc' });
     const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 7).map((td) => td.textContent?.trim());
-    expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', 'OP', '02/11/2020', 'En poste']);
+    expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', 'Opérateurs', '02/11/2020', 'En poste']);
     expect(ligne(1)).toEqual(['Zahra Idrissi', 'CD456', 'CHAUFFEUR', 'C168', '-', '14/05/2018', 'Sorti']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 employés');
     expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
