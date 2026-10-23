@@ -102,7 +102,7 @@ Les libellés `A`, `LABO`, `ASPHALET` et `8` ont été initialisés provisoireme
 
 ## 4. État de réalisation du premier bloc
 
-Les trois vues Équipe et leur liaison aux données Employé et Paie sont réalisées dans une version de travail. La vérification de la partie visible de l’application a réussi localement. Les contrôles automatisés complets restent à examiner avant de déclarer le bloc terminé. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
+Les trois vues Équipe et leur liaison aux données Employé et Paie sont **fusionnées dans la branche principale** (PR #77, 23 octobre 2026) avec une intégration continue verte (backend, frontend, profil de performance, parcours complet navigateur + base). Les vues Cartes et Analytique y ont ensuite été remplacées par les **composants partagés par les cinq modules** (ADR 0011) : cette évolution est dans la PR #80, **pas encore fusionnée**, et ses contrôles complets sont à confirmer. Cette version n’est pas déclarée en production et n’a pas encore reçu l’accord métier final.
 
 Les contrôles couvrent les règles de ce PV et leurs résultats doivent être examinés avant la signature. Un contrôle en cours, une vérification locale isolée ou un résultat technique seul ne prouve pas que toutes les règles de ce PV sont respectées.
 
@@ -117,11 +117,11 @@ Chaque règle présentée aux intervenants doit avoir une preuve compréhensible
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | À confirmer par la CI et la revue des intervenants |
+| Trois vues et filtres conservés | Parcours des trois vues, avec filtres et retour à la même sélection | Vert en CI pour la version fusionnée (PR #77); version partagée (PR #80) à confirmer en CI, puis revue des intervenants |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement d’équipe entre deux mois, vérifié sur les deux affichages | À confirmer |
 | Indicateurs Paie et période affichée | Valeurs comparées à des exemples Paie vérifiés, y compris une équipe sans bulletin sur le mois | À confirmer |
 | Accès par domaine | Essai avec un compte autorisé et un compte non autorisé pour Employé et Paie | À confirmer |
-| Code et libellé | Cas valides, doublons, champs vides, espaces extérieurs et limites de longueur | Compilation locale vérifiée; tests et messages à confirmer |
+| Code et libellé | Cas valides, doublons, champs vides, espaces extérieurs et limites de longueur | Tests automatisés verts en CI; messages à confirmer avec les intervenants |
 | Modification du code et historique | Décision écrite sur l’effet visible dans les bulletins historiques | Décision des intervenants attendue |
 | Suppression d’une équipe utilisée | Confirmation du refus actuel ou décision signée sur un autre comportement | Décision des intervenants attendue |
 | Quatre libellés provisoires | Signification et libellé confirmés ou action attribuée avec échéance | Réponse RH attendue |
@@ -187,7 +187,7 @@ Un résultat collectif n’est renseigné comme accepté que si les personnes co
 
 ## 9. Deuxième bloc — domaine Fonction
 
-**État du bloc :** version de travail réalisée le 23 octobre 2026, non déclarée en production et sans accord métier. Ce bloc applique au domaine Fonction le cadre des sections 2 et 6 et le modèle de trois vues du bloc Équipe. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** fusionné dans la branche principale le 23 octobre 2026 (PR #79, intégration continue verte), non déclaré en production et sans accord métier; ses vues Cartes et Analytique sont remplacées par les composants partagés dans la PR #80, non encore fusionnée. Ce bloc applique au domaine Fonction le cadre des sections 2 et 6 et le modèle de trois vues du bloc Équipe. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
 
 ### 9.1 Rôle du domaine et liens avec l’application
 
@@ -230,10 +230,10 @@ Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés 
 
 | Sujet à vérifier | Preuve attendue | État avant signature |
 |---|---|---|
-| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Tests unitaires et E2E locaux réussis; parcours intégré à confirmer en CI |
+| Trois vues et filtre conservé | Parcours des trois vues avec le même filtre dans l’adresse | Vert en CI pour la version fusionnée (PR #79); version partagée (PR #80) à confirmer en CI |
 | Situation Employé distincte de l’historique Paie | Exemple avec changement de fonction entre deux mois | À confirmer |
 | Indicateurs Paie et mois sans bulletin | Valeurs comparées à des exemples Paie vérifiés; fonction sans bulletin sur le mois choisi | Cas du mois sans bulletin couvert par test; valeurs à comparer |
-| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests; parcours intégré à confirmer en CI |
+| Accès par domaine | Essai avec un compte autorisé et un compte privé de `EMPLOYEE_READ` et `PAIE_READ` | Couvert par tests, vert en CI pour la version fusionnée (PR #79); version partagée (PR #80) à confirmer en CI |
 | Libellé : validations | Cas valides, doublons, champs vides, espaces extérieurs, limites de longueur | Tests existants; messages à confirmer |
 | Renommage et suppression d’une fonction utilisée | Décision du propriétaire (comportement actuel conservé) et avis écrit des intervenants | Décision du propriétaire prise le 23 octobre 2026; avis des intervenants attendu |
 
@@ -248,7 +248,7 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
 ## 10. Troisième bloc — domaine Chantier
 
-**État du bloc :** version de travail réalisée le 23 octobre 2026, non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
+**État du bloc :** version de travail réalisée le 23 octobre 2026 dans la PR #80 (intégration continue en cours, pas encore fusionnée), non déclarée en production et sans accord métier. Ce bloc applique au domaine Chantier le cadre des sections 2 et 6 et le modèle de trois vues des blocs Équipe et Fonction. Tout ce qui suit est un projet à valider par le propriétaire avant transmission aux intervenants.
 
 ### 10.1 Rôle du domaine et liens avec l’application
 

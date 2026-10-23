@@ -58,6 +58,15 @@ describe('FunctionVuesComponent', () => {
     expect(TestBed.inject(Router).url).toBe('/functions?libelle=OP');
   });
 
+  it('garde le périmètre, le mois et le regroupement des Cartes quand le filtre de la barre change', async () => {
+    const composant = await harness.navigateByUrl('/functions/cartes?fonctionIds=7&periode=2026-08&par=equipe', FunctionVuesComponent);
+
+    composant['appliquer']({ libelle: 'OP' });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/functions/cartes?fonctionIds=7&periode=2026-08&par=equipe&libelle=OP');
+  });
+
   it('ne montre pas la création sans FUNCTION_WRITE', async () => {
     TestBed.resetTestingModule();
     configurer(['FUNCTION_READ']);

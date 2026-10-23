@@ -90,5 +90,5 @@ affiche des indicateurs à zéro. Le module à niveau « mois » (Paie) ouvre le
 
 `perimetre.spec.ts`, `perimetre-groupes.spec.ts`, `cartes-perimetre.component.spec.ts`, `analytique-perimetre.component.spec.ts`,
 `graphiques-perimetre.spec.ts` ; un `<module>-module.spec.ts` par module ; `paie-cartes.component.spec.ts` (niveau « mois »,
-suppression en groupe) ; E2E `chantiers.spec.ts`, `fonctions.spec.ts`, `employes.spec.ts`, `paie.spec.ts` et le parcours
-`full-stack`.
+suppression en groupe) ; chaque coque de module vérifie que sa barre de filtres fusionne ses valeurs avec l'URL ; E2E `chantiers.spec.ts`,
+`equipes.spec.ts`, `fonctions.spec.ts`, `employes.spec.ts`, `paie.spec.ts` et le parcours `full-stack`.

@@ -47,9 +47,9 @@ export class PaieVuesComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltres(params)));
   }
 
-  /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. */
+  /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. Ils sont fusionnés avec l'URL : le regroupement des Cartes (`par`) est conservé. */
   protected appliquer(filtres: PaieFiltres): void {
-    void this.router.navigate([], { replaceUrl: true, queryParams: versParametres(filtres) });
+    void this.router.navigate([], { replaceUrl: true, queryParams: versParametres(filtres), queryParamsHandling: 'merge' });
   }
 
   /** Après un import : la vue affichée est recréée, elle recharge donc ses données (et les mois de la barre, voir

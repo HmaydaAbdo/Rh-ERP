@@ -135,9 +135,9 @@ rétroactive ou automatique des bulletins déjà existants.
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
 | `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export) | 200 |
-| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs du tableau de bord d'un mois sur le périmètre filtré (vue Analytique et graphiques Cartes) | 200, 400 |
+| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs d'un mois sur le périmètre filtré : synthèse, évolution, répartitions par chantier, équipe et fonction (STC compris), tranches (vues Analytique et Cartes de tous les modules) | 200, 400 |
 | `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré, avec masse et STC (Cartes) | 200 |
-| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (Cartes) | 200, 400 |
+| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (assistant d'export) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search` + `sansVueEnsemble` (retire le chapitre « Vue d'ensemble »), voir `docs/report/README.md` | 200, 404 |
@@ -330,9 +330,10 @@ mois (groupe `‹ Août 2026 › ✕` : flèches vers le mois précédent / suiv
 panneau, croix pour revenir à « tous les mois »), la recherche **nom et prénom** et **CIN** (« contient », sans casse), les
 sélecteurs **chantiers, équipes et fonctions** (sélecteur générique multiple, recherche serveur, mode compact : la valeur seule
 quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante. **Sur téléphone**, la barre tient sur deux lignes — le mois (pleine largeur), puis la recherche, « Filtres (n) » et « Effacer » (icône seule) — et le CIN et les trois sélecteurs se déplient sous le bouton « Filtres » (n = nombre de ces filtres actifs) ; les onglets de vue se partagent la largeur et les actions se rangent en grille sous eux (Exporter et Importer côte à côte, Nouveau bulletin pleine largeur).
-En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, un **fil de
-navigation** s'ajoute sous la barre : `Tous les mois › Août 2026 › n° 3`, chaque segment cliquable pour remonter, plus
-« Remonter ».
+En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, le **fil de
+navigation** (`Toute la paie › Mois août 2026 › Chantier C168`, chaque étape se retire seule) est celui des vues partagées, posé
+sous la barre par la vue elle-même (voir « Vue Cartes »). La barre écrit ses valeurs en fusion avec l'URL : le regroupement des
+Cartes (`par`) n'est pas perdu quand on change un filtre.
 
 **Permissions** : sans mois, les sélecteurs chantiers, équipes et fonctions interrogent leurs référentiels ; ils ne sont
 proposés qu'avec `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ`. Avec un mois, les menus chantiers et équipes interrogent
@@ -353,13 +354,13 @@ retour navigateur et bascule entre vues les conservent donc. Une valeur invalide
 `GET /paie/periodes`, rechargé à chaque changement de vue.
 
 **Changer de vue conserve les filtres.** Le sélecteur reporte les paramètres d'URL : le tabulaire et l'Analytique gardent le
-mois, le chantier, l'équipe, la fonction et les filtres employés actifs dans les Cartes. Le retour aux Cartes conserve à son
-tour le niveau correspondant à ces filtres.
+mois, le chantier, l'équipe, la fonction et les filtres employés actifs dans les Cartes. Le retour aux Cartes restitue le
+fil et le regroupement lus dans l'URL.
 
 | Vue | Effet du mois vide | Effet du mois choisi |
 |---|---|---|
 | Tabulaire | tous les mois | seulement ce mois |
-| Cartes | niveau « mois » | vue d'ensemble, puis chantier et équipe selon les filtres choisis (voir ci-dessous) |
+| Cartes | niveau « mois » (une carte par mois) | regroupement libre par chantier, équipe ou fonction, puis employés (voir ci-dessous) |
 | Analytique | le mois le plus récent est ouvert uniquement si aucun mois n'est déjà sélectionné | ce mois |
 
 Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des

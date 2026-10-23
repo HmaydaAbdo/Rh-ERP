@@ -7,20 +7,22 @@
   <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="code">Code <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" [formField]="form.code" />
+      <input class="stp-input" spellcheck="false" autocomplete="off" id="code" type="text" aria-describedby="code-aide" [formField]="form.code" />
+      <small id="code-aide">Obligatoire · 100 caractères maximum · les espaces autour sont retirés. Chaque code doit être unique, sans distinguer majuscules et minuscules. Il sert à reconnaître le chantier dans l’ERP et dans les fichiers de paie.</small>
       <stp-field-error [field]="form.code" />
     </div>
 
     <div class="field">
       <label for="designation">Désignation <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="stp-input" autocomplete="off" id="designation" type="text" [formField]="form.designation" />
+      <input class="stp-input" autocomplete="off" id="designation" type="text" aria-describedby="designation-aide" [formField]="form.designation" />
+      <small id="designation-aide">Obligatoire · 500 caractères maximum.</small>
       <stp-field-error [field]="form.designation" />
     </div>
 
     <div class="field">
       <label for="nom">Nom (optionnel)</label>
-      <input class="stp-input" autocomplete="off" id="nom" type="text" [formField]="form.nom" />
-      <small>Jamais synchronisé depuis l'ERP — affiché entre parenthèses après le code dans le rapport PDF et l'export Excel de la paie.</small>
+      <input class="stp-input" autocomplete="off" id="nom" type="text" aria-describedby="nom-aide" [formField]="form.nom" />
+      <small id="nom-aide">Facultatif · 255 caractères maximum · jamais synchronisé depuis l'ERP — affiché entre parenthèses après le code dans le rapport PDF et l'export Excel de la paie.</small>
       <stp-field-error [field]="form.nom" />
     </div>
 
