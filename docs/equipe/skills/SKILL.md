@@ -14,10 +14,13 @@ description: Use when changing the ERP-RH Equipe reference domain or its consump
 
 ## Périmètre
 
-Référentiel partagé des équipes. Les autres domaines passent par `IEquipeService`. Le domaine
-Équipe fournit le code et le libellé courants; Paie conserve une référence d'équipe facultative dans
-chaque bulletin. Un changement de code se reflète sur les bulletins historiques qui référencent la
-même équipe.
+La fiche Employé porte l'équipe courante, facultative, alignée sur le dernier mois de paie importé.
+Le référentiel partagé fournit les équipes sélectionnables et leur code/libellé. Chaque bulletin
+conserve séparément l'équipe de son mois : changer l'affectation de l'employé ne modifie pas les
+bulletins antérieurs. Les bulletins gardent une référence au référentiel; renommer l'équipe change le
+code/libellé affiché dans les bulletins qui la référencent. Dans le formulaire Paie, le choix d'équipe
+met à jour la fiche Employé et le bulletin dans la même transaction; ces opérations demandent
+`PAIE_WRITE` et `EMPLOYEE_WRITE`.
 
 ## Garde-fous
 

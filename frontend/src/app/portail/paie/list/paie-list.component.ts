@@ -61,7 +61,7 @@ export class PaieListComponent {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE') && this.authService.hasPermission('EMPLOYEE_WRITE'));
 
   protected readonly canDelete = computed(() => this.authService.hasPermission('PAIE_DELETE'));
 

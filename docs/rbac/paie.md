@@ -7,8 +7,8 @@
 
 | Endpoint | Permission (`@PreAuthorize`) |
 |---|---|
-| `POST /paie` | `PAIE_WRITE` |
-| `PUT /paie/{id}` | `PAIE_WRITE` |
+| `POST /paie` | `PAIE_WRITE` **et** `EMPLOYEE_WRITE` (l'équipe choisie met aussi à jour la fiche Employé) |
+| `PUT /paie/{id}` | `PAIE_WRITE` **et** `EMPLOYEE_WRITE` (l'équipe choisie met aussi à jour la fiche Employé) |
 | `GET /paie/{id}` | `PAIE_READ` |
 | `POST /paie/search` | `PAIE_READ` |
 | `POST /paie/options/chantiers` | `PAIE_READ` |
@@ -38,6 +38,8 @@
 > manque n'est pas proposé (`PaieFiltresComponent`) : l'appeler provoquerait un `403`, journalisé comme un faux refus.
 > Quand un mois est choisi, les menus Chantier et Équipe utilisent les endpoints Paie paginés ci-dessus (`PAIE_READ`) pour
 > respecter le périmètre des bulletins de ce mois et les chantiers choisis ; sans mois, ils interrogent les référentiels voisins.
+> La création et la modification manuelles d'un bulletin mettent aussi à jour l'équipe de la fiche Employé; elles exigent donc
+> `PAIE_WRITE` et `EMPLOYEE_WRITE`.
 
 ## Frontend
 
@@ -45,8 +47,8 @@
 |---|---|
 | Lien sidebar « Paie » | `PAIE_READ` (`NAV_ITEMS`, `core/navigation/nav-items.ts`) |
 | Routes `/paie`, `/paie/cartes`, `/paie/analytique` et `/paie/:id` | `authGuard` + `permissionGuard` (`PAIE_READ`) — les trois vues partagent la barre de filtres (sélecteurs visibles selon `CHANTIER_READ`, `FUNCTION_READ`, `EQUIPE_READ`) ; pour un mois choisi, les menus Chantiers/Équipes paginent via `/paie/options/chantiers` et `/paie/options/equipes` (`PAIE_READ`), et leurs options sont cherchées dans le périmètre mois/chantier ; sans mois ils utilisent les référentiels voisins. La vue Cartes appelle également `/paie/periodes/search` et `/paie/chantiers/search`, Analytique `/paie/analytique`, et la barre `/paie/periodes` pour griser les mois sans paie |
-| Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE`) |
-| Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` — `canWrite()` |
+| Routes `/paie/new` et `/paie/:id/edit` | `authGuard` + `permissionGuard` (`PAIE_WRITE` et `EMPLOYEE_WRITE`) |
+| Boutons « Nouveau bulletin » et « Modifier » (liste, détail) | `PAIE_WRITE` et `EMPLOYEE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `PAIE_IMPORT` et `PAIE_READ` — `canImport()` (l'assistant commence par l'analyse) |
 | Assistant d'import : « Rouvrir le chantier » (chantier clôturé cité par le fichier) | `CHANTIER_READ` **et** `CHANTIER_WRITE` — `peutRouvrir()` ; il lit puis met à jour le chantier par `GET` / `PUT /chantiers/{id}` ; sans ces droits, l'assistant invite à corriger le fichier |
 | Assistant d'import : « Mettre à jour la fiche », « Tout mettre à jour », « Créer l'employé » | `EMPLOYEE_WRITE` — `peutCorriger()` ; sans elle, l'assistant invite à corriger le fichier |

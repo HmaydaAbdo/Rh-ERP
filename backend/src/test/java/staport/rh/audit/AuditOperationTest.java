@@ -100,6 +100,21 @@ class AuditOperationTest extends AuditIntegrationTestBase {
     }
 
     @Test
+    void creer_un_bulletin_synchronise_l_equipe_choisie_avec_la_fiche_employe() {
+        Referentiel ref = donnees.creerReferentiel();
+        EquipeResponseDto equipe = equipeService.create(new EquipeCreateRequestDto(
+                "SYNC-" + Long.toHexString(System.nanoTime()), "Équipe synchronisée"));
+
+        PaieResponseDto bulletin = paieService.create(new PaieCreateRequestDto(ref.employeId(), YearMonth.of(2031, 7),
+                ref.fonctionId(), ref.chantierId(), equipe.id(), BigDecimal.valueOf(26), null, null,
+                new BigDecimal("3000"), null, null, new BigDecimal("3000"), null));
+
+        assertThat(jdbc.queryForObject("SELECT equipe_id FROM employe WHERE id = ?", Long.class, ref.employeId()))
+                .isEqualTo(equipe.id());
+        assertThat(paieService.findById(bulletin.id()).equipe().id()).isEqualTo(equipe.id());
+    }
+
+    @Test
     void une_modification_sans_changement_laisse_une_entree_et_une_revision_vide() {
         FunctionResponseDto fonction = functionService.create(new FunctionCreateRequestDto("F-" + Long.toHexString(System.nanoTime())));
         functionService.update(fonction.id(), new FunctionUpdateRequestDto(0L, fonction.libelle()));

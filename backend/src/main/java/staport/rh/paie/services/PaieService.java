@@ -20,6 +20,8 @@ import staport.rh.audit.services.interfaces.IAuditJournalService;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
+import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.equipe.services.interfaces.IEquipeService;
@@ -61,6 +63,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -105,11 +108,15 @@ public class PaieService implements IPaieService {
             throw new PaieAlreadyExistsException(dto.employeeId(), dto.periode());
         }
 
+        EmployeeResponseDto employe = employeeService.findById(dto.employeeId());
+        Equipe equipe = resolveEquipeReference(dto.equipeId());
+        synchroniserEquipeEmploye(employe, dto.equipeId());
+
         Paie entity = mapper.toEntity(dto);
         entity.setEmployee(entityManager.getReference(Employee.class, dto.employeeId()));
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
-        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
+        entity.setEquipe(equipe);
 
         Paie saved;
         try {
@@ -142,13 +149,29 @@ public class PaieService implements IPaieService {
         Paie entity = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), entity.getVersion());
 
+        EmployeeResponseDto employe = employeeService.findById(entity.getEmployee().getId());
+        Equipe equipe = resolveEquipeReference(dto.equipeId());
+        synchroniserEquipeEmploye(employe, dto.equipeId());
+
         mapper.updateEntityFromDto(dto, entity);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
         entity.setChantier(resolveChantierReference(dto.chantierId()));
-        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
+        entity.setEquipe(equipe);
 
         Paie updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
+    }
+
+    /** L'équipe saisie sur le bulletin devient aussi l'affectation courante de l'employé. */
+    private void synchroniserEquipeEmploye(EmployeeResponseDto employe, Long equipeId) {
+        Long equipeActuelle = employe.equipe() == null ? null : employe.equipe().id();
+        if (Objects.equals(equipeActuelle, equipeId)) {
+            return;
+        }
+        employeeService.update(employe.id(), new EmployeeUpdateRequestDto(
+                employe.version(), employe.nomPrenom(), employe.cin(), employe.dateNaissance(), employe.dateEmbauche(),
+                employe.fonction().id(), employe.chantier().id(), equipeId,
+                employe.salaire(), employe.typeSalaire(), employe.statut()));
     }
 
     @Override

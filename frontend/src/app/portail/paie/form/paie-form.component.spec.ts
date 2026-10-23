@@ -100,6 +100,24 @@ describe('PaieFormComponent', () => {
       expect(racine().querySelector('stp-message')).toBeNull();
     });
 
+    it('affiche le statut facultatif des champs également facultatifs dans l’import mensuel', async () => {
+      await afficher();
+
+      const statutDesChamps = [
+        ['equipeId', 'Équipe (facultative)'],
+        ['joursRecuperationOuvrable', 'Jours récup. ouvrable (facultatifs)'],
+        ['joursRecuperationDimanche', 'Jours récup. dimanche (facultatifs)'],
+        ['primeRoulageOrdinaire', 'Prime roulage ordinaire (facultative)'],
+        ['primeRoulageDimanche', 'Prime roulage dimanche (facultative)'],
+        ['observation', 'Observation (facultative)']
+      ];
+
+      for (const [id, libelle] of statutDesChamps) {
+        expect(racine().querySelector(`label[for="${id}"]`)?.textContent).toContain(libelle);
+      }
+      expect(racine().querySelectorAll('.field__req')).toHaveLength(7);
+    });
+
     it('refuse un formulaire vide : chaque champ obligatoire est signalé, le focus va à l’employé', async () => {
       await afficher();
 
@@ -172,7 +190,7 @@ describe('PaieFormComponent', () => {
       expect(formulaire()().dirty()).toBe(false);
     });
 
-    it('envoie les champs facultatifs renseignés', async () => {
+    it('envoie les champs facultatifs renseignés et l’équipe choisie', async () => {
       await afficher();
       await remplirObligatoires();
       formulaire().equipeId().value.set(3);
@@ -185,6 +203,7 @@ describe('PaieFormComponent', () => {
       expect(service.create).toHaveBeenCalledWith(
         expect.objectContaining({ equipeId: 3, joursRecuperationOuvrable: 1.5, primeRoulageDimanche: 80, observation: 'Heures de nuit' })
       );
+      expect(racine().textContent).toContain("met aussi à jour l'équipe sur la fiche de l'employé");
     });
 
     it('reste sur le formulaire quand le serveur refuse (bulletin déjà existant pour cet employé et ce mois)', async () => {

@@ -19,7 +19,7 @@ import { PaieService } from '../services/paie.service';
 export class PaieDetailComponent {
   private readonly authService = inject(AuthService);
 
-  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE'));
+  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE') && this.authService.hasPermission('EMPLOYEE_WRITE'));
 
   protected readonly canViewHistory = computed(() => this.authService.hasPermission('AUDIT_READ'));
 

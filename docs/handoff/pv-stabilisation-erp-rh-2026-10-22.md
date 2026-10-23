@@ -38,6 +38,12 @@ qui évolue avec le comportement de l'application.
 Décisions du propriétaire du 23 octobre 2026, confirmées par les scénarios locaux décrits dans le README :
 le code renommé s'affiche sur les bulletins historiques qui référencent l'équipe; la suppression d'une
 équipe utilisée par Paie ou Employé est refusée; le rattachement d'équipe reste facultatif sur les bulletins.
+La fiche Employé porte l'affectation courante de l'employé, dont son équipe; chaque bulletin conserve
+séparément l'équipe associée à son mois. Un changement d'affectation sur la fiche n'altère pas les
+bulletins antérieurs. Dans le formulaire Paie, l'équipe choisie pour un bulletin est aussi enregistrée
+sur la fiche Employé dans la même transaction; les créations/modifications manuelles exigent donc les
+droits Paie et Employé correspondants. Les règles détaillées et leurs tests restent dans les README
+Employé, Équipe et Paie.
 
 ## 4. État de réalisation du premier bloc
 

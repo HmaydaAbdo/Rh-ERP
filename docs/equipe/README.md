@@ -1,9 +1,9 @@
 # Module Équipe
 
-> Référentiel des équipes de travail (CHAUFFEURS, OPERATEURS, ATELIER...), partagé par tous les
-> chantiers. Remplace l'ancienne table de libellés codée en dur (`EquipeLibelleCatalogue`) et le
-> texte libre qui était saisi sur chaque bulletin de paie. Consommé par le domaine Paie (équipe d'un
-> bulletin, regroupement des exports Excel/PDF).
+> Référentiel partagé des équipes de travail (CHAUFFEURS, OPERATEURS, ATELIER...). Une équipe est
+> une affectation possible de l'employé : la fiche Employé conserve son équipe courante, tandis que
+> chaque bulletin conserve l'équipe associée à son mois. Le référentiel fournit le code et le libellé
+> affichés et sert aux sélections, regroupements et exports.
 
 ---
 
@@ -53,10 +53,13 @@ sur les nouvelles écritures. La version optimiste est ajoutée en V18. L'audit 
 `equipe_aud` (V11) et l'état initial est capturé en V14. Les scripts V7/V8/V9, V11, V14, V18, V25,
 V27 et V29/V30 forment l'historique du schéma et des reprises liées au domaine.
 
-La paie stocke une FK nullable `paie.equipe_id` avec l'index `idx_paie_equipe` (V8). La fiche
-Employé stocke l'équipe de son dernier état importé dans `employe.equipe_id` (nullable, index
-`idx_employe_equipe`, V29/V30). Les contrats consommateurs sont détaillés plus bas et dans les
-README Paie/Employé.
+La fiche Employé porte l'équipe courante dans `employe.equipe_id` (nullable, index
+`idx_employe_equipe`, V29/V30), au même titre que les autres éléments de son état courant. Chaque
+bulletin porte séparément `paie.equipe_id` (nullable, index `idx_paie_equipe`, V8) : changer
+l'affectation de l'employé ne réécrit donc pas ses bulletins antérieurs. Les deux colonnes référencent
+le même référentiel d'équipes; le code et le libellé affichés dans un bulletin suivent donc les
+modifications ultérieures de l'équipe référencée. Les contrats consommateurs sont détaillés dans les
+README Employé et Paie.
 
 ### Données de départ (seed V7)
 
@@ -220,7 +223,7 @@ Les tests spécifiques du domaine couvrent les règles suivantes :
 | Couche | Fichier / parcours | Vérifications présentes |
 |---|---|---|
 | Backend — règles du référentiel | `backend/src/test/java/staport/rh/equipe/services/EquipeServiceTest.java`, `backend/src/test/java/staport/rh/referentiel/ReferentielUniciteInsensibleCasseTest.java` | Normalisation et unicité du code et du libellé, y compris les espaces/casse sur PostgreSQL, modification sans auto-doublon, doublons et équipe absente |
-| Backend — références et historique | `backend/src/test/java/staport/rh/audit/AuditOperationTest.java` | Suppression refusée si un bulletin Paie ou une fiche Employé référence l'équipe; le code modifié est relu sur un bulletin antérieur; l'échec de suppression est conservé et audité |
+| Backend — références et historique | `backend/src/test/java/staport/rh/audit/AuditOperationTest.java`, `backend/src/test/java/staport/rh/paie/services/PaieServiceTest.java` | Suppression refusée si un bulletin Paie ou une fiche Employé référence l'équipe; le code modifié est relu sur un bulletin antérieur; une équipe modifiée dans le formulaire Paie met aussi à jour la fiche Employé; l'échec de suppression est conservé et audité |
 | Backend — bulletin sans équipe | `backend/src/test/java/staport/rh/paie/services/PaieServiceTest.java`, scénario `create_devraitAccepterUnBulletinSansEquipe` | Création acceptée avec `equipeId` nul |
 | Backend — indicateurs et périodes | `backend/src/test/java/staport/rh/paie/services/PaieAnalytiqueServiceTest.java`, `backend/src/test/java/staport/rh/paie/effectifs/PaieEffectifsServiceTest.java`, tests des vues partagées dans `frontend/src/app/portail/perimetre/` | Répartition Paie par équipe, filtres, bulletins sans équipe, effectifs par période et comportement lorsqu'une équipe n'a aucun bulletin dans le mois retenu |
 | Backend — import Excel du référentiel | `backend/src/test/java/staport/rh/equipe/imports/EquipeImportServiceTest.java` | Modèle, en-têtes, lignes vides, champs obligatoires, limites, normalisation, doublons existants et dans le fichier, rejet complet sans écriture partielle |

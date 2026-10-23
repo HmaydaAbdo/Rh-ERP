@@ -61,7 +61,7 @@ public class PaieController {
     @ApiResponse(responseCode = "201", description = "Bulletin créé.")
     @ApiResponse(responseCode = "400", description = "Les montants, la période ou les références ne respectent pas les règles de validation.")
     @ApiResponse(responseCode = "409", description = "Un bulletin existe déjà pour cet employé et cette période.")
-    @PreAuthorize("hasAuthority('PAIE_WRITE')")
+    @PreAuthorize("hasAuthority('PAIE_WRITE') and hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<PaieResponseDto> creer(@Valid @RequestBody PaieCreateRequestDto dto) {
         PaieResponseDto created = paieService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -71,7 +71,7 @@ public class PaieController {
     @Operation(summary = "Modifier un bulletin de paie")
     @ApiResponse(responseCode = "400", description = "Les montants ou les références ne respectent pas les règles de validation.")
     @ApiResponse(responseCode = "404", description = "Le bulletin demandé n'existe pas.")
-    @PreAuthorize("hasAuthority('PAIE_WRITE')")
+    @PreAuthorize("hasAuthority('PAIE_WRITE') and hasAuthority('EMPLOYEE_WRITE')")
     public ResponseEntity<PaieResponseDto> modifier(
             @PathVariable Long id,
             @Valid @RequestBody PaieUpdateRequestDto dto) {

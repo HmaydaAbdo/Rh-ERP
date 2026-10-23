@@ -55,11 +55,11 @@ describe('PaieService', () => {
   });
 
   it('crée un bulletin avec son employé et sa période', () => {
-    service.create({ employeeId: 3, periode: '2026-08', fonctionId: 1, chantierId: 2, equipeId: null, nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null, salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000, observation: null }).subscribe();
+    service.create({ employeeId: 3, periode: '2026-08', fonctionId: 1, chantierId: 2, equipeId: 4, nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null, salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000, observation: null }).subscribe();
 
     const r = requete(http, 'POST', 'paie');
     r.flush({ id: 9 });
-    expect(r.request.body).toMatchObject({ employeeId: 3, periode: '2026-08' });
+    expect(r.request.body).toMatchObject({ employeeId: 3, periode: '2026-08', equipeId: 4 });
   });
 
   it('supprime un groupe de bulletins en envoyant le nombre attendu à confirmer', () => {
