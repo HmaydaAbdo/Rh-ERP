@@ -52,5 +52,10 @@ streamés et natifs au design system, ainsi qu'une mascotte animée corrélée �
 
 ## Suivi
 
+Le [cadrage IA du 2026-10-23](0013-integration-ia-mcp-langgraph-rag.md) propose de valider d’abord
+un pilote AG-UI avec les composants Staport, puis d’ajouter A2UI/Rive selon ses preuves et le
+séquencement approuvé. Il ne constate aucune implémentation et ne remplace pas la cible ci-dessus
+par une nouvelle suite UI. La décision de séquencement D8 reste ouverte.
+
 La convention normative est [`conventions/agent-ui.md`](../../conventions/agent-ui.md). Le premier
 pilote applicatif sera choisi et décrit dans sa documentation de projet avant implémentation.

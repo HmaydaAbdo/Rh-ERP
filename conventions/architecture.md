@@ -35,6 +35,8 @@ L'arborescence exacte suit le framework choisi si les frontières de domaine res
 
 Les exigences opérationnelles sont précisées dans [`agents-ia.md`](agents-ia.md),
 [`mcp.md`](mcp.md), [`rag.md`](rag.md) et [`testing.md`](testing.md).
+Le choix des protocoles et transports suit [`integrations.md`](integrations.md) : proposer des
+solutions nouvelles utiles, comparer leurs compromis et les adopter sur un besoin vérifié.
 
 * Les règles métier et les indicateurs restent la source de vérité dans leurs domaines propriétaires.
   Un modèle, un index de recherche ou un tableau de bord ne les redéfinit pas.

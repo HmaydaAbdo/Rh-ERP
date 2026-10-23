@@ -27,6 +27,8 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
 | Intégrer des interfaces agentiques (AG-UI, A2UI, mascotte) | [conventions/agent-ui.md](../conventions/agent-ui.md) |
+| Préparer l’intégration IA, MCP, LangGraph.js et RAG | [Dossier IA](ia/README.md) · [plan détaillé](ia/plan-integration.md) · [ADR 0013 proposé](adr/0013-integration-ia-mcp-langgraph-rag.md) · [handoff IA](handoff/integration-ia.md) |
+| Choisir gRPC, MCP, A2A, AG-UI, UDP ou une autre solution selon le besoin | [Convention d’intégration](../conventions/integrations.md) · [matrice des protocoles et innovations](ia/protocoles-et-innovations.md) |
 | **Reprendre le projet** : état, règles du propriétaire, déploiement en cours, sujets ouverts | [handoff/etat-du-projet.md](handoff/etat-du-projet.md) |
 | **Suivre le cadrage de stabilisation de toute l’application** (Équipe est le premier bloc; les autres domaines seront ajoutés ensuite) | [PV de stabilisation ERP-RH — projet à valider avant diffusion](handoff/pv-stabilisation-erp-rh-2026-10-22.md) |
 | **Vues de collection partagées** (coque, Tabulaire, Cartes et Analytique; responsabilités des domaines) | [frontend/README.md](frontend/README.md) · [ADR 0012](adr/0012-coque-et-tabulaire-partages.md) · [vues-perimetre.md](frontend/vues-perimetre.md) · [ADR 0011](adr/0011-vues-cartes-analytique-par-perimetre.md) · [conventions/frontend.md](../conventions/frontend.md) |
@@ -44,7 +46,7 @@ Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles
 |---|---|---|---|
 | **Fonction** | Référentiel des fonctions occupées | [README](function/README.md) · [skill IA](function/skills/SKILL.md) | [rbac/function.md](rbac/function.md) |
 | **Chantier** | Référentiel des chantiers, ajout automatique depuis l'ERP | [README](chantier/README.md) · [carte](chantier/carte.md) · [skill IA](chantier/skills/SKILL.md) | [rbac/chantier.md](rbac/chantier.md) |
-| **Équipe** | Référentiel des équipes de travail | [Dossier du domaine](equipe/README.md) · [maquette](equipe/maquette-vues.html) · [skill IA](equipe/skills/SKILL.md) | [Autorisations](equipe/README.md#autorisations-et-dépendances-de-droits) |
+| **Équipe** | Référentiel des équipes de travail | [Dossier du domaine](equipe/README.md) · [skill IA](equipe/skills/SKILL.md) | [Autorisations](equipe/README.md#autorisations-et-dépendances-de-droits) |
 | **Employé** | Fiche d'identité, affectation fonction/chantier | [README](employee/README.md) · [skill IA](employee/skills/SKILL.md) | [rbac/employee.md](rbac/employee.md) |
 | **Paie** | Bulletins mensuels (saisie, import, export) | [README](paie/README.md) · [skill IA](paie/skills/SKILL.md) | [rbac/paie.md](rbac/paie.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
