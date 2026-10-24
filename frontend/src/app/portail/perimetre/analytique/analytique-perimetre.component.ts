@@ -1,15 +1,17 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
-import type { ChartData, ChartOptions } from 'chart.js';
+import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
+import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
@@ -21,7 +23,7 @@ import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.s
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
 import { EmployeeAnalytique, EmployeeRegroupement } from '../../employee/models/employee.model';
 import { EmployeeService } from '../../employee/services/employee.service';
-import { PaieAnalytique, PaieEffectifMois } from '../../paie/models/paie.model';
+import { PaieAnalytique, PaieEffectifMois, PaieSearchCriteria } from '../../paie/models/paie.model';
 import { couleurEvolution, libelleEvolutionMesure, MesureEvolution } from '../../paie/analytique/paie-chart-theme';
 import { formaterMontant, formaterVariation, libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
@@ -32,7 +34,7 @@ import { LIBELLE_EQUIPE_ORPHELINE, lignesPaie, LignePaie, nomGroupe } from '../p
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
 
-type Graphique<T extends 'bar' | 'line'> = { data: ChartData<T>; options: ChartOptions<T> };
+type Graphique<T extends ChartType> = { data: ChartData<T>; options: ChartOptions<T> };
 type MesureRepartition = 'masse' | 'effectif';
 type OptionEquipeEvolution = SelectOption<number>;
 
@@ -65,6 +67,7 @@ interface Tuile {
 
 interface Donnees {
   paie: PaieAnalytique | null;
+  qualitePaie: PaieAnalytique | null;
   fiches: EmployeeAnalytique | null;
   mouvements: PaieEffectifMois[];
   catalogueVide: boolean;
@@ -132,7 +135,7 @@ export class AnalytiquePerimetreComponent {
   );
   protected readonly noms = signal<Record<string, string>>({});
 
-  protected readonly donnees = signal<Donnees>({ paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
+  protected readonly donnees = signal<Donnees>({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
   protected readonly chargement = signal(false);
   protected readonly repartitionFiches = signal<EmployeeRegroupement[]>([]);
 
@@ -200,6 +203,26 @@ export class AnalytiquePerimetreComponent {
     return groupes;
   });
   protected readonly chantiersEquipe = computed(() => this.donnees().chantiersCatalogue);
+  protected readonly qualiteChantierIds = computed(() => this.idsQualite(this.params().get('qualiteChantierIds')));
+  protected readonly qualiteFonctionIds = computed(() => this.idsQualite(this.params().get('qualiteFonctionIds')));
+  protected readonly sourcesQualiteChantiers: LazySelectSource<ChantierReference>[] = [this.chantiers];
+  protected readonly sourcesQualiteFonctions: LazySelectSource<FunctionReference>[] = [this.fonctions];
+  protected readonly qualitePaie = computed(() => this.donnees().qualitePaie);
+  protected readonly bulletinsAvecEquipe = computed(() => Math.max(0, (this.qualitePaie()?.kpis.effectif ?? 0) - (this.qualitePaie()?.qualite.sansEquipe ?? 0)));
+  protected readonly graphiqueQualiteOrphelins = computed<Graphique<'doughnut'>>(() => {
+    this.theme.theme();
+    const analyse = this.qualitePaie();
+    const orphelins = analyse?.qualite.sansEquipe ?? 0;
+    const avecEquipe = Math.max(0, (analyse?.kpis.effectif ?? 0) - orphelins);
+    const repartition = [
+      { libelle: 'Avec équipe', valeur: avecEquipe, couleur: jeton('--color-primary') },
+      { libelle: 'Orphelins', valeur: orphelins, couleur: jeton('--color-danger') }
+    ].filter((part) => part.valeur > 0);
+    return {
+      data: { labels: repartition.map((part) => part.libelle), datasets: [{ data: repartition.map((part) => part.valeur), backgroundColor: repartition.map((part) => part.couleur), borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'bottom' } } }
+    };
+  });
   protected readonly chantierSelectionne = computed<number | null>(() => {
     const id = Number(this.params().get('chantierIds'));
     return Number.isInteger(id) && id > 0 ? id : null;
@@ -242,12 +265,14 @@ export class AnalytiquePerimetreComponent {
   });
   protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
-    const equipes = this.tableauEquipes();
-    return this.mesureRepartitionEquipe().map((mesure) => ({
-      mesure,
-      data: { labels: equipes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: equipes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
-      options: optionsBarres({ indexAxis: 'y', montants: mesure === 'masse' || mesure === 'stcMontant' })
-    }));
+    return this.mesureRepartitionEquipe().map((mesure) => {
+      const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0);
+      return {
+        mesure,
+        data: { labels: groupes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: groupes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
+        options: optionsBarres({ indexAxis: 'y', montants: mesure === 'masse' || mesure === 'stcMontant' })
+      };
+    });
   });
   protected readonly graphiquesEvolutionEquipe = computed<Array<Graphique<'line'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
@@ -439,6 +464,16 @@ export class AnalytiquePerimetreComponent {
       `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.label}` : ''}`);
   }
 
+  protected documentQualiteOrphelins(): PdfImpressionDocument {
+    const analyse = this.qualitePaie();
+    return {
+      titre: 'Qualité des rattachements des bulletins de paie',
+      contexte: `${this.module().libellePluriel} · Paie de ${analyse ? libellePeriode(analyse.periode) : ''}`,
+      colonnes: ['Rattachement', 'Bulletins'],
+      lignes: [['Avec équipe', this.bulletinsAvecEquipe()], ['Sans équipe (orphelins)', analyse?.qualite.sansEquipe ?? 0]]
+    };
+  }
+
   private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {
     const periode = this.periode();
     return { titre, contexte: contexte ?? `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
@@ -530,6 +565,14 @@ export class AnalytiquePerimetreComponent {
     this.naviguer({ chantierIds: typeof value === 'number' ? String(value) : null });
   }
 
+  protected choisirFiltresQualiteChantier(value: unknown): void {
+    this.naviguer({ qualiteChantierIds: this.versIdsQualite(value) });
+  }
+
+  protected choisirFiltresQualiteFonction(value: unknown): void {
+    this.naviguer({ qualiteFonctionIds: this.versIdsQualite(value) });
+  }
+
   protected nom(dimension: Dimension, id: number): string {
     return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? LIBELLE_EQUIPE_ORPHELINE : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
   }
@@ -543,7 +586,7 @@ export class AnalytiquePerimetreComponent {
   }
 
   protected toutRetirer(): void {
-    this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null });
+    this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null, qualiteChantierIds: null, qualiteFonctionIds: null });
   }
 
   /** Un clic sur une barre de la répartition de la paie approfondit le périmètre : le groupe devient une étape. */
@@ -575,6 +618,33 @@ export class AnalytiquePerimetreComponent {
     void this.router.navigate([], { relativeTo: this.route, queryParams: parametres, queryParamsHandling: 'merge', replaceUrl: remplacer });
   }
 
+  private idsQualite(value: string | null): number[] {
+    return (value ?? '').split(',').map(Number).filter((id) => Number.isInteger(id) && id > 0);
+  }
+
+  private versIdsQualite(value: unknown): string | null {
+    if (!Array.isArray(value)) return null;
+    const ids = value.map(Number).filter((id) => Number.isInteger(id) && id > 0);
+    return ids.length ? ids.join(',') : null;
+  }
+
+  private analyserQualitePaie(params: ParamMap, portee: Portee, periode: string): Observable<PaieAnalytique | null> {
+    if (!this.module().afficherQualiteOrphelins) return of(null);
+    const criteres = this.module().criterePaie(params, portee, periode);
+    const chantiers = this.qualiteChantierIds();
+    const fonctions = this.qualiteFonctionIds();
+    const chantierIds = this.intersectionQualite(criteres.chantierIds, chantiers);
+    const fonctionIds = this.intersectionQualite(criteres.fonctionIds, fonctions);
+    if ((chantiers.length > 0 && chantierIds?.length === 0) || (fonctions.length > 0 && fonctionIds?.length === 0)) return of(null);
+    const filtre: PaieSearchCriteria = { ...criteres, chantierIds, fonctionIds };
+    return this.paieService.analyser(filtre).pipe(catchError(() => of(null)));
+  }
+
+  private intersectionQualite(base: number[] | undefined, selection: number[]): number[] | undefined {
+    if (selection.length === 0) return base;
+    return base?.length ? base.filter((id) => selection.includes(id)) : selection;
+  }
+
   private barresTranches(tranches: { min: number; max: number | null; effectif: number }[], mesure: 'age' | 'anciennete', couleur: string): Graphique<'bar'> {
     this.theme.theme();
     return {
@@ -601,7 +671,7 @@ export class AnalytiquePerimetreComponent {
         if (dimension && items && perimetre[cleIds(dimension)].length === 0) {
           portee[cleIds(dimension)] = dimension === 'EQUIPE' ? [0, ...items.map((item) => item.id)] : items.map((item) => item.id);
         }
-        const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] };
+        const vide: Donnees = { paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] };
         if (porteeVide(portee)) {
           return of({ portee, donnees: { ...vide, catalogueVide: true } });
         }
@@ -612,13 +682,14 @@ export class AnalytiquePerimetreComponent {
             return of({ portee, donnees: avecCatalogue });
           }
           const paie$ = this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null)));
+          const qualitePaie$ = this.analyserQualitePaie(params, portee, periode);
           const evolution$ = equipeEvolutionId === null
             ? of<PaieAnalytique | null>(null)
             : this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)).pipe(catchError(() => of(null)));
           const chantiers$ = this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)).pipe(catchError(() => of(null)));
-          return forkJoin([paie$, evolution$, chantiers$]).pipe(map(([paie, evolution, catalogueChantiers]) => ({
+          return forkJoin([paie$, evolution$, chantiers$, qualitePaie$]).pipe(map(([paie, evolution, catalogueChantiers, qualitePaie]) => ({
             portee,
-            donnees: { ...avecCatalogue, paie, evolutionEquipe: evolution?.evolution ?? [], chantiersCatalogue: catalogueChantiers?.parChantier ?? [] }
+            donnees: { ...avecCatalogue, paie, qualitePaie, evolutionEquipe: evolution?.evolution ?? [], chantiersCatalogue: catalogueChantiers?.parChantier ?? [] }
           })));
         }
         // Une source en panne n'efface pas les autres : son bloc reste simplement vide.
