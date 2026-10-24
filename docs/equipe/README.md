@@ -111,7 +111,7 @@ remplace pas le contrôle serveur.
 | `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
 | `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
 | `EMPLOYEE_READ` | Accéder aux fiches Employé selon les permissions du domaine Employé; les Cartes Équipe ne chargent pas les effectifs des fiches |
-| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et l'effectif mensuel par équipe dans Analytique; les nombres affichés par Équipe viennent exclusivement des bulletins |
+| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et Analytique et l'indicateur commun de qualité des rattachements dans les trois vues; sans ce droit, les données Paie ne sont ni chargées ni affichées |
 
 Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
 les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
@@ -134,8 +134,9 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   reste visible à la racine sans être compté comme une équipe; l'ouvrir conserve ce périmètre lors du détail par chantier
   puis par fonction. Un indicateur graphique commun aux trois vues présente la qualité du rattachement des bulletins
   (avec équipe / « Orphelins ») à partir du même dernier mois enregistré; il n'est affiché que si au moins un bulletin
-  est orphelin et peut être exporté seul en PDF. L'Analytique inclut également les bulletins sans équipe dans sa source
-  de données, même si le catalogue Équipe ne contient que des équipes référencées. Le mois est déterminé par la base,
+  est orphelin et peut être exporté seul en PDF (`PAIE_READ`). Sans ce droit, le graphique n'est pas demandé au serveur.
+  L'Analytique inclut également les bulletins sans équipe dans sa source de données, même si le catalogue Équipe ne contient
+  que des équipes référencées. Le mois est déterminé par la base,
   sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
   Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
@@ -180,6 +181,7 @@ reste un modèle d'import, pas un export.
 | Import atomique et rejet des lignes invalides | `EquipeImportServiceTest`, `AuditImportTest`, tests d'actions d'import |
 | Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
 | Cartes : quatre mesures Paie lisibles, dernier mois et comparaison au mois précédent | `CartesPerimetreComponent.spec.ts`, `perimetre-groupes.spec.ts`, `frontend/e2e/equipes.spec.ts` |
+| Orphelins cohérents entre vues, masqués si zéro, et protégés par `PAIE_READ` | `equipe-qualite.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
 | PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
