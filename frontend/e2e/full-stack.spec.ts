@@ -145,7 +145,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
   await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}&periode=${moisCourant}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`H${suffixe}`);
-  await expect(page.getByText('Aucun bulletin sur ce périmètre')).toBeVisible();
+  await expect(page.getByText(/Aucun bulletin sur ce périmètre en/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
 
   // Fonctions : mêmes trois vues, la fonction est portée par la fiche Employé (dernier état) et par chaque bulletin.
