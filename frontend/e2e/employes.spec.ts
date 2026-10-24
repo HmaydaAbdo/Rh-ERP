@@ -69,7 +69,7 @@ test.describe('Employés — Cartes et Analytique', () => {
     await page.getByRole('button', { name: 'Ouvrir C168' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3$/);
     await expect(page.getByRole('navigation', { name: /Position dans les employés/ })).toContainText('Chantier C168');
-    await expect(page.getByRole('button', { name: /Sans équipe/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ouvrir Sans équipe' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Ouvrir Opérateurs' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3&equipeIds=5$/);

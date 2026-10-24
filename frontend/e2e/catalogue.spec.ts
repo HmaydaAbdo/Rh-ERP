@@ -31,10 +31,10 @@ test.describe('Catalogue des composants', () => {
     await page.keyboard.press('ArrowDown');
     await expect(champ).not.toHaveAttribute('aria-activedescendant', avant ?? '');
     await page.keyboard.press('Enter');
-    await expect(champ).toHaveValue('3 chantiers');
 
     await page.keyboard.press('Escape');
     await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(champ).toHaveValue('3 chantiers');
   });
 
   test('le panneau multiple reste dans la fenêtre et fait défiler l’option clavier active', async ({ page }) => {
