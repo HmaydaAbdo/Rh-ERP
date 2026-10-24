@@ -62,7 +62,10 @@ test.describe('Employés — Cartes et Analytique', () => {
     await expect(exportPdf).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(exportPdf).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    const largeurApresRedimensionnement = await page.evaluate(() => new Promise<number>(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve(document.documentElement.scrollWidth)));
+    }));
+    expect(largeurApresRedimensionnement).toBeLessThanOrEqual(390);
     await page.getByRole('button', { name: 'Ouvrir C168' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3$/);
     await expect(page.getByRole('navigation', { name: /Position dans les employés/ })).toContainText('Chantier C168');
