@@ -90,11 +90,8 @@
                     @if (groupe.detail) {
                       <span class="perimetre-carte__libelle">{{ groupe.detail }}</span>
                     }
-                    @if (voitPaie() && moisDe(groupe); as mois) {
-                      <span class="perimetre-carte__paie-periode">Paie · {{ libellePeriode(mois) }}</span>
-                    }
-                    <dl class="perimetre-carte__mesures">
-                      @if (groupe.fiches; as fiches) {
+                    @if (groupe.fiches; as fiches) {
+                      <dl class="perimetre-carte__fiches">
                         <div class="perimetre-carte__fiche-indicateur"><dt>Employés sur les fiches récentes</dt><dd>{{ fiches.effectif }}</dd></div>
                         @if (fiches.effectif > 0) {
                           <div class="perimetre-carte__jauge-ligne">
@@ -105,7 +102,12 @@
                             </dd>
                           </div>
                         }
-                      }
+                      </dl>
+                    }
+                    @if (voitPaie() && moisDe(groupe); as mois) {
+                      <span class="perimetre-carte__paie-periode">Paie · {{ libellePeriode(mois) }}</span>
+                    }
+                    <dl class="perimetre-carte__mesures">
                       @if (voitPaie()) {
                         @if (moisDe(groupe); as mois) {
                           <div class="perimetre-carte__indicateur">
