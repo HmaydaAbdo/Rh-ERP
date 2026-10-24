@@ -1,4 +1,4 @@
-# Prototype MCP — première tâche P1.1
+# Prototype MCP — preuve de compatibilité (jalon J0)
 
 Client TypeScript de test uniquement, associé au profil Maven `mcp-compatibility` du backend.
 Le serveur n'existe que pendant le test Java : loopback, port éphémère, outil synthétique,
@@ -16,8 +16,8 @@ Set-Location backend
 ```
 
 Sur un autre OS, utiliser `./mvnw` à la dernière ligne. Une fois les dépendances résolues, `-o`
-permet le test hors ligne. Si le wrapper ou le cache local bloque, voir la commande de distribution
-installée dans le [handoff](../../../docs/handoff/integration-ia.md), sans modifier le wrapper.
+permet le test hors ligne. Si le wrapper ou le cache local bloque, appeler directement la
+distribution Maven déjà présente dans `~/.m2/wrapper/dists`, sans modifier le wrapper versionné.
 
 Le test Java démarre Tomcat, fournit `MCP_COMPATIBILITY_URL` au processus Node, attend ses dix
 scénarios, ferme les deux côtés et vérifie que le port est libéré. Ne pas lancer `npm test` contre
@@ -38,5 +38,4 @@ Le résultat est `target/mcp-compatibility/mcp-compatibility-bom.json`. La CI pr
 exécute le test et scanne aussi ce SBOM avec OSV avant de pouvoir réussir son job backend.
 La réussite distante ne doit pas être présumée d'après un résultat local.
 
-Résultat, versions, limites et validation attendue : [preuve P1.1](../../../docs/ia/validation-p1-1.md).
-**La tâche P1.2 n'est pas autorisée par l'exécution de ce test.**
+Versions exercées, état et suite du chantier : [ia.md](../../../docs/ia.md).
