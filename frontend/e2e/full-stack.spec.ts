@@ -236,7 +236,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteLimitee).not.toContainText('Masse');
 
     await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
-    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     await pageLimitee.goto(`/chantiers/cartes?${filtreChantier}`);
     const carteChantierLimitee = pageLimitee.locator('.perimetre-carte').filter({ hasText: `T${suffixe}` });
