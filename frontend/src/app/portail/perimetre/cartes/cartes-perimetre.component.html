@@ -178,7 +178,7 @@
                 <span class="perimetre-cartes__initiales" aria-hidden="true">{{ initiales(employe) }}</span>
                 <span class="perimetre-cartes__qui">
                   <strong>{{ employe.nomPrenom }}</strong>
-                  <small>{{ employe.fonction.libelle }} · {{ employe.chantier.code }}@if (employe.equipe) { · {{ employe.equipe.libelle }} }</small>
+                  <small>{{ employe.fonction.libelle }} · {{ employe.chantier?.code || 'Sans chantier' }}@if (employe.equipe) { · {{ employe.equipe.libelle }} }</small>
                 </span>
                 <stp-badge [value]="libelleStatutEmploye(employe.statut)" [severity]="employe.statut === 'ACTIF' ? 'success' : 'neutral'"></stp-badge>
               </a>

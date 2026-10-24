@@ -52,7 +52,7 @@ public class EmployeeAnalytiqueService implements IEmployeeAnalytiqueService {
         CriteriaQuery<Tuple> requete = cb.createTupleQuery();
         Root<Employee> employe = requete.from(Employee.class);
         From<?, ?> groupe = switch (dimension) {
-            case CHANTIER -> employe.join("chantier");
+            case CHANTIER -> employe.join("chantier", JoinType.LEFT);
             case FONCTION -> employe.join("fonction");
             case EQUIPE -> employe.join("equipe", JoinType.LEFT);
         };
@@ -73,7 +73,9 @@ public class EmployeeAnalytiqueService implements IEmployeeAnalytiqueService {
                     Long id = ligne.get(0, Long.class);
                     Number nombreActifs = ligne.get(4, Number.class);
                     return id == null
-                            ? new EmployeeRegroupementDto(0L, null, "Sans équipe", ligne.get(3, Long.class), nombreActifs.longValue())
+                            ? new EmployeeRegroupementDto(0L, null,
+                                    dimension == DimensionEmployes.CHANTIER ? "Sans chantier" : "Sans équipe",
+                                    ligne.get(3, Long.class), nombreActifs.longValue())
                             : new EmployeeRegroupementDto(id, ligne.get(1, String.class), ligne.get(2, String.class), ligne.get(3, Long.class),
                                     nombreActifs.longValue());
                 })

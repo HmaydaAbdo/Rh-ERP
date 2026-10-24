@@ -35,15 +35,19 @@ Le domaine Équipe est le premier domaine examiné. Son rôle, les règles, les 
 les API, les droits et les scénarios de test sont centralisés dans le [dossier Équipe](../equipe/README.md),
 qui évolue avec le comportement de l'application.
 
+La base ne conserve plus l'équipe combinée `CH+OP`. Ses bulletins historiques et ses fiches encore actives
+sont répartis selon leur fonction : `CH.` et `COURSIER` vers `CH`, `OP.` vers `OP`, et `CHEF DE POSTE`
+vers `EE`. Les fiches inactives n'ont aucune équipe courante; leurs bulletins conservent le reclassement
+de leur historique mensuel. Une fonction non classée bloque la migration et les opérations sont auditées.
+
 Les règles et scénarios actuellement appliqués sont centralisés dans le [README Équipe](../equipe/README.md) :
 le code modifié est affiché dans les bulletins historiques qui référencent l'équipe; la suppression d'une équipe référencée
 par Paie ou Employé est bloquée; le rattachement d'équipe reste facultatif sur les bulletins.
-La fiche Employé porte l'affectation courante de l'employé, dont son équipe; chaque bulletin conserve
-séparément l'équipe associée à son mois. Un changement d'affectation sur la fiche n'altère pas les
-bulletins antérieurs. Dans le formulaire Paie, l'équipe choisie pour un bulletin est aussi enregistrée
-sur la fiche Employé dans la même transaction; les créations/modifications manuelles exigent donc les
-droits Paie et Employé correspondants. Les règles détaillées et leurs tests restent dans les README
-Employé, Équipe et Paie.
+La fiche Employé représente son état courant dérivé du dernier mois de paie enregistré. Une fiche active a un chantier;
+l'équipe y reste facultative. Une fiche inactive n'a ni chantier ni équipe courants. Chaque bulletin conserve séparément
+les affectations de son mois et reste inchangé après un départ ou une mutation. Au retour confirmé par l'import, la fiche
+reprend le chantier et l'équipe de la ligne importée. Les règles détaillées et leurs tests restent dans les README Employé,
+Équipe et Paie.
 
 ## 4. État de réalisation du premier bloc
 
@@ -55,9 +59,10 @@ README Équipe, qui donne aussi les commandes et résultats locaux à jour.
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
 
-Dans les Cartes Équipe, les quatre mesures Paie du dernier mois enregistré sont présentées séparément,
-avec leur valeur et leur comparaison au mois calendaire précédent. Les règles de comparaison et les cas
-où elle est indisponible sont détaillés dans le README Équipe.
+Dans les Cartes Équipe, les quatre mesures Paie du dernier mois enregistré sont l'unique source des effectifs et montants;
+les agrégats courants de fiches Employé n'y sont pas chargés. Elles sont présentées séparément, avec leur valeur et leur
+comparaison au mois calendaire précédent. Les règles de comparaison et les cas où elle est indisponible sont détaillés
+dans le README Équipe.
 
 ## 5. Source des preuves Équipe
 

@@ -11,7 +11,7 @@ export interface EmployeeFiltres {
   cin: string;
   fonctionIds: number[];
   chantierIds: number[];
-  /** `0` = sans équipe (comme dans la paie). */
+  /** `0` = sans affectation courante (chantier ou équipe). */
   equipeIds: number[];
   statut: EmployeeStatut | null;
 }
@@ -33,7 +33,7 @@ export function lireFiltres(params: ParamMap): EmployeeFiltres {
       .map((valeur) => valeur.trim())
       .filter((valeur) => valeur !== '')
       .map(Number)
-      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' ? id >= 0 : id > 0));
+      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' || cle === 'chantierIds' ? id >= 0 : id > 0));
   const statut = params.get('statut');
   return {
     nomPrenom: params.get('nom') ?? '',

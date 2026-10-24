@@ -16,9 +16,10 @@ fonction/chantier/équipe sont dupliqués »). L'historique d'un employé existe
 
 ## Décision
 
-1. **La fiche employé est l'état du dernier mois de paie importé** : nom, CIN, fonction, chantier, **équipe**, **salaire**
-   et **type de salaire** (mensuel, ou tarif d'une journée). Équipe, salaire et type sont nullables : un employé créé sans
-   paie ne les a pas encore.
+1. **La fiche employé représente l'état courant dérivé du dernier mois de paie enregistré** : nom, CIN, fonction,
+   affectations courantes, **salaire** et **type de salaire** (mensuel, ou tarif d'une journée). Un employé `ACTIF` a un
+   chantier; l'équipe est facultative. Un employé `INACTIF` n'a ni chantier ni équipe courants. Salaire et type restent
+   nullables lorsqu'aucune paie ne les a renseignés.
 2. **L'historique est calculé à partir des bulletins**, jamais recopié dans une seconde table : une copie finirait par
    diverger. Les modifications faites à l'écran restent tracées par l'audit (Envers).
 3. **Les départs sont la seule donnée nouvelle** : table `employe_sortie` (employé, mois, motif « STC » ou saisi), un
@@ -31,6 +32,11 @@ fonction/chantier/équipe sont dupliqués »). L'historique d'un employé existe
 6. **Le salaire et son type sont des données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas, ignore ceux qu'on
    saisit, et ne trie pas par salaire. Le masquage est fait au contrôleur, pour que les autres domaines lisent le vrai
    salaire par `IEmployeeService`.
+7. **Une seule source pour les indicateurs Équipe** : les Cartes et l'Analytique Équipe calculent leurs effectifs depuis
+   les bulletins du dernier mois enregistré. Les effectifs courants des fiches Employé ne sont pas mélangés à ces mesures.
+8. **Un employé inactif n'a pas d'affectation courante** : à la sortie, `chantier_id` et `equipe_id` sont vidés. La paie
+   conserve les affectations historiques de chaque bulletin. Au retour via l'import, la fiche redevient active avec le
+   chantier et l'équipe de la ligne du mois importé.
 
 ### Reprise des données existantes (migration V30, auditée)
 

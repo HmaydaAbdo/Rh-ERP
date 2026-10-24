@@ -112,7 +112,8 @@ class AuditIntegriteTest extends AuditIntegrationTestBase {
     void le_compte_applicatif_garde_ses_droits_sur_les_donnees_metier() {
         Referentiel ref = donnees.creerReferentiel();
 
-        assertThat(jdbc.update("UPDATE employe SET statut = 'INACTIF' WHERE id = ?", ref.employeId())).isEqualTo(1);
+        assertThat(jdbc.update("UPDATE employe SET statut = 'INACTIF', chantier_id = NULL, equipe_id = NULL WHERE id = ?",
+                ref.employeId())).isEqualTo(1);
         assertThat(jdbc.update("DELETE FROM employe WHERE id = ?", ref.employeId())).isEqualTo(1);
     }
 

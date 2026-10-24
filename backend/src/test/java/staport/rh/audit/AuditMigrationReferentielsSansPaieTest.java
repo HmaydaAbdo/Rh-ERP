@@ -38,8 +38,8 @@ class AuditMigrationReferentielsSansPaieTest extends AuditIntegrationTestBase {
             long fonctionDUneFiche = fonction("FICHE " + ref.suffixe());
             jdbc.update("""
                     INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, statut)
-                    VALUES (?, ?, DATE '1990-01-01', DATE '2020-01-01', ?, ?, 'INACTIF')""",
-                    "FICHE " + ref.suffixe(), "FICHE" + ref.suffixe(), fonctionDUneFiche, ref.chantierId());
+                    VALUES (?, ?, DATE '1990-01-01', DATE '2020-01-01', ?, NULL, 'INACTIF')""",
+                    "FICHE " + ref.suffixe(), "FICHE" + ref.suffixe(), fonctionDUneFiche);
             long chantierSansPaie = jdbc.queryForObject("""
                     INSERT INTO chantier (code, designation, source_erp, actif) VALUES (?, 'Sans paie', true, true) RETURNING id""",
                     Long.class, "SP" + ref.suffixe());

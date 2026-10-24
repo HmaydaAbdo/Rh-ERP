@@ -41,6 +41,7 @@
       <stp-field-error [field]="form.fonctionId" />
     </div>
 
+    @if (!estInactif()) {
     <div class="field">
       <label for="chantierId">Chantier <span class="field__req" aria-hidden="true">*</span></label>
       <app-lazy-select
@@ -63,6 +64,9 @@
         placeholder="Sans équipe"
       ></app-lazy-select>
     </div>
+    } @else {
+      <p class="app-form__hint">Un employé inactif n’a pas d’affectation courante. Son historique reste conservé dans ses bulletins de paie.</p>
+    }
 
     @if (voitLaPaie()) {
       <div class="field">

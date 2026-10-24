@@ -54,7 +54,7 @@ export function lirePerimetre(params: ParamMap): Perimetre {
       .map((valeur) => valeur.trim())
       .filter((valeur) => valeur !== '')
       .map(Number)
-      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' ? id >= 0 : id > 0));
+      .filter((id) => Number.isInteger(id) && (cle === 'equipeIds' || cle === 'chantierIds' ? id >= 0 : id > 0));
   const periode = params.get('periode') ?? '';
   return { chantierIds: ids('chantierIds'), equipeIds: ids('equipeIds'), fonctionIds: ids('fonctionIds'), periode: FORMAT_PERIODE.test(periode) ? periode : null };
 }

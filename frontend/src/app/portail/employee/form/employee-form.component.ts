@@ -74,6 +74,7 @@ export class EmployeeFormComponent {
   private readonly employeeId = signal<number | null>(null);
   private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.employeeId() !== null);
+  protected readonly estInactif = computed(() => this.modele().statut === 'INACTIF');
 
   private readonly modele = signal<EmployeeSaisie>({
     nomPrenom: '',
@@ -97,7 +98,11 @@ export class EmployeeFormComponent {
       required(chemin.dateNaissance, { message: 'La date de naissance est obligatoire.' });
       required(chemin.dateEmbauche, { message: "La date d'embauche est obligatoire." });
       required(chemin.fonctionId, { message: 'La fonction est obligatoire.' });
-      required(chemin.chantierId, { message: 'Le chantier est obligatoire.' });
+      validate(chemin.chantierId, ({ value, valueOf }) =>
+        valueOf(chemin.statut) !== 'INACTIF' && value() === null
+          ? { kind: 'required', message: 'Le chantier est obligatoire.' }
+          : undefined
+      );
       min(chemin.salaire, 0, { message: 'Le salaire ne peut pas être négatif.' });
       // Le salaire et son type vont ensemble : l'un sans l'autre ne dit pas combien l'employé est payé.
       validate(chemin.typeSalaire, ({ value, valueOf }) =>
@@ -122,7 +127,7 @@ export class EmployeeFormComponent {
           dateNaissance: fromIsoDate(employee.dateNaissance),
           dateEmbauche: fromIsoDate(employee.dateEmbauche),
           fonctionId: employee.fonction.id,
-          chantierId: employee.chantier.id,
+          chantierId: employee.chantier?.id ?? null,
           equipeId: employee.equipe?.id ?? null,
           salaire: employee.salaire,
           typeSalaire: employee.typeSalaire,
@@ -140,15 +145,21 @@ export class EmployeeFormComponent {
       dateNaissance: toIsoDate(saisie.dateNaissance!),
       dateEmbauche: toIsoDate(saisie.dateEmbauche!),
       fonctionId: saisie.fonctionId!,
-      chantierId: saisie.chantierId!,
-      equipeId: saisie.equipeId,
       salaire: saisie.salaire,
       typeSalaire: saisie.typeSalaire
     };
     const id = this.employeeId();
 
     const employee = await attendreEnregistrement(
-      id !== null ? this.employeeService.update(id, { ...dto, statut: saisie.statut, version: this.version()! }) : this.employeeService.create(dto)
+      id !== null
+        ? this.employeeService.update(id, {
+            ...dto,
+            chantierId: saisie.statut === 'INACTIF' ? null : saisie.chantierId!,
+            equipeId: saisie.statut === 'INACTIF' ? null : saisie.equipeId,
+            statut: saisie.statut,
+            version: this.version()!
+          })
+        : this.employeeService.create({ ...dto, chantierId: saisie.chantierId!, equipeId: saisie.equipeId })
     );
     if (!employee) {
       return;

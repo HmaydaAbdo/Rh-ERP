@@ -12,13 +12,13 @@ describe('filtres des employés (URL)', () => {
   it('ignore les valeurs invalides', () => {
     const filtres = lireFiltres(convertToParamMap({ chantierIds: 'x,-2,1.5,0', fonctionIds: '', equipeIds: '-1', statut: 'SUSPENDU' }));
 
-    expect(filtres).toEqual(AUCUN_FILTRE);
+    expect(filtres).toEqual({ ...AUCUN_FILTRE, chantierIds: [0] });
   });
 
-  it('garde zéro seulement pour l’équipe : « sans équipe »', () => {
+  it('garde zéro pour le chantier et l’équipe : sans affectation courante', () => {
     const filtres = lireFiltres(convertToParamMap({ chantierIds: '0', equipeIds: '0, 2' }));
 
-    expect(filtres.chantierIds).toEqual([]);
+    expect(filtres.chantierIds).toEqual([0]);
     expect(filtres.equipeIds).toEqual([0, 2]);
   });
 

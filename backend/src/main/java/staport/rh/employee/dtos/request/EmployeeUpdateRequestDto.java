@@ -36,7 +36,6 @@ public record EmployeeUpdateRequestDto(
         @NotNull
         Long fonctionId,
 
-        @NotNull
         Long chantierId,
 
         Long equipeId,
@@ -54,5 +53,12 @@ public record EmployeeUpdateRequestDto(
     @AssertTrue(message = "le salaire et son type se renseignent ensemble")
     public boolean isSalaireEtTypeEnsemble() {
         return (salaire == null) == (typeSalaire == null);
+    }
+
+    @AssertTrue(message = "un employé actif doit avoir un chantier; un employé inactif ne garde ni chantier ni équipe")
+    public boolean isAffectationsCoherentesAvecStatut() {
+        return statut == EmployeeStatut.INACTIF
+                ? chantierId == null && equipeId == null
+                : chantierId != null;
     }
 }
