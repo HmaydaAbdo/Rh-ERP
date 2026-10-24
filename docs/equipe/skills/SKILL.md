@@ -31,7 +31,9 @@ le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et
 de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. Le résumé des Cartes donne le nombre d'équipes
 référencées, l'effectif en personnes et la masse salariale en DH, sans chiffre provenant des fiches Employé. « Orphelins »
 est un groupe Paie de premier niveau, exclu du nombre d'équipes; son périmètre est conservé pendant le détail par chantier
-puis fonction. L'Analytique présente aussi leur nombre comme indicateur de qualité des données, zéro compris, avec export PDF.
+puis fonction. Un indicateur graphique partagé par Tabulaire, Cartes et Analytique présente le rattachement des bulletins
+du dernier mois de paie; il n'apparaît que si le nombre d'« Orphelins » est supérieur à zéro et s'exporte seul en PDF.
+L'Analytique inclut les bulletins orphelins dans son périmètre Paie, même si aucune équipe correspondante n'est présente au catalogue.
 Elle présente la répartition par équipe
 sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
 (personnes), Masse salariale (DH), STC (personnes) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
