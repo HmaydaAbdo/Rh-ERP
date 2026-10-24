@@ -4,6 +4,8 @@ import { formaterVariation } from '../paie/paie-format';
 import { ItemCatalogue } from './perimetre-module';
 import { Dimension } from './perimetre';
 
+export const LIBELLE_EQUIPE_ORPHELINE = 'Orphelins';
+
 /** Les chiffres de Paie d'un groupe pour le mois affiché. */
 export interface ChiffresPaie {
   effectif: number;
@@ -14,7 +16,7 @@ export interface ChiffresPaie {
 
 /** Une carte des vues Cartes : un groupe d'une dimension (un chantier, une équipe, une fonction) avec ses fiches et sa paie. */
 export interface GroupeCarte {
-  /** `0` = « Sans équipe ». */
+  /** `0` = groupe « Orphelins ». */
   id: number;
   code: string | null;
   libelle: string;
@@ -35,7 +37,7 @@ export interface LignePaie extends ChiffresPaie {
   libelle: string;
 }
 
-/** Les groupes de paie d'une dimension, normalisés (`id` nul = sans équipe = 0). */
+/** Les groupes de paie d'une dimension, normalisés (`id` nul = équipe orpheline = 0). */
 export function lignesPaie(dimension: Dimension, analyse: PaieAnalytique | null): LignePaie[] {
   if (!analyse) {
     return [];
@@ -44,7 +46,7 @@ export function lignesPaie(dimension: Dimension, analyse: PaieAnalytique | null)
     return analyse.parChantier.map((c) => ({ id: c.id, code: c.code, libelle: c.libelle ?? c.code, effectif: c.effectif, masse: c.masse, stc: c.stc, stcMontant: c.stcMontant }));
   }
   if (dimension === 'EQUIPE') {
-    return analyse.parEquipe.map((e) => ({ id: e.id ?? 0, code: e.code ?? null, libelle: e.libelle ?? e.code ?? 'Sans équipe', effectif: e.effectif, masse: e.masse, stc: e.stc, stcMontant: e.stcMontant }));
+    return analyse.parEquipe.map((e) => ({ id: e.id ?? 0, code: e.code ?? null, libelle: e.libelle ?? e.code ?? LIBELLE_EQUIPE_ORPHELINE, effectif: e.effectif, masse: e.masse, stc: e.stc, stcMontant: e.stcMontant }));
   }
   return analyse.parFonction.map((f) => ({ id: f.id, code: null, libelle: f.libelle, effectif: f.effectif, masse: f.masse, stc: f.stc, stcMontant: f.stcMontant }));
 }
@@ -52,7 +54,7 @@ export function lignesPaie(dimension: Dimension, analyse: PaieAnalytique | null)
 /** Les équipes sont nommées par leur libellé; les autres référentiels gardent le code. */
 export function nomGroupe(dimension: Dimension, groupe: { id: number; code: string | null; libelle: string }): string {
   if (dimension === 'EQUIPE' && groupe.id === 0) {
-    return 'Sans équipe';
+    return LIBELLE_EQUIPE_ORPHELINE;
   }
   return dimension === 'EQUIPE' ? (groupe.libelle || groupe.code || '') : (groupe.code || groupe.libelle);
 }
@@ -99,7 +101,8 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
     }
   }
   for (const ligne of sources.paie ?? []) {
-    if (!exhaustif || parId.has(ligne.id)) {
+    // « Orphelins » est un groupe Paie valide, même si le catalogue des équipes est exhaustif.
+    if (!exhaustif || parId.has(ligne.id) || (dimension === 'EQUIPE' && ligne.id === 0)) {
       carte(ligne.id, ligne.code, ligne.libelle).paie = { effectif: ligne.effectif, masse: ligne.masse, stc: ligne.stc, stcMontant: ligne.stcMontant };
     }
   }

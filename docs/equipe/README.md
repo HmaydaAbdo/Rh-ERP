@@ -129,7 +129,11 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   libellé; les filtres code/libellé suivent la même règle dans les trois vues.
 - **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction**. Le libellé est le nom principal des équipes;
   leur code reste un repère secondaire. Les cartes prennent leurs indicateurs exclusivement des bulletins du
-  dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
+  dernier mois de paie enregistré. Le résumé indique le nombre d'équipes référencées, l'effectif en personnes et
+  la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le groupe Paie « Orphelins »
+  reste visible à la racine sans être compté comme une équipe; l'ouvrir conserve ce périmètre lors du détail par chantier
+  puis par fonction. L'Analytique affiche également le nombre de bulletins orphelins dans la qualité des données, y compris
+  lorsque ce nombre vaut zéro, et permet son export PDF. Le mois est déterminé par la base, sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
   Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
   STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et

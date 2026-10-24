@@ -77,6 +77,25 @@ class HoteEquipeComponent {
   };
 }
 
+@Component({
+  selector: 'app-hote-equipe-paie',
+  imports: [CartesPerimetreComponent],
+  template: '<app-cartes-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteEquipePaieComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
+    sansRaccourciListe: true, sansLienEmployes: true, sansEffectifFichesDansCartes: true,
+    catalogue: {
+      filtreActif: (params) => params.get('code') !== null,
+      charger: () => of([{ id: 5, code: 'CH', libelle: 'Chauffeurs', detail: null, statut: null }]),
+      lien: (id) => ['/equipes', id]
+    }
+  };
+}
+
 describe('CartesPerimetreComponent', () => {
   let employes: MockedObject<EmployeeService>;
   let paie: MockedObject<PaieService>;
@@ -124,7 +143,11 @@ describe('CartesPerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'chantiers/cartes', component: HoteComponent }, { path: 'equipes/cartes', component: HoteEquipeComponent }]),
+        provideRouter([
+          { path: 'chantiers/cartes', component: HoteComponent },
+          { path: 'equipes/cartes', component: HoteEquipeComponent },
+          { path: 'equipes/paie-cartes', component: HoteEquipePaieComponent }
+        ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
@@ -284,6 +307,38 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.perimetre-carte app-pdf-export-button button[aria-label="Exporter Nador en PDF"]')).not.toBeNull();
     expect(page.querySelector('.perimetre-carte__pied a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
     expect(page.querySelector('.perimetre-carte__pied a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
+  });
+
+  it('résume Équipe avec la paie, montre « Orphelins » et conserve ce filtre dans les niveaux suivants', async () => {
+    paie.analyser.mockImplementation((criteres: { chantierIds?: number[]; equipeIds?: number[] }) => of(analyse(
+      [{ id: 1, code: 'C168', libelle: 'Nador', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
+      [{ id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
+      [{ id: 7, libelle: 'MACON', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }]
+    )));
+    await harness.navigateByUrl('/equipes/paie-cartes', HoteEquipePaieComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const page = harness.routeNativeElement as HTMLElement;
+
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).toContain('1 équipe');
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).toContain('Effectif : 1 personnes');
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).toMatch(/Masse salariale : 50[.,]00 DH/);
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).not.toMatch(/employé|fiche|payé/i);
+    expect(page.querySelector('button[aria-label="Ouvrir Orphelins"]')).not.toBeNull();
+    expect(employes.regrouper).not.toHaveBeenCalled();
+
+    (page.querySelector('button[aria-label="Ouvrir Orphelins"]') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    expect(TestBed.inject(Router).url).toContain('equipeIds=0');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Chantier');
+    expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ equipeIds: [0] }));
+
+    (page.querySelector('button[aria-label="Ouvrir C168"]') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Fonction');
+    expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ equipeIds: [0], chantierIds: [1] }));
   });
 
   it('masque le fil racine redondant au départ et le garde pour revenir après une étape', async () => {
