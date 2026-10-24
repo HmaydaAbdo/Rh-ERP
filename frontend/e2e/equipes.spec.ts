@@ -90,7 +90,8 @@ test.describe('Équipes', () => {
     await expect(page.getByLabel('Période Paie')).toHaveCount(0);
     await expect(page.locator('.perimetre-cartes__periode-fixe')).toHaveText('Paie · août 2026');
     await expect(page.getByRole('link', { name: 'Voir la liste' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Voir les employés' })).toHaveCount(0);
+    await expect(page.locator('.perimetre-cartes__acces').getByRole('link', { name: 'Voir les employés' })).toHaveCount(0);
+    await expect(page.locator('.perimetre-cartes__niveau').getByRole('link', { name: 'Voir les employés de ce périmètre' })).toBeVisible();
     await expect(carte.getByRole('button', { name: 'Exporter Chauffeurs en PDF' })).toBeVisible();
     await expect(carte.getByRole('link', { name: 'Consulter Chauffeurs' })).toBeVisible();
     await expect(carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' })).toBeVisible();
