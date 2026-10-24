@@ -4,6 +4,12 @@ Cette routine s'applique à chaque tâche du dépôt, dans le périmètre demand
 Elle organise l'application des conventions ; les exigences détaillées restent dans leurs documents
 de référence. `AGENTS.md` en est la porte d'entrée.
 
+`CLAUDE.md` renvoie à cette même porte d'entrée. Lors d'un changement d'assistant, actualiser le
+handoff technique du chantier avec l'objectif en cours, les décisions approuvées, les questions
+encore ouvertes, l'état des fichiers et de la branche, les vérifications réellement effectuées et la
+prochaine action. Le nouvel assistant confronte ces informations à l'état réel avant de reprendre.
+Ne pas y recopier de secrets ni le transcript de la conversation.
+
 ## 1. Reprendre le contexte
 
 1. Lire `docs/handoff/etat-du-projet.md`, puis les conventions applicables et `docs/README.md`.
@@ -81,10 +87,16 @@ validation supplémentaire dans chaque domaine.
 2. Si le commit et le push sont autorisés, enregistrer le lot cohérent sur la branche prévue et mettre
    à jour la PR concernée avec le comportement final et les preuves utiles. Exclure secrets, fichiers
    générés et modifications étrangères au lot ; conserver le travail local préexistant.
-3. Vérifier les contrôles requis sur le **dernier commit poussé**. Après une correction ou un nouveau
-   commit, attendre les nouveaux résultats ; une ancienne CI verte ne valide pas ce nouvel état.
-   Diagnostiquer les échecs et corriger dans le périmètre autorisé sans affaiblir les contrôles.
-4. Présenter la livraison pour revue lorsque les contrôles requis sont verts. Appliquer l'autorisation
+3. **Lancer ou relancer la CI uniquement sur demande explicite du propriétaire.** Si le push
+   déclenche automatiquement une CI et que cette demande n'a pas été donnée, conserver le commit
+   prêt en local. Une autorisation générale de commit/push ne vaut pas une demande de CI.
+   Lorsque la CI est demandée, vérifier les contrôles requis sur le **dernier commit poussé** et
+   attendre leurs résultats. Une ancienne CI verte ne valide pas un nouveau commit. Diagnostiquer
+   les échecs et préparer les corrections sans affaiblir les contrôles ; toute relance attend la
+   demande du propriétaire.
+4. Présenter le résultat local pour revue avec le statut exact des contrôles. Lorsque la CI n'a pas
+   été demandée, indiquer qu'elle reste à exécuter. La livraison validée par CI exige les contrôles
+   requis verts sur le dernier commit. Appliquer l'autorisation
    de fusion donnée par le propriétaire ; lorsqu'il demande à revoir d'abord, attendre son retour.
 5. Après une fusion autorisée, vérifier `main`, les branches locales et distantes et l'état du dépôt.
    Appliquer le nettoyage de branches demandé uniquement aux branches concernées ; préserver les

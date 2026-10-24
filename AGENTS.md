@@ -34,6 +34,10 @@ et revue. L'appliquer sans attendre que le propriétaire répète ces consignes.
 autorisations déjà données restent valables dans leur périmètre ; une modification de convention
 nouvellement proposée demande son accord avant application.
 
+`CLAUDE.md` renvoie à cette même porte d'entrée : Claude et Codex appliquent les mêmes règles.
+La CI n'est lancée ou relancée que sur demande explicite du propriétaire. Si un push la déclenche
+automatiquement, conserver le lot prêt en local jusqu'à cette demande.
+
 ---
 
 # Ordre de lecture
