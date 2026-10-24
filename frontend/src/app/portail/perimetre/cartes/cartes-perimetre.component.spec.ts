@@ -378,10 +378,13 @@ describe('CartesPerimetreComponent', () => {
   it('résume Équipe avec la paie et masque les bulletins orphelins dans les Cartes', async () => {
     const resultat = analyse(
       [{ id: 1, code: 'C168', libelle: 'Nador', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
-      [{ id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
+      [
+        { id: 5, code: 'CH', libelle: 'Chauffeurs', masse: 50, effectif: 1, stc: 0, stcMontant: 0 },
+        { id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }
+      ],
       [{ id: 7, libelle: 'MACON', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }]
     );
-    paie.analyser.mockReturnValue(of({ ...resultat, kpis: { ...resultat.kpis, effectif: 1, masse: 50 } }));
+    paie.analyser.mockReturnValue(of({ ...resultat, kpis: { ...resultat.kpis, effectif: 2, masse: 100 } }));
     await harness.navigateByUrl('/equipes/paie-cartes', HoteEquipePaieComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
