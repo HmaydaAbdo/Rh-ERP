@@ -27,6 +27,10 @@ class AuditMigrationChantiersAbsentsDernierePaieTest extends AuditIntegrationTes
 
         transaction.executeWithoutResult(statut -> {
             statut.setRollbackOnly();
+            // Les tests d'intégration partagent leur base; isoler les données de ce scénario sans les conserver.
+            jdbc.update("DELETE FROM paie");
+            jdbc.update("UPDATE chantier SET actif = false WHERE actif");
+            jdbc.update("UPDATE chantier SET actif = true WHERE id = ?", ref.chantierId());
             long chantierHistorique = creerChantier("HISTORIQUE " + ref.suffixe(), true);
             long chantierSansBulletin = creerChantier("SANS PAIE " + ref.suffixe(), true);
             long chantierDejaCloture = creerChantier("DEJA CLOTURE " + ref.suffixe(), false);
