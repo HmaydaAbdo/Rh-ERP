@@ -390,7 +390,23 @@ describe('AnalytiquePerimetreComponent', () => {
     paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 5, sansObservation: 2 } }));
     const page = await ouvrir();
 
-    expect(page.textContent).toContain('Qualité des données : 5 bulletin(s) sans équipe, 2 sans observation.');
+    expect(page.textContent).toContain('Qualité des données : 5 bulletin(s) orphelin(s), 2 sans observation.');
+  });
+
+  it('affiche et exporte le nombre de bulletins orphelins comme indicateur de qualité Équipe', async () => {
+    paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 5, sansObservation: 0 } }));
+    const page = await ouvrirEquipe();
+
+    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('Bulletins orphelins');
+    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('5');
+    expect(page.querySelector('button[aria-label="Exporter l’indicateur de qualité des données Équipe en PDF"]')).not.toBeNull();
+  });
+
+  it('affiche aussi zéro orphelin quand la qualité des données du mois est conforme', async () => {
+    const page = await ouvrirEquipe();
+
+    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('Bulletins orphelins');
+    expect(page.querySelector('[aria-label="Qualité des données Équipe"] strong')?.textContent).toBe('0');
   });
 
   it('met à jour le mois dans l’URL et retire une étape', async () => {

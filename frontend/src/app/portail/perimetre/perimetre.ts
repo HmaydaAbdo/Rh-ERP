@@ -7,7 +7,7 @@ import { PaieSearchCriteria } from '../paie/models/paie.model';
  * Socle commun des vues **Cartes** et **Analytique** de tous les modules (Employés, Paie, Équipes, Fonctions, Chantiers).
  *
  * Le *périmètre* est ce que l'on regarde : des chantiers, des équipes, des fonctions (`chantierIds`, `equipeIds`, `fonctionIds`
- * dans l'URL, `0` = sans équipe) et un mois de paie (`periode`). La progression des Cartes suit l'ordre défini par chaque
+ * dans l'URL, `0` = équipe orpheline) et un mois de paie (`periode`). La progression des Cartes suit l'ordre défini par chaque
  * domaine. Les filtres propres à un module (code, nom, statut…) s'ajoutent aux paramètres du périmètre sans jamais les
  * remplacer. Tout vit dans l'URL : lien direct, retour navigateur et passage d'une vue à l'autre restituent donc le même affichage.
  * Voir `conventions/frontend.md`, section « Cartes par niveaux et Analytique graphique ».

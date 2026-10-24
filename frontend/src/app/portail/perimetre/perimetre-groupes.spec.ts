@@ -11,9 +11,9 @@ const ANALYSE: PaieAnalytique = {
 };
 
 describe('lignesPaie', () => {
-  it('normalise les trois répartitions : « sans équipe » devient l’identifiant 0, le libellé retombe sur le code', () => {
+  it('normalise les trois répartitions : « Orphelins » conserve l’identifiant 0, le libellé retombe sur le code', () => {
     expect(lignesPaie('CHANTIER', ANALYSE)[0]).toMatchObject({ id: 1, code: 'C168', libelle: 'C168', stc: 1 });
-    expect(lignesPaie('EQUIPE', ANALYSE).map((l) => [l.id, l.libelle])).toEqual([[0, 'Sans équipe'], [5, 'Chauffeurs']]);
+    expect(lignesPaie('EQUIPE', ANALYSE).map((l) => [l.id, l.libelle])).toEqual([[0, 'Orphelins'], [5, 'Chauffeurs']]);
     expect(lignesPaie('FONCTION', ANALYSE)[0]).toMatchObject({ id: 7, code: null, libelle: 'MACON' });
     expect(lignesPaie('CHANTIER', null)).toEqual([]);
   });
@@ -24,7 +24,7 @@ describe('nomGroupe', () => {
     expect(nomGroupe('CHANTIER', { id: 1, code: 'C168', libelle: 'Nador' })).toBe('C168');
     expect(nomGroupe('EQUIPE', { id: 5, code: 'CH', libelle: 'Chauffeurs' })).toBe('Chauffeurs');
     expect(nomGroupe('FONCTION', { id: 7, code: null, libelle: 'MACON' })).toBe('MACON');
-    expect(nomGroupe('EQUIPE', { id: 0, code: null, libelle: '' })).toBe('Sans équipe');
+    expect(nomGroupe('EQUIPE', { id: 0, code: null, libelle: '' })).toBe('Orphelins');
   });
 });
 
@@ -43,6 +43,21 @@ describe('fusionnerGroupes', () => {
     expect(groupes.map((g) => g.id)).toEqual([1, 2]);
     expect(groupes[0]).toMatchObject({ statut: { libelle: 'En cours' }, lien: ['/chantiers', 1], fiches: { effectif: 3, actifs: 2 }, paie: { masse: 100 }, precedent: { masse: 80 } });
     expect(groupes[1]).toMatchObject({ fiches: { effectif: 0, actifs: 0 }, paie: { effectif: 0, masse: 0 }, precedent: { effectif: 0, masse: 0, stc: 0, stcMontant: 0 } });
+  });
+
+  it('conserve « Orphelins » depuis la Paie même si le catalogue Équipe est exhaustif', () => {
+    const equipes = [{ id: 5, code: 'CH', libelle: 'Chauffeurs', detail: null, statut: null }];
+    const groupes = fusionnerGroupes('EQUIPE', {
+      catalogue: equipes,
+      exhaustif: true,
+      fiches: null,
+      paie: lignesPaie('EQUIPE', ANALYSE),
+      paiePrecedente: null,
+      lien: null
+    });
+
+    expect(groupes.map((groupe) => [groupe.id, groupe.libelle])).toEqual([[5, 'Chauffeurs'], [0, 'Orphelins']]);
+    expect(groupes.find((groupe) => groupe.id === 0)?.paie).toMatchObject({ effectif: 1, masse: 50 });
   });
 
   it('sans référentiel exhaustif, ne crée une carte que pour les groupes qui ont une fiche ou un bulletin, et décore ceux du référentiel', () => {

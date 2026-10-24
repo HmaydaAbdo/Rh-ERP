@@ -58,9 +58,13 @@
         <section class="perimetre-cartes__resultats" aria-label="Résultats du périmètre">
           <div class="perimetre-cartes__resultats-entete">
             <p class="perimetre-cartes__resume" role="status">
-              {{ liste.length }} {{ pluriel(niveau()) }}
-              @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-              @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+              {{ libelleGroupesResume(liste) }}
+              @if (module().sansEffectifFichesDansCartes) {
+                @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+              } @else {
+                @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+                @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+              }
               @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
             </p>
             @if (liste.length > 0) {

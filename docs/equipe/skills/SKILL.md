@@ -28,7 +28,11 @@ met à jour la fiche Employé et le bulletin dans la même transaction; ces opé
 
 La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
 le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et l'Analytique lisent toujours le dernier mois
-de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. L'Analytique présente la répartition par équipe
+de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. Le résumé des Cartes donne le nombre d'équipes
+référencées, l'effectif en personnes et la masse salariale en DH, sans chiffre provenant des fiches Employé. « Orphelins »
+est un groupe Paie de premier niveau, exclu du nombre d'équipes; son périmètre est conservé pendant le détail par chantier
+puis fonction. L'Analytique présente aussi leur nombre comme indicateur de qualité des données, zéro compris, avec export PDF.
+Elle présente la répartition par équipe
 sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
 (personnes), Masse salariale (DH), STC (personnes) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
 Tous ces multisélecteurs et filtres permettent la recherche et le chargement des options au défilement, conformément à la convention frontend commune.
