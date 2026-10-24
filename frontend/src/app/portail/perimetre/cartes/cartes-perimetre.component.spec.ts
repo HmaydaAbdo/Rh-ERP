@@ -73,7 +73,7 @@ class HoteEquipeComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
-    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true,
+    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
     resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true
   };
 }
@@ -376,11 +376,12 @@ describe('CartesPerimetreComponent', () => {
   });
 
   it('résume Équipe avec la paie et masque les bulletins orphelins dans les Cartes', async () => {
-    paie.analyser.mockImplementation((criteres: { chantierIds?: number[]; equipeIds?: number[] }) => of(analyse(
+    const resultat = analyse(
       [{ id: 1, code: 'C168', libelle: 'Nador', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
       [{ id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
       [{ id: 7, libelle: 'MACON', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }]
-    )));
+    );
+    paie.analyser.mockReturnValue(of({ ...resultat, kpis: { ...resultat.kpis, effectif: 1, masse: 50 } }));
     await harness.navigateByUrl('/equipes/paie-cartes', HoteEquipePaieComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
