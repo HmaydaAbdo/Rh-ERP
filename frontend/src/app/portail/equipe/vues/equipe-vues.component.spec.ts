@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { fournirPermissions } from '../../../shared/testing/ecrans';
+import { ThemeService } from '../../../core/theme/theme.service';
+import { PaieService } from '../../paie/services/paie.service';
 import { EquipeVuesComponent } from './equipe-vues.component';
 
 @Component({ standalone: true, changeDetection: ChangeDetectionStrategy.Eager, template: 'vue' })
@@ -24,7 +26,9 @@ describe('EquipeVuesComponent', () => {
             { path: 'analytique', component: VueFactice }
           ]
         }]),
-        fournirPermissions(['EQUIPE_READ', 'EQUIPE_WRITE']).providers
+        fournirPermissions(['EQUIPE_READ', 'EQUIPE_WRITE']).providers,
+        { provide: PaieService, useValue: { listerPeriodes: vi.fn(), analyser: vi.fn() } },
+        { provide: ThemeService, useValue: { theme: signal('light') } }
       ]
     });
     harness = await RouterTestingHarness.create();
@@ -41,6 +45,7 @@ describe('EquipeVuesComponent', () => {
       '/equipes/analytique?code=CH&libelle=Chauffeurs'
     ]);
     expect(page.querySelector('app-equipe-filtres')).not.toBeNull();
+    expect(page.querySelector('app-equipe-qualite')).not.toBeNull();
     expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 
@@ -70,7 +75,9 @@ describe('EquipeVuesComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: 'equipes', component: EquipeVuesComponent, children: [{ path: '', component: VueFactice }] }]),
-        fournirPermissions(['EQUIPE_READ']).providers
+        fournirPermissions(['EQUIPE_READ']).providers,
+        { provide: PaieService, useValue: { listerPeriodes: vi.fn(), analyser: vi.fn() } },
+        { provide: ThemeService, useValue: { theme: signal('light') } }
       ]
     });
     harness = await RouterTestingHarness.create();

@@ -46,6 +46,7 @@ Ce document dit **où en est le projet, comment le propriétaire veut travailler
 | 2026-10-20 | Vocabulaire RH | L'interface dit « En poste / Sorti » pour les employés et « En cours / Clôturé » pour les chantiers (API et base inchangées : `ACTIF`/`INACTIF`, `actif`) ; boutons **Clôturer / Rouvrir** sur la liste et la fiche d'un chantier ; l'assistant d'import de la paie signale à part un chantier clôturé et propose de le rouvrir ; migration **V31** : supprime les fonctions sans bulletin ni fiche, clôture les chantiers sans bulletin (sur la base de développement : 48 fonctions, 183 chantiers, 29 restent en cours). |
 
 | 2026-10-23 | Équipe | Référentiel d'équipes, trois vues partagées et import Excel; les règles et scénarios actuels sont centralisés dans [le dossier Équipe](../equipe/README.md). |
+| 2026-10-24 | Équipe et Chantier | Les trois vues Équipe partagent un indicateur de qualité des rattachements alimenté par la dernière paie; « Orphelins » n'apparaît que si le compte est positif. La répartition Analytique inclut les bulletins sans équipe. La migration V35 clôture les chantiers absents de la dernière période de paie, avec audit; sans paie, elle ne change rien. |
 | 2026-10-23 | Fonction | Trois vues, import et création dans l'en-tête; répartition par fonction porte les STC (`stc`, `stcMontant`). Les règles métier sont dans [le dossier Fonction](../function/README.md). |
 | 2026-10-23 | Vues partagées et Chantier | Coque, Tabulaire, Cartes et Analytique partagés par les cinq domaines. Chaque domaine configure sa hiérarchie Cartes et l'ordre de priorité Analytique; filtres, données, colonnes, cellules, actions et règles métier restent propres au domaine. Voir [les vues de périmètre](../frontend/vues-perimetre.md). |
 
@@ -59,10 +60,11 @@ elles ne prouvent pas à elles seules un déploiement ni un accord métier.
 
 - **Sauvegarde faite** le 2026-10-19 avant la mise à jour : `rh-erp-20261019T152826Z.tar.gz.age` (serveur, `./backups/`),
   contrôles d'intégrité OK. Elle est chiffrée avec `age` ; la clé privée est hors serveur (voir `docs/deployment.md`).
-- **À faire par le propriétaire** : `docker compose pull` puis `docker compose up -d`. Au démarrage, Flyway applique **V29**
-  (colonnes de la fiche, table des départs) et **V30** (reprise : fiches alignées sur le dernier bulletin, statut, départs,
-  **suppression des employés sans aucun bulletin**) puis **V31** (fonctions sans bulletin supprimées, chantiers sans bulletin
-  clôturés). V30 et la suppression des fonctions de V31 sont irréversibles sans la sauvegarde.
+- **À faire par le propriétaire** : `docker compose pull` puis `docker compose up -d`. Si elles ne sont pas déjà appliquées,
+  Flyway exécute **V29–V35** : colonnes Employé et départs; reprise des fiches depuis la dernière paie (V30); nettoyage des
+  référentiels (V31); permission d'import Équipe (V32); retrait des affectations des employés sortis (V33); fusion de
+  `CH+OP` (V34); clôture des chantiers absents de la dernière paie (V35). Les reprises de données sont auditées; sauvegarder
+  la base avant application.
 - **Ensuite** : essayer l'assistant d'import avec le vrai fichier de paie d'**octobre 2026** (premier vrai usage).
 
 ---

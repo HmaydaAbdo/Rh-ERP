@@ -21,6 +21,7 @@ export interface CollectionShellConfig {
         <app-vue-switcher [label]="configuration().libelleVue" [vues]="configuration().vues"></app-vue-switcher>
         <div class="app-vues__actions"><ng-content select="[collection-actions]"></ng-content></div>
       </div>
+      <ng-content select="[collection-summary]"></ng-content>
       <ng-content select="[collection-filters]"></ng-content>
       @if (contentVisible()) {
         <router-outlet (activate)="outletActivated.emit($event)"></router-outlet>
