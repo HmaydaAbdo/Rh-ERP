@@ -40,7 +40,7 @@ describe('fond de carte', () => {
 
   describe('creerStyle', () => {
     it("lit l'archive auto-hébergée par le protocole pmtiles, avec l'attribution OpenStreetMap", () => {
-      const source = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).sources[SOURCE_DU_FOND];
+      const source = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE).sources[SOURCE_DU_FOND];
       expect(source).toEqual({
         type: 'vector',
         url: 'pmtiles://https://rh.staport.ma/rh-erp/carte/fond/monde.pmtiles',
@@ -50,26 +50,28 @@ describe('fond de carte', () => {
     });
 
     it('prend les polices et les icônes hébergées par l’application, sans service externe', () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE);
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE);
       expect(style.glyphs).toBe('https://rh.staport.ma/rh-erp/carte/fond/fonts/{fontstack}/{range}.pbf');
-      expect(style.sprite).toBe('https://rh.staport.ma/rh-erp/carte/fond/sprites/v4/light');
+      expect(style.sprite).toBe('https://rh.staport.ma/rh-erp/carte/fond/sprites/v4/dark');
     });
 
-    it("suit le thème de l'application", () => {
-      const clair = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE);
-      const sombre = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'dark', BASE);
-      expect(sombre.sprite).toBe('https://rh.staport.ma/rh-erp/carte/fond/sprites/v4/dark');
-      expect(sombre.layers).not.toEqual(clair.layers);
+    it("garde le style sombre quel que soit le thème de l'application", () => {
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE);
+      expect(style.sprite).toBe('https://rh.staport.ma/rh-erp/carte/fond/sprites/v4/dark');
+      expect(style.layers.find((couche) => couche.id === 'background')).toMatchObject({
+        type: 'background',
+        paint: { 'background-color': '#31353f' }
+      });
     });
 
     it("prend la couleur de l'eau en attendant les tuiles", () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE);
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE);
       const fond = style.layers.find((couche) => couche.id === 'background');
-      expect(fond).toMatchObject({ type: 'background', paint: { 'background-color': '#80deea' } });
+      expect(fond).toMatchObject({ type: 'background', paint: { 'background-color': '#31353f' } });
     });
 
     it('construit toutes les couches du plan sans relief sur la source du fond', () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'plan', relief: false });
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE, { fond: 'plan', relief: false });
       expect(style.layers.length).toBeGreaterThan(10);
       for (const couche of style.layers) {
         if ('source' in couche) {
@@ -81,12 +83,12 @@ describe('fond de carte', () => {
     });
 
     it('élève les bâtiments à leur hauteur OpenStreetMap', () => {
-      const batiments = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE).layers.find((couche) => couche.id === 'buildings');
+      const batiments = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE).layers.find((couche) => couche.id === 'buildings');
       expect(batiments).toMatchObject({ type: 'fill-extrusion', source: SOURCE_DU_FOND, 'source-layer': 'buildings' });
     });
 
     it("ajoute le relief auto-hébergé : terrain 3D et ombrage, sous l'eau, sur deux sources de la même archive", () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'plan', relief: true });
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE, { fond: 'plan', relief: true });
       expect(style.sources[SOURCE_DU_RELIEF]).toEqual({
         type: 'raster-dem',
         url: 'pmtiles://https://rh.staport.ma/rh-erp/carte/fond/monde-relief.pmtiles',
@@ -103,7 +105,7 @@ describe('fond de carte', () => {
     });
 
     it("affiche l'imagerie satellite sous les frontières, les grands axes et des libellés blancs", () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'light', BASE, { fond: 'satellite', relief: false });
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE, { fond: 'satellite', relief: false });
       // Les tuiles passent par le protocole satellite:// (relais avec clé, puis secours) : aucune clé dans le navigateur.
       expect(style.sources[SOURCE_SATELLITE]).toMatchObject({ type: 'raster', tiles: ['satellite://{z}/{y}/{x}'] });
       expect(style.layers[1]).toMatchObject({ type: 'raster', source: SOURCE_SATELLITE });
@@ -117,7 +119,7 @@ describe('fond de carte', () => {
     });
 
     it('dessine le globe vu de loin, avec son atmosphère', () => {
-      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, 'dark', BASE);
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE);
       expect(style.projection).toEqual({ type: 'globe' });
       expect(style.sky?.['atmosphere-blend']).toBeDefined();
     });

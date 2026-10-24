@@ -16,7 +16,7 @@ export interface FondDeCarte {
   readonly zoomMaxArchive: number;
   /** Modèle des polices des libellés (`{fontstack}` et `{range}` sont remplacés par MapLibre). */
   readonly glyphes: string;
-  /** Dossier des icônes ; la variante claire ou sombre y est ajoutée selon le thème. */
+  /** Dossier des icônes ; la variante sombre y est ajoutée quel que soit le thème de l'application. */
   readonly icones: string;
   /** Mention légale affichée sur la carte (texte statique de la configuration, jamais une donnée utilisateur). */
   readonly attribution: string;

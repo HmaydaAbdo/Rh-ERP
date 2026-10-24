@@ -25,7 +25,6 @@ import {
   type MapLayerMouseEvent
 } from 'maplibre-gl';
 
-import { ThemeService, type Theme } from '../../../core/theme/theme.service';
 import { CARTE_CONFIG } from './carte.config';
 import {
   AFFICHAGE_PAR_DEFAUT,
@@ -71,8 +70,8 @@ class ControleDuGabarit implements IControl {
 
 /**
  * Carte du monde, ouverte sur le Maroc : le fond seulement, sans donnée de chantier pour l'instant. Composant « bête » : il ne connaît ni la page,
- * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, la redessine au changement de thème
- * ou d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
+ * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, conserve son style sombre malgré
+ * le thème applicatif, la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
  * détruit la carte à sa destruction.
  *
  * Styles sans encapsulation : MapLibre crée ses propres éléments (contrôles, mention légale, fiches) hors du gabarit Angular.
@@ -87,7 +86,6 @@ class ControleDuGabarit implements IControl {
 })
 export class ChantierCarteComponent {
   private readonly config = inject(CARTE_CONFIG);
-  private readonly theme = inject(ThemeService);
   private readonly document = inject(DOCUMENT);
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly conteneur = viewChild.required<ElementRef<HTMLElement>>('conteneur');
@@ -95,8 +93,8 @@ export class ChantierCarteComponent {
 
   private carte?: CarteMapLibre;
   private observateur?: ResizeObserver;
-  /** Thème et affichage du style en place : un changement de l'un ou de l'autre redessine la carte. */
-  private styleAffiche?: { theme: Theme; affichage: Affichage };
+  /** Affichage du style en place ; le thème cartographique reste sombre et indépendant du thème applicatif. */
+  private styleAffiche?: Affichage;
 
   protected readonly idAide = `chantier-carte-aide-${compteur++}`;
 
@@ -117,11 +115,10 @@ export class ChantierCarteComponent {
     afterNextRender(() => this.creerCarte());
 
     effect(() => {
-      const theme = this.theme.theme();
       const affichage = this.affichage();
-      if (this.carte && (theme !== this.styleAffiche?.theme || affichage !== this.styleAffiche.affichage)) {
-        this.styleAffiche = { theme, affichage };
-        this.carte.setStyle(creerStyle(this.config, theme, this.document.baseURI, affichage));
+      if (this.carte && affichage !== this.styleAffiche) {
+        this.styleAffiche = affichage;
+        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage));
       }
     });
 
@@ -158,10 +155,10 @@ export class ChantierCarteComponent {
     const base = this.document.baseURI;
     preparerMapLibre(this.config, base);
 
-    this.styleAffiche = { theme: this.theme.theme(), affichage: this.affichage() };
+    this.styleAffiche = this.affichage();
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
-      style: creerStyle(this.config, this.styleAffiche.theme, base, this.styleAffiche.affichage),
+      style: creerStyle(this.config, base, this.styleAffiche),
       attributionControl: { compact: true },
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.
       fadeDuration: 0,

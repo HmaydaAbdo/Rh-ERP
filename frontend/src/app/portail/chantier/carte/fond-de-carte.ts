@@ -13,7 +13,6 @@ import {
 } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 
-import type { Theme } from '../../../core/theme/theme.service';
 import { CarteConfig } from './carte.config';
 
 /** Nom de la source du fond dans le style ; les couches Protomaps s'y réfèrent. */
@@ -30,7 +29,7 @@ const PROTOCOLE_SATELLITE = 'satellite';
 /** Fond affiché : le plan vectoriel, ou l'imagerie satellite avec les frontières, les grands axes et les libellés du plan. */
 export type TypeDeFond = 'plan' | 'satellite';
 
-/** Ce que l'utilisateur a choisi d'afficher ; le style est une fonction pure de ce choix, du thème et de la configuration. */
+/** Ce que l'utilisateur a choisi d'afficher ; le style reste sombre et dépend du calque choisi et de la configuration. */
 export interface Affichage {
   readonly fond: TypeDeFond;
   /** Ombrage du relief et terrain 3D. */
@@ -132,9 +131,8 @@ export function preparerMapLibre(config: CarteConfig, base: string): void {
   mapLibrePrete = true;
 }
 
-/** Style complet de la carte pour le thème et l'affichage choisis ; `base` est l'adresse de l'application (`document.baseURI`). */
-export function creerStyle(config: CarteConfig, theme: Theme, base: string, affichage: Affichage = AFFICHAGE_PAR_DEFAUT): StyleSpecification {
-  const variante = theme === 'dark' ? 'dark' : 'light';
+/** Style complet : la carte reste sombre quel que soit le thème de l'application ; `base` est `document.baseURI`. */
+export function creerStyle(config: CarteConfig, base: string, affichage: Affichage = AFFICHAGE_PAR_DEFAUT): StyleSpecification {
   const sources: Record<string, SourceSpecification> = {
     [SOURCE_DU_FOND]: {
       type: 'vector',
@@ -167,13 +165,13 @@ export function creerStyle(config: CarteConfig, theme: Theme, base: string, affi
   return {
     version: 8,
     glyphs: urlAbsolue(config.fond.glyphes, base),
-    // Sur l'imagerie, les libellés sont ceux du thème sombre (texte clair, halo foncé) : les icônes les suivent.
-    sprite: `${urlAbsolue(config.fond.icones, base)}/${affichage.fond === 'satellite' ? 'dark' : variante}`,
+    // Les libellés et icônes restent contrastés sur le fond sombre comme sur l'imagerie satellite.
+    sprite: `${urlAbsolue(config.fond.icones, base)}/dark`,
     sources,
-    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, variante, affichage),
+    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, 'dark', affichage),
     // Globe vu de loin, à plat en approchant (MapLibre passe de l'un à l'autre au fil du zoom).
     projection: { type: 'globe' },
-    sky: ciel(variante),
+    sky: ciel('dark'),
     ...(affichage.relief ? { terrain: { source: SOURCE_DU_RELIEF, exaggeration: config.relief.exageration } } : {})
   };
 }
