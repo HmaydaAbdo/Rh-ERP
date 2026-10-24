@@ -46,6 +46,9 @@ describe('EquipeListComponent', () => {
     ]);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 équipes');
     expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
+    const exporteur = racine().querySelector('app-pdf-export-button[table-export]');
+    expect(exporteur?.parentElement?.classList.contains('app-table-bar__tools')).toBe(true);
+    expect(exporteur?.querySelector('button[aria-label="Exporter les équipes filtrées en PDF"]')).not.toBeNull();
   });
 
   it('propose modification et suppression à qui a les droits, la seule consultation sinon', async () => {

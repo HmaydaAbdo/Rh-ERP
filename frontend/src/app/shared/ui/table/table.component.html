@@ -130,11 +130,7 @@
       <button stp-button variant="text" iconOnly icon="chevrons-right" aria-label="Dernière page" [disabled]="currentPage() === pageCount()" (click)="goToPage(pageCount())"></button>
       <label class="stp-table__rows">
         <span class="app-lecteur">Lignes par page</span>
-        <select [value]="rows()" (change)="changeRows(rowsFromSelect($event))">
-          @for (option of rowsPerPageOptions(); track option) {
-            <option [value]="option" [selected]="option === rows()">{{ option }}</option>
-          }
-        </select>
+        <stp-select ariaLabel="Lignes par page" placeholder="Lignes par page" [options]="rowsOptions()" [value]="rows()" (valueChange)="changeRows($event)" />
       </label>
     </div>
   </nav>

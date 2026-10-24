@@ -13,6 +13,7 @@ export const MODULE_EMPLOYE: ModulePerimetre = {
   libelleRacine: 'Tous les employés',
   dimension: null,
   ordre: ['CHANTIER', 'EQUIPE', 'FONCTION'],
+  ordreAnalytique: ['EMPLOYEE', 'PAIE'],
   route: '/employees',
   permission: 'EMPLOYEE_READ',
   sansLienEmployes: true,

@@ -244,15 +244,8 @@ tfoot td {
   gap: var(--space-xs);
 }
 
-.stp-table__rows select {
-  min-height: var(--control-height);
-  padding: 0 var(--space-sm);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--control-font-size);
+.stp-table__rows stp-select {
+  width: 5rem;
 }
 
 // ---- Téléphone : la première colonne reste en vue pendant le défilement, le total sur sa ligne ----

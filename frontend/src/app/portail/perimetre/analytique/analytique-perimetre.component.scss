@@ -7,7 +7,7 @@
 
   &__tuiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
     gap: var(--space-md);
   }
 
@@ -55,16 +55,50 @@
   }
 
   &__section {
+    position: relative;
     min-width: 0;
     padding: var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+
+    &:hover,
+    &:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
 
     h4 {
       margin: 0 0 var(--space-sm);
       font-size: var(--text-base);
       font-weight: 600;
+    }
+
+    > app-pdf-export-button {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: var(--space-xs);
+      inset-inline-end: var(--space-xs);
+    }
+  }
+
+  &__section--synthese {
+    padding-block-start: var(--space-sm);
+
+    > app-pdf-export-button {
+      inset-block-start: var(--space-xs);
+    }
+
+    .perimetre-analytique__tuiles {
+      padding-block-start: var(--control-height);
+    }
+  }
+
+  &__section--exportable {
+    > h4,
+    .perimetre-analytique__entete-section h4 {
+      padding-inline-end: var(--control-height);
     }
   }
 
@@ -79,6 +113,8 @@
     h4 {
       margin: 0;
     }
+
+    app-pdf-export-button { position: static; flex: none; }
   }
 
   &__choix {
@@ -103,11 +139,34 @@
     }
   }
 
+  &__indicateurs { flex: 1 1 14rem; min-inline-size: 0; }
+
   &__graphique {
     height: 16rem;
 
     &--haut {
       height: 22rem;
+    }
+
+    &--exportable {
+      position: relative;
+      padding: var(--control-height) var(--space-xs) var(--space-xs);
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+
+      &:hover,
+      &:focus-within {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+      }
+
+      app-pdf-export-button {
+        position: absolute;
+        z-index: 1;
+        inset-block-start: var(--space-2xs);
+        inset-inline-end: var(--space-2xs);
+      }
     }
   }
 
@@ -152,6 +211,57 @@
     gap: var(--space-md);
   }
 
+  &__periode-fixe {
+    align-self: center;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  &__selection {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: fit-content;
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+
+    stp-select { min-width: 14rem; max-width: 100%; }
+  }
+
+  &__filtres-equipe {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+    margin-block: var(--space-sm) var(--space-md);
+
+    > .perimetre-analytique__selection {
+      flex: 1 1 14rem;
+      min-inline-size: 0;
+    }
+
+    > .perimetre-analytique__selection stp-select {
+      flex: 1 1 auto;
+      inline-size: 100%;
+      min-inline-size: 0;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    &__filtres-equipe > .perimetre-analytique__selection { flex-basis: 100%; }
+    &__selection {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-2xs);
+    }
+    &__indicateurs { flex-basis: 100%; }
+  }
+
   &__periode {
     display: grid;
     gap: var(--space-2xs);
@@ -161,7 +271,6 @@
     select { min-width: 11rem; }
   }
 
-  &__lien-vue,
   &__lien {
     border: 0;
     padding: 0;
@@ -244,6 +353,11 @@
     flex-direction: column;
     gap: var(--space-md);
     min-width: 0;
+
+    &--prioritaire {
+      padding-inline-start: var(--space-md);
+      border-inline-start: 3px solid var(--color-primary);
+    }
   }
 
   &__titre {
@@ -262,6 +376,16 @@
 
   .app-static-table {
     min-width: 28rem;
+  }
+
+  @include bp.phone {
+    &__tuiles {
+      gap: var(--space-xs);
+    }
+
+    &__tuile {
+      padding: var(--space-sm);
+    }
   }
 }
 

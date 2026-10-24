@@ -1,6 +1,7 @@
 import type { MockedObject } from 'vitest';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
@@ -13,6 +14,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
 import { AnalytiquePerimetreComponent } from './analytique-perimetre.component';
@@ -84,6 +86,22 @@ class HotePaieComponent {
   module: ModulePerimetre = { ...module(), cle: 'paie', dimension: null, catalogue: undefined, niveauPeriode: true, route: '/paie' };
 }
 
+@Component({
+  selector: 'app-hote-equipe',
+  imports: [AnalytiquePerimetreComponent],
+  template: '<app-analytique-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteEquipeComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['PAIE'], sourcesAnalytique: ['PAIE'],
+    introAnalytique: 'Répartition de la paie par équipe et évolution mensuelle des indicateurs sélectionnés.',
+    vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true,
+    catalogue: { ...module().catalogue!, charger: () => of(ITEMS), filtreActif: () => false }, route: '/equipes'
+  };
+}
+
 describe('AnalytiquePerimetreComponent', () => {
   let employes: MockedObject<EmployeeService>;
   let paie: MockedObject<PaieService>;
@@ -97,6 +115,33 @@ describe('AnalytiquePerimetreComponent', () => {
     return harness.routeNativeElement as HTMLElement;
   }
 
+  async function ouvrirEquipe(url = '/equipes/analytique'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function choisirOption(input: HTMLInputElement, recherche: string): Promise<void> {
+    input.click();
+    input.value = recherche;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+    (document.querySelector('[role="option"]') as HTMLElement).click();
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
+  async function choisirValeur(conteneur: Element, ariaLabel: string, value: unknown): Promise<void> {
+    const select = harness.fixture.debugElement.queryAll(By.directive(SelectComponent))
+      .find((debug) => conteneur.contains(debug.nativeElement) && (debug.componentInstance as SelectComponent).ariaLabel() === ariaLabel)!
+      .componentInstance as SelectComponent;
+    select.value.set(value);
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
   beforeEach(async () => {
     permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
@@ -104,7 +149,10 @@ describe('AnalytiquePerimetreComponent', () => {
       analyser: vi.fn().mockReturnValue(of(FICHES))
     } as unknown as MockedObject<EmployeeService>;
     paie = {
-      listerPeriodes: vi.fn().mockReturnValue(of([{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 }])),
+      listerPeriodes: vi.fn().mockReturnValue(of([
+        { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 },
+        { periode: '2026-07', nombreBulletins: 1, nombreChantiers: 1, masse: 4000, stc: 0, stcMontant: 0 }
+      ])),
       analyser: vi.fn().mockReturnValue(of(ANALYSE)),
       effectifs: vi.fn().mockReturnValue(of([
         { periode: '2026-07', effectif: 1, entrees: null, sorties: 0, mutations: null },
@@ -113,7 +161,11 @@ describe('AnalytiquePerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'chantiers/analytique', component: HoteComponent }, { path: 'paie/analytique', component: HotePaieComponent }]),
+        provideRouter([
+          { path: 'chantiers/analytique', component: HoteComponent },
+          { path: 'equipes/analytique', component: HoteEquipeComponent },
+          { path: 'paie/analytique', component: HotePaieComponent }
+        ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
@@ -135,7 +187,68 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
+    expect(page.querySelectorAll('.perimetre-analytique__section--exportable > app-pdf-export-button').length).toBeGreaterThanOrEqual(4);
+    expect(page.querySelector('.perimetre-analytique__section--exportable app-pdf-export-button button[aria-label="Exporter l’évolution mensuelle en PDF"]')).not.toBeNull();
+    expect(page.querySelector('a.stp-button[href="/chantiers/cartes"]')).not.toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: undefined }));
+  });
+
+  it('centre Équipe sur l’effectif par équipe et son historique, sans filtre de période ni blocs Employé/Paie', async () => {
+    const page = await ouvrirEquipe('/equipes/analytique?periode=2026-07');
+
+    expect(page.textContent).toContain('Répartition de la paie par équipe · août 2026');
+    expect(page.textContent).toContain('Évolution mensuelle par équipe');
+    expect(page.textContent).not.toContain('Répartir par');
+    expect(page.textContent).not.toContain('Pyramide des âges');
+    expect(page.textContent).not.toContain('Ancienneté');
+    expect(page.querySelector('#pa-evolution')).toBeNull();
+    expect(page.querySelector('#pa-repartition')).toBeNull();
+    expect(page.querySelector('.perimetre-analytique__periode')).toBeNull();
+    expect(page.querySelector('a[href="/equipes/cartes"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-analytique__section--exportable app-pdf-export-button')).toHaveLength(2);
+    expect(page.textContent).toContain('juillet 2026');
+    expect(page.textContent).toContain('août 2026');
+    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+    expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de la répartition par équipe"]')).toHaveLength(1);
+    expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]')).toHaveLength(1);
+    expect(page.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(page.querySelector('stp-select input[aria-label="Chantier"]')?.getAttribute('placeholder')).toBe('Tous les chantiers');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [1] }));
+    expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
+    expect(employes.analyser).not.toHaveBeenCalled();
+    expect(employes.regrouper).not.toHaveBeenCalled();
+  });
+
+  it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {
+    const page = await ouvrirEquipe();
+    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'));
+    const chantier = evolution?.querySelector('input[aria-label="Chantier"]') as HTMLInputElement;
+    await choisirOption(chantier, 'Nador');
+    harness.fixture.detectChanges();
+
+    expect(TestBed.inject(Router).url).toContain('chantierIds=1');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1], equipeIds: [1] }));
+    expect([...page.querySelectorAll('.perimetre-analytique__section input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'Nador')).toBe(true);
+    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+  });
+
+  it('permet de sélectionner plusieurs indicateurs indépendamment et affiche un graphique par indicateur', async () => {
+    const page = await ouvrirEquipe();
+    const repartition = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Répartition de la paie par équipe'))!;
+    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'))!;
+    await choisirValeur(repartition, 'Indicateurs de la répartition par équipe', ['effectif', 'masse']);
+    await choisirValeur(evolution, 'Indicateurs de l’évolution mensuelle par équipe', ['effectif', 'stc']);
+    harness.fixture.detectChanges();
+
+    expect((repartition.querySelector('input[aria-label="Indicateurs de la répartition par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
+    expect((evolution.querySelector('input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
+    expect(repartition.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(evolution.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {
@@ -269,7 +382,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = harness.routeNativeElement as HTMLElement;
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
-    expect(page.querySelector('select')).toBeNull();
+    expect(page.querySelector('stp-select')).toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
   });
 
@@ -282,11 +395,9 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('met à jour le mois dans l’URL et retire une étape', async () => {
     const page = await ouvrir('/chantiers/analytique?chantierIds=1&periode=2026-08');
-    const select = page.querySelector('select') as HTMLSelectElement;
-    select.value = '2026-08';
-    select.dispatchEvent(new Event('change'));
+    await choisirValeur(page, 'Période de paie', '2026-07');
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+    expect(TestBed.inject(Router).url).toContain('periode=2026-07');
 
     (page.querySelector('button[aria-label="Retirer l’étape Chantier"]') as HTMLButtonElement).click();
     await harness.fixture.whenStable();

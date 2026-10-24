@@ -1,6 +1,7 @@
 import type { MockedObject } from 'vitest';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
@@ -9,6 +10,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
@@ -61,6 +63,20 @@ class HoteComponent {
   module = module();
 }
 
+@Component({
+  selector: 'app-hote-equipe',
+  imports: [CartesPerimetreComponent],
+  template: '<app-cartes-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteEquipeComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
+    sansRaccourciListe: true, sansLienEmployes: true
+  };
+}
+
 describe('CartesPerimetreComponent', () => {
   let employes: MockedObject<EmployeeService>;
   let paie: MockedObject<PaieService>;
@@ -74,6 +90,22 @@ describe('CartesPerimetreComponent', () => {
     return harness.routeNativeElement as HTMLElement;
   }
 
+  async function ouvrirEquipe(url = '/equipes/cartes'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function choisirValeur(ariaLabel: string, value: unknown): Promise<void> {
+    const select = harness.fixture.debugElement.queryAll(By.directive(SelectComponent))
+      .find((debug) => (debug.componentInstance as SelectComponent).ariaLabel() === ariaLabel)!
+      .componentInstance as SelectComponent;
+    select.value.set(value);
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
   beforeEach(async () => {
     permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
@@ -81,7 +113,10 @@ describe('CartesPerimetreComponent', () => {
       search: vi.fn().mockReturnValue(of({ content: [], page: { size: 24, number: 0, totalElements: 0, totalPages: 0 } }))
     } as unknown as MockedObject<EmployeeService>;
     paie = {
-      listerPeriodes: vi.fn().mockReturnValue(of([{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 }])),
+      listerPeriodes: vi.fn().mockReturnValue(of([
+        { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 },
+        { periode: '2026-07', nombreBulletins: 1, nombreChantiers: 1, masse: 4000, stc: 0, stcMontant: 0 }
+      ])),
       analyser: vi.fn().mockImplementation((criteres: { periode: string }) =>
         of(criteres.periode === '2026-08'
           ? analyse([{ id: 1, code: 'C168', libelle: 'Nador', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }])
@@ -89,7 +124,7 @@ describe('CartesPerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'chantiers/cartes', component: HoteComponent }]),
+        provideRouter([{ path: 'chantiers/cartes', component: HoteComponent }, { path: 'equipes/cartes', component: HoteEquipeComponent }]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
@@ -122,6 +157,10 @@ describe('CartesPerimetreComponent', () => {
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(page.querySelector('a[href="/chantiers/1"]')).not.toBeNull();
     expect(page.querySelector('a[href^="/chantiers/analytique?chantierIds=1"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete app-pdf-export-button button[aria-label="Exporter les résultats de ce périmètre en PDF"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete app-pdf-export-button button[title]')).not.toBeNull();
+    expect(page.textContent).not.toContain('Étape 1 sur 4');
+    expect(page.textContent).not.toContain('Le parcours suit l’organisation définie');
   });
 
   it('ouvrir une carte l’ajoute au fil et descend à la dimension suivante dans le périmètre choisi', async () => {
@@ -134,17 +173,15 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.perimetre-cartes__etape')?.textContent).toContain('C168');
     expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
-    expect(page.querySelector('button[aria-pressed="true"]')?.textContent).toContain('Équipe');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Équipe');
   });
 
-  it('laisse regrouper dans un autre ordre, sans proposer une dimension déjà choisie', async () => {
+  it('suit la hiérarchie du domaine et ignore le regroupement demandé par une ancienne URL', async () => {
     const page = await ouvrir('/chantiers/cartes?chantierIds=1&par=fonction');
 
-    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'FONCTION');
-    const boutons = Array.from(page.querySelectorAll('.perimetre-cartes__choix button')) as HTMLButtonElement[];
-    expect(boutons.find((b) => b.textContent?.includes('Chantier'))?.disabled).toBe(true);
-    expect(boutons.find((b) => b.textContent?.includes('Équipe'))?.disabled).toBe(false);
-    expect(boutons.find((b) => b.textContent?.includes('Fonction'))?.getAttribute('aria-pressed')).toBe('true');
+    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Équipe');
+    expect(page.querySelector('.perimetre-cartes__choix')).toBeNull();
   });
 
   it('retire une étape du fil sans toucher aux filtres du module', async () => {
@@ -159,9 +196,9 @@ describe('CartesPerimetreComponent', () => {
   });
 
   it('applique le filtre du module au périmètre des niveaux suivants', async () => {
-    await ouvrir('/chantiers/cartes?code=C1&par=equipe');
+    await ouvrir('/chantiers/cartes?code=C1');
 
-    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
+    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, 'CHANTIER');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ chantierIds: [1] }));
   });
 
@@ -179,9 +216,9 @@ describe('CartesPerimetreComponent', () => {
       content: [{ id: 9, nomPrenom: 'Zahra Idrissi', cin: 'CD456', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 1, code: 'C168' }, equipe: null, statut: 'ACTIF' }],
       page: { size: 24, number: 0, totalElements: 30, totalPages: 2 }
     }) as never);
-    const page = await ouvrir('/chantiers/cartes?par=employes&chantierIds=1');
+    const page = await ouvrir('/chantiers/cartes?chantierIds=1&equipeIds=5&fonctionIds=7');
 
-    expect(employes.search).toHaveBeenCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined }, { page: 0, size: 24, sort: 'nomPrenom,asc' });
+    expect(employes.search).toHaveBeenCalledWith({ chantierIds: [1], equipeIds: [5], fonctionIds: [7] }, { page: 0, size: 24, sort: 'nomPrenom,asc' });
     expect(page.textContent).toContain('Zahra Idrissi');
     expect(page.textContent).toContain('Afficher plus (29 restants)');
   });
@@ -196,7 +233,7 @@ describe('CartesPerimetreComponent', () => {
     expect(employes.regrouper).not.toHaveBeenCalled();
     expect(paie.listerPeriodes).not.toHaveBeenCalled();
     expect(paie.analyser).not.toHaveBeenCalled();
-    expect(Array.from(page.querySelectorAll('.perimetre-cartes__choix button')).some((b) => b.textContent?.includes('Employés'))).toBe(false);
+    expect(page.querySelector('.perimetre-cartes__niveau')).not.toBeNull();
   });
 
   it('signale l’absence de mois de paie sans inventer d’indicateurs', async () => {
@@ -209,12 +246,36 @@ describe('CartesPerimetreComponent', () => {
 
   it('change le mois de paie dans l’URL', async () => {
     const page = await ouvrir();
-    const select = page.querySelector('select') as HTMLSelectElement;
-    select.value = '2026-08';
-    select.dispatchEvent(new Event('change'));
-    await harness.fixture.whenStable();
+    await choisirValeur('Période de paie', '2026-07');
 
-    expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+    expect(TestBed.inject(Router).url).toContain('periode=2026-07');
+  });
+
+  it('garde le mois Paie le plus récent et exporte chaque carte Équipe séparément', async () => {
+    await harness.navigateByUrl('/equipes/cartes?periode=2026-07&code=CH', HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const page = harness.routeNativeElement as HTMLElement;
+
+    expect(page.querySelector('stp-select')).toBeNull();
+    expect(page.textContent).toContain('Paie · août 2026');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
+    expect(page.querySelector('a[href="/equipes"]')).toBeNull();
+    expect(page.querySelector('a[href^="/employees"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-carte__pied > app-pdf-export-button')).toHaveLength(1);
+    expect(page.querySelector('.perimetre-carte app-pdf-export-button button[aria-label="Exporter Nador en PDF"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-carte__pied a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
+    expect(page.querySelector('.perimetre-carte__pied a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
+  });
+
+  it('masque le fil racine redondant au départ et le garde pour revenir après une étape', async () => {
+    let page = await ouvrirEquipe();
+    expect(page.querySelector('.perimetre-cartes__fil')).toBeNull();
+
+    page = await ouvrirEquipe('/equipes/cartes?equipeIds=1');
+    const racine = page.querySelector('.perimetre-cartes__racine') as HTMLButtonElement;
+    expect(racine.textContent).toContain('Toutes les équipes');
+    expect(racine.disabled).toBe(false);
   });
 
   it('renvoie à la vue Tabulaire avec les filtres du module, et aux employés avec le périmètre', async () => {

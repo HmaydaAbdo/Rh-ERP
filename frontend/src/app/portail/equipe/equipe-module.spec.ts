@@ -17,6 +17,10 @@ describe('moduleEquipe', () => {
   it('décrit le module : référentiel d’équipes, descente équipe → chantier → fonction', () => {
     expect(module).toMatchObject({ cle: 'equipe', dimension: 'EQUIPE', route: '/equipes', permission: 'EQUIPE_READ' });
     expect(module.ordre).toEqual(['EQUIPE', 'CHANTIER', 'FONCTION']);
+    expect(module).toMatchObject({
+      sourcesAnalytique: ['PAIE'], vueEffectifParDimension: true, periodePaieRecenteFixe: true,
+      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true
+    });
   });
 
   it('charge le référentiel filtré par code et libellé', () => {

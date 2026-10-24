@@ -84,45 +84,15 @@
     }
   }
 
-  // ---- Choix du regroupement : un groupe de boutons segmentés ----
-  &__choix {
+  // ---- Niveau courant du parcours métier ----
+  &__niveau {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-xs);
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
 
-    > span {
-      margin-right: var(--space-xs);
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-
-    button {
-      padding: var(--space-xs) var(--space-md);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-pill);
-      background: var(--color-surface);
-      color: var(--color-text);
-      font: inherit;
-      font-size: var(--text-sm);
-      cursor: pointer;
-      transition: background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
-
-      &[aria-pressed='true'] {
-        border-color: var(--color-primary);
-        background: var(--color-primary);
-        color: var(--color-primary-contrast);
-      }
-
-      &:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-
-      &:not(:disabled, [aria-pressed='true']):hover {
-        border-color: var(--color-primary);
-      }
-    }
+    h2 { margin: 0; font-size: var(--text-lg); font-weight: 600; }
   }
 
   // ---- Contenu ----
@@ -133,9 +103,30 @@
 
   &__resume,
   &__vide {
-    margin: 0 0 var(--space-sm);
+    margin: 0;
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__resultats {
+    padding: var(--space-xs);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+
+    &:hover,
+    &:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  &__resultats-entete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
   }
 
   &__grille {
@@ -168,7 +159,16 @@
     font-size: var(--text-sm);
     font-weight: 600;
 
-    select { min-width: 10rem; }
+    stp-select { min-width: 10rem; }
+  }
+
+  &__periode-fixe {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
   }
 
   // ---- Fiches des employés ----
@@ -236,6 +236,7 @@
 }
 
 .perimetre-carte {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -256,7 +257,7 @@
     flex-direction: column;
     gap: var(--space-xs);
     width: 100%;
-    padding: var(--space-md);
+    padding: calc(var(--space-md) + 2rem) var(--space-md) var(--space-md);
     border: 0;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     background: none;
@@ -264,6 +265,10 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
+  }
+
+  &__export {
+    display: inline-flex;
   }
 
   &__entete {
@@ -274,7 +279,19 @@
   }
 
   &__code {
-    font-weight: 700;
+    width: fit-content;
+    padding: 0 var(--space-xs);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    overflow-wrap: anywhere;
+  }
+
+  &__nom {
+    font-size: var(--text-md);
+    font-weight: 650;
     overflow-wrap: anywhere;
   }
 
@@ -358,13 +375,21 @@
   &__pied {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-xs) var(--space-md);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+    width: 100%;
     padding: var(--space-xs) var(--space-md) var(--space-sm);
     border-top: 1px solid var(--color-border);
     font-size: var(--text-sm);
 
-    a {
-      color: var(--color-primary);
+    > a,
+    > button,
+    > app-pdf-export-button {
+      display: inline-flex;
+      flex: 0 0 var(--control-height);
+      width: var(--control-height);
+      justify-content: center;
     }
   }
 }

@@ -257,20 +257,21 @@ mènent aux trois vues ; l'en-tête à onglets est le style global `.app-vues` (
 
 ### Vues Cartes et Analytique
 
-Les deux vues sont les **vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) : `EmployeeCartesComponent` et
+Les deux vues sont les **vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0014) : `EmployeeCartesComponent` et
 `EmployeeAnalytiqueComponent` ne sont que des hôtes minces, `employee-module.ts` décrit le module (pas de référentiel propre ;
 périmètre = barre de filtres : chantiers, équipes, fonctions, nom, CIN, statut).
 
-**Cartes** (lecture seule). On descend dans l'effectif en choisissant soi-même par quoi regrouper : **chantier, équipe, fonction**
-dans cet ordre par défaut, ou dans un autre — les boutons « Regrouper par » proposent à tout moment chaque dimension pas
-encore choisie, et « Employés » pour voir directement les fiches (« Afficher plus », 24 par page). Ouvrir une carte en fait une
-**étape du fil** ; chaque étape se retire seule. **« Voir la liste »** ouvre la vue Tabulaire sur le même périmètre. Tout est dans
-l'URL : les étapes sont `chantierIds`, `equipeIds` (0 = sans équipe) et `fonctionIds`, le regroupement courant `?par=`.
+**Cartes** (lecture seule). On descend dans l'effectif selon la hiérarchie **chantier → équipe → fonction → employés**.
+L'ouverture d'une carte avance automatiquement à l'étape suivante et ajoute une **étape au fil** ; chaque étape se retire
+seule. **« Voir la liste »** ouvre la vue Tabulaire sur le même périmètre. Tout est dans l'URL : les étapes sont
+`chantierIds`, `equipeIds` (0 = sans équipe) et `fonctionIds`. Les anciens liens contenant `?par=` suivent maintenant la
+hiérarchie définie par le domaine.
 Chaque carte montre l'effectif, la part des employés en poste (jauge) et, avec `PAIE_READ`, la paie du mois (payés, masse, STC)
-avec l'écart sur le mois contigu. Décision du propriétaire (2026-10-19) : descente libre, liste accessible à tout moment.
+avec l'écart sur le mois contigu.
 
-**Analytique** (graphiques). Avec `EMPLOYEE_READ` : six chiffres clés (effectif, en poste, sortis, âge moyen, ancienneté
-moyenne, embauches sur 12 mois), la **pyramide des âges** et l'**ancienneté** par tranche, la **répartition** en poste / sortis
+**Analytique** (graphiques). Les données Employé viennent en premier, suivies du bloc Paie. Avec `EMPLOYEE_READ` : six chiffres
+clés (effectif, en poste, sortis, âge moyen, ancienneté moyenne, embauches sur 12 mois), la **pyramide des âges** et l'**ancienneté**
+par tranche, la **répartition** en poste / sortis
 par chantier, équipe ou fonction (les 12 plus grands groupes ; tous dans le tableau de données). Avec `PAIE_READ` : les chiffres
 du mois, l'évolution mensuelle, la répartition de la paie, les tranches de total et les **mouvements mois par mois**
 (`POST /paie/effectifs` : employés payés, entrées, sorties, mutations). Chaque graphique a son tableau de données (« Voir les

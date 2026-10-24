@@ -4,7 +4,7 @@ import { CartesPerimetreComponent } from '../../perimetre/cartes/cartes-perimetr
 import { moduleEquipe } from '../equipe-module';
 import { EquipeService } from '../services/equipe.service';
 
-/** Vue Cartes des équipes : la descente libre par niveaux est partagée par tous les modules (voir `portail/perimetre/`). */
+/** Vue Cartes des équipes : la hiérarchie Équipe → Chantier → Fonction est définie par le domaine. */
 @Component({
   selector: 'app-equipe-cartes',
   imports: [CartesPerimetreComponent],

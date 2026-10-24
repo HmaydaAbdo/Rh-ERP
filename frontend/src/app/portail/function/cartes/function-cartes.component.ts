@@ -4,7 +4,7 @@ import { CartesPerimetreComponent } from '../../perimetre/cartes/cartes-perimetr
 import { moduleFunction } from '../function-module';
 import { FunctionService } from '../services/function.service';
 
-/** Vue Cartes des fonctions : la descente libre par niveaux est partagée par tous les modules (voir `portail/perimetre/`). */
+/** Vue Cartes des fonctions : la hiérarchie Fonction → Chantier → Équipe est configurée par le domaine. */
 @Component({
   selector: 'app-function-cartes',
   imports: [CartesPerimetreComponent],

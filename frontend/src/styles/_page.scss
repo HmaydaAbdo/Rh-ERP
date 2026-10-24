@@ -202,6 +202,11 @@
       grid-column: 1 / -1;
     }
 
+    > [table-export] {
+      grid-column: 2;
+      justify-self: end;
+    }
+
     .stp-split-button {
       display: flex;
       width: 100%;
@@ -211,6 +216,13 @@
       flex: 1;
     }
   }
+}
+
+.app-collection-table__surface:has([table-export]:hover) .stp-table__scroll,
+.app-collection-table__surface:has([table-export]:focus-within) .stp-table__scroll {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
 }
 
 // Tableaux courts hors stp-table (résultats d'import, journaux spécialisés) : mêmes repères et défilement autonome.

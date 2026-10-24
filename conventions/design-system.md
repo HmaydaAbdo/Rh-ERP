@@ -50,6 +50,28 @@ Le rendu premium repose sur le soin apporté à la typographie, aux espacements,
 visuelle, pas sur l'ajout d'effets. Les écrans denses gardent des niveaux de lecture évidents. Chaque écran conserve une
 action principale identifiable et un parcours métier compréhensible sans animation.
 
+Les textes décrivent les données et les actions utiles. Éviter les commentaires sur la conception du
+parcours (« suit l'organisation définie pour le domaine ») et les compteurs d'étapes d'une simple
+navigation hiérarchique. Un assistant de saisie garde ses repères de progression lorsqu'ils aident à
+terminer une opération. Les accès entre vues dans les onglets restent des liens identifiables. Les raccourcis
+compacts au pied d'une carte (par exemple l'accès à l'analyse de cette équipe) utilisent une icône sans bordure
+permanente, avec un nom accessible et une infobulle qui décrivent la destination. Les liens de lecture ou de retour
+conservent une apparence de lien identifiable.
+
+L'action d'export d'un composant est une icône sans bordure permanente dans son coin supérieur droit ou sa barre d'outils,
+avec un nom accessible et une infobulle explicites. Pour une carte qui comporte d'autres actions, l'export rejoint leur
+rangée d'icônes dans le pied de carte, répartie sur toute la largeur disponible. Le survol et le focus mettent en évidence la
+bordure du conteneur concerné, avec les jetons de couleur, d'ombre et de durée du design system.
+Préserver l'espace du bouton pour éviter les chevauchements et les déplacements de mise en page.
+L'action reste disponible au clavier et sur écran tactile ; sa découverte ne dépend pas du survol.
+Le mouvement reste discret et respecte `prefers-reduced-motion`.
+
+Pour préparer ou contrôler une évolution visuelle, utiliser les skills de design et d'accessibilité
+pertinentes disponibles (par exemple Impeccable ou UI/UX Pro Max) et un outil de navigateur adapté
+(par exemple Playwright). Leurs recommandations sont confrontées aux jetons, composants et règles
+du dépôt ; les résultats sont vérifiés sur l'application réelle. Suivre la
+[routine commune](workflow.md) pour les vérifications et les preuves de livraison.
+
 Pour les fonctions assistées par IA, distinguer clairement la suggestion de l'action confirmée. Une réponse fondée sur
 des données expose le contexte ou les sources disponibles ; les appels d'outils et les actions avec effet de bord sont
 visibles et confirmés selon le risque. L'assistance complète le parcours métier et ne le remplace pas.
@@ -182,7 +204,7 @@ des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni 
 | `app-page__header` | Le titre éditorial (`--text-page-title`) de l'écran et, à droite, ses actions |
 | `app-page__header` + `app-page__actions app-page__actions--liste` | Les actions d'un écran de liste (Importer, Synchroniser, Exporter, puis l'action principale « Nouveau … » en dernier), à droite du titre ; en une grille sur téléphone. Les écrans qui ont des onglets de vue (la paie) les posent au même niveau que les onglets |
 | `app-toolbar` | Les filtres regroupés dans une bande secondaire, sans ajouter une carte lourde : contrôles de même hauteur (`--control-height`), deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
-| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils à droite (`app-table-bar__tools`) — pour les écrans dont les actions sont dans l'en-tête, seulement le choix des colonnes |
+| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils du tableau à droite (`app-table-bar__tools`) : choix des colonnes et export propre au tableau lorsqu'il est proposé |
 | `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
 
 Formulaires et consultations (`src/styles/_forms.scss`) :

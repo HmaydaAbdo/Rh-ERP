@@ -22,6 +22,7 @@ const POSITIONS: ConnectedPosition[] = [
 
 /** Distance (px) au bas de la liste à partir de laquelle `loadMore` est émis. */
 const LOAD_MORE_THRESHOLD = 48;
+const OPTION_PAGE_SIZE = 40;
 
 /**
  * Liste déroulante Staport : sélection simple ou multiple, filtre à la frappe, bouton d'effacement. Construite sur
@@ -49,7 +50,6 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   readonly options = input<SelectOption<V>[]>([]);
   readonly selectedOptions = input<SelectOption<V>[]>([]);
   readonly multiple = input(false);
-  readonly filterable = input(false);
   readonly externalFilter = input(false);
   readonly clearable = input(true);
   readonly loading = input(false);
@@ -66,6 +66,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
 
   protected readonly expanded = signal(false);
   protected readonly term = signal('');
+  protected readonly visibleLimit = signal(OPTION_PAGE_SIZE);
   protected readonly selected = computed<V[]>(() => {
     const value = this.value();
     if (value === null || value === undefined) {
@@ -83,10 +84,11 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
 
   protected readonly shown = computed(() => {
     const term = normaliser(this.term().trim());
-    if (this.externalFilter() || !this.filterable() || term === '') {
+    if (this.externalFilter()) {
       return this.options();
     }
-    return this.options().filter((option) => normaliser(option.label).includes(term));
+    const filtered = term === '' ? this.options() : this.options().filter((option) => normaliser(option.label).includes(term));
+    return filtered.slice(0, this.visibleLimit());
   });
 
   /** Texte du champ fermé : libellé choisi, ou résumé à partir de deux valeurs en sélection multiple. */
@@ -103,7 +105,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   });
 
   /** Le champ affiche la saisie pendant qu'on cherche, la sélection sinon. */
-  protected readonly text = computed(() => (this.expanded() && this.filterable() ? this.term() : this.display()));
+  protected readonly text = computed(() => (this.expanded() ? this.term() : this.display()));
   protected readonly canClear = computed(() => this.clearable() && !this.disabled() && this.selected().length > 0);
 
   constructor() {
@@ -128,33 +130,22 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   }
 
   /**
-   * Un clic ouvre la liste. Sans filtre, le champ est un simple bouton déroulant : le clic ouvre et referme. Avec filtre, il
-   * ouvre seulement (le combobox Aria n'ouvre que sur une frappe ou une flèche) : se refermer à chaque clic gênerait le placement
-   * du curseur dans la saisie ; Échap, le choix d'une option ou un clic à l'extérieur ferment.
+   * La liste est toujours recherchable : le clic ouvre la saisie et le panneau; Échap, le choix d'une option ou un clic
+   * à l'extérieur ferment la liste.
    */
   protected toggle(): void {
     if (this.disabled()) {
       return;
     }
-    if (this.filterable()) {
-      this.expanded.set(true);
-    } else {
-      this.expanded.update((open) => !open);
-    }
-  }
-
-  /** Sans filtre, la frappe ne modifie pas le champ (qui n'affiche que la sélection). */
-  protected onBeforeInput(event: Event): void {
-    if (!this.filterable()) {
-      event.preventDefault();
-    }
+    this.expanded.set(true);
   }
 
   protected onType(text: string): void {
-    if (!this.filterable() || !this.expanded()) {
+    if (!this.expanded()) {
       return;
     }
     this.term.set(text);
+    this.visibleLimit.set(OPTION_PAGE_SIZE);
     this.filterChange.emit(text);
   }
 
@@ -188,13 +179,18 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     event.stopPropagation();
     this.commit([]);
     this.term.set('');
+    this.visibleLimit.set(OPTION_PAGE_SIZE);
     this.filterChange.emit('');
   }
 
   protected onScroll(event: Event): void {
     const list = event.target as HTMLElement;
     if (list.scrollHeight - list.scrollTop - list.clientHeight < LOAD_MORE_THRESHOLD) {
-      this.loadMore.emit();
+      if (this.externalFilter()) {
+        this.loadMore.emit();
+      } else if (this.visibleLimit() < this.shown().length || this.shown().length < this.options().length) {
+        this.visibleLimit.update((limit) => limit + OPTION_PAGE_SIZE);
+      }
     }
   }
 

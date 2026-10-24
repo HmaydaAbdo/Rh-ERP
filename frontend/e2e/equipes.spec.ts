@@ -8,13 +8,21 @@ const DROITS = ['EQUIPE_READ', 'EQUIPE_WRITE', 'EQUIPE_DELETE', 'EQUIPE_IMPORT']
 const CHAUFFEURS = { id: 5, version: 0, code: 'CH', libelle: 'Chauffeurs' };
 const OPERATEURS = { id: 6, version: 0, code: 'OP', libelle: 'Opérateurs' };
 
-const PERIODES = [{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 }];
+const PERIODES = [
+  { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 },
+  { periode: '2026-07', nombreBulletins: 1, nombreChantiers: 1, masse: 4200, stc: 0, stcMontant: 0 }
+];
 const ANALYSE = {
   periode: '2026-08',
   kpis: { masse: 4500, effectif: 1, coutMoyen: 4500, nombreChantiers: 1, stc: 1, stcMontant: 1000 },
-  moisPrecedent: null, parChantier: [], parFonction: [], tranches: [], qualite: { sansEquipe: 0, sansObservation: 0 },
+  moisPrecedent: null,
+  parChantier: [{ id: 9, code: 'C168', libelle: 'Nador', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }],
+  parFonction: [], tranches: [], qualite: { sansEquipe: 0, sansObservation: 0 },
   parEquipe: [{ id: 5, code: 'CH', libelle: 'Chauffeurs', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }],
-  evolution: [{ periode: '2026-08', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }]
+  evolution: [
+    { periode: '2026-07', masse: 4200, effectif: 2, stc: 0, stcMontant: 0 },
+    { periode: '2026-08', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }
+  ]
 };
 const FICHES = {
   effectif: 3, actifs: 2, inactifs: 1, ageMoyen: 35.5, ancienneteMoyenne: 4.2, embauchesDouzeMois: 1,
@@ -44,6 +52,7 @@ test.describe('Équipes', () => {
     const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
       'POST /equipes/search': () => pageDe([CHAUFFEURS, OPERATEURS]),
       'GET /equipes/5': () => CHAUFFEURS,
+      'GET /chantiers/9': () => ({ id: 9, code: 'NADOR', libelle: 'Nador' }),
       // Les fiches courantes sont affectées à OP; le bulletin d'août reste rattaché à CH.
       'POST /employees/regroupements': () => [{ id: 6, code: 'OP', libelle: 'Opérateurs', effectif: 3, actifs: 2 }],
       'GET /paie/periodes': () => PERIODES,
@@ -53,10 +62,30 @@ test.describe('Équipes', () => {
     });
     await page.goto('/equipes?code=C');
     await expect(page.getByRole('cell', { name: 'CH', exact: true })).toBeVisible();
+    const exportTable = page.getByRole('button', { name: 'Exporter les équipes filtrées en PDF' });
+    await expect(exportTable).toBeVisible();
+    await expect(page.locator('.app-table-bar__tools [table-export]')).toBeVisible();
+    const tableFrame = page.locator('.app-collection-table__surface .stp-table__scroll');
+    const bordureRepos = await tableFrame.evaluate((element) => getComputedStyle(element).borderColor);
+    await exportTable.focus();
+    await expect.poll(() => tableFrame.evaluate((element) => getComputedStyle(element).borderColor)).not.toBe(bordureRepos);
 
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/equipes\/cartes\?code=C$/);
+    await expect(page.getByText('Étape 1 sur 4')).toHaveCount(0);
+    await expect(page.getByText('Le parcours suit l’organisation définie')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Exporter les résultats de ce périmètre en PDF' })).toBeVisible();
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'Chauffeurs' });
+    await expect(page.getByRole('button', { name: 'Toutes les équipes' })).toHaveCount(0);
+    await expect(page.getByLabel('Période Paie')).toHaveCount(0);
+    await expect(page.getByText('Paie · août 2026')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voir la liste' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Voir les employés' })).toHaveCount(0);
+    await expect(carte.getByRole('button', { name: 'Exporter Chauffeurs en PDF' })).toBeVisible();
+    await expect(carte.getByRole('link', { name: 'Consulter Chauffeurs' })).toBeVisible();
+    await expect(carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' })).toBeVisible();
+    await expect(carte.locator('.perimetre-carte__pied app-pdf-export-button')).toBeVisible();
+    await expect(carte.locator('.perimetre-carte__pied')).toHaveCSS('justify-content', 'space-between');
     await expect(carte).toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Payés · août 2026');
     await expect(carte.locator('dt').filter({ hasText: 'Employés sur les fiches récentes' }).locator('xpath=..').locator('dd')).toHaveText('0');
@@ -65,16 +94,43 @@ test.describe('Équipes', () => {
 
     // Le filtre suit dans l'Analytique et borne le périmètre analysé (mêmes équipes que les deux autres vues).
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Analytique' }).click();
-    await expect(page).toHaveURL(/\/equipes\/analytique\?code=C(&periode=2026-08)?$/);
-    await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
-    await expect(page.getByText('Répartition par équipe')).toBeVisible();
-    expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', equipeIds: [5, 6] });
+    await expect(page).toHaveURL('/equipes/analytique?code=C');
+    await expect(page.getByRole('heading', { name: 'Répartition de la paie par équipe · août 2026' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
+    await expect(page.getByText('Répartir par')).toHaveCount(0);
+    await expect(page.getByText('Pyramide des âges')).toHaveCount(0);
+    await expect(page.getByText('Ancienneté')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Exporter la situation de paie par équipe en PDF' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Exporter l’évolution mensuelle des indicateurs de paie par équipe en PDF' })).toBeVisible();
+    const repartition = page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' });
+    const evolution = page.locator('.perimetre-analytique__section').filter({ hasText: 'Évolution mensuelle par équipe' });
+    const indicateursRepartition = repartition.getByRole('combobox', { name: 'Indicateurs de la répartition par équipe' });
+    const indicateursEvolution = evolution.getByRole('combobox', { name: 'Indicateurs de l’évolution mensuelle par équipe' });
+    await indicateursRepartition.click();
+    await expect(page.getByRole('option')).toHaveCount(4);
+    await page.getByRole('option', { name: 'Masse salariale (DH)' }).click();
+    await indicateursEvolution.click();
+    await page.getByRole('option', { name: 'STC (personnes)' }).click();
+    await expect(repartition.locator('.perimetre-analytique__graphique-indicateur')).toHaveCount(2);
+    await expect(evolution.locator('.perimetre-analytique__graphique-indicateur')).toHaveCount(2);
+    await expect(page.locator('.perimetre-analytique__donnees[open]')).toHaveCount(0);
+    expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5, 6] });
+    expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5] });
+    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Évolution mensuelle' })).toContainText('juillet 2026');
+    const chantier = evolution.getByRole('combobox', { name: 'Chantier' });
+    await chantier.fill('Nador');
+    await page.getByRole('option', { name: 'Nador' }).click();
+    await expect(page).toHaveURL('/equipes/analytique?code=C&chantierIds=9');
+    await expect.poll(() => mock.bodies['POST /paie/analytique'].some((body) => body.chantierIds?.includes(9) && body.equipeIds?.includes(5))).toBe(true);
+    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' }).getByRole('combobox', { name: 'Chantier' })).toHaveValue('Nador');
+    await evolution.getByRole('button', { name: 'Effacer la sélection' }).first().click();
+    await expect(page).toHaveURL('/equipes/analytique?code=C');
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
 
-    await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
-    await expect(page).toHaveURL(/\/equipes\/analytique\?code=C&equipeIds=5/);
-    await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    await carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' }).click();
+    await expect(page).toHaveURL('/equipes/analytique?code=C&equipeIds=5');
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
+    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Évolution mensuelle par équipe' })).toContainText('juillet 2026');
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', equipeIds: [5] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
@@ -91,7 +147,7 @@ test.describe('Équipes', () => {
     await expect(carte).not.toContainText('Payés');
     await expect(page.getByRole('link', { name: 'Nouvelle équipe' })).toHaveCount(0);
     await page.goto('/equipes/analytique');
-    await expect(page.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(page.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
     expect(mock.calls.filter((appel) => appel.includes('/paie') || appel.includes('/employees'))).toEqual([]);
   });
 });

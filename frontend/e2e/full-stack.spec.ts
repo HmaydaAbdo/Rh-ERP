@@ -145,8 +145,8 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
   await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}&periode=${moisCourant}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`H${suffixe}`);
-  await expect(page.getByText('Aucun bulletin sur ce périmètre')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Répartition de la paie par équipe/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
 
   // Fonctions : mêmes trois vues, la fonction est portée par la fiche Employé (dernier état) et par chaque bulletin.
   const filtreFonction = `libelle=${encodeURIComponent(`Fonction e2e ${suffixe}`)}`;
@@ -236,7 +236,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteLimitee).not.toContainText('Masse');
 
     await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
-    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     await pageLimitee.goto(`/chantiers/cartes?${filtreChantier}`);
     const carteChantierLimitee = pageLimitee.locator('.perimetre-carte').filter({ hasText: `T${suffixe}` });

@@ -81,7 +81,7 @@ describe('PaieCartesComponent', () => {
     const page = await ouvrir('/paie/cartes?nom=ali');
     const cartes = Array.from(page.querySelectorAll('.perimetre-carte'));
 
-    expect(cartes.map((c) => c.querySelector('.perimetre-carte__code')?.textContent?.trim())).toEqual(['septembre 2026', 'août 2026', 'juin 2026']);
+    expect(cartes.map((c) => c.querySelector('.perimetre-carte__nom')?.textContent?.trim())).toEqual(['septembre 2026', 'août 2026', 'juin 2026']);
     expect(paie.rechercherPeriodes).toHaveBeenCalledWith(expect.objectContaining({ nomPrenom: 'ali', periode: undefined }));
     expect(paie.analyser).not.toHaveBeenCalled();
     expect(page.querySelector('.perimetre-cartes__periode')).toBeNull();
@@ -108,14 +108,14 @@ describe('PaieCartesComponent', () => {
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
     expect(page.querySelector('.perimetre-cartes__etape')?.textContent).toContain('août 2026');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
-    expect(page.querySelector('button[aria-pressed="true"]')?.textContent).toContain('Chantier');
+    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Chantier');
   });
 
   it('transmet les filtres de la barre à chaque niveau et ajoute « Sans équipe » parmi les équipes', async () => {
-    const page = await ouvrir('/paie/cartes?periode=2026-08&nom=ali&cin=AB1&fonctionIds=5&chantierIds=1&par=equipe');
+    const page = await ouvrir('/paie/cartes?periode=2026-08&nom=ali&cin=AB1&fonctionIds=5&chantierIds=1');
 
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', fonctionIds: [5], chantierIds: [1] }));
-    expect(Array.from(page.querySelectorAll('.perimetre-carte__code')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Sans équipe']);
+    expect(Array.from(page.querySelectorAll('.perimetre-carte__nom')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Sans équipe']);
   });
 
   describe('suppression en groupe', () => {
@@ -186,7 +186,7 @@ describe('PaieCartesComponent', () => {
     });
 
     it('vise le chantier de la carte dans le mois choisi, en remplaçant le filtre chantier', async () => {
-      const page = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1,2&par=chantier');
+      const page = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1,2');
       bouton(page, 'Supprimer les bulletins de chantier C196')!.click();
       harness.fixture.detectChanges();
       await harness.fixture.whenStable();
@@ -200,7 +200,7 @@ describe('PaieCartesComponent', () => {
     });
 
     it('ne cible pas les bulletins sans équipe : l’API ne sait pas les isoler', async () => {
-      const page = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1&par=equipe');
+      const page = await ouvrir('/paie/cartes?periode=2026-08&chantierIds=1');
 
       expect(bouton(page, 'Supprimer les bulletins de équipe Chauffeurs')).not.toBeNull();
       expect(bouton(page, 'Supprimer les bulletins de équipe Sans équipe')).toBeNull();

@@ -4,6 +4,7 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, contentC
 import { TABLE_ROWS_PER_PAGE, TableColumn } from '../../table/table-columns';
 import { ButtonComponent } from '../button/button.directive';
 import { IconComponent } from '../icon/icon.component';
+import { SelectComponent, SelectOption } from '../select/select.component';
 
 /** Requête de données d'un tableau paginé côté serveur (même forme que l'ancien `TableLazyLoadEvent`). */
 export interface TableLazyLoadEvent {
@@ -47,7 +48,7 @@ const KEYBOARD_RESIZE_STEP = 12;
  */
 @Component({
   selector: 'stp-table',
-  imports: [NgTemplateOutlet, ButtonComponent, IconComponent],
+  imports: [NgTemplateOutlet, ButtonComponent, IconComponent, SelectComponent],
   templateUrl: './table.component.html',
   styleUrl: './table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -99,6 +100,7 @@ export class TableComponent<T extends object> {
   protected readonly currentPage = computed(() => Math.min(this.pageCount(), Math.floor(this.first() / this.rows()) + 1));
   protected readonly lastRow = computed(() => Math.min(this.total(), this.first() + this.rows()));
   protected readonly columnCount = computed(() => this.columns().length + (this.showActions() ? 1 : 0));
+  protected readonly rowsOptions = computed<SelectOption<number>[]>(() => this.rowsPerPageOptions().map((value) => ({ value, label: String(value) })));
 
   protected readonly displayed = computed(() => {
     if (this.lazy()) {
@@ -165,14 +167,13 @@ export class TableComponent<T extends object> {
     this.emitLazy();
   }
 
-  protected changeRows(size: number): void {
-    this.rows.set(size);
+  protected changeRows(value: unknown): void {
+    if (typeof value !== 'number' || !this.rowsPerPageOptions().includes(value)) {
+      return;
+    }
+    this.rows.set(value);
     this.first.set(0);
     this.emitLazy();
-  }
-
-  protected rowsFromSelect(event: Event): number {
-    return Number((event.target as HTMLSelectElement).value);
   }
 
   // ---- Redimensionnement ----
