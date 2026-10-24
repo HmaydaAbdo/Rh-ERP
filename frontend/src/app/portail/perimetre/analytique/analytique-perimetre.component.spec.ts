@@ -11,6 +11,8 @@ import { ThemeService } from '../../../core/theme/theme.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { ChartComponent } from '../../../shared/ui/chart/chart.component';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
@@ -97,8 +99,23 @@ class HoteEquipeComponent {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['PAIE'], sourcesAnalytique: ['PAIE'],
     introAnalytique: 'Répartition de la paie par équipe et évolution mensuelle des indicateurs sélectionnés.',
-    vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true,
+    vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true, afficherQualiteOrphelins: true,
     catalogue: { ...module().catalogue!, charger: () => of(ITEMS), filtreActif: () => false }, route: '/equipes'
+  };
+}
+
+@Component({
+  selector: 'app-hote-function',
+  imports: [AnalytiquePerimetreComponent],
+  template: '<app-analytique-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteFunctionComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'function', libellePluriel: 'fonctions', libelleRacine: 'Toutes les fonctions', dimension: 'FONCTION',
+    ordre: ['FONCTION', 'CHANTIER', 'EQUIPE'], ordreAnalytique: ['PAIE'], sourcesAnalytique: ['PAIE'],
+    vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true, afficherQualiteOrphelins: true, route: '/functions',
+    catalogue: { ...module().catalogue!, charger: () => of(ITEMS), filtreActif: () => false }
   };
 }
 
@@ -117,6 +134,13 @@ describe('AnalytiquePerimetreComponent', () => {
 
   async function ouvrirEquipe(url = '/equipes/analytique'): Promise<HTMLElement> {
     await harness.navigateByUrl(url, HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function ouvrirFonction(url = '/functions/analytique'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteFunctionComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
     return harness.routeNativeElement as HTMLElement;
@@ -164,15 +188,16 @@ describe('AnalytiquePerimetreComponent', () => {
         provideRouter([
           { path: 'chantiers/analytique', component: HoteComponent },
           { path: 'equipes/analytique', component: HoteEquipeComponent },
+          { path: 'functions/analytique', component: HoteFunctionComponent },
           { path: 'paie/analytique', component: HotePaieComponent }
         ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
         { provide: ThemeService, useValue: { theme: signal('light') } },
-        { provide: ChantierReferenceService, useValue: { fetchById: () => of({ id: 1, code: 'C168' }) } },
+        { provide: ChantierReferenceService, useValue: { fetchPage: () => of({ items: ITEMS.map((item) => ({ id: item.id, code: item.code!, designation: item.libelle, actif: true })), totalRecords: ITEMS.length }), fetchById: () => of({ id: 1, code: 'C168', designation: 'Nador', actif: true }) } },
         { provide: EquipeReferenceService, useValue: { fetchById: () => of({ id: 5, code: 'CH' }) } },
-        { provide: FunctionReferenceService, useValue: { fetchById: () => of({ id: 7, libelle: 'MACON' }) } }
+        { provide: FunctionReferenceService, useValue: { fetchPage: () => of({ items: ITEMS.map((item) => ({ id: item.id, libelle: item.libelle })), totalRecords: ITEMS.length }), fetchById: () => of({ id: 7, libelle: 'MACON' }) } }
       ]
     });
     harness = await RouterTestingHarness.create();
@@ -218,6 +243,45 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(employes.analyser).not.toHaveBeenCalled();
     expect(employes.regrouper).not.toHaveBeenCalled();
+    expect(page.querySelector('.perimetre-analytique__qualite')).toBeNull();
+  });
+
+  it.each([
+    ['Équipe', ouvrirEquipe],
+    ['Fonction', ouvrirFonction]
+  ] as const)('affiche les orphelins uniquement dans une section Analytique dédiée pour %s', async (_domaine, ouvrirVue) => {
+    paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
+    const page = await ouvrirVue();
+    const section = page.querySelector('.perimetre-analytique__qualite');
+    const graphique = harness.fixture.debugElement.queryAll(By.directive(ChartComponent))
+      .map((debug) => debug.componentInstance as ChartComponent<'doughnut'>)
+      .find((component) => component.type() === 'doughnut');
+
+    expect(section).not.toBeNull();
+    expect(section?.querySelectorAll('app-lazy-select')).toHaveLength(2);
+    expect(section?.querySelector('[aria-label="Exporter le graphique des bulletins sans équipe en PDF"]')).not.toBeNull();
+    expect(graphique?.data().labels).toEqual(['Orphelins']);
+    expect(graphique?.data().datasets[0]?.data).toEqual([2]);
+    expect(page.querySelector('.perimetre-analytique__note--qualite')).toBeNull();
+  });
+
+  it('applique les filtres Chantier et Fonction du graphique qualité à sa requête Paie dédiée', async () => {
+    paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
+    await ouvrirEquipe();
+    const section = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'));
+    const filtres = section.queryAll(By.directive(LazySelectComponent));
+    (filtres[0].componentInstance as LazySelectComponent).value.set([1]);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const filtresActualises = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'))
+      .queryAll(By.directive(LazySelectComponent));
+    (filtresActualises[1].componentInstance as LazySelectComponent).value.set([2]);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+
+    expect(TestBed.inject(Router).url).toContain('qualiteChantierIds=1');
+    expect(TestBed.inject(Router).url).toContain('qualiteFonctionIds=2');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ chantierIds: [1], fonctionIds: [2], periode: '2026-08' }));
   });
 
   it('inclut Orphelins dans la répartition et permet d’en suivre l’historique mensuel', async () => {
@@ -241,6 +305,24 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect((page.querySelector('input[aria-label="Équipe"]') as HTMLInputElement).value).toContain('Orphelins');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [0] }));
+  });
+
+  it.each([
+    ['Équipe', 'parEquipe', ouvrirEquipe],
+    ['Fonction', 'parFonction', ouvrirFonction]
+  ] as const)('masque les valeurs nulles du graphique de répartition %s et conserve le tableau complet', async (_domaine, champ, ouvrirVue) => {
+    const groupes = [
+      { id: 1, code: null, libelle: 'Nador', effectif: 3, masse: 300, stc: 0, stcMontant: 0 },
+      { id: 2, code: null, libelle: 'Marrakech', effectif: 0, masse: 0, stc: 0, stcMontant: 0 }
+    ];
+    paie.analyser.mockReturnValue(of({ ...ANALYSE, [champ]: groupes }));
+    const page = await ouvrirVue();
+    const graphique = harness.fixture.debugElement.queryAll(By.directive(ChartComponent))
+      .map((debug) => debug.componentInstance as ChartComponent<'bar' | 'line'>)
+      .find((component) => component.data().datasets[0]?.label === 'Effectif (personnes)');
+
+    expect(graphique?.data().labels).toEqual(['Nador']);
+    expect(page.textContent).toContain('Marrakech');
   });
 
   it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {

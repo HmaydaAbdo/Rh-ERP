@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { provideRouter, Router, ActivatedRoute, convertToParamMap } from '@angular/router';
+import { EMPTY, firstValueFrom, of } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
@@ -28,9 +28,10 @@ describe('FunctionListComponent', () => {
   const lignes = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement | null;
 
-  async function afficher(permissions: string[] = TOUTES): Promise<void> {
+  async function afficher(permissions: string[] = TOUTES, query: Record<string, string> = {}): Promise<void> {
     service = { search: vi.fn().mockReturnValue(of(page(FONCTIONS))), delete: vi.fn().mockReturnValue(of(undefined)) };
-    TestBed.configureTestingModule({ providers: [provideRouter([]), fournirPermissions(permissions).providers, { provide: FunctionService, useValue: service }] });
+    const paramMap = convertToParamMap(query);
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}), queryParamMap: paramMap }, queryParamMap: EMPTY } }, fournirPermissions(permissions).providers, { provide: FunctionService, useValue: service }] });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(FunctionListComponent);
     fixture.detectChanges();
@@ -56,6 +57,7 @@ describe('FunctionListComponent', () => {
       expect(lignes()).toEqual(['MACON', 'PLOMBIER']);
       expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 fonctions');
       expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
+      expect(racine().querySelector('app-pdf-export-button[table-export] button[aria-label="Exporter les fonctions filtrées en PDF"]')).not.toBeNull();
     });
 
     it('accorde le singulier à une seule fonction', async () => {
@@ -108,6 +110,29 @@ describe('FunctionListComponent', () => {
       fixture.componentInstance['onLazyLoad']({ first: 20, rows: 10, sortField: 'libelle', sortOrder: -1 });
 
       expect(pagination()).toEqual({ page: 2, size: 10, sort: 'libelle,desc' });
+    });
+  });
+
+  describe('export PDF', () => {
+    it('exporte toutes les fonctions qui correspondent au filtre et garde les colonnes visibles', async () => {
+      await afficher(TOUTES, { libelle: 'mac' });
+      service.search.mockImplementation((_criteria: unknown, demande: { page: number; size: number; sort: string }) => of({
+        content: demande.page === 0 ? [FONCTIONS[0]] : [{ id: 3, version: 0, libelle: 'MACONNERIE' }],
+        page: { size: demande.size, number: demande.page, totalElements: 2, totalPages: 2 }
+      }));
+
+      const document = await firstValueFrom(fixture.componentInstance['chargerExport']());
+
+      expect(service.search.mock.calls.slice(-2)).toEqual([
+        [{ libelle: 'mac' }, { page: 0, size: 200, sort: 'libelle,asc' }],
+        [{ libelle: 'mac' }, { page: 1, size: 200, sort: 'libelle,asc' }]
+      ]);
+      expect(document).toEqual({
+        titre: 'Référentiel des fonctions',
+        contexte: 'Recherche par libellé : mac',
+        colonnes: ['Libellé'],
+        lignes: [['MACON'], ['MACONNERIE']]
+      });
     });
   });
 

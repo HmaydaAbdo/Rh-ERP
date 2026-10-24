@@ -150,11 +150,11 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(page.getByRole('heading', { name: /Répartition de la paie par équipe/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
 
-  // Fonctions : mêmes trois vues, la fonction est portée par la fiche Employé (dernier état) et par chaque bulletin.
+  // Fonctions : les deux vues de synthèse lisent la fonction portée par les bulletins du dernier mois.
   const filtreFonction = `libelle=${encodeURIComponent(`Fonction e2e ${suffixe}`)}`;
   await page.goto(`/functions/cartes?${filtreFonction}`);
   const carteFonction = page.locator('.perimetre-carte').filter({ hasText: `Fonction e2e ${suffixe}` });
-  await expect(carteFonction).toContainText('Employés sur les fiches récentes');
+  await expect(carteFonction).not.toContainText('Employés sur les fiches récentes');
   await expect(carteFonction).toContainText('Paie ·');
   await expect(carteFonction).toContainText('Masse');
 
@@ -169,9 +169,9 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   expect(syntheseFonction.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent, moisCourant]);
   await page.goto(`/functions/analytique?fonctionIds=${fonction.id}&periode=${moisCourant}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Fonction e2e ${suffixe}`);
-  await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
-  await expect(page.locator('section[aria-labelledby="pa-fiches-titre"]')).toContainText(/Effectif\s*1/);
+  await expect(page.getByRole('heading', { name: /Répartition de la paie par fonction/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Évolution mensuelle par fonction' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
 
   // Chantiers : mêmes trois vues ; le chantier est porté par la fiche Employé (dernier état) et par chaque bulletin.
   const filtreChantier = `code=${encodeURIComponent(`T${suffixe}`)}`;
@@ -256,7 +256,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteFonctionLimitee).not.toContainText('Payés');
     await expect(carteFonctionLimitee).not.toContainText('Masse');
     await pageLimitee.goto(`/functions/analytique?fonctionIds=${fonction.id}&periode=${moisCourant}`);
-    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByText('L’effectif mensuel par fonction n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     const reponseInterdite = await pageLimitee.request.get(`${BACKEND_URL}/paie/periodes`, {
       headers: { Authorization: `Bearer ${sessionLimitee.accessToken}` }

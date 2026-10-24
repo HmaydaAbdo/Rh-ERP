@@ -144,7 +144,28 @@ export class CartesPerimetreComponent {
   /** Libellés des étapes du fil (« C168 », « Équipe OP »…), chargés une fois par valeur. */
   protected readonly noms = signal<Record<string, string>>({});
 
-  protected readonly groupes = computed(() => this.resultat().groupes);
+  protected readonly groupes = computed(() => {
+    const source = this.resultat().groupes;
+    const groupes = source && this.module().sansOrphelinsDansCartes && this.niveau() === 'EQUIPE'
+      ? source.filter((groupe) => groupe.id !== 0)
+      : source;
+    const tri = this.module().triCartesPaie;
+    if (!groupes || !tri?.length) {
+      return groupes;
+    }
+    const niveau = this.niveau();
+    return [...groupes].sort((a, b) => {
+      for (const indicateur of tri) {
+        const difference = (b.paie?.[indicateur] ?? 0) - (a.paie?.[indicateur] ?? 0);
+        if (difference !== 0) {
+          return difference;
+        }
+      }
+      const nomA = niveau === 'PERIODE' || niveau === 'EMPLOYES' ? a.libelle : nomGroupe(niveau, a);
+      const nomB = niveau === 'PERIODE' || niveau === 'EMPLOYES' ? b.libelle : nomGroupe(niveau, b);
+      return nomA.localeCompare(nomB, 'fr', { numeric: true });
+    });
+  });
   protected readonly groupesVisibles = computed(() => (this.groupes() ?? []).slice(0, this.visibles()));
   protected readonly totaux = computed(() => {
     const liste = this.groupes() ?? [];

@@ -19,7 +19,8 @@ describe('moduleEquipe', () => {
     expect(module.ordre).toEqual(['EQUIPE', 'CHANTIER', 'FONCTION']);
     expect(module).toMatchObject({
       sourcesAnalytique: ['PAIE'], vueEffectifParDimension: true, periodePaieRecenteFixe: true,
-      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true
+      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true,
+      resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true, afficherQualiteOrphelins: true
     });
   });
 

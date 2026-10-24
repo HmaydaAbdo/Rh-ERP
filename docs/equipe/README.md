@@ -111,7 +111,7 @@ remplace pas le contrôle serveur.
 | `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
 | `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
 | `EMPLOYEE_READ` | Accéder aux fiches Employé selon les permissions du domaine Employé; les Cartes Équipe ne chargent pas les effectifs des fiches |
-| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et Analytique et l'indicateur commun de qualité des rattachements dans les trois vues; sans ce droit, les données Paie ne sont ni chargées ni affichées |
+| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et Analytique, y compris la section qualité dédiée; sans ce droit, les données Paie ne sont ni chargées ni affichées |
 
 Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
 les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
@@ -130,15 +130,12 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 - **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction**. Le libellé est le nom principal des équipes;
   leur code reste un repère secondaire. Les cartes prennent leurs indicateurs exclusivement des bulletins du
   dernier mois de paie enregistré. Le résumé indique le nombre d'équipes référencées, l'effectif en personnes et
-  la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le groupe Paie « Orphelins »
-  reste visible à la racine sans être compté comme une équipe; l'ouvrir conserve ce périmètre lors du détail par chantier
-  puis par fonction. Un indicateur graphique commun aux trois vues présente la qualité du rattachement des bulletins
-  (avec équipe / « Orphelins ») à partir du même dernier mois enregistré; il n'est affiché que si au moins un bulletin
-  est orphelin et peut être exporté seul en PDF (`PAIE_READ`). Sans ce droit, le graphique n'est pas demandé au serveur.
-  L'Analytique inclut également les bulletins sans équipe dans sa source de données, même si le catalogue Équipe ne contient
-  que des équipes référencées. Le mois est déterminé par la base,
+  la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le mois Paie est aligné
+  sur le titre du niveau; résumé et export PDF des résultats sont regroupés dans le même en-tête. Les bulletins sans équipe
+  ne sont pas présentés comme une carte Équipe. Le mois est déterminé par la base,
   sans sélecteur de période. La navigation
-  par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
+  par onglets remplace le raccourci vers le Tabulaire; l'accès aux employés est une icône avec infobulle à droite du titre de
+  niveau dans Cartes. Elle conserve le périmètre courant et nécessite `EMPLOYEE_READ`; les filtres restent conservés entre les vues.
   Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
   STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
   son évolution par rapport au mois calendaire précédent : écart en personnes et pourcentage en DH. Un groupe
@@ -148,14 +145,19 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
   pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
   Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
-  Les groupes et le sélecteur d'équipe incluent « Orphelins (sans équipe) »; le suivi transmet `equipeIds=0` et couvre
-  l'historique des bulletins sans équipe. Les filtres des vues Employé et Paie proposent aussi cette option; sur un
-  formulaire, elle enregistre une valeur d'équipe nulle, jamais l'identifiant synthétique `0`.
+  Les graphiques de répartition et le suivi incluent « Orphelins (sans équipe) »; le suivi transmet `equipeIds=0` et couvre
+  l'historique des bulletins sans équipe. Un graphique d'anneau dédié à la qualité du rattachement, distinct des graphiques
+  de répartition, apparaît dans cette section uniquement si le dernier mois contient des bulletins orphelins; il propose
+  ses propres filtres Chantier et Fonction et s'exporte seul en PDF (`PAIE_READ`). Il n'apparaît ni dans le Tabulaire ni
+  dans Cartes. Les sélecteurs des autres vues continuent de proposer « Orphelins » quand ils
+  filtrent une équipe; un formulaire enregistre une valeur d'équipe nulle, jamais l'identifiant synthétique `0`.
   Comme tous les sélecteurs de l'application, ces contrôles permettent la recherche et le chargement au défilement;
   le filtre Chantier et le choix d'Équipe proposent également la recherche.
   Chaque carte de graphique contient son filtre Chantier; les deux filtres restent synchronisés dans l'URL et
   s'appliquent aux deux cartes. L'évolution conserve les mois antérieurs; le mois de référence courant ne peut pas
-  être changé. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
+  être changé. Le graphique de répartition masque les groupes dont la valeur de l'indicateur sélectionné est nulle;
+  le tableau « Voir les données » conserve tous les groupes. La vue n'expose ni le choix « Répartir par », ni les
+  graphiques propres aux domaines Employé ou Paie.
   Les tableaux de données sont repliés par défaut et s'ouvrent avec « Voir les données ».
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
@@ -185,7 +187,7 @@ reste un modèle d'import, pas un export.
 | Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
 | Cartes : quatre mesures Paie lisibles, dernier mois et comparaison au mois précédent | `CartesPerimetreComponent.spec.ts`, `perimetre-groupes.spec.ts`, `frontend/e2e/equipes.spec.ts` |
 | Orphelins proposés dans les filtres d'équipe, présents dans la répartition et suivis dans l'historique | `reference-services.spec.ts`, `paie-option.sources.spec.ts`, `employee-filtres.component.spec.ts`, `analytique-perimetre.component.spec.ts` |
-| Orphelins cohérents entre vues, masqués si zéro, et protégés par `PAIE_READ` | `equipe-qualite.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
+| Orphelins absents du Tabulaire et des Cartes; graphique en anneau uniquement dans la section qualité Analytique si leur nombre est supérieur à zéro, filtres Chantier/Fonction et accès protégé par `PAIE_READ` | `cartes-perimetre.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
 | PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |

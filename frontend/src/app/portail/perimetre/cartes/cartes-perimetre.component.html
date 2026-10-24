@@ -29,7 +29,7 @@
     }
 
     <div class="perimetre-cartes__acces">
-      @if (voitPaie() && module().periodePaieRecenteFixe && periode()) {
+      @if (voitPaie() && module().periodePaieRecenteFixe && periode() && !module().resumeCartesPresDuNiveau) {
         <span class="perimetre-cartes__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
       }
       @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
@@ -47,7 +47,39 @@
   </div>
 
   <div class="perimetre-cartes__niveau" aria-live="polite">
-    <h2>{{ progression().libelle }}</h2>
+    <div class="perimetre-cartes__niveau-contenu">
+      <div class="perimetre-cartes__niveau-titre">
+        <h2>{{ progression().libelle }}</h2>
+        @if (voitPaie() && module().periodePaieRecenteFixe && periode() && module().resumeCartesPresDuNiveau) {
+          <span class="perimetre-cartes__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
+        }
+      </div>
+      @if (module().resumeCartesPresDuNiveau && niveau() !== 'EMPLOYES') {
+        <div class="perimetre-cartes__niveau-resume">
+          <p class="perimetre-cartes__resume" role="status">
+            {{ libelleGroupesResume(groupes() ?? []) }}
+            @if (module().sansEffectifFichesDansCartes) {
+              @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+            } @else {
+              @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+              @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+            }
+            @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
+          </p>
+        </div>
+      }
+    </div>
+    <div class="perimetre-cartes__niveau-actions">
+      @if (voitEmployes() && module().lienEmployesPresDuNiveau) {
+        <a stp-button variant="text" icon="users" [iconOnly]="true" routerLink="/employees" [queryParams]="parametresEmployes()"
+          aria-label="Voir les employés de ce périmètre" title="Voir les employés de ce périmètre"></a>
+      }
+      @if (groupes(); as groupesNiveau) {
+        @if (module().resumeCartesPresDuNiveau && groupesNiveau.length > 0) {
+          <app-pdf-export-button [document]="documentGroupes()" [iconOnly]="true" ariaLabel="Exporter les résultats de ce périmètre en PDF" />
+        }
+      }
+    </div>
   </div>
 
   <div class="perimetre-cartes__contenu" [attr.aria-busy]="chargement()">
@@ -56,21 +88,23 @@
     } @else if (niveau() !== 'EMPLOYES') {
       @if (groupes(); as liste) {
         <section class="perimetre-cartes__resultats" aria-label="Résultats du périmètre">
-          <div class="perimetre-cartes__resultats-entete">
-            <p class="perimetre-cartes__resume" role="status">
-              {{ libelleGroupesResume(liste) }}
-              @if (module().sansEffectifFichesDansCartes) {
-                @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
-              } @else {
-                @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-                @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+          @if (!module().resumeCartesPresDuNiveau) {
+            <div class="perimetre-cartes__resultats-entete">
+              <p class="perimetre-cartes__resume" role="status">
+                {{ libelleGroupesResume(liste) }}
+                @if (module().sansEffectifFichesDansCartes) {
+                  @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+                } @else {
+                  @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+                  @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+                }
+                @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
+              </p>
+              @if (liste.length > 0) {
+                <app-pdf-export-button [document]="documentGroupes()" [iconOnly]="true" ariaLabel="Exporter les résultats de ce périmètre en PDF" />
               }
-              @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
-            </p>
-            @if (liste.length > 0) {
-              <app-pdf-export-button [document]="documentGroupes()" [iconOnly]="true" ariaLabel="Exporter les résultats de ce périmètre en PDF" />
-            }
-          </div>
+            </div>
+          }
           @if (liste.length === 0 && !chargement()) {
             <p class="perimetre-cartes__vide">Aucun élément ne correspond à ce périmètre.</p>
           }

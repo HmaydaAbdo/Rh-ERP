@@ -59,11 +59,12 @@ README Équipe, qui donne aussi les commandes et résultats locaux à jour.
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
 
-Dans toutes les vues Équipe, la Paie du dernier mois enregistré est la source des indicateurs. Les Cartes présentent
+Dans les vues Équipe, la Paie du dernier mois enregistré est la source des indicateurs. Les Cartes présentent
 séparément les quatre mesures, leur valeur et leur comparaison au mois précédent; l’effectif des fiches Employé n’y est
-pas chargé. Un graphique partagé de qualité des rattachements présente les bulletins « Avec équipe » et « Orphelins »;
-il n’apparaît que si le nombre d’orphelins est supérieur à zéro et il s’exporte en PDF. L’Analytique inclut les bulletins
-sans équipe dans la même source. Les règles détaillées sont dans le README Équipe.
+pas chargé et les bulletins sans équipe n’y forment pas de carte. Une section Analytique dédiée présente un graphique
+d’anneau distinct des graphiques de répartition, avec les bulletins sans équipe et leurs filtres Chantier/Fonction;
+elle n’apparaît que si le dernier mois contient des bulletins sans équipe et s’exporte en PDF. Le graphique qualité
+n’apparaît ni dans le Tabulaire ni dans Cartes. Les règles détaillées sont dans le README Équipe.
 
 ## 5. Source des preuves Équipe
 
@@ -105,15 +106,15 @@ Le référentiel Fonction fournit le libellé du poste occupé. Il relie trois i
 - **Situation Employé :** la fonction enregistrée sur la fiche Employé au dernier mois de paie importé.
 - **Historique Paie :** la fonction portée par chaque bulletin de sa période, qui reste lisible même si la fiche Employé change ensuite.
 
-Comme pour Équipe, la situation Employé récente et l’historique Paie ne sont jamais présentés comme décrivant la même période.
+La fiche Employé et le bulletin décrivent des situations distinctes; les vues Cartes et Analytique Fonction ne chargent que les données Paie du dernier mois enregistré.
 
 ### 9.2 Parcours, indicateurs et accès
 
 | Vue | Contenu |
 |---|---|
-| **Tabulaire** | Liste paginée, recherche par libellé, consultation, modification et suppression selon les droits; import Excel et création dans l’en-tête commun. |
-| **Cartes** | Parcours fonction → chantier → équipe → employés; chaque étape conserve les fiches Employé et les indicateurs Paie du mois. |
-| **Analytique** | Graphiques : indicateurs de la période (STC compris dans la répartition), évolution mensuelle, répartition (les fonctions sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
+| **Tabulaire** | Liste paginée, recherche par libellé, consultation, modification et suppression selon les droits; import Excel et création dans l’en-tête commun; export PDF de toutes les lignes filtrées. |
+| **Cartes** | Parcours fonction → chantier → équipe; données du dernier mois de Paie, cartes triées par masse salariale puis effectif payé, sans filtre de période ni raccourci vers le Tabulaire. Le mois, le résumé du périmètre et l'export PDF sont regroupés dans l'en-tête du niveau. Avec `EMPLOYEE_READ`, une icône d'accès Employés avec infobulle figure à droite du titre de niveau et conserve le périmètre. |
+| **Analytique** | Indicateurs et graphiques Paie (STC compris), répartition par fonction et évolution mensuelle; la période est fixée au dernier mois enregistré. Le graphique de répartition masque les valeurs nulles; son tableau voisin conserve les fonctions complètes du périmètre. Une section qualité distincte affiche, si nécessaire, le graphique d'anneau des bulletins sans équipe et ses filtres Chantier/Fonction. |
 
 Les indicateurs sont ceux de la section 3.3, et la répartition par fonction indique aussi le nombre et le montant des soldes de tout compte (STC) de chaque fonction. Le filtre par libellé agit de la même façon dans les trois vues. Les droits restent séparés : `FUNCTION_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
 
