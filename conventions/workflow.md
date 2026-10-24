@@ -83,6 +83,11 @@ validation supplémentaire dans chaque domaine.
 
 ## 5. Livrer et rendre compte
 
+La branche distante `main` est protégée : ne jamais y pousser directement ou forcer sa mise à jour.
+Tout changement qui vise `main` passe par une PR ciblant `main`. Si une PR existe déjà pour le
+chantier, pousser les commits sur sa branche head et mettre cette PR à jour; sinon, créer une branche
+de travail et ouvrir une PR. Respecter les contrôles de protection.
+
 1. Relire le diff et vérifier que code, tests, documentation et décisions approuvées concordent.
 2. Si le commit et le push sont autorisés, enregistrer le lot cohérent sur la branche prévue et mettre
    à jour la PR concernée avec le comportement final et les preuves utiles. Exclure secrets, fichiers

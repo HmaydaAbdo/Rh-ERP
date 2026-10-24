@@ -17,6 +17,10 @@ Pour reprendre et mener une tâche :
 
 La CI est lancée ou relancée uniquement sur demande explicite du propriétaire. Un push qui la
 déclencherait automatiquement attend également cette demande ; garder le travail prêt en local.
+La branche distante `main` est protégée : ne jamais y pousser directement ni forcer sa mise à jour.
+Publier les changements destinés à `main` sur la branche head de la PR existante, ou ouvrir une PR
+ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine définie dans
+[`conventions/workflow.md`](conventions/workflow.md).
 
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.

@@ -38,6 +38,12 @@ nouvellement proposée demande son accord avant application.
 La CI n'est lancée ou relancée que sur demande explicite du propriétaire. Si un push la déclenche
 automatiquement, conserver le lot prêt en local jusqu'à cette demande.
 
+La branche distante `main` est protégée : aucune mise à jour directe ou forcée de `main` n'est permise.
+Tout changement destiné à `main` passe par une pull request ciblant `main`. Mettre à jour la branche
+head de la PR existante lorsqu'il y en a une; sinon, créer une branche de travail et une PR. Ne pas
+contourner les contrôles de protection. La livraison et la fusion suivent
+[`conventions/workflow.md`](conventions/workflow.md).
+
 ---
 
 # Ordre de lecture
