@@ -93,15 +93,6 @@
                     @if (groupe.fiches; as fiches) {
                       <dl class="perimetre-carte__fiches">
                         <div class="perimetre-carte__fiche-indicateur"><dt>Employés sur les fiches récentes</dt><dd>{{ fiches.effectif }}</dd></div>
-                        @if (fiches.effectif > 0) {
-                          <div class="perimetre-carte__jauge-ligne">
-                            <dt class="app-lecteur">Part des employés en poste</dt>
-                            <dd>
-                              <span class="perimetre-carte__jauge" aria-hidden="true"><span [style.width.%]="(fiches.actifs / fiches.effectif) * 100"></span></span>
-                              <small>{{ fiches.actifs }} en poste</small>
-                            </dd>
-                          </div>
-                        }
                       </dl>
                     }
                     @if (voitPaie() && moisDe(groupe); as mois) {
