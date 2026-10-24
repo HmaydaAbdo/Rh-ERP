@@ -52,17 +52,16 @@ Table `employe` :
 | `date_naissance` | `DATE` | `NOT NULL` | Date de naissance |
 | `date_embauche` | `DATE` | `NOT NULL` | Date d'embauche |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | Fonction occupée |
-| `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | Chantier d'affectation |
-| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe courante de l'employé, alignée sur le dernier mois de paie importé (`NULL` = sans équipe); référentiel partagé décrit dans le [dossier Équipe](../equipe/README.md) |
+| `chantier_id` | `BIGINT` | nullable, FK → `chantier.id` | Chantier courant; obligatoire pour `ACTIF`, vide pour `INACTIF` |
+| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe courante; facultative pour `ACTIF`, vide pour `INACTIF`; référentiel partagé décrit dans le [dossier Équipe](../equipe/README.md) |
 | `salaire` | `NUMERIC(10,2)` | nullable, ≥ 0 | Salaire du dernier mois de paie : montant mensuel, ou tarif d'une journée |
 | `type_salaire` | `VARCHAR(20)` | nullable, `MENSUEL` ou `JOURNALIER` | Comment lire `salaire` ; renseigné avec lui ou pas du tout |
 | `statut` | `ENUM('ACTIF','INACTIF')` | `NOT NULL`, défaut `ACTIF` | Statut de l'employé |
 
-La fiche porte **l'état courant de l'employé**, aligné sur le dernier mois de paie importé : notamment fonction, chantier,
-équipe, salaire et type de salaire. L'équipe est une donnée de l'état Employé courant, comme le salaire; sa liste de valeurs
-reste gérée par le référentiel partagé Équipe. Chaque bulletin conserve séparément les affectations de son mois : changer
-l'équipe sur la fiche ne modifie donc pas les bulletins antérieurs. Voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md).
-Équipe, salaire et type restent vides tant qu'aucune paie ne les a renseignés.
+La fiche porte **l'état courant de l'employé**, aligné sur le dernier mois de paie enregistré. Un employé `ACTIF` a un chantier
+courant et peut avoir une équipe; un employé `INACTIF` n'a ni chantier ni équipe courants. Ses bulletins conservent les
+affectations de chaque mois, y compris après un départ ou une mutation. Voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md).
+Salaire et type restent vides tant qu'aucune paie ne les a renseignés.
 
 Table `employe_sortie` — les **départs** de l'entreprise (entité `EmployeeSortie`, auditée) :
 
@@ -96,9 +95,9 @@ l'import comme l'API exigent déjà ces deux dates).
   Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
   attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
   lève `InvalidReferenceException` (400). L'`équipe` est facultative et résolue de même par `IEquipeService`.
-- Lorsqu'un bulletin est créé ou corrigé depuis le formulaire Paie, l'équipe choisie sur le bulletin
-  met aussi à jour l'affectation courante de la fiche Employé, dans la même transaction. L'équipe des
-  autres bulletins mensuels reste inchangée.
+- Lorsqu'un bulletin est créé ou corrigé manuellement depuis Paie, l'équipe choisie met à jour l'affectation
+  courante d'un employé actif dans la même transaction. Une fiche inactive reste sans affectation; les données du
+  bulletin restent historiques et indépendantes.
 - `salaire` et `typeSalaire` se renseignent **ensemble** ou pas du tout (`@AssertTrue` sur les DTO, 400 sinon) ; le salaire
   n'est jamais négatif. Ce sont des **données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas (`null`), ignore ceux
   qu'on saisit (la fiche garde les siens) et retire un tri par salaire — masquage fait par `EmployeeController`, pour que
@@ -111,11 +110,11 @@ l'import comme l'API exigent déjà ces deux dates).
   tracée dans le journal d'audit (échec).
 - **Libellés** (décision du propriétaire, 2026-10-19) : l'interface dit **« En poste »** (`ACTIF`) et **« Sorti »**
   (`INACTIF`) ; l'API et la base gardent `ACTIF` / `INACTIF`.
-- Un employé `INACTIF` (« Sorti ») reste consultable et reste référencé par ses bulletins ; l'import crée toujours des
-  employés `ACTIF`.
+- Un employé `INACTIF` (« Sorti ») reste consultable et reste référencé par ses bulletins. Sa fiche ne conserve aucune
+  affectation courante de chantier ou d'équipe; la contrainte de base protège cette règle. L'import crée toujours des employés `ACTIF`.
 - **Le statut suit la paie** : l'assistant d'import de la paie (voir [../paie/README.md](../paie/README.md), « Import Excel
   (assistant) ») repasse ACTIF un inactif présent dans le fichier, et enregistre les **départs confirmés** par
-  `IEmployeeService.enregistrerSortie(id, mois, motif)` : l'employé passe INACTIF et le départ (mois, motif « STC » ou saisi)
+  `IEmployeeService.enregistrerSortie(id, mois, motif)` : l'employé passe INACTIF, ses affectations courantes sont effacées et le départ (mois, motif « STC » ou saisi)
   rejoint `employe_sortie` — un seul par mois (sinon 400), motif obligatoire de 255 caractères au plus. Action d'audit
   `EMPLOYE_SORTIE`. Depuis l'assistant, l'utilisateur peut aussi aligner une fiche sur le fichier ou créer un CIN inconnu
   (ce sont les `update` et `create` habituels, appelés par le domaine Paie).
@@ -129,8 +128,8 @@ l'import comme l'API exigent déjà ces deux dates).
 | `POST` | `/employees` | Créer un employé | 201, 400, 409 |
 | `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
 | `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
-| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` = sans équipe | 200 |
-| `POST` | `/employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | Employés du périmètre (mêmes critères) regroupés par la dimension : `id` (0 = sans équipe), `code`, `libelle`, `effectif`, `actifs`, du groupe le plus grand au plus petit (vue Cartes, répartition de l'Analytique) | 200 |
+| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `chantierIds=0` = sans chantier, `equipeIds=0` = sans équipe | 200 |
+| `POST` | `/employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | Employés du périmètre (mêmes critères) regroupés par la dimension : `id` (0 = sans chantier ou équipe), `code`, `libelle`, `effectif`, `actifs`, du groupe le plus grand au plus petit (vue Cartes, répartition de l'Analytique) | 200 |
 | `POST` | `/employees/analytique` | Chiffres clés du périmètre : effectif, actifs, inactifs, âge et ancienneté moyens (années, une décimale), embauches des 12 derniers mois, tranches d'âge et d'ancienneté (vue Analytique) | 200 |
 | `DELETE` | `/employees/{id}` | Supprimer | 204, 404, 409 (bulletins ou compte liés) |
 | `POST` | `/employees/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
@@ -138,7 +137,7 @@ l'import comme l'API exigent déjà ces deux dates).
 
 `EmployeeResponseDto` : `id`, `nomPrenom`, `cin`, `dateNaissance`, `dateEmbauche`,
 `fonction` (`FunctionSummaryDto` : `id`, `libelle`), `chantier` (`ChantierSummaryDto` : `id`, `code`,
-`designation`), `equipe` (`EquipeSummaryDto` : `id`, `code`, `libelle`, ou `null`), `salaire` et `typeSalaire` (`null` sans
+`designation`, ou `null` pour un employé inactif), `equipe` (`EquipeSummaryDto` : `id`, `code`, `libelle`, ou `null`), `salaire` et `typeSalaire` (`null` sans
 `PAIE_READ` ou tant qu'aucune paie ne les a renseignés), `statut`. Les requêtes de création et de modification acceptent
 `equipeId`, `salaire` et `typeSalaire`, facultatifs.
 

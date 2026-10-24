@@ -300,6 +300,11 @@ Un bulletin garde l'identifiant de l'équipe associée à son mois, même si la 
 d'équipe ensuite. Le code et le libellé ne sont pas copiés dans le bulletin : renommer l'équipe
 référencée change donc aussi son affichage sur les bulletins historiques.
 
+La migration de correction V34 est une exception ponctuelle à cette stabilité : elle reclasse les bulletins
+qui portaient l'ancienne équipe `CH+OP` d'après la fonction de chaque bulletin (`CH.`/`COURSIER` → `CH`,
+`OP.` → `OP`, `CHEF DE POSTE` → `EE`). Les bulletins restent en base; leurs valeurs métier autres que l'équipe
+ne changent pas, et le reclassement est inscrit dans l'audit. Les fiches inactives restent sans équipe courante.
+
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
 contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne
 s'importe pas tant qu'elle n'est pas corrigée. Une cellule vide laisse le bulletin sans équipe.

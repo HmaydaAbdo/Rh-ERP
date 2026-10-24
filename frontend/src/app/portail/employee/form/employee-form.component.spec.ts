@@ -227,6 +227,9 @@ describe('EmployeeFormComponent', () => {
       await afficher('9');
       saisir(racine(), '#cin', 'AB999');
       formulaire().statut().value.set('INACTIF');
+      await stabiliser();
+      expect(racine().querySelector('#chantierId')).toBeNull();
+      expect(racine().querySelector('#equipeId')).toBeNull();
 
       await envoyer();
 
@@ -237,7 +240,7 @@ describe('EmployeeFormComponent', () => {
         dateNaissance: '1990-03-07',
         dateEmbauche: '2020-11-02',
         fonctionId: 1,
-        chantierId: 2,
+        chantierId: null,
         equipeId: null,
         salaire: null,
         typeSalaire: null,

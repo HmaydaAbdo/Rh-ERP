@@ -200,6 +200,8 @@ class EmployeeServiceTest {
     @Test
     void enregistrerSortie_devraitPasserLEmployeInactifEtGarderLeDepart() {
         entity.setStatut(EmployeeStatut.ACTIF);
+        entity.setChantier(new staport.rh.chantier.entities.Chantier());
+        entity.setEquipe(new staport.rh.equipe.entities.Equipe());
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
         when(sortieRepository.existsByEmployee_IdAndPeriode(1L, YearMonth.of(2026, 10))).thenReturn(false);
 
@@ -211,6 +213,8 @@ class EmployeeServiceTest {
         assertThat(sortie.getValue().getMotif()).isEqualTo("Démission");
         assertThat(sortie.getValue().getPeriode()).isEqualTo(YearMonth.of(2026, 10));
         assertThat(entity.getStatut()).isEqualTo(EmployeeStatut.INACTIF);
+        assertThat(entity.getChantier()).isNull();
+        assertThat(entity.getEquipe()).isNull();
     }
 
     @Test

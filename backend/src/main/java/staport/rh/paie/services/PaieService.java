@@ -164,6 +164,9 @@ public class PaieService implements IPaieService {
 
     /** L'équipe saisie sur le bulletin devient aussi l'affectation courante de l'employé. */
     private void synchroniserEquipeEmploye(EmployeeResponseDto employe, Long equipeId) {
+        if (employe.statut() == staport.rh.employee.entities.EmployeeStatut.INACTIF) {
+            return;
+        }
         Long equipeActuelle = employe.equipe() == null ? null : employe.equipe().id();
         if (Objects.equals(equipeActuelle, equipeId)) {
             return;

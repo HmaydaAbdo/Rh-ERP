@@ -56,7 +56,17 @@ test.describe('Équipes', () => {
       // Les fiches courantes sont affectées à OP; le bulletin d'août reste rattaché à CH.
       'POST /employees/regroupements': () => [{ id: 6, code: 'OP', libelle: 'Opérateurs', effectif: 3, actifs: 2 }],
       'GET /paie/periodes': () => PERIODES,
-      'POST /paie/analytique': () => ANALYSE,
+      'POST /paie/analytique': (request) => {
+        const { periode } = request.postDataJSON() as { periode: string };
+        return periode === '2026-07'
+          ? {
+              ...ANALYSE,
+              periode,
+              kpis: { masse: 4200, effectif: 2, coutMoyen: 2100, nombreChantiers: 1, stc: 0, stcMontant: 0 },
+              parEquipe: [{ id: 5, code: 'CH', libelle: 'Chauffeurs', masse: 4200, effectif: 2, stc: 0, stcMontant: 0 }]
+            }
+          : ANALYSE;
+      },
       'POST /paie/effectifs': () => [{ periode: '2026-08', effectif: 3, entrees: null, sorties: 0, mutations: null }],
       'POST /employees/analytique': () => FICHES
     });
@@ -78,7 +88,7 @@ test.describe('Équipes', () => {
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'Chauffeurs' });
     await expect(page.getByRole('button', { name: 'Toutes les équipes' })).toHaveCount(0);
     await expect(page.getByLabel('Période Paie')).toHaveCount(0);
-    await expect(page.getByText('Paie · août 2026')).toBeVisible();
+    await expect(page.locator('.perimetre-cartes__periode-fixe')).toHaveText('Paie · août 2026');
     await expect(page.getByRole('link', { name: 'Voir la liste' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Voir les employés' })).toHaveCount(0);
     await expect(carte.getByRole('button', { name: 'Exporter Chauffeurs en PDF' })).toBeVisible();
@@ -86,10 +96,29 @@ test.describe('Équipes', () => {
     await expect(carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' })).toBeVisible();
     await expect(carte.locator('.perimetre-carte__pied app-pdf-export-button')).toBeVisible();
     await expect(carte.locator('.perimetre-carte__pied')).toHaveCSS('justify-content', 'space-between');
-    await expect(carte).toContainText('Employés sur les fiches récentes');
-    await expect(carte).toContainText('Payés · août 2026');
-    await expect(carte.locator('dt').filter({ hasText: 'Employés sur les fiches récentes' }).locator('xpath=..').locator('dd')).toHaveText('0');
-    await expect(carte.locator('dt').filter({ hasText: 'Payés · août 2026' }).locator('xpath=..').locator('dd')).toContainText('1');
+    await expect(carte).not.toContainText('Employés sur les fiches récentes');
+    await expect(carte).toContainText('Paie · août 2026');
+    const mesures = carte.locator('.perimetre-carte__mesures');
+    await expect(carte.locator('.perimetre-carte__fiches')).toHaveCount(0);
+    await expect(carte.locator('.perimetre-carte__jauge, .perimetre-carte__jauge-ligne')).toHaveCount(0);
+    await expect(mesures.locator('.perimetre-carte__indicateur')).toHaveCount(4);
+    const carteOperateurs = page.locator('.perimetre-carte').filter({ hasText: 'Opérateurs' });
+    await expect(carteOperateurs.locator('.perimetre-carte__jauge, .perimetre-carte__jauge-ligne')).toHaveCount(0);
+    await expect(carteOperateurs).not.toContainText('en poste');
+    const indicateurs = mesures.locator('.perimetre-carte__indicateur');
+    await expect(indicateurs).toHaveCount(4);
+    await expect(indicateurs.nth(0).locator('dt')).toHaveText('Effectif (personnes)');
+    await expect(indicateurs.nth(0).locator('strong')).toHaveText('1');
+    await expect(indicateurs.nth(0).locator('.perimetre-carte__variation')).toHaveText('−1 personne · vs juillet 2026');
+    await expect(indicateurs.nth(1).locator('dt')).toHaveText('Masse salariale (DH)');
+    await expect(indicateurs.nth(1).locator('strong')).toContainText('4');
+    await expect(indicateurs.nth(1).locator('.perimetre-carte__variation')).toHaveText('+7,1 % · vs juillet 2026');
+    await expect(indicateurs.nth(2).locator('dt')).toHaveText('STC (personnes)');
+    await expect(indicateurs.nth(2).locator('strong')).toHaveText('1');
+    await expect(indicateurs.nth(2).locator('.perimetre-carte__variation')).toHaveText('+1 personne · vs juillet 2026');
+    await expect(indicateurs.nth(3).locator('dt')).toHaveText('STC (DH)');
+    await expect(indicateurs.nth(3).locator('strong')).toContainText('1');
+    await expect(indicateurs.nth(3).locator('.perimetre-carte__variation')).toHaveText('Base précédente nulle · vs juillet 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre suit dans l'Analytique et borne le périmètre analysé (mêmes équipes que les deux autres vues).

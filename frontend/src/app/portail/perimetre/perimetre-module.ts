@@ -71,6 +71,8 @@ export interface ModulePerimetre {
   noteMouvements?(params: ParamMap): string | null;
   /** Vrai pour le module Employés : le lien « Voir les employés » serait redondant avec « Voir la liste ». */
   sansLienEmployes?: boolean;
+  /** Désactive les agrégats et l'étape des fiches dans Cartes si la source des effectifs est exclusivement Paie. */
+  sansEffectifFichesDansCartes?: boolean;
   /** Masque le raccourci vers le Tabulaire, lorsque les onglets suffisent à changer de vue. */
   sansRaccourciListe?: boolean;
   /** Masque le raccourci vers Cartes dans Analytique, lorsque les onglets suffisent à changer de vue. */

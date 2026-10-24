@@ -32,7 +32,7 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
         jdbc.update("UPDATE employe SET equipe_id = NULL WHERE id = ?", ref.employeId());
         LocalDate aujourdhui = LocalDate.now();
         employe(ref, "A", aujourdhui.minusYears(22), aujourdhui.minusMonths(3), ref.equipeId(), "ACTIF");
-        employe(ref, "B", aujourdhui.minusYears(58), aujourdhui.minusYears(12), ref.equipeId(), "INACTIF");
+        employe(ref, "B", aujourdhui.minusYears(58), aujourdhui.minusYears(12), null, "INACTIF");
         return ref;
     }
 
@@ -40,11 +40,13 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
         jdbc.update("""
                 INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, equipe_id, statut)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", nom + " " + ref.suffixe(), nom + ref.suffixe(), Date.valueOf(naissance),
-                Date.valueOf(embauche), ref.fonctionId(), ref.chantierId(), equipeId, statut);
+                Date.valueOf(embauche), ref.fonctionId(), "INACTIF".equals(statut) ? null : ref.chantierId(), equipeId, statut);
     }
 
     private static EmployeeSearchCriteria duChantier(Referentiel ref, List<Long> equipeIds) {
-        return new EmployeeSearchCriteria(null, null, null, List.of(ref.chantierId()), equipeIds, null);
+        // Le périmètre inclut aussi « Sans chantier » : un employé INACTIF n'a plus d'affectation courante.
+        // Le filtre par fonction isole aussi ce test des « Sans chantier » créés par les autres tests d'intégration.
+        return new EmployeeSearchCriteria(null, null, List.of(ref.fonctionId()), List.of(ref.chantierId(), 0L), equipeIds, null);
     }
 
     @Test
@@ -54,8 +56,8 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
         List<EmployeeRegroupementDto> groupes = service.regrouper(duChantier(ref, null), DimensionEmployes.EQUIPE);
 
         assertThat(groupes).containsExactly(
-                new EmployeeRegroupementDto(ref.equipeId(), "E" + ref.suffixe(), "Equipe " + ref.suffixe(), 2, 1),
-                new EmployeeRegroupementDto(0L, null, "Sans équipe", 1, 1));
+                new EmployeeRegroupementDto(0L, null, "Sans équipe", 2, 1),
+                new EmployeeRegroupementDto(ref.equipeId(), "E" + ref.suffixe(), "Equipe " + ref.suffixe(), 1, 1));
     }
 
     @Test
@@ -64,7 +66,8 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
 
         assertThat(service.regrouper(duChantier(ref, null), DimensionEmployes.CHANTIER))
                 .extracting(EmployeeRegroupementDto::id, EmployeeRegroupementDto::effectif)
-                .containsExactly(org.assertj.core.groups.Tuple.tuple(ref.chantierId(), 3L));
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(ref.chantierId(), 2L),
+                        org.assertj.core.groups.Tuple.tuple(0L, 1L));
         assertThat(service.regrouper(duChantier(ref, null), DimensionEmployes.FONCTION))
                 .extracting(EmployeeRegroupementDto::code, EmployeeRegroupementDto::effectif)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("F-" + ref.suffixe(), 3L));

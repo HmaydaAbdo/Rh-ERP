@@ -29,6 +29,8 @@ class AuditMigrationRepriseEmployesTest extends AuditIntegrationTestBase {
     void la_reprise_aligne_les_fiches_sur_la_paie_enregistre_les_departs_et_supprime_les_employes_sans_paie() throws IOException {
         Referentiel ref = donnees.creerReferentiel();
         String script = new ClassPathResource("db/migration/" + MIGRATION + ".sql").getContentAsString(StandardCharsets.UTF_8);
+        String nettoyageAffectations = new ClassPathResource("db/migration/V33__employe_inactif_sans_affectation.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
 
         transaction.executeWithoutResult(statut -> {
             statut.setRollbackOnly();
@@ -47,16 +49,23 @@ class AuditMigrationRepriseEmployesTest extends AuditIntegrationTestBase {
             jdbc.update("INSERT INTO utilisateur (username, email, mot_de_passe_hash, employee_id) VALUES (?, ?, 'x', ?)",
                     "u" + ref.suffixe(), "u" + ref.suffixe() + "@test.local", sansPaieAvecCompte);
 
+            // V30 précède V33 en production. La base du test a déjà toutes les migrations appliquées :
+            // on enlève donc la contrainte récente pour rejouer V30 sur son schéma historique, puis V33.
+            jdbc.execute("ALTER TABLE employe DROP CONSTRAINT ck_employe_affectations_statut");
             jdbc.execute(script);
+            jdbc.execute(nettoyageAffectations);
 
             assertThat(fiche(present)).containsEntry("statut", "ACTIF").containsEntry("type_salaire", "MENSUEL")
                     .containsEntry("salaire", new BigDecimal("5000.00")).containsEntry("equipe_id", ref.equipeId());
-            assertThat(fiche(absent)).containsEntry("statut", "INACTIF");
-            assertThat(fiche(stc)).containsEntry("statut", "INACTIF");
+            assertThat(fiche(absent)).containsEntry("statut", "INACTIF").containsEntry("chantier_id", null)
+                    .containsEntry("equipe_id", null);
+            assertThat(fiche(stc)).containsEntry("statut", "INACTIF").containsEntry("chantier_id", null)
+                    .containsEntry("equipe_id", null);
             assertThat(fiche(journalier)).as("dernier bulletin non nul : le tarif d'une journée")
                     .containsEntry("statut", "ACTIF").containsEntry("type_salaire", "JOURNALIER")
                     .containsEntry("salaire", new BigDecimal("120.00"));
-            assertThat(fiche(sansPaieAvecCompte)).as("lié à un compte : conservé, mais INACTIF").containsEntry("statut", "INACTIF");
+            assertThat(fiche(sansPaieAvecCompte)).as("lié à un compte : conservé, mais INACTIF")
+                    .containsEntry("statut", "INACTIF").containsEntry("chantier_id", null).containsEntry("equipe_id", null);
             assertThat(jdbc.queryForObject("SELECT count(*) FROM employe WHERE id = ?", Long.class, sansPaie)).isZero();
 
             assertThat(departs(absent)).containsExactly(FEVRIER + ":Absent de la paie (reprise)");
@@ -100,7 +109,7 @@ class AuditMigrationRepriseEmployesTest extends AuditIntegrationTestBase {
     }
 
     private Map<String, Object> fiche(long employeId) {
-        return jdbc.queryForMap("SELECT statut, salaire, type_salaire, equipe_id FROM employe WHERE id = ?", employeId);
+        return jdbc.queryForMap("SELECT statut, salaire, type_salaire, chantier_id, equipe_id FROM employe WHERE id = ?", employeId);
     }
 
     private List<String> departs(long employeId) {

@@ -39,7 +39,7 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 | `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
 | `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
 | `equipe` | Voir le [modèle du domaine Équipe](equipe/README.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`, contrôle `CHECK`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — l'état du dernier mois de paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
+| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC » ou saisi), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 
@@ -170,8 +170,11 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V27` | Unicité des identifiants textuels (CIN, libellé de fonction, code de chantier, nom d'utilisateur, e-mail, nom de rôle) après trim et sans casse, et refus des espaces extérieurs en base ; les prérequis sont contrôlés avant de remplacer les index |
 | `V28` | Permission `CARTE_READ` et rôle `DIRECTION`. `CARTE_READ` est attribuée à `SYSTEM_ADMIN` et à `DIRECTION`, pas à `PAIE_MANAGER` ; un rôle `DIRECTION` déjà existant est conservé. Écrit sa révision d'audit (une révision, deux entrées de journal) |
 | `V29` | `employe.equipe_id`, `employe.salaire`, `employe.type_salaire` (nullables) et table `employe_sortie` (départs), avec leurs tables `_aud` |
-| `V31` | **Nettoyage des référentiels depuis la paie** (2026-10-19, joué une fois) : suppression des fonctions qu'aucun bulletin ni aucune fiche ne cite, **clôture** (`actif = false`) des chantiers qu'aucun bulletin ne cite (leur code perd aussi les espaces extérieurs hérités d'avant V27). Une révision d'audit et deux entrées de journal (`FONCTION_SUPPRESSION`, `CHANTIER_MODIFICATION`, origine `MIGRATION`) ; sans aucune paie en base, ne fait rien |
 | `V30` | **Reprise des employés depuis la paie** ([ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md)) : fiche alignée sur le dernier bulletin, départs (STC, absence), statut, suppression des employés sans aucun bulletin (sauf ceux liés à un compte). Une révision d'audit et trois entrées de journal (`EMPLOYE_SORTIE`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`) ; sans aucune paie en base, ne fait rien |
+| `V31` | **Nettoyage des référentiels depuis la paie** (2026-10-19, joué une fois) : suppression des fonctions qu'aucun bulletin ni aucune fiche ne cite, **clôture** (`actif = false`) des chantiers qu'aucun bulletin ne cite (leur code perd aussi les espaces extérieurs hérités d'avant V27). Une révision d'audit et deux entrées de journal (`FONCTION_SUPPRESSION`, `CHANTIER_MODIFICATION`, origine `MIGRATION`) ; sans aucune paie en base, ne fait rien |
+| `V32` | Permission `EQUIPE_IMPORT`, attribuée aux rôles qui administrent déjà le référentiel avec `EQUIPE_WRITE` |
+| `V33` | `employe.chantier_id` devient nullable; les fiches INACTIF perdent leurs affectations courantes chantier/équipe, avec audit de données et contrainte assurant les affectations selon le statut; les bulletins historiques restent inchangés |
+| `V34` | Supprime l'équipe `CH+OP` après reclassement de ses bulletins selon leur fonction (`CH.`/`COURSIER` → `CH`, `OP.` → `OP`, `CHEF DE POSTE` → `EE`) et des fiches actives selon la même règle. Une fonction non classée fait échouer la migration. La suppression et les mises à jour sont auditées. |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
@@ -184,6 +187,6 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
 - Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
-  toute la chaîne V1 → V28 est rejouée et validée contre les entités à chaque exécution.
+  toute la chaîne de migrations est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

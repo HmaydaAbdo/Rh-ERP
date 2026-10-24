@@ -42,7 +42,7 @@ test.describe('Chantiers', () => {
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
     await expect(carte).toContainText('En cours');
     await expect(carte).toContainText('Employés sur les fiches récentes');
-    await expect(carte).toContainText('Payés · août 2026');
+    await expect(carte).toContainText('Paie · août 2026');
     await expect(page.locator('.perimetre-carte').filter({ hasText: 'C196' })).toContainText('Clôturé');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
