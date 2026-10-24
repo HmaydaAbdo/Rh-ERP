@@ -383,40 +383,6 @@
     font-weight: 400 !important;
   }
 
-  &__jauge-ligne {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch !important;
-    gap: var(--space-2xs);
-
-    dd {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2xs);
-      font-weight: 400;
-      text-align: left;
-    }
-
-    small {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-  }
-
-  &__jauge {
-    display: block;
-    height: 6px;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--color-danger) 25%, var(--color-surface-alt));
-    overflow: hidden;
-
-    span {
-      display: block;
-      height: 100%;
-      background: var(--color-success);
-    }
-  }
-
   &__pied {
     display: flex;
     flex-wrap: wrap;

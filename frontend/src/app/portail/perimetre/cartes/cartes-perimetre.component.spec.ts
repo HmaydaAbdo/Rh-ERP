@@ -145,7 +145,8 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).toContain('En cours');
     expect(cartes[0].textContent).toContain('Route de Nador');
     expect(cartes[0].textContent).toContain('Employés sur les fiches récentes');
-    expect(cartes[0].textContent).toContain('2 en poste');
+    expect(cartes[0].querySelector('.perimetre-carte__jauge')).toBeNull();
+    expect(cartes[0].textContent).not.toContain('en poste');
     expect(cartes[0].textContent).toContain('Paie · août 2026');
     expect(Array.from(cartes[0].querySelectorAll('.perimetre-carte__indicateur dt')).map((dt) => dt.textContent?.trim())).toEqual([
       'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'
