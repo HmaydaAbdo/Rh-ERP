@@ -77,6 +77,9 @@ test.describe('Permissions', () => {
     // au-dessus de la barre latérale, et peut sinon lancer sa transition d'expansion pendant la mesure du contraste).
     await page.mouse.move(640, 360);
     await expect(page.locator('.app-sidebar')).toHaveCSS('width', '72px');
+    // La largeur arrive à sa valeur cible avant la fin du fondu des libellés; Axe ne doit pas mesurer
+    // leur contraste pendant cette transition alors qu'ils sont visuellement masqués.
+    await expect(page.locator('.app-sidebar__label').first()).toHaveCSS('opacity', '0');
 
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
