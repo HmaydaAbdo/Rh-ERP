@@ -110,7 +110,7 @@ test.describe('Fonctions', () => {
     await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
     await expect(carte).toContainText('Employés sur les fiches récentes');
-    await expect(carte).toContainText('Payés · août 2026');
+    await expect(carte).toContainText('Paie · août 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre libellé suit dans l'Analytique et borne le périmètre analysé (mêmes fonctions que les deux autres vues).
