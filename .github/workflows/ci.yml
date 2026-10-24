@@ -120,7 +120,11 @@ jobs:
           npm run typecheck
           npm audit --audit-level=moderate
 
-      - name: Verify MCP Java TypeScript interoperability
+      # Client MCP Python officiel (tâche T3 de docs/ia.md), versions figées par ia/uv.lock.
+      - name: Install uv for the Python MCP client
+        run: pipx install uv==0.12.2
+
+      - name: Verify MCP Java TypeScript and Python interoperability
         working-directory: backend
         run: ./mvnw -B -ntp -P mcp-compatibility -Dtest=McpCompatibilityTest test
 
@@ -140,9 +144,39 @@ jobs:
           path: |
             backend/target/mcp-compatibility/surefire-reports
             backend/target/mcp-compatibility/client.tap
+            backend/target/mcp-compatibility/client-python.txt
             backend/target/mcp-compatibility/bom.json
           if-no-files-found: warn
           retention-days: 14
+
+  # Service IA Python et passerelle LiteLLM (docs/ia.md) : qualité du code et construction des images.
+  ia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        run: pipx install uv==0.12.2
+
+      - name: Lint, type-check and test the IA service
+        working-directory: ia
+        run: |
+          uv sync --locked
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pyright
+          uv run pytest -q
+
+      - name: Read LiteLLM pools without calling any provider
+        run: python3 litellm/test_providers.py --list
+
+      - name: Build IA images
+        run: |
+          set -euo pipefail
+          docker build --tag erp-rh-litellm:ci litellm
+          docker build --tag erp-rh-ia:ci ia
 
   performance-profile:
     runs-on: ubuntu-latest
@@ -357,7 +391,7 @@ jobs:
           retention-days: 7
 
   publish-images:
-    needs: [backend, performance-profile, frontend, full-stack]
+    needs: [backend, ia, performance-profile, frontend, full-stack]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
@@ -366,7 +400,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Construire les quatre images avant la connexion authentifiée au registre ou leur publication.
+      # Construire toutes les images avant la connexion authentifiée au registre ou leur publication.
       # Un échec de build n'en publie ainsi aucune.
       - name: Build all images locally
         run: |
@@ -375,11 +409,13 @@ jobs:
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backend:$GITHUB_SHA" backend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-ia:$GITHUB_SHA" ia
 
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup; do
+          for image in postgres backend frontend backup litellm ia; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -396,11 +432,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Les tests, le contrôle de couverture, les audits et les builds des quatre images sont verts.
+      # Les tests, le contrôle de couverture, les audits et les builds de toutes les images sont verts.
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup; do
+          for image in postgres backend frontend backup litellm ia; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then

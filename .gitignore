@@ -96,3 +96,9 @@ backups/
 /frontend/carte-fond
 # Dossier de travail de scripts/carte/preparer-fond-carte.sh (gardé après un échec pour reprendre, supprimé en cas de succès).
 carte-fond.preparation/
+
+# --- Service IA (Python, uv) ---
+ia/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

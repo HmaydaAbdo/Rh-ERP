@@ -1,178 +1,168 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-24.** Ce document est la seule référence du chantier IA : décisions,
-architecture, feuille de route, état et reprise. Les règles réutilisables restent dans les
-conventions ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
+**Mis à jour : 2026-10-24.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+et reprise. Les règles réutilisables sont dans les conventions
+([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
-[integrations](../conventions/integrations.md)) ; ce document dit comment ERP-RH les applique.
-
-**État en une ligne :** décisions de cadrage prises par le propriétaire le 2026-10-24 ; seule la
-preuve de compatibilité MCP (J0) existe dans le code, en profil de test isolé ; aucune route MCP
-métier, aucun appel de modèle, aucune interface IA livrés. **Prochaine action : J1.**
+[integrations](../conventions/integrations.md)) ; ce document fixe comment ERP-RH les applique.
 
 ## 1. Objectif
 
-Rendre l'IA utile à **tous les utilisateurs** d'une entreprise BTP marocaine de classe S, en
-commençant par la partie RH de l'ERP, puis en couvrant chaque département (achats, matériel,
-finance…) avec le même socle. L'IA aide à comprendre, retrouver, contrôler et préparer ; elle ne
-devient jamais la source des chiffres, des droits ou des décisions métier.
+L'IA sert **tous les utilisateurs** de l'entreprise (BTP, classe S, Maroc) : comprendre, retrouver,
+contrôler, préparer. Elle commence par la partie RH de l'ERP, puis couvre chaque département avec le
+même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier.
 
-## 2. Décisions du propriétaire (2026-10-24)
+## 2. Décisions
 
 | Sujet | Décision |
 |---|---|
-| Méthode | **Tranche verticale** : un cas d'usage complet navigateur → agent → MCP → Spring, en lecture seule sur données de développement, puis durcissement avant les données réelles. Validation par jalon. |
-| Premier cas d'usage | **Questions/réponses et vues pilotées** (§ 6). Tous les autres cas suivent : contrôle de la paie, documents RH, assistant réglementaire, terrain. |
-| Utilisateurs | **Tout le monde**, d'où une sécurité par **département** et par **fiche de poste** (§ 5) avant d'ouvrir l'IA au-delà du pilote. |
-| Modèles | **LiteLLM** devant plusieurs fournisseurs ; seuls des modèles performants (exactitude, latence, absence d'invention) sont retenus, **choisis sur notre jeu de référence** (§ 4). |
-| Données personnelles | Le propriétaire indique disposer de l'accord CNDP (loi 09-08). Sa référence et sa date sont à consigner ici avant le pilote réel (J3). |
-| Langage de la couche IA | **Python** (§ 3), décision prise sur recommandation après comparaison avec TypeScript. |
-| Métier | Spring reste propriétaire des données, transactions, règles, permissions et audits. Pas de Spring AI, LangChain4j ou LangGraph4j dans le monolithe. |
+| Méthode | Tranche verticale de bout en bout, puis durcissement. Une tâche à la fois, suivie au § 7. |
+| Métier | Spring est propriétaire des données, transactions, règles, permissions et audits. Aucun framework LLM dans le monolithe. |
+| Service IA | **Python** : LangGraph pour le graphe, Pydantic pour tous les contrats, `uv` (lockfile), `ruff`, `pyright` strict, `pytest`. Python est le langage unique de l'IA (graphe, ML, OCR, voix, évaluation). |
+| Outils métier | **MCP** (Streamable HTTP) entre le service IA et Spring. Le service IA n'a ni accès aux tables ni client REST métier. |
+| Interface ↔ agent | **AG-UI** entre Angular et le service IA : messages en streaming, états d'outils, interruptions, confirmations, événements de la mascotte. Angular dialogue directement avec l'agent Python, sans runtime intermédiaire. |
+| Modèles | **LiteLLM** : un alias unique `ai-gateway`, la tâche indiquée par tag (`simple`, `medium`, `complex`, `code`, `ocr`), bascule entre fournisseurs du même niveau, budgets par clé virtuelle. Un modèle est retenu sur le jeu de référence (§ 4). |
+| Données envoyées aux modèles | Développement : **données synthétiques uniquement** (les clés actuelles sont des paliers gratuits). Données réelles : fournisseurs payants sans entraînement sur les requêtes, à partir de J3. Accord CNDP (loi 09-08) obtenu par le propriétaire ; référence et date consignées avant J3. |
+| Sécurité | Périmètres de données par **département et fiche de poste**, appliqués dans Spring pour REST et MCP ; jeton délégué court RS256 ; audit de chaque appel d'outil (§ 5). |
+| Premier usage | **Questions/réponses + vues pilotées** : l'agent répond avec des chiffres Spring et ouvre la vue partagée (Tabulaire, Cartes, Analytique) déjà filtrée (§ 6). |
+| Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
+| Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
+| Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
+| Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
-## 3. Pourquoi Python plutôt que TypeScript
-
-| Critère | Python | TypeScript |
-|---|---|---|
-| Orchestration | LangGraph Python : implémentation de référence, nouveautés en premier | LangGraph.js : suit avec retard |
-| Besoins futurs du plan | Détection d'anomalies de paie (statistiques, ML), extraction de documents et OCR (textes réglementaires, PDF scannés FR/AR), voix et darija, évaluations RAG : écosystème dominant | Possible, mais bibliothèques moins nombreuses ou appelées en service externe |
-| Protocoles | SDK MCP officiel, AG-UI côté serveur disponibles | Disponibles |
-| Cohérence avec Angular | Contrats partagés par schéma JSON généré | Mêmes types partagés directement |
-| Coût pour une équipe d'une personne | Un langage de plus, limité au service IA | Langage déjà connu par le frontend |
-
-**Décision : Python** pour le service IA. Les jalons J4 à J7 (ML, OCR, voix, RAG) reposent sur
-l'écosystème Python ; choisir TypeScript reviendrait à ajouter Python plus tard en service
-annexe, donc deux runtimes IA au lieu d'un. Le coût d'un langage supplémentaire est contenu :
-Python reste confiné au service IA, typé strictement, avec un outillage reproductible.
-
-Socle Python (versions exactes vérifiées et verrouillées en J1) : version stable supportée de
-CPython, `uv` et son lockfile, Pydantic v2 pour tous les contrats, `ruff`, `pyright` en mode strict,
-`pytest`. Serveur HTTP ASGI pour le point d'entrée AG-UI, LangGraph pour le graphe, client MCP
-officiel, OpenTelemetry. Le service appelle les modèles uniquement par LiteLLM.
-
-La preuve J0 (client MCP TypeScript contre le serveur Java) reste valable : elle établit que le
-serveur Spring parle MCP. J1 ajoute la même preuve avec le client Python.
-
-## 4. Architecture cible
+## 3. Architecture
 
 ```text
-Angular (panneau IA + vues partagées existantes)
-   │  AG-UI : entrées HTTP, événements SSE          ▲ ViewSpec → route + filtres → Tabulaire / Cartes / Analytique
-   ▼                                                │
-Service IA Python (LangGraph)
-   │  graphe : intention → outils → vérification des chiffres → réponse + ViewSpec
-   ├── LiteLLM : alias par rôle, secours entre fournisseurs, budgets par poste
-   ▼  MCP (Streamable HTTP) + jeton délégué court
-Spring : adaptateurs MCP → façades de domaine → périmètre de la fiche de poste → audit
+Angular ── panneau IA / Espace IA (A2UI + mascotte Rive) ── vues partagées existantes
+   │  AG-UI : entrées HTTP, événements SSE              ▲ ViewSpec → route + filtres
+   ▼                                                    │
+erp-rh-ia (Python, LangGraph)
+   │  graphe : intention → outils → vérification des chiffres → réponse + ViewSpec + surface A2UI
+   ├── erp-rh-litellm → fournisseurs (alias ai-gateway, tags de tâche)
+   ├── A2A (plus tard) → agents des autres applications
+   ▼  MCP + jeton délégué
+erp-rh-backend (Spring) : adaptateurs MCP → façades de domaine → périmètre fiche de poste → audit
    ▼
-PostgreSQL : données métier · schéma ia (conversations, retours, coûts) · plus tard corpus/pgvector
+PostgreSQL ERP (métier) · base LiteLLM dédiée (clés virtuelles, budgets) · plus tard corpus/pgvector
 ```
 
-Frontières :
+Les services IA tournent sous le profil Compose `ia` : la pile ERP actuelle reste inchangée tant
+que ce profil n'est pas activé. Les checkpoints durables LangGraph arrivent avec les écritures (J6).
 
-- Angular continue d'utiliser les API REST pour ses écrans ; seul le panneau IA parle AG-UI.
-- Le service IA ne lit aucune table métier et n'a pas de client REST métier : tout passe par MCP.
-- Pas de runtime Node intermédiaire. J1 vérifie si le client Angular CopilotKit se connecte
-  directement à l'agent Python AG-UI ; sinon, le client AG-UI officiel est intégré à un panneau
-  Staport. Aucun composant React ni PrimeNG.
-- Les checkpoints durables LangGraph n'arrivent qu'avec les écritures (J5) ; avant, l'historique
-  de conversation suffit.
+## 4. Exactitude
 
-### Exactitude : « pas d'invention » garanti par l'architecture
-
-Aucun modèle ne garantit l'absence d'erreur ; ces mécanismes la garantissent pour les chiffres :
-
-1. **Le modèle ne calcule jamais.** Effectifs, montants, taux et périodes viennent des outils Spring.
-2. **Vérificateur de chiffres.** Avant affichage, chaque nombre et chaque période de la réponse doit
-   figurer dans les résultats d'outils du run. Sinon, la réponse est régénérée une fois, puis
-   remplacée par une abstention explicite.
-3. **Abstention.** Sans outil ni source adaptés, l'assistant le dit et propose l'écran classique.
-4. **Jeu de référence versionné** (≈ 100 questions RH au départ, réponses calculées sur la base de
-   développement) rejoué à chaque changement de modèle, de prompt ou d'outil. Les modèles de
-   LiteLLM sont choisis et remplacés selon ce jeu : exactitude, latence p95, coût.
-5. **Sorties structurées** validées par Pydantic côté service et par schéma côté Angular.
+1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils Spring.
+2. Un vérificateur déterministe contrôle que chaque nombre et chaque période de la réponse figure
+   dans les résultats d'outils du run ; sinon une seule régénération, puis abstention explicite.
+3. Sans outil ni source adaptés, l'agent s'abstient et propose l'écran classique.
+4. Un jeu de référence versionné (≈ 100 questions RH au départ, réponses calculées sur la base
+   synthétique) est rejoué à chaque changement de modèle, prompt, outil ou graphe. Il décide des
+   modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
+5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
+   `enable_json_schema_validation` côté LiteLLM.
 
 ## 5. Sécurité
 
-### Fiches de poste et périmètres de données
+- **Périmètres.** Département → fiche de poste → rôles et permissions + périmètre de données
+  (chantiers, équipes, département, ou « tous »). Appliqué dans les requêtes Spring, même règle pour
+  REST et MCP. Le salaire devient une politique de projection du domaine (`EMPLOYEE_READ` sans
+  `PAIE_READ` : ni salaire, ni tri, ni agrégat salarial). Le modèle exact est présenté et validé au
+  lancement de J2.
+- **Identité de l'agent.** Spring émet pour l'utilisateur connecté un jeton court RS256 (clé
+  publique JWKS), audience `mcp`, scopes réduits ; le `JWT_SECRET` n'est jamais partagé. Chaque appel
+  MCP revalide émetteur, audience, expiration, permissions et périmètre.
+- **Minimisation.** Agrégats et identifiants d'abord ; noms seulement si la question l'exige et que
+  l'utilisateur y a droit.
+- **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé d'ERP-RH porte
+  `metadata.tags: ["!eval"]` (aucun modèle d'évaluation), une limite de débit et un budget. Port lié
+  à `127.0.0.1` ou au seul réseau Docker interne. Cache de réponses désactivé.
+- **Audit et exploitation.** Acteur humain, service délégué et corrélation
+  `requestId/threadId/runId/toolCallId` pour chaque outil, sans jeton ni contenu RH dans les
+  journaux. Interrupteur global de l'IA ; budgets par utilisateur et par poste ; plafonds d'étapes,
+  de tokens et de durée par run. L'application reste entièrement utilisable sans IA.
 
-Aujourd'hui, le RBAC dit **quelle action** est permise (27 permissions `DOMAINE_ACTION`), jamais
-**sur quelles données**. Ouvrir l'IA à tous exige un périmètre :
+## 6. Expérience
 
-- Département → fiche de poste → rôles et permissions + **périmètre de données** (par exemple
-  chantiers, équipes, département, ou « tous »). Un utilisateur occupe une fiche de poste.
-- Le périmètre est appliqué **dans Spring, au niveau des requêtes**, de la même façon pour REST et
-  MCP. L'écran classique en bénéficie aussi.
-- Le masquage du salaire sort du `EmployeeController` pour devenir une politique de projection du
-  domaine, réutilisée par REST et MCP (`EMPLOYEE_READ` sans `PAIE_READ` ne révèle ni salaire, ni
-  tri, ni agrégat salarial).
-- Le modèle exact (entités, migration, écrans d'administration) est un choix d'architecture à
-  présenter et valider au lancement de J2.
+**Vues pilotées (ViewSpec).** Un outil renvoie, avec ses données, une description de vue : domaine,
+vue, filtres, période, niveau de parcours. Schéma défini une fois (Pydantic → schéma JSON → types
+Angular), validé des deux côtés ; Angular la traduit en route connue et ses gardes s'appliquent.
 
-### Identité de l'agent
+**Espace IA immersif.** Plein écran, ouvert depuis le panneau : la conversation à gauche, à droite
+une scène composée par l'agent en **A2UI** — indicateurs, graphiques, tableaux, fiches et sources,
+tous rendus par des composants Staport du catalogue versionné — avec transitions animées et retour
+à la vue classique en un clic. Clavier, lecteur d'écran, mobile et `prefers-reduced-motion` sont
+pris en charge ; chaque surface a un repli texte.
 
-- Spring émet, pour l'utilisateur connecté, un **jeton délégué court signé RS256** (clé publique
-  JWKS), d'audience `mcp`, avec des scopes réduits. Le `JWT_SECRET` HS256 n'est jamais partagé.
-- Le serveur MCP revalide émetteur, audience, expiration, permissions et périmètre **à chaque appel** ;
-  un `userId` fourni en argument n'a aucune valeur.
-- Le catalogue d'outils proposé au modèle est filtré par droits ; le filtrage n'est pas la
-  sécurité, le refus serveur l'est.
+**Mascotte.** Un personnage Rive vivant, présent dans le panneau et dans l'Espace IA :
 
-### Minimisation et données personnelles
+- il **écoute** pendant la saisie, **réfléchit** pendant le raisonnement, **cherche** pendant un
+  appel d'outil, **trouve** à l'arrivée du résultat, **demande** lors d'une confirmation et
+  **s'excuse** sur un refus ou une erreur ;
+- il **désigne** le composant dont parle la réponse (cible `surfaceId/componentId`), suit le
+  pointeur du regard et a des animations de repos ;
+- il est piloté par l'événement AG-UI `com.staport.mascot.state.v1` décrit dans
+  [agent-ui](../conventions/agent-ui.md), jamais directement par le modèle ;
+- avec la voix (J9), il parle avec synchronisation labiale et sous-titres ;
+- l'utilisateur peut le masquer ; une image fixe remplace l'animation si Rive est indisponible ou
+  si le mouvement réduit est demandé.
 
-Même avec l'accord CNDP : les outils renvoient d'abord des agrégats et des identifiants ; les noms
-ne sont envoyés au modèle que lorsque la question les exige et que l'utilisateur y a droit.
-Données RH réelles : uniquement des offres payantes sans entraînement sur les requêtes et à
-conservation minimale. Les quotas gratuits et les comptes multiples chez un même fournisseur pour
-cumuler des quotas sont exclus (conditions d'utilisation, entraînement sur les données).
+## 7. Plan et suivi
 
-### Audit et exploitation
+États : ⬜ à faire · 🟦 en cours · ✅ fait · ⛔ bloqué.
 
-Chaque appel d'outil est audité avec l'acteur humain, le service délégué et la corrélation
-`requestId/threadId/runId/toolCallId`, sans jeton ni contenu RH dans les journaux. Interrupteur
-global de l'IA, budgets par utilisateur et par poste, limites de durée, d'étapes et de tokens par
-run. L'application reste entièrement utilisable sans IA.
+### Jalons
 
-## 6. Vues pilotées (ViewSpec)
+| Jalon | Contenu | Sortie | État |
+|---|---|---|---|
+| J0 — Socle | Preuve MCP Java ↔ client TypeScript ; décisions ; ce document | Fait | ✅ |
+| J1 — Tranche verticale | Tâches T1 à T9 ci-dessous, données synthétiques | Démonstration de bout en bout ; exactitude mesurée ; refus serveur testés | 🟦 |
+| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets par poste | Tests négatifs verts ; porte avant tout utilisateur non administrateur | ⬜ |
+| J3 — Pilote réel | RH/paie puis direction ; fournisseurs payants sans entraînement ; retours 👍/👎 vers le jeu de référence ; suivi coûts/latence | Accord CNDP consigné ; seuils validés et atteints | ⬜ |
+| J4 — Expérience immersive | Espace IA, catalogue A2UI Staport, mascotte Rive complète | Parcours réel vérifié au navigateur, accessibilité et mouvement réduit | ⬜ |
+| J5 — Contrôle de la paie | Règles d'anomalies dans l'assistant d'import, puis détection statistique ; l'agent explique, l'humain décide | Anomalies connues retrouvées sur imports historiques | ⬜ |
+| J6 — Documents RH | Attestations, certificats, contrats de chantier ; première écriture (diff, approbation, idempotence, checkpoints durables) | Pas de double effet après crash ; approbation expirée refusée | ⬜ |
+| J7 — Assistant réglementaire | Corpus versionné (Code du travail, CNSS/AMO, barème IR par loi de finances, procédures) ; plein texte puis hybride pgvector | Citations vérifiées, abstention hors corpus | ⬜ |
+| J8 — Autres départements et A2A | Catalogue MCP, périmètres et jeu de référence par module ; A2A entre applications | Mêmes portes que J1–J3 par module | ⬜ |
+| J9 — Terrain et voix | Mobile chef de chantier, voix FR/darija, mascotte parlante ; avec le domaine Pointage | Parcours mobile vérifié, transcription corrigible | ⬜ |
 
-L'IA ne génère pas d'écrans : elle **pilote les vues partagées existantes** (coque, Tabulaire,
-Cartes, Analytique — ADR 0011, 0012, 0014). Un outil renvoie, à côté de ses données, une
-`ViewSpec` : domaine, vue, filtres, période, niveau de parcours. Son schéma est défini une fois
-(Pydantic → schéma JSON → types Angular) et validé des deux côtés. Angular la traduit en route et
-paramètres connus ; les gardes et permissions existantes s'appliquent. Exemple : « masse salariale
-du chantier X par rapport à août » → réponse chiffrée + bouton « Ouvrir dans Analytique » déjà filtré.
+### Tâches de J1
 
-## 7. Feuille de route
+| Tâche | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| T1 — LiteLLM | Dossier `litellm/` versionné sans secret : image `erp-rh-litellm` (version et digest épinglés, configuration intégrée), base dédiée, service Compose sous le profil `ia`, variables dans le `.env` racine | Image construite ; passerelle prête sur une pile jetable ; pools lus par `test_providers.py --list` | ✅ |
+| T2 — Service IA | `ia/` : projet Python (`uv`, Pydantic Settings, `ruff`, `pyright`, `pytest`), santé HTTP, client LiteLLM, image `erp-rh-ia` non privilégiée | Lint, typage et tests verts ; image construite ; `/health` répond | ✅ |
+| T3 — MCP Python | Le client MCP Python officiel rejoue les scénarios de la preuve J0 contre le serveur Java | Mêmes scénarios verts que le client TypeScript | ✅ |
+| T4 — Identité MCP | Jeton délégué RS256 + JWKS dans Spring ; route MCP réelle protégée | Mauvaise audience, émetteur, signature ou expiration refusés | ⬜ |
+| T5 — Outils de lecture | Indicateurs de paie, recherche/comptage d'employés, entrées et sorties, fiche chantier ; ViewSpec ; projection salaire | Tests de contrat, refus et masquage | ⬜ |
+| T6 — Graphe et exactitude | Graphe LangGraph, vérificateur de chiffres, jeu de référence synthétique | Exactitude mesurée et rapportée | ⬜ |
+| T7 — AG-UI | Point d'entrée AG-UI du service ; événements d'outils, de confirmation et de mascotte | Flux réel testé avec un client AG-UI | ⬜ |
+| T8 — Panneau Angular | Panneau en streaming, sources, bouton « Ouvrir la vue » | Parcours vérifié au navigateur | ⬜ |
+| T9 — Démonstration J1 | Navigateur → agent → MCP → Spring sur base synthétique | Démonstration présentée au propriétaire | ⬜ |
 
-| Jalon | Contenu | Critère de sortie |
-|---|---|---|
-| **J0 — Socle** ✅ | Preuve MCP Java ↔ client TypeScript ; décisions du § 2 ; ce document | Fait (§ 8) |
-| **J1 — Tranche verticale** | Serveur MCP Spring avec 4 outils de lecture sur les façades analytiques (indicateurs de paie par périmètre et période, recherche/comptage d'employés, entrées et sorties, fiche chantier) renvoyant données + ViewSpec ; jeton délégué minimal ; service Python (graphe, LiteLLM, client MCP) ; panneau Angular en streaming avec ouverture de la vue pilotée ; jeu de référence et vérificateur de chiffres | Démonstration de bout en bout sur données de dev ; exactitude mesurée sur le jeu de référence ; refus serveur testés |
-| **J2 — Sécurité par fiche de poste** | Périmètres de données dans Spring (REST + MCP), projection salaire du domaine, catalogue filtré, audit des outils, budgets par poste | Tests négatifs verts : autre chantier, salaire sans `PAIE_READ`, droit révoqué en cours de conversation. Porte obligatoire avant tout utilisateur non administrateur |
-| **J3 — Pilote réel** | Service RH/paie puis direction, données réelles, fournisseurs payants sans entraînement, retour 👍/👎 avec correction alimentant le jeu de référence, suivi coûts/latence | Accord CNDP consigné ; seuils d'exactitude, de latence et de coût validés par le propriétaire et atteints |
-| **J4 — Contrôle de la paie** | Règles d'anomalies déterministes dans l'assistant d'import (saut de salaire, doublon, mutation suspecte, STC inhabituel), puis détection statistique ; le modèle explique et priorise, l'humain décide | Anomalies connues détectées sur des imports historiques ; aucun blocage automatique sans règle validée |
-| **J5 — Documents RH** | Brouillons d'attestations, certificats, contrats de chantier avec le moteur PDF existant ; première écriture : diff, approbation liée à l'action, idempotence, checkpoints durables | Pas de double effet après crash ; approbation expirée ou droit révoqué refusés |
-| **J6 — Assistant réglementaire** | Corpus versionné (Code du travail, CNSS/AMO, barème IR par loi de finances, procédures internes) ; plein texte d'abord, hybride pgvector si gain mesuré ; citations et abstention | Citations vérifiées, sources retirées inaccessibles, abstention sur question hors corpus |
-| **J7 — Terrain** | Chefs de chantier sur mobile, voix FR/darija ; avec le futur domaine Pointage | Parcours mobile vérifié ; transcription visible et corrigible |
-| **J8+ — Autres départements** | Chaque module apporte son catalogue MCP, ses périmètres et son jeu de référence ; sous-agents par département seulement si le contexte l'exige | Mêmes portes que J1–J3 par module |
+### Journal
 
-Repoussé tant qu'un besoin mesuré ne l'impose pas : A2UI et surfaces déclaratives, interface
-générée (interdite sans ADR), mascotte, Langfuse (OpenTelemetry d'abord), GraphRAG/Neo4j, A2A.
+| Date | Fait |
+|---|---|
+| 2026-10-24 | Décisions du § 2 ; documents IA fusionnés dans ce fichier ; plan de J1 établi. |
+| 2026-10-25 | **T1** : image `erp-rh-litellm` construite ; sur une pile Compose jetable, passerelle prête, appel sans clé refusé (401), image refusant de démarrer sans clé master, clé ERP-RH `!eval` refusant le pool d'évaluation et l'alias de test sans appel fournisseur ; clés regroupées dans le `.env` racine. **T2** : 8 tests, `ruff` et `pyright` strict verts ; image `erp-rh-ia` (utilisateur 10001, lecture seule) saine, `/health/ready` voit la passerelle. **T3** : `McpCompatibilityTest` vert, 10/10 scénarios pour le client TypeScript et pour le client Python (`mcp` 2.3.0, révision 2025-11-25). CI préparée (job `ia`, images publiées), non exécutée. |
 
-## 8. État actuel
+## 8. État technique
 
 | Élément | État |
 |---|---|
-| Preuve MCP (J0) | SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1, client TypeScript `@modelcontextprotocol/sdk` 1.32.1 ; protocole **2025-11-25** négocié en Streamable HTTP ; 10 scénarios client et un test Java verts en local. Profil Maven `mcp-compatibility`, dépendances de portée test uniquement ; commandes dans le [README du prototype](../scripts/ia/mcp-compatibility/README.md) |
-| Code IA applicatif | Aucun : pas de route MCP métier, de service Python, de modèle ni de panneau |
-| CI | Le profil MCP et son SBOM de test sont dans la CI ; exécution distante sur demande du propriétaire |
-| Production | Rien de déployé |
+| Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
+| LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, profil Compose `ia`. Fournisseurs configurés : Gemini, Groq, Cloudflare, OpenRouter (paliers gratuits) ; Mistral, Cerebras et NVIDIA sans clé. Clé virtuelle ERP-RH à créer au premier démarrage. Voir [`litellm/README.md`](../litellm/README.md). |
+| Service IA | Image `erp-rh-ia` (Python 3.13), santé et client LiteLLM ; graphe, outils et AG-UI à venir (T4–T7). Voir [`ia/README.md`](../ia/README.md). |
+| Code IA dans l'application | Aucune route MCP métier, aucun panneau Angular. |
+| CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 
-## 9. Reprise et règles de travail
+## 9. Reprise
 
-1. Lire `AGENTS.md`, le [handoff général](handoff/etat-du-projet.md), ce document et les
-   conventions IA ; vérifier branche, `git status` et derniers commits.
-2. Travailler jalon par jalon ; un jalon se termine par une démonstration, ses tests et la mise à
-   jour du § 8. Le propriétaire valide le jalon avant le suivant.
-3. Ne jamais toucher au port 4200 ni à la pile Docker du propriétaire ; aucune donnée réelle avant J3.
-4. Consigner ici toute nouvelle décision (date, choix, réserve). Ne pas recréer de documents IA
-   parallèles : ce fichier les remplace.
+1. Lire `AGENTS.md`, le [handoff général](handoff/etat-du-projet.md), ce document et les conventions
+   IA ; vérifier branche, `git status` et derniers commits.
+2. Reprendre la première tâche ⬜ du § 7 ; la passer en 🟦, puis en ✅ avec une ligne de journal
+   quand son critère de sortie est prouvé.
+3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire ; aucune donnée
+   réelle vers un modèle avant J3.
+4. Toute nouvelle décision s'inscrit au § 2. Aucun autre document IA n'est créé : celui-ci les
+   remplace.
