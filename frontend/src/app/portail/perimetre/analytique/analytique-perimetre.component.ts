@@ -26,7 +26,7 @@ import { PaieService } from '../../paie/services/paie.service';
 import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, lirePerimetre, Portee, porteeDe, porteeVide
 } from '../perimetre';
-import { lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
+import { LIBELLE_EQUIPE_ORPHELINE, lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
 
@@ -208,6 +208,7 @@ export class AnalytiquePerimetreComponent {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
     return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
   });
+  protected readonly bulletinsOrphelins = computed(() => this.paie()?.qualite.sansEquipe ?? null);
 
   protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
@@ -400,6 +401,12 @@ export class AnalytiquePerimetreComponent {
       `${this.contexteEquipe(true)} · Indicateurs affichés : ${this.mesureRepartitionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'}`);
   }
 
+  protected documentQualiteEquipe(): PdfImpressionDocument {
+    return this.documentPdf('Qualité des données · Équipe', ['Indicateur', 'Bulletins'],
+      [[`Bulletins ${LIBELLE_EQUIPE_ORPHELINE.toLowerCase()}`, this.bulletinsOrphelins() ?? 0]],
+      `${this.contexteEquipe(true)} · Contrôle du rattachement des bulletins`);
+  }
+
   protected documentEvolutionEquipe(): PdfImpressionDocument {
     const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
     return this.documentPdf('Évolution mensuelle de la paie par équipe',
@@ -500,7 +507,7 @@ export class AnalytiquePerimetreComponent {
   }
 
   protected nom(dimension: Dimension, id: number): string {
-    return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? 'Sans équipe' : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
+    return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? LIBELLE_EQUIPE_ORPHELINE : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
   }
 
   protected changerPeriode(value: unknown): void {

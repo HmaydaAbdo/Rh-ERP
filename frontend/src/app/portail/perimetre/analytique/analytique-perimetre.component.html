@@ -53,6 +53,18 @@
       } @else if (!periode()) {
         <p class="perimetre-analytique__note" role="status">Aucun mois de paie n’est disponible.</p>
       } @else {
+        @if (paie(); as analyseEquipe) {
+          <section class="perimetre-analytique__section perimetre-analytique__section--synthese" aria-label="Qualité des données Équipe">
+            <app-pdf-export-button [document]="documentQualiteEquipe()" [iconOnly]="true" ariaLabel="Exporter l’indicateur de qualité des données Équipe en PDF" />
+            <div class="perimetre-analytique__tuiles">
+              <div class="perimetre-analytique__tuile">
+                <span>Bulletins orphelins</span>
+                <strong>{{ analyseEquipe.qualite.sansEquipe }}</strong>
+                <small>Bulletins sans rattachement à une équipe</small>
+              </div>
+            </div>
+          </section>
+        }
         <section class="perimetre-analytique__bande perimetre-analytique__bande--prioritaire" aria-label="Indicateurs de paie par équipe">
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-equipe-effectif">
             <div class="perimetre-analytique__entete-section">
@@ -223,7 +235,7 @@
 
         @if (a.qualite.sansEquipe > 0 || a.qualite.sansObservation > 0) {
           <p class="perimetre-analytique__note perimetre-analytique__note--qualite" role="status">
-            Qualité des données : {{ a.qualite.sansEquipe }} bulletin(s) sans équipe, {{ a.qualite.sansObservation }} sans observation.
+            Qualité des données : {{ a.qualite.sansEquipe }} bulletin(s) orphelin(s), {{ a.qualite.sansObservation }} sans observation.
           </p>
         }
 

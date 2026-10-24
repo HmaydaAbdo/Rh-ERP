@@ -24,7 +24,7 @@ import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
   Portee, porteeDe, porteeVide, versParametresPerimetre
 } from '../perimetre';
-import { fusionnerGroupes, GroupeCarte, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
+import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
 import { chargerToutLeReferentiel, ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 
 const TAILLE_PAGE = 24;
@@ -154,6 +154,21 @@ export class CartesPerimetreComponent {
       masse: liste.reduce((somme, g) => somme + (g.paie?.masse ?? 0), 0)
     };
   });
+  /** Exclut « Orphelins » du nombre de référentiels, tout en conservant ses montants Paie dans les totaux. */
+  protected nombreGroupesResume(groupes: GroupeCarte[]): number {
+    if (this.module().sansEffectifFichesDansCartes && this.niveau() === 'EQUIPE') {
+      return groupes.filter((groupe) => groupe.id !== 0).length;
+    }
+    return groupes.length;
+  }
+  protected libelleGroupesResume(groupes: GroupeCarte[]): string {
+    const nombre = this.nombreGroupesResume(groupes);
+    const niveau = this.niveau();
+    const singulier: Record<Niveau, string> = {
+      CHANTIER: 'chantier', EQUIPE: 'équipe', FONCTION: 'fonction', PERIODE: 'mois', EMPLOYES: 'employé'
+    };
+    return `${nombre} ${nombre === 1 ? singulier[niveau] : this.pluriel(niveau)}`;
+  }
   protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie());
   protected readonly documentGroupes = computed<PdfImpressionDocument>(() => {
     const groupes = this.groupes() ?? [];
@@ -265,7 +280,7 @@ export class CartesPerimetreComponent {
   }
 
   protected nom(dimension: Dimension, id: number): string {
-    return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? 'Sans équipe' : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
+    return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? LIBELLE_EQUIPE_ORPHELINE : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
   }
 
   protected pluriel(niveau: Niveau): string {
