@@ -88,6 +88,13 @@ describe('CartesPerimetreComponent', () => {
     return harness.routeNativeElement as HTMLElement;
   }
 
+  async function ouvrirEquipe(url = '/equipes/cartes'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
   beforeEach(async () => {
     permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
@@ -247,8 +254,20 @@ describe('CartesPerimetreComponent', () => {
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(page.querySelector('a[href="/equipes"]')).toBeNull();
     expect(page.querySelector('a[href^="/employees"]')).toBeNull();
-    expect(page.querySelectorAll('.perimetre-carte > app-pdf-export-button')).toHaveLength(1);
+    expect(page.querySelectorAll('.perimetre-carte__pied > app-pdf-export-button')).toHaveLength(1);
     expect(page.querySelector('.perimetre-carte app-pdf-export-button button[aria-label="Exporter Nador en PDF"]')).not.toBeNull();
+    expect(page.querySelector('.perimetre-carte__pied a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
+    expect(page.querySelector('.perimetre-carte__pied a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
+  });
+
+  it('masque le fil racine redondant au départ et le garde pour revenir après une étape', async () => {
+    let page = await ouvrirEquipe();
+    expect(page.querySelector('.perimetre-cartes__fil')).toBeNull();
+
+    page = await ouvrirEquipe('/equipes/cartes?equipeIds=1');
+    const racine = page.querySelector('.perimetre-cartes__racine') as HTMLButtonElement;
+    expect(racine.textContent).toContain('Toutes les équipes');
+    expect(racine.disabled).toBe(false);
   });
 
   it('renvoie à la vue Tabulaire avec les filtres du module, et aux employés avec le périmètre', async () => {

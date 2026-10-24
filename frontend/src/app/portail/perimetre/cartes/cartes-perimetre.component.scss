@@ -268,10 +268,7 @@
   }
 
   &__export {
-    position: absolute;
-    z-index: 1;
-    top: var(--space-xs);
-    right: var(--space-xs);
+    display: inline-flex;
   }
 
   &__entete {
@@ -378,13 +375,21 @@
   &__pied {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-xs) var(--space-md);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+    width: 100%;
     padding: var(--space-xs) var(--space-md) var(--space-sm);
     border-top: 1px solid var(--color-border);
     font-size: var(--text-sm);
 
-    a {
-      color: var(--color-primary);
+    > a,
+    > button,
+    > app-pdf-export-button {
+      display: inline-flex;
+      flex: 0 0 var(--control-height);
+      width: var(--control-height);
+      justify-content: center;
     }
   }
 }

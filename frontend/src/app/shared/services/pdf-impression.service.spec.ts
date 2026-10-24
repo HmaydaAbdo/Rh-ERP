@@ -21,6 +21,8 @@ describe('PdfImpressionService', () => {
 
     expect(fenetre.document.open).toHaveBeenCalledOnce();
     expect(html).toContain('Équipes &lt;actives&gt;');
+    expect(html).toContain('Staport · Ressources humaines');
+    expect(html).toContain('Édité le');
     expect(html).toContain('A &amp; B');
     expect(html).toContain('&lt;script&gt;texte&lt;/script&gt;');
     expect(html.match(/<tbody><tr>/g)).toHaveLength(1);

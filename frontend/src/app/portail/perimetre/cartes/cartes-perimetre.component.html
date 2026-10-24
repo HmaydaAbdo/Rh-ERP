@@ -1,30 +1,32 @@
 <div class="perimetre-cartes" [class]="'perimetre-cartes perimetre-cartes--' + module().cle">
   <div class="perimetre-cartes__barre">
-    <nav class="perimetre-cartes__fil" [attr.aria-label]="'Position dans les ' + module().libellePluriel">
-      <button type="button" class="perimetre-cartes__racine" [disabled]="etapes().length === 0" (click)="toutRetirer()">
-        <stp-icon name="layout-grid" /> {{ module().libelleRacine }}
-      </button>
-      @if (module().niveauPeriode && perimetre().periode) {
-        <stp-icon name="chevron-right" class="perimetre-cartes__separateur" />
-        <span class="perimetre-cartes__etape">
-          <span class="perimetre-cartes__dimension">Mois</span>
-          {{ libellePeriode(perimetre().periode) }}
-          <button type="button" class="perimetre-cartes__retirer" aria-label="Retirer l’étape Mois" (click)="retirerPeriode()">
-            <stp-icon name="x" />
-          </button>
-        </span>
-      }
-      @for (etape of etapes(); track etape.dimension) {
-        <stp-icon name="chevron-right" class="perimetre-cartes__separateur" />
-        <span class="perimetre-cartes__etape">
-          <span class="perimetre-cartes__dimension">{{ libelles[etape.dimension] }}</span>
-          {{ nom(etape.dimension, etape.id) }}
-          <button type="button" class="perimetre-cartes__retirer" [attr.aria-label]="'Retirer l’étape ' + libelles[etape.dimension]" (click)="retirer(etape.dimension)">
-            <stp-icon name="x" />
-          </button>
-        </span>
-      }
-    </nav>
+    @if (etapes().length > 0 || (module().niveauPeriode && perimetre().periode)) {
+      <nav class="perimetre-cartes__fil" [attr.aria-label]="'Position dans les ' + module().libellePluriel">
+        <button type="button" class="perimetre-cartes__racine" (click)="toutRetirer()">
+          <stp-icon name="layout-grid" /> {{ module().libelleRacine }}
+        </button>
+        @if (module().niveauPeriode && perimetre().periode) {
+          <stp-icon name="chevron-right" class="perimetre-cartes__separateur" />
+          <span class="perimetre-cartes__etape">
+            <span class="perimetre-cartes__dimension">Mois</span>
+            {{ libellePeriode(perimetre().periode) }}
+            <button type="button" class="perimetre-cartes__retirer" aria-label="Retirer l’étape Mois" (click)="retirerPeriode()">
+              <stp-icon name="x" />
+            </button>
+          </span>
+        }
+        @for (etape of etapes(); track etape.dimension) {
+          <stp-icon name="chevron-right" class="perimetre-cartes__separateur" />
+          <span class="perimetre-cartes__etape">
+            <span class="perimetre-cartes__dimension">{{ libelles[etape.dimension] }}</span>
+            {{ nom(etape.dimension, etape.id) }}
+            <button type="button" class="perimetre-cartes__retirer" [attr.aria-label]="'Retirer l’étape ' + libelles[etape.dimension]" (click)="retirer(etape.dimension)">
+              <stp-icon name="x" />
+            </button>
+          </span>
+        }
+      </nav>
+    }
 
     <div class="perimetre-cartes__acces">
       @if (voitPaie() && module().periodePaieRecenteFixe && periode()) {
@@ -74,7 +76,6 @@
             @for (groupe of groupesVisibles(); track groupe.id; let i = $index) {
               <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
                 <article class="perimetre-carte">
-                  <app-pdf-export-button class="perimetre-carte__export" [document]="documentCarte(groupe)" [iconOnly]="true" [ariaLabel]="'Exporter ' + titre(groupe) + ' en PDF'" />
                   <button type="button" class="perimetre-carte__corps" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
                     <span class="perimetre-carte__entete">
                       <span class="perimetre-carte__nom">{{ titre(groupe) }}</span>
@@ -124,11 +125,14 @@
                   </button>
                   <div class="perimetre-carte__pied">
                     @if (groupe.lien; as lien) {
-                      <a [routerLink]="lien" [attr.aria-label]="'Consulter ' + titre(groupe)">Consulter</a>
+                      <a stp-button variant="text" icon="eye" [iconOnly]="true" [routerLink]="lien"
+                        [attr.aria-label]="'Consulter ' + titre(groupe)" [attr.title]="'Consulter ' + titre(groupe)"></a>
                     }
-                    <a [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge">
-                      {{ voitPaie() && periode() ? 'Voir l’historique Paie' : 'Voir l’analyse' }}
-                    </a>
+                    <a stp-button variant="text" icon="chart-column" [iconOnly]="true"
+                      [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge"
+                      [attr.aria-label]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)"
+                      [attr.title]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)"></a>
+                    <app-pdf-export-button class="perimetre-carte__export" [document]="documentCarte(groupe)" [iconOnly]="true" [ariaLabel]="'Exporter ' + titre(groupe) + ' en PDF'" />
                     @if (actionsCarte(); as modele) {
                       <ng-container [ngTemplateOutlet]="modele" [ngTemplateOutletContext]="{ $implicit: groupe, niveau: niveau(), periode: moisDe(groupe), portee: resultat().portee }"></ng-container>
                     }

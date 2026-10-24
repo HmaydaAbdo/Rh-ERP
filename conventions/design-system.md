@@ -53,11 +53,14 @@ action principale identifiable et un parcours métier compréhensible sans anima
 Les textes décrivent les données et les actions utiles. Éviter les commentaires sur la conception du
 parcours (« suit l'organisation définie pour le domaine ») et les compteurs d'étapes d'une simple
 navigation hiérarchique. Un assistant de saisie garde ses repères de progression lorsqu'ils aident à
-terminer une opération. Les accès entre vues ont l'apparence d'actions secondaires ; les liens de
-lecture ou de retour conservent une apparence de lien identifiable.
+terminer une opération. Les accès entre vues dans les onglets restent des liens identifiables. Les raccourcis
+compacts au pied d'une carte (par exemple l'accès à l'analyse de cette équipe) utilisent une icône sans bordure
+permanente, avec un nom accessible et une infobulle qui décrivent la destination. Les liens de lecture ou de retour
+conservent une apparence de lien identifiable.
 
-L'action d'export d'un composant est une icône dans son coin supérieur droit ou sa barre d'outils,
-avec un nom accessible et une infobulle explicites. Le survol et le focus mettent en évidence la
+L'action d'export d'un composant est une icône sans bordure permanente dans son coin supérieur droit ou sa barre d'outils,
+avec un nom accessible et une infobulle explicites. Pour une carte qui comporte d'autres actions, l'export rejoint leur
+rangée d'icônes dans le pied de carte, répartie sur toute la largeur disponible. Le survol et le focus mettent en évidence la
 bordure du conteneur concerné, avec les jetons de couleur, d'ombre et de durée du design system.
 Préserver l'espace du bouton pour éviter les chevauchements et les déplacements de mise en page.
 L'action reste disponible au clavier et sur écran tactile ; sa découverte ne dépend pas du survol.

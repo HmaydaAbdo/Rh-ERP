@@ -59,6 +59,7 @@ describe('PdfExportButtonComponent', () => {
     expect(bouton.getAttribute('aria-label')).toBe('Exporter les résultats en PDF');
     expect(bouton.title).toBe('Exporter les résultats en PDF');
     expect(bouton.classList).toContain('stp-button--icon-only');
+    expect(bouton.classList).toContain('stp-button--text');
     expect(bouton.textContent?.trim()).toBe('');
   });
 

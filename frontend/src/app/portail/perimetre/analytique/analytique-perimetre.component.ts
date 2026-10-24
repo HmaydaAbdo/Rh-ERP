@@ -50,6 +50,7 @@ interface Donnees {
   catalogueVide: boolean;
   equipesCatalogue: ItemCatalogue[];
   evolutionEquipe: PaieAnalytique['evolution'];
+  chantiersCatalogue: PaieAnalytique['parChantier'];
 }
 
 /**
@@ -111,7 +112,7 @@ export class AnalytiquePerimetreComponent {
   );
   protected readonly noms = signal<Record<string, string>>({});
 
-  protected readonly donnees = signal<Donnees>({ paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [] });
+  protected readonly donnees = signal<Donnees>({ paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
   protected readonly chargement = signal(false);
   protected readonly repartitionFiches = signal<EmployeeRegroupement[]>([]);
 
@@ -167,12 +168,14 @@ export class AnalytiquePerimetreComponent {
   protected readonly noteMouvements = computed(() => this.module().noteMouvements?.(this.params()) ?? null);
   protected readonly equipesEffectif = computed(() => {
     const dimension = this.module().dimension ?? this.module().ordre[0];
-    const valeurs = new Map(lignesPaie(dimension, this.paie()).map((groupe) => [groupe.id, groupe.effectif]));
+    const valeurs = new Map(lignesPaie(dimension, this.paie()).map((groupe) => [groupe.id, groupe]));
     const ids = this.perimetre()[cleIds(dimension)];
     return this.donnees().equipesCatalogue
       .filter((equipe) => ids.length === 0 || ids.includes(equipe.id))
-      .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, effectif: valeurs.get(equipe.id) ?? 0 }));
+      .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, ...(valeurs.get(equipe.id) ?? { effectif: 0, masse: 0, stc: 0, stcMontant: 0 }) }));
   });
+  protected readonly chantiersEquipe = computed(() => this.donnees().chantiersCatalogue);
+  protected readonly chantierSelectionne = computed(() => this.params().get('chantierIds') ?? '');
   protected readonly selectionEquipeEvolution = signal<number | null>(null);
   protected readonly equipeEvolutionId = computed(() => {
     const equipes = this.equipesEffectif();
@@ -180,21 +183,37 @@ export class AnalytiquePerimetreComponent {
     return choisi !== null && equipes.some((equipe) => equipe.id === choisi) ? choisi : (equipes[0]?.id ?? null);
   });
   protected readonly evolutionEquipe = computed(() => this.donnees().evolutionEquipe);
+  protected readonly mesureRepartitionEquipe = signal<MesureEvolution>('effectif');
+  protected readonly mesureEvolutionEquipe = signal<MesureEvolution>('effectif');
+  protected readonly mesuresEquipe = MESURES_EVOLUTION;
+  protected readonly libelleMesureEquipe = (mesure: MesureEvolution): string => {
+    switch (mesure) {
+      case 'effectif': return 'Effectif (personnes)';
+      case 'masse': return 'Masse salariale (DH)';
+      case 'stc': return 'STC (personnes)';
+      case 'stcMontant': return 'STC (DH)';
+    }
+  };
+  protected readonly tableauEquipes = computed(() => this.equipesEffectif().slice().sort((a, b) => b[this.mesureRepartitionEquipe()] - a[this.mesureRepartitionEquipe()]));
 
   protected readonly graphiqueEffectifEquipe = computed<Graphique<'bar'>>(() => {
     this.theme.theme();
-    const equipes = this.equipesEffectif();
+    const equipes = this.tableauEquipes();
+    const mesure = this.mesureRepartitionEquipe();
+    const montants = mesure === 'masse' || mesure === 'stcMontant';
     return {
-      data: { labels: equipes.map((groupe) => groupe.libelle), datasets: [{ label: 'Effectif payé', data: equipes.map((groupe) => groupe.effectif), backgroundColor: jeton('--chart-1'), borderRadius: 4 }] },
-      options: optionsBarres({ indexAxis: 'y' })
+      data: { labels: equipes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: equipes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
+      options: optionsBarres({ indexAxis: 'y', montants })
     };
   });
   protected readonly graphiqueEvolutionEquipe = computed<Graphique<'line'>>(() => {
     this.theme.theme();
     const evolution = this.evolutionEquipe();
+    const mesure = this.mesureEvolutionEquipe();
+    const couleur = couleurEvolution(mesure);
     return {
-      data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: 'Effectif payé', data: evolution.map((mois) => mois.effectif), borderColor: jeton('--chart-1'), backgroundColor: jeton('--chart-1'), tension: 0.25 }] },
-      options: optionsLigne(false)
+      data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25 }] },
+      options: optionsLigne(mesure === 'masse' || mesure === 'stcMontant')
     };
   });
 
@@ -360,20 +379,36 @@ export class AnalytiquePerimetreComponent {
       this.repartitionFiches().map((groupe) => [this.nomLigne(groupe), groupe.effectif, groupe.actifs]));
   }
 
-  protected documentEffectifParEquipe(): PdfImpressionDocument {
-    return this.documentPdf('Effectif payé par équipe', ['Équipe', 'Code', 'Effectif payé'],
-      this.equipesEffectif().map((equipe) => [equipe.libelle, equipe.code ?? '', equipe.effectif]));
+  protected documentRepartitionEquipe(): PdfImpressionDocument {
+    const mesure = this.mesureRepartitionEquipe();
+    return this.documentPdf(`Situation de paie par équipe — ${this.libelleMesureEquipe(mesure)}`,
+      ['Équipe', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
+      this.tableauEquipes().map((equipe) => [equipe.libelle, equipe.effectif, formaterMontant(equipe.masse), equipe.stc, formaterMontant(equipe.stcMontant)]),
+      this.contexteEquipe(true));
   }
 
   protected documentEvolutionEquipe(): PdfImpressionDocument {
     const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
-    return this.documentPdf(`Évolution de l’effectif · ${equipe?.libelle ?? 'Équipe'}`, ['Mois', 'Effectif payé'],
-      this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif]));
+    const mesure = this.mesureEvolutionEquipe();
+    return this.documentPdf(`Évolution mensuelle de la paie — ${this.libelleMesureEquipe(mesure)}`,
+      ['Mois', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
+      this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif, formaterMontant(mois.masse), mois.stc, formaterMontant(mois.stcMontant)]),
+      `${this.contexteEquipe(false)} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.libelle}` : ''}`);
   }
 
-  private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][]): PdfImpressionDocument {
+  private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {
     const periode = this.periode();
-    return { titre, contexte: `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
+    return { titre, contexte: contexte ?? `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
+  }
+
+  private contexteEquipe(avecPeriode: boolean): string {
+    const contexte = [`Domaine : Équipe`];
+    const periode = this.periode();
+    if (avecPeriode && periode) contexte.push(`Période de référence : ${libellePeriode(periode)}`);
+    const ids = this.perimetre().chantierIds;
+    const chantiers = this.chantiersEquipe().filter((chantier) => ids.includes(chantier.id));
+    contexte.push(ids.length ? `Chantier : ${chantiers.map((chantier) => chantier.libelle || chantier.code).join(', ') || ids.join(', ')}` : 'Chantier : tous');
+    return contexte.join(' · ');
   }
 
   constructor() {
@@ -438,6 +473,11 @@ export class AnalytiquePerimetreComponent {
 
   protected choisirEquipeEvolution(event: Event): void {
     this.selectionEquipeEvolution.set(Number((event.target as HTMLSelectElement).value) || null);
+  }
+
+  protected choisirChantierEquipe(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.naviguer({ chantierIds: value ? value : null });
   }
 
   protected nom(dimension: Dimension, id: number): string {
@@ -511,7 +551,7 @@ export class AnalytiquePerimetreComponent {
         if (dimension && items && perimetre[cleIds(dimension)].length === 0) {
           portee[cleIds(dimension)] = items.map((item) => item.id);
         }
-        const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [] };
+        const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] };
         if (porteeVide(portee)) {
           return of({ portee, donnees: { ...vide, catalogueVide: true } });
         }
@@ -525,9 +565,10 @@ export class AnalytiquePerimetreComponent {
           const evolution$ = equipeEvolutionId === null
             ? of<PaieAnalytique | null>(null)
             : this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)).pipe(catchError(() => of(null)));
-          return forkJoin([paie$, evolution$]).pipe(map(([paie, evolution]) => ({
+          const chantiers$ = this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)).pipe(catchError(() => of(null)));
+          return forkJoin([paie$, evolution$, chantiers$]).pipe(map(([paie, evolution, catalogueChantiers]) => ({
             portee,
-            donnees: { ...avecCatalogue, paie, evolutionEquipe: evolution?.evolution ?? [] }
+            donnees: { ...avecCatalogue, paie, evolutionEquipe: evolution?.evolution ?? [], chantiersCatalogue: catalogueChantiers?.parChantier ?? [] }
           })));
         }
         // Une source en panne n'efface pas les autres : son bloc reste simplement vide.

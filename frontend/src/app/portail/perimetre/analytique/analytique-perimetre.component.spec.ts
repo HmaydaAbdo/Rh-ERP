@@ -94,6 +94,7 @@ class HoteEquipeComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['PAIE'], sourcesAnalytique: ['PAIE'],
+    introAnalytique: 'Répartition de la paie par équipe et évolution mensuelle des indicateurs sélectionnés.',
     vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true,
     catalogue: { ...module().catalogue!, charger: () => of(ITEMS), filtreActif: () => false }, route: '/equipes'
   };
@@ -107,6 +108,13 @@ describe('AnalytiquePerimetreComponent', () => {
 
   async function ouvrir(url = '/chantiers/analytique'): Promise<HTMLElement> {
     await harness.navigateByUrl(url, HoteComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function ouvrirEquipe(url = '/equipes/analytique'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteEquipeComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
     return harness.routeNativeElement as HTMLElement;
@@ -164,27 +172,61 @@ describe('AnalytiquePerimetreComponent', () => {
   });
 
   it('centre Équipe sur l’effectif par équipe et son historique, sans filtre de période ni blocs Employé/Paie', async () => {
-    await harness.navigateByUrl('/equipes/analytique?periode=2026-07', HoteEquipeComponent);
-    await harness.fixture.whenStable();
-    harness.fixture.detectChanges();
-    const page = harness.routeNativeElement as HTMLElement;
+    const page = await ouvrirEquipe('/equipes/analytique?periode=2026-07');
 
-    expect(page.textContent).toContain('Effectif payé par équipe · août 2026');
-    expect(page.textContent).toContain('Évolution mensuelle');
+    expect(page.textContent).toContain('Répartition de la paie par équipe · août 2026');
+    expect(page.textContent).toContain('Évolution mensuelle par équipe');
     expect(page.textContent).not.toContain('Répartir par');
     expect(page.textContent).not.toContain('Pyramide des âges');
     expect(page.textContent).not.toContain('Ancienneté');
-    expect(page.textContent).not.toContain('Masse salariale');
+    expect(page.querySelector('#pa-evolution')).toBeNull();
+    expect(page.querySelector('#pa-repartition')).toBeNull();
     expect(page.querySelector('.perimetre-analytique__periode')).toBeNull();
     expect(page.querySelector('a[href="/equipes/cartes"]')).toBeNull();
     expect(page.querySelectorAll('.perimetre-analytique__section--exportable app-pdf-export-button')).toHaveLength(2);
     expect(page.textContent).toContain('juillet 2026');
     expect(page.textContent).toContain('août 2026');
+    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+    expect(page.querySelectorAll('[aria-label="Indicateur de la répartition par équipe"] button')).toHaveLength(4);
+    expect(page.querySelectorAll('[aria-label="Indicateur de l’évolution mensuelle par équipe"] button')).toHaveLength(4);
+    expect(page.querySelector('select')?.options[0].textContent).toContain('Tous les chantiers');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [1] }));
     expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(employes.analyser).not.toHaveBeenCalled();
     expect(employes.regrouper).not.toHaveBeenCalled();
+  });
+
+  it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {
+    const page = await ouvrirEquipe();
+    const chantier = page.querySelector('select') as HTMLSelectElement;
+    chantier.value = '1';
+    chantier.dispatchEvent(new Event('change'));
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+
+    expect(TestBed.inject(Router).url).toContain('chantierIds=1');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1], equipeIds: [1] }));
+    expect(page.querySelector('select')?.textContent).toContain('Nador');
+    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+  });
+
+  it('permet de choisir indépendamment les quatre mesures de la répartition et de l’évolution par équipe', async () => {
+    const page = await ouvrirEquipe();
+    const repartition = page.querySelector('[aria-label="Indicateur de la répartition par équipe"]')!;
+    const evolution = page.querySelector('[aria-label="Indicateur de l’évolution mensuelle par équipe"]')!;
+    const bouton = (groupe: Element, nom: string) => Array.from(groupe.querySelectorAll('button')).find((item) => item.textContent?.trim() === nom) as HTMLButtonElement;
+
+    bouton(repartition, 'Masse salariale (DH)').click();
+    bouton(evolution, 'STC (personnes)').click();
+    harness.fixture.detectChanges();
+
+    expect(bouton(repartition, 'Masse salariale (DH)').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton(evolution, 'STC (personnes)').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton(evolution, 'Effectif (personnes)').getAttribute('aria-pressed')).toBe('false');
+    expect(page.textContent).toContain('Masse salariale (DH)');
+    expect(page.textContent).toContain('STC (DH)');
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {

@@ -28,15 +28,20 @@ met à jour la fiche Employé et le bulletin dans la même transaction; ces opé
 
 La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
 le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et l'Analytique lisent toujours le dernier mois
-de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. L'Analytique présente l'effectif payé par équipe
-sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Elle ne présente pas les indicateurs génériques des
-domaines Employé et Paie. Chaque graphique s'exporte séparément en PDF avec ses données complètes. Ne pas créer de version
+de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. L'Analytique présente la répartition par équipe
+sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Les deux graphiques proposent Effectif (personnes),
+Masse salariale (DH), STC (personnes) et STC (DH), avec des sélections d'indicateur indépendantes. Le filtre Chantier
+s'applique à la répartition et à l'évolution et reste synchronisé dans l'URL. Elle ne présente pas les indicateurs génériques des
+domaines Employé et Paie. Les tableaux de données restent repliés à l'écran jusqu'à l'action « Voir les données ».
+Chaque graphique s'exporte séparément en PDF avec ses données complètes. Ne pas créer de version
 propre au domaine ni permettre de changer librement l'ordre du parcours; suivre la
 [convention frontend](../../../conventions/frontend.md) et la
 [référence technique des vues partagées](../../frontend/vues-perimetre.md).
 
 Les cartes mettent le **libellé** en titre et le code en repère secondaire. Chaque composant qui expose des données conserve
-son export PDF séparé, borné au périmètre et aux permissions actifs. Les filtres sont conservés entre les vues; les onglets
+son export PDF séparé, borné au périmètre et aux permissions actifs. Les exports sont des documents métier partageables : titre
+explicite, période, périmètre et date d'édition; leurs tableaux complets sont inclus même si ceux de l'écran sont repliés.
+Les filtres sont conservés entre les vues; les onglets
 remplacent les liens d'accès directs vers la liste et les employés.
 
 ## Garde-fous

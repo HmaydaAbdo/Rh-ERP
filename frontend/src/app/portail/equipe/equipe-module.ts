@@ -16,7 +16,7 @@ export function moduleEquipe(equipeService: EquipeService): ModulePerimetre {
     ordreAnalytique: ['PAIE'],
     sourcesAnalytique: ['PAIE'],
     vueEffectifParDimension: true,
-    introAnalytique: 'Effectif payé par équipe et évolution mensuelle de l’équipe sélectionnée.',
+    introAnalytique: 'Répartition de la paie par équipe et évolution mensuelle des indicateurs sélectionnés.',
     periodePaieRecenteFixe: true,
     sansRaccourciListe: true,
     sansRaccourciCartes: true,

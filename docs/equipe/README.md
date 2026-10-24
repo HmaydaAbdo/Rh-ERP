@@ -124,10 +124,12 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   leur code reste un repère secondaire. Les cartes rapprochent les données des fiches Employé et celles du
   dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
-- **Analytique** présente l'effectif payé par équipe pour le dernier mois enregistré et son évolution mensuelle
-  pour une équipe sélectionnée. La période courante ne peut pas être changée; l'évolution conserve les mois
-  antérieurs. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
-  Chaque graphique peut être exporté séparément en PDF avec sa représentation et toutes les lignes de son tableau.
+- **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
+  pour une équipe choisie. Les deux graphiques proposent Effectif (personnes), Masse salariale (DH), STC (personnes)
+  et STC (DH), chacun avec son propre indicateur sélectionné. Le filtre Chantier s'applique aux deux graphiques et
+  reste synchronisé dans l'URL. L'évolution conserve les mois antérieurs; le mois de référence courant ne peut pas
+  être changé. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
+  Les tableaux de données sont repliés par défaut et s'ouvrent avec « Voir les données ».
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
 dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.
@@ -137,11 +139,13 @@ La définition complète des vues et des comportements communs est dans
 ### Export
 
 Chaque composant qui expose des données peut être exporté séparément en PDF depuis son composant ou son
-conteneur. L'export contient uniquement les données de ce composant et respecte son périmètre et ses
-filtres : toutes les lignes du Tabulaire, toutes les cartes (y compris celles derrière « Afficher plus »),
-ou toutes les données représentées par un graphique. Un graphique est accompagné de son tableau de données.
-L'impression Angular partagée ouvre le dialogue d'impression du navigateur; l'utilisateur peut y enregistrer
-le document en PDF. Le modèle Excel téléchargeable reste un modèle d'import, pas un export.
+conteneur. Le document porte un titre métier, la période et le périmètre utiles au partage; il ne reprend pas
+les noms des vues de l'application. L'export respecte les filtres et contient toutes les lignes du composant,
+même celles masquées derrière « Afficher plus » ou un tableau replié. Pour les deux graphiques analytiques,
+le graphique exporté montre l'indicateur sélectionné et le tableau joint présente les quatre mesures. Le PDF
+porte une identité visuelle Staport et une date d'édition. L'impression Angular partagée ouvre le dialogue
+d'impression du navigateur; l'utilisateur peut y enregistrer le document en PDF. Le modèle Excel téléchargeable
+reste un modèle d'import, pas un export.
 
 ## Scénarios de vérification associés
 

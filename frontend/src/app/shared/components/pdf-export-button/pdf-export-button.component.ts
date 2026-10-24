@@ -9,7 +9,7 @@ import { PdfImpressionDocument, PdfImpressionService } from '../../services/pdf-
   template: `
     <button
       stp-button
-      variant="secondary"
+      [variant]="iconOnly() ? 'text' : 'secondary'"
       icon="download"
       type="button"
       [iconOnly]="iconOnly()"
