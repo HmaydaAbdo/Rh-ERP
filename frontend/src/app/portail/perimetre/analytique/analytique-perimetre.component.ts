@@ -10,6 +10,8 @@ import { ThemeService } from '../../../core/theme/theme.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
@@ -32,6 +34,23 @@ import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, 
 
 type Graphique<T extends 'bar' | 'line'> = { data: ChartData<T>; options: ChartOptions<T> };
 type MesureRepartition = 'masse' | 'effectif';
+type OptionEquipeEvolution = SelectOption<number>;
+
+/** Source recherchable et paginée du sélecteur de suivi, depuis les groupes déjà autorisés et chargés pour l'analyse. */
+class OptionEquipeEvolutionSource implements LazySelectSource<OptionEquipeEvolution> {
+  constructor(private readonly options: OptionEquipeEvolution[]) {}
+
+  fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<OptionEquipeEvolution>> {
+    const terme = search.trim().toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const options = this.options.filter((option) => !terme || option.label.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(terme));
+    return of({ items: options.slice(page * size, (page + 1) * size), totalRecords: options.length });
+  }
+
+  fetchById(id: number | string): Observable<OptionEquipeEvolution> {
+    const choisi = this.options.find((option) => option.value === Number(id));
+    return of(choisi ?? { value: Number(id), label: Number(id) === 0 ? LIBELLE_EQUIPE_ORPHELINE : 'Équipe' });
+  }
+}
 
 /** La répartition montre les plus grands groupes ; le reste est dans le tableau de données. */
 const NOMBRE_BARRES = 12;
@@ -65,7 +84,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, ButtonComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -171,9 +190,14 @@ export class AnalytiquePerimetreComponent {
     const dimension = this.module().dimension ?? this.module().ordre[0];
     const valeurs = new Map(lignesPaie(dimension, this.paie()).map((groupe) => [groupe.id, groupe]));
     const ids = this.perimetre()[cleIds(dimension)];
-    return this.donnees().equipesCatalogue
+    const groupes = this.donnees().equipesCatalogue
       .filter((equipe) => ids.length === 0 || ids.includes(equipe.id))
       .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, ...(valeurs.get(equipe.id) ?? { effectif: 0, masse: 0, stc: 0, stcMontant: 0 }) }));
+    const orphelins = valeurs.get(0);
+    if (orphelins && orphelins.effectif > 0 && (ids.length === 0 || ids.includes(0))) {
+      groupes.push({ ...orphelins, id: 0, code: null, libelle: LIBELLE_EQUIPE_ORPHELINE });
+    }
+    return groupes;
   });
   protected readonly chantiersEquipe = computed(() => this.donnees().chantiersCatalogue);
   protected readonly chantierSelectionne = computed<number | null>(() => {
@@ -182,9 +206,9 @@ export class AnalytiquePerimetreComponent {
   });
   protected readonly selectionEquipeEvolution = signal<number | null>(null);
   protected readonly equipeEvolutionId = computed(() => {
-    const equipes = this.equipesEffectif();
+    const equipes = this.optionsEquipesEvolution();
     const choisi = this.selectionEquipeEvolution();
-    return choisi !== null && equipes.some((equipe) => equipe.id === choisi) ? choisi : (equipes[0]?.id ?? null);
+    return choisi !== null && equipes.some((equipe) => equipe.value === choisi) ? choisi : (equipes[0]?.value ?? null);
   });
   protected readonly evolutionEquipe = computed(() => this.donnees().evolutionEquipe);
   protected readonly mesureRepartitionEquipe = signal<MesureEvolution[]>(['effectif']);
@@ -202,7 +226,15 @@ export class AnalytiquePerimetreComponent {
     { value: null, label: 'Tous les chantiers' },
     ...this.chantiersEquipe().map((chantier) => ({ value: chantier.id, label: chantier.libelle || chantier.code }))
   ]);
-  protected readonly optionsEquipesEvolution = computed<SelectOption<number>[]>(() => this.equipesEffectif().map((equipe) => ({ value: equipe.id, label: equipe.libelle })));
+  protected readonly optionsEquipesEvolution = computed<SelectOption<number>[]>(() => {
+    const ids = this.perimetre().equipeIds;
+    const groupes = this.equipesEffectif().map((equipe) => ({ value: equipe.id, label: equipe.id === 0 ? 'Orphelins (sans équipe)' : equipe.libelle }));
+    if ((ids.length === 0 || ids.includes(0)) && !groupes.some((equipe) => equipe.value === 0)) {
+      groupes.push({ value: 0, label: 'Orphelins (sans équipe)' });
+    }
+    return groupes;
+  });
+  protected readonly sourcesEquipesEvolution = computed<LazySelectSource<OptionEquipeEvolution>[]>(() => [new OptionEquipeEvolutionSource(this.optionsEquipesEvolution())]);
   protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   protected readonly tableauEquipes = computed(() => {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
@@ -400,11 +432,11 @@ export class AnalytiquePerimetreComponent {
   }
 
   protected documentEvolutionEquipe(): PdfImpressionDocument {
-    const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
+    const equipe = this.optionsEquipesEvolution().find((valeur) => valeur.value === this.equipeEvolutionId());
     return this.documentPdf('Évolution mensuelle de la paie par équipe',
       ['Mois', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
       this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif, formaterMontant(mois.masse), mois.stc, formaterMontant(mois.stcMontant)]),
-      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.libelle}` : ''}`);
+      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.label}` : ''}`);
   }
 
   private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {

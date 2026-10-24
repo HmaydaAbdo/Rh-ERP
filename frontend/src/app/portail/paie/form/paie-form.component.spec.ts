@@ -206,6 +206,16 @@ describe('PaieFormComponent', () => {
       expect(racine().textContent).toContain("met aussi à jour l'équipe sur la fiche de l'employé");
     });
 
+    it('enregistre le choix Orphelins sans équipe et n’envoie pas son identifiant synthétique', async () => {
+      await afficher();
+      await remplirObligatoires();
+      formulaire().equipeId().value.set(0);
+
+      await envoyer();
+
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: null }));
+    });
+
     it('reste sur le formulaire quand le serveur refuse (bulletin déjà existant pour cet employé et ce mois)', async () => {
       await afficher();
       service.create.mockReturnValue(throwError(() => new Error('409')));

@@ -128,7 +128,7 @@ l'import comme l'API exigent déjà ces deux dates).
 | `POST` | `/employees` | Créer un employé | 201, 400, 409 |
 | `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
 | `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
-| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `chantierIds=0` = sans chantier, `equipeIds=0` = sans équipe | 200 |
+| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `chantierIds=0` = sans chantier, `equipeIds=0` = sans équipe (« Orphelins » dans le filtre) | 200 |
 | `POST` | `/employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | Employés du périmètre (mêmes critères) regroupés par la dimension : `id` (0 = sans chantier ou équipe), `code`, `libelle`, `effectif`, `actifs`, du groupe le plus grand au plus petit (vue Cartes, répartition de l'Analytique) | 200 |
 | `POST` | `/employees/analytique` | Chiffres clés du périmètre : effectif, actifs, inactifs, âge et ancienneté moyens (années, une décimale), embauches des 12 derniers mois, tranches d'âge et d'ancienneté (vue Analytique) | 200 |
 | `DELETE` | `/employees/{id}` | Supprimer | 204, 404, 409 (bulletins ou compte liés) |
@@ -140,6 +140,7 @@ l'import comme l'API exigent déjà ces deux dates).
 `designation`, ou `null` pour un employé inactif), `equipe` (`EquipeSummaryDto` : `id`, `code`, `libelle`, ou `null`), `salaire` et `typeSalaire` (`null` sans
 `PAIE_READ` ou tant qu'aucune paie ne les a renseignés), `statut`. Les requêtes de création et de modification acceptent
 `equipeId`, `salaire` et `typeSalaire`, facultatifs.
+Le formulaire propose « Orphelins (sans équipe) » comme choix synthétique; il enregistre `equipeId: null`, jamais `0`.
 
 Authentification JWT + permissions requises sur chaque endpoint (`EMPLOYEE_READ`/
 `EMPLOYEE_WRITE`/`EMPLOYEE_DELETE`/`EMPLOYEE_IMPORT`) — voir `docs/rbac/employee.md` pour le

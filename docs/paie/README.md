@@ -102,7 +102,8 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   expose pas. Un bulletin est un document historique — le corriger reviendrait à en créer un autre
   pour un employé/mois différent, jamais à réassigner un bulletin existant.
 - `fonction`/`chantier` restent modifiables après création (correction d'une erreur de saisie),
-  `equipe` aussi (`equipeId`, facultatif : `null` = sans équipe ; un id inconnu est rejeté).
+  `equipe` aussi (`equipeId`, facultatif : `null` = sans équipe ; un id inconnu est rejeté). Le sélecteur propose
+  « Orphelins (sans équipe) » et traduit ce choix en `null`, sans envoyer l'identifiant de filtre `0`.
 - `salaireTotal` est **saisi (formulaire/API) ou repris du fichier (import Excel, colonne « Total »)
   tel quel**, jamais recalculé par le serveur : pour la main-d'œuvre journalière, `salaireMensuel`
   porte le tarif journalier et le total vaut tarif × jours (ex. 120 × 31 = 3 720), ce qu'une somme
@@ -125,7 +126,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie` | Créer un bulletin | 201, 400, 409 |
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
-| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe | 200 |
+| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe (« Orphelins » dans le filtre) | 200 |
 | `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; recherche serveur sur code et désignation | 200, 400 |
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |

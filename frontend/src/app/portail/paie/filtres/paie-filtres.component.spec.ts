@@ -6,6 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { PaieService } from '../services/paie.service';
 import { AUCUN_FILTRE, PaieFiltres } from './paie-filtres';
 import { PaieFiltresComponent } from './paie-filtres.component';
@@ -46,6 +47,10 @@ describe('PaieFiltresComponent', () => {
                 provideHttpClient(withXhr()),
                 provideHttpClientTesting(),
                 { provide: PaieService, useValue: service },
+                { provide: EquipeReferenceService, useValue: {
+                    fetchPage: () => of({ items: [{ id: 1, code: 'CH', libelle: 'Chauffeurs' }], totalRecords: 1 }),
+                    fetchById: () => of({ id: 1, code: 'CH', libelle: 'Chauffeurs' })
+                } },
                 { provide: AuthService, useValue: { hasPermission: (code: string) => permissions().includes(code) } }
             ]
         });
@@ -191,17 +196,23 @@ describe('PaieFiltresComponent', () => {
             expect(service.rechercherOptionsEquipes).toHaveBeenCalledWith('2026-08', [3, 4], 2, 30, 'chauff');
         });
 
-        it('propose les listes complètes du référentiel avec l’option « Sans équipe » sans mois', () => {
+        it('propose les listes complètes du référentiel avec « Orphelins » sans mois', async () => {
             afficher({ ...AUCUN_FILTRE, chantierIds: [3] });
 
             expect(composant['sourcesChantiers']()[0]).toBe(composant['chantierReferenceService']);
-            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
+            const source = composant['sourcesEquipes']()[0];
+            expect(source).not.toBe(composant['equipeReferenceService']);
+            const page = await firstValueFrom(source.fetchPage(0, 30, ''));
+            expect(page.items.map((e) => e.libelle)).toContain('Orphelins (sans équipe)');
         });
 
-        it('propose toutes les équipes et « Sans équipe » tant qu\'aucun chantier n\'est choisi', () => {
+        it('propose toutes les équipes et « Orphelins » tant qu\'aucun chantier n\'est choisi', async () => {
             afficher({ ...AUCUN_FILTRE, periode: '2026-08' });
 
-            expect(composant['sourcesEquipes']()[0]).not.toBe(composant['equipeReferenceService']);
+            const source = composant['sourcesEquipes']()[0];
+            expect(source).not.toBe(composant['equipeReferenceService']);
+            const page = await firstValueFrom(source.fetchPage(0, 30, ''));
+            expect(page.items.map((e) => e.libelle)).toContain('Orphelins (sans équipe)');
         });
 
     });

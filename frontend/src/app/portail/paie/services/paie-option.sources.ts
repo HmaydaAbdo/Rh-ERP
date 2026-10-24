@@ -3,7 +3,7 @@ import { Observable, map, of } from 'rxjs';
 import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
-import { EquipeReference } from '../../../shared/reference-data/equipe-reference.model';
+import { EQUIPE_ORPHELINE, EquipeReference, rechercheEquipeOrpheline } from '../../../shared/reference-data/equipe-reference.model';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { PaieService } from './paie.service';
 
@@ -41,21 +41,20 @@ export class PaieEquipeOptionSource implements LazySelectSource<EquipeReference>
         map((result) => ({ items: result.content, totalRecords: result.page.totalElements }))
       )
       : this.references.fetchPage(page, size, search);
-    return page$.pipe(map((result) => this.ajouterSansEquipe(result, page, search)));
+    return page$.pipe(map((result) => this.ajouterOrphelins(result, page, search)));
   }
 
   fetchById(id: number | string): Observable<EquipeReference> {
     if (Number(id) === 0) {
-      return of({ id: 0, code: 'Sans équipe', libelle: '' });
+      return of(EQUIPE_ORPHELINE);
     }
     return this.references.fetchById(id);
   }
 
-  private ajouterSansEquipe(result: LazySelectPage<EquipeReference>, page: number, search: string): LazySelectPage<EquipeReference> {
-    const terme = search.trim().toLocaleLowerCase();
-    const correspond = page === 0 && (!terme || 'sans équipe'.includes(terme) || 'sans equipe'.includes(terme));
-    return correspond
-      ? { items: [{ id: 0, code: 'Sans équipe', libelle: '' }, ...result.items], totalRecords: result.totalRecords + 1 }
+  private ajouterOrphelins(result: LazySelectPage<EquipeReference>, page: number, search: string): LazySelectPage<EquipeReference> {
+    if (page !== 0 || result.items.some((equipe) => equipe.id === EQUIPE_ORPHELINE.id)) return result;
+    return !search.trim() || rechercheEquipeOrpheline(search)
+      ? { items: [...result.items, EQUIPE_ORPHELINE], totalRecords: result.totalRecords + 1 }
       : result;
   }
 }
