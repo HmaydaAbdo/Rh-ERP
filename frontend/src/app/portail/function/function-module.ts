@@ -13,6 +13,7 @@ export function moduleFunction(functionService: FunctionService): ModulePerimetr
     libelleRacine: 'Toutes les fonctions',
     dimension: 'FONCTION',
     ordre: ['FONCTION', 'CHANTIER', 'EQUIPE'],
+    ordreAnalytique: ['EMPLOYEE', 'PAIE'],
     route: '/functions',
     permission: 'FUNCTION_READ',
     parametresListe: (params) => versParametresFunction(lireFiltresFunction(params)),

@@ -37,7 +37,13 @@ export class EquipeVuesComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltresEquipe(params)));
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.filtres.set(lireFiltresEquipe(params));
+      // L'équipe n'expose pas de filtre de période : nettoyer les liens hérités sans toucher aux autres filtres.
+      if (params.has('periode')) {
+        void this.router.navigate([], { replaceUrl: true, queryParams: { periode: null }, queryParamsHandling: 'merge' });
+      }
+    });
   }
 
   protected appliquer(filtres: EquipeFiltres): void {

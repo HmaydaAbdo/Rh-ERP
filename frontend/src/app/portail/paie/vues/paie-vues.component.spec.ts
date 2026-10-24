@@ -78,14 +78,14 @@ describe('PaieVuesComponent', () => {
         expect(url).toContain('equipeIds=2,5');
     });
 
-    it('garde le regroupement des Cartes quand un filtre de la barre change', async () => {
-        const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-07&par=fonction', PaieVuesComponent);
+    it('conserve les filtres du périmètre quand un filtre de la barre change', async () => {
+        const composant = await harness.navigateByUrl('/paie/cartes?periode=2026-07&chantierIds=3', PaieVuesComponent);
 
-        composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-07', cin: 'AB1' });
+        composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-07', cin: 'AB1', chantierIds: [3] });
         await harness.fixture.whenStable();
 
         const url = TestBed.inject(Router).url;
-        expect(url).toContain('par=fonction');
+        expect(url).toContain('chantierIds=3');
         expect(url).toContain('cin=AB1');
     });
 

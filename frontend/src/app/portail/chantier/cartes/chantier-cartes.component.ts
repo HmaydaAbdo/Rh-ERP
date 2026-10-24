@@ -4,7 +4,7 @@ import { CartesPerimetreComponent } from '../../perimetre/cartes/cartes-perimetr
 import { moduleChantier } from '../chantier-module';
 import { ChantierService } from '../services/chantier.service';
 
-/** Vue Cartes des chantiers : la descente libre par niveaux est partagée par tous les modules (voir `portail/perimetre/`). */
+/** Vue Cartes des chantiers : la hiérarchie Chantier → Équipe → Fonction est configurée par le domaine. */
 @Component({
   selector: 'app-chantier-cartes',
   imports: [CartesPerimetreComponent],

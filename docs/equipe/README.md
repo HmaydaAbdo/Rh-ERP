@@ -103,8 +103,8 @@ remplace pas le contrôle serveur.
 | `EQUIPE_WRITE` | Créer et modifier une équipe; afficher les actions correspondantes |
 | `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
 | `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
-| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes et Analytique; sans ce droit, les données Employé ne sont pas chargées |
-| `PAIE_READ` | Lire la projection Paie affichée dans Cartes et Analytique; sans ce droit, les données Paie ne sont pas chargées |
+| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes; sans ce droit, les données Employé ne sont pas chargées |
+| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et l'effectif mensuel par équipe dans Analytique; sans ce droit, ces données ne sont pas chargées |
 
 Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
 les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
@@ -120,11 +120,19 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 
 - **Tabulaire** sert à retrouver, consulter et administrer les équipes. Le tableau présente le code et le
   libellé; les filtres code/libellé suivent la même règle dans les trois vues.
-- **Cartes** permet de regrouper et parcourir le périmètre par équipe, chantier ou fonction. Le nom de
-  groupe affiché est le libellé; la carte peut réunir l'état courant des fiches Employé et les chiffres du
-  mois Paie choisi, avec les droits correspondants.
-- **Analytique** présente les indicateurs Paie par mois et dimension ainsi que les données d'effectif
-  Employé autorisées. Chaque graphique a son tableau de données accessible.
+- **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction**. Le libellé est le nom principal des équipes;
+  leur code reste un repère secondaire. Les cartes rapprochent les données des fiches Employé et celles du
+  dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
+  par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
+- **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
+  pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
+  Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
+  Comme tous les sélecteurs de l'application, ces contrôles permettent la recherche et le chargement au défilement;
+  le filtre Chantier et le choix d'Équipe proposent également la recherche.
+  Chaque carte de graphique contient son filtre Chantier; les deux filtres restent synchronisés dans l'URL et
+  s'appliquent aux deux cartes. L'évolution conserve les mois antérieurs; le mois de référence courant ne peut pas
+  être changé. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
+  Les tableaux de données sont repliés par défaut et s'ouvrent avec « Voir les données ».
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
 dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.
@@ -134,11 +142,13 @@ La définition complète des vues et des comportements communs est dans
 ### Export
 
 Chaque composant qui expose des données peut être exporté séparément en PDF depuis son composant ou son
-conteneur. L'export contient uniquement les données de ce composant et respecte son périmètre et ses
-filtres : toutes les lignes du Tabulaire, toutes les cartes (y compris celles derrière « Afficher plus »),
-ou toutes les données représentées par un graphique. Un graphique est accompagné de son tableau de données.
-L'impression Angular partagée ouvre le dialogue d'impression du navigateur; l'utilisateur peut y enregistrer
-le document en PDF. Le modèle Excel téléchargeable reste un modèle d'import, pas un export.
+conteneur. Le document porte un titre métier, la période et le périmètre utiles au partage; il ne reprend pas
+les noms des vues de l'application. L'export respecte les filtres et contient toutes les lignes du composant,
+même celles masquées derrière « Afficher plus » ou un tableau replié. Pour les deux graphiques analytiques,
+le graphique exporté montre l'indicateur sélectionné et le tableau joint présente les quatre mesures. Le PDF
+porte une identité visuelle Staport et une date d'édition. L'impression Angular partagée ouvre le dialogue
+d'impression du navigateur; l'utilisateur peut y enregistrer le document en PDF. Le modèle Excel téléchargeable
+reste un modèle d'import, pas un export.
 
 ## Scénarios de vérification associés
 

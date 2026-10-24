@@ -48,7 +48,7 @@ describe('étapes et portée', () => {
 describe('niveauAffiche', () => {
   const niveau = (url: Record<string, string>, avecMois = false, fiches = true) => {
     const p = params(url);
-    return niveauAffiche(p, lirePerimetre(p), ORDRE, avecMois, fiches);
+    return niveauAffiche(lirePerimetre(p), ORDRE, avecMois, fiches);
   };
 
   it('prend la première dimension de l’ordre pas encore choisie', () => {
@@ -58,11 +58,10 @@ describe('niveauAffiche', () => {
     expect(niveau({ chantierIds: '1', equipeIds: '2', fonctionIds: '3' })).toBe('EMPLOYES');
   });
 
-  it('garde le niveau demandé s’il est possible et l’ignore sinon', () => {
-    expect(niveau({ par: 'fonction' })).toBe('FONCTION');
+  it('suit toujours la hiérarchie du domaine, même si une ancienne URL contient un regroupement', () => {
+    expect(niveau({ par: 'fonction' })).toBe('CHANTIER');
     expect(niveau({ chantierIds: '1', par: 'chantier' })).toBe('EQUIPE');
-    expect(niveau({ par: 'employes' })).toBe('EMPLOYES');
-    expect(niveau({ par: 'employes' }, false, false)).toBe('CHANTIER');
+    expect(niveau({ chantierIds: '1', equipeIds: '2', fonctionIds: '3', par: 'chantier' })).toBe('EMPLOYES');
     expect(niveau({ par: 'inconnu' })).toBe('CHANTIER');
   });
 
@@ -75,6 +74,6 @@ describe('niveauAffiche', () => {
     expect(niveau({ chantierIds: '1' }, true)).toBe('PERIODE');
     expect(niveau({ periode: '2026-08' }, true)).toBe('CHANTIER');
     expect(niveau({ periode: '2026-08', par: 'periode' }, true)).toBe('CHANTIER');
-    expect(niveau({ par: 'chantier' }, true)).toBe('CHANTIER');
+    expect(niveau({ par: 'chantier' }, true)).toBe('PERIODE');
   });
 });

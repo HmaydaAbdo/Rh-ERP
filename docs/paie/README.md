@@ -316,7 +316,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression. « Importer » ouvre `PaieImportWizardComponent`, l'**assistant d'import** (fichier, contrôle, départs, import — voir « Import Excel »), et son menu le modèle Excel. Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
-| `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** par descente libre (mois, puis chantier, équipe, fonction dans l'ordre voulu), voir « Vue Cartes » ci-dessous |
+| `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** hiérarchique (mois → chantier → équipe → fonction → employés), voir « Vue Cartes » ci-dessous |
 | `/paie/analytique` | `PaieAnalytiqueComponent` | Vue **Analytique** : tableau de bord graphique, voir « Vue Analytique » ci-dessous |
 | `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
@@ -345,8 +345,8 @@ sélecteurs **chantiers, équipes et fonctions** (sélecteur générique multipl
 quand il y en a une, « 3 chantiers » à partir de deux) et « Effacer ». Quand la largeur manque, la ligne passe à la suivante. **Sur téléphone**, la barre tient sur deux lignes — le mois (pleine largeur), puis la recherche, « Filtres (n) » et « Effacer » (icône seule) — et le CIN et les trois sélecteurs se déplient sous le bouton « Filtres » (n = nombre de ces filtres actifs) ; les onglets de vue se partagent la largeur et les actions se rangent en grille sous eux (Exporter et Importer côte à côte, Nouveau bulletin pleine largeur).
 En Analytique le mois est indispensable : il n'a pas de croix, et « Effacer » le conserve. **Dans les Cartes**, le **fil de
 navigation** (`Toute la paie › Mois août 2026 › Chantier C168`, chaque étape se retire seule) est celui des vues partagées, posé
-sous la barre par la vue elle-même (voir « Vue Cartes »). La barre écrit ses valeurs en fusion avec l'URL : le regroupement des
-Cartes (`par`) n'est pas perdu quand on change un filtre.
+sous la barre par la vue elle-même (voir « Vue Cartes »). La barre écrit ses valeurs en fusion avec l'URL : les étapes de la
+hiérarchie ne sont pas perdues quand on change un filtre.
 
 **Permissions** : sans mois, les sélecteurs chantiers, équipes et fonctions interrogent leurs référentiels ; ils ne sont
 proposés qu'avec `CHANTIER_READ`, `EQUIPE_READ` ou `FUNCTION_READ`. Avec un mois, les menus chantiers et équipes interrogent
@@ -368,12 +368,12 @@ retour navigateur et bascule entre vues les conservent donc. Une valeur invalide
 
 **Changer de vue conserve les filtres.** Le sélecteur reporte les paramètres d'URL : le tabulaire et l'Analytique gardent le
 mois, le chantier, l'équipe, la fonction et les filtres employés actifs dans les Cartes. Le retour aux Cartes restitue le
-fil et le regroupement lus dans l'URL.
+fil et l'étape courante de la hiérarchie.
 
 | Vue | Effet du mois vide | Effet du mois choisi |
 |---|---|---|
 | Tabulaire | tous les mois | seulement ce mois |
-| Cartes | niveau « mois » (une carte par mois) | regroupement libre par chantier, équipe ou fonction, puis employés (voir ci-dessous) |
+| Cartes | niveau « mois » (une carte par mois) | chantier → équipe → fonction → employés (voir ci-dessous) |
 | Analytique | le mois le plus récent est ouvert uniquement si aucun mois n'est déjà sélectionné | ce mois |
 
 Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des
@@ -382,16 +382,15 @@ filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`) est l'hôte du composant **partagé par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011) ;
+`PaieCartesComponent` (`cartes/`) est l'hôte du composant **partagé par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0014) ;
 `paie-module.ts` décrit le module Paie (pas de référentiel propre ; périmètre = barre commune : mois, nom, CIN, chantiers, équipes,
 fonctions ; la liste des mois en premier niveau). Lecture seule, sauf la suppression en groupe ci-dessous.
 
-**Descente libre.** Tant qu'aucun mois n'est choisi, la vue montre **une carte par mois** qui a de la paie. Ouvrir un mois le
-choisit, puis l'on regroupe **dans l'ordre que l'on veut** : « Regrouper par » chantier, équipe ou fonction (chaque dimension déjà
-choisie n'est plus proposée), puis « Employés ». Ouvrir une carte en fait une **étape du fil** (mois, chantier, équipe…), que l'on
-retire seule. Tout est dans l'URL (`periode`, `chantierIds`, `equipeIds`, `fonctionIds`, `par`) ; la barre de filtres écrit ses
-valeurs **en fusion** avec l'URL pour garder le regroupement. Le fil de navigation est celui des Cartes : l'ancien fil de la barre de
-filtres a été retiré.
+**Hiérarchie guidée.** Tant qu'aucun mois n'est choisi, la vue montre **une carte par mois** qui a de la paie. Ouvrir un mois
+le choisit, puis la vue avance dans l'ordre **chantier → équipe → fonction → employés**. Ouvrir une carte en fait une **étape
+du fil** (mois, chantier, équipe…), que l'on retire seule. Tout est dans l'URL (`periode`, `chantierIds`, `equipeIds`,
+`fonctionIds`); le mois et les étapes sont conservés quand un filtre change. Les anciens liens contenant `par` suivent cette
+même hiérarchie. Le fil de navigation est celui des Cartes : l'ancien fil de la barre de filtres a été retiré.
 
 **Comparaison.** Chaque carte montre ses quatre indicateurs — **masse (DH)**, **bulletins** (personnes), **montant des STC** (DH) et
 **STC** (personnes) — avec l'écart par rapport au **mois civil immédiatement précédent**, pour le même groupe : en pourcentage pour
@@ -423,7 +422,7 @@ importé par erreur. Le bouton est fourni par `PaieCartesComponent` (gabarit `#a
 
 ### Vue Analytique
 
-`PaieAnalytiqueComponent` (`analytique/`) est l'hôte du composant **partagé par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011).
+`PaieAnalytiqueComponent` (`analytique/`) est l'hôte du composant **partagé par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0014).
 **Lecture seule**, sur le périmètre de la barre commune. Sans mois, le plus récent est ouvert et inscrit dans la barre ; chaque
 changement de filtre relance l'analyse (une demande encore en cours est abandonnée).
 

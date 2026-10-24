@@ -11,6 +11,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { Employee } from '../../employee/models/employee.model';
@@ -20,7 +21,7 @@ import { PaiePeriodeResume } from '../../paie/models/paie.model';
 import { formaterMontant, libellePeriode, periodePrecedente } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
 import {
-  cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche, parametrePar,
+  cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
   Portee, porteeDe, porteeVide, versParametresPerimetre
 } from '../perimetre';
 import { fusionnerGroupes, GroupeCarte, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
@@ -46,8 +47,7 @@ interface Chargement {
 }
 
 /**
- * Vues Cartes des modules (lecture seule) — **descente libre** : on parcourt le périmètre en choisissant soi-même par quoi
- * regrouper (chantier, équipe, fonction, dans l'ordre proposé par le module ou dans un autre), jusqu'aux fiches des employés.
+ * Vues Cartes des modules (lecture seule) — **parcours guidé** selon l'ordre défini par le domaine, jusqu'aux fiches des employés.
  * Ouvrir une carte en fait une étape du fil ; chaque étape se retire seule. Chaque carte réunit les fiches Employé (dernier état
  * importé) et la paie du mois choisi, avec la variation de la masse par rapport au mois contigu ; une source n'est lue qu'avec son
  * droit (`EMPLOYEE_READ`, `PAIE_READ`). Tout vit dans l'URL (voir `perimetre.ts`). Le composant ne connaît aucun module : il lit
@@ -55,7 +55,7 @@ interface Chargement {
  */
 @Component({
   selector: 'app-cartes-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, SelectComponent, PdfExportButtonComponent],
   templateUrl: './cartes-perimetre.component.html',
   styleUrl: './cartes-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -91,17 +91,29 @@ export class CartesPerimetreComponent {
 
   /** Mois de paie du module, du plus récent au plus ancien (avec `PAIE_READ`). */
   protected readonly mois = signal<string[]>([]);
+  protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   /** Le mois affiché : celui de l'URL, à défaut le plus récent (sauf module Paie, où « aucun mois » est la liste des mois). */
   protected readonly periode = computed(() => {
     if (!this.voitPaie()) {
       return null;
     }
+    if (this.module().periodePaieRecenteFixe) {
+      return this.mois()[0] ?? null;
+    }
     return this.perimetre().periode ?? (this.module().niveauPeriode ? null : (this.mois()[0] ?? null));
   });
 
   protected readonly niveau = computed<Niveau>(() =>
-    niveauAffiche(this.params(), this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.voitEmployes())
+    niveauAffiche(this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.voitEmployes())
   );
+  protected readonly progression = computed(() => {
+    const niveau = this.niveau();
+    const decalageMois = this.module().niveauPeriode ? 1 : 0;
+    const total = this.module().ordre.length + (this.voitEmployes() ? 1 : 0) + decalageMois;
+    if (niveau === 'PERIODE') return { libelle: 'Mois', etape: 1, total };
+    if (niveau === 'EMPLOYES') return { libelle: 'Employés', etape: this.module().ordre.length + decalageMois + 1, total };
+    return { libelle: LIBELLES_DIMENSIONS[niveau], etape: this.module().ordre.indexOf(niveau) + decalageMois + 1, total };
+  });
   /** Les étapes du fil : chaque dimension choisie, dans l'ordre du module. */
   protected readonly etapes = computed(() =>
     this.module().ordre
@@ -142,6 +154,18 @@ export class CartesPerimetreComponent {
       ])
     };
   });
+  protected documentCarte(groupe: GroupeCarte): PdfImpressionDocument {
+    const periode = this.moisDe(groupe);
+    return {
+      titre: this.titre(groupe),
+      contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()}${periode ? ` · ${libellePeriode(periode)}` : ''}`,
+      colonnes: ['Groupe', 'Statut', 'Employés', 'En poste', 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
+      lignes: [[
+        this.titre(groupe), groupe.statut?.libelle ?? '', groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? '',
+        groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
+      ]]
+    };
+  }
   protected readonly documentEmployesVide: PdfImpressionDocument = { titre: 'Employés', colonnes: [], lignes: [] };
   protected readonly chargerExportEmployes = () => {
     const params = this.params();
@@ -191,23 +215,6 @@ export class CartesPerimetreComponent {
     this.version.update((n) => n + 1);
   }
 
-  /** Le mois est un niveau possible tant qu'aucun mois n'est choisi (module Paie). */
-  protected moisPossible(): boolean {
-    return !!this.module().niveauPeriode && this.voitPaie() && this.perimetre().periode === null;
-  }
-
-  /** Une dimension se choisit si elle n'est pas déjà une étape et si une source la fournit. */
-  protected possible(dimension: Dimension): boolean {
-    if (etapeChoisie(this.perimetre(), dimension) !== null) {
-      return false;
-    }
-    return (this.module().dimension === dimension && !!this.module().catalogue) || this.voitEmployes() || this.voitPaie();
-  }
-
-  protected regrouperPar(niveau: Niveau): void {
-    this.naviguer({ par: parametrePar(niveau) });
-  }
-
   /** Ouvrir un groupe : il devient une étape du fil, et l'on descend à la dimension suivante. Ouvrir un mois le choisit. */
   protected ouvrir(groupe: GroupeCarte): void {
     if (this.niveau() === 'PERIODE') {
@@ -231,8 +238,8 @@ export class CartesPerimetreComponent {
     this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null, periode: this.module().niveauPeriode ? null : this.perimetre().periode, par: null });
   }
 
-  protected changerPeriode(event: Event): void {
-    this.naviguer({ periode: (event.target as HTMLSelectElement).value || null });
+  protected changerPeriode(value: unknown): void {
+    this.naviguer({ periode: typeof value === 'string' && value ? value : null });
   }
 
   /** Vers l'Analytique du module : mêmes filtres, avec ce groupe pour périmètre. */

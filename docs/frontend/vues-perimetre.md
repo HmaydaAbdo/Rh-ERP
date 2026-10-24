@@ -2,8 +2,8 @@
 
 > Les vues **Cartes** et **Analytique** de tous les modules — Paie, Employés, Équipes, Fonctions, Chantiers — sont les deux
 > mêmes composants. Ce document est la référence technique ; la règle est dans
-> [`conventions/frontend.md`](../../conventions/frontend.md) (« Cartes par niveaux et Analytique graphique ») et la décision
-> dans l'[ADR 0011](../adr/0011-vues-cartes-analytique-par-perimetre.md).
+> [`conventions/frontend.md`](../../conventions/frontend.md) (« Cartes par niveaux et Analytique graphique ») et les décisions
+> dans l'[ADR 0011](../adr/0011-vues-cartes-analytique-par-perimetre.md) et l'[ADR 0014](../adr/0014-vues-partagees-parcours-metier-configurables.md).
 
 ---
 
@@ -28,7 +28,7 @@ Chaque module écrit `<module>-module.ts` (`moduleChantier(service)`, `moduleEqu
 | `chantierIds`, `fonctionIds` | Identifiants (entiers > 0, séparés par des virgules) |
 | `equipeIds` | Identifiants ; `0` = bulletins et fiches sans équipe |
 | `periode` | Mois de paie `AAAA-MM` |
-| `par` | Cartes seulement : `chantier`, `equipe`, `fonction`, `employes`, `periode` |
+| Hiérarchie | Cartes suit l'ordre déclaré par le domaine; aucune valeur d'URL ne permet de le remplacer |
 
 Une dimension portant **exactement une valeur** est une **étape** du fil. Plusieurs valeurs (barre de filtres multiple des
 Employés et de la Paie) restreignent le périmètre sans être une étape. Les filtres propres au module (`code`, `designation`,
@@ -36,9 +36,9 @@ Employés et de la Paie) restreignent le périmètre sans être une étape. Les 
 
 ## Cartes
 
-**Niveau affiché** (`niveauAffiche`) : le `par` demandé s'il est possible ; sinon, pour le module Paie sans mois, la liste des
-mois (`PERIODE`) ; sinon la première dimension de l'ordre du module qui n'est pas une étape ; sinon les employés (avec
-`EMPLOYEE_READ`) ou le dernier regroupement.
+**Niveau affiché** (`niveauAffiche`) : la première dimension de la hiérarchie du module qui n'est pas encore une étape ; puis
+les employés (avec `EMPLOYEE_READ`). Paie commence par la liste des mois tant qu'aucun mois n'est choisi. Les anciens liens
+avec `par` suivent désormais la hiérarchie déclarée.
 
 **Sources d'un niveau-dimension** (en parallèle, chacune indépendante) :
 
@@ -57,14 +57,30 @@ vide (aucun élément ne correspond) n'interroge aucune source.
 qui ont des fiches ou des bulletins. `variations` compare au mois contigu : pourcentage pour les montants, écart pour les
 personnes, rien sans mois contigu.
 
-**Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et retire `par` ; ouvrir une carte de mois pose `periode`.
+**Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et fait avancer à l'étape suivante ; ouvrir une carte de mois pose `periode`.
+
+**Équipe** : Cartes fixe les chiffres Paie sur le dernier mois présent dans `GET /paie/periodes`; aucun sélecteur de période
+n'est affiché. Les raccourcis vers la liste et les employés sont masqués car la coque fournit déjà les onglets des vues.
+Le passage d'une vue à l'autre conserve les filtres et le périmètre métier, mais retire tout ancien paramètre `periode`.
 
 **Extension** : un hôte projette un gabarit `#actionsCarte` (contexte : `groupe`, `niveau`, `periode`, `portee`) ; il recharge
 le niveau avec `recharger()` (vue enfant `CartesPerimetreComponent`).
 
 ## Analytique
 
-Même périmètre et même portée que les Cartes. Blocs, dans l'ordre :
+Même périmètre et même portée que les Cartes. L'ordre des sources est déclaré par chaque module dans `ordreAnalytique`.
+Les projections restent indépendantes et chaque source conserve son bloc et ses permissions. Les référentiels mettent les
+effectifs Employé en premier; le module Paie met ses indicateurs Paie en premier.
+
+Tous les filtres et sélecteurs des vues utilisent `stp-select` ou `app-lazy-select`. La recherche est toujours disponible;
+les longues listes métier sont recherchées et paginées côté serveur, tandis que les listes finies sont recherchables et
+révélées par blocs lors du défilement dans le composant partagé.
+
+Un module peut activer un panneau analytique dédié à sa dimension avec `vueEffectifParDimension`. Dans Équipe, ce panneau
+utilise `PAIE_READ` et le dernier mois disponible pour la répartition des effectifs payés par équipe. Le sélecteur de période,
+« Répartir par » et les panneaux génériques Employé/Paie sont masqués. Un sélecteur d'équipe pilote l'évolution historique
+mensuelle de son effectif. Le mois courant reste celui qui est le plus récent dans la base; l'évolution conserve l'historique.
+Chaque graphique exportable capture son graphique et inclut le tableau complet associé dans le PDF.
 
 1. En-tête : titre, mois (sauf module à niveau « mois », dont la barre le porte), lien « Voir les cartes », fil d'étapes.
 2. **Paie** (`PAIE_READ`) : chiffres du mois et variation sur le mois précédent ; **évolution mensuelle** (une mesure, un axe :
@@ -78,13 +94,13 @@ affiche des indicateurs à zéro. Le module à niveau « mois » (Paie) ouvre le
 
 ## Ce que chaque module apporte
 
-| Module | Dimension | Ordre de descente | Référentiel | Particularités |
-|---|---|---|---|---|
-| Chantiers | `CHANTIER` | chantier → équipe → fonction | code, nom/désignation, statut En cours / Clôturé | filtres code, désignation, statut |
-| Équipes | `EQUIPE` | équipe → chantier → fonction | code, libellé | filtres code, libellé |
-| Fonctions | `FONCTION` | fonction → chantier → équipe | libellé | filtre libellé |
-| Employés | aucune | chantier → équipe → fonction | aucun | nom, CIN, statut sur les fiches (nom et CIN aussi sur la paie) ; pas de lien « Voir les employés » |
-| Paie | aucune | chantier → équipe → fonction | aucun | liste des mois en premier niveau ; suppression en groupe par carte (`PAIE_PURGE`) |
+| Module | Dimension | Hiérarchie Cartes | Priorité Analytique | Référentiel | Particularités |
+|---|---|---|---|---|---|
+| Chantiers | `CHANTIER` | chantier → équipe → fonction → employés | Employé puis Paie | code, nom/désignation, statut En cours / Clôturé | filtres code, désignation, statut |
+| Équipes | `EQUIPE` | équipe → chantier → fonction | Effectif payé par équipe, mois le plus récent | code, libellé | filtres code/libellé conservés entre vues; pas de sélecteur de période; évolution historique de l'équipe choisie |
+| Fonctions | `FONCTION` | fonction → chantier → équipe → employés | Employé puis Paie | libellé | filtre libellé |
+| Employés | aucune | chantier → équipe → fonction → employés | Employé puis Paie | aucun | nom, CIN, statut sur les fiches (nom et CIN aussi sur la paie) ; pas de lien « Voir les employés » |
+| Paie | aucune | mois → chantier → équipe → fonction → employés | Paie puis Employé | aucun | suppression en groupe par carte (`PAIE_PURGE`) |
 
 ## Tests
 

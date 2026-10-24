@@ -7,9 +7,9 @@ import { PaieSearchCriteria } from '../paie/models/paie.model';
  * Socle commun des vues **Cartes** et **Analytique** de tous les modules (Employés, Paie, Équipes, Fonctions, Chantiers).
  *
  * Le *périmètre* est ce que l'on regarde : des chantiers, des équipes, des fonctions (`chantierIds`, `equipeIds`, `fonctionIds`
- * dans l'URL, `0` = sans équipe), un mois de paie (`periode`) et, dans les Cartes, le regroupement courant (`par`). Les
- * filtres propres à un module (code, nom, statut…) s'ajoutent aux paramètres du périmètre sans jamais les remplacer. Tout vit
- * dans l'URL : lien direct, retour navigateur et passage d'une vue à l'autre restituent donc le même affichage.
+ * dans l'URL, `0` = sans équipe) et un mois de paie (`periode`). La progression des Cartes suit l'ordre défini par chaque
+ * domaine. Les filtres propres à un module (code, nom, statut…) s'ajoutent aux paramètres du périmètre sans jamais les
+ * remplacer. Tout vit dans l'URL : lien direct, retour navigateur et passage d'une vue à l'autre restituent donc le même affichage.
  * Voir `conventions/frontend.md`, section « Cartes par niveaux et Analytique graphique ».
  */
 
@@ -22,8 +22,6 @@ export const DIMENSIONS: readonly Dimension[] = ['CHANTIER', 'EQUIPE', 'FONCTION
 
 export const LIBELLES_DIMENSIONS: Record<Dimension, string> = { CHANTIER: 'Chantier', EQUIPE: 'Équipe', FONCTION: 'Fonction' };
 export const LIBELLES_PLURIELS: Record<Dimension, string> = { CHANTIER: 'chantiers', EQUIPE: 'équipes', FONCTION: 'fonctions' };
-
-const PARAMETRES_PAR: Record<Niveau, string> = { CHANTIER: 'chantier', EQUIPE: 'equipe', FONCTION: 'fonction', EMPLOYES: 'employes', PERIODE: 'periode' };
 
 const FORMAT_PERIODE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -72,16 +70,6 @@ export function etapeChoisie(perimetre: Perimetre, dimension: Dimension): number
   return ids.length === 1 ? ids[0] : null;
 }
 
-/** Le paramètre `?par=` demandé, s'il existe. */
-export function niveauDemande(params: ParamMap): Niveau | null {
-  const demande = params.get('par');
-  return (Object.keys(PARAMETRES_PAR) as Niveau[]).find((niveau) => PARAMETRES_PAR[niveau] === demande) ?? null;
-}
-
-export function parametrePar(niveau: Niveau): string {
-  return PARAMETRES_PAR[niveau];
-}
-
 /** Les mêmes identifiants sous forme de paramètres d'URL (`null` retire un paramètre vide). */
 export function versParametresPerimetre(perimetre: Perimetre): Params {
   const liste = (ids: number[]): string | null => (ids.length > 0 ? ids.join(',') : null);
@@ -100,20 +88,10 @@ export function porteeVide(portee: Portee): boolean {
 }
 
 /**
- * Niveau affiché : celui qui est demandé s'il est possible, sinon (module Paie, `avecNiveauMois`) la liste des mois tant qu'aucun
- * mois n'est choisi, sinon la première dimension de l'ordre pas encore choisie, sinon les employés.
+ * Niveau affiché : pour Paie, la liste des mois tant qu'aucun mois n'est choisi ; sinon le premier niveau restant
+ * dans la hiérarchie du domaine, puis les fiches Employé si leur lecture est autorisée.
  */
-export function niveauAffiche(params: ParamMap, perimetre: Perimetre, ordre: readonly Dimension[], avecNiveauMois: boolean, fichesPossibles: boolean): Niveau {
-  const demande = niveauDemande(params);
-  if (demande) {
-    const possible =
-      demande === 'EMPLOYES' ? fichesPossibles
-      : demande === 'PERIODE' ? avecNiveauMois && perimetre.periode === null
-      : etapeChoisie(perimetre, demande) === null;
-    if (possible) {
-      return demande;
-    }
-  }
+export function niveauAffiche(perimetre: Perimetre, ordre: readonly Dimension[], avecNiveauMois: boolean, fichesPossibles: boolean): Niveau {
   if (avecNiveauMois && perimetre.periode === null) {
     return 'PERIODE';
   }

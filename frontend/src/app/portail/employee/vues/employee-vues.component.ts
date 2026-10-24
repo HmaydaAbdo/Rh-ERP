@@ -49,7 +49,7 @@ export class EmployeeVuesComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltres(params)));
   }
 
-  /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. Le mois et le regroupement des Cartes sont conservés. */
+  /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. Le périmètre reste synchronisé entre les vues. */
   protected appliquer(filtres: EmployeeFiltres): void {
     void this.router.navigate([], { replaceUrl: true, queryParams: versParametres(filtres), queryParamsHandling: 'merge' });
   }

@@ -14,6 +14,7 @@ export function moduleChantier(chantierService: ChantierService): ModulePerimetr
     libelleRacine: 'Tous les chantiers',
     dimension: 'CHANTIER',
     ordre: ['CHANTIER', 'EQUIPE', 'FONCTION'],
+    ordreAnalytique: ['EMPLOYEE', 'PAIE'],
     route: '/chantiers',
     permission: 'CHANTIER_READ',
     parametresListe: (params) => versParametresChantier(lireFiltresChantier(params)),

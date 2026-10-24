@@ -10,7 +10,7 @@ Employés et Paie avaient chacun leurs Cartes et leur Analytique, écrites sépa
 n'avaient que des vues de référentiel. Le propriétaire veut que les cinq modules (Paie, Employés, Équipes, Fonctions,
 Chantiers) se lisent de la même façon, et que ce soit le pattern de toute l'application :
 
-- des **Cartes par descente libre** : on choisit soi-même par quoi regrouper (chantier, équipe, fonction, puis les employés),
+- des **Cartes hiérarchiques** : le domaine déclare l'ordre des dimensions (chantier, équipe, fonction, puis les employés),
   chaque carte ouverte devient une étape du fil ;
 - une **Analytique faite de graphiques**, à la manière de la Paie, qui réunit la paie et les fiches Employé ;
 - des **filtres communs** aux trois vues d'un module, dont les valeurs suivent quand on passe de l'une à l'autre.
@@ -29,9 +29,10 @@ reportée cinq fois.
    (sa dimension et son référentiel éventuels, les critères que ses filtres produisent) et deux composants hôtes minces. Un
    hôte peut projeter un gabarit `#actionsCarte` pour ajouter ses propres boutons à chaque carte (suppression en groupe de la
    paie).
-3. **Le périmètre vit dans l'URL** : `chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds`, `periode`, et `par` pour le
-   regroupement des Cartes. Les filtres propres au module s'y ajoutent sans jamais les remplacer ; les valeurs invalides sont
-   ignorées. Le passage d'une vue à l'autre conserve tous les paramètres.
+3. **Le périmètre vit dans l'URL** : `chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds` et `periode`. Les filtres
+   propres au module s'y ajoutent sans jamais les remplacer ; les valeurs invalides sont ignorées. Le passage d'une vue à
+   l'autre conserve le périmètre. Le paramètre historique `par` est ignoré; la hiérarchie suit l'ordre configuré par le domaine
+   (voir ADR 0014).
 4. **Les sources sont les contrats existants** : `POST /employees/regroupements`, `/employees/analytique`, `/paie/analytique`,
    `/paie/periodes/search`, `/paie/effectifs`, plus le référentiel du module. Aucun endpoint ne change, sauf `parFonction`
    de `/paie/analytique` qui porte désormais les STC. Chaque source n'est lue qu'avec son droit (`EMPLOYEE_READ`,
@@ -39,6 +40,8 @@ reportée cinq fois.
 5. **Les filtres propres au module bornent tout l'écran**, y compris l'Analytique : le référentiel filtré donne les
    identifiants passés aux fiches et à la paie ; si aucun élément ne correspond, aucune source n'est interrogée.
 6. **Le module Paie** ajoute un premier niveau, la liste des mois, tant qu'aucun mois n'est choisi.
+7. La hiérarchie des Cartes et l'ordre des sources de l'Analytique sont configurés par domaine selon l'ADR 0014 ; le niveau
+   Cartes avance automatiquement et ne se choisit plus librement.
 
 ## Conséquences
 

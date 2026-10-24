@@ -24,7 +24,6 @@ const OPTIONS: SelectOption<number>[] = [
       [options]="options()"
       [selectedOptions]="connus()"
       [multiple]="multiple()"
-      [filterable]="filtrable()"
       [externalFilter]="filtreExterne()"
       [clearable]="effacable()"
       [loading]="chargement()"
@@ -43,7 +42,6 @@ class SelectTestComponent {
   readonly options = signal(OPTIONS);
   readonly connus = signal<SelectOption<number>[]>([]);
   readonly multiple = signal(false);
-  readonly filtrable = signal(false);
   readonly filtreExterne = signal(false);
   readonly effacable = signal(true);
   readonly chargement = signal(false);
@@ -120,6 +118,14 @@ describe('SelectComponent', () => {
       expect(libelles()).toEqual(['Chantier Marrakech', 'Chantier Casablanca', 'Autoroute Rabat–Fès', 'Barrage Souss']);
     });
 
+    it('active la recherche par défaut, même pour une courte liste locale', async () => {
+      await afficher();
+      await ouvrir();
+      await saisir('casablanca');
+
+      expect(libelles()).toEqual(['Chantier Casablanca']);
+    });
+
     it('écrit la valeur de l’option choisie dans le formulaire, affiche son libellé et se referme', async () => {
       await afficher();
       await ouvrir();
@@ -185,15 +191,6 @@ describe('SelectComponent', () => {
       expect(fixture.nativeElement.querySelector('stp-select').className).toContain('ng-invalid');
     });
 
-    it('ne laisse pas saisir de texte quand il n’est pas filtrable', async () => {
-      await afficher();
-      const evenement = new Event('beforeinput', { cancelable: true });
-
-      champ().dispatchEvent(evenement);
-
-      expect(evenement.defaultPrevented).toBe(true);
-    });
-
     it('désactivé par le formulaire : ni ouverture ni bouton d’effacement', async () => {
       await afficher((h) => {
         h.modele.set({ choix: 2 });
@@ -228,9 +225,11 @@ describe('SelectComponent', () => {
       expect(document.querySelectorAll('.stp-select__checkbox--checked')).toHaveLength(1);
       await choisir('Souss');
 
-      expect(valeur()).toEqual([1, 4]);
-      expect(champ().value).toBe('2 chantiers');
       expect(document.querySelectorAll('.stp-select__checkbox--checked')).toHaveLength(2);
+      expect(valeur()).toEqual([1, 4]);
+      champ().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      expect(champ().value).toBe('2 chantiers');
     });
 
     it('affiche le libellé seul avec une valeur, puis le résumé à partir de deux', async () => {
@@ -288,7 +287,7 @@ describe('SelectComponent', () => {
 
   describe('filtre', () => {
     it('filtre les options à la frappe sans tenir compte des accents ni de la casse', async () => {
-      await afficher((h) => h.filtrable.set(true));
+      await afficher();
       await ouvrir();
 
       await saisir('FES');
@@ -297,7 +296,7 @@ describe('SelectComponent', () => {
     });
 
     it('s’ouvre au clic, sans se refermer au clic suivant (placement du curseur dans la saisie)', async () => {
-      await afficher((h) => h.filtrable.set(true));
+      await afficher();
 
       await ouvrir();
       expect(champ().getAttribute('aria-expanded')).toBe('true');
@@ -308,7 +307,7 @@ describe('SelectComponent', () => {
     });
 
     it('annonce l’absence de résultat', async () => {
-      await afficher((h) => h.filtrable.set(true));
+      await afficher();
       await ouvrir();
 
       await saisir('zzz');
@@ -319,7 +318,6 @@ describe('SelectComponent', () => {
 
     it('signale le chargement quand la liste vient d’une source distante', async () => {
       await afficher((h) => {
-        h.filtrable.set(true);
         h.filtreExterne.set(true);
       });
       await ouvrir();
@@ -337,7 +335,6 @@ describe('SelectComponent', () => {
 
     it('avec un filtre externe, laisse le parent filtrer : toutes les options restent, la saisie est émise', async () => {
       await afficher((h) => {
-        h.filtrable.set(true);
         h.filtreExterne.set(true);
       });
       await ouvrir();
@@ -350,7 +347,6 @@ describe('SelectComponent', () => {
 
     it('émet un filtre vide à l’effacement', async () => {
       await afficher((h) => {
-        h.filtrable.set(true);
         h.filtreExterne.set(true);
         h.modele.set({ choix: 1 });
       });
@@ -360,19 +356,22 @@ describe('SelectComponent', () => {
       expect(hote.filtres.at(-1)).toBe('');
     });
 
-    it('demande la page suivante quand la liste est défilée jusqu’en bas', async () => {
+    it('révèle le bloc local suivant quand la liste est défilée jusqu’en bas', async () => {
       await afficher((h) => {
-        h.options.set(Array.from({ length: 40 }, (_, i) => ({ label: `Option ${i}`, value: i })));
+        h.options.set(Array.from({ length: 80 }, (_, i) => ({ label: `Option ${i}`, value: i })));
       });
       await ouvrir();
+      expect(options()).toHaveLength(40);
       const liste = document.querySelector('ul[role="listbox"]') as HTMLElement;
       liste.style.maxHeight = '100px';
       liste.style.overflowY = 'auto';
 
       liste.scrollTop = liste.scrollHeight;
       liste.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
 
-      expect(hote.pages()).toBe(1);
+      expect(options()).toHaveLength(80);
+      expect(hote.pages()).toBe(0);
     });
   });
 });

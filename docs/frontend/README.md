@@ -240,7 +240,7 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-badge` | Pastille de statut (success, warning, danger, info, neutral), contraste calculé par thème | |
 | `stp-dialog` | Dialogue modal ou tiroir (`placement="end"`) : piège de focus, Échap, `closable`, panneau en overlay | CDK Overlay + A11y |
 | `stp-menu-button`, `stp-split-button` | Menu d'actions (`role="menu"`, flèches, Échap) ; bouton scindé | Angular Aria `menu` |
-| `stp-select` | Liste déroulante simple/multiple, panneau contraint à la fenêtre et défilable, navigation clavier qui garde l'option active visible, filtre sans accents, effacement, `loadMore`, valeur `V` ou `V[]` ; en multiple, les valeurs choisies qui ne figurent pas dans les options affichées sont conservées | Aria `combobox` + `listbox`, CDK Overlay |
+| `stp-select` | Liste déroulante simple/multiple, toujours recherchable, options locales filtrées puis révélées par blocs de 40 au défilement, panneau contraint à la fenêtre et défilable, navigation clavier qui garde l'option active visible, effacement, `loadMore`, valeur `V` ou `V[]` ; en multiple, les valeurs choisies qui ne figurent pas dans les options affichées sont conservées | Aria `combobox` + `listbox`, CDK Overlay |
 | `stp-table` | Tableau natif : tri, pagination serveur ou mémoire, redimensionnement/réordonnancement clavier, pied, ligne cliquable | HTML natif |
 | `stp-number-input` | Nombre au format `fr-FR`, bornes, décimales | |
 | `stp-password-input` | Mot de passe avec afficher/masquer (`aria-pressed`) | |

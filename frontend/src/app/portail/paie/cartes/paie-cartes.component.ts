@@ -29,7 +29,7 @@ interface Suppression {
 }
 
 /**
- * Vue Cartes de la paie : la descente libre par niveaux (mois, puis chantier, équipe, fonction dans l'ordre voulu) est celle
+ * Vue Cartes de la paie : le parcours guidé (mois, chantier, équipe, fonction, employés) est celui
  * des vues partagées (voir `portail/perimetre/`). Ce composant n'ajoute que ce qui est propre à la paie : sur chaque carte,
  * la **suppression d'un coup** des bulletins qu'elle compte (permission `PAIE_PURGE`, distincte de `PAIE_DELETE` qui ne couvre
  * qu'un bulletin), après une confirmation qui demande de retaper leur nombre (voir docs/paie/README.md, « Suppression en groupe »).

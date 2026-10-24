@@ -17,13 +17,14 @@ export interface CollectionTableConfig {
   selector: 'app-collection-table',
   imports: [ColumnChooserComponent, TableComponent, NgTemplateOutlet, TableCellDirective, TableRowActionsDirective, TableFooterDirective],
   template: `
-    <div class="app-page">
+      <div class="app-page app-collection-table__surface">
       <div class="app-table-bar">
         <p class="app-table-bar__total" role="status">
           @if (!loading()) { {{ configuration().countLabel(totalRecords()) }} }
         </p>
         <div class="app-table-bar__tools">
           <app-column-chooser class="en-ligne" [state]="columnState()"></app-column-chooser>
+          <ng-content select="[table-export]"></ng-content>
         </div>
       </div>
       <stp-table

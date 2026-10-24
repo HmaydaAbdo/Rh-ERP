@@ -60,13 +60,13 @@ describe('ChantierVuesComponent', () => {
     expect(TestBed.inject(Router).url).toBe('/chantiers?code=C2&actif=true');
   });
 
-  it('garde le périmètre, le mois et le regroupement des Cartes quand un filtre de la barre change', async () => {
-    const composant = await harness.navigateByUrl('/chantiers/cartes?chantierIds=1&periode=2026-08&par=fonction', ChantierVuesComponent);
+  it('garde le périmètre et le mois des Cartes quand un filtre de la barre change', async () => {
+    const composant = await harness.navigateByUrl('/chantiers/cartes?chantierIds=1&periode=2026-08', ChantierVuesComponent);
 
     composant['appliquer']({ code: 'C2', designation: '', actif: null });
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/chantiers/cartes?chantierIds=1&periode=2026-08&par=fonction&code=C2');
+    expect(TestBed.inject(Router).url).toBe('/chantiers/cartes?chantierIds=1&periode=2026-08&code=C2');
   });
 
   it('ne montre ni création ni synchronisation sans les droits', async () => {
