@@ -73,6 +73,10 @@ test.describe('Permissions', () => {
     await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
     await page.goto('/carte');
     await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
+    // Garde la coque dans son état compact stable pendant Axe (le pointeur Playwright démarre à l'origine de la fenêtre,
+    // au-dessus de la barre latérale, et peut sinon lancer sa transition d'expansion pendant la mesure du contraste).
+    await page.mouse.move(640, 360);
+    await expect(page.locator('.app-sidebar')).toHaveCSS('width', '72px');
 
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);

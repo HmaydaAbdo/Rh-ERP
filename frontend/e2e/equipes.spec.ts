@@ -96,14 +96,12 @@ test.describe('Équipes', () => {
     await expect(carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' })).toBeVisible();
     await expect(carte.locator('.perimetre-carte__pied app-pdf-export-button')).toBeVisible();
     await expect(carte.locator('.perimetre-carte__pied')).toHaveCSS('justify-content', 'space-between');
-    await expect(carte).toContainText('Employés sur les fiches récentes');
+    await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Paie · août 2026');
-    const fiches = carte.locator('.perimetre-carte__fiches');
     const mesures = carte.locator('.perimetre-carte__mesures');
-    await expect(fiches.locator('.perimetre-carte__fiche-indicateur')).toHaveCount(1);
+    await expect(carte.locator('.perimetre-carte__fiches')).toHaveCount(0);
     await expect(carte.locator('.perimetre-carte__jauge, .perimetre-carte__jauge-ligne')).toHaveCount(0);
-    await expect(mesures.locator('.perimetre-carte__fiche-indicateur')).toHaveCount(0);
-    await expect(carte.locator('dt').filter({ hasText: 'Employés sur les fiches récentes' }).locator('xpath=..').locator('dd')).toHaveText('0');
+    await expect(mesures.locator('.perimetre-carte__indicateur')).toHaveCount(4);
     const carteOperateurs = page.locator('.perimetre-carte').filter({ hasText: 'Opérateurs' });
     await expect(carteOperateurs.locator('.perimetre-carte__jauge, .perimetre-carte__jauge-ligne')).toHaveCount(0);
     await expect(carteOperateurs).not.toContainText('en poste');
