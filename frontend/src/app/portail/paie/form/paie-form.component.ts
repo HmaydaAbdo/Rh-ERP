@@ -161,7 +161,7 @@ export class PaieFormComponent {
     const dto = {
       fonctionId: saisie.fonctionId!,
       chantierId: saisie.chantierId!,
-      equipeId: saisie.equipeId,
+      equipeId: saisie.equipeId === 0 ? null : saisie.equipeId,
       nombreJoursTravailles: saisie.nombreJoursTravailles!,
       joursRecuperationOuvrable: saisie.joursRecuperationOuvrable,
       joursRecuperationDimanche: saisie.joursRecuperationDimanche,

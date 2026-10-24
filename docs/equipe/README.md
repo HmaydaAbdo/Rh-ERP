@@ -148,6 +148,9 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
   pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
   Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
+  Les groupes et le sélecteur d'équipe incluent « Orphelins (sans équipe) »; le suivi transmet `equipeIds=0` et couvre
+  l'historique des bulletins sans équipe. Les filtres des vues Employé et Paie proposent aussi cette option; sur un
+  formulaire, elle enregistre une valeur d'équipe nulle, jamais l'identifiant synthétique `0`.
   Comme tous les sélecteurs de l'application, ces contrôles permettent la recherche et le chargement au défilement;
   le filtre Chantier et le choix d'Équipe proposent également la recherche.
   Chaque carte de graphique contient son filtre Chantier; les deux filtres restent synchronisés dans l'URL et
@@ -181,6 +184,7 @@ reste un modèle d'import, pas un export.
 | Import atomique et rejet des lignes invalides | `EquipeImportServiceTest`, `AuditImportTest`, tests d'actions d'import |
 | Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
 | Cartes : quatre mesures Paie lisibles, dernier mois et comparaison au mois précédent | `CartesPerimetreComponent.spec.ts`, `perimetre-groupes.spec.ts`, `frontend/e2e/equipes.spec.ts` |
+| Orphelins proposés dans les filtres d'équipe, présents dans la répartition et suivis dans l'historique | `reference-services.spec.ts`, `paie-option.sources.spec.ts`, `employee-filtres.component.spec.ts`, `analytique-perimetre.component.spec.ts` |
 | Orphelins cohérents entre vues, masqués si zéro, et protégés par `PAIE_READ` | `equipe-qualite.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
 | PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
