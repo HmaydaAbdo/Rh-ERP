@@ -111,11 +111,11 @@ describe('PaieCartesComponent', () => {
     expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Chantier');
   });
 
-  it('transmet les filtres de la barre à chaque niveau et ajoute « Sans équipe » parmi les équipes', async () => {
+  it('transmet les filtres de la barre à chaque niveau et ajoute « Orphelins » parmi les équipes', async () => {
     const page = await ouvrir('/paie/cartes?periode=2026-08&nom=ali&cin=AB1&fonctionIds=5&chantierIds=1');
 
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', fonctionIds: [5], chantierIds: [1] }));
-    expect(Array.from(page.querySelectorAll('.perimetre-carte__nom')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Sans équipe']);
+    expect(Array.from(page.querySelectorAll('.perimetre-carte__nom')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Orphelins']);
   });
 
   describe('suppression en groupe', () => {

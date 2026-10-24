@@ -68,7 +68,7 @@ export interface EmployeeImportResult {
 /** Ce par quoi la vue Cartes regroupe les employés. */
 export type DimensionEmployes = 'CHANTIER' | 'EQUIPE' | 'FONCTION';
 
-/** Un groupe de la vue Cartes ; pour l'équipe, `id` 0 = sans équipe. */
+/** Un groupe de la vue Cartes ; pour l'équipe, `id` 0 = orphelins. */
 export interface EmployeeRegroupement {
   id: number;
   code: string | null;
