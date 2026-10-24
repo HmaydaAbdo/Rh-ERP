@@ -16,48 +16,14 @@ Angular Aria/CDK + Lucide + Tailwind 4, PrimeNG/PrimeIcons/Zone.js/Karma retiré
 audit npm sans aucune vulnérabilité, licences contrôlées et SBOM produits par les contrôles automatisés.
 Restent à faire :
 
-### Chantier séparé — appliquer les concepts IA, Agent UI, MCP et RAG à ERP-RH
+### Intégration IA
 
-Ce chantier est distinct de l'audit des conventions actuellement en cours. Il vise à étudier puis
-intégrer ces capacités dans l'application à partir de besoins RH concrets.
+Tout le chantier est suivi dans [docs/ia.md](docs/ia.md) (décisions, architecture, jalons, état).
 
-**Cadrage du 2026-10-23 sur branche dédiée `codex/integration-ia-mcp-rag`** :
-conventions actualisées, [analyse critique](docs/ia/analyse-architecture.md),
-[ADR 0013](docs/adr/0013-integration-ia-mcp-langgraph-rag.md),
-[plan détaillé en quatre phases](docs/ia/plan-integration.md),
-[conception RAG](docs/ia/rag.md) et [matrice des protocoles/innovations](docs/ia/protocoles-et-innovations.md).
-Reprise obligatoire par le [handoff IA](docs/handoff/integration-ia.md).
-L’orientation demandée remplace Spring AI par des adaptateurs MCP Java sans framework LLM et une
-orchestration TypeScript/LangGraph.js. LiteLLM, classification et garde-fous de l’ADR 0008 restent
-applicables. Ne pas supposer les données fictives. Le prototype P1.1 introduit seulement un
-profil de tests MCP isolé ; aucune dépendance IA ni route MCP métier dans le runtime normal.
-
-- [x] Préparer conventions, stress-test des neuf piliers, plan RAG et registre de reprise.
-- [x] Autorisation initiale limitée à P1.1 reçue ; choix métier et D1–D8 encore ouverts.
-- [ ] **P1.1 — revue propriétaire** : [prototype testé et documenté](docs/ia/validation-p1-1.md), attente de validation avant P1.2.
-- [ ] P1.2 — identité déléguée : non commencée, bloquée par la validation précédente.
-- [ ] Phase 1 : MCP Spring, identité déléguée, RBAC/projections et audit (G1).
-- [ ] Phase 2 : runtime LangGraph.js, client MCP et checkpoints durables (G2).
-- [ ] Phase 3 : CopilotKit Runtime / AG-UI Angular et vérification réelle du parcours (G3).
-- [ ] Phase 4 : corpus approuvé, recherche hybride évaluée, mémoire et compactage (G4).
-- [ ] Progression UI par domaine : suivre [les cinq modes et leurs critères](docs/ia/progression-ui.md), sans retirer les parcours classiques.
-
-Les principes ci-dessous restent applicables ; le détail des lots et preuves n’est tenu que dans
-le plan et le handoff dédiés.
-
-1. **Préparer les données et le besoin** : instrumenter le catalogue de KPI existant, puis choisir
-   avec la RH un premier cas d'usage, ses utilisateurs, ses données autorisées et le résultat attendu.
-2. **Cadrer les quatre concepts** : déterminer le rôle d'un agent/modèle, la nécessité d'une
-   interface AG-UI/A2UI, les outils MCP utiles (premier outil en lecture seule) et l'usage éventuel
-   de RAG/pgvector. Pour chaque capacité, documenter le périmètre et la raison de l'inclure ou non.
-3. **Valider l'architecture avant le code** : comparer les approches et faire valider le choix
-   d'architecture avant d'introduire un nouveau composant, service, transport ou index.
-4. **Implémenter par étapes** : relier chaque capacité retenue à une permission RBAC, une source de
-   données autorisée, une trace d'audit appropriée et une interface compréhensible ; aucune
-   connexion directe d'un modèle à la base métier.
-5. **Vérifier avant livraison** : tests de contrat et de permissions, provenance des réponses,
-   absence de fuite de données, résistance aux entrées hostiles, comportement en cas d'indisponibilité,
-   puis mesures de latence et de coût. Garder les fonctionnalités non validées hors production.
+- [x] J0 — preuve MCP Java ↔ client, décisions de cadrage du 2026-10-24.
+- [ ] J1 — tranche verticale « questions et vues pilotées » (lecture seule, données de dev).
+- [ ] J2 — périmètres de données par fiche de poste, avant tout utilisateur non administrateur.
+- [ ] J3 à J8 — pilote réel, contrôle de la paie, documents RH, assistant réglementaire, terrain, autres départements.
 
 Les validations d'exploitation restent regroupées ci-dessous dans **Travail côté serveur**.
 

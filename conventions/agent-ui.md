@@ -6,14 +6,11 @@ décrit les contrats et les responsabilités, pas une dépendance obligatoire à
 serveur. Chaque application documente ses versions, son catalogue de composants, ses adaptateurs et
 ses parcours dans `docs/`.
 
-Pour ERP-RH, l'orientation demandée est Angular → AG-UI → CopilotKit Runtime/LangGraph.js en
-TypeScript, avec les capacités métier MCP côté Spring. Le cadrage est dans
-[`docs/ia/README.md`](../docs/ia/README.md) et l'[ADR 0013](../docs/adr/0013-integration-ia-mcp-langgraph-rag.md).
-Le premier parcours proposé vise des messages, citations, états et cartes typées rendus avec les
-composants Staport existants. Le séquencement d'A2UI, d'une mascotte Rive ou d'une vue immersive
-reste à valider dans D8 de l'ADR 0013 ; ce cadrage ne constate pas leur abandon ni leur réalisation.
-La trajectoire par domaine est documentée dans
-[`docs/ia/progression-ui.md`](../docs/ia/progression-ui.md).
+Pour ERP-RH, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
+capacités métier MCP côté Spring ; décisions et état dans [`docs/ia.md`](../docs/ia.md). Le premier
+parcours rend messages, sources et états avec les composants Staport et **pilote les vues partagées
+existantes** (voir « Pilotage des vues existantes »). A2UI, une mascotte Rive ou une vue immersive
+ne sont introduits qu'après un besoin mesuré que ce pilotage ne couvre pas.
 
 ## Progression des modes et contrôle utilisateur
 
@@ -106,9 +103,10 @@ des résultats et des demandes de confirmation. Il ne publie pas de chaîne de p
 internes ni d'exceptions Java brutes. Les erreurs présentées indiquent une correction possible sans
 révéler de contenu sensible.
 
-Pour ERP-RH, confirmer par un prototype l'intégration du client AG-UI Angular et de CopilotKit
-Runtime avec les versions réelles de l'application. L'existence d'un runtime serveur ne prouve pas
-la disponibilité d'un composant Angular compatible. Ne pas ajouter React ou PrimeNG par défaut,
+Pour ERP-RH, confirmer par un prototype qu'un client Angular (CopilotKit Angular ou client AG-UI
+officiel) dialogue directement avec le point d'entrée AG-UI du service Python, avec les versions
+réelles de l'application ; ne pas ajouter de runtime intermédiaire sans besoin prouvé. L'existence
+d'un SDK serveur ne prouve pas la disponibilité d'un composant Angular compatible. Ne pas ajouter React ou PrimeNG par défaut,
 ni remplacer le design system Staport pour suivre un exemple externe.
 
 Le transport d'événements interactifs utilise SSE ou un transport bidirectionnel justifié, sans
@@ -117,6 +115,15 @@ connexion et l'arrêt du producteur lorsqu'un client lent ou déconnecté ne peu
 Keep-alive et HTTP/2 sont vérifiés sur le chemin de déploiement réel, pas promis par le seul SDK.
 Une reconnexion ou lecture ponctuelle d'un snapshot ne doit ni relancer une commande métier ni
 laisser croire que des événements perdus ont été rejoués si le serveur ne le garantit pas.
+
+## Pilotage des vues existantes
+
+Le mode contrôlé de référence ne génère pas d'écran : l'agent propose une **description de vue**
+(domaine, vue Tabulaire/Cartes/Analytique, filtres, période, niveau de parcours) produite par un
+outil du domaine, validée par un schéma versionné commun au service IA et au client. Le client la
+traduit en route et paramètres déjà connus de l'application, applique ses gardes et ses
+permissions, puis affiche la vue partagée habituelle. Une description invalide ou inconnue est
+ignorée avec un message ; elle n'accorde aucun droit et ne déclenche aucune action métier.
 
 ## Catalogue borné et composants du design system
 

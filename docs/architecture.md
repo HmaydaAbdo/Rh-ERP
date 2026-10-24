@@ -177,23 +177,15 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 
 ## Limites connues
 
-### Chantier IA séparé — conception du 2026-10-23
+### Intégration IA — cible décidée, non livrée
 
-L’orientation demandée conserve le métier dans Spring et place l’orchestration dans un runtime
-TypeScript/Node avec LangGraph.js ; les outils métier IA passent par des adaptateurs MCP.
-Les API REST et le kit Angular Staport restent les interfaces actuelles. Aucun code IA n’est
-introduit par le lot documentaire. L’[ADR 0013](adr/0013-integration-ia-mcp-langgraph-rag.md)
-remplace la prescription Spring AI de l’ADR 0008 pour cette orientation et expose les choix
-détaillés encore à valider. Voir le [dossier IA](ia/README.md), le [plan](ia/plan-integration.md)
-et le [handoff dédié](handoff/integration-ia.md).
-
-Les jetons par audience, le masquage de champs et l’audit de chaque outil sont des prérequis : les
-protections actuelles des contrôleurs REST ne sont pas héritées par un appel direct aux services.
-Le corpus documentaire et les données transactionnelles restent séparés ; le RAG ne recopie pas
-les employés ou la paie. L’emplacement physique et les comptes de ses stockages restent à valider.
-La première preuve [P1.1](ia/validation-p1-1.md) exerce désormais un serveur/client MCP synthétique
-dans un profil de tests opt-in, sur le classpath réel. Elle n'ajoute aucun adaptateur métier au
-runtime et reste en revue propriétaire avant l'étude d'identité.
+Le métier reste dans Spring ; un service IA Python (LangGraph) consomme des adaptateurs MCP Spring
+et appelle les modèles par LiteLLM ; Angular dialogue avec lui par AG-UI. Les API REST et le kit
+Staport restent les interfaces des écrans. Les jetons délégués par audience, les périmètres de
+données par fiche de poste, la projection du salaire et l'audit de chaque outil sont des prérequis :
+les protections des contrôleurs REST ne sont pas héritées par un appel direct aux services. Le RAG
+ne recopie ni les employés ni la paie. Seule une preuve MCP existe, en profil de test isolé.
+Décisions, feuille de route et état : [ia.md](ia.md).
 
 ### Autres limites
 

@@ -8,12 +8,10 @@ CI sont préparés en local sur `codex/vues-partagees-domaines`. La CI documenta
 la nouvelle consigne du propriétaire a été annulée. Prochaine action : revue du lot, puis push et
 CI uniquement sur demande explicite du propriétaire ; la PR en cours attend toujours sa revue.
 
-**Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, plan renforcé et
-prototype MCP P1.1 testé en profil isolé ; validation propriétaire attendue avant P1.2.
-Aucune route MCP métier ni livraison IA. Reprendre par le
-[handoff IA](integration-ia.md), le [plan détaillé](../ia/plan-integration.md) et
-l’[ADR 0013 proposé](../adr/0013-integration-ia-mcp-langgraph-rag.md). La demande récente de branche
-dédiée s’applique à ce chantier ; ne pas intégrer son contenu à `main` par une ancienne consigne.
+**Chantier IA (2026-10-24)** : décisions prises (tranche verticale, service IA Python, LiteLLM,
+sécurité par fiche de poste, premier cas « questions et vues pilotées »). Seule la preuve MCP
+existe, en profil de test isolé ; aucune route MCP métier ni livraison IA. Tout le chantier est
+suivi dans un seul document : [ia.md](../ia.md). Prochaine action : jalon J1.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

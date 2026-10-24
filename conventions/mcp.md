@@ -6,10 +6,9 @@ ses cas d'usage. Elle conserve ses API et services comme frontières métier. Le
 des adaptateurs vers les cas d'usage publics du domaine, jamais un accès parallèle aux repositories
 ou aux règles métier. L'exposition n'implique pas d'exposer toutes les opérations CRUD.
 
-Pour ERP-RH, l'orientation demandée est de conserver les services métier Spring et d'exposer leurs
-capacités à l'orchestrateur TypeScript ; aucun framework LLM Java n'est requis. Le périmètre, les
-options à valider et l'ordre de réalisation sont décrits dans [`docs/ia/README.md`](../docs/ia/README.md)
-et l'[ADR 0013](../docs/adr/0013-integration-ia-mcp-langgraph-rag.md).
+Pour ERP-RH, les services métier Spring exposent leurs capacités au service IA Python par MCP ;
+aucun framework LLM Java n'est requis. Le catalogue, les versions retenues et l'ordre de
+réalisation sont tenus dans [`docs/ia.md`](../docs/ia.md).
 
 ## Contrat des outils
 
@@ -23,7 +22,7 @@ Search) et ne charger ensuite que leurs descriptions et schémas. La recherche d
 catalogue publié et configuré. Elle ne change pas les permissions : le serveur contrôle chaque appel
 selon l'identité et le périmètre effectifs.
 
-Le runtime TypeScript utilise un client MCP et ses contrats JSON-RPC pour consommer les capacités
+Le service IA utilise un client MCP et ses contrats JSON-RPC pour consommer les capacités
 Spring ; il ne recrée pas un client REST métier parallèle. Les API REST existantes restent les
 contrats de l'interface ordinaire. Un cache des schémas de découverte est borné, lié au serveur,
 à sa version de catalogue et au contexte d'autorisation applicable, puis invalidé lors d'un
@@ -62,8 +61,8 @@ commun.
 * Dans ERP-RH, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
   Choisir le SDK Java maintenu et son mode d'intégration seulement après vérification avec les
   versions réelles du JDK et de Spring Boot. L'intégration ne doit pas ajouter Spring AI,
-  LangChain4j ou un autre framework LLM au monolithe. Le SDK précis reste une décision du lot de
-  compatibilité de l'ADR 0013.
+  LangChain4j ou un autre framework LLM au monolithe. Le SDK retenu, ses versions et la révision
+  négociée sont consignés dans [`docs/ia.md`](../docs/ia.md).
 * Pour un serveur réseau, retenir le transport **Streamable HTTP** et enregistrer la révision MCP
   exacte, les SDK client/serveur et les capacités négociées. Le transport historique HTTP+SSE ne
   devient pas la référence par défaut ; stdio reste réservé aux intégrations locales adaptées.
@@ -90,12 +89,22 @@ périmètre métier au moment de l'action. Un appel interservice ou un contexte 
 le RBAC. Toute modification et tout refus pertinent suivent les conventions
 [`security.md`](security.md) et [`audit.md`](audit.md).
 
-Ne pas partager le `JWT_SECRET` du monolithe avec le runtime Node pour lui permettre de fabriquer
+Ne pas partager le `JWT_SECRET` du monolithe avec le service IA pour lui permettre de fabriquer
 des jetons ERP-RH. Ne pas transmettre un jeton reçu à un service pour lequel il n'a pas été émis
 (token passthrough). Une délégation documentée utilise des credentials destinés à la ressource MCP,
 avec portée limitée et vérification de l'émetteur, de l'audience, de l'expiration et des droits
-effectifs. Le choix entre mécanisme d'échange, jeton de délégation court ou évolution de l'identité
-fait l'objet d'une décision validée ; aucun mécanisme n'est réputé déjà présent dans ERP-RH.
+effectifs. Pour ERP-RH, la cible décidée est un jeton délégué court, émis par Spring pour
+l'utilisateur connecté, signé de façon asymétrique (clé publique publiée, par exemple JWKS),
+d'audience MCP et à scopes réduits ; son état d'implémentation est suivi dans `docs/ia.md`.
+
+Le périmètre de données (chantiers, équipes, département… attribués par la fiche de poste) est
+appliqué dans la requête du domaine, avec la même règle que pour REST ; il n'est jamais déduit d'un
+argument d'outil ni filtré après coup dans la réponse.
+
+Les sorties d'outils sont minimisées : agrégats et identifiants d'abord, données nominatives
+seulement lorsque la tâche l'exige et que l'identité y a droit. Un outil peut renvoyer, à côté de
+ses données, une description de vue validée par schéma (vue du domaine, filtres, période) que
+l'interface traduit en route connue ; cette description n'accorde aucun droit.
 
 Les permissions HTTP ne sont pas héritées automatiquement par une façade Java. Un adaptateur doit
 réappliquer l'autorisation et les règles de divulgation métier effectivement nécessaires. Dans
@@ -138,13 +147,13 @@ et une perte de réponse après un effet ne doit pas produire un doublon au red�
 
 Vérifier la révision effectivement adoptée avant de verrouiller les contrats :
 
-Au 2026-10-23, la page officielle `latest` des transports redirige vers la révision **2026-07-28**.
-Cette observation ne verrouille pas les SDK du projet : le prototype doit prouver leur révision
-commune et leur conformité avant de choisir entre cette révision et une révision antérieure prise
-en charge. La documentation de plusieurs révisions ne se combine pas en un contrat implicite.
+Une révision plus récente de la spécification ne s'adopte que lorsque les SDK serveur et client
+du projet l'implémentent en version stable et que les tests le prouvent des deux côtés. La
+documentation de plusieurs révisions ne se combine pas en un contrat implicite.
 
 * [MCP — spécification](https://modelcontextprotocol.io/specification/)
 * [MCP — transports, révision 2026-07-28 consultée](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
 * [MCP — autorisation](https://modelcontextprotocol.io/specification/latest/basic/authorization)
 * [MCP — pratiques de sécurité](https://modelcontextprotocol.io/specification/latest/basic/security_best_practices)
 * [SDK Java MCP](https://github.com/modelcontextprotocol/java-sdk)
+* [SDK Python MCP](https://github.com/modelcontextprotocol/python-sdk)
