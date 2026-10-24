@@ -33,6 +33,7 @@ référencées, l'effectif en personnes et la masse salariale en DH, sans chiffr
 est un groupe Paie de premier niveau, exclu du nombre d'équipes; son périmètre est conservé pendant le détail par chantier
 puis fonction. Un indicateur graphique partagé par Tabulaire, Cartes et Analytique présente le rattachement des bulletins
 du dernier mois de paie; il n'apparaît que si le nombre d'« Orphelins » est supérieur à zéro et s'exporte seul en PDF.
+Il est soumis à `PAIE_READ` : sans ce droit, les données de Paie ne sont ni demandées ni affichées.
 L'Analytique inclut les bulletins orphelins dans son périmètre Paie, même si aucune équipe correspondante n'est présente au catalogue.
 Elle présente la répartition par équipe
 sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
@@ -67,6 +68,7 @@ remplacent les liens d'accès directs vers la liste et les employés.
 - Les formulaires Paie peuvent exiger `EQUIPE_READ` en plus de leur permission Paie ; vérifier la
   matrice RBAC lorsque l'accès frontend ou les appels changent.
 - Le référentiel s'importe depuis un classeur Excel; l'import est une création atomique et une seule ligne invalide rejette le fichier entier.
+- Les vues Tabulaire, Cartes et Analytique s'appuient sur la même source du dernier mois de Paie pour l'indicateur de qualité des rattachements; le groupe « Orphelins » n'est visible que si son effectif est supérieur à zéro.
 - Mettre à jour la section Autorisations de [../README.md](../README.md) et les documents transverses
   concernés (catalogue RBAC, modèle de données) avec tout changement correspondant.
 
@@ -74,5 +76,7 @@ remplacent les liens d'accès directs vers la liste et les employés.
 
 Utiliser la matrice de scénarios et les fichiers de tests du [README Équipe](../README.md#scénarios-de-vérification-associés).
 Elle associe à chaque règle un test ciblé : normalisation/unicité, équipe facultative, indicateurs par
-période, code historique, suppression avec références Paie et Employé, import et droits. Exécuter
-les tests d'intégration PostgreSQL dès qu'une relation, une contrainte ou une migration change.
+période, code historique, suppression avec références Paie et Employé, import et droits. Pour la
+cohérence des orphelins, vérifier notamment `equipe-qualite.component.spec.ts`,
+`analytique-perimetre.component.spec.ts` et les tests des vues Équipe. Exécuter les tests d'intégration
+PostgreSQL dès qu'une relation, une contrainte ou une migration change.
