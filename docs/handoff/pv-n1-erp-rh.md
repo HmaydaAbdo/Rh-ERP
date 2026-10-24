@@ -55,6 +55,10 @@ README Équipe, qui donne aussi les commandes et résultats locaux à jour.
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
 
+Dans les Cartes Équipe, les quatre mesures Paie du dernier mois enregistré sont présentées séparément,
+avec leur valeur et leur comparaison au mois calendaire précédent. Les règles de comparaison et les cas
+où elle est indisponible sont détaillés dans le README Équipe.
+
 ## 5. Source des preuves Équipe
 
 La description métier, les règles confirmées et les scénarios de contrôle Équipe sont regroupés dans
