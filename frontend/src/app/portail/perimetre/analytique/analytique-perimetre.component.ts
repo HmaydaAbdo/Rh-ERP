@@ -40,7 +40,7 @@ type OptionEquipeEvolution = SelectOption<number>;
 
 /** Source recherchable et paginée du sélecteur de suivi, depuis les groupes déjà autorisés et chargés pour l'analyse. */
 class OptionEquipeEvolutionSource implements LazySelectSource<OptionEquipeEvolution> {
-  constructor(private readonly options: OptionEquipeEvolution[]) {}
+  constructor(private readonly options: OptionEquipeEvolution[], private readonly nomDimension: string) {}
 
   fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<OptionEquipeEvolution>> {
     const terme = search.trim().toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -50,7 +50,7 @@ class OptionEquipeEvolutionSource implements LazySelectSource<OptionEquipeEvolut
 
   fetchById(id: number | string): Observable<OptionEquipeEvolution> {
     const choisi = this.options.find((option) => option.value === Number(id));
-    return of(choisi ?? { value: Number(id), label: Number(id) === 0 ? LIBELLE_EQUIPE_ORPHELINE : 'Équipe' });
+    return of(choisi ?? { value: Number(id), label: Number(id) === 0 ? LIBELLE_EQUIPE_ORPHELINE : this.nomDimension });
   }
 }
 
@@ -107,6 +107,8 @@ export class AnalytiquePerimetreComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly libelles = LIBELLES_DIMENSIONS;
+  protected readonly libelleDimensionVue = computed(() => this.module().dimension === 'FONCTION' ? 'fonction' : 'équipe');
+  protected readonly libelleDimensionVueMaj = computed(() => this.module().dimension === 'FONCTION' ? 'Fonction' : 'Équipe');
   protected readonly mesuresEvolution = MESURES_EVOLUTION;
   protected readonly libelleEvolutionMesure = libelleEvolutionMesure;
   protected readonly libellePeriode = libellePeriode;
@@ -197,7 +199,7 @@ export class AnalytiquePerimetreComponent {
       .filter((equipe) => ids.length === 0 || ids.includes(equipe.id))
       .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, ...(valeurs.get(equipe.id) ?? { effectif: 0, masse: 0, stc: 0, stcMontant: 0 }) }));
     const orphelins = valeurs.get(0);
-    if (orphelins && orphelins.effectif > 0 && (ids.length === 0 || ids.includes(0))) {
+    if (dimension === 'EQUIPE' && orphelins && orphelins.effectif > 0 && (ids.length === 0 || ids.includes(0))) {
       groupes.push({ ...orphelins, id: 0, code: null, libelle: LIBELLE_EQUIPE_ORPHELINE });
     }
     return groupes;
@@ -250,14 +252,15 @@ export class AnalytiquePerimetreComponent {
     ...this.chantiersEquipe().map((chantier) => ({ value: chantier.id, label: chantier.libelle || chantier.code }))
   ]);
   protected readonly optionsEquipesEvolution = computed<SelectOption<number>[]>(() => {
-    const ids = this.perimetre().equipeIds;
+    const dimension = this.module().dimension ?? 'EQUIPE';
+    const ids = this.perimetre()[cleIds(dimension)];
     const groupes = this.equipesEffectif().map((equipe) => ({ value: equipe.id, label: equipe.id === 0 ? 'Orphelins (sans équipe)' : equipe.libelle }));
-    if ((ids.length === 0 || ids.includes(0)) && !groupes.some((equipe) => equipe.value === 0)) {
+    if (dimension === 'EQUIPE' && (ids.length === 0 || ids.includes(0)) && !groupes.some((equipe) => equipe.value === 0)) {
       groupes.push({ value: 0, label: 'Orphelins (sans équipe)' });
     }
     return groupes;
   });
-  protected readonly sourcesEquipesEvolution = computed<LazySelectSource<OptionEquipeEvolution>[]>(() => [new OptionEquipeEvolutionSource(this.optionsEquipesEvolution())]);
+  protected readonly sourcesEquipesEvolution = computed<LazySelectSource<OptionEquipeEvolution>[]>(() => [new OptionEquipeEvolutionSource(this.optionsEquipesEvolution(), this.libelleDimensionVueMaj())]);
   protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   protected readonly tableauEquipes = computed(() => {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
@@ -450,18 +453,18 @@ export class AnalytiquePerimetreComponent {
   }
 
   protected documentRepartitionEquipe(): PdfImpressionDocument {
-    return this.documentPdf('Situation de paie par équipe',
-      ['Équipe', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
+    return this.documentPdf(`Situation de paie par ${this.libelleDimensionVue()}`,
+      [this.libelleDimensionVueMaj(), 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
       this.tableauEquipes().map((equipe) => [equipe.libelle, equipe.effectif, formaterMontant(equipe.masse), equipe.stc, formaterMontant(equipe.stcMontant)]),
       `${this.contexteEquipe(true)} · Indicateurs affichés : ${this.mesureRepartitionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'}`);
   }
 
   protected documentEvolutionEquipe(): PdfImpressionDocument {
     const equipe = this.optionsEquipesEvolution().find((valeur) => valeur.value === this.equipeEvolutionId());
-    return this.documentPdf('Évolution mensuelle de la paie par équipe',
+    return this.documentPdf(`Évolution mensuelle de la paie par ${this.libelleDimensionVue()}`,
       ['Mois', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
       this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif, formaterMontant(mois.masse), mois.stc, formaterMontant(mois.stcMontant)]),
-      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.label}` : ''}`);
+      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · ${this.libelleDimensionVueMaj()} : ${equipe.label}` : ''}`);
   }
 
   protected documentQualiteOrphelins(): PdfImpressionDocument {
@@ -480,7 +483,7 @@ export class AnalytiquePerimetreComponent {
   }
 
   private contexteEquipe(avecPeriode: boolean): string {
-    const contexte = [`Domaine : Équipe`];
+    const contexte = [`Domaine : ${this.libelleDimensionVueMaj()}`];
     const periode = this.periode();
     if (avecPeriode && periode) contexte.push(`Période de référence : ${libellePeriode(periode)}`);
     const ids = this.perimetre().chantierIds;

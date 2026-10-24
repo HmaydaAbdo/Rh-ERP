@@ -109,22 +109,22 @@ test.describe('Fonctions', () => {
     await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
-    await expect(carte).toContainText('Employés sur les fiches récentes');
+    await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Paie · août 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre libellé suit dans l'Analytique et borne le périmètre analysé (mêmes fonctions que les deux autres vues).
     await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Analytique' }).click();
     await expect(page).toHaveURL(/\/functions\/analytique\?libelle=mac$/);
-    await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
-    await expect(page.getByText('Répartition par fonction')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Répartition de la paie par fonction · août 2026' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle par fonction' })).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', fonctionIds: [1, 2] });
     await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
 
     await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
     await expect(page).toHaveURL(/\/functions\/analytique\?libelle=mac&fonctionIds=1/);
     await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', fonctionIds: [1] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
@@ -140,7 +140,7 @@ test.describe('Fonctions', () => {
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');
     await page.goto('/functions/analytique');
-    await expect(page.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(page.getByText('L’effectif mensuel par fonction n’est pas disponible pour votre compte.')).toBeVisible();
     expect(mock.calls.filter((appel) => appel.includes('/paie') || appel.includes('/employees'))).toEqual([]);
   });
 
