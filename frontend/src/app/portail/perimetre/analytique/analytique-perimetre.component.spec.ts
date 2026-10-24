@@ -268,9 +268,14 @@ describe('AnalytiquePerimetreComponent', () => {
   it('applique les filtres Chantier et Fonction du graphique qualité à sa requête Paie dédiée', async () => {
     paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
     await ouvrirEquipe();
-    const filtres = harness.fixture.debugElement.queryAll(By.directive(LazySelectComponent));
+    const section = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'));
+    const filtres = section.queryAll(By.directive(LazySelectComponent));
     (filtres[0].componentInstance as LazySelectComponent).value.set([1]);
-    (filtres[1].componentInstance as LazySelectComponent).value.set([2]);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const filtresActualises = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'))
+      .queryAll(By.directive(LazySelectComponent));
+    (filtresActualises[1].componentInstance as LazySelectComponent).value.set([2]);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
 
