@@ -89,9 +89,10 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
 - Seuls les chantiers **en cours** sont acceptés par l'import Excel des employés. L'assistant d'import de la paie signale à
   part un chantier **clôturé** que le fichier cite (« Chantiers clôturés ») et propose **« Rouvrir le chantier »**
   (`CHANTIER_READ` et `CHANTIER_WRITE`) : le chantier est rouvert puis le même fichier est réanalysé, sans le corriger.
-- **Reprise V31 (2026-10-19)** : les chantiers qu'aucun bulletin de paie ne cite sont passés « Clôturés » une fois pour
-  toutes (voir [../data-model.md](../data-model.md)). Ce n'est pas une règle permanente : un chantier créé ensuite reste en
-  cours tant qu'on ne le clôture pas.
+- **Reprises V31 et V35** : V31 a clôturé les chantiers qu'aucun bulletin ne citait. V35 applique la règle métier confirmée
+  le 2026-10-24 : la dernière période de paie enregistrée est la référence; les chantiers encore en cours mais absents de
+  cette période sont clôturés, même s'ils ont des bulletins historiques. Si aucune paie n'existe, V35 ne modifie rien.
+  Cette migration est une reprise unique; l'absence d'un chantier dans une paie ultérieure ne le clôture pas automatiquement.
 - Modifier le `code` d'un chantier (`PUT`) le change partout, historique de paie compris : **décision du propriétaire
   (2026-10-23), ce comportement est conservé** ; c'est le moyen de corriger une faute de saisie.
 - La suppression (`DELETE /chantiers/{id}`) est bloquée (409) si le chantier est référencé par au

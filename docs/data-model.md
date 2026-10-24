@@ -175,6 +175,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V32` | Permission `EQUIPE_IMPORT`, attribuée aux rôles qui administrent déjà le référentiel avec `EQUIPE_WRITE` |
 | `V33` | `employe.chantier_id` devient nullable; les fiches INACTIF perdent leurs affectations courantes chantier/équipe, avec audit de données et contrainte assurant les affectations selon le statut; les bulletins historiques restent inchangés |
 | `V34` | Supprime l'équipe `CH+OP` après reclassement de ses bulletins selon leur fonction (`CH.`/`COURSIER` → `CH`, `OP.` → `OP`, `CHEF DE POSTE` → `EE`) et des fiches actives selon la même règle. Une fonction non classée fait échouer la migration. La suppression et les mises à jour sont auditées. |
+| `V35` | Reprise auditée des chantiers actifs absents de la dernière période de paie enregistrée : ils sont clôturés même s'ils ont des bulletins historiques; sans paie en base, aucune donnée ne change. |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration

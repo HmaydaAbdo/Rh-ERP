@@ -1,0 +1,15 @@
+@if (resume(); as resultat) {
+  @if (resultat.analyse.qualite.sansEquipe > 0) {
+    <section class="equipe-qualite" aria-label="Qualité des données de paie Équipe">
+      <div class="equipe-qualite__texte">
+        <span>Qualité des données · Paie de {{ libellePeriode(resultat.periode) }}</span>
+        <h2>{{ compteOrphelins() }} bulletin{{ compteOrphelins() > 1 ? 's' : '' }} orphelin{{ compteOrphelins() > 1 ? 's' : '' }}</h2>
+        <p>Bulletins sans équipe · {{ bulletinsRattaches() }} bulletin{{ bulletinsRattaches() > 1 ? 's' : '' }} avec équipe</p>
+      </div>
+      <div class="equipe-qualite__graphique">
+        <stp-chart type="bar" ariaLabel="Qualité du rattachement des bulletins : avec équipe et orphelins" [data]="graphique()" [options]="options()"></stp-chart>
+      </div>
+      <app-pdf-export-button [document]="document()" [inclureGraphique]="true" [iconOnly]="true" ariaLabel="Exporter la qualité du rattachement des bulletins en PDF" />
+    </section>
+  }
+}

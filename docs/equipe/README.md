@@ -132,8 +132,11 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   dernier mois de paie enregistré. Le résumé indique le nombre d'équipes référencées, l'effectif en personnes et
   la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le groupe Paie « Orphelins »
   reste visible à la racine sans être compté comme une équipe; l'ouvrir conserve ce périmètre lors du détail par chantier
-  puis par fonction. L'Analytique affiche également le nombre de bulletins orphelins dans la qualité des données, y compris
-  lorsque ce nombre vaut zéro, et permet son export PDF. Le mois est déterminé par la base, sans sélecteur de période. La navigation
+  puis par fonction. Un indicateur graphique commun aux trois vues présente la qualité du rattachement des bulletins
+  (avec équipe / « Orphelins ») à partir du même dernier mois enregistré; il n'est affiché que si au moins un bulletin
+  est orphelin et peut être exporté seul en PDF. L'Analytique inclut également les bulletins sans équipe dans sa source
+  de données, même si le catalogue Équipe ne contient que des équipes référencées. Le mois est déterminé par la base,
+  sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
   Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
   STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
