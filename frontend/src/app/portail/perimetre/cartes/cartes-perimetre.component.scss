@@ -162,6 +162,15 @@
     select { min-width: 10rem; }
   }
 
+  &__periode-fixe {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
   // ---- Fiches des employés ----
   &__fiche {
     display: flex;
@@ -227,6 +236,7 @@
 }
 
 .perimetre-carte {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -247,7 +257,7 @@
     flex-direction: column;
     gap: var(--space-xs);
     width: 100%;
-    padding: var(--space-md);
+    padding: calc(var(--space-md) + 2rem) var(--space-md) var(--space-md);
     border: 0;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     background: none;
@@ -255,6 +265,13 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
+  }
+
+  &__export {
+    position: absolute;
+    z-index: 1;
+    top: var(--space-xs);
+    right: var(--space-xs);
   }
 
   &__entete {

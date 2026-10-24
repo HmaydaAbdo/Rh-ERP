@@ -103,8 +103,8 @@ remplace pas le contrôle serveur.
 | `EQUIPE_WRITE` | Créer et modifier une équipe; afficher les actions correspondantes |
 | `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
 | `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
-| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes et Analytique; sans ce droit, les données Employé ne sont pas chargées |
-| `PAIE_READ` | Lire la projection Paie affichée dans Cartes et Analytique; sans ce droit, les données Paie ne sont pas chargées |
+| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes; sans ce droit, les données Employé ne sont pas chargées |
+| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et l'effectif mensuel par équipe dans Analytique; sans ce droit, ces données ne sont pas chargées |
 
 Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
 les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
@@ -120,11 +120,14 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 
 - **Tabulaire** sert à retrouver, consulter et administrer les équipes. Le tableau présente le code et le
   libellé; les filtres code/libellé suivent la même règle dans les trois vues.
-- **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction → Employés**. Le libellé est le nom principal
-  des équipes; leur code reste un repère secondaire. Chaque carte peut réunir l'état courant des fiches
-  Employé et les chiffres du mois Paie choisi, avec les droits correspondants.
-- **Analytique** commence par les effectifs et leur répartition par équipe. Les indicateurs Paie du mois
-  sélectionné viennent ensuite comme contexte complémentaire. Chaque graphique a son tableau de données accessible.
+- **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction**. Le libellé est le nom principal des équipes;
+  leur code reste un repère secondaire. Les cartes rapprochent les données des fiches Employé et celles du
+  dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
+  par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
+- **Analytique** présente l'effectif payé par équipe pour le dernier mois enregistré et son évolution mensuelle
+  pour une équipe sélectionnée. La période courante ne peut pas être changée; l'évolution conserve les mois
+  antérieurs. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
+  Chaque graphique peut être exporté séparément en PDF avec sa représentation et toutes les lignes de son tableau.
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
 dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.

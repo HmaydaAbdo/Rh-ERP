@@ -46,6 +46,12 @@ export interface ModulePerimetre {
   ordre: readonly Dimension[];
   /** Ordre des sources dans Analytique ; permet de faire commencer chaque domaine par sa question métier principale. */
   ordreAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
+  /** Sources métier visibles dans l'Analytique. Par défaut, les deux projections protégées sont disponibles. */
+  sourcesAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
+  /** Active le panneau générique d'effectifs par dimension et l'historique du groupe sélectionné. */
+  vueEffectifParDimension?: boolean;
+  /** Texte d'introduction propre à la question métier de l'Analytique. */
+  introAnalytique?: string;
   /** Titre de la section Employé, adapté au domaine sans spécialiser le composant partagé. */
   libelleSectionEmployes?: string;
   /** Titre du graphique Employé lorsque sa dimension correspond au référentiel du domaine. */
@@ -65,6 +71,12 @@ export interface ModulePerimetre {
   noteMouvements?(params: ParamMap): string | null;
   /** Vrai pour le module Employés : le lien « Voir les employés » serait redondant avec « Voir la liste ». */
   sansLienEmployes?: boolean;
+  /** Masque le raccourci vers le Tabulaire, lorsque les onglets suffisent à changer de vue. */
+  sansRaccourciListe?: boolean;
+  /** Masque le raccourci vers Cartes dans Analytique, lorsque les onglets suffisent à changer de vue. */
+  sansRaccourciCartes?: boolean;
+  /** Utilise toujours le dernier mois Paie disponible et masque son sélecteur dans Cartes. */
+  periodePaieRecenteFixe?: boolean;
   /** Vrai pour le module Paie : tant qu'aucun mois n'est choisi, le premier niveau des Cartes est la liste des mois (et le mois se choisit dans la barre du module). */
   niveauPeriode?: boolean;
 }

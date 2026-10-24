@@ -95,6 +95,9 @@ export class CartesPerimetreComponent {
     if (!this.voitPaie()) {
       return null;
     }
+    if (this.module().periodePaieRecenteFixe) {
+      return this.mois()[0] ?? null;
+    }
     return this.perimetre().periode ?? (this.module().niveauPeriode ? null : (this.mois()[0] ?? null));
   });
 
@@ -149,6 +152,18 @@ export class CartesPerimetreComponent {
       ])
     };
   });
+  protected documentCarte(groupe: GroupeCarte): PdfImpressionDocument {
+    const periode = this.moisDe(groupe);
+    return {
+      titre: this.titre(groupe),
+      contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()}${periode ? ` · ${libellePeriode(periode)}` : ''}`,
+      colonnes: ['Groupe', 'Statut', 'Employés', 'En poste', 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
+      lignes: [[
+        this.titre(groupe), groupe.statut?.libelle ?? '', groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? '',
+        groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
+      ]]
+    };
+  }
   protected readonly documentEmployesVide: PdfImpressionDocument = { titre: 'Employés', colonnes: [], lignes: [] };
   protected readonly chargerExportEmployes = () => {
     const params = this.params();

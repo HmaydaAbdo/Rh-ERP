@@ -27,14 +27,17 @@ met à jour la fiche Employé et le bulletin dans la même transaction; ces opé
 ### Vues de collection
 
 La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
-le parcours fixe des Cartes **Équipe → Chantier → Fonction → Employés**. Son Analytique commence par les effectifs et leur
-répartition par équipe, puis présente les indicateurs Paie du mois choisi. Ne pas créer de version propre au domaine ni
-permettre de changer librement l'ordre du parcours; suivre la
+le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et l'Analytique lisent toujours le dernier mois
+de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. L'Analytique présente l'effectif payé par équipe
+sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Elle ne présente pas les indicateurs génériques des
+domaines Employé et Paie. Chaque graphique s'exporte séparément en PDF avec ses données complètes. Ne pas créer de version
+propre au domaine ni permettre de changer librement l'ordre du parcours; suivre la
 [convention frontend](../../../conventions/frontend.md) et la
 [référence technique des vues partagées](../../frontend/vues-perimetre.md).
 
 Les cartes mettent le **libellé** en titre et le code en repère secondaire. Chaque composant qui expose des données conserve
-son export PDF séparé, borné au périmètre et aux permissions actifs.
+son export PDF séparé, borné au périmètre et aux permissions actifs. Les filtres sont conservés entre les vues; les onglets
+remplacent les liens d'accès directs vers la liste et les employés.
 
 ## Garde-fous
 

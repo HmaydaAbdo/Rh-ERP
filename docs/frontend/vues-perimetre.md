@@ -59,6 +59,10 @@ personnes, rien sans mois contigu.
 
 **Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et fait avancer à l'étape suivante ; ouvrir une carte de mois pose `periode`.
 
+**Équipe** : Cartes fixe les chiffres Paie sur le dernier mois présent dans `GET /paie/periodes`; aucun sélecteur de période
+n'est affiché. Les raccourcis vers la liste et les employés sont masqués car la coque fournit déjà les onglets des vues.
+Le passage d'une vue à l'autre conserve les filtres et le périmètre métier, mais retire tout ancien paramètre `periode`.
+
 **Extension** : un hôte projette un gabarit `#actionsCarte` (contexte : `groupe`, `niveau`, `periode`, `portee`) ; il recharge
 le niveau avec `recharger()` (vue enfant `CartesPerimetreComponent`).
 
@@ -67,6 +71,12 @@ le niveau avec `recharger()` (vue enfant `CartesPerimetreComponent`).
 Même périmètre et même portée que les Cartes. L'ordre des sources est déclaré par chaque module dans `ordreAnalytique`.
 Les projections restent indépendantes et chaque source conserve son bloc et ses permissions. Les référentiels mettent les
 effectifs Employé en premier; le module Paie met ses indicateurs Paie en premier.
+
+Un module peut activer un panneau analytique dédié à sa dimension avec `vueEffectifParDimension`. Dans Équipe, ce panneau
+utilise `PAIE_READ` et le dernier mois disponible pour la répartition des effectifs payés par équipe. Le sélecteur de période,
+« Répartir par » et les panneaux génériques Employé/Paie sont masqués. Un sélecteur d'équipe pilote l'évolution historique
+mensuelle de son effectif. Le mois courant reste celui qui est le plus récent dans la base; l'évolution conserve l'historique.
+Chaque graphique exportable capture son graphique et inclut le tableau complet associé dans le PDF.
 
 1. En-tête : titre, mois (sauf module à niveau « mois », dont la barre le porte), lien « Voir les cartes », fil d'étapes.
 2. **Paie** (`PAIE_READ`) : chiffres du mois et variation sur le mois précédent ; **évolution mensuelle** (une mesure, un axe :
@@ -83,7 +93,7 @@ affiche des indicateurs à zéro. Le module à niveau « mois » (Paie) ouvre le
 | Module | Dimension | Hiérarchie Cartes | Priorité Analytique | Référentiel | Particularités |
 |---|---|---|---|---|---|
 | Chantiers | `CHANTIER` | chantier → équipe → fonction → employés | Employé puis Paie | code, nom/désignation, statut En cours / Clôturé | filtres code, désignation, statut |
-| Équipes | `EQUIPE` | équipe → chantier → fonction → employés | Employé puis Paie | code, libellé | filtres code, libellé |
+| Équipes | `EQUIPE` | équipe → chantier → fonction | Effectif payé par équipe, mois le plus récent | code, libellé | filtres code/libellé conservés entre vues; pas de sélecteur de période; évolution historique de l'équipe choisie |
 | Fonctions | `FONCTION` | fonction → chantier → équipe → employés | Employé puis Paie | libellé | filtre libellé |
 | Employés | aucune | chantier → équipe → fonction → employés | Employé puis Paie | aucun | nom, CIN, statut sur les fiches (nom et CIN aussi sur la paie) ; pas de lien « Voir les employés » |
 | Paie | aucune | mois → chantier → équipe → fonction → employés | Paie puis Employé | aucun | suppression en groupe par carte (`PAIE_PURGE`) |

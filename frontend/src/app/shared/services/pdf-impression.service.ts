@@ -3,6 +3,8 @@ import { Injectable } from '@angular/core';
 export interface PdfImpressionDocument {
   titre: string;
   contexte?: string;
+  graphiqueDataUrl?: string;
+  graphiqueAlt?: string;
   colonnes: string[];
   lignes: (string | number)[][];
 }
@@ -21,6 +23,9 @@ export class PdfImpressionService {
     const entetes = document.colonnes.map((colonne) => `<th scope="col">${echapper(colonne)}</th>`).join('');
     const lignes = document.lignes.map((ligne) => `<tr>${document.colonnes.map((_, index) => `<td>${echapper(String(ligne[index] ?? ''))}</td>`).join('')}</tr>`).join('');
     const contexte = document.contexte ? `<p class="contexte">${echapper(document.contexte)}</p>` : '';
+    const graphique = document.graphiqueDataUrl?.startsWith('data:image/png;base64,')
+      ? `<figure><img src="${document.graphiqueDataUrl}" alt="${echapper(document.graphiqueAlt ?? 'Graphique exporté avec ses données')}" /></figure>`
+      : '';
     fenetre.document.open();
     fenetre.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${echapper(document.titre)}</title>
       <style>
@@ -31,6 +36,8 @@ export class PdfImpressionService {
         h1 { font-size: 19pt; margin: 0; }
         .contexte { color: #475467; font-size: 10pt; margin: 7px 0 0; }
         .meta { color: #667085; font-size: 8pt; margin-top: 8px; }
+        figure { margin: 0 0 16px; page-break-inside: avoid; text-align: center; }
+        figure img { max-height: 115mm; max-width: 100%; object-fit: contain; }
         table { border-collapse: collapse; width: 100%; }
         th { background: #eef3fb; color: #182230; font-weight: 700; text-align: left; }
         th, td { border: 1px solid #d0d5dd; padding: 6px 8px; vertical-align: top; }
@@ -38,7 +45,7 @@ export class PdfImpressionService {
         tbody tr:nth-child(even) { background: #f8fafc; }
         footer { color: #667085; font-size: 8pt; margin-top: 12px; }
       </style></head><body><header><h1>${echapper(document.titre)}</h1>${contexte}<p class="meta">Généré le ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' }).format(new Date())} · ${document.lignes.length} ligne(s)</p></header>
-      <table><thead><tr>${entetes}</tr></thead><tbody>${lignes}</tbody></table><footer>Document produit depuis les données affichées dans ERP-RH.</footer>
+      ${graphique}<table><thead><tr>${entetes}</tr></thead><tbody>${lignes}</tbody></table><footer>Document produit depuis les données affichées dans ERP-RH.</footer>
       <script>window.addEventListener('load', () => window.print());</script></body></html>`);
     fenetre.document.close();
   }

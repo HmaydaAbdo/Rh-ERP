@@ -48,15 +48,18 @@ interface Donnees {
   fiches: EmployeeAnalytique | null;
   mouvements: PaieEffectifMois[];
   catalogueVide: boolean;
+  equipesCatalogue: ItemCatalogue[];
+  evolutionEquipe: PaieAnalytique['evolution'];
 }
 
 /**
  * Vues Analytique des modules (lecture seule) — **tableau de bord graphique** d'un périmètre : côté Paie, les chiffres du mois
  * avec leur variation, l'évolution mensuelle (une mesure à la fois, un seul axe), la répartition en barres par une autre
  * dimension (un clic sur une barre approfondit le périmètre) et les tranches de total ; côté fiches Employé, les chiffres clés,
- * la pyramide des âges, l'ancienneté, la répartition en poste / sortis et les mouvements tirés de la paie. Chaque graphique a son
- * tableau de données. Une source n'est lue qu'avec son droit (`PAIE_READ`, `EMPLOYEE_READ`). Le périmètre est celui des Cartes
- * (voir `perimetre.ts`) : les filtres propres au module le bornent, les étapes l'approfondissent.
+ * la pyramide des âges, l'ancienneté, la répartition en poste / sortis et les mouvements tirés de la paie. Un module peut
+ * remplacer ces blocs par une projection d'effectif dédiée à sa dimension. Chaque graphique a son tableau de données. Une source
+ * n'est lue qu'avec son droit (`PAIE_READ`, `EMPLOYEE_READ`). Le périmètre est celui des Cartes (voir `perimetre.ts`) : les
+ * filtres propres au module le bornent, les étapes l'approfondissent.
  */
 @Component({
   selector: 'app-analytique-perimetre',
@@ -88,16 +91,18 @@ export class AnalytiquePerimetreComponent {
   protected readonly formaterMontant = formaterMontant;
   protected readonly hauteurPourLignes = hauteurPourLignes;
 
-  protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
-  protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ'));
+  protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && (this.module().sourcesAnalytique?.includes('PAIE') ?? true));
+  protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ') && (this.module().sourcesAnalytique?.includes('EMPLOYEE') ?? true));
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
   protected readonly ordreSources = computed(() => this.module().ordreAnalytique ?? ['PAIE', 'EMPLOYEE'] as const);
   protected readonly mois = signal<string[]>([]);
   protected readonly moisCharges = signal(false);
-  /** Le mois analysé : celui de l'URL, à défaut le plus récent. */
-  protected readonly periode = computed(() => (this.voitPaie() ? (this.perimetre().periode ?? this.mois()[0] ?? null) : null));
+  /** Le mois courant : toujours le plus récent pour un module à période fixe, sinon celui de l'URL ou le plus récent. */
+  protected readonly periode = computed(() => (this.voitPaie()
+    ? (this.module().periodePaieRecenteFixe ? this.mois()[0] ?? null : this.perimetre().periode ?? this.mois()[0] ?? null)
+    : null));
 
   protected readonly etapes = computed(() =>
     this.module().ordre
@@ -106,7 +111,7 @@ export class AnalytiquePerimetreComponent {
   );
   protected readonly noms = signal<Record<string, string>>({});
 
-  protected readonly donnees = signal<Donnees>({ paie: null, fiches: null, mouvements: [], catalogueVide: false });
+  protected readonly donnees = signal<Donnees>({ paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [] });
   protected readonly chargement = signal(false);
   protected readonly repartitionFiches = signal<EmployeeRegroupement[]>([]);
 
@@ -160,6 +165,38 @@ export class AnalytiquePerimetreComponent {
   protected readonly mouvements = computed(() => this.donnees().mouvements);
   protected readonly fiches = computed(() => this.donnees().fiches);
   protected readonly noteMouvements = computed(() => this.module().noteMouvements?.(this.params()) ?? null);
+  protected readonly equipesEffectif = computed(() => {
+    const dimension = this.module().dimension ?? this.module().ordre[0];
+    const valeurs = new Map(lignesPaie(dimension, this.paie()).map((groupe) => [groupe.id, groupe.effectif]));
+    const ids = this.perimetre()[cleIds(dimension)];
+    return this.donnees().equipesCatalogue
+      .filter((equipe) => ids.length === 0 || ids.includes(equipe.id))
+      .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, effectif: valeurs.get(equipe.id) ?? 0 }));
+  });
+  protected readonly selectionEquipeEvolution = signal<number | null>(null);
+  protected readonly equipeEvolutionId = computed(() => {
+    const equipes = this.equipesEffectif();
+    const choisi = this.selectionEquipeEvolution();
+    return choisi !== null && equipes.some((equipe) => equipe.id === choisi) ? choisi : (equipes[0]?.id ?? null);
+  });
+  protected readonly evolutionEquipe = computed(() => this.donnees().evolutionEquipe);
+
+  protected readonly graphiqueEffectifEquipe = computed<Graphique<'bar'>>(() => {
+    this.theme.theme();
+    const equipes = this.equipesEffectif();
+    return {
+      data: { labels: equipes.map((groupe) => groupe.libelle), datasets: [{ label: 'Effectif payé', data: equipes.map((groupe) => groupe.effectif), backgroundColor: jeton('--chart-1'), borderRadius: 4 }] },
+      options: optionsBarres({ indexAxis: 'y' })
+    };
+  });
+  protected readonly graphiqueEvolutionEquipe = computed<Graphique<'line'>>(() => {
+    this.theme.theme();
+    const evolution = this.evolutionEquipe();
+    return {
+      data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: 'Effectif payé', data: evolution.map((mois) => mois.effectif), borderColor: jeton('--chart-1'), backgroundColor: jeton('--chart-1'), tension: 0.25 }] },
+      options: optionsLigne(false)
+    };
+  });
 
   protected readonly graphiqueEvolution = computed<Graphique<'line'> & { plugins: ReturnType<typeof valeursSurPoints>[] }>(() => {
     this.theme.theme();
@@ -323,13 +360,24 @@ export class AnalytiquePerimetreComponent {
       this.repartitionFiches().map((groupe) => [this.nomLigne(groupe), groupe.effectif, groupe.actifs]));
   }
 
+  protected documentEffectifParEquipe(): PdfImpressionDocument {
+    return this.documentPdf('Effectif payé par équipe', ['Équipe', 'Code', 'Effectif payé'],
+      this.equipesEffectif().map((equipe) => [equipe.libelle, equipe.code ?? '', equipe.effectif]));
+  }
+
+  protected documentEvolutionEquipe(): PdfImpressionDocument {
+    const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
+    return this.documentPdf(`Évolution de l’effectif · ${equipe?.libelle ?? 'Équipe'}`, ['Mois', 'Effectif payé'],
+      this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif]));
+  }
+
   private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][]): PdfImpressionDocument {
     const periode = this.periode();
     return { titre, contexte: `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
   }
 
   constructor() {
-    if (this.voitPaie()) {
+    if (this.authService.hasPermission('PAIE_READ')) {
       this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((periodes) => {
         this.mois.set(periodes.map((p) => p.periode));
         this.moisCharges.set(true);
@@ -346,17 +394,19 @@ export class AnalytiquePerimetreComponent {
       }
     });
 
-    const requete = computed(() => ({ params: this.params(), periode: this.periode(), module: this.module(), pret: this.moisCharges() }));
+    const requete = computed(() => ({
+      params: this.params(), periode: this.periode(), module: this.module(), pret: this.moisCharges(), equipeId: this.equipeEvolutionId()
+    }));
     toObservable(requete)
       .pipe(
-        distinctUntilChanged((a, b) => a.module === b.module && a.pret === b.pret && a.periode === b.periode && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
+        distinctUntilChanged((a, b) => a.module === b.module && a.pret === b.pret && a.periode === b.periode && a.equipeId === b.equipeId && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
         switchMap((r) => {
           if (!r.pret) {
             return of(null);
           }
           this.chargement.set(true);
           this.nommerEtapes();
-          return this.charger(r.periode).pipe(catchError(() => of(null)));
+          return this.charger(r.periode, r.equipeId).pipe(catchError(() => of(null)));
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -384,6 +434,10 @@ export class AnalytiquePerimetreComponent {
 
   protected choisirDimension(dimension: Dimension): void {
     this.choixDimension.set(dimension);
+  }
+
+  protected choisirEquipeEvolution(event: Event): void {
+    this.selectionEquipeEvolution.set(Number((event.target as HTMLSelectElement).value) || null);
   }
 
   protected nom(dimension: Dimension, id: number): string {
@@ -442,13 +496,13 @@ export class AnalytiquePerimetreComponent {
     };
   }
 
-  private charger(periode: string | null): Observable<{ portee: Portee; donnees: Donnees }> {
+  private charger(periode: string | null, equipeEvolutionId: number | null): Observable<{ portee: Portee; donnees: Donnees }> {
     const module = this.module();
     const params = this.params();
     const perimetre = this.perimetre();
     const catalogue = module.catalogue;
     const filtreActif = !!catalogue && catalogue.filtreActif(params);
-    const catalogue$: Observable<ItemCatalogue[] | null> = filtreActif ? catalogue!.charger(params) : of(null);
+    const catalogue$: Observable<ItemCatalogue[] | null> = filtreActif || module.vueEffectifParDimension ? catalogue!.charger(params) : of(null);
 
     return catalogue$.pipe(
       switchMap((items) => {
@@ -457,9 +511,24 @@ export class AnalytiquePerimetreComponent {
         if (dimension && items && perimetre[cleIds(dimension)].length === 0) {
           portee[cleIds(dimension)] = items.map((item) => item.id);
         }
-        const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false };
+        const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [] };
         if (porteeVide(portee)) {
           return of({ portee, donnees: { ...vide, catalogueVide: true } });
+        }
+        if (module.vueEffectifParDimension) {
+          const equipesCatalogue = (items ?? []).filter((equipe) => !dimension || perimetre[cleIds(dimension)].length === 0 || perimetre[cleIds(dimension)].includes(equipe.id));
+          const avecCatalogue = { ...vide, equipesCatalogue, catalogueVide: !!catalogue && filtreActif && equipesCatalogue.length === 0 };
+          if (!this.voitPaie() || !periode) {
+            return of({ portee, donnees: avecCatalogue });
+          }
+          const paie$ = this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null)));
+          const evolution$ = equipeEvolutionId === null
+            ? of<PaieAnalytique | null>(null)
+            : this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)).pipe(catchError(() => of(null)));
+          return forkJoin([paie$, evolution$]).pipe(map(([paie, evolution]) => ({
+            portee,
+            donnees: { ...avecCatalogue, paie, evolutionEquipe: evolution?.evolution ?? [] }
+          })));
         }
         // Une source en panne n'efface pas les autres : son bloc reste simplement vide.
         const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null))) : of(null);

@@ -2,17 +2,22 @@
   <div class="perimetre-analytique__entete">
     <div>
       <h2>Analyse des {{ module().libellePluriel }}</h2>
-      <p>Effectifs selon les fiches à jour · Paie sur la période sélectionnée.</p>
+      <p>{{ module().introAnalytique ?? 'Effectifs selon les fiches à jour · Paie sur la période sélectionnée.' }}</p>
     </div>
     <div class="perimetre-analytique__acces">
-      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode) {
+      @if (voitPaie() && module().periodePaieRecenteFixe && periode()) {
+        <span class="perimetre-analytique__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
+      }
+      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
         <label class="perimetre-analytique__periode">Période Paie
           <select class="stp-input" [value]="periode() ?? ''" (change)="changerPeriode($event)">
             @for (m of mois(); track m) { <option [value]="m">{{ libellePeriode(m) }}</option> }
           </select>
         </label>
       }
-      <a stp-button variant="secondary" icon="layout-grid" [routerLink]="[module().route, 'cartes']" queryParamsHandling="merge">Voir les cartes</a>
+      @if (!module().sansRaccourciCartes) {
+        <a stp-button variant="secondary" icon="layout-grid" [routerLink]="[module().route, 'cartes']" queryParamsHandling="merge">Voir les cartes</a>
+      }
     </div>
   </div>
 
@@ -35,7 +40,7 @@
   @if (perimetreVide()) {
     <p class="perimetre-analytique__note" role="status">Aucun élément ne correspond à ces critères.</p>
   } @else {
-    @if (dimensionsPossibles().length > 1 && (voitPaie() || voitEmployes())) {
+    @if (!module().vueEffectifParDimension && dimensionsPossibles().length > 1 && (voitPaie() || voitEmployes())) {
       <div class="perimetre-analytique__choix" role="group" aria-label="Répartir par">
         <span>Répartir par</span>
         @for (d of dimensionsPossibles(); track d) {
@@ -44,11 +49,66 @@
       </div>
     }
 
-    @for (source of ordreSources(); track source) {
-      @if (source === 'PAIE') {
-        <ng-container [ngTemplateOutlet]="blocPaie" />
+    @if (module().vueEffectifParDimension) {
+      @if (!voitPaie()) {
+        <p class="perimetre-analytique__note">L’effectif mensuel par équipe n’est pas disponible pour votre compte.</p>
+      } @else if (!periode()) {
+        <p class="perimetre-analytique__note" role="status">Aucun mois de paie n’est disponible.</p>
       } @else {
-        <ng-container [ngTemplateOutlet]="blocEmployes" />
+        <section class="perimetre-analytique__bande perimetre-analytique__bande--prioritaire" aria-label="Effectif par équipe">
+          <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-equipe-effectif">
+            <app-pdf-export-button [document]="documentEffectifParEquipe()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter la répartition des effectifs par équipe en PDF" />
+            <h3 id="pa-equipe-effectif" class="perimetre-analytique__titre">Effectif payé par équipe · {{ libellePeriode(periode()!) }}</h3>
+            @if (equipesEffectif().length > 0) {
+              <div class="perimetre-analytique__graphique perimetre-analytique__graphique--haut">
+                <stp-chart type="bar" ariaLabel="Effectif payé dans chaque équipe, le détail complet est dans le tableau des données." [data]="graphiqueEffectifEquipe().data" [options]="graphiqueEffectifEquipe().options"></stp-chart>
+              </div>
+              <details class="perimetre-analytique__donnees" open>
+                <summary>Voir les données ({{ equipesEffectif().length }})</summary>
+                <table class="app-static-table">
+                  <thead><tr><th scope="col">Équipe</th><th scope="col">Code</th><th scope="col">Effectif payé</th></tr></thead>
+                  <tbody>@for (equipe of equipesEffectif(); track equipe.id) { <tr><td>{{ equipe.libelle }}</td><td>{{ equipe.code }}</td><td>{{ equipe.effectif }}</td></tr> }</tbody>
+                </table>
+              </details>
+            } @else {
+              <p class="perimetre-analytique__vide" role="status">Aucune équipe ne correspond à ces filtres.</p>
+            }
+          </section>
+
+          <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-equipe-evolution">
+            <app-pdf-export-button [document]="documentEvolutionEquipe()" [iconOnly]="true" [inclureGraphique]="true" [disabled]="evolutionEquipe().length === 0" ariaLabel="Exporter l’évolution mensuelle des effectifs en PDF" />
+            <h3 id="pa-equipe-evolution" class="perimetre-analytique__titre">Évolution mensuelle</h3>
+            @if (equipesEffectif().length > 0) {
+              <label class="perimetre-analytique__selection">Équipe
+                <select class="stp-input" [value]="equipeEvolutionId() ?? ''" (change)="choisirEquipeEvolution($event)">
+                  @for (equipe of equipesEffectif(); track equipe.id) { <option [value]="equipe.id">{{ equipe.libelle }}</option> }
+                </select>
+              </label>
+            }
+            @if (evolutionEquipe().length > 0) {
+              <div class="perimetre-analytique__graphique perimetre-analytique__graphique--haut">
+                <stp-chart type="line" ariaLabel="Évolution mensuelle de l’effectif payé de l’équipe sélectionnée, le détail complet est dans le tableau des données." [data]="graphiqueEvolutionEquipe().data" [options]="graphiqueEvolutionEquipe().options"></stp-chart>
+              </div>
+              <details class="perimetre-analytique__donnees" open>
+                <summary>Voir les données ({{ evolutionEquipe().length }})</summary>
+                <table class="app-static-table">
+                  <thead><tr><th scope="col">Mois</th><th scope="col">Effectif payé</th></tr></thead>
+                  <tbody>@for (mois of evolutionEquipe(); track mois.periode) { <tr><td>{{ libellePeriode(mois.periode) }}</td><td>{{ mois.effectif }}</td></tr> }</tbody>
+                </table>
+              </details>
+            } @else {
+              <p class="perimetre-analytique__vide" role="status">Aucun historique disponible pour cette équipe.</p>
+            }
+          </section>
+        </section>
+      }
+    } @else {
+      @for (source of ordreSources(); track source) {
+        @if (source === 'PAIE') {
+          <ng-container [ngTemplateOutlet]="blocPaie" />
+        } @else {
+          <ng-container [ngTemplateOutlet]="blocEmployes" />
+        }
       }
     }
   }
@@ -79,7 +139,7 @@
         </section>
 
         <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-evolution">
-          @if (a.evolution.length > 0) { <app-pdf-export-button [document]="documentEvolution()" [iconOnly]="true" ariaLabel="Exporter l’évolution mensuelle en PDF" /> }
+          @if (a.evolution.length > 0) { <app-pdf-export-button [document]="documentEvolution()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter l’évolution mensuelle en PDF" /> }
           <div class="perimetre-analytique__entete-section">
             <h4 id="pa-evolution">Évolution mensuelle</h4>
             <div class="perimetre-analytique__choix" role="group" aria-label="Mesure de l’évolution">
@@ -105,7 +165,7 @@
         </section>
 
         <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-repartition">
-          @if (lignesRepartitionPaie().length > 0) { <app-pdf-export-button [document]="documentRepartitionPaie()" [iconOnly]="true" [ariaLabel]="'Exporter la répartition par ' + libelles[dimension()].toLowerCase() + ' en PDF'" /> }
+          @if (lignesRepartitionPaie().length > 0) { <app-pdf-export-button [document]="documentRepartitionPaie()" [iconOnly]="true" [inclureGraphique]="true" [ariaLabel]="'Exporter la répartition par ' + libelles[dimension()].toLowerCase() + ' en PDF'" /> }
           <div class="perimetre-analytique__entete-section">
             <h4 id="pa-repartition">Répartition par {{ libelles[dimension()].toLowerCase() }} · {{ libellePeriode(a.periode) }}</h4>
             <div class="perimetre-analytique__choix" role="group" aria-label="Mesure de la répartition">
@@ -145,7 +205,7 @@
 
         @if (!aucunePaie()) {
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-tranches">
-            @if (a.tranches.length > 0) { <app-pdf-export-button [document]="documentTranchesPaie()" [iconOnly]="true" ariaLabel="Exporter la répartition des totaux de paie en PDF" /> }
+            @if (a.tranches.length > 0) { <app-pdf-export-button [document]="documentTranchesPaie()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter la répartition des totaux de paie en PDF" /> }
             <h4 id="pa-tranches">Répartition des totaux de paie</h4>
             <div class="perimetre-analytique__graphique">
               <stp-chart type="bar" ariaLabel="Bulletins par tranche de total ; le détail est dans le tableau des données." [data]="graphiqueTranches().data" [options]="graphiqueTranches().options"></stp-chart>
@@ -171,11 +231,11 @@
             </p>
             <div class="perimetre-analytique__deux">
               <div class="perimetre-analytique__graphique perimetre-analytique__graphique--exportable">
-                @if (mouvements().length > 0) { <app-pdf-export-button [document]="documentMouvementsPaye()" [iconOnly]="true" ariaLabel="Exporter l’effectif payé par mois en PDF" /> }
+                @if (mouvements().length > 0) { <app-pdf-export-button [document]="documentMouvementsPaye()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter l’effectif payé par mois en PDF" /> }
                 <stp-chart type="line" [ariaLabel]="'Employés payés sur ' + mouvements().length + ' mois ; le détail est dans le tableau des données.'" [data]="graphiqueEffectifPaye().data" [options]="graphiqueEffectifPaye().options"></stp-chart>
               </div>
               <div class="perimetre-analytique__graphique perimetre-analytique__graphique--exportable">
-                @if (mouvements().length > 1) { <app-pdf-export-button [document]="documentMouvements()" [iconOnly]="true" ariaLabel="Exporter les mouvements mensuels en PDF" /> }
+                @if (mouvements().length > 1) { <app-pdf-export-button [document]="documentMouvements()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter les mouvements mensuels en PDF" /> }
                 <stp-chart type="bar" ariaLabel="Entrées, sorties et mutations de chaque mois ; le détail est dans le tableau des données." [data]="graphiqueMouvements().data" [options]="graphiqueMouvements().options"></stp-chart>
               </div>
             </div>
@@ -221,7 +281,7 @@
         } @else {
           <div class="perimetre-analytique__deux">
             <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-ages">
-              @if (f.parAge.length > 0) { <app-pdf-export-button [document]="documentAges()" [iconOnly]="true" ariaLabel="Exporter la pyramide des âges en PDF" /> }
+              @if (f.parAge.length > 0) { <app-pdf-export-button [document]="documentAges()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter la pyramide des âges en PDF" /> }
               <h4 id="pa-ages">Pyramide des âges</h4>
               <div class="perimetre-analytique__graphique">
                 <stp-chart type="bar" ariaLabel="Employés par tranche d’âge ; le détail est dans le tableau des données." [data]="graphiqueAges().data" [options]="graphiqueAges().options"></stp-chart>
@@ -235,7 +295,7 @@
               </details>
             </section>
             <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-anciennete">
-              @if (f.parAnciennete.length > 0) { <app-pdf-export-button [document]="documentAnciennete()" [iconOnly]="true" ariaLabel="Exporter la répartition par ancienneté en PDF" /> }
+              @if (f.parAnciennete.length > 0) { <app-pdf-export-button [document]="documentAnciennete()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter la répartition par ancienneté en PDF" /> }
               <h4 id="pa-anciennete">Ancienneté</h4>
               <div class="perimetre-analytique__graphique">
                 <stp-chart type="bar" ariaLabel="Employés par tranche d’ancienneté ; le détail est dans le tableau des données." [data]="graphiqueAnciennete().data" [options]="graphiqueAnciennete().options"></stp-chart>
@@ -251,7 +311,7 @@
           </div>
 
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-fiches-repartition">
-            @if (repartitionFiches().length > 0) { <app-pdf-export-button [document]="documentRepartitionFiches()" [iconOnly]="true" [ariaLabel]="'Exporter la répartition des employés par ' + libelles[dimension()].toLowerCase() + ' en PDF'" /> }
+            @if (repartitionFiches().length > 0) { <app-pdf-export-button [document]="documentRepartitionFiches()" [iconOnly]="true" [inclureGraphique]="true" [ariaLabel]="'Exporter la répartition des employés par ' + libelles[dimension()].toLowerCase() + ' en PDF'" /> }
             <h4 id="pa-fiches-repartition">{{ dimension() === module().dimension && module().libelleRepartitionPrincipale ? module().libelleRepartitionPrincipale : 'Employés par ' + libelles[dimension()].toLowerCase() }}</h4>
             <p class="perimetre-analytique__aide">Un clic sur une barre ajoute ce groupe au périmètre et approfondit l’analyse.</p>
             <div class="perimetre-analytique__graphique perimetre-analytique__graphique--haut">

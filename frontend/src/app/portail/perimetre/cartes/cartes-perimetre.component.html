@@ -27,14 +27,19 @@
     </nav>
 
     <div class="perimetre-cartes__acces">
-      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode) {
+      @if (voitPaie() && module().periodePaieRecenteFixe && periode()) {
+        <span class="perimetre-cartes__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
+      }
+      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
         <label class="perimetre-cartes__periode">Période Paie
           <select class="stp-input" [value]="periode() ?? ''" (change)="changerPeriode($event)">
             @for (m of mois(); track m) { <option [value]="m">{{ libellePeriode(m) }}</option> }
           </select>
         </label>
       }
-      <a stp-button variant="secondary" icon="table" [routerLink]="module().route" [queryParams]="parametresListe()">Voir la liste</a>
+      @if (!module().sansRaccourciListe) {
+        <a stp-button variant="secondary" icon="table" [routerLink]="module().route" [queryParams]="parametresListe()">Voir la liste</a>
+      }
       @if (voitEmployes() && !module().sansLienEmployes) {
         <a stp-button variant="secondary" icon="users" routerLink="/employees" [queryParams]="parametresEmployes()">Voir les employés</a>
       }
@@ -69,6 +74,7 @@
             @for (groupe of groupesVisibles(); track groupe.id; let i = $index) {
               <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
                 <article class="perimetre-carte">
+                  <app-pdf-export-button class="perimetre-carte__export" [document]="documentCarte(groupe)" [iconOnly]="true" [ariaLabel]="'Exporter ' + titre(groupe) + ' en PDF'" />
                   <button type="button" class="perimetre-carte__corps" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
                     <span class="perimetre-carte__entete">
                       <span class="perimetre-carte__nom">{{ titre(groupe) }}</span>

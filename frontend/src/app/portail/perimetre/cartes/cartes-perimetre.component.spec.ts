@@ -61,6 +61,20 @@ class HoteComponent {
   module = module();
 }
 
+@Component({
+  selector: 'app-hote-equipe',
+  imports: [CartesPerimetreComponent],
+  template: '<app-cartes-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteEquipeComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
+    sansRaccourciListe: true, sansLienEmployes: true
+  };
+}
+
 describe('CartesPerimetreComponent', () => {
   let employes: MockedObject<EmployeeService>;
   let paie: MockedObject<PaieService>;
@@ -81,7 +95,10 @@ describe('CartesPerimetreComponent', () => {
       search: vi.fn().mockReturnValue(of({ content: [], page: { size: 24, number: 0, totalElements: 0, totalPages: 0 } }))
     } as unknown as MockedObject<EmployeeService>;
     paie = {
-      listerPeriodes: vi.fn().mockReturnValue(of([{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 }])),
+      listerPeriodes: vi.fn().mockReturnValue(of([
+        { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 },
+        { periode: '2026-07', nombreBulletins: 1, nombreChantiers: 1, masse: 4000, stc: 0, stcMontant: 0 }
+      ])),
       analyser: vi.fn().mockImplementation((criteres: { periode: string }) =>
         of(criteres.periode === '2026-08'
           ? analyse([{ id: 1, code: 'C168', libelle: 'Nador', masse: 4500, effectif: 1, stc: 1, stcMontant: 1000 }])
@@ -89,7 +106,7 @@ describe('CartesPerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'chantiers/cartes', component: HoteComponent }]),
+        provideRouter([{ path: 'chantiers/cartes', component: HoteComponent }, { path: 'equipes/cartes', component: HoteEquipeComponent }]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
@@ -217,6 +234,21 @@ describe('CartesPerimetreComponent', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+  });
+
+  it('garde le mois Paie le plus récent et exporte chaque carte Équipe séparément', async () => {
+    await harness.navigateByUrl('/equipes/cartes?periode=2026-07&code=CH', HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const page = harness.routeNativeElement as HTMLElement;
+
+    expect(page.querySelector('select')).toBeNull();
+    expect(page.textContent).toContain('Paie · août 2026');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
+    expect(page.querySelector('a[href="/equipes"]')).toBeNull();
+    expect(page.querySelector('a[href^="/employees"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-carte > app-pdf-export-button')).toHaveLength(1);
+    expect(page.querySelector('.perimetre-carte app-pdf-export-button button[aria-label="Exporter Nador en PDF"]')).not.toBeNull();
   });
 
   it('renvoie à la vue Tabulaire avec les filtres du module, et aux employés avec le périmètre', async () => {

@@ -207,6 +207,28 @@
     gap: var(--space-md);
   }
 
+  &__periode-fixe {
+    align-self: center;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  &__selection {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: fit-content;
+    margin-block: var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: 600;
+
+    select { min-width: 14rem; }
+  }
+
   &__periode {
     display: grid;
     gap: var(--space-2xs);

@@ -93,9 +93,9 @@ class HotePaieComponent {
 class HoteEquipeComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
-    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['EMPLOYEE', 'PAIE'],
-    libelleSectionEmployes: 'Effectifs et organisation', libelleRepartitionPrincipale: 'Effectifs par équipe',
-    catalogue: undefined, route: '/equipes'
+    ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], ordreAnalytique: ['PAIE'], sourcesAnalytique: ['PAIE'],
+    vueEffectifParDimension: true, periodePaieRecenteFixe: true, sansRaccourciCartes: true,
+    catalogue: { ...module().catalogue!, charger: () => of(ITEMS), filtreActif: () => false }, route: '/equipes'
   };
 }
 
@@ -119,7 +119,10 @@ describe('AnalytiquePerimetreComponent', () => {
       analyser: vi.fn().mockReturnValue(of(FICHES))
     } as unknown as MockedObject<EmployeeService>;
     paie = {
-      listerPeriodes: vi.fn().mockReturnValue(of([{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 }])),
+      listerPeriodes: vi.fn().mockReturnValue(of([
+        { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 },
+        { periode: '2026-07', nombreBulletins: 1, nombreChantiers: 1, masse: 4000, stc: 0, stcMontant: 0 }
+      ])),
       analyser: vi.fn().mockReturnValue(of(ANALYSE)),
       effectifs: vi.fn().mockReturnValue(of([
         { periode: '2026-07', effectif: 1, entrees: null, sorties: 0, mutations: null },
@@ -160,17 +163,28 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: undefined }));
   });
 
-  it('place les effectifs et leur répartition par équipe avant les indicateurs Paie selon la configuration du domaine', async () => {
-    await harness.navigateByUrl('/equipes/analytique', HoteEquipeComponent);
+  it('centre Équipe sur l’effectif par équipe et son historique, sans filtre de période ni blocs Employé/Paie', async () => {
+    await harness.navigateByUrl('/equipes/analytique?periode=2026-07', HoteEquipeComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
     const page = harness.routeNativeElement as HTMLElement;
-    const titres = Array.from(page.querySelectorAll('.perimetre-analytique__titre')).map((element) => element.textContent?.trim());
 
-    expect(titres[0]).toBe('Effectifs et organisation');
-    expect(titres[1]).toBe('Paie · août 2026');
-    expect(page.textContent).toContain('Effectifs par équipe');
-    expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'EQUIPE');
+    expect(page.textContent).toContain('Effectif payé par équipe · août 2026');
+    expect(page.textContent).toContain('Évolution mensuelle');
+    expect(page.textContent).not.toContain('Répartir par');
+    expect(page.textContent).not.toContain('Pyramide des âges');
+    expect(page.textContent).not.toContain('Ancienneté');
+    expect(page.textContent).not.toContain('Masse salariale');
+    expect(page.querySelector('.perimetre-analytique__periode')).toBeNull();
+    expect(page.querySelector('a[href="/equipes/cartes"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-analytique__section--exportable app-pdf-export-button')).toHaveLength(2);
+    expect(page.textContent).toContain('juillet 2026');
+    expect(page.textContent).toContain('août 2026');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [1] }));
+    expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
+    expect(employes.analyser).not.toHaveBeenCalled();
+    expect(employes.regrouper).not.toHaveBeenCalled();
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {
