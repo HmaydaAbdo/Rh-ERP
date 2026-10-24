@@ -45,6 +45,7 @@ app-chantier-carte {
   right: calc(var(--space-md) + 3rem); // laisse libre la colonne de contrôles
   z-index: 2;
   box-shadow: var(--shadow-md);
+  color: var(--color-text);
 }
 
 // ---- Calques : plan, satellite, relief ----
