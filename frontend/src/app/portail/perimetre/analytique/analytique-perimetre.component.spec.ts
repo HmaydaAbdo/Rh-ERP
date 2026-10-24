@@ -220,6 +220,29 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(employes.regrouper).not.toHaveBeenCalled();
   });
 
+  it('inclut Orphelins dans la répartition et permet d’en suivre l’historique mensuel', async () => {
+    paie.analyser.mockReturnValue(of({
+      ...ANALYSE,
+      parEquipe: [
+        ...ANALYSE.parEquipe,
+        { id: null, code: null, libelle: null, effectif: 2, masse: 8500, stc: 1, stcMontant: 1200 }
+      ],
+      qualite: { ...ANALYSE.qualite, sansEquipe: 2 }
+    }));
+    const page = await ouvrirEquipe();
+    const tableau = [...page.querySelectorAll('.perimetre-analytique__section details')]
+      .find((details) => details.textContent?.includes('données des'))!;
+
+    expect(tableau.textContent).toContain('Orphelins');
+    expect(tableau.textContent).toContain('8 500,00');
+
+    const champEquipe = page.querySelector('input[aria-label="Équipe"]') as HTMLInputElement;
+    await choisirOption(champEquipe, 'Orphelins');
+
+    expect((page.querySelector('input[aria-label="Équipe"]') as HTMLInputElement).value).toContain('Orphelins');
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [0] }));
+  });
+
   it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {
     const page = await ouvrirEquipe();
     const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]

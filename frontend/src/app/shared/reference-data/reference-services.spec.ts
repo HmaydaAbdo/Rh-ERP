@@ -76,6 +76,29 @@ describe('sources des sélecteurs (référentiels)', () => {
 
       requete(http, 'GET', 'equipes/2').flush({ id: 2, code: 'CH', libelle: 'Chauffeurs' });
     });
+
+    it('ajoute l’option Orphelins au premier chargement et permet de la rechercher sans créer de requête par identifiant', () => {
+      let options: { id: number; libelle: string }[] = [];
+      let total = 0;
+      TestBed.inject(EquipeReferenceService).fetchPage(0, 30, '').subscribe((pageResult) => {
+        options = pageResult.items;
+        total = pageResult.totalRecords;
+      });
+      requete(http, 'POST', 'equipes/search').flush(page([{ id: 5, code: 'OP', libelle: 'Opérateurs' }], 1));
+      expect(options).toEqual([
+        { id: 5, code: 'OP', libelle: 'Opérateurs' },
+        { id: 0, code: '', libelle: 'Orphelins (sans équipe)' }
+      ]);
+      expect(total).toBe(2);
+
+      TestBed.inject(EquipeReferenceService).fetchPage(0, 30, 'sans equipe').subscribe((result) => {
+        expect(result.items.at(-1)).toEqual({ id: 0, code: '', libelle: 'Orphelins (sans équipe)' });
+      });
+      requete(http, 'POST', 'equipes/search').flush(page([]));
+      TestBed.inject(EquipeReferenceService).fetchById(0).subscribe((equipe) => {
+        expect(equipe).toEqual({ id: 0, code: '', libelle: 'Orphelins (sans équipe)' });
+      });
+    });
   });
 
   describe('EmployeeReferenceService', () => {

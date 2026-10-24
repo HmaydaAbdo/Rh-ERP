@@ -155,11 +155,11 @@ export class EmployeeFormComponent {
         ? this.employeeService.update(id, {
             ...dto,
             chantierId: saisie.statut === 'INACTIF' ? null : saisie.chantierId!,
-            equipeId: saisie.statut === 'INACTIF' ? null : saisie.equipeId,
+            equipeId: saisie.statut === 'INACTIF' || saisie.equipeId === 0 ? null : saisie.equipeId,
             statut: saisie.statut,
             version: this.version()!
           })
-        : this.employeeService.create({ ...dto, chantierId: saisie.chantierId!, equipeId: saisie.equipeId })
+        : this.employeeService.create({ ...dto, chantierId: saisie.chantierId!, equipeId: saisie.equipeId === 0 ? null : saisie.equipeId })
     );
     if (!employee) {
       return;

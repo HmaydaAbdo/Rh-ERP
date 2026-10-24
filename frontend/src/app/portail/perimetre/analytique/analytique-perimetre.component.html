@@ -76,7 +76,7 @@
               }
               @if (graphiquesRepartitionEquipe().length === 0) { <p class="perimetre-analytique__vide" role="status">Sélectionnez au moins un indicateur à afficher.</p> }
               <details class="perimetre-analytique__donnees">
-                <summary>Voir les données des {{ tableauEquipes().length }} équipes</summary>
+                <summary>Voir les données des {{ tableauEquipes().length }} groupes</summary>
                 <table class="app-static-table">
                   <thead><tr><th scope="col">Équipe</th><th scope="col">Effectif (personnes)</th><th scope="col">Masse salariale (DH)</th><th scope="col">STC (personnes)</th><th scope="col">STC (DH)</th></tr></thead>
                   <tbody>@for (equipe of tableauEquipes(); track equipe.id) { <tr><td>{{ equipe.libelle }}</td><td>{{ equipe.effectif }}</td><td>{{ formaterMontant(equipe.masse) }}</td><td>{{ equipe.stc }}</td><td>{{ formaterMontant(equipe.stcMontant) }}</td></tr> }</tbody>
@@ -96,9 +96,11 @@
               <label class="perimetre-analytique__selection">Chantier
                 <stp-select ariaLabel="Chantier" placeholder="Tous les chantiers" [options]="optionsChantiersEquipe()" [value]="chantierSelectionne()" (valueChange)="choisirChantierEquipe($event)" />
               </label>
-              @if (equipesEffectif().length > 0) {
+              @if (optionsEquipesEvolution().length > 0) {
                 <label class="perimetre-analytique__selection">Équipe
-                  <stp-select ariaLabel="Équipe" placeholder="Équipe" [options]="optionsEquipesEvolution()" [value]="equipeEvolutionId()" (valueChange)="choisirEquipeEvolution($event)" />
+                  @for (source of sourcesEquipesEvolution(); track source) {
+                    <app-lazy-select ariaLabel="Équipe" placeholder="Équipe" optionLabel="label" dataKey="value" [source]="source" [value]="equipeEvolutionId()" (valueChange)="choisirEquipeEvolution($event)" />
+                  }
                 </label>
               }
               <stp-select class="perimetre-analytique__indicateurs" ariaLabel="Indicateurs de l’évolution mensuelle par équipe" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" [options]="optionsMesuresEquipe" [value]="mesureEvolutionEquipe()" (valueChange)="modifierMesureEvolutionEquipe($event)" />

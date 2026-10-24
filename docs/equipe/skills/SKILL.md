@@ -35,6 +35,8 @@ puis fonction. Un indicateur graphique partagé par Tabulaire, Cartes et Analyti
 du dernier mois de paie; il n'apparaît que si le nombre d'« Orphelins » est supérieur à zéro et s'exporte seul en PDF.
 Il est soumis à `PAIE_READ` : sans ce droit, les données de Paie ne sont ni demandées ni affichées.
 L'Analytique inclut les bulletins orphelins dans son périmètre Paie, même si aucune équipe correspondante n'est présente au catalogue.
+Tous les sélecteurs d'équipe de filtre proposent également l'option « Orphelins (sans équipe) » via l'identifiant de filtre `0`.
+Dans un formulaire d'affectation, ce choix est converti en `null`; l'identifiant synthétique n'est jamais envoyé pour écriture.
 Elle présente la répartition par équipe
 sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
 (personnes), Masse salariale (DH), STC (personnes) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
@@ -69,6 +71,7 @@ remplacent les liens d'accès directs vers la liste et les employés.
   matrice RBAC lorsque l'accès frontend ou les appels changent.
 - Le référentiel s'importe depuis un classeur Excel; l'import est une création atomique et une seule ligne invalide rejette le fichier entier.
 - Les vues Tabulaire, Cartes et Analytique s'appuient sur la même source du dernier mois de Paie pour l'indicateur de qualité des rattachements; le groupe « Orphelins » n'est visible que si son effectif est supérieur à zéro.
+- La répartition analytique inclut la ligne « Orphelins » lorsque le dernier mois contient des bulletins sans équipe; le filtre de suivi `equipeIds=0` affiche leur évolution historique.
 - Mettre à jour la section Autorisations de [../README.md](../README.md) et les documents transverses
   concernés (catalogue RBAC, modèle de données) avec tout changement correspondant.
 
