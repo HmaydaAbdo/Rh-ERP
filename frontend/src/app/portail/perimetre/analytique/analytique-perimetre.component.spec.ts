@@ -214,7 +214,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
     expect(page.querySelector('stp-select input[aria-label="Chantier"]')?.getAttribute('placeholder')).toBe('Tous les chantiers');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
-    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [1] }));
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [0, 1, 2] }));
     expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(employes.analyser).not.toHaveBeenCalled();
     expect(employes.regrouper).not.toHaveBeenCalled();
@@ -391,22 +391,6 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = await ouvrir();
 
     expect(page.textContent).toContain('Qualité des données : 5 bulletin(s) orphelin(s), 2 sans observation.');
-  });
-
-  it('affiche et exporte le nombre de bulletins orphelins comme indicateur de qualité Équipe', async () => {
-    paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 5, sansObservation: 0 } }));
-    const page = await ouvrirEquipe();
-
-    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('Bulletins orphelins');
-    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('5');
-    expect(page.querySelector('button[aria-label="Exporter l’indicateur de qualité des données Équipe en PDF"]')).not.toBeNull();
-  });
-
-  it('affiche aussi zéro orphelin quand la qualité des données du mois est conforme', async () => {
-    const page = await ouvrirEquipe();
-
-    expect(page.querySelector('[aria-label="Qualité des données Équipe"]')?.textContent).toContain('Bulletins orphelins');
-    expect(page.querySelector('[aria-label="Qualité des données Équipe"] strong')?.textContent).toBe('0');
   });
 
   it('met à jour le mois dans l’URL et retire une étape', async () => {

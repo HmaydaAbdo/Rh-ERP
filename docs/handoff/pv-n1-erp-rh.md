@@ -59,10 +59,11 @@ README Équipe, qui donne aussi les commandes et résultats locaux à jour.
 La revue propriétaire suit l'ordre global : **Équipe → Fonction → Chantier → Employé → Paie**.
 Cet ordre n'établit ni accord métier ni validation de production.
 
-Dans les Cartes Équipe, les quatre mesures Paie du dernier mois enregistré sont l'unique source des effectifs et montants;
-les agrégats courants de fiches Employé n'y sont pas chargés. Elles sont présentées séparément, avec leur valeur et leur
-comparaison au mois calendaire précédent. Les règles de comparaison et les cas où elle est indisponible sont détaillés
-dans le README Équipe.
+Dans toutes les vues Équipe, la Paie du dernier mois enregistré est la source des indicateurs. Les Cartes présentent
+séparément les quatre mesures, leur valeur et leur comparaison au mois précédent; l’effectif des fiches Employé n’y est
+pas chargé. Un graphique partagé de qualité des rattachements présente les bulletins « Avec équipe » et « Orphelins »;
+il n’apparaît que si le nombre d’orphelins est supérieur à zéro et il s’exporte en PDF. L’Analytique inclut les bulletins
+sans équipe dans la même source. Les règles détaillées sont dans le README Équipe.
 
 ## 5. Source des preuves Équipe
 
@@ -182,6 +183,7 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 - le code et la désignation sont obligatoires à la création manuelle; le code est unique sans tenir compte de la casse ni des espaces extérieurs;
 - la synchronisation avec l’ERP n’ajoute que les chantiers manquants : elle ne modifie, ne clôture ni ne supprime jamais un chantier existant;
 - clôturer un chantier ne le supprime pas : il reste consultable et référencé par l’historique, mais n’est plus accepté par l’import des employés et l’assistant d’import de la paie propose de le rouvrir (décision du propriétaire du 19 octobre 2026);
+- la période la plus récente enregistrée dans la Paie définit les chantiers opérationnels; la migration V35 clôture les chantiers encore en cours qui n'apparaissent pas dans cette période, même s'ils ont un historique. Sans bulletin en base, elle ne change aucun statut. Cette migration est une reprise unique et ne rend pas la clôture automatique à chaque import;
 - supprimer un chantier référencé par une fiche Employé ou un bulletin est refusé; la clôture est l’alternative;
 - modifier le code d’un chantier le change pour tous les bulletins et fiches qui le référencent, historique compris : **décision du propriétaire du 23 octobre 2026, ce comportement est conservé**, c’est le moyen de corriger une faute de saisie.
 

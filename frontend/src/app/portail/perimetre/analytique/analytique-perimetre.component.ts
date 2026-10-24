@@ -208,8 +208,6 @@ export class AnalytiquePerimetreComponent {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
     return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
   });
-  protected readonly bulletinsOrphelins = computed(() => this.paie()?.qualite.sansEquipe ?? null);
-
   protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
     const equipes = this.tableauEquipes();
@@ -401,12 +399,6 @@ export class AnalytiquePerimetreComponent {
       `${this.contexteEquipe(true)} · Indicateurs affichés : ${this.mesureRepartitionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'}`);
   }
 
-  protected documentQualiteEquipe(): PdfImpressionDocument {
-    return this.documentPdf('Qualité des données · Équipe', ['Indicateur', 'Bulletins'],
-      [[`Bulletins ${LIBELLE_EQUIPE_ORPHELINE.toLowerCase()}`, this.bulletinsOrphelins() ?? 0]],
-      `${this.contexteEquipe(true)} · Contrôle du rattachement des bulletins`);
-  }
-
   protected documentEvolutionEquipe(): PdfImpressionDocument {
     const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
     return this.documentPdf('Évolution mensuelle de la paie par équipe',
@@ -575,7 +567,7 @@ export class AnalytiquePerimetreComponent {
         const portee = porteeDe(perimetre);
         const dimension = module.dimension;
         if (dimension && items && perimetre[cleIds(dimension)].length === 0) {
-          portee[cleIds(dimension)] = items.map((item) => item.id);
+          portee[cleIds(dimension)] = dimension === 'EQUIPE' ? [0, ...items.map((item) => item.id)] : items.map((item) => item.id);
         }
         const vide: Donnees = { paie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] };
         if (porteeVide(portee)) {

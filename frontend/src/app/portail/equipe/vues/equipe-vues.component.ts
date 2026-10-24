@@ -6,6 +6,7 @@ import { CollectionShellComponent, CollectionShellConfig } from '../../../shared
 import { EquipeActionsComponent } from '../actions/equipe-actions.component';
 import { AUCUN_FILTRE_EQUIPE, EquipeFiltres, lireFiltresEquipe, versParametresEquipe } from '../filtres/equipe-filtres';
 import { EquipeFiltresComponent } from '../filtres/equipe-filtres.component';
+import { EquipeQualiteComponent } from '../qualite/equipe-qualite.component';
 
 const CONFIGURATION_EQUIPE: CollectionShellConfig = {
   titre: 'Équipes',
@@ -19,10 +20,11 @@ const CONFIGURATION_EQUIPE: CollectionShellConfig = {
 
 @Component({
   selector: 'app-equipe-vues',
-  imports: [CollectionShellComponent, EquipeActionsComponent, EquipeFiltresComponent],
+  imports: [CollectionShellComponent, EquipeActionsComponent, EquipeFiltresComponent, EquipeQualiteComponent],
   template: `
     <app-collection-shell [configuration]="configuration" [contentVisible]="vueAffichee()">
       <app-equipe-actions collection-actions (importe)="rafraichirVue()"></app-equipe-actions>
+      <app-equipe-qualite collection-summary></app-equipe-qualite>
       <app-equipe-filtres collection-filters [value]="filtres()" (valueChange)="appliquer($event)"></app-equipe-filtres>
     </app-collection-shell>
   `,
