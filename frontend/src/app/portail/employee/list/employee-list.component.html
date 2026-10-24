@@ -20,7 +20,7 @@
           {{ employee.fonction.libelle }}
         }
         @case ('chantier') {
-          {{ employee.chantier.code }}
+          {{ employee.chantier?.code ?? 'Sans chantier' }}
         }
         @case ('equipe') {
           {{ employee.equipe?.libelle ?? '-' }}

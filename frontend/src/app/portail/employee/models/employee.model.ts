@@ -14,7 +14,7 @@ export interface Employee {
   dateNaissance: string;
   dateEmbauche: string;
   fonction: Pick<FunctionReference, 'id' | 'libelle'>;
-  chantier: Pick<ChantierReference, 'id' | 'code'>;
+  chantier: Pick<ChantierReference, 'id' | 'code'> | null;
   /** État du dernier mois de paie : vides tant qu'aucune paie ne les a renseignés. Le salaire et son type ne sont envoyés
    * qu'à qui a `PAIE_READ` (null sinon). */
   equipe: Pick<EquipeReference, 'id' | 'code' | 'libelle'> | null;
@@ -36,7 +36,8 @@ export interface EmployeeCreateRequest {
   typeSalaire: TypeSalaire | null;
 }
 
-export interface EmployeeUpdateRequest extends EmployeeCreateRequest {
+export interface EmployeeUpdateRequest extends Omit<EmployeeCreateRequest, 'chantierId'> {
+  chantierId: number | null;
   statut: EmployeeStatut;
   version: number;
 }

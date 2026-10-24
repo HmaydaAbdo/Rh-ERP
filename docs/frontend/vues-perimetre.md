@@ -27,6 +27,7 @@ Chaque module écrit `<module>-module.ts` (`moduleChantier(service)`, `moduleEqu
 |---|---|
 | `chantierIds`, `fonctionIds` | Identifiants (entiers > 0, séparés par des virgules) |
 | `equipeIds` | Identifiants ; `0` = bulletins et fiches sans équipe |
+| `chantierIds` | Identifiants ; `0` = fiches Employé sans chantier (inactives) |
 | `periode` | Mois de paie `AAAA-MM` |
 | Hiérarchie | Cartes suit l'ordre déclaré par le domaine; aucune valeur d'URL ne permet de le remplacer |
 
@@ -62,7 +63,8 @@ est indisponible; une base monétaire nulle n'est jamais divisée.
 
 **Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et fait avancer à l'étape suivante ; ouvrir une carte de mois pose `periode`.
 
-**Équipe** : Cartes fixe les chiffres Paie sur le dernier mois présent dans `GET /paie/periodes`; aucun sélecteur de période
+**Équipe** : Cartes fixe les chiffres Paie sur le dernier mois présent dans `GET /paie/periodes`; les agrégats de fiches Employé
+ne sont pas chargés ni mélangés à l'effectif Paie. Le parcours s'arrête à Fonction, sans étape d'employés. Aucun sélecteur de période
 n'est affiché. Les raccourcis vers la liste et les employés sont masqués car la coque fournit déjà les onglets des vues.
 Le passage d'une vue à l'autre conserve les filtres et le périmètre métier, mais retire tout ancien paramètre `periode`.
 

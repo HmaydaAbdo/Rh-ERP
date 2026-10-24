@@ -162,7 +162,9 @@ public class PaieImportService {
         }
         for (RetourDto retour : analyse.retours()) {
             EmployeeResponseDto employe = contexte.employesParCin().get(cle(retour.cin()));
-            employeeService.update(employe.id(), avecStatut(employe, EmployeeStatut.ACTIF));
+            LigneFichierPaie ligne = lignes.stream().filter(candidate -> cle(candidate.cin()).equals(cle(retour.cin()))).findFirst()
+                    .orElseThrow(() -> new PaieImportException("Ligne de retour introuvable pour " + retour.cin()));
+            employeeService.update(employe.id(), retourActif(employe, ligne, contexte));
         }
         for (PaieImportDepartsDto.Depart depart : departsConfirmes.departs()) {
             employeeService.enregistrerSortie(depart.employeId(), periode, depart.motif());
@@ -356,13 +358,15 @@ public class PaieImportService {
         if (!cle(ligne.fonction()).equals(cle(employe.fonction().libelle()))) {
             champs.add(new ChampDto("fonction", employe.fonction().libelle(), ligne.fonction().strip()));
         }
-        if (!contexte.chantiersParCode().get(cle(ligne.chantier())).equals(employe.chantier().id())) {
-            champs.add(new ChampDto("chantier", employe.chantier().code(), ligne.chantier().strip()));
-        }
-        Long equipeFichier = ligne.equipe() == null ? null : contexte.equipesParCode().get(cle(ligne.equipe()));
-        Long equipeFiche = employe.equipe() == null ? null : employe.equipe().id();
-        if (!Objects.equals(equipeFichier, equipeFiche)) {
-            champs.add(new ChampDto("equipe", employe.equipe() == null ? null : employe.equipe().code(), texte(ligne.equipe())));
+        if (employe.statut() != EmployeeStatut.INACTIF) {
+            if (!Objects.equals(contexte.chantiersParCode().get(cle(ligne.chantier())), employe.chantier() == null ? null : employe.chantier().id())) {
+                champs.add(new ChampDto("chantier", employe.chantier() == null ? null : employe.chantier().code(), ligne.chantier().strip()));
+            }
+            Long equipeFichier = equipeId(ligne, contexte);
+            Long equipeFiche = employe.equipe() == null ? null : employe.equipe().id();
+            if (!Objects.equals(equipeFichier, equipeFiche)) {
+                champs.add(new ChampDto("equipe", employe.equipe() == null ? null : employe.equipe().code(), texte(ligne.equipe())));
+            }
         }
         if (employe.salaire() == null || employe.salaire().compareTo(ligne.salaireMensuel()) != 0) {
             champs.add(new ChampDto("salaire", employe.salaire() == null ? null : employe.salaire().toPlainString(),
@@ -378,10 +382,12 @@ public class PaieImportService {
         if (type == null) {
             throw new PaieImportException("Choisissez le type de salaire (mensuel ou journalier) de " + employe.nomPrenom());
         }
+        Long chantierId = employe.statut() == EmployeeStatut.INACTIF ? null : contexte.chantiersParCode().get(cle(ligne.chantier()));
+        Long equipeId = employe.statut() == EmployeeStatut.INACTIF ? null : equipeId(ligne, contexte);
         employeeService.update(employe.id(), new EmployeeUpdateRequestDto(employe.version(),
                 ligne.nomPrenom() != null ? ligne.nomPrenom().strip() : employe.nomPrenom(), employe.cin(),
                 employe.dateNaissance(), employe.dateEmbauche(), fonctionId(ligne.fonction(), contexte),
-                contexte.chantiersParCode().get(cle(ligne.chantier())), equipeId(ligne, contexte),
+                chantierId, equipeId,
                 ligne.salaireMensuel(), type, employe.statut()));
     }
 
@@ -408,17 +414,20 @@ public class PaieImportService {
         return ligne.equipe() == null ? null : contexte.equipesParCode().get(cle(ligne.equipe()));
     }
 
-    private static EmployeeUpdateRequestDto avecStatut(EmployeeResponseDto employe, EmployeeStatut statut) {
+    private EmployeeUpdateRequestDto retourActif(EmployeeResponseDto employe, LigneFichierPaie ligne, Contexte contexte) {
+        if (employe.typeSalaire() == null) {
+            throw new PaieImportException("Le type de salaire de " + employe.nomPrenom() + " doit être renseigné avant son retour");
+        }
         return new EmployeeUpdateRequestDto(employe.version(), employe.nomPrenom(), employe.cin(), employe.dateNaissance(),
-                employe.dateEmbauche(), employe.fonction().id(), employe.chantier().id(),
-                employe.equipe() == null ? null : employe.equipe().id(), employe.salaire(), employe.typeSalaire(), statut);
+                employe.dateEmbauche(), fonctionId(ligne.fonction(), contexte), contexte.chantiersParCode().get(cle(ligne.chantier())),
+                equipeId(ligne, contexte), ligne.salaireMensuel(), employe.typeSalaire(), EmployeeStatut.ACTIF);
     }
 
     // ---- Import ----
 
     private Paie bulletin(LigneFichierPaie ligne, YearMonth periode, Contexte contexte) {
         EmployeeResponseDto employe = contexte.employesParCin().get(cle(ligne.cin()));
-        Long equipeId = employe.equipe() == null ? null : employe.equipe().id();
+        Long equipeId = equipeId(ligne, contexte);
         Paie paie = new Paie();
         paie.setEmployee(entityManager.getReference(Employee.class, employe.id()));
         paie.setPeriode(periode);

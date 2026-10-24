@@ -97,6 +97,7 @@ export class CartesPerimetreComponent {
 
   protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ'));
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
+  private readonly fichesDansCartes = computed(() => this.voitEmployes() && !this.module().sansEffectifFichesDansCartes);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
@@ -116,12 +117,12 @@ export class CartesPerimetreComponent {
   });
 
   protected readonly niveau = computed<Niveau>(() =>
-    niveauAffiche(this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.voitEmployes())
+    niveauAffiche(this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.fichesDansCartes())
   );
   protected readonly progression = computed(() => {
     const niveau = this.niveau();
     const decalageMois = this.module().niveauPeriode ? 1 : 0;
-    const total = this.module().ordre.length + (this.voitEmployes() ? 1 : 0) + decalageMois;
+    const total = this.module().ordre.length + (this.fichesDansCartes() ? 1 : 0) + decalageMois;
     if (niveau === 'PERIODE') return { libelle: 'Mois', etape: 1, total };
     if (niveau === 'EMPLOYES') return { libelle: 'Employés', etape: this.module().ordre.length + decalageMois + 1, total };
     return { libelle: LIBELLES_DIMENSIONS[niveau], etape: this.module().ordre.indexOf(niveau) + decalageMois + 1, total };
@@ -156,24 +157,28 @@ export class CartesPerimetreComponent {
   protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie());
   protected readonly documentGroupes = computed<PdfImpressionDocument>(() => {
     const groupes = this.groupes() ?? [];
+    const avecFiches = !this.module().sansEffectifFichesDansCartes;
+    const colonnes = ['Groupe', 'Statut', ...(avecFiches ? ['Employés', 'En poste'] : []), 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'];
     return {
       titre: `Cartes · ${this.module().libellePluriel}`,
       contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()} · ${this.periode() ? libellePeriode(this.periode()!) : 'toutes périodes'}`,
-      colonnes: ['Groupe', 'Statut', 'Employés', 'En poste', 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
+      colonnes,
       lignes: groupes.map((groupe) => [
-        this.titre(groupe), groupe.statut?.libelle ?? '', groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? '',
+        this.titre(groupe), groupe.statut?.libelle ?? '',
+        ...(avecFiches ? [groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? ''] : []),
         groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
       ])
     };
   });
   protected documentCarte(groupe: GroupeCarte): PdfImpressionDocument {
     const periode = this.moisDe(groupe);
+    const avecFiches = !this.module().sansEffectifFichesDansCartes;
     return {
       titre: this.titre(groupe),
       contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()}${periode ? ` · ${libellePeriode(periode)}` : ''}`,
-      colonnes: ['Groupe', 'Statut', 'Employés', 'En poste', 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
+      colonnes: ['Groupe', 'Statut', ...(avecFiches ? ['Employés', 'En poste'] : []), 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
       lignes: [[
-        this.titre(groupe), groupe.statut?.libelle ?? '', groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? '',
+        this.titre(groupe), groupe.statut?.libelle ?? '', ...(avecFiches ? [groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? ''] : []),
         groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
       ]]
     };
@@ -188,7 +193,7 @@ export class CartesPerimetreComponent {
       titre: 'Employés',
       contexte: `${this.module().libellePluriel} · ${this.periode() ? libellePeriode(this.periode()!) : 'périmètre courant'}`,
       colonnes: ['Nom et prénom', 'CIN', 'Fonction', 'Chantier', 'Équipe', 'Statut'],
-      lignes: employes.map((e) => [e.nomPrenom, e.cin, e.fonction.libelle, e.chantier.code, e.equipe?.libelle ?? '', libelleStatutEmploye(e.statut)])
+      lignes: employes.map((e) => [e.nomPrenom, e.cin, e.fonction.libelle, e.chantier?.code ?? 'Sans chantier', e.equipe?.libelle ?? '', libelleStatutEmploye(e.statut)])
     })));
   };
 
@@ -333,7 +338,7 @@ export class CartesPerimetreComponent {
           return of<Chargement>({ ...vide, portee, groupes: [] });
         }
         // Une source en panne n'efface pas les autres : ses chiffres manquent simplement sur les cartes.
-        const fiches$ = this.voitEmployes() ? this.employeeService.regrouper(module.critereEmployes(params, portee), dimension).pipe(catchError(() => of(null))) : of(null);
+        const fiches$ = this.fichesDansCartes() ? this.employeeService.regrouper(module.critereEmployes(params, portee), dimension).pipe(catchError(() => of(null))) : of(null);
         const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null))) : of(null);
         const moisPrecedent = periode ? periodePrecedente(periode) : null;
         const precedente$ = this.voitPaie() && moisPrecedent && this.mois().includes(moisPrecedent)

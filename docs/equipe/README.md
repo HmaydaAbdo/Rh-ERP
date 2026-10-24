@@ -28,6 +28,13 @@ valeur affichée pour les bulletins qui référencent cette même équipe.
   manuelle de bulletin, le choix de l'équipe met aussi à jour la fiche Employé pour garder les deux états
   cohérents. L'équipe associée à chaque bulletin antérieur reste distincte.
 - La suppression est refusée (`409`) si une fiche Employé ou un bulletin référence l'équipe.
+- L'équipe temporaire `CH+OP` (`CHAUFFEURS + OPERATEURS`) est supprimée par migration. Ses bulletins
+  sont reclassés à partir de leur propre fonction : fonctions `CH.` et `COURSIER` vers `CH` (Chauffeurs),
+  fonctions `OP.` vers `OP` (Opérateurs), et `CHEF DE POSTE` vers `EE` (Enrobé). Une fonction liée à
+  `CH+OP` qui n'est pas classée bloque la migration au lieu de laisser des données sans équipe.
+- Les fiches Employé `INACTIF` n'ont pas d'équipe courante. Pour la fusion de `CH+OP`, seules les fiches
+  actives suivent leur fonction; les bulletins historiques restent présents et sont reclassés selon leur
+  fonction mensuelle. Les changements de données et la suppression sont audités.
 - Une équipe a un état unique : il n'existe pas de statut actif/inactif.
 - L'import Excel ne crée que de nouvelles équipes. Il valide le fichier entier avant l'écriture; une ligne
   invalide entraîne le rejet de tout le fichier, sans création partielle.
@@ -103,8 +110,8 @@ remplace pas le contrôle serveur.
 | `EQUIPE_WRITE` | Créer et modifier une équipe; afficher les actions correspondantes |
 | `EQUIPE_DELETE` | Demander la suppression d'une équipe, sous réserve qu'elle ne soit référencée |
 | `EQUIPE_IMPORT` | Importer un classeur et télécharger son modèle |
-| `EMPLOYEE_READ` | Lire la projection Employé affichée dans Cartes; sans ce droit, les données Employé ne sont pas chargées |
-| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et l'effectif mensuel par équipe dans Analytique; sans ce droit, ces données ne sont pas chargées |
+| `EMPLOYEE_READ` | Accéder aux fiches Employé selon les permissions du domaine Employé; les Cartes Équipe ne chargent pas les effectifs des fiches |
+| `PAIE_READ` | Lire le dernier mois de paie enregistré dans Cartes et l'effectif mensuel par équipe dans Analytique; les nombres affichés par Équipe viennent exclusivement des bulletins |
 
 Les formulaires Employé et Paie exigent également les droits de leur propre domaine. L'import Paie résout
 les codes d'équipe côté serveur avec le droit `PAIE_IMPORT`; il ne déclenche pas un appel HTTP du client
@@ -121,14 +128,15 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 - **Tabulaire** sert à retrouver, consulter et administrer les équipes. Le tableau présente le code et le
   libellé; les filtres code/libellé suivent la même règle dans les trois vues.
 - **Cartes** suit la hiérarchie **Équipe → Chantier → Fonction**. Le libellé est le nom principal des équipes;
-  leur code reste un repère secondaire. Les cartes rapprochent les données des fiches Employé et celles du
+  leur code reste un repère secondaire. Les cartes prennent leurs indicateurs exclusivement des bulletins du
   dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
   Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
   STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
   son évolution par rapport au mois calendaire précédent : écart en personnes et pourcentage en DH. Un groupe
   absent d'un mois précédent enregistré est comparé à zéro; sans paie enregistrée pour ce mois, la comparaison
-  est indiquée comme indisponible. Les fiches Employé restent présentées dans leur propre bloc.
+  est indiquée comme indisponible. Les effectifs des fiches Employé ne sont pas chargés ni présentés dans ces Cartes,
+  afin que l'effectif, la masse et les STC proviennent d'une seule source pour un même mois.
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
   pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
   Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.

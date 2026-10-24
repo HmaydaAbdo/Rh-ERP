@@ -30,7 +30,7 @@
         </div>
         <div>
           <dt>Chantier</dt>
-          <dd>{{ employee.chantier.code }}</dd>
+          <dd>{{ employee.chantier?.code ?? 'Sans chantier' }}</dd>
         </div>
         <div>
           <dt>Équipe</dt>

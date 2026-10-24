@@ -8,15 +8,15 @@ const params = (valeurs: Record<string, string>) => convertToParamMap(valeurs);
 const ORDRE = ['CHANTIER', 'EQUIPE', 'FONCTION'] as const;
 
 describe('lirePerimetre', () => {
-  it('lit les identifiants et le mois de l’URL, « 0 » désignant les bulletins sans équipe', () => {
-    expect(lirePerimetre(params({ chantierIds: '3,4', equipeIds: '0', fonctionIds: '7', periode: '2026-08' }))).toEqual({
-      chantierIds: [3, 4], equipeIds: [0], fonctionIds: [7], periode: '2026-08'
+  it('lit les identifiants et le mois, « 0 » désignant les employés sans affectation courante', () => {
+    expect(lirePerimetre(params({ chantierIds: '0,3,4', equipeIds: '0', fonctionIds: '7', periode: '2026-08' }))).toEqual({
+      chantierIds: [0, 3, 4], equipeIds: [0], fonctionIds: [7], periode: '2026-08'
     });
   });
 
-  it('ignore les valeurs invalides : identifiants non entiers ou négatifs, mois mal formé, « 0 » hors équipe', () => {
+  it('ignore les valeurs invalides : identifiants non entiers ou négatifs, mois mal formé, « 0 » hors dimensions facultatives', () => {
     expect(lirePerimetre(params({ chantierIds: 'a,-2,0,5', equipeIds: '-1,x', fonctionIds: '0', periode: '2026-13' }))).toEqual({
-      chantierIds: [5], equipeIds: [], fonctionIds: [], periode: null
+      chantierIds: [0, 5], equipeIds: [], fonctionIds: [], periode: null
     });
   });
 });
