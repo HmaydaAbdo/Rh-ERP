@@ -11,7 +11,7 @@ const CHANTIERS = [
 ];
 const EQUIPES = [
   { id: 5, code: 'OP', libelle: 'Opérateurs', effectif: 20, actifs: 18 },
-  { id: 0, code: null, libelle: 'Sans équipe', effectif: 10, actifs: 9 }
+  { id: 0, code: null, libelle: 'Orphelins', effectif: 10, actifs: 9 }
 ];
 const FONCTIONS = [{ id: 2, code: null, libelle: 'CH. CAMION', effectif: 1, actifs: 1 }];
 const EMPLOYE = {
@@ -69,7 +69,7 @@ test.describe('Employés — Cartes et Analytique', () => {
     await page.getByRole('button', { name: 'Ouvrir C168' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3$/);
     await expect(page.getByRole('navigation', { name: /Position dans les employés/ })).toContainText('Chantier C168');
-    await expect(page.getByRole('button', { name: 'Ouvrir Sans équipe' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ouvrir Orphelins' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Ouvrir Opérateurs' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3&equipeIds=5$/);
