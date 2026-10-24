@@ -145,8 +145,16 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).toContain('En cours');
     expect(cartes[0].textContent).toContain('Route de Nador');
     expect(cartes[0].textContent).toContain('Employés sur les fiches récentes');
-    expect(cartes[0].textContent).toContain('2 en poste');
-    expect(cartes[0].textContent).toContain('Payés · août 2026');
+    expect(cartes[0].querySelector('.perimetre-carte__jauge')).toBeNull();
+    expect(cartes[0].textContent).not.toContain('en poste');
+    expect(cartes[0].textContent).toContain('Paie · août 2026');
+    expect(Array.from(cartes[0].querySelectorAll('.perimetre-carte__indicateur dt')).map((dt) => dt.textContent?.trim())).toEqual([
+      'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'
+    ]);
+    expect(cartes[0].querySelectorAll('.perimetre-carte__indicateur')).toHaveLength(4);
+    expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
+    expect(cartes[0].textContent).toContain('+1 personne · vs juillet 2026');
+    expect(cartes[0].textContent).toContain('Base précédente nulle · vs juillet 2026');
     expect(cartes[0].textContent).toMatch(/4[, ]500\.00 DH/);
     expect(cartes[0].textContent).toContain('+12,5 %');
     expect(cartes[1].textContent).toContain('Clôturé');
@@ -242,6 +250,16 @@ describe('CartesPerimetreComponent', () => {
 
     expect(page.textContent).toContain('Aucun mois disponible');
     expect(paie.analyser).not.toHaveBeenCalled();
+  });
+
+  it('ne compare pas au mois contigu lorsqu’aucune paie n’y est enregistrée', async () => {
+    paie.listerPeriodes.mockReturnValue(of([
+      { periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 0, stcMontant: 0 }
+    ]));
+    const page = await ouvrir();
+
+    expect(paie.analyser).toHaveBeenCalledTimes(1);
+    expect(page.textContent).toContain('Comparaison indisponible');
   });
 
   it('change le mois de paie dans l’URL', async () => {

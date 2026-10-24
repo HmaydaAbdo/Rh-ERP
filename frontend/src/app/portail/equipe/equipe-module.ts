@@ -21,6 +21,7 @@ export function moduleEquipe(equipeService: EquipeService): ModulePerimetre {
     sansRaccourciListe: true,
     sansRaccourciCartes: true,
     sansLienEmployes: true,
+    sansEffectifFichesDansCartes: true,
     route: '/equipes',
     permission: 'EQUIPE_READ',
     parametresListe: (params) => versParametresEquipe(lireFiltresEquipe(params)),

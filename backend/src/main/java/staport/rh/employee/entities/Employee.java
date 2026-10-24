@@ -65,7 +65,7 @@ public class Employee {
     private Function fonction;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chantier_id", nullable = false)
+    @JoinColumn(name = "chantier_id")
     private Chantier chantier;
 
     @ManyToOne(fetch = FetchType.LAZY)

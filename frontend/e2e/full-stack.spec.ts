@@ -117,8 +117,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const filtreEquipe = `libelle=${encodeURIComponent(`Équipe e2e ${suffixe}`)}`;
   await page.goto(`/equipes/cartes?${filtreEquipe}`);
   const carteEquipe = page.locator('.perimetre-carte').filter({ hasText: `Équipe e2e ${suffixe}` });
-  await expect(carteEquipe).toContainText('Employés sur les fiches récentes');
-  await expect(carteEquipe).toContainText('Payés');
+  await expect(carteEquipe).not.toContainText('Employés sur les fiches récentes');
+  await expect(carteEquipe).toContainText('Paie ·');
+  await expect(carteEquipe.locator('.perimetre-carte__fiches')).toHaveCount(0);
+  await expect(carteEquipe.locator('.perimetre-carte__mesures .perimetre-carte__indicateur')).toHaveCount(4);
   await expect(carteEquipe).toContainText('Masse');
 
   await page.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
@@ -153,7 +155,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await page.goto(`/functions/cartes?${filtreFonction}`);
   const carteFonction = page.locator('.perimetre-carte').filter({ hasText: `Fonction e2e ${suffixe}` });
   await expect(carteFonction).toContainText('Employés sur les fiches récentes');
-  await expect(carteFonction).toContainText('Payés');
+  await expect(carteFonction).toContainText('Paie ·');
   await expect(carteFonction).toContainText('Masse');
 
   const syntheseFonction = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
@@ -177,7 +179,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const carteChantier = page.locator('.perimetre-carte').filter({ hasText: `T${suffixe}` });
   await expect(carteChantier).toContainText('En cours');
   await expect(carteChantier).toContainText('Employés sur les fiches récentes');
-  await expect(carteChantier).toContainText('Payés');
+  await expect(carteChantier).toContainText('Paie ·');
   await expect(carteChantier).toContainText('Masse');
 
   const syntheseChantier = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }>; parChantier: Array<{ id: number; stc: number }> }>(

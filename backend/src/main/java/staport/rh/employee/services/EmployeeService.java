@@ -98,8 +98,13 @@ public class EmployeeService implements IEmployeeService {
         mapper.updateEntityFromDto(dto, entity);
         entity.setCin(cin);
         entity.setFonction(resolveFonctionReference(dto.fonctionId()));
-        entity.setChantier(resolveChantierReference(dto.chantierId()));
-        entity.setEquipe(resolveEquipeReference(dto.equipeId()));
+        if (dto.statut() == EmployeeStatut.INACTIF) {
+            entity.setChantier(null);
+            entity.setEquipe(null);
+        } else {
+            entity.setChantier(resolveChantierReference(dto.chantierId()));
+            entity.setEquipe(resolveEquipeReference(dto.equipeId()));
+        }
 
         Employee updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
@@ -151,6 +156,8 @@ public class EmployeeService implements IEmployeeService {
         sortie.setMotif(motif.strip());
         sortieRepository.save(sortie);
         entity.setStatut(EmployeeStatut.INACTIF);
+        entity.setChantier(null);
+        entity.setEquipe(null);
     }
 
     @Override

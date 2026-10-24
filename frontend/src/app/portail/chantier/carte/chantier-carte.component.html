@@ -21,7 +21,7 @@
       [title]="vue3d() ? 'Vue à plat' : 'Vue 3D'"
       (click)="basculerVue3d()"
     >
-      <span class="chantier-carte__outil-texte" aria-hidden="true">{{ vue3d() ? '2D' : '3D' }}</span>
+      <stp-icon [name]="vue3d() ? 'map' : 'box'" />
     </button>
     <button type="button" class="chantier-carte__outil" aria-label="Revenir au Maroc entier" title="Vue d'ensemble" (click)="vueDEnsemble()">
       <stp-icon name="scan" />

@@ -44,7 +44,17 @@ public class EmployeeSpecification {
             }
 
             if (criteria.chantierIds() != null && !criteria.chantierIds().isEmpty()) {
-                predicates.add(root.get("chantier").get("id").in(criteria.chantierIds()));
+                // 0 = sans chantier : les fiches inactives ont une affectation courante vide.
+                var chantier = root.join("chantier", JoinType.LEFT);
+                List<Long> ids = criteria.chantierIds().stream().filter(id -> id != 0).toList();
+                List<Predicate> chantiers = new ArrayList<>();
+                if (criteria.chantierIds().contains(0L)) {
+                    chantiers.add(criteriaBuilder.isNull(chantier.get("id")));
+                }
+                if (!ids.isEmpty()) {
+                    chantiers.add(chantier.get("id").in(ids));
+                }
+                predicates.add(criteriaBuilder.or(chantiers.toArray(new Predicate[0])));
             }
 
             if (criteria.equipeIds() != null && !criteria.equipeIds().isEmpty()) {

@@ -9,9 +9,9 @@
 | Étape | État |
 |---|---|
 | 1. Moteur de carte (`maplibre-gl`, `pmtiles`, `@protomaps/basemaps`) | Fait |
-| 2. Configuration du fond auto-hébergé, du thème et de l'emprise | Fait |
+| 2. Configuration du fond auto-hébergé, du style sombre et de l'emprise | Fait |
 | Permission `CARTE_READ` et rôle `DIRECTION` | Fait — voir [../rbac/carte.md](../rbac/carte.md) |
-| Page minimale `/carte` : fond, thème, zoom, état d'erreur, menu « Carte » | Fait |
+| Page minimale `/carte` : fond, zoom, état d'erreur, menu « Carte » | Fait |
 | Monde entier (globe), zoom rue (19), bâtiments 3D, relief (ombrage et terrain 3D), satellite, vue 3D, boussole, position, plein écran, échelle, fiche d'un lieu | Fait |
 | Recherche de lieux | Reportée |
 | 3. Contrat de données `ChantierCarte` et source | À faire |
@@ -26,7 +26,7 @@ La page `/carte` affiche le fond et rien d'autre (aucune donnée de chantier). E
 | Composant | Rôle |
 |---|---|
 | `ChantierCartePageComponent` (`/carte`) | Page : carte plein écran dans la zone de contenu, sans titre |
-| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre et ses contrôles, redessine au changement de thème ou de calque, suit la taille de son conteneur, détruit la carte. Région nommée « Carte des chantiers », aide au clavier (flèches, + et −, Maj et flèches pour pivoter et incliner) |
+| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre et ses contrôles, garde un style sombre indépendant du thème de l'application, redessine au changement de calque, suit la taille de son conteneur, détruit la carte. Région nommée « Carte des chantiers », aide au clavier (flèches, + et −, Maj et flèches pour pivoter et incliner) |
 
 ### Ce que la carte propose
 
@@ -49,8 +49,8 @@ Une source introuvable est signalée sans bloquer le reste, de la plus grave à 
 n'est pas disponible », la carte reste vide), l'imagerie (« Le plan reste utilisable ») puis le relief. Le message
 disparaît dès que la source se charge.
 
-Les couleurs des contrôles MapLibre, des calques et des fiches viennent des jetons du design system (`--map-icon-filter`
-pour les icônes en thème sombre). La feuille de MapLibre est insérée en tête du document : sinon sa règle
+La carte, ses contrôles MapLibre, ses calques et ses fiches restent en style sombre quel que soit le thème actif de l'application.
+La feuille de MapLibre est insérée en tête du document : sinon sa règle
 `.maplibregl-map { position: relative }` écrase le positionnement du conteneur, qui prend une hauteur nulle (carte
 blanche).
 
@@ -63,7 +63,7 @@ Tout se règle dans `frontend/src/app/portail/chantier/carte/carte.config.ts`, j
 |---|---|---|
 | `fond.archive`, `fond.zoomMaxArchive` | Archive PMTiles du plan (monde, Maroc détaillé) et son zoom maximal | `carte/fond/monde.pmtiles`, 15 |
 | `fond.glyphes` | Modèle des polices des libellés | `carte/fond/fonts/{fontstack}/{range}.pbf` |
-| `fond.icones` | Dossier des icônes ; `light` ou `dark` y est ajouté selon le thème | `carte/fond/sprites/v4` |
+| `fond.icones` | Dossier des icônes ; la variante `dark` est toujours utilisée | `carte/fond/sprites/v4` |
 | `fond.attribution` | Mention légale affichée sur la carte (obligatoire : données OpenStreetMap, ODbL) | Protomaps, © OpenStreetMap |
 | `relief.archive`, `relief.zoomMaxArchive` | Archive PMTiles du relief (terrarium, 512 px) et son zoom maximal | `carte/fond/monde-relief.pmtiles`, 11 |
 | `relief.exageration` | Exagération verticale du terrain 3D (1 = réel) | 1,4 |
@@ -82,7 +82,7 @@ sous-chemin de nginx outer. `fond-de-carte.ts` transforme la configuration pour 
 | Fonction | Rôle |
 |---|---|
 | `preparerMapLibre(base)` | Déclare le worker de MapLibre, le protocole `pmtiles://` et la feuille de style (une seule fois) |
-| `creerStyle(config, theme, base, affichage)` | Style complet : plan (variante claire ou sombre selon `ThemeService`) ou satellite, avec ou sans relief (`Affichage`), globe et atmosphère |
+| `creerStyle(config, base, affichage)` | Style sombre complet : plan ou satellite, avec ou sans relief (`Affichage`), globe et atmosphère; indépendant du thème applicatif |
 | `optionsDeVue(config)` | Ajustement sur le territoire, zooms et inclinaison maximale (80°) ; la carte n'est pas bornée |
 | `territoire(config)` | Boîte englobante du territoire (vue initiale et « Vue d'ensemble ») |
 

@@ -335,6 +335,9 @@ class PaieImportServiceTest {
         ArgumentCaptor<EmployeeUpdateRequestDto> reactivation = ArgumentCaptor.forClass(EmployeeUpdateRequestDto.class);
         verify(employeeService).update(eq(3L), reactivation.capture());
         assertThat(reactivation.getValue().statut()).isEqualTo(EmployeeStatut.ACTIF);
+        assertThat(reactivation.getValue().chantierId()).isEqualTo(20L);
+        assertThat(reactivation.getValue().equipeId()).isEqualTo(30L);
+        assertThat(reactivation.getValue().salaire()).isEqualByComparingTo("5000");
         verify(employeeService).enregistrerSortie(1L, SEPTEMBRE, "STC");
         verify(employeeService, never()).enregistrerSortie(eq(2L), any(), any());
     }
@@ -351,8 +354,9 @@ class PaieImportServiceTest {
 
     private static EmployeeResponseDto fiche(long id, String nom, String cin, EmployeeStatut statut) {
         return new EmployeeResponseDto(id, 0L, nom, cin, LocalDate.of(1984, 5, 1), LocalDate.of(2018, 7, 14),
-                new FunctionSummaryDto(10L, "OPERATEUR"), new ChantierSummaryDto(20L, "C059", "Travaux de voirie"),
-                new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"), new BigDecimal("5000.00"), TypeSalaire.MENSUEL, statut);
+                new FunctionSummaryDto(10L, "OPERATEUR"), statut == EmployeeStatut.INACTIF ? null : new ChantierSummaryDto(20L, "C059", "Travaux de voirie"),
+                statut == EmployeeStatut.INACTIF ? null : new EquipeSummaryDto(30L, "EQUIPE A", "Equipe A"),
+                new BigDecimal("5000.00"), TypeSalaire.MENSUEL, statut);
     }
 
     /** Une ligne qui concorde avec la fiche de BOULJIHEL SALH (sauf le CIN). */
