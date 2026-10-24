@@ -42,7 +42,7 @@ describe('fusionnerGroupes', () => {
 
     expect(groupes.map((g) => g.id)).toEqual([1, 2]);
     expect(groupes[0]).toMatchObject({ statut: { libelle: 'En cours' }, lien: ['/chantiers', 1], fiches: { effectif: 3, actifs: 2 }, paie: { masse: 100 }, precedent: { masse: 80 } });
-    expect(groupes[1]).toMatchObject({ fiches: { effectif: 0, actifs: 0 }, paie: { effectif: 0, masse: 0 }, precedent: null });
+    expect(groupes[1]).toMatchObject({ fiches: { effectif: 0, actifs: 0 }, paie: { effectif: 0, masse: 0 }, precedent: { effectif: 0, masse: 0, stc: 0, stcMontant: 0 } });
   });
 
   it('sans référentiel exhaustif, ne crée une carte que pour les groupes qui ont une fiche ou un bulletin, et décore ceux du référentiel', () => {
@@ -75,16 +75,16 @@ describe('variations', () => {
   it('compare au mois contigu : pourcentage pour les montants, écart pour les personnes', () => {
     const v = variations(groupe({ effectif: 3, masse: 4500, stc: 1, stcMontant: 1000 }, { effectif: 1, masse: 4000, stc: 0, stcMontant: 800 }));
 
-    expect(v).toEqual({ masse: '+12,5 %', effectif: '+2', stc: '+1', stcMontant: '+25,0 %' });
+    expect(v).toEqual({ masse: '+12,5 %', effectif: '+2 personnes', stc: '+1 personne', stcMontant: '+25,0 %' });
   });
 
-  it('ne dit rien sans mois contigu, ni quand rien ne change, ni sur une base nulle', () => {
+  it('signale l’absence de comparaison, la stabilité et une base monétaire nulle', () => {
     expect(variations(groupe({ effectif: 1, masse: 1, stc: 0, stcMontant: 0 }, null))).toBeNull();
-    expect(variations(groupe({ effectif: 1, masse: 100, stc: 0, stcMontant: 0 }, { effectif: 1, masse: 100, stc: 0, stcMontant: 0 }))).toEqual({ masse: null, effectif: null, stc: null, stcMontant: null });
+    expect(variations(groupe({ effectif: 1, masse: 100, stc: 0, stcMontant: 0 }, { effectif: 1, masse: 100, stc: 0, stcMontant: 0 }))).toEqual({ masse: 'Stable', effectif: 'Stable', stc: 'Stable', stcMontant: 'Stable' });
     expect(variations(groupe({ effectif: 1, masse: 100, stc: 1, stcMontant: 5 }, { effectif: 0, masse: 0, stc: 0, stcMontant: 0 }))?.masse).toBeNull();
   });
 
   it('écrit une baisse avec le vrai signe moins', () => {
-    expect(variations(groupe({ effectif: 1, masse: 90, stc: 0, stcMontant: 0 }, { effectif: 3, masse: 100, stc: 0, stcMontant: 0 }))).toMatchObject({ effectif: '−2', masse: '-10,0 %' });
+    expect(variations(groupe({ effectif: 1, masse: 90, stc: 0, stcMontant: 0 }, { effectif: 3, masse: 100, stc: 0, stcMontant: 0 }))).toMatchObject({ effectif: '−2 personnes', masse: '-10,0 %' });
   });
 });

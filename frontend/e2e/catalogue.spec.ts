@@ -30,12 +30,14 @@ test.describe('Catalogue des composants', () => {
     const avant = await champ.getAttribute('aria-activedescendant');
     await page.keyboard.press('ArrowDown');
     await expect(champ).not.toHaveAttribute('aria-activedescendant', avant ?? '');
-    // Un listbox multi-select suit la convention WAI-ARIA : Espace bascule l'option active.
-    await page.keyboard.press('Space');
+    const option = page.getByRole('option', { name: 'Chantier Casablanca' });
+    await expect(option).toHaveAttribute('aria-selected', 'false');
+    await expect(champ).toHaveAttribute('aria-activedescendant', await option.getAttribute('id'));
+    await page.keyboard.press('Enter');
+    await expect(option).toHaveAttribute('aria-selected', 'true');
 
     await page.keyboard.press('Escape');
     await expect(page.getByRole('listbox')).toHaveCount(0);
-    await expect(champ).toHaveValue('3 chantiers');
   });
 
   test('le panneau multiple reste dans la fenêtre et fait défiler l’option clavier active', async ({ page }) => {

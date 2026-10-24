@@ -117,7 +117,9 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
   for (const groupe of parId.values()) {
     if (sources.fiches !== null && groupe.fiches === null) groupe.fiches = { effectif: 0, actifs: 0 };
     if (sources.paie !== null && groupe.paie === null) groupe.paie = { effectif: 0, masse: 0, stc: 0, stcMontant: 0 };
-    const precedent = sources.paiePrecedente !== null ? (precedentes.get(groupe.id) ?? null) : null;
+    const precedent = sources.paiePrecedente !== null
+      ? (precedentes.get(groupe.id) ?? { effectif: 0, masse: 0, stc: 0, stcMontant: 0 })
+      : null;
     groupe.precedent = precedent ? { effectif: precedent.effectif, masse: precedent.masse, stc: precedent.stc, stcMontant: precedent.stcMontant } : null;
   }
   return [...parId.values()].sort((a, b) => nomGroupe(dimension, a).localeCompare(nomGroupe(dimension, b), 'fr', { numeric: true }));
@@ -133,13 +135,20 @@ export interface Variations {
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
-function ecart(courant: number, precedent: number): string | null {
+function ecartPersonnes(courant: number, precedent: number): string {
   const difference = courant - precedent;
-  return difference === 0 ? null : `${difference > 0 ? '+' : '−'}${FORMAT_ENTIER.format(Math.abs(difference))}`;
+  if (difference === 0) {
+    return 'Stable';
+  }
+  const unite = Math.abs(difference) === 1 ? 'personne' : 'personnes';
+  return `${difference > 0 ? '+' : '−'}${FORMAT_ENTIER.format(Math.abs(difference))} ${unite}`;
 }
 
 function pourcent(courant: number, precedent: number): string | null {
-  return precedent > 0 && courant !== precedent ? formaterVariation(((courant - precedent) / precedent) * 100) : null;
+  if (courant === precedent) {
+    return 'Stable';
+  }
+  return precedent > 0 ? formaterVariation(((courant - precedent) / precedent) * 100) : null;
 }
 
 /** Les variations d'une carte par rapport au mois contigu ; `null` sans comparaison possible (jamais un zéro ni une division par zéro). */
@@ -151,8 +160,8 @@ export function variations(groupe: GroupeCarte): Variations | null {
   }
   return {
     masse: pourcent(courant.masse, precedent.masse),
-    effectif: ecart(courant.effectif, precedent.effectif),
-    stc: ecart(courant.stc, precedent.stc),
+    effectif: ecartPersonnes(courant.effectif, precedent.effectif),
+    stc: ecartPersonnes(courant.stc, precedent.stc),
     stcMontant: pourcent(courant.stcMontant, precedent.stcMontant)
   };
 }

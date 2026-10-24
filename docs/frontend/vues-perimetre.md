@@ -54,8 +54,11 @@ vide (aucun élément ne correspond) n'interroge aucune source.
 
 **Cartes** (`fusionnerGroupes`) : au niveau de la dimension du module et sans autre dimension restreinte, le référentiel est
 **exhaustif** (une carte par entrée, à zéro sans données) ; sinon il ne fait que décorer (statut, désignation, lien) les groupes
-qui ont des fiches ou des bulletins. `variations` compare au mois contigu : pourcentage pour les montants, écart pour les
-personnes, rien sans mois contigu.
+qui ont des fiches ou des bulletins. Quand `PAIE_READ` est accordée, chaque carte présente séparément Effectif (personnes),
+Masse salariale (DH), STC (personnes) et STC (DH), avec leur libellé et leur valeur. La comparaison porte sur le mois
+calendaire contigu : écart pour les effectifs, pourcentage pour les montants. Si le mois précédent existe mais qu'un groupe
+n'y figure pas, ses valeurs de comparaison sont zéro. Sans paie enregistrée sur ce mois, la carte indique que la comparaison
+est indisponible; une base monétaire nulle n'est jamais divisée.
 
 **Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et fait avancer à l'étape suivante ; ouvrir une carte de mois pose `periode`.
 

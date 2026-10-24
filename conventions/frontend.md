@@ -399,9 +399,13 @@ tous les paramètres métier.
 - Ouvrir une carte en fait une **étape du fil** (le paramètre d'URL de sa dimension, une seule valeur) ; chaque étape se retire
   seule ; le fil ne montre jamais un identifiant technique. Les fiches Employé forment le dernier niveau lorsque le droit de
   lecture est accordé.
-- Chaque carte réunit les **fiches Employé** (dernier état importé) et la **paie du mois**, avec l'écart par rapport au **mois
-  contigu** seulement (jamais un mois plus ancien, jamais un zéro ni une division par zéro). Le module Paie commence par la
-  liste des mois tant qu'aucun mois n'est choisi.
+- Chaque carte réunit les **fiches Employé** (dernier état importé) et, lorsque `PAIE_READ` est accordée, les quatre mesures du
+  mois : **Effectif (personnes)**, **Masse salariale (DH)**, **STC (personnes)** et **STC (DH)**. Chaque mesure présente son
+  libellé, sa valeur et sa comparaison au mois calendaire précédent : écart en personnes, pourcentage en DH. La comparaison
+  utilise uniquement ce mois contigu, jamais un mois antérieur plus ancien. Un groupe absent du mois précédent vaut zéro si
+  des données y sont enregistrées; si le mois n'existe pas, la comparaison est indiquée comme indisponible. Un montant dont
+  la base précédente est nulle n'est pas converti en pourcentage. Le module Paie commence par la liste des mois tant qu'aucun
+  mois n'est choisi.
 - Au niveau de la dimension du module, **toutes** les entrées du référentiel sont des cartes, même sans fiche ni bulletin
   (chiffres à zéro, jamais inventés). Dès qu'une autre dimension restreint le périmètre, seules les cartes qui ont des données
   existent. Le statut métier du référentiel se montre en pastille.

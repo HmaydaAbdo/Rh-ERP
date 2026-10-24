@@ -80,8 +80,20 @@ export class CartesPerimetreComponent {
   protected readonly libellePeriode = libellePeriode;
   protected readonly formaterMontant = formaterMontant;
   protected readonly nomGroupe = nomGroupe;
-  protected readonly variations = variations;
   protected readonly libelleStatutEmploye = libelleStatutEmploye;
+
+  /** Compare chaque indicateur au mois contigu et conserve son unité de lecture. */
+  protected variationPaie(groupe: GroupeCarte, indicateur: keyof NonNullable<GroupeCarte['paie']>, periode: string): string {
+    const valeur = variations(groupe)?.[indicateur];
+    if (valeur === undefined) {
+      return 'Comparaison indisponible';
+    }
+    const contexte = ` · vs ${libellePeriode(periodePrecedente(periode))}`;
+    if (valeur === null) {
+      return `Base précédente nulle${contexte}`;
+    }
+    return `${valeur}${contexte}`;
+  }
 
   protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ'));
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
@@ -192,10 +204,10 @@ export class CartesPerimetreComponent {
     if (this.voitPaie()) {
       this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((periodes) => this.mois.set(periodes.map((p) => p.periode)));
     }
-    const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), module: this.module(), version: this.version() }));
+    const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), periodes: this.mois(), module: this.module(), version: this.version() }));
     toObservable(requete)
       .pipe(
-        distinctUntilChanged((a, b) => a.module === b.module && a.niveau === b.niveau && a.periode === b.periode && a.version === b.version && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
+        distinctUntilChanged((a, b) => a.module === b.module && a.niveau === b.niveau && a.periode === b.periode && a.periodes === b.periodes && a.version === b.version && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
         switchMap((r) => {
           this.chargement.set(true);
           this.visibles.set(TAILLE_PAGE);
@@ -323,7 +335,10 @@ export class CartesPerimetreComponent {
         // Une source en panne n'efface pas les autres : ses chiffres manquent simplement sur les cartes.
         const fiches$ = this.voitEmployes() ? this.employeeService.regrouper(module.critereEmployes(params, portee), dimension).pipe(catchError(() => of(null))) : of(null);
         const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null))) : of(null);
-        const precedente$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periodePrecedente(periode))).pipe(catchError(() => of(null))) : of(null);
+        const moisPrecedent = periode ? periodePrecedente(periode) : null;
+        const precedente$ = this.voitPaie() && moisPrecedent && this.mois().includes(moisPrecedent)
+          ? this.paieService.analyser(module.criterePaie(params, portee, moisPrecedent)).pipe(catchError(() => of(null)))
+          : of(null);
         return forkJoin([fiches$, paie$, precedente$]).pipe(
           map(([fiches, paie, precedente]) => ({
             ...vide,

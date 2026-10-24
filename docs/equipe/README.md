@@ -124,6 +124,11 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   leur code reste un repère secondaire. Les cartes rapprochent les données des fiches Employé et celles du
   dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
+  Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
+  STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
+  son évolution par rapport au mois calendaire précédent : écart en personnes et pourcentage en DH. Un groupe
+  absent d'un mois précédent enregistré est comparé à zéro; sans paie enregistrée pour ce mois, la comparaison
+  est indiquée comme indisponible. Les fiches Employé restent présentées dans leur propre bloc.
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
   pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
   Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
@@ -159,6 +164,7 @@ reste un modèle d'import, pas un export.
 | Suppression bloquée si l'équipe est référencée | `PaieServiceTest`, tests d'audit, `EndpointSecurityTest` |
 | Import atomique et rejet des lignes invalides | `EquipeImportServiceTest`, `AuditImportTest`, tests d'actions d'import |
 | Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
+| Cartes : quatre mesures Paie lisibles, dernier mois et comparaison au mois précédent | `CartesPerimetreComponent.spec.ts`, `perimetre-groupes.spec.ts`, `frontend/e2e/equipes.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
 | PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |

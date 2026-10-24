@@ -40,6 +40,12 @@ propre au domaine ni permettre de changer librement l'ordre du parcours; suivre 
 [convention frontend](../../../conventions/frontend.md) et la
 [référence technique des vues partagées](../../frontend/vues-perimetre.md).
 
+Chaque carte affiche séparément Effectif (personnes), Masse salariale (DH), STC (personnes) et STC (DH), avec
+le libellé et la valeur du dernier mois enregistré. La comparaison porte sur le mois calendaire précédent : écart
+en personnes et pourcentage en DH. Un groupe sans ligne au mois précédent enregistré est comparé à zéro; si aucune
+paie n'est enregistrée sur ce mois, ou si la lecture échoue, la comparaison reste indisponible. Ne pas afficher une
+variation en pourcentage quand le montant précédent est nul.
+
 Les cartes mettent le **libellé** en titre et le code en repère secondaire. Chaque composant qui expose des données conserve
 son export PDF séparé, borné au périmètre et aux permissions actifs. Les exports sont des documents métier partageables : titre
 explicite, période, périmètre et date d'édition; leurs tableaux complets sont inclus même si ceux de l'écran sont repliés.
