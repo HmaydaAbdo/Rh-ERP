@@ -359,6 +359,14 @@ ne révèle aucune donnée inaccessible à l'utilisateur. Les règles métier et
 s'appliquent aussi au document. Chaque README de domaine précise le format et les limites de ses exports. Les tests
 vérifient la parité entre le document exporté et les données complètes de la vue.
 
+L'action d'export PDF est une icône placée en haut à droite du composant ou de sa barre d'outils,
+dans le conteneur des données qu'elle exporte. Dans le Tabulaire partagé, utiliser l'emplacement
+prévu dans la barre du tableau, à côté du choix des colonnes. Chaque composant de données exportable
+conserve son action propre, même lorsqu'un export de l'ensemble de la vue existe. Le bouton porte
+un nom accessible et une infobulle qui précisent le contenu exporté ; il reste visible et utilisable
+au clavier et sur écran tactile. L'impression partagée permet d'imprimer ou d'enregistrer un PDF
+contenant tout le résultat filtré, selon les droits actifs.
+
 ### Brancher un module
 
 1. Écrire `<module>-module.ts` : une fonction (ou une constante) qui renvoie un `ModulePerimetre` — clé, pluriel, début du

@@ -28,12 +28,21 @@ Après toute modification :
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 
+La [routine de travail et de livraison](conventions/workflow.md) s'applique à chaque tâche : reprise du
+contexte et de l'état Git, exécution du périmètre approuvé, vérifications, documentation, puis livraison
+et revue. L'appliquer sans attendre que le propriétaire répète ces consignes. Les décisions et
+autorisations déjà données restent valables dans leur périmètre ; une modification de convention
+nouvellement proposée demande son accord avant application.
+
 ---
 
 # Ordre de lecture
 
 Pour reprendre le travail en cours (état du projet, règles du propriétaire, déploiement, sujets ouverts), lire
 d'abord `docs/handoff/etat-du-projet.md`.
+
+Lire ensuite `conventions/workflow.md` pour la routine commune, puis les conventions applicables
+dans l'ordre ci-dessous.
 
 0. Les conventions de référence résident dans `conventions/` à la racine. Elles constituent le
    blueprint ERP-RH ; lire les documents applicables dans l'ordre ci-dessous.

@@ -64,13 +64,9 @@ elles ne prouvent pas à elles seules un déploiement ni un accord métier.
 ## 4. Règles du propriétaire (à respecter sans les redemander)
 
 **Façon de travailler**
-- Il écrit en français ; répondre en français, textes de l'interface en français.
-- Il choisit les sujets : travailler **point par point**, ne jamais lancer un sujet qu'il n'a pas choisi.
-- Avant tout choix d'architecture (nouvelle abstraction, nouveau mécanisme, règle métier absente), **poser la question** avec
-  des options et une recommandation ; ne jamais inventer une règle métier ou une valeur (tranches, seuils, motifs…).
-- Une fois un plan validé, il veut une exécution autonome de bout en bout (code, tests, vérification à l'écran, docs) et un
-  seul bilan à la fin.
-- Il juge l'interface sur captures : « premium », fluide, lisible sur téléphone. Vérifier soi-même à l'écran.
+- Appliquer la [routine de travail et de livraison](../../conventions/workflow.md), référencée dans
+  `AGENTS.md` : elle centralise les consignes de cadrage, d'autonomie, de vérification à l'écran,
+  de documentation et de livraison. Les décisions métier ci-dessous restent propres au projet.
 
 **Décisions déjà prises**
 - Carte : **gratuité absolue**, sans rien payer ni maintenant ni plus tard, même en pic ; le monde entier ; lancement possible

@@ -15,6 +15,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 
 | Je veux… | Document |
 |---|---|
+| Appliquer la routine de reprise, réalisation, vérification, documentation et livraison | [Routine de travail](../conventions/workflow.md) · [AGENTS.md](../AGENTS.md) |
 | Comprendre l'ensemble (modules, dépendances, flux d'une requête) | [architecture.md](architecture.md) |
 | Connaître les tables, contraintes et migrations | [data-model.md](data-model.md) |
 | Lancer le projet et connaître toutes les variables d'environnement | [configuration.md](configuration.md) |
@@ -40,8 +41,10 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 
 ## Documentation par domaine métier
 
-Chaque domaine suit le même plan : vue d'ensemble, modèle de données, règles métier, API, import
-(si applicable), frontend, limites connues.
+Chaque domaine centralise sa documentation dans `docs/<domaine>/` et suit le même plan : vue
+d'ensemble, règles métier, modèle de données, DTO exposés (types, contraintes et descriptions), API,
+permissions et accès associés, import/export (si applicable), frontend, scénarios liés aux tests et
+limites connues. Sa skill renvoie à ces sources ; son TODO ne contient que le travail encore ouvert.
 
 | Domaine | Rôle | Documentation | Permissions |
 |---|---|---|---|
