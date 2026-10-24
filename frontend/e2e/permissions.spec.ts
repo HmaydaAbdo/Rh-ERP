@@ -82,7 +82,9 @@ test.describe('Permissions', () => {
     await expect(page.locator('.app-sidebar__label').first()).toHaveCSS('opacity', '0');
 
     const resultats = await new AxeBuilder({ page }).analyze();
-    expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+    expect(
+      resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(' ')} ${n.html} ${n.failureSummary}`).join(' | ')}`)
+    ).toEqual([]);
   });
 
   test('la liste des fonctions est accessible (axe)', async ({ page }) => {
