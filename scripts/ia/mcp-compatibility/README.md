@@ -20,7 +20,9 @@ permet le test hors ligne. Si le wrapper ou le cache local bloque, appeler direc
 distribution Maven déjà présente dans `~/.m2/wrapper/dists`, sans modifier le wrapper versionné.
 
 Le test Java démarre Tomcat, fournit `MCP_COMPATIBILITY_URL` au processus Node, attend ses dix
-scénarios, ferme les deux côtés et vérifie que le port est libéré. Ne pas lancer `npm test` contre
+scénarios, ferme les deux côtés et vérifie que le port est libéré. Un second test fait de même avec
+le client MCP Python officiel du service IA (`ia/tests/compatibilite/`, lancé par `uv run --locked`,
+rapport `client-python.txt`) ; `uv` doit être installé. Ne pas lancer `npm test` contre
 une API de l'application : le client refuse une URL autre que `http://127.0.0.1:<port>/mcp`.
 
 Sorties séparées : `backend/target/mcp-compatibility/client.tap`, `surefire-reports/`, classes et

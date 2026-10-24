@@ -29,9 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * P1.1 : interopérabilité réseau réelle Java/TypeScript sur le classpath ERP-RH.
+ * Interopérabilité réseau réelle du SDK Java sur le classpath ERP-RH avec les clients officiels
+ * TypeScript (preuve J0) et Python (tâche T3 de docs/ia.md), sur les mêmes scénarios.
  * Profil explicite, sans SpringApplication, scan applicatif, auto-configuration, .env ou base.
- * Le serveur est limité à loopback, à un port éphémère et à la durée de ce test synthétique.
+ * Le serveur est limité à loopback, à un port éphémère et à la durée de chaque test synthétique.
  */
 class McpCompatibilityTest {
 
@@ -42,7 +43,25 @@ class McpCompatibilityTest {
         assertThat(clientDirectory.resolve("node_modules/@modelcontextprotocol/sdk/package.json"))
                 .as("Installer le client isolé avec npm ci avant le test Maven")
                 .exists();
-        Path report = Path.of("target", "mcp-compatibility", "client.tap").toAbsolutePath();
+        executerContreServeur(clientDirectory, "client.tap", "TypeScript",
+                List.of(System.getProperty("node.executable", "node"), "--test", "--test-reporter=tap",
+                        "src/interop.test.ts"));
+    }
+
+    @Test
+    @Timeout(120)
+    void un_client_python_decouvre_et_appelle_le_sdk_java_puis_ferme_sa_session() throws Exception {
+        Path serviceIa = Path.of("..", "ia").toAbsolutePath().normalize();
+        assertThat(serviceIa.resolve("uv.lock")).as("Service IA Python attendu dans ../ia").exists();
+        // --locked : versions du lockfile versionné ; -rA : chaque scénario apparaît dans le rapport.
+        executerContreServeur(serviceIa, "client-python.txt", "Python",
+                List.of(System.getProperty("uv.executable", "uv"), "run", "--locked", "pytest",
+                        "tests/compatibilite", "-q", "-rA", "-p", "no:cacheprovider"));
+    }
+
+    private static void executerContreServeur(Path dossier, String nomRapport, String client, List<String> commande)
+            throws Exception {
+        Path report = Path.of("target", "mcp-compatibility", nomRapport).toAbsolutePath();
         Files.createDirectories(report.getParent());
         int port;
 
@@ -50,22 +69,21 @@ class McpCompatibilityTest {
             context.register(ServeurSynthetique.class);
             context.refresh();
             port = context.getWebServer().getPort();
-            assertThat(port).isPositive().isNotIn(4200, 4300, 5000, 5001, 5002, 8080);
+            assertThat(port).isPositive().isNotIn(4000, 4200, 4300, 5000, 5001, 5002, 5003, 8080);
             assertThat(context.getBeanNamesForType(javax.sql.DataSource.class)).isEmpty();
             assertThat(context.getBeanDefinitionNames()).noneMatch(name -> name.contains("flyway"));
 
-            var processBuilder = new ProcessBuilder(System.getProperty("node.executable", "node"),
-                    "--test", "--test-reporter=tap", "src/interop.test.ts")
-                    .directory(clientDirectory.toFile())
+            var processBuilder = new ProcessBuilder(commande)
+                    .directory(dossier.toFile())
                     .redirectErrorStream(true)
                     .redirectOutput(report.toFile());
             processBuilder.environment().put("MCP_COMPATIBILITY_URL", "http://127.0.0.1:" + port + "/mcp");
             Process process = processBuilder.start();
             try {
-                assertThat(process.waitFor(45, TimeUnit.SECONDS))
-                        .as("Le client doit se terminer dans les 45 secondes ; rapport : %s", report)
+                assertThat(process.waitFor(90, TimeUnit.SECONDS))
+                        .as("Le client %s doit se terminer dans les 90 secondes ; rapport : %s", client, report)
                         .isTrue();
-                assertThat(process.exitValue()).as("Résultats TypeScript :\n%s", Files.readString(report)).isZero();
+                assertThat(process.exitValue()).as("Résultats %s :\n%s", client, Files.readString(report)).isZero();
             } finally {
                 if (process.isAlive()) {
                     process.destroyForcibly();
