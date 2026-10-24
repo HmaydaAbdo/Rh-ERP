@@ -52,6 +52,7 @@ test.describe('Équipes', () => {
     const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
       'POST /equipes/search': () => pageDe([CHAUFFEURS, OPERATEURS]),
       'GET /equipes/5': () => CHAUFFEURS,
+      'GET /chantiers/9': () => ({ id: 9, code: 'NADOR', libelle: 'Nador' }),
       // Les fiches courantes sont affectées à OP; le bulletin d'août reste rattaché à CH.
       'POST /employees/regroupements': () => [{ id: 6, code: 'OP', libelle: 'Opérateurs', effectif: 3, actifs: 2 }],
       'GET /paie/periodes': () => PERIODES,
@@ -101,16 +102,28 @@ test.describe('Équipes', () => {
     await expect(page.getByText('Ancienneté')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Exporter la situation de paie par équipe en PDF' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Exporter l’évolution mensuelle des indicateurs de paie par équipe en PDF' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Indicateur de la répartition par équipe' }).getByRole('button')).toHaveCount(4);
-    await expect(page.getByRole('group', { name: 'Indicateur de l’évolution mensuelle par équipe' }).getByRole('button')).toHaveCount(4);
+    const repartition = page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' });
+    const evolution = page.locator('.perimetre-analytique__section').filter({ hasText: 'Évolution mensuelle par équipe' });
+    const indicateursRepartition = repartition.getByRole('combobox', { name: 'Indicateurs de la répartition par équipe' });
+    const indicateursEvolution = evolution.getByRole('combobox', { name: 'Indicateurs de l’évolution mensuelle par équipe' });
+    await indicateursRepartition.click();
+    await expect(page.getByRole('option')).toHaveCount(4);
+    await page.getByRole('option', { name: 'Masse salariale (DH)' }).click();
+    await indicateursEvolution.click();
+    await page.getByRole('option', { name: 'STC (personnes)' }).click();
+    await expect(repartition.locator('.perimetre-analytique__graphique-indicateur')).toHaveCount(2);
+    await expect(evolution.locator('.perimetre-analytique__graphique-indicateur')).toHaveCount(2);
     await expect(page.locator('.perimetre-analytique__donnees[open]')).toHaveCount(0);
     expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5, 6] });
     expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5] });
     await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Évolution mensuelle' })).toContainText('juillet 2026');
-    await page.locator('.perimetre-analytique__bande select').first().selectOption('9');
+    const chantier = evolution.getByRole('combobox', { name: 'Chantier' });
+    await chantier.fill('Nador');
+    await page.getByRole('option', { name: 'Nador' }).click();
     await expect(page).toHaveURL('/equipes/analytique?code=C&chantierIds=9');
-    await expect.poll(() => mock.bodies['POST /paie/analytique'].some((body) => body.chantierIds?.includes(9))).toBe(true);
-    await page.locator('.perimetre-analytique__bande select').first().selectOption('');
+    await expect.poll(() => mock.bodies['POST /paie/analytique'].some((body) => body.chantierIds?.includes(9) && body.equipeIds?.includes(5))).toBe(true);
+    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' }).getByRole('combobox', { name: 'Chantier' })).toHaveValue('Nador');
+    await evolution.getByRole('button', { name: 'Effacer la sélection' }).first().click();
     await expect(page).toHaveURL('/equipes/analytique?code=C');
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
 

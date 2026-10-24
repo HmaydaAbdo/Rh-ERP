@@ -34,9 +34,7 @@
       }
       @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
         <label class="perimetre-cartes__periode">Période Paie
-          <select class="stp-input" [value]="periode() ?? ''" (change)="changerPeriode($event)">
-            @for (m of mois(); track m) { <option [value]="m">{{ libellePeriode(m) }}</option> }
-          </select>
+          <stp-select ariaLabel="Période de paie" placeholder="Période de paie" [options]="optionsPeriodes()" [value]="periode()" (valueChange)="changerPeriode($event)" />
         </label>
       }
       @if (!module().sansRaccourciListe) {

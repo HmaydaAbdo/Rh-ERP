@@ -142,11 +142,10 @@ Interdictions :
 
 # Sélecteurs (listes déroulantes)
 
-Un composant générique unique sert de sélecteur pour toute liste adossée à une source de données
-back-end — jamais un composant de sélection piloté par une liste chargée intégralement en mémoire
-au montage du composant, même pour une liste de référence de petite taille (la pagination/recherche
-existe déjà côté backend pour la lister ailleurs ; un sélecteur la réutilise plutôt que de charger
-"tout d'un coup").
+Un composant générique unique sert à tout sélecteur ou multisélecteur de l'application, sans
+exception, qu'il propose une liste métier ou un choix fini (période, statut, taille de page ou
+indicateur). Il fournit toujours une recherche et révèle les options par blocs au défilement. Une
+petite liste ne désactive pas ces interactions.
 
 ## Cardinalité
 
@@ -164,11 +163,14 @@ existe déjà côté backend pour la lister ailleurs ; un sélecteur la réutili
 
 ## Recherche et chargement différé
 
-* Tout sélecteur recherche côté serveur au fil de la frappe (jamais un filtre client sur une liste
-  déjà entièrement chargée) — débounce obligatoire.
-* Tout sélecteur charge ses options par page (chargement différé) plutôt qu'une liste complète —
-  y compris pour une liste de référence de petite taille, par cohérence : un seul comportement,
-  jamais une exception "parce que c'est petit aujourd'hui" qui redevient un problème demain.
+* Toute liste métier adossée au backend utilise `app-lazy-select` et son contrat de recherche côté
+  serveur au fil de la frappe (débounce obligatoire) et de chargement paginé au défilement.
+* Toute liste finie est passée au même `stp-select` : recherche dans les libellés puis chargement
+  paresseux par blocs au défilement. Les blocs sont un mécanisme commun de rendu, même lorsqu'une
+  liste courte tient dans le premier bloc.
+* Aucun `<select>` natif, contrôle maison, ou option désactivant recherche et défilement paresseux
+  n'est ajouté dans un écran. Les listes à source backend ne sont jamais chargées intégralement
+  pour simuler recherche ou pagination côté client.
 * Un domaine qui expose un sélecteur fournit une implémentation du contrat correspondant (une
   méthode de pagination filtrée + une résolution par identifiant, pour afficher correctement une
   valeur déjà sélectionnée avant même que sa page ne soit chargée, ex. en modification) — jamais

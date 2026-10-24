@@ -1,6 +1,7 @@
 import type { MockedObject } from 'vitest';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
@@ -13,6 +14,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
 import { AnalytiquePerimetreComponent } from './analytique-perimetre.component';
@@ -120,6 +122,26 @@ describe('AnalytiquePerimetreComponent', () => {
     return harness.routeNativeElement as HTMLElement;
   }
 
+  async function choisirOption(input: HTMLInputElement, recherche: string): Promise<void> {
+    input.click();
+    input.value = recherche;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+    (document.querySelector('[role="option"]') as HTMLElement).click();
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
+  async function choisirValeur(conteneur: Element, ariaLabel: string, value: unknown): Promise<void> {
+    const select = harness.fixture.debugElement.queryAll(By.directive(SelectComponent))
+      .find((debug) => conteneur.contains(debug.nativeElement) && (debug.componentInstance as SelectComponent).ariaLabel() === ariaLabel)!
+      .componentInstance as SelectComponent;
+    select.value.set(value);
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
   beforeEach(async () => {
     permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
@@ -187,9 +209,10 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.textContent).toContain('juillet 2026');
     expect(page.textContent).toContain('août 2026');
     expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
-    expect(page.querySelectorAll('[aria-label="Indicateur de la répartition par équipe"] button')).toHaveLength(4);
-    expect(page.querySelectorAll('[aria-label="Indicateur de l’évolution mensuelle par équipe"] button')).toHaveLength(4);
-    expect(page.querySelector('select')?.options[0].textContent).toContain('Tous les chantiers');
+    expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de la répartition par équipe"]')).toHaveLength(1);
+    expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]')).toHaveLength(1);
+    expect(page.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(page.querySelector('stp-select input[aria-label="Chantier"]')?.getAttribute('placeholder')).toBe('Tous les chantiers');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [1] }));
     expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
@@ -199,34 +222,33 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {
     const page = await ouvrirEquipe();
-    const chantier = page.querySelector('select') as HTMLSelectElement;
-    chantier.value = '1';
-    chantier.dispatchEvent(new Event('change'));
-    await harness.fixture.whenStable();
+    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'));
+    const chantier = evolution?.querySelector('input[aria-label="Chantier"]') as HTMLInputElement;
+    await choisirOption(chantier, 'Nador');
     harness.fixture.detectChanges();
 
     expect(TestBed.inject(Router).url).toContain('chantierIds=1');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1], equipeIds: [1] }));
-    expect(page.querySelector('select')?.textContent).toContain('Nador');
+    expect([...page.querySelectorAll('.perimetre-analytique__section input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'Nador')).toBe(true);
     expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
   });
 
-  it('permet de choisir indépendamment les quatre mesures de la répartition et de l’évolution par équipe', async () => {
+  it('permet de sélectionner plusieurs indicateurs indépendamment et affiche un graphique par indicateur', async () => {
     const page = await ouvrirEquipe();
-    const repartition = page.querySelector('[aria-label="Indicateur de la répartition par équipe"]')!;
-    const evolution = page.querySelector('[aria-label="Indicateur de l’évolution mensuelle par équipe"]')!;
-    const bouton = (groupe: Element, nom: string) => Array.from(groupe.querySelectorAll('button')).find((item) => item.textContent?.trim() === nom) as HTMLButtonElement;
-
-    bouton(repartition, 'Masse salariale (DH)').click();
-    bouton(evolution, 'STC (personnes)').click();
+    const repartition = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Répartition de la paie par équipe'))!;
+    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+      .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'))!;
+    await choisirValeur(repartition, 'Indicateurs de la répartition par équipe', ['effectif', 'masse']);
+    await choisirValeur(evolution, 'Indicateurs de l’évolution mensuelle par équipe', ['effectif', 'stc']);
     harness.fixture.detectChanges();
 
-    expect(bouton(repartition, 'Masse salariale (DH)').getAttribute('aria-pressed')).toBe('true');
-    expect(bouton(evolution, 'STC (personnes)').getAttribute('aria-pressed')).toBe('true');
-    expect(bouton(evolution, 'Effectif (personnes)').getAttribute('aria-pressed')).toBe('false');
-    expect(page.textContent).toContain('Masse salariale (DH)');
-    expect(page.textContent).toContain('STC (DH)');
+    expect((repartition.querySelector('input[aria-label="Indicateurs de la répartition par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
+    expect((evolution.querySelector('input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
+    expect(repartition.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(evolution.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {
@@ -360,7 +382,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = harness.routeNativeElement as HTMLElement;
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
-    expect(page.querySelector('select')).toBeNull();
+    expect(page.querySelector('stp-select')).toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
   });
 
@@ -373,11 +395,9 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('met à jour le mois dans l’URL et retire une étape', async () => {
     const page = await ouvrir('/chantiers/analytique?chantierIds=1&periode=2026-08');
-    const select = page.querySelector('select') as HTMLSelectElement;
-    select.value = '2026-08';
-    select.dispatchEvent(new Event('change'));
+    await choisirValeur(page, 'Période de paie', '2026-07');
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+    expect(TestBed.inject(Router).url).toContain('periode=2026-07');
 
     (page.querySelector('button[aria-label="Retirer l’étape Chantier"]') as HTMLButtonElement).click();
     await harness.fixture.whenStable();

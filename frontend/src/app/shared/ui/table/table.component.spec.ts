@@ -1,7 +1,9 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { TableColumn } from '../../table/table-columns';
+import { SelectComponent } from '../select/select.component';
 import { TableCellDirective, TableComponent, TableFooterDirective, TableLazyLoadEvent, TableRowActionsDirective } from './table.component';
 
 interface Ligne {
@@ -72,6 +74,15 @@ describe('TableComponent', () => {
   let fixture: ComponentFixture<TableauTestComponent>;
   let hote: TableauTestComponent;
   const racine = () => fixture.nativeElement as HTMLElement;
+
+  async function choisirLignesParPage(value: number): Promise<void> {
+    const select = fixture.debugElement.queryAll(By.directive(SelectComponent))
+      .map((debug) => debug.componentInstance as SelectComponent<number>)
+      .find((component) => component.ariaLabel() === 'Lignes par page')!;
+    select.value.set(value);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
 
   function afficher(configurer?: (h: TableauTestComponent) => void): void {
     fixture = TestBed.createComponent(TableauTestComponent);
@@ -208,14 +219,10 @@ describe('TableComponent', () => {
       expect(bouton('Page suivante').disabled).toBe(true);
     });
 
-    it('change la taille de page et revient à la première', () => {
+    it('recherche la taille de page, la choisit et revient à la première', async () => {
       bouton('Page suivante').click();
       fixture.detectChanges();
-      const choix = racine().querySelector('select') as HTMLSelectElement;
-
-      choix.value = '20';
-      choix.dispatchEvent(new Event('change'));
-      fixture.detectChanges();
+      await choisirLignesParPage(20);
 
       expect(hote.rows()).toBe(20);
       expect(hote.first()).toBe(0);
@@ -253,7 +260,7 @@ describe('TableComponent', () => {
       expect(racine().querySelector('.stp-table__report')?.textContent?.trim()).toBe('1 - 10 sur 95 — page 1/10');
     });
 
-    it('émet la page suivante, la taille et le tri demandés', async () => {
+    it('émet la page suivante, la taille recherchée et le tri demandés', async () => {
       afficher((h) => {
         h.lazy.set(true);
         h.lignes.set(LIGNES);
@@ -265,9 +272,7 @@ describe('TableComponent', () => {
       bouton('Page suivante').click();
       entete('Nom').querySelector('button')!.click();
       entete('Nom').querySelector('button')!.click();
-      const choix = racine().querySelector('select') as HTMLSelectElement;
-      choix.value = '50';
-      choix.dispatchEvent(new Event('change'));
+      await choisirLignesParPage(50);
 
       expect(hote.chargements).toEqual([
         { first: 10, rows: 10, sortField: null, sortOrder: 1 },

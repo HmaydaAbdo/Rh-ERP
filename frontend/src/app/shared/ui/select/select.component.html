@@ -7,17 +7,14 @@
     type="text"
     autocomplete="off"
     [attr.id]="inputId()"
-    [class.stp-select__input--static]="!filterable()"
-    [attr.inputmode]="filterable() ? null : 'none'"
     [disabled]="disabled()"
-    [placeholder]="expanded() && filterable() ? filterPlaceholder() : placeholder()"
+    [placeholder]="expanded() ? filterPlaceholder() : placeholder()"
     [attr.aria-label]="ariaLabel()"
     [value]="text()"
     [(expanded)]="expanded"
     (keydown)="onComboboxKeydown()"
     (valueChange)="onType($event)"
     (click)="toggle()"
-    (beforeinput)="onBeforeInput($event)"
     (blur)="onBlur()"
   />
   @if (loading()) {

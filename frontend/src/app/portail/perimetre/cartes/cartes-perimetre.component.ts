@@ -11,6 +11,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { Employee } from '../../employee/models/employee.model';
@@ -54,7 +55,7 @@ interface Chargement {
  */
 @Component({
   selector: 'app-cartes-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, SelectComponent, PdfExportButtonComponent],
   templateUrl: './cartes-perimetre.component.html',
   styleUrl: './cartes-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -90,6 +91,7 @@ export class CartesPerimetreComponent {
 
   /** Mois de paie du module, du plus récent au plus ancien (avec `PAIE_READ`). */
   protected readonly mois = signal<string[]>([]);
+  protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   /** Le mois affiché : celui de l'URL, à défaut le plus récent (sauf module Paie, où « aucun mois » est la liste des mois). */
   protected readonly periode = computed(() => {
     if (!this.voitPaie()) {
@@ -236,8 +238,8 @@ export class CartesPerimetreComponent {
     this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null, periode: this.module().niveauPeriode ? null : this.perimetre().periode, par: null });
   }
 
-  protected changerPeriode(event: Event): void {
-    this.naviguer({ periode: (event.target as HTMLSelectElement).value || null });
+  protected changerPeriode(value: unknown): void {
+    this.naviguer({ periode: typeof value === 'string' && value ? value : null });
   }
 
   /** Vers l'Analytique du module : mêmes filtres, avec ce groupe pour périmètre. */

@@ -19,11 +19,7 @@
   font: inherit;
   font-size: var(--control-font-size);
   text-overflow: ellipsis;
-  cursor: pointer;
-
-  &:not(.stp-select__input--static) {
-    cursor: text;
-  }
+  cursor: text;
 
   &::placeholder {
     color: var(--color-text-muted);

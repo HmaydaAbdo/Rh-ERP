@@ -125,9 +125,12 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   dernier mois de paie enregistré. Le mois est déterminé par la base, sans sélecteur de période. La navigation
   par onglets remplace les raccourcis vers la liste et les employés; les filtres restent conservés entre les vues.
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
-  pour une équipe choisie. Les deux graphiques proposent Effectif (personnes), Masse salariale (DH), STC (personnes)
-  et STC (DH), chacun avec son propre indicateur sélectionné. Le filtre Chantier s'applique aux deux graphiques et
-  reste synchronisé dans l'URL. L'évolution conserve les mois antérieurs; le mois de référence courant ne peut pas
+  pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
+  Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
+  Comme tous les sélecteurs de l'application, ces contrôles permettent la recherche et le chargement au défilement;
+  le filtre Chantier et le choix d'Équipe proposent également la recherche.
+  Chaque carte de graphique contient son filtre Chantier; les deux filtres restent synchronisés dans l'URL et
+  s'appliquent aux deux cartes. L'évolution conserve les mois antérieurs; le mois de référence courant ne peut pas
   être changé. La vue n'expose ni le choix « Répartir par », ni les graphiques propres aux domaines Employé ou Paie.
   Les tableaux de données sont repliés par défaut et s'ouvrent avec « Voir les données ».
 

@@ -43,6 +43,11 @@ describe('ColumnChooserComponent', () => {
     await stabiliser();
   }
 
+  async function fermer(): Promise<void> {
+    champ().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await stabiliser();
+  }
+
   afterEach(() => document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove()));
 
   it('résume le nombre de colonnes visibles et nomme le choix', async () => {
@@ -69,6 +74,7 @@ describe('ColumnChooserComponent', () => {
     await stabiliser();
 
     expect(visibles()).toEqual(['nom', 'fonction']);
+    await fermer();
     expect(champ().value).toBe('Colonnes (2)');
   });
 
@@ -84,6 +90,7 @@ describe('ColumnChooserComponent', () => {
     await stabiliser();
 
     expect(visibles()).toEqual(['nom']);
+    await fermer();
     expect(champ().value).toBe('Colonnes (1)');
   });
 

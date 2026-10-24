@@ -1,6 +1,7 @@
 import type { MockedObject } from 'vitest';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
@@ -9,6 +10,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
@@ -93,6 +95,15 @@ describe('CartesPerimetreComponent', () => {
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
     return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function choisirValeur(ariaLabel: string, value: unknown): Promise<void> {
+    const select = harness.fixture.debugElement.queryAll(By.directive(SelectComponent))
+      .find((debug) => (debug.componentInstance as SelectComponent).ariaLabel() === ariaLabel)!
+      .componentInstance as SelectComponent;
+    select.value.set(value);
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
   }
 
   beforeEach(async () => {
@@ -235,12 +246,9 @@ describe('CartesPerimetreComponent', () => {
 
   it('change le mois de paie dans l’URL', async () => {
     const page = await ouvrir();
-    const select = page.querySelector('select') as HTMLSelectElement;
-    select.value = '2026-08';
-    select.dispatchEvent(new Event('change'));
-    await harness.fixture.whenStable();
+    await choisirValeur('Période de paie', '2026-07');
 
-    expect(TestBed.inject(Router).url).toContain('periode=2026-08');
+    expect(TestBed.inject(Router).url).toContain('periode=2026-07');
   });
 
   it('garde le mois Paie le plus récent et exporte chaque carte Équipe séparément', async () => {
@@ -249,7 +257,7 @@ describe('CartesPerimetreComponent', () => {
     harness.fixture.detectChanges();
     const page = harness.routeNativeElement as HTMLElement;
 
-    expect(page.querySelector('select')).toBeNull();
+    expect(page.querySelector('stp-select')).toBeNull();
     expect(page.textContent).toContain('Paie · août 2026');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(page.querySelector('a[href="/equipes"]')).toBeNull();

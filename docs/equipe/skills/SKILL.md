@@ -29,9 +29,11 @@ met à jour la fiche Employé et le bulletin dans la même transaction; ces opé
 La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
 le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et l'Analytique lisent toujours le dernier mois
 de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. L'Analytique présente la répartition par équipe
-sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Les deux graphiques proposent Effectif (personnes),
-Masse salariale (DH), STC (personnes) et STC (DH), avec des sélections d'indicateur indépendantes. Le filtre Chantier
-s'applique à la répartition et à l'évolution et reste synchronisé dans l'URL. Elle ne présente pas les indicateurs génériques des
+sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
+(personnes), Masse salariale (DH), STC (personnes) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
+Tous ces multisélecteurs et filtres permettent la recherche et le chargement des options au défilement, conformément à la convention frontend commune.
+Le filtre Chantier est présent dans chacune des deux cartes de graphique, s'applique aux deux et reste synchronisé dans l'URL.
+Elle ne présente pas les indicateurs génériques des
 domaines Employé et Paie. Les tableaux de données restent repliés à l'écran jusqu'à l'action « Voir les données ».
 Chaque graphique s'exporte séparément en PDF avec ses données complètes. Ne pas créer de version
 propre au domaine ni permettre de changer librement l'ordre du parcours; suivre la

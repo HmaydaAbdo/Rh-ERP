@@ -37,7 +37,6 @@ type Key = number | string;
       [options]="options()"
       [selectedOptions]="resolved()"
       [multiple]="multiple()"
-      [filterable]="true"
       [externalFilter]="true"
       [clearable]="showClear()"
       [loading]="loading()"

@@ -12,6 +12,7 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
@@ -35,7 +36,7 @@ type MesureRepartition = 'masse' | 'effectif';
 /** La répartition montre les plus grands groupes ; le reste est dans le tableau de données. */
 const NOMBRE_BARRES = 12;
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const MESURES_EVOLUTION: MesureEvolution[] = ['masse', 'effectif', 'stc', 'stcMontant'];
+const MESURES_EVOLUTION: MesureEvolution[] = ['effectif', 'masse', 'stc', 'stcMontant'];
 
 interface Tuile {
   libelle: string;
@@ -64,7 +65,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, ButtonComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, ButtonComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -175,7 +176,10 @@ export class AnalytiquePerimetreComponent {
       .map((equipe) => ({ id: equipe.id, code: equipe.code, libelle: equipe.libelle, ...(valeurs.get(equipe.id) ?? { effectif: 0, masse: 0, stc: 0, stcMontant: 0 }) }));
   });
   protected readonly chantiersEquipe = computed(() => this.donnees().chantiersCatalogue);
-  protected readonly chantierSelectionne = computed(() => this.params().get('chantierIds') ?? '');
+  protected readonly chantierSelectionne = computed<number | null>(() => {
+    const id = Number(this.params().get('chantierIds'));
+    return Number.isInteger(id) && id > 0 ? id : null;
+  });
   protected readonly selectionEquipeEvolution = signal<number | null>(null);
   protected readonly equipeEvolutionId = computed(() => {
     const equipes = this.equipesEffectif();
@@ -183,9 +187,8 @@ export class AnalytiquePerimetreComponent {
     return choisi !== null && equipes.some((equipe) => equipe.id === choisi) ? choisi : (equipes[0]?.id ?? null);
   });
   protected readonly evolutionEquipe = computed(() => this.donnees().evolutionEquipe);
-  protected readonly mesureRepartitionEquipe = signal<MesureEvolution>('effectif');
-  protected readonly mesureEvolutionEquipe = signal<MesureEvolution>('effectif');
-  protected readonly mesuresEquipe = MESURES_EVOLUTION;
+  protected readonly mesureRepartitionEquipe = signal<MesureEvolution[]>(['effectif']);
+  protected readonly mesureEvolutionEquipe = signal<MesureEvolution[]>(['effectif']);
   protected readonly libelleMesureEquipe = (mesure: MesureEvolution): string => {
     switch (mesure) {
       case 'effectif': return 'Effectif (personnes)';
@@ -194,27 +197,38 @@ export class AnalytiquePerimetreComponent {
       case 'stcMontant': return 'STC (DH)';
     }
   };
-  protected readonly tableauEquipes = computed(() => this.equipesEffectif().slice().sort((a, b) => b[this.mesureRepartitionEquipe()] - a[this.mesureRepartitionEquipe()]));
+  protected readonly optionsMesuresEquipe: SelectOption<MesureEvolution>[] = MESURES_EVOLUTION.map((value) => ({ value, label: this.libelleMesureEquipe(value) }));
+  protected readonly optionsChantiersEquipe = computed<SelectOption<number | null>[]>(() => [
+    { value: null, label: 'Tous les chantiers' },
+    ...this.chantiersEquipe().map((chantier) => ({ value: chantier.id, label: chantier.libelle || chantier.code }))
+  ]);
+  protected readonly optionsEquipesEvolution = computed<SelectOption<number>[]>(() => this.equipesEffectif().map((equipe) => ({ value: equipe.id, label: equipe.libelle })));
+  protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
+  protected readonly tableauEquipes = computed(() => {
+    const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
+    return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
+  });
 
-  protected readonly graphiqueEffectifEquipe = computed<Graphique<'bar'>>(() => {
+  protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
     const equipes = this.tableauEquipes();
-    const mesure = this.mesureRepartitionEquipe();
-    const montants = mesure === 'masse' || mesure === 'stcMontant';
-    return {
+    return this.mesureRepartitionEquipe().map((mesure) => ({
+      mesure,
       data: { labels: equipes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: equipes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
-      options: optionsBarres({ indexAxis: 'y', montants })
-    };
+      options: optionsBarres({ indexAxis: 'y', montants: mesure === 'masse' || mesure === 'stcMontant' })
+    }));
   });
-  protected readonly graphiqueEvolutionEquipe = computed<Graphique<'line'>>(() => {
+  protected readonly graphiquesEvolutionEquipe = computed<Array<Graphique<'line'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
     const evolution = this.evolutionEquipe();
-    const mesure = this.mesureEvolutionEquipe();
-    const couleur = couleurEvolution(mesure);
-    return {
-      data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25 }] },
-      options: optionsLigne(mesure === 'masse' || mesure === 'stcMontant')
-    };
+    return this.mesureEvolutionEquipe().map((mesure) => {
+      const couleur = couleurEvolution(mesure);
+      return {
+        mesure,
+        data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25 }] },
+        options: optionsLigne(mesure === 'masse' || mesure === 'stcMontant')
+      };
+    });
   });
 
   protected readonly graphiqueEvolution = computed<Graphique<'line'> & { plugins: ReturnType<typeof valeursSurPoints>[] }>(() => {
@@ -380,20 +394,18 @@ export class AnalytiquePerimetreComponent {
   }
 
   protected documentRepartitionEquipe(): PdfImpressionDocument {
-    const mesure = this.mesureRepartitionEquipe();
-    return this.documentPdf(`Situation de paie par équipe — ${this.libelleMesureEquipe(mesure)}`,
+    return this.documentPdf('Situation de paie par équipe',
       ['Équipe', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
       this.tableauEquipes().map((equipe) => [equipe.libelle, equipe.effectif, formaterMontant(equipe.masse), equipe.stc, formaterMontant(equipe.stcMontant)]),
-      this.contexteEquipe(true));
+      `${this.contexteEquipe(true)} · Indicateurs affichés : ${this.mesureRepartitionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'}`);
   }
 
   protected documentEvolutionEquipe(): PdfImpressionDocument {
     const equipe = this.equipesEffectif().find((valeur) => valeur.id === this.equipeEvolutionId());
-    const mesure = this.mesureEvolutionEquipe();
-    return this.documentPdf(`Évolution mensuelle de la paie — ${this.libelleMesureEquipe(mesure)}`,
+    return this.documentPdf('Évolution mensuelle de la paie par équipe',
       ['Mois', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
       this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif, formaterMontant(mois.masse), mois.stc, formaterMontant(mois.stcMontant)]),
-      `${this.contexteEquipe(false)} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.libelle}` : ''}`);
+      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · Équipe : ${equipe.libelle}` : ''}`);
   }
 
   private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {
@@ -471,21 +483,28 @@ export class AnalytiquePerimetreComponent {
     this.choixDimension.set(dimension);
   }
 
-  protected choisirEquipeEvolution(event: Event): void {
-    this.selectionEquipeEvolution.set(Number((event.target as HTMLSelectElement).value) || null);
+  protected choisirEquipeEvolution(value: unknown): void {
+    this.selectionEquipeEvolution.set(typeof value === 'number' ? value : null);
   }
 
-  protected choisirChantierEquipe(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.naviguer({ chantierIds: value ? value : null });
+  protected modifierMesureRepartitionEquipe(value: unknown): void {
+    this.mesureRepartitionEquipe.set(Array.isArray(value) ? value as MesureEvolution[] : []);
+  }
+
+  protected modifierMesureEvolutionEquipe(value: unknown): void {
+    this.mesureEvolutionEquipe.set(Array.isArray(value) ? value as MesureEvolution[] : []);
+  }
+
+  protected choisirChantierEquipe(value: unknown): void {
+    this.naviguer({ chantierIds: typeof value === 'number' ? String(value) : null });
   }
 
   protected nom(dimension: Dimension, id: number): string {
     return this.noms()[`${dimension}-${id}`] ?? (dimension === 'EQUIPE' && id === 0 ? 'Sans équipe' : `${LIBELLES_DIMENSIONS[dimension]} choisi`);
   }
 
-  protected changerPeriode(event: Event): void {
-    this.naviguer({ periode: (event.target as HTMLSelectElement).value || null });
+  protected changerPeriode(value: unknown): void {
+    this.naviguer({ periode: typeof value === 'string' && value ? value : null });
   }
 
   protected retirer(dimension: Dimension): void {

@@ -72,6 +72,10 @@ Même périmètre et même portée que les Cartes. L'ordre des sources est décl
 Les projections restent indépendantes et chaque source conserve son bloc et ses permissions. Les référentiels mettent les
 effectifs Employé en premier; le module Paie met ses indicateurs Paie en premier.
 
+Tous les filtres et sélecteurs des vues utilisent `stp-select` ou `app-lazy-select`. La recherche est toujours disponible;
+les longues listes métier sont recherchées et paginées côté serveur, tandis que les listes finies sont recherchables et
+révélées par blocs lors du défilement dans le composant partagé.
+
 Un module peut activer un panneau analytique dédié à sa dimension avec `vueEffectifParDimension`. Dans Équipe, ce panneau
 utilise `PAIE_READ` et le dernier mois disponible pour la répartition des effectifs payés par équipe. Le sélecteur de période,
 « Répartir par » et les panneaux génériques Employé/Paie sont masqués. Un sélecteur d'équipe pilote l'évolution historique
