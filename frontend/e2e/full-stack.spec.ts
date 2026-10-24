@@ -256,7 +256,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteFonctionLimitee).not.toContainText('Payés');
     await expect(carteFonctionLimitee).not.toContainText('Masse');
     await pageLimitee.goto(`/functions/analytique?fonctionIds=${fonction.id}&periode=${moisCourant}`);
-    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByText('L’effectif mensuel par fonction n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     const reponseInterdite = await pageLimitee.request.get(`${BACKEND_URL}/paie/periodes`, {
       headers: { Authorization: `Bearer ${sessionLimitee.accessToken}` }
