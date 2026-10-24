@@ -62,6 +62,13 @@ describe('EmployeeFiltresComponent', () => {
     expect(emis.at(-1)).toEqual({ ...AUCUN_FILTRE, fonctionIds: [1, 3], chantierIds: [2], statut: 'INACTIF' });
   });
 
+  it('conserve Orphelins comme filtre d’équipe sans l’envoyer comme un identifiant de référentiel', () => {
+    formulaire().equipeIds().value.set([0]);
+    TestBed.tick();
+
+    expect(emis.at(-1)?.equipeIds).toEqual([0]);
+  });
+
   it('« Réinitialiser » vide tous les filtres', () => {
     (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réinitialiser')) as HTMLButtonElement).click();
     TestBed.tick();

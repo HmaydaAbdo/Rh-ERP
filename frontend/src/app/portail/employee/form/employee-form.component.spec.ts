@@ -67,7 +67,15 @@ describe('EmployeeFormComponent', () => {
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
         fournirPermissions(permissions).providers,
-        { provide: EquipeReferenceService, useValue: referentiel([{ id: 5, code: 'OP', libelle: 'Opérateurs' }]) },
+        { provide: EquipeReferenceService, useValue: {
+          fetchPage: () => of({ items: [
+            { id: 5, code: 'OP', libelle: 'Opérateurs' },
+            { id: 0, code: '', libelle: 'Orphelins (sans équipe)' }
+          ], totalRecords: 2 }),
+          fetchById: (id: number) => of(Number(id) === 0
+            ? { id: 0, code: '', libelle: 'Orphelins (sans équipe)' }
+            : { id, code: 'OP', libelle: 'Opérateurs' })
+        } },
         { provide: EmployeeService, useValue: service },
         { provide: FunctionReferenceService, useValue: referentiel(FONCTIONS) },
         { provide: ChantierReferenceService, useValue: referentiel(CHANTIERS) }
@@ -158,6 +166,16 @@ describe('EmployeeFormComponent', () => {
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé créé');
       expect(navigation).toHaveBeenCalledWith(['/employees', 15]);
       expect(formulaire()().dirty()).toBe(false);
+    });
+
+    it('enregistre le choix Orphelins comme une absence d’équipe, sans envoyer son identifiant synthétique', async () => {
+      await afficher();
+      await remplir();
+      formulaire().equipeId().value.set(0);
+
+      await envoyer();
+
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: null }));
     });
 
     it('affiche le libellé de la fonction et du chantier choisis', async () => {
