@@ -45,7 +45,7 @@ describe('EquipeVuesComponent', () => {
       '/equipes/analytique?code=CH&libelle=Chauffeurs'
     ]);
     expect(page.querySelector('app-equipe-filtres')).not.toBeNull();
-    expect(page.querySelector('app-equipe-qualite')).not.toBeNull();
+    expect(page.querySelector('app-equipe-qualite')).toBeNull();
     expect(page.querySelector('app-collection-shell router-outlet')).not.toBeNull();
   });
 

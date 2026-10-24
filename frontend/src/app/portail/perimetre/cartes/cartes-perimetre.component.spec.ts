@@ -73,7 +73,8 @@ class HoteEquipeComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
-    sansRaccourciListe: true, sansLienEmployes: true
+    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true,
+    resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true
   };
 }
 
@@ -88,10 +89,36 @@ class HoteEquipePaieComponent {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
     sansRaccourciListe: true, sansLienEmployes: true, sansEffectifFichesDansCartes: true,
+    resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true,
     catalogue: {
       filtreActif: (params) => params.get('code') !== null,
       charger: () => of([{ id: 5, code: 'CH', libelle: 'Chauffeurs', detail: null, statut: null }]),
       lien: (id) => ['/equipes', id]
+    }
+  };
+}
+
+@Component({
+  selector: 'app-hote-fonction',
+  imports: [CartesPerimetreComponent],
+  template: '<app-cartes-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteFonctionComponent {
+  module: ModulePerimetre = {
+    ...module(), cle: 'function', libellePluriel: 'fonctions', libelleRacine: 'Toutes les fonctions', dimension: 'FONCTION',
+    ordre: ['FONCTION', 'CHANTIER', 'EQUIPE'], route: '/functions', periodePaieRecenteFixe: true,
+    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
+    resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true, triCartesPaie: ['masse', 'effectif'],
+    sourcesAnalytique: ['PAIE'],
+    catalogue: {
+      filtreActif: () => false,
+      charger: () => of([
+        { id: 7, code: null, libelle: 'MACON', detail: null, statut: null },
+        { id: 8, code: null, libelle: 'OPERATEUR', detail: null, statut: null },
+        { id: 9, code: null, libelle: 'GRUTIER', detail: null, statut: null }
+      ]),
+      lien: (id) => ['/functions', id]
     }
   };
 }
@@ -111,6 +138,13 @@ describe('CartesPerimetreComponent', () => {
 
   async function ouvrirEquipe(url = '/equipes/cartes'): Promise<HTMLElement> {
     await harness.navigateByUrl(url, HoteEquipeComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  async function ouvrirFonction(url = '/functions/cartes'): Promise<HTMLElement> {
+    await harness.navigateByUrl(url, HoteFonctionComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
     return harness.routeNativeElement as HTMLElement;
@@ -146,7 +180,8 @@ describe('CartesPerimetreComponent', () => {
         provideRouter([
           { path: 'chantiers/cartes', component: HoteComponent },
           { path: 'equipes/cartes', component: HoteEquipeComponent },
-          { path: 'equipes/paie-cartes', component: HoteEquipePaieComponent }
+          { path: 'equipes/paie-cartes', component: HoteEquipePaieComponent },
+          { path: 'functions/cartes', component: HoteFonctionComponent }
         ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
@@ -300,16 +335,47 @@ describe('CartesPerimetreComponent', () => {
 
     expect(page.querySelector('stp-select')).toBeNull();
     expect(page.textContent).toContain('Paie · août 2026');
+    expect(page.querySelector('.perimetre-cartes__niveau-titre .perimetre-cartes__periode-fixe')?.textContent).toContain('Paie · août 2026');
+    expect(page.querySelector('.perimetre-cartes__niveau-resume .perimetre-cartes__resume')?.textContent).toContain('Effectif :');
+    expect(page.querySelector('.perimetre-cartes__niveau app-pdf-export-button')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete')).toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(page.querySelector('a[href="/equipes"]')).toBeNull();
-    expect(page.querySelector('a[href^="/employees"]')).toBeNull();
+    expect(page.querySelector('.perimetre-cartes__acces a[href^="/employees"]')).toBeNull();
+    expect(page.querySelector('.perimetre-cartes__niveau a[href="/employees"][aria-label="Voir les employés de ce périmètre"]')).not.toBeNull();
     expect(page.querySelectorAll('.perimetre-carte__pied > app-pdf-export-button')).toHaveLength(1);
     expect(page.querySelector('.perimetre-carte app-pdf-export-button button[aria-label="Exporter Nador en PDF"]')).not.toBeNull();
     expect(page.querySelector('.perimetre-carte__pied a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
     expect(page.querySelector('.perimetre-carte__pied a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
   });
 
-  it('résume Équipe avec la paie, montre « Orphelins » et conserve ce filtre dans les niveaux suivants', async () => {
+  it('centre les cartes Fonction sur la paie récente, retire les raccourcis redondants et trie par masse puis effectif', async () => {
+    permissions = (code) => ['FUNCTION_READ', 'PAIE_READ', 'EMPLOYEE_READ'].includes(code);
+    paie.analyser.mockImplementation((_criteres: { periode?: string }) => of(analyse([], [], [
+      { id: 7, libelle: 'MACON', masse: 6000, effectif: 2, stc: 0, stcMontant: 0 },
+      { id: 8, libelle: 'OPERATEUR', masse: 5000, effectif: 5, stc: 0, stcMontant: 0 },
+      { id: 9, libelle: 'GRUTIER', masse: 5000, effectif: 7, stc: 0, stcMontant: 0 }
+    ])));
+    const page = await ouvrirFonction('/functions/cartes?periode=2026-07');
+
+    expect(page.querySelector('stp-select')).toBeNull();
+    expect(page.textContent).toContain('Paie · août 2026');
+    expect(page.querySelector('.perimetre-cartes__niveau-titre .perimetre-cartes__periode-fixe')?.textContent).toContain('Paie · août 2026');
+    expect(page.querySelector('.perimetre-cartes__niveau-resume .perimetre-cartes__resume')?.textContent).toContain('Masse salariale');
+    expect(page.querySelector('.perimetre-cartes__niveau app-pdf-export-button')).not.toBeNull();
+    expect(page.querySelector('.perimetre-cartes__resultats-entete')).toBeNull();
+    expect(page.querySelector('a[href="/functions"]')).toBeNull();
+    expect(page.querySelector('.perimetre-cartes__acces a[href^="/employees"]')).toBeNull();
+    expect(page.querySelector('.perimetre-cartes__niveau a[href="/employees"][aria-label="Voir les employés de ce périmètre"]')).not.toBeNull();
+    expect(employes.regrouper).not.toHaveBeenCalled();
+    expect(employes.search).not.toHaveBeenCalled();
+    expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
+    expect(Array.from(page.querySelectorAll('.perimetre-carte__nom')).map((nom) => nom.textContent?.trim())).toEqual([
+      'MACON', 'GRUTIER', 'OPERATEUR'
+    ]);
+  });
+
+  it('résume Équipe avec la paie et masque les bulletins orphelins dans les Cartes', async () => {
     paie.analyser.mockImplementation((criteres: { chantierIds?: number[]; equipeIds?: number[] }) => of(analyse(
       [{ id: 1, code: 'C168', libelle: 'Nador', masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
       [{ id: null, code: null, libelle: null, masse: 50, effectif: 1, stc: 0, stcMontant: 0 }],
@@ -324,21 +390,9 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.perimetre-cartes__resume')?.textContent).toContain('Effectif : 1 personnes');
     expect(page.querySelector('.perimetre-cartes__resume')?.textContent).toMatch(/Masse salariale : 50[.,]00 DH/);
     expect(page.querySelector('.perimetre-cartes__resume')?.textContent).not.toMatch(/employé|fiche|payé/i);
-    expect(page.querySelector('button[aria-label="Ouvrir Orphelins"]')).not.toBeNull();
+    expect(page.querySelector('button[aria-label="Ouvrir Orphelins"]')).toBeNull();
+    expect(page.textContent).not.toContain('Orphelins');
     expect(employes.regrouper).not.toHaveBeenCalled();
-
-    (page.querySelector('button[aria-label="Ouvrir Orphelins"]') as HTMLButtonElement).click();
-    await harness.fixture.whenStable();
-    harness.fixture.detectChanges();
-    expect(TestBed.inject(Router).url).toContain('equipeIds=0');
-    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Chantier');
-    expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ equipeIds: [0] }));
-
-    (page.querySelector('button[aria-label="Ouvrir C168"]') as HTMLButtonElement).click();
-    await harness.fixture.whenStable();
-    harness.fixture.detectChanges();
-    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Fonction');
-    expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ equipeIds: [0], chantierIds: [1] }));
   });
 
   it('masque le fil racine redondant au départ et le garde pour revenir après une étape', async () => {

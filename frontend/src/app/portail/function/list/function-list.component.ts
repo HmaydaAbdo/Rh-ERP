@@ -5,24 +5,27 @@ import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
+import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
+import { chargerToutLeReferentiel } from '../../perimetre/perimetre-module';
+import { Function } from '../models/function.model';
 import { FunctionFiltres, lireFiltresFunction, memesFiltresFunction } from '../filtres/function-filtres';
+import { FunctionService } from '../services/function.service';
 
 const CONFIGURATION_TABLE_FUNCTION: CollectionTableConfig = {
   countLabel: (total) => `${total} fonction${total > 1 ? 's' : ''}`,
   accessibleLabel: 'Liste des fonctions',
   emptyMessage: 'Aucune fonction ne correspond à ces critères.'
 };
-import { Function } from '../models/function.model';
-import { FunctionService } from '../services/function.service';
 
 /** Vue tabulaire des fonctions. Le filtre vient de l'URL (voir `FunctionVuesComponent`) ; l'import et la création sont dans l'en-tête de la page. */
 @Component({
   selector: 'app-function-list',
-  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective, PdfExportButtonComponent],
   templateUrl: './function-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -45,12 +48,28 @@ export class FunctionListComponent {
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
   protected readonly deletingId = signal<number | null>(null);
+  protected readonly first = signal(0);
 
   private filtres: FunctionFiltres = lireFiltresFunction(this.route.snapshot.queryParamMap);
 
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'libelle,asc';
+
+  protected readonly documentVide: PdfImpressionDocument = { titre: 'Fonctions', contexte: '', colonnes: [], lignes: [] };
+  protected readonly chargerExport = () => {
+    const filtres = this.filtres;
+    const colonnes = this.columns.visible;
+    return chargerToutLeReferentiel((page, taille) => this.functionService.search(
+      { libelle: filtres.libelle || undefined },
+      { page, size: taille, sort: this.lastSort }
+    )).pipe(map((fonctions) => ({
+      titre: 'Référentiel des fonctions',
+      contexte: filtres.libelle ? `Recherche par libellé : ${filtres.libelle}` : 'Toutes les fonctions',
+      colonnes: colonnes.map((colonne) => colonne.header),
+      lignes: fonctions.map((fonction) => colonnes.map((colonne) => String(fonction[colonne.field as keyof Function] ?? '')))
+    })));
+  };
 
   constructor() {
     this.route.queryParamMap
@@ -72,6 +91,7 @@ export class FunctionListComponent {
 
   protected onSearch(): void {
     this.lastPage = 0;
+    this.first.set(0);
     this.fetchPage();
   }
 

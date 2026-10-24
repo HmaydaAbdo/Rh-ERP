@@ -50,6 +50,10 @@ export interface ModulePerimetre {
   sourcesAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
   /** Active le panneau générique d'effectifs par dimension et l'historique du groupe sélectionné. */
   vueEffectifParDimension?: boolean;
+  /** Présente la qualité des rattachements Paie uniquement dans la section dédiée d'Analytique. */
+  afficherQualiteOrphelins?: boolean;
+  /** Ordre décroissant des cartes selon les indicateurs Paie ; les égalités retombent sur le libellé du groupe. */
+  triCartesPaie?: readonly ('masse' | 'effectif' | 'stc' | 'stcMontant')[];
   /** Texte d'introduction propre à la question métier de l'Analytique. */
   introAnalytique?: string;
   /** Titre de la section Employé, adapté au domaine sans spécialiser le composant partagé. */
@@ -77,6 +81,12 @@ export interface ModulePerimetre {
   sansRaccourciListe?: boolean;
   /** Masque le raccourci vers Cartes dans Analytique, lorsque les onglets suffisent à changer de vue. */
   sansRaccourciCartes?: boolean;
+  /** Place l'accès aux employés à côté du titre de niveau dans Cartes, au lieu de l'en-tête de la vue. */
+  lienEmployesPresDuNiveau?: boolean;
+  /** Place la période, le résumé du périmètre et son export dans l'en-tête du niveau Cartes. */
+  resumeCartesPresDuNiveau?: boolean;
+  /** Exclut les bulletins orphelins des cartes du domaine; leur qualité reste visible dans Analytique. */
+  sansOrphelinsDansCartes?: boolean;
   /** Utilise toujours le dernier mois Paie disponible et masque son sélecteur dans Cartes. */
   periodePaieRecenteFixe?: boolean;
   /** Vrai pour le module Paie : tant qu'aucun mois n'est choisi, le premier niveau des Cartes est la liste des mois (et le mois se choisit dans la barre du module). */
