@@ -31,8 +31,9 @@ le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et
 de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. Le résumé des Cartes donne le nombre d'équipes
 référencées, l'effectif en personnes et la masse salariale en DH, sans chiffre provenant des fiches Employé. « Orphelins »
 est un groupe Paie de premier niveau, exclu du nombre d'équipes; son périmètre est conservé pendant le détail par chantier
-puis fonction. Un indicateur graphique partagé par Tabulaire, Cartes et Analytique présente le rattachement des bulletins
-du dernier mois de paie; il n'apparaît que si le nombre d'« Orphelins » est supérieur à zéro et s'exporte seul en PDF.
+puis fonction. Le graphique de qualité des rattachements est distinct des graphiques de répartition : il apparaît uniquement
+dans une section dédiée de l'Analytique, sous forme d'anneau avec ses propres filtres Chantier et Fonction. Il n'apparaît ni
+dans le Tabulaire ni dans Cartes et s'exporte seul en PDF.
 Il est soumis à `PAIE_READ` : sans ce droit, les données de Paie ne sont ni demandées ni affichées.
 L'Analytique inclut les bulletins orphelins dans son périmètre Paie, même si aucune équipe correspondante n'est présente au catalogue.
 Tous les sélecteurs d'équipe de filtre proposent également l'option « Orphelins (sans équipe) » via l'identifiant de filtre `0`.
@@ -80,6 +81,6 @@ remplacent les liens d'accès directs vers la liste et les employés.
 Utiliser la matrice de scénarios et les fichiers de tests du [README Équipe](../README.md#scénarios-de-vérification-associés).
 Elle associe à chaque règle un test ciblé : normalisation/unicité, équipe facultative, indicateurs par
 période, code historique, suppression avec références Paie et Employé, import et droits. Pour la
-cohérence des orphelins, vérifier notamment `equipe-qualite.component.spec.ts`,
-`analytique-perimetre.component.spec.ts` et les tests des vues Équipe. Exécuter les tests d'intégration
+cohérence des orphelins, vérifier `analytique-perimetre.component.spec.ts` et les tests des vues Équipe.
+Exécuter les tests d'intégration
 PostgreSQL dès qu'une relation, une contrainte ou une migration change.

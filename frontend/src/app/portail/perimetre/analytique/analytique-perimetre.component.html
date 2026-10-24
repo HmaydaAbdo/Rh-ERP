@@ -49,28 +49,28 @@
 
     @if (module().vueEffectifParDimension) {
       @if (!voitPaie()) {
-        <p class="perimetre-analytique__note">L’effectif mensuel par équipe n’est pas disponible pour votre compte.</p>
+        <p class="perimetre-analytique__note">L’effectif mensuel par {{ libelleDimensionVue() }} n’est pas disponible pour votre compte.</p>
       } @else if (!periode()) {
         <p class="perimetre-analytique__note" role="status">Aucun mois de paie n’est disponible.</p>
       } @else {
-        <section class="perimetre-analytique__bande perimetre-analytique__bande--prioritaire" aria-label="Indicateurs de paie par équipe">
+        <section class="perimetre-analytique__bande perimetre-analytique__bande--prioritaire" [attr.aria-label]="'Indicateurs de paie par ' + libelleDimensionVue()">
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-equipe-effectif">
             <div class="perimetre-analytique__entete-section">
-              <h3 id="pa-equipe-effectif" class="perimetre-analytique__titre">Répartition de la paie par équipe · {{ libellePeriode(periode()!) }}</h3>
-              <app-pdf-export-button [document]="documentRepartitionEquipe()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter la situation de paie par équipe en PDF" />
+              <h3 id="pa-equipe-effectif" class="perimetre-analytique__titre">Répartition de la paie par {{ libelleDimensionVue() }} · {{ libellePeriode(periode()!) }}</h3>
+              <app-pdf-export-button [document]="documentRepartitionEquipe()" [iconOnly]="true" [inclureGraphique]="true" [ariaLabel]="'Exporter la situation de paie par ' + libelleDimensionVue() + ' en PDF'" />
             </div>
-            <div class="perimetre-analytique__filtres-equipe" role="group" aria-label="Filtres de la répartition par équipe">
+            <div class="perimetre-analytique__filtres-equipe" role="group" [attr.aria-label]="'Filtres de la répartition par ' + libelleDimensionVue()">
               <label class="perimetre-analytique__selection">Chantier
                 <stp-select ariaLabel="Chantier" placeholder="Tous les chantiers" [options]="optionsChantiersEquipe()" [value]="chantierSelectionne()" (valueChange)="choisirChantierEquipe($event)" />
               </label>
-              <stp-select class="perimetre-analytique__indicateurs" ariaLabel="Indicateurs de la répartition par équipe" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" [options]="optionsMesuresEquipe" [value]="mesureRepartitionEquipe()" (valueChange)="modifierMesureRepartitionEquipe($event)" />
+              <stp-select class="perimetre-analytique__indicateurs" [ariaLabel]="'Indicateurs de la répartition par ' + libelleDimensionVue()" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" [options]="optionsMesuresEquipe" [value]="mesureRepartitionEquipe()" (valueChange)="modifierMesureRepartitionEquipe($event)" />
             </div>
             @if (equipesEffectif().length > 0) {
               @for (graphique of graphiquesRepartitionEquipe(); track graphique.mesure) {
-                <section class="perimetre-analytique__graphique-indicateur" [attr.aria-label]="'Répartition par équipe — ' + libelleMesureEquipe(graphique.mesure)">
+                <section class="perimetre-analytique__graphique-indicateur" [attr.aria-label]="'Répartition par ' + libelleDimensionVue() + ' — ' + libelleMesureEquipe(graphique.mesure)">
                   <h4>{{ libelleMesureEquipe(graphique.mesure) }}</h4>
                   <div class="perimetre-analytique__graphique perimetre-analytique__graphique--haut">
-                    <stp-chart type="bar" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' par équipe, le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
+                    <stp-chart type="bar" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' par ' + libelleDimensionVue() + ', le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
                   </div>
                 </section>
               }
@@ -78,39 +78,39 @@
               <details class="perimetre-analytique__donnees">
                 <summary>Voir les données des {{ tableauEquipes().length }} groupes</summary>
                 <table class="app-static-table">
-                  <thead><tr><th scope="col">Équipe</th><th scope="col">Effectif (personnes)</th><th scope="col">Masse salariale (DH)</th><th scope="col">STC (personnes)</th><th scope="col">STC (DH)</th></tr></thead>
+                  <thead><tr><th scope="col">{{ libelleDimensionVueMaj() }}</th><th scope="col">Effectif (personnes)</th><th scope="col">Masse salariale (DH)</th><th scope="col">STC (personnes)</th><th scope="col">STC (DH)</th></tr></thead>
                   <tbody>@for (equipe of tableauEquipes(); track equipe.id) { <tr><td>{{ equipe.libelle }}</td><td>{{ equipe.effectif }}</td><td>{{ formaterMontant(equipe.masse) }}</td><td>{{ equipe.stc }}</td><td>{{ formaterMontant(equipe.stcMontant) }}</td></tr> }</tbody>
                 </table>
               </details>
             } @else {
-              <p class="perimetre-analytique__vide" role="status">Aucune équipe ne correspond à ces filtres.</p>
+              <p class="perimetre-analytique__vide" role="status">Aucune {{ libelleDimensionVue() }} ne correspond à ces filtres.</p>
             }
           </section>
 
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-equipe-evolution">
             <div class="perimetre-analytique__entete-section">
-              <h3 id="pa-equipe-evolution" class="perimetre-analytique__titre">Évolution mensuelle par équipe</h3>
-              <app-pdf-export-button [document]="documentEvolutionEquipe()" [iconOnly]="true" [inclureGraphique]="true" [disabled]="evolutionEquipe().length === 0" ariaLabel="Exporter l’évolution mensuelle des indicateurs de paie par équipe en PDF" />
+              <h3 id="pa-equipe-evolution" class="perimetre-analytique__titre">Évolution mensuelle par {{ libelleDimensionVue() }}</h3>
+              <app-pdf-export-button [document]="documentEvolutionEquipe()" [iconOnly]="true" [inclureGraphique]="true" [disabled]="evolutionEquipe().length === 0" [ariaLabel]="'Exporter l’évolution mensuelle des indicateurs de paie par ' + libelleDimensionVue() + ' en PDF'" />
             </div>
-            <div class="perimetre-analytique__filtres-equipe" role="group" aria-label="Filtres de l’évolution mensuelle par équipe">
+            <div class="perimetre-analytique__filtres-equipe" role="group" [attr.aria-label]="'Filtres de l’évolution mensuelle par ' + libelleDimensionVue()">
               <label class="perimetre-analytique__selection">Chantier
                 <stp-select ariaLabel="Chantier" placeholder="Tous les chantiers" [options]="optionsChantiersEquipe()" [value]="chantierSelectionne()" (valueChange)="choisirChantierEquipe($event)" />
               </label>
               @if (optionsEquipesEvolution().length > 0) {
-                <label class="perimetre-analytique__selection">Équipe
+                <label class="perimetre-analytique__selection">{{ libelleDimensionVueMaj() }}
                   @for (source of sourcesEquipesEvolution(); track source) {
-                    <app-lazy-select ariaLabel="Équipe" placeholder="Équipe" optionLabel="label" dataKey="value" [source]="source" [value]="equipeEvolutionId()" (valueChange)="choisirEquipeEvolution($event)" />
+                    <app-lazy-select [ariaLabel]="libelleDimensionVueMaj()" [placeholder]="libelleDimensionVueMaj()" optionLabel="label" dataKey="value" [source]="source" [value]="equipeEvolutionId()" (valueChange)="choisirEquipeEvolution($event)" />
                   }
                 </label>
               }
-              <stp-select class="perimetre-analytique__indicateurs" ariaLabel="Indicateurs de l’évolution mensuelle par équipe" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" [options]="optionsMesuresEquipe" [value]="mesureEvolutionEquipe()" (valueChange)="modifierMesureEvolutionEquipe($event)" />
+              <stp-select class="perimetre-analytique__indicateurs" [ariaLabel]="'Indicateurs de l’évolution mensuelle par ' + libelleDimensionVue()" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" [options]="optionsMesuresEquipe" [value]="mesureEvolutionEquipe()" (valueChange)="modifierMesureEvolutionEquipe($event)" />
             </div>
             @if (evolutionEquipe().length > 0) {
               @for (graphique of graphiquesEvolutionEquipe(); track graphique.mesure) {
-                <section class="perimetre-analytique__graphique-indicateur" [attr.aria-label]="'Évolution mensuelle par équipe — ' + libelleMesureEquipe(graphique.mesure)">
+                <section class="perimetre-analytique__graphique-indicateur" [attr.aria-label]="'Évolution mensuelle par ' + libelleDimensionVue() + ' — ' + libelleMesureEquipe(graphique.mesure)">
                   <h4>{{ libelleMesureEquipe(graphique.mesure) }}</h4>
                   <div class="perimetre-analytique__graphique perimetre-analytique__graphique--haut">
-                    <stp-chart type="line" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' mensuel pour l’équipe sélectionnée, le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
+                    <stp-chart type="line" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' mensuel pour la ' + libelleDimensionVue() + ' sélectionnée, le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
                   </div>
                 </section>
               }
@@ -123,7 +123,7 @@
                 </table>
               </details>
             } @else {
-              <p class="perimetre-analytique__vide" role="status">Aucun historique disponible pour cette équipe.</p>
+              <p class="perimetre-analytique__vide" role="status">Aucun historique disponible pour cette {{ libelleDimensionVue() }}.</p>
             }
           </section>
         </section>
@@ -139,6 +139,56 @@
     }
   }
 
+  @if (module().afficherQualiteOrphelins && paie(); as analyseContexteQualite) {
+    @if (analyseContexteQualite.qualite.sansEquipe > 0) {
+      <section class="perimetre-analytique__section perimetre-analytique__section--exportable perimetre-analytique__qualite" aria-labelledby="pa-qualite-orphelins">
+        <div class="perimetre-analytique__entete-section">
+          <div>
+            <h3 id="pa-qualite-orphelins" class="perimetre-analytique__titre">Qualité des rattachements · {{ libellePeriode(analyseContexteQualite.periode) }}</h3>
+            <p class="perimetre-analytique__aide">Bulletins sans équipe dans la paie récente, selon les filtres sélectionnés.</p>
+          </div>
+        </div>
+        <div class="perimetre-analytique__filtres-equipe" role="group" aria-label="Filtres de qualité des rattachements Paie">
+          <label class="perimetre-analytique__selection">Chantier
+            @for (source of sourcesQualiteChantiers; track source) {
+              <app-lazy-select ariaLabel="Chantier du graphique de qualité" placeholder="Tous les chantiers" optionLabel="code" dataKey="id" [multiple]="true" summaryLabel="{0} chantiers" [source]="source" [value]="qualiteChantierIds()" (valueChange)="choisirFiltresQualiteChantier($event)" />
+            }
+          </label>
+          <label class="perimetre-analytique__selection">Fonction
+            @for (source of sourcesQualiteFonctions; track source) {
+              <app-lazy-select ariaLabel="Fonction du graphique de qualité" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" summaryLabel="{0} fonctions" [source]="source" [value]="qualiteFonctionIds()" (valueChange)="choisirFiltresQualiteFonction($event)" />
+            }
+          </label>
+        </div>
+        @if (qualitePaie(); as analyseQualite) {
+          @if (analyseQualite.qualite.sansEquipe > 0) {
+            <div class="perimetre-analytique__entete-section">
+              <p class="perimetre-analytique__aide">{{ analyseQualite.qualite.sansEquipe }} bulletin(s) orphelin(s) sur {{ analyseQualite.kpis.effectif }} bulletin(s) filtré(s).</p>
+              <app-pdf-export-button [document]="documentQualiteOrphelins()" [iconOnly]="true" [inclureGraphique]="true" ariaLabel="Exporter le graphique des bulletins sans équipe en PDF" />
+            </div>
+            <div class="perimetre-analytique__graphique perimetre-analytique__graphique--qualite">
+              <stp-chart type="doughnut" ariaLabel="Répartition des bulletins avec équipe et sans équipe" [data]="graphiqueQualiteOrphelins().data" [options]="graphiqueQualiteOrphelins().options"></stp-chart>
+            </div>
+            <details class="perimetre-analytique__donnees">
+              <summary>Voir les données</summary>
+              <table class="app-static-table">
+                <thead><tr><th scope="col">Rattachement</th><th scope="col">Bulletins</th></tr></thead>
+                <tbody>
+                  <tr><td>Avec équipe</td><td>{{ bulletinsAvecEquipe() }}</td></tr>
+                  <tr><td>Sans équipe (orphelins)</td><td>{{ analyseQualite.qualite.sansEquipe }}</td></tr>
+                </tbody>
+              </table>
+            </details>
+          } @else {
+            <p class="perimetre-analytique__vide" role="status">Aucun bulletin sans équipe ne correspond aux filtres choisis.</p>
+          }
+        } @else {
+          <p class="perimetre-analytique__vide" role="status">Aucune donnée ne correspond aux filtres choisis.</p>
+        }
+      </section>
+    }
+  }
+
   <ng-template #blocPaie>
     <!-- Paie -->
     @if (!voitPaie()) {
@@ -148,6 +198,11 @@
     } @else if (paie(); as a) {
       <section class="perimetre-analytique__bande" [class.perimetre-analytique__bande--prioritaire]="ordreSources()[0] === 'PAIE'" aria-labelledby="pa-paie-titre">
         <h3 id="pa-paie-titre" class="perimetre-analytique__titre">Paie · {{ libellePeriode(a.periode) }}</h3>
+        @if (!module().afficherQualiteOrphelins && (a.qualite.sansEquipe > 0 || a.qualite.sansObservation > 0)) {
+          <p class="perimetre-analytique__note perimetre-analytique__note--qualite" role="status">
+            Qualité des données : {{ a.qualite.sansEquipe }} bulletin(s) orphelin(s), {{ a.qualite.sansObservation }} sans observation.
+          </p>
+        }
         @if (aucunePaie()) {
           <p class="perimetre-analytique__note" role="status">Aucun bulletin sur ce périmètre en {{ libellePeriode(a.periode) }}. Les indicateurs ci-dessous valent zéro pour ce mois.</p>
         }
@@ -222,12 +277,6 @@
             </table>
           </details>
         </section>
-
-        @if (a.qualite.sansEquipe > 0 || a.qualite.sansObservation > 0) {
-          <p class="perimetre-analytique__note perimetre-analytique__note--qualite" role="status">
-            Qualité des données : {{ a.qualite.sansEquipe }} bulletin(s) orphelin(s), {{ a.qualite.sansObservation }} sans observation.
-          </p>
-        }
 
         @if (!aucunePaie()) {
           <section class="perimetre-analytique__section perimetre-analytique__section--exportable" aria-labelledby="pa-tranches">

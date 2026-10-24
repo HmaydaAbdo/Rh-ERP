@@ -10,7 +10,7 @@ process.env['PLAYWRIGHT_BROWSERS_PATH'] ??= resolve(process.cwd(), '.angular', '
  * et peut faire (connexion, permissions, listes, formulaires, export) et l'accessibilité (axe).
  * Hors CI, le Chrome installé sur la machine est utilisé ; en CI, `npx playwright install chromium`.
  */
-const PORT = 4300;
+const PORT = Number(process.env['E2E_PORT'] ?? 4300);
 const channel = undefined;
 const fullStack = !!process.env['E2E_FULL_STACK'];
 

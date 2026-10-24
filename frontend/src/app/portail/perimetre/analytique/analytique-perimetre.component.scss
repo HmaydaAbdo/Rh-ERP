@@ -148,6 +148,12 @@
       height: 22rem;
     }
 
+    &--qualite {
+      width: min(100%, 32rem);
+      height: 20rem;
+      margin-inline: auto;
+    }
+
     &--exportable {
       position: relative;
       padding: var(--control-height) var(--space-xs) var(--space-xs);
@@ -250,6 +256,8 @@
       inline-size: 100%;
       min-inline-size: 0;
     }
+
+    > .perimetre-analytique__selection app-lazy-select { width: 100%; }
   }
 
   @media (max-width: 40rem) {

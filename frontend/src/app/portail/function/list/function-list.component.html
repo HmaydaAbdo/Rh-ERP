@@ -5,8 +5,13 @@
     [value]="functions()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
+    [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
   >
+    @if (totalRecords() > 0) {
+      <app-pdf-export-button table-export [document]="documentVide" [chargerDocument]="chargerExport" [iconOnly]="true" ariaLabel="Exporter les fonctions filtrées en PDF" />
+    }
+
     <ng-template stpCell let-fonction let-col="col">
       @switch (col.field) {
         @case ('libelle') {

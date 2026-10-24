@@ -15,7 +15,14 @@ describe('moduleFunction', () => {
   });
 
   it('décrit le module : référentiel de fonctions, descente fonction → chantier → équipe', () => {
-    expect(module).toMatchObject({ cle: 'function', dimension: 'FONCTION', route: '/functions', permission: 'FUNCTION_READ' });
+    expect(module).toMatchObject({
+      cle: 'function', dimension: 'FONCTION', route: '/functions', permission: 'FUNCTION_READ',
+      sourcesAnalytique: ['PAIE'], ordreAnalytique: ['PAIE'], periodePaieRecenteFixe: true,
+      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true,
+      lienEmployesPresDuNiveau: true, resumeCartesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
+      sansOrphelinsDansCartes: true, afficherQualiteOrphelins: true,
+      triCartesPaie: ['masse', 'effectif']
+    });
     expect(module.ordre).toEqual(['FONCTION', 'CHANTIER', 'EQUIPE']);
   });
 
