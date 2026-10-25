@@ -174,8 +174,8 @@ La situation Employé récente et l’historique Paie ne sont jamais présentés
 | Vue | Contenu |
 |---|---|
 | **Tabulaire** | Liste paginée, recherche par code, désignation et statut, consultation, modification, clôture ou réouverture, suppression selon les droits; synchronisation et création dans l’en-tête commun. |
-| **Cartes** | Parcours chantier → équipe → fonction → employés; statut du chantier, fiches Employé et indicateurs Paie du mois. |
-| **Analytique** | Graphiques : indicateurs de la période, évolution mensuelle, répartition par chantier (STC compris; les chantiers sans bulletin restent visibles), tranches, mouvements, et fiches Employé. |
+| **Cartes** | Parcours chantier → équipe → fonction; statut et quatre indicateurs du dernier mois de paie, comparés au mois précédent. Tri par masse salariale puis effectif. |
+| **Analytique** | Répartition par chantier et suivi mensuel d’un chantier : Effectif, Masse salariale, STC en personnes et en DH, avec filtres Fonction et Équipe. Valeurs nulles masquées dans les répartitions. Section qualité dédiée aux bulletins sans équipe. |
 
 Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le nombre de chantiers concernés n’est pas répété) et la répartition indique le nombre et le montant des soldes de tout compte de chaque chantier. Les filtres par code, désignation et statut agissent de la même façon dans les trois vues. Les droits restent séparés : `CHANTIER_READ` pour le référentiel, `EMPLOYEE_READ` pour les effectifs des fiches, `PAIE_READ` pour les indicateurs et montants Paie.
 

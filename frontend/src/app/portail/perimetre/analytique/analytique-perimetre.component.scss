@@ -104,7 +104,7 @@
 
   &__entete-section {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
@@ -112,6 +112,12 @@
 
     h4 {
       margin: 0;
+    }
+
+    h3, h4, > div {
+      flex: 1 1 auto;
+      min-inline-size: 0;
+      overflow-wrap: anywhere;
     }
 
     app-pdf-export-button { position: static; flex: none; }
@@ -179,6 +185,9 @@
   &__donnees {
     margin-top: var(--space-sm);
     font-size: var(--text-sm);
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
 
     summary {
       color: var(--color-primary);
@@ -236,7 +245,6 @@
     font-size: var(--text-sm);
     font-weight: 600;
 
-    stp-select { min-width: 14rem; max-width: 100%; }
   }
 
   &__filtres-equipe {
@@ -260,7 +268,7 @@
     > .perimetre-analytique__selection app-lazy-select { width: 100%; }
   }
 
-  @media (max-width: 40rem) {
+  @include bp.phone {
     &__filtres-equipe > .perimetre-analytique__selection { flex-basis: 100%; }
     &__selection {
       flex-direction: column;
@@ -276,7 +284,6 @@
     font-size: var(--text-sm);
     font-weight: 600;
 
-    select { min-width: 11rem; }
   }
 
   &__lien {
@@ -363,8 +370,7 @@
     min-width: 0;
 
     &--prioritaire {
-      padding-inline-start: var(--space-md);
-      border-inline-start: 3px solid var(--color-primary);
+      gap: var(--space-lg);
     }
   }
 

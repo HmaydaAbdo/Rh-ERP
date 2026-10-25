@@ -92,12 +92,14 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     List<ChantierEquipePeriodeProjection> resumerChantiersEtEquipesParPeriode(@Param("periode") YearMonth periode, @Param("f") FiltresPaie f);
 
     /** Page des chantiers ayant au moins un bulletin pour le mois, tri stable par code. */
-    @Query(value = "SELECT DISTINCT c.id AS id, c.code AS code, c.designation AS designation, c.actif AS actif " +
+    @Query(value = "SELECT DISTINCT c.id AS id, c.code AS code, c.nom AS nom, c.designation AS designation, c.actif AS actif " +
             "FROM Paie p JOIN p.chantier c WHERE p.periode = :periode " +
             "AND (:motif IS NULL OR LOWER(c.code) LIKE :motif ESCAPE '\\' " +
+            "OR LOWER(COALESCE(c.nom, '')) LIKE :motif ESCAPE '\\' " +
             "OR LOWER(COALESCE(c.designation, '')) LIKE :motif ESCAPE '\\') ORDER BY c.code ASC",
             countQuery = "SELECT COUNT(DISTINCT c.id) FROM Paie p JOIN p.chantier c " +
                     "WHERE p.periode = :periode AND (:motif IS NULL OR LOWER(c.code) LIKE :motif ESCAPE '\\' " +
+                    "OR LOWER(COALESCE(c.nom, '')) LIKE :motif ESCAPE '\\' " +
                     "OR LOWER(COALESCE(c.designation, '')) LIKE :motif ESCAPE '\\')")
     Page<PaieChantierOptionProjection> rechercherOptionsChantiers(@Param("periode") YearMonth periode,
                                                                   @Param("motif") String motif,

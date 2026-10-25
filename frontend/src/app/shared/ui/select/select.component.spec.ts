@@ -24,6 +24,7 @@ const OPTIONS: SelectOption<number>[] = [
       [options]="options()"
       [selectedOptions]="connus()"
       [multiple]="multiple()"
+      [bulkMode]="bulkMode()"
       [externalFilter]="filtreExterne()"
       [clearable]="effacable()"
       [loading]="chargement()"
@@ -42,6 +43,7 @@ class SelectTestComponent {
   readonly options = signal(OPTIONS);
   readonly connus = signal<SelectOption<number>[]>([]);
   readonly multiple = signal(false);
+  readonly bulkMode = signal<'none' | 'filter' | 'loaded'>('none');
   readonly filtreExterne = signal(false);
   readonly effacable = signal(true);
   readonly chargement = signal(false);
@@ -57,6 +59,18 @@ describe('SelectComponent', () => {
   const options = () => Array.from(document.querySelectorAll('[role="option"]')) as HTMLElement[];
   const libelles = () => options().map((o) => o.textContent?.trim());
   const valeur = () => hote.modele().choix;
+
+  it('applique tous les résultats d’un filtre paginé sans énumérer les pages', async () => {
+    await afficher((h) => { h.multiple.set(true); h.bulkMode.set('filter'); h.modele.set({ choix: [1] }); });
+    await ouvrir();
+    (Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Tout sélectionner') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(valeur()).toEqual([]);
+    await ouvrir();
+    (Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Ne rien sélectionner') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(valeur()).toEqual([]);
+  });
 
   async function afficher(configurer?: (h: SelectTestComponent) => void): Promise<void> {
     fixture = TestBed.createComponent(SelectTestComponent);

@@ -22,6 +22,10 @@ describe('moduleChantier', () => {
   it('décrit le module : référentiel de chantiers, descente chantier → équipe → fonction', () => {
     expect(module).toMatchObject({ cle: 'chantier', dimension: 'CHANTIER', route: '/chantiers', permission: 'CHANTIER_READ' });
     expect(module.ordre).toEqual(['CHANTIER', 'EQUIPE', 'FONCTION']);
+    expect(module.sourcesAnalytique).toEqual(['PAIE']);
+    expect(module.periodePaieRecenteFixe).toBe(true);
+    expect(module.sansEffectifFichesDansCartes).toBe(true);
+    expect(module.triCartesPaie).toEqual(['masse', 'effectif']);
   });
 
   it('charge le référentiel filtré par code, désignation et statut, et en fait des cartes avec leur statut', () => {
