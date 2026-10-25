@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ThemeService } from '../../../core/theme/theme.service';
@@ -13,9 +13,12 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { ChartComponent } from '../../../shared/ui/chart/chart.component';
+import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { EmployeeService } from '../../employee/services/employee.service';
+import { MODULE_EMPLOYE } from '../../employee/employee-module';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
+import { formaterMontant } from '../../paie/paie-format';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
@@ -86,6 +89,14 @@ class HoteComponent {
 })
 class HotePaieComponent {
   module: ModulePerimetre = { ...module(), cle: 'paie', dimension: null, catalogue: undefined, niveauPeriode: true, route: '/paie' };
+}
+
+@Component({
+  imports: [AnalytiquePerimetreComponent],
+  template: '<app-analytique-perimetre [module]="module" />'
+})
+class HoteEmployeComponent {
+  readonly module = MODULE_EMPLOYE;
 }
 
 @Component({
@@ -189,7 +200,8 @@ describe('AnalytiquePerimetreComponent', () => {
           { path: 'chantiers/analytique', component: HoteComponent },
           { path: 'equipes/analytique', component: HoteEquipeComponent },
           { path: 'functions/analytique', component: HoteFunctionComponent },
-          { path: 'paie/analytique', component: HotePaieComponent }
+          { path: 'paie/analytique', component: HotePaieComponent },
+          { path: 'employees/analytique', component: HoteEmployeComponent }
         ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
@@ -201,6 +213,98 @@ describe('AnalytiquePerimetreComponent', () => {
       ]
     });
     harness = await RouterTestingHarness.create();
+  });
+
+  it('applique nom et CIN aux mouvements et les inscrit avec le périmètre dans les exports complets', async () => {
+    await harness.navigateByUrl('/employees/analytique?nom=Ali&cin=AB&chantierIds=1&statut=ACTIF', HoteEmployeComponent);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(paie.effectifs).toHaveBeenLastCalledWith({ nomPrenom: 'Ali', cin: 'AB', periode: undefined, chantierIds: [1], equipeIds: undefined, fonctionIds: undefined });
+    const documents = harness.fixture.debugElement.queryAll(By.directive(PdfExportButtonComponent))
+      .map((debug) => (debug.componentInstance as PdfExportButtonComponent).document());
+    const evolution = documents.find((document) => document.titre.startsWith('Évolution mensuelle'))!;
+    expect(evolution.contexte).toContain('Nom : Ali');
+    expect(evolution.contexte).toContain('CIN : AB');
+    expect(evolution.contexte).toContain('Chantier : C168');
+    expect(evolution.contexte).toContain('Statut des fiches : En poste (ne filtre pas la paie)');
+    expect(evolution.colonnes).toEqual(['Mois', 'Masse (DH)', 'Effectif payé', 'STC (personnes)', 'STC (DH)']);
+    expect(evolution.lignes).toHaveLength(2);
+    expect(evolution.lignes[1]).toEqual(['août 2026', formaterMontant(4500), 1, 1, formaterMontant(1000)]);
+  });
+
+  it('annonce une source en erreur, conserve les autres et permet une reprise sans présenter l’erreur comme un résultat vide', async () => {
+    paie.analyser.mockReturnValue(throwError(() => new Error('indisponible')));
+    const page = await ouvrir();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Les indicateurs de paie n’ont pas pu être chargés.');
+    expect(page.textContent).toContain('Situation des fiches Employé');
+    expect(page.textContent).not.toContain('Aucun bulletin sur ce périmètre');
+
+    paie.analyser.mockReturnValue(of(ANALYSE));
+    const bouton = Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer le chargement de l’analyse'))!;
+    bouton.click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelector('[aria-label="Indicateurs de paie"]')).not.toBeNull();
+  });
+
+  it('distingue une erreur de périodes d’une absence de paie et réessaie leur chargement', async () => {
+    paie.listerPeriodes.mockReturnValue(throwError(() => new Error('indisponible')));
+    const page = await ouvrir();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Les périodes de paie n’ont pas pu être chargées.');
+    expect(page.textContent).not.toContain('Aucun mois de paie n’est disponible');
+    paie.listerPeriodes.mockReturnValue(of([{ periode: '2026-08', nombreBulletins: 1, nombreChantiers: 1, masse: 4500, stc: 1, stcMontant: 1000 }]));
+    Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer le chargement de l’analyse'))!.click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(paie.analyser).toHaveBeenCalled();
+  });
+
+  it('masque les données précédentes pendant le chargement d’un nouveau périmètre', async () => {
+    const page = await ouvrir();
+    const attente = new Subject<PaieAnalytique>();
+    paie.analyser.mockReturnValue(attente);
+    await TestBed.inject(Router).navigateByUrl('/chantiers/analytique?chantierIds=2');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(page.textContent).toContain('Chargement de l’analyse…');
+    expect(page.querySelector('div[hidden]')).not.toBeNull();
+    attente.next(ANALYSE);
+    attente.complete();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(page.querySelector('div[hidden]')).toBeNull();
+  });
+
+  it('retire la répartition et son export pendant le chargement d’une nouvelle dimension', async () => {
+    const page = await ouvrir();
+    const attente = new Subject<{ id: number; code: string; libelle: string; effectif: number; actifs: number }[]>();
+    employes.regrouper.mockReturnValue(attente);
+    const choix = Array.from(page.querySelectorAll('[aria-label="Répartir par"] button')).find((b) => b.textContent?.trim() === 'Équipe') as HTMLButtonElement;
+    choix.click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    const section = page.querySelector('[aria-labelledby="pa-fiches-repartition"]')!;
+    expect(section.textContent).toContain('Chargement de la répartition…');
+    expect(section.querySelector('app-pdf-export-button')).toBeNull();
+    expect(section.querySelector('tbody')?.textContent).not.toContain('Nador');
+    attente.next([{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 2, actifs: 2 }]);
+    attente.complete();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(section.querySelector('app-pdf-export-button')).not.toBeNull();
+    expect(section.querySelector('tbody')?.textContent).toContain('Chauffeurs');
+  });
+
+  it('annonce une panne de la projection qualité sans la présenter comme un filtre sans résultat', async () => {
+    paie.analyser.mockImplementation((criteres) => criteres.fonctionIds?.includes(2)
+      ? throwError(() => new Error('qualité indisponible'))
+      : of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
+    const page = await ouvrirEquipe('/equipes/analytique?qualiteFonctionIds=2');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('La qualité des rattachements n’a pas pu être chargée.');
+    expect(page.textContent).toContain('Les données de qualité sont indisponibles.');
+    expect(page.textContent).not.toContain('Aucune donnée ne correspond aux filtres choisis.');
   });
 
   it('affiche les chiffres de la paie avec leur variation et des graphiques accompagnés de leur tableau de données', async () => {
@@ -401,7 +505,7 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect(employes.analyser).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined });
     expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
-    expect(paie.effectifs).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined });
+    expect(paie.effectifs).toHaveBeenLastCalledWith({ chantierIds: [1], equipeIds: undefined, fonctionIds: undefined, periode: undefined });
     expect(page.textContent).toContain('Le code ne s’applique pas ici.');
   });
 

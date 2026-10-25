@@ -4,6 +4,13 @@
     <h1>{{ isEditMode() ? "Modifier l'employé" : 'Nouvel employé' }}</h1>
   </div>
 
+  @if (loading()) {
+    <stp-message text="Chargement de l’employé…" />
+  } @else if (erreurChargement()) {
+    <stp-message severity="error" text="Impossible de charger l’employé. Vérifiez la connexion ou revenez à la liste.">
+      <button stp-button variant="text" type="button" (click)="charger()">Réessayer</button>
+    </stp-message>
+  } @else {
   <form [formRoot]="form" class="app-form__grid">
     <div class="field">
       <label for="nomPrenom">Nom &amp; prénom <span class="field__req" aria-hidden="true">*</span></label>
@@ -65,7 +72,7 @@
       ></app-lazy-select>
     </div>
     } @else {
-      <p class="app-form__hint">Un employé inactif n’a pas d’affectation courante. Son historique reste conservé dans ses bulletins de paie.</p>
+      <p class="app-form__hint">Un employé sorti n’a pas d’affectation courante. Son historique reste conservé dans ses bulletins de paie.</p>
     }
 
     @if (voitLaPaie()) {
@@ -94,4 +101,5 @@
       <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>
+  }
 </div>

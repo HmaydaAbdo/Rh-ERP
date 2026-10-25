@@ -96,8 +96,8 @@ public class UserService implements IUserService {
     @Transactional
     @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public UserResponseDto create(UserCreateRequestDto dto) {
-        String username = dto.username().strip();
-        String email = dto.email().strip();
+        String username = dto.username();
+        String email = dto.email();
         politiqueMotDePasse.exiger(dto.motDePasse(), username);
         if (repository.existsByUsernameIgnoreCase(username)) {
             throw new UsernameAlreadyExistsException(username);
@@ -125,7 +125,7 @@ public class UserService implements IUserService {
         Utilisateur utilisateur = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), utilisateur.getVersion());
 
-        String email = dto.email().strip();
+        String email = dto.email();
         repository.findByEmail(email)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {

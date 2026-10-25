@@ -10,6 +10,8 @@ import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.request.PaieOptionsChantierRequest;
 import staport.rh.paie.dtos.request.PaieOptionsEquipeRequest;
 import staport.rh.paie.services.interfaces.IPaieService;
+import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.repositories.FiltresPaie;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -24,6 +26,9 @@ class PaieRechercheJokersTest extends AuditIntegrationTestBase {
 
     @Autowired
     private IPaieService paieService;
+
+    @Autowired
+    private PaieRepository repository;
 
     private Referentiel employeNomme(String nom, String cin, YearMonth periode) {
         Referentiel ref = donnees.creerReferentiel();
@@ -71,6 +76,26 @@ class PaieRechercheJokersTest extends AuditIntegrationTestBase {
         assertThat(dansLesAgregats("ab%" + s, null, periode)).isEqualTo(1);
         assertThat(dansLaListe("ab_" + s, null)).as("« _ » n'est pas un joker : aucun CIN ne contient de tiret bas").isZero();
         assertThat(dansLesAgregats("ab_" + s, null, periode)).isZero();
+    }
+
+    @Test
+    void tendances_du_pdf_et_effectifs_appliquent_les_memes_filtres_que_la_liste() {
+        String s = DonneesDeTest.suffixeUnique();
+        YearMonth periode = YearMonth.of(2091, 6);
+        Referentiel retenu = employeNomme("Rapport% " + s, "RP%" + s, periode);
+        employeNomme("RapportX " + s, "RPX" + s, periode);
+        FiltresPaie filtres = new FiltresPaie("rapport% " + s, "rp%" + s,
+                List.of(retenu.chantierId()), List.of(retenu.fonctionId()), List.of(retenu.equipeId()));
+
+        assertThat(repository.sommerParChantierEquipePeriode(periode.minusMonths(11), periode, filtres))
+                .singleElement().satisfies(ligne -> {
+                    assertThat(ligne.getChantierId()).isEqualTo(retenu.chantierId());
+                    assertThat(ligne.getEffectif()).isEqualTo(1L);
+                });
+        assertThat(repository.listerEffectifs(filtres)).extracting("employeId").containsExactly(retenu.employeId());
+        FiltresPaie aucun = new FiltresPaie("rapport% " + s, null, null, List.of(-9L), null);
+        assertThat(repository.sommerParChantierEquipePeriode(periode.minusMonths(11), periode, aucun)).isEmpty();
+        assertThat(repository.listerEffectifs(aucun)).isEmpty();
     }
 
     @Test

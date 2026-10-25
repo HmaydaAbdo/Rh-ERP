@@ -27,8 +27,9 @@ describe('MODULE_EMPLOYE', () => {
     expect(MODULE_EMPLOYE.parametresListe(params({ nom: 'ali', chantierIds: '3,4' }))).toMatchObject({ nom: 'ali', chantierIds: '3,4' });
   });
 
-  it('prévient que nom, CIN et statut ne s’appliquent pas aux mouvements de la paie', () => {
-    expect(MODULE_EMPLOYE.noteMouvements?.(params({ statut: 'ACTIF' }))).toContain('ne s’appliquent pas');
+  it('prévient que seul le statut courant ne s’applique pas aux mouvements historiques', () => {
+    expect(MODULE_EMPLOYE.noteMouvements?.(params({ nom: 'ali', cin: 'AB1' }))).toBeNull();
+    expect(MODULE_EMPLOYE.noteMouvements?.(params({ statut: 'ACTIF' }))).toContain('statut de la fiche ne s’applique pas');
     expect(MODULE_EMPLOYE.noteMouvements?.(params({}))).toBeNull();
   });
 });

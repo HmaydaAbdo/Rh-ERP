@@ -70,6 +70,8 @@ final class PaieReportHtmlBuilder {
             corps.appendElement("div").addClass("titre-chapitre").text(b.texte());
         } else if (bloc instanceof PageModel.BlocTitreSection b) {
             corps.appendElement("div").addClass("titre-section").text(b.texte());
+        } else if (bloc instanceof PageModel.BlocTexte b) {
+            corps.appendElement("div").addClass("perimetre-ligne").text(b.texte());
         } else if (bloc instanceof PageModel.BlocTitreRubrique b) {
             corps.appendElement("div").addClass("titre-section").addClass("rubrique-titre")
                     .text(b.numero() + ". " + b.texte());

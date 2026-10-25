@@ -177,6 +177,7 @@ final class RapportPageModelBuilder {
     /** @param sansVueEnsemble vrai : pas de page de vue d'ensemble, les chantiers sont numérotés à partir de I */
     List<PageModel> construire(RapportBiVue vue, boolean sansVueEnsemble) {
         List<PageEnConstruction> pages = new ArrayList<>();
+        ajouterPagesPerimetre(pages, vue.filtresActifs());
 
         if (!sansVueEnsemble) {
             ajouterPageGlobale(pages, vue.synthese());
@@ -213,6 +214,23 @@ final class RapportPageModelBuilder {
             resultat.add(new PageModel(brut.niveauTexte(), i + 1, total, brut.blocs()));
         }
         return resultat;
+    }
+
+    private void ajouterPagesPerimetre(List<PageEnConstruction> pages, List<String> filtres) {
+        if (filtres == null || filtres.isEmpty()) {
+            return;
+        }
+        List<String> lignes = filtres.stream()
+                .flatMap(filtre -> RapportMesureTexte.decouper(filtre, LARGEUR_PAGE, 10.5, false).stream())
+                .toList();
+        int lignesParPage = (int) ((PAGE_BODY_HAUTEUR - TITRE_CHAPITRE_HAUTEUR - MARGE_SECURITE) / 14);
+        for (int debut = 0; debut < lignes.size(); debut += lignesParPage) {
+            List<PageModel.Bloc> blocs = new ArrayList<>();
+            blocs.add(new PageModel.BlocTitreChapitre(debut == 0 ? "Périmètre du rapport" : "Périmètre du rapport (suite)"));
+            lignes.subList(debut, Math.min(debut + lignesParPage, lignes.size()))
+                    .forEach(ligne -> blocs.add(new PageModel.BlocTexte(ligne)));
+            pages.add(new PageEnConstruction("PÉRIMÈTRE", blocs));
+        }
     }
 
     private void ajouterPageGlobale(List<PageEnConstruction> pages, SyntheseGlobaleVue synthese) {

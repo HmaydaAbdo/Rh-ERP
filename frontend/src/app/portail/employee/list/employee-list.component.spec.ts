@@ -4,7 +4,7 @@ import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
@@ -87,6 +87,40 @@ describe('EmployeeListComponent', () => {
       expect(criteres()).toMatchObject({ chantierIds: [4] });
       expect(service.search.mock.lastCall![1]).toMatchObject({ page: 0 });
     });
+
+    it('annule la recherche précédente pour qu’une réponse tardive ne remplace pas le filtre courant', async () => {
+      await afficher();
+      const ancienne = new Subject<ReturnType<typeof page>>();
+      const courante = new Subject<ReturnType<typeof page>>();
+      service.search.mockReturnValueOnce(ancienne).mockReturnValueOnce(courante);
+
+      await TestBed.inject(Router).navigateByUrl('/employees?nom=ali');
+      await TestBed.inject(Router).navigateByUrl('/employees?nom=zahra');
+      courante.next(page([EMPLOYES[1]]));
+      courante.complete();
+      ancienne.next(page([EMPLOYES[0]]));
+      ancienne.complete();
+      harness.detectChanges();
+
+      expect(racine().querySelector('tbody')?.textContent).toContain('Zahra Idrissi');
+      expect(racine().querySelector('tbody')?.textContent).not.toContain('Ali Alaoui');
+    });
+  });
+
+  it('distingue un échec réseau d’une liste vide et recharge les mêmes critères au réessai', async () => {
+    await afficher();
+    service.search.mockReturnValueOnce(throwError(() => new Error('indisponible')));
+    await TestBed.inject(Router).navigateByUrl('/employees?nom=ali');
+    harness.detectChanges();
+    expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les employés');
+
+    (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer')) as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(criteres()).toMatchObject({ nomPrenom: 'ali' });
+    expect(racine().querySelector('[role="alert"]')).toBeNull();
+    expect(racine().querySelector('tbody')?.textContent).toContain('Ali Alaoui');
   });
 
   describe('permissions', () => {

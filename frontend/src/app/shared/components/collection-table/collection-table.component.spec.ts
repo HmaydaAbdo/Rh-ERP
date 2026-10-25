@@ -17,7 +17,9 @@ import { CollectionTableComponent, CollectionTableConfig } from './collection-ta
       [columnState]="columns"
       [value]="rows"
       [totalRecords]="2"
-      [loading]="busy"
+      [loading]="busy()"
+      [erreur]="erreur()"
+      (reessayer)="reprises = reprises + 1"
       [(first)]="first"
       (lazyLoad)="loads.push($event)"
     >
@@ -35,7 +37,9 @@ class TableauHote {
   readonly rows = [{ nom: 'Ali' }, { nom: 'Zahra' }];
   readonly first = signal(0);
   readonly loads: TableLazyLoadEvent[] = [];
-  busy = false;
+  readonly busy = signal(false);
+  readonly erreur = signal<string | null>(null);
+  reprises = 0;
 }
 
 describe('CollectionTableComponent', () => {
@@ -58,7 +62,7 @@ describe('CollectionTableComponent', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([{ path: '', component: TableauHote }])] });
     const harness = await RouterTestingHarness.create();
     const hote = await harness.navigateByUrl('/', TableauHote);
-    hote.busy = true;
+    hote.busy.set(true);
     hote.first.set(20);
     harness.detectChanges();
     const page = harness.routeNativeElement as HTMLElement;
@@ -66,5 +70,30 @@ describe('CollectionTableComponent', () => {
     expect(page.querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('');
     expect(page.querySelector('.stp-table__paginator')).not.toBeNull();
     expect(hote.first()).toBe(20);
+  });
+
+  it('distingue une erreur du résultat vide, masque les anciennes données et permet de réessayer sans recréer le tableau', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([{ path: '', component: TableauHote }])] });
+    const harness = await RouterTestingHarness.create();
+    const hote = await harness.navigateByUrl('/', TableauHote);
+    await harness.fixture.whenStable();
+    const page = harness.routeNativeElement as HTMLElement;
+    const tableau = page.querySelector('stp-table');
+    const nombreChargements = hote.loads.length;
+
+    hote.erreur.set('Impossible de charger les collaborateurs.');
+    harness.detectChanges();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(hote.erreur());
+    expect(tableau?.closest('[hidden]')).not.toBeNull();
+    const reessayer = Array.from(page.querySelectorAll('button')).find((bouton) => bouton.textContent?.includes('Réessayer'))!;
+    reessayer.click();
+    expect(hote.reprises).toBe(1);
+
+    hote.erreur.set(null);
+    harness.detectChanges();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelector('stp-table')).toBe(tableau);
+    expect(tableau?.closest('[hidden]')).toBeNull();
+    expect(hote.loads.length).toBe(nombreChargements);
   });
 });

@@ -31,23 +31,29 @@ public record PaieCreateRequestDto(
         BigDecimal nombreJoursTravailles,
 
         @DecimalMin(value = "0", inclusive = true)
+        @Digits(integer = 3, fraction = 2)
         BigDecimal joursRecuperationOuvrable,
 
         @DecimalMin(value = "0", inclusive = true)
+        @Digits(integer = 3, fraction = 2)
         BigDecimal joursRecuperationDimanche,
 
         @NotNull
         @PositiveOrZero
+        @Digits(integer = 8, fraction = 2)
         BigDecimal salaireMensuel,
 
         @PositiveOrZero
+        @Digits(integer = 8, fraction = 2)
         BigDecimal primeRoulageOrdinaire,
 
         @PositiveOrZero
+        @Digits(integer = 8, fraction = 2)
         BigDecimal primeRoulageDimanche,
 
         @NotNull
         @PositiveOrZero
+        @Digits(integer = 8, fraction = 2)
         BigDecimal salaireTotal,
 
         @Size(max = 255)

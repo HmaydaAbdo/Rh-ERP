@@ -76,7 +76,7 @@ class PaieReportHtmlPdfServiceTest {
         when(historique.getEffectif()).thenReturn(3L);
         when(historique.getStc()).thenReturn(0L);
         when(historique.getStcMontant()).thenReturn(BigDecimal.ZERO);
-        when(repository.sommerParChantierEquipePeriode(any(YearMonth.class), any(YearMonth.class)))
+        when(repository.sommerParChantierEquipePeriode(any(YearMonth.class), any(YearMonth.class), any()))
                 .thenReturn(List.of(historique));
 
         byte[] pdf = service.generer(YearMonth.of(2026, 9), REQUETE_SANS_FILTRE);
@@ -105,6 +105,22 @@ class PaieReportHtmlPdfServiceTest {
     }
 
     /** Rapport d'un seul chantier, sans vue d'ensemble : un PDF valide, sans les deux pages globales. */
+    @Test
+    void le_pdf_filtre_indique_son_perimetre_et_conserve_le_detail_complet() throws IOException {
+        Paie bulletin = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);
+        when(repository.findAll(any(Specification.class))).thenReturn(List.of(bulletin), List.of());
+
+        byte[] pdf = service.generer(YearMonth.of(2026, 9),
+                new PaieReportPdfRequestDto("2026-09", "EMPLOYE", "CIN1", null, null, null, null));
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            String texte = new PDFTextStripper().getText(document);
+            assertThat(texte.replace('\u00a0', ' ').replace('\u202f', ' '))
+                    .contains("Périmètre du rapport", "Nom & prénom contient : EMPLOYE", "CIN contient : CIN1",
+                    "Septembre 2026", "EMPLOYE UN", "5 000,00");
+        }
+    }
+
     @Test
     void generer_sansVueEnsembleProduitUnPdfValideSansLaPageGlobale() {
         Paie c059 = paie("EMPLOYE UN", "CIN1", "MACON", "C059", "EQUIPE A", "5000", null);

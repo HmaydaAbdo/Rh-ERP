@@ -34,8 +34,8 @@ import java.util.Map;
  */
 public record PaieReportPdfRequestDto(
         String periode,
-        String nomPrenom,
-        String cin,
+        @Size(max = 150) String nomPrenom,
+        @Size(max = 30) String cin,
         Long fonctionId,
         /** Filtre multi-marchés de l'assistant PDF ; vide ou nul = tous. */
         @Size(max = 500) List<@NotNull Long> chantierIds,

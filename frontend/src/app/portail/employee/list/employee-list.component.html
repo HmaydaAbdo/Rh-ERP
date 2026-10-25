@@ -5,8 +5,10 @@
     [value]="employees()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
+    [erreur]="erreur()"
     [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
+    (reessayer)="fetchPage()"
   >
     <ng-template stpCell let-employee let-col="col">
       @switch (col.field) {

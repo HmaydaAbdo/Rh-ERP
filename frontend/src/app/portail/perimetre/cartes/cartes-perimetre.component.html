@@ -54,17 +54,17 @@
           <span class="perimetre-cartes__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
         }
       </div>
-      @if (module().resumeCartesPresDuNiveau && niveau() !== 'EMPLOYES') {
+      @if (module().resumeCartesPresDuNiveau && niveau() !== 'EMPLOYES' && !chargement() && !resultat().erreur) {
         <div class="perimetre-cartes__niveau-resume">
           <p class="perimetre-cartes__resume" role="status">
             {{ libelleGroupesResume(groupes() ?? []) }}
             @if (module().sansEffectifFichesDansCartes) {
-              @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
             } @else {
-              @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-              @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+              @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
             }
-            @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
+            @if (voitPaie() && !periode() && niveau() !== 'PERIODE' && !erreurPeriodes() && !chargementPeriodes()) { · aucun mois de paie disponible }
           </p>
         </div>
       }
@@ -82,7 +82,25 @@
     </div>
   </div>
 
-  <div class="perimetre-cartes__contenu" [attr.aria-busy]="chargement()">
+  <div class="perimetre-cartes__contenu" [attr.aria-busy]="chargement() || chargementPeriodes()">
+    @if (chargement() || chargementPeriodes()) {
+      <stp-message text="Chargement du périmètre…" />
+    }
+    @if (erreurPeriodes()) {
+      <stp-message severity="error" text="La liste des périodes de paie est indisponible.">
+        <button stp-button variant="text" type="button" (click)="recharger()">Réessayer les périodes</button>
+      </stp-message>
+    }
+    @if (avertissementSources() && !chargement()) {
+      <stp-message severity="error" [text]="avertissementSources()">
+        <button stp-button variant="text" type="button" (click)="recharger()">Réessayer les sources</button>
+      </stp-message>
+    }
+    @if (resultat().erreur; as erreur) {
+      <stp-message severity="error" [text]="erreur">
+        <button stp-button variant="text" type="button" (click)="recharger()">Réessayer</button>
+      </stp-message>
+    } @else {
     @if (aucuneSource() && !module().catalogue) {
       <p class="perimetre-cartes__vide">Aucune donnée n’est disponible pour votre compte.</p>
     } @else if (niveau() !== 'EMPLOYES') {
@@ -93,19 +111,19 @@
               <p class="perimetre-cartes__resume" role="status">
                 {{ libelleGroupesResume(liste) }}
                 @if (module().sansEffectifFichesDansCartes) {
-                  @if (voitPaie() && periode()) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
                 } @else {
-                  @if (voitEmployes()) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-                  @if (voitPaie() && periode()) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+                  @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
+                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
                 }
-                @if (voitPaie() && !periode() && niveau() !== 'PERIODE') { · aucun mois de paie disponible }
+                @if (voitPaie() && !periode() && niveau() !== 'PERIODE' && !erreurPeriodes() && !chargementPeriodes()) { · aucun mois de paie disponible }
               </p>
               @if (liste.length > 0) {
                 <app-pdf-export-button [document]="documentGroupes()" [iconOnly]="true" ariaLabel="Exporter les résultats de ce périmètre en PDF" />
               }
             </div>
           }
-          @if (liste.length === 0 && !chargement()) {
+          @if (liste.length === 0 && !chargement() && resultat().erreursSources.length === 0) {
             <p class="perimetre-cartes__vide">Aucun élément ne correspond à ce périmètre.</p>
           }
           <ul class="perimetre-cartes__grille">
@@ -138,7 +156,9 @@
                     }
                     <dl class="perimetre-carte__mesures">
                       @if (voitPaie()) {
-                        @if (moisDe(groupe); as mois) {
+                        @if (resultat().erreursSources.includes('PAIE') || (erreurPeriodes() && !moisDe(groupe))) {
+                          <div><dt>Paie</dt><dd class="perimetre-carte__indisponible">Indisponible</dd></div>
+                        } @else if (moisDe(groupe); as mois) {
                           <div class="perimetre-carte__indicateur">
                             <dt>Effectif (personnes)</dt>
                             <dd>
@@ -167,7 +187,7 @@
                               <small class="perimetre-carte__variation">{{ variationPaie(groupe, 'stcMontant', mois) }}</small>
                             </dd>
                           </div>
-                        } @else {
+                        } @else if (!chargementPeriodes()) {
                           <div><dt>Paie</dt><dd class="perimetre-carte__indisponible">Aucun mois disponible</dd></div>
                         }
                       }
@@ -225,10 +245,14 @@
         </ul>
         @if (resultat().employes.length < resultat().totalEmployes) {
           <div class="perimetre-cartes__plus">
-            <button stp-button variant="secondary" type="button" (click)="afficherPlusEmployes()">Afficher plus ({{ resultat().totalEmployes - resultat().employes.length }} restants)</button>
+            @if (erreurPlus()) {
+              <stp-message severity="error" text="Impossible de charger la suite des employés. Les fiches déjà chargées sont conservées." />
+            }
+            <button stp-button variant="secondary" type="button" [loading]="chargementPlus()" (click)="afficherPlusEmployes()">{{ erreurPlus() ? 'Réessayer' : 'Afficher plus' }} ({{ resultat().totalEmployes - resultat().employes.length }} restants)</button>
           </div>
         }
       </section>
+    }
     }
   </div>
 </div>

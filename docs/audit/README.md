@@ -9,6 +9,10 @@ refusées comprises) ; **à quoi ressemblaient les données avant** ; **sur quel
 **peut-on le prouver** (l'application ne peut ni effacer ni réécrire l'historique) ; **peut-on réparer** (le contenu des
 lignes supprimées est conservé).
 
+Le [modèle et les contrats DTO](contrats.md) décrivent les filtres, réponses, types et contraintes du
+journal et des différences. Ce domaine expose uniquement des consultations ; la restauration de Paie
+reste une action du domaine Paie avec sa propre permission.
+
 ---
 
 ## Les trois couches
@@ -140,7 +144,7 @@ mot de passe sont tracés sans conserver les secrets. La réponse HTTP ne change
 | `POST /logs/search` | `AUDIT_READ` | Journal paginé ; filtres : dates, utilisateur (« contient », jokers neutralisés), catégories/actions/entités multiples, résultat, identifiant de requête. Les critères singuliers restent acceptés pour compatibilité. |
 | `GET /logs/{id}` | `AUDIT_READ` | Une entrée avec son contexte complet et son périmètre |
 | `GET /logs/{id}/details` | `AUDIT_READ` | Ce que l'opération a changé, champ par champ, **paginé** (une suppression de 1 000 bulletins = 1 000 éléments) |
-| `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` | Toutes les versions d'un enregistrement (`paie`, `employee`, `function`, `chantier`, `equipe`, `utilisateur`, `role`), de la plus récente à la plus ancienne |
+| `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` | Toutes les versions d'une entité auditée (`paie`, `employee`, `function`, `chantier`, `equipe`, `utilisateur`, `role`, `permission`, `parametre`, notamment), de la plus récente à la plus ancienne |
 
 Le journal reste non modifiable. La restauration d'un groupe n'altère pas l'entrée source : le bouton visible sur une suppression
 de groupe réussie appelle `POST /paie/restauration/{idEntreeAudit}` (`PAIE_RESTORE`). L'audit fournit à Paie les instantanés
@@ -157,6 +161,15 @@ n'apparaissent jamais.
 temps réel, panneau latéral par entrée (contexte, périmètre, modifications paginées, lien « toutes les entrées de cette
 requête ») ; bouton **Historique** sur le détail d'un bulletin et d'un employé, visible avec `AUDIT_READ`. Les horodatages
 sont stockés en UTC et affichés à l'heure de Casablanca.
+
+Les filtres reviennent à la première page du journal. Une réponse tardive ne peut pas remplacer la
+recherche ou l'entrée sélectionnée plus récemment. Le chargement de l'entrée, de ses modifications et
+de l'historique dispose d'un état annoncé ; les erreurs de lecture sont distinguées d'un résultat vide
+et proposent un réessai. Une page d'historique échouée est redemandée avant de passer à la suivante,
+sans perdre les versions déjà affichées. Changer d'enregistrement recharge son propre historique.
+
+Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la consultation porte sur des
+événements et des versions, sans indicateur Paie ajouté au domaine.
 
 ---
 
@@ -347,3 +360,6 @@ Tous sur une vraie base PostgreSQL (`AuditIntegrationTestBase`) sauf l'architect
 `AuditSynchronisationTest`, `AuditSecurityEventsTest`, `AuditAccesTest`, `AuditDefaillanceTest`, `AuditMigrationGabaritTest`,
 `AuditIntegriteTest`, `AuditConsultationTest` ; côté frontend `journal.component.spec.ts`,
 `audit-historique.component.spec.ts`, `audit-champs.component.spec.ts`, `audit-format.spec.ts`. Voir [testing.md](../testing.md).
+Les specs du journal et de l'historique couvrent aussi la remise à zéro du paginateur, les réponses tardives,
+les erreurs de lecture et le réessai de la page en échec. Les événements de sécurité ne déclenchent pas une
+lecture inutile de différences Envers.

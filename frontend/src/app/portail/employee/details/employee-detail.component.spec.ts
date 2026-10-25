@@ -3,7 +3,7 @@ import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 
 import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans';
 import { AuditService } from '../../audit/services/audit.service';
@@ -37,8 +37,8 @@ describe('EmployeeDetailComponent', () => {
   beforeEach(() => vi.useFakeTimers({ now: new Date(2026, 9, 19), toFake: ['Date'] }));
   afterEach(() => vi.useRealTimers());
 
-  function afficher(permissions: string[], employe: Employee = EMPLOYE) {
-    service.getById.mockReset().mockReturnValue(of(employe));
+  function afficher(permissions: string[], employe: Employee = EMPLOYE, reponse?: Observable<Employee>) {
+    service.getById.mockReset().mockReturnValue(reponse ?? of(employe));
     paie.parcours.mockReset().mockReturnValue(of({ employeId: 9, indicateurs: { moisPayes: 0, totalPercu: 0, joursTravailles: 0, premierMois: null, dernierMois: null }, mois: [], evenements: [] }));
     audit.historique.mockReset().mockReturnValue(of({ content: [], page: { size: 10, number: 0, totalElements: 0, totalPages: 0 } }));
     TestBed.configureTestingModule({
@@ -58,6 +58,34 @@ describe('EmployeeDetailComponent', () => {
   }
 
   const valeurs = (page: HTMLElement) => Array.from(page.querySelectorAll('.employee-fiche__situation dd')).map((d) => d.textContent?.replace(/\s+/g, ' ').trim());
+
+  it('annonce le chargement avant de présenter l’identité', () => {
+    const reponse = new Subject<Employee>();
+    const { fixture, page } = afficher(['EMPLOYEE_READ'], EMPLOYE, reponse);
+    expect(page.querySelector('[role="status"]')?.textContent).toContain('Chargement');
+    expect(page.textContent).not.toContain('Ali Alaoui');
+
+    reponse.next(EMPLOYE);
+    reponse.complete();
+    fixture.detectChanges();
+
+    expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
+    expect(page.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('affiche une erreur de lecture avec retour et réessai', () => {
+    const { fixture, page } = afficher(['EMPLOYEE_READ'], EMPLOYE, throwError(() => new Error('indisponible')));
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger l’employé');
+    expect(page.querySelector('a[href="/employees"]')).not.toBeNull();
+
+    service.getById.mockReturnValue(of(EMPLOYE));
+    (page.querySelector('stp-message button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(service.getById).toHaveBeenCalledTimes(2);
+    expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+  });
 
   it('montre l’identité, la situation actuelle, l’ancienneté et l’âge', () => {
     const { page } = afficher(['EMPLOYEE_READ']);

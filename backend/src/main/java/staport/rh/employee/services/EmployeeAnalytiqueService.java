@@ -109,7 +109,7 @@ public class EmployeeAnalytiqueService implements IEmployeeAnalytiqueService {
             if (ligne.get(2) == EmployeeStatut.ACTIF) {
                 actifs++;
             }
-            if (embauche.isAfter(aujourdhui.minusYears(1))) {
+            if (embauche.isAfter(aujourdhui.minusYears(1)) && !embauche.isAfter(aujourdhui)) {
                 embauches++;
             }
         }

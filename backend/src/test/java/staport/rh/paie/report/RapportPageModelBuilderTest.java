@@ -23,6 +23,26 @@ class RapportPageModelBuilderTest {
 
     private final RapportPageModelBuilder builder = new RapportPageModelBuilder();
 
+    @Test
+    void conserve_tous_les_filtres_sur_des_pages_de_perimetre_sans_deborder() {
+        RapportBiVue base = vueAvecUneEquipe(3, 1, false);
+        List<String> filtres = java.util.stream.IntStream.range(0, 150)
+                .mapToObj(i -> "Marché " + i + " : " + "libellé long ".repeat(12)).toList();
+        RapportBiVue filtree = new RapportBiVue(base.periodeLibelle(), filtres, base.synthese(), base.chantiers());
+
+        List<PageModel> pages = builder.construire(filtree, true);
+
+        List<PageModel> perimetre = pages.stream().filter(p -> p.niveauTexte().equals("PÉRIMÈTRE")).toList();
+        assertThat(perimetre).hasSizeGreaterThan(1);
+        assertThat(perimetre).allSatisfy(p -> assertThat(p.blocs().size()).isLessThanOrEqualTo(34));
+        String texte = perimetre.stream().flatMap(p -> p.blocs().stream())
+                .filter(PageModel.BlocTexte.class::isInstance).map(PageModel.BlocTexte.class::cast)
+                .map(PageModel.BlocTexte::texte).collect(java.util.stream.Collectors.joining(" "));
+        assertThat(texte).contains("Marché 0 :", "Marché 149 :");
+        assertThat(pages.get(perimetre.size()).blocs().get(0))
+                .isEqualTo(new PageModel.BlocTitreChapitre("I — CHANTIER : C1"));
+    }
+
     /**
      * Constantes de hauteur utilisées par le moteur de pagination.
      *

@@ -63,8 +63,8 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
 
     /** Tous les bulletins réduits à qui, quand et où (tendances des effectifs) ; cinq colonnes, aucune entité chargée. */
     @Query("SELECT p.employee.id AS employeId, p.periode AS periode, p.chantier.id AS chantierId, p.fonction.id AS fonctionId, "
-            + "e.id AS equipeId FROM Paie p LEFT JOIN p.equipe e ORDER BY p.periode")
-    List<EffectifBulletinProjection> listerEffectifs();
+            + "e.id AS equipeId FROM Paie p LEFT JOIN p.equipe e WHERE 1 = 1" + FILTRES + " ORDER BY p.periode")
+    List<EffectifBulletinProjection> listerEffectifs(@Param("f") FiltresPaie filtres);
 
     /** Les bulletins d'un employé, du plus ancien au plus récent : son parcours. */
     @EntityGraph(attributePaths = {"fonction", "chantier", "equipe"})
@@ -137,9 +137,11 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
             "SUM(p.salaireTotal) AS masse, COUNT(p) AS effectif, " +
             "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN 1 ELSE 0 END) AS stc, " +
             "SUM(CASE WHEN LOWER(TRIM(p.observation)) IN ('stc', 'sortie') THEN p.salaireTotal ELSE 0 END) AS stcMontant " +
-            "FROM Paie p LEFT JOIN p.equipe e WHERE p.periode BETWEEN :debut AND :fin " +
+            "FROM Paie p LEFT JOIN p.equipe e WHERE p.periode BETWEEN :debut AND :fin " + FILTRES +
             "GROUP BY p.chantier.id, p.chantier.code, e.code, p.periode")
-    List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut, @Param("fin") YearMonth fin);
+    List<EvolutionChantierEquipeProjection> sommerParChantierEquipePeriode(@Param("debut") YearMonth debut,
+                                                                         @Param("fin") YearMonth fin,
+                                                                         @Param("f") FiltresPaie filtres);
 
     // ---- Tableau de bord analytique : mêmes filtres multi-valeurs pour toutes les requêtes ci-dessous ----
 

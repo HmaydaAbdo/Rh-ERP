@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
 import { surChangementDesFiltres } from '../../../shared/forms/filtres';
@@ -84,6 +85,11 @@ export class JournalComponent {
   private readonly paieService = inject(PaieService);
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly notificationService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private recherche?: Subscription;
+  private chargementEntreeRequete?: Subscription;
+  private chargementChangementsRequete?: Subscription;
+  private ligneDemandee: AuditLigne | null = null;
   protected readonly canRestore = computed(() => this.authService.hasPermission('PAIE_RESTORE'));
   protected readonly restaurationPossible = computed(() => {
     const entree = this.entree();
@@ -98,6 +104,8 @@ export class JournalComponent {
   protected readonly lignes = signal<AuditLigne[]>([]);
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
+  protected readonly erreurRecherche = signal(false);
+  protected readonly first = signal(0);
 
   protected readonly filtres = signal(filtresVides());
   protected readonly filterForm = form(this.filtres, (chemin) => {
@@ -116,6 +124,9 @@ export class JournalComponent {
   protected readonly totalChangements = signal(0);
   protected readonly pageChangements = signal(0);
   protected readonly chargementDetail = signal(false);
+  protected readonly chargementEntree = signal(false);
+  protected readonly erreurEntree = signal(false);
+  protected readonly erreurChangements = signal(false);
 
   private lastPage = 0;
   private lastSize = 10;
@@ -140,6 +151,7 @@ export class JournalComponent {
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {
+    this.first.set(event.first);
     const size = event.rows;
     this.lastPage = size > 0 ? Math.floor(event.first / size) : 0;
     this.lastSize = size;
@@ -149,6 +161,7 @@ export class JournalComponent {
   }
 
   protected onSearch(): void {
+    this.first.set(0);
     this.lastPage = 0;
     this.fetchPage();
   }
@@ -159,23 +172,59 @@ export class JournalComponent {
 
   /** Ouvre une entrée dans le panneau : son contexte d'abord, puis la première page de ses modifications. */
   protected onOuvrir(ligne: AuditLigne): void {
+    this.chargementEntreeRequete?.unsubscribe();
+    this.chargementChangementsRequete?.unsubscribe();
+    this.ligneDemandee = ligne;
     this.panneauOuvert.set(true);
     this.entree.set(null);
     this.changements.set([]);
     this.totalChangements.set(0);
     this.pageChangements.set(0);
-    this.auditService.getById(ligne.id).subscribe((entree) => {
-      this.entree.set(entree);
-      this.chargerChangements();
-    });
+    this.erreurEntree.set(false);
+    this.erreurChangements.set(false);
+    this.chargementEntree.set(true);
+    this.chargementEntreeRequete = this.auditService.getById(ligne.id)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chargementEntree.set(false)))
+      .subscribe({ next: (entree) => {
+        this.entree.set(entree);
+        if (entree.categorie === 'OPERATION' && entree.resultat === 'SUCCES') {
+          this.chargerChangements();
+        }
+      }, error: () => this.erreurEntree.set(true) });
+  }
+
+  protected reessayerEntree(): void {
+    if (this.ligneDemandee) {
+      this.onOuvrir(this.ligneDemandee);
+    }
+  }
+
+  protected fermerPanneau(): void {
+    this.chargementEntreeRequete?.unsubscribe();
+    this.chargementChangementsRequete?.unsubscribe();
+    this.panneauOuvert.set(false);
+  }
+
+  protected reessayerRecherche(): void {
+    this.fetchPage();
+  }
+
+  protected reessayerChangements(): void {
+    this.chargerChangements();
   }
 
   changementsSuivants(): void {
+    if (this.chargementDetail() || this.erreurChangements() || this.pageChangements() + 1 >= this.nombrePagesChangements()) {
+      return;
+    }
     this.pageChangements.update((page) => page + 1);
     this.chargerChangements();
   }
 
   changementsPrecedents(): void {
+    if (this.chargementDetail() || this.erreurChangements() || this.pageChangements() === 0) {
+      return;
+    }
     this.pageChangements.update((page) => page - 1);
     this.chargerChangements();
   }
@@ -187,7 +236,7 @@ export class JournalComponent {
   /** Remplace les filtres par « toutes les entrées de cette requête » : relie les événements d'une même action. */
   protected onVoirLaRequete(requestId: string): void {
     this.filterForm().reset({ ...filtresVides(), requestId });
-    this.panneauOuvert.set(false);
+    this.fermerPanneau();
   }
 
   protected demanderRestauration(): void {
@@ -228,25 +277,34 @@ export class JournalComponent {
     if (!entree) {
       return;
     }
+    this.chargementChangementsRequete?.unsubscribe();
     this.chargementDetail.set(true);
-    this.auditService
+    this.erreurChangements.set(false);
+    this.changements.set([]);
+    this.chargementChangementsRequete = this.auditService
       .details(entree.id, { page: this.pageChangements(), size: TAILLE_PAGE_DETAIL })
-      .pipe(finalize(() => this.chargementDetail.set(false)))
-      .subscribe((resultat) => {
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chargementDetail.set(false)))
+      .subscribe({ next: (resultat) => {
         this.changements.set(resultat.content);
         this.totalChangements.set(resultat.page.totalElements);
-      });
+      }, error: () => this.erreurChangements.set(true) });
   }
 
   private fetchPage(): void {
+    this.recherche?.unsubscribe();
     this.loading.set(true);
-    this.auditService
+    this.erreurRecherche.set(false);
+    this.recherche = this.auditService
       .search(this.criteres(), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe((resultat) => {
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+      .subscribe({ next: (resultat) => {
         this.lignes.set(resultat.content);
         this.totalRecords.set(resultat.page.totalElements);
-      });
+      }, error: () => {
+        this.erreurRecherche.set(true);
+        this.lignes.set([]);
+        this.totalRecords.set(0);
+      } });
   }
 
   private criteres(): AuditCriteres {

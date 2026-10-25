@@ -64,7 +64,7 @@ public class RoleService implements IRoleService {
     @Transactional
     @AuditableAction(action = "ROLE_CREATION", type = TypeOperation.CREATE, entite = Role.class)
     public RoleResponseDto create(RoleCreateRequestDto dto) {
-        String nom = dto.nom().strip();
+        String nom = dto.nom();
         if (roleRepository.existsByNomIgnoreCase(nom)) {
             throw new RoleAlreadyExistsException(nom);
         }
@@ -84,7 +84,7 @@ public class RoleService implements IRoleService {
     public RoleResponseDto update(Long id, RoleUpdateRequestDto dto) {
         Role role = getEntityById(id);
         VersionOptimiste.verifier(dto.version(), role.getVersion());
-        String nom = dto.nom().strip();
+        String nom = dto.nom();
         Set<Permission> permissions = resolvePermissions(dto.permissionIds());
         if (RolesSysteme.SYSTEM_ADMIN.equals(role.getNom())) {
             garantirAdministrationIntacte(role, nom, permissions);
