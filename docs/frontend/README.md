@@ -196,9 +196,11 @@ ce qui provoquerait une boucle de redirections pour un utilisateur sans droit su
 
 ### Menu
 
-`core/navigation/nav-items.ts` (`NAV_ITEMS`) est la **source unique** du menu latéral et de l'écran d'accueil.
-Chaque entrée porte la permission de lecture qui la rend visible : Paie, Employés, Chantiers, Fonctions,
-Équipes, Utilisateurs (`USER_MANAGE`), Rôles (`ROLE_MANAGE`). **Un nouvel écran s'ajoute dans ce fichier.**
+`core/navigation/nav-items.ts` contient les destinations et leurs permissions. `NAV_ITEMS` fixe la priorité
+de l'écran d'accueil; `SIDEBAR_ITEMS` place Carte en première position dans le menu sans changer cette priorité.
+Équipe et Fonction sont regroupées sous « Référentiel RH » ; Utilisateurs, Rôles, Paramètres et Journal sous
+« Administration système ». Chaque sous-entrée garde sa propre permission. Un groupe est absent quand aucune
+de ses pages n'est autorisée. **Un nouvel écran s'ajoute dans ce fichier.**
 
 ### Boutons d'action
 
@@ -250,6 +252,14 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-chart` | Graphique Chart.js (`role="img"`), navigation par flèches, Début/Fin et sélection par Entrée/Espace ; annonce du point courant, `dataSelect` au clic ou au clavier | Chart.js |
 
 Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles ; ses parcours E2E couvrent axe en thème clair/sombre et interactions clavier ciblées. Le [rapport de conformité](../conformite/design-system-2026-10-13.md) consigne les vérifications manuelles de contraste élevé déjà obtenues et celles qui restent à faire avant de clôturer `design-system.md`.
+
+`app-lazy-select` fournit la recherche serveur et la pagination au défilement à `stp-select`. Les options
+Chantier montrent **code + nom** (désignation si le nom manque), les options Équipe **code + libellé**,
+les options Fonction le **libellé seul**. Le code reste visible dans la valeur choisie. Dans les filtres
+multiples, « Tout sélectionner » vaut tous les résultats du référentiel, y compris les pages non chargées,
+sans envoyer une longue liste d'identifiants; « Ne rien sélectionner » vide le filtre. Les listes finies
+d'indicateurs cochent effectivement toutes leurs options avec « Tout sélectionner ». Les sélections multiples
+de formulaire, telles que l'attribution de rôles, n'assimilent jamais « tous » à une valeur vide.
 
 Clavier du sélecteur : ouverture par clic ou **Flèche bas**, navigation aux flèches, **Entrée** coche/choisit, **Échap** ferme ;
 la frappe filtre (sélecteurs filtrables). Conséquence de l'implémentation sur Angular Aria : sans filtre, la frappe de lettres

@@ -38,15 +38,12 @@ public class ChantierSpecification {
                 ));
             }
 
-            // Recherche libre du sélecteur générique (voir ChantierReferenceService) : OU entre code
-            // et désignation, jamais ET — contrairement à code/designation ci-dessus (filtre précis de
-            // la liste chantier, où les 2 champs sont volontairement combinés en ET). Un utilisateur du
-            // sélecteur tape ce qu'il voit (le code, affiché comme option), une correspondance sur la
-            // seule désignation ne le trouverait jamais.
+            // Recherche libre du sélecteur générique : code, nom et désignation sont tous visibles.
             if (criteria.recherche() != null && !criteria.recherche().isBlank()) {
                 String motif = MotifRecherche.contient(criteria.recherche());
                 predicates.add(criteriaBuilder.or(
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("code")), motif, MotifRecherche.ECHAPPEMENT),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("nom")), motif, MotifRecherche.ECHAPPEMENT),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("designation")), motif, MotifRecherche.ECHAPPEMENT)
                 ));
             }

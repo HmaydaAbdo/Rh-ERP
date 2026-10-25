@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, model, output, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, model, output, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormValueControl } from '@angular/forms/signals';
 import { debounceTime, distinctUntilChanged, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
@@ -37,6 +37,7 @@ type Key = number | string;
       [options]="options()"
       [selectedOptions]="resolved()"
       [multiple]="multiple()"
+      [bulkMode]="bulkFilterActions() ? 'filter' : 'none'"
       [externalFilter]="true"
       [clearable]="showClear()"
       [loading]="loading()"
@@ -63,6 +64,8 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   readonly touch = output<void>();
   readonly source = input.required<LazySelectSource<T>>();
   readonly multiple = input(false);
+  /** Actions de masse réservées aux filtres (un formulaire de rôles ne peut pas assimiler « tous » à une valeur vide). */
+  readonly bulkFilterActions = input(false);
   readonly optionLabel = input('label');
   readonly dataKey = input('id');
   readonly placeholder = input('Sélectionner…');
@@ -84,6 +87,7 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
 
   private total = 0;
   private search = '';
+  private generation = 0;
   private initialLoadDone = false;
   private readonly filterSubject = new Subject<string>();
   private readonly resolution = new Subject<Key[]>();
@@ -98,11 +102,21 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
         takeUntilDestroyed(destroyRef)
       )
       .subscribe((options) => this.resolved.set(options));
+    let precedente: LazySelectSource<T> | undefined;
     effect(() => {
+      const source = this.source();
       const value = this.value();
-      untracked(() => this.resolution.next((Array.isArray(value) ? value : value === null || value === undefined ? [] : [value]) as Key[]));
+      untracked(() => {
+        const change = source !== precedente;
+        if (change) {
+          precedente = source;
+          this.initialLoadDone = true;
+          this.options.set([]);
+        }
+        this.resolution.next((Array.isArray(value) ? value : value == null ? [] : [value]) as Key[]);
+        if (change) this.resetAndLoad('');
+      });
     });
-    afterNextRender(() => this.ensureInitialLoad());
   }
 
   /** Donne le focus au champ (premier champ invalide d'un formulaire refusé). */
@@ -133,7 +147,13 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
 
   private toOption(item: T): SelectOption<Key> {
     const record = item as Record<string, unknown>;
-    return { label: String(record[this.optionLabel()] ?? ''), value: record[this.dataKey()] as Key };
+    const code = typeof record['code'] === 'string' ? record['code'].trim() : '';
+    const estChantier = this.optionLabel() === 'code' && typeof record['designation'] === 'string';
+    const afficheCode = code.length > 0 && ['libelle', 'label'].includes(this.optionLabel());
+    const label = estChantier
+      ? String(record['nom'] || record['designation'] || code)
+      : String(record[this.optionLabel()] ?? '');
+    return { label, value: record[this.dataKey()] as Key, ...(estChantier || afficheCode ? { code } : {}) };
   }
 
   private ensureInitialLoad(): void {
@@ -145,6 +165,7 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   }
 
   private resetAndLoad(search: string): void {
+    this.generation++;
     this.search = search;
     this.fetchPage(0, true);
   }
@@ -152,16 +173,21 @@ export class LazySelectComponent<T extends object = Record<string, unknown>> imp
   private fetchPage(page: number, reset: boolean): void {
     this.loading.set(true);
     const search = this.search;
+    const generation = this.generation;
     this.source()
       .fetchPage(page, this.pageSize(), search)
-      .subscribe((result) => {
-        if (search !== this.search) {
+      .subscribe({ next: (result) => {
+        if (generation !== this.generation || search !== this.search) {
           return; // une recherche plus récente a pris le relais
         }
         this.total = result.totalRecords;
         const loaded = result.items.map((item) => this.toOption(item));
         this.options.update((current) => (reset ? loaded : [...current, ...loaded]));
         this.loading.set(false);
-      });
+      }, error: () => {
+        if (generation !== this.generation) return;
+        this.loading.set(false);
+        if (reset) { this.options.set([]); this.total = 0; }
+      } });
   }
 }

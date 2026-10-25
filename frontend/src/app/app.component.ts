@@ -1,9 +1,10 @@
 
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   LucideBriefcase,
   LucideBuilding,
+  LucideChevronDown,
   LucideHistory,
   LucideLogOut,
   LucideMapPinned,
@@ -22,7 +23,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map, startWith } from 'rxjs';
 
 import { AuthService } from './core/auth/services/auth.service';
-import { NAV_ITEMS } from './core/navigation/nav-items';
+import { SIDEBAR_ITEMS } from './core/navigation/nav-items';
 import { ThemeService } from './core/theme/theme.service';
 import { FeedbackViewportComponent } from './shared/feedback/feedback-viewport.component';
 
@@ -40,6 +41,7 @@ function estRouteAuthentification(url: string): boolean {
       FeedbackViewportComponent,
       LucideBriefcase,
       LucideBuilding,
+      LucideChevronDown,
       LucideHistory,
       LucideLogOut,
       LucideMapPinned,
@@ -77,10 +79,33 @@ export class AppComponent {
     { initialValue: estRouteAuthentification(this.router.url) }
   );
   readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
+  private readonly routeCourante = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
 
   readonly navItems = computed(() =>
-    NAV_ITEMS.filter((item) => this.authService.hasPermission(item.permission))
+    SIDEBAR_ITEMS.filter((item) => this.authService.hasPermission(item.permission))
   );
+  readonly referentielItems = computed(() => this.navItems().filter((item) => item.group === 'referentiel-rh'));
+  readonly administrationItems = computed(() => this.navItems().filter((item) => item.group === 'administration-systeme'));
+  readonly referentielOuvert = signal(false);
+  readonly administrationOuverte = signal(false);
+  private readonly ouvrirGroupeActif = effect(() => {
+    const route = this.routeCourante();
+    if (route.startsWith('/functions') || route.startsWith('/equipes')) this.referentielOuvert.set(true);
+    if (route.startsWith('/admin/') || route.startsWith('/audit')) this.administrationOuverte.set(true);
+  });
+
+  changerGroupe(groupe: 'referentiel-rh' | 'administration-systeme', evenement: Event): void {
+    const ouvert = (evenement.currentTarget as HTMLDetailsElement).open;
+    if (groupe === 'referentiel-rh') this.referentielOuvert.set(ouvert);
+    else this.administrationOuverte.set(ouvert);
+  }
 
   basculerMenu(): void {
     this.menuOuvert.update((ouvert) => !ouvert);
