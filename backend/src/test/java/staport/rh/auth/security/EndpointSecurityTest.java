@@ -55,6 +55,7 @@ class EndpointSecurityTest {
      * par READ), qu'un test dérivé de l'annotation elle-même ne verrait pas.
      */
     private static final Map<String, String> PERMISSIONS_ATTENDUES = Map.ofEntries(
+            Map.entry("AgentController.emettre", "IA_UTILISER"),
             Map.entry("AuditController.rechercher", "AUDIT_READ"),
             Map.entry("AuditController.lireParId", "AUDIT_READ"),
             Map.entry("AuditController.details", "AUDIT_READ"),

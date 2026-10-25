@@ -68,6 +68,12 @@ commun.
   devient pas la référence par défaut ; stdio reste réservé aux intégrations locales adaptées.
   SSE peut intervenir dans Streamable HTTP selon la révision retenue, mais n'est ni MCP lui-même
   ni un canal de raisonnement interne.
+* Préférer le mode **sans état** du transport lorsque les outils sont des requêtes/réponses : chaque requête
+  est authentifiée et autorisée, aucun identifiant de session ne peut être rejoué par une autre identité.
+  Un mode avec sessions exige de lier chaque session à son identité et de tester ce lien.
+* Refuser tout appel portant un en-tête `Origin` sur un serveur MCP qui n'est destiné qu'à un service
+  (protection contre le DNS rebinding et les appels depuis un navigateur), et ne pas publier la route
+  par le proxy public.
 * Implémenter et tester les métadonnées de version/capacités, le format des erreurs et le cycle
   d'échange applicables à la révision retenue. Ne pas présumer que toutes les révisions utilisent
   le même handshake `initialize` ou une session persistante. Un éventuel identifiant de session

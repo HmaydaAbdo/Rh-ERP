@@ -153,6 +153,12 @@ services:
       SMTP_AUTH: ${SMTP_AUTH}
       SMTP_STARTTLS: ${SMTP_STARTTLS}
       MAIL_FROM: ${MAIL_FROM}
+      # Assistant IA (docs/ia.md, § 5) : route /mcp et jeton agent RS256. Clés obligatoires si MCP_ENABLED=true.
+      MCP_ENABLED: ${MCP_ENABLED:-false}
+      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:-}
+      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:-}
+      MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
+      MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
       # Journaux JSON sur la console et dans des archives journalières (30 jours, UTC).
       LOGGING_FORMAT: json
       LOGGING_FILE_PATH: /app/logs
@@ -165,6 +171,8 @@ services:
     networks:
       - db-net
       - web-net
+      # Le service IA atteint /mcp par ce réseau interne ; nginx ne relaie jamais /mcp.
+      - ia-net
     ports:
       # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif réel n'y passe pas — nginx
       # inner atteint le backend via le réseau Docker interne (web-net, nom de service "backend"),
@@ -294,5 +302,5 @@ networks:
   web-net:
   # litellm et sa base, isolés du reste.
   ia-db-net:
-  # ia et litellm (puis le backend pour MCP, tâche T4).
+  # ia, litellm et le backend (route /mcp).
   ia-net:

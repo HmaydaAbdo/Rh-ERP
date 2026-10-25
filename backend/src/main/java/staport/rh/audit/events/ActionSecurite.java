@@ -19,7 +19,11 @@ public enum ActionSecurite {
     MOT_DE_PASSE_OUBLIE(ResultatAudit.SUCCES),
     MOT_DE_PASSE_REINITIALISE(ResultatAudit.SUCCES),
     MOT_DE_PASSE_REINITIALISE_PAR_ADMIN(ResultatAudit.SUCCES),
-    ACCES_REFUSE(ResultatAudit.ECHEC);
+    ACCES_REFUSE(ResultatAudit.ECHEC),
+    /** Jeton délégué de l'agent IA émis (identifiant et durée seulement, jamais le jeton). */
+    JETON_AGENT_EMIS(ResultatAudit.SUCCES),
+    /** Demande de jeton agent refusée : compte désactivé ou droit IA retiré depuis la connexion. */
+    JETON_AGENT_REFUSE(ResultatAudit.ECHEC);
 
     private final ResultatAudit resultat;
 
