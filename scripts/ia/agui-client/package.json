@@ -9,7 +9,7 @@
     "test": "node --test src/flux.test.ts"
   },
   "dependencies": {
-    "@ag-ui/client": "1.0.2"
+    "@ag-ui/client": "1.0.3"
   },
   "devDependencies": {
     "@types/node": "24.10.0",
