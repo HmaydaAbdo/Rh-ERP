@@ -183,7 +183,7 @@ describe('EmployeeFormComponent', () => {
       await remplir();
 
       expect((racine().querySelector('input#fonctionId') as HTMLInputElement).value).toBe('CHAUFFEUR');
-      expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C168');
+      expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C168 · Nador');
     });
 
     it('reste sur le formulaire quand le serveur refuse (CIN déjà utilisé)', async () => {
@@ -236,7 +236,7 @@ describe('EmployeeFormComponent', () => {
       expect((racine().querySelector('input#dateNaissance') as HTMLInputElement).value).toBe('1990-03-07');
       expect((racine().querySelector('input#dateEmbauche') as HTMLInputElement).value).toBe('2020-11-02');
       expect((racine().querySelector('input#fonctionId') as HTMLInputElement).value).toBe('MACON');
-      expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C196');
+      expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C196 · Marrakech');
       expect((racine().querySelector('input#statut') as HTMLInputElement).value).toBe('En poste');
       expect(formulaire()().dirty()).toBe(false);
     });

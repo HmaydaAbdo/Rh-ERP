@@ -610,3 +610,13 @@ Après toute évolution d'un module frontend, mettre à jour la documentation co
 - [Guide officiel de mise à jour](https://angular.dev/update-guide)
 - [Signals et état dérivé avec `linkedSignal`](https://angular.dev/guide/signals)
 - [Signal Forms](https://angular.dev/guide/forms/signals/overview)
+
+## Référentiels RH : synthèses de la paie récente
+
+Pour Équipe, Fonction et Chantier, Cartes et Analytique utilisent exclusivement le dernier mois de
+paie enregistré, sans choix de période ni effectif des fiches Employé. Le suivi mensuel conserve
+l'historique. Le mois, le résumé et les outils sont réunis près du titre du niveau; l'accès Employés
+est une icône avec infobulle, selon les droits. La qualité des rattachements des bulletins est une
+section dédiée à l'Analytique, visible en présence d'orphelins, avec ses filtres et son export.
+Ces configurations remplacent pour ces trois référentiels les raccourcis textuels et projections
+Employé de la configuration générale. Le style des sélecteurs suit design-system.md.

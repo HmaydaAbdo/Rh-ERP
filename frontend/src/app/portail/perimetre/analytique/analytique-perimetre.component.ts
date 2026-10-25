@@ -44,7 +44,7 @@ class OptionEquipeEvolutionSource implements LazySelectSource<OptionEquipeEvolut
 
   fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<OptionEquipeEvolution>> {
     const terme = search.trim().toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const options = this.options.filter((option) => !terme || option.label.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(terme));
+    const options = this.options.filter((option) => !terme || `${option.code ?? ''} ${option.label}`.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(terme));
     return of({ items: options.slice(page * size, (page + 1) * size), totalRecords: options.length });
   }
 
@@ -107,8 +107,8 @@ export class AnalytiquePerimetreComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly libelles = LIBELLES_DIMENSIONS;
-  protected readonly libelleDimensionVue = computed(() => this.module().dimension === 'FONCTION' ? 'fonction' : 'équipe');
-  protected readonly libelleDimensionVueMaj = computed(() => this.module().dimension === 'FONCTION' ? 'Fonction' : 'Équipe');
+  protected readonly libelleDimensionVueMaj = computed(() => LIBELLES_DIMENSIONS[this.module().dimension ?? 'EQUIPE']);
+  protected readonly libelleDimensionVue = computed(() => this.libelleDimensionVueMaj().toLocaleLowerCase('fr'));
   protected readonly mesuresEvolution = MESURES_EVOLUTION;
   protected readonly libelleEvolutionMesure = libelleEvolutionMesure;
   protected readonly libellePeriode = libellePeriode;
@@ -207,8 +207,12 @@ export class AnalytiquePerimetreComponent {
   protected readonly chantiersEquipe = computed(() => this.donnees().chantiersCatalogue);
   protected readonly qualiteChantierIds = computed(() => this.idsQualite(this.params().get('qualiteChantierIds')));
   protected readonly qualiteFonctionIds = computed(() => this.idsQualite(this.params().get('qualiteFonctionIds')));
-  protected readonly sourcesQualiteChantiers: LazySelectSource<ChantierReference>[] = [this.chantiers];
-  protected readonly sourcesQualiteFonctions: LazySelectSource<FunctionReference>[] = [this.fonctions];
+  protected readonly sourcesQualiteChantiers: LazySelectSource<ChantierReference>[] = this.authService.hasPermission('CHANTIER_READ') ? [this.chantiers] : [];
+  protected readonly sourcesQualiteFonctions: LazySelectSource<FunctionReference>[] = this.authService.hasPermission('FUNCTION_READ') ? [this.fonctions] : [];
+  protected readonly sourcesFiltresEquipes = this.authService.hasPermission('EQUIPE_READ') ? [this.equipes] : [];
+  protected readonly sourcesFiltresFonctions = this.authService.hasPermission('FUNCTION_READ') ? [this.fonctions] : [];
+  protected readonly filtresEquipeIds = computed(() => this.perimetre().equipeIds);
+  protected readonly filtresFonctionIds = computed(() => this.perimetre().fonctionIds);
   protected readonly qualitePaie = computed(() => this.donnees().qualitePaie);
   protected readonly bulletinsAvecEquipe = computed(() => Math.max(0, (this.qualitePaie()?.kpis.effectif ?? 0) - (this.qualitePaie()?.qualite.sansEquipe ?? 0)));
   protected readonly graphiqueQualiteOrphelins = computed<Graphique<'doughnut'>>(() => {
@@ -249,12 +253,16 @@ export class AnalytiquePerimetreComponent {
   protected readonly optionsMesuresEquipe: SelectOption<MesureEvolution>[] = MESURES_EVOLUTION.map((value) => ({ value, label: this.libelleMesureEquipe(value) }));
   protected readonly optionsChantiersEquipe = computed<SelectOption<number | null>[]>(() => [
     { value: null, label: 'Tous les chantiers' },
-    ...this.chantiersEquipe().map((chantier) => ({ value: chantier.id, label: chantier.libelle || chantier.code }))
+    ...this.chantiersEquipe().map((chantier) => ({ value: chantier.id, label: chantier.libelle || chantier.code, code: chantier.code }))
   ]);
   protected readonly optionsEquipesEvolution = computed<SelectOption<number>[]>(() => {
     const dimension = this.module().dimension ?? 'EQUIPE';
     const ids = this.perimetre()[cleIds(dimension)];
-    const groupes = this.equipesEffectif().map((equipe) => ({ value: equipe.id, label: equipe.id === 0 ? 'Orphelins (sans équipe)' : equipe.libelle }));
+    const lignes = this.equipesEffectif();
+    const ordonnees = dimension === 'CHANTIER'
+      ? [...lignes].sort((a, b) => b.masse - a.masse || b.effectif - a.effectif || a.libelle.localeCompare(b.libelle, 'fr'))
+      : lignes;
+    const groupes: SelectOption<number>[] = ordonnees.map((equipe) => ({ value: equipe.id, label: equipe.id === 0 ? 'Orphelins (sans équipe)' : equipe.libelle, code: this.donnees().equipesCatalogue.find((item) => item.id === equipe.id)?.code ?? undefined }));
     if (dimension === 'EQUIPE' && (ids.length === 0 || ids.includes(0)) && !groupes.some((equipe) => equipe.value === 0)) {
       groupes.push({ value: 0, label: 'Orphelins (sans équipe)' });
     }
@@ -269,7 +277,7 @@ export class AnalytiquePerimetreComponent {
   protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
     this.theme.theme();
     return this.mesureRepartitionEquipe().map((mesure) => {
-      const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0);
+      const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0).sort((a, b) => b[mesure] - a[mesure] || a.libelle.localeCompare(b.libelle, 'fr'));
       return {
         mesure,
         data: { labels: groupes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: groupes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
@@ -487,8 +495,15 @@ export class AnalytiquePerimetreComponent {
     const periode = this.periode();
     if (avecPeriode && periode) contexte.push(`Période de référence : ${libellePeriode(periode)}`);
     const ids = this.perimetre().chantierIds;
-    const chantiers = this.chantiersEquipe().filter((chantier) => ids.includes(chantier.id));
+    const chantiersDisponibles = this.module().dimension === 'CHANTIER' ? this.donnees().equipesCatalogue : this.chantiersEquipe();
+    const chantiers = chantiersDisponibles.filter((chantier) => ids.includes(chantier.id));
     contexte.push(ids.length ? `Chantier : ${chantiers.map((chantier) => chantier.libelle || chantier.code).join(', ') || ids.join(', ')}` : 'Chantier : tous');
+    if (this.module().dimension === 'CHANTIER') {
+      const fonctions = this.perimetre().fonctionIds;
+      const equipes = this.perimetre().equipeIds;
+      contexte.push(fonctions.length ? `Fonctions : ${fonctions.map((id) => this.nom('FONCTION', id)).join(', ')}` : 'Fonctions : toutes');
+      contexte.push(equipes.length ? `Équipes : ${equipes.map((id) => this.nom('EQUIPE', id)).join(', ')}` : 'Équipes : toutes');
+    }
     return contexte.join(' · ');
   }
 
@@ -568,6 +583,14 @@ export class AnalytiquePerimetreComponent {
     this.naviguer({ chantierIds: typeof value === 'number' ? String(value) : null });
   }
 
+  protected choisirFiltresEquipes(value: unknown): void {
+    this.naviguer({ equipeIds: this.versIdsDimension(value, true) });
+  }
+
+  protected choisirFiltresFonctions(value: unknown): void {
+    this.naviguer({ fonctionIds: this.versIdsDimension(value, false) });
+  }
+
   protected choisirFiltresQualiteChantier(value: unknown): void {
     this.naviguer({ qualiteChantierIds: this.versIdsQualite(value) });
   }
@@ -631,6 +654,12 @@ export class AnalytiquePerimetreComponent {
     return ids.length ? ids.join(',') : null;
   }
 
+  private versIdsDimension(value: unknown, avecOrphelins: boolean): string | null {
+    if (!Array.isArray(value)) return null;
+    const ids = value.map(Number).filter((id) => Number.isInteger(id) && (avecOrphelins ? id >= 0 : id > 0));
+    return ids.length ? [...new Set(ids)].join(',') : null;
+  }
+
   private analyserQualitePaie(params: ParamMap, portee: Portee, periode: string): Observable<PaieAnalytique | null> {
     if (!this.module().afficherQualiteOrphelins) return of(null);
     const criteres = this.module().criterePaie(params, portee, periode);
@@ -689,7 +718,8 @@ export class AnalytiquePerimetreComponent {
           const evolution$ = equipeEvolutionId === null
             ? of<PaieAnalytique | null>(null)
             : this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)).pipe(catchError(() => of(null)));
-          const chantiers$ = this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)).pipe(catchError(() => of(null)));
+          const chantiers$ = dimension === 'CHANTIER' ? of<PaieAnalytique | null>(null)
+            : this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)).pipe(catchError(() => of(null)));
           return forkJoin([paie$, evolution$, chantiers$, qualitePaie$]).pipe(map(([paie, evolution, catalogueChantiers, qualitePaie]) => ({
             portee,
             donnees: { ...avecCatalogue, paie, qualitePaie, evolutionEquipe: evolution?.evolution ?? [], chantiersCatalogue: catalogueChantiers?.parChantier ?? [] }
@@ -705,16 +735,17 @@ export class AnalytiquePerimetreComponent {
   }
 
   private nommerEtapes(): void {
-    for (const { dimension, id } of this.etapes()) {
+    for (const { dimension, id } of DIMENSIONS.flatMap((dimension) => this.perimetre()[cleIds(dimension)].map((id) => ({ dimension, id })))) {
       const cle = `${dimension}-${id}`;
       if (this.noms()[cle] || (dimension === 'EQUIPE' && id === 0)) {
         continue;
       }
+      if (!this.authService.hasPermission(dimension === 'FONCTION' ? 'FUNCTION_READ' : `${dimension}_READ`)) continue;
       const source =
         dimension === 'CHANTIER'
           ? this.chantiers.fetchById(id).pipe(map((c) => c.code))
           : dimension === 'EQUIPE'
-            ? this.equipes.fetchById(id).pipe(map((e) => e.code))
+            ? this.equipes.fetchById(id).pipe(map((e) => e.libelle || e.code))
             : this.fonctions.fetchById(id).pipe(map((f) => f.libelle));
       source.pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe((libelle) => {
         if (libelle) {

@@ -162,6 +162,8 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
 
 Les sélections, filtres et regroupements d'équipe utilisent le libellé pour la lecture humaine. Les autres
 dimensions gardent leurs contrats propres. L'identifiant interne reste utilisé pour relier les données.
+Dans les sélecteurs partagés, le code apparaît aussi comme repère court à côté du libellé; la recherche
+porte sur les deux. Les filtres multiples disposent des actions « Tout sélectionner » et « Ne rien sélectionner ».
 La définition complète des vues et des comportements communs est dans
 [`conventions/frontend.md`](../../conventions/frontend.md).
 

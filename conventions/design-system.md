@@ -105,6 +105,29 @@ troisième palette de marque qui dupliquerait les thèmes.
 
 # Bibliothèques UI et thème
 
+## Sélecteurs partagés
+
+Toutes les listes déroulantes, simples ou multiples, utilisent le même contrôle Staport : même hauteur,
+surface, panneau, focus, recherche et chargement des options au défilement, dans les filtres comme dans les
+formulaires. La cardinalité change la sélection, pas le langage visuel. Fonction affiche son libellé;
+Équipe affiche code et libellé; Chantier affiche code et nom, avec la désignation si le nom est absent.
+Le code est un repère secondaire et participe à la recherche.
+
+Les filtres multiples proposent « Tout sélectionner » et « Ne rien sélectionner ». Pour un catalogue
+paginé, tous signifie sans restriction, y compris les valeurs non chargées; vider retire le filtre.
+Pour une liste finie d'indicateurs, tout coche toutes les options. Les formulaires conservent les valeurs
+et obligations de leur contrat métier. Le panneau reste utilisable au clavier, dans les deux thèmes,
+sur téléphone et en couleurs forcées. Un changement de source recharge les options autorisées.
+
+Chaque graphique de répartition trie ses catégories selon sa propre mesure et masque les valeurs nulles.
+Son tableau complet reste accessible à la demande et dans l'export. Les tableaux larges défilent dans
+leur conteneur sans élargir la page.
+Le canvas reste borné à la largeur de son conteneur, y compris après passage du bureau au téléphone.
+Les cartes alignent leurs indicateurs avec des espacements explicites; ne pas réserver de place pour
+une action déplacée dans leur pied. Une comparaison courte conserve la hauteur nécessaire aux deux
+lignes usuelles pour garder la grille lisible. Sur téléphone, deux actions d'en-tête occupent chacune
+une ligne complète pour préserver leurs libellés.
+
 Les jetons Staport et les composants propres à Staport sont la source visuelle. Angular Aria/CDK fournit les primitives
 d'interaction accessibles; Tailwind CSS 4 fournit les utilitaires reliés aux jetons; Lucide Angular fournit les icônes.
 Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/` et la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre).

@@ -198,7 +198,7 @@ public class PaieService implements IPaieService {
         Pageable trie = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("code").ascending());
         String motif = motifOption(requete.recherche());
         return repository.rechercherOptionsChantiers(requete.periode(), motif, trie)
-                .map(c -> new PaieChantierOptionDto(c.getId(), c.getCode(), c.getDesignation(), c.getActif()));
+                .map(c -> new PaieChantierOptionDto(c.getId(), c.getCode(), c.getNom(), c.getDesignation(), c.getActif()));
     }
 
     @Override

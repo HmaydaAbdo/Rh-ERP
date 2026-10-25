@@ -240,7 +240,7 @@ describe('PaieFormComponent', () => {
       expect((racine().querySelector('button#periode') as HTMLButtonElement).textContent).toContain('08/2026');
       expect((racine().querySelector('input#fonctionId') as HTMLInputElement).value).toBe('MACON');
       expect((racine().querySelector('input#chantierId') as HTMLInputElement).value).toBe('C196');
-      expect((racine().querySelector('input#equipeId') as HTMLInputElement).value).toBe('Chauffeurs');
+      expect((racine().querySelector('input#equipeId') as HTMLInputElement).value).toBe('CH · Chauffeurs');
       expect((racine().querySelector('input#observation') as HTMLInputElement).value).toBe('Heures de nuit');
       expect(formulaire()().dirty()).toBe(false);
     });

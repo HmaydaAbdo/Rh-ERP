@@ -1,12 +1,13 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-24 (routine commune à Claude et Codex ; CI sur demande explicite).
+Dernière mise à jour : 2026-10-25 (routine commune à Claude et Codex ; CI sur demande explicite).
 
 **Relais Claude / Codex** : `CLAUDE.md` renvoie à `AGENTS.md` et à la
 [routine commune](../../conventions/workflow.md). Le lot de continuité entre assistants et la règle
-CI sont préparés en local sur `codex/vues-partagees-domaines`. La CI documentaire déclenchée avant
-la nouvelle consigne du propriétaire a été annulée. Prochaine action : revue du lot, puis push et
-CI uniquement sur demande explicite du propriétaire ; la PR en cours attend toujours sa revue.
+CI sont définis dans les conventions. Le propriétaire a demandé la revue locale des trois domaines
+Équipe, Fonction et Chantier, puis leur livraison dans `main` par PR après validation.
+Le lot harmonise les sélecteurs, la navigation et les synthèses Chantier sur la paie récente.
+Les README et skills de chaque domaine décrivent les règles courantes.
 
 **Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, plan renforcé et
 prototype MCP P1.1 testé en profil isolé ; validation propriétaire attendue avant P1.2.
