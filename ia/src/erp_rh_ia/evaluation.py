@@ -31,7 +31,7 @@ from openai import AsyncOpenAI
 
 from erp_rh_ia.agent import Agent, ReponseAgent
 from erp_rh_ia.modele import ModeleLiteLLM
-from erp_rh_ia.outils import ouvrir_outils
+from erp_rh_ia.outils import jeton_agent, ouvrir_outils
 from erp_rh_ia.verification import extraire_nombres
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
@@ -117,12 +117,6 @@ _MOIS = [
 
 def _sans_accents(texte: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
-
-
-async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str) -> str:
-    reponse = await client.post(f"{api}/auth/jetons/agent", headers={"Authorization": f"Bearer {jeton_connexion}"})
-    reponse.raise_for_status()
-    return str(reponse.json()["jeton"])
 
 
 async def evaluer_cas(

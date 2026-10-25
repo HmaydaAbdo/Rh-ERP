@@ -12,8 +12,9 @@ abstention. Le graphe n'a pas de mémoire durable : chaque question est un run i
 """
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict, cast
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
@@ -77,6 +78,29 @@ class ReponseAgent(BaseModel):
     domaines: list[str] | None = None  # None : ciblage indisponible, catalogue complet
 
 
+Etape = Literal["cibler", "choisir", "executer", "rediger", "verifier"]
+
+
+@dataclass(frozen=True)
+class EtapeCommencee:
+    etape: Etape
+
+
+@dataclass(frozen=True)
+class OutilAppele:
+    appel: AppelOutil
+
+
+@dataclass(frozen=True)
+class OutilTermine:
+    appel: AppelOutil
+    resultat: ResultatOutil
+
+
+Progression = EtapeCommencee | OutilAppele | OutilTermine | ReponseAgent
+"""Ce que ``derouler`` publie, dans l'ordre : étapes et outils pendant le run, puis la réponse vérifiée en dernier."""
+
+
 @dataclass(frozen=True)
 class Contexte:
     outils: Outils
@@ -126,13 +150,32 @@ class Agent:
         self._graphe = graphe.compile()
 
     async def repondre(self, question: str, outils: Outils) -> ReponseAgent:
-        etat = await self._graphe.ainvoke(
-            {"question": question}, context=Contexte(outils), config={"recursion_limit": 40}
-        )
+        reponse: ReponseAgent | None = None
+        async for progression in self.derouler(question, outils):
+            if isinstance(progression, ReponseAgent):
+                reponse = progression
+        if reponse is None:
+            raise RuntimeError("Run terminé sans réponse")  # derouler finit toujours par une réponse
+        return reponse
+
+    async def derouler(self, question: str, outils: Outils) -> AsyncIterator[Progression]:
+        """Le run pas à pas. Le texte n'est publié qu'une fois vérifié : jamais de brouillon vers l'utilisateur."""
+        etat: dict[str, Any] = {}
+        async for mode, valeur in self._graphe.astream(
+            {"question": question},
+            context=Contexte(outils),
+            config={"recursion_limit": 40},
+            stream_mode=["custom", "values"],
+        ):
+            if mode == "custom":
+                yield cast(Progression, valeur)
+            else:
+                etat = cast(dict[str, Any], valeur)
         reponse = etat.get("reponse")
         if not isinstance(reponse, ReponseAgent):
-            return ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])
-        return reponse.model_copy(update={"domaines": etat.get("domaines")})
+            yield ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])
+            return
+        yield reponse.model_copy(update={"domaines": etat.get("domaines")})
 
     # --- nœuds ---
 
@@ -150,9 +193,10 @@ class Agent:
             "appels": [],
         }
 
-    async def _cibler(self, state: Etat) -> Maj:
+    async def _cibler(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         """Ne garde que les outils des domaines utiles ; un ciblage invalide laisse tout le catalogue."""
         etat = state
+        runtime.stream_writer(EtapeCommencee("cibler"))
         presents = domaines_du_catalogue(etat["catalogue"])
         if not presents:
             return {}
@@ -166,8 +210,9 @@ class Agent:
             return {}
         return {"domaines": domaines, "catalogue": restreindre(etat["catalogue"], domaines)}
 
-    async def _choisir(self, state: Etat) -> Maj:
+    async def _choisir(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         etat = state
+        runtime.stream_writer(EtapeCommencee("choisir"))
         restant = self._limites.appels - len(etat["resultats"])
         choix = await self._modele.choisir(etat["messages"], etat["catalogue"])
         appels = choix.appels[: max(restant, 0)]
@@ -190,23 +235,27 @@ class Agent:
 
     async def _executer(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         etat = state
+        runtime.stream_writer(EtapeCommencee("executer"))
         connus = {o.nom for o in etat["catalogue"]}
         refuses = {r.outil for r in etat["resultats"] if r.refuse}
         messages = list(etat["messages"])
         resultats = list(etat["resultats"])
         for appel in etat["appels"]:
+            runtime.stream_writer(OutilAppele(appel))
             if appel.nom not in connus:
                 resultat = ResultatOutil(appel.nom, appel.arguments, True, f"Outil inconnu : {appel.nom}.")
             elif appel.nom in refuses:
                 resultat = ResultatOutil(appel.nom, appel.arguments, True, "Accès refusé : déjà signalé.")
             else:
                 resultat = await runtime.context.outils.appeler(appel.nom, appel.arguments)
+            runtime.stream_writer(OutilTermine(appel, resultat))
             resultats.append(resultat)
             messages.append({"role": "tool", "tool_call_id": appel.identifiant, "content": self._contenu(resultat)})
         return {"resultats": resultats, "messages": messages, "tours": etat["tours"] + 1, "appels": []}
 
-    async def _rediger(self, state: Etat) -> Maj:
+    async def _rediger(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         etat = state
+        runtime.stream_writer(EtapeCommencee("rediger"))
         vues = self._vues(etat["resultats"])
         liste = "\n".join(f"{i} : {json.dumps(v, ensure_ascii=False)}" for i, v in enumerate(vues)) or "(aucune)"
         consigne = {"role": "user", "content": CONSIGNE_REDACTION.format(vues=liste)}
@@ -224,8 +273,9 @@ class Agent:
         brouillon = await self._modele.rediger(messages)
         return {"brouillon": brouillon, "redactions": etat["redactions"] + 1}
 
-    def _verifier(self, state: Etat) -> Maj:
+    def _verifier(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         etat = state
+        runtime.stream_writer(EtapeCommencee("verifier"))
         brouillon = etat.get("brouillon")
         if brouillon is None:
             return {"reponse": ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])}

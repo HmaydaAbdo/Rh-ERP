@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import create_mcp_http_client
@@ -53,6 +54,16 @@ class OutilsMcp:
         texte = " ".join(c.text for c in resultat.content if isinstance(c, TextContent))
         donnees = dict(resultat.structured_content or {})
         return ResultatOutil(nom, arguments, bool(resultat.is_error), texte, donnees)
+
+
+async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str) -> str:
+    """Échange le jeton de connexion de l'utilisateur contre son jeton agent (RS256, 5 minutes) auprès de Spring.
+
+    Spring vérifie la connexion et le droit ``IA_UTILISER`` ; une erreur HTTP remonte telle quelle (401, 403, 404).
+    """
+    reponse = await client.post(f"{api}/auth/jetons/agent", headers={"Authorization": f"Bearer {jeton_connexion}"})
+    reponse.raise_for_status()
+    return str(reponse.json()["jeton"])
 
 
 @asynccontextmanager

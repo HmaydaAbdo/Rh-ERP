@@ -1,4 +1,4 @@
-"""Application HTTP du service IA. Les routes AG-UI arrivent avec la tâche T7 (docs/ia.md)."""
+"""Application HTTP du service IA : santé et point d'entrée AG-UI ``POST /agui`` (docs/ia.md, T7)."""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -8,8 +8,11 @@ import httpx
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 
+from erp_rh_ia.agent import Agent
+from erp_rh_ia.agui import AccesErp, AccesSpring, routeur_agui
 from erp_rh_ia.config import Settings, get_settings
-from erp_rh_ia.llm import passerelle_prete
+from erp_rh_ia.llm import creer_client, passerelle_prete
+from erp_rh_ia.modele import ModeleLiteLLM
 
 
 class Sante(BaseModel):
@@ -18,16 +21,22 @@ class Sante(BaseModel):
     passerelle: Literal["PRETE", "INDISPONIBLE", "NON_VERIFIEE"]
 
 
-def creer_app(settings: Settings | None = None) -> FastAPI:
+def creer_app(settings: Settings | None = None, agent: Agent | None = None, acces: AccesErp | None = None) -> FastAPI:
+    """``agent`` et ``acces`` remplacent le modèle LiteLLM et Spring dans les tests ; absents, les vrais sont créés."""
     config = settings or get_settings()
 
     @asynccontextmanager
     async def cycle(app: FastAPI) -> AsyncGenerator[None]:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             app.state.http = client
+            app.state.agent = agent or Agent(ModeleLiteLLM(creer_client(config), config.litellm_model))
+            app.state.acces = acces or AccesSpring(client, str(config.erp_api_url))
             yield
 
     app = FastAPI(title="ERP-RH IA", docs_url=None, redoc_url=None, openapi_url=None, lifespan=cycle)
+    app.include_router(
+        routeur_agui(agent=lambda: app.state.agent, acces=lambda: app.state.acces, actif=lambda: config.enabled)
+    )
 
     @app.get("/health")
     async def vivant() -> Sante:  # pyright: ignore[reportUnusedFunction]

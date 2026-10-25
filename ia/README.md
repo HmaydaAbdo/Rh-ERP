@@ -9,7 +9,16 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
 - Santé : `GET /health` (processus vivant) et `GET /health/ready` (IA désactivée, ou passerelle
   LiteLLM joignable ; sinon `503`).
 - Configuration typée (`src/erp_rh_ia/config.py`) ; le service refuse de démarrer sans
-  `IA_ENABLED`, `IA_LITELLM_BASE_URL` ou `IA_LITELLM_API_KEY` (8 caractères au moins).
+  `IA_ENABLED`, `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` (8 caractères au moins) ou `IA_ERP_API_URL`.
+- **AG-UI (T7)** — `agui.py`, `POST /agui` (`ag-ui-protocol` 1.0.0, SSE). Entrée : `RunAgentInput` et
+  `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton agent ; refus HTTP
+  avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, étapes `STEP_*` (`cibler`, `choisir`,
+  `executer`, `rediger`, `verifier`), outils `TOOL_CALL_START/ARGS/END/RESULT`, puis la réponse **vérifiée**
+  (`TEXT_MESSAGE_*` ; aucun brouillon diffusé), `CUSTOM com.staport.answer.v1` (abstention, motif, vue) et
+  `RUN_FINISHED`. `CUSTOM com.staport.mascot.state.v1` porte l'humeur logique (`thinking`, `searching`,
+  `found`, `apologetic`, `neutral`…) avec une séquence croissante. Une panne donne un `RUN_ERROR`
+  générique ; une déconnexion du client annule le run et ferme la session MCP. Seule la dernière question
+  est lue (pas d'historique en J1) ; outils et état envoyés par le client sont ignorés.
 - Client LiteLLM : alias `ai-gateway`, tag de tâche obligatoire (`Tache`), aucune nouvelle tentative
   côté service (la passerelle bascule déjà).
 - Preuve MCP : `tests/compatibilite/` rejoue contre le serveur Java les scénarios du client
@@ -82,6 +91,17 @@ cd backend
 
 Rapport : `backend/target/client-python-mcp-erp-rh.txt`.
 
+Flux AG-UI réel avec le client officiel `@ag-ui/client` (`scripts/ia/agui-client`) : l'application de test,
+ce service lancé par `uvicorn` et une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) :
+
+```bash
+npm ci --ignore-scripts --prefix scripts/ia/agui-client
+cd backend
+./mvnw -B -Dia.agui=true -Dtest=FluxAgUiIntegrationTest test
+```
+
+Journaux : `backend/target/agui-client.txt` et `backend/target/agui-service.txt`.
+
 ## Image et exploitation
 
 - Image multi-étapes, bases `python:3.13-slim` et `uv` épinglées par digest ; dépendances installées
@@ -89,4 +109,4 @@ Rapport : `backend/target/client-python-mcp-erp-rh.txt`.
 - Service Compose `ia` sous le profil `ia`, système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
 - Variables dans le `.env` racine unique : `IA_ENABLED`, `IA_LITELLM_API_KEY` (clé virtuelle
-  ERP-RH, `metadata.tags: ["!eval"]`) ; l'URL de la passerelle est fixée par Compose.
+  ERP-RH, `metadata.tags: ["!eval"]`) ; les URL de la passerelle et du backend sont fixées par Compose.
