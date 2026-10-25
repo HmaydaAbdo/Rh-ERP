@@ -16,11 +16,19 @@ public final class ParametresDeTest implements IParametreService {
 
     public static final int LONGUEUR_MOT_DE_PASSE = 10;
 
-    private ParametresDeTest() {
+    private final Duration dureeJetonAcces;
+
+    private ParametresDeTest(Duration dureeJetonAcces) {
+        this.dureeJetonAcces = dureeJetonAcces;
     }
 
     public static IParametreService parDefaut() {
-        return new ParametresDeTest();
+        return new ParametresDeTest(Duration.ofMinutes(15));
+    }
+
+    /** Pour un test plus long qu'un jeton d'accès ordinaire (évaluation de l'agent) ; le reste est inchangé. */
+    public static IParametreService avecDureeJetonAcces(Duration duree) {
+        return new ParametresDeTest(duree);
     }
 
     @Override
@@ -35,7 +43,7 @@ public final class ParametresDeTest implements IParametreService {
 
     @Override
     public Duration dureeJetonAcces() {
-        return Duration.ofMinutes(15);
+        return dureeJetonAcces;
     }
 
     @Override

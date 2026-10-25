@@ -3,15 +3,18 @@ package staport.rh.mcp;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import staport.rh.audit.support.DonneesDeTest;
 import staport.rh.auth.entities.Utilisateur;
 import staport.rh.auth.security.JwtService;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.support.McpIntegrationTestBase;
+import staport.rh.support.ParametresDeTest;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,8 +39,10 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
     private static final Set<String> TOUT = Set.of("IA_UTILISER", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
             "CHANTIER_READ", "EQUIPE_READ", "FUNCTION_READ", "PARAMETRE_READ", "ROLE_MANAGE", "AUDIT_READ");
 
-    @Autowired
-    private JwtService jwtService;
+    @Value("${security.jwt.secret}")
+    private String secretJwt;
+    @Value("${spring.application.name}")
+    private String emetteur;
     @Autowired
     private IEmployeeService employes;
 
@@ -58,6 +63,7 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
             donnees.creerBulletin(ref, moisA);
             donnees.creerBulletin(ref, moisB);
         }
+        donnees.renseignerSalaire(a);
         employes.enregistrerSortie(c.employeId(), moisB, "STC");
 
         Map<String, Object> marqueurs = new LinkedHashMap<>();
@@ -100,7 +106,10 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         }
     }
 
+    /** Jeton d'une heure : l'évaluation dure plus que les 15 minutes d'un jeton ordinaire. Mêmes clé et émetteur. */
     private String connexion(Utilisateur utilisateur, Set<String> permissions) {
-        return jwtService.genererAccessToken(utilisateur, permissions, Set.of());
+        JwtService pourEvaluation = new JwtService(secretJwt, emetteur,
+                ParametresDeTest.avecDureeJetonAcces(Duration.ofHours(1)));
+        return pourEvaluation.genererAccessToken(utilisateur, permissions, Set.of());
     }
 }

@@ -46,6 +46,11 @@ def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
     assert succes and "sans employes_compter" in raison
     assert not juger("reponse", "paie_indicateurs", [("nombre", 3100)], reponse)[0]
     assert not juger("abstention", None, [], reponse)[0]
+    # Valeur absente de l'outil attendu : le jeu de données est en cause, signalé comme tel.
+    assert juger("reponse", "paie_indicateurs", [("nombre", None)], reponse) == (
+        False,
+        "vérité absente des données synthétiques",
+    )
     refus = ReponseAgent(
         texte="Vous n'avez pas le droit de voir la paie.", abstention=False, outils=["paie_indicateurs"]
     )

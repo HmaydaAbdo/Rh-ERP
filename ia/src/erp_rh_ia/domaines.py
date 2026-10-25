@@ -21,7 +21,8 @@ DOMAINES = (
     Domaine(
         "paie",
         "bulletins de paie, masse salariale, net et brut, effectif payé, répartition par chantier ou équipe, "
-        "évolution, entrées et sorties du mois, STC, qualité des données de paie, périodes de paie",
+        "évolution, entrées et sorties du mois, STC, qualité des données de paie (bulletins sans équipe, sans chantier "
+        "ou sans fonction), périodes de paie (AAAA-MM)",
         ("paie_",),
     ),
     Domaine(
