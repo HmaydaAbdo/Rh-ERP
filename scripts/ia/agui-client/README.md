@@ -14,5 +14,7 @@ npm ci --ignore-scripts --prefix scripts/ia/agui-client
 npm run typecheck --prefix scripts/ia/agui-client
 ```
 
-Versions figées par `package-lock.json` ; `@ag-ui/client` 1.0.2, la plus récente publiée depuis plus de
-deux semaines à l'adoption (2026-10-25).
+Versions figées par `package-lock.json` ; `@ag-ui/client` 1.0.3, dernière version stable au 2026-10-25.
+`npm audit` signale `zod` 3 (GHSA-mrhx-c7xc-m3w5, épuisement mémoire sur des collections surdimensionnées),
+dépendance du client sans correctif publié : sans effet ici (client de test face au service local), à
+trancher avant d'embarquer le client dans Angular (T8).
