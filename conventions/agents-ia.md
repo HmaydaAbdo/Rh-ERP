@@ -225,6 +225,11 @@ et ne contient aucune règle métier.
   disparaître ou changer sans préavis : chaque alias garde un repli (autre fournisseur ou modèle
   auto-hébergé, par exemple via Ollama), et l'application affiche un état dégradé compréhensible
   quand aucun modèle ne répond.
+* **Ce que la bascule ne couvre pas.** Une passerelle bascule sur limite de débit, délai ou erreur
+  serveur, pas sur une requête refusée (400) ni une clé invalide (401). Un déploiement sans clé est
+  donc retiré de la configuration effective au démarrage, et les requêtes restent au plus près du
+  format OpenAI commun (contenu de message toujours en chaîne, éventuellement vide, jamais `null`).
+  Le volume de tokens par appel est mesuré et comparé aux limites par minute de chaque pool.
 * **Clés et budgets.** Les clés des fournisseurs restent dans la passerelle, jamais dans
   l'application ni dans Git. L'application dispose d'une clé virtuelle de passerelle par
   environnement, avec un budget et des limites de débit.
@@ -272,6 +277,27 @@ Un agent n'est créé que pour un besoin identifié. L'ordre de préférence est
 
 Ne pas créer un agent par entité ou par écran : un micro-agent sans contexte ni outils propres est un
 coût (tokens, latence, erreurs de routage) sans bénéfice.
+
+### Du ciblage par domaine aux agents de domaine
+
+Étape intermédiaire de référence avant le multi-agents : **un seul agent dont le catalogue est ciblé**.
+Un petit modèle classe la question parmi les domaines déclarés ; seuls les outils de ces domaines sont
+transmis au modèle qui raisonne. Un domaine se déclare par un préfixe d'outil, une description et des cas
+du jeu de référence. Un outil sans domaine reste visible, et un ciblage invalide ou indisponible rend le
+catalogue complet : masquer un outil n'est jamais un contrôle d'accès.
+
+On passe à des agents de domaine (sous-graphes LangGraph exposés au superviseur comme outils) seulement
+quand le jeu de référence montre au moins l'un des besoins suivants :
+
+* un domaine doit garder des instructions, un modèle ou un budget propres pour rester fiable ;
+* le catalogue ciblé d'un domaine dépasse la capacité mesurée du pool de modèles (tokens par minute,
+  qualité du choix d'outil) ;
+* des questions multi-domaines fréquentes gagnent à traiter leurs sous-tâches en parallèle.
+
+Un agent de domaine ne transmet au superviseur que ses résultats d'outils et un état typé, jamais sa
+seule prose : le vérificateur de chiffres du run reste applicable à la réponse finale. Chaque appel de
+modèle supplémentaire se paie en latence et en quota ; le gain doit être mesuré sur le jeu de référence
+avant l'adoption.
 
 ### Agents de domaine
 

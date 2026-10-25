@@ -14,6 +14,39 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
   côté service (la passerelle bascule déjà).
 - Preuve MCP : `tests/compatibilite/` rejoue contre le serveur Java les scénarios du client
   TypeScript ; lancée par `McpCompatibilityTest` (profil Maven `mcp-compatibility`).
+- **Agent (T6)** — `agent.py` : graphe LangGraph explicite
+  `preparer → cibler → choisir ⇄ executer → rediger → verifier`. Bornes : 3 tours d'outils, 6 appels, 2 rédactions,
+  résultat d'outil tronqué à 12 000 caractères. Un refus « Accès refusé » n'est jamais retenté ; un outil
+  hors catalogue n'est pas appelé ; une sortie JSON invalide est rédigée une seconde fois. Aucune mémoire
+  durable : chaque question est un run indépendant.
+- **Ciblage par domaine** — `domaines.py` : un petit modèle (tag `simple`) choisit les domaines utiles
+  (paie, employés, référentiels, administration) ; seuls leurs outils, plus l'identité et les recherches de
+  référentiel, partent vers le modèle `complex`. Un outil sans domaine reste visible ; un ciblage invalide
+  ou indisponible garde tout le catalogue. Ce n'est pas un contrôle d'accès : Spring revérifie chaque appel.
+- **Vérificateur de chiffres** — `verification.py` : chaque nombre de la réponse (formats `3 000,50`,
+  `3000.50`, espaces insécables) doit figurer dans les résultats d'outils ou la question. Sinon une
+  réécriture, puis abstention `CHIFFRES_NON_VERIFIES`. Un pourcentage ou un total recalculé par le modèle
+  est donc refusé.
+- **Modèle** — `modele.py` : appels d'outils puis réponse JSON validée (`reponse`, `vue`, `abstention`),
+  tag `complex`, température 0. La vue proposée est choisie parmi celles rendues par les outils, jamais
+  inventée.
+- **Outils** — `outils.py` : une session MCP par question, avec le jeton agent de l'utilisateur.
+
+## Évaluation (jeu de référence)
+
+`evaluation/jeu_reference.json` contient les cas (réponses chiffrées, textes, dates, statuts,
+abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur appelle l'outil attendu
+avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
+
+```bash
+cd backend
+./mvnw -B -Dia.evaluation=true -Dtest=EvaluationAgentIaTest test
+```
+
+Prérequis : passerelle LiteLLM prête et `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` dans
+l'environnement. Le test crée des données synthétiques, démarre l'application, puis lance
+`python -m erp_rh_ia.evaluation`. Rapport : `backend/target/evaluation-ia.json` (exactitude,
+latences p50/p95, détail par cas) ; journal : `backend/target/evaluation-ia.txt`.
 
 ## Développer
 
