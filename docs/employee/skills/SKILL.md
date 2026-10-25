@@ -14,14 +14,23 @@ description: Use when changing employee records, import, assignment references, 
 
 ## Périmètre
 
-Fiche d'identité et affectation actuelle de l'employé. Ce domaine consomme Fonction et Chantier via
-leurs façades de service ; il ne dépend pas de leurs repositories.
+Fiche d'identité et situation actuelle de l'employé. Ce domaine consomme Fonction, Chantier et
+Équipe via leurs façades de service; il ne dépend pas de leurs repositories. Les bulletins et le
+parcours restent détenus par Paie. Cartes et Analytique utilisent les composants partagés configurés
+par `employee-module.ts`, sans dupliquer leurs règles.
 
 ## Garde-fous
 
 - CIN, champs obligatoires, statut, import d'ajout et restrictions de suppression suivent le README.
-- Ne pas supprimer un employé lié à un bulletin ou à un compte utilisateur ; la désactivation
-  conserve l'historique conformément aux règles métier.
+- Ne pas supprimer un employé lié à un bulletin ou à un compte utilisateur; le passage à « Sorti »
+  conserve l'historique, sans affectation courante de chantier ou d'équipe.
+- Naissance strictement passée dans API, formulaire et import; date d'embauche future permise mais
+  exclue des embauches des douze derniers mois. Ne pas ajouter de règle d'âge ou d'ancienneté.
+- Salaire et type sont conjoints, masqués sans `PAIE_READ`; préserver le salaire existant lors
+  d'une écriture sans ce droit. La modification renvoie la version lue.
+- Les critères nom/CIN/dimensions se conservent entre les vues et s'appliquent à la Paie et aux
+  mouvements; le statut courant ne filtre pas l'historique. Ne jamais mélanger effectif courant et
+  salariés payés comme une même mesure.
 - Le backend reste l'autorité des permissions ; le frontend masque les actions interdites sans
   remplacer les contrôles serveur.
 - Toute modification de permission, schéma ou règle métier met à jour RBAC, modèle de données ou
@@ -29,5 +38,9 @@ leurs façades de service ; il ne dépend pas de leurs repositories.
 
 ## Vérification
 
-Tester unicité CIN, validations, références, import atomique, blocage de suppression, audit et refus
-RBAC. Utiliser des données synthétiques ; ne jamais copier des données personnelles en fixtures.
+Tester unicité CIN, validations, références, import atomique, numéros réels des lignes Excel,
+blocage de suppression, audit et refus RBAC. Vérifier les critères invalides et groupes sans
+chantier/équipe, les bornes des embauches, la réponse tardive d'une ancienne recherche, le chargement,
+l'erreur et le réessai de la fiche/formulaire/liste. Vérifier les deux thèmes, le téléphone et le
+clavier dans l'application; les tests automatisés ne remplacent pas la revue visuelle.
+Utiliser des données synthétiques; ne jamais copier des données personnelles en fixtures.

@@ -44,6 +44,7 @@ describe('PdfImpressionService', () => {
     service.imprimer(fenetre, {
       titre: 'Effectif par équipe',
       graphiqueDataUrl: 'data:image/png;base64,AAAA',
+      graphiqueFond: 'rgb(18, 32, 51)',
       graphiqueAlt: 'Effectif <par équipe>',
       colonnes: ['Équipe', 'Effectif'],
       lignes: [['Chauffeurs', 12]]
@@ -51,5 +52,24 @@ describe('PdfImpressionService', () => {
 
     expect(html).toContain('<img src="data:image/png;base64,AAAA" alt="Effectif &lt;par équipe&gt;"');
     expect(html).toContain('<td>Chauffeurs</td><td>12</td>');
+    expect(html).toContain('style="background-color:rgb(18, 32, 51)"');
+  });
+
+  it('imprime tous les graphiques et leurs légendes sans accepter de source active', () => {
+    const service = new PdfImpressionService();
+    let html = '';
+    const fenetre = { document: { open: vi.fn(), write: (value: string) => { html = value; }, close: vi.fn() } } as unknown as Window;
+    service.imprimer(fenetre, {
+      titre: 'Situation complète', colonnes: ['Effectif'], lignes: [[12]],
+      graphiques: [
+        { dataUrl: 'data:image/png;base64,AAAA', description: 'Effectif <payé>' },
+        { dataUrl: 'data:image/png;base64,BBBB', description: 'Masse salariale (DH)' },
+        { dataUrl: 'data:image/png;base64,AAAA" onerror="alert(1)', description: 'Invalide' }
+      ]
+    });
+    expect(html.match(/<figure>/g)).toHaveLength(2);
+    expect(html).toContain('<figcaption>Effectif &lt;payé&gt;</figcaption>');
+    expect(html).toContain('<figcaption>Masse salariale (DH)</figcaption>');
+    expect(html).not.toContain('onerror');
   });
 });

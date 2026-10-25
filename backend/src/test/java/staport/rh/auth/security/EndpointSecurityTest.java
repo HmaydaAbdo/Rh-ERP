@@ -114,8 +114,8 @@ class EndpointSecurityTest {
             Map.entry("PaieReportController.telecharger", "PAIE_EXPORT"),
             Map.entry("ParametreController.findAll", "PARAMETRE_READ"),
             Map.entry("ParametreController.update", "PARAMETRE_WRITE"),
-            Map.entry("RoleController.search", "ROLE_MANAGE"),
-            Map.entry("RoleController.findById", "ROLE_MANAGE"),
+            Map.entry("RoleController.search", "ROLE_MANAGE|USER_MANAGE"),
+            Map.entry("RoleController.findById", "ROLE_MANAGE|USER_MANAGE"),
             Map.entry("RoleController.create", "ROLE_MANAGE"),
             Map.entry("RoleController.update", "ROLE_MANAGE"),
             Map.entry("RoleController.delete", "ROLE_MANAGE"),
@@ -263,6 +263,24 @@ class EndpointSecurityTest {
         }
 
         assertThat(accesPartiels).as("endpoints accessibles sans toutes les permissions exigées").isEmpty();
+    }
+
+    @Test
+    void unePermissionAlternativeSuffitIndividuellement() {
+        List<String> accesRefuses = new ArrayList<>();
+        for (Method endpoint : endpoints()) {
+            PreAuthorize annotation = preAuthorize(endpoint);
+            if (exigeToutes(annotation) || autorites(annotation).size() < 2) {
+                continue;
+            }
+            for (String seule : autorites(annotation)) {
+                authentifierAvec(seule);
+                if (estRefuse(endpoint)) {
+                    accesRefuses.add(nom(endpoint) + " refusé avec " + seule);
+                }
+            }
+        }
+        assertThat(accesRefuses).as("endpoints refusés malgré une permission alternative").isEmpty();
     }
 
     @Test

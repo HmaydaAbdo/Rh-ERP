@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize, Subscription } from 'rxjs';
 
 import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
@@ -10,6 +11,7 @@ import { PaieService } from '../services/paie.service';
 export type Format = 'PDF' | 'EXCEL';
 export type EtapeId = 'periode' | 'format' | 'chantier' | 'equipes' | 'materiel' | 'recap';
 export type Etat = 'saisie' | 'generation' | 'termine';
+type Chargement = 'periodes' | 'chantiers' | 'materiel';
 
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
@@ -38,6 +40,12 @@ export const NOMBRE_MAX_MATERIEL = 999;
 export class PaieExportStore {
   private readonly paieService = inject(PaieService);
   private readonly messageService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly requetes: Partial<Record<Chargement, Subscription>> = {};
+  readonly erreursChargement = signal<Chargement[]>([]);
+  readonly materielEnCours = signal(false);
+  readonly chargementBloquant = computed(() => this.periodesEnCours() || this.chantiersEnCours()
+    || this.materielEnCours() || this.erreursChargement().length > 0);
 
   readonly libelleEtapes = LIBELLES_ETAPES;
   readonly nombreMax = NOMBRE_MAX_MATERIEL;
@@ -135,6 +143,8 @@ export class PaieExportStore {
 
   /** Un nouveau mois invalide tout ce qui dépend du précédent (chantiers chargés, équipes choisies). */
   choisirPeriode(periode: string): void {
+    this.requetes.chantiers?.unsubscribe();
+    this.retirerErreurChargement('chantiers');
     this.periode.set(periode);
     this.erreur.set(null);
     this.chantiers.set([]);
@@ -190,7 +200,7 @@ export class PaieExportStore {
   // ---- Navigation ----
 
   suivant(): void {
-    if (this.etat() === 'generation') {
+    if (this.etat() === 'generation' || this.chargementBloquant()) {
       return;
     }
     const courante = this.etape();
@@ -511,6 +521,8 @@ export class PaieExportStore {
 
   /** Remet l'assistant à son état de départ (ouverture, ou « Nouvel export »). */
   ouvrir(): void {
+    Object.values(this.requetes).forEach((requete) => requete.unsubscribe());
+    this.erreursChargement.set([]);
     this.etape.set('periode');
     this.sens.set('avant');
     this.etat.set('saisie');
@@ -538,20 +550,29 @@ export class PaieExportStore {
   }
 
   private chargerPeriodes(): void {
+    this.requetes.periodes?.unsubscribe();
     this.periodesEnCours.set(true);
-    this.paieService
+    this.requetes.periodes = this.paieService
       .listerPeriodes()
-      .pipe(finalize(() => this.periodesEnCours.set(false)))
-      .subscribe((periodes) => {
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.periodesEnCours.set(false)))
+      .subscribe({ next: (periodes) => {
+        this.retirerErreurChargement('periodes');
         this.periodes.set(periodes);
-        if (periodes.length > 0) {
+        if (!this.periode() && periodes.length > 0) {
           this.choisirPeriode(periodes[0].periode);
         }
-      });
+      }, error: () => this.ajouterErreurChargement('periodes') });
   }
 
   private chargerTableauxMateriel(): void {
-    this.paieService.listerTableauxMateriel().subscribe((tableaux) => this.tableauxMateriel.set(tableaux));
+    this.requetes.materiel?.unsubscribe();
+    this.materielEnCours.set(true);
+    this.requetes.materiel = this.paieService.listerTableauxMateriel()
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.materielEnCours.set(false)))
+      .subscribe({
+        next: (tableaux) => { this.tableauxMateriel.set(tableaux); this.retirerErreurChargement('materiel'); },
+        error: () => this.ajouterErreurChargement('materiel')
+      });
   }
 
   private chargerChantiers(): void {
@@ -559,11 +580,31 @@ export class PaieExportStore {
     if (!periode || this.chantiers().length > 0) {
       return;
     }
+    this.requetes.chantiers?.unsubscribe();
     this.chantiersEnCours.set(true);
-    this.paieService
+    this.requetes.chantiers = this.paieService
       .listerChantiersDeLaPeriode(periode)
-      .pipe(finalize(() => this.chantiersEnCours.set(false)))
-      .subscribe((chantiers) => this.chantiers.set(chantiers));
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chantiersEnCours.set(false)))
+      .subscribe({
+        next: (chantiers) => { this.chantiers.set(chantiers); this.retirerErreurChargement('chantiers'); },
+        error: () => this.ajouterErreurChargement('chantiers')
+      });
+  }
+
+  reessayerChargements(): void {
+    for (const chargement of this.erreursChargement()) {
+      if (chargement === 'periodes') this.chargerPeriodes();
+      else if (chargement === 'chantiers') this.chargerChantiers();
+      else this.chargerTableauxMateriel();
+    }
+  }
+
+  private ajouterErreurChargement(chargement: Chargement): void {
+    this.erreursChargement.update((erreurs) => [...new Set([...erreurs, chargement])]);
+  }
+
+  private retirerErreurChargement(chargement: Chargement): void {
+    this.erreursChargement.update((erreurs) => erreurs.filter((erreur) => erreur !== chargement));
   }
 
 }

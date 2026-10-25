@@ -1,4 +1,16 @@
-@if (employee(); as employee) {
+@if (loading() || erreurChargement()) {
+  <div class="app-page app-page--narrow">
+    <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
+    <div class="app-page__header"><h1>Fiche de l’employé</h1></div>
+    @if (loading()) {
+      <stp-message text="Chargement de l’employé…" />
+    } @else {
+      <stp-message severity="error" text="Impossible de charger l’employé. Vérifiez la connexion ou revenez à la liste.">
+        <button stp-button variant="text" type="button" (click)="charger()">Réessayer</button>
+      </stp-message>
+    }
+  </div>
+} @else if (employee(); as employee) {
   <div class="employee-fiche app-page">
     <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
 

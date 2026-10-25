@@ -63,6 +63,19 @@ est indisponible; une base monétaire nulle n'est jamais divisée.
 
 **Action** : ouvrir une carte pose l'étape (`<dimension>Ids=<id>`) et fait avancer à l'étape suivante ; ouvrir une carte de mois pose `periode`.
 
+**Chargement et erreurs** : un changement de périmètre retire les résultats précédents pendant la
+lecture et annule la requête en cours. Une erreur de référentiel, de première page Employé ou de
+liste des mois affiche un message avec réessai; elle n'est jamais présentée comme un périmètre vide.
+Une panne des fiches, de la paie du mois ou du mois de comparaison est identifiée séparément et
+laisse visibles les autres sources disponibles. Une paie indisponible n'est pas remplacée par des
+indicateurs à zéro; une comparaison indisponible n'est pas une variation nulle. Le réessai recharge
+le même périmètre et relit les périodes si leur lecture a échoué.
+
+Au niveau Employés, « Afficher plus » ne charge qu'une page à la fois. La page suivante est validée
+uniquement après réception : après un échec, les fiches déjà chargées restent visibles et le réessai
+demande la même page. Une suite appartenant à un ancien périmètre est annulée et ne peut pas
+s'ajouter au nouveau résultat.
+
 **Équipe** : Cartes fixe les chiffres Paie sur le dernier mois présent dans `GET /paie/periodes`; les agrégats de fiches Employé
 ne sont pas chargés ni mélangés à l'effectif Paie. Le parcours s'arrête à Fonction, sans étape d'employés. Aucun sélecteur de période
 n'est affiché. Les raccourcis vers la liste et les employés sont masqués car la coque fournit déjà les onglets des vues.
@@ -74,6 +87,8 @@ le niveau avec `recharger()` (vue enfant `CartesPerimetreComponent`).
 ## Analytique
 
 Même périmètre et même portée que les Cartes. L'ordre des sources est déclaré par chaque module dans `ordreAnalytique`.
+Le chargement masque les chiffres du périmètre précédent. Une erreur de période, de source ou de répartition est
+annoncée avec reprise; les autres sources disponibles restent consultables et une erreur ne devient pas un zéro métier.
 Les projections restent indépendantes et chaque source conserve son bloc et ses permissions. Les référentiels mettent les
 effectifs Employé en premier; le module Paie met ses indicateurs Paie en premier.
 
@@ -85,13 +100,16 @@ Un module peut activer un panneau analytique dédié à sa dimension avec `vueEf
 utilise `PAIE_READ` et le dernier mois disponible pour la répartition des effectifs payés par équipe. Le sélecteur de période,
 « Répartir par » et les panneaux génériques Employé/Paie sont masqués. Un sélecteur d'équipe pilote l'évolution historique
 mensuelle de son effectif. Le mois courant reste celui qui est le plus récent dans la base; l'évolution conserve l'historique.
-Chaque graphique exportable capture son graphique et inclut le tableau complet associé dans le PDF.
+Chaque composant exportable capture tous ses graphiques et inclut le tableau complet associé dans le PDF, avec période,
+filtres et périmètre lisibles. L'évolution mensuelle conserve toutes les colonnes de données, quel que soit l'indicateur
+choisi à l'écran. Les exports individuels restent disponibles.
 
 1. En-tête : titre, mois (sauf module à niveau « mois », dont la barre le porte), lien « Voir les cartes », fil d'étapes.
 2. **Paie** (`PAIE_READ`) : chiffres du mois et variation sur le mois précédent ; **évolution mensuelle** (une mesure, un axe :
    masse, effectif, STC personnes, STC DH ; mois analysé agrandi) ; **répartition** en barres par la dimension choisie
    (« Répartir par », masse ou effectif, les 12 plus grands groupes, tableau complet avec STC et bouton « Approfondir ») ;
-   qualité des données ; tranches de total ; mouvements mois par mois (`POST /paie/effectifs`).
+   qualité des données ; tranches de total ; mouvements mois par mois (`POST /paie/effectifs`), selon les mêmes dimensions,
+   nom et CIN que les autres projections Paie. Le statut de la fiche Employé ne filtre que les fiches.
 3. **Fiches Employé** (`EMPLOYEE_READ`) : chiffres clés, pyramide des âges, ancienneté, répartition en poste / sortis.
 
 Un clic sur une barre ou sur « Approfondir » ajoute le groupe au périmètre. Un mois sans bulletin garde l'historique et

@@ -75,6 +75,7 @@ public class PaieImportService {
 
     private static final Logger log = LoggerFactory.getLogger(PaieImportService.class);
     private static final BigDecimal MAX_JOURS_TRAVAILLES = new BigDecimal("999.99");
+    private static final BigDecimal MAX_MONTANT = new BigDecimal("99999999.99");
     private static final int LONGUEUR_NOM_MAX = 150;
 
     private final PaieRepository repository;
@@ -326,6 +327,16 @@ public class PaieImportService {
         if (estJourTravailleInvalide(ligne.nombreJoursTravailles())) {
             return "Le nombre de jours travaillés doit être compris entre 0 et 999,99 avec au plus deux décimales";
         }
+        if (depassePrecision(ligne.joursRecuperationOuvrable(), MAX_JOURS_TRAVAILLES)
+                || depassePrecision(ligne.joursRecuperationDimanche(), MAX_JOURS_TRAVAILLES)) {
+            return "Les jours de récupération doivent être compris entre 0 et 999,99 avec au plus deux décimales";
+        }
+        if (depassePrecision(ligne.salaireMensuel(), MAX_MONTANT)
+                || depassePrecision(ligne.primeRoulageOrdinaire(), MAX_MONTANT)
+                || depassePrecision(ligne.primeRoulageDimanche(), MAX_MONTANT)
+                || depassePrecision(ligne.salaireTotal(), MAX_MONTANT)) {
+            return "Les salaires et primes doivent être compris entre 0 et 99 999 999,99 avec au plus deux décimales";
+        }
         if (ligne.observation() != null && ligne.observation().length() > 255) {
             return "Observation trop longue (255 caractères maximum)";
         }
@@ -452,7 +463,11 @@ public class PaieImportService {
     }
 
     private static boolean estJourTravailleInvalide(BigDecimal valeur) {
-        return valeur.stripTrailingZeros().scale() > 2 || valeur.compareTo(MAX_JOURS_TRAVAILLES) > 0;
+        return depassePrecision(valeur, MAX_JOURS_TRAVAILLES);
+    }
+
+    private static boolean depassePrecision(BigDecimal valeur, BigDecimal maximum) {
+        return valeur != null && (valeur.stripTrailingZeros().scale() > 2 || valeur.compareTo(maximum) > 0);
     }
 
     private static String cle(String valeur) {

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 
 import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirSignalForms } from '../../../shared/forms/signal-forms.config';
@@ -48,9 +48,9 @@ describe('PaieFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string): Promise<void> {
+  async function afficher(id?: string, chargement: Observable<Paie> = of(BULLETIN)): Promise<void> {
     service = {
-      getById: vi.fn().mockReturnValue(of(BULLETIN)),
+      getById: vi.fn().mockReturnValue(chargement),
       create: vi.fn().mockReturnValue(of({ id: 40 })),
       update: vi.fn().mockReturnValue(of({ id: 8 }))
     };
@@ -149,6 +149,33 @@ describe('PaieFormComponent', () => {
       expect(erreurs()).toEqual(['La valeur ne peut pas être négative.']);
     });
 
+    it.each([
+      ['joursRecuperationOuvrable', 1000], ['joursRecuperationDimanche', 1.001],
+      ['primeRoulageOrdinaire', 100000000], ['primeRoulageDimanche', 1.001], ['salaireTotal', 100000000]
+    ] as const)('refuse %s hors des bornes et de la précision du contrat', async (champ, valeur) => {
+      await afficher();
+      await remplirObligatoires();
+      formulaire()[champ]().value.set(valeur);
+      formulaire()[champ]().markAsTouched();
+
+      await envoyer();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(erreurs()).toHaveLength(1);
+    });
+
+    it('refuse une observation de plus de 255 caractères', async () => {
+      await afficher();
+      await remplirObligatoires();
+      formulaire().observation().value.set('x'.repeat(256));
+      formulaire().observation().markAsTouched();
+
+      await envoyer();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(erreurs()).toEqual(['L’observation est limitée à 255 caractères.']);
+    });
+
     it('ramène à zéro un montant négatif saisi, en quittant le champ (borne de la règle du schéma)', async () => {
       await afficher();
       const champ = racine().querySelector('input#salaireMensuel') as HTMLInputElement;
@@ -230,6 +257,25 @@ describe('PaieFormComponent', () => {
   });
 
   describe('modification', () => {
+    it('attend le bulletin puis propose de réessayer en cas d’échec, sans formulaire vide', async () => {
+      const chargement = new Subject<Paie>();
+      await afficher('8', chargement);
+      expect(racine().textContent).toContain('Chargement du bulletin…');
+      expect(racine().querySelector('form')).toBeNull();
+
+      chargement.error(new Error('indisponible'));
+      await stabiliser();
+      expect(erreurs()).toHaveLength(1);
+      expect(racine().querySelector('form')).toBeNull();
+      expect(service.update).not.toHaveBeenCalled();
+
+      service.getById.mockReturnValue(of(BULLETIN));
+      (racine().querySelector('stp-message button') as HTMLButtonElement).click();
+      await stabiliser();
+      expect(racine().querySelector('form')).not.toBeNull();
+      expect((racine().querySelector('input#observation') as HTMLInputElement).value).toBe('Heures de nuit');
+    });
+
     it('charge le bulletin, affiche les libellés choisis et prévient que l’employé et la période sont figés', async () => {
       await afficher('8');
 

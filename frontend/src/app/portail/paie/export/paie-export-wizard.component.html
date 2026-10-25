@@ -27,6 +27,13 @@
       }
     </nav>
 
+    @if (store.erreursChargement().length > 0) {
+      <div role="alert">
+        <p class="export-wizard__erreur">Impossible de charger les données de l’export. Réessayez avant de continuer.</p>
+        <button stp-button variant="secondary" type="button" (click)="store.reessayerChargements()">Réessayer</button>
+      </div>
+    }
+
     <div class="export-wizard__corps">
       @if (store.etat() === 'saisie') {
         @switch (store.etape()) {
@@ -81,7 +88,7 @@
             Vous pouvez continuer sans rien choisir
           }
         </span>
-        <button stp-button type="button" [icon]="store.etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="store.etat() === 'generation'" (click)="store.suivant()">{{ store.etape() === 'recap' ? (store.format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>
+        <button stp-button type="button" [icon]="store.etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="store.etat() === 'generation'" [disabled]="store.chargementBloquant()" (click)="store.suivant()">{{ store.etape() === 'recap' ? (store.format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>
       </footer>
     }
   </div>

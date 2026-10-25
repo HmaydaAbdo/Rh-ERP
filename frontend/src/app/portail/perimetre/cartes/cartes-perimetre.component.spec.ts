@@ -1,10 +1,12 @@
 import type { MockedObject } from 'vitest';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import { ChangeDetectionStrategy, Component, LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
@@ -12,16 +14,26 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { EmployeeService } from '../../employee/services/employee.service';
+import { Employee } from '../../employee/models/employee.model';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
 import { CartesPerimetreComponent } from './cartes-perimetre.component';
 
+registerLocaleData(localeFr);
+
 const ITEMS = [
   { id: 1, code: 'C168', libelle: 'Nador', detail: 'Route de Nador', statut: { libelle: 'En cours', severite: 'success' as const } },
   { id: 2, code: 'C196', libelle: 'Marrakech', detail: null, statut: { libelle: 'Clôturé', severite: 'neutral' as const } }
 ];
+
+const fiche = (id: number): Employee => ({
+  id, version: 0, nomPrenom: `Employé ${id}`, cin: `TEST${id}`, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
+  fonction: { id: 7, libelle: 'MACON' }, chantier: { id: 1, code: 'C168' }, equipe: null,
+  salaire: null, typeSalaire: null, statut: 'ACTIF'
+});
+const pageEmployes = (content: Employee[], total = 48) => ({ content, page: { size: 24, number: 0, totalElements: total, totalPages: 2 } });
 
 function analyse(parChantier: PaieAnalytique['parChantier'], parEquipe: PaieAnalytique['parEquipe'] = [], parFonction: PaieAnalytique['parFonction'] = []): PaieAnalytique {
   return {
@@ -177,6 +189,7 @@ describe('CartesPerimetreComponent', () => {
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({
       providers: [
+        { provide: LOCALE_ID, useValue: 'fr-FR' },
         provideRouter([
           { path: 'chantiers/cartes', component: HoteComponent },
           { path: 'equipes/cartes', component: HoteEquipeComponent },
@@ -213,10 +226,10 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
     expect(cartes[0].textContent).toContain('+1 personne · vs juillet 2026');
     expect(cartes[0].textContent).toContain('Base précédente nulle · vs juillet 2026');
-    expect(cartes[0].textContent).toMatch(/4[, ]500\.00 DH/);
+    expect(cartes[0].textContent).toMatch(/4\s500,00 DH/);
     expect(cartes[0].textContent).toContain('+12,5 %');
     expect(cartes[1].textContent).toContain('Clôturé');
-    expect(cartes[1].textContent).toMatch(/0\.00 DH/);
+    expect(cartes[1].textContent).toContain('0,00 DH');
     expect(page.textContent).toContain('2 chantiers');
     expect(employes.regrouper).toHaveBeenCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'CHANTIER');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
@@ -287,6 +300,118 @@ describe('CartesPerimetreComponent', () => {
     expect(employes.search).toHaveBeenCalledWith({ chantierIds: [1], equipeIds: [5], fonctionIds: [7] }, { page: 0, size: 24, sort: 'nomPrenom,asc' });
     expect(page.textContent).toContain('Zahra Idrissi');
     expect(page.textContent).toContain('Afficher plus (29 restants)');
+  });
+
+  it('annonce un échec du référentiel sans le présenter comme un périmètre vide et permet de reprendre', async () => {
+    const page = await ouvrir();
+    const hote = harness.routeDebugElement!.componentInstance as HoteComponent;
+    vi.mocked(hote.module.catalogue!.charger).mockReturnValueOnce(throwError(() => new Error('indisponible')));
+    const cartes = harness.fixture.debugElement.query(By.directive(CartesPerimetreComponent)).componentInstance as CartesPerimetreComponent;
+    cartes.recharger();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger ce niveau');
+    expect(page.querySelectorAll('.perimetre-carte')).toHaveLength(0);
+    expect(page.textContent).not.toContain('Aucun élément');
+
+    (page.querySelector('stp-message button') as HTMLButtonElement).click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-carte')).toHaveLength(2);
+  });
+
+  it('signale les fiches indisponibles en conservant les chiffres Paie', async () => {
+    employes.regrouper.mockReturnValue(throwError(() => new Error('indisponible')));
+    const page = await ouvrir();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('fiches Employé sont indisponibles');
+    expect(page.querySelectorAll('.perimetre-carte')).toHaveLength(2);
+    expect(page.querySelector('.perimetre-carte__mesures')?.textContent).toMatch(/4\s500,00 DH/);
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).not.toContain('sur les fiches');
+  });
+
+  it('signale la paie indisponible sans inventer des zéros et conserve les fiches', async () => {
+    paie.analyser.mockReturnValue(throwError(() => new Error('indisponible')));
+    const page = await ouvrir();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('paie du mois est indisponible');
+    expect(page.querySelector('.perimetre-carte__fiches')?.textContent).toContain('3');
+    expect(page.querySelectorAll('.perimetre-carte__indicateur')).toHaveLength(0);
+    expect(page.querySelector('.perimetre-carte__mesures')?.textContent).toContain('Indisponible');
+    expect(page.querySelector('.perimetre-cartes__resume')?.textContent).not.toContain('payé(s)');
+
+    paie.analyser.mockReturnValue(of(analyse([{ id: 1, code: 'C168', libelle: 'Nador', masse: 4500, effectif: 1, stc: 0, stcMontant: 0 }])));
+    (page.querySelector('stp-message button') as HTMLButtonElement).click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelector('.perimetre-carte__mesures')?.textContent).toMatch(/4\s500,00 DH/);
+  });
+
+  it('distingue l’échec de lecture des périodes d’une absence de paie et réessaie', async () => {
+    paie.listerPeriodes.mockReturnValueOnce(throwError(() => new Error('indisponible')));
+    const page = await ouvrir();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('liste des périodes de paie est indisponible');
+    expect(page.textContent).not.toContain('Aucun mois disponible');
+    (page.querySelector('stp-message button') as HTMLButtonElement).click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(paie.listerPeriodes).toHaveBeenCalledTimes(2);
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.textContent).toContain('Paie · août 2026');
+  });
+
+  it('conserve la page et les fiches après un échec puis recharge la même suite une seule fois', async () => {
+    const premiere = Array.from({ length: 24 }, (_, i) => fiche(i + 1));
+    const suite = new Subject<ReturnType<typeof pageEmployes>>();
+    employes.search.mockReturnValueOnce(of(pageEmployes(premiere)))
+      .mockReturnValueOnce(throwError(() => new Error('indisponible')))
+      .mockReturnValueOnce(suite);
+    const page = await ouvrir('/chantiers/cartes?chantierIds=1&equipeIds=5&fonctionIds=7');
+    const bouton = () => page.querySelector('.perimetre-cartes__plus button') as HTMLButtonElement;
+    bouton().click();
+    harness.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger la suite');
+    expect(page.querySelectorAll('.perimetre-cartes__fiche')).toHaveLength(24);
+    bouton().click();
+    bouton().click();
+    expect(employes.search).toHaveBeenCalledTimes(3);
+    expect(employes.search.mock.calls.slice(1).map((appel) => appel[1]?.page)).toEqual([1, 1]);
+
+    suite.next(pageEmployes(Array.from({ length: 24 }, (_, i) => fiche(i + 25))));
+    suite.complete();
+    harness.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelectorAll('.perimetre-cartes__fiche')).toHaveLength(48);
+    expect(page.querySelector('.perimetre-cartes__plus')).toBeNull();
+  });
+
+  it('annule une suite en cours quand le périmètre change pour ne pas mélanger les employés', async () => {
+    const suite = new Subject<ReturnType<typeof pageEmployes>>();
+    employes.search.mockReturnValueOnce(of(pageEmployes(Array.from({ length: 24 }, (_, i) => fiche(i + 1)))))
+      .mockReturnValueOnce(suite)
+      .mockReturnValueOnce(of(pageEmployes([fiche(100)], 1)));
+    const page = await ouvrir('/chantiers/cartes?chantierIds=1&equipeIds=5&fonctionIds=7');
+    (page.querySelector('.perimetre-cartes__plus button') as HTMLButtonElement).click();
+
+    await ouvrir('/chantiers/cartes?chantierIds=2&equipeIds=5&fonctionIds=7');
+    suite.next(pageEmployes([fiche(25)]));
+    suite.complete();
+    harness.detectChanges();
+
+    expect(Array.from(page.querySelectorAll('.perimetre-cartes__fiche strong')).map((nom) => nom.textContent)).toEqual(['Employé 100']);
   });
 
   it('masque fiches et paie sans les droits et n’appelle ni Employé ni Paie', async () => {

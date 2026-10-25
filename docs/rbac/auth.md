@@ -39,7 +39,7 @@ Chaque outil MCP exige en plus la permission de son domaine, revérifiée à cha
 | `PUT /users/{id}` | `USER_MANAGE` |
 | `PUT /users/{id}/permissions-refusees` | `USER_MANAGE` |
 | `POST /users/{id}/reset-password` | `USER_MANAGE` |
-| `POST /roles/search`, `GET /roles/{id}` | `ROLE_MANAGE` |
+| `POST /roles/search`, `GET /roles/{id}` | `ROLE_MANAGE` ou `USER_MANAGE` — lecture nécessaire à l'attribution des rôles aux comptes |
 | `POST /roles` | `ROLE_MANAGE` |
 | `PUT /roles/{id}` | `ROLE_MANAGE` |
 | `DELETE /roles/{id}` | `ROLE_MANAGE` |
@@ -54,6 +54,7 @@ Chaque outil MCP exige en plus la permission de son domaine, revérifiée à cha
 | Lien sidebar "Utilisateurs" | `authService.hasPermission('USER_MANAGE')` |
 | Lien sidebar "Rôles" | `authService.hasPermission('ROLE_MANAGE')` |
 | Routes `/admin/users/**` | `permissionGuard`, `data: { permission: 'USER_MANAGE' }` |
+| Sélecteur d'employé lié au compte | `EMPLOYEE_READ` ; sans ce droit, le lien courant reste visible et conservé en lecture seule |
 | Routes `/admin/roles/**` | `permissionGuard`, `data: { permission: 'ROLE_MANAGE' }` |
 | Route `/admin/parametres` | `permissionGuard`, `data: { permission: 'PARAMETRE_READ' }` |
 | Confirmation de suppression d'un rôle | Le message dit qu'un rôle attribué n'est pas supprimable ; le refus `409` du serveur s'affiche par l'intercepteur global |

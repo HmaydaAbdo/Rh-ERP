@@ -106,4 +106,18 @@ class EmployeeAnalytiqueServiceTest extends AuditIntegrationTestBase {
         assertThat(analyse.ageMoyen()).isNull();
         assertThat(analyse.parAge()).extracting(TrancheDto::effectif).containsOnly(0L);
     }
+
+    @Test
+    void les_embauches_sur_douze_mois_excluent_les_dates_futures_et_la_borne_ancienne() {
+        Referentiel ref = donnees.creerReferentiel();
+        LocalDate aujourdhui = LocalDate.now();
+        employe(ref, "AUJOURDHUI", aujourdhui.minusYears(30), aujourdhui, null, "ACTIF");
+        employe(ref, "DEMAIN", aujourdhui.minusYears(30), aujourdhui.plusDays(1), null, "ACTIF");
+        employe(ref, "BORNE", aujourdhui.minusYears(30), aujourdhui.minusYears(1), null, "ACTIF");
+
+        EmployeeAnalytiqueDto analyse = service.analyser(duChantier(ref, null));
+
+        assertThat(analyse.effectif()).isEqualTo(4);
+        assertThat(analyse.embauchesDouzeMois()).isEqualTo(1);
+    }
 }

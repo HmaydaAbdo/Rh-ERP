@@ -3,6 +3,8 @@ package staport.rh.employee.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -115,6 +118,25 @@ class EmployeeControllerTest {
         ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
         verify(employeeService).search(any(), page.capture());
         assertThat(page.getValue().getSort().stream().map(Sort.Order::getProperty)).containsExactly("nomPrenom");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"equipeIds\":[null]}", "{\"chantierIds\":[null]}", "{\"fonctionIds\":[null]}",
+            "{\"equipeIds\":[-1]}", "{\"chantierIds\":[-1]}", "{\"fonctionIds\":[0]}"})
+    void rechercher_refuseLesIdentifiantsInvalidesAvantLeService(String criteres) throws Exception {
+        mockMvc.perform(post("/employees/search").principal(connecte("EMPLOYEE_READ"))
+                        .contentType(MediaType.APPLICATION_JSON).content(criteres))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(employeeService);
+    }
+
+    @Test
+    void rechercher_conserveLesFiltresSynthetiquesSansChantierEtSansEquipe() throws Exception {
+        when(employeeService.search(any(), any())).thenReturn(new PageImpl<>(List.of()));
+        mockMvc.perform(post("/employees/search").principal(connecte("EMPLOYEE_READ"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"chantierIds\":[0],\"equipeIds\":[0]}"))
+                .andExpect(status().isOk());
     }
 
     @Test

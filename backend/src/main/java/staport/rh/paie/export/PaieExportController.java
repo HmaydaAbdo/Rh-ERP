@@ -58,6 +58,9 @@ public class PaieExportController {
     }
 
     private YearMonth parsePeriode(String periode) {
+        if (periode == null) {
+            throw new InvalidPeriodeException("Période obligatoire, format attendu aaaa-MM (ex. 2026-08).");
+        }
         try {
             return YearMonth.parse(periode);
         } catch (DateTimeParseException e) {

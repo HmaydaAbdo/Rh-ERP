@@ -43,7 +43,7 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
+      @if (!loading() && !erreurRecherche()) {
         {{ totalRecords() }} entrée{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
@@ -52,9 +52,16 @@
     </div>
   </div>
 
+  @if (erreurRecherche()) {
+    <div role="alert">
+      <p>Impossible de charger le journal d’audit.</p>
+      <button stp-button variant="secondary" type="button" (click)="reessayerRecherche()">Réessayer</button>
+    </div>
+  }
+
   <stp-table
     label="Liste : Journal d’audit"
-    emptyMessage="Aucune entrée ne correspond à ces critères."
+    [emptyMessage]="erreurRecherche() ? 'Le journal n’est pas disponible.' : 'Aucune entrée ne correspond à ces critères.'"
     [lazy]="true"
     [value]="lignes()"
     [totalRecords]="totalRecords()"
@@ -62,6 +69,7 @@
     [columns]="columns.visible"
     [sortField]="'horodatage'"
     [sortOrder]="-1"
+    [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
     (columnsReorder)="columns.onReorder($event)"
   >
@@ -98,12 +106,20 @@
     </ng-template>
 
     <ng-template stpRowActions let-ligne>
-      <button stp-button variant="text" icon="eye" iconOnly type="button" aria-label="Ouvrir l’entrée" (click)="onOuvrir(ligne)"></button>
+      <button stp-button variant="text" icon="eye" iconOnly type="button" [attr.aria-label]="'Ouvrir l’entrée n° ' + ligne.id" (click)="onOuvrir(ligne)"></button>
     </ng-template>
   </stp-table>
 </div>
 
-<stp-dialog [header]="entree() ? libelleAction(entree()!.action) : 'Entrée du journal'" width="46rem" placement="end" [(open)]="panneauOuvert">
+<stp-dialog [header]="entree() ? libelleAction(entree()!.action) : 'Entrée du journal'" width="46rem" placement="end" [(open)]="panneauOuvert" (closed)="fermerPanneau()">
+  @if (chargementEntree()) {
+    <p role="status" aria-busy="true">Chargement de l’entrée du journal…</p>
+  } @else if (erreurEntree()) {
+    <div role="alert">
+      <p>Impossible de charger cette entrée du journal.</p>
+      <button stp-button variant="secondary" type="button" (click)="reessayerEntree()">Réessayer</button>
+    </div>
+  }
   @if (entree(); as e) {
     <dl class="journal__contexte">
       <div>
@@ -182,7 +198,14 @@
 
     @if (e.categorie === 'OPERATION' && e.resultat === 'SUCCES') {
       <h3>Modifications</h3>
-      @if (!chargementDetail() && changements().length === 0) {
+      @if (chargementDetail()) {
+        <p role="status" aria-busy="true">Chargement des modifications…</p>
+      } @else if (erreurChangements()) {
+        <div role="alert">
+          <p>Impossible de charger les modifications de cette opération.</p>
+          <button stp-button variant="secondary" type="button" (click)="reessayerChangements()">Réessayer</button>
+        </div>
+      } @else if (changements().length === 0) {
         <p class="journal__vide">Aucun changement enregistré par cette opération.</p>
       }
       @for (changement of changements(); track changement.entiteType + changement.entiteId + changement.operation) {
@@ -199,9 +222,9 @@
       }
       @if (totalChangements() > 10) {
         <div class="journal__pagination">
-          <button stp-button variant="secondary" icon="chevron-left" iconOnly type="button" aria-label="Page précédente" [disabled]="pageChangements() === 0 || chargementDetail()" (click)="changementsPrecedents()"></button>
+          <button stp-button variant="secondary" icon="chevron-left" iconOnly type="button" aria-label="Page précédente" [disabled]="pageChangements() === 0 || chargementDetail() || erreurChangements()" (click)="changementsPrecedents()"></button>
           <span>Page {{ pageChangements() + 1 }} / {{ nombrePagesChangements() }} — {{ totalChangements() }} élément(s)</span>
-          <button stp-button variant="secondary" icon="chevron-right" iconOnly type="button" aria-label="Page suivante" [disabled]="pageChangements() + 1 >= nombrePagesChangements() || chargementDetail()" (click)="changementsSuivants()"></button>
+          <button stp-button variant="secondary" icon="chevron-right" iconOnly type="button" aria-label="Page suivante" [disabled]="pageChangements() + 1 >= nombrePagesChangements() || chargementDetail() || erreurChangements()" (click)="changementsSuivants()"></button>
         </div>
       }
     }

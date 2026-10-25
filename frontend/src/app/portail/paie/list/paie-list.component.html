@@ -6,8 +6,10 @@
     [value]="paies()"
     [totalRecords]="totalRecords()"
     [loading]="loading()"
+    [erreur]="erreur()"
     [(first)]="first"
     (lazyLoad)="onLazyLoad($event)"
+    (reessayer)="fetchPage()"
   >
     <ng-template stpCell let-paie let-col="col">
       @switch (col.field) {
@@ -24,10 +26,10 @@
           {{ paie.nombreJoursTravailles === null ? '-' : (paie.nombreJoursTravailles | number:'1.0-2') }}
         }
         @case ('joursRecuperationOuvrable') {
-          {{ paie.joursRecuperationOuvrable ?? '-' }}
+          {{ paie.joursRecuperationOuvrable === null ? '-' : (paie.joursRecuperationOuvrable | number:'1.0-2') }}
         }
         @case ('joursRecuperationDimanche') {
-          {{ paie.joursRecuperationDimanche ?? '-' }}
+          {{ paie.joursRecuperationDimanche === null ? '-' : (paie.joursRecuperationDimanche | number:'1.0-2') }}
         }
         @case ('salaireMensuel') {
           {{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
@@ -51,7 +53,7 @@
           {{ paie.chantier?.designation || '-' }}
         }
         @case ('equipe') {
-          {{ paie.equipe?.libelle || '-' }}
+          {{ paie.equipe?.code || '-' }}
         }
         @case ('equipeLibelle') {
           {{ paie.equipe?.libelle || '-' }}

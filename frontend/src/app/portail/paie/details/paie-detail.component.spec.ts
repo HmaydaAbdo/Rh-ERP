@@ -3,7 +3,7 @@ import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 
 import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans';
 import { AuditService } from '../../audit/services/audit.service';
@@ -35,8 +35,8 @@ describe('PaieDetailComponent', () => {
   const service = { getById: vi.fn() };
   const audit = { historique: vi.fn() };
 
-  function afficher(permissions: string[], bulletin: Paie = BULLETIN) {
-    service.getById.mockReset().mockReturnValue(of(bulletin));
+  function afficher(permissions: string[], bulletin: Paie = BULLETIN, chargement: Observable<Paie> = of(bulletin)) {
+    service.getById.mockReset().mockReturnValue(chargement);
     audit.historique.mockReset().mockReturnValue(of({ content: [], page: { size: 10, number: 0, totalElements: 0, totalPages: 0 } }));
     TestBed.configureTestingModule({
       providers: [
@@ -66,12 +66,27 @@ describe('PaieDetailComponent', () => {
       'C196',
       'Chauffeurs (CH)',
       '26',
-      '1.5 / 0',
+      '1,5 / 0',
       '4 000,00',
       '120,50 / 0,00',
       '4 350,50',
       '—'
     ]);
+  });
+
+  it('annonce le chargement et propose une reprise si le bulletin ne peut pas être lu', () => {
+    const chargement = new Subject<Paie>();
+    const { fixture, page } = afficher(['PAIE_READ'], BULLETIN, chargement);
+    expect(page.textContent).toContain('Chargement du bulletin…');
+    expect(page.querySelector('dl')).toBeNull();
+
+    chargement.error(new Error('indisponible'));
+    fixture.detectChanges();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger le bulletin');
+    service.getById.mockReturnValue(of(BULLETIN));
+    (page.querySelector('stp-message button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(page.querySelector('h1')?.textContent).toContain('Ali Alaoui');
   });
 
   it('remplace une équipe absente et une observation vide par un tiret, et affiche l’observation saisie', () => {

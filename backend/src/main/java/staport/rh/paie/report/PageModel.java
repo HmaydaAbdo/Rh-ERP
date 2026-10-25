@@ -21,6 +21,10 @@ record PageModel(String niveauTexte, int numeroPage, int totalPages, List<Bloc> 
     record BlocTitreSection(String texte) implements Bloc {
     }
 
+    /** Ligne du périmètre, déjà découpée à la largeur du document. */
+    record BlocTexte(String texte) implements Bloc {
+    }
+
     /** Rubrique numérotée à chaque niveau, destinée à alimenter le futur sommaire avec son numéro de page. */
     record BlocTitreRubrique(int numero, String texte) implements Bloc {
     }

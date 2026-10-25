@@ -54,14 +54,23 @@ export class PdfExportButtonComponent {
     if (!this.inclureGraphique()) {
       return document;
     }
-    const conteneur = this.element.nativeElement.closest('.perimetre-analytique__graphique')
+    const conteneur: Element | null = this.element.nativeElement.closest('.perimetre-analytique__graphique')
       ?? this.element.nativeElement.closest('.perimetre-analytique__section');
-    const canvas = conteneur?.querySelector('canvas');
-    if (!canvas) {
+    const canvases = Array.from(conteneur?.querySelectorAll('canvas') ?? []);
+    if (canvases.length === 0) {
       return document;
     }
     try {
-      return { ...document, graphiqueDataUrl: canvas.toDataURL('image/png'), graphiqueAlt: this.ariaLabel() };
+      const surface = this.element.nativeElement.closest('.perimetre-analytique__section') ?? conteneur;
+      const fond = surface ? getComputedStyle(surface).backgroundColor : '#ffffff';
+      const graphiques = canvases.map((canvas) => ({
+        dataUrl: canvas.toDataURL('image/png'),
+        description: (canvas.getAttribute('aria-label') || this.ariaLabel()).replace(/\. Utilisez les flèches.*$/, ''),
+        fond
+      }));
+      return graphiques.length === 1
+        ? { ...document, graphiqueDataUrl: graphiques[0].dataUrl, graphiqueAlt: graphiques[0].description, graphiqueFond: graphiques[0].fond }
+        : { ...document, graphiques };
     } catch {
       return document;
     }

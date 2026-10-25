@@ -52,6 +52,7 @@ Table `paie` :
 | Colonne | Type | Contrainte | Description |
 |---|---|---|---|
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
+| `version` | `BIGINT` | `NOT NULL`, verrou optimiste | Version attendue pour une modification; une version périmée est refusée en `409` |
 | `employee_id` | `BIGINT` | `NOT NULL`, FK → `employe.id` | Employé concerné |
 | `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) via `YearMonthAttributeConverter` (`common/`) |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
@@ -108,11 +109,11 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   tel quel**, jamais recalculé par le serveur : pour la main-d'œuvre journalière, `salaireMensuel`
   porte le tarif journalier et le total vaut tarif × jours (ex. 120 × 31 = 3 720), ce qu'une somme
   `salaireMensuel + primes` fausserait. Le formulaire propose un aperçu de saisie, mais le champ
-  reste modifiable. Décision du 2026-10-03 : pour l'instant la paie n'est **pas calculée**, elle est prise telle que
-  saisie (formulaire) ou importée (Excel) ; un calcul automatique à partir du Pointage reste une évolution
-  envisagée (voir [TODO.md](../../TODO.md), « Domaines restants »).
+  reste modifiable. La paie est prise telle que saisie (formulaire) ou importée (Excel).
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
-  `nombreJoursTravailles` accepte de 0 à 999,99 avec au plus deux décimales ; `observation` fait 255 caractères au plus.
+  les jours travaillés et de récupération acceptent de 0 à 999,99; les salaires et primes de 0 à
+  99 999 999,99. Tous acceptent au plus deux décimales; une valeur dépassant cette précision est refusée avant
+  l'enregistrement, sans arrondi silencieux. `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
   bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**
   (`POST /paie/suppression`) suit la même règle, avec les garde-fous décrits dans « Suppression en groupe ».
@@ -131,7 +132,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
-| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Calculés en mémoire sur une projection de cinq colonnes (`listerEffectifs`) : les comparaisons d'un mois au précédent ne s'écrivent pas en JPQL | 200 |
+| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `nomPrenom`, `cin`, `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Les filtres sont appliqués en base avant le calcul des mouvements | 200, 400 |
 | `GET` | `/paie/employes/{id}/parcours` | Parcours d'un employé (voir « Parcours d'un employé ») | 200, 404 |
 | `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
 | `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |
@@ -144,9 +145,12 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (assistant d'export) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
-| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF BI de synthèse — périmètre = mêmes filtres que `/paie/search` + `sansVueEnsemble` (retire le chapitre « Vue d'ensemble »), voir `docs/report/README.md` | 200, 404 |
+| `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF de synthèse — mois, nom, CIN, fonction simple et marchés sélectionnés; `sansVueEnsemble` retire le chapitre global, voir [Rapport](../report/README.md) | 200, 400, 404 |
 
-`PaieResponseDto` : `id`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
+Les types, contraintes et descriptions des requêtes et réponses sont centralisés dans
+[les contrats du domaine](contrats.md).
+
+`PaieResponseDto` : `id`, `version`, `employee` (`id`, `nomPrenom`, `cin`), `periode` (`"aaaa-MM"`),
 `fonction` (`id`, `libelle`), `chantier` (`id`, `code`, `designation`), `equipe` (`id`, `code`, `libelle`, ou `null`),
 `nombreJoursTravailles`, `joursRecuperationOuvrable`, `joursRecuperationDimanche`,
 `salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche`, `salaireTotal`, `observation`.
@@ -160,7 +164,7 @@ permission et `conventions/security.md` pour la conception du RBAC.
 ## Import Excel (assistant)
 
 L'import se fait dans un **assistant** qui ne laisse passer qu'un fichier **en accord avec les fiches des employés** :
-la fiche porte l'état du dernier mois de paie, et un import la tient à jour (décision du 2026-10-18, voir
+la fiche porte l'état du dernier mois de paie, et un import la tient à jour (voir
 [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md)). Le serveur ne garde rien entre les étapes : chacune
 reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `LecteurFichierPaie`).
 
@@ -201,6 +205,11 @@ fichier `.xlsx` vierge avec les trois lignes d'en-tête et les 13 colonnes dans 
 ### Format attendu
 
 Fichier `.xlsx`, **trois lignes d'en-tête** (ignorées quel que soit leur contenu), colonnes dans cet ordre exact :
+
+Les lignes sont repérées par leur numéro réel dans Excel, même si certaines lignes vides ne sont pas
+stockées dans le fichier. Une cellule numérique non vide mais illisible est refusée avec son adresse,
+y compris dans une colonne facultative. Les cellules numériques suivent les mêmes bornes de stockage
+que la saisie API; une récupération ou une prime facultative ne peut pas dépasser sa précision.
 
 | Colonne | Contenu | Statut dans l'import |
 |---|---|---|
@@ -267,9 +276,8 @@ l'employé (`parcours/paie-parcours.component.*`) : quatre chiffres, la chronolo
 ## Export Excel et Rapport PDF
 
 La génération de documents à partir des bulletins de paie est documentée dans
-**`docs/report/README.md`** : export Excel multi-feuilles (opérationnel, assistant d'export dédié
-`PaieExportWizardComponent`) et rapport PDF (BI RH/Paie de synthèse pour la direction,
-téléchargement direct sans dialog sur la période sélectionnée dans la liste) — architecture, modèle
+**[le dossier Rapport](../report/README.md)** : export Excel multi-feuilles et rapport PDF de synthèse
+pour la direction, tous deux proposés par l'assistant d'export guidé — modèle
 analytique et catalogue de KPI du rapport PDF, structure des feuilles/sections, paramétrage
 chantier/équipe, règle Include/Exclude, et points d'extension. Ne pas dupliquer cette documentation
 ici — seules les règles ci-dessous, propres au champ `Paie.equipe` en tant que donnée métier
@@ -300,11 +308,6 @@ utilisent son libellé. Le code identifie l'équipe pour les imports et les éch
 Un bulletin garde l'identifiant de l'équipe associée à son mois, même si la fiche Employé change
 d'équipe ensuite. Le code et le libellé ne sont pas copiés dans le bulletin : renommer l'équipe
 référencée change donc aussi son affichage sur les bulletins historiques.
-
-La migration de correction V34 est une exception ponctuelle à cette stabilité : elle reclasse les bulletins
-qui portaient l'ancienne équipe `CH+OP` d'après la fonction de chaque bulletin (`CH.`/`COURSIER` → `CH`,
-`OP.` → `OP`, `CHEF DE POSTE` → `EE`). Les bulletins restent en base; leurs valeurs métier autres que l'équipe
-ne changent pas, et le reclassement est inscrit dans l'audit. Les fiches inactives restent sans équipe courante.
 
 À l'import Excel (colonne M), le code est résolu **insensiblement à la casse et aux espaces**
 contre le référentiel ; un code inconnu est une erreur du fichier (`« Équipe introuvable : X »`) : le fichier ne
@@ -396,7 +399,7 @@ fonctions ; la liste des mois en premier niveau). Lecture seule, sauf la suppres
 le choisit, puis la vue avance dans l'ordre **chantier → équipe → fonction → employés**. Ouvrir une carte en fait une **étape
 du fil** (mois, chantier, équipe…), que l'on retire seule. Tout est dans l'URL (`periode`, `chantierIds`, `equipeIds`,
 `fonctionIds`); le mois et les étapes sont conservés quand un filtre change. Les anciens liens contenant `par` suivent cette
-même hiérarchie. Le fil de navigation est celui des Cartes : l'ancien fil de la barre de filtres a été retiré.
+même hiérarchie. Le fil de navigation est celui des Cartes.
 
 **Comparaison.** Chaque carte montre ses quatre indicateurs — **masse (DH)**, **bulletins** (personnes), **montant des STC** (DH) et
 **STC** (personnes) — avec l'écart par rapport au **mois civil immédiatement précédent**, pour le même groupe : en pourcentage pour
@@ -423,7 +426,7 @@ importé par erreur. Le bouton est fourni par `PaieCartesComponent` (gabarit `#a
   serveur revérifie le nombre de bulletins du groupe et **ne supprime rien (`409`) s'il diffère du nombre confirmé** (import
   ou suppression entre-temps) ; le tout dans une transaction. Le groupe est calculé avec le même filtre que la liste
   (`PaieSpecification`).
-- Les bulletins **sans équipe** ne se suppriment pas par leur carte (l'API ne sait pas les cibler) ; le bouton n'y est pas proposé.
+- Les bulletins **sans équipe** ne se suppriment pas par leur carte : le bouton n'y est pas proposé.
   Après une suppression, le niveau affiché est rechargé.
 
 ### Vue Analytique
@@ -441,6 +444,11 @@ changement de filtre relance l'analyse (une demande encore en cours est abandonn
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte |
 | Mouvements | Employés payés, entrées, sorties et mutations mois par mois (`POST /paie/effectifs`) |
 | Fiches Employé | Avec `EMPLOYEE_READ` : chiffres clés, pyramide des âges, ancienneté, répartition en poste / sortis |
+
+Les mouvements appliquent les filtres nom, CIN, chantier, fonction et équipe du périmètre. Le calcul
+utilise les rattachements du bulletin mensuel. Les entrées et mutations ne sont pas renseignées pour
+le premier mois disponible; les départs sont ceux enregistrés pour un employé payé sur le périmètre
+ce mois-ci ou le mois civil précédent.
 
 **Backend** : `PaieAnalytiqueService` (façade `IPaieAnalytiqueService`), appelé par `POST /paie/analytique` (`PAIE_READ`).
 Tout est agrégé en base par des requêtes JPQL de `PaieRepository` qui partagent le même fragment de filtres (`FiltresPaie`) ; le
@@ -468,17 +476,14 @@ fonction/chantier du formulaire utilisent tous le même sélecteur générique �
 change (sélection multiple pour les filtres de liste, simple pour les relations uniques du
 formulaire, voir `conventions/frontend.md`, section Sélecteurs). `EmployeeReferenceService`,
 `FunctionReferenceService` et `ChantierReferenceService` (`shared/reference-data/`) fournissent
-chacun une implémentation du contrat de pagination/recherche attendu par ce composant — plus de
-distinction entre une recherche paginée (employés) et un chargement complet (fonction/chantier),
-les trois interrogent désormais leur endpoint `/search` page par page.
+chacun une implémentation du contrat de pagination/recherche attendu par ce composant;
+les trois interrogent leur endpoint `/search` page par page.
 
 Le tableau de la liste (comme tous les tableaux de l'application, voir `conventions/frontend.md`,
 section Tableaux) propose : tri sur chaque colonne, redimensionnement, réordonnancement par
 glisser-déposer, sélecteur de colonnes visibles et pagination avec total de lignes. L'en-tête est sur
 **une seule ligne** (Nom & prénom, Fonction, CIN, Jours trav., J.R.O, J.R.D, Salaire, Prime RO,
-Prime RD, Total, Obs, Chantier, Équipe, Période) : l'ancien en-tête groupé à deux lignes (« Nbre Jrs »,
-« SALAIRE ») a été abandonné car un en-tête groupé ne se réordonne ni ne se masque par colonne
-(décision du 2026-10-03).
+Prime RD, Total, Obs, Chantier, Équipe, Période). Chaque colonne peut être réordonnée et masquée séparément.
 
 Accès via la barre latérale (`core/navigation/nav-items.ts`, entrée « Paie », permission `PAIE_READ`). Les boutons
 de création et modification demandent `PAIE_WRITE` et `EMPLOYEE_WRITE` car le choix d'équipe met aussi à jour la fiche Employé. Suppression, import et export sont conditionnés par `PAIE_DELETE` (un bulletin), `PAIE_PURGE` (suppression en groupe),
@@ -488,32 +493,40 @@ doit aussi pouvoir les lire.
 
 ---
 
-## Évolutions prévues
-
-Voir [TODO.md](../../TODO.md) pour le détail complet — deux sujets qui dépendent du domaine Pointage, qui
-n'existe pas encore :
-
-- **Calcul de la paie depuis le Pointage** : évolution envisagée (décision du 2026-09-22), **non retenue pour
-  l'instant** : la paie est prise telle que saisie ou importée (décision du 2026-10-03). Si elle est un jour
-  construite, l'import Excel de la paie disparaîtrait au profit d'un calcul à la validation du Pointage.
-- **Statuts provisoire / validé (Pointage et Paie)** : une fois validé, un pointage ou un bulletin
-  sera figé (non modifiable) ; seul l'état provisoire restera éditable. Un mois ne pourra être saisi
-  que si le mois précédent est validé, imposant une progression strictement séquentielle.
-
----
-
 ## Limites connues
 
 Voir [TODO.md](../../TODO.md) pour le détail :
 
 - **Aucun calcul** : `salaireMensuel`, les primes et `salaireTotal` sont saisis ou importés. Rien ne vérifie
   leur cohérence entre eux (pas de contrôle « total = tarif × jours »).
-- **Qualité des données** : l'équipe, l'observation, les jours de récupération et les primes sont facultatifs
-  (340 bulletins n'ont pas d'équipe au dernier relevé) ; décision « tous champs obligatoires » dans la tâche
-  dédiée du TODO.
+- **Qualité des données** : l'équipe, l'observation, les jours de récupération et les primes sont facultatifs.
+  Les éventuelles évolutions d'obligation restent dans la tâche dédiée du TODO.
 - **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
 - Audité (voir [../audit/README.md](../audit/README.md)) : création, modification, suppression (unitaire ou en groupe, **bulletin par
-  bulletin**), restauration, import et exports Excel / PDF. Dans le détail d'une suppression de groupe réussie, `SYSTEM_ADMIN`
-  peut restaurer le groupe avec `PAIE_RESTORE`. Les bulletins sont recréés avec de nouveaux identifiants ; si un employé a déjà
+  bulletin**), restauration, import et exports Excel / PDF. Dans le détail d'une suppression de groupe réussie, un compte
+  avec `PAIE_RESTORE` peut restaurer le groupe. Les bulletins sont recréés avec de nouveaux identifiants ; si un employé a déjà
   un bulletin pour le même mois, toute la restauration est refusée en `409` et rien n'est écrit. L'historique d'un bulletin
   s'ouvre depuis son détail (bouton **Historique**, permission `AUDIT_READ`).
+
+## Scénarios et vérifications
+
+La liste, la consultation et la modification distinguent chargement, absence de résultat et erreur.
+Une reprise est proposée après un échec de lecture; aucun formulaire de modification vide n'est
+présenté tant que le bulletin n'a pas été chargé. Une ancienne réponse de recherche ne remplace pas
+les résultats des filtres courants. Les quantités et montants sont affichés au format français.
+
+| Scénario | Tests |
+|---|---|
+| Unicité, références, conservation du total et synchronisation de l'équipe | `PaieServiceTest` |
+| Version attendue et conflit de modification | `VersionOptimisteTest` |
+| Bornes de jours et montants, décimales | `PaieRequestValidationTest`, `PaieImportServiceTest`, specs du formulaire |
+| Trois lignes d'en-tête, trous de lignes, cellules invalides | `LecteurFichierPaieTest` |
+| Mois autorisé, corrections, départs, retours et import atomique | `PaieImportServiceTest`, `AuditImportTest`, specs de l'assistant d'import |
+| Filtres cohérents, jokers littéraux, options paginées | `PaieRechercheJokersTest`, `FiltresPaieTest`, specs de filtre et service |
+| Analytique, mois vide, historique et STC | `PaieAnalytiqueServiceTest` |
+| Mouvements et parcours historique | `PaieEffectifsServiceTest`, `PaieParcoursServiceTest` |
+| Chargement, erreurs, reprise et recherche courante | Specs Liste, Formulaire et Détail Paie |
+| Autorisations et refus | `EndpointSecurityTest`, specs des actions et routes |
+| Documents et périmètres d'export | [Scénarios Rapport](../report/README.md#mise-en-œuvre-et-scénarios) |
+
+Les décisions et accords à recueillir sont dans le [PV global](../handoff/pv-n1-erp-rh.md).

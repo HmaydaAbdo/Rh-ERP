@@ -1,12 +1,15 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { AuditHistoriqueComponent } from '../../audit/historique/audit-historique.component';
 import { PaieParcoursComponent } from '../../paie/parcours/paie-parcours.component';
 import { Employee } from '../models/employee.model';
@@ -30,7 +33,7 @@ function duree(depuis: string, aujourdhui: Date): { annees: number; mois: number
  */
 @Component({
   selector: 'app-employee-detail',
-  imports: [DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent, PaieParcoursComponent],
+  imports: [DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent, MessageComponent, PaieParcoursComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-detail.component.html',
   styleUrl: './employee-detail.component.scss'
@@ -50,8 +53,11 @@ export class EmployeeDetailComponent {
 
   private readonly route = inject(ActivatedRoute);
   private readonly employeeService = inject(EmployeeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly employee = signal<Employee | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly erreurChargement = signal(false);
 
   protected readonly initiales = computed(() =>
     (this.employee()?.nomPrenom ?? '')
@@ -78,7 +84,16 @@ export class EmployeeDetailComponent {
   });
 
   constructor() {
+    this.charger();
+  }
+
+  protected charger(): void {
+    this.loading.set(true);
+    this.erreurChargement.set(false);
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.employeeService.getById(id).subscribe((employee) => this.employee.set(employee));
+    this.employeeService.getById(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
+      next: (employee) => this.employee.set(employee),
+      error: () => this.erreurChargement.set(true)
+    });
   }
 }
