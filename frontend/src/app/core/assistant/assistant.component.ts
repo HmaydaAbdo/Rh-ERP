@@ -10,18 +10,10 @@ import {
   viewChild
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import {
-  LucideArrowLeft,
-  LucideArrowRight,
-  LucideArrowUpRight,
-  LucideChevronDown,
-  LucideMinus,
-  LucidePlus,
-  LucideShieldCheck,
-  LucideSquare,
-  LucideTriangleAlert
-} from '@lucide/angular';
+import { LucideArrowRight, LucideMinus, LucidePlus, LucideSquare } from '@lucide/angular';
 
+import { AssistantEchangeComponent } from './assistant-echange.component';
+import { AssistantMascotteComponent } from './assistant-mascotte.component';
 import { AssistantService, type Echange, type Humeur } from './assistant.service';
 
 const LIBELLES_HUMEUR: Readonly<Record<Humeur, string>> = {
@@ -49,15 +41,12 @@ const SUGGESTIONS = [
   selector: 'app-assistant',
   imports: [
     NgTemplateOutlet,
-    LucideArrowLeft,
+    AssistantEchangeComponent,
+    AssistantMascotteComponent,
     LucideArrowRight,
-    LucideArrowUpRight,
-    LucideChevronDown,
     LucideMinus,
     LucidePlus,
-    LucideShieldCheck,
-    LucideSquare,
-    LucideTriangleAlert
+    LucideSquare
   ],
   templateUrl: './assistant.component.html',
   styleUrl: './assistant.component.scss',
@@ -77,8 +66,6 @@ export class AssistantComponent {
 
   readonly question = signal('');
   readonly reduit = signal(false);
-  /** Blocs d'étapes ouverts à la main ; un échange en cours est toujours déplié. */
-  readonly etapesOuvertes = signal<ReadonlySet<string>>(new Set());
   readonly panneau = computed(() => this.echanges().length > 0 && !this.reduit());
   readonly erreurSaisie = signal('');
 
@@ -143,41 +130,11 @@ export class AssistantComponent {
 
   nouvelleDiscussion(): void {
     this.assistant.nouvelleDiscussion();
-    this.etapesOuvertes.set(new Set());
     queueMicrotask(() => this.champ()?.nativeElement.focus());
   }
 
   reduire(): void {
     this.reduit.set(true);
-  }
-
-  etapesVisibles(echange: Echange): boolean {
-    return echange.etat === 'encours' || this.etapesOuvertes().has(echange.id);
-  }
-
-  basculerEtapes(echange: Echange): void {
-    this.etapesOuvertes.update((ouverts) => {
-      const copie = new Set(ouverts);
-      if (copie.has(echange.id)) {
-        copie.delete(echange.id);
-      } else {
-        copie.add(echange.id);
-      }
-      return copie;
-    });
-  }
-
-  resumeEtapes(echange: Echange): string {
-    if (echange.etat === 'encours') {
-      return echange.etapes.at(-1)?.libelle ?? 'Démarrage…';
-    }
-    const outils = echange.outils.length;
-    return `${echange.etapes.length} étapes · ${outils} ${outils > 1 ? 'outils' : 'outil'}`;
-  }
-
-  chiffre(valeur: string): string {
-    const nombre = Number(valeur);
-    return Number.isFinite(nombre) ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(nombre) : valeur;
   }
 
   /** `Ctrl K` (ou `⌘ K`) ouvre l'assistant depuis n'importe quel écran ; `Échap` le réduit. */
