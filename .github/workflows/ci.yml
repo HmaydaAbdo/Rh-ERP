@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: "24.15.0"
 
+      # uv sert aux clients MCP Python du service IA : preuve de bout en bout sur /mcp (McpClientPythonIntegrationTest)
+      # et preuve de compatibilité du profil mcp-compatibility. Versions figées par ia/uv.lock.
+      - name: Install uv for the Python MCP client
+        run: pipx install uv==0.12.2
+
       - name: Run backend tests
         working-directory: backend
         # mvnw doit être exécutable — le bit d'exécution a été perdu une première fois lors d'un
@@ -47,7 +52,7 @@ jobs:
         # ce chmod est une garde permanente, peu coûteuse, contre une régression future du même genre.
         run: |
           chmod +x mvnw
-          ./mvnw -B test
+          ./mvnw -B -Dia.client-python=true test
         # Pas de variables DB_* : les tests d'intégration démarrent leur propre PostgreSQL 18 + pgvector (Testcontainers, Docker
         # est présent sur le runner) et publient ses coordonnées eux-mêmes.
         env:
@@ -66,6 +71,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
 
       - name: Upload backend test reports
         if: always()
@@ -106,12 +112,12 @@ jobs:
           name: sbom-backend
           path: backend/target/bom.json
 
-      # P1.1 : profil opt-in, sorties séparées, aucune base ni configuration applicative.
-      - name: Verify normal runtime excludes MCP
+      # Le SDK MCP Java fait partie du livrable (route /mcp) ; aucun framework LLM n'entre dans le monolithe.
+      - name: Verify runtime excludes LLM frameworks
         working-directory: backend
         run: |
-          ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/mcp-default-runtime-dependencies.txt
-          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/mcp-default-runtime-dependencies.txt", "utf8"); if (/io\.modelcontextprotocol\.sdk:|org\.springframework\.ai:/.test(tree)) throw new Error("MCP or Spring AI in production runtime");'
+          ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/runtime-dependencies.txt
+          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/runtime-dependencies.txt", "utf8"); if (/org\.springframework\.ai:|dev\.langchain4j:|langgraph4j/.test(tree)) throw new Error("LLM framework in production runtime");'
 
       - name: Install and validate MCP test client
         working-directory: scripts/ia/mcp-compatibility
@@ -120,7 +126,7 @@ jobs:
           npm run typecheck
           npm audit --audit-level=moderate
 
-      - name: Verify MCP Java TypeScript interoperability
+      - name: Verify MCP Java TypeScript and Python interoperability
         working-directory: backend
         run: ./mvnw -B -ntp -P mcp-compatibility -Dtest=McpCompatibilityTest test
 
@@ -140,9 +146,39 @@ jobs:
           path: |
             backend/target/mcp-compatibility/surefire-reports
             backend/target/mcp-compatibility/client.tap
+            backend/target/mcp-compatibility/client-python.txt
             backend/target/mcp-compatibility/bom.json
           if-no-files-found: warn
           retention-days: 14
+
+  # Service IA Python et passerelle LiteLLM (docs/ia.md) : qualité du code et construction des images.
+  ia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        run: pipx install uv==0.12.2
+
+      - name: Lint, type-check and test the IA service
+        working-directory: ia
+        run: |
+          uv sync --locked
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pyright
+          uv run pytest -q
+
+      - name: Read LiteLLM pools without calling any provider
+        run: python3 litellm/test_providers.py --list
+
+      - name: Build IA images
+        run: |
+          set -euo pipefail
+          docker build --tag erp-rh-litellm:ci litellm
+          docker build --tag erp-rh-ia:ci ia
 
   performance-profile:
     runs-on: ubuntu-latest
@@ -183,6 +219,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
 
       - name: Upload performance profile result
         if: always()
@@ -332,6 +369,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
       - name: Install frontend and browser
         working-directory: frontend
         run: npm ci && npx playwright install --with-deps chromium
@@ -357,7 +395,7 @@ jobs:
           retention-days: 7
 
   publish-images:
-    needs: [backend, performance-profile, frontend, full-stack]
+    needs: [backend, ia, performance-profile, frontend, full-stack]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
@@ -366,7 +404,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Construire les quatre images avant la connexion authentifiée au registre ou leur publication.
+      # Construire toutes les images avant la connexion authentifiée au registre ou leur publication.
       # Un échec de build n'en publie ainsi aucune.
       - name: Build all images locally
         run: |
@@ -375,11 +413,13 @@ jobs:
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backend:$GITHUB_SHA" backend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-ia:$GITHUB_SHA" ia
 
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup; do
+          for image in postgres backend frontend backup litellm ia; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -396,11 +436,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Les tests, le contrôle de couverture, les audits et les builds des quatre images sont verts.
+      # Les tests, le contrôle de couverture, les audits et les builds de toutes les images sont verts.
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup; do
+          for image in postgres backend frontend backup litellm ia; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then

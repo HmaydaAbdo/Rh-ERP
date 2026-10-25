@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +24,12 @@ import staport.rh.auth.dtos.response.PolitiqueMotDePasseDto;
 import staport.rh.auth.dtos.response.LoginResponseDto;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.exceptions.InvalidRefreshTokenException;
+import staport.rh.auth.services.interfaces.IAgentService;
 import staport.rh.auth.services.interfaces.IAuthService;
 import staport.rh.auth.services.interfaces.IUserService;
+
+import java.time.Duration;
+import java.util.Map;
 
 /**
  * Endpoints publics (pas d'authentification requise, voir SecurityConfig) sauf /auth/logout et /auth/me. Le
@@ -40,12 +45,14 @@ public class AuthController {
 
     private final IAuthService authService;
     private final IUserService userService;
+    private final IAgentService agentService;
     private final boolean cookieSecure;
 
-    public AuthController(IAuthService authService, IUserService userService,
+    public AuthController(IAuthService authService, IUserService userService, IAgentService agentService,
                            @Value("${security.cookie.secure}") boolean cookieSecure) {
         this.authService = authService;
         this.userService = userService;
+        this.agentService = agentService;
         this.cookieSecure = cookieSecure;
     }
 
@@ -117,6 +124,15 @@ public class AuthController {
     public ResponseEntity<UserResponseDto> me(@AuthenticationPrincipal Jwt jwt) {
         Long userId = jwt.getClaim("uid");
         return ResponseEntity.ok(userService.findById(userId));
+    }
+
+    @GetMapping("/.well-known/jwks.json")
+    @Operation(summary = "Lire les clés publiques des jetons agent",
+            description = "Publique : clé courante et clé précédente (JWKS), sans partie privée. 404 si l'assistant IA est désactivé.")
+    @SecurityRequirements
+    public ResponseEntity<Map<String, Object>> clesPubliquesAgent() {
+        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)))
+                .body(agentService.clesPubliques());
     }
 
     private ResponseEntity<LoginResponseDto> withRefreshCookie(IAuthService.Connexion connexion) {

@@ -153,6 +153,12 @@ services:
       SMTP_AUTH: ${SMTP_AUTH}
       SMTP_STARTTLS: ${SMTP_STARTTLS}
       MAIL_FROM: ${MAIL_FROM}
+      # Assistant IA (docs/ia.md, § 5) : route /mcp et jeton agent RS256. Clés obligatoires si MCP_ENABLED=true.
+      MCP_ENABLED: ${MCP_ENABLED:-false}
+      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:-}
+      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:-}
+      MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
+      MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
       # Journaux JSON sur la console et dans des archives journalières (30 jours, UTC).
       LOGGING_FORMAT: json
       LOGGING_FILE_PATH: /app/logs
@@ -165,6 +171,8 @@ services:
     networks:
       - db-net
       - web-net
+      # Le service IA atteint /mcp par ce réseau interne ; nginx ne relaie jamais /mcp.
+      - ia-net
     ports:
       # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif réel n'y passe pas — nginx
       # inner atteint le backend via le réseau Docker interne (web-net, nom de service "backend"),
@@ -186,6 +194,8 @@ services:
         condition: service_healthy
     networks:
       - web-net
+      # Relais /ia/agui vers le service IA (nginx.conf) ; inutilisé sans le profil « ia ».
+      - assistant-net
     environment:
       # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
       ARCGIS_API_KEY: ${ARCGIS_API_KEY:?ARCGIS_API_KEY est obligatoire (clé ArcGIS gratuite, voir docs/chantier/carte.md)}
@@ -204,8 +214,90 @@ services:
       start_period: 5s
       retries: 3
 
+  # --- IA (profil « ia », voir docs/ia.md) -------------------------------------------------------
+  # Inactifs sans `--profile ia` (ou COMPOSE_PROFILES=ia) : la pile ERP fonctionne sans eux. Chaque
+  # conteneur ne reçoit que ses propres variables du .env racine unique.
+  litellm-db:
+    # Même image PostgreSQL que l'ERP, instance et volume séparés : clés virtuelles, budgets et
+    # journaux de dépense de LiteLLM uniquement, aucune donnée métier.
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    profiles: ["ia"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      # Vide : PostgreSQL refuse de démarrer.
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:-}
+    volumes:
+      - litellm_db_data:/var/lib/postgresql
+    networks:
+      - ia-db-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  litellm:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
+    profiles: ["ia"]
+    restart: unless-stopped
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    environment:
+      # Sans clé master, sel ou base, l'image refuse de démarrer (litellm/entrypoint.sh).
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-}
+      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:-}@litellm-db:5432/litellm
+      # Une clé vide désactive ses modèles au démarrage (litellm/filtrer_config.py) : LiteLLM ne bascule
+      # pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même tag.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ZAI_API_KEY: ${ZAI_API_KEY:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ia-db-net
+      - ia-net
+    ports:
+      # Loopback uniquement : administration et tests depuis le serveur, jamais exposé à Internet.
+      - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
+
+  ia:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-ia:${IA_IMAGE_TAG:-latest}
+    profiles: ["ia"]
+    restart: unless-stopped
+    depends_on:
+      litellm:
+        condition: service_healthy
+    environment:
+      # Interrupteur global de l'IA ; une variable obligatoire manquante empêche le démarrage.
+      IA_ENABLED: ${IA_ENABLED:-false}
+      IA_LITELLM_BASE_URL: http://litellm:4000/v1
+      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:-}
+      # Jeton agent et route /mcp du backend, par le réseau ia-net.
+      IA_ERP_API_URL: http://backend:8080
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - ia-net
+      - assistant-net
+    ports:
+      - "127.0.0.1:${IA_PORT:-5003}:8000"
+
 volumes:
   postgres_data_v18:
+  litellm_db_data:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -213,3 +305,9 @@ networks:
   db-net:
   # backend <-> frontend (proxy_pass de nginx inner vers le backend, voir frontend/nginx.conf).
   web-net:
+  # litellm et sa base, isolés du reste.
+  ia-db-net:
+  # ia, litellm et le backend (route /mcp).
+  ia-net:
+  # frontend (nginx) et service IA seulement : le navigateur atteint l'assistant, jamais la passerelle LiteLLM.
+  assistant-net:

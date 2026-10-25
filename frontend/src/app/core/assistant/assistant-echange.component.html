@@ -1,0 +1,86 @@
+<p class="assistant-echange__question">{{ echange().question }}</p>
+
+<div class="assistant-echange__reponse">
+  <div class="assistant-etapes">
+    <button
+      type="button"
+      class="assistant-etapes__resume"
+      [attr.aria-expanded]="etapesVisibles()"
+      [disabled]="enCours()"
+      (click)="basculerEtapes()"
+    >
+      @if (enCours()) {
+        <span class="assistant-etapes__spinner" aria-hidden="true"></span>
+      }
+      <span class="assistant-etapes__texte">{{ resume() }}</span>
+      @if (!enCours()) {
+        <svg lucideChevronDown class="assistant-etapes__chevron" aria-hidden="true"></svg>
+      }
+    </button>
+    @if (etapesVisibles()) {
+      <ol class="assistant-etapes__liste">
+        @for (etape of echange().etapes; track etape.nom) {
+          <li class="assistant-etapes__etape" [class.assistant-etapes__etape--terminee]="etape.terminee">
+            <span class="assistant-etapes__puce" aria-hidden="true"></span>{{ etape.libelle }}
+            <span class="assistant-sr">{{ etape.terminee ? '(terminée)' : '(en cours)' }}</span>
+          </li>
+        }
+      </ol>
+      @if (echange().outils.length > 0) {
+        <p class="assistant-etapes__outils">
+          <span class="assistant-sr">Outils consultés :</span>
+          @for (outil of echange().outils; track $index) {
+            <code>{{ outil }}</code>
+          }
+        </p>
+      }
+    }
+  </div>
+
+  @switch (echange().etat) {
+    @case ('reponse') {
+      <p class="assistant-badge assistant-badge--ok"><svg lucideShieldCheck aria-hidden="true"></svg>Chiffres vérifiés sur les données de l’ERP</p>
+      @if (chiffrePrincipal(); as chiffre) {
+        <p class="assistant-chiffre">{{ chiffre }}</p>
+      }
+      <p class="assistant-echange__texte">{{ echange().texte }}</p>
+    }
+    @case ('abstention') {
+      <p class="assistant-badge assistant-badge--attention"><svg lucideTriangleAlert aria-hidden="true"></svg>Pas de donnée fiable</p>
+      <p class="assistant-echange__texte">{{ echange().texte }}</p>
+    }
+    @case ('erreur') {
+      <p class="assistant-badge assistant-badge--erreur"><svg lucideTriangleAlert aria-hidden="true"></svg>Assistant indisponible</p>
+      <p class="assistant-echange__texte">{{ echange().texte }}</p>
+    }
+    @case ('arrete') {
+      <p class="assistant-echange__note">Arrêté. Aucune vue n’a été ouverte.</p>
+    }
+  }
+
+  @if (echange().ouverture; as ouverture) {
+    @if (ouverture.statut === 'ouverte') {
+      <div class="assistant-vue">
+        <svg lucideArrowUpRight aria-hidden="true"></svg>
+        <div>
+          <p>Vue ouverte : <strong>{{ ouverture.cible.libelle }}</strong></p>
+          @if (ouverture.cible.filtres.length > 0) {
+            <p class="assistant-vue__filtres">
+              @for (filtre of ouverture.cible.filtres; track filtre) {
+                <span>{{ filtre }}</span>
+              }
+            </p>
+          }
+        </div>
+      </div>
+      <button type="button" class="assistant-lien" (click)="revenir.emit()">
+        <svg lucideArrowLeft aria-hidden="true"></svg>Revenir à l’écran précédent
+      </button>
+    } @else {
+      <div class="assistant-vue assistant-vue--refusee">
+        <p>Vue non ouverte : <strong>{{ ouverture.cible.libelle }}</strong> (droit absent ou saisie en cours).</p>
+      </div>
+      <button type="button" class="assistant-lien" (click)="rouvrir.emit()">Réessayer d’ouvrir la vue</button>
+    }
+  }
+</div>

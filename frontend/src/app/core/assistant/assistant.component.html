@@ -1,0 +1,80 @@
+<ng-template #saisie>
+  <div class="assistant-saisie">
+    <label class="assistant-sr" for="assistant-question">Question pour l’assistant</label>
+    <textarea
+      #champ
+      id="assistant-question"
+      class="assistant-saisie__champ"
+      rows="1"
+      maxlength="2000"
+      placeholder="Demandez une donnée RH, l’assistant ouvre la vue…"
+      [value]="question()"
+      [attr.aria-invalid]="erreurSaisie() ? 'true' : null"
+      [attr.aria-describedby]="erreurSaisie() ? 'assistant-erreur' : null"
+      (input)="saisir($any($event.target).value)"
+      (keydown)="touche($event)"
+    ></textarea>
+    @if (!panneau()) {
+      <kbd class="assistant-saisie__kbd">Ctrl K</kbd>
+    }
+    @if (enCours()) {
+      <button type="button" class="assistant-saisie__bouton assistant-saisie__bouton--arret" aria-label="Arrêter" (click)="arreter()">
+        <svg lucideSquare aria-hidden="true"></svg>
+      </button>
+    } @else {
+      <button type="button" class="assistant-saisie__bouton" aria-label="Envoyer" (click)="envoyer()">
+        <svg lucideArrowRight aria-hidden="true"></svg>
+      </button>
+    }
+  </div>
+  @if (erreurSaisie()) {
+    <p id="assistant-erreur" class="assistant-saisie__erreur" role="alert">{{ erreurSaisie() }}</p>
+  }
+</ng-template>
+
+@if (panneau()) {
+  <section class="assistant assistant--panneau" aria-label="Assistant RH">
+    <header class="assistant__entete">
+      <app-assistant-mascotte [humeur]="humeur()" />
+      <div class="assistant__titre">
+        <h2>Assistant RH</h2>
+        <p aria-live="polite">{{ libelleHumeur() }}</p>
+      </div>
+      <button type="button" class="assistant__action" aria-label="Nouvelle discussion" title="Nouvelle discussion" (click)="nouvelleDiscussion()">
+        <svg lucidePlus aria-hidden="true"></svg>
+      </button>
+      <button type="button" class="assistant__action" aria-label="Réduire l’assistant" title="Réduire (Échap)" (click)="reduire()">
+        <svg lucideMinus aria-hidden="true"></svg>
+      </button>
+    </header>
+
+    <div #fil class="assistant__fil" role="log" aria-live="polite" aria-relevant="additions text">
+      @for (echange of echanges(); track echange.id) {
+        <app-assistant-echange [echange]="echange" (revenir)="revenir(echange)" (rouvrir)="rouvrir(echange)" />
+      }
+    </div>
+
+    <footer class="assistant__pied">
+      <ng-container [ngTemplateOutlet]="saisie" />
+      <p class="assistant__mention">Chaque question est traitée seule ; les droits de votre compte s’appliquent.</p>
+    </footer>
+  </section>
+} @else {
+  <section class="assistant assistant--barre" aria-label="Assistant RH">
+    <div class="assistant-barre">
+      <app-assistant-mascotte [humeur]="humeur()" />
+      <ng-container [ngTemplateOutlet]="saisie" />
+    </div>
+    @if (echanges().length === 0) {
+      <div class="assistant-suggestions" role="group" aria-label="Exemples de questions">
+        @for (suggestion of suggestions; track suggestion) {
+          <button type="button" (click)="suggerer(suggestion)">{{ suggestion }}</button>
+        }
+      </div>
+    } @else {
+      <button type="button" class="assistant-lien assistant-lien--reprendre" (click)="reduit.set(false)">
+        Reprendre la discussion ({{ echanges().length }})
+      </button>
+    }
+  </section>
+}

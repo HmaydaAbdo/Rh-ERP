@@ -4,7 +4,9 @@ Le RAG peut aider à retrouver des sources pertinentes pour une réponse. Il ne 
 de vérité métier : les documents originaux, les services de domaine et les définitions officielles
 des indicateurs restent autoritaires.
 
-Le cadrage ERP-RH est dans [`docs/ia/README.md`](../docs/ia/README.md) et l'[ADR 0013](../docs/adr/0013-integration-ia-mcp-langgraph-rag.md).
+Le cadrage ERP-RH est dans [`docs/ia.md`](../docs/ia.md). Un corpus réglementaire (barèmes,
+taux, textes) porte la date d'effet de chaque version ; une réponse cite la version applicable à
+la période demandée.
 Le premier corpus, ses propriétaires et ses droits sont à valider avant ingestion. La présence de
 pgvector dans une image PostgreSQL ne prouve ni l'existence d'un pipeline RAG ni sa qualité.
 

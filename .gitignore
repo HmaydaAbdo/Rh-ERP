@@ -45,6 +45,7 @@ frontend/dist/
 frontend/.angular/
 frontend/coverage/
 scripts/ia/mcp-compatibility/node_modules/
+scripts/ia/agui-client/node_modules/
 npm-debug.log*
 yarn-error.log*
 
@@ -96,3 +97,9 @@ backups/
 /frontend/carte-fond
 # Dossier de travail de scripts/carte/preparer-fond-carte.sh (gardé après un échec pour reprendre, supprimé en cas de succès).
 carte-fond.preparation/
+
+# --- Service IA (Python, uv) ---
+ia/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

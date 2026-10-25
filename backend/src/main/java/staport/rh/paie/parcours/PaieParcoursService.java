@@ -10,6 +10,7 @@ import staport.rh.paie.parcours.ParcoursEmployeDto.Indicateurs;
 import staport.rh.paie.parcours.ParcoursEmployeDto.MoisDto;
 import staport.rh.paie.parcours.ParcoursEmployeDto.TypeEvenement;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.services.interfaces.IPaieParcoursService;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ import java.util.Objects;
  * ou de salaire devient un événement ; une paie après un départ est un retour.
  */
 @Service
-public class PaieParcoursService {
+public class PaieParcoursService implements IPaieParcoursService {
 
     private static final Comparator<EvenementDto> PLUS_RECENT_D_ABORD = Comparator
             .comparing(EvenementDto::periode).reversed()
@@ -38,6 +39,7 @@ public class PaieParcoursService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public ParcoursEmployeDto parcours(Long employeId) {
         if (!employeeService.existsById(employeId)) {
             throw new ParcoursEmployeIntrouvableException(employeId);

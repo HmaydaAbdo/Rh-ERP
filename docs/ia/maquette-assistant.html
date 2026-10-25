@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistant ERP-RH — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-50:#eef5fc;--brand-100:#d9e8f7;--brand-200:#b3d1ef;--brand-400:#4f8dcb;--brand-500:#2a6db0;--brand-600:#0c5190;--brand-700:#084478;--brand-900:#052a49;--brand-950:#031a2e;
+  --copper:#d6a36f;--copper-soft:rgba(214,163,111,.16);
+  --canvas:#f4f7fb;--surface:#fff;--surface-alt:#f7f9fc;--line:rgba(8,68,120,.10);--line-strong:rgba(8,68,120,.18);
+  --text:#0e1d2f;--text-2:#4c5f75;--text-3:#7d8ea3;--success:#16834a;--success-soft:rgba(22,131,74,.10);--warning:#9a5b00;--warning-soft:rgba(240,165,58,.14);
+  --sidebar:#052a49;--sidebar-text:#9db6d1;
+  --glass:rgba(255,255,255,.72);--glass-line:rgba(255,255,255,.6);
+  --shadow-lg:0 24px 60px rgba(5,42,73,.22),0 6px 18px rgba(5,42,73,.10);
+  --shadow-md:0 8px 24px rgba(5,42,73,.12);
+  --ring:0 0 0 3px rgba(42,109,176,.28);
+  --font:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+[data-theme=dark]{
+  --canvas:#091521;--surface:#111f30;--surface-alt:#152639;--line:rgba(156,196,240,.12);--line-strong:rgba(156,196,240,.22);
+  --text:#e6eef8;--text-2:#a8bbd0;--text-3:#7088a3;--success:#3fb873;--success-soft:rgba(63,184,115,.14);--warning:#f0a53a;--warning-soft:rgba(240,165,58,.14);
+  --sidebar:#07101c;--glass:rgba(17,31,48,.72);--glass-line:rgba(156,196,240,.14);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.55),0 6px 18px rgba(0,0,0,.35);--shadow-md:0 8px 24px rgba(0,0,0,.4);
+  --brand-50:#17314f;--brand-100:#1c3a5c;--brand-600:#82b2e0;--brand-700:#9cc4f0;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--canvas);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;height:100vh}
+button{font:inherit;cursor:pointer}
+.app{display:grid;grid-template-columns:232px 1fr;height:100vh}
+.side{background:linear-gradient(180deg,var(--sidebar),#031a2e);color:var(--sidebar-text);padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:600;padding:4px 10px 18px}
+.logo b{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand-400),var(--brand-700));display:grid;place-items:center;font-size:13px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:14px}
+.nav.on{background:rgba(130,178,224,.14);color:#fff;box-shadow:inset 3px 0 0 var(--copper)}
+.main{position:relative;overflow:hidden;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 28px 0}
+.crumb{font-size:13px;color:var(--text-3)}.crumb b{color:var(--text);font-weight:500}
+.page{flex:1;padding:16px 28px 120px;overflow:auto;transition:opacity .45s ease,transform .45s ease,filter .45s}
+.page.out{opacity:0;transform:translateY(8px) scale(.995);filter:blur(2px)}
+h1{font-size:22px;font-weight:600;margin:4px 0 14px;letter-spacing:-.01em}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.f{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.f.ai{border-color:var(--copper);background:var(--copper-soft);color:var(--text);animation:pop .6s cubic-bezier(.2,.9,.3,1.3) both}
+.f.ai::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--copper)}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;transition:box-shadow .5s,transform .5s}
+.card small{display:block;font-size:12px;color:var(--text-3);margin-bottom:6px}
+.card .v{font-size:24px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.card.spot{box-shadow:0 0 0 2px var(--copper),0 0 0 8px var(--copper-soft);transform:translateY(-2px)}
+.card.spot::after{content:'Cité par l’assistant';position:absolute;top:-11px;right:14px;font-size:11px;font-weight:500;background:var(--copper);color:#3a2207;padding:2px 8px;border-radius:999px}
+.chart{height:200px;margin-top:14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);padding:16px;display:flex;align-items:flex-end;gap:10px}
+.bar{flex:1;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--brand-400),var(--brand-600));opacity:.85}
+.table{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;padding:11px 16px;font-size:13px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0;color:var(--text-3);font-size:12px;background:var(--surface-alt)}
+.dim{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(5,42,73,.30),rgba(5,42,73,.10) 60%,transparent);opacity:0;pointer-events:none;transition:opacity .4s}
+.dim.on{opacity:1}
+/* barre de commande */
+.cmd{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);width:min(680px,calc(100% - 40px));background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--glass-line);border-radius:20px;box-shadow:var(--shadow-lg);transition:width .5s cubic-bezier(.2,.8,.2,1),transform .5s;z-index:5}
+.cmd.docked{left:auto;right:22px;bottom:22px;transform:none;width:380px}
+.cmd-in{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px}
+.cmd input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;color:var(--text);outline:0}
+.cmd input::placeholder{color:var(--text-3)}
+.kbd{font-family:var(--mono);font-size:11px;color:var(--text-3);border:1px solid var(--line-strong);border-radius:6px;padding:2px 6px}
+.go{width:38px;height:38px;border-radius:12px;border:0;background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:grid;place-items:center;box-shadow:0 6px 16px rgba(8,68,120,.35)}
+.go svg{width:18px;height:18px}
+/* mascotte */
+.mascot{width:40px;height:40px;flex:none;position:relative}
+.mascot .head{position:absolute;inset:4px;border-radius:50%;background:linear-gradient(160deg,#fff,var(--brand-100));border:1.5px solid var(--brand-600);overflow:hidden}
+.mascot .helmet{position:absolute;left:2px;right:2px;top:0;height:17px;border-radius:18px 18px 4px 4px;background:linear-gradient(180deg,#f2c14e,#e0a526);border:1.5px solid #b07d12}
+.mascot .eye{position:absolute;top:21px;width:5px;height:6px;border-radius:3px;background:var(--brand-900);transition:height .2s,top .2s}
+.mascot .eye.l{left:12px}.mascot .eye.r{right:12px}
+.mascot .smile{position:absolute;left:50%;top:28px;width:10px;height:4px;margin-left:-5px;border-bottom:2px solid var(--brand-900);border-radius:0 0 8px 8px;transition:all .3s}
+.mascot.think .eye{top:19px}.mascot.think{animation:bob 1.6s ease-in-out infinite}
+.mascot.search .eye{animation:look 1.1s ease-in-out infinite}
+.mascot.found .smile{width:14px;height:6px;margin-left:-7px}.mascot.found{animation:hop .5s ease}
+.mascot.sorry .smile{border-bottom:0;border-top:2px solid var(--brand-900);border-radius:8px 8px 0 0;top:30px}
+@keyframes bob{50%{transform:translateY(-2px) rotate(-4deg)}}
+@keyframes look{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+@keyframes hop{40%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* fil de progression */
+.trail{display:none;padding:0 16px 14px;gap:6px;flex-direction:column}
+.cmd.running .trail,.cmd.answered .trail{display:flex}
+.q{font-size:13px;color:var(--text-2);padding:2px 0 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.step{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-3);transition:color .3s}
+.step i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-strong);flex:none;position:relative}
+.step.active{color:var(--text)}.step.active i{border-color:var(--brand-500);border-top-color:transparent;animation:spin .8s linear infinite}
+.step.done{color:var(--text-2)}.step.done i{background:var(--success);border-color:var(--success)}
+.step.done i::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.step code{font-family:var(--mono);font-size:11px;background:var(--surface-alt);border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:var(--text-2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* carte réponse */
+.ans{display:none;padding:4px 16px 16px}
+.cmd.answered .ans{display:block;animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.cmd.answered .trail{display:none}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.big{font-size:30px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0}
+.big span{font-size:15px;color:var(--text-2);font-weight:500;margin-left:4px}
+.ans p{margin:6px 0 10px;font-size:14px;line-height:1.55;color:var(--text-2)}
+.ok{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--success);background:var(--success-soft);padding:4px 9px;border-radius:999px}
+.opened{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-alt);border:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.opened b{color:var(--text);font-weight:500}
+.acts{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:9px 12px;border-radius:11px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text);font-size:13px}
+.btn.p{background:var(--brand-700);color:#fff;border-color:transparent}
+.src{font-size:12px;color:var(--text-3);margin-top:10px}
+.src code{font-family:var(--mono);font-size:11px}
+.ans.abs .big{display:none}
+.toast{position:absolute;top:16px;left:50%;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;transform:translate(-50%,-160%);background:var(--brand-900);color:#fff;font-size:13px;padding:9px 14px;border-radius:12px;box-shadow:var(--shadow-md);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);z-index:6;display:flex;gap:8px;align-items:center}
+.toast.on{transform:translate(-50%,0)}
+.toast::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--copper)}
+.ctrl{position:fixed;bottom:12px;left:12px;flex-direction:column;display:flex;gap:6px;z-index:9}
+.ctrl button{font-size:12px;padding:6px 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text-2)}
+.sugg{display:flex;gap:8px;padding:0 14px 12px;flex-wrap:wrap}
+.cmd.running .sugg,.cmd.answered .sugg{display:none}
+.sugg button{font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text-2)}
+.sugg button:hover{border-color:var(--brand-400);color:var(--text)}
+@media (max-width:760px){.app{grid-template-columns:1fr}.side{display:none}.grid{grid-template-columns:1fr}.cmd,.cmd.docked{left:8px;right:8px;width:auto;transform:none;bottom:8px}.kbd{display:none}.page{padding:12px 14px 140px}.top{padding:14px 14px 0}}
+.mobile .app{grid-template-columns:1fr}.mobile .side{display:none}.mobile .grid{grid-template-columns:1fr}
+.mobile .cmd,.mobile .cmd.docked{left:8px;right:8px;width:auto;transform:none;bottom:8px;border-radius:22px 22px 18px 18px}
+.mobile body,.mobile{max-width:390px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="ctrl">
+  <button id="bTheme">Thème sombre</button>
+  <button id="bMobile">Téléphone</button>
+  <button id="bAbs">Scénario abstention</button>
+  <button id="bReset">Recommencer</button>
+</div>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><b>S</b>Staport RH</div>
+    <div class="nav" id="navEmp">Employés</div>
+    <div class="nav">Chantiers</div>
+    <div class="nav">Carte</div>
+    <div class="nav" id="navPaie">Paie</div>
+    <div class="nav">Administration</div>
+  </aside>
+  <main class="main">
+    <div class="toast" id="toast">L’assistant a ouvert Paie · Analytique avec vos filtres</div>
+    <div class="top"><div class="crumb" id="crumb"><b>Employés</b> · Tabulaire</div></div>
+    <section class="page" id="page"></section>
+    <div class="dim" id="dim"></div>
+
+    <div class="cmd" id="cmd" role="dialog" aria-label="Assistant RH">
+      <div class="cmd-in">
+        <div class="mascot" id="mascot" aria-hidden="true"><div class="head"><div class="helmet"></div><div class="eye l"></div><div class="eye r"></div><div class="smile"></div></div></div>
+        <input id="champ" placeholder="Demandez une donnée RH, l’assistant ouvre la vue…" aria-label="Question pour l’assistant">
+        <span class="kbd">Ctrl K</span>
+        <button class="go" id="go" aria-label="Envoyer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="sugg">
+        <button data-q="Quelle est la masse salariale du chantier C-104 en 2026-09 ?">Masse salariale d’un chantier</button>
+        <button data-q="Combien d’employés en poste sur le chantier C-104 ?">Effectif en poste</button>
+        <button data-q="Combien d’entrées la paie de 2026-09 constate-t-elle ?">Entrées du mois</button>
+      </div>
+      <div class="trail" id="trail">
+        <div class="q" id="qText"></div>
+        <div class="step" data-s="0"><i></i>Comprendre la question</div>
+        <div class="step" data-s="1"><i></i>Trouver le chantier <code>chantier_rechercher</code></div>
+        <div class="step" data-s="2"><i></i>Lire la paie <code>paie_indicateurs</code></div>
+        <div class="step" data-s="3"><i></i>Vérifier chaque chiffre</div>
+        <div class="step" data-s="4"><i></i>Ouvrir la vue filtrée</div>
+      </div>
+      <div class="ans" id="ans">
+        <span class="ok" id="okBadge">✓ Chiffres vérifiés sur les données de l’ERP</span>
+        <div class="big" id="big">1 250 000,50<span>MAD</span></div>
+        <p id="ansText">Masse salariale du chantier C-104 en 2026-09, pour 412 bulletins.</p>
+        <div class="opened" id="opened">↗ <span>Vue ouverte : <b>Paie · Analytique</b> — chantier C-104, 2026-09</span></div>
+        <div class="acts">
+          <button class="btn" id="back">← Revenir à Employés</button>
+          <button class="btn p" id="again">Nouvelle question</button>
+        </div>
+        <div class="src">Sources : <code>chantier_rechercher</code> · <code>paie_indicateurs</code></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const page=$('#page'),cmd=$('#cmd'),mascot=$('#mascot');
+let abstention=false, minuteurs=[];
+const employes=`<h1>Employés</h1><div class="filters"><span class="f">Tous les chantiers</span><span class="f">En poste</span></div>
+<div class="table">${['Nom,Fonction,Chantier,Embauche','Amrani Youssef,Chef d’équipe,C-104,2019-03-11','Benali Sara,Coffreuse,C-104,2021-06-02','El Idrissi Omar,Grutier,C-087,2018-11-20','Haddad Nadia,Magasinière,C-087,2022-01-17','Ouazzani Karim,Ferrailleur,C-104,2020-09-08'].map(r=>`<div class="row">${r.split(',').map(c=>`<span>${c}</span>`).join('')}</div>`).join('')}</div>`;
+const paie=`<h1>Paie · Analytique</h1><div class="filters"><span class="f ai">Chantier C-104</span><span class="f ai">Période 2026-09</span><span class="f">Toutes les équipes</span></div>
+<div class="grid"><div class="card" id="kpiMasse"><small>Masse salariale</small><div class="v">1 250 000,50 MAD</div></div><div class="card" id="kpiEff"><small>Bulletins</small><div class="v">412</div></div><div class="card"><small>Soldes de tout compte</small><div class="v">3</div></div></div>
+<div class="chart">${[46,58,52,64,61,70,68,74,72,80,77,84].map(h=>`<div class="bar" style="height:${h}%"></div>`).join('')}</div>`;
+function afficher(html,crumb,nav){page.innerHTML=html;$('#crumb').innerHTML=crumb;$$('.nav').forEach(n=>n.classList.remove('on'));$(nav).classList.add('on')}
+function humeur(h){mascot.className='mascot '+h}
+function plus_tard(ms,f){minuteurs.push(setTimeout(f,ms))}
+function reinit(){minuteurs.forEach(clearTimeout);minuteurs=[];cmd.className='cmd';$('#champ').value='';humeur('');$('#dim').classList.remove('on');$('#toast').classList.remove('on');$$('.step').forEach(s=>s.className='step');afficher(employes,'<b>Employés</b> · Tabulaire','#navEmp')}
+function lancer(q){
+  if(!q.trim()){$('#champ').focus();return}
+  minuteurs.forEach(clearTimeout);minuteurs=[];
+  $('#qText').textContent=q;cmd.className='cmd running';$('#dim').classList.add('on');humeur('think');
+  const etapes=abstention?[0,3]:[0,1,2,3,4];
+  etapes.forEach((s,i)=>{
+    plus_tard(700+i*850,()=>{$$('.step').forEach(x=>{if(+x.dataset.s===s)x.className='step active';else if(x.classList.contains('active'))x.className='step done'});humeur(s===1||s===2?'search':'think')});
+  });
+  const fin=700+etapes.length*850;
+  if(abstention){
+    plus_tard(fin,()=>{cmd.className='cmd answered docked';$('#dim').classList.remove('on');humeur('sorry');
+      $('#ans').classList.add('abs');$('#okBadge').textContent='Pas de donnée fiable';$('#okBadge').style.cssText='color:var(--warning);background:var(--warning-soft)';
+      $('#ansText').textContent='Je ne peux pas répondre de façon fiable : aucun outil ne donne la météo des chantiers. L’écran reste inchangé.';
+      $('#opened').style.display='none';$('#back').style.display='none'});
+    return;
+  }
+  $('#ans').classList.remove('abs');$('#okBadge').textContent='✓ Chiffres vérifiés sur les données de l’ERP';$('#okBadge').style.cssText='';$('#opened').style.display='';$('#back').style.display='';
+  $('#ansText').textContent='Masse salariale du chantier C-104 en 2026-09, pour 412 bulletins.';
+  plus_tard(fin-500,()=>{page.classList.add('out')});
+  plus_tard(fin,()=>{afficher(paie,'<b>Paie</b> · Analytique','#navPaie');page.classList.remove('out');$('#toast').classList.add('on');humeur('found');
+    cmd.className='cmd answered docked';$('#dim').classList.remove('on');
+    plus_tard(350,()=>$('#kpiMasse').classList.add('spot'));plus_tard(550,()=>$('#kpiEff').classList.add('spot'));
+    plus_tard(3200,()=>$('#toast').classList.remove('on'))});
+}
+$('#go').onclick=()=>lancer($('#champ').value);
+$('#champ').addEventListener('keydown',e=>{if(e.key==='Enter')lancer($('#champ').value)});
+$$('.sugg button').forEach(b=>b.onclick=()=>{$('#champ').value=b.dataset.q;lancer(b.dataset.q)});
+$('#back').onclick=()=>{reinit()};
+$('#again').onclick=()=>{cmd.className='cmd';humeur('');$('#champ').value='';$('#champ').focus()};
+$('#bReset').onclick=()=>{abstention=false;$('#bAbs').textContent='Scénario abstention';reinit()};
+$('#bAbs').onclick=()=>{abstention=!abstention;$('#bAbs').textContent=abstention?'Scénario réponse':'Scénario abstention';reinit();const q=abstention?'Quel temps fera-t-il demain sur le chantier C-104 ?':'Quelle est la masse salariale du chantier C-104 en 2026-09 ?';$('#champ').value=q;lancer(q)};
+$('#bTheme').onclick=()=>{const d=document.documentElement;const s=d.dataset.theme==='dark';d.dataset.theme=s?'light':'dark';$('#bTheme').textContent=s?'Thème sombre':'Thème clair'};
+$('#bMobile').onclick=()=>{document.documentElement.classList.toggle('mobile');$('#bMobile').textContent=document.documentElement.classList.contains('mobile')?'Ordinateur':'Téléphone'};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#champ').focus()}if(e.key==='Escape'&&cmd.classList.contains('answered')){cmd.className='cmd'}});
+reinit();
+</script>
+</body>
+</html>
