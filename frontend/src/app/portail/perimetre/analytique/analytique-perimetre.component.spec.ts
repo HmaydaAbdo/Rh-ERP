@@ -167,7 +167,7 @@ describe('AnalytiquePerimetreComponent', () => {
   }
 
   beforeEach(async () => {
-    permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
+    permissions = (code) => ['CHANTIER_READ', 'FUNCTION_READ', 'EQUIPE_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
       regrouper: vi.fn().mockReturnValue(of([{ id: 1, code: 'C168', libelle: 'Nador', effectif: 3, actifs: 2 }])),
       analyser: vi.fn().mockReturnValue(of(FICHES))
@@ -336,7 +336,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(TestBed.inject(Router).url).toContain('chantierIds=1');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1], equipeIds: [1] }));
-    expect([...page.querySelectorAll('.perimetre-analytique__section input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'Nador')).toBe(true);
+    expect([...page.querySelectorAll('.perimetre-analytique__section input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'C168 · Nador')).toBe(true);
     expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
   });
 

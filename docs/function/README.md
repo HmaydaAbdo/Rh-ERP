@@ -201,6 +201,8 @@ Le référentiel fonction est également consommé par les formulaires/filtres E
 (`shared/reference-data/function-reference.service.ts`, implémentation du contrat de pagination
 attendu par le sélecteur générique `shared/components/lazy-select` — voir `conventions/frontend.md`,
 section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de liste (multiple).
+Une option Fonction affiche son libellé seul; les filtres multiples proposent la sélection globale et
+la remise à zéro sans charger tout le référentiel dans le navigateur.
 
 ---
 

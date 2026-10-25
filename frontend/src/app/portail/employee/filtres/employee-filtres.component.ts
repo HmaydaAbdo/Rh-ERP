@@ -28,6 +28,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
       <app-lazy-select
         [formField]="formulaire.fonctionIds"
         [multiple]="true"
+        [bulkFilterActions]="true"
         [source]="functionReferenceService"
         optionLabel="libelle"
         ariaLabel="Fonction"
@@ -37,6 +38,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
       <app-lazy-select
         [formField]="formulaire.chantierIds"
         [multiple]="true"
+        [bulkFilterActions]="true"
         [source]="chantierReferenceService"
         optionLabel="code"
         ariaLabel="Chantier"
@@ -46,6 +48,7 @@ const DEBOUNCE_RECHERCHE_MS = 300;
       <app-lazy-select
         [formField]="formulaire.equipeIds"
         [multiple]="true"
+        [bulkFilterActions]="true"
         [source]="equipeReferenceService"
         optionLabel="libelle"
         ariaLabel="Équipe"

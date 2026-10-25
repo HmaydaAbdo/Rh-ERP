@@ -11,6 +11,8 @@ import { IconComponent } from '../icon/icon.component';
 export interface SelectOption<V = unknown> {
   label: string;
   value: V;
+  /** Code court affiché à côté du libellé métier lorsqu'il existe. */
+  code?: string;
 }
 
 const POSITIONS: ConnectedPosition[] = [
@@ -50,6 +52,8 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   readonly options = input<SelectOption<V>[]>([]);
   readonly selectedOptions = input<SelectOption<V>[]>([]);
   readonly multiple = input(false);
+  /** `filter` = toutes les valeurs via absence de restriction; `loaded` = toutes les options locales. */
+  readonly bulkMode = input<'none' | 'filter' | 'loaded'>('none');
   readonly externalFilter = input(false);
   readonly clearable = input(true);
   readonly loading = input(false);
@@ -74,6 +78,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     }
     return Array.isArray(value) ? (value as V[]) : [value as V];
   });
+  protected readonly toutSelectionne = signal(false);
   protected readonly known = signal(new Map<V, string>());
   protected readonly positions = POSITIONS;
   protected readonly minWidth = signal(0);
@@ -87,7 +92,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     if (this.externalFilter()) {
       return this.options();
     }
-    const filtered = term === '' ? this.options() : this.options().filter((option) => normaliser(option.label).includes(term));
+    const filtered = term === '' ? this.options() : this.options().filter((option) => normaliser(`${option.code ?? ''} ${option.label}`).includes(term));
     return filtered.slice(0, this.visibleLimit());
   });
 
@@ -95,7 +100,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   protected readonly display = computed(() => {
     const values = this.selected();
     if (values.length === 0) {
-      return '';
+      return this.toutSelectionne() ? 'Tous' : '';
     }
     if (this.multiple() && values.length >= this.summaryFrom()) {
       const summary = this.summaryLabel();
@@ -106,13 +111,13 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
 
   /** Le champ affiche la saisie pendant qu'on cherche, la sélection sinon. */
   protected readonly text = computed(() => (this.expanded() ? this.term() : this.display()));
-  protected readonly canClear = computed(() => this.clearable() && !this.disabled() && this.selected().length > 0);
+  protected readonly canClear = computed(() => this.clearable() && !this.disabled() && (this.selected().length > 0 || this.toutSelectionne()));
 
   constructor() {
     // Retient les libellés de tout ce qui a été vu : une valeur choisie garde son libellé quand la liste filtrée ne la contient plus.
     effect(() => {
       const next = new Map(untracked(this.known));
-      [...this.options(), ...this.selectedOptions()].forEach((option) => next.set(option.value, option.label));
+      [...this.options(), ...this.selectedOptions()].forEach((option) => next.set(option.value, option.code ? `${option.code} · ${option.label}` : option.label));
       this.known.set(next);
     });
     effect(() => {
@@ -160,6 +165,7 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
   }
 
   protected onSelection(values: V[]): void {
+    this.toutSelectionne.set(false);
     if (this.multiple()) {
       // Le listbox ne connaît que les options affichées : une valeur déjà choisie qui n'y figure pas (autre page d'une source
       // distante, ou écartée par le filtre) lui échappe et ne doit pas être perdue pour autant.
@@ -173,14 +179,28 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
     const chosen = values.filter((value) => !this.selected().includes(value));
     this.commit(chosen.length > 0 ? [chosen[chosen.length - 1]] : values.slice(-1));
     this.expanded.set(false);
+    queueMicrotask(() => this.expanded.set(false));
   }
 
   protected clear(event: Event): void {
     event.stopPropagation();
     this.commit([]);
+    this.toutSelectionne.set(false);
     this.term.set('');
     this.visibleLimit.set(OPTION_PAGE_SIZE);
     this.filterChange.emit('');
+  }
+
+  protected selectionnerTout(): void {
+    this.commit(this.bulkMode() === 'loaded' ? this.options().map((option) => option.value) : []);
+    this.toutSelectionne.set(this.bulkMode() === 'filter');
+    this.expanded.set(false);
+  }
+
+  protected neRienSelectionner(): void {
+    this.commit([]);
+    this.toutSelectionne.set(false);
+    this.expanded.set(false);
   }
 
   protected onScroll(event: Event): void {

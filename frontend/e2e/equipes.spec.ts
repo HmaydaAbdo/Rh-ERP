@@ -152,7 +152,7 @@ test.describe('Équipes', () => {
     await page.getByRole('option', { name: 'Nador' }).click();
     await expect(page).toHaveURL('/equipes/analytique?code=C&chantierIds=9');
     await expect.poll(() => mock.bodies['POST /paie/analytique'].some((body) => body.chantierIds?.includes(9) && body.equipeIds?.includes(5))).toBe(true);
-    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' }).getByRole('combobox', { name: 'Chantier' })).toHaveValue('Nador');
+    await expect(page.locator('.perimetre-analytique__section').filter({ hasText: 'Répartition de la paie par équipe' }).getByRole('combobox', { name: 'Chantier' })).toHaveValue('C168 · Nador');
     await evolution.getByRole('button', { name: 'Effacer la sélection' }).first().click();
     await expect(page).toHaveURL('/equipes/analytique?code=C');
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();

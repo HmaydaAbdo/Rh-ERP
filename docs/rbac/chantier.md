@@ -25,8 +25,10 @@
 | Boutons « Clôturer » / « Rouvrir » (liste, détail) | `CHANTIER_WRITE` — `canWrite()` ; mise à jour par `PUT /chantiers/{id}` |
 | Bouton « Synchroniser maintenant » (en-tête commun aux trois vues) | `CHANTIER_SYNC` — `ChantierActionsComponent.canSync()` |
 | Bouton « Supprimer » (liste) | `CHANTIER_DELETE` — `canDelete()` |
-| Effectifs des fiches Employé dans Cartes et Analytique | Appel au service Employé uniquement avec `EMPLOYEE_READ` |
-| Indicateurs et montants Paie dans Cartes et Analytique | Appel au service Paie uniquement avec `PAIE_READ` |
+| Icône d'accès à la liste Employé depuis Cartes | Visible uniquement avec `EMPLOYEE_READ` ; les fiches Employé ne contribuent pas aux chiffres de Cartes et Analytique |
+| Indicateurs du dernier mois Paie, historique mensuel et qualité des rattachements dans Cartes et Analytique | Appel au service Paie uniquement avec `PAIE_READ` |
+| Filtres Fonction et Équipe de l’Analytique | `FUNCTION_READ` et `EQUIPE_READ` respectivement; sans le droit, le sélecteur et ses appels sont absents |
+| Filtres de la qualité des rattachements | `CHANTIER_READ` pour Chantier et `FUNCTION_READ` pour Fonction |
 
 ## Note — synchronisation automatique
 

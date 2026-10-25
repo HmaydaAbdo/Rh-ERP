@@ -39,6 +39,16 @@
       [cdkConnectedOverlayViewportMargin]="8"
       (overlayOutsideClick)="onOutsideClick($event)"
     >
+      <div class="stp-select__popup">
+      @if (multiple() && bulkMode() !== 'none') {
+        <div class="stp-select__bulk" role="group" aria-label="Actions de sélection">
+          <button type="button" class="stp-select__bulk-action" [attr.aria-pressed]="toutSelectionne()"
+            [attr.title]="bulkMode() === 'filter' ? 'Toutes les valeurs, y compris celles qui ne sont pas encore chargées. Filtre sans restriction.' : 'Sélectionner toutes les options de cette liste.'"
+            (click)="selectionnerTout()">Tout sélectionner</button>
+          <button type="button" class="stp-select__bulk-action" [attr.title]="bulkMode() === 'filter' ? 'Vider la sélection et retirer le filtre.' : 'Vider la sélection.'"
+            (click)="neRienSelectionner()">Ne rien sélectionner</button>
+        </div>
+      }
       <ul
         ngComboboxWidget
         ngListbox
@@ -55,7 +65,10 @@
       >
         @for (option of shown(); track option.value) {
           <li ngOption class="stp-select__option" [value]="option.value" [label]="option.label">
-            <span class="stp-select__option-label">{{ option.label }}</span>
+            <span class="stp-select__option-copy">
+              @if (option.code) { <span class="stp-select__option-code">{{ option.code }}</span> }
+              <span class="stp-select__option-label">{{ option.label }}</span>
+            </span>
             @if (multiple()) {
               <span
                 class="stp-select__checkbox"
@@ -72,6 +85,7 @@
           <li class="stp-select__empty" role="presentation">{{ loading() ? 'Chargement…' : 'Aucun résultat' }}</li>
         }
       </ul>
+      </div>
     </ng-template>
   </ng-template>
 </div>
