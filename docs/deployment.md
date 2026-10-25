@@ -137,21 +137,20 @@ temporaire ; la valeur devra passer à HTTPS lorsque TLS sera configuré.
 cp .env.example .env   # une seule fois, puis renseigner de vraies valeurs (voir .env.example)
 ```
 
-Sur le serveur de production, ajouter `COMPOSE_PROFILES=backup` au fichier `.env` une seule fois,
-puis lancer les commandes ordinaires :
+Puis lancer les commandes ordinaires, sans profil ni option :
 
 ```bash
 docker compose pull    # récupère les images publiées par la CI (voir .github/workflows/ci.yml)
-docker compose up -d   # démarre aussi les planificateurs de sauvegarde et de rétention pgAudit
+docker compose up -d   # démarre toute la pile
 ```
 
-Compose active alors ce profil pour les commandes. Le profil lance le planificateur de sauvegarde
-et le planificateur de rétention pgAudit ; ce n'est pas une commande de restauration. Sans cette
-variable ou `--profile backup`, ces services optionnels ne sont pas inclus.
-
-Les services IA (`litellm-db`, `litellm`, `ia`) appartiennent au profil `ia`
-(`COMPOSE_PROFILES=backup,ia` pour les inclure) ; la pile ERP n'en dépend pas. Leurs variables
-sont dans la section IA du même `.env` ; voir [ia.md](ia.md) et [litellm/README.md](../litellm/README.md).
+Depuis le 2026-10-26, aucun service n'appartient plus à un profil Compose : `up -d` démarre l'ERP, les
+planificateurs de sauvegarde et de rétention pgAudit (ce n'est pas une commande de restauration), LiteLLM et sa
+base, le service IA et la tâche ponctuelle `litellm-cles`. Celle-ci enregistre les clés virtuelles du `.env` dans
+une base LiteLLM neuve, puis s'arrête (`Exited (0)` est son état normal) ; le service IA attend qu'elle ait réussi.
+`COMPOSE_PROFILES` n'est plus nécessaire dans le `.env`. L'ERP ne dépend pas des services IA :
+`IA_ENABLED=false` ou `MCP_ENABLED=false` coupe l'assistant. Variables : section IA du même `.env` ; voir
+[ia.md](ia.md) et [litellm/README.md](../litellm/README.md).
 
 Le fond de la carte des chantiers est un dossier de l'hôte (`CARTE_FOND_DIR`, défaut `./carte-fond`) monté en lecture
 seule dans le frontend ; le préparer une fois avec `scripts/carte/preparer-fond-carte.sh ./carte-fond` (voir
@@ -344,9 +343,9 @@ le contexte d'une pull request.
 
 **CD manuel** — la mise à jour de production est déclenchée par un opérateur autorisé avec
 `docker compose pull && docker compose up -d`, après réussite de la CI sur `main`. La production suit
-`latest` pour les quatre images selon l'ADR 0004. Le `.env` de production doit porter
-`COMPOSE_PROFILES=backup` pour inclure les conteneurs de sauvegarde et de rétention planifiées. Vérifier
-l'état de santé des cinq services et les parcours critiques avant de terminer la fenêtre. Aucun accès SSH ni déploiement
+`latest` pour les six images selon l'ADR 0004. Tous les services sont inclus sans profil. Vérifier
+l'état de santé des huit services (dont `litellm-cles`, terminé en `Exited (0)`) et les parcours critiques avant
+de terminer la fenêtre. Aucun accès SSH ni déploiement
 automatisé n'est souhaité. La migration PG17→PG18 et l'émission pgAudit sont confirmées ; les contrôles
 restants sont dans `TODO.md`.
 
@@ -362,9 +361,8 @@ recréation de conteneur — **ce n'est pas un backup** : il ne protège pas con
 volume, une corruption, ou une erreur humaine (ex. `DELETE` sans `WHERE`). Un vrai backup, distinct
 du volume, est exécuté par le service Compose `backup`.
 
-Le service `backup` utilise le profil Compose `backup` : les démarrages locaux habituels ne lancent
-pas le planificateur ni le conteneur à partir duquel Docker créait un volume PostgreSQL anonyme inutile.
-En production, les commandes de démarrage et de mise à jour activent explicitement ce profil.
+Le service `backup` démarre par défaut avec `docker compose up -d`, en local comme en production ; il
+monte `/var/lib/postgresql` en tmpfs, ce qui évite le volume PostgreSQL anonyme qu'imposait l'image.
 
 Les archives PostgreSQL complètes sont créées chaque jour à `02:00 UTC` et conservées 30 jours. Si
 le service démarre sans archive datant de moins de 24 heures, il en crée une immédiatement ; un
