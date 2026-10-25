@@ -94,7 +94,7 @@
 }
 
 .stp-select__bulk-action {
-  min-height: 2.25rem;
+  min-height: var(--control-height);
   padding-inline: var(--space-sm);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);

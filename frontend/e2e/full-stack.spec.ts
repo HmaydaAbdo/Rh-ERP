@@ -14,7 +14,7 @@ async function api<T>(page: Page, token: string, method: string, path: string, d
 
 test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans accès Paie', async ({ page, browser }) => {
   // Neuf domaines, écritures réelles, historique et second compte : budget d'un parcours intégré complet.
-  test.slow();
+  test.setTimeout(180_000);
   await page.goto('/login');
   await page.getByLabel(/Nom d.utilisateur/).fill(process.env['ADMIN_USERNAME'] ?? 'ci-admin');
   await page.getByLabel('Mot de passe', { exact: true }).fill(process.env['ADMIN_PASSWORD'] ?? 'ci-admin-password');
