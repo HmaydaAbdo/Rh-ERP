@@ -2,4 +2,5 @@
 !Dockerfile
 !entrypoint.sh
 !filtrer_config.py
+!enregistrer_cles.py
 !litellm_config.yaml

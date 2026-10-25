@@ -7,6 +7,8 @@ FROM ghcr.io/berriai/litellm:v1.104.2@sha256:3d88bd757134a00e8c00237b85a021ab1f6
 COPY --chmod=0444 litellm_config.yaml /app/config.yaml
 COPY --chmod=0555 entrypoint.sh /usr/local/bin/erp-rh-litellm-entrypoint
 COPY --chmod=0444 filtrer_config.py /usr/local/bin/erp-rh-filtrer-config
+# Lancé par le service Compose litellm-cles : enregistre les clés virtuelles du .env (idempotent).
+COPY --chmod=0444 enregistrer_cles.py /usr/local/bin/erp-rh-enregistrer-cles
 
 EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=8s --start-period=90s --retries=8 \

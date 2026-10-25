@@ -243,7 +243,7 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
 
 ### Bascule de la production sur deux comptes
 1. Ajouter dans `.env` du serveur `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` (voir `.env.example` ; mot de passe sans apostrophe).
-2. `docker compose --profile backup pull && docker compose --profile backup up -d` : Flyway (compte propriétaire) applique les migrations d'audit, **crée le
+2. `docker compose pull && docker compose up -d` : Flyway (compte propriétaire) applique les migrations d'audit, **crée le
    compte applicatif et ses droits**, puis l'application se connecte avec ce compte.
 3. Vérifier dans les logs : « Intégrité de l'audit : le compte applicatif ne peut pas modifier les tables d'audit ».
 4. **Retour arrière** : retirer les deux variables — l'application retrouve le compte unique (le compte applicatif reste
