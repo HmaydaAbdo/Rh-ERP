@@ -13,6 +13,8 @@ async function api<T>(page: Page, token: string, method: string, path: string, d
 }
 
 test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans accès Paie', async ({ page, browser }) => {
+  // Neuf domaines, écritures réelles, historique et second compte : budget d'un parcours intégré complet.
+  test.slow();
   await page.goto('/login');
   await page.getByLabel(/Nom d.utilisateur/).fill(process.env['ADMIN_USERNAME'] ?? 'ci-admin');
   await page.getByLabel('Mot de passe', { exact: true }).fill(process.env['ADMIN_PASSWORD'] ?? 'ci-admin-password');
@@ -27,7 +29,12 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     ['/equipes', 'Équipes'], ['/paie', 'Paie'], ['/admin/users', 'Utilisateurs'],
     ['/admin/roles', 'Rôles'], ['/admin/parametres', 'Paramètres'], ['/audit', 'Journal d’audit']
   ] as const) {
-    await page.locator(`a[href="${url}"]`).first().click();
+    const lien = page.locator(`a[href="${url}"]`).first();
+    if (!(await lien.isVisible())) {
+      const groupe = url.startsWith('/admin/') || url === '/audit' ? 'Administration système' : 'Référentiel RH';
+      await page.getByTitle(groupe, { exact: true }).click();
+    }
+    await lien.click();
     await expect(page.getByRole('heading', { name: titre })).toBeVisible();
   }
 
@@ -124,8 +131,8 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteEquipe).toContainText('Masse');
 
   await page.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
-  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`T${suffixe}`);
-  await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
+  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe e2e ${suffixe}`);
+  await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
   const synthesePaie = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
     page,
@@ -146,7 +153,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   expect(syntheseHistorique.kpis).toMatchObject({ effectif: 0, masse: 0 });
   expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
   await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}&periode=${moisCourant}`);
-  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`H${suffixe}`);
+  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe historique e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: /Répartition de la paie par équipe/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
 
@@ -173,12 +180,13 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par fonction' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
 
-  // Chantiers : mêmes trois vues ; le chantier est porté par la fiche Employé (dernier état) et par chaque bulletin.
+  // Chantiers : les synthèses utilisent exclusivement les bulletins de la paie récente.
   const filtreChantier = `code=${encodeURIComponent(`T${suffixe}`)}`;
   await page.goto(`/chantiers/cartes?${filtreChantier}`);
   const carteChantier = page.locator('.perimetre-carte').filter({ hasText: `T${suffixe}` });
   await expect(carteChantier).toContainText('En cours');
-  await expect(carteChantier).toContainText('Employés sur les fiches récentes');
+  await expect(carteChantier).not.toContainText('Employés sur les fiches récentes');
+  await expect(carteChantier.locator('.perimetre-carte__mesures .perimetre-carte__indicateur')).toHaveCount(4);
   await expect(carteChantier).toContainText('Paie ·');
   await expect(carteChantier).toContainText('Masse');
 
@@ -194,9 +202,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   expect(syntheseChantier.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent, moisCourant]);
   await page.goto(`/chantiers/analytique?chantierIds=${chantier.id}&periode=${moisCourant}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`T${suffixe}`);
-  await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
-  await expect(page.locator('section[aria-labelledby="pa-fiches-titre"]')).toContainText(/Effectif\s*1/);
+  await expect(page.getByRole('heading', { name: 'Évolution mensuelle par chantier' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Fonctions de la répartition' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Équipes de la répartition' })).toBeVisible();
 
   const roles = await api<{ content: Array<{ id: number; nom: string }> }>(page, adminToken, 'POST', '/roles/search', {});
   const roleMetier = roles.content.find((role) => role.nom === 'PAIE_MANAGER');
@@ -219,7 +228,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     permissionIds: [permissionPaie!.id, permissionEmployee!.id]
   });
 
-  const contexteLimite = await browser.newContext({ baseURL: 'http://localhost:4300', locale: 'fr-FR', timezoneId: 'Africa/Casablanca' });
+  const contexteLimite = await browser.newContext({ baseURL: new URL(page.url()).origin, locale: 'fr-FR', timezoneId: 'Africa/Casablanca' });
   try {
     const pageLimitee = await contexteLimite.newPage();
     await pageLimitee.goto('/login');
@@ -247,7 +256,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteChantierLimitee).not.toContainText('Payés');
     await expect(carteChantierLimitee).not.toContainText('Masse');
     await pageLimitee.goto(`/chantiers/analytique?chantierIds=${chantier.id}&periode=${moisCourant}`);
-    await expect(pageLimitee.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(pageLimitee.getByText('L’effectif mensuel par chantier n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     await pageLimitee.goto(`/functions/cartes?${filtreFonction}`);
     const carteFonctionLimitee = pageLimitee.locator('.perimetre-carte').filter({ hasText: `Fonction e2e ${suffixe}` });
