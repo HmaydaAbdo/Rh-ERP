@@ -14,19 +14,29 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import staport.rh.audit.services.interfaces.IAuditJournalService;
 import staport.rh.audit.services.interfaces.IAuditOutilsAgent;
+import staport.rh.auth.services.interfaces.IRoleService;
 import staport.rh.chantier.services.interfaces.IChantierService;
 import staport.rh.employee.services.interfaces.IEmployeeAnalytiqueService;
 import staport.rh.employee.services.interfaces.IEmployeeService;
-import staport.rh.mcp.outils.OutilChantierFiche;
+import staport.rh.equipe.services.interfaces.IEquipeService;
+import staport.rh.function.services.interfaces.IFunctionService;
 import staport.rh.mcp.outils.OutilEmployesCompter;
 import staport.rh.mcp.outils.OutilEmployesRechercher;
 import staport.rh.mcp.outils.OutilEmployesSorties;
 import staport.rh.mcp.outils.OutilIdentite;
 import staport.rh.mcp.outils.OutilLecture;
 import staport.rh.mcp.outils.OutilPaieIndicateurs;
+import staport.rh.mcp.outils.OutilsAdministration;
+import staport.rh.mcp.outils.OutilsEmploye;
+import staport.rh.mcp.outils.OutilsPaie;
+import staport.rh.mcp.outils.OutilsReferentiels;
 import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
+import staport.rh.paie.services.interfaces.IPaieEffectifsService;
+import staport.rh.paie.services.interfaces.IPaieParcoursService;
 import staport.rh.paie.services.interfaces.IPaieService;
+import staport.rh.parametre.services.interfaces.IParametreService;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
@@ -72,17 +82,26 @@ public class McpServeurConfig {
                 .build();
     }
 
-    /** Outils de lecture (docs/ia.md, T5) : chacun revérifie sa permission et ne lit que des façades de domaine. */
+    /**
+     * Catalogue de lecture par domaine (docs/ia.md, § 8) : chaque outil revérifie la permission de son domaine et ne lit
+     * que des façades publiques. Aucune écriture n'est publiée.
+     */
     @Bean
-    List<OutilLecture> outilsLecture(IPaieService paie, IPaieAnalytiqueService paieAnalytique, IEmployeeService employes,
-                                     IEmployeeAnalytiqueService employesAnalytique, IChantierService chantiers,
+    List<OutilLecture> outilsLecture(IChantierService chantiers, IEquipeService equipes, IFunctionService fonctions,
+                                     IEmployeeService employes, IEmployeeAnalytiqueService employesAnalytique,
+                                     IPaieService paie, IPaieAnalytiqueService paieAnalytique,
+                                     IPaieEffectifsService effectifs, IPaieParcoursService parcours,
+                                     IParametreService parametres, IRoleService roles, IAuditJournalService journal,
                                      IAuditOutilsAgent audit) {
-        return List.of(
-                new OutilPaieIndicateurs(paie, paieAnalytique, audit),
-                new OutilEmployesCompter(employesAnalytique, audit),
-                new OutilEmployesRechercher(employes, audit),
-                new OutilEmployesSorties(employes, paie, audit),
-                new OutilChantierFiche(chantiers, audit));
+        List<OutilLecture> catalogue = new ArrayList<>(OutilsReferentiels.catalogue(chantiers, equipes, fonctions, audit));
+        catalogue.add(new OutilEmployesRechercher(employes, audit));
+        catalogue.add(new OutilEmployesCompter(employesAnalytique, audit));
+        catalogue.add(new OutilEmployesSorties(employes, paie, audit));
+        catalogue.addAll(OutilsEmploye.catalogue(employes, employesAnalytique, parcours, audit));
+        catalogue.add(new OutilPaieIndicateurs(paie, paieAnalytique, audit));
+        catalogue.addAll(OutilsPaie.catalogue(paie, paieAnalytique, effectifs, audit));
+        catalogue.addAll(OutilsAdministration.catalogue(parametres, roles, journal, audit));
+        return List.copyOf(catalogue);
     }
 
     @Bean(destroyMethod = "close")
