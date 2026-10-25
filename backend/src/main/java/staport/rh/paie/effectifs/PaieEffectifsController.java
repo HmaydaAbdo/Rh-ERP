@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 
 import java.util.List;
 
@@ -17,9 +18,9 @@ import java.util.List;
 @Tag(name = "Paie", description = "Bulletins de paie, import, export et rapport PDF")
 public class PaieEffectifsController {
 
-    private final PaieEffectifsService effectifsService;
+    private final IPaieEffectifsService effectifsService;
 
-    public PaieEffectifsController(PaieEffectifsService effectifsService) {
+    public PaieEffectifsController(IPaieEffectifsService effectifsService) {
         this.effectifsService = effectifsService;
     }
 

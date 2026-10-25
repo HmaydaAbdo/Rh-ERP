@@ -22,7 +22,7 @@ même socle. Elle ne devient jamais la source des chiffres, des droits ou des d�
 | Outils métier | **MCP** (Streamable HTTP) entre le service IA et Spring. Le service IA n'a ni accès aux tables ni client REST métier. |
 | Interface ↔ agent | **AG-UI** entre Angular et le service IA : messages en streaming, états d'outils, interruptions, confirmations, événements de la mascotte. Angular dialogue directement avec l'agent Python, sans runtime intermédiaire. |
 | Modèles | **LiteLLM** : un alias unique `ai-gateway`, la tâche indiquée par tag (`simple`, `medium`, `complex`, `code`, `ocr`), bascule entre fournisseurs du même niveau, budgets par clé virtuelle. Un modèle est retenu sur le jeu de référence (§ 4). |
-| Données envoyées aux modèles | Développement : **données synthétiques uniquement** (les clés actuelles sont des paliers gratuits). Données réelles : fournisseurs payants sans entraînement sur les requêtes, à partir de J3. Accord CNDP (loi 09-08) obtenu par le propriétaire ; référence et date consignées avant J3. |
+| Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Tests sur données fictives. Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
 | Sécurité | Périmètres de données par **département et fiche de poste**, appliqués dans Spring pour REST et MCP ; jeton délégué court RS256 ; audit de chaque appel d'outil (§ 5). |
 | Premier usage | **Questions/réponses + vues pilotées** : l'agent répond avec des chiffres Spring et ouvre la vue partagée (Tabulaire, Cartes, Analytique) déjà filtrée (§ 6). |
 | Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
@@ -71,8 +71,9 @@ que ce profil n'est pas activé. Les checkpoints durables LangGraph arrivent ave
 - **Identité de l'agent.** Spring émet pour l'utilisateur connecté un jeton court RS256 (clé
   publique JWKS), audience `mcp`, scopes réduits ; le `JWT_SECRET` n'est jamais partagé. Chaque appel
   MCP revalide émetteur, audience, expiration, permissions et périmètre.
-- **Minimisation.** Agrégats et identifiants d'abord ; noms seulement si la question l'exige et que
-  l'utilisateur y a droit.
+- **Champs rendus.** Les mêmes que les écrans pour un utilisateur donné (CIN, dates et montants compris) ; seules
+  les permissions filtrent. Avant tout envoi de données réelles à un fournisseur externe, revoir cette règle avec
+  le choix du modèle (cible : modèle local).
 - **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé d'ERP-RH porte
   `metadata.tags: ["!eval"]` (aucun modèle d'évaluation), une limite de débit et un budget. Port lié
   à `127.0.0.1` ou au seul réseau Docker interne. Cache de réponses désactivé.
@@ -147,6 +148,7 @@ pris en charge ; chaque surface a un repli texte.
 | 2026-10-25 | **T1** : image `erp-rh-litellm` construite ; sur une pile Compose jetable, passerelle prête, appel sans clé refusé (401), image refusant de démarrer sans clé master, clé ERP-RH `!eval` refusant le pool d'évaluation et l'alias de test sans appel fournisseur ; clés regroupées dans le `.env` racine. **T2** : 8 tests, `ruff` et `pyright` strict verts ; image `erp-rh-ia` (utilisateur 10001, lecture seule) saine, `/health/ready` voit la passerelle. **T3** : `McpCompatibilityTest` vert, 10/10 scénarios pour le client TypeScript et pour le client Python (`mcp` 2.3.0, révision 2025-11-25). CI préparée (job `ia`, images publiées), non exécutée. |
 | 2026-10-25 | **T4** (design validé par le propriétaire : sans état, `IA_UTILISER`, clé dans le `.env`, 5 minutes) : jeton agent RS256, JWKS, chaîne `/mcp` dédiée, migration V36. `McpSecuriteIntegrationTest` 21/21 (émission, JWKS, appel accepté, refus individuel appliqué au prochain appel, ancienne clé acceptée ; refus sans jeton, jeton REST, autre clé, audience, émetteur, expiration, `alg: none`, scope, `Origin`, compte désactivé, droit retiré, `uid` incohérent ; jeton agent refusé par REST). Client MCP Python sur la vraie route : 2/2. Suite backend complète : 457 tests verts (1 ignoré) ; couverture `mcp` 97,9 % lignes / 50 % branches. Clé RSA 3072 bits ajoutée au `.env` racine, MCP désactivé. |
 | 2026-10-25 | `.env` locaux complétés (racine : `CARTE_FOND_DIR`, valeurs des clés virtuelles LiteLLM ; backend : `DB_MIGRATION_*`, `CORS_ALLOWED_ORIGINS`) ; `litellm/enregistrer_cles.py` enregistre ces clés dans la passerelle (prouvé sur pile jetable, idempotent, clé ERP-RH refusant le pool d'évaluation). **T5** : 5 outils de lecture (§ 8), `ViewSpec`, règle de projection du salaire `ProjectionPaieEmployee` partagée par REST et MCP, journal `LECTURE_METIER` canal `MCP`. `McpOutilsLectureIntegrationTest` 9/9 (chiffres identiques aux façades, refus et journal par outil, salaire masqué sans `PAIE_READ`, ni CIN ni date de naissance, argument hors schéma refusé). Suite backend 466 tests verts (1 ignoré), client Python 2/2 ; couverture `mcp` 93,1 % lignes / 55,9 % branches. |
+| 2026-10-25 | Décision : champs rendus identiques aux écrans (CIN, dates, montants), modèle local open source visé, tests sur données fictives. Catalogue étendu à **25 outils** sur tous les domaines (§ 8) ; `IPaieEffectifsService` et `IPaieParcoursService` publiés comme façades. `McpOutilsLectureIntegrationTest` 15/15 (chaque outil refusé sans sa permission et journalisé, chaque outil répond avec les droits, chiffres comparés aux façades, introuvable signalé). Suite backend 472 tests verts (1 ignoré), client Python 2/2 ; couverture `mcp` 95,6 % lignes / 59,1 % branches. |
 
 ## 8. État technique
 
@@ -155,23 +157,43 @@ pris en charge ; chaque surface a un repli texte.
 | Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
 | LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, profil Compose `ia`. Fournisseurs configurés : Gemini, Groq, Cloudflare, OpenRouter (paliers gratuits) ; Mistral, Cerebras et NVIDIA sans clé. Clé virtuelle ERP-RH à créer au premier démarrage. Voir [`litellm/README.md`](../litellm/README.md). |
 | Service IA | Image `erp-rh-ia` (Python 3.13), santé et client LiteLLM ; graphe, outils et AG-UI à venir (T4–T7). Voir [`ia/README.md`](../ia/README.md). |
-| Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 6 outils en lecture (ci-dessous). Aucun panneau Angular. Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
+| Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Aucun panneau Angular. Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 
 ### Catalogue MCP
 
-Chaque outil exige `IA_UTILISER` (route) et la permission de son domaine (revérifiée à chaque appel), lit uniquement
-la façade du domaine, journalise l'appel (`LECTURE_METIER`, canal `MCP`) et renvoie une `vue` (§ 6) aux paramètres
-d'URL des vues partagées. Annotations MCP : lecture seule, idempotent, monde fermé.
+Chaque outil exige `IA_UTILISER` (route) et la permission de son domaine (revérifiée à chaque appel), lit uniquement les façades publiques des domaines, journalise l'appel (`LECTURE_METIER`, canal `MCP`) et renvoie une `vue` (§ 6). Annotations MCP : lecture seule, idempotent, monde fermé. Un identifiant inconnu rend « Élément introuvable ».
 
-| Outil | Permission | Arguments | Rend | Vue proposée |
-|---|---|---|---|---|
-| `systeme_identite` | — | aucun | Utilisateur et autorités effectives | — |
-| `paie_indicateurs` | `PAIE_READ` | `periode` (défaut : dernier mois importé), `chantierIds`, `equipeIds`, `fonctionIds` | Masse, effectif payé, coût moyen, STC ; mois précédent ; 5 principaux chantiers | `paie` / `analytique` |
-| `employes_compter` | `EMPLOYEE_READ` | `chantierIds`, `equipeIds`, `fonctionIds`, `statut` (`EN_POSTE`, `SORTI`) | Effectif, en poste, sortis, âge et ancienneté moyens, embauches 12 mois, tranches | `employees` / `analytique` |
-| `employes_rechercher` | `EMPLOYEE_READ` | `nom`, périmètre, `statut`, `limite` (≤ 20) ; au moins un critère | Fiches sans CIN ni date de naissance ; salaire avec `PAIE_READ` seulement | `employees` / `tabulaire` |
-| `employes_sorties` | `EMPLOYEE_READ` | `periode` (défaut : dernier mois importé) | Nombre de départs, par motif ; 20 noms au plus | `employees` / `tabulaire` (`statut=INACTIF`) |
-| `chantier_fiche` | `CHANTIER_READ` | `recherche` (code ou désignation) | 5 chantiers : identifiant, code, désignation, `EN_COURS` / `CLOTURE` | `chantiers` / `tabulaire` |
+| Domaine | Outil | Permission | Arguments principaux | Rend | Vue proposée |
+|---|---|---|---|---|---|
+| Système | `systeme_identite` | — | aucun | Utilisateur et autorités effectives | — |
+| Chantier | `chantier_rechercher` | `CHANTIER_READ` | `recherche`, `statut` (`EN_COURS`/`CLOTURE`), `limite` ≤ 20 | Identifiant, code, désignation, nom, origine ERP, statut | `chantiers` / `tabulaire` |
+| | `chantier_fiche` | `CHANTIER_READ` | `id` | Fiche du chantier | `chantiers` / `fiche` |
+| Équipe | `equipe_rechercher` | `EQUIPE_READ` | `recherche`, `limite` ≤ 20 | Identifiant, code, libellé | `equipes` / `tabulaire` |
+| | `equipe_fiche` | `EQUIPE_READ` | `id` | Fiche de l'équipe | `equipes` / `fiche` |
+| Fonction | `fonction_rechercher` | `FUNCTION_READ` | `recherche`, `limite` ≤ 20 | Identifiant, libellé | `functions` / `tabulaire` |
+| | `fonction_fiche` | `FUNCTION_READ` | `id` | Fiche de la fonction | `functions` / `fiche` |
+| Employé | `employes_rechercher` | `EMPLOYEE_READ` | `nom`, `cin`, périmètre, `statut` (`EN_POSTE`/`SORTI`), `limite` ≤ 20 | Fiches complètes (CIN, naissance, embauche, affectations) ; salaire avec `PAIE_READ` | `employees` / `tabulaire` |
+| | `employe_fiche` | `EMPLOYEE_READ` | `id` | Fiche complète et départs ; salaire avec `PAIE_READ` | `employees` / `fiche` |
+| | `employes_compter` | `EMPLOYEE_READ` | périmètre, `statut` | Effectif, en poste, sortis, âge et ancienneté moyens, embauches 12 mois, tranches | `employees` / `analytique` |
+| | `employes_regrouper` | `EMPLOYEE_READ` | `dimension` (`CHANTIER`/`EQUIPE`/`FONCTION`), périmètre, `statut` | Effectif et en poste par groupe, 50 au plus | `employees` / `cartes` |
+| | `employes_sorties` | `EMPLOYEE_READ` | `periode` | Départs du mois par motif, 20 noms au plus | `employees` / `analytique` (mouvements, avec `PAIE_READ`) ou liste « Sorti » |
+| | `employe_parcours` | `PAIE_READ` | `id` | Indicateurs, 36 derniers mois (affectations, jours, salaires), événements | `employees` / `fiche` |
+| Paie | `paie_indicateurs` | `PAIE_READ` | `periode`, périmètre | Masse, effectif, coût moyen, STC ; mois précédent ; 5 principaux chantiers | `paie` / `analytique` |
+| | `paie_periodes` | `PAIE_READ` | périmètre, `limite` ≤ 36 | Mois importés : bulletins, chantiers, masse, STC | `paie` / `cartes` |
+| | `paie_repartition` | `PAIE_READ` | `periode`, `dimension`, périmètre | Masse, effectif, STC par groupe, 50 au plus | `paie` / `analytique` |
+| | `paie_evolution` | `PAIE_READ` | `periode` (dernier mois de la série), périmètre, `limite` ≤ 36 | Série mensuelle masse, effectif, STC | `paie` / `analytique` |
+| | `paie_mouvements` | `PAIE_READ` | `periode` ou `limite` ≤ 36, périmètre | Payés, entrées, sorties, mutations par mois | `employees` / `analytique` |
+| | `paie_qualite` | `PAIE_READ` | `periode`, périmètre | Bulletins sans équipe, sans observation ; tranches de total | `paie` / `tabulaire` (sans équipe) |
+| | `paie_bulletins_rechercher` | `PAIE_READ` | `periode`, `nom`, `cin`, périmètre, `limite` ≤ 20 | Bulletins complets : employé et CIN, affectations, jours, salaires, primes, total, observation | `paie` / `tabulaire` |
+| Rapport | `rapport_preparer` | `PAIE_EXPORT` + `PAIE_READ` | `periode`, `chantierIds` | Chantiers du rapport ; aucun fichier généré | `paie` / `tabulaire`, `action=export` |
+| Paramètres | `parametres_lire` | `PARAMETRE_READ` | aucun | Clé, libellé, valeur, unité, bornes | `admin/parametres` |
+| Administration | `roles_lister` | `ROLE_MANAGE` | `nom`, `limite` ≤ 20 | Rôles et codes de permission (sans les comptes) | `admin/roles` |
+| Audit | `audit_rechercher` | `AUDIT_READ` | `depuis`, `jusqua`, `utilisateur`, `action`, `categorie`, `resultat`, `entite`, `entiteId`, `limite` ≤ 20 | Entrées du journal | `audit` |
+| | `audit_historique` | `AUDIT_READ` | `entite`, `id`, `limite` ≤ 10 | Versions : auteur, opération, champs avant/après | — |
+
+Périmètre = `chantierIds`, `equipeIds` (`0` = sans équipe), `fonctionIds`. `periode` absente = dernier mois de paie
+importé. Exclus : toute écriture (jusqu'à J6), la liste des comptes utilisateurs, la carte.
 
 ## 9. Reprise
 

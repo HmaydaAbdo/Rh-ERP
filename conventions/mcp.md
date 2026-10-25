@@ -107,8 +107,10 @@ Le périmètre de données (chantiers, équipes, département… attribués par 
 appliqué dans la requête du domaine, avec la même règle que pour REST ; il n'est jamais déduit d'un
 argument d'outil ni filtré après coup dans la réponse.
 
-Les sorties d'outils sont minimisées : agrégats et identifiants d'abord, données nominatives
-seulement lorsque la tâche l'exige et que l'identité y a droit. Un outil peut renvoyer, à côté de
+Les champs qu'un outil rend suivent une règle documentée par l'application et jamais plus que ce que
+l'identité peut lire dans ses écrans ; la règle tient compte de l'endroit où tourne le modèle (local ou
+fournisseur externe) et de la classification des données (voir [`agents-ia.md`](agents-ia.md)). Pour
+ERP-RH, elle est dans [`docs/ia.md`](../docs/ia.md). Un outil peut renvoyer, à côté de
 ses données, une description de vue validée par schéma (vue du domaine, filtres, période) que
 l'interface traduit en route connue ; cette description n'accorde aucun droit.
 

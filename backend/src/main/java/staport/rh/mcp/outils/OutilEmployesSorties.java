@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import staport.rh.audit.services.interfaces.IAuditOutilsAgent;
 import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.entities.EmployeeStatut;
+import staport.rh.employee.projection.ProjectionPaieEmployee;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.mcp.dtos.VueProposeeDto;
 import staport.rh.paie.services.interfaces.IPaieService;
@@ -77,16 +78,27 @@ public class OutilEmployesSorties extends OutilLecture {
                         "nomPrenom", employes.findById(sortie.employeId()).nomPrenom(), "motif", motif(sortie)))
                 .toList();
 
-        Map<String, String> parametres = new LinkedHashMap<>();
-        Statuts.versUrl(EmployeeStatut.INACTIF, parametres);
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", periode.toString());
         donnees.put("nombre", sorties.size());
         donnees.put("parMotif", parMotif);
         donnees.put("employes", personnes);
-        donnees.put("vue", new VueProposeeDto("employees", "tabulaire", parametres).enJson());
+        donnees.put("vue", vue(lecteur, periode).enJson());
         String synthese = sorties.size() + " départ(s) en " + periode + ".";
         return new Resultat(donnees, synthese, personnes.size(), Perimetres.de(periode, null, null, null));
+    }
+
+    /**
+     * Les mouvements du mois (Employés › Analytique, avec {@code PAIE_READ}) ; sans ce droit, la liste des employés sortis
+     * (décision du 2026-10-25 : aucun nouvel écran).
+     */
+    private static VueProposeeDto vue(Authentication lecteur, YearMonth periode) {
+        if (ProjectionPaieEmployee.voitLaPaie(lecteur)) {
+            return new VueProposeeDto("employees", "analytique", Map.of("periode", periode.toString()));
+        }
+        Map<String, String> parametres = new LinkedHashMap<>();
+        Statuts.versUrl(EmployeeStatut.INACTIF, parametres);
+        return new VueProposeeDto("employees", "tabulaire", parametres);
     }
 
     /** Un départ ancien sans motif reste compté. */

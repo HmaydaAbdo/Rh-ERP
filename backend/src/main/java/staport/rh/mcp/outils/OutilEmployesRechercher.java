@@ -18,9 +18,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * {@code employes_rechercher} : fiches Employé correspondant à un nom et/ou un périmètre, au plus
- * {@value #LIMITE_MAXIMALE}. Minimisation : ni CIN ni date de naissance ; le salaire et son type seulement avec
- * {@code PAIE_READ}, selon la même règle que l'API ({@link ProjectionPaieEmployee}).
+ * {@code employes_rechercher} : fiches Employé correspondant à un nom, un CIN et/ou un périmètre, au plus
+ * {@value #LIMITE_MAXIMALE}. Mêmes champs que l'écran (CIN et dates compris, décision du 2026-10-25) ; le salaire et
+ * son type seulement avec {@code PAIE_READ}, selon la même règle que l'API ({@link ProjectionPaieEmployee}).
  */
 public class OutilEmployesRechercher extends OutilLecture {
 
@@ -41,9 +41,9 @@ public class OutilEmployesRechercher extends OutilLecture {
 
     @Override
     protected String description() {
-        return "Recherche des employés par nom (partiel) et/ou par chantier, équipe, fonction, statut. Renvoie au plus "
-                + LIMITE_MAXIMALE + " fiches (fonction, chantier, équipe, statut) et le nombre total trouvé ; le salaire "
-                + "n'apparaît que si l'utilisateur a le droit de voir la paie.";
+        return "Recherche des employés par nom (partiel), CIN et/ou par chantier, équipe, fonction, statut. Renvoie au plus "
+                + LIMITE_MAXIMALE + " fiches (CIN, dates de naissance et d'embauche, fonction, chantier, équipe, statut) et le "
+                + "nombre total trouvé ; le salaire n'apparaît que si l'utilisateur a le droit de voir la paie.";
     }
 
     @Override
@@ -55,6 +55,7 @@ public class OutilEmployesRechercher extends OutilLecture {
     protected Map<String, Object> proprietesEntree() {
         return Map.of(
                 "nom", Map.of("type", "string", "minLength", 2, "maxLength", 150, "description", "Nom et/ou prénom, partiel"),
+                "cin", Map.of("type", "string", "minLength", 2, "maxLength", 30, "description", "CIN, partiel"),
                 "chantierIds", identifiants("Chantiers ; absent = tous"),
                 "equipeIds", identifiants("Équipes ; 0 = sans équipe ; absent = toutes"),
                 "fonctionIds", identifiants("Fonctions ; absent = toutes"),
@@ -75,18 +76,19 @@ public class OutilEmployesRechercher extends OutilLecture {
     @Override
     protected Resultat executer(Authentication lecteur, Arguments arguments) {
         String nom = arguments.texte("nom").orElse(null);
+        String cin = arguments.texte("cin").orElse(null);
         List<Long> chantiers = arguments.identifiants("chantierIds");
         List<Long> equipes = arguments.identifiants("equipeIds");
         List<Long> fonctions = arguments.identifiants("fonctionIds");
         EmployeeStatut statut = Statuts.lire(arguments);
-        if (nom == null && chantiers == null && equipes == null && fonctions == null && statut == null) {
-            throw invalide("Préciser un nom ou un périmètre (chantier, équipe, fonction, statut).");
+        if (nom == null && cin == null && chantiers == null && equipes == null && fonctions == null && statut == null) {
+            throw invalide("Préciser un nom, un CIN ou un périmètre (chantier, équipe, fonction, statut).");
         }
         int limite = arguments.entier("limite", 10, 1, LIMITE_MAXIMALE);
         boolean voitLaPaie = ProjectionPaieEmployee.voitLaPaie(lecteur);
 
         Page<EmployeeResponseDto> page = employes.search(
-                new EmployeeSearchCriteria(nom, null, fonctions, chantiers, equipes, statut),
+                new EmployeeSearchCriteria(nom, cin, fonctions, chantiers, equipes, statut),
                 PageRequest.of(0, limite, Sort.by("nomPrenom")));
         List<Map<String, Object>> fiches = page.getContent().stream()
                 .map(employe -> fiche(ProjectionPaieEmployee.pourLeLecteur(employe, voitLaPaie), voitLaPaie))
@@ -95,6 +97,9 @@ public class OutilEmployesRechercher extends OutilLecture {
         Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
         if (nom != null) {
             parametres.put("nom", nom);
+        }
+        if (cin != null) {
+            parametres.put("cin", cin);
         }
         Statuts.versUrl(statut, parametres);
         Map<String, Object> donnees = new LinkedHashMap<>();
@@ -105,6 +110,7 @@ public class OutilEmployesRechercher extends OutilLecture {
 
         Map<String, Object> perimetre = Perimetres.de(null, chantiers, equipes, fonctions);
         perimetre.put("rechercheParNom", nom != null);
+        perimetre.put("rechercheParCin", cin != null);
         if (statut != null) {
             perimetre.put("statut", statut.name());
         }
@@ -112,15 +118,21 @@ public class OutilEmployesRechercher extends OutilLecture {
         return new Resultat(donnees, synthese, fiches.size(), perimetre);
     }
 
-    private static Map<String, Object> fiche(EmployeeResponseDto employe, boolean voitLaPaie) {
+    /** Une fiche Employé pour l'assistant ; partagée avec {@code employe_fiche}. */
+    static Map<String, Object> fiche(EmployeeResponseDto employe, boolean voitLaPaie) {
         Map<String, Object> fiche = new LinkedHashMap<>();
         fiche.put("id", employe.id());
         fiche.put("nomPrenom", employe.nomPrenom());
+        fiche.put("cin", employe.cin());
+        fiche.put("dateNaissance", employe.dateNaissance() == null ? null : employe.dateNaissance().toString());
+        fiche.put("dateEmbauche", employe.dateEmbauche() == null ? null : employe.dateEmbauche().toString());
         fiche.put("statut", Statuts.libelle(employe.statut()));
-        fiche.put("fonction", employe.fonction() == null ? null : employe.fonction().libelle());
+        fiche.put("fonction", employe.fonction() == null ? null
+                : Map.of("id", employe.fonction().id(), "libelle", employe.fonction().libelle()));
         fiche.put("chantier", employe.chantier() == null ? null
                 : Map.of("id", employe.chantier().id(), "code", employe.chantier().code()));
-        fiche.put("equipe", employe.equipe() == null ? null : employe.equipe().code());
+        fiche.put("equipe", employe.equipe() == null ? null
+                : Map.of("id", employe.equipe().id(), "code", employe.equipe().code()));
         if (voitLaPaie) {
             fiche.put("salaire", employe.salaire());
             fiche.put("typeSalaire", employe.typeSalaire() == null ? null : employe.typeSalaire().name());

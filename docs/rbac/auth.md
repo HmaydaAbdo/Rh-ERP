@@ -28,16 +28,7 @@
 | `POST /auth/jetons/agent` | `IA_UTILISER` | Jeton délégué RS256 de 5 minutes ; compte actif et droit revérifiés en base avant l'émission |
 | `POST /mcp` | Jeton agent + `IA_UTILISER` | Réseau interne seulement (nginx ne relaie pas `/mcp`) ; compte et permissions relus à chaque requête ; tout en-tête `Origin` refusé |
 
-Chaque outil MCP exige en plus la permission de son domaine, revérifiée à chaque appel :
-
-| Outil | Permission | Données |
-|---|---|---|
-| `systeme_identite` | — | Identité et autorités reconstruites par Spring |
-| `paie_indicateurs` | `PAIE_READ` | Indicateurs de la vue Analytique Paie d'un mois et d'un périmètre |
-| `employes_compter` | `EMPLOYEE_READ` | Indicateurs de la vue Analytique Employés ; aucun salaire |
-| `employes_rechercher` | `EMPLOYEE_READ` | 20 fiches au plus, sans CIN ni date de naissance ; salaire seulement avec `PAIE_READ` |
-| `employes_sorties` | `EMPLOYEE_READ` | Départs d'un mois de paie, par motif ; 20 noms au plus |
-| `chantier_fiche` | `CHANTIER_READ` | 5 chantiers au plus : identifiant, code, désignation, statut |
+Chaque outil MCP exige en plus la permission de son domaine, revérifiée à chaque appel ; le catalogue complet (arguments, données, vues) est dans [ia.md](../ia.md#catalogue-mcp). Le salaire suit `PAIE_READ` comme dans l'API ; aucune écriture n'est exposée.
 
 ## Endpoints d'administration
 

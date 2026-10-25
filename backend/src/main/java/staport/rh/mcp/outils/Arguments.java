@@ -43,6 +43,17 @@ public final class Arguments {
         }).distinct().toList();
     }
 
+    public Optional<Long> identifiant(String nom) {
+        Object valeur = valeurs.get(nom);
+        if (valeur == null) {
+            return Optional.empty();
+        }
+        if (valeur instanceof Number nombre && nombre.longValue() > 0 && nombre.doubleValue() == nombre.longValue()) {
+            return Optional.of(nombre.longValue());
+        }
+        throw OutilLecture.invalide("« " + nom + " » doit être un identifiant entier positif.");
+    }
+
     public Optional<String> texte(String nom) {
         Object valeur = valeurs.get(nom);
         return valeur == null || valeur.toString().isBlank() ? Optional.empty() : Optional.of(valeur.toString().trim());

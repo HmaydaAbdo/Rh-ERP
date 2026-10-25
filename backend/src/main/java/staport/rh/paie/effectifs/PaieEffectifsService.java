@@ -6,6 +6,7 @@ import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.paie.repositories.EffectifBulletinProjection;
 import staport.rh.paie.repositories.PaieRepository;
+import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ import java.util.TreeMap;
  * comparaisons d'un mois au précédent ne s'expriment pas en JPQL.
  */
 @Service
-public class PaieEffectifsService {
+public class PaieEffectifsService implements IPaieEffectifsService {
 
     private final PaieRepository repository;
     private final IEmployeeService employeeService;
@@ -31,6 +32,7 @@ public class PaieEffectifsService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<EffectifMoisDto> tendances(EffectifsCriteria criteres) {
         // Mois -> employé -> chantier du mois, pour les seuls bulletins du périmètre.
         Map<YearMonth, Map<Long, Long>> parMois = new TreeMap<>();

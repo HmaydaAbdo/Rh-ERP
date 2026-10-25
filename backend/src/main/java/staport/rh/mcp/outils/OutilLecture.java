@@ -84,6 +84,10 @@ public abstract class OutilLecture {
             audit.lectureRefusee(nom(), "ARGUMENT_INVALIDE");
             return erreur(invalide.getMessage());
         } catch (RuntimeException panne) {
+            if (estIntrouvable(panne)) {
+                audit.lectureRefusee(nom(), "INTROUVABLE");
+                return erreur("Élément introuvable pour " + nom() + ".");
+            }
             log.error("Outil MCP {} en échec", nom(), panne);
             audit.lectureRefusee(nom(), "ERREUR_INTERNE");
             return erreur("L'outil " + nom() + " n'a pas pu répondre.");
@@ -94,6 +98,12 @@ public abstract class OutilLecture {
                 .structuredContent(resultat.donnees())
                 .addTextContent(resultat.synthese())
                 .build();
+    }
+
+    /** Les domaines signalent un identifiant inconnu par une exception « …NotFound… » ou « …Introuvable… ». */
+    private static boolean estIntrouvable(RuntimeException panne) {
+        String nom = panne.getClass().getSimpleName();
+        return nom.contains("NotFound") || nom.contains("Introuvable") || nom.startsWith("Unknown");
     }
 
     private static McpSchema.CallToolResult erreur(String message) {
