@@ -61,8 +61,7 @@ services:
 
   backup:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG est obligatoire}
-    # Optionnel en local ; activer explicitement en production avec --profile backup.
-    profiles: ["backup"]
+    # Démarré par défaut, comme tous les services : `docker compose pull && docker compose up -d` suffit.
     restart: unless-stopped
     depends_on:
       postgres:
@@ -99,8 +98,7 @@ services:
 
   postgres-log-retention:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
-    # La rétention est activée avec le profil backup déjà requis en production.
-    profiles: ["backup"]
+    # Rétention des journaux pgAudit, démarrée par défaut avec la sauvegarde.
     restart: unless-stopped
     user: postgres
     entrypoint: ["/usr/local/bin/pgaudit-retention-scheduler"]
@@ -153,10 +151,11 @@ services:
       SMTP_AUTH: ${SMTP_AUTH}
       SMTP_STARTTLS: ${SMTP_STARTTLS}
       MAIL_FROM: ${MAIL_FROM}
-      # Assistant IA (docs/ia.md, § 5) : route /mcp et jeton agent RS256. Clés obligatoires si MCP_ENABLED=true.
-      MCP_ENABLED: ${MCP_ENABLED:-false}
-      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:-}
-      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:-}
+      # Assistant IA (docs/ia.md, § 5) : route /mcp et jeton agent RS256, actifs par défaut. MCP_ENABLED=false
+      # les coupe ; la clé et son identifiant restent alors exigés pour garder un seul .env complet.
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:?MCP_JWT_PRIVATE_KEY est obligatoire (voir .env.example)}
+      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:?MCP_JWT_KEY_ID est obligatoire}
       MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
       MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
       # Journaux JSON sur la console et dans des archives journalières (30 jours, UTC).
@@ -194,7 +193,7 @@ services:
         condition: service_healthy
     networks:
       - web-net
-      # Relais /ia/agui vers le service IA (nginx.conf) ; inutilisé sans le profil « ia ».
+      # Relais /ia/agui vers le service IA (nginx.conf).
       - assistant-net
     environment:
       # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
@@ -214,20 +213,18 @@ services:
       start_period: 5s
       retries: 3
 
-  # --- IA (profil « ia », voir docs/ia.md) -------------------------------------------------------
-  # Inactifs sans `--profile ia` (ou COMPOSE_PROFILES=ia) : la pile ERP fonctionne sans eux. Chaque
-  # conteneur ne reçoit que ses propres variables du .env racine unique.
+  # --- IA (voir docs/ia.md) ---------------------------------------------------------------------
+  # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
+  # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.
   litellm-db:
     # Même image PostgreSQL que l'ERP, instance et volume séparés : clés virtuelles, budgets et
     # journaux de dépense de LiteLLM uniquement, aucune donnée métier.
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
-    profiles: ["ia"]
     restart: unless-stopped
     environment:
       POSTGRES_DB: litellm
       POSTGRES_USER: litellm
-      # Vide : PostgreSQL refuse de démarrer.
-      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:-}
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}
     volumes:
       - litellm_db_data:/var/lib/postgresql
     networks:
@@ -240,16 +237,15 @@ services:
 
   litellm:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
-    profiles: ["ia"]
     restart: unless-stopped
     depends_on:
       litellm-db:
         condition: service_healthy
     environment:
       # Sans clé master, sel ou base, l'image refuse de démarrer (litellm/entrypoint.sh).
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
-      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-}
-      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:-}@litellm-db:5432/litellm
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?LITELLM_SALT_KEY est obligatoire}
+      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}@litellm-db:5432/litellm
       # Une clé vide désactive ses modèles au démarrage (litellm/filtrer_config.py) : LiteLLM ne bascule
       # pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même tag.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -269,18 +265,39 @@ services:
       # Loopback uniquement : administration et tests depuis le serveur, jamais exposé à Internet.
       - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
 
-  ia:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-ia:${IA_IMAGE_TAG:-latest}
-    profiles: ["ia"]
-    restart: unless-stopped
+  litellm-cles:
+    # Tâche ponctuelle : enregistre les clés virtuelles du .env dans une base LiteLLM neuve (litellm/enregistrer_cles.py),
+    # puis s'arrête. Une clé déjà connue est laissée telle quelle ; `up -d` suffit, sans script à lancer à la main.
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
+    restart: "no"
     depends_on:
       litellm:
         condition: service_healthy
+    entrypoint: ["python3", "/usr/local/bin/erp-rh-enregistrer-cles"]
+    command: []
     environment:
-      # Interrupteur global de l'IA ; une variable obligatoire manquante empêche le démarrage.
-      IA_ENABLED: ${IA_ENABLED:-false}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
+      LITELLM_GATEWAY_URL: http://litellm:4000/v1/chat/completions
+      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire}
+      LITELLM_TEST_API_KEY: ${LITELLM_TEST_API_KEY:-}
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ia-net
+
+  ia:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-ia:${IA_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      litellm-cles:
+        condition: service_completed_successfully
+    environment:
+      # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
+      IA_ENABLED: ${IA_ENABLED:-true}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
-      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:-}
+      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire (clé virtuelle LiteLLM, litellm/README.md)}
       # Jeton agent et route /mcp du backend, par le réseau ia-net.
       IA_ERP_API_URL: http://backend:8080
     read_only: true
