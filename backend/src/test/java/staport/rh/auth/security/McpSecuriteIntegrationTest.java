@@ -6,26 +6,16 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.PlainHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import staport.rh.audit.support.AuditIntegrationTestBase;
 import staport.rh.auth.entities.Permission;
-import staport.rh.auth.entities.Role;
 import staport.rh.auth.entities.Utilisateur;
-import staport.rh.auth.repositories.PermissionRepository;
-import staport.rh.auth.repositories.RoleRepository;
-import staport.rh.auth.repositories.UtilisateurRepository;
+import staport.rh.support.ClesAgentDeTest;
+import staport.rh.support.McpIntegrationTestBase;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -36,9 +26,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,50 +39,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * T4 (docs/ia.md) : jeton délégué RS256, JWKS et route {@code /mcp} protégée, sur l'application complète et un vrai
  * serveur HTTP (la servlet MCP n'est pas atteinte par MockMvc). Chaque refus de la liste du design est prouvé ici.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class McpSecuriteIntegrationTest extends AuditIntegrationTestBase {
+class McpSecuriteIntegrationTest extends McpIntegrationTestBase {
 
-    private static final RSAKey CLE_COURANTE = genererCle("cle-courante");
-    private static final RSAKey CLE_PRECEDENTE = genererCle("cle-precedente");
-    private static final RSAKey CLE_INCONNUE = genererCle("cle-courante");
+    private static final RSAKey CLE_INCONNUE = ClesAgentDeTest.generer("cle-courante");
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    @DynamicPropertySource
-    static void activerMcp(DynamicPropertyRegistry proprietes) {
-        proprietes.add("security.mcp.enabled", () -> "true");
-        proprietes.add("security.mcp.private-key", () -> base64Prive(CLE_COURANTE));
-        proprietes.add("security.mcp.key-id", CLE_COURANTE::getKeyID);
-        proprietes.add("security.mcp.previous-public-key", () -> base64Public(CLE_PRECEDENTE));
-        proprietes.add("security.mcp.previous-key-id", CLE_PRECEDENTE::getKeyID);
-    }
-
-    @LocalServerPort
-    private int port;
     @Autowired
     private JwtService jwtService;
-    @Autowired
-    private UtilisateurRepository utilisateurs;
-    @Autowired
-    private RoleRepository roles;
-    @Autowired
-    private PermissionRepository permissions;
-    @Autowired
-    private PasswordEncoder encodeur;
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-    private final List<Long> utilisateursCrees = new ArrayList<>();
-    private final List<Long> rolesCrees = new ArrayList<>();
     private Utilisateur agent;
 
     @BeforeEach
     void creerUtilisateurAgent() {
         agent = creerUtilisateur(Set.of("IA_UTILISER", "EQUIPE_READ"), true);
-    }
-
-    @AfterEach
-    void supprimerDonnees() {
-        utilisateursCrees.forEach(utilisateurs::deleteById);
-        rolesCrees.forEach(roles::deleteById);
     }
 
     // --- émission du jeton et JWKS ---
@@ -342,26 +300,6 @@ class McpSecuriteIntegrationTest extends AuditIntegrationTestBase {
         return jeton.serialize();
     }
 
-    private Utilisateur creerUtilisateur(Set<String> codes, boolean actif) {
-        String suffixe = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        Role role = new Role();
-        role.setNom("IA-TEST-" + suffixe);
-        role.setDescription("Rôle de test T4");
-        role.setPermissions(new HashSet<>(permissions.findByCodeIn(List.copyOf(codes))));
-        role = roles.saveAndFlush(role);
-        rolesCrees.add(role.getId());
-
-        Utilisateur utilisateur = new Utilisateur();
-        utilisateur.setUsername("ia-" + suffixe);
-        utilisateur.setEmail("ia-" + suffixe + "@example.test");
-        utilisateur.setMotDePasseHash(encodeur.encode("mot-de-passe-de-test"));
-        utilisateur.setActif(actif);
-        utilisateur.setRoles(new HashSet<>(Set.of(role)));
-        utilisateur = utilisateurs.saveAndFlush(utilisateur);
-        utilisateursCrees.add(0, utilisateur.getId());
-        return utilisateur;
-    }
-
     private void retirerPermissionIa(Utilisateur utilisateur) {
         modifier(utilisateur, u -> u.getRoles().forEach(role ->
                 role.getPermissions().removeIf(p -> p.getCode().equals("IA_UTILISER"))));
@@ -388,29 +326,5 @@ class McpSecuriteIntegrationTest extends AuditIntegrationTestBase {
     private long entreesJournal(String action, Long utilisateurId) {
         return jdbc.queryForObject("SELECT count(*) FROM audit_journal WHERE action = ? AND utilisateur_id = ?",
                 Long.class, action, utilisateurId);
-    }
-
-    static RSAKey genererCle(String kid) {
-        try {
-            return new RSAKeyGenerator(AgentSigningKeys.TAILLE_MINIMALE).keyID(kid).generate();
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    static String base64Prive(RSAKey cle) {
-        try {
-            return Base64.getEncoder().encodeToString(cle.toPrivateKey().getEncoded());
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static String base64Public(RSAKey cle) {
-        try {
-            return Base64.getEncoder().encodeToString(cle.toPublicKey().getEncoded());
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

@@ -29,6 +29,7 @@ public class OutilIdentite {
         McpSchema.Tool outil = McpSchema.Tool.builder(NOM, entree)
                 .description("Identité et droits effectifs de l'utilisateur pour qui l'assistant agit")
                 .outputSchema(sortie)
+                .annotations(new McpSchema.ToolAnnotations(null, true, false, true, false, null))
                 .build();
         return new McpStatelessServerFeatures.SyncToolSpecification(outil, (contexte, requete) -> appeler(contexte));
     }

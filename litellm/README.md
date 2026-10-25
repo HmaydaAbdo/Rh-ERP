@@ -40,17 +40,20 @@ docker compose --profile ia up -d litellm-db litellm
 docker compose --profile ia logs -f litellm
 ```
 
-Créer la clé virtuelle d'ERP-RH (une fois), puis la placer dans `IA_LITELLM_API_KEY` du `.env` :
+Les valeurs des clés virtuelles sont déjà dans le `.env` racine (`IA_LITELLM_API_KEY`, `LITELLM_TEST_API_KEY`).
+Une fois la passerelle prête, les enregistrer (une fois ; relancer ne change rien) :
 
 ```bash
-curl -s http://127.0.0.1:4000/key/generate -H "Authorization: Bearer <LITELLM_MASTER_KEY>" -H "Content-Type: application/json" -d '{"key_alias":"erp-rh-ia","models":["ai-gateway"],"rpm_limit":60,"metadata":{"tags":["!eval"]}}'
+python litellm/enregistrer_cles.py
 ```
 
-Clé de test (accès à `ai-gateway` et `ai-gateway-selftest`), à placer dans `LITELLM_TEST_API_KEY` :
+| Variable | Clé | Droits |
+|---|---|---|
+| `IA_LITELLM_API_KEY` | `erp-rh-ia` | `ai-gateway` seulement, `metadata.tags: ["!eval"]`, 60 requêtes/min |
+| `LITELLM_TEST_API_KEY` | `smoke-tests` | `ai-gateway` et `ai-gateway-selftest` (tests de `test_providers.py`) |
 
-```bash
-curl -s http://127.0.0.1:4000/key/generate -H "Authorization: Bearer <LITELLM_MASTER_KEY>" -H "Content-Type: application/json" -d '{"key_alias":"smoke-tests","models":["ai-gateway","ai-gateway-selftest"]}'
-```
+Pour une nouvelle valeur, la générer (`python -c "import secrets;print('sk-'+secrets.token_hex(24))"`), la placer
+dans le `.env`, puis relancer le script ; supprimer l'ancienne clé dans l'interface LiteLLM.
 
 ## Tester
 
