@@ -28,8 +28,7 @@ Nginx du serveur n'a été modifiée ; HTTPS reste suivi dans `TODO.md`.
 
 Le déploiement restera manuel par un opérateur autorisé : il n'y a pas d'environnement de staging et
 aucun déploiement continu via GitHub Actions n'est souhaité. Le propriétaire a choisi de suivre le tag
-`latest` pour les quatre images Compose, après réussite de la CI sur `main`. Sur le serveur, le `.env`
-doit contenir `COMPOSE_PROFILES=backup` afin que `docker compose pull` et `docker compose up -d`
-incluent les services de sauvegarde et de rétention pgAudit sans option répétée. Cette configuration ne lance pas une
-restauration. La décision de tag et ses conséquences sont décrites dans [`ADR 0004`](adr/0004-production-latest-tag.md)
+`latest` pour les six images Compose, après réussite de la CI sur `main`. Sur le serveur, `docker compose pull`
+et `docker compose up -d` incluent tous les services, sauvegarde, rétention pgAudit et IA compris, sans profil ni
+option (depuis le 2026-10-26). Cette configuration ne lance pas une restauration. La décision de tag et ses conséquences sont décrites dans [`ADR 0004`](adr/0004-production-latest-tag.md)
 et [`deployment.md`](deployment.md). Aucun secret n'est consigné dans ce fichier.

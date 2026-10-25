@@ -38,16 +38,18 @@ section « Passerelle de modèles ».
 
 ## Démarrer
 
-Les services `litellm-db`, `litellm` et `ia` appartiennent au profil Compose `ia` du
-`docker-compose.yml` racine ; la pile ERP n'en dépend pas.
+Les services `litellm-db`, `litellm`, `litellm-cles` et `ia` démarrent par défaut avec le reste du
+`docker-compose.yml` racine, sans profil ; la pile ERP n'en dépend pas.
 
 ```bash
-docker compose --profile ia up -d litellm-db litellm
-docker compose --profile ia logs -f litellm
+docker compose pull && docker compose up -d
+docker compose logs -f litellm
 ```
 
-Les valeurs des clés virtuelles sont déjà dans le `.env` racine (`IA_LITELLM_API_KEY`, `LITELLM_TEST_API_KEY`).
-Une fois la passerelle prête, les enregistrer (une fois ; relancer ne change rien) :
+Les valeurs des clés virtuelles sont dans le `.env` racine (`IA_LITELLM_API_KEY`, `LITELLM_TEST_API_KEY`). La tâche
+ponctuelle `litellm-cles` les enregistre à chaque `up -d` dès que la passerelle est prête, puis s'arrête en
+`Exited (0)` ; une clé déjà connue est laissée telle quelle (`[DÉJÀ]` dans `docker compose logs litellm-cles`).
+Hors Compose, contre une passerelle d'essai, le même script se lance à la main :
 
 ```bash
 python litellm/enregistrer_cles.py
