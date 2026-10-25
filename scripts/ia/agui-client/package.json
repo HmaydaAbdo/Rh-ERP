@@ -11,6 +11,9 @@
   "dependencies": {
     "@ag-ui/client": "1.0.3"
   },
+  "overrides": {
+    "zod": "4.6.7"
+  },
   "devDependencies": {
     "@types/node": "24.10.0",
     "typescript": "6.0.3"

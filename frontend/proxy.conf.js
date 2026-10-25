@@ -8,6 +8,10 @@
 // Le proxy de production est nginx.conf et utilise le réseau Docker interne : il ne lit pas ce fichier.
 const target = process.env.BACKEND_URL || 'http://localhost:5001';
 
+// Assistant RH : /ia/* vers le service IA (port hôte publié par Compose, IA_PORT, 5003 par défaut). Même chemin qu'en production
+// (nginx.conf) : le navigateur parle à sa propre origine, sans CORS. Flux SSE relayé tel quel.
+const cibleIa = process.env.IA_URL || `http://localhost:${process.env.IA_PORT || lireDansEnv('IA_PORT') || '5003'}`;
+
 const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/parametres', '/auth', '/users', '/roles', '/permissions', '/logs'];
 
 // Imagerie satellite de la carte : même relais que nginx.conf (carte-satellite.conf.template). La clé ArcGIS est ajoutée
@@ -50,6 +54,12 @@ function relaisSatellite(relais, origine, chemin, jeton) {
 }
 
 module.exports = [
+  {
+    context: ['/ia/'],
+    target: cibleIa,
+    changeOrigin: true,
+    rewrite: (url) => url.replace(/^\/ia/, '')
+  },
   relaisSatellite(
     'satellite',
     'https://ibasemaps-api.arcgis.com',

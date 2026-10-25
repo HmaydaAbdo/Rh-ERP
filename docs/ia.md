@@ -90,6 +90,16 @@ que ce profil n'est pas activé. Les checkpoints durables LangGraph arrivent ave
 **Vues pilotées (ViewSpec).** Un outil renvoie, avec ses données, une description de vue : domaine,
 vue, filtres, période, niveau de parcours. Schéma défini une fois (Pydantic → schéma JSON → types
 Angular), validé des deux côtés ; Angular la traduit en route connue et ses gardes s'appliquent.
+**L'assistant ouvre lui-même la vue de sa réponse**, filtres appliqués, une fois la réponse vérifiée
+(décision du 2026-10-25) : liste blanche côté client, gardes de route respectées, retour à l'écran
+précédent en un clic, valeurs citées surlignées dans la vue
+([règles](../conventions/agent-ui.md#pilotage-des-vues-existantes)).
+
+**Assistant RH (T8).** Barre de commande translucide au repos (`Ctrl K`), discussion ancrée à droite
+dès la première question, comme un chat d'assistant : pour chaque réponse, un bloc repliable
+d'étapes et d'outils (déplié pendant le travail), la réponse vérifiée avec son chiffre principal,
+puis la vue ouverte et ses filtres. Plein écran sur téléphone, thème clair et sombre, mouvement
+réduit respecté. Prototype de référence : [maquette-assistant.html](ia/maquette-assistant.html).
 
 **Espace IA immersif.** Plein écran, ouvert depuis le panneau : la conversation à gauche, à droite
 une scène composée par l'agent en **A2UI** — indicateurs, graphiques, tableaux, fiches et sources,
@@ -140,7 +150,7 @@ pris en charge ; chaque surface a un repli texte.
 | T5 — Outils de lecture | Indicateurs de paie, recherche/comptage d'employés, entrées et sorties, fiche chantier ; ViewSpec ; projection salaire | Tests de contrat, refus et masquage | ✅ |
 | T6 — Graphe et exactitude | Graphe LangGraph, vérificateur de chiffres, jeu de référence synthétique | Exactitude mesurée et rapportée | ✅ |
 | T7 — AG-UI | Point d'entrée AG-UI du service ; événements d'outils et de mascotte ; la confirmation (interruption AG-UI 1.0 et reprise) arrive avec la première écriture et ses checkpoints (J6) | Flux réel testé avec un client AG-UI | ✅ |
-| T8 — Panneau Angular | Intégration AG-UI LangGraph officielle côté service ; panneau en streaming, sources, bouton « Ouvrir la vue » | Parcours vérifié au navigateur | 🟦 |
+| T8 — Assistant Angular | Intégration AG-UI LangGraph officielle côté service ; assistant immersif en streaming (barre de commande, discussion, étapes repliables), ouverture automatique de la vue filtrée, valeurs citées surlignées | Parcours vérifié au navigateur | ✅ |
 | T9 — Démonstration J1 | Navigateur → agent → MCP → Spring sur base synthétique | Démonstration présentée au propriétaire | ⬜ |
 
 ### Journal
@@ -158,6 +168,7 @@ pris en charge ; chaque surface a un repli texte.
 | 2026-10-25 | Les 3 abstentions à tort corrigées. Masse globale et qualité de paie : la période « 3260-02 » était lue comme un code de chantier ; la consigne système et celle du ciblage disent désormais qu'une valeur AAAA-MM est une période de paie, et la description du domaine `paie` cite les bulletins sans équipe, chantier ou fonction. Salaire : l'employé synthétique n'avait pas de salaire (l'import de paie le renseigne, ADR 0010), l'agent avait raison ; les données de test le renseignent, et l'évaluation signale « vérité absente des données synthétiques » au lieu d'imputer l'échec à l'agent. Jeton d'évaluation porté à 1 h (test seulement ; le paramètre reste à 15 min) : un run de 18 min finissait en 401. **Évaluation : 23/24** (run complet 15/15 cas joués, puis 8/9 cas rejoués après l'expiration du jeton et le quota Cloudflare du jour) ; abstentions 2/3, refus 1/1, réponses 20/20 ; seul échec : un délai fournisseur (408). Latences élevées ce jour-là (p50 ≈ 40 s) : quotas gratuits du jour épuisés par les runs précédents, bascules en chaîne. |
 | 2026-10-25 | **T7 terminée.** `POST /agui` (`ag-ui-protocol` 1.0.0) : le jeton de connexion est échangé auprès de Spring contre le jeton agent, refus HTTP avant tout flux ; étapes, outils, réponse vérifiée, `com.staport.answer.v1` et `com.staport.mascot.state.v1` ; panne → `RUN_ERROR` générique ; déconnexion → run annulé et session MCP fermée. Le graphe publie sa progression (`Agent.derouler`, flux `custom` de LangGraph). 12 tests de la route (49 au total). Flux réel `FluxAgUiIntegrationTest` avec le client officiel `@ag-ui/client` 1.0.3 (`scripts/ia/agui-client`) : réponse vérifiée (3 000 MAD attendus), arrêt par le client sans événement serveur tardif, jeton invalide refusé — 3/3. Jeton de connexion inchangé en production (15 min) : il ne sert qu'au début du run, le jeton agent (5 min) couvre un run borné. Confirmation (interruption AG-UI) reportée à J6 avec les checkpoints. |
 | 2026-10-25 | T8, côté service : le flux AG-UI passe par l'intégration officielle `ag-ui-langgraph` 0.0.47 ([ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)). Le graphe porte la conversation en messages LangChain (seule clé de sortie), signale outils, mascotte et réponse par événements personnalisés et émet le texte vérifié depuis le nouveau nœud `conclure`. Frontière de sécurité dans `agui.py` : ni `RAW` ni `rawEvent` (ils exposaient consignes et données), `RUN_ERROR` générique, échos `manually_emit_*` retirés. Checkpointer en mémoire neuf par run, liste blanche msgpack. 49 tests verts ; flux réel avec `@ag-ui/client` 1.0.3 : 3/3. |
+| 2026-10-25 | **T8 terminée.** Assistant immersif dans Angular (`core/assistant`) : client officiel `@ag-ui/client` 1.0.3 (`zod` forcé en 4.6.7, faille GHSA-mrhx-c7xc-m3w5 du `zod` 3 écartée, flux réel validé), barre `Ctrl K`, discussion avec étapes et outils repliables, réponse vérifiée, **ouverture automatique de la vue** (liste blanche, gardes, « Revenir ») et valeurs citées surlignées. `/ia/agui` relayé par `proxy.conf.js` (dev) et nginx (réseau Compose `assistant-net`, frontend et service IA seulement ; limite 20 questions/min). Jetons `--assistant-*` dans les deux thèmes. 21 tests unitaires, 2 parcours e2e (flux AG-UI simulé, axe) ; vérifié au navigateur sur le banc `BancAssistantTest` (données fictives) : question sur un chantier, vue Paie · Analytique ouverte avec période et chantier, masse salariale surlignée, retour à l'écran précédent. |
 
 ## 8. État technique
 

@@ -125,6 +125,19 @@ traduit en route et paramètres déjà connus de l'application, applique ses gar
 permissions, puis affiche la vue partagée habituelle. Une description invalide ou inconnue est
 ignorée avec un message ; elle n'accorde aucun droit et ne déclenche aucune action métier.
 
+Une application peut laisser l'assistant **ouvrir lui-même** la vue de sa réponse, filtres appliqués,
+plutôt que de proposer un bouton (choix d'ERP-RH validé le 2026-10-25). Conditions :
+
+* la description passe par une liste blanche côté client (modules, vues, paramètres et leur format) ;
+  tout élément inconnu ou mal formé annule l'ouverture ;
+* l'ouverture n'a lieu qu'après la réponse vérifiée, jamais sur une abstention, une erreur ou un run
+  arrêté ;
+* la navigation passe par le routeur : gardes de droits et de saisie non enregistrée s'appliquent ;
+  un refus est affiché (« vue non ouverte ») avec une nouvelle tentative possible ;
+* l'écran précédent reste accessible en un clic (« Revenir ») ;
+* la mise en évidence des valeurs citées est déterministe (valeur identique, nombre isolé, jamais
+  approchée) et retirée au retour.
+
 ## Catalogue borné et composants du design system
 
 Toute proposition d'interface passe par un catalogue versionné côté client, qu'elle utilise des
@@ -221,6 +234,10 @@ téléphone et sans masquer une action métier en cours. La maquette, les règle
 parcours sont validés avant réalisation. Les citations et les liens permettent de revenir aux
 sources autorisées. Une mascotte ou une surface A2UI peut compléter ce parcours si son adoption est
 validée. Une vue immersive nécessite un besoin distinct ; elle n'est pas créée par anticipation.
+Pour ERP-RH, ce besoin est validé (2026-10-25) : barre de commande au repos (`Ctrl K`), discussion
+ancrée sur le côté, étapes et outils de chaque réponse dans un bloc repliable (déplié pendant le
+travail), réponse vérifiée, ouverture de la vue et mise en évidence des valeurs citées ; plein écran
+sur téléphone. Les surfaces A2UI et la mascotte Rive restent des extensions à valider (J4).
 
 À la réception d'une interruption (bouton arrêter, nouvelle demande ou fermeture explicite) :
 
