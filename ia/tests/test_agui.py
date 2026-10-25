@@ -11,8 +11,8 @@ from ag_ui.core import EventType, RunAgentInput, UserMessage
 from doubles import ModeleScripte, OutilsSimules, appel, ok
 from fastapi.testclient import TestClient
 
-from erp_rh_ia.agent import Agent
-from erp_rh_ia.agui import ERREUR_PUBLIQUE, EVENEMENT_MASCOTTE, EVENEMENT_REPONSE, evenements
+from erp_rh_ia.agent import EVENEMENT_MASCOTTE, EVENEMENT_REPONSE, SYSTEME, Agent
+from erp_rh_ia.agui import ERREUR_PUBLIQUE, evenements
 from erp_rh_ia.app import creer_app
 from erp_rh_ia.config import Settings
 from erp_rh_ia.modele import Brouillon
@@ -101,17 +101,27 @@ def test_un_run_complet_suit_le_contrat_ag_ui() -> None:
     types = [e["type"] for e in evenements_recus]
     assert types[0] == EventType.RUN_STARTED and types[-1] == EventType.RUN_FINISHED
     assert EventType.RUN_ERROR not in types
-    # Outil annoncé, arguments, fin, puis résultat, dans cet ordre.
+    # Outil annoncé, arguments, fin, dans cet ordre ; son résultat arrive dans l'instantané des messages.
     outil = [t for t in types if t.startswith("TOOL_CALL")]
-    assert outil == ["TOOL_CALL_START", "TOOL_CALL_ARGS", "TOOL_CALL_END", "TOOL_CALL_RESULT"]
+    assert outil == ["TOOL_CALL_START", "TOOL_CALL_ARGS", "TOOL_CALL_END"]
     debut = next(e for e in evenements_recus if e["type"] == "TOOL_CALL_START")
     assert debut["toolCallName"] == "paie_indicateurs"
-    # Étapes : chacune ouverte puis fermée, avant le texte.
+    # Étapes : un nœud du graphe à la fois, de « preparer » à « conclure », chacune ouverte puis fermée.
     etapes = [(e["type"], e["stepName"]) for e in evenements_recus if e["type"].startswith("STEP_")]
-    assert etapes[0] == ("STEP_STARTED", "cibler")
-    assert etapes[-1] == ("STEP_FINISHED", "verifier")
+    assert etapes[0] == ("STEP_STARTED", "preparer")
+    assert etapes[-1] == ("STEP_FINISHED", "conclure")
     assert sum(t == "STEP_STARTED" for t, _ in etapes) == sum(t == "STEP_FINISHED" for t, _ in etapes)
-    assert types.index("TEXT_MESSAGE_START") > types.index("STEP_FINISHED")
+    assert ("STEP_STARTED", "verifier") in etapes
+    assert types.index("TEXT_MESSAGE_START") > max(
+        i for i, e in enumerate(evenements_recus) if e.get("stepName") == "verifier"
+    )
+    # Conversation visible : question, appel, synthèse du résultat, réponse — jamais l'état interne.
+    instantane = [e for e in evenements_recus if e["type"] == "MESSAGES_SNAPSHOT"][-1]["messages"]
+    assert [m["role"] for m in instantane] == ["user", "assistant", "tool", "assistant"]
+    assert instantane[2]["content"] == "ok"
+    assert instantane[-1]["content"] == "En 2026-09 : masse 1 250 000,50 MAD."
+    assert "rawEvent" not in reponse.text and '"type":"RAW"' not in reponse.text
+    assert SYSTEME[:40] not in reponse.text and "echanges" not in reponse.text and "manually_emit" not in reponse.text
     # Texte vérifié en un seul message, puis méta-données de la réponse avec la vue Spring.
     texte = "".join(e["delta"] for e in evenements_recus if e["type"] == "TEXT_MESSAGE_CONTENT")
     assert texte == "En 2026-09 : masse 1 250 000,50 MAD."
@@ -197,7 +207,7 @@ async def test_un_client_qui_part_ferme_la_session_mcp() -> None:
     entree = RunAgentInput(
         thread_id="t1", run_id="r1", messages=[UserMessage(id="m1", content=QUESTION)], state={}, tools=[], context=[]
     )
-    flux = evenements(entree, QUESTION, _agent_masse(), acces.outils("jeton-agent"))
+    flux = evenements(entree, _agent_masse(), acces.outils("jeton-agent"))
 
     recus: list[str] = []
     async for evenement in flux:

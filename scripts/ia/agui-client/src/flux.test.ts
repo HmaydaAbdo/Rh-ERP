@@ -31,7 +31,11 @@ test("une question suit le cycle AG-UI jusqu'à la réponse vérifiée", { timeo
   assert.equal(types[0], "RUN_STARTED");
   assert.equal(types.at(-1), "RUN_FINISHED");
   assert.ok(!types.includes("RUN_ERROR"));
-  assert.ok(types.includes("TOOL_CALL_START") && types.includes("TOOL_CALL_RESULT"), "au moins un outil Spring");
+  assert.ok(types.includes("TOOL_CALL_START"), "au moins un outil Spring");
+  assert.ok(types.includes("MESSAGES_SNAPSHOT"));
+  assert.ok(!types.includes("RAW"));
+  // Le résultat d'outil (synthèse lisible) arrive dans la conversation reconstruite par le client.
+  assert.ok(newMessages.some((m) => m.role === "tool"), "résultat d'outil dans les messages");
   // Le client reconstruit lui-même le message assistant à partir des événements.
   const assistant = newMessages.filter((m) => m.role === "assistant" && typeof m.content === "string").at(-1);
   assert.ok(assistant && String(assistant.content).replaceAll(/\s/g, "").includes(attendu), String(assistant?.content));

@@ -13,6 +13,7 @@ dependencies = [
     "mcp",
     "langgraph",
     "ag-ui-protocol==1.0.0",
+    "ag-ui-langgraph==0.0.47",
 ]
 
 [dependency-groups]

@@ -1,62 +1,70 @@
-"""Point d'entrée AG-UI (docs/ia.md, T7) : une question en entrée, le run de l'agent en événements SSE.
+# ag-ui-langgraph ne publie pas de stubs : seules ces deux règles sont levées, et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
+"""Point d'entrée AG-UI (docs/ia.md, T7 et T8) : une question en entrée, le run de l'agent en événements SSE.
 
-Contrat (AG-UI 1.0, ``ag-ui-protocol``) :
+Le flux est produit par l'intégration officielle ``ag-ui-langgraph`` (``LangGraphAgent``) ; ce module n'ajoute que ce
+qu'elle ne fait pas : l'identité (jeton de connexion échangé auprès de Spring, refus HTTP avant tout flux), la session
+MCP du run et une frontière de sécurité sur les événements sortants :
 
-- ``RUN_STARTED`` puis, pour chaque nœud du graphe, ``STEP_STARTED``/``STEP_FINISHED`` (identifiants stables :
-  ``cibler``, ``choisir``, ``executer``, ``rediger``, ``verifier`` ; le client les traduit) ;
-- chaque outil : ``TOOL_CALL_START``/``ARGS``/``END`` puis ``TOOL_CALL_RESULT`` avec la synthèse lisible du résultat ;
-- la réponse **vérifiée** seulement (``TEXT_MESSAGE_*``) : aucun brouillon ni jeton du modèle n'est diffusé, le
-  vérificateur de chiffres passe avant ;
-- ``CUSTOM com.staport.answer.v1`` (abstention, motif, vue proposée) et ``CUSTOM com.staport.mascot.state.v1`` ;
-- ``RUN_FINISHED``, ou ``RUN_ERROR`` avec un message générique (aucune exception ni contenu interne).
+- aucun événement ``RAW`` ni copie ``rawEvent`` (ils porteraient l'état interne : consignes, données complètes) ;
+- ``RUN_ERROR`` remplacé par un message générique (l'intégration y recopie le texte de l'exception) ;
+- les échos ``CUSTOM manually_emit_*`` de l'intégration sont retirés ; ``com.staport.mascot.state.v1`` reçoit sa
+  séquence croissante et la corrélation du run.
 
-Le service ne garde pas d'historique (J1) : seule la dernière question de l'utilisateur est lue. Les outils déclarés
-par le client et l'état partagé sont ignorés. Une déconnexion du client annule le run et ferme la session MCP.
+Contrat vu par le client (AG-UI 1.0) : ``RUN_STARTED`` ; ``STEP_STARTED``/``STEP_FINISHED`` par nœud du graphe
+(``preparer``, ``cibler``, ``choisir``, ``executer``, ``rediger``, ``verifier``, ``conclure``) ; chaque outil
+``TOOL_CALL_START``/``ARGS``/``END`` ; la réponse **vérifiée** seulement (``TEXT_MESSAGE_*``) ;
+``CUSTOM com.staport.answer.v1`` (abstention, motif, vue) ; ``STATE_SNAPSHOT``/``MESSAGES_SNAPSHOT`` (conversation
+visible : question, appels, synthèse des résultats, réponse) ; ``RUN_FINISHED``. Seule la dernière question est lue
+(pas d'historique en J1) ; outils et état envoyés par le client sont ignorés. Une déconnexion du client annule le run
+et ferme la session MCP.
 """
 
-import json
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Literal, Protocol
-from uuid import uuid4
+from typing import Any, Literal, Protocol, cast
 
 import httpx
 from ag_ui.core import (
     BaseEvent,
     CustomEvent,
+    EventType,
     RunAgentInput,
     RunErrorEvent,
-    RunFinishedEvent,
     RunStartedEvent,
-    StepFinishedEvent,
-    StepStartedEvent,
-    TextMessageContentEvent,
-    TextMessageEndEvent,
-    TextMessageStartEvent,
-    ToolCallArgsEvent,
-    ToolCallEndEvent,
-    ToolCallResultEvent,
-    ToolCallStartEvent,
     UserMessage,
 )
 from ag_ui.encoder import EventEncoder
+from ag_ui_langgraph import LangGraphAgent
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from erp_rh_ia.agent import Agent, EtapeCommencee, OutilAppele, OutilTermine, ReponseAgent
+from erp_rh_ia.agent import EVENEMENT_MASCOTTE, Agent, Humeur
 from erp_rh_ia.outils import Outils, jeton_agent, ouvrir_outils
 
 journal = logging.getLogger(__name__)
 
 TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
+ECHOS_INTEGRATION = frozenset({"manually_emit_message", "manually_emit_tool_call", "manually_emit_state"})
 
-EVENEMENT_REPONSE = "com.staport.answer.v1"
-EVENEMENT_MASCOTTE = "com.staport.mascot.state.v1"
 
-Humeur = Literal["neutral", "attentive", "thinking", "searching", "found", "asking", "apologetic"]
+class _SansDetail(logging.Filter):
+    """L'intégration journalise l'exception d'un run en échec : on garde le message, jamais la trace ni son texte."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info:
+            nom = record.exc_info[0].__name__ if record.exc_info[0] else "Exception"
+            record.msg = f"{record.getMessage()} ({nom})"
+            record.args = None
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
+logging.getLogger("ag_ui_langgraph").addFilter(_SansDetail())
 
 
 class EtatMascotte(BaseModel):
@@ -66,14 +74,6 @@ class EtatMascotte(BaseModel):
     mood: Humeur
     action: Literal["idle"] = "idle"  # gestes et cibles A2UI avec l'Espace IA (J4)
     expiresInMs: int | None = Field(default=None, ge=0, le=10_000)
-
-
-class Reponse(BaseModel):
-    """Méta-données de la réponse pour le panneau : abstention et vue à proposer (ViewSpec de Spring)."""
-
-    abstention: bool
-    motif: str | None
-    vue: dict[str, Any] | None
 
 
 class AccesErp(Protocol):
@@ -101,64 +101,13 @@ def question_de(entree: RunAgentInput) -> str:
     return texte
 
 
-class Diffusion:
-    """Traduit la progression de l'agent en événements AG-UI, dans l'ordre et avec une séquence de mascotte."""
+class _Frontiere:
+    """Filtre et complète les événements de l'intégration avant qu'ils ne partent vers le navigateur."""
 
     def __init__(self, entree: RunAgentInput) -> None:
         self._entree = entree
         self._sequence = 0
-        self._etape: str | None = None
-
-    def debut(self) -> list[BaseEvent]:
-        return [
-            RunStartedEvent(thread_id=self._entree.thread_id, run_id=self._entree.run_id),
-            self.mascotte("thinking"),
-        ]
-
-    def etape(self, progression: EtapeCommencee) -> list[BaseEvent]:
-        evenements = self._fin_etape()
-        self._etape = progression.etape
-        evenements.append(StepStartedEvent(step_name=progression.etape))
-        return evenements
-
-    def appel(self, progression: OutilAppele) -> list[BaseEvent]:
-        appel = progression.appel
-        return [
-            self.mascotte("searching"),
-            ToolCallStartEvent(tool_call_id=appel.identifiant, tool_call_name=appel.nom),
-            ToolCallArgsEvent(tool_call_id=appel.identifiant, delta=json.dumps(appel.arguments, ensure_ascii=False)),
-            ToolCallEndEvent(tool_call_id=appel.identifiant),
-        ]
-
-    def resultat(self, progression: OutilTermine) -> list[BaseEvent]:
-        return [
-            ToolCallResultEvent(
-                message_id=str(uuid4()),
-                tool_call_id=progression.appel.identifiant,
-                content=progression.resultat.texte,
-                role="tool",
-            ),
-            self.mascotte("apologetic" if progression.resultat.refuse else "found"),
-        ]
-
-    def reponse(self, reponse: ReponseAgent) -> list[BaseEvent]:
-        message = str(uuid4())
-        meta = Reponse(abstention=reponse.abstention, motif=reponse.motif, vue=reponse.vue)
-        return [
-            *self._fin_etape(),
-            TextMessageStartEvent(message_id=message, role="assistant"),
-            TextMessageContentEvent(message_id=message, delta=reponse.texte),
-            TextMessageEndEvent(message_id=message),
-            CustomEvent(name=EVENEMENT_REPONSE, value=meta.model_dump()),
-            self.mascotte("apologetic" if reponse.abstention else "neutral"),
-            RunFinishedEvent(thread_id=self._entree.thread_id, run_id=self._entree.run_id),
-        ]
-
-    def erreur(self) -> list[BaseEvent]:
-        return [
-            self.mascotte("apologetic"),
-            RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE"),
-        ]
+        self.demarre = False
 
     def mascotte(self, humeur: Humeur) -> CustomEvent:
         self._sequence += 1
@@ -166,37 +115,55 @@ class Diffusion:
         correlation = {"com_staport": {"threadId": self._entree.thread_id, "runId": self._entree.run_id}}
         return CustomEvent(name=EVENEMENT_MASCOTTE, value=etat.model_dump(exclude_none=True), metadata=correlation)
 
-    def _fin_etape(self) -> list[BaseEvent]:
-        if self._etape is None:
-            return []
-        fin = StepFinishedEvent(step_name=self._etape)
-        self._etape = None
-        return [fin]
+    def filtrer(self, evenement: BaseEvent) -> BaseEvent | None:
+        if evenement.type == EventType.RAW:
+            return None
+        if evenement.type == EventType.RUN_STARTED:
+            self.demarre = True
+        if isinstance(evenement, CustomEvent):
+            if evenement.name in ECHOS_INTEGRATION:
+                return None
+            if evenement.name == EVENEMENT_MASCOTTE:
+                valeur: Any = evenement.value
+                humeur = cast(Humeur, valeur.get("mood", "neutral") if isinstance(valeur, dict) else "neutral")
+                return self.mascotte(humeur)  # une humeur inconnue est refusée par EtatMascotte
+        if evenement.raw_event is not None:
+            evenement = evenement.model_copy(update={"raw_event": None})
+        return evenement
+
+    def erreur(self) -> list[BaseEvent]:
+        debut: list[BaseEvent] = []
+        if not self.demarre:
+            debut.append(RunStartedEvent(thread_id=self._entree.thread_id, run_id=self._entree.run_id))
+        return [*debut, self.mascotte("apologetic"), RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE")]
+
+
+class _RunEnEchec(Exception):
+    """L'intégration a émis un RUN_ERROR : il est remplacé par l'erreur publique."""
 
 
 async def evenements(
-    entree: RunAgentInput, question: str, agent: Agent, session: AbstractAsyncContextManager[Outils]
+    entree: RunAgentInput, agent: Agent, session: AbstractAsyncContextManager[Outils]
 ) -> AsyncGenerator[BaseEvent]:
     """Le run complet en événements AG-UI ; toute panne, ouverture MCP comprise, devient un ``RUN_ERROR`` générique."""
-    diffusion = Diffusion(entree)
-    for evenement in diffusion.debut():
-        yield evenement
+    frontiere = _Frontiere(entree)
     try:
         async with session as outils:
-            async for progression in agent.derouler(question, outils):
-                if isinstance(progression, EtapeCommencee):
-                    lot = diffusion.etape(progression)
-                elif isinstance(progression, OutilAppele):
-                    lot = diffusion.appel(progression)
-                elif isinstance(progression, OutilTermine):
-                    lot = diffusion.resultat(progression)
-                else:
-                    lot = diffusion.reponse(progression)
-                for evenement in lot:
+            officiel = LangGraphAgent(
+                name="erp-rh",
+                graph=cast(Any, agent.graphe_pour_run()),  # typage de l'intégration : contexte None
+                config={"configurable": {"outils": outils}, "recursion_limit": 40},
+                emit_raw_events=False,
+            )
+            async for brut in officiel.run(entree):
+                if brut.type == EventType.RUN_ERROR:
+                    raise _RunEnEchec
+                evenement = frontiere.filtrer(brut)
+                if evenement is not None:
                     yield evenement
     except Exception as panne:  # le détail reste côté serveur, sans contenu RH
         journal.warning("Run %s en échec : %s", entree.run_id, type(panne).__name__)
-        for evenement in diffusion.erreur():
+        for evenement in frontiere.erreur():
             yield evenement
 
 
@@ -224,13 +191,15 @@ def routeur_agui(agent: Callable[[], Agent], acces: Callable[[], AccesErp], acti
         autorisation = requete.headers.get("authorization", "")
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
-        question = question_de(entree)
+        question_de(entree)
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
+        # Outils et état déclarés par le navigateur ne sont pas des capacités de l'agent : ignorés.
+        entree_serveur = entree.model_copy(update={"tools": [], "state": {}})
 
         async def flux() -> AsyncIterator[str]:
-            async for evenement in evenements(entree, question, agent(), erp.outils(jeton)):
+            async for evenement in evenements(entree_serveur, agent(), erp.outils(jeton)):
                 yield encodeur.encode(evenement)
 
         return StreamingResponse(
