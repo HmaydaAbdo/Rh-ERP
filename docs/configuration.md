@@ -122,7 +122,7 @@ le port 1025, valeur par défaut de `backend/.env.example`).
 
 ### Pile complète (production ou test de l'image de production)
 
-Voir [deployment.md](deployment.md) : `docker compose --profile backup pull && docker compose --profile backup up -d`.
+Voir [deployment.md](deployment.md) : `docker compose pull && docker compose up -d` (tous les services, sans profil).
 
 ### Tests
 

@@ -176,9 +176,8 @@ procédures propres à chaque opération dans `docs/deployment.md` avant toute a
 
 Le propriétaire n'utilisera pas SSH. Le déploiement manuel a été confirmé le 2026-10-16 : aucun staging
 ni déploiement automatisé vers le serveur. La production utilisera `latest` pour les quatre images
-après réussite des contrôles automatisés du projet (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)). Pour
-inclure automatiquement les services de sauvegarde et de rétention pgAudit, le `.env` de production doit contenir
-`COMPOSE_PROFILES=backup`. La revue de l'extrait Nginx outer a été faite ; les contrôles restants sont
+après réussite des contrôles automatisés du projet (voir [ADR 0004](docs/adr/0004-production-latest-tag.md)).
+`docker compose pull && docker compose up -d` inclut tous les services, sauvegarde et IA comprises, sans profil. La revue de l'extrait Nginx outer a été faite ; les contrôles restants sont
 détaillés ci-dessus.
 
 ## Performance — arbitrages et mesures à terminer

@@ -112,7 +112,7 @@ avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS`
 
 - Image multi-étapes, bases `python:3.13-slim` et `uv` épinglées par digest ; dépendances installées
   depuis `uv.lock` sans outils de développement ; utilisateur non privilégié `10001`.
-- Service Compose `ia` sous le profil `ia`, système de fichiers en lecture seule, aucune capacité,
+- Service Compose `ia` démarré par défaut (sans profil) après la tâche `litellm-cles`, système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
 - Variables dans le `.env` racine unique : `IA_ENABLED`, `IA_LITELLM_API_KEY` (clé virtuelle
   ERP-RH, `metadata.tags: ["!eval"]`) ; les URL de la passerelle et du backend sont fixées par Compose.

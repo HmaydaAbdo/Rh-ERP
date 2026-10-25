@@ -9,13 +9,15 @@ CI sont définis dans les conventions. Le propriétaire a demandé la revue loca
 Le lot harmonise les sélecteurs, la navigation et les synthèses Chantier sur la paie récente.
 Les README et skills de chaque domaine décrivent les règles courantes.
 
-**Chantier IA (2026-10-25)** : branche `claude/ia-doc-unique` (worktree `.claude/worktrees/ia-doc-unique`),
-livrée dans `main` par PR à la demande du propriétaire (J1, tâche T9). Tâches T1 à T8 de J1 faites : passerelle
-LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp` désactivée par
+**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la branche `claude/compose-tout-par-defaut`,
+`docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
+IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.
+Tâches T1 à T8 de J1 faites : passerelle
+LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
 `MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
 (évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
-Angular qui ouvre lui-même la vue filtrée de sa réponse. L'assistant n'apparaît qu'avec `IA_UTILISER`, le profil
-Compose `ia` et `IA_ENABLED=true`. Tout le chantier est suivi dans un seul document : [ia.md](../ia.md). Prochaine
+Angular qui ouvre lui-même la vue filtrée de sa réponse. L'assistant n'apparaît qu'avec `IA_UTILISER` et
+`IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un seul document : [ia.md](../ia.md). Prochaine
 action : J2 (périmètres par fiche de poste), après la démonstration J1 au propriétaire.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
