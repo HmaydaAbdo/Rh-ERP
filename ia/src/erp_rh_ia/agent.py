@@ -2,21 +2,33 @@
 # seules ces deux règles sont levées, et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 """Graphe de l'agent (docs/ia.md, T6) : préparer → cibler les domaines → choisir des outils ⇄ les exécuter → rédiger →
-vérifier les chiffres.
+vérifier les chiffres → conclure.
 
 Le ciblage (petit modèle, tag ``simple``) ne transmet au modèle que les outils des domaines utiles, aucun d'office ;
 s'il échoue, tout le catalogue part (masquer n'est pas un contrôle d'accès : Spring revérifie chaque appel).
 Explicite et borné : nombre de tours d'outils, d'appels et de rédactions plafonnés ; un refus d'autorisation n'est
 jamais retenté ; une réponse dont un nombre ne vient pas des outils est réécrite une fois puis remplacée par une
 abstention. Le graphe n'a pas de mémoire durable : chaque question est un run indépendant.
+
+AG-UI passe par l'intégration officielle ``ag-ui-langgraph`` : ``messages`` porte la conversation au format LangChain
+(seule la dernière question est lue) et c'est la seule clé de sortie, donc la seule que l'instantané d'état montre au
+navigateur. Les nœuds signalent appels d'outils, humeur de la mascotte et réponse par des événements LangChain
+personnalisés ; le texte n'est émis qu'une fois vérifié, par ``conclure``. Aucun appel de modèle ne passe par
+LangChain : aucun jeton de brouillon ne peut être diffusé.
 """
 
 import json
-from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, Literal, NotRequired, TypedDict, cast
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
+from uuid import uuid4
 
+from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 from pydantic import BaseModel
 
@@ -78,43 +90,32 @@ class ReponseAgent(BaseModel):
     domaines: list[str] | None = None  # None : ciblage indisponible, catalogue complet
 
 
-Etape = Literal["cibler", "choisir", "executer", "rediger", "verifier"]
-
-
-@dataclass(frozen=True)
-class EtapeCommencee:
-    etape: Etape
-
-
-@dataclass(frozen=True)
-class OutilAppele:
-    appel: AppelOutil
-
-
-@dataclass(frozen=True)
-class OutilTermine:
-    appel: AppelOutil
-    resultat: ResultatOutil
-
-
-Progression = EtapeCommencee | OutilAppele | OutilTermine | ReponseAgent
-"""Ce que ``derouler`` publie, dans l'ordre : étapes et outils pendant le run, puis la réponse vérifiée en dernier."""
+EVENEMENT_REPONSE = "com.staport.answer.v1"
+EVENEMENT_MASCOTTE = "com.staport.mascot.state.v1"
+Humeur = Literal["neutral", "attentive", "thinking", "searching", "found", "asking", "apologetic"]
 
 
 @dataclass(frozen=True)
 class Contexte:
-    outils: Outils
+    # Un ``Outils`` : typé Any parce qu'ag-ui-langgraph décrit le contexte en schéma JSON, ce qu'un Protocol n'a pas.
+    outils: Any
+    thread_id: str | None = None  # ajouté par ag-ui-langgraph, inutilisé
 
 
 class Entree(TypedDict):
-    question: str
+    messages: Annotated[list[AnyMessage], add_messages]
 
 
 class Etat(TypedDict):
-    """État d'un run ; les clés obligatoires sont posées par ``preparer``, les facultatives en cours de route."""
+    """État d'un run ; les clés obligatoires sont posées par ``preparer``, les facultatives en cours de route.
 
+    ``messages`` : conversation LangChain vue par le client ; ``echanges`` : conversation interne avec le modèle
+    (consignes et résultats complets des outils), jamais exposée.
+    """
+
+    messages: Annotated[list[AnyMessage], add_messages]
     question: str
-    messages: list[dict[str, Any]]
+    echanges: list[dict[str, Any]]
     catalogue: list[OutilDecrit]
     domaines: list[str] | None
     appels: list[AppelOutil]
@@ -133,70 +134,66 @@ class Agent:
     def __init__(self, modele: Modele, limites: Limites | None = None) -> None:
         self._modele = modele
         self._limites = limites or Limites()
-        graphe = StateGraph(Etat, input_schema=Entree, context_schema=Contexte)
+        graphe = StateGraph(Etat, input_schema=Entree, output_schema=Entree, context_schema=Contexte)
         graphe.add_node("preparer", self._preparer)
         graphe.add_node("cibler", self._cibler)
         graphe.add_node("choisir", self._choisir)
         graphe.add_node("executer", self._executer)
         graphe.add_node("rediger", self._rediger)
         graphe.add_node("verifier", self._verifier)
+        graphe.add_node("conclure", self._conclure)
         graphe.add_edge(START, "preparer")
         graphe.add_edge("preparer", "cibler")
         graphe.add_edge("cibler", "choisir")
         graphe.add_conditional_edges("choisir", self._apres_choix, ["executer", "rediger"])
         graphe.add_conditional_edges("executer", self._apres_execution, ["choisir", "rediger"])
         graphe.add_edge("rediger", "verifier")
-        graphe.add_conditional_edges("verifier", self._apres_verification, ["rediger", END])
+        graphe.add_conditional_edges("verifier", self._apres_verification, ["rediger", "conclure"])
+        graphe.add_edge("conclure", END)
+        self._constructeur = graphe
         self._graphe = graphe.compile()
 
-    async def repondre(self, question: str, outils: Outils) -> ReponseAgent:
-        reponse: ReponseAgent | None = None
-        async for progression in self.derouler(question, outils):
-            if isinstance(progression, ReponseAgent):
-                reponse = progression
-        if reponse is None:
-            raise RuntimeError("Run terminé sans réponse")  # derouler finit toujours par une réponse
-        return reponse
+    def graphe_pour_run(self) -> CompiledStateGraph[Etat, Contexte, Entree, Entree]:
+        """Graphe d'un run AG-UI : ag-ui-langgraph exige un checkpointer ; un neuf par run, en mémoire, oublié après."""
+        # Seuls nos types d'état sont relus depuis le checkpoint (liste blanche explicite de LangGraph).
+        serde = JsonPlusSerializer(
+            allowed_msgpack_modules=[OutilDecrit, ResultatOutil, AppelOutil, Brouillon, ReponseAgent]
+        )
+        return self._constructeur.compile(checkpointer=InMemorySaver(serde=serde))
 
-    async def derouler(self, question: str, outils: Outils) -> AsyncIterator[Progression]:
-        """Le run pas à pas. Le texte n'est publié qu'une fois vérifié : jamais de brouillon vers l'utilisateur."""
-        etat: dict[str, Any] = {}
-        async for mode, valeur in self._graphe.astream(
-            {"question": question},
+    async def repondre(self, question: str, outils: Outils) -> ReponseAgent:
+        etat = await self._graphe.ainvoke(
+            {"messages": [HumanMessage(content=question)]},
             context=Contexte(outils),
             config={"recursion_limit": 40},
-            stream_mode=["custom", "values"],
-        ):
-            if mode == "custom":
-                yield cast(Progression, valeur)
-            else:
-                etat = cast(dict[str, Any], valeur)
+            output_keys=["reponse", "domaines"],
+        )
         reponse = etat.get("reponse")
         if not isinstance(reponse, ReponseAgent):
-            yield ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])
-            return
-        yield reponse.model_copy(update={"domaines": etat.get("domaines")})
+            return ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])
+        return reponse.model_copy(update={"domaines": etat.get("domaines")})
 
     # --- nœuds ---
 
     async def _preparer(self, state: Entree, runtime: Runtime[Contexte]) -> Maj:
-        etat = state
+        await _mascotte("thinking")
+        question = _derniere_question(state["messages"])
         catalogue = await runtime.context.outils.lister()
-        messages = [{"role": "system", "content": SYSTEME}, {"role": "user", "content": etat["question"]}]
+        echanges = [{"role": "system", "content": SYSTEME}, {"role": "user", "content": question}]
         return {
+            "question": question,
             "catalogue": catalogue,
             "domaines": None,
-            "messages": messages,
+            "echanges": echanges,
             "resultats": [],
             "tours": 0,
             "redactions": 0,
             "appels": [],
         }
 
-    async def _cibler(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
+    async def _cibler(self, state: Etat) -> Maj:
         """Ne garde que les outils des domaines utiles ; un ciblage invalide laisse tout le catalogue."""
         etat = state
-        runtime.stream_writer(EtapeCommencee("cibler"))
         presents = domaines_du_catalogue(etat["catalogue"])
         if not presents:
             return {}
@@ -210,11 +207,10 @@ class Agent:
             return {}
         return {"domaines": domaines, "catalogue": restreindre(etat["catalogue"], domaines)}
 
-    async def _choisir(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
+    async def _choisir(self, state: Etat) -> Maj:
         etat = state
-        runtime.stream_writer(EtapeCommencee("choisir"))
         restant = self._limites.appels - len(etat["resultats"])
-        choix = await self._modele.choisir(etat["messages"], etat["catalogue"])
+        choix = await self._modele.choisir(etat["echanges"], etat["catalogue"])
         appels = choix.appels[: max(restant, 0)]
         if not appels:
             return {"appels": []}
@@ -231,35 +227,49 @@ class Agent:
                 for a in appels
             ],
         }
-        return {"appels": appels, "messages": [*etat["messages"], message]}
+        return {"appels": appels, "echanges": [*etat["echanges"], message]}
 
     async def _executer(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
         etat = state
-        runtime.stream_writer(EtapeCommencee("executer"))
         connus = {o.nom for o in etat["catalogue"]}
         refuses = {r.outil for r in etat["resultats"] if r.refuse}
-        messages = list(etat["messages"])
+        echanges = list(etat["echanges"])
         resultats = list(etat["resultats"])
+        visibles: list[AnyMessage] = []
         for appel in etat["appels"]:
-            runtime.stream_writer(OutilAppele(appel))
+            await adispatch_custom_event(
+                "manually_emit_tool_call", {"id": appel.identifiant, "name": appel.nom, "args": appel.arguments}
+            )
+            await _mascotte("searching")
             if appel.nom not in connus:
                 resultat = ResultatOutil(appel.nom, appel.arguments, True, f"Outil inconnu : {appel.nom}.")
             elif appel.nom in refuses:
                 resultat = ResultatOutil(appel.nom, appel.arguments, True, "Accès refusé : déjà signalé.")
             else:
                 resultat = await runtime.context.outils.appeler(appel.nom, appel.arguments)
-            runtime.stream_writer(OutilTermine(appel, resultat))
+            await _mascotte("apologetic" if resultat.refuse else "found")
             resultats.append(resultat)
-            messages.append({"role": "tool", "tool_call_id": appel.identifiant, "content": self._contenu(resultat)})
-        return {"resultats": resultats, "messages": messages, "tours": etat["tours"] + 1, "appels": []}
+            echanges.append({"role": "tool", "tool_call_id": appel.identifiant, "content": self._contenu(resultat)})
+            # Côté client : l'appel et la synthèse lisible du résultat, pas ses données complètes.
+            appel_visible = {"id": appel.identifiant, "name": appel.nom, "args": appel.arguments}
+            visibles.append(AIMessage(id=appel.identifiant, content="", tool_calls=[appel_visible]))
+            visibles.append(
+                ToolMessage(id=f"{appel.identifiant}-resultat", tool_call_id=appel.identifiant, content=resultat.texte)
+            )
+        return {
+            "resultats": resultats,
+            "echanges": echanges,
+            "messages": visibles,
+            "tours": etat["tours"] + 1,
+            "appels": [],
+        }
 
-    async def _rediger(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
+    async def _rediger(self, state: Etat) -> Maj:
         etat = state
-        runtime.stream_writer(EtapeCommencee("rediger"))
         vues = self._vues(etat["resultats"])
         liste = "\n".join(f"{i} : {json.dumps(v, ensure_ascii=False)}" for i, v in enumerate(vues)) or "(aucune)"
         consigne = {"role": "user", "content": CONSIGNE_REDACTION.format(vues=liste)}
-        messages = [*etat["messages"], consigne]
+        messages = [*etat["echanges"], consigne]
         inconnus = etat.get("inconnus", [])
         if inconnus:
             messages.append(
@@ -273,9 +283,8 @@ class Agent:
         brouillon = await self._modele.rediger(messages)
         return {"brouillon": brouillon, "redactions": etat["redactions"] + 1}
 
-    def _verifier(self, state: Etat, runtime: Runtime[Contexte]) -> Maj:
+    def _verifier(self, state: Etat) -> Maj:
         etat = state
-        runtime.stream_writer(EtapeCommencee("verifier"))
         brouillon = etat.get("brouillon")
         if brouillon is None:
             return {"reponse": ReponseAgent(texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[])}
@@ -305,6 +314,18 @@ class Agent:
             )
         }
 
+    async def _conclure(self, state: Etat) -> Maj:
+        """La réponse vérifiée, seul texte envoyé à l'utilisateur, puis ses méta-données et l'humeur finale."""
+        reponse = state.get("reponse") or ReponseAgent(
+            texte=ABSTENTION, abstention=True, motif="SORTIE_INVALIDE", outils=[]
+        )
+        identifiant = str(uuid4())
+        await adispatch_custom_event("manually_emit_message", {"message_id": identifiant, "message": reponse.texte})
+        meta = {"abstention": reponse.abstention, "motif": reponse.motif, "vue": reponse.vue}
+        await adispatch_custom_event(EVENEMENT_REPONSE, meta)
+        await _mascotte("apologetic" if reponse.abstention else "neutral")
+        return {"messages": [AIMessage(id=identifiant, content=reponse.texte)]}
+
     # --- routage ---
 
     @staticmethod
@@ -321,7 +342,7 @@ class Agent:
 
     @staticmethod
     def _apres_verification(etat: Etat) -> str:
-        return END if "reponse" in etat else "rediger"
+        return "conclure" if "reponse" in etat else "rediger"
 
     # --- utilitaires ---
 
@@ -340,3 +361,20 @@ class Agent:
             if not resultat.est_erreur and isinstance(vue, dict):
                 vues.append(vue)  # pyright: ignore[reportUnknownArgumentType]
         return vues
+
+
+async def _mascotte(humeur: Humeur) -> None:
+    """Humeur logique de la mascotte ; le point d'entrée AG-UI y ajoute séquence et corrélation du run."""
+    await adispatch_custom_event(EVENEMENT_MASCOTTE, {"mood": humeur})
+
+
+def _derniere_question(messages: list[AnyMessage]) -> str:
+    """Le texte du dernier message humain ; chaîne vide s'il n'y en a pas."""
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            contenu = message.content
+            if isinstance(contenu, str):
+                return contenu.strip()
+            morceaux = [str(p.get("text", "")) for p in contenu if isinstance(p, dict) and p.get("type") == "text"]
+            return " ".join(morceaux).strip()
+    return ""

@@ -10,15 +10,16 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
   LiteLLM joignable ; sinon `503`).
 - Configuration typée (`src/erp_rh_ia/config.py`) ; le service refuse de démarrer sans
   `IA_ENABLED`, `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` (8 caractères au moins) ou `IA_ERP_API_URL`.
-- **AG-UI (T7)** — `agui.py`, `POST /agui` (`ag-ui-protocol` 1.0.0, SSE). Entrée : `RunAgentInput` et
-  `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton agent ; refus HTTP
-  avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, étapes `STEP_*` (`cibler`, `choisir`,
-  `executer`, `rediger`, `verifier`), outils `TOOL_CALL_START/ARGS/END/RESULT`, puis la réponse **vérifiée**
-  (`TEXT_MESSAGE_*` ; aucun brouillon diffusé), `CUSTOM com.staport.answer.v1` (abstention, motif, vue) et
-  `RUN_FINISHED`. `CUSTOM com.staport.mascot.state.v1` porte l'humeur logique (`thinking`, `searching`,
-  `found`, `apologetic`, `neutral`…) avec une séquence croissante. Une panne donne un `RUN_ERROR`
-  générique ; une déconnexion du client annule le run et ferme la session MCP. Seule la dernière question
-  est lue (pas d'historique en J1) ; outils et état envoyés par le client sont ignorés.
+- **AG-UI** — `agui.py`, `POST /agui` (SSE), produit par l'intégration officielle `ag-ui-langgraph`
+  (`LangGraphAgent`, [ADR 0015](../docs/adr/0015-ag-ui-integration-langgraph-officielle.md)). Entrée :
+  `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton agent ;
+  refus HTTP avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, `STEP_*` par nœud du graphe,
+  `TOOL_CALL_START/ARGS/END`, la réponse **vérifiée** (`TEXT_MESSAGE_*`, émise par `conclure` ; aucun brouillon),
+  `CUSTOM com.staport.answer.v1` (abstention, motif, vue), `CUSTOM com.staport.mascot.state.v1` (humeur logique,
+  séquence croissante), `STATE_SNAPSHOT`/`MESSAGES_SNAPSHOT` (conversation visible seulement : question, appels,
+  synthèse des résultats, réponse) et `RUN_FINISHED`. Frontière de sécurité : ni `RAW` ni `rawEvent`, `RUN_ERROR`
+  générique, journal sans trace d'exception. Un checkpointer en mémoire neuf par run ; une déconnexion du client
+  annule le run et ferme la session MCP. Seule la dernière question est lue (pas d'historique en J1).
 - Client LiteLLM : alias `ai-gateway`, tag de tâche obligatoire (`Tache`), aucune nouvelle tentative
   côté service (la passerelle bascule déjà).
 - Preuve MCP : `tests/compatibilite/` rejoue contre le serveur Java les scénarios du client
