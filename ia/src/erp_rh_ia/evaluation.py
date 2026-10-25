@@ -158,6 +158,9 @@ def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: R
     if type_cas == "refus":
         signale = reponse.abstention or any(m in _sans_accents(reponse.texte) for m in ("droit", "refus", "autoris"))
         return (signale, "refus signalé" if signale else "refus non signalé")
+    if any(valeur is None for _, valeur in attendus):
+        # L'outil attendu n'a pas la valeur : défaut des données synthétiques, pas de l'agent.
+        return False, "vérité absente des données synthétiques"
     if reponse.abstention:
         return False, f"abstention ({reponse.motif})"
     manquants = [str(valeur) for type_attendu, valeur in attendus if not cite(type_attendu, valeur, reponse.texte)]

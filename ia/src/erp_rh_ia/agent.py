@@ -33,7 +33,9 @@ Règles impératives :
 4. Si un outil répond « Accès refusé », dis à l'utilisateur qu'il n'a pas ce droit ; ne contourne pas le refus.
 5. Pour un chantier, une équipe ou une fonction cité par son nom ou son code, cherche d'abord son identifiant avec
    l'outil de recherche du référentiel, puis utilise cet identifiant.
-6. Réponds en français, brièvement. Les montants sont en dirhams (MAD)."""
+6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie, quelle que soit l'année : passe-la
+   telle quelle en paramètre « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction.
+7. Réponds en français, brièvement. Les montants sont en dirhams (MAD)."""
 
 CONSIGNE_REDACTION = """Rédige maintenant la réponse finale, en JSON uniquement :
 - "reponse" : le texte pour l'utilisateur ;
@@ -46,6 +48,7 @@ Vues disponibles :
 CONSIGNE_CIBLAGE = """Tu classes la question d'un utilisateur d'ERP-RH (RH d'une entreprise du BTP au Maroc).
 Réponds en JSON {{"domaines": [...]}} avec tous les domaines dont les données peuvent servir à répondre ;
 en cas de doute, ajoute le domaine. Liste vide si la question ne relève d'aucun domaine.
+Une valeur AAAA-MM (par exemple 2026-09) est une période de paie, jamais un code de chantier, d'équipe ou de fonction.
 Domaines :
 {domaines}"""
 
