@@ -8,6 +8,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 |---|---|
 | `Dockerfile` | Image LiteLLM v1.104.2 épinglée par version et digest, configuration intégrée |
 | `entrypoint.sh` | Refuse de démarrer sans `LITELLM_MASTER_KEY` (préfixe `sk-`), `LITELLM_SALT_KEY` ou `DATABASE_URL` |
+| `filtrer_config.py` | Au démarrage, retire les déploiements dont la clé est vide (LiteLLM ne bascule pas sur une 401) |
 | `litellm_config.yaml` | Alias `ai-gateway`, pools par tag, poids, limites, réglages du routeur |
 | `test_providers.py` | Tests de fumée, bibliothèque standard Python uniquement |
 
@@ -16,8 +17,10 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 - Un seul alias : `ai-gateway`. Le client indique la tâche dans `metadata.tags` : `simple`, `medium`,
   `complex`, `code` ou `ocr`. **Toujours un tag** : sans tag, un pool `default` épuisé se rabat sur
   n'importe quel modèle de l'alias.
-- Un modèle par tentative ; sur erreur ou limite, bascule vers un autre modèle **du même tag**,
-  jusqu'à 4 modèles. Pool épuisé : échec explicite, jamais un modèle plus faible.
+- Un modèle par tentative ; sur limite (429), délai ou erreur serveur, bascule vers un autre modèle
+  **du même tag**, jusqu'à 4 modèles. Pas de bascule sur 400 ni 401 : une clé vide désactive donc ses
+  modèles au démarrage. Pool épuisé : échec explicite, jamais un modèle plus faible ; LiteLLM le
+  signale par « Not allowed to access model due to tags configuration ».
 - Pool d'évaluation (NVIDIA Developer, preview Groq, essai Cerebras) : tags `eval…` seulement. La clé
   d'ERP-RH porte `metadata.tags: ["!eval"]` et ne peut jamais les atteindre.
 - Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée

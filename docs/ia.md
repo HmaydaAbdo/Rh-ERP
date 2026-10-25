@@ -27,6 +27,8 @@ même socle. Elle ne devient jamais la source des chiffres, des droits ou des d�
 | Premier usage | **Questions/réponses + vues pilotées** : l'agent répond avec des chiffres Spring et ouvre la vue partagée (Tabulaire, Cartes, Analytique) déjà filtrée (§ 6). |
 | Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
 | Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
+| Orchestration | **Un agent, catalogue ciblé par domaine** : un petit modèle (tag `simple`) choisit les domaines de la question, seuls leurs outils partent vers le modèle `complex`. Les agents de domaine (sous-graphes sous un superviseur) viennent avec J8, quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, modèle ou budget ([conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine)). |
+| Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Offres d'évaluation (NVIDIA, Cohere, SambaNova) sous tags `eval`. |
 | Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
@@ -37,7 +39,7 @@ Angular ── panneau IA / Espace IA (A2UI + mascotte Rive) ── vues partag�
    │  AG-UI : entrées HTTP, événements SSE              ▲ ViewSpec → route + filtres
    ▼                                                    │
 erp-rh-ia (Python, LangGraph)
-   │  graphe : intention → outils → vérification des chiffres → réponse + ViewSpec + surface A2UI
+   │  graphe : ciblage des domaines → outils → rédaction → vérification des chiffres → réponse + ViewSpec + A2UI
    ├── erp-rh-litellm → fournisseurs (alias ai-gateway, tags de tâche)
    ├── A2A (plus tard) → agents des autres applications
    ▼  MCP + jeton délégué
@@ -55,8 +57,9 @@ que ce profil n'est pas activé. Les checkpoints durables LangGraph arrivent ave
 2. Un vérificateur déterministe contrôle que chaque nombre et chaque période de la réponse figure
    dans les résultats d'outils du run ; sinon une seule régénération, puis abstention explicite.
 3. Sans outil ni source adaptés, l'agent s'abstient et propose l'écran classique.
-4. Un jeu de référence versionné (≈ 100 questions RH au départ, réponses calculées sur la base
-   synthétique) est rejoué à chaque changement de modèle, prompt, outil ou graphe. Il décide des
+4. Un jeu de référence versionné (`ia/evaluation/jeu_reference.json`, 24 cas au départ, à porter vers
+   ≈ 100 ; réponses calculées en appelant l'outil attendu sur la base synthétique) est rejoué à chaque
+   changement de modèle, prompt, outil ou graphe par `EvaluationAgentIaTest`. Il décide des
    modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
 5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
    `enable_json_schema_validation` côté LiteLLM.
@@ -135,7 +138,7 @@ pris en charge ; chaque surface a un repli texte.
 | T3 — MCP Python | Le client MCP Python officiel rejoue les scénarios de la preuve J0 contre le serveur Java | Mêmes scénarios verts que le client TypeScript | ✅ |
 | T4 — Identité MCP | Jeton délégué RS256 + JWKS dans Spring ; route MCP réelle protégée | Mauvaise audience, émetteur, signature ou expiration refusés | ✅ |
 | T5 — Outils de lecture | Indicateurs de paie, recherche/comptage d'employés, entrées et sorties, fiche chantier ; ViewSpec ; projection salaire | Tests de contrat, refus et masquage | ✅ |
-| T6 — Graphe et exactitude | Graphe LangGraph, vérificateur de chiffres, jeu de référence synthétique | Exactitude mesurée et rapportée | ⬜ |
+| T6 — Graphe et exactitude | Graphe LangGraph, vérificateur de chiffres, jeu de référence synthétique | Exactitude mesurée et rapportée | ✅ |
 | T7 — AG-UI | Point d'entrée AG-UI du service ; événements d'outils, de confirmation et de mascotte | Flux réel testé avec un client AG-UI | ⬜ |
 | T8 — Panneau Angular | Panneau en streaming, sources, bouton « Ouvrir la vue » | Parcours vérifié au navigateur | ⬜ |
 | T9 — Démonstration J1 | Navigateur → agent → MCP → Spring sur base synthétique | Démonstration présentée au propriétaire | ⬜ |
@@ -150,14 +153,15 @@ pris en charge ; chaque surface a un repli texte.
 | 2026-10-25 | `.env` locaux complétés (racine : `CARTE_FOND_DIR`, valeurs des clés virtuelles LiteLLM ; backend : `DB_MIGRATION_*`, `CORS_ALLOWED_ORIGINS`) ; `litellm/enregistrer_cles.py` enregistre ces clés dans la passerelle (prouvé sur pile jetable, idempotent, clé ERP-RH refusant le pool d'évaluation). **T5** : 5 outils de lecture (§ 8), `ViewSpec`, règle de projection du salaire `ProjectionPaieEmployee` partagée par REST et MCP, journal `LECTURE_METIER` canal `MCP`. `McpOutilsLectureIntegrationTest` 9/9 (chiffres identiques aux façades, refus et journal par outil, salaire masqué sans `PAIE_READ`, ni CIN ni date de naissance, argument hors schéma refusé). Suite backend 466 tests verts (1 ignoré), client Python 2/2 ; couverture `mcp` 93,1 % lignes / 55,9 % branches. |
 | 2026-10-25 | Décision : champs rendus identiques aux écrans (CIN, dates, montants), modèle local open source visé, tests sur données fictives. Catalogue étendu à **25 outils** sur tous les domaines (§ 8) ; `IPaieEffectifsService` et `IPaieParcoursService` publiés comme façades. `McpOutilsLectureIntegrationTest` 15/15 (chaque outil refusé sans sa permission et journalisé, chaque outil répond avec les droits, chiffres comparés aux façades, introuvable signalé). Suite backend 472 tests verts (1 ignoré), client Python 2/2 ; couverture `mcp` 95,6 % lignes / 59,1 % branches. |
 | 2026-10-25 | Branche mise à jour de `main` (PR #89 : référentiels et responsive). Seul impact : la recherche libre de chantier couvre aussi le nom, reporté dans `chantier_rechercher`. Mois de test des outils MCP déplacés après 2300 pour ne plus croiser les mois fixes des autres tests. Suite backend 472 tests verts, client Python 2/2. |
+| 2026-10-25 | **T6** : graphe LangGraph `preparer → cibler → choisir ⇄ executer → rediger → verifier`, vérificateur de chiffres, jeu de référence de 24 cas (20 réponses, 3 abstentions, 1 refus) et `EvaluationAgentIaTest`. Service IA : 36 tests, `pyright` et `ruff` verts. Mesure réelle par LiteLLM, pool `complex` = Gemini 3.8 Flash + Cloudflare gpt-oss-120b : **16/24 (67 %)**, p50 6,8 s, p95 12,7 s (abstentions 2/3, refus 1/1, réponses 13/20). Le juge corrigé ensuite (« aucune » = 0, statut `EN_COURS`, valeurs justes par un autre outil) valide 2 cas de plus ; 2 autres restent à confirmer. Échecs restants : modèle (période prise pour un code de chantier, fiche employé non ouverte) et 2 sorties JSON invalides de gpt-oss, désormais rédigées une seconde fois. Fournisseurs : le catalogue complet (≈ 5 000 tokens par appel) dépassait les 8 000 TPM de Groq → **ciblage par domaine** ; Cloudflare refusait `content: null` → chaîne vide ; LiteLLM ne bascule pas sur 400/401 → modèles sans clé désactivés au démarrage (`litellm/filtrer_config.py`). Quota quotidien Gemini (≈ 20 requêtes) épuisé après 3 séries : une nouvelle mesure attend plus de fournisseurs (§ 8). |
 
 ## 8. État technique
 
 | Élément | État |
 |---|---|
 | Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
-| LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, profil Compose `ia`. Fournisseurs configurés : Gemini, Groq, Cloudflare, OpenRouter (paliers gratuits) ; Mistral, Cerebras et NVIDIA sans clé. Clé virtuelle ERP-RH à créer au premier démarrage. Voir [`litellm/README.md`](../litellm/README.md). |
-| Service IA | Image `erp-rh-ia` (Python 3.13), santé et client LiteLLM ; graphe, outils et AG-UI à venir (T4–T7). Voir [`ia/README.md`](../ia/README.md). |
+| LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, profil Compose `ia`. Fournisseurs actifs : Gemini, Groq, Cloudflare, OpenRouter (paliers gratuits) ; Mistral, Cerebras et NVIDIA désactivés tant que leur clé est vide. Pool `complex` : Gemini 3.8 Flash et Cloudflare gpt-oss-120b, trop juste pour une série complète par jour. À ajouter (recensement du 2026-10-25, quotas renouvelables) : Mistral Experiment (`MISTRAL_API_KEY`), NVIDIA NIM (`NVIDIA_API_KEY`, tags `eval`), Z.ai GLM Flash (`ZAI_API_KEY`). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (essai non renouvelable). Voir [`litellm/README.md`](../litellm/README.md). |
+| Service IA | Image `erp-rh-ia` (Python 3.13), santé, client LiteLLM, agent LangGraph avec ciblage par domaine, vérificateur de chiffres et évaluation (T6) ; AG-UI à venir (T7). Voir [`ia/README.md`](../ia/README.md). |
 | Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Aucun panneau Angular. Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 

@@ -11,6 +11,7 @@ dependencies = [
     "httpx",
     "openai",
     "mcp",
+    "langgraph",
 ]
 
 [dependency-groups]
@@ -32,7 +33,7 @@ packages = ["src/erp_rh_ia"]
 required-version = ">=0.12"
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
