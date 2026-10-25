@@ -24,9 +24,11 @@ const FICHES = {
 };
 
 test.describe('Chantiers', () => {
-  test('parcourt les trois vues en conservant les filtres et relie les fiches Employé à la Paie', async ({ page }) => {
-    const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ'] }, {
+  test('parcourt les trois vues en conservant les filtres et utilise uniquement la paie récente', async ({ page }) => {
+    const mock = await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_READ', 'PAIE_READ', 'FUNCTION_READ', 'EQUIPE_READ'] }, {
       'POST /chantiers/search': () => pageDe([NADOR, MARRAKECH]),
+      'POST /functions/search': () => pageDe([{ id: 7, libelle: 'Chauffeur' }]),
+      'POST /equipes/search': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
       'GET /chantiers/1': () => NADOR,
       'POST /employees/regroupements': () => [{ id: 1, code: 'C168', libelle: 'Route de Nador', effectif: 3, actifs: 3 }],
       'GET /paie/periodes': () => PERIODES,
@@ -41,7 +43,8 @@ test.describe('Chantiers', () => {
     await expect(page).toHaveURL(/\/chantiers\/cartes\?code=C1$/);
     const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
     await expect(carte).toContainText('En cours');
-    await expect(carte).toContainText('Employés sur les fiches récentes');
+    await expect(carte).not.toContainText('Employés sur les fiches récentes');
+    await expect(carte).toContainText('Effectif (personnes)');
     await expect(carte).toContainText('Paie · août 2026');
     await expect(page.locator('.perimetre-carte').filter({ hasText: 'C196' })).toContainText('Clôturé');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
@@ -49,15 +52,17 @@ test.describe('Chantiers', () => {
     // Les filtres suivent dans l'Analytique et bornent le périmètre analysé (mêmes chantiers que les deux autres vues).
     await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Analytique' }).click();
     await expect(page).toHaveURL(/\/chantiers\/analytique\?code=C1(&periode=2026-08)?$/);
-    await expect(page.getByRole('heading', { name: /Paie · août 2026/ })).toBeVisible();
-    await expect(page.getByText('Répartition par chantier')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Répartition de la paie par chantier/ })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Fonctions de la répartition' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Équipes de la répartition' })).toBeVisible();
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', chantierIds: [1, 2] });
     await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
 
-    await carte.getByRole('link', { name: 'Voir l’historique Paie' }).click();
+    await carte.getByRole('link', { name: /Voir l’historique Paie de/ }).click();
     await expect(page).toHaveURL(/\/chantiers\/analytique\?code=C1&chantierIds=1/);
-    await expect(page.getByRole('heading', { name: 'Évolution mensuelle' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Évolution mensuelle par chantier' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
+    expect(mock.calls.filter((appel) => appel.includes('/employees'))).toEqual([]);
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', chantierIds: [1] });
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   });
@@ -75,7 +80,7 @@ test.describe('Chantiers', () => {
     await expect(page.getByRole('link', { name: 'Nouveau chantier' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Synchroniser maintenant' })).toHaveCount(0);
     await page.goto('/chantiers/analytique');
-    await expect(page.getByText('Les indicateurs de paie ne sont pas disponibles pour votre compte.')).toBeVisible();
+    await expect(page.getByText('L’effectif mensuel par chantier n’est pas disponible pour votre compte.')).toBeVisible();
     expect(mock.calls.filter((appel) => appel.includes('/paie') || appel.includes('/employees'))).toEqual([]);
   });
 

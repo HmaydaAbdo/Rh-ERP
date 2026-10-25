@@ -117,7 +117,28 @@ conception du RBAC.
 | `DELETE` | `/chantiers/{id}` | Supprimer (bloqué si référencé par un employé) | 204, 404, 409 |
 | `POST` | `/chantiers/sync` | Déclencher une synchronisation ERP immédiate | 200 |
 
-`ChantierResponseDto` : `id`, `code`, `designation`, `nom`, `sourceErp`, `actif`.
+### DTO exposés
+
+| Contrat | Champs (type) | Contraintes et sens |
+|---|---|---|
+| `ChantierCreateRequestDto` | `code: String`, `designation: String`, `nom: String?` | Code requis (100 caractères maximum), désignation requise (500 maximum), nom facultatif (255 maximum) |
+| `ChantierUpdateRequestDto` | `version: Long`, `code: String`, `designation: String`, `nom: String?`, `actif: Boolean` | Version et statut requis; mêmes contraintes de texte que la création. La version empêche d'écraser une modification concurrente |
+| `ChantierSearchCriteria` | `code: String?`, `designation: String?`, `recherche: String?`, `actif: Boolean?` | Filtres facultatifs; 100 caractères maximum pour le code, 500 pour les deux textes. `code` et `designation` se combinent; `recherche` cherche dans code, nom ou désignation |
+| `ChantierResponseDto` | `id: Long`, `version: Long`, `code: String`, `designation: String?`, `nom: String?`, `sourceErp: boolean`, `actif: boolean` | Identité, version, libellés, origine et statut renvoyés à la consultation et à la recherche |
+| `PaieChantierOptionDto` | `id: Long`, `code: String`, `nom: String?`, `designation: String?`, `actif: boolean` | Option des filtres Paie du mois choisi : code et nom visibles, désignation en repli quand le nom manque |
+
+### Permissions
+
+| Permission | Accès accordé |
+|---|---|
+| `CHANTIER_READ` | Ouvrir le domaine, lire les fiches et les trois vues, rechercher les chantiers |
+| `CHANTIER_WRITE` | Créer, modifier, clôturer et rouvrir un chantier |
+| `CHANTIER_DELETE` | Supprimer un chantier non référencé |
+| `CHANTIER_SYNC` | Déclencher la synchronisation ERP manuelle |
+| `PAIE_READ` | Lire les indicateurs des bulletins dans Cartes et Analytique |
+| `EMPLOYEE_READ` | Ouvrir la liste Employé depuis l'icône des Cartes, sans alimenter leurs indicateurs |
+
+Le détail par route et action est dans [../rbac/chantier.md](../rbac/chantier.md).
 
 ---
 
@@ -194,8 +215,8 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 | Route | Composant | Description |
 |---|---|---|
 | `/chantiers` | `ChantierVuesComponent` + `ChantierListComponent` | Coque commune (titre, onglets de vue, actions Synchroniser maintenant / Nouveau chantier, filtres code, désignation et statut dans l'URL), tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)), clôture / réouverture et suppression |
-| `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes hiérarchiques** : chantier → équipe → fonction → employés ; fiches Employé et paie du mois sur chaque carte |
-| `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : chiffres de la paie, évolution mensuelle, répartition (STC compris), tranches, mouvements, et fiches Employé |
+| `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes hiérarchiques** : chantier → équipe → fonction, avec les indicateurs de la dernière paie disponible |
+| `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : répartition par chantier et évolution mensuelle de l'effectif payé, de la masse salariale et des STC ; qualité des rattachements |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
 | `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
 | `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
@@ -206,19 +227,16 @@ Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` 
 l'en-tête commun (`ChantierActionsComponent`) : une synchronisation réussie recrée la vue affichée. La carte géographique
 (`/carte`, droit `CARTE_READ`) reste un écran séparé, décrit dans [carte.md](carte.md).
 
-**Cartes et Analytique sont les vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0011 et 0014) : `ChantierCartesComponent` et
+**La coque, le Tabulaire, Cartes et Analytique reposent sur des composants partagés configurés par domaine** ([Vues de collection partagées](../frontend/vues-perimetre.md), ADR 0011, 0012 et 0014) : `ChantierCartesComponent` et
 `ChantierAnalytiqueComponent` ne sont que des hôtes minces ; `chantier-module.ts` décrit le module (référentiel de chantiers avec
 leur statut, filtres code, désignation et statut, ordre de descente chantier → équipe → fonction). Les liens avec les autres
-domaines passent par les services existants, sans endpoint propre. Les vues partagées affichent d'abord les fiches Employé, puis
-les indicateurs Paie :
+domaines passent par les services existants, sans endpoint propre. Cartes et Analytique utilisent la **paie du dernier mois enregistré** comme source commune :
 
-- l'effectif vient du regroupement des fiches Employé et représente le **dernier état importé** de chaque fiche (`EMPLOYEE_READ`) ;
-- la masse, l'effectif payé, le coût moyen, les STC et l'historique mensuel viennent de l'analyse Paie par période
-  (`POST /paie/analytique`) (`PAIE_READ`) ;
-- le chantier d'une **fiche** (état le plus récent) et celui d'un **bulletin** (chantier du mois) sont deux informations distinctes ;
-- un mois sans bulletin pour le chantier choisi affiche des indicateurs à zéro avec un message explicite et conserve l'historique
-  des autres mois ; un chantier clôturé reste une carte, avec sa pastille « Clôturé » ;
-- sans `EMPLOYEE_READ` ou sans `PAIE_READ`, le bloc concerné est masqué et son service n'est pas appelé.
+- l'effectif correspond aux **personnes payées** dans ce mois ; la masse salariale et les STC proviennent du même ensemble de bulletins (`POST /paie/analytique`, droit `PAIE_READ`) ;
+- chaque carte montre ces quatre indicateurs et leur variation par rapport au mois précédent ; les cartes sont triées par masse salariale puis effectif payé ; un chantier clôturé reste consultable avec sa pastille « Clôturé » ;
+- le sélecteur de période et les raccourcis entre vues sont absents : les onglets changent de vue et conservent le périmètre ; la synthèse et son export PDF figurent au niveau consulté ;
+- l'Analytique répartit les quatre indicateurs par chantier, puis suit mensuellement un chantier choisi. Les graphiques de répartition et d'évolution acceptent les filtres Fonction et Équipe, dont « Orphelins » pour l'équipe ; les données chiffrées restent repliées jusqu'à « Voir les données ». La section distincte de qualité des rattachements apparaît lorsqu'il existe des bulletins sans équipe dans le périmètre ;
+- un chantier sans bulletin dans la période récente garde sa carte avec des indicateurs à zéro et son historique mensuel ; sans `PAIE_READ`, les indicateurs protégés ne sont pas chargés. L'accès à la liste des employés est conditionné par `EMPLOYEE_READ`, sans contribution des fiches aux chiffres de ces deux vues.
 
 Colonnes du tableau : Code, Nom, Désignation, Source (ERP ou manuel), Statut. Accès via la barre latérale
 (`core/navigation/nav-items.ts`, entrée « Chantiers », permission `CHANTIER_READ`). Les boutons de création,
@@ -228,7 +246,10 @@ modification, suppression et synchronisation sont conditionnés par `CHANTIER_WR
 Le référentiel chantier est également consommé par les formulaires/filtres Employee et Paie
 (`shared/reference-data/chantier-reference.service.ts`, implémentation du contrat de pagination
 attendu par le sélecteur générique `shared/components/lazy-select` — voir `conventions/frontend.md`,
-section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de liste (multiple).
+section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de liste (multiple). Le sélecteur
+affiche le code et le nom; quand `nom` est vide, il affiche la désignation. La recherche accepte ces trois
+textes. Dans un filtre multiple, « Tout sélectionner » retire la restriction même pour les pages non
+chargées; « Ne rien sélectionner » vide le filtre.
 
 ---
 

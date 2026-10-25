@@ -45,3 +45,10 @@ Exécuter les tests unitaires et d'intégration concernés, y compris les cas de
 existante, import atomique et accès refusé. Vérifier migration Flyway sur base vide si le schéma change.
 Vérifier aussi le parcours des trois vues et l'export PDF de la liste complète filtrée; synchroniser le README et le PV global
 avec le code réellement livré.
+
+## Sélecteurs et revue visuelle
+
+Réutiliser exclusivement le contrôle partagé pour les listes simples et multiples, avec recherche et
+options au défilement. Afficher Fonction par libellé, Équipe par code et libellé, Chantier par code et
+nom (désignation si le nom est absent). Vérifier les trois vues dans les deux thèmes et sur téléphone,
+le changement de source des options, les exports et les filtres conservés dans l'URL.

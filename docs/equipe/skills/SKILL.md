@@ -29,9 +29,7 @@ met à jour la fiche Employé et le bulletin dans la même transaction; ces opé
 La coque, le Tabulaire, les Cartes et l'Analytique sont des composants configurables partagés. Le module Équipe déclare
 le parcours fixe des Cartes **Équipe → Chantier → Fonction**. Les Cartes et l'Analytique lisent toujours le dernier mois
 de paie enregistré; l'utilisateur ne choisit pas de période pour ces vues. Le résumé des Cartes donne le nombre d'équipes
-référencées, l'effectif en personnes et la masse salariale en DH, sans chiffre provenant des fiches Employé. « Orphelins »
-est un groupe Paie de premier niveau, exclu du nombre d'équipes; son périmètre est conservé pendant le détail par chantier
-puis fonction. Le graphique de qualité des rattachements est distinct des graphiques de répartition : il apparaît uniquement
+référencées, l'effectif en personnes et la masse salariale en DH, sans chiffre provenant des fiches Employé. Le groupe « Orphelins » reste disponible dans les filtres et les graphiques analytiques; il ne constitue pas une carte du référentiel. Le graphique de qualité des rattachements est distinct des graphiques de répartition : il apparaît uniquement
 dans une section dédiée de l'Analytique, sous forme d'anneau avec ses propres filtres Chantier et Fonction. Il n'apparaît ni
 dans le Tabulaire ni dans Cartes et s'exporte seul en PDF.
 Il est soumis à `PAIE_READ` : sans ce droit, les données de Paie ne sont ni demandées ni affichées.
@@ -71,7 +69,7 @@ remplacent les liens d'accès directs vers la liste et les employés.
 - Les formulaires Paie peuvent exiger `EQUIPE_READ` en plus de leur permission Paie ; vérifier la
   matrice RBAC lorsque l'accès frontend ou les appels changent.
 - Le référentiel s'importe depuis un classeur Excel; l'import est une création atomique et une seule ligne invalide rejette le fichier entier.
-- Les vues Tabulaire, Cartes et Analytique s'appuient sur la même source du dernier mois de Paie pour l'indicateur de qualité des rattachements; le groupe « Orphelins » n'est visible que si son effectif est supérieur à zéro.
+- L'Analytique lit le dernier mois de Paie pour l'indicateur de qualité des rattachements; le groupe « Orphelins » n'est visible que si son effectif est supérieur à zéro.
 - La répartition analytique inclut la ligne « Orphelins » lorsque le dernier mois contient des bulletins sans équipe; le filtre de suivi `equipeIds=0` affiche leur évolution historique.
 - Mettre à jour la section Autorisations de [../README.md](../README.md) et les documents transverses
   concernés (catalogue RBAC, modèle de données) avec tout changement correspondant.
@@ -84,3 +82,10 @@ période, code historique, suppression avec références Paie et Employé, impor
 cohérence des orphelins, vérifier `analytique-perimetre.component.spec.ts` et les tests des vues Équipe.
 Exécuter les tests d'intégration
 PostgreSQL dès qu'une relation, une contrainte ou une migration change.
+
+## Sélecteurs et revue visuelle
+
+Réutiliser exclusivement le contrôle partagé pour les listes simples et multiples, avec recherche et
+options au défilement. Afficher Fonction par libellé, Équipe par code et libellé, Chantier par code et
+nom (désignation si le nom est absent). Vérifier les trois vues dans les deux thèmes et sur téléphone,
+le changement de source des options, les exports et les filtres conservés dans l'URL.

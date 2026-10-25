@@ -271,7 +271,7 @@
     flex-direction: column;
     gap: var(--space-xs);
     width: 100%;
-    padding: calc(var(--space-md) + 2rem) var(--space-md) var(--space-md);
+    padding: var(--space-md);
     border: 0;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     background: none;
@@ -319,7 +319,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-sm) var(--space-md);
-    margin: auto 0 0;
+    margin: var(--space-sm) 0 0;
   }
 
   &__fiches {
@@ -385,6 +385,7 @@
 
   &__variation {
     max-width: 100%;
+    min-block-size: 2lh;
     font-weight: 400;
     color: var(--color-text-muted);
     font-size: var(--text-xs);

@@ -227,4 +227,21 @@ describe('LazySelectComponent', () => {
 
     expect(document.activeElement).toBe(champ());
   });
+
+  it('recharge les options après un changement de source et ignore la réponse précédente', async () => {
+    const retardee = new Subject<LazySelectPage<Chantier>>();
+    await afficher();
+    source.fetchPage.mockReturnValue(retardee);
+    await ouvrir();
+    await saisir('ancien');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    hote.source = {
+      fetchPage: () => of(page([{ id: 100, code: 'NOUVEAU' }])),
+      fetchById: () => of({ id: 100, code: 'NOUVEAU' })
+    };
+    await stabiliser();
+    retardee.next(page([{ id: 101, code: 'ANCIEN' }]));
+    await ouvrir();
+    expect(options()).toEqual(['NOUVEAU']);
+  });
 });
