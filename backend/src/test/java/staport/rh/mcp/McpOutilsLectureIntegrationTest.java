@@ -67,8 +67,8 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     @BeforeEach
     void creerDonnees() {
         ref = donnees.creerReferentiel();
-        // Un mois isolé des autres tests de la base partagée.
-        periode = YearMonth.of(2090 + ThreadLocalRandom.current().nextInt(9), 1 + ThreadLocalRandom.current().nextInt(12));
+        // Un mois isolé des autres tests de la base partagée : leurs mois fixes s'arrêtent avant 2100.
+        periode = YearMonth.of(2300 + ThreadLocalRandom.current().nextInt(600), 1 + ThreadLocalRandom.current().nextInt(12));
         donnees.creerBulletin(ref, periode);
         toutVoir = jeton(TOUT);
     }

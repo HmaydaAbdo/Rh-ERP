@@ -9,10 +9,11 @@ CI sont définis dans les conventions. Le propriétaire a demandé la revue loca
 Le lot harmonise les sélecteurs, la navigation et les synthèses Chantier sur la paie récente.
 Les README et skills de chaque domaine décrivent les règles courantes.
 
-**Chantier IA (2026-10-24)** : décisions prises (tranche verticale, service IA Python, LiteLLM,
-sécurité par fiche de poste, premier cas « questions et vues pilotées »). Seule la preuve MCP
-existe, en profil de test isolé ; aucune route MCP métier ni livraison IA. Tout le chantier est
-suivi dans un seul document : [ia.md](../ia.md). Prochaine action : jalon J1.
+**Chantier IA (2026-10-25)** : branche `claude/ia-doc-unique` (worktree `.claude/worktrees/ia-doc-unique`),
+à jour de `main`, non poussée. Tâches T1 à T5 de J1 faites : passerelle LiteLLM, service IA Python, preuve MCP
+Python, jeton agent RS256 et route `/mcp` (désactivée par `MCP_ENABLED=false`), catalogue de 25 outils de lecture.
+Aucun panneau Angular ni graphe d'agent livré. Tout le chantier est suivi dans un seul document :
+[ia.md](../ia.md). Prochaine action : T6 (graphe LangGraph et vérificateur de chiffres).
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

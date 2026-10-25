@@ -88,11 +88,11 @@ public final class OutilsReferentiels {
 
     private static OutilLecture chantierRechercher(IChantierService chantiers, IAuditOutilsAgent audit) {
         return outil("chantier_rechercher")
-                .description("Recherche des chantiers par code ou désignation (texte partiel) et/ou statut : identifiant, "
+                .description("Recherche des chantiers par code, nom ou désignation (texte partiel) et/ou statut : identifiant, "
                         + "code, désignation, statut EN_COURS ou CLOTURE. 20 au plus, avec le nombre total.")
                 .permissions("CHANTIER_READ")
                 .entree(Map.of(
-                        "recherche", texte("Code ou désignation, partiel", 100),
+                        "recherche", texte("Code, nom ou désignation, partiel", 100),
                         "statut", enumeration("Absent = tous", "EN_COURS", "CLOTURE"),
                         "limite", limite(10, LIMITE)))
                 .sortie(Map.of("total", nombre(), "chantiers", liste(), "vue", OutilLecture.vueProposee()),
