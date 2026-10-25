@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: "24.15.0"
 
+      # uv sert aux clients MCP Python du service IA : preuve de bout en bout sur /mcp (McpClientPythonIntegrationTest)
+      # et preuve de compatibilité du profil mcp-compatibility. Versions figées par ia/uv.lock.
+      - name: Install uv for the Python MCP client
+        run: pipx install uv==0.12.2
+
       - name: Run backend tests
         working-directory: backend
         # mvnw doit être exécutable — le bit d'exécution a été perdu une première fois lors d'un
@@ -47,7 +52,7 @@ jobs:
         # ce chmod est une garde permanente, peu coûteuse, contre une régression future du même genre.
         run: |
           chmod +x mvnw
-          ./mvnw -B test
+          ./mvnw -B -Dia.client-python=true test
         # Pas de variables DB_* : les tests d'intégration démarrent leur propre PostgreSQL 18 + pgvector (Testcontainers, Docker
         # est présent sur le runner) et publient ses coordonnées eux-mêmes.
         env:
@@ -66,6 +71,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
 
       - name: Upload backend test reports
         if: always()
@@ -106,12 +112,12 @@ jobs:
           name: sbom-backend
           path: backend/target/bom.json
 
-      # P1.1 : profil opt-in, sorties séparées, aucune base ni configuration applicative.
-      - name: Verify normal runtime excludes MCP
+      # Le SDK MCP Java fait partie du livrable (route /mcp) ; aucun framework LLM n'entre dans le monolithe.
+      - name: Verify runtime excludes LLM frameworks
         working-directory: backend
         run: |
-          ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/mcp-default-runtime-dependencies.txt
-          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/mcp-default-runtime-dependencies.txt", "utf8"); if (/io\.modelcontextprotocol\.sdk:|org\.springframework\.ai:/.test(tree)) throw new Error("MCP or Spring AI in production runtime");'
+          ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/runtime-dependencies.txt
+          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/runtime-dependencies.txt", "utf8"); if (/org\.springframework\.ai:|dev\.langchain4j:|langgraph4j/.test(tree)) throw new Error("LLM framework in production runtime");'
 
       - name: Install and validate MCP test client
         working-directory: scripts/ia/mcp-compatibility
@@ -119,10 +125,6 @@ jobs:
           npm ci --ignore-scripts
           npm run typecheck
           npm audit --audit-level=moderate
-
-      # Client MCP Python officiel (tâche T3 de docs/ia.md), versions figées par ia/uv.lock.
-      - name: Install uv for the Python MCP client
-        run: pipx install uv==0.12.2
 
       - name: Verify MCP Java TypeScript and Python interoperability
         working-directory: backend
@@ -217,6 +219,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
 
       - name: Upload performance profile result
         if: always()
@@ -366,6 +369,7 @@ jobs:
           SMTP_AUTH: "false"
           SMTP_STARTTLS: "false"
           MAIL_FROM: noreply@example.invalid
+          MCP_ENABLED: "false"
       - name: Install frontend and browser
         working-directory: frontend
         run: npm ci && npx playwright install --with-deps chromium

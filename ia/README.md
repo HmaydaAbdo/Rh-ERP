@@ -38,6 +38,16 @@ cd backend
 
 Rapport : `backend/target/mcp-compatibility/client-python.txt`.
 
+`tests/integration/` appelle la **vraie** route `/mcp` de l'application avec un jeton agent ; lancé par
+`McpClientPythonIntegrationTest` (application complète et base de test) :
+
+```bash
+cd backend
+./mvnw -B -Dia.client-python=true -Dtest=McpClientPythonIntegrationTest test
+```
+
+Rapport : `backend/target/client-python-mcp-erp-rh.txt`.
+
 ## Image et exploitation
 
 - Image multi-étapes, bases `python:3.13-slim` et `uv` épinglées par digest ; dépendances installées

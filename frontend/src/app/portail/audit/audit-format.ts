@@ -63,7 +63,9 @@ const LIBELLES_ACTIONS: Record<string, string> = {
   MOT_DE_PASSE_REINITIALISE: 'Mot de passe réinitialisé (lien)',
   MOT_DE_PASSE_REINITIALISE_PAR_ADMIN: 'Mot de passe réinitialisé par un administrateur',
   ACCES_REFUSE: 'Accès refusé',
-  ACCES_ANONYME_REFUSE: 'Accès anonyme refusé'
+  ACCES_ANONYME_REFUSE: 'Accès anonyme refusé',
+  JETON_AGENT_EMIS: "Jeton de l'assistant IA émis",
+  JETON_AGENT_REFUSE: "Jeton de l'assistant IA refusé"
 };
 
 export const ACTIONS_AUDIT: { code: string; libelle: string }[] = Object.entries(LIBELLES_ACTIONS).map(([code, libelle]) => ({

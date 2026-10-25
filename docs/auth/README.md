@@ -148,11 +148,33 @@ chargée ; le serveur reste l'autorité et vérifie aussi la différence avec l'
 | Jeton d'accès | **Non** : valable jusqu'à son expiration (15 minutes par défaut, durée réglable), même si le compte est désactivé ou ses permissions modifiées |
 | Jeton de rafraîchissement | Oui : déconnexion, réinitialisation du mot de passe (par courriel **ou par un administrateur**), **désactivation du compte**, détection de vol — `AuthService.revoquerSessions` coupe toutes les sessions d'un compte |
 
+Exception : le **jeton agent** de l'assistant IA (voir « Jeton délégué de l'assistant IA ») ne porte aucune permission ; la
+route `/mcp` relit le compte et ses droits à chaque appel, donc une désactivation ou un retrait de droit s'y applique tout de suite.
+
 **Conséquence** : un changement de rôle ou de refus individuel ne prend effet qu'au prochain rafraîchissement
 de l'utilisateur concerné (au plus la durée réglée du jeton d'accès). Le frontend relit ses permissions à chaque rafraîchissement.
 De même, un compte désactivé ou dont le mot de passe vient d'être réinitialisé **perd ses sessions tout de suite, sauf
 le jeton d'accès déjà émis, qui reste valable jusqu'à son expiration** (risque assumé : le révoquer exigerait une lecture en
 base à chaque requête).
+
+### Jeton délégué de l'assistant IA
+
+Le navigateur obtient, avec son jeton d'accès, un **jeton agent** (`POST /auth/jetons/agent`, permission `IA_UTILISER`) et
+le transmet au service IA, qui le présente à la route `/mcp`. Décision et architecture : [ia.md](../ia.md), § 5.
+
+| Élément | Règle |
+|---|---|
+| Signature | RS256, clé RSA de 3072 bits au moins (`MCP_JWT_PRIVATE_KEY`, `MCP_JWT_KEY_ID`) ; jamais le `JWT_SECRET` |
+| Contenu | `iss`, `sub`, `uid`, `aud` = `erp-rh-ia` et `erp-rh-mcp`, `scope` = `mcp:lecture`, `jti`, dates ; **aucune permission** |
+| Durée | 5 minutes ; Angular en redemande un à chaque question |
+| Cloisonnement | Refusé par toutes les routes REST ; le jeton d'accès REST est refusé par `/mcp` |
+| Contrôle à chaque appel MCP | Compte actif, identifiant cohérent avec `sub`, permissions effectives (refus individuels compris), `IA_UTILISER` et scope |
+| Clés publiques | `GET /.well-known/jwks.json` : clé courante et, pendant un changement, clé précédente |
+| Journal | `JETON_AGENT_EMIS` (identifiant `jti` et durée, jamais le jeton) et `JETON_AGENT_REFUSE` (motif) |
+
+**Changer de clé** : générer une nouvelle clé, placer l'ancienne clé publique (base64 d'un X.509 DER) dans
+`MCP_JWT_PREVIOUS_PUBLIC_KEY` et son identifiant dans `MCP_JWT_PREVIOUS_KEY_ID`, la nouvelle clé dans `MCP_JWT_PRIVATE_KEY`
+avec un nouvel identifiant, redémarrer, puis vider les deux variables précédentes après 5 minutes.
 
 ---
 
@@ -213,6 +235,8 @@ Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `
 | `POST` | `/auth/forgot-password` | Demande de lien de réinitialisation (toujours `202`) | Public |
 | `POST` | `/auth/reset-password` | Réinitialisation avec le jeton du courriel | Public |
 | `GET` | `/auth/password-policy` | Lire la longueur minimale du mot de passe | Public |
+| `POST` | `/auth/jetons/agent` | Jeton délégué de l'assistant IA (5 minutes) | `IA_UTILISER` |
+| `GET` | `/.well-known/jwks.json` | Clés publiques des jetons agent | Public |
 | `POST` | `/users/search` | Rechercher avec filtres et pagination serveur | `USER_MANAGE` |
 | `GET` | `/users/{id}` | Consulter | `USER_MANAGE` |
 | `POST` | `/users` | Créer | `USER_MANAGE` |
