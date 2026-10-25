@@ -1,8 +1,8 @@
 """Domaines du catalogue MCP : le modèle ne reçoit que les outils des domaines utiles à la question.
 
 Le catalogue complet coûte environ 5 000 tokens par appel ; les paliers gratuits limités en tokens par minute (Groq :
-8 000) ne tiennent pas un tour d'outils avec lui. Un outil dont le préfixe n'est rattaché à aucun domaine reste
-toujours visible : un nouvel outil n'est jamais masqué par oubli.
+8 000) ne tiennent pas un tour d'outils avec lui. Tout outil appartient à un domaine, aucun n'est transmis d'office :
+un outil dont le préfixe n'est pas déclaré forme son propre domaine, décrit par ses outils, et suit le même ciblage.
 """
 
 from dataclasses import dataclass
@@ -32,7 +32,8 @@ DOMAINES = (
     ),
     Domaine(
         "referentiels",
-        "fiches des chantiers, des équipes et des fonctions (codes, libellés, rattachements)",
+        "chantiers, équipes et fonctions (codes, libellés, statut, rattachements) ; à ajouter dès que la question "
+        "cite un chantier, une équipe ou une fonction par son nom ou son code",
         ("chantier_", "equipe_", "fonction_"),
     ),
     Domaine(
@@ -40,19 +41,37 @@ DOMAINES = (
         "rôles et permissions, paramètres de l'application, journal d'audit",
         ("audit_", "parametres_", "roles_"),
     ),
+    Domaine(
+        "systeme",
+        "l'utilisateur connecté : son identité, ses rôles et ses droits dans l'assistant",
+        ("systeme_",),
+    ),
 )
 
-
-def domaine_de(outil: str) -> str | None:
-    return next((d.nom for d in DOMAINES if outil.startswith(d.prefixes)), None)
+_TAILLE_DESCRIPTION = 300
 
 
-def toujours_visible(outil: str) -> bool:
-    """Identité et recherches de référentiel : nécessaires pour résoudre un chantier ou une équipe cité par son nom."""
-    domaine = domaine_de(outil)
-    return domaine is None or (domaine == "referentiels" and outil.endswith("_rechercher"))
+def domaine_de(outil: str) -> str:
+    """Domaine déclaré, ou à défaut le préfixe de l'outil (``achats_commandes`` → ``achats``)."""
+    return next((d.nom for d in DOMAINES if outil.startswith(d.prefixes)), outil.split("_", 1)[0])
+
+
+def domaines_du_catalogue(catalogue: list[OutilDecrit]) -> list[Domaine]:
+    """Les domaines présents dans le catalogue, déclarés d'abord, puis ceux déduits des préfixes inconnus."""
+    presents = {domaine_de(o.nom) for o in catalogue}
+    declares = [d for d in DOMAINES if d.nom in presents]
+    connus = {d.nom for d in declares}
+    deduits: dict[str, list[str]] = {}
+    for outil in catalogue:
+        nom = domaine_de(outil.nom)
+        if nom not in connus:
+            deduits.setdefault(nom, []).append(outil.description or outil.nom)
+    return declares + [
+        Domaine(nom, " ; ".join(descriptions)[:_TAILLE_DESCRIPTION], (f"{nom}_",))
+        for nom, descriptions in deduits.items()
+    ]
 
 
 def restreindre(catalogue: list[OutilDecrit], domaines: list[str]) -> list[OutilDecrit]:
     retenus = set(domaines)
-    return [o for o in catalogue if toujours_visible(o.nom) or domaine_de(o.nom) in retenus]
+    return [o for o in catalogue if domaine_de(o.nom) in retenus]

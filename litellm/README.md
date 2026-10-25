@@ -21,7 +21,10 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   **du même tag**, jusqu'à 4 modèles. Pas de bascule sur 400 ni 401 : une clé vide désactive donc ses
   modèles au démarrage. Pool épuisé : échec explicite, jamais un modèle plus faible ; LiteLLM le
   signale par « Not allowed to access model due to tags configuration ».
-- Pool d'évaluation (NVIDIA Developer, preview Groq, essai Cerebras) : tags `eval…` seulement. La clé
+- Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash et NVIDIA
+  NIM (prototypage : admis jusqu'à J2, données synthétiques). Les modèles sont sondés (outils + JSON)
+  avant d'entrer dans un pool.
+- Pool d'évaluation (preview Groq, Step 5) : tags `eval…` seulement. La clé
   d'ERP-RH porte `metadata.tags: ["!eval"]` et ne peut jamais les atteindre.
 - Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée
   `litellm-db` (même image PostgreSQL que l'ERP, volume séparé) pour les clés virtuelles, budgets et

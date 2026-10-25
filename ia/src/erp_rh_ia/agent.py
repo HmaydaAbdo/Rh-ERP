@@ -4,10 +4,11 @@
 """Graphe de l'agent (docs/ia.md, T6) : préparer → cibler les domaines → choisir des outils ⇄ les exécuter → rédiger →
 vérifier les chiffres.
 
-Le ciblage (petit modèle, tag ``simple``) ne transmet au modèle que les outils des domaines utiles. Explicite et
-borné : nombre de tours d'outils, d'appels et de rédactions plafonnés ; un refus d'autorisation n'est jamais retenté ;
-une réponse dont un nombre ne vient pas des outils est réécrite une fois puis remplacée par une abstention. Le graphe
-n'a pas de mémoire durable : chaque question est un run indépendant.
+Le ciblage (petit modèle, tag ``simple``) ne transmet au modèle que les outils des domaines utiles, aucun d'office ;
+s'il échoue, tout le catalogue part (masquer n'est pas un contrôle d'accès : Spring revérifie chaque appel).
+Explicite et borné : nombre de tours d'outils, d'appels et de rédactions plafonnés ; un refus d'autorisation n'est
+jamais retenté ; une réponse dont un nombre ne vient pas des outils est réécrite une fois puis remplacée par une
+abstention. Le graphe n'a pas de mémoire durable : chaque question est un run indépendant.
 """
 
 import json
@@ -18,7 +19,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from pydantic import BaseModel
 
-from erp_rh_ia.domaines import DOMAINES, domaine_de, restreindre
+from erp_rh_ia.domaines import domaines_du_catalogue, restreindre
 from erp_rh_ia.modele import AppelOutil, Brouillon, Modele
 from erp_rh_ia.outils import OutilDecrit, Outils, ResultatOutil
 from erp_rh_ia.verification import verifier
@@ -149,7 +150,7 @@ class Agent:
     async def _cibler(self, state: Etat) -> Maj:
         """Ne garde que les outils des domaines utiles ; un ciblage invalide laisse tout le catalogue."""
         etat = state
-        presents = [d for d in DOMAINES if any(domaine_de(o.nom) == d.nom for o in etat["catalogue"])]
+        presents = domaines_du_catalogue(etat["catalogue"])
         if not presents:
             return {}
         liste = "\n".join(f"- {d.nom} : {d.description}" for d in presents)

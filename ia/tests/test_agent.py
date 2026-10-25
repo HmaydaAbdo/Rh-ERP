@@ -37,8 +37,10 @@ class ModeleScripte:
         self.domaines = domaines
         self.messages_redaction: list[list[dict[str, Any]]] = []
         self.outils_vus: list[list[str]] = []
+        self.domaines_proposes: list[list[str]] = []
 
     async def cibler(self, messages: list[dict[str, Any]], domaines: list[str]) -> list[str] | None:
+        self.domaines_proposes.append(domaines)
         return self.domaines
 
     async def choisir(self, messages: list[dict[str, Any]], outils: list[OutilDecrit]) -> Choix:
@@ -196,17 +198,28 @@ async def test_le_ciblage_ne_transmet_que_les_outils_des_domaines_utiles() -> No
 
     reponse = await Agent(modele).repondre("Masse salariale ?", OutilsSimules(CATALOGUE))
 
-    # Toujours visibles : identité, recherches de référentiel et outils sans domaine connu.
-    assert modele.outils_vus == [["systeme_identite", "paie_indicateurs", "chantier_rechercher", "outil_futur"]]
+    # Aucun outil d'office : ni identité, ni recherche de référentiel hors des domaines choisis.
+    assert modele.outils_vus == [["paie_indicateurs"]]
     assert reponse.domaines == ["paie"]
+    # Un préfixe non déclaré forme son propre domaine, proposé au ciblage comme les autres.
+    assert modele.domaines_proposes == [["paie", "employes", "referentiels", "administration", "systeme", "outil"]]
 
 
-async def test_hors_domaine_seuls_les_outils_toujours_visibles_restent() -> None:
+async def test_plusieurs_domaines_cumulent_leurs_outils() -> None:
+    modele = ModeleScripte([], [Brouillon("Rien.", None, True)], domaines=["paie", "referentiels"])
+
+    await Agent(modele).repondre("Masse du chantier C-12 ?", OutilsSimules(CATALOGUE))
+
+    assert modele.outils_vus == [["paie_indicateurs", "chantier_rechercher", "chantier_fiche"]]
+
+
+async def test_hors_domaine_aucun_outil_n_est_transmis() -> None:
     modele = ModeleScripte([], [Brouillon("Je ne sais pas.", None, True)], domaines=[])
 
-    await Agent(modele).repondre("Quel temps fera-t-il ?", OutilsSimules(CATALOGUE))
+    reponse = await Agent(modele).repondre("Quel temps fera-t-il ?", OutilsSimules(CATALOGUE))
 
-    assert modele.outils_vus == [["systeme_identite", "chantier_rechercher", "outil_futur"]]
+    assert modele.outils_vus == [[]]
+    assert reponse.abstention
 
 
 async def test_un_ciblage_indisponible_garde_tout_le_catalogue() -> None:

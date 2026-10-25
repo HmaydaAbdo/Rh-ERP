@@ -256,7 +256,7 @@ services:
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY:-}
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY:-}
+      ZAI_API_KEY: ${ZAI_API_KEY:-}
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
     security_opt:
       - no-new-privileges:true

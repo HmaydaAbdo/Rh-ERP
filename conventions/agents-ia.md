@@ -282,9 +282,10 @@ coût (tokens, latence, erreurs de routage) sans bénéfice.
 
 Étape intermédiaire de référence avant le multi-agents : **un seul agent dont le catalogue est ciblé**.
 Un petit modèle classe la question parmi les domaines déclarés ; seuls les outils de ces domaines sont
-transmis au modèle qui raisonne. Un domaine se déclare par un préfixe d'outil, une description et des cas
-du jeu de référence. Un outil sans domaine reste visible, et un ciblage invalide ou indisponible rend le
-catalogue complet : masquer un outil n'est jamais un contrôle d'accès.
+transmis au modèle qui raisonne, aucun d'office. Un domaine se déclare par un préfixe d'outil, une
+description et des cas du jeu de référence ; un préfixe non déclaré forme son propre domaine et suit le
+même ciblage. Un ciblage invalide ou indisponible rend le catalogue complet : masquer un outil n'est
+jamais un contrôle d'accès.
 
 On passe à des agents de domaine (sous-graphes LangGraph exposés au superviseur comme outils) seulement
 quand le jeu de référence montre au moins l'un des besoins suivants :
