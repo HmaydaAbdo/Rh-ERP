@@ -20,9 +20,10 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
   hors catalogue n'est pas appelé ; une sortie JSON invalide est rédigée une seconde fois. Aucune mémoire
   durable : chaque question est un run indépendant.
 - **Ciblage par domaine** — `domaines.py` : un petit modèle (tag `simple`) choisit les domaines utiles
-  (paie, employés, référentiels, administration) ; seuls leurs outils, plus l'identité et les recherches de
-  référentiel, partent vers le modèle `complex`. Un outil sans domaine reste visible ; un ciblage invalide
-  ou indisponible garde tout le catalogue. Ce n'est pas un contrôle d'accès : Spring revérifie chaque appel.
+  (paie, employés, référentiels, administration, système) ; seuls leurs outils partent vers le modèle
+  `complex`, aucun d'office. Un préfixe d'outil non déclaré forme son propre domaine et suit le même
+  ciblage. Un ciblage invalide ou indisponible garde tout le catalogue. Ce n'est pas un contrôle d'accès :
+  Spring revérifie chaque appel.
 - **Vérificateur de chiffres** — `verification.py` : chaque nombre de la réponse (formats `3 000,50`,
   `3000.50`, espaces insécables) doit figurer dans les résultats d'outils ou la question. Sinon une
   réécriture, puis abstention `CHIFFRES_NON_VERIFIES`. Un pourcentage ou un total recalculé par le modèle

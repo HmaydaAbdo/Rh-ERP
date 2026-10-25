@@ -11,8 +11,10 @@
 #   saute directement au niveau suivant sans essayer les autres modèles du même niveau.
 # - Chaque pool ne contient que des modèles acceptables pour la tâche. Pool épuisé = échec explicite,
 #   jamais une réponse d'un modèle plus faible.
-# - Les offres « pas pour la production » (NVIDIA Developer, preview Groq, essai Cerebras) ne portent
-#   que des tags opt-in `eval`, `eval-<capacité>`. La clé d'ERP-RH porte metadata {"tags": ["!eval"]}.
+# - Les modèles en préversion ou à sortie non fiable (preview Groq, Step 5) ne portent que des tags opt-in
+#   `eval`, `eval-<capacité>`. La clé d'ERP-RH porte metadata {"tags": ["!eval"]}. NVIDIA NIM (prototypage)
+#   est dans les pools tant que l'ERP ne traite que des données synthétiques (J1–J2), retiré avant J3.
+# - Pas de bascule sur 400 ni 401 : les déploiements sans clé sont retirés au démarrage (filtrer_config.py).
 # - Sans tag, si tout le pool `default` est en cooldown, LiteLLM se rabat sur n'importe quel
 #   déploiement sain du groupe : toujours envoyer un tag.
 # - Chaque déploiement porte aussi `id:<model_info.id>` pour cibler un modèle précis (tests, évaluations).
@@ -92,18 +94,110 @@ model_list:
       max_parallel_requests: 4
       tags: [simple, "id:groq-gpt-oss-20b"]
 
-  # ---------------------------------------------------------------- Mistral (Free mode)
-  # Limites visibles dans Admin > Limits. Les requêtes gratuites peuvent servir à l'entraînement
-  # sauf désactivation dans Admin Console > Privacy.
+  # ---------------------------------------------------------------- Mistral (Experiment, gratuit)
+  # Limites par modèle dans Admin > Limits (environ 1 req/s pour l'espace de travail). Les requêtes
+  # gratuites peuvent servir à l'entraînement sauf désactivation dans Admin Console > Privacy.
+  # Sondé le 2026-10-25 : ministral-14b et codestral répondent (outils + JSON) ; medium renvoie 429
+  # sur ce compte (quota à vérifier) — un 429 bascule, il reste donc dans le pool.
   - model_name: ai-gateway
-    model_info: { id: mistral-small }
+    model_info: { id: mistral-medium }
     litellm_params:
-      model: mistral/mistral-small-latest
+      model: mistral/mistral-medium-latest
       api_key: os.environ/MISTRAL_API_KEY
       weight: 3
+      rpm: 30
       timeout: 60
-      max_parallel_requests: 2
-      tags: [medium, complex, code, default, "id:mistral-small"]
+      max_parallel_requests: 1
+      tags: [complex, "id:mistral-medium"]
+
+  - model_name: ai-gateway
+    model_info: { id: mistral-ministral-14b }
+    litellm_params:
+      model: mistral/ministral-14b-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, medium, default, "id:mistral-ministral-14b"]
+
+  - model_name: ai-gateway
+    model_info: { id: mistral-codestral }
+    litellm_params:
+      model: mistral/codestral-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [code, "id:mistral-codestral"]
+
+  # ---------------------------------------------------------------- Z.ai (modèles Flash gratuits)
+  # Seuls les modèles *-flash sont gratuits sur ce compte (les autres : « Insufficient balance »).
+  # glm-4.7-flash : outils OK, mais sortie json_schema invalide par la passerelle (sondage du
+  # 2026-10-25) : hors des pools simple (ciblage JSON) et complex.
+  - model_name: ai-gateway
+    model_info: { id: zai-glm-47-flash }
+    litellm_params:
+      model: zai/glm-4.7-flash
+      api_key: os.environ/ZAI_API_KEY
+      weight: 3
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [medium, default, "id:zai-glm-47-flash"]
+
+  # ---------------------------------------------------------------- NVIDIA NIM (build.nvidia.com)
+  # Offre de prototypage : admise tant que l'ERP ne traite que des données synthétiques (J1–J2),
+  # retirée des pools avant J3. Environ 40 RPM par compte (non publié) : rpm 10 par modèle.
+  # Sondé le 2026-10-25 (outils + JSON en 1 à 3 s) ; écartés : deepseek-v4.1-flash, glm-5.3, gemma-4-31b
+  # (délai dépassé), kimi-k2.6, nemotron-3-super, muse-glimmer (404 pour ce compte), glm-5.3-flash (90 s).
+  - model_name: ai-gateway
+    model_info: { id: nvidia-minimax-m31-flash }
+    litellm_params:
+      model: openai/minimaxai/minimax-m3.1-flash
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
+
+  - model_name: ai-gateway
+    model_info: { id: nvidia-nemotron-3-ultra-550b }
+    litellm_params:
+      model: openai/nvidia/nemotron-3-ultra-550b-a55b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, "id:nvidia-nemotron-3-ultra-550b"]
+
+  - model_name: ai-gateway
+    model_info: { id: nvidia-nemotron-35-super-vl-120b }
+    litellm_params:
+      model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, medium, "id:nvidia-nemotron-35-super-vl-120b"]
+
+  - model_name: ai-gateway
+    model_info: { id: nvidia-gpt-oss-20b }
+    litellm_params:
+      model: openai/openai/gpt-oss-20b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 3
+      rpm: 10
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, "id:nvidia-gpt-oss-20b"]
 
   # ---------------------------------------------------------------- Cloudflare Workers AI
   # 10 000 Neurons/jour partagés par TOUS les modèles du compte (remise à zéro 00:00 UTC). Rester en
@@ -159,91 +253,18 @@ model_list:
       max_parallel_requests: 2
       tags: [eval, eval-medium, eval-complex, eval-code, "id:groq-qwen-38-27b"]
 
-  # Essai gratuit Cerebras : crédit unique de 5 $ valable 30 jours, 5 RPM, 1M tokens/jour, contexte 65k.
+  # Step 5 Preview (NVIDIA) : outils OK mais JSON invalide au sondage du 2026-10-25 ; évaluation seulement.
   - model_name: ai-gateway
-    model_info: { id: cerebras-gpt-oss-120b, max_input_tokens: 56000 }
+    model_info: { id: nvidia-step-5-preview }
     litellm_params:
-      model: cerebras/gpt-oss-120b
-      api_key: os.environ/CEREBRAS_API_KEY
-      weight: 2
-      rpm: 5
-      timeout: 45
-      max_parallel_requests: 2
-      tags: [eval, eval-medium, eval-complex, eval-code, "id:cerebras-gpt-oss-120b"]
-
-  # NVIDIA NIM Developer : prototypage et tests uniquement. Aucune limite publiée : rpm 6 par modèle
-  # est un choix prudent de cette passerelle. Entrée image non vérifiée : tester --providers avant eval-ocr.
-  - model_name: ai-gateway
-    model_info: { id: nvidia-glm-5-3-flash }
-    litellm_params:
-      model: openai/z-ai/glm-5.3-flash
+      model: openai/stepfun-ai/step-5-preview
       api_base: https://integrate.api.nvidia.com/v1
       api_key: os.environ/NVIDIA_API_KEY
       weight: 2
-      rpm: 6
-      timeout: 120
+      rpm: 10
+      timeout: 90
       max_parallel_requests: 1
-      tags: [eval, eval-simple, eval-medium, eval-ocr, "id:nvidia-glm-5-3-flash"]
-
-  - model_name: ai-gateway
-    model_info: { id: nvidia-nemotron-3-super-120b }
-    litellm_params:
-      model: openai/nvidia/nemotron-3-super-120b-a12b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 2
-      rpm: 6
-      timeout: 120
-      max_parallel_requests: 1
-      tags: [eval, eval-medium, eval-complex, eval-code, "id:nvidia-nemotron-3-super-120b"]
-
-  - model_name: ai-gateway
-    model_info: { id: nvidia-glm-5-3 }
-    litellm_params:
-      model: openai/z-ai/glm-5.3
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 3
-      rpm: 6
-      timeout: 120
-      max_parallel_requests: 1
-      tags: [eval, eval-medium, eval-complex, eval-code, "id:nvidia-glm-5-3"]
-
-  - model_name: ai-gateway
-    model_info: { id: nvidia-nemotron-3-ultra-550b }
-    litellm_params:
-      model: openai/nvidia/nemotron-3-ultra-550b-a55b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 2
-      rpm: 6
-      timeout: 120
-      max_parallel_requests: 1
-      tags: [eval, eval-complex, eval-code, "id:nvidia-nemotron-3-ultra-550b"]
-
-  - model_name: ai-gateway
-    model_info: { id: nvidia-kimi-k3 }
-    litellm_params:
-      model: openai/moonshotai/kimi-k3
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 3
-      rpm: 6
-      timeout: 120
-      max_parallel_requests: 1
-      tags: [eval, eval-complex, eval-code, eval-ocr, "id:nvidia-kimi-k3"]
-
-  - model_name: ai-gateway
-    model_info: { id: nvidia-deepseek-v41-flash }
-    litellm_params:
-      model: openai/deepseek-ai/deepseek-v4.1-flash
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 3
-      rpm: 6
-      timeout: 120
-      max_parallel_requests: 1
-      tags: [eval, eval-medium, eval-complex, eval-code, eval-ocr, "id:nvidia-deepseek-v41-flash"]
+      tags: [eval, eval-medium, eval-complex, "id:nvidia-step-5-preview"]
 
   # ================================================================ Auto-test de bascule
   # Alias interne utilisé seulement par test_providers.py ; ne jamais le donner aux clés applicatives.
