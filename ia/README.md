@@ -103,6 +103,11 @@ cd backend
 
 Journaux : `backend/target/agui-client.txt` et `backend/target/agui-service.txt`.
 
+Banc de démonstration pour le navigateur (`BancAssistantTest`, `-Dia.banc=true`) : l'application de test avec des données
+fictives, un compte de test et ce service (port 5103), laissés en marche jusqu'à `backend/target/banc-assistant.stop`
+(45 minutes au plus). Ports, compte et codes chantier dans `backend/target/banc-assistant.json` ; pointer `ng serve` dessus
+avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS` incluant l'origine de `ng serve`.
+
 ## Image et exploitation
 
 - Image multi-étapes, bases `python:3.13-slim` et `uv` épinglées par digest ; dépendances installées

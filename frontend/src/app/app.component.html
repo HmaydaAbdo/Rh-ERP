@@ -4,6 +4,7 @@
   class="app-shell"
   [class.app-shell--auth]="!navigationVisible()"
   [class.app-shell--menu-ouvert]="menuOuvert()"
+  [class.app-shell--assistant]="assistantVisible()"
   (keydown.escape)="fermerMenu()"
 >
   @if (navigationVisible()) {
@@ -123,4 +124,7 @@
   <main id="contenu" class="app-content" tabindex="-1">
     <router-outlet></router-outlet>
   </main>
+  @if (assistantVisible()) {
+    <app-assistant />
+  }
 </div>

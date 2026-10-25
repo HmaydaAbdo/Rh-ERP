@@ -15,6 +15,6 @@ npm run typecheck --prefix scripts/ia/agui-client
 ```
 
 Versions figées par `package-lock.json` ; `@ag-ui/client` 1.0.3, dernière version stable au 2026-10-25.
-`npm audit` signale `zod` 3 (GHSA-mrhx-c7xc-m3w5, épuisement mémoire sur des collections surdimensionnées),
-dépendance du client sans correctif publié : sans effet ici (client de test face au service local), à
-trancher avant d'embarquer le client dans Angular (T8).
+`zod` est forcé en 4.6.7 (`overrides`) : le client déclare `zod` 3, touché par GHSA-mrhx-c7xc-m3w5 sans correctif
+en 3.x. Le flux réel passe avec `zod` 4 ; le frontend applique le même forçage. À retirer quand le client
+déclarera `zod` 4.

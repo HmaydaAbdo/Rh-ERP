@@ -24,7 +24,7 @@ nouveau préfixe d'API s'ajoute aussi à `nginx.conf` (production).
 
 | Fichier | Rôle |
 |---|---|
-| `proxy.conf.js` | Proxy de développement (distingue navigation de page et appel API par l'en-tête `Accept`) |
+| `proxy.conf.js` | Proxy de développement (distingue navigation de page et appel API par l'en-tête `Accept`) ; `/ia/*` vers le service IA (`IA_URL`, sinon `http://localhost:${IA_PORT}`, 5003 par défaut) |
 | `nginx.conf` | nginx « inner » de production : sert l'application, relaie l'API, fournit `/health` |
 | `Dockerfile` | Build de l'application puis image nginx |
 | `angular.json` | Configuration Angular CLI |

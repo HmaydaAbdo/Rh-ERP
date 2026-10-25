@@ -22,6 +22,7 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
+import { AssistantComponent } from './core/assistant/assistant.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { SIDEBAR_ITEMS } from './core/navigation/nav-items';
 import { ThemeService } from './core/theme/theme.service';
@@ -39,6 +40,7 @@ function estRouteAuthentification(url: string): boolean {
       RouterLink,
       RouterLinkActive,
       FeedbackViewportComponent,
+      AssistantComponent,
       LucideBriefcase,
       LucideBuilding,
       LucideChevronDown,
@@ -79,6 +81,8 @@ export class AppComponent {
     { initialValue: estRouteAuthentification(this.router.url) }
   );
   readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
+  /** Assistant RH (docs/ia.md, T8) : réservé au droit IA_UTILISER ; l'application reste entièrement utilisable sans lui. */
+  readonly assistantVisible = computed(() => this.navigationVisible() && this.authService.hasPermission('IA_UTILISER'));
   private readonly routeCourante = toSignal(
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),

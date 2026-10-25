@@ -194,6 +194,8 @@ services:
         condition: service_healthy
     networks:
       - web-net
+      # Relais /ia/agui vers le service IA (nginx.conf) ; inutilisé sans le profil « ia ».
+      - assistant-net
     environment:
       # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
       ARCGIS_API_KEY: ${ARCGIS_API_KEY:?ARCGIS_API_KEY est obligatoire (clé ArcGIS gratuite, voir docs/chantier/carte.md)}
@@ -289,6 +291,7 @@ services:
       - /tmp
     networks:
       - ia-net
+      - assistant-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -306,3 +309,5 @@ networks:
   ia-db-net:
   # ia, litellm et le backend (route /mcp).
   ia-net:
+  # frontend (nginx) et service IA seulement : le navigateur atteint l'assistant, jamais la passerelle LiteLLM.
+  assistant-net:
