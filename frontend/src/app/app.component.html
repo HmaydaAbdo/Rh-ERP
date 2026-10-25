@@ -125,6 +125,9 @@
     <router-outlet></router-outlet>
   </main>
   @if (assistantVisible()) {
-    <app-assistant />
+    <!-- Chargé après l'écran (client AG-UI compris) : le premier affichage ne paie pas l'assistant. -->
+    @defer (on idle) {
+      <app-assistant />
+    }
   }
 </div>
