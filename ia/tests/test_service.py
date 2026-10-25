@@ -9,11 +9,16 @@ from erp_rh_ia.llm import Tache, options_tache, passerelle_prete, url_disponibil
 
 
 def _settings(enabled: bool = True, base_url: str = "http://litellm:4000/v1") -> Settings:
-    return Settings(enabled=enabled, litellm_base_url=base_url, litellm_api_key="sk-test-cle")  # pyright: ignore[reportArgumentType]
+    return Settings(
+        enabled=enabled,
+        litellm_base_url=base_url,  # pyright: ignore[reportArgumentType]
+        litellm_api_key="sk-test-cle",  # pyright: ignore[reportArgumentType]
+        erp_api_url="http://backend:8080",  # pyright: ignore[reportArgumentType]
+    )
 
 
 def test_configuration_refuse_variable_manquante(monkeypatch: pytest.MonkeyPatch) -> None:
-    for nom in ("IA_ENABLED", "IA_LITELLM_BASE_URL", "IA_LITELLM_API_KEY"):
+    for nom in ("IA_ENABLED", "IA_LITELLM_BASE_URL", "IA_LITELLM_API_KEY", "IA_ERP_API_URL"):
         monkeypatch.delenv(nom, raising=False)
     with pytest.raises(ValidationError):
         Settings()  # pyright: ignore[reportCallIssue]

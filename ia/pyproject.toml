@@ -12,6 +12,7 @@ dependencies = [
     "openai",
     "mcp",
     "langgraph",
+    "ag-ui-protocol==1.0.0",
 ]
 
 [dependency-groups]

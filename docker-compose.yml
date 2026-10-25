@@ -279,6 +279,8 @@ services:
       IA_ENABLED: ${IA_ENABLED:-false}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:-}
+      # Jeton agent et route /mcp du backend, par le réseau ia-net.
+      IA_ERP_API_URL: http://backend:8080
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
