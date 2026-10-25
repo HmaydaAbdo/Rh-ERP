@@ -142,6 +142,15 @@ security:
     # Secret HMAC (HS256) pour signer/valider les Access Tokens, base64, 256 bits minimum. Jamais de
     # valeur par défaut (conventions/security.md) — générer avec, par ex., `openssl rand -base64 32`.
     secret: ${JWT_SECRET}
+  mcp:
+    # Route /mcp et jeton délégué de l'agent IA (docs/ia.md, § 5). Obligatoire : true ou false, jamais deviné.
+    enabled: ${MCP_ENABLED}
+    # Avec MCP_ENABLED=true, le démarrage échoue sans clé privée RSA 3072 bits (base64 d'un PKCS#8 DER) ni identifiant.
+    # La clé publique précédente (base64 d'un X.509 DER) reste acceptée pendant un changement de clé.
+    private-key: ${MCP_JWT_PRIVATE_KEY:}
+    key-id: ${MCP_JWT_KEY_ID:}
+    previous-public-key: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:}
+    previous-key-id: ${MCP_JWT_PREVIOUS_KEY_ID:}
   cors:
     frontend-url: ${FRONTEND_URL}
     allowed-origins: ${CORS_ALLOWED_ORIGINS}

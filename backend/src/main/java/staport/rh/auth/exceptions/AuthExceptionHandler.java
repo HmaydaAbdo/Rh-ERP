@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import staport.rh.auth.controller.AgentController;
 import staport.rh.auth.controller.AuthController;
 import staport.rh.auth.controller.RoleController;
 import staport.rh.auth.controller.UserController;
@@ -13,7 +14,7 @@ import staport.rh.common.dtos.ErrorResponseDto;
 
 import java.time.Instant;
 
-@RestControllerAdvice(assignableTypes = {AuthController.class, UserController.class, RoleController.class})
+@RestControllerAdvice(assignableTypes = {AuthController.class, UserController.class, RoleController.class, AgentController.class})
 @Order(0)
 public class AuthExceptionHandler {
 
@@ -32,7 +33,7 @@ public class AuthExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
-    @ExceptionHandler({UtilisateurNotFoundException.class, RoleNotFoundException.class})
+    @ExceptionHandler({UtilisateurNotFoundException.class, RoleNotFoundException.class, IaDesactiveeException.class})
     public ResponseEntity<ErrorResponseDto> handleNotFound(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }

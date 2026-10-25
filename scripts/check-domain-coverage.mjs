@@ -11,7 +11,8 @@ const domains = {
   equipe: { prefix: 'staport/rh/equipe/', line: 70, branch: 25 },
   paie: { prefix: 'staport/rh/paie/', line: 70, branch: 70 },
   parametre: { prefix: 'staport/rh/parametre/', line: 70, branch: 70 },
-  audit: { prefix: 'staport/rh/audit/', line: 70, branch: 60 }
+  audit: { prefix: 'staport/rh/audit/', line: 70, branch: 60 },
+  mcp: { prefix: 'staport/rh/mcp/', line: 70, branch: 50 }
 };
 
 const packages = [...xml.matchAll(/<package name="([^"]+)"[\s\S]*?<\/package>/g)].map((match) => match[0]);

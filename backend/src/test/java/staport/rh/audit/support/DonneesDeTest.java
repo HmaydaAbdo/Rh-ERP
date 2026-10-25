@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
+import staport.rh.employee.entities.TypeSalaire;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.entities.Paie;
@@ -68,6 +69,18 @@ public class DonneesDeTest {
             Paie paie = nouveauBulletin(ref, periode);
             entityManager.persist(paie);
             return paie.getId();
+        });
+    }
+
+    /**
+     * Donne à l'employé le salaire de ses bulletins (3 000 MAD, mensuel), comme le ferait l'import de paie : l'employé
+     * porte l'état de son dernier mois (ADR 0010), que {@link #creerBulletin} n'applique pas.
+     */
+    public void renseignerSalaire(Referentiel ref) {
+        transaction.executeWithoutResult(statut -> {
+            Employee employe = entityManager.find(Employee.class, ref.employeId());
+            employe.setSalaire(new BigDecimal("3000.00"));
+            employe.setTypeSalaire(TypeSalaire.MENSUEL);
         });
     }
 

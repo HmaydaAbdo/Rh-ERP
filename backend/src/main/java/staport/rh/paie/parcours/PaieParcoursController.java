@@ -12,15 +12,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import staport.rh.common.dtos.ErrorResponseDto;
+import staport.rh.paie.services.interfaces.IPaieParcoursService;
 
 @RestController
 @RequestMapping("/paie/employes")
 @Tag(name = "Paie", description = "Bulletins de paie, import, export et rapport PDF")
 public class PaieParcoursController {
 
-    private final PaieParcoursService parcoursService;
+    private final IPaieParcoursService parcoursService;
 
-    public PaieParcoursController(PaieParcoursService parcoursService) {
+    public PaieParcoursController(IPaieParcoursService parcoursService) {
         this.parcoursService = parcoursService;
     }
 

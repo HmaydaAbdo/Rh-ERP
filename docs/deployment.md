@@ -149,6 +149,10 @@ Compose active alors ce profil pour les commandes. Le profil lance le planificat
 et le planificateur de rétention pgAudit ; ce n'est pas une commande de restauration. Sans cette
 variable ou `--profile backup`, ces services optionnels ne sont pas inclus.
 
+Les services IA (`litellm-db`, `litellm`, `ia`) appartiennent au profil `ia`
+(`COMPOSE_PROFILES=backup,ia` pour les inclure) ; la pile ERP n'en dépend pas. Leurs variables
+sont dans la section IA du même `.env` ; voir [ia.md](ia.md) et [litellm/README.md](../litellm/README.md).
+
 Le fond de la carte des chantiers est un dossier de l'hôte (`CARTE_FOND_DIR`, défaut `./carte-fond`) monté en lecture
 seule dans le frontend ; le préparer une fois avec `scripts/carte/preparer-fond-carte.sh ./carte-fond` (voir
 [chantier/carte.md](chantier/carte.md)). Sans lui, l'application fonctionne, la carte s'affiche sans fond.

@@ -30,6 +30,8 @@
 		<java.version>21</java.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<archunit.version>1.5.1</archunit.version>
+		<!-- SDK MCP Java officiel (route /mcp, docs/ia.md) ; même version que la preuve de compatibilité. -->
+		<mcp-sdk.version>2.1.0</mcp-sdk.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<cyclonedx.version>2.9.3</cyclonedx.version>
 		<!-- Correctifs de sécurité plus récents que ceux de la BOM de Spring Boot 4.1.1 (analyse OSV du 2026-10-11) :
@@ -149,6 +151,16 @@
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-core</artifactId>
+            <version>${mcp-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-json-jackson3</artifactId>
+            <version>${mcp-sdk.version}</version>
+        </dependency>
         <dependency>
             <groupId>me.paulschwarz</groupId>
             <artifactId>springboot4-dotenv</artifactId>
@@ -380,28 +392,11 @@
 		</plugins>
 	</build>
 
-	<!-- P1.1 : prototype MCP opt-in, uniquement sur le classpath des tests.
-	     Aucune dépendance MCP ni source du prototype dans le livrable applicatif. -->
+	<!-- Preuve de compatibilité MCP opt-in (clients TypeScript et Python contre un serveur synthétique) :
+	     ses sources et sorties restent hors du livrable applicatif. -->
 	<profiles>
 		<profile>
 			<id>mcp-compatibility</id>
-			<properties>
-				<mcp.compatibility.version>2.1.0</mcp.compatibility.version>
-			</properties>
-			<dependencies>
-				<dependency>
-					<groupId>io.modelcontextprotocol.sdk</groupId>
-					<artifactId>mcp-core</artifactId>
-					<version>${mcp.compatibility.version}</version>
-					<scope>test</scope>
-				</dependency>
-				<dependency>
-					<groupId>io.modelcontextprotocol.sdk</groupId>
-					<artifactId>mcp-json-jackson3</artifactId>
-					<version>${mcp.compatibility.version}</version>
-					<scope>test</scope>
-				</dependency>
-			</dependencies>
 			<build>
 				<!-- Les classes de ce profil ne contaminent jamais target/test-classes. -->
 				<directory>${project.basedir}/target/mcp-compatibility</directory>

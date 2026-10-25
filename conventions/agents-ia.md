@@ -5,11 +5,10 @@ contribuent à leur développement. Elle fixe les règles communes ; chaque appl
 cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans `docs/` et ses
 ADR.
 
-Pour ERP-RH, le cadrage et le suivi de l'intégration sont dans [`docs/ia/README.md`](../docs/ia/README.md)
-et l'[ADR 0013](../docs/adr/0013-integration-ia-mcp-langgraph-rag.md). L'orientation demandée par le
-propriétaire sépare le métier Spring de l'orchestration IA TypeScript. Les options nouvelles de cet
-ADR restent des propositions jusqu'à leur validation ; ce document ne déclare pas ces composants
-implémentés ni déployés.
+Pour ERP-RH, les décisions, l'architecture, la feuille de route et l'état du chantier sont tenus
+dans un document unique, [`docs/ia.md`](../docs/ia.md). Le métier reste dans Spring ; l'orchestration
+IA est un service Python distinct. Ce document ne déclare aucun composant implémenté ni déployé ;
+l'état réel est celui de `docs/ia.md`.
 
 ## Choisir la famille de solution IA
 
@@ -136,12 +135,18 @@ backend expose seulement des capacités métier ciblées par des adaptateurs MCP
 les appels de modèles ni les graphes d'agents. Ne pas introduire Spring AI, LangChain4j ou
 LangGraph4j dans ERP-RH pour cette intégration.
 
-L'orientation ERP-RH est un runtime distinct **TypeScript/Node.js**, avec **LangGraph.js** pour les
-workflows à état explicite et **CopilotKit Runtime** pour la frontière avec l'interface **AG-UI**.
-Angular reste le client ; un runtime CopilotKit serveur ne suppose pas l'adoption de composants
-React dans Angular. Les versions exactes, l'intégration Angular et les contrats compatibles sont
-vérifiés au lot de compatibilité, puis verrouillés ; ne pas recopier une pile Java 17/Spring Boot 3
-issue d'un exemple. L'audit de la pile réelle et les points ouverts sont dans `docs/ia/`.
+L'orientation ERP-RH est un **service IA Python** distinct, avec **LangGraph** pour les workflows à
+état explicite et un point d'entrée **AG-UI** pour l'interface. Python est retenu parce que
+l'orchestration, l'apprentissage statistique, l'extraction de documents, la voix et l'évaluation y
+ont leur écosystème de référence : un seul runtime IA couvre ainsi les besoins futurs. Angular reste
+le client, sans composant React. Les versions exactes et l'intégration Angular sont vérifiées puis
+verrouillées au premier jalon ; ne pas recopier une pile issue d'un exemple.
+
+Le service Python suit les mêmes exigences de qualité que le reste du dépôt : dépendances
+verrouillées (`uv` et lockfile versionné), typage strict vérifié (`pyright`), lint et format
+(`ruff`), tests (`pytest`), contrats Pydantic pour les entrées, sorties, états et événements,
+configuration typée sans secret dans le code, conteneur non privilégié. Les contrats partagés avec
+Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côtés.
 
 * Les nœuds du graphe orchestrent des outils MCP autorisés, la recherche documentaire et les appels
   de modèles via la passerelle. Ils ne dupliquent pas les règles métier et n'accèdent pas aux tables
@@ -156,16 +161,17 @@ issue d'un exemple. L'audit de la pile réelle et les points ouverts sont dans `
   pas un motif pour multiplier les agents.
 * Dans ERP-RH, ne pas remplacer ce graphe explicite par un framework d'agents autonome opaque,
   notamment Deep Agents. Le contrôle des transitions est explicite ; les appels de modèles restent
-  probabilistes. Valider les arguments et sorties par schéma côté runtime (par exemple Zod), puis
+  probabilistes. Valider les arguments et sorties par schéma côté service IA (Pydantic), puis
   refaire les validations métier côté Spring. Une erreur retournée au graphe est structurée et
   minimisée ; elle n'expose ni stacktrace ni données interdites.
 * Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
   et Spring Boot réellement déclarés par le projet, sans ajouter de framework LLM au monolithe.
-* Tout composant supplémentaire, notamment Python, file de messages ou moteur de workflow, exige
-  un besoin vérifié, un contrat authentifié et la décision d'architecture correspondante.
-
-Cette orientation remplace la prescription d'orchestration Java de l'ADR 0008 pour ERP-RH ; elle ne
-supprime pas ses exigences de passerelle, de confidentialité, d'autorisation et d'évaluation.
+* Tout composant supplémentaire, notamment un second runtime IA, une file de messages ou un moteur
+  de workflow, exige un besoin vérifié, un contrat authentifié et la décision d'architecture
+  correspondante.
+* Les checkpoints durables ne sont introduits qu'avec un besoin de reprise réel (écriture avec
+  approbation, travail long) ; un dialogue en lecture seule se contente de l'historique de
+  conversation.
 
 ### Reprise durable et effets métier
 
@@ -208,12 +214,22 @@ et ne contient aucune règle métier.
   répartition de charge. Les modèles d'un même alias doivent avoir des capacités comparables (appels
   d'outils, sortie structurée, taille de contexte) ; vérifier ces capacités par les évaluations, pas
   par la documentation du fournisseur seule.
+* **Choix des modèles par évaluation.** Un modèle n'entre dans un alias qu'après avoir atteint les
+  seuils validés sur le jeu de référence de l'application (exactitude, respect des outils et des
+  schémas, abstention, latence p95, coût) ; il en sort s'il régresse. La réputation ou le classement
+  public d'un modèle ne suffit pas.
+* **Comptes.** Plusieurs fournisseurs, chacun avec un compte par environnement ou usage déclaré, sont
+  admis. Plusieurs comptes chez un même fournisseur pour cumuler des quotas sont interdits.
 * **Offres gratuites.** Les quotas gratuits de plusieurs fournisseurs peuvent être combinés derrière un
-  alias, dans le respect des conditions d'utilisation de chacun : un compte par fournisseur et par
-  usage déclaré, jamais de multiplication de comptes pour contourner un quota. Une offre gratuite peut
+  alias pour les seules données admises par leur classe (voir ci-dessous). Une offre gratuite peut
   disparaître ou changer sans préavis : chaque alias garde un repli (autre fournisseur ou modèle
   auto-hébergé, par exemple via Ollama), et l'application affiche un état dégradé compréhensible
   quand aucun modèle ne répond.
+* **Ce que la bascule ne couvre pas.** Une passerelle bascule sur limite de débit, délai ou erreur
+  serveur, pas sur une requête refusée (400) ni une clé invalide (401). Un déploiement sans clé est
+  donc retiré de la configuration effective au démarrage, et les requêtes restent au plus près du
+  format OpenAI commun (contenu de message toujours en chaîne, éventuellement vide, jamais `null`).
+  Le volume de tokens par appel est mesuré et comparé aux limites par minute de chaque pool.
 * **Clés et budgets.** Les clés des fournisseurs restent dans la passerelle, jamais dans
   l'application ni dans Git. L'application dispose d'une clé virtuelle de passerelle par
   environnement, avec un budget et des limites de débit.
@@ -262,11 +278,33 @@ Un agent n'est créé que pour un besoin identifié. L'ordre de préférence est
 Ne pas créer un agent par entité ou par écran : un micro-agent sans contexte ni outils propres est un
 coût (tokens, latence, erreurs de routage) sans bénéfice.
 
+### Du ciblage par domaine aux agents de domaine
+
+Étape intermédiaire de référence avant le multi-agents : **un seul agent dont le catalogue est ciblé**.
+Un petit modèle classe la question parmi les domaines déclarés ; seuls les outils de ces domaines sont
+transmis au modèle qui raisonne, aucun d'office. Un domaine se déclare par un préfixe d'outil, une
+description et des cas du jeu de référence ; un préfixe non déclaré forme son propre domaine et suit le
+même ciblage. Un ciblage invalide ou indisponible rend le catalogue complet : masquer un outil n'est
+jamais un contrôle d'accès.
+
+On passe à des agents de domaine (sous-graphes LangGraph exposés au superviseur comme outils) seulement
+quand le jeu de référence montre au moins l'un des besoins suivants :
+
+* un domaine doit garder des instructions, un modèle ou un budget propres pour rester fiable ;
+* le catalogue ciblé d'un domaine dépasse la capacité mesurée du pool de modèles (tokens par minute,
+  qualité du choix d'outil) ;
+* des questions multi-domaines fréquentes gagnent à traiter leurs sous-tâches en parallèle.
+
+Un agent de domaine ne transmet au superviseur que ses résultats d'outils et un état typé, jamais sa
+seule prose : le vérificateur de chiffres du run reste applicable à la réponse finale. Chaque appel de
+modèle supplémentaire se paie en latence et en quota ; le gain doit être mesuré sur le jeu de référence
+avant l'adoption.
+
 ### Agents de domaine
 
 Un agent de domaine (« micro-agent ») possède un périmètre métier explicite et ne travaille que sur
 ses outils, ses skills (`docs/<domaine>/skills/`) et son contexte. Dans ERP-RH, sa définition reste
-dans le runtime TypeScript, organisée par domaine ; les règles métier et les adaptateurs MCP restent
+dans le service IA, organisée par domaine ; les règles métier et les adaptateurs MCP restent
 dans leurs domaines Spring propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
 modèle et son budget. Un besoin d'un autre domaine passe par une délégation explicite du superviseur
 ou un outil public autorisé, sans accès implicite à son contexte.
@@ -287,12 +325,13 @@ Le modèle de collaboration de référence est le **superviseur** (orchestrateur
 La chorégraphie pair-à-pair (agents qui s'appellent librement ou réagissent à des événements entre eux)
 n'est pas retenue : elle rend les boucles, les coûts et la responsabilité d'une action difficiles à
 contrôler et à auditer. Un workflow à état explicite, avec reprises, branches ou validation humaine,
-peut utiliser LangGraph.js dans le runtime TypeScript d'ERP-RH, sous les mêmes règles.
+peut utiliser LangGraph dans le service IA d'ERP-RH, sous les mêmes règles.
 
 ### Règles communes à toute délégation
 
-* **Identité.** Un agent délégué agit avec l'identité et les permissions de l'utilisateur à l'origine
-  de la demande, jamais avec un compte technique plus puissant. Une délégation ne peut que restreindre
+* **Identité.** Un agent délégué agit avec l'identité, les permissions et le périmètre de données de
+  l'utilisateur à l'origine de la demande (par exemple les chantiers ou le département de sa fiche
+  de poste), jamais avec un compte technique plus puissant. Une délégation ne peut que restreindre
   les droits.
 * **Bornes.** Profondeur de délégation, nombre d'appels d'outils, nombre d'itérations, durée et budget
   de tokens sont plafonnés par demande ; au plafond, l'agent s'arrête et rend un état explicite.
@@ -355,6 +394,20 @@ suit [`integrations.md`](integrations.md).
 * **Garde-fous.** Les entrées et les contenus récupérés sont traités comme non fiables (injection de
   prompt) ; les sorties structurées sont validées par schéma avant usage ; une sortie invalide est un
   échec explicite, pas une réponse partielle silencieuse.
+
+## Exactitude des réponses chiffrées
+
+Un modèle ne garantit pas l'absence d'invention ; l'architecture la garantit pour les valeurs métier :
+
+* Le modèle ne calcule pas une valeur métier. Effectifs, montants, taux, dates et périodes viennent
+  des outils du domaine propriétaire et sont restitués avec leur période et leur définition.
+* Avant affichage, un vérificateur déterministe contrôle que chaque nombre, montant et période de la
+  réponse figure dans les résultats d'outils du même run. Une réponse non conforme est régénérée au
+  plus une fois, puis remplacée par une abstention explicite ; elle n'est jamais affichée telle quelle.
+* Sans outil ou source adaptés, l'agent s'abstient et propose le parcours classique correspondant.
+* Un jeu de référence versionné (questions, réponses attendues calculées sur des données de test,
+  cas d'abstention et cas interdits) est rejoué à chaque changement de modèle, de prompt, d'outil
+  ou de graphe ; une régression bloque la livraison.
 
 ## Découverte des outils à la demande (Tool Search)
 
@@ -436,10 +489,12 @@ couvertes par des contrôles déterministes et des sources métier faisant autor
 Les bibliothèques et protocoles évoluent. Vérifier les versions stables et les guides officiels au
 moment de l'adoption ou d'une mise à niveau :
 
-* [LangGraph.js — présentation et concepts](https://docs.langchain.com/oss/javascript/langgraph/overview)
-* [LangGraph.js — persistance et mémoire](https://docs.langchain.com/oss/javascript/langgraph/persistence)
+* [LangGraph — présentation et concepts](https://docs.langchain.com/oss/python/langgraph/overview)
+* [LangGraph — persistance et mémoire](https://docs.langchain.com/oss/python/langgraph/persistence)
+* [AG-UI](https://docs.ag-ui.com/introduction)
 * [CopilotKit](https://docs.copilotkit.ai/)
 * [Spécification MCP](https://modelcontextprotocol.io/specification/)
+* [SDK Python MCP](https://github.com/modelcontextprotocol/python-sdk)
 * [Protocole A2A](https://a2a-protocol.org/)
 * [LiteLLM](https://docs.litellm.ai/)
 * [Langfuse](https://langfuse.com/docs)

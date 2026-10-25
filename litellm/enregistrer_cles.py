@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Enregistre dans la passerelle les clés virtuelles dont la valeur est déjà dans le .env racine.
+
+  python litellm/enregistrer_cles.py
+
+- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : alias ai-gateway seulement, metadata.tags ["!eval"], 60 requêtes/min.
+- LITELLM_TEST_API_KEY -> clé « smoke-tests » : ai-gateway et ai-gateway-selftest (test_providers.py).
+
+Idempotent : une clé déjà enregistrée est laissée telle quelle. Utilise LITELLM_MASTER_KEY, sans jamais afficher de
+clé. Bibliothèque standard Python uniquement.
+"""
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+ENV = os.path.join(os.path.dirname(ICI), ".env")
+
+CLES = [
+    ("IA_LITELLM_API_KEY", {"key_alias": "erp-rh-ia", "models": ["ai-gateway"], "rpm_limit": 60,
+                            "metadata": {"tags": ["!eval"]}}),
+    ("LITELLM_TEST_API_KEY", {"key_alias": "smoke-tests", "models": ["ai-gateway", "ai-gateway-selftest"]}),
+]
+
+
+def lire_env():
+    """Le .env racine, puis les variables d'environnement du processus, qui priment."""
+    valeurs = {}
+    try:
+        with open(ENV, encoding="utf-8") as fichier:
+            for ligne in fichier:
+                ligne = ligne.strip()
+                if ligne and not ligne.startswith("#") and "=" in ligne:
+                    nom, valeur = ligne.split("=", 1)
+                    valeurs[nom.strip()] = valeur.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    utiles = {"LITELLM_MASTER_KEY", "LITELLM_GATEWAY_URL"} | {variable for variable, _ in CLES}
+    return {**valeurs, **{k: v for k, v in os.environ.items() if k in utiles}}
+
+
+def appeler(base, maitre, chemin, corps=None):
+    donnees = None if corps is None else json.dumps(corps).encode("utf-8")
+    requete = urllib.request.Request(base + chemin, data=donnees, headers={
+        "Authorization": f"Bearer {maitre}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(requete, timeout=30) as reponse:
+            return reponse.status, json.loads(reponse.read() or b"{}")
+    except urllib.error.HTTPError as erreur:
+        return erreur.code, {"erreur": erreur.read().decode("utf-8", "replace")[:300]}
+
+
+def main():
+    env = lire_env()
+    maitre = env.get("LITELLM_MASTER_KEY", "")
+    if not maitre.startswith("sk-"):
+        sys.exit("LITELLM_MASTER_KEY absente du .env racine")
+    base = env.get("LITELLM_GATEWAY_URL", "http://127.0.0.1:4000/v1/chat/completions").split("/v1/", 1)[0]
+    echec = False
+    for variable, definition in CLES:
+        cle = env.get(variable, "")
+        if not cle.startswith("sk-"):
+            print(f"[IGNORÉE] {variable} vide dans le .env")
+            continue
+        statut, _ = appeler(base, maitre, "/key/info?key=" + urllib.request.quote(cle))
+        if statut == 200:
+            print(f"[DÉJÀ]    {definition['key_alias']} ({variable})")
+            continue
+        statut, reponse = appeler(base, maitre, "/key/generate", {**definition, "key": cle})
+        if statut == 200:
+            print(f"[CRÉÉE]   {definition['key_alias']} ({variable})")
+        else:
+            echec = True
+            print(f"[ÉCHEC]   {definition['key_alias']} : HTTP {statut} {str(reponse).replace(cle, '<clé>')}")
+    sys.exit(1 if echec else 0)
+
+
+if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    main()

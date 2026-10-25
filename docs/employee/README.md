@@ -100,8 +100,9 @@ l'import comme l'API exigent déjà ces deux dates).
   bulletin restent historiques et indépendantes.
 - `salaire` et `typeSalaire` se renseignent **ensemble** ou pas du tout (`@AssertTrue` sur les DTO, 400 sinon) ; le salaire
   n'est jamais négatif. Ce sont des **données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas (`null`), ignore ceux
-  qu'on saisit (la fiche garde les siens) et retire un tri par salaire — masquage fait par `EmployeeController`, pour que
-  les autres domaines lisent le vrai salaire par `IEmployeeService`.
+  qu'on saisit (la fiche garde les siens) et retire un tri par salaire. La règle est `ProjectionPaieEmployee`, appliquée
+  à la frontière HTTP (`EmployeeController`) et par les outils MCP de l'assistant IA ; les autres domaines lisent le
+  vrai salaire par `IEmployeeService`.
 - La suppression (`DELETE /employees/{id}`) supprime l'employé. **Un employé référencé par au moins un bulletin de paie**
   (`paie.employee_id`) **ou lié à un compte utilisateur** (`utilisateur.employee_id`) **n'est pas supprimable** : la base refuse
   et l'API répond `409` avec un message explicite (`EmployeeExceptionHandler`, comme pour fonction, chantier et équipe — un

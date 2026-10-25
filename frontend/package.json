@@ -18,6 +18,7 @@
     "node": "^24.15.0"
   },
   "dependencies": {
+    "@ag-ui/client": "1.0.3",
     "@angular/aria": "^22.2.3",
     "@angular/cdk": "^22.2.2",
     "@angular/common": "^22.2.3",
@@ -52,6 +53,7 @@
     "vitest": "^5.0.5"
   },
   "overrides": {
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "zod": "4.6.7"
   }
 }

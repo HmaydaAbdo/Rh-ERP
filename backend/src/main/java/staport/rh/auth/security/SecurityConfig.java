@@ -194,6 +194,8 @@ public class SecurityConfig {
                     });
                     auth.requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/auth/password-policy").permitAll();
+                    // Clés publiques des jetons agent (JWKS) : publiques par nature, aucune partie privée.
+                    auth.requestMatchers(HttpMethod.GET, "/.well-known/jwks.json").permitAll();
                     auth.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll();
                     // Publique seulement quand la documentation est allumée (développement) ; sinon ces routes ne sont rien.
                     if (documentationApiActive) {

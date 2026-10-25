@@ -12,6 +12,7 @@
 | `POST /auth/forgot-password` | Répond toujours `202`, que l'email existe ou non |
 | `POST /auth/reset-password` | Consomme un token à usage unique |
 | `GET /auth/password-policy` | Renvoie la longueur minimale utilisée par le formulaire public de réinitialisation |
+| `GET /.well-known/jwks.json` | Clés publiques des jetons agent (aucune partie privée) ; `404` si l'assistant IA est désactivé |
 
 ## Endpoints authentifiés (utilisateur connecté, sans permission spécifique)
 
@@ -19,6 +20,15 @@
 |---|---|
 | `GET /auth/me` | Profil de l'utilisateur courant (résolu depuis le claim `uid` du JWT) |
 | `POST /auth/logout` | Révoque le Refresh Token courant |
+
+## Assistant IA
+
+| Endpoint | Permission | Note |
+|---|---|---|
+| `POST /auth/jetons/agent` | `IA_UTILISER` | Jeton délégué RS256 de 5 minutes ; compte actif et droit revérifiés en base avant l'émission |
+| `POST /mcp` | Jeton agent + `IA_UTILISER` | Réseau interne seulement (nginx ne relaie pas `/mcp`) ; compte et permissions relus à chaque requête ; tout en-tête `Origin` refusé |
+
+Chaque outil MCP exige en plus la permission de son domaine, revérifiée à chaque appel ; le catalogue complet (arguments, données, vues) est dans [ia.md](../ia.md#catalogue-mcp). Le salaire suit `PAIE_READ` comme dans l'API ; aucune écriture n'est exposée.
 
 ## Endpoints d'administration
 

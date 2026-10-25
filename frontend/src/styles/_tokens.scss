@@ -69,6 +69,16 @@
 
   // Les icônes des contrôles de la carte sont des images noires : inversées pour rester lisibles sur la surface sombre
   --map-icon-filter: invert(1);
+
+  // Assistant RH : verre sombre, mascotte lisible sur fond sombre
+  --assistant-glass-bg: color-mix(in srgb, var(--neutral-0) 78%, transparent);
+  --assistant-glass-border: rgba(156, 196, 240, 0.14);
+  --assistant-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 6px 18px rgba(0, 0, 0, 0.35);
+  --assistant-send-bg: var(--primary-300);
+  --assistant-send-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --assistant-mascot-face: var(--neutral-200);
+  --assistant-mascot-ink: var(--neutral-950);
+  --assistant-mascot-edge: var(--primary-600);
 }
 
 :root {
@@ -255,6 +265,22 @@
   --table-row-alt-bg: var(--neutral-50);
   --table-row-hover-bg: var(--neutral-100);
 
+  // ---- Assistant RH (voir core/assistant) : verre dépoli, accent cuivre de l'IA, mascotte casquée ----
+  --assistant-glass-bg: color-mix(in srgb, var(--neutral-0) 76%, transparent);
+  --assistant-glass-border: color-mix(in srgb, var(--neutral-0) 60%, transparent);
+  --assistant-glass-blur: 18px;
+  --assistant-shadow: 0 24px 60px rgba(5, 42, 73, 0.22), 0 6px 18px rgba(5, 42, 73, 0.1);
+  --assistant-panel-width: 25rem;
+  --assistant-accent: var(--brand-copper-400);
+  --assistant-accent-soft: color-mix(in srgb, var(--brand-copper-400) 16%, transparent);
+  --assistant-accent-contrast: #3a2207;
+  --assistant-send-bg: var(--brand-700);
+  --assistant-send-shadow: 0 6px 16px rgba(8, 68, 120, 0.35);
+  --assistant-mascot-face: var(--brand-50);
+  --assistant-mascot-ink: var(--brand-900);
+  --assistant-mascot-edge: var(--brand-600);
+  --assistant-mascot-helmet: #f2c14e;
+  --assistant-mascot-helmet-edge: #b07d12;
 }
 
 :root[data-theme='dark'] {

@@ -9,12 +9,14 @@ CI sont définis dans les conventions. Le propriétaire a demandé la revue loca
 Le lot harmonise les sélecteurs, la navigation et les synthèses Chantier sur la paie récente.
 Les README et skills de chaque domaine décrivent les règles courantes.
 
-**Chantier IA séparé (2026-10-23)** : branche `codex/integration-ia-mcp-rag`, plan renforcé et
-prototype MCP P1.1 testé en profil isolé ; validation propriétaire attendue avant P1.2.
-Aucune route MCP métier ni livraison IA. Reprendre par le
-[handoff IA](integration-ia.md), le [plan détaillé](../ia/plan-integration.md) et
-l’[ADR 0013 proposé](../adr/0013-integration-ia-mcp-langgraph-rag.md). La demande récente de branche
-dédiée s’applique à ce chantier ; ne pas intégrer son contenu à `main` par une ancienne consigne.
+**Chantier IA (2026-10-25)** : branche `claude/ia-doc-unique` (worktree `.claude/worktrees/ia-doc-unique`),
+livrée dans `main` par PR à la demande du propriétaire (J1, tâche T9). Tâches T1 à T8 de J1 faites : passerelle
+LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp` désactivée par
+`MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
+(évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
+Angular qui ouvre lui-même la vue filtrée de sa réponse. L'assistant n'apparaît qu'avec `IA_UTILISER`, le profil
+Compose `ia` et `IA_ENABLED=true`. Tout le chantier est suivi dans un seul document : [ia.md](../ia.md). Prochaine
+action : J2 (périmètres par fiche de poste), après la démonstration J1 au propriétaire.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
@@ -129,3 +131,5 @@ Le détail transversal est dans `TODO.md`; les tâches propres à un domaine son
   décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.
 - **Carte** : recherche de lieux reportée ; la clé ArcGIS (`ARCGIS_API_KEY`) expire au plus tard un an après sa création.
 - **Domaines à venir** : Pointage, puis paie calculée depuis le Pointage (section « Évolutions prochaines »).
+- **IA** : J2 (périmètres par fiche de poste, projection du salaire, budgets par poste) avant tout utilisateur non
+  administrateur ; aucune donnée réelle vers un modèle avant J3. Détail et journal dans [ia.md](../ia.md).
