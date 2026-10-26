@@ -40,9 +40,8 @@ public class LecteurFichierPaie {
         try (InputStream flux = fichier.getInputStream(); Workbook classeur = new XSSFWorkbook(flux)) {
             Sheet feuille = classeur.getSheetAt(0);
             List<LigneFichierPaie> lignes = new ArrayList<>();
-            int numeroLigne = 0;
             for (Row ligne : feuille) {
-                numeroLigne++;
+                int numeroLigne = ligne.getRowNum() + 1;
                 if (numeroLigne <= LIGNES_ENTETE || estVide(ligne)) {
                     continue;
                 }
@@ -114,7 +113,7 @@ public class LecteurFichierPaie {
             String valeur = DATA_FORMATTER.formatCellValue(cellule).replaceAll("[\\s\\u00A0\\u202F]", "");
             return valeur.isEmpty() ? null : new BigDecimal(valeur);
         } catch (RuntimeException e) {
-            return null;
+            throw new IllegalArgumentException("Valeur numérique invalide dans la cellule " + cellule.getAddress(), e);
         }
     }
 }

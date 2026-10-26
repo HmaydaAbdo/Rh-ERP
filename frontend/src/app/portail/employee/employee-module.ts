@@ -32,6 +32,6 @@ export const MODULE_EMPLOYE: ModulePerimetre = {
   },
   noteMouvements: (params) => {
     const filtres = lireFiltres(params);
-    return filtres.nomPrenom.trim() || filtres.cin.trim() || filtres.statut !== null ? 'Le nom, le CIN et le statut de la barre ne s’appliquent pas ici.' : null;
+    return filtres.statut !== null ? 'Le statut de la fiche ne s’applique pas aux mouvements historiques de la paie.' : null;
   }
 };

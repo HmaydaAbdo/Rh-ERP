@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input, OnInit, output, signal } from '@angular/core';
-import { disabled, form, FormField, FormRoot, required, validate } from '@angular/forms/signals';
+import { disabled, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
@@ -57,13 +57,18 @@ export class ParametreItemComponent implements OnInit {
     (chemin) => {
       disabled(chemin.valeur, () => !this.editable());
       required(chemin.valeur, { message: 'La valeur est obligatoire.' });
+      maxLength(chemin.valeur, 255, { message: 'La valeur ne dépasse pas 255 caractères.' });
       validate(chemin.valeur, ({ value }) => {
         const parametre = this.parametre();
-        if (parametre.type !== 'ENTIER' || value().trim() === '') {
+        const saisie = value().trim();
+        if (value() !== '' && saisie === '') {
+          return { kind: 'required', message: 'La valeur est obligatoire.' };
+        }
+        if (parametre.type !== 'ENTIER' || saisie === '') {
           return undefined;
         }
-        const nombre = Number(value());
-        if (!Number.isInteger(nombre) || (parametre.minimum !== null && nombre < parametre.minimum) || (parametre.maximum !== null && nombre > parametre.maximum)) {
+        const nombre = Number(saisie);
+        if (!/^[+-]?\d+$/.test(saisie) || !Number.isSafeInteger(nombre) || (parametre.minimum !== null && nombre < parametre.minimum) || (parametre.maximum !== null && nombre > parametre.maximum)) {
           return { kind: 'bornes', message: `Saisissez un entier compris entre ${parametre.minimum} et ${parametre.maximum}.` };
         }
         return undefined;
@@ -77,6 +82,9 @@ export class ParametreItemComponent implements OnInit {
   }
 
   private async enregistrer(): Promise<void> {
+    if (!this.editable()) {
+      return;
+    }
     const parametre = this.parametre();
     const resultat = await attendreEnregistrement(this.parametreService.update(parametre.id, { version: parametre.version, valeur: this.saisie().valeur }));
     if (resultat) {

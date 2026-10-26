@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.paie.repositories.EffectifBulletinProjection;
+import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 
@@ -36,10 +37,10 @@ public class PaieEffectifsService implements IPaieEffectifsService {
     public List<EffectifMoisDto> tendances(EffectifsCriteria criteres) {
         // Mois -> employé -> chantier du mois, pour les seuls bulletins du périmètre.
         Map<YearMonth, Map<Long, Long>> parMois = new TreeMap<>();
-        for (EffectifBulletinProjection bulletin : repository.listerEffectifs()) {
-            if (dansLePerimetre(bulletin, criteres)) {
-                parMois.computeIfAbsent(bulletin.getPeriode(), m -> new HashMap<>()).put(bulletin.getEmployeId(), bulletin.getChantierId());
-            }
+        FiltresPaie filtres = criteres == null ? FiltresPaie.AUCUN
+                : new FiltresPaie(criteres.nomPrenom(), criteres.cin(), criteres.chantierIds(), criteres.fonctionIds(), criteres.equipeIds());
+        for (EffectifBulletinProjection bulletin : repository.listerEffectifs(filtres)) {
+            parMois.computeIfAbsent(bulletin.getPeriode(), m -> new HashMap<>()).put(bulletin.getEmployeId(), bulletin.getChantierId());
         }
         Map<YearMonth, List<Long>> departs = new HashMap<>();
         for (EmployeeSortieDto depart : employeeService.listerToutesLesSorties()) {
@@ -70,16 +71,4 @@ public class PaieEffectifsService implements IPaieEffectifsService {
         return tendances;
     }
 
-    private static boolean dansLePerimetre(EffectifBulletinProjection bulletin, EffectifsCriteria criteres) {
-        if (criteres == null) {
-            return true;
-        }
-        return contient(criteres.chantierIds(), bulletin.getChantierId())
-                && contient(criteres.fonctionIds(), bulletin.getFonctionId())
-                && contient(criteres.equipeIds(), bulletin.getEquipeId() == null ? 0L : bulletin.getEquipeId());
-    }
-
-    private static boolean contient(List<Long> filtre, Long valeur) {
-        return filtre == null || filtre.isEmpty() || filtre.contains(valeur);
-    }
 }

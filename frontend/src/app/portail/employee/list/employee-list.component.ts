@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
+import { distinctUntilChanged, finalize, map, skip, Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
@@ -67,6 +67,7 @@ export class EmployeeListComponent {
   protected readonly employees = signal<Employee[]>([]);
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
+  protected readonly erreur = signal<string | null>(null);
   protected readonly deletingId = signal<number | null>(null);
 
   /** Filtres de la barre commune, lus dans l'URL (voir `filtres/employee-filtres.ts`). */
@@ -78,6 +79,7 @@ export class EmployeeListComponent {
   private lastPage = 0;
   private lastSize = 10;
   private lastSort = 'nomPrenom,asc';
+  private requete?: Subscription;
 
   constructor() {
     // La première émission est celle de l'URL déjà lue ci-dessus : le premier chargement vient du tableau (`onLazyLoad`).
@@ -133,15 +135,20 @@ export class EmployeeListComponent {
       });
   }
 
-  private fetchPage(): void {
+  protected fetchPage(): void {
+    this.requete?.unsubscribe();
     this.loading.set(true);
+    this.erreur.set(null);
 
-    this.employeeService
+    this.requete = this.employeeService
       .search(versCriteres(this.filtres), { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe((result) => {
-        this.employees.set(result.content);
-        this.totalRecords.set(result.page.totalElements);
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.employees.set(result.content);
+          this.totalRecords.set(result.page.totalElements);
+        },
+        error: () => this.erreur.set('Impossible de charger les employés. Vérifiez la connexion puis réessayez.')
       });
   }
 }

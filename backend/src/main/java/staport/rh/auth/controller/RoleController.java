@@ -27,7 +27,7 @@ import staport.rh.auth.services.interfaces.IRoleService;
 
 import java.util.List;
 
-/** Gestion des rôles — réservé à ROLE_MANAGE ; le catalogue est aussi consultable par USER_MANAGE pour l'édition des comptes. */
+/** Écriture des rôles réservée à ROLE_MANAGE ; leurs lectures et le catalogue servent aussi à l'administration des comptes. */
 @RestController
 @Tag(name = "Rôles", description = "Rôles administrables et catalogue des permissions")
 @PreAuthorize("hasAuthority('ROLE_MANAGE')")
@@ -40,6 +40,7 @@ public class RoleController {
     }
 
     @PostMapping("/roles/search")
+    @PreAuthorize("hasAnyAuthority('ROLE_MANAGE', 'USER_MANAGE')")
     @Operation(summary = "Rechercher des rôles", description = "Pagination serveur ; tri sur nom ou description.")
     public ResponseEntity<Page<RoleResponseDto>> search(@Valid @RequestBody(required = false) RoleSearchCriteria criteria,
                                                          @PageableDefault(size = 20, sort = "nom") Pageable pageable) {
@@ -47,6 +48,7 @@ public class RoleController {
     }
 
     @GetMapping("/roles/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_MANAGE', 'USER_MANAGE')")
     @Operation(summary = "Lire un rôle")
     public ResponseEntity<RoleResponseDto> findById(@PathVariable Long id) {
         return ResponseEntity.ok(roleService.findById(id));

@@ -1,7 +1,7 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
@@ -99,6 +99,7 @@ describe('JournalComponent', () => {
             requestId: undefined
         });
         expect(vi.mocked(service.search).mock.lastCall![1].page).toBe(0);
+        expect(composant['first']()).toBe(0);
     });
 
     it('utilise la sélection multiple pour les dimensions de journal à forte cardinalité', () => {
@@ -169,6 +170,71 @@ describe('JournalComponent', () => {
         composant['changementsSuivants']();
 
         expect(service.details).toHaveBeenCalledWith(5, { page: 1, size: 10 });
+    });
+
+    it('garde la dernière entrée choisie lorsque la précédente répond plus tard', () => {
+        const ancienne = new Subject<AuditEntree>();
+        service.getById.mockReturnValueOnce(ancienne).mockReturnValueOnce(of({ ...ENTREE, id: 9 }));
+
+        composant['onOuvrir'](LIGNE);
+        composant['onOuvrir']({ ...LIGNE, id: 9 });
+        ancienne.next(ENTREE);
+
+        expect(composant['entree']()?.id).toBe(9);
+        expect(service.details).toHaveBeenLastCalledWith(9, { page: 0, size: 10 });
+    });
+
+    it('annonce une lecture refusée sans la présenter comme une opération vide et permet de réessayer', () => {
+        service.getById.mockReturnValueOnce(throwError(() => new Error('lecture impossible')));
+        composant['onOuvrir'](LIGNE);
+
+        expect(composant['erreurEntree']()).toBe(true);
+        expect(composant['entree']()).toBeNull();
+        expect(service.details).not.toHaveBeenCalled();
+
+        composant['reessayerEntree']();
+
+        expect(composant['erreurEntree']()).toBe(false);
+        expect(composant['entree']()?.id).toBe(LIGNE.id);
+    });
+
+    it('réessaie la page de modifications en échec sans avancer à la suivante', () => {
+        service.details.mockReturnValueOnce(of(page([CHANGEMENT], 25)))
+            .mockReturnValueOnce(throwError(() => new Error('détails impossibles')))
+            .mockReturnValueOnce(of(page([CHANGEMENT], 25)));
+        composant['onOuvrir'](LIGNE);
+        composant['changementsSuivants']();
+
+        expect(composant['erreurChangements']()).toBe(true);
+        expect(composant['changements']()).toEqual([]);
+        composant['changementsSuivants']();
+        expect(service.details).toHaveBeenCalledTimes(2);
+
+        composant['reessayerChangements']();
+
+        expect(service.details).toHaveBeenLastCalledWith(5, { page: 1, size: 10 });
+        expect(composant['erreurChangements']()).toBe(false);
+    });
+
+    it('n’interroge pas les différences Envers d’un événement de sécurité', () => {
+        service.getById.mockReturnValue(of({ ...ENTREE, categorie: 'SECURITE', typeOperation: null }));
+
+        composant['onOuvrir'](LIGNE);
+
+        expect(service.details).not.toHaveBeenCalled();
+    });
+
+    it('signale l’échec de recherche et recharge le même périmètre au réessai', () => {
+        service.search.mockReturnValueOnce(throwError(() => new Error('journal indisponible')));
+        composant['onSearch']();
+
+        expect(composant['erreurRecherche']()).toBe(true);
+        expect(composant['lignes']()).toEqual([]);
+
+        composant['reessayerRecherche']();
+
+        expect(composant['erreurRecherche']()).toBe(false);
+        expect(composant['lignes']()).toEqual([LIGNE]);
     });
 
     it('remplace les filtres par l’identifiant de requête pour relier les entrées d’une même action', () => {

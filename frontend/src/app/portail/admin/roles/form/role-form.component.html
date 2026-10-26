@@ -4,7 +4,14 @@
     <h1>{{ isEditMode() ? 'Modifier le rôle' : 'Nouveau rôle' }}</h1>
   </div>
 
-  @if (!loading()) {
+  @if (loading()) {
+    <p role="status" aria-busy="true">Chargement du rôle et du catalogue des permissions…</p>
+  } @else if (erreurChargement()) {
+    <div role="alert">
+      <p>Impossible de charger le rôle et ses permissions.</p>
+      <button stp-button variant="secondary" type="button" (click)="charger()">Réessayer</button>
+    </div>
+  } @else {
     <form [formRoot]="form" class="app-form__grid">
       <div class="field">
         <label for="nom">Nom <span class="field__req" aria-hidden="true">*</span></label>
@@ -15,6 +22,7 @@
       <div class="field">
         <label for="description">Description</label>
         <input class="stp-input" autocomplete="off" id="description" type="text" [formField]="form.description" />
+        <stp-field-error [field]="form.description" />
       </div>
 
       <div class="app-form__wide role-form__permissions">
@@ -33,6 +41,7 @@
                 class="stp-checkbox"
                 [attr.aria-label]="'Tout sélectionner : ' + group.domaine"
                 [checked]="isGroupFullySelected(group)"
+                [indeterminate]="isGroupPartiallySelected(group)"
                 [disabled]="protege()"
                 (change)="onToggleGroup(group, $event)"
               />

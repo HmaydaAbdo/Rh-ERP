@@ -8,6 +8,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -141,6 +143,33 @@ class PaieImportServiceTest {
 
         assertThat(analyse.pret()).isFalse();
         assertThat(analyse.erreurs()).singleElement().satisfies(erreur -> assertThat(erreur.raison()).startsWith("Salaire à 0"));
+    }
+
+    @Test
+    void accepte_les_montants_et_recuperations_aux_limites_de_stockage() throws IOException {
+        Object[] ligne = ligne("PB85747");
+        ligne[4] = 999.99;
+        ligne[5] = 999.99;
+        ligne[7] = 99999999.99;
+        ligne[8] = 99999999.99;
+        ligne[9] = 99999999.99;
+
+        assertThat(importService.analyser(fichier(ligne), SEPTEMBRE).pret()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"4,1000", "5,1.001", "6,100000000", "7,1.001", "8,100000000", "9,1.001"})
+    void refuse_les_valeurs_hors_precision_au_controle_avant_toute_ecriture(int colonne, double valeur) throws IOException {
+        Object[] ligne = ligne("PB85747");
+        ligne[colonne] = valeur;
+
+        PaieImportAnalyseDto analyse = importService.analyser(fichier(ligne), SEPTEMBRE);
+
+        assertThat(analyse.pret()).isFalse();
+        assertThat(analyse.erreurs()).singleElement().satisfies(erreur ->
+                assertThat(erreur.raison()).contains("avec au plus deux décimales"));
+        verify(repository, never()).save(any(Paie.class));
+        verify(employeeService, never()).update(any(), any());
     }
 
     @Test

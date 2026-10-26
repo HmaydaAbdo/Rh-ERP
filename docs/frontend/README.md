@@ -90,6 +90,10 @@ Tabulaire `app-collection-table` (ADR 0012). Chaque hôte domaine configure titr
 projette ses actions et filtres, ses colonnes, cellules et actions de ligne. Les composants partagés portent la structure
 et les interactions communes; les appels API, critères, permissions et règles de chaque domaine restent dans son hôte.
 
+`app-collection-table` reçoit aussi un message `erreur` et émet `reessayer`. Une erreur masque les anciennes lignes,
+le compteur et les outils sans recréer le tableau ni changer sa pagination. Les listes Employé et Paie annulent
+la recherche précédente lorsqu'un filtre ou une page change; une réponse tardive ne remplace pas les résultats courants.
+
 Tous les écrans de liste (Employés, Chantiers, Fonctions, Équipes, Utilisateurs, Rôles, Journal, et le tabulaire de la Paie)
 ont **la même structure** : titre éditorial, panneau de filtres, barre du tableau, tableau. Pour **Employés, Chantiers, Fonctions,
 Équipes, Utilisateurs, Rôles et la Paie**, les **actions** (secondaire, puis l'action principale en bleu plein) sont **dans l'en-tête, à droite du
@@ -251,7 +255,7 @@ widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalog
 | `stp-field-error` | Première erreur Signal Forms annoncée (`role="alert"`) quand le champ touché est invalide | Signal Forms |
 | `stp-chart` | Graphique Chart.js (`role="img"`), navigation par flèches, Début/Fin et sélection par Entrée/Espace ; annonce du point courant, `dataSelect` au clic ou au clavier | Chart.js |
 
-Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles ; ses parcours E2E couvrent axe en thème clair/sombre et interactions clavier ciblées. Le [rapport de conformité](../conformite/design-system-2026-10-13.md) consigne les vérifications manuelles de contraste élevé déjà obtenues et celles qui restent à faire avant de clôturer `design-system.md`.
+Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles; ses parcours E2E couvrent axe en thème clair/sombre et les interactions clavier ciblées. Les exigences de contraste élevé et de vérification manuelle sont définies dans le [design system](../../conventions/design-system.md).
 
 `app-lazy-select` fournit la recherche serveur et la pagination au défilement à `stp-select`. Les options
 Chantier montrent **code + nom** (désignation si le nom manque), les options Équipe **code + libellé**,
@@ -385,6 +389,15 @@ d'étapes, corps, attente, fin, pied) par le mixin `cadre-assistant($bloc)` de `
 inclus sous le nom de bloc de chacun (`.export-wizard`, `.import-wizard`).
 
 ## Formulaires, notifications et erreurs
+
+Les formulaires de modification et les fiches distinguent chargement, donnée disponible et échec de lecture avec reprise.
+Un formulaire n'est pas enregistrable avant la lecture de l'enregistrement demandé. Une recherche échouée ne se présente
+pas comme une liste vide. Les vues partagées gardent les sources disponibles et nomment celles qui sont indisponibles.
+
+Les exports individuels des tableaux et graphiques utilisent `PdfImpressionService` : titre, période de référence,
+filtres lisibles, graphiques et tableau de données complet. Les composants qui présentent plusieurs graphiques les
+incluent tous avec leur légende et le fond de leur thème afin que les libellés restent lisibles. La table conserve ses en-têtes sur chaque page imprimée; la fenêtre d'impression
+permet l'enregistrement en PDF. Le rapport métier Paie conserve son export PDF serveur et son assistant dédié.
 
 - **Signal Forms** pour tous les formulaires (2026-10-10) : modèle `signal` typé, `form(modele, schema, { submission })`, `<form [formRoot]>`,
   `[formField]` sur les champs, `<stp-field-error>` pour le message sous le champ (une fois touché) ; les champs obligatoires portent une

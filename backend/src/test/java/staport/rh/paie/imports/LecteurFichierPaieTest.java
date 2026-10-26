@@ -57,6 +57,37 @@ class LecteurFichierPaieTest {
     }
 
     @Test
+    void conserve_les_positions_excel_quand_des_lignes_ne_sont_pas_stockees() throws IOException {
+        MockMultipartFile fichier;
+        try (XSSFWorkbook classeur = new XSSFWorkbook()) {
+            Sheet feuille = classeur.createSheet();
+            feuille.createRow(2).createCell(0).setCellValue("en-tête");
+            feuille.createRow(3).createCell(2).setCellValue("AB1");
+            feuille.createRow(7).createCell(2).setCellValue("AB2");
+            ByteArrayOutputStream sortie = new ByteArrayOutputStream();
+            classeur.write(sortie);
+            fichier = new MockMultipartFile("file", "paie.xlsx", null, sortie.toByteArray());
+        }
+
+        assertThat(lecteur.lire(fichier)).extracting(LigneFichierPaie::numeroLigne).containsExactly(4, 8);
+        assertThat(lecteur.lire(fichier)).extracting(LigneFichierPaie::cin).containsExactly("AB1", "AB2");
+    }
+
+    @Test
+    void refuse_une_valeur_non_numerique_meme_dans_une_colonne_facultative() throws IOException {
+        MockMultipartFile fichier;
+        try (XSSFWorkbook classeur = new XSSFWorkbook(lecteur.genererModele())) {
+            classeur.getSheetAt(0).createRow(3).createCell(7).setCellValue("prime inconnue");
+            ByteArrayOutputStream sortie = new ByteArrayOutputStream();
+            classeur.write(sortie);
+            fichier = new MockMultipartFile("file", "paie.xlsx", null, sortie.toByteArray());
+        }
+
+        assertThatThrownBy(() -> lecteur.lire(fichier)).isInstanceOf(PaieImportException.class)
+                .hasMessageContaining("Valeur numérique invalide dans la cellule H4");
+    }
+
+    @Test
     void un_fichier_illisible_est_refuse() {
         assertThatThrownBy(() -> lecteur.lire(new MockMultipartFile("file", "paie.xlsx", null, new byte[]{1, 2, 3})))
                 .isInstanceOf(PaieImportException.class)

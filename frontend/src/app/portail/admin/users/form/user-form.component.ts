@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { disabled, email, form, FormField, FormRoot, maxLength, minLength, required } from '@angular/forms/signals';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { disabled, email, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
+import { AuthService } from '../../../../core/auth/services/auth.service';
 import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
@@ -42,16 +44,22 @@ interface PermissionGroup {
 })
 export class UserFormComponent {
   private readonly userService = inject(UserService);
+  private readonly authService = inject(AuthService);
   protected readonly employeeReferenceService = inject(EmployeeReferenceService);
   protected readonly roleReferenceService = inject(RoleReferenceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly userId = signal<number | null>(null);
   private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.userId() !== null);
   protected readonly loading = signal(true);
+  protected readonly erreurChargement = signal(false);
+  protected readonly compteEnregistre = signal(false);
+  protected readonly canSelectEmployee = computed(() => this.authService.hasPermission('EMPLOYEE_READ'));
+  protected readonly employeLie = signal<string | null>(null);
 
   private readonly deniedPermissionIds = signal(new Set<number>());
   private readonly permissionCatalogue = signal<PermissionSummary[]>([]);
@@ -63,10 +71,17 @@ export class UserFormComponent {
       // Le username n'est pas modifiable après création (UserUpdateRequestDto ne le porte pas).
       disabled(chemin.username, () => this.isEditMode());
       required(chemin.username, { message: "Le nom d'utilisateur est obligatoire." });
-      minLength(chemin.username, 3, { message: '3 à 50 caractères.' });
+      validate(chemin.username, ({ value }) => {
+        const identifiant = value().trim();
+        if (value() !== '' && identifiant === '') {
+          return { kind: 'required', message: "Le nom d'utilisateur est obligatoire." };
+        }
+        return identifiant.length > 0 && identifiant.length < 3 ? { kind: 'minLength', message: '3 à 50 caractères.' } : undefined;
+      });
       maxLength(chemin.username, 50, { message: '3 à 50 caractères.' });
       required(chemin.email, { message: "L'email est obligatoire." });
       email(chemin.email, { message: 'Email invalide.' });
+      maxLength(chemin.email, 255, { message: 'L’email ne dépasse pas 255 caractères.' });
       required(chemin.motDePasse, { when: () => !this.isEditMode(), message: 'Le mot de passe est obligatoire.' });
       motDePasseConforme(chemin.motDePasse);
     },
@@ -129,14 +144,30 @@ export class UserFormComponent {
       untracked(() => this.deniedPermissionIds.update((courant) => new Set(Array.from(courant).filter((id) => deniables.has(id)))));
     });
 
-    const id = this.userId();
+    this.charger();
+  }
 
+  protected charger(): void {
+    const id = this.userId();
+    this.erreurChargement.set(false);
     if (id === null) {
       this.loading.set(false);
-    } else {
-      this.userService.findById(id)
-        .pipe(finalize(() => this.loading.set(false)))
-        .subscribe((user) => {
+      return;
+    }
+    this.loading.set(true);
+    forkJoin({ user: this.userService.findById(id), permissions: this.roleReferenceService.findAllPermissions() })
+      .pipe(
+        switchMap((resultat) => {
+          const roles = resultat.user.roles.map((role) => this.roleReferenceService.fetchById(role.id));
+          return (roles.length > 0 ? forkJoin(roles) : of([])).pipe(map(() => resultat));
+        }),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false))
+      )
+      .subscribe({
+        next: ({ user, permissions }) => {
+          this.employeLie.set(user.employee ? `${user.employee.nomPrenom} — ${user.employee.cin}` : null);
+          this.permissionCatalogue.set(permissions);
           this.version.set(user.version);
           this.deniedPermissionIds.set(new Set(user.permissionsRefusees.map((p) => p.id)));
           this.modele.set({
@@ -147,9 +178,9 @@ export class UserFormComponent {
             employeeId: user.employee?.id ?? null,
             roleIds: user.roles.map((r) => r.id)
           });
-        });
-      this.roleReferenceService.findAllPermissions().subscribe((permissions) => this.permissionCatalogue.set(permissions));
-    }
+        },
+        error: () => this.erreurChargement.set(true)
+      });
   }
 
   protected isDenied(permission: PermissionSummary): boolean {
@@ -178,17 +209,27 @@ export class UserFormComponent {
   }
 
   private async enregistrer(): Promise<void> {
+    if (this.loading() || this.erreurChargement()) {
+      return;
+    }
     const saisie = this.modele();
     const id = this.userId();
+    let compteMisAJour = false;
 
     const requete$ =
       id !== null
         ? this.userService
             .update(id, { version: this.version()!, email: saisie.email, actif: saisie.actif, employeeId: saisie.employeeId, roleIds: saisie.roleIds })
-            .pipe(switchMap((user) => this.userService.updateDeniedPermissions(id, { version: user.version, permissionIds: Array.from(this.deniedPermissionIds()) })))
+            .pipe(
+              tap((user) => {
+                this.version.set(user.version);
+                compteMisAJour = true;
+              }),
+              switchMap((user) => this.userService.updateDeniedPermissions(id, { version: user.version, permissionIds: Array.from(this.deniedPermissionIds()) }))
+            )
         : this.userService.create({
-            username: saisie.username,
-            email: saisie.email,
+            username: saisie.username.trim(),
+            email: saisie.email.trim(),
             motDePasse: saisie.motDePasse,
             employeeId: saisie.employeeId,
             roleIds: saisie.roleIds
@@ -196,8 +237,12 @@ export class UserFormComponent {
 
     const termine = await attendreEnregistrement(requete$);
     if (!termine) {
+      if (compteMisAJour) {
+        this.compteEnregistre.set(true);
+      }
       return;
     }
+    this.compteEnregistre.set(false);
     this.messageService.add({ severity: 'success', summary: id !== null ? 'Utilisateur modifié' : 'Utilisateur créé', life: 4000 });
     this.form().reset();
     this.router.navigate(['/admin/users']);

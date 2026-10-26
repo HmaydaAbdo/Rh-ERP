@@ -97,10 +97,9 @@ public class EmployeeImportService {
             Map<String, Long> chantiersParCode = chargerChantiersActifs();
             Set<String> cinsExistants = repository.findAllCinsEnMajuscules();
 
-            int numeroLigne = 0;
             for (Row row : sheet) {
-                numeroLigne++;
-                if (numeroLigne == 1) {
+                int numeroLigne = row.getRowNum() + 1;
+                if (row.getRowNum() == sheet.getFirstRowNum()) {
                     continue;
                 }
                 if (estLigneVide(row)) {
@@ -198,6 +197,10 @@ public class EmployeeImportService {
             return "Nom/prénom ou CIN trop long";
         }
 
+        if (!dateNaissance.isBefore(LocalDate.now())) {
+            return "La date de naissance doit être antérieure à aujourd’hui";
+        }
+
         String cinNormalise = normaliserCle(cin);
         if (cinsTraites.contains(cinNormalise)) {
             return "CIN en doublon dans le fichier";
@@ -210,7 +213,7 @@ public class EmployeeImportService {
             return "Fonction introuvable : " + fonctionLibelle.strip();
         }
         if (!chantiersParCode.containsKey(normaliserCle(chantierCode))) {
-            return "Chantier introuvable ou inactif : " + chantierCode.strip();
+            return "Chantier introuvable ou clôturé : " + chantierCode.strip();
         }
 
         return null;

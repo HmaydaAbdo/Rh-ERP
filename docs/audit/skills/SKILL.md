@@ -23,8 +23,15 @@ description: Use when changing audit events, Envers history, audit access, reten
 - Limiter et protéger l'accès aux données personnelles, CIN, adresses IP et montants ; utiliser
   `AUDIT_READ` tel que décrit dans RBAC.
 - Une migration qui change une entité auditée met à jour son schéma d'audit et la documentation.
+- Les [contrats](../contrats.md) décrivent les types et contraintes de recherche et de lecture ;
+  ne pas confondre une entrée de journal, une page de différences et l'historique d'un enregistrement.
+- Les filtres reviennent à la première page ; une réponse tardive ne remplace pas une sélection récente.
+  Un échec de page d'historique se réessaie avant d'avancer, sans perdre les versions déjà lues.
+- Annoncer chargement, erreur et vide séparément. Les événements de sécurité ne demandent pas de
+  différences Envers quand ils ne portent aucune opération métier réussie.
 
 ## Vérification
 
 Tester commit/rollback, auteur et origine, échec métier/sécurité, accès non autorisé, historique
 complet et droits SQL du compte applicatif avec PostgreSQL.
+Vérifier aussi erreurs/réessais, pagination et changement d'enregistrement dans les composants de consultation.

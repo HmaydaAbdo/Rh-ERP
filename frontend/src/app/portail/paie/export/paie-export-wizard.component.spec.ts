@@ -1,7 +1,7 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NotificationService } from '@shared/feedback/feedback.service';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { PaieChantierPeriode, PaieMaterielTableau, PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -72,6 +72,40 @@ describe('PaieExportWizardComponent', () => {
         expect(store.periode()).toBe('2026-09');
         expect(store.resume()?.nombreBulletins).toBe(975);
         expect(store.disponibles()).toEqual(['2026-09', '2026-08']);
+    });
+
+    it('bloque un export incomplet et permet de reprendre le chargement sans perdre le mois choisi', () => {
+        service.listerTableauxMateriel.mockReturnValueOnce(throwError(() => new Error('indisponible')));
+        store.ouvrir();
+        store.choisirPeriode('2026-08');
+        expect(store.erreursChargement()).toEqual(['materiel']);
+        store.suivant();
+        expect(store.etape()).toBe('periode');
+
+        store.reessayerChargements();
+        expect(store.erreursChargement()).toEqual([]);
+        expect(store.periode()).toBe('2026-08');
+        store.suivant();
+        expect(store.etape()).toBe('format');
+    });
+
+    it('abandonne les marchés d’un ancien mois avant de lire le suivant', () => {
+        const ancien = new Subject<PaieChantierPeriode[]>();
+        const courant = new Subject<PaieChantierPeriode[]>();
+        service.listerChantiersDeLaPeriode.mockReturnValueOnce(ancien).mockReturnValueOnce(courant);
+        store.suivant();
+        store.precedent();
+        store.choisirPeriode('2026-08');
+        store.suivant();
+        ancien.next(CHANTIERS);
+        expect(store.chantiers()).toEqual([]);
+        expect(ancien.observed).toBe(false);
+        expect(store.chantiersEnCours()).toBe(true);
+
+        courant.next([CHANTIERS[1]]);
+        courant.complete();
+        expect(store.chantiers()).toEqual([CHANTIERS[1]]);
+        expect(store.chantiersEnCours()).toBe(false);
     });
 
     it("refuse de continuer sans mois valide et l'explique", () => {

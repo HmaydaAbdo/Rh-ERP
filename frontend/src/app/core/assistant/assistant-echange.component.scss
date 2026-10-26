@@ -191,18 +191,18 @@
 }
 
 .assistant-badge--ok {
-  color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: color-mix(in srgb, var(--color-success) 70%, var(--color-text));
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
 }
 
 .assistant-badge--attention {
-  color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  color: color-mix(in srgb, var(--color-warning) 70%, var(--color-text));
+  background: color-mix(in srgb, var(--color-warning) 7%, transparent);
 }
 
 .assistant-badge--erreur {
-  color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: color-mix(in srgb, var(--color-danger) 70%, var(--color-text));
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
 }
 
 .assistant-chiffre {

@@ -89,7 +89,7 @@ export class PaieService {
   }
 
   /** Effectifs mois par mois (payés, entrées, sorties, mutations) ; chantiers, fonctions et équipes du bulletin du mois. */
-  effectifs(criteres: { chantierIds?: number[]; fonctionIds?: number[]; equipeIds?: number[] }): Observable<PaieEffectifMois[]> {
+  effectifs(criteres: PaieSearchCriteria): Observable<PaieEffectifMois[]> {
     return this.http.post<PaieEffectifMois[]>(`${this.baseUrl}/effectifs`, criteres);
   }
 

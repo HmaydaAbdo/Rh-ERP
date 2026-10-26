@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
 import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
@@ -28,10 +29,13 @@ export class RoleListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private recherche?: Subscription;
 
   protected readonly roles = signal<Role[]>([]);
   protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
+  protected readonly erreur = signal(false);
   protected readonly deletingId = signal<number | null>(null);
   protected readonly first = signal(0);
 
@@ -72,6 +76,10 @@ export class RoleListComponent {
     this.fetchPage();
   }
 
+  protected reessayer(): void {
+    this.fetchPage();
+  }
+
   protected onResetFilters(): void {
     this.filterForm().reset(filtresVides());
   }
@@ -97,20 +105,30 @@ export class RoleListComponent {
       .pipe(finalize(() => this.deletingId.set(null)))
       .subscribe(() => {
         this.messageService.add({ severity: 'success', summary: 'Rôle supprimé', life: 4000 });
+        if (this.roles().length === 1 && this.lastPage > 0) {
+          this.lastPage -= 1;
+          this.first.set(this.lastPage * this.lastSize);
+        }
         this.fetchPage();
       });
   }
 
   private fetchPage(): void {
+    this.recherche?.unsubscribe();
     this.loading.set(true);
+    this.erreur.set(false);
     const { nom, description } = this.filtres();
 
-    this.roleService
+    this.recherche = this.roleService
       .search({ nom: nom || undefined, description: description || undefined }, { page: this.lastPage, size: this.lastSize, sort: this.lastSort })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe((result) => {
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+      .subscribe({ next: (result) => {
         this.roles.set(result.content);
         this.totalRecords.set(result.page.totalElements);
-      });
+      }, error: () => {
+        this.erreur.set(true);
+        this.roles.set([]);
+        this.totalRecords.set(0);
+      } });
   }
 }

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { disabled, form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { disabled, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
@@ -29,11 +30,13 @@ export class RoleFormComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly roleId = signal<number | null>(null);
   private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.roleId() !== null);
   protected readonly loading = signal(true);
+  protected readonly erreurChargement = signal(false);
   protected readonly permissionGroups = signal<PermissionGroup[]>([]);
   private readonly selectedPermissionIds = signal(new Set<number>());
   /** Rôle d'administration : seule sa description se modifie, le serveur refuse le reste. */
@@ -45,7 +48,15 @@ export class RoleFormComponent {
     (chemin) => {
       disabled(chemin.nom, () => this.protege());
       required(chemin.nom, { message: 'Le nom est obligatoire.' });
+      validate(chemin.nom, ({ value }) => {
+        const nom = value().trim();
+        if (value() !== '' && nom === '') {
+          return { kind: 'required', message: 'Le nom est obligatoire.' };
+        }
+        return nom.length > 0 && nom.length < 2 ? { kind: 'minLength', message: 'Le nom contient au moins 2 caractères.' } : undefined;
+      });
       maxLength(chemin.nom, 50, { message: 'Le nom ne dépasse pas 50 caractères.' });
+      maxLength(chemin.description, 255, { message: 'La description ne dépasse pas 255 caractères.' });
     },
     { submission: { action: () => this.enregistrer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
   );
@@ -54,21 +65,28 @@ export class RoleFormComponent {
     const idParam = this.route.snapshot.paramMap.get('id');
     const id = idParam ? Number(idParam) : null;
     this.roleId.set(id);
+    this.charger();
+  }
 
+  protected charger(): void {
+    this.loading.set(true);
+    this.erreurChargement.set(false);
+    const id = this.roleId();
     const permissions$ = this.roleService.findAllPermissions();
 
     if (id !== null) {
       forkJoin([permissions$, this.roleService.findById(id)])
-        .pipe(finalize(() => this.loading.set(false)))
-        .subscribe(([permissions, role]) => {
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+        .subscribe({ next: ([permissions, role]) => {
           this.buildGroups(permissions);
           this.selectedPermissionIds.set(new Set(role.permissions.map((p) => p.id)));
           this.modele.set({ nom: role.nom, description: role.description ?? '' });
           this.protege.set(role.protege);
           this.version.set(role.version);
-        });
+        }, error: () => this.erreurChargement.set(true) });
     } else {
-      permissions$.pipe(finalize(() => this.loading.set(false))).subscribe((permissions) => this.buildGroups(permissions));
+      permissions$.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+        .subscribe({ next: (permissions) => this.buildGroups(permissions), error: () => this.erreurChargement.set(true) });
     }
   }
 
@@ -88,10 +106,17 @@ export class RoleFormComponent {
     return group.permissions.every((p) => this.selectedPermissionIds().has(p.id));
   }
 
+  protected isGroupPartiallySelected(group: PermissionGroup): boolean {
+    return !this.isGroupFullySelected(group) && group.permissions.some((p) => this.selectedPermissionIds().has(p.id));
+  }
+
   private async enregistrer(): Promise<void> {
+    if (this.loading() || this.erreurChargement()) {
+      return;
+    }
     const saisie = this.modele();
     const dto = {
-      nom: saisie.nom,
+      nom: saisie.nom.trim(),
       description: saisie.description || null,
       permissionIds: Array.from(this.selectedPermissionIds())
     };

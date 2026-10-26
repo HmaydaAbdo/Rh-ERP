@@ -112,7 +112,7 @@ tâche « Qualité des données » ([../TODO.md](../TODO.md)).
 | Chantier référencé par un employé ou un bulletin | Bloqué : `409` |
 | Équipe référencée par un bulletin | Bloqué : `409` |
 | Employé **sans** bulletin ni compte lié | Supprimé |
-| Employé **avec** des bulletins ou un compte utilisateur lié | **Erreur `500`** : aucune règle n'a été définie pour ce cas (voir [../TODO.md](../TODO.md)) |
+| Employé **avec** des bulletins ou un compte utilisateur lié | Bloqué : `409`; les bulletins et le compte lié sont conservés |
 | Bulletin | Supprimé (aucune contrainte) |
 | Rôle **attribué** à au moins un compte | Bloqué : `409` (retirez-le d'abord des comptes) |
 | Rôle `SYSTEM_ADMIN` | Bloqué : `409`, jamais supprimable |

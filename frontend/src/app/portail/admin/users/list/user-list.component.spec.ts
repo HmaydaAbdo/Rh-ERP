@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { Page } from '../../../../shared/models/page.model';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
 import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
 import { AdminUser } from '../../models/admin.model';
@@ -124,6 +125,34 @@ describe('UserListComponent', () => {
     expect(navigation).toHaveBeenCalledWith(['/admin/users', 1, 'edit']);
   });
 
+  it('ne remplace pas la recherche récente par une réponse arrivée en retard', async () => {
+    await afficher();
+    const ancienne = new Subject<Page<AdminUser>>();
+    service.search.mockReturnValueOnce(ancienne).mockReturnValueOnce(of({ content: [UTILISATEURS[1]], page: { size: 10, number: 0, totalElements: 1, totalPages: 1 } }));
+    fixture.componentInstance['onSearch']();
+    fixture.componentInstance['onSearch']();
+
+    ancienne.next({ content: [UTILISATEURS[0]], page: { size: 10, number: 0, totalElements: 1, totalPages: 1 } });
+    await stabiliser();
+
+    expect(noms()).toEqual(['rh.fatima']);
+  });
+
+  it('distingue une erreur de recherche d’une liste vide et recharge les mêmes critères', async () => {
+    await afficher();
+    service.search.mockReturnValueOnce(throwError(() => new Error('lecture impossible')));
+    fixture.componentInstance['onSearch']();
+    await stabiliser();
+
+    expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les utilisateurs');
+    expect(racine().textContent).not.toContain('Aucun utilisateur ne correspond');
+
+    fixture.componentInstance['reessayer']();
+    await stabiliser();
+    expect(noms()).toEqual(['admin', 'rh.fatima', 'ancien']);
+    expect(racine().querySelector('[role="alert"]')).toBeNull();
+  });
+
   describe('réinitialisation du mot de passe', () => {
     async function ouvrir(): Promise<void> {
       bouton('Réinitialiser le mot de passe de rh.fatima').click();
@@ -137,6 +166,7 @@ describe('UserListComponent', () => {
 
       expect(dialogue()?.textContent).toContain('rh.fatima');
       expect(dialogue()?.querySelector('input[type="password"]')).not.toBeNull();
+      expect(dialogue()?.querySelector('label[for="nouveau-mot-de-passe"]')?.textContent).toBe('Nouveau mot de passe');
     });
 
     it('refuse un mot de passe qui ne respecte pas la règle, en la rappelant, sans appeler l’API', async () => {

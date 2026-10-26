@@ -1,4 +1,11 @@
-@if (versions().length === 0 && !chargement()) {
+@if (chargement()) {
+  <p role="status" aria-busy="true">Chargement des versions…</p>
+} @else if (erreur()) {
+  <div role="alert">
+    <p>Impossible de charger ces versions de l’historique.</p>
+    <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
+  </div>
+} @else if (versions().length === 0) {
   <p class="audit-historique__vide">Aucune version enregistrée pour cet enregistrement.</p>
 }
 
@@ -16,6 +23,6 @@
   }
 </ol>
 
-@if (resteAcharger()) {
+@if (resteAcharger() && !erreur()) {
   <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="plus()">Versions plus anciennes</button>
 }

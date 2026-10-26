@@ -48,8 +48,9 @@ const PARAMETRES: Readonly<Record<string, (valeur: string) => boolean>> = {
   chantierIds: (v) => IDENTIFIANTS.test(v),
   equipeIds: (v) => IDENTIFIANTS.test(v),
   fonctionIds: (v) => IDENTIFIANTS.test(v),
-  nom: (v) => v.trim().length > 0 && v.length <= 100,
-  cin: (v) => /^[A-Za-z0-9]{1,20}$/.test(v),
+  // Mêmes bornes que les contrats Employé; le CIN n'impose pas d'alphabet particulier.
+  nom: (v) => v.trim().length > 0 && v.length <= 150,
+  cin: (v) => v.trim().length > 0 && v.length <= 30,
   code: (v) => v.trim().length > 0 && v.length <= 50,
   statut: (v) => /^[A-Z_]{1,30}$/.test(v),
   action: (v) => v === 'export'

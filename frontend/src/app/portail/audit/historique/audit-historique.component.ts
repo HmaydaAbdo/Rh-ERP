@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnChanges, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize, Subscription } from 'rxjs';
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { formaterHorodatage, LIBELLES_OPERATIONS, LIBELLES_ORIGINES } from '../audit-format';
@@ -21,8 +22,10 @@ const TAILLE_PAGE = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './audit-historique.component.scss'
 })
-export class AuditHistoriqueComponent implements OnInit {
+export class AuditHistoriqueComponent implements OnChanges {
   private readonly auditService = inject(AuditService);
+  private readonly destroyRef = inject(DestroyRef);
+  private requete?: Subscription;
 
   /** Nom de l'entité auditée (ex. `Paie`, `Employee`). */
   readonly entite = input.required<string>();
@@ -31,6 +34,7 @@ export class AuditHistoriqueComponent implements OnInit {
   protected readonly versions = signal<AuditVersion[]>([]);
   protected readonly total = signal(0);
   protected readonly chargement = signal(false);
+  protected readonly erreur = signal(false);
 
   protected readonly formaterHorodatage = formaterHorodatage;
   protected readonly libelleOperation = (operation: AuditVersion['operation']): string => LIBELLES_OPERATIONS[operation];
@@ -38,12 +42,21 @@ export class AuditHistoriqueComponent implements OnInit {
 
   private page = 0;
 
-  ngOnInit(): void {
+  ngOnChanges(): void {
+    this.requete?.unsubscribe();
+    this.page = 0;
+    this.versions.set([]);
+    this.total.set(0);
     this.charger();
   }
 
   protected plus(): void {
-    this.page += 1;
+    if (!this.chargement() && !this.erreur() && this.resteAcharger()) {
+      this.charger();
+    }
+  }
+
+  protected reessayer(): void {
     this.charger();
   }
 
@@ -53,12 +66,14 @@ export class AuditHistoriqueComponent implements OnInit {
 
   private charger(): void {
     this.chargement.set(true);
-    this.auditService
+    this.erreur.set(false);
+    this.requete = this.auditService
       .historique(this.entite(), this.id(), { page: this.page, size: TAILLE_PAGE })
-      .pipe(finalize(() => this.chargement.set(false)))
-      .subscribe((resultat) => {
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chargement.set(false)))
+      .subscribe({ next: (resultat) => {
         this.versions.update((existantes) => [...existantes, ...resultat.content]);
         this.total.set(resultat.page.totalElements);
-      });
+        this.page += 1;
+      }, error: () => this.erreur.set(true) });
   }
 }

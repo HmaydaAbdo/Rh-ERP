@@ -31,11 +31,13 @@
 
   &__group-items {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
     gap: var(--space-sm) var(--space-md);
   }
 
   &__code {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
   }

@@ -1,310 +1,229 @@
-# Module Employee
+# Domaine Employé
 
-> Fiche d'identité des employés — domaine de référence de l'ERP RH. Référence les domaines Function
-> (fonction occupée) et Chantier (affectation) par clé étrangère. Les nouveaux employés s'ajoutent par saisie
-> ou par import Excel en masse ; toute **modification** d'un employé existant se fait depuis l'interface.
+La fiche conserve l’identité et la situation courante de l’employé. Les bulletins Paie conservent les
+situations de chaque mois; ils constituent l’historique, sans être confondus avec l’effectif courant.
+Les fiches sont créées par saisie ou import Excel d’ajout. Toute modification d’une fiche existante
+passe par l’application.
 
----
+## Règles
 
-## Vue d'ensemble
-
-| | |
-|---|---|
-| Backend | `backend/src/main/java/staport/rh/employee/` |
-| Frontend | `frontend/src/app/portail/employee/` |
-| Table | `employe` |
-| Endpoints | `/employees`, `/employees/search`, `/employees/import` |
-
-Le module suit l'architecture de référence du projet (`conventions/architecture.md`) :
-`entities → repositories → specifications → dtos → mappers → services → controller`, avec un
-sous-module `imports/` dédié à l'import Excel.
-
-```text
-employee/
-├── controller/EmployeeController.java
-├── dtos/
-│   ├── request/ (Create, Update, SearchCriteria)
-│   └── response/ (EmployeeResponseDto, FunctionSummaryDto, ChantierSummaryDto)
-├── entities/ (Employee, EmployeeStatut)
-├── exceptions/ (NotFound, CinAlreadyExists, InvalidReference, ExceptionHandler)
-├── mappers/EmployeeMapper.java
-├── repositories/EmployeeRepository.java
-├── services/ (EmployeeService + IEmployeeService)
-├── specifications/EmployeeSpecification.java
-└── imports/
-    ├── EmployeeImportService.java     ← lecture du fichier, résolution Fonction/Chantier, création atomique (CIN inédit), génération du modèle
-    ├── EmployeeImportController.java  ← POST /employees/import, GET /employees/import/modele
-    ├── EmployeeImportResultDto.java
-    └── EmployeeImportException.java   ← fichier illisible ou format inattendu (pas une ligne invalide)
-```
-
----
+- Le CIN est obligatoire, limité à 30 caractères et unique sans distinction de casse après retrait
+  des espaces extérieurs. Le nom et prénom est obligatoire, limité à 150 caractères.
+- Les deux dates et la fonction sont obligatoires. La naissance est strictement antérieure à
+  aujourd’hui, dans l’API, le formulaire et l’import. La date d’embauche peut être future.
+- Une fiche « En poste » (`ACTIF`) a un chantier et peut avoir une équipe. Une fiche « Sorti »
+  (`INACTIF`) n’a ni chantier ni équipe courants. La fonction est conservée. Les bulletins gardent
+  leurs affectations de période, même après une sortie ou une mutation.
+- Fonction, chantier et équipe sont résolus par les façades des domaines propriétaires. Une
+  référence inconnue est refusée. `equipeId: null` signifie sans équipe; le formulaire convertit le
+  choix synthétique « Orphelins (sans équipe) » en `null`, jamais en identifiant `0`.
+- Salaire et type de salaire se renseignent ensemble ou restent tous deux vides. Le salaire est
+  positif ou nul, avec deux décimales au plus. La saisie et la lecture exigent `PAIE_READ` en plus du
+  droit de l’opération Employé. Sans ce droit, les réponses masquent les deux champs, une écriture
+  conserve le salaire existant et le tri sur ces champs est retiré.
+  Cette règle appartient à `ProjectionPaieEmployee`, réutilisée par l’API REST et les outils MCP de
+  l’assistant IA; les autres domaines lisent la fiche complète par `IEmployeeService`.
+- Une modification exige la version lue. Une version périmée renvoie `409`, sans écraser la fiche.
+- Un employé lié à un bulletin ou à un compte utilisateur ne peut pas être supprimé (`409`). Le
+  passage à « Sorti » conserve son historique. Les écritures et leurs refus sont audités.
+- L’import Paie aligne les fiches selon son assistant : un employé sorti présent dans le fichier
+  redevient en poste; un départ confirmé est enregistré avec sa période et son motif. Un départ par
+  employé et par mois au plus, motif obligatoire de 255 caractères au plus. Les règles de cet
+  assistant appartiennent au [domaine Paie](../paie/README.md).
 
 ## Modèle de données
 
-Table `employe` :
+Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimiste :
 
-| Colonne | Type | Contrainte | Description |
-|---|---|---|---|
-| `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
-| `nom_prenom` | `VARCHAR(150)` | `NOT NULL` | Nom et prénom |
-| `cin` | `VARCHAR(30)` | `NOT NULL`, **unique** | Carte d'identité nationale |
-| `date_naissance` | `DATE` | `NOT NULL` | Date de naissance |
-| `date_embauche` | `DATE` | `NOT NULL` | Date d'embauche |
-| `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | Fonction occupée |
-| `chantier_id` | `BIGINT` | nullable, FK → `chantier.id` | Chantier courant; obligatoire pour `ACTIF`, vide pour `INACTIF` |
-| `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | Équipe courante; facultative pour `ACTIF`, vide pour `INACTIF`; référentiel partagé décrit dans le [dossier Équipe](../equipe/README.md) |
-| `salaire` | `NUMERIC(10,2)` | nullable, ≥ 0 | Salaire du dernier mois de paie : montant mensuel, ou tarif d'une journée |
-| `type_salaire` | `VARCHAR(20)` | nullable, `MENSUEL` ou `JOURNALIER` | Comment lire `salaire` ; renseigné avec lui ou pas du tout |
-| `statut` | `ENUM('ACTIF','INACTIF')` | `NOT NULL`, défaut `ACTIF` | Statut de l'employé |
+| Colonne | Type | Contraintes et description |
+|---|---|---|
+| `id` | `BIGINT` | Clé primaire générée |
+| `version` | `BIGINT` | Obligatoire; version de modification concurrente |
+| `nom_prenom` | `VARCHAR(150)` | Obligatoire; identité affichée |
+| `cin` | `VARCHAR(30)` | Obligatoire; unique sur `UPPER(BTRIM(cin))`, sans espaces extérieurs |
+| `date_naissance` | `DATE` | Obligatoire; naissance |
+| `date_embauche` | `DATE` | Obligatoire; embauche |
+| `fonction_id` | `BIGINT` | FK obligatoire vers `fonction` |
+| `chantier_id` | `BIGINT` | FK vers `chantier`; obligatoire en poste, vide après sortie |
+| `equipe_id` | `BIGINT` | FK vers `equipe`; facultative en poste, vide après sortie |
+| `salaire` | `NUMERIC(10,2)` | Facultatif; montant mensuel ou tarif d’une journée |
+| `type_salaire` | `VARCHAR(20)` | Facultatif; `MENSUEL` ou `JOURNALIER`, conjoint au salaire |
+| `statut` | `VARCHAR(20)` | Obligatoire; `ACTIF` à la création, ou `INACTIF` |
 
-La fiche porte **l'état courant de l'employé**, aligné sur le dernier mois de paie enregistré. Un employé `ACTIF` a un chantier
-courant et peut avoir une équipe; un employé `INACTIF` n'a ni chantier ni équipe courants. Ses bulletins conservent les
-affectations de chaque mois, y compris après un départ ou une mutation. Voir [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md).
-Salaire et type restent vides tant qu'aucune paie ne les a renseignés.
+Les relations, statut et date d’embauche sont indexés. Les contraintes de base protègent les
+références, le CIN et l’absence d’affectation des fiches sorties. Le modèle transverse est dans
+[le modèle de données](../data-model.md).
 
-Table `employe_sortie` — les **départs** de l'entreprise (entité `EmployeeSortie`, auditée) :
+Table `employe_sortie`, entité `EmployeeSortie`, auditée :
 
-| Colonne | Type | Contrainte | Description |
-|---|---|---|---|
-| `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
-| `employee_id` | `BIGINT` | `NOT NULL`, FK → `employe.id` | Employé parti |
-| `periode` | `INT` | `NOT NULL` | Mois (`aaaaMM`) de la paie qui constate le départ |
-| `motif` | `VARCHAR(255)` | `NOT NULL` | « STC », ou le motif saisi |
+| Colonne | Type | Contraintes et description |
+|---|---|---|
+| `id` | `BIGINT` | Clé primaire générée |
+| `employee_id` | `BIGINT` | FK obligatoire vers l’employé |
+| `periode` | `INT` | Mois `aaaaMM`, obligatoire |
+| `motif` | `VARCHAR(255)` | Obligatoire; « STC » ou motif saisi |
 
-Unique `(employee_id, periode)` : un départ par mois au plus ; un employé qui revient puis repart en a plusieurs. La reprise
-des données existantes (migration V30, décidée le 2026-10-18) est décrite dans l'ADR 0010.
+L’unicité `(employee_id, periode)` permet plusieurs départs à des mois différents pour une personne
+qui revient puis repart. Les bulletins et départs sont les sources du parcours historique.
 
-Index : `idx_employe_fonction`, `idx_employe_chantier`, `idx_employe_equipe`, `idx_employe_statut`, `idx_employe_date_embauche`.
+## Contrats exposés
 
-`dateNaissance`/`dateEmbauche` sont `NOT NULL` à la fois au niveau entité et via la validation des
-DTO (`@NotNull` sur `EmployeeCreateRequestDto`/`EmployeeUpdateRequestDto`) — la contrainte base et la
-validation applicative sont désormais alignées (2026-09-22 ; auparavant l'entité tolérait `NULL` par
-souci de compatibilité avec d'anciens imports historiques, ce qui n'a plus lieu d'être puisque
-l'import comme l'API exigent déjà ces deux dates).
+Les dates HTTP sont des chaînes ISO `aaaa-MM-jj`. Les identifiants et versions sont des entiers
+Java `Long`, représentés comme nombres JSON. Les montants sont des `BigDecimal`, en nombres JSON.
 
----
+### Création et modification
 
-## Règles métier
+`EmployeeCreateRequestDto` et `EmployeeUpdateRequestDto` partagent les champs ci-dessous :
 
-- `cin` est la clé métier : le service et l'import retirent les espaces extérieurs. V27 impose
-  l'unicité après trim et sans tenir compte de la casse, au moyen d'un index sur
-  `UPPER(BTRIM(cin))`, et bloque les nouvelles valeurs entourées d'espaces en base. Les collisions
-  existantes font échouer V27 pour être résolues explicitement, sans fusion implicite.
-- `fonction` et `chantier` sont résolus via `IFunctionService`/`IChantierService` (jamais leur
-  Repository directement — encapsulation des domaines, `conventions/architecture.md`), puis
-  attachés par référence JPA (`EntityManager.getReference`). Une fonction ou un chantier inexistant
-  lève `InvalidReferenceException` (400). L'`équipe` est facultative et résolue de même par `IEquipeService`.
-- Lorsqu'un bulletin est créé ou corrigé manuellement depuis Paie, l'équipe choisie met à jour l'affectation
-  courante d'un employé actif dans la même transaction. Une fiche inactive reste sans affectation; les données du
-  bulletin restent historiques et indépendantes.
-- `salaire` et `typeSalaire` se renseignent **ensemble** ou pas du tout (`@AssertTrue` sur les DTO, 400 sinon) ; le salaire
-  n'est jamais négatif. Ce sont des **données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas (`null`), ignore ceux
-  qu'on saisit (la fiche garde les siens) et retire un tri par salaire. La règle est `ProjectionPaieEmployee`, appliquée
-  à la frontière HTTP (`EmployeeController`) et par les outils MCP de l'assistant IA ; les autres domaines lisent le
-  vrai salaire par `IEmployeeService`.
-- La suppression (`DELETE /employees/{id}`) supprime l'employé. **Un employé référencé par au moins un bulletin de paie**
-  (`paie.employee_id`) **ou lié à un compte utilisateur** (`utilisateur.employee_id`) **n'est pas supprimable** : la base refuse
-  et l'API répond `409` avec un message explicite (`EmployeeExceptionHandler`, comme pour fonction, chantier et équipe — un
-  contrôle dans le service créerait une dépendance circulaire avec les domaines Paie et Auth). Le message invite à passer
-  l'employé à `INACTIF`, qui conserve son historique ; l'écran le rappelle dans la confirmation. La tentative refusée reste
-  tracée dans le journal d'audit (échec).
-- **Libellés** (décision du propriétaire, 2026-10-19) : l'interface dit **« En poste »** (`ACTIF`) et **« Sorti »**
-  (`INACTIF`) ; l'API et la base gardent `ACTIF` / `INACTIF`.
-- Un employé `INACTIF` (« Sorti ») reste consultable et reste référencé par ses bulletins. Sa fiche ne conserve aucune
-  affectation courante de chantier ou d'équipe; la contrainte de base protège cette règle. L'import crée toujours des employés `ACTIF`.
-- **Le statut suit la paie** : l'assistant d'import de la paie (voir [../paie/README.md](../paie/README.md), « Import Excel
-  (assistant) ») repasse ACTIF un inactif présent dans le fichier, et enregistre les **départs confirmés** par
-  `IEmployeeService.enregistrerSortie(id, mois, motif)` : l'employé passe INACTIF, ses affectations courantes sont effacées et le départ (mois, motif « STC » ou saisi)
-  rejoint `employe_sortie` — un seul par mois (sinon 400), motif obligatoire de 255 caractères au plus. Action d'audit
-  `EMPLOYE_SORTIE`. Depuis l'assistant, l'utilisateur peut aussi aligner une fiche sur le fichier ou créer un CIN inconnu
-  (ce sont les `update` et `create` habituels, appelés par le domaine Paie).
+| Champ | Type Java / JSON | Contraintes et description |
+|---|---|---|
+| `nomPrenom` | `String` / chaîne | Obligatoire, non blanc, 150 caractères au plus |
+| `cin` | `String` / chaîne | Obligatoire, non blanc, 30 caractères au plus; clé métier normalisée |
+| `dateNaissance` | `LocalDate` / date ISO | Obligatoire, strictement passée |
+| `dateEmbauche` | `LocalDate` / date ISO | Obligatoire |
+| `fonctionId` | `Long` / entier | Obligatoire; référence existante |
+| `chantierId` | `Long` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
+| `equipeId` | `Long` / entier ou `null` | Facultatif; `null` si sorti |
+| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers et deux décimales au plus; avec son type |
+| `typeSalaire` | `TypeSalaire` / chaîne ou `null` | `MENSUEL` ou `JOURNALIER`; avec le salaire |
 
----
+La modification ajoute `version` (`Long`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :
+`ACTIF` ou `INACTIF`). La création n’accepte pas de statut : l’employé est en poste.
 
-## API
+### Recherche
 
-| Méthode | Route | Description | Codes |
-|---|---|---|---|
-| `POST` | `/employees` | Créer un employé | 201, 400, 409 |
-| `PUT` | `/employees/{id}` | Modifier un employé | 200, 400, 404, 409 |
-| `GET` | `/employees/{id}` | Consulter un employé | 200, 404 |
-| `POST` | `/employees/search` | Rechercher (paginé, triable) — body `EmployeeSearchCriteria` (`nomPrenom`, `cin`, `fonctionIds`, `chantierIds`, `equipeIds`, `statut`) — filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `chantierIds=0` = sans chantier, `equipeIds=0` = sans équipe (« Orphelins » dans le filtre) | 200 |
-| `POST` | `/employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | Employés du périmètre (mêmes critères) regroupés par la dimension : `id` (0 = sans chantier ou équipe), `code`, `libelle`, `effectif`, `actifs`, du groupe le plus grand au plus petit (vue Cartes, répartition de l'Analytique) | 200 |
-| `POST` | `/employees/analytique` | Chiffres clés du périmètre : effectif, actifs, inactifs, âge et ancienneté moyens (années, une décimale), embauches des 12 derniers mois, tranches d'âge et d'ancienneté (vue Analytique) | 200 |
-| `DELETE` | `/employees/{id}` | Supprimer | 204, 404, 409 (bulletins ou compte liés) |
-| `POST` | `/employees/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
-| `GET` | `/employees/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
+`EmployeeSearchCriteria` est partagé par la recherche, les regroupements et l’analytique :
 
-`EmployeeResponseDto` : `id`, `nomPrenom`, `cin`, `dateNaissance`, `dateEmbauche`,
-`fonction` (`FunctionSummaryDto` : `id`, `libelle`), `chantier` (`ChantierSummaryDto` : `id`, `code`,
-`designation`, ou `null` pour un employé inactif), `equipe` (`EquipeSummaryDto` : `id`, `code`, `libelle`, ou `null`), `salaire` et `typeSalaire` (`null` sans
-`PAIE_READ` ou tant qu'aucune paie ne les a renseignés), `statut`. Les requêtes de création et de modification acceptent
-`equipeId`, `salaire` et `typeSalaire`, facultatifs.
-Le formulaire propose « Orphelins (sans équipe) » comme choix synthétique; il enregistre `equipeId: null`, jamais `0`.
+| Champ | Type | Contraintes et description |
+|---|---|---|
+| `nomPrenom` | `String` ou `null` | 150 caractères au plus; contient, sans distinction de casse |
+| `cin` | `String` ou `null` | 30 caractères au plus; contient, sans distinction de casse |
+| `fonctionIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants strictement positifs, jamais `null` |
+| `chantierIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans chantier, jamais `null` dans la liste |
+| `equipeIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans équipe, jamais `null` dans la liste |
+| `statut` | `EmployeeStatut` ou `null` | `ACTIF`, `INACTIF`; absent = tous |
 
-Authentification JWT + permissions requises sur chaque endpoint (`EMPLOYEE_READ`/
-`EMPLOYEE_WRITE`/`EMPLOYEE_DELETE`/`EMPLOYEE_IMPORT`) — voir `docs/rbac/employee.md` pour le
-détail endpoint ↔ permission et `conventions/security.md` pour la conception du RBAC.
+Une liste absente ou vide ne filtre pas cette dimension. Les dimensions se combinent par « et »;
+les valeurs d’une même dimension par « ou ». Les caractères `%` et `_` sont recherchés littéralement.
+La recherche renvoie une page (`content`, `page.number`, `page.size`, `page.totalElements`,
+`page.totalPages`) et accepte pagination et tri.
 
----
+### Réponses et projections
+
+| DTO | Champs, types et signification |
+|---|---|
+| `EmployeeResponseDto` | `id`, `version` (`Long`); `nomPrenom`, `cin` (`String`); `dateNaissance`, `dateEmbauche` (`LocalDate`); `fonction` (`FunctionSummaryDto`); `chantier` (`ChantierSummaryDto` ou `null`); `equipe` (`EquipeSummaryDto` ou `null`); `salaire` (`BigDecimal` ou `null`); `typeSalaire` (`TypeSalaire` ou `null`); `statut` (`EmployeeStatut`). Salaire et type sont `null` sans `PAIE_READ` ou s’ils ne sont pas renseignés. |
+| `FunctionSummaryDto` | `id` (`Long`), `libelle` (`String`) de la fonction |
+| `ChantierSummaryDto` | `id` (`Long`), `code` (`String`), `designation` (`String` ou `null`) du chantier |
+| `EquipeSummaryDto` | `id` (`Long`), `code`, `libelle` (`String`) de l’équipe |
+| `EmployeeRegroupementDto` | `id` (`long`, `0` sans chantier/équipe), `code` et `libelle` (`String`, code `null` pour le groupe sans rattachement), `effectif` et `actifs` (`long`). Groupes triés par effectif décroissant, puis code. Aucun salaire. |
+| `EmployeeAnalytiqueDto` | `effectif`, `actifs`, `inactifs`, `embauchesDouzeMois` (`long`); `ageMoyen`, `ancienneteMoyenne` (`BigDecimal` ou `null` sans employé); `parAge`, `parAnciennete` (`List<TrancheDto>`). Aucun salaire. |
+| `TrancheDto` | `min` (`int` inclus), `max` (`Integer` exclu, `null` pour « et plus »), `effectif` (`long`); bornes en années pleines |
+| `EmployeeImportResultDto` | `totalLignes`, `crees`, `ignores` (`int`), `lignesIgnorees` (`List<LigneIgnoreeDto>`); en rejet atomique, `crees = 0` |
+| `LigneIgnoreeDto` | `numeroLigne` (`int`, numéro réel Excel à partir de 1), `cin`, `nomPrenom` (`String` ou `null`), `raison` (`String`) |
+| `EmployeeSortieDto` | Contrat de façade : `employeId` (`long`), `periode` (`YearMonth`, `aaaa-MM`), `motif` (`String`); consommé par le parcours Paie |
+
+Âge et ancienneté moyens sont la moyenne des durées en jours divisée par 365,2425, arrondie à une
+décimale. L’ancienneté ne devient jamais négative. Les embauches des douze derniers mois satisfont
+`aujourd’hui - 1 an < dateEmbauche <= aujourd’hui`; les dates futures sont exclues.
+Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienneté `<1`, `[1,3[`, `[3,5[`,
+`[5,10[`, `10+` ans.
+
+## API et permissions
+
+| Méthode et route | Permission | Résultat et erreurs utiles |
+|---|---|---|
+| `POST /employees` | `EMPLOYEE_WRITE` | `201`; validation/référence `400`, CIN ou intégrité `409` |
+| `PUT /employees/{id}` | `EMPLOYEE_WRITE` | `200`; validation `400`, absent `404`, CIN/version `409` |
+| `GET /employees/{id}` | `EMPLOYEE_READ` | `200`; absent `404` |
+| `POST /employees/search` | `EMPLOYEE_READ` | Page de fiches; critères invalides `400` |
+| `POST /employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | `EMPLOYEE_READ` | Groupes du périmètre; critères/dimension invalides `400` |
+| `POST /employees/analytique` | `EMPLOYEE_READ` | Chiffres et tranches du périmètre; critères invalides `400` |
+| `DELETE /employees/{id}` | `EMPLOYEE_DELETE` | `204`; absent `404`, fiche utilisée `409` |
+| `POST /employees/import` | `EMPLOYEE_IMPORT` | Multipart `file`; résultat `200`, fichier ou lignes invalides `400` |
+| `GET /employees/import/modele` | `EMPLOYEE_IMPORT` | Modèle XLSX vierge |
+
+Chaque route exige une authentification. Le [catalogue RBAC Employé](../rbac/employee.md) décrit
+les guards et boutons. Le formulaire utilise les sélecteurs Fonction, Chantier et Équipe : il faut
+les droits de lecture correspondants (`FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ`). Lire une
+fiche à modifier nécessite aussi `EMPLOYEE_READ`. L’import résout ces références côté serveur et
+ne demande que `EMPLOYEE_IMPORT`. L’historique exige `AUDIT_READ`; le salaire et le parcours exigent
+`PAIE_READ`.
+
+### Lecture par l’assistant IA
+
+Les outils de recherche, fiche, comptage, regroupement et départs réutilisent les façades Employé
+avec `EMPLOYEE_READ`, en plus de `IA_UTILISER` exigée par l’accès IA. Le parcours nécessite
+`PAIE_READ`. La projection du salaire est commune : sans `PAIE_READ`, les réponses REST renvoient
+les champs salariaux à `null` et les outils MCP les omettent. Le comptage et le regroupement
+réutilisent les définitions du domaine, sans calcul parallèle. Les vues proposées ciblent les
+routes Employé existantes avec leur périmètre. Le catalogue, ses limites et ses contrôles sont
+décrits dans [le catalogue MCP](../ia.md#catalogue-mcp).
 
 ## Import Excel
 
-L'import Excel sert uniquement à **ajouter de nouveaux employés** (décision du 2026-10-03 : toute
-modification se fait depuis l'écran Employés, jamais par un fichier). L'employé est identifié par son
-**CIN** (colonne C) : un CIN inédit crée un nouvel employé, un CIN déjà présent en base **rejette la
-ligne** — donc tout le fichier — sans rien modifier.
+Le modèle téléchargeable comporte six colonnes, dans cet ordre : date d’embauche, nom et prénom,
+CIN, fonction (libellé existant), chantier (code existant et en cours), date de naissance. Les dates
+sont des cellules de date Excel, pas du texte. La taille maximale du fichier est 20 Mo.
 
-### Modèle téléchargeable
+Une ligne d’en-tête est ignorée. Les lignes vides sont sautées; les numéros d’erreur restent ceux
+d’Excel, même après une ligne absente. Le fichier ajoute exclusivement des CIN inédits : aucun
+employé existant, fonction ou chantier n’est modifié ou créé implicitement. Les employés créés sont
+en poste, sans équipe ni salaire.
 
-`GET /employees/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI) renvoie
-un fichier `.xlsx` vierge contenant uniquement les 6 en-têtes attendus, dans l'ordre, généré par
-`EmployeeImportService.genererModele()`. Objectif : que l'utilisateur parte toujours d'un fichier au
-bon format plutôt que de deviner ou de réutiliser un fichier dont la structure a pu changer.
-Volontairement **sans ligne d'exemple**, pour les mêmes raisons que le modèle Function (éviter qu'une
-valeur d'exemple soit importée par erreur si elle n'est pas retirée).
+Toutes les lignes sont contrôlées avant écriture. Une seule erreur rejette le fichier entier; le
+corps de réponse reste `EmployeeImportResultDto`, avec chaque ligne invalide et une première raison
+par ligne. Ordre : champs manquants/invalides, longueurs, naissance non passée, doublon du fichier,
+CIN déjà présent, fonction inconnue, chantier inconnu ou clôturé. Corriger puis importer à nouveau
+peut révéler un autre problème de la même ligne.
 
-### Format attendu
+Les référentiels sont lus une fois par pages bornées, puis les références et CIN sont comparés en
+mémoire. Les règles communes et l’atomicité sont précisées dans [Imports](../imports.md).
 
-Fichier `.xlsx`, une ligne d'en-tête (ignorée), **6 colonnes**, dans cet ordre exact :
+## Parcours frontend et exports
 
-| Colonne | Contenu | Exemple |
-|---|---|---|
-| A | Date d'embauche | `14/07/2018` |
-| B | Nom & prénom | `BOULJIHEL SALH` |
-| C | CIN — doit être inédit en base | `PB85747` |
-| D | Fonction (libellé, doit exister) | `OPERATEUR` |
-| E | Chantier (code, doit exister et être actif) | `C059` |
-| F | Date de naissance | `26/05/1984` |
+La coque commune porte les onglets, actions et filtres pour `/employees`, `/employees/cartes` et
+`/employees/analytique`. Les filtres nom, CIN, fonctions, chantiers, équipes et statut vivent dans
+l’URL et sont conservés entre vues et par le retour navigateur. Les sélecteurs de dimensions sont
+partagés, multiples, avec recherche serveur, pagination au défilement et navigation clavier.
 
-Le plus sûr est de partir du modèle téléchargeable. Si le fichier a moins de 6 colonnes en en-tête, l'import est
-rejeté immédiatement (`400`, message explicite) avant même de tenter de lire les données.
+- **Tabulaire** : identité, fonction, chantier, équipe, date d’embauche, statut et salaire autorisé;
+  colonnes configurables, tri, pagination et actions de consultation/modification/suppression.
+  Les recherches précédentes sont annulées lors d’un changement de périmètre. Un échec affiche une
+  erreur et un réessai, sans présenter les anciennes lignes comme résultat du filtre courant.
+- **Cartes** : chantier → équipe → fonction → employés; chaque sélection ajoute une étape au fil.
+  « Voir la liste » conserve le périmètre. Les effectifs et la part en poste viennent des fiches;
+  les indicateurs Paie autorisés sont identifiés par leur période.
+- **Analytique** : chiffres et tranches Employé en premier, puis données Paie autorisées. Les groupes
+  des graphiques sont limités aux douze plus grands pour la lisibilité; leur tableau de données
+  conserve tous les groupes. Chaque graphique possède son tableau et son export individuel.
+  Les exports de périmètre utilisent les composants partagés et conservent leurs critères.
+- **Fiche** `/employees/:id` : identité, situation, âge et ancienneté; salaire et parcours Paie
+  réservés à `PAIE_READ`, historique réservé à `AUDIT_READ`.
+- **Saisie** `/employees/new`, `/employees/:id/edit` : mêmes contraintes que l’API; salaire et type
+  facultatifs mais conjoints. Une fiche sortie n’affiche pas chantier/équipe. La modification attend
+  la lecture de la fiche avant d’ouvrir les champs. Fiche et modification annoncent chargement et
+  erreur, avec retour liste et réessai. Quitter une saisie modifiée demande confirmation.
+- **Import** : bouton et modèle dans l’en-tête, résumé et dialogue des erreurs par numéro Excel;
+  un succès recharge la vue courante.
 
-**Le statut n'est pas une colonne de ce format** — il ne peut pas être modifié en masse par l'import,
-uniquement via l'UI (formulaire), employé par employé : les employés créés sont toujours `ACTIF`.
+Nom, CIN et dimensions s’appliquent aux données Paie et aux mouvements. Le statut courant reste
+propre aux fiches et ne filtre pas les mouvements historiques; un message le rappelle lorsqu’il
+est sélectionné. Les sources mensuelles et l’effectif courant restent distincts. Les règles
+partagées de présentation et d’export sont dans [Vues de périmètre](../frontend/vues-perimetre.md).
 
-**Prérequis** : Fonction est résolue par libellé (aucune notion d'actif/inactif sur ce référentiel),
-Chantier par code parmi les chantiers déjà **actifs** en base — ils doivent exister au préalable
-(import Function, synchronisation Chantier ou saisie manuelle). L'import Employee ne crée jamais de
-Fonction ni de Chantier automatiquement.
+## Scénarios vérifiables
 
-### Comportement
-
-Import **atomique** (tout ou rien) — une seule ligne invalide rejette tout le fichier, rien n'est
-créé :
-
-| Cas | Message affiché |
+| Scénario | Tests |
 |---|---|
-| Fichier avec moins de 6 colonnes en en-tête | `Format de fichier invalide : 6 colonnes attendues (...), N trouvée(s).` (rejet global, 400) |
-| Fichier illisible/corrompu | `Fichier Excel illisible : ...` (rejet global, 400) |
-| Champ obligatoire manquant (nom, CIN, dates, fonction, chantier) | `Champs obligatoires manquants ou invalides : ...` |
-| Nom & prénom > 150 caractères ou CIN > 30 caractères | `Nom/prénom ou CIN trop long` (mêmes limites que les colonnes `nom_prenom`/`cin` en base) |
-| CIN en double dans le même fichier | `CIN en doublon dans le fichier` |
-| CIN déjà présent en base (insensible à la casse) | `Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)` |
-| Fonction absente du référentiel | `Fonction introuvable : <valeur>` |
-| Chantier absent du référentiel actif | `Chantier introuvable ou inactif : <valeur>` |
-| Au moins une ligne invalide parmi les autres | `400 Bad Request`, **rien** n'est persisté, `crees = 0`, détail complet dans `lignesIgnorees` |
-| Toutes les lignes valides | `200 OK`, chaque ligne crée un employé |
+| Création/modification, CIN normalisé, références, version | `EmployeeServiceTest`, `EmployeeControllerTest` |
+| Salaire masqué, tri de paie retiré, salaire conservé sans droit | `EmployeeControllerTest`, specs formulaire/liste/détail |
+| Critères invalides refusés; `0` conserve le sens sans chantier/équipe | `EmployeeControllerTest`, `EmployeeAnalytiqueServiceTest` |
+| Suppression d’une fiche utilisée refusée | `EmployeeSuppressionTest` sur PostgreSQL |
+| Import valide, doublon, atomicité, naissance passée, numéros réels | `EmployeeImportServiceTest`, specs actions |
+| Effectifs, groupes sans rattachement, tranches et bornes douze mois | `EmployeeAnalytiqueServiceTest` sur PostgreSQL |
+| Formulaire, fiche, chargement/erreur/réessai et permissions | Specs `employee-form`, `employee-detail`, `employee-list` |
+| URL et recherches tardives, passage entre trois vues | Specs filtres/coque/liste/module et E2E Employé |
 
-`EmployeeImportResultDto` : `totalLignes`, `crees`, `ignores`, `lignesIgnorees[]`
-(`numeroLigne`, `cin`, `nomPrenom`, `raison`). Le corps de réponse a la même forme en succès (`200`)
-qu'en rejet (`400`) — seul le code HTTP change.
-
-**Une seule raison par ligne, ordre de vérification fixe** : si une ligne cumule plusieurs problèmes,
-seul le premier détecté est rapporté (les autres ne sont pas évalués). Ordre exact :
-1. champs obligatoires manquants (nom, CIN, dates, fonction, chantier) ;
-2. nom/prénom ou CIN trop long ;
-3. CIN en doublon dans le fichier ;
-4. fonction introuvable ;
-5. chantier introuvable/inactif.
-
-Concrètement : une ligne avec un CIN trop long *et* une fonction manquante ne remontera que
-`Nom/prénom ou CIN trop long` — corriger cette ligne et réimporter peut donc révéler une deuxième
-erreur qui n'était pas visible au premier rejet.
-
-Toutes les lignes sont validées avant toute écriture en base, sur des valeurs brutes (aucune entité JPA gérée
-pendant la validation) : voir [../imports.md](../imports.md) pour le principe commun à tous les imports.
-
-### Performance
-
-Le référentiel Function (entier), les chantiers actifs et l'ensemble des CIN déjà présents en base
-(`EmployeeRepository.findAllCinsEnMajuscules`) sont chargés **une seule fois** avant la boucle
-(`Pageable.unpaged()` sur les façades `IFunctionService`/`IChantierService`) et gardés en mémoire
-(`Map`/`Set`) pour la résolution de chaque ligne — aucune requête SQL par ligne dans la boucle,
-conformément à `conventions/performance.md`.
-
----
-
-## Frontend
-
-Routes sous `/employees` (lazy loading, `employee.routes.ts`) :
-
-| Route | Composant | Description |
-|---|---|---|
-| `/employees` | `EmployeeListComponent` | **Vue Tabulaire** : tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir [../frontend/README.md](../frontend/README.md)) filtré par la barre commune, avec les colonnes Équipe et, pour `PAIE_READ`, Salaire (« / mois » ou « / jour ») ; consultation, modification, suppression |
-| `/employees/new` | `EmployeeFormComponent` | Création ; équipe facultative ; salaire et type (mensuel ou journalier) ensemble, proposés seulement avec `PAIE_READ` |
-| `/employees/:id` | `EmployeeDetailComponent` | **Fiche de l'employé** : initiales, nom, CIN et statut ; situation actuelle (fonction, chantier, équipe, ancienneté depuis l'embauche, âge) ; avec `PAIE_READ`, le salaire (« par mois » ou « par jour ») et le **parcours** (`PaieParcoursComponent`, domaine Paie : chiffres, chronologie des changements, total perçu par mois, bulletins) |
-| `/employees/:id/edit` | `EmployeeFormComponent` | Modification (y compris statut, équipe, et salaire avec `PAIE_READ`) |
-
-Les vues des employés sont les routes filles de `EmployeeVuesComponent` (`vues/`), qui configure la coque partagée `app-collection-shell`; la liste utilise également `app-collection-table`. Le domaine fournit le titre, les
-**actions** (`EmployeeActionsComponent`, `actions/` : « Importer », avec le modèle Excel dans son menu, et « Nouvel employé »,
-chacune avec sa permission) et la **barre de filtres** (`EmployeeFiltresComponent`, `filtres/` : nom, CIN, fonctions, chantiers,
-statut, « Réinitialiser »), une seule fois pour toutes les vues. Les écrans de saisie et de consultation n'en font pas partie.
-Les **filtres vivent dans l'URL** (`?nom=ali&cin=AB1&fonctionIds=7&chantierIds=3,4&statut=ACTIF`, voir `filtres/employee-filtres.ts`) :
-la barre les écrit (nom et CIN après un court délai), chaque vue les lit ; lien direct et retour navigateur les conservent, une
-valeur invalide est ignorée. Un import réussi recrée la vue affichée, qui recharge ses données. Les onglets (`VueSwitcherComponent`, partagé avec la Paie)
-mènent aux trois vues ; l'en-tête à onglets est le style global `.app-vues` (`styles/_page.scss`), commun avec la Paie.
-
-### Vues Cartes et Analytique
-
-Les deux vues sont les **vues partagées par tous les modules** ([Vues Cartes et Analytique partagées](../frontend/vues-perimetre.md), ADR 0014) : `EmployeeCartesComponent` et
-`EmployeeAnalytiqueComponent` ne sont que des hôtes minces, `employee-module.ts` décrit le module (pas de référentiel propre ;
-périmètre = barre de filtres : chantiers, équipes, fonctions, nom, CIN, statut).
-
-**Cartes** (lecture seule). On descend dans l'effectif selon la hiérarchie **chantier → équipe → fonction → employés**.
-L'ouverture d'une carte avance automatiquement à l'étape suivante et ajoute une **étape au fil** ; chaque étape se retire
-seule. **« Voir la liste »** ouvre la vue Tabulaire sur le même périmètre. Tout est dans l'URL : les étapes sont
-`chantierIds`, `equipeIds` (0 = sans équipe) et `fonctionIds`. Les anciens liens contenant `?par=` suivent maintenant la
-hiérarchie définie par le domaine.
-Chaque carte montre l'effectif, la part des employés en poste (jauge) et, avec `PAIE_READ`, la paie du mois (payés, masse, STC)
-avec l'écart sur le mois contigu.
-
-**Analytique** (graphiques). Les données Employé viennent en premier, suivies du bloc Paie. Avec `EMPLOYEE_READ` : six chiffres
-clés (effectif, en poste, sortis, âge moyen, ancienneté moyenne, embauches sur 12 mois), la **pyramide des âges** et l'**ancienneté**
-par tranche, la **répartition** en poste / sortis
-par chantier, équipe ou fonction (les 12 plus grands groupes ; tous dans le tableau de données). Avec `PAIE_READ` : les chiffres
-du mois, l'évolution mensuelle, la répartition de la paie, les tranches de total et les **mouvements mois par mois**
-(`POST /paie/effectifs` : employés payés, entrées, sorties, mutations). Chaque graphique a son tableau de données (« Voir les
-données »). Les mouvements suivent le chantier, l'équipe et la fonction **du bulletin du mois** ; le nom, le CIN et le statut de
-la barre ne s'y appliquent pas (l'écran le dit).
-
-Tranches retenues par le propriétaire (2026-10-19) : âge **moins de 25, 25-34, 35-44, 45-54, 55 ans et plus** (années pleines) ;
-ancienneté **moins d'un an, 1-3, 3-5, 5-10, 10 ans et plus** (de borne à borne : 1-3 = d'un an à moins de trois).
-
-Fonction et chantier utilisent le sélecteur générique (`shared/components/lazy-select`, recherche
-serveur + chargement différé — voir `conventions/frontend.md`, section Sélecteurs) : sélection
-multiple pour les filtres de liste (`fonctionIds`/`chantierIds`), sélection simple dans le formulaire
-(relation unique de l'employé). Le filtre Statut reste en sélection simple (2 valeurs seulement, le
-multiselect n'y apporterait rien).
-
-L'entrée « Télécharger le modèle Excel » du bouton « Importer » télécharge le fichier vierge (`GET /employees/import/modele`) via un lien
-`<a download>` généré dynamiquement à partir du `Blob` reçu. Le bouton "Importer" déclenche un
-sélecteur de fichier natif (`<input type="file" accept=".xlsx">` masqué), envoie le fichier à
-`POST /employees/import`, puis affiche un résumé (toast) et le détail de chaque ligne ignorée — avec
-sa raison exacte — dans une boîte de dialogue défilante.
-
-Colonnes du tableau : Nom & prénom, CIN, Fonction, Chantier, Date d'embauche, Statut. Accès via la barre latérale
-(`core/navigation/nav-items.ts`, entrée « Employés », permission `EMPLOYEE_READ`). Les boutons de création,
-modification, suppression et import sont conditionnés par `EMPLOYEE_WRITE`, `EMPLOYEE_DELETE` et
-`EMPLOYEE_IMPORT` (voir [../rbac/employee.md](../rbac/employee.md)).
-
----
-
-## Limites connues
-
-Voir [TODO.md](../../TODO.md) pour le détail :
-
-- Audité (voir [../audit/README.md](../audit/README.md)) : créations, modifications, suppressions et imports (fichier : nom,
-  taille, empreinte) ; l'historique d'un employé s'ouvre depuis son détail (bouton **Historique**, permission `AUDIT_READ`).
-- Aucun lien avec le Pointage, qui reste à construire.
+Les suites et commandes transverses sont décrites dans [Tests](../testing.md). Le Pointage et les
+évolutions de qualité de données non arbitrées sont suivis dans le [TODO global](../../TODO.md).

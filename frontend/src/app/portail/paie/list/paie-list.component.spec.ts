@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/feedback/feedback.service';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
 import { Paie } from '../models/paie.model';
@@ -98,5 +98,36 @@ describe('PaieListComponent — filtres de la barre commune', () => {
         await harness.navigateByUrl('/paie?cin=AB1#haut', PaieListComponent);
 
         expect(service.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('présente une erreur avec reprise puis recharge le même périmètre', async () => {
+        service.search.mockReturnValueOnce(throwError(() => new Error('indisponible')));
+        const composant = await harness.navigateByUrl('/paie?cin=AB1', PaieListComponent);
+        harness.detectChanges();
+        expect(composant['erreur']()).toContain('Impossible de charger les bulletins');
+        expect(harness.routeNativeElement?.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les bulletins');
+
+        (harness.routeNativeElement?.querySelector('.app-page__actions button') as HTMLButtonElement).click();
+        harness.detectChanges();
+        expect(composant['erreur']()).toBeNull();
+        expect(service.search).toHaveBeenLastCalledWith(expect.objectContaining({ cin: 'AB1' }), expect.objectContaining({ page: 0 }));
+    });
+
+    it('annule une recherche obsolète et attend la nouvelle réponse', async () => {
+        const composant = await harness.navigateByUrl('/paie', PaieListComponent);
+        const ancien = new Subject<Page<Paie>>();
+        const courant = new Subject<Page<Paie>>();
+        service.search.mockReturnValueOnce(ancien).mockReturnValueOnce(courant);
+        composant['onSearch']();
+        composant['onSearch']();
+        ancien.next({ content: [], page: { size: 10, number: 0, totalElements: 99, totalPages: 10 } });
+        expect(composant['loading']()).toBe(true);
+        expect(composant['totalRecords']()).toBe(0);
+
+        courant.next({ content: [], page: { size: 10, number: 0, totalElements: 3, totalPages: 1 } });
+        courant.complete();
+        expect(composant['totalRecords']()).toBe(3);
+        expect(composant['loading']()).toBe(false);
+        expect(ancien.observed).toBe(false);
     });
 });

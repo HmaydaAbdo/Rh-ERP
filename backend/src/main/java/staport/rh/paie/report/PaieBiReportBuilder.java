@@ -5,6 +5,7 @@ import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
 import staport.rh.paie.repositories.EvolutionChantierEquipeProjection;
+import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.PaieRepository;
 import staport.rh.paie.reporting.MaterielChantierCatalogue;
 import staport.rh.paie.reporting.ObservationStc;
@@ -98,7 +99,7 @@ class PaieBiReportBuilder {
     RapportBiVue construire(YearMonth periode, PaieReportPdfRequestDto requete) {
         List<Paie> courant = rechercher(periode, requete);
         List<Paie> precedent = rechercher(periode.minusMonths(1), requete);
-        EvolutionParNiveau evolutions = evolutionParNiveau(periode, requete.chantiersEffectifs());
+        EvolutionParNiveau evolutions = evolutionParNiveau(periode, requete);
         return construireDepuis(periode, requete, courant, precedent, evolutions);
     }
 
@@ -439,19 +440,17 @@ class PaieBiReportBuilder {
      * finissant à la période du rapport. Les périodes sans bulletin ne sont pas ajoutées
      * artificiellement au graphique.
      *
-     * Le filtre des marchés du wizard est appliqué aux agrégats historiques avant leur cumul. */
-    private EvolutionParNiveau evolutionParNiveau(YearMonth periode, List<Long> chantierIds) {
+     * Les mêmes filtres de nom, CIN, fonction et marchés que les données du mois sont appliqués en base. */
+    private EvolutionParNiveau evolutionParNiveau(YearMonth periode, PaieReportPdfRequestDto requete) {
         YearMonth debut = periode.minusMonths(MOIS_EVOLUTION - 1);
-        List<EvolutionChantierEquipeProjection> lignes = repository.sommerParChantierEquipePeriode(debut, periode);
+        List<EvolutionChantierEquipeProjection> lignes = repository.sommerParChantierEquipePeriode(debut, periode,
+                FiltresPaie.depuis(criteres(periode, requete)));
 
         Map<YearMonth, Cumul> global = new LinkedHashMap<>();
         Map<String, Map<YearMonth, Cumul>> parChantier = new LinkedHashMap<>();
         Map<CleEvolutionEquipe, Map<YearMonth, Cumul>> parEquipe = new LinkedHashMap<>();
 
         for (EvolutionChantierEquipeProjection ligne : lignes) {
-            if (chantierIds != null && !chantierIds.isEmpty() && !chantierIds.contains(ligne.getChantierId())) {
-                continue;
-            }
             YearMonth mois = ligne.getPeriode();
             BigDecimal masse = ligne.getMasse() == null ? BigDecimal.ZERO : ligne.getMasse();
             long effectif = ligne.getEffectif() == null ? 0 : ligne.getEffectif();
@@ -609,12 +608,15 @@ class PaieBiReportBuilder {
     }
 
     private List<Paie> rechercher(YearMonth periode, PaieReportPdfRequestDto requete) {
-        PaieSearchCriteria criteria = new PaieSearchCriteria(
+        return repository.findAll(PaieSpecification.searchByCriteria(criteres(periode, requete)));
+    }
+
+    private PaieSearchCriteria criteres(YearMonth periode, PaieReportPdfRequestDto requete) {
+        return new PaieSearchCriteria(
                 requete.cin(), requete.nomPrenom(), periode,
                 requete.fonctionId() != null ? List.of(requete.fonctionId()) : null,
                 requete.chantiersEffectifs(),
                 null);
-        return repository.findAll(PaieSpecification.searchByCriteria(criteria));
     }
 
     private static String libellePeriode(YearMonth periode) {

@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.paie.repositories.EffectifBulletinProjection;
+import staport.rh.paie.repositories.FiltresPaie;
 import staport.rh.paie.repositories.PaieRepository;
 
 import java.time.YearMonth;
@@ -15,6 +16,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class PaieEffectifsServiceTest {
@@ -40,7 +43,7 @@ class PaieEffectifsServiceTest {
     }
 
     private void donnees() {
-        when(repository.listerEffectifs()).thenReturn(List.of(
+        when(repository.listerEffectifs(any())).thenReturn(List.of(
                 bulletin(1, AOUT, 10, 5L), bulletin(2, AOUT, 10, null), bulletin(3, AOUT, 10, 5L),
                 bulletin(1, SEPTEMBRE, 10, 5L), bulletin(2, SEPTEMBRE, 20, null), bulletin(4, SEPTEMBRE, 10, 5L)));
         when(employeeService.listerToutesLesSorties()).thenReturn(List.of(new EmployeeSortieDto(3L, SEPTEMBRE, "Démission")));
@@ -59,13 +62,34 @@ class PaieEffectifsServiceTest {
     void ne_compte_que_les_bulletins_du_perimetre_et_les_departs_de_qui_y_etait_paye() {
         donnees();
 
+        when(repository.listerEffectifs(any())).thenReturn(List.of(
+                bulletin(1, AOUT, 10, 5L), bulletin(2, AOUT, 10, null), bulletin(3, AOUT, 10, 5L),
+                bulletin(1, SEPTEMBRE, 10, 5L), bulletin(4, SEPTEMBRE, 10, 5L)));
+
         List<EffectifMoisDto> chantier10 = service.tendances(new EffectifsCriteria(List.of(10L), null, null));
         assertThat(chantier10).containsExactly(
                 new EffectifMoisDto(AOUT, 3, null, 0, null),
                 // 2 a quitté le chantier 10 : il n'y est plus payé (pas une mutation dans ce périmètre) ; 4 y entre ; 3 part
                 new EffectifMoisDto(SEPTEMBRE, 2, 1L, 1, 0L));
 
+        when(repository.listerEffectifs(any())).thenReturn(List.of(bulletin(2, AOUT, 10, null), bulletin(2, SEPTEMBRE, 20, null)));
         assertThat(service.tendances(new EffectifsCriteria(null, null, List.of(0L))))
                 .as("0 = sans équipe").extracting(EffectifMoisDto::effectif).containsExactly(1L, 1L);
+    }
+
+    @Test
+    void transmet_nom_cin_et_rattachements_a_la_meme_recherche_que_les_agregats() {
+        var filtres = org.mockito.ArgumentCaptor.forClass(FiltresPaie.class);
+        when(repository.listerEffectifs(any())).thenReturn(List.of());
+        when(employeeService.listerToutesLesSorties()).thenReturn(List.of());
+
+        service.tendances(new EffectifsCriteria(List.of(10L), List.of(1L), List.of(0L), "Ali%", "AB_"));
+
+        verify(repository).listerEffectifs(filtres.capture());
+        assertThat(filtres.getValue().getMotifNom()).isEqualTo("%ali\\%%");
+        assertThat(filtres.getValue().getMotifCin()).isEqualTo("%ab\\_%");
+        assertThat(filtres.getValue().getChantierIds()).containsExactly(10L);
+        assertThat(filtres.getValue().getFonctionIds()).containsExactly(1L);
+        assertThat(filtres.getValue().isInclureSansEquipe()).isTrue();
     }
 }

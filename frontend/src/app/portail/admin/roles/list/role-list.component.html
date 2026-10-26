@@ -15,7 +15,7 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
+      @if (!loading() && !erreur()) {
         {{ totalRecords() }} rôle{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
@@ -24,9 +24,16 @@
     </div>
   </div>
 
+  @if (erreur()) {
+    <div role="alert">
+      <p>Impossible de charger les rôles.</p>
+      <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
+    </div>
+  }
+
   <stp-table
     label="Liste : Rôles"
-    emptyMessage="Aucun rôle ne correspond à ces critères."
+    [emptyMessage]="erreur() ? 'La liste des rôles n’est pas disponible.' : 'Aucun rôle ne correspond à ces critères.'"
     [lazy]="true"
     [value]="roles()"
     [totalRecords]="totalRecords()"

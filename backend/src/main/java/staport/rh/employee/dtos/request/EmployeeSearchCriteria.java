@@ -1,6 +1,9 @@
 package staport.rh.employee.dtos.request;
 
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import staport.rh.employee.entities.EmployeeStatut;
 
 import java.util.List;
@@ -13,9 +16,9 @@ import java.util.List;
 public record EmployeeSearchCriteria(
         @Size(max = 150) String nomPrenom,
         @Size(max = 30) String cin,
-        @Size(max = 500) List<Long> fonctionIds,
-        @Size(max = 500) List<Long> chantierIds,
-        @Size(max = 500) List<Long> equipeIds,
+        @Size(max = 500) List<@NotNull @Positive Long> fonctionIds,
+        @Size(max = 500) List<@NotNull @PositiveOrZero Long> chantierIds,
+        @Size(max = 500) List<@NotNull @PositiveOrZero Long> equipeIds,
         EmployeeStatut statut
 ) {
 }

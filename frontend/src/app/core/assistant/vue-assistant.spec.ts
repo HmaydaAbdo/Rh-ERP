@@ -25,6 +25,36 @@ describe('cibleDeVue', () => {
     expect(cibleDeVue({ module: 'admin/roles', vue: 'tabulaire', parametres: {} })?.commandes).toEqual(['/admin/roles']);
   });
 
+  it('conserve les critères Employé aux limites du contrat : nom de 150 caractères et CIN de 30', () => {
+    const parametres = { nom: 'N'.repeat(150), cin: 'C'.repeat(30) };
+
+    expect(cibleDeVue({ module: 'employees', vue: 'tabulaire', parametres })).toMatchObject({
+      commandes: ['/employees'],
+      queryParams: parametres,
+      filtres: [`Nom « ${parametres.nom} »`, `CIN ${parametres.cin}`]
+    });
+    expect(cibleDeVue({ module: 'employees', vue: 'tabulaire', parametres: { nom: 'N', cin: 'C' } })).not.toBeNull();
+  });
+
+  it('accepte les caractères de CIN permis par les DTO sans les transformer en route', () => {
+    const cin = 'أب-12 /34.é?x=1&#';
+
+    expect(cibleDeVue({ module: 'employees', vue: 'tabulaire', parametres: { cin } })).toMatchObject({
+      commandes: ['/employees'],
+      queryParams: { cin },
+      filtres: [`CIN ${cin}`]
+    });
+  });
+
+  it('refuse les critères Employé vides, blancs, trop longs ou non textuels', () => {
+    for (const cle of ['nom', 'cin']) {
+      const limite = cle === 'nom' ? 150 : 30;
+      for (const valeur of ['', '   ', '\t\n', 'X'.repeat(limite + 1), null, 123, ['AB1']]) {
+        expect(cibleDeVue({ module: 'employees', vue: 'tabulaire', parametres: { [cle]: valeur } })).toBeNull();
+      }
+    }
+  });
+
   it('refuse tout module, vue ou paramètre hors de la liste blanche', () => {
     expect(cibleDeVue({ module: 'users', vue: 'tabulaire', parametres: {} })).toBeNull();
     expect(cibleDeVue({ module: 'paie', vue: 'fiche', parametres: { id: '1' } })).toBeNull();
