@@ -10,16 +10,21 @@ les lectures autorisées des rôles, les reprises après erreur, les sources ana
 individuels sont alignés sur leurs contrats documentés. Les README et skills de chaque domaine
 décrivent les règles courantes; le PV global garde les accords métier à recueillir avant diffusion.
 
-**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la branche `claude/compose-tout-par-defaut`,
+**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
 IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.
+Revue face aux cadres de référence (NIST AI RMF, ISO/IEC 42001, OWASP LLM et agents, loi 09-08) : conventions
+IA complétées, tâches de J2 et J3 détaillées, écarts suivis au § 10 de [ia.md](../ia.md), décisions à prendre
+listées au § 7.
 Tâches T1 à T8 de J1 faites : passerelle
 LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
 `MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
 (évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
-Angular qui ouvre lui-même la vue filtrée de sa réponse. L'assistant n'apparaît qu'avec `IA_UTILISER` et
-`IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un seul document : [ia.md](../ia.md). Prochaine
-action : J2 (périmètres par fiche de poste), après la démonstration J1 au propriétaire.
+Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
+CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est
+retirée. L'assistant n'apparaît qu'avec `IA_UTILISER` et `IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un
+seul document : [ia.md](../ia.md). Prochaine action : voir au navigateur une surface A2UI d'un vrai modèle (fin de
+T16), puis T17 à T20.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
@@ -135,4 +140,4 @@ Le détail transversal est dans `TODO.md`; les tâches propres à un domaine son
 - **Carte** : recherche de lieux reportée ; la clé ArcGIS (`ARCGIS_API_KEY`) expire au plus tard un an après sa création.
 - **Domaines à venir** : Pointage, puis paie calculée depuis le Pointage (section « Évolutions prochaines »).
 - **IA** : J2 (périmètres par fiche de poste, projection du salaire, budgets par poste) avant tout utilisateur non
-  administrateur ; aucune donnée réelle vers un modèle avant J3. Détail et journal dans [ia.md](../ia.md).
+  administrateur. Détail et journal dans [ia.md](../ia.md).

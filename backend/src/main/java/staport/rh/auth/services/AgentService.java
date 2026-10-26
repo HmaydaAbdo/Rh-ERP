@@ -1,16 +1,17 @@
 package staport.rh.auth.services;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JOSEObjectType;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.audit.events.ActionSecurite;
@@ -26,7 +27,6 @@ import staport.rh.auth.security.JetonAgent;
 import staport.rh.auth.services.interfaces.IAgentService;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,29 +65,27 @@ public class AgentService implements IAgentService {
             refuser(utilisateurId, "DROIT_IA_RETIRE");
         }
         Instant maintenant = Instant.now();
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        // Émission par l'encodeur JWT de Spring Security : l'algorithme, la clé et son identifiant vont dans l'en-tête,
+        // la signature est faite par Nimbus derrière cette API standard.
+        JwsHeader entete = JwsHeader.with(SignatureAlgorithm.RS256).keyId(cle.getKeyID()).type("JWT").build();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(emetteur)
                 .subject(identite.get().username())
                 .audience(List.of(JetonAgent.AUDIENCE_IA, JetonAgent.AUDIENCE_MCP))
-                .issueTime(Date.from(maintenant))
-                .notBeforeTime(Date.from(maintenant))
-                .expirationTime(Date.from(maintenant.plus(JetonAgent.DUREE)))
-                .jwtID(UUID.randomUUID().toString())
+                .issuedAt(maintenant)
+                .notBefore(maintenant)
+                .expiresAt(maintenant.plus(JetonAgent.DUREE))
+                .id(UUID.randomUUID().toString())
                 .claim(CLAIM_USER_ID, identite.get().utilisateurId())
                 .claim(JetonAgent.CLAIM_SCOPE, JetonAgent.SCOPE_LECTURE)
                 .build();
-        SignedJWT jeton = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(cle.getKeyID())
-                .type(JOSEObjectType.JWT).build(), claims);
-        try {
-            jeton.sign(new RSASSASigner(cle));
-        } catch (JOSEException e) {
-            throw new IllegalStateException("Signature du jeton agent impossible", e);
-        }
+        Jwt jeton = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(cle)))
+                .encode(JwtEncoderParameters.from(entete, claims));
         // Le jeton lui-même n'est jamais journalisé : seulement son identifiant et sa durée.
         evenements.publishEvent(EvenementSecurite.avecDetails(ActionSecurite.JETON_AGENT_EMIS,
                 identite.get().utilisateurId(), identite.get().username(),
-                Map.of("jti", claims.getJWTID(), "dureeSecondes", JetonAgent.DUREE.toSeconds())));
-        return new JetonAgentResponseDto(jeton.serialize(), "Bearer", JetonAgent.DUREE.toSeconds());
+                Map.of("jti", jeton.getId(), "dureeSecondes", JetonAgent.DUREE.toSeconds())));
+        return new JetonAgentResponseDto(jeton.getTokenValue(), "Bearer", JetonAgent.DUREE.toSeconds());
     }
 
     @Override

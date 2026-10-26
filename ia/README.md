@@ -1,7 +1,8 @@
 # Service IA — image `erp-rh-ia`
 
-Service Python d'ERP-RH : graphe LangGraph (T6), client MCP vers Spring (T3–T5), point d'entrée
-AG-UI vers Angular (T7), modèles uniquement par la passerelle [LiteLLM](../litellm/README.md).
+Service Python d'ERP-RH, construit uniquement sur les composants officiels (règle « frameworks d'abord ») : agent
+`create_agent` de LangChain sur LangGraph (T10), flux AG-UI par CopilotKit et `ag-ui-langgraph` (T11), outils MCP par
+le MCP intégré à LangChain, modèles par `ChatLiteLLM` et la passerelle [LiteLLM](../litellm/README.md).
 Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
 
 ## État actuel
@@ -10,38 +11,28 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
   LiteLLM joignable ; sinon `503`).
 - Configuration typée (`src/erp_rh_ia/config.py`) ; le service refuse de démarrer sans
   `IA_ENABLED`, `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` (8 caractères au moins) ou `IA_ERP_API_URL`.
-- **AG-UI** — `agui.py`, `POST /agui` (SSE), produit par l'intégration officielle `ag-ui-langgraph`
-  (`LangGraphAgent`, [ADR 0015](../docs/adr/0015-ag-ui-integration-langgraph-officielle.md)). Entrée :
-  `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton agent ;
-  refus HTTP avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, `STEP_*` par nœud du graphe,
-  `TOOL_CALL_START/ARGS/END`, la réponse **vérifiée** (`TEXT_MESSAGE_*`, émise par `conclure` ; aucun brouillon),
-  `CUSTOM com.staport.answer.v1` (abstention, motif, vue), `CUSTOM com.staport.mascot.state.v1` (humeur logique,
-  séquence croissante), `STATE_SNAPSHOT`/`MESSAGES_SNAPSHOT` (conversation visible seulement : question, appels,
-  synthèse des résultats, réponse) et `RUN_FINISHED`. Frontière de sécurité : ni `RAW` ni `rawEvent`, `RUN_ERROR`
-  générique, journal sans trace d'exception. Un checkpointer en mémoire neuf par run ; une déconnexion du client
-  annule le run et ferme la session MCP. Seule la dernière question est lue (pas d'historique en J1).
-- Client LiteLLM : alias `ai-gateway`, tag de tâche obligatoire (`Tache`), aucune nouvelle tentative
-  côté service (la passerelle bascule déjà).
-- Preuve MCP : `tests/compatibilite/` rejoue contre le serveur Java les scénarios du client
-  TypeScript ; lancée par `McpCompatibilityTest` (profil Maven `mcp-compatibility`).
-- **Agent (T6)** — `agent.py` : graphe LangGraph explicite
-  `preparer → cibler → choisir ⇄ executer → rediger → verifier`. Bornes : 3 tours d'outils, 6 appels, 2 rédactions,
-  résultat d'outil tronqué à 12 000 caractères. Un refus « Accès refusé » n'est jamais retenté ; un outil
-  hors catalogue n'est pas appelé ; une sortie JSON invalide est rédigée une seconde fois. Aucune mémoire
-  durable : chaque question est un run indépendant.
-- **Ciblage par domaine** — `domaines.py` : un petit modèle (tag `simple`) choisit les domaines utiles
-  (paie, employés, référentiels, administration, système) ; seuls leurs outils partent vers le modèle
-  `complex`, aucun d'office. Un préfixe d'outil non déclaré forme son propre domaine et suit le même
-  ciblage. Un ciblage invalide ou indisponible garde tout le catalogue. Ce n'est pas un contrôle d'accès :
-  Spring revérifie chaque appel.
-- **Vérificateur de chiffres** — `verification.py` : chaque nombre de la réponse (formats `3 000,50`,
-  `3000.50`, espaces insécables) doit figurer dans les résultats d'outils ou la question. Sinon une
-  réécriture, puis abstention `CHIFFRES_NON_VERIFIES`. Un pourcentage ou un total recalculé par le modèle
-  est donc refusé.
-- **Modèle** — `modele.py` : appels d'outils puis réponse JSON validée (`reponse`, `vue`, `abstention`),
-  tag `complex`, température 0. La vue proposée est choisie parmi celles rendues par les outils, jamais
-  inventée.
-- **Outils** — `outils.py` : une session MCP par question, avec le jeton agent de l'utilisateur.
+- **AG-UI** — `agui.py`, `POST /agui` (SSE) : `LangGraphAGUIAgent` (CopilotKit, sur `ag-ui-langgraph`).
+  Entrée : `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton
+  agent ; refus HTTP avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, `REASONING_*` (raisonnement
+  du modèle), `TEXT_MESSAGE_*` (texte en flux), `TOOL_CALL_*`, `STATE_SNAPSHOT` (état partagé `verification`),
+  `MESSAGES_SNAPSHOT`, `RUN_FINISHED`. Ne reste à nous que : l'identité (jeton) et une frontière de sécurité (ni
+  `RAW` ni `rawEvent`, `RUN_ERROR` générique, journal sans trace d'exception). Une déconnexion du client annule le run.
+  Seule la conversation du run existe (mémoire durable : T19).
+- **Modèles** — `modeles.py` : `ChatLiteLLM` (le seul connecteur qui transmet le raisonnement) sur l'alias
+  `ai-gateway`, tag de tâche LiteLLM par appel, aucune nouvelle tentative côté service (la passerelle bascule).
+- **Agent (T10)** — `agent.py` : `create_agent` (LangChain sur LangGraph). Le modèle choisit seul sa forme de
+  réponse : directe pour un message simple, avec outils pour une question de données, avec un plan (`write_todos`,
+  `TodoListMiddleware`) pour une demande à plusieurs étapes. Middlewares officiels : `CopilotKitMiddleware` (outils du
+  navigateur), `TodoListMiddleware`, `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` (8 par run),
+  `LLMToolSelectorMiddleware` (facultatif, `IA_SELECTION_OUTILS`).
+- **Vérificateur de chiffres** — la seule règle à nous, en middleware `after_model` (`agent.py`) avec
+  `verification.py` : chaque nombre de la réponse finale doit figurer dans les résultats d'outils du tour ou la
+  question ; sinon la réponse est retirée et réécrite une fois, puis remplacée par une abstention. L'état partagé
+  `verification` (`en_cours`, `verifiee`, `abstention`) est lu par l'interface.
+- **Outils** — `outils.py` : le MCP intégré à LangChain (`langchain.mcp`, FastMCP) charge les outils de Spring avec le
+  jeton agent de l'utilisateur ; l'échange de jeton est le seul code à nous.
+- **Évaluation** — `evaluation.py` (`openevals`, `agentevals`) sur le vrai agent ; `tests/test_passerelle_simulee.py`
+  rejoue l'agent sur une passerelle simulée par CopilotKit `aimock`, sans réseau ni quota.
 
 ## Évaluation (jeu de référence)
 

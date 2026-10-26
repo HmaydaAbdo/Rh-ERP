@@ -17,6 +17,19 @@ de sortie typé et documenté, et des limites de taille et de résultats. Les re
 définissent leurs limites et leur ordre. Séparer les outils de lecture des outils d'écriture, et ne
 pas exposer indistinctement toutes les routes CRUD de l'application.
 
+**Descriptions et réponses faites pour un modèle** (pratiques d'Anthropic, d'OpenAI et de Google pour les outils d'agents) :
+
+* Le nom et la description disent à quoi sert l'outil, **quand le choisir et quand préférer son voisin**, comme on briefe
+  un nouveau collègue : vocabulaire du métier, abréviations expliquées (STC, entrée, sortie), unité et période par défaut.
+* Chaque paramètre dit son sens, son format, ses bornes et un exemple ; les valeurs possibles sont des énumérations.
+* La réponse renvoie ce qui permet de continuer sans deuxième appel inutile : noms lisibles à côté des identifiants,
+  la période et le périmètre appliqués, la définition de chaque chiffre, l'outil suivant utile (identifiant de fiche pour
+  `*_fiche`), et pour une liste le total, la limite et s'il en reste.
+* Une réponse est compacte (jetons) : champs utiles seulement, listes bornées, pas de doublon entre texte et données.
+* Une erreur dit au modèle quoi corriger (« periode attend aaaa-MM », « identifiant introuvable : chercher d'abord avec
+  `chantier_rechercher` ») sans recopier la valeur saisie ni exposer d'interne.
+* Les descriptions sont évaluées comme du code : le jeu de référence mesure le bon choix d'outil et d'arguments.
+
 Pour un catalogue important, l'agent peut rechercher les outils pertinents à la demande (Tool
 Search) et ne charger ensuite que leurs descriptions et schémas. La recherche doit rester bornée au
 catalogue publié et configuré. Elle ne change pas les permissions : le serveur contrôle chaque appel
@@ -60,9 +73,10 @@ commun.
 
 * Dans ERP-RH, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
   Choisir le SDK Java maintenu et son mode d'intégration seulement après vérification avec les
-  versions réelles du JDK et de Spring Boot. L'intégration ne doit pas ajouter Spring AI,
-  LangChain4j ou un autre framework LLM au monolithe. Le SDK retenu, ses versions et la révision
-  négociée sont consignés dans [`docs/ia.md`](../docs/ia.md).
+  versions réelles du JDK et de Spring Boot. Pour ERP-RH, c'est le serveur MCP de Spring AI, outils
+  déclarés par annotations ; l'intégration n'ajoute au monolithe aucun client de modèle ni
+  LangChain4j. Le SDK retenu, ses versions et la révision négociée sont consignés dans
+  [`docs/ia.md`](../docs/ia.md).
 * Pour un serveur réseau, retenir le transport **Streamable HTTP** et enregistrer la révision MCP
   exacte, les SDK client/serveur et les capacités négociées. Le transport historique HTTP+SSE ne
   devient pas la référence par défaut ; stdio reste réservé aux intégrations locales adaptées.
@@ -131,6 +145,17 @@ Ne jamais exposer au modèle un outil générique de SQL, shell, filesystem ou r
 arguments et résultats d'outils sont des données non fiables : valider les sorties, résister aux
 tentatives d'injection et empêcher qu'un contenu récupéré change les instructions ou permissions.
 Minimiser et masquer les données sensibles dans les réponses, traces et journaux.
+
+* **Champs libres.** Un champ saisi par une personne (observation, désignation, nom, commentaire)
+  peut contenir une consigne. Le résultat d'outil le transmet comme donnée, borné en taille ; le
+  service IA le place dans un bloc délimité de données, jamais dans les consignes. Le jeu adversarial
+  contient de tels champs piégés.
+* **Descriptions d'outils.** Le nom, la description et le schéma d'un outil sont lus par le modèle et
+  orientent son comportement : ils sont revus comme du code, versionnés avec le catalogue, et un
+  changement relance les évaluations. Un client n'accepte pas un catalogue modifié à la volée par un
+  serveur tiers sans revue (empoisonnement d'outil).
+* **Coupure et quotas par outil.** Un outil peut être retiré du catalogue publié par configuration ;
+  un outil coûteux ou sensible a sa propre limite d'appels par utilisateur et par période.
 
 Tracer l'outil et son résultat selon le risque, avec durée et corrélation ; ne pas recopier de
 secrets ou de contenu sensible dans la télémétrie. Le protocole d'échange avec l'interface est un

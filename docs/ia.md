@@ -1,6 +1,6 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-24.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+**Mis à jour : 2026-10-26.** Seule référence du chantier IA : décisions, architecture, plan, suivi
 et reprise. Les règles réutilisables sont dans les conventions
 ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
@@ -10,7 +10,9 @@ et reprise. Les règles réutilisables sont dans les conventions
 
 L'IA sert **tous les utilisateurs** de l'entreprise (BTP, classe S, Maroc) : comprendre, retrouver,
 contrôler, préparer. Elle commence par la partie RH de l'ERP, puis couvre chaque département avec le
-même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier.
+même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier, et ne
+prend aucune décision sur une personne : elle explique et prépare, une personne habilitée décide
+([usage responsable](../conventions/agents-ia.md#gouvernance-et-usage-responsable)).
 
 ## 2. Décisions
 
@@ -20,26 +22,31 @@ même socle. Elle ne devient jamais la source des chiffres, des droits ou des d�
 | Métier | Spring est propriétaire des données, transactions, règles, permissions et audits. Aucun framework LLM dans le monolithe. |
 | Service IA | **Python** : LangGraph pour le graphe, Pydantic pour tous les contrats, `uv` (lockfile), `ruff`, `pyright` strict, `pytest`. Python est le langage unique de l'IA (graphe, ML, OCR, voix, évaluation). |
 | Outils métier | **MCP** (Streamable HTTP) entre le service IA et Spring. Le service IA n'a ni accès aux tables ni client REST métier. |
-| Interface ↔ agent | **AG-UI** entre Angular et le service IA : messages en streaming, états d'outils, interruptions, confirmations, événements de la mascotte. Angular dialogue directement avec l'agent Python, sans runtime intermédiaire. Flux produit par l'**intégration LangGraph officielle** `ag-ui-langgraph` 0.0.47 (version figée, [ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)) ; le service n'y ajoute que l'identité, la session MCP et une frontière de sécurité sur les événements. Client : `@ag-ui/client` 1.0.3. Seule la réponse vérifiée est diffusée, jamais les jetons du brouillon. |
+| Interface ↔ agent | **AG-UI** entre Angular et le service IA, par le **runtime CopilotKit officiel** (service `copilot-runtime`, Node, `@copilotkit/runtime` 1.80) depuis T16 (décision du 2026-10-26) : il relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur et lui applique le middleware A2UI officiel, que l'architecture de CopilotKit place côté serveur. Flux produit par l'**intégration LangGraph officielle** `ag-ui-langgraph` 0.0.47 ([ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)) ; le service n'y ajoute que l'identité et la session MCP. Télémétrie de CopilotKit coupée. |
 | Modèles | **LiteLLM** : un alias unique `ai-gateway`, la tâche indiquée par tag (`simple`, `medium`, `complex`, `code`, `ocr`), bascule entre fournisseurs du même niveau, budgets par clé virtuelle. Un modèle est retenu sur le jeu de référence (§ 4). |
-| Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Tests sur données fictives. Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
+| Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Les données réelles peuvent être envoyées aux modèles configurés, offres gratuites comprises : la règle « aucune donnée réelle vers un modèle » est retirée, risque accepté par le propriétaire (décision du 2026-10-26). Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
 | Sécurité | Périmètres de données par **département et fiche de poste**, appliqués dans Spring pour REST et MCP ; jeton délégué court RS256 ; audit de chaque appel d'outil (§ 5). |
-| Premier usage | **Questions/réponses + vues pilotées** : l'agent répond avec des chiffres Spring et ouvre la vue partagée (Tabulaire, Cartes, Analytique) déjà filtrée (§ 6). |
+| Premier usage | **Questions/réponses + interface composée A2UI** : l'agent répond avec des chiffres Spring et, quand c'est plus lisible, compose dans la discussion une surface A2UI (tableau, liste, indicateurs). L'ouverture automatique des vues de l'ERP est retirée (décision du propriétaire du 2026-10-26 : A2UI suffit et supprime le code maison de pilotage des écrans). |
 | Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
 | Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
-| Orchestration | **Un agent, catalogue ciblé par domaine** : un petit modèle (tag `simple`) choisit les domaines de la question, seuls leurs outils partent vers le modèle `complex`. Les agents de domaine (sous-graphes sous un superviseur) viennent avec J8, quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, modèle ou budget ([conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine)). |
-| Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (prototypage) est dans les pools tant que les données sont synthétiques (jusqu'à J2) ; les préversions à sortie instable restent sous tags `eval`. |
+| Orchestration | **Un agent `create_agent`** (LangChain sur LangGraph) avec tous les outils, groupés par domaine dans leurs descriptions ; `LLMToolSelectorMiddleware` ne transmet que les outils utiles quand le catalogue ou les quotas l'exigent. **Deep Agents** (`create_deep_agent`, mêmes middlewares plus sous-agents par domaine) est adopté quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, outils ou budget, ou qu'une tâche est longue : contrôle de la paie (J5), assistant réglementaire (J7), documents RH (J6). Pas avant : chaque sous-agent ajoute des appels de modèle, donc de la latence et des quotas (les offres gratuites répondent déjà 429 parfois). Détail : [conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine). |
+| Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (offre de prototypage) est dans les pools ; les préversions à sortie instable restent sous tags `eval`. |
 | Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
+| Frameworks d'abord | Décision du 2026-10-26 : tout le code IA s'appuie sur LangChain (`create_agent` et ses middlewares), LangGraph, Deep Agents si besoin, le MCP intégré à LangChain (`langchain.mcp`), `ag-ui-langgraph` et CopilotKit (raisonnement, texte, A2UI, interface Angular), LiteLLM pour la passerelle et ses garde-fous ; côté Java, le serveur MCP de **Spring AI** et l'échange de jetons OAuth2 de **Spring Authorization Server** ; tout code maison qui duplique un composant officiel est retiré ([règle et correspondances](../conventions/agents-ia.md#frameworks-dabord)). L'agent décide lui-même de sa forme de réponse : directe, raisonnée avec outils, ou planifiée et suivie étape par étape, comme Claude, ChatGPT, Gemini et Grok. Remplace, une fois T10 à T20 faites, le graphe explicite de T6 et le ciblage maison. |
+| Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les [conventions](../conventions/agents-ia.md#gouvernance-et-usage-responsable) ; l'écart avec l'existant est suivi au § 10. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
 ## 3. Architecture
 
 ```text
-Angular ── panneau IA / Espace IA (A2UI + mascotte Rive) ── vues partagées existantes
-   │  AG-UI : entrées HTTP, événements SSE              ▲ ViewSpec → route + filtres
-   ▼                                                    │
-erp-rh-ia (Python, LangGraph)
-   │  graphe : ciblage des domaines → outils → rédaction → vérification des chiffres → réponse + ViewSpec + A2UI
+Angular (CopilotKit Angular : discussion, raisonnement, surfaces A2UI)
+   │  /ia/copilotkit (nginx)
+   ▼
+erp-rh-copilot-runtime (Node, runtime CopilotKit + middleware A2UI)
+   │  AG-UI : entrées HTTP, événements SSE, jeton de l'utilisateur
+   ▼
+erp-rh-ia (Python, create_agent LangChain sur LangGraph)
+   │  outils → réponse (+ generate_a2ui) → vérification des chiffres de la réponse et de la surface
    ├── erp-rh-litellm → fournisseurs (alias ai-gateway, tags de tâche)
    ├── A2A (plus tard) → agents des autres applications
    ▼  MCP + jeton délégué
@@ -64,6 +71,9 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
    modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
 5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
    `enable_json_schema_validation` côté LiteLLM.
+6. À venir (T2.7) : le vérificateur couvre aussi les identifiants, noms et dates cités, et chaque
+   chiffre principal affiche sa période, son périmètre et la définition de l'indicateur. Aujourd'hui,
+   seuls les nombres et les périodes sont vérifiés.
 
 ## 5. Sécurité
 
@@ -76,8 +86,7 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
   publique JWKS), audience `mcp`, scopes réduits ; le `JWT_SECRET` n'est jamais partagé. Chaque appel
   MCP revalide émetteur, audience, expiration, permissions et périmètre.
 - **Champs rendus.** Les mêmes que les écrans pour un utilisateur donné (CIN, dates et montants compris) ; seules
-  les permissions filtrent. Avant tout envoi de données réelles à un fournisseur externe, revoir cette règle avec
-  le choix du modèle (cible : modèle local).
+  les permissions filtrent, quel que soit le fournisseur (cible : modèle local).
 - **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé d'ERP-RH porte
   `metadata.tags: ["!eval"]` (aucun modèle d'évaluation), une limite de débit et un budget. Port lié
   à `127.0.0.1` ou au seul réseau Docker interne. Cache de réponses désactivé.
@@ -85,16 +94,20 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
   `requestId/threadId/runId/toolCallId` pour chaque outil, sans jeton ni contenu RH dans les
   journaux. Interrupteur global de l'IA ; budgets par utilisateur et par poste ; plafonds d'étapes,
   de tokens et de durée par run. L'application reste entièrement utilisable sans IA.
+- **Menaces.** Le [modèle de menaces](../conventions/agents-ia.md#modèle-de-menaces) s'applique
+  menace par menace ; l'état de chaque contrôle est suivi au § 10.
 
 ## 6. Expérience
 
-**Vues pilotées (ViewSpec).** Un outil renvoie, avec ses données, une description de vue : domaine,
-vue, filtres, période, niveau de parcours. Schéma défini une fois (Pydantic → schéma JSON → types
-Angular), validé des deux côtés ; Angular la traduit en route connue et ses gardes s'appliquent.
-**L'assistant ouvre lui-même la vue de sa réponse**, filtres appliqués, une fois la réponse vérifiée
-(décision du 2026-10-25) : liste blanche côté client, gardes de route respectées, retour à l'écran
-précédent en un clic, valeurs citées surlignées dans la vue
-([règles](../conventions/agent-ui.md#pilotage-des-vues-existantes)).
+**Interface composée (A2UI, T16).** Pour une réponse chiffrée plus lisible en tableau, en liste ou en indicateurs,
+l'agent appelle `generate_a2ui` (injecté par `CopilotKitMiddleware` quand le runtime active A2UI) ; le middleware A2UI
+du runtime transforme son flux en surface, rendue par CopilotKit Angular avec le catalogue de base officiel aux
+couleurs Staport. Le vérificateur contrôle les chiffres de la dernière surface comme ceux du texte ; la surface n'est
+jamais une source. Limite connue : la surface se peint pendant le flux, avant la vérification finale ; sur une
+abstention, la réponse dit de ne pas se fier aux chiffres affichés.
+**Vues pilotées retirées** (décision du propriétaire du 2026-10-26) : l'assistant n'ouvre plus les écrans de l'ERP.
+Les outils Spring décrivent toujours la vue correspondante (`VueProposeeDto`), réutilisable si un lien est un jour
+proposé.
 
 **Assistant RH (T8).** Barre de commande translucide au repos (`Ctrl K`), discussion ancrée à droite
 dès la première question, comme un chat d'assistant : pour chaque réponse, un bloc repliable
@@ -131,8 +144,8 @@ pris en charge ; chaque surface a un repli texte.
 |---|---|---|---|
 | J0 — Socle | Preuve MCP Java ↔ client TypeScript ; décisions ; ce document | Fait | ✅ |
 | J1 — Tranche verticale | Tâches T1 à T9 ci-dessous, données synthétiques | Démonstration de bout en bout ; exactitude mesurée ; refus serveur testés | 🟦 |
-| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets par poste | Tests négatifs verts ; porte avant tout utilisateur non administrateur | ⬜ |
-| J3 — Pilote réel | RH/paie puis direction ; fournisseurs payants sans entraînement ; retours 👍/👎 vers le jeu de référence ; suivi coûts/latence | Accord CNDP consigné ; seuils validés et atteints | ⬜ |
+| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets et quotas, jeu adversarial, vérificateur étendu (tâches ci-dessous) | Tests négatifs et adversariaux verts ; porte avant tout utilisateur non administrateur | ⬜ |
+| J3 — Pilote réel | Modèle local open source (les offres gratuites restent possibles en attendant) ; conversations multi-tours ; observabilité et objectifs de service ; conformité et transparence ; retours 👍/👎 revus avant le jeu de référence ; RH/paie puis direction (tâches ci-dessous) | Porte de mise en service franchie ; seuils validés et atteints sur le pilote | ⬜ |
 | J4 — Expérience immersive | Espace IA, catalogue A2UI Staport, mascotte Rive complète | Parcours réel vérifié au navigateur, accessibilité et mouvement réduit | ⬜ |
 | J5 — Contrôle de la paie | Règles d'anomalies dans l'assistant d'import, puis détection statistique ; l'agent explique, l'humain décide | Anomalies connues retrouvées sur imports historiques | ⬜ |
 | J6 — Documents RH | Attestations, certificats, contrats de chantier ; première écriture (diff, approbation, idempotence, checkpoints durables) | Pas de double effet après crash ; approbation expirée refusée | ⬜ |
@@ -153,6 +166,66 @@ pris en charge ; chaque surface a un repli texte.
 | T7 — AG-UI | Point d'entrée AG-UI du service ; événements d'outils et de mascotte ; la confirmation (interruption AG-UI 1.0 et reprise) arrive avec la première écriture et ses checkpoints (J6) | Flux réel testé avec un client AG-UI | ✅ |
 | T8 — Assistant Angular | Intégration AG-UI LangGraph officielle côté service ; assistant immersif en streaming (barre de commande, discussion, étapes repliables), ouverture automatique de la vue filtrée, valeurs citées surlignées | Parcours vérifié au navigateur | ✅ |
 | T9 — Démonstration J1 | Navigateur → agent → MCP → Spring sur base synthétique ; vérification complète et PR vers `main` | Démonstration présentée au propriétaire | 🟦 |
+| T10 — Agent par les frameworks | `create_agent` et middlewares officiels (plan `TodoListMiddleware`, plafonds, `CopilotKitMiddleware`), modèles `ChatLiteLLM` sur la passerelle (seul connecteur qui transmet le raisonnement), outils par le MCP intégré à LangChain (`langchain.mcp`, FastMCP ; l'ancien `langchain-mcp-adapters` n'est plus maintenu). Graphe, tri, ciblage et clients maison retirés ; vérificateur en middleware `after_model` | Tests unitaires verts ; jeu de référence au moins au niveau actuel (22/24 réel, les 2 échecs sont des quotas 429) ; « bonjour » en un appel | ✅ |
+| T11 — Flux officiel | `LangGraphAGUIAgent` (CopilotKit, sur `ag-ui-langgraph`) : raisonnement `REASONING_*`, texte en flux, outils du navigateur, état partagé `verification` ; mascotte maison retirée | Flux réel testé avec le client officiel | ✅ |
+| T12 — Évaluation officielle | `openevals` et `agentevals` sur le jeu de référence ; réponses de modèle enregistrées et outils simulés par CopilotKit `aimock` pour une évaluation hors ligne en CI, sans quota | Mêmes cas qu'avant, rapport identique ; la CI détecte une régression sans réseau | ✅ |
+| T13 — Serveur MCP Spring AI | Serveur MCP de Spring AI 2.0.2 (stable, même SDK MCP 2.1.0 ; Spring Boot 4.1.2) : 25 outils déclarés par `@McpTool`/`@McpToolParam`, schémas générés, **descriptions enrichies** (quand l'utiliser, outil voisin à préférer, sens de chaque argument, définitions des chiffres) ; permission par `@PreAuthorize`, bornes par Bean Validation, trace par `@AuditableAction` (un seul `PerimetreAudit`) ; retirés : `OutilDefini`, `OutilLecture`, `Arguments`, `AuditOutilsAgent`, transport et serveur écrits à la main | `McpOutilsLectureIntegrationTest` 17/17 et `McpSecuriteIntegrationTest` 21/21 ; suite backend 522 tests verts ; flux réel vert | ✅ |
+| T14 — Émission du jeton agent | Le jeton agent est émis par l'encodeur JWT de Spring Security (`NimbusJwtEncoder`, `JwtClaimsSet`) à la place de la signature Nimbus écrite à la main. **Spring Authorization Server écarté pour l'instant** : son échange de jetons (RFC 8693) ne sait valider qu'un jeton qu'il a lui-même émis, alors que le jeton de connexion d'ERP-RH est émis par `JwtService` ; l'adopter suppose de faire du serveur d'autorisation le fournisseur d'identité de tout l'ERP (connexion, rafraîchissement, réinitialisation), ce qui relève de l'authentification unique (J8) | Mêmes refus prouvés (audience, émetteur, expiration, droit retiré) : `McpSecuriteIntegrationTest` 21/21 | ✅ |
+| T15 — Interface CopilotKit | CopilotKit Angular (`provideCopilotKit` relié à `/ia/agui`) aux couleurs Staport : discussion, raisonnement à la place des étapes, plan, texte en flux, « vérification en cours » ; `registerFrontendTool` pour proposer une vue ; `registerRenderToolCall` pour afficher les résultats des outils Spring en cartes Staport (chiffres lus dans les données, jamais écrits par le modèle) ; interface maison retirée | Parcours vérifié au navigateur, accessibilité, budgets de build | ✅ (2026-10-26) |
+| T16 — Interface composée A2UI | Outil `generate_a2ui` injecté par `CopilotKitMiddleware`, rendu A2UI de CopilotKit au thème Staport, chiffres de la surface contrôlés par le vérificateur | Une réponse chiffrée affichée en surface A2UI au navigateur | 🟦 (construite et testée ; surface d'un vrai modèle à voir au navigateur) |
+| T17 — Passerelle native | Garde-fous natifs de LiteLLM (détection d'injection de prompt, masquage d'identifiants par Presidio), budgets et limites par utilisateur et par équipe (suivi `user` de LiteLLM), et pour chaque script maison (`filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py`) la fonction native qui le remplace ou la raison de le garder | Injection et dépassement de budget refusés par la passerelle ; décision par script consignée | ⬜ |
+| T18 — Observabilité | OpenTelemetry de bout en bout (navigateur, service IA, Spring par Micrometer, base) et Langfuse auto-hébergé (traces LangChain, coûts, retours, versions de prompts) | Une question se suit du clic à la requête SQL, sans donnée personnelle en clair | ⬜ |
+| T19 — Conversations durables | Checkpointer LangGraph PostgreSQL (base IA dédiée) pour les fils de discussion, reprise de fil par CopilotKit, mémoire longue par le `Store` LangGraph, compactage par `SummarizationMiddleware` | Questions de suivi justes ; isolation entre utilisateurs et suppression testées | ⬜ |
+| T20 — Image et banc réels | Images `erp-rh-ia` et frontend reconstruites ; banc `BancAssistantTest` et flux réel avec les vrais modèles ; démonstration | Démonstration J1 présentée sur la nouvelle base | ⬜ |
+
+### Tâches de J2
+
+Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T2.1).
+
+| Tâche | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| T2.1 — Modèle de périmètres | Étude de l'existant (fiches de poste, rôles, permissions, filtres des écrans), puis modèle département → fiche de poste → périmètre présenté au propriétaire | Modèle validé par le propriétaire | ⬜ |
+| T2.2 — Périmètres appliqués | Filtre de périmètre dans les requêtes des domaines, même règle pour REST et MCP | Tests négatifs par domaine : aucune donnée hors périmètre, ni en liste, ni en agrégat, ni en fiche | ⬜ |
+| T2.3 — Projection du salaire | Politique de domaine partagée : sans `PAIE_READ`, ni salaire, ni tri, ni agrégat salarial | Tests REST et MCP identiques | ⬜ |
+| T2.4 — Catalogue filtré | Seuls les outils permis par les droits sont proposés au modèle (confort, pas sécurité) | Le serveur refuse toujours un outil interdit appelé directement | ⬜ |
+| T2.5 — Budgets et quotas | Quotas par utilisateur et par jour ; budget par poste ; plafonds par run complétés par les tokens totaux et la durée totale | Dépassement refusé avec un message clair ; tests | ⬜ |
+| T2.6 — Jeu adversarial | Injections directes et indirectes (champs de données piégés), contournement de périmètre, exfiltration par lien ou image, demandes interdites ; résultats d'outils délimités comme données dans les prompts | Chaque cas a une issue déterministe attendue, rejouée à chaque changement | ⬜ |
+| T2.7 — Vérificateur étendu | Identifiants, noms et dates cités vérifiés comme les chiffres ; période, périmètre et définition affichés | Cas d'invention d'identifiant refusés ; jeu de référence vert | ⬜ |
+| T2.8 — Conservation dans la passerelle | Contenu des messages non conservé par LiteLLM, réglé explicitement ; durée des journaux de dépense confirmée | Configuration vérifiée | ⬜ |
+| T2.9 — Contrat de vue généré | ViewSpec : schéma JSON généré depuis Pydantic, types Angular et contrôle Spring dérivés du même schéma | Une divergence fait échouer la CI | ⬜ |
+
+### Tâches de J3
+
+| Tâche | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| T3.1 — Modèle local | Comparaison de modèles open source (familles, tailles, quantifications) sur le jeu de référence ; licence et provenance ; serveur d'inférence sans accès sortant derrière LiteLLM ; dimensionnement du matériel | Seuils atteints ; achat ou location décidés par le propriétaire | ⬜ |
+| T3.2 — Conversations multi-tours | Historique côté serveur lié à l'utilisateur, identifiant créé par le serveur, fenêtre bornée, rétention et suppression ; questions de suivi et demandes de précision ; liste et suppression des conversations dans l'interface | Cas multi-tours du jeu de référence verts ; isolation et suppression testées | ⬜ |
+| T3.3 — Contexte d'écran | La vue courante (module, filtres) accompagne la question comme indice non fiable, revérifié par Spring | « Ce chantier » résolu ; identifiant hors périmètre refusé | ⬜ |
+| T3.4 — Observabilité | Traces OpenTelemetry (`gen_ai.*`) du navigateur aux outils, outil open source auto-hébergé, contenu masqué, tableaux et alertes ; versions de prompt, graphe, catalogue et modèle dans chaque trace | Une question se suit de bout en bout ; aucune donnée personnelle en clair | ⬜ |
+| T3.5 — Objectifs de service | Mesures sur le banc puis proposition d'objectifs (disponibilité, réponses vérifiées, abstention, latence du premier signe et de la réponse, coût par question) ; tests de charge avec modèle simulé et de panne | Objectifs validés par le propriétaire et tenus sur le banc | ⬜ |
+| T3.6 — Conformité | Fiche du système, inscription au registre des cas d'usage, analyse d'impact et formalités CNDP (dont transferts), durées de conservation de chaque stockage, notice aux utilisateurs | Références consignées au § 2 ; notice visible dans l'assistant | ⬜ |
+| T3.7 — Exploitation | Procédure d'incident IA, coupure par outil, procédure de changement de modèle (jeu de référence, comparaison, retour arrière), prompts versionnés | Procédure rejouée à blanc | ⬜ |
+| T3.8 — Retours et évaluation continue | Retours utile / faux / incomplet avec motif ; revue humaine avant entrée dans le jeu ; évaluation hors ligne en CI avec réponses enregistrées ; relecture périodique d'un échantillon masqué | Le jeu grandit sans écriture directe des utilisateurs ; la CI détecte une régression du graphe sans appel réseau | ⬜ |
+| T3.9 — Langues | Cas en arabe et en darija écrits dans le jeu de référence ; réponse dans la langue de la question | Seuils atteints par langue retenue | ⬜ |
+| T3.10 — Pilote | Groupe pilote RH/paie formé, puis direction ; accès par `IA_UTILISER` | Retours du pilote revus ; décision de généralisation | ⬜ |
+
+**Porte de mise en service** (avant le pilote) : J2 terminé ; formalités CNDP consignées ; observabilité et alertes actives ; objectifs de service validés ; procédure d'incident prête ; notice
+aux utilisateurs visible.
+
+### Décisions à prendre
+
+| Sujet | Options | Recommandation |
+|---|---|---|
+| Stockage des conversations (T3.2) | Checkpointer LangGraph PostgreSQL dans une base IA dédiée ; ou table dédiée de conversations | Checkpointer PostgreSQL dans une base IA dédiée, tables créées par migration contrôlée : il sert aussi aux reprises de J6 |
+| Durées de conservation (T3.6) | Conversations, traces, journaux LiteLLM (30 jours aujourd'hui) | Proposées après la mesure du pilote, avec l'analyse d'impact |
+| Outil d'observabilité (T3.4) | Langfuse (riche, mais plusieurs conteneurs : PostgreSQL, ClickHouse, Redis, stockage objet) ; Arize Phoenix (un conteneur et PostgreSQL) | Instrumenter en OpenTelemetry d'abord, puis choisir sur l'empreinte mesurée sur le serveur |
+| Modèle local (T3.1) | Matériel acheté, loué ou mutualisé | Décision du propriétaire sur le dimensionnement mesuré |
+| Pseudonymisation (T3.1) | Remplacer CIN et noms par des jetons avant un modèle externe, les rétablir dans la réponse | Oui tant qu'un modèle hors de l'entreprise reçoit des données réelles ; inutile avec le seul modèle local |
+| Vérificateur de chiffres (T10) | **Décidé le 2026-10-26** : gardé, en middleware officiel (`after_model`), qui fait réécrire puis abstenir | — |
+| Texte en flux et vérification (T11) | **Décidé le 2026-10-26** : texte diffusé au fil de l'eau avec « vérification en cours », remplacé si la vérification échoue | — |
+| Raisonnement affiché (T11) | **Décidé le 2026-10-26** : raisonnement brut du modèle, dans un bloc « Réflexion » replié | — |
+| Dépendances du client (T12, T13) | **Décidé le 2026-10-26** : dernières versions des frameworks adoptées même préliminaires (CopilotKit Angular, A2UI) ; `zod` forcé en version 4 contre la faille GHSA-mrhx-c7xc-m3w5, compatibilité vérifiée | — |
+| Langues (T3.9) | Français seul ; français, arabe et darija écrits | Mesurer la demande au pilote ; arabe écrit en priorité si les utilisateurs l'emploient |
 
 ### Journal
 
@@ -171,20 +244,29 @@ pris en charge ; chaque surface a un repli texte.
 | 2026-10-25 | T8, côté service : le flux AG-UI passe par l'intégration officielle `ag-ui-langgraph` 0.0.47 ([ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)). Le graphe porte la conversation en messages LangChain (seule clé de sortie), signale outils, mascotte et réponse par événements personnalisés et émet le texte vérifié depuis le nouveau nœud `conclure`. Frontière de sécurité dans `agui.py` : ni `RAW` ni `rawEvent` (ils exposaient consignes et données), `RUN_ERROR` générique, échos `manually_emit_*` retirés. Checkpointer en mémoire neuf par run, liste blanche msgpack. 49 tests verts ; flux réel avec `@ag-ui/client` 1.0.3 : 3/3. |
 | 2026-10-25 | **T8 terminée.** Assistant immersif dans Angular (`core/assistant`) : client officiel `@ag-ui/client` 1.0.3 (`zod` forcé en 4.6.7, faille GHSA-mrhx-c7xc-m3w5 du `zod` 3 écartée, flux réel validé), barre `Ctrl K`, discussion avec étapes et outils repliables, réponse vérifiée, **ouverture automatique de la vue** (liste blanche, gardes, « Revenir ») et valeurs citées surlignées. `/ia/agui` relayé par `proxy.conf.js` (dev) et nginx (réseau Compose `assistant-net`, frontend et service IA seulement ; limite 20 questions/min). Jetons `--assistant-*` dans les deux thèmes. 21 tests unitaires, 2 parcours e2e (flux AG-UI simulé, axe) ; vérifié au navigateur sur le banc `BancAssistantTest` (données fictives) : question sur un chantier, vue Paie · Analytique ouverte avec période et chantier, masse salariale surlignée, retour à l'écran précédent. |
 | 2026-10-25 | **T9, vérification de J1 avant la PR** : backend 475 tests verts (4 ignorés) avec le client MCP Python et seuil de couverture par domaine respecté ; service IA 49 tests, `ruff`, `pyright` ; images `erp-rh-ia` et `erp-rh-litellm` construites, `erp-rh-ia` démarrée (santé, `/agui` en 503 IA désactivée) ; frontend 863 tests unitaires et build de production dans les budgets (assistant chargé en différé : 703 ko initiaux) ; e2e 66 parcours (les échecs en parallèle repassent en série, instabilité connue du poste) ; flux réel `FluxAgUiIntegrationTest` 3/3 ; parcours navigateur sur le banc. Reste : présenter la démonstration au propriétaire. |
+| 2026-10-26 | J1 fusionné dans `main` (PR #90). Pile Compose sans profil, IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles` (PR #91). PR #92 (domaines) : contraste des badges de l'assistant corrigé. Pile du propriétaire : le backend refusait la clé MCP au format PKCS#1, convertie en PKCS#8 (même clé publique). |
+| 2026-10-26 | Revue du chantier face aux cadres de référence (§ 10) : conventions complétées (gouvernance et usages interdits, modèle de menaces OWASP, objectifs de service, cycle de vie des modèles, modèles auto-hébergés, évaluation à trois niveaux, expérience de confiance, injection par champs de données) ; tâches de J2 et J3 détaillées ; J3 aligné sur la décision « aucun service payant » ; décisions à prendre listées. |
+| 2026-10-26 | Retour du propriétaire : « bonjour » lent (7 étapes, 3 appels de modèle) ; « 127 entrées » juste mais trompeur (969 payés en août, 1 009 en septembre, +40 net, 87 plus payés). Nœud `trier` en tête du graphe : salutation, remerciement, au revoir et aide répondus sans modèle ni outil ; un ciblage sans domaine passe directement à la rédaction. `paie_mouvements` rend l'effectif du mois précédent, l'écart net, les « plus payés » et la définition de chaque chiffre ; consigne 8 du modèle : nommer chaque chiffre selon sa définition. Service IA 73 tests, `McpOutilsLectureIntegrationTest` 16/16, frontend 921 tests. |
+| 2026-10-26 | Décision du propriétaire, contre la recommandation de garder la protection des conventions : la règle « aucune donnée réelle vers un modèle » est retirée du plan et des conventions (§ 2). Retirés : l'interdiction d'envoyer des données réelles aux offres gratuites, le routage et la garde technique par classe de données (ancienne T2.8, recentrée sur la conservation dans la passerelle), la condition « avant toute donnée réelle » de la porte de mise en service. Gardés : classification documentée, minimisation, pseudonymisation possible, formalités de transfert et durées de conservation. |
+| 2026-10-26 | Décision du propriétaire « frameworks d'abord » (§ 2) : l'agent décide de sa forme de réponse comme Claude, ChatGPT, Gemini et Grok ; tout code IA maison est retiré au profit de LangChain, LangGraph, Deep Agents si besoin, `ag-ui-langgraph`, A2UI et CopilotKit Angular. Vérifié : LangChain 1.4.7 fournit les middlewares nécessaires ; `ag-ui-langgraph` diffuse le raisonnement des modèles LangChain ; les modèles NVIDIA du pool renvoient leur raisonnement par LiteLLM (1 à 6 s, en anglais) ; `@copilotkit/angular` 0.6 vise Angular 22. Conventions alignées ; tâches T10 à T15 ajoutées à J1. |
+| 2026-10-26 | **T10 à T12 terminées.** Service IA sur `create_agent`, `ChatLiteLLM` (seul connecteur qui transmet le raisonnement), MCP intégré à LangChain (`langchain.mcp`, FastMCP ; `langchain-mcp-adapters` n'est plus maintenu), `LangGraphAGUIAgent` de CopilotKit ; graphe, tri, ciblage, clients de modèle et MCP, événements de mascotte retirés ; vérificateur de chiffres en middleware `after_model`, état partagé `verification`. Évaluation par `openevals`/`agentevals` et scénarios hors ligne sur `aimock` (CopilotKit). Défaut corrigé : le serveur MCP ne mettait que la synthèse dans le texte, les clients standard ne donnent au modèle que les blocs texte et l'agent bouclait ; le JSON est aussi renvoyé en texte (spécification MCP). **Évaluation réelle : 22/24 (91,7 %)**, abstentions 3/3, refus 1/1, réponses 18/20 ; les 2 échecs sont des erreurs 429 d'un fournisseur gratuit ; p50 9,8 s, p95 41,7 s. Service IA 44 tests, flux réel `FluxAgUiIntegrationTest` vert (3 appels de modèle), `McpOutilsLecture` 16/16, `McpSecurite` 21/21. |
+| 2026-10-26 | **T13 et T14 terminées.** Serveur MCP par **Spring AI 2.0.2** (aucune mécanique à nous : annotations `@McpTool`, `@PreAuthorize`, Bean Validation, `@AuditableAction`, `McpStatelessSyncServerCustomizer` pour l'exécution sur le fil de la requête) ; descriptions d'outils réécrites selon les bonnes pratiques ; refus de permission audités par l'écouteur de sécurité existant (`ACCES_REFUSE`), lectures par `MCP_<OUTIL>`. Comportements des frameworks adoptés : bornes dites dans les descriptions (le générateur de schéma ne reprend pas Bean Validation), messages d'erreur de Spring Security et des exceptions de domaine. Vue à ouvrir : état partagé `vue`, posé par le vérificateur une fois la réponse vérifiée (vue rendue par Spring, jamais choisie par le modèle). Jeton agent par `NimbusJwtEncoder`. Backend 522 tests verts, flux réel vert. |
+| 2026-10-26 | **T15 terminée.** Interface rebâtie sur CopilotKit Angular 0.6 : barre latérale ancrée à droite (`Ctrl K`), raisonnement repliable à la place des étapes, plan de l'agent en liste cochée, consultations d'outils en une ligne, questions proposées et contexte adaptés à l'écran ouvert, vue de la réponse vérifiée ouverte par l'état partagé (`verification`/`vue`) avec « Revenir », libellés en français, thème Staport clair/sombre (variables CopilotKit reliées aux jetons ; `dark` posé selon le thème). Ancien code maison retiré (service, mascotte, échanges). Choix de structure : les services de CopilotKit sont fournis à la racine par la bibliothèque et lisent sa configuration ; la déclarer à la racine ramenait toute la bibliothèque dans le paquet initial (5 Mo). L'assistant crée donc un injecteur d'environnement enfant (`assistant-racine.component.ts`) avec la configuration (`enableInspector: false` : l'inspecteur est un outil distant promotionnel) et ses services ; l'agent et les rendus s'y branchent par `updateRuntime` et `addRenderToolCall`. Paquet initial 785 kB (budget 1 Mo), assistant 4,2 Mo dans un chunk différé. Vérifié : 918 tests unitaires, e2e (flux AG-UI simulé avec raisonnement, outil, état vérifié ; axe sans violation), parcours réel au navigateur sur le banc (données fictives, vrai modèle) : question, raisonnement, consultation, réponse, vue Paie · Analytique ouverte. Finitions faites : raisonnement en français par l'emplacement `reasoningMessageComponent` (« Réfléchi pendant … », la bibliothèque n'expose pas ce libellé), bandeau « Vue ouverte » visible, thème clair vérifié, téléphone (fenêtre modale pleine largeur, sans débordement) couvert par l'e2e. Connu : en développement seulement, la console affiche l'échec de chargement de l'inspecteur de la bibliothèque (sa configuration n'existe pas à la racine) ; aucun inspecteur n'est affiché et le build de production n'en contient pas. |
+| 2026-10-26 | **T16 construite.** Décisions du propriétaire : runtime CopilotKit officiel en Node (service `copilot-runtime`, image `erp-rh-copilot-runtime`, réseaux `assistant-net`/`runtime-net`, relais nginx `/ia/copilotkit/`) pour le middleware A2UI que CopilotKit place côté serveur (`@ag-ui/a2ui-middleware` importe `crypto` de Node, impossible dans le navigateur) ; ouverture automatique des vues retirée (A2UI suffit) ; composants CopilotKit d'origine à la place des rendus maison (raisonnement, plan, outils). Règles « frameworks d'abord » et « un seul `compose pull` + `up` » inscrites dans `AGENTS.md`. Le vérificateur contrôle les chiffres de la dernière surface ; elle n'est jamais une source. Vérifié : Python 47 tests, Angular 903, e2e 3 (surface A2UI simulée rendue par le rendu officiel, axe), image du runtime construite, `/info` du runtime local (A2UI actif, télémétrie coupée). Reste : voir au navigateur la surface produite par un vrai modèle. |
 
 ## 8. État technique
 
 | Élément | État |
 |---|---|
-| Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
+| Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 (J0, avant l'adoption de Spring AI en T13) ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
 | LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, démarrés par défaut avec la pile (clés virtuelles enregistrées par `litellm-cles`). Fournisseurs actifs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA NIM. Pool `complex` : Gemini 3.8 Flash, Mistral Medium, NVIDIA MiniMax M3.1 Flash, Nemotron 3 Ultra, Nemotron 3.5 Super VL, Cloudflare gpt-oss-120b. Candidats suivants (gratuits, renouvelables) : SambaNova (20 req/jour par modèle, sans carte), OVHcloud AI Endpoints anonyme (2 req/min), Cohere (1 000 appels/mois, évaluation), LLM7 (100 K tokens/jour). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (aucune inférence gratuite), DeepSeek (aucun palier gratuit), Alibaba Model Studio (quota unique de 90 jours), SiliconFlow international, Chutes, Kluster. Voir [`litellm/README.md`](../litellm/README.md). |
 | Service IA | Image `erp-rh-ia` (Python 3.13), santé, client LiteLLM, agent LangGraph avec ciblage par domaine, vérificateur de chiffres et évaluation (T6), point d'entrée AG-UI `POST /agui` (T7). Voir [`ia/README.md`](../ia/README.md). |
-| Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Aucun panneau Angular. Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
+| Code IA dans l'application | Serveur MCP de **Spring AI 2.0.2** (SDK MCP Java 2.1.0, Spring Boot 4.1.2) : route `/mcp` sans état derrière `MCP_ENABLED`, outils déclarés par `@McpTool` (permission par `@PreAuthorize`, bornes par Bean Validation, trace par `@AuditableAction`), chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Assistant Angular (`core/assistant`, T8). Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 
 ### Catalogue MCP
 
-Chaque outil exige `IA_UTILISER` (route) et la permission de son domaine (revérifiée à chaque appel), lit uniquement les façades publiques des domaines, journalise l'appel (`LECTURE_METIER`, canal `MCP`) et renvoie une `vue` (§ 6). Annotations MCP : lecture seule, idempotent, monde fermé. Un identifiant inconnu rend « Élément introuvable ».
+Chaque outil exige `IA_UTILISER` (route) et la permission de son domaine (revérifiée à chaque appel), lit uniquement les façades publiques des domaines, journalise l'appel (entrée `ACCES` d'action `MCP_<OUTIL>`, canal `MCP` ; un refus de permission est l'événement de sécurité `ACCES_REFUSE`, comme pour l'API REST) et renvoie une `vue` (§ 6). Les données sont rendues en contenu structuré, en synthèse et en JSON texte (spécification MCP). Annotations MCP : lecture seule, idempotent, monde fermé. Les erreurs sont celles des frameworks : « Access Denied » de Spring Security, message de l'exception du domaine (par exemple « Employé introuvable avec l'id… », celui de l'API REST), violation de borne de Bean Validation.
 
 | Domaine | Outil | Permission | Arguments principaux | Rend | Vue proposée |
 |---|---|---|---|---|---|
@@ -223,7 +305,39 @@ importé. Exclus : toute écriture (jusqu'à J6), la liste des comptes utilisate
    IA ; vérifier branche, `git status` et derniers commits.
 2. Reprendre la première tâche ⬜ du § 7 ; la passer en 🟦, puis en ✅ avec une ligne de journal
    quand son critère de sortie est prouvé.
-3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire ; aucune donnée
-   réelle vers un modèle avant J3.
+3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire.
 4. Toute nouvelle décision s'inscrit au § 2. Aucun autre document IA n'est créé : celui-ci les
    remplace.
+5. Tenir le § 10 à jour : une pratique passe à « en place » seulement quand sa preuve existe.
+
+## 10. Pratiques de référence : état réel
+
+Revue du 2026-10-26 de l'existant face aux cadres retenus au § 2. « En place » signifie prouvé par un
+test ou une mesure ; la règle de chaque ligne est dans les conventions.
+
+| Pratique | État réel | Traitée par |
+|---|---|---|
+| Le modèle ne calcule pas ; chiffres et périodes vérifiés ; abstention | En place | T6 |
+| Identifiants, noms et dates vérifiés ; période, périmètre et définition affichés | Partiel : nombres et périodes vérifiés ; `paie_mouvements` rend ses définitions, l'écart net et les « plus payés » ; identifiants et noms pas encore vérifiés | T2.7 |
+| Réponse directe aux messages simples | Provisoire : tri par mots-clés dans un nœud du graphe (2 à 17 ms), à remplacer par la décision du modèle (règle « frameworks d'abord ») | T10 |
+| Raisonnement et plan visibles, texte en flux | Absent : étapes du graphe affichées, texte d'un bloc après vérification | T10 à T12 |
+| Code IA maison | Présent : graphe, tri, ciblage, client de modèle, client MCP, frontière AG-UI, rejoueur d'évaluation, interface Angular, scripts LiteLLM, outils MCP et jeton agent côté Java | T10 à T20 (service IA : graphe, tri, ciblage et clients maison déjà retirés) |
+| Permissions revérifiées à chaque appel d'outil ; jeton délégué court ; audit par outil | En place | T4, T5 |
+| Périmètre de données par fiche de poste | Absent : l'accès est réservé à `SYSTEM_ADMIN` | T2.1 à T2.3 |
+| Injection directe et indirecte (champs de données piégés), exfiltration | Non testées ; seuls les refus de droits le sont | T2.6 |
+| Texte du modèle rendu comme texte, aucun lien ni image actif | En place (interpolation Angular), sans test dédié | T2.6 |
+| Plafonds par run | Partiel : 3 tours, 6 appels, 2 rédactions, 12 000 caractères par résultat, 1 500 tokens par réponse, 120 s par appel ; durée totale et tokens totaux non plafonnés (nginx coupe à 300 s) | T2.5 |
+| Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé ERP-RH | T2.5 |
+| Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
+| Contrat de vue unique entre Spring, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
+| Conversations multi-tours, isolation, suppression | Absent : chaque question est traitée seule, l'historique ne vit que dans le navigateur | T3.2 |
+| Contexte d'écran | Absent | T3.3 |
+| Traces OpenTelemetry, outil d'observation, alertes | Absent : journaux JSON et corrélation seulement | T3.4 |
+| Objectifs de service, tests de charge et de panne | Absent ; mesure connue : p50 9,7 s et p95 26,1 s sur offres gratuites | T3.5 |
+| Registre, fiche du système, analyse d'impact, notice, conservation | Absent ; accord CNDP obtenu (§ 2), sa référence et son périmètre restent à consigner | T3.6 |
+| Procédure d'incident, changement de modèle, prompts versionnés | Partiel : interrupteur global en place ; prompts dans le dépôt sans identifiant de version | T3.7 |
+| Évaluation hors ligne en CI, retours utilisateurs, relecture d'échantillons | Partiel : jeu de 24 cas rejoué à la demande sur vrais modèles | T3.8 |
+| Langues arabe et darija | Absent | T3.9 |
+| Modèle local, licence et provenance des poids | Absent : offres gratuites externes, données synthétiques | T3.1 |
+| Confirmation humaine, idempotence, reprise durable | Sans objet tant que tout est en lecture | J6 |
+| SBOM et analyse de vulnérabilités du service IA | Absent pour le service IA (dépendances verrouillées par `uv.lock`) ; en place pour le backend et le frontend | T3.7 |

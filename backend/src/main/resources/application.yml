@@ -2,6 +2,27 @@ spring:
   application:
     name: paie
 
+  ai:
+    mcp:
+      server:
+        # Serveur MCP de Spring AI (docs/ia.md, T13) : sans état, sur /mcp, uniquement des outils (@McpTool).
+        enabled: ${security.mcp.enabled}
+        name: erp-rh
+        version: "1"
+        type: SYNC
+        protocol: STATELESS
+        streamable-http:
+          mcp-endpoint: /mcp
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        instructions: >
+          Outils de lecture d'ERP-RH, une entreprise du BTP au Maroc : employés, paie, chantiers, équipes, fonctions,
+          paramètres et journal d'audit. Chaque outil est limité par les droits de l'utilisateur. Chercher d'abord
+          l'identifiant d'un chantier, d'une équipe ou d'une fonction avec l'outil de recherche du même domaine.
+
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USER}

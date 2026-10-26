@@ -1,54 +1,40 @@
-# ag-ui-langgraph ne publie pas de stubs : seules ces deux règles sont levées, et seulement pour ce fichier.
+# ag-ui-langgraph et copilotkit ne publient pas de stubs : seules ces deux règles sont levées, et seulement ici.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Point d'entrée AG-UI (docs/ia.md, T7 et T8) : une question en entrée, le run de l'agent en événements SSE.
+"""Point d'entrée AG-UI (docs/ia.md, T11) : ``LangGraphAGUIAgent`` de CopilotKit, sur l'intégration officielle
+``ag-ui-langgraph``, diffuse le run de l'agent — raisonnement (``REASONING_*``), texte en flux, appels d'outils,
+plan, état partagé (``verification``) et outils déclarés par le navigateur.
 
-Le flux est produit par l'intégration officielle ``ag-ui-langgraph`` (``LangGraphAgent``) ; ce module n'ajoute que ce
-qu'elle ne fait pas : l'identité (jeton de connexion échangé auprès de Spring, refus HTTP avant tout flux), la session
-MCP du run et une frontière de sécurité sur les événements sortants :
+Ne restent ici que deux protections qu'aucun framework ne fournit :
 
-- aucun événement ``RAW`` ni copie ``rawEvent`` (ils porteraient l'état interne : consignes, données complètes) ;
-- ``RUN_ERROR`` remplacé par un message générique (l'intégration y recopie le texte de l'exception) ;
-- les échos ``CUSTOM manually_emit_*`` de l'intégration sont retirés ; ``com.staport.mascot.state.v1`` reçoit sa
-  séquence croissante et la corrélation du run.
-
-Contrat vu par le client (AG-UI 1.0) : ``RUN_STARTED`` ; ``STEP_STARTED``/``STEP_FINISHED`` par nœud du graphe
-(``preparer``, ``cibler``, ``choisir``, ``executer``, ``rediger``, ``verifier``, ``conclure``) ; chaque outil
-``TOOL_CALL_START``/``ARGS``/``END`` ; la réponse **vérifiée** seulement (``TEXT_MESSAGE_*``) ;
-``CUSTOM com.staport.answer.v1`` (abstention, motif, vue) ; ``STATE_SNAPSHOT``/``MESSAGES_SNAPSHOT`` (conversation
-visible : question, appels, synthèse des résultats, réponse) ; ``RUN_FINISHED``. Seule la dernière question est lue
-(pas d'historique en J1) ; outils et état envoyés par le client sont ignorés. Une déconnexion du client annule le run
-et ferme la session MCP.
+- l'identité : le jeton de connexion est échangé auprès de Spring contre le jeton agent de l'utilisateur, avec un refus
+  HTTP avant tout flux ;
+- la sortie : aucun événement ``RAW`` ni copie ``rawEvent`` (ils porteraient l'état interne) et un ``RUN_ERROR``
+  générique (l'intégration y recopie le texte de l'exception).
 """
 
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Callable
-from contextlib import AbstractAsyncContextManager
-from typing import Any, Literal, Protocol, cast
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
+from typing import Any, Protocol, cast
 
 import httpx
-from ag_ui.core import (
-    BaseEvent,
-    CustomEvent,
-    EventType,
-    RunAgentInput,
-    RunErrorEvent,
-    RunStartedEvent,
-    UserMessage,
-)
+from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, UserMessage
 from ag_ui.encoder import EventEncoder
-from ag_ui_langgraph import LangGraphAgent
+from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph.state import CompiledStateGraph
 
-from erp_rh_ia.agent import EVENEMENT_MASCOTTE, Agent, Humeur
-from erp_rh_ia.outils import Outils, jeton_agent, ouvrir_outils
+from erp_rh_ia.outils import jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
 
 TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
-ECHOS_INTEGRATION = frozenset({"manually_emit_message", "manually_emit_tool_call", "manually_emit_state"})
+
+# L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
+FabriqueAgent = Callable[[Sequence[BaseTool], InMemorySaver], CompiledStateGraph[Any, Any, Any, Any]]
 
 
 class _SansDetail(logging.Filter):
@@ -67,25 +53,16 @@ class _SansDetail(logging.Filter):
 logging.getLogger("ag_ui_langgraph").addFilter(_SansDetail())
 
 
-class EtatMascotte(BaseModel):
-    """État logique de la mascotte (conventions/agent-ui.md) ; jamais d'entrée Rive ni d'asset."""
-
-    sequence: int = Field(ge=0)
-    mood: Humeur
-    action: Literal["idle"] = "idle"  # gestes et cibles A2UI avec l'Espace IA (J4)
-    expiresInMs: int | None = Field(default=None, ge=0, le=10_000)
-
-
 class AccesErp(Protocol):
-    """Identité de l'utilisateur auprès de Spring : échange de jeton, puis session MCP à son nom."""
+    """Identité de l'utilisateur auprès de Spring : échange de jeton, puis outils MCP à son nom."""
 
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
-    def outils(self, jeton_agent: str) -> AbstractAsyncContextManager[Outils]: ...
+    async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
 
 
-def question_de(entree: RunAgentInput) -> str:
-    """La dernière question de l'utilisateur, en texte ; 422 si absente, vide ou trop longue."""
+def verifier_question(entree: RunAgentInput) -> None:
+    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide ou trop long."""
     dernier = entree.messages[-1] if entree.messages else None
     if not isinstance(dernier, UserMessage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Le dernier message doit venir de l'utilisateur.")
@@ -93,82 +70,42 @@ def question_de(entree: RunAgentInput) -> str:
         texte = dernier.content
     else:
         texte = " ".join(str(getattr(p, "text", "")) for p in dernier.content if getattr(p, "type", "") == "text")
-    texte = texte.strip()
-    if not texte or len(texte) > TAILLE_QUESTION:
+    if not texte.strip() or len(texte) > TAILLE_QUESTION:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, f"Question vide ou de plus de {TAILLE_QUESTION} caractères."
         )
-    return texte
-
-
-class _Frontiere:
-    """Filtre et complète les événements de l'intégration avant qu'ils ne partent vers le navigateur."""
-
-    def __init__(self, entree: RunAgentInput) -> None:
-        self._entree = entree
-        self._sequence = 0
-        self.demarre = False
-
-    def mascotte(self, humeur: Humeur) -> CustomEvent:
-        self._sequence += 1
-        etat = EtatMascotte(sequence=self._sequence, mood=humeur)
-        correlation = {"com_staport": {"threadId": self._entree.thread_id, "runId": self._entree.run_id}}
-        return CustomEvent(name=EVENEMENT_MASCOTTE, value=etat.model_dump(exclude_none=True), metadata=correlation)
-
-    def filtrer(self, evenement: BaseEvent) -> BaseEvent | None:
-        if evenement.type == EventType.RAW:
-            return None
-        if evenement.type == EventType.RUN_STARTED:
-            self.demarre = True
-        if isinstance(evenement, CustomEvent):
-            if evenement.name in ECHOS_INTEGRATION:
-                return None
-            if evenement.name == EVENEMENT_MASCOTTE:
-                valeur: Any = evenement.value
-                humeur = cast(Humeur, valeur.get("mood", "neutral") if isinstance(valeur, dict) else "neutral")
-                return self.mascotte(humeur)  # une humeur inconnue est refusée par EtatMascotte
-        if evenement.raw_event is not None:
-            evenement = evenement.model_copy(update={"raw_event": None})
-        return evenement
-
-    def erreur(self) -> list[BaseEvent]:
-        debut: list[BaseEvent] = []
-        if not self.demarre:
-            debut.append(RunStartedEvent(thread_id=self._entree.thread_id, run_id=self._entree.run_id))
-        return [*debut, self.mascotte("apologetic"), RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE")]
-
-
-class _RunEnEchec(Exception):
-    """L'intégration a émis un RUN_ERROR : il est remplacé par l'erreur publique."""
 
 
 async def evenements(
-    entree: RunAgentInput, agent: Agent, session: AbstractAsyncContextManager[Outils]
+    entree: RunAgentInput, fabrique: FabriqueAgent, outils: Sequence[BaseTool]
 ) -> AsyncGenerator[BaseEvent]:
-    """Le run complet en événements AG-UI ; toute panne, ouverture MCP comprise, devient un ``RUN_ERROR`` générique."""
-    frontiere = _Frontiere(entree)
+    """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail."""
+    demarre = False
     try:
-        async with session as outils:
-            officiel = LangGraphAgent(
-                name="erp-rh",
-                graph=cast(Any, agent.graphe_pour_run()),  # typage de l'intégration : contexte None
-                config={"configurable": {"outils": outils}, "recursion_limit": 40},
-                emit_raw_events=False,
-            )
-            async for brut in officiel.run(entree):
-                if brut.type == EventType.RUN_ERROR:
-                    raise _RunEnEchec
-                evenement = frontiere.filtrer(brut)
-                if evenement is not None:
-                    yield evenement
+        officiel = LangGraphAGUIAgent(
+            name="erp-rh",
+            graph=fabrique(outils, InMemorySaver()),  # conversation du run seulement (mémoire durable : T3.2)
+            # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
+            # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
+            config={"recursion_limit": 200},
+        )
+        async for brut in officiel.run(entree):
+            evenement = cast(BaseEvent, brut)
+            if evenement.type == EventType.RUN_ERROR:
+                raise RuntimeError("RUN_ERROR")
+            if evenement.type == EventType.RAW:
+                continue
+            demarre = demarre or evenement.type == EventType.RUN_STARTED
+            yield evenement.model_copy(update={"raw_event": None}) if evenement.raw_event is not None else evenement
     except Exception as panne:  # le détail reste côté serveur, sans contenu RH
         journal.warning("Run %s en échec : %s", entree.run_id, type(panne).__name__)
-        for evenement in frontiere.erreur():
-            yield evenement
+        if not demarre:
+            yield RunStartedEvent(thread_id=entree.thread_id, run_id=entree.run_id)
+        yield RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE")
 
 
 class AccesSpring:
-    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` du backend, avec le client HTTP du service."""
+    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` du backend."""
 
     def __init__(self, client: httpx.AsyncClient, api: str) -> None:
         self._client = client
@@ -177,11 +114,13 @@ class AccesSpring:
     async def jeton_agent(self, jeton_connexion: str) -> str:
         return await jeton_agent(self._client, self._api, jeton_connexion)
 
-    def outils(self, jeton_agent: str) -> AbstractAsyncContextManager[Outils]:
-        return ouvrir_outils(f"{self._api}/mcp", jeton_agent)
+    async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
+        return await outils_erp(f"{self._api}/mcp", jeton_agent)
 
 
-def routeur_agui(agent: Callable[[], Agent], acces: Callable[[], AccesErp], actif: Callable[[], bool]) -> APIRouter:
+def routeur_agui(
+    fabrique: Callable[[], FabriqueAgent], acces: Callable[[], AccesErp], actif: Callable[[], bool]
+) -> APIRouter:
     routeur = APIRouter()
 
     @routeur.post("/agui")
@@ -191,15 +130,17 @@ def routeur_agui(agent: Callable[[], Agent], acces: Callable[[], AccesErp], acti
         autorisation = requete.headers.get("authorization", "")
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
-        question_de(entree)
+        verifier_question(entree)
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
+        outils = await _outils(erp, jeton)
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
-        # Outils et état déclarés par le navigateur ne sont pas des capacités de l'agent : ignorés.
-        entree_serveur = entree.model_copy(update={"tools": [], "state": {}})
+        # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
+        # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
+        entree_serveur = entree.model_copy(update={"state": {}})
 
         async def flux() -> AsyncIterator[str]:
-            async for evenement in evenements(entree_serveur, agent(), erp.outils(jeton)):
+            async for evenement in evenements(entree_serveur, fabrique(), outils):
                 yield encodeur.encode(evenement)
 
         return StreamingResponse(
@@ -224,4 +165,12 @@ async def _jeton(erp: AccesErp, jeton_connexion: str) -> str:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Droit IA_UTILISER requis.") from None
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
     except httpx.HTTPError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
+
+
+async def _outils(erp: AccesErp, jeton: str) -> Sequence[BaseTool]:
+    try:
+        return await erp.outils(jeton)
+    except Exception as panne:  # Spring injoignable ou catalogue refusé : indisponibilité, sans détail
+        journal.warning("Catalogue MCP indisponible : %s", type(panne).__name__)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None

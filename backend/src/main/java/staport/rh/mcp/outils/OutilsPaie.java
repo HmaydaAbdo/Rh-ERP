@@ -1,9 +1,20 @@
 package staport.rh.mcp.outils;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import staport.rh.audit.services.interfaces.IAuditOutilsAgent;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
+import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.mcp.dtos.VueProposeeDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
@@ -17,269 +28,371 @@ import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static staport.rh.mcp.outils.OutilDefini.enumeration;
-import static staport.rh.mcp.outils.OutilDefini.limite;
-import static staport.rh.mcp.outils.OutilDefini.liste;
-import static staport.rh.mcp.outils.OutilDefini.nombre;
-import static staport.rh.mcp.outils.OutilDefini.outil;
-import static staport.rh.mcp.outils.OutilDefini.texte;
+import static staport.rh.mcp.outils.OutilsEmploye.ids;
 
 /**
- * Outils Paie en plus de {@code paie_indicateurs} : mois importés, répartition, évolution, mouvements d'effectif,
- * qualité des données, recherche de bulletins et préparation du rapport. Chiffres issus des façades de la Paie.
+ * Outils Paie : indicateurs, mois importés, répartition, évolution, mouvements d'effectif, qualité des données,
+ * bulletins et préparation du rapport. Chiffres issus des façades de la Paie ; le modèle ne calcule rien. Mécanique
+ * portée par les frameworks, comme {@link OutilsReferentiels}.
  */
-public final class OutilsPaie {
+@Component
+@Validated
+@ConditionalOnBooleanProperty("security.mcp.enabled")
+public class OutilsPaie {
 
+    private static final int CHANTIERS_RENDUS = 5;
     private static final int MOIS = 36;
     private static final int GROUPES = 50;
     private static final int BULLETINS = 20;
 
-    private OutilsPaie() {
+    /** Sens de chaque chiffre de {@code paie_mouvements}, rendu avec lui pour que la réponse le cite. */
+    private static final Map<String, String> DEFINITIONS_MOUVEMENTS = Map.of(
+            "effectif", "Employés payés dans le mois (un bulletin)",
+            "effectifMoisPrecedent", "Employés payés le mois précédent ; absent si ce mois n'a pas de paie",
+            "variation", "Effectif du mois moins effectif du mois précédent (écart net)",
+            "entrees", "Employés payés ce mois-ci et absents de la paie du mois précédent",
+            "plusPayes", "Employés payés le mois précédent et absents de la paie de ce mois",
+            "sorties", "Départs enregistrés sur la fiche employé dans le mois, parmi les payés du mois ou du précédent",
+            "mutations", "Employés payés les deux mois, sur un chantier différent");
+
+    private final IPaieService paie;
+    private final IPaieAnalytiqueService analytique;
+    private final IPaieEffectifsService effectifs;
+    private final PeriodePaie periodes;
+
+    OutilsPaie(IPaieService paie, IPaieAnalytiqueService analytique, IPaieEffectifsService effectifs, PeriodePaie periodes) {
+        this.paie = paie;
+        this.analytique = analytique;
+        this.effectifs = effectifs;
+        this.periodes = periodes;
     }
 
-    public static List<OutilLecture> catalogue(IPaieService paie, IPaieAnalytiqueService analytique,
-                                               IPaieEffectifsService effectifs, IAuditOutilsAgent audit) {
-        return List.of(
-                outil("paie_periodes")
-                        .description("Mois de paie importés, du plus récent au plus ancien (" + MOIS + " au plus), avec "
-                                + "bulletins, chantiers, masse et STC de chacun, sur un périmètre.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of("limite", limite(12, MOIS))))
-                        .sortie(Map.of("nombreMois", nombre(), "periodes", liste(), "vue", OutilLecture.vueProposee()),
-                                "nombreMois", "periodes", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            List<PaiePeriodeResumeDto> periodes = paie.findPeriodes(p.criteres(null));
-                            List<Map<String, Object>> rendues = periodes.stream()
-                                    .limit(arguments.entier("limite", 12, 1, MOIS)).map(OutilsPaie::periode).toList();
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("nombreMois", periodes.size());
-                            donnees.put("periodes", rendues);
-                            donnees.put("vue", new VueProposeeDto("paie", "cartes", p.parametres(null)).enJson());
-                            return new OutilLecture.Resultat(donnees, periodes.size() + " mois de paie importés.",
-                                    rendues.size(), p.audit(null));
-                        })
-                        .construire(audit),
-                outil("paie_repartition")
-                        .description("Répartition de la paie d'un mois par chantier, équipe ou fonction (masse, effectif, "
-                                + "STC), de la plus grosse masse à la plus petite ; " + GROUPES + " groupes au plus.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of(
-                                "periode", OutilLecture.periode(),
-                                "dimension", enumeration("Regroupement", "CHANTIER", "EQUIPE", "FONCTION"),
-                                "limite", limite(GROUPES, GROUPES))))
-                        .sortie(Map.of("periode", Map.of("type", "string"), "dimension", Map.of("type", "string"),
-                                "nombreGroupes", nombre(), "groupes", liste(), "vue", OutilLecture.vueProposee()),
-                                "periode", "dimension", "nombreGroupes", "groupes", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            YearMonth periode = periodeOuDerniere(paie, arguments);
-                            String dimension = arguments.texte("dimension")
-                                    .orElseThrow(() -> OutilLecture.invalide("« dimension » est obligatoire."));
-                            PaieAnalytiqueDto resultat = analytique.analyser(p.criteres(periode));
-                            List<Map<String, Object>> groupes = switch (dimension) {
-                                case "CHANTIER" -> resultat.parChantier().stream()
-                                        .map(c -> groupe(c.id(), c.code(), c.libelle(), c.masse(), c.effectif(), c.stc(), c.stcMontant())).toList();
-                                case "EQUIPE" -> resultat.parEquipe().stream()
-                                        .map(e -> groupe(e.id(), e.code(), e.libelle(), e.masse(), e.effectif(), e.stc(), e.stcMontant())).toList();
-                                default -> resultat.parFonction().stream()
-                                        .map(f -> groupe(f.id(), null, f.libelle(), f.masse(), f.effectif(), f.stc(), f.stcMontant())).toList();
-                            };
-                            List<Map<String, Object>> rendus = groupes.stream().limit(arguments.entier("limite", GROUPES, 1, GROUPES)).toList();
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("periode", periode.toString());
-                            donnees.put("dimension", dimension);
-                            donnees.put("nombreGroupes", groupes.size());
-                            donnees.put("groupes", rendus);
-                            donnees.put("vue", new VueProposeeDto("paie", "analytique", p.parametres(periode)).enJson());
-                            Map<String, Object> journal = p.audit(periode);
-                            journal.put("dimension", dimension);
-                            return new OutilLecture.Resultat(donnees, groupes.size() + " groupe(s) en " + periode + ".",
-                                    rendus.size(), journal);
-                        })
-                        .construire(audit),
-                outil("paie_evolution")
-                        .description("Évolution mensuelle de la paie d'un périmètre (masse, effectif payé, STC), du mois le "
-                                + "plus ancien au plus récent, jusqu'au mois donné ; " + MOIS + " mois au plus.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of("periode", OutilLecture.periode(), "limite", limite(12, MOIS))))
-                        .sortie(Map.of("mois", liste(), "vue", OutilLecture.vueProposee()), "mois", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            YearMonth derniere = periodeOuDerniere(paie, arguments);
-                            // L'évolution couvre tout l'historique du périmètre : on la borne au mois demandé (aaaa-MM se compare en texte).
-                            List<PaieAnalytiqueDto.Evolution> evolution = analytique.analyser(p.criteres(derniere)).evolution().stream()
-                                    .filter(e -> e.periode().compareTo(derniere.toString()) <= 0).toList();
-                            int limite = arguments.entier("limite", 12, 1, MOIS);
-                            List<Map<String, Object>> mois = evolution.subList(Math.max(0, evolution.size() - limite), evolution.size())
-                                    .stream().map(e -> {
-                                        Map<String, Object> valeurs = new LinkedHashMap<>();
-                                        valeurs.put("periode", e.periode());
-                                        valeurs.put("masse", e.masse());
-                                        valeurs.put("effectif", e.effectif());
-                                        valeurs.put("stc", e.stc());
-                                        valeurs.put("stcMontant", e.stcMontant());
-                                        return valeurs;
-                                    }).toList();
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("mois", mois);
-                            donnees.put("vue", new VueProposeeDto("paie", "analytique", p.parametres(derniere)).enJson());
-                            return new OutilLecture.Resultat(donnees, mois.size() + " mois d'évolution.", mois.size(), p.audit(null));
-                        })
-                        .construire(audit),
-                outil("paie_mouvements")
-                        .description("Mouvements d'effectif mois par mois selon la paie : employés payés, entrées, sorties, "
-                                + "mutations, sur un périmètre (chantier, équipe, fonction du bulletin du mois). Un mois précis, "
-                                + "ou les " + MOIS + " derniers au plus.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of("periode", OutilLecture.periode(), "limite", limite(12, MOIS))))
-                        .sortie(Map.of("mois", liste(), "vue", OutilLecture.vueProposee()), "mois", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            List<EffectifMoisDto> tendances = effectifs.tendances(
-                                    new EffectifsCriteria(p.chantiers(), p.fonctions(), p.equipes()));
-                            YearMonth periode = arguments.periode("periode").orElse(null);
-                            List<EffectifMoisDto> retenus = periode != null
-                                    ? tendances.stream().filter(m -> m.periode().equals(periode)).toList()
-                                    : tendances.subList(Math.max(0, tendances.size() - arguments.entier("limite", 12, 1, MOIS)), tendances.size());
-                            List<Map<String, Object>> mois = retenus.stream().map(m -> {
-                                Map<String, Object> valeurs = new LinkedHashMap<>();
-                                valeurs.put("periode", m.periode().toString());
-                                valeurs.put("effectif", m.effectif());
-                                valeurs.put("entrees", m.entrees());
-                                valeurs.put("sorties", m.sorties());
-                                valeurs.put("mutations", m.mutations());
-                                return valeurs;
-                            }).toList();
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("mois", mois);
-                            donnees.put("vue", new VueProposeeDto("employees", "analytique", p.parametres(periode)).enJson());
-                            return new OutilLecture.Resultat(donnees, mois.size() + " mois de mouvements.", mois.size(), p.audit(periode));
-                        })
-                        .construire(audit),
-                outil("paie_qualite")
-                        .description("Qualité des données de la paie d'un mois sur un périmètre : bulletins sans équipe et "
-                                + "sans observation, et tranches de salaire total.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of("periode", OutilLecture.periode())))
-                        .sortie(Map.of("periode", Map.of("type", "string"), "sansEquipe", nombre(), "sansObservation", nombre(),
-                                "tranches", liste(), "vue", OutilLecture.vueProposee()),
-                                "periode", "sansEquipe", "sansObservation", "tranches", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            YearMonth periode = periodeOuDerniere(paie, arguments);
-                            PaieAnalytiqueDto resultat = analytique.analyser(p.criteres(periode));
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("periode", periode.toString());
-                            donnees.put("sansEquipe", resultat.qualite().sansEquipe());
-                            donnees.put("sansObservation", resultat.qualite().sansObservation());
-                            donnees.put("tranches", resultat.tranches().stream().map(t -> {
-                                Map<String, Object> tranche = new LinkedHashMap<>();
-                                tranche.put("min", t.min());
-                                tranche.put("max", t.max());
-                                tranche.put("effectif", t.effectif());
-                                return tranche;
-                            }).toList());
-                            Map<String, String> parametres = p.parametres(periode);
-                            parametres.put("equipeIds", "0");
-                            donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
-                            return new OutilLecture.Resultat(donnees, resultat.qualite().sansEquipe() + " bulletin(s) sans équipe en "
-                                    + periode + ".", 1, p.audit(periode));
-                        })
-                        .construire(audit),
-                outil("paie_bulletins_rechercher")
-                        .description("Bulletins de paie d'un mois (dernier mois importé par défaut) par nom, CIN et/ou "
-                                + "périmètre : employé, chantier, équipe, fonction, jours, salaires, primes, total, observation. "
-                                + BULLETINS + " au plus, avec le nombre total.")
-                        .permissions("PAIE_READ")
-                        .entree(perimetre(Map.of(
-                                "periode", OutilLecture.periode(),
-                                "nom", texte("Nom et/ou prénom, partiel", 150),
-                                "cin", texte("CIN, partiel", 30),
-                                "limite", limite(10, BULLETINS))))
-                        .sortie(Map.of("periode", Map.of("type", "string"), "total", nombre(), "bulletins", liste(),
-                                "vue", OutilLecture.vueProposee()), "periode", "total", "bulletins", "vue")
-                        .execution((lecteur, arguments) -> {
-                            Perimetre p = Perimetre.de(arguments);
-                            YearMonth periode = periodeOuDerniere(paie, arguments);
-                            String nom = arguments.texte("nom").orElse(null);
-                            String cin = arguments.texte("cin").orElse(null);
-                            Page<PaieResponseDto> page = paie.search(
-                                    new PaieSearchCriteria(cin, nom, periode, p.fonctions(), p.chantiers(), p.equipes()),
-                                    PageRequest.of(0, arguments.entier("limite", 10, 1, BULLETINS), Sort.by("employee.nomPrenom")));
-                            List<Map<String, Object>> bulletins = page.getContent().stream().map(OutilsPaie::bulletin).toList();
-                            Map<String, String> parametres = p.parametres(periode);
-                            if (nom != null) {
-                                parametres.put("nom", nom);
-                            }
-                            if (cin != null) {
-                                parametres.put("cin", cin);
-                            }
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("periode", periode.toString());
-                            donnees.put("total", page.getTotalElements());
-                            donnees.put("bulletins", bulletins);
-                            donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
-                            Map<String, Object> journal = p.audit(periode);
-                            journal.put("rechercheParNom", nom != null);
-                            journal.put("rechercheParCin", cin != null);
-                            return new OutilLecture.Resultat(donnees, page.getTotalElements() + " bulletin(s) en " + periode + ".",
-                                    bulletins.size(), journal);
-                        })
-                        .construire(audit),
-                outil("rapport_preparer")
-                        .description("Prépare le rapport de paie d'un mois (PDF) : vérifie les chantiers concernés et "
-                                + "propose d'ouvrir l'assistant d'export déjà réglé. Ne génère aucun fichier.")
-                        .permissions("PAIE_EXPORT", "PAIE_READ")
-                        .entree(Map.of("periode", OutilLecture.periode(),
-                                "chantierIds", OutilLecture.identifiants("Marchés du rapport ; absent = rapport complet")))
-                        .sortie(Map.of("periode", Map.of("type", "string"), "nombreChantiers", nombre(), "chantiers", liste(),
-                                "vue", OutilLecture.vueProposee()), "periode", "nombreChantiers", "chantiers", "vue")
-                        .execution((lecteur, arguments) -> {
-                            YearMonth periode = periodeOuDerniere(paie, arguments);
-                            List<Long> chantiers = arguments.identifiants("chantierIds");
-                            List<PaieChantierPeriodeDto> concernes = paie.findChantiersDeLaPeriode(periode,
-                                    chantiers == null ? null : new PaieSearchCriteria(null, null, periode, null, chantiers, null));
-                            List<Map<String, Object>> rendus = concernes.stream().limit(GROUPES).map(c -> {
-                                Map<String, Object> chantier = new LinkedHashMap<>();
-                                chantier.put("id", c.id());
-                                chantier.put("code", c.code());
-                                chantier.put("libelle", c.libelle());
-                                chantier.put("effectif", c.effectif());
-                                chantier.put("masse", c.masse());
-                                return chantier;
-                            }).toList();
-                            Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, null, null));
-                            parametres.put("periode", periode.toString());
-                            parametres.put("action", "export");
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("periode", periode.toString());
-                            donnees.put("nombreChantiers", concernes.size());
-                            donnees.put("chantiers", rendus);
-                            donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
-                            return new OutilLecture.Resultat(donnees, "Rapport " + periode + " : " + concernes.size()
-                                    + " chantier(s).", rendus.size(), Perimetres.de(periode, chantiers, null, null));
-                        })
-                        .construire(audit));
+    /** Regroupement de la paie. */
+    public enum Dimension { CHANTIER, EQUIPE, FONCTION }
+
+    @McpTool(name = "paie_indicateurs", title = "Indicateurs de paie d'un mois", generateOutputSchema = true,
+            description = """
+                    Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale en \
+                    dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de tout \
+                    compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et les 5 \
+                    principaux chantiers par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». \
+                    Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, \
+                    `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_INDICATEURS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieIndicateurs(
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth mois = periodes.ou(periode);
+        PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
+        List<Map<String, Object>> principaux = resultat.parChantier().stream().limit(CHANTIERS_RENDUS)
+                .map(c -> {
+                    Map<String, Object> chantier = new LinkedHashMap<>();
+                    chantier.put("id", c.id());
+                    chantier.put("code", c.code());
+                    chantier.put("libelle", c.libelle());
+                    chantier.put("masse", c.masse());
+                    chantier.put("effectif", c.effectif());
+                    return chantier;
+                })
+                .toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("indicateurs", kpi(resultat.kpis()));
+        donnees.put("moisPrecedent", resultat.moisPrecedent() == null ? null : kpi(resultat.moisPrecedent()));
+        donnees.put("principauxChantiers", principaux);
+        donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(mois)).enJson());
+        return donnees;
     }
 
-    /** Ajoute aux propriétés d'entrée le périmètre commun chantier/équipe/fonction. */
-    private static Map<String, Object> perimetre(Map<String, Object> proprietes) {
-        Map<String, Object> entree = new LinkedHashMap<>(proprietes);
-        entree.put("chantierIds", OutilLecture.identifiants("Chantiers ; absent = tous"));
-        entree.put("equipeIds", OutilLecture.identifiants("Équipes ; 0 = sans équipe ; absent = toutes"));
-        entree.put("fonctionIds", OutilLecture.identifiants("Fonctions ; absent = toutes"));
-        return entree;
+    @McpTool(name = "paie_periodes", title = "Mois de paie importés", generateOutputSchema = true,
+            description = """
+                    Liste les mois de paie importés, du plus récent au plus ancien, avec pour chacun le nombre de bulletins, le \
+                    nombre de chantiers, la masse salariale en dirhams et les soldes de tout compte (STC), sur un périmètre. \
+                    À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; 36 mois au plus.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_PERIODES", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paiePeriodes(
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Nombre de mois rendus, de 1 à 36, 12 par défaut.")
+            @Min(1) @Max(MOIS) Integer limite) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        List<PaiePeriodeResumeDto> toutes = paie.findPeriodes(filtre.criteres(null));
+        List<Map<String, Object>> rendues = toutes.stream().limit(limite == null ? 12 : limite)
+                .map(OutilsPaie::periode).toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("nombreMois", toutes.size());
+        donnees.put("periodes", rendues);
+        donnees.put("vue", new VueProposeeDto("paie", "cartes", filtre.parametres(null)).enJson());
+        return donnees;
     }
 
-    private static YearMonth periodeOuDerniere(IPaieService paie, Arguments arguments) {
-        return arguments.periode("periode").orElseGet(() -> paie.findPeriodes(null).stream().findFirst()
-                .map(resume -> YearMonth.parse(resume.periode()))
-                .orElseThrow(() -> OutilLecture.invalide("Aucune paie n'est encore importée.")));
+    @McpTool(name = "paie_repartition", title = "Paie par chantier, équipe ou fonction", generateOutputSchema = true,
+            description = """
+                    Répartit la paie d'un mois par chantier, par équipe ou par fonction : masse salariale en dirhams, effectif \
+                    payé et soldes de tout compte (STC) de chaque groupe, de la plus grosse masse à la plus petite ; 50 groupes \
+                    au plus. À utiliser pour « quel chantier coûte le plus », « masse par équipe ». Pour les effectifs sans \
+                    montants, `employes_regrouper` ; pour un seul chiffre global, `paie_indicateurs`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_REPARTITION", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieRepartition(
+            @McpToolParam(description = "Regroupement : CHANTIER, EQUIPE ou FONCTION.") Dimension dimension,
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
+            @Min(1) @Max(GROUPES) Integer limite) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth mois = periodes.ou(periode);
+        PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
+        List<Map<String, Object>> groupes = switch (dimension) {
+            case CHANTIER -> resultat.parChantier().stream()
+                    .map(c -> groupe(c.id(), c.code(), c.libelle(), c.masse(), c.effectif(), c.stc(), c.stcMontant())).toList();
+            case EQUIPE -> resultat.parEquipe().stream()
+                    .map(e -> groupe(e.id(), e.code(), e.libelle(), e.masse(), e.effectif(), e.stc(), e.stcMontant())).toList();
+            case FONCTION -> resultat.parFonction().stream()
+                    .map(f -> groupe(f.id(), null, f.libelle(), f.masse(), f.effectif(), f.stc(), f.stcMontant())).toList();
+        };
+        List<Map<String, Object>> rendus = groupes.stream().limit(limite == null ? GROUPES : limite).toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("dimension", dimension.name());
+        donnees.put("nombreGroupes", groupes.size());
+        donnees.put("groupes", rendus);
+        donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(mois)).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "paie_evolution", title = "Évolution mensuelle de la paie", generateOutputSchema = true,
+            description = """
+                    Série mensuelle de la paie d'un périmètre, du mois le plus ancien au plus récent, jusqu'au mois donné : masse \
+                    salariale en dirhams, effectif payé, soldes de tout compte (STC) et leur montant. À utiliser pour les \
+                    tendances (« la masse augmente-t-elle ? »). Pour comparer seulement deux mois, `paie_indicateurs` rend déjà \
+                    le mois précédent ; 36 mois au plus.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_EVOLUTION", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieEvolution(
+            @McpToolParam(required = false, description = "Dernier mois de la série, au format aaaa-MM. Absent = le dernier "
+                    + "mois de paie importé.") @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Nombre de mois rendus, de 1 à 36, 12 par défaut.")
+            @Min(1) @Max(MOIS) Integer limite) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth derniere = periodes.ou(periode);
+        // L'évolution couvre tout l'historique du périmètre : on la borne au mois demandé (aaaa-MM se compare en texte).
+        List<PaieAnalytiqueDto.Evolution> evolution = analytique.analyser(filtre.criteres(derniere)).evolution().stream()
+                .filter(e -> e.periode().compareTo(derniere.toString()) <= 0).toList();
+        int nombre = limite == null ? 12 : limite;
+        List<Map<String, Object>> mois = evolution.subList(Math.max(0, evolution.size() - nombre), evolution.size())
+                .stream().map(e -> {
+                    Map<String, Object> valeurs = new LinkedHashMap<>();
+                    valeurs.put("periode", e.periode());
+                    valeurs.put("masse", e.masse());
+                    valeurs.put("effectif", e.effectif());
+                    valeurs.put("stc", e.stc());
+                    valeurs.put("stcMontant", e.stcMontant());
+                    return valeurs;
+                }).toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("mois", mois);
+        donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(derniere)).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "paie_mouvements", title = "Arrivées, départs et mutations par mois", generateOutputSchema = true,
+            description = """
+                    Mouvements d'effectif mois par mois selon la paie, sur un périmètre. Pour chaque mois : employés payés \
+                    (`effectif`), effectif du mois précédent et écart net (`variation`), `entrees` (payés ce mois-ci et absents \
+                    de la paie du mois précédent), `plusPayes` (payés le mois précédent, absents ce mois-ci), `sorties` (départs \
+                    enregistrés sur la fiche employé) et `mutations` (changements de chantier). Chaque chiffre est défini dans \
+                    `definitions` : citer ces définitions, et donner `variation` à côté des entrées, car « entrées » n'est pas \
+                    l'écart net (entrées − plus payés = variation). Un mois précis ou les derniers mois ; 36 au plus.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_MOUVEMENTS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieMouvements(
+            @McpToolParam(required = false, description = "Un mois précis au format aaaa-MM. Absent = les derniers mois "
+                    + "(selon `limite`).") @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Nombre de mois rendus quand `periode` est absente, de 1 à 36, 12 par "
+                    + "défaut.") @Min(1) @Max(MOIS) Integer limite) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        List<EffectifMoisDto> tendances = effectifs.tendances(
+                new EffectifsCriteria(filtre.chantiers(), filtre.fonctions(), filtre.equipes()));
+        YearMonth demande = PeriodePaie.demande(periode);
+        List<EffectifMoisDto> retenus = demande != null
+                ? tendances.stream().filter(m -> m.periode().equals(demande)).toList()
+                : tendances.subList(Math.max(0, tendances.size() - (limite == null ? 12 : limite)), tendances.size());
+        // Effectif payé de chaque mois, pour donner au modèle l'écart net sans qu'il le calcule.
+        Map<YearMonth, Long> payesParMois = new HashMap<>();
+        tendances.forEach(m -> payesParMois.put(m.periode(), m.effectif()));
+        List<Map<String, Object>> mois = retenus.stream().map(m -> {
+            Long precedent = payesParMois.get(m.periode().minusMonths(1));
+            Map<String, Object> valeurs = new LinkedHashMap<>();
+            valeurs.put("periode", m.periode().toString());
+            valeurs.put("effectif", m.effectif());
+            valeurs.put("effectifMoisPrecedent", precedent);
+            valeurs.put("variation", precedent == null ? null : m.effectif() - precedent);
+            valeurs.put("entrees", m.entrees());
+            // Payés le mois précédent, absents de ce mois : précédent + entrées − effectif.
+            valeurs.put("plusPayes", precedent == null || m.entrees() == null ? null : precedent + m.entrees() - m.effectif());
+            valeurs.put("sorties", m.sorties());
+            valeurs.put("mutations", m.mutations());
+            return valeurs;
+        }).toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("mois", mois);
+        donnees.put("definitions", DEFINITIONS_MOUVEMENTS);
+        donnees.put("vue", new VueProposeeDto("employees", "analytique", filtre.parametres(demande)).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "paie_qualite", title = "Qualité des données de paie", generateOutputSchema = true,
+            description = """
+                    Contrôle la qualité de la paie d'un mois sur un périmètre : nombre de bulletins sans équipe, nombre sans \
+                    observation, et répartition des bulletins par tranches de salaire total. À utiliser pour « y a-t-il des \
+                    anomalies », « combien de bulletins sans équipe ». Propose la liste des bulletins sans équipe.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_QUALITE", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieQualite(
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth mois = periodes.ou(periode);
+        PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("sansEquipe", resultat.qualite().sansEquipe());
+        donnees.put("sansObservation", resultat.qualite().sansObservation());
+        donnees.put("tranches", resultat.tranches().stream().map(t -> {
+            Map<String, Object> tranche = new LinkedHashMap<>();
+            tranche.put("min", t.min());
+            tranche.put("max", t.max());
+            tranche.put("effectif", t.effectif());
+            return tranche;
+        }).toList());
+        Map<String, String> parametres = filtre.parametres(mois);
+        parametres.put("equipeIds", "0");
+        donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "paie_bulletins_rechercher", title = "Rechercher des bulletins de paie", generateOutputSchema = true,
+            description = """
+                    Trouve les bulletins de paie d'un mois par nom, CIN et/ou périmètre. Chaque bulletin rend : employé (id, nom, \
+                    CIN), fonction, chantier, équipe, jours travaillés, jours de récupération, salaire mensuel, primes, salaire \
+                    total en dirhams et observation. 20 bulletins au plus, avec le nombre total. À utiliser pour la paie d'une \
+                    personne précise ; pour des totaux, préférer `paie_indicateurs`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_BULLETINS_RECHERCHER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieBulletinsRechercher(
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = "Nom et/ou prénom de l'employé, partiel.") @Size(max = 150) String nom,
+            @McpToolParam(required = false, description = "CIN de l'employé, partiel.") @Size(max = 30) String cin,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Nombre de bulletins rendus, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(BULLETINS) Integer limite) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth mois = periodes.ou(periode);
+        String nomRecherche = texte(nom);
+        String cinRecherche = texte(cin);
+        Page<PaieResponseDto> page = paie.search(
+                new PaieSearchCriteria(cinRecherche, nomRecherche, mois, filtre.fonctions(), filtre.chantiers(), filtre.equipes()),
+                PageRequest.of(0, limite == null ? 10 : limite, Sort.by("employee.nomPrenom")));
+        List<Map<String, Object>> bulletins = page.getContent().stream().map(OutilsPaie::bulletin).toList();
+        Map<String, String> parametres = filtre.parametres(mois);
+        if (nomRecherche != null) {
+            parametres.put("nom", nomRecherche);
+        }
+        if (cinRecherche != null) {
+            parametres.put("cin", cinRecherche);
+        }
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("total", page.getTotalElements());
+        donnees.put("bulletins", bulletins);
+        donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "rapport_preparer", title = "Préparer le rapport de paie", generateOutputSchema = true,
+            description = """
+                    Prépare le rapport de paie PDF d'un mois : vérifie les chantiers concernés (id, code, effectif, masse) et \
+                    propose d'ouvrir l'assistant d'export déjà réglé sur ce mois et ces chantiers. Ne génère aucun fichier : \
+                    l'utilisateur lance lui-même l'export. Réservé aux utilisateurs qui peuvent exporter la paie.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_EXPORT') and hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_RAPPORT_PREPARER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> rapportPreparer(
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = "Identifiants des chantiers du rapport (rendus par "
+                    + "`chantier_rechercher`). Absent = rapport complet.") @Size(max = 50) List<@Min(0) Long> chantierIds) {
+        YearMonth mois = periodes.ou(periode);
+        List<Long> chantiers = ids(chantierIds);
+        List<PaieChantierPeriodeDto> concernes = paie.findChantiersDeLaPeriode(mois,
+                chantiers == null ? null : new PaieSearchCriteria(null, null, mois, null, chantiers, null));
+        List<Map<String, Object>> rendus = concernes.stream().limit(GROUPES).map(c -> {
+            Map<String, Object> chantier = new LinkedHashMap<>();
+            chantier.put("id", c.id());
+            chantier.put("code", c.code());
+            chantier.put("libelle", c.libelle());
+            chantier.put("effectif", c.effectif());
+            chantier.put("masse", c.masse());
+            return chantier;
+        }).toList();
+        Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, null, null));
+        parametres.put("periode", mois.toString());
+        parametres.put("action", "export");
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("nombreChantiers", concernes.size());
+        donnees.put("chantiers", rendus);
+        donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
+        return donnees;
+    }
+
+    private static Map<String, Object> kpi(PaieAnalytiqueDto.Kpi k) {
+        Map<String, Object> valeurs = new LinkedHashMap<>();
+        valeurs.put("masse", k.masse());
+        valeurs.put("effectif", k.effectif());
+        valeurs.put("coutMoyen", k.coutMoyen());
+        valeurs.put("nombreChantiers", k.nombreChantiers());
+        valeurs.put("stc", k.stc());
+        valeurs.put("stcMontant", k.stcMontant());
+        return valeurs;
     }
 
     private static Map<String, Object> periode(PaiePeriodeResumeDto p) {
@@ -333,13 +446,12 @@ public final class OutilsPaie {
         return valeurs;
     }
 
-    /** Périmètre chantier/équipe/fonction d'un appel, avec ses formes critère, URL et journal. */
-    private record Perimetre(List<Long> chantiers, List<Long> equipes, List<Long> fonctions) {
+    private static String texte(String valeur) {
+        return valeur == null || valeur.isBlank() ? null : valeur.trim();
+    }
 
-        static Perimetre de(Arguments arguments) {
-            return new Perimetre(arguments.identifiants("chantierIds"), arguments.identifiants("equipeIds"),
-                    arguments.identifiants("fonctionIds"));
-        }
+    /** Périmètre chantier/équipe/fonction d'un appel, avec ses formes critère et URL. */
+    private record Filtre(List<Long> chantiers, List<Long> equipes, List<Long> fonctions) {
 
         PaieSearchCriteria criteres(YearMonth periode) {
             return new PaieSearchCriteria(null, null, periode, fonctions, chantiers, equipes);
@@ -351,10 +463,6 @@ public final class OutilsPaie {
                 parametres.put("periode", periode.toString());
             }
             return parametres;
-        }
-
-        Map<String, Object> audit(YearMonth periode) {
-            return Perimetres.de(periode, chantiers, equipes, fonctions);
         }
     }
 }

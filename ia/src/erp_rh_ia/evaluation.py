@@ -1,13 +1,17 @@
-"""Évaluation de l'agent sur le jeu de référence (docs/ia.md, § 4) : ``python -m erp_rh_ia.evaluation``.
+# LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
+# et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
+"""Évaluation de l'agent sur le jeu de référence (docs/ia.md, § 4 et T12) : ``python -m erp_rh_ia.evaluation``.
 
-Pour chaque cas, la vérité est lue en appelant directement l'outil attendu avec l'identité de l'utilisateur ; l'agent
-répond ensuite à la question, avec le modèle de la passerelle LiteLLM. Un cas réussit si l'agent
-répond sans abstention et cite chaque valeur attendue (le rapport signale s'il a pris un autre outil que celui
-attendu) — ou s'abstient (ou signale le refus) quand le cas l'exige.
+Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
+le vrai agent (``create_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
+répond sans abstention et cite chaque valeur attendue — ou s'abstient (ou signale le refus) quand le cas l'exige. La
+trajectoire d'outils est comparée par ``agentevals`` (l'outil attendu doit figurer parmi les appels) et rapportée.
 
 Variables : ``EVAL_API_URL`` (racine de l'API ERP-RH), ``EVAL_JETON_COMPLET`` et ``EVAL_JETON_RESTREINT`` (jetons de
 connexion REST, échangés contre un jeton agent à chaque question), ``EVAL_DONNEES`` (JSON des marqueurs),
-``IA_LITELLM_BASE_URL`` et ``IA_LITELLM_API_KEY``. Le rapport JSON n'écrit ni jeton ni clé.
+``IA_LITELLM_BASE_URL`` et ``IA_LITELLM_API_KEY``. Le rapport JSON n'écrit ni jeton ni clé. L'évaluation hors ligne,
+sans réseau, est dans ``tests/test_passerelle_simulee.py`` (CopilotKit ``aimock``).
 """
 
 import argparse
@@ -27,15 +31,32 @@ from pathlib import Path
 from typing import Any, cast
 
 import httpx
-from openai import AsyncOpenAI
+from agentevals.trajectory.match import create_async_trajectory_match_evaluator
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.tools import BaseTool
 
-from erp_rh_ia.agent import Agent, ReponseAgent
-from erp_rh_ia.modele import ModeleLiteLLM
-from erp_rh_ia.outils import jeton_agent, ouvrir_outils
+from erp_rh_ia.agent import creer_agent
+from erp_rh_ia.config import Settings
+from erp_rh_ia.modeles import Tache, modele
+from erp_rh_ia.outils import jeton_agent, outils_erp
 from erp_rh_ia.verification import extraire_nombres
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
 _MARQUEUR = re.compile(r"\{(\w+)\}")
+# Formulations d'une abstention écrite par le modèle (sans chiffre, donc acceptée par le vérificateur).
+_ABSTENTION = (
+    "ne peux pas",
+    "pas de donnee",
+    "aucune donnee",
+    "ne dispose",
+    "pas d'information",
+    "impossible",
+    "pas disponible",
+    "n'ai pas",
+    "ne trouve pas",
+    "fiable",
+)
+_TRAJECTOIRE = create_async_trajectory_match_evaluator(trajectory_match_mode="superset", tool_args_match_mode="ignore")
 
 
 @dataclass
@@ -48,6 +69,14 @@ class ResultatCas:
     outils: list[str] = field(default_factory=lambda: [])
     abstention: bool = False
     reponse: str = ""
+
+
+@dataclass(frozen=True)
+class Reponse:
+    texte: str
+    abstention: bool
+    outils: list[str]
+    outil_attendu_appele: bool
 
 
 def remplir(valeur: Any, donnees: dict[str, Any]) -> Any:
@@ -119,9 +148,35 @@ def _sans_accents(texte: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
 
 
+async def verite(outils: list[BaseTool], nom: str, arguments: dict[str, Any]) -> dict[str, Any] | str:
+    """Résultat structuré de l'outil attendu, ou le texte de son erreur."""
+    outil = next(o for o in outils if o.name == nom)
+    message = await outil.ainvoke({"type": "tool_call", "id": "verite", "name": nom, "args": arguments})
+    if not isinstance(message, ToolMessage) or message.status == "error":
+        return str(getattr(message, "content", message))
+    artefact = cast(dict[str, Any], message.artifact or {})
+    structure = artefact.get("structured_content")
+    return cast(dict[str, Any], structure) if structure else cast(dict[str, Any], json.loads(message.text))
+
+
+async def repondre(config: Settings, outils: list[BaseTool], question: str, outil_attendu: Any) -> Reponse:
+    agent = creer_agent(modele(config, Tache.COMPLEX), outils)
+    etat = await agent.ainvoke({"messages": [HumanMessage(content=question)]}, {"recursion_limit": 200})
+    messages: list[BaseMessage] = list(etat["messages"])
+    texte = messages[-1].text if messages else ""
+    appeles = [a["name"] for m in messages if isinstance(m, AIMessage) for a in m.tool_calls]
+    abstention = etat.get("verification") == "abstention" or any(m in _sans_accents(texte) for m in _ABSTENTION)
+    attendu = False
+    if outil_attendu:
+        reference = [AIMessage(content="", tool_calls=[{"id": "attendu", "name": str(outil_attendu), "args": {}}])]
+        evaluation = await _TRAJECTOIRE(outputs=messages, reference_outputs=reference)
+        attendu = bool(cast(dict[str, Any], evaluation).get("score"))
+    return Reponse(texte, abstention, appeles, attendu)
+
+
 async def evaluer_cas(
     cas: dict[str, Any],
-    agent: Agent,
+    config: Settings,
     client: httpx.AsyncClient,
     api: str,
     jetons: dict[str, str],
@@ -130,23 +185,23 @@ async def evaluer_cas(
     type_cas = str(cas.get("type", "reponse"))
     question = str(remplir(cas["question"], donnees))
     jeton = await jeton_agent(client, api, jetons[str(cas.get("jeton", "complet"))])
+    outils = await outils_erp(f"{api}/mcp", jeton)
     attendus: list[tuple[str, Any]] = []
-    async with ouvrir_outils(f"{api}/mcp", jeton) as outils:
-        if type_cas == "reponse":
-            verite = await outils.appeler(str(cas["outil"]), cast(dict[str, Any], remplir(cas["arguments"], donnees)))
-            if verite.est_erreur:
-                return ResultatCas(cas["id"], type_cas, False, f"vérité indisponible : {verite.texte}", 0)
-            attendus = [(a["type"], extraire(verite.donnees, a["chemin"])) for a in cas["attendus"]]
-        debut = time.monotonic()
-        reponse = await agent.repondre(question, outils)
-        latence = time.monotonic() - debut
+    if type_cas == "reponse":
+        resultat = await verite(outils, str(cas["outil"]), cast(dict[str, Any], remplir(cas["arguments"], donnees)))
+        if isinstance(resultat, str):
+            return ResultatCas(cas["id"], type_cas, False, f"vérité indisponible : {resultat}", 0)
+        attendus = [(a["type"], extraire(resultat, a["chemin"])) for a in cas["attendus"]]
+    debut = time.monotonic()
+    reponse = await repondre(config, outils, question, cas.get("outil"))
+    latence = time.monotonic() - debut
     succes, raison = juger(type_cas, cas.get("outil"), attendus, reponse)
     return ResultatCas(
         cas["id"], type_cas, succes, raison, round(latence, 2), reponse.outils, reponse.abstention, reponse.texte
     )
 
 
-def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: ReponseAgent) -> tuple[bool, str]:
+def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: Reponse) -> tuple[bool, str]:
     if type_cas == "abstention":
         return (reponse.abstention, "abstention" if reponse.abstention else "a répondu au lieu de s'abstenir")
     if type_cas == "refus":
@@ -155,14 +210,13 @@ def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: R
     if any(valeur is None for _, valeur in attendus):
         # L'outil attendu n'a pas la valeur : défaut des données synthétiques, pas de l'agent.
         return False, "vérité absente des données synthétiques"
-    if reponse.abstention:
-        return False, f"abstention ({reponse.motif})"
     manquants = [str(valeur) for type_attendu, valeur in attendus if not cite(type_attendu, valeur, reponse.texte)]
     appeles = ", ".join(reponse.outils) or "aucun"
     if manquants:
-        return False, f"valeur(s) absente(s) : {', '.join(manquants)} (outils : {appeles})"
+        motif = "abstention" if reponse.abstention else "valeur(s) absente(s)"
+        return False, f"{motif} : {', '.join(manquants)} (outils : {appeles})"
     # Les valeurs citées sont celles de l'outil attendu : la réponse est juste, même trouvée par un autre chemin.
-    return True, "conforme" if outil in reponse.outils else f"conforme, sans {outil} (outils : {appeles})"
+    return True, "conforme" if reponse.outil_attendu_appele else f"conforme, sans {outil} (outils : {appeles})"
 
 
 def cause(panne: BaseException) -> str:
@@ -196,16 +250,20 @@ async def principal(filtre: set[str] | None = None) -> dict[str, Any]:
     api = os.environ["EVAL_API_URL"].rstrip("/")
     jetons = {"complet": os.environ["EVAL_JETON_COMPLET"], "restreint": os.environ["EVAL_JETON_RESTREINT"]}
     donnees = cast(dict[str, Any], json.loads(os.environ["EVAL_DONNEES"]))
-    client_llm = AsyncOpenAI(
-        base_url=os.environ["IA_LITELLM_BASE_URL"], api_key=os.environ["IA_LITELLM_API_KEY"], timeout=180, max_retries=0
+    config = Settings(
+        enabled=True,
+        litellm_base_url=os.environ["IA_LITELLM_BASE_URL"],  # pyright: ignore[reportArgumentType]
+        litellm_api_key=os.environ["IA_LITELLM_API_KEY"],  # pyright: ignore[reportArgumentType]
+        litellm_model=os.environ.get("IA_LITELLM_MODEL", "ai-gateway"),
+        llm_timeout_seconds=180,
+        erp_api_url=api,  # pyright: ignore[reportArgumentType]
     )
-    agent = Agent(ModeleLiteLLM(client_llm, os.environ.get("IA_LITELLM_MODEL", "ai-gateway")))
     jeu = json.loads(JEU.read_text(encoding="utf-8"))
     resultats: list[ResultatCas] = []
     async with httpx.AsyncClient(timeout=30) as client:
         for cas in [c for c in jeu["cas"] if not filtre or c["id"] in filtre]:
             try:
-                resultat = await evaluer_cas(cas, agent, client, api, jetons, donnees)
+                resultat = await evaluer_cas(cas, config, client, api, jetons, donnees)
             except Exception as panne:  # un cas en panne est un échec mesuré, pas un arrêt
                 resultat = ResultatCas(cas["id"], str(cas.get("type", "reponse")), False, f"panne : {cause(panne)}", 0)
             resultats.append(resultat)
