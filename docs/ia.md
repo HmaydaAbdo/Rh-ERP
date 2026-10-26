@@ -230,6 +230,7 @@ aux utilisateurs visible.
 | 2026-10-25 | **T9, vérification de J1 avant la PR** : backend 475 tests verts (4 ignorés) avec le client MCP Python et seuil de couverture par domaine respecté ; service IA 49 tests, `ruff`, `pyright` ; images `erp-rh-ia` et `erp-rh-litellm` construites, `erp-rh-ia` démarrée (santé, `/agui` en 503 IA désactivée) ; frontend 863 tests unitaires et build de production dans les budgets (assistant chargé en différé : 703 ko initiaux) ; e2e 66 parcours (les échecs en parallèle repassent en série, instabilité connue du poste) ; flux réel `FluxAgUiIntegrationTest` 3/3 ; parcours navigateur sur le banc. Reste : présenter la démonstration au propriétaire. |
 | 2026-10-26 | J1 fusionné dans `main` (PR #90). Pile Compose sans profil, IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles` (PR #91). PR #92 (domaines) : contraste des badges de l'assistant corrigé. Pile du propriétaire : le backend refusait la clé MCP au format PKCS#1, convertie en PKCS#8 (même clé publique). |
 | 2026-10-26 | Revue du chantier face aux cadres de référence (§ 10) : conventions complétées (gouvernance et usages interdits, modèle de menaces OWASP, objectifs de service, cycle de vie des modèles, modèles auto-hébergés, évaluation à trois niveaux, expérience de confiance, injection par champs de données) ; tâches de J2 et J3 détaillées ; J3 aligné sur la décision « aucun service payant » ; décisions à prendre listées. |
+| 2026-10-26 | Retour du propriétaire : « bonjour » lent (7 étapes, 3 appels de modèle) ; « 127 entrées » juste mais trompeur (969 payés en août, 1 009 en septembre, +40 net, 87 plus payés). Nœud `trier` en tête du graphe : salutation, remerciement, au revoir et aide répondus sans modèle ni outil ; un ciblage sans domaine passe directement à la rédaction. `paie_mouvements` rend l'effectif du mois précédent, l'écart net, les « plus payés » et la définition de chaque chiffre ; consigne 8 du modèle : nommer chaque chiffre selon sa définition. Service IA 73 tests, `McpOutilsLectureIntegrationTest` 16/16, frontend 921 tests. |
 
 ## 8. État technique
 
@@ -296,7 +297,8 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Pratique | État réel | Traitée par |
 |---|---|---|
 | Le modèle ne calcule pas ; chiffres et périodes vérifiés ; abstention | En place | T6 |
-| Identifiants, noms et dates vérifiés ; période, périmètre et définition affichés | Absent : seuls nombres et périodes sont vérifiés | T2.7 |
+| Identifiants, noms et dates vérifiés ; période, périmètre et définition affichés | Partiel : nombres et périodes vérifiés ; `paie_mouvements` rend ses définitions, l'écart net et les « plus payés » ; identifiants et noms pas encore vérifiés | T2.7 |
+| Réponse immédiate aux messages sans donnée | En place : salutation, remerciement, au revoir et aide reconnus sans modèle (français, darija latine, arabe), 2 à 17 ms dans le graphe ; un ciblage sans domaine saute le choix d'outils | T3.5 |
 | Permissions revérifiées à chaque appel d'outil ; jeton délégué court ; audit par outil | En place | T4, T5 |
 | Périmètre de données par fiche de poste | Absent : l'accès est réservé à `SYSTEM_ADMIN` | T2.1 à T2.3 |
 | Injection directe et indirecte (champs de données piégés), exfiltration | Non testées ; seuls les refus de droits le sont | T2.6 |

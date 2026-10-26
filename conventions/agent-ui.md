@@ -254,7 +254,9 @@ Ces principes s'appliquent à tout mode, du panneau à l'espace immersif :
 * **Retours.** Chaque réponse peut être signalée comme utile, fausse ou incomplète, avec un motif
   court ; le signalement d'une réponse fausse indique la suite donnée.
 * **Latence perçue.** Un premier signe de progression apparaît en moins d'une seconde après l'envoi ;
-  les étapes réelles remplacent un indicateur vide. Les objectifs chiffrés de latence sont fixés par
+  les étapes réelles remplacent un indicateur vide. Un message sans demande de donnée (salutation,
+  remerciement, demande d'aide) est reconnu de façon déterministe et reçoit sa réponse aussitôt, sans
+  appel de modèle ni étape de recherche ; seul un message de pure politesse emprunte ce chemin. Les objectifs chiffrés de latence sont fixés par
   mesure et validés (voir « Objectifs de service » dans [`agents-ia.md`](agents-ia.md)).
 * **Langues.** Les questions peuvent arriver en français, en arabe ou en darija. L'interface gère la
   saisie et l'affichage de droite à gauche lorsque l'arabe est pris en charge ; la langue de réponse

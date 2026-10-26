@@ -167,13 +167,40 @@ async def test_plusieurs_domaines_cumulent_leurs_outils() -> None:
     assert modele.outils_vus == [["paie_indicateurs", "chantier_rechercher", "chantier_fiche"]]
 
 
-async def test_hors_domaine_aucun_outil_n_est_transmis() -> None:
+async def test_hors_domaine_la_redaction_repond_sans_choix_d_outils() -> None:
     modele = ModeleScripte([], [Brouillon("Je ne sais pas.", None, True)], domaines=[])
 
     reponse = await Agent(modele).repondre("Quel temps fera-t-il ?", OutilsSimules(CATALOGUE))
 
-    assert modele.outils_vus == [[]]
+    assert modele.outils_vus == []  # aucun appel « choisir » : un appel de modèle en moins
+    assert len(modele.messages_redaction) == 1
     assert reponse.abstention
+
+
+@pytest.mark.parametrize(
+    ("message", "debut"),
+    [("Bonjour", "Bonjour !"), ("merci beaucoup", "Avec plaisir"), ("Que sais-tu faire ?", "Je réponds")],
+)
+async def test_un_message_sans_donnee_repond_aussitot_sans_modele_ni_outil(message: str, debut: str) -> None:
+    outils = OutilsSimules(CATALOGUE)
+    modele = ModeleScripte([], [])
+
+    reponse = await Agent(modele).repondre(message, outils)
+
+    assert reponse.texte.startswith(debut)
+    assert not reponse.abstention
+    assert modele.domaines_proposes == [] and modele.outils_vus == [] and modele.messages_redaction == []
+    assert outils.appels == []
+
+
+async def test_une_salutation_suivie_d_une_question_suit_le_parcours_complet() -> None:
+    outils = OutilsSimules({"paie_indicateurs": ok("paie_indicateurs", INDICATEURS)})
+    modele = ModeleScripte([appel("paie_indicateurs")], [Brouillon("Masse : 1 250 000,50 MAD.", None, False)])
+
+    reponse = await Agent(modele).repondre("Bonjour, quelle est la masse salariale ?", outils)
+
+    assert outils.appels == ["paie_indicateurs"]
+    assert not reponse.abstention
 
 
 async def test_un_ciblage_indisponible_garde_tout_le_catalogue() -> None:

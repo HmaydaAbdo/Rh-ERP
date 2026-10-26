@@ -17,6 +17,7 @@ import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import static staport.rh.mcp.outils.OutilDefini.enumeration;
 import static staport.rh.mcp.outils.OutilDefini.limite;
 import static staport.rh.mcp.outils.OutilDefini.liste;
 import static staport.rh.mcp.outils.OutilDefini.nombre;
+import static staport.rh.mcp.outils.OutilDefini.objetLibre;
 import static staport.rh.mcp.outils.OutilDefini.outil;
 import static staport.rh.mcp.outils.OutilDefini.texte;
 
@@ -37,6 +39,15 @@ public final class OutilsPaie {
     private static final int MOIS = 36;
     private static final int GROUPES = 50;
     private static final int BULLETINS = 20;
+    /** Sens de chaque chiffre de {@code paie_mouvements}, rendu avec lui pour que la réponse le cite (docs/ia.md, T2.7). */
+    private static final Map<String, String> DEFINITIONS_MOUVEMENTS = Map.of(
+            "effectif", "Employés payés dans le mois (un bulletin)",
+            "effectifMoisPrecedent", "Employés payés le mois précédent ; absent si ce mois n'a pas de paie",
+            "variation", "Effectif du mois moins effectif du mois précédent (écart net)",
+            "entrees", "Employés payés ce mois-ci et absents de la paie du mois précédent",
+            "plusPayes", "Employés payés le mois précédent et absents de la paie de ce mois",
+            "sorties", "Départs enregistrés sur la fiche employé dans le mois, parmi les payés du mois ou du précédent",
+            "mutations", "Employés payés les deux mois, sur un chantier différent");
 
     private OutilsPaie() {
     }
@@ -132,12 +143,15 @@ public final class OutilsPaie {
                         })
                         .construire(audit),
                 outil("paie_mouvements")
-                        .description("Mouvements d'effectif mois par mois selon la paie : employés payés, entrées, sorties, "
-                                + "mutations, sur un périmètre (chantier, équipe, fonction du bulletin du mois). Un mois précis, "
+                        .description("Mouvements d'effectif mois par mois selon la paie : employés payés, effectif du mois "
+                                + "précédent et écart net, entrées (payés ce mois-ci, absents du mois précédent), employés "
+                                + "plus payés, départs enregistrés, mutations, sur un périmètre (chantier, équipe, fonction "
+                                + "du bulletin du mois). Chaque chiffre a sa définition dans « definitions ». Un mois précis, "
                                 + "ou les " + MOIS + " derniers au plus.")
                         .permissions("PAIE_READ")
                         .entree(perimetre(Map.of("periode", OutilLecture.periode(), "limite", limite(12, MOIS))))
-                        .sortie(Map.of("mois", liste(), "vue", OutilLecture.vueProposee()), "mois", "vue")
+                        .sortie(Map.of("mois", liste(), "definitions", objetLibre(), "vue", OutilLecture.vueProposee()),
+                                "mois", "definitions", "vue")
                         .execution((lecteur, arguments) -> {
                             Perimetre p = Perimetre.de(arguments);
                             List<EffectifMoisDto> tendances = effectifs.tendances(
@@ -146,17 +160,27 @@ public final class OutilsPaie {
                             List<EffectifMoisDto> retenus = periode != null
                                     ? tendances.stream().filter(m -> m.periode().equals(periode)).toList()
                                     : tendances.subList(Math.max(0, tendances.size() - arguments.entier("limite", 12, 1, MOIS)), tendances.size());
+                            // Effectif payé de chaque mois, pour donner au modèle l'écart net sans qu'il le calcule.
+                            Map<YearMonth, Long> payesParMois = new HashMap<>();
+                            tendances.forEach(m -> payesParMois.put(m.periode(), m.effectif()));
                             List<Map<String, Object>> mois = retenus.stream().map(m -> {
+                                Long precedent = payesParMois.get(m.periode().minusMonths(1));
                                 Map<String, Object> valeurs = new LinkedHashMap<>();
                                 valeurs.put("periode", m.periode().toString());
                                 valeurs.put("effectif", m.effectif());
+                                valeurs.put("effectifMoisPrecedent", precedent);
+                                valeurs.put("variation", precedent == null ? null : m.effectif() - precedent);
                                 valeurs.put("entrees", m.entrees());
+                                // Payés le mois précédent, absents de ce mois : précédent + entrées − effectif.
+                                valeurs.put("plusPayes", precedent == null || m.entrees() == null
+                                        ? null : precedent + m.entrees() - m.effectif());
                                 valeurs.put("sorties", m.sorties());
                                 valeurs.put("mutations", m.mutations());
                                 return valeurs;
                             }).toList();
                             Map<String, Object> donnees = new LinkedHashMap<>();
                             donnees.put("mois", mois);
+                            donnees.put("definitions", DEFINITIONS_MOUVEMENTS);
                             donnees.put("vue", new VueProposeeDto("employees", "analytique", p.parametres(periode)).enJson());
                             return new OutilLecture.Resultat(donnees, mois.size() + " mois de mouvements.", mois.size(), p.audit(periode));
                         })
