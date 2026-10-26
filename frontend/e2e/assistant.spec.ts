@@ -87,7 +87,8 @@ test.describe('Assistant RH', () => {
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
     await expect(assistant.getByText('Paie · indicateurs consulté')).toBeVisible();
     await expect(page).toHaveURL(/\/paie\/analytique\?periode=2026-08$/);
-    await expect(assistant.getByText('Paie · Analytique')).toBeVisible();
+    await expect(assistant.getByText('Paie · Analytique')).toBeInViewport();
+    await expect(assistant.getByText(/Réfléchi pendant/)).toBeVisible();
     await expect(page.locator('#contenu .assistant-cite').first()).toBeVisible();
     expect(agent.autorisations).toEqual(['Bearer jeton-test']);
 
@@ -96,6 +97,23 @@ test.describe('Assistant RH', () => {
 
     await assistant.getByRole('button', { name: 'Revenir' }).click();
     await expect(page).toHaveURL(/\/paie$/);
+  });
+
+  test('occupe tout l’écran sur téléphone, sans défilement horizontal', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerAgent(page);
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+
+    await page.keyboard.press('Control+k');
+    // Sur téléphone la barre devient une fenêtre modale.
+    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
+    await expect(assistant.getByPlaceholder('Posez votre question…')).toBeVisible();
+    const largeur = await assistant.evaluate((e) => e.getBoundingClientRect().width);
+    expect(largeur).toBe(390);
+    const debordement = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(debordement).toBeLessThanOrEqual(0);
   });
 
   test('n’apparaît pas sans le droit IA_UTILISER', async ({ page }) => {
