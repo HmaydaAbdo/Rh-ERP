@@ -1,6 +1,6 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-24.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+**Mis à jour : 2026-10-26.** Seule référence du chantier IA : décisions, architecture, plan, suivi
 et reprise. Les règles réutilisables sont dans les conventions
 ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
@@ -10,7 +10,9 @@ et reprise. Les règles réutilisables sont dans les conventions
 
 L'IA sert **tous les utilisateurs** de l'entreprise (BTP, classe S, Maroc) : comprendre, retrouver,
 contrôler, préparer. Elle commence par la partie RH de l'ERP, puis couvre chaque département avec le
-même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier.
+même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier, et ne
+prend aucune décision sur une personne : elle explique et prépare, une personne habilitée décide
+([usage responsable](../conventions/agents-ia.md#gouvernance-et-usage-responsable)).
 
 ## 2. Décisions
 
@@ -30,6 +32,7 @@ même socle. Elle ne devient jamais la source des chiffres, des droits ou des d�
 | Orchestration | **Un agent, catalogue ciblé par domaine** : un petit modèle (tag `simple`) choisit les domaines de la question, seuls leurs outils partent vers le modèle `complex`. Les agents de domaine (sous-graphes sous un superviseur) viennent avec J8, quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, modèle ou budget ([conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine)). |
 | Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (prototypage) est dans les pools tant que les données sont synthétiques (jusqu'à J2) ; les préversions à sortie instable restent sous tags `eval`. |
 | Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
+| Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les [conventions](../conventions/agents-ia.md#gouvernance-et-usage-responsable) ; l'écart avec l'existant est suivi au § 10. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
 ## 3. Architecture
@@ -64,6 +67,9 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
    modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
 5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
    `enable_json_schema_validation` côté LiteLLM.
+6. À venir (T2.7) : le vérificateur couvre aussi les identifiants, noms et dates cités, et chaque
+   chiffre principal affiche sa période, son périmètre et la définition de l'indicateur. Aujourd'hui,
+   seuls les nombres et les périodes sont vérifiés.
 
 ## 5. Sécurité
 
@@ -85,12 +91,16 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
   `requestId/threadId/runId/toolCallId` pour chaque outil, sans jeton ni contenu RH dans les
   journaux. Interrupteur global de l'IA ; budgets par utilisateur et par poste ; plafonds d'étapes,
   de tokens et de durée par run. L'application reste entièrement utilisable sans IA.
+- **Menaces.** Le [modèle de menaces](../conventions/agents-ia.md#modèle-de-menaces) s'applique
+  menace par menace ; l'état de chaque contrôle est suivi au § 10.
 
 ## 6. Expérience
 
 **Vues pilotées (ViewSpec).** Un outil renvoie, avec ses données, une description de vue : domaine,
-vue, filtres, période, niveau de parcours. Schéma défini une fois (Pydantic → schéma JSON → types
-Angular), validé des deux côtés ; Angular la traduit en route connue et ses gardes s'appliquent.
+vue, filtres, période, niveau de parcours. Cible : schéma défini une fois (Pydantic → schéma JSON →
+types Angular), validé des deux côtés (T2.9). Aujourd'hui, la description est validée par deux listes
+écrites à la main, `VueProposeeDto` côté Spring et `vue-assistant.ts` côté Angular. Angular la traduit
+en route connue et ses gardes s'appliquent.
 **L'assistant ouvre lui-même la vue de sa réponse**, filtres appliqués, une fois la réponse vérifiée
 (décision du 2026-10-25) : liste blanche côté client, gardes de route respectées, retour à l'écran
 précédent en un clic, valeurs citées surlignées dans la vue
@@ -131,8 +141,8 @@ pris en charge ; chaque surface a un repli texte.
 |---|---|---|---|
 | J0 — Socle | Preuve MCP Java ↔ client TypeScript ; décisions ; ce document | Fait | ✅ |
 | J1 — Tranche verticale | Tâches T1 à T9 ci-dessous, données synthétiques | Démonstration de bout en bout ; exactitude mesurée ; refus serveur testés | 🟦 |
-| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets par poste | Tests négatifs verts ; porte avant tout utilisateur non administrateur | ⬜ |
-| J3 — Pilote réel | RH/paie puis direction ; fournisseurs payants sans entraînement ; retours 👍/👎 vers le jeu de référence ; suivi coûts/latence | Accord CNDP consigné ; seuils validés et atteints | ⬜ |
+| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets et quotas, jeu adversarial, vérificateur étendu, garde technique de classe de données (tâches ci-dessous) | Tests négatifs et adversariaux verts ; porte avant tout utilisateur non administrateur | ⬜ |
+| J3 — Pilote réel | Modèle local open source (ou fournisseur admis pour la classe, par ADR) ; conversations multi-tours ; observabilité et objectifs de service ; conformité et transparence ; retours 👍/👎 revus avant le jeu de référence ; RH/paie puis direction (tâches ci-dessous) | Porte de mise en service franchie ; seuils validés et atteints sur le pilote | ⬜ |
 | J4 — Expérience immersive | Espace IA, catalogue A2UI Staport, mascotte Rive complète | Parcours réel vérifié au navigateur, accessibilité et mouvement réduit | ⬜ |
 | J5 — Contrôle de la paie | Règles d'anomalies dans l'assistant d'import, puis détection statistique ; l'agent explique, l'humain décide | Anomalies connues retrouvées sur imports historiques | ⬜ |
 | J6 — Documents RH | Attestations, certificats, contrats de chantier ; première écriture (diff, approbation, idempotence, checkpoints durables) | Pas de double effet après crash ; approbation expirée refusée | ⬜ |
@@ -154,6 +164,53 @@ pris en charge ; chaque surface a un repli texte.
 | T8 — Assistant Angular | Intégration AG-UI LangGraph officielle côté service ; assistant immersif en streaming (barre de commande, discussion, étapes repliables), ouverture automatique de la vue filtrée, valeurs citées surlignées | Parcours vérifié au navigateur | ✅ |
 | T9 — Démonstration J1 | Navigateur → agent → MCP → Spring sur base synthétique ; vérification complète et PR vers `main` | Démonstration présentée au propriétaire | 🟦 |
 
+### Tâches de J2
+
+Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T2.1).
+
+| Tâche | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| T2.1 — Modèle de périmètres | Étude de l'existant (fiches de poste, rôles, permissions, filtres des écrans), puis modèle département → fiche de poste → périmètre présenté au propriétaire | Modèle validé par le propriétaire | ⬜ |
+| T2.2 — Périmètres appliqués | Filtre de périmètre dans les requêtes des domaines, même règle pour REST et MCP | Tests négatifs par domaine : aucune donnée hors périmètre, ni en liste, ni en agrégat, ni en fiche | ⬜ |
+| T2.3 — Projection du salaire | Politique de domaine partagée : sans `PAIE_READ`, ni salaire, ni tri, ni agrégat salarial | Tests REST et MCP identiques | ⬜ |
+| T2.4 — Catalogue filtré | Seuls les outils permis par les droits sont proposés au modèle (confort, pas sécurité) | Le serveur refuse toujours un outil interdit appelé directement | ⬜ |
+| T2.5 — Budgets et quotas | Quotas par utilisateur et par jour ; budget par poste ; plafonds par run complétés par les tokens totaux et la durée totale | Dépassement refusé avec un message clair ; tests | ⬜ |
+| T2.6 — Jeu adversarial | Injections directes et indirectes (champs de données piégés), contournement de périmètre, exfiltration par lien ou image, demandes interdites ; résultats d'outils délimités comme données dans les prompts | Chaque cas a une issue déterministe attendue, rejouée à chaque changement | ⬜ |
+| T2.7 — Vérificateur étendu | Identifiants, noms et dates cités vérifiés comme les chiffres ; période, périmètre et définition affichés | Cas d'invention d'identifiant refusés ; jeu de référence vert | ⬜ |
+| T2.8 — Garde de classe de données | Chaque environnement déclare sa classe maximale ; le service refuse de démarrer si un fournisseur configuré n'est pas admis ; contenu des messages non conservé par LiteLLM, réglé explicitement | Test du refus ; configuration vérifiée | ⬜ |
+| T2.9 — Contrat de vue généré | ViewSpec : schéma JSON généré depuis Pydantic, types Angular et contrôle Spring dérivés du même schéma | Une divergence fait échouer la CI | ⬜ |
+
+### Tâches de J3
+
+| Tâche | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| T3.1 — Modèle local | Comparaison de modèles open source (familles, tailles, quantifications) sur le jeu de référence ; licence et provenance ; serveur d'inférence sans accès sortant derrière LiteLLM ; dimensionnement du matériel | Seuils atteints ; achat ou location décidés par le propriétaire | ⬜ |
+| T3.2 — Conversations multi-tours | Historique côté serveur lié à l'utilisateur, identifiant créé par le serveur, fenêtre bornée, rétention et suppression ; questions de suivi et demandes de précision ; liste et suppression des conversations dans l'interface | Cas multi-tours du jeu de référence verts ; isolation et suppression testées | ⬜ |
+| T3.3 — Contexte d'écran | La vue courante (module, filtres) accompagne la question comme indice non fiable, revérifié par Spring | « Ce chantier » résolu ; identifiant hors périmètre refusé | ⬜ |
+| T3.4 — Observabilité | Traces OpenTelemetry (`gen_ai.*`) du navigateur aux outils, outil open source auto-hébergé, contenu masqué, tableaux et alertes ; versions de prompt, graphe, catalogue et modèle dans chaque trace | Une question se suit de bout en bout ; aucune donnée personnelle en clair | ⬜ |
+| T3.5 — Objectifs de service | Mesures sur le banc puis proposition d'objectifs (disponibilité, réponses vérifiées, abstention, latence du premier signe et de la réponse, coût par question) ; tests de charge avec modèle simulé et de panne | Objectifs validés par le propriétaire et tenus sur le banc | ⬜ |
+| T3.6 — Conformité | Fiche du système, inscription au registre des cas d'usage, analyse d'impact et formalités CNDP (dont transferts), durées de conservation de chaque stockage, notice aux utilisateurs | Références consignées au § 2 ; notice visible dans l'assistant | ⬜ |
+| T3.7 — Exploitation | Procédure d'incident IA, coupure par outil, procédure de changement de modèle (jeu de référence, comparaison, retour arrière), prompts versionnés | Procédure rejouée à blanc | ⬜ |
+| T3.8 — Retours et évaluation continue | Retours utile / faux / incomplet avec motif ; revue humaine avant entrée dans le jeu ; évaluation hors ligne en CI avec réponses enregistrées ; relecture périodique d'un échantillon masqué | Le jeu grandit sans écriture directe des utilisateurs ; la CI détecte une régression du graphe sans appel réseau | ⬜ |
+| T3.9 — Langues | Cas en arabe et en darija écrits dans le jeu de référence ; réponse dans la langue de la question | Seuils atteints par langue retenue | ⬜ |
+| T3.10 — Pilote | Groupe pilote RH/paie formé, puis direction ; accès par `IA_UTILISER` | Retours du pilote revus ; décision de généralisation | ⬜ |
+
+**Porte de mise en service** (avant toute donnée réelle) : J2 terminé ; classe de données appliquée
+techniquement ; fournisseur ou modèle admis pour cette classe ; formalités CNDP consignées ;
+observabilité et alertes actives ; objectifs de service validés ; procédure d'incident prête ; notice
+aux utilisateurs visible.
+
+### Décisions à prendre
+
+| Sujet | Options | Recommandation |
+|---|---|---|
+| Stockage des conversations (T3.2) | Checkpointer LangGraph PostgreSQL dans une base IA dédiée ; ou table dédiée de conversations | Checkpointer PostgreSQL dans une base IA dédiée, tables créées par migration contrôlée : il sert aussi aux reprises de J6 |
+| Durées de conservation (T3.6) | Conversations, traces, journaux LiteLLM (30 jours aujourd'hui) | Proposées après la mesure du pilote, avec l'analyse d'impact |
+| Outil d'observabilité (T3.4) | Langfuse (riche, mais plusieurs conteneurs : PostgreSQL, ClickHouse, Redis, stockage objet) ; Arize Phoenix (un conteneur et PostgreSQL) | Instrumenter en OpenTelemetry d'abord, puis choisir sur l'empreinte mesurée sur le serveur |
+| Modèle local (T3.1) | Matériel acheté, loué ou mutualisé | Décision du propriétaire sur le dimensionnement mesuré |
+| Pseudonymisation (T3.1) | Remplacer CIN et noms par des jetons avant un modèle externe, les rétablir dans la réponse | Oui tant qu'un modèle hors de l'entreprise reçoit des données réelles ; inutile avec le seul modèle local |
+| Langues (T3.9) | Français seul ; français, arabe et darija écrits | Mesurer la demande au pilote ; arabe écrit en priorité si les utilisateurs l'emploient |
+
 ### Journal
 
 | Date | Fait |
@@ -171,6 +228,8 @@ pris en charge ; chaque surface a un repli texte.
 | 2026-10-25 | T8, côté service : le flux AG-UI passe par l'intégration officielle `ag-ui-langgraph` 0.0.47 ([ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)). Le graphe porte la conversation en messages LangChain (seule clé de sortie), signale outils, mascotte et réponse par événements personnalisés et émet le texte vérifié depuis le nouveau nœud `conclure`. Frontière de sécurité dans `agui.py` : ni `RAW` ni `rawEvent` (ils exposaient consignes et données), `RUN_ERROR` générique, échos `manually_emit_*` retirés. Checkpointer en mémoire neuf par run, liste blanche msgpack. 49 tests verts ; flux réel avec `@ag-ui/client` 1.0.3 : 3/3. |
 | 2026-10-25 | **T8 terminée.** Assistant immersif dans Angular (`core/assistant`) : client officiel `@ag-ui/client` 1.0.3 (`zod` forcé en 4.6.7, faille GHSA-mrhx-c7xc-m3w5 du `zod` 3 écartée, flux réel validé), barre `Ctrl K`, discussion avec étapes et outils repliables, réponse vérifiée, **ouverture automatique de la vue** (liste blanche, gardes, « Revenir ») et valeurs citées surlignées. `/ia/agui` relayé par `proxy.conf.js` (dev) et nginx (réseau Compose `assistant-net`, frontend et service IA seulement ; limite 20 questions/min). Jetons `--assistant-*` dans les deux thèmes. 21 tests unitaires, 2 parcours e2e (flux AG-UI simulé, axe) ; vérifié au navigateur sur le banc `BancAssistantTest` (données fictives) : question sur un chantier, vue Paie · Analytique ouverte avec période et chantier, masse salariale surlignée, retour à l'écran précédent. |
 | 2026-10-25 | **T9, vérification de J1 avant la PR** : backend 475 tests verts (4 ignorés) avec le client MCP Python et seuil de couverture par domaine respecté ; service IA 49 tests, `ruff`, `pyright` ; images `erp-rh-ia` et `erp-rh-litellm` construites, `erp-rh-ia` démarrée (santé, `/agui` en 503 IA désactivée) ; frontend 863 tests unitaires et build de production dans les budgets (assistant chargé en différé : 703 ko initiaux) ; e2e 66 parcours (les échecs en parallèle repassent en série, instabilité connue du poste) ; flux réel `FluxAgUiIntegrationTest` 3/3 ; parcours navigateur sur le banc. Reste : présenter la démonstration au propriétaire. |
+| 2026-10-26 | J1 fusionné dans `main` (PR #90). Pile Compose sans profil, IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles` (PR #91). PR #92 (domaines) : contraste des badges de l'assistant corrigé. Pile du propriétaire : le backend refusait la clé MCP au format PKCS#1, convertie en PKCS#8 (même clé publique). |
+| 2026-10-26 | Revue du chantier face aux cadres de référence (§ 10) : conventions complétées (gouvernance et usages interdits, modèle de menaces OWASP, objectifs de service, cycle de vie des modèles, modèles auto-hébergés, évaluation à trois niveaux, expérience de confiance, injection par champs de données) ; tâches de J2 et J3 détaillées ; J3 aligné sur la décision « aucun service payant » ; décisions à prendre listées. |
 
 ## 8. État technique
 
@@ -179,7 +238,7 @@ pris en charge ; chaque surface a un repli texte.
 | Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
 | LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, démarrés par défaut avec la pile (clés virtuelles enregistrées par `litellm-cles`). Fournisseurs actifs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA NIM. Pool `complex` : Gemini 3.8 Flash, Mistral Medium, NVIDIA MiniMax M3.1 Flash, Nemotron 3 Ultra, Nemotron 3.5 Super VL, Cloudflare gpt-oss-120b. Candidats suivants (gratuits, renouvelables) : SambaNova (20 req/jour par modèle, sans carte), OVHcloud AI Endpoints anonyme (2 req/min), Cohere (1 000 appels/mois, évaluation), LLM7 (100 K tokens/jour). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (aucune inférence gratuite), DeepSeek (aucun palier gratuit), Alibaba Model Studio (quota unique de 90 jours), SiliconFlow international, Chutes, Kluster. Voir [`litellm/README.md`](../litellm/README.md). |
 | Service IA | Image `erp-rh-ia` (Python 3.13), santé, client LiteLLM, agent LangGraph avec ciblage par domaine, vérificateur de chiffres et évaluation (T6), point d'entrée AG-UI `POST /agui` (T7). Voir [`ia/README.md`](../ia/README.md). |
-| Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Aucun panneau Angular. Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
+| Code IA dans l'application | Route `/mcp` sans état (SDK Java 2.1.0) derrière `MCP_ENABLED`, chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 25 outils en lecture (ci-dessous). Assistant Angular (`core/assistant`, T8). Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 
 ### Catalogue MCP
@@ -227,3 +286,34 @@ importé. Exclus : toute écriture (jusqu'à J6), la liste des comptes utilisate
    réelle vers un modèle avant J3.
 4. Toute nouvelle décision s'inscrit au § 2. Aucun autre document IA n'est créé : celui-ci les
    remplace.
+5. Tenir le § 10 à jour : une pratique passe à « en place » seulement quand sa preuve existe.
+
+## 10. Pratiques de référence : état réel
+
+Revue du 2026-10-26 de l'existant face aux cadres retenus au § 2. « En place » signifie prouvé par un
+test ou une mesure ; la règle de chaque ligne est dans les conventions.
+
+| Pratique | État réel | Traitée par |
+|---|---|---|
+| Le modèle ne calcule pas ; chiffres et périodes vérifiés ; abstention | En place | T6 |
+| Identifiants, noms et dates vérifiés ; période, périmètre et définition affichés | Absent : seuls nombres et périodes sont vérifiés | T2.7 |
+| Permissions revérifiées à chaque appel d'outil ; jeton délégué court ; audit par outil | En place | T4, T5 |
+| Périmètre de données par fiche de poste | Absent : l'accès est réservé à `SYSTEM_ADMIN` | T2.1 à T2.3 |
+| Injection directe et indirecte (champs de données piégés), exfiltration | Non testées ; seuls les refus de droits le sont | T2.6 |
+| Texte du modèle rendu comme texte, aucun lien ni image actif | En place (interpolation Angular), sans test dédié | T2.6 |
+| Plafonds par run | Partiel : 3 tours, 6 appels, 2 rédactions, 12 000 caractères par résultat, 1 500 tokens par réponse, 120 s par appel ; durée totale et tokens totaux non plafonnés (nginx coupe à 300 s) | T2.5 |
+| Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé ERP-RH | T2.5 |
+| Classe de données appliquée techniquement | Absent : règle écrite seulement (données synthétiques, offres gratuites) | T2.8 |
+| Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
+| Contrat de vue unique entre Spring, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
+| Conversations multi-tours, isolation, suppression | Absent : chaque question est traitée seule, l'historique ne vit que dans le navigateur | T3.2 |
+| Contexte d'écran | Absent | T3.3 |
+| Traces OpenTelemetry, outil d'observation, alertes | Absent : journaux JSON et corrélation seulement | T3.4 |
+| Objectifs de service, tests de charge et de panne | Absent ; mesure connue : p50 9,7 s et p95 26,1 s sur offres gratuites | T3.5 |
+| Registre, fiche du système, analyse d'impact, notice, conservation | Absent ; accord CNDP obtenu (§ 2), sa référence et son périmètre restent à consigner | T3.6 |
+| Procédure d'incident, changement de modèle, prompts versionnés | Partiel : interrupteur global en place ; prompts dans le dépôt sans identifiant de version | T3.7 |
+| Évaluation hors ligne en CI, retours utilisateurs, relecture d'échantillons | Partiel : jeu de 24 cas rejoué à la demande sur vrais modèles | T3.8 |
+| Langues arabe et darija | Absent | T3.9 |
+| Modèle local, licence et provenance des poids | Absent : offres gratuites externes, données synthétiques | T3.1 |
+| Confirmation humaine, idempotence, reprise durable | Sans objet tant que tout est en lecture | J6 |
+| SBOM et analyse de vulnérabilités du service IA | Absent pour le service IA (dépendances verrouillées par `uv.lock`) ; en place pour le backend et le frontend | T3.7 |

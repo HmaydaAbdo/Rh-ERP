@@ -132,6 +132,17 @@ arguments et résultats d'outils sont des données non fiables : valider les sor
 tentatives d'injection et empêcher qu'un contenu récupéré change les instructions ou permissions.
 Minimiser et masquer les données sensibles dans les réponses, traces et journaux.
 
+* **Champs libres.** Un champ saisi par une personne (observation, désignation, nom, commentaire)
+  peut contenir une consigne. Le résultat d'outil le transmet comme donnée, borné en taille ; le
+  service IA le place dans un bloc délimité de données, jamais dans les consignes. Le jeu adversarial
+  contient de tels champs piégés.
+* **Descriptions d'outils.** Le nom, la description et le schéma d'un outil sont lus par le modèle et
+  orientent son comportement : ils sont revus comme du code, versionnés avec le catalogue, et un
+  changement relance les évaluations. Un client n'accepte pas un catalogue modifié à la volée par un
+  serveur tiers sans revue (empoisonnement d'outil).
+* **Coupure et quotas par outil.** Un outil peut être retiré du catalogue publié par configuration ;
+  un outil coûteux ou sensible a sa propre limite d'appels par utilisateur et par période.
+
 Tracer l'outil et son résultat selon le risque, avec durée et corrélation ; ne pas recopier de
 secrets ou de contenu sensible dans la télémétrie. Le protocole d'échange avec l'interface est un
 choix d'implémentation documenté par l'application ; l'interface n'exécute jamais du contenu fourni

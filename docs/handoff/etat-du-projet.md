@@ -10,9 +10,12 @@ les lectures autorisées des rôles, les reprises après erreur, les sources ana
 individuels sont alignés sur leurs contrats documentés. Les README et skills de chaque domaine
 décrivent les règles courantes; le PV global garde les accords métier à recueillir avant diffusion.
 
-**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la branche `claude/compose-tout-par-defaut`,
+**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
 IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.
+Revue face aux cadres de référence (NIST AI RMF, ISO/IEC 42001, OWASP LLM et agents, loi 09-08) : conventions
+IA complétées, tâches de J2 et J3 détaillées, écarts suivis au § 10 de [ia.md](../ia.md), décisions à prendre
+listées au § 7.
 Tâches T1 à T8 de J1 faites : passerelle
 LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
 `MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
