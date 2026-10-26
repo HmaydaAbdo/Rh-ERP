@@ -43,6 +43,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 
 from erp_rh_ia.contexte import ContexteErp
+from erp_rh_ia.surfaces import PresentationResultats, avec_surfaces, resultat_sans_surface
 from erp_rh_ia.verification import valeurs_surface, verifier
 
 SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc. Tu réponds en français.
@@ -68,8 +69,11 @@ Règles impératives :
 7. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
    emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
-8. Quand une réponse chiffrée se lit mieux en tableau, en liste ou en indicateurs, appelle `generate_a2ui` après avoir
-   obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des valeurs des outils.
+8. Une liste rendue par un outil (quatre lignes ou plus) s'affiche d'elle-même à l'écran en tableau, avec une courbe
+   pour une suite de mois : ne la recopie pas. Réponds en deux ou trois phrases qui citent les valeurs remarquables
+   telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, appelle
+   `generate_a2ui` après avoir obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des
+   valeurs des outils.
 9. Les montants sont en dirhams (MAD)."""
 
 ABSTENTION = (
@@ -90,8 +94,8 @@ CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
 - Chaque valeur affichée (montant, effectif, nombre, période) est reprise telle quelle d'un résultat d'outil de la
   conversation, avec son unité : MAD pour les montants. Ne calcule rien : ni total, ni moyenne, ni écart, ni
   pourcentage. Une valeur absente des outils n'apparaît pas.
-- Utilise uniquement les composants du catalogue fourni (Text, Row, Column, List, Card, Divider…) ; un tableau se
-  compose avec des Row et des Column, des titres avec Text et sa variante.
+- Utilise uniquement les composants du catalogue fourni : KpiGrid pour des indicateurs, Chart pour un graphique,
+  DataTable pour un tableau (lignes données en littéral dans « rows »), Text, Row, Column et Card pour la mise en page.
 - Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
 
 Verification = Literal["en_cours", "verifiee", "abstention"]
@@ -99,27 +103,33 @@ Verification = Literal["en_cours", "verifiee", "abstention"]
 
 def _parametres_a2ui() -> dict[str, Any]:
     """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
-    copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) pour valider chaque surface et la faire
-    reprendre par le sous-agent tant qu'elle n'est pas conforme, et les consignes de l'ERP."""
-    fichier = resources.files("erp_rh_ia").joinpath("catalogue_a2ui_base.json")
-    catalogue = json.loads(fichier.read_text(encoding="utf-8"))
+    copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) complété des composants de l'ERP
+    (``catalogue_a2ui_erp.json``) pour valider chaque surface et la faire reprendre par le sous-agent tant qu'elle n'est
+    pas conforme, et les consignes de l'ERP."""
+    paquet = resources.files("erp_rh_ia")
+    catalogue = json.loads(paquet.joinpath("catalogue_a2ui_base.json").read_text(encoding="utf-8"))
+    erp = json.loads(paquet.joinpath("catalogue_a2ui_erp.json").read_text(encoding="utf-8"))
+    composants = {**catalogue["components"], **erp["components"]}
     return {
-        "catalog": {"components": catalogue["components"]},
+        "catalog": {"components": composants},
         "guidelines": {
             "design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}",
-            "composition_guide": _guide_composition(catalogue["components"]),
+            "composition_guide": _guide_composition(composants),
         },
     }
 
 
 #: Composants de présentation proposés au sous-agent : les surfaces de l'ERP sont en lecture seule.
-_COMPOSANTS_SURFACE = ("Text", "Row", "Column", "List", "Card", "Divider", "Icon", "Tabs")
+_COMPOSANTS_SURFACE = (
+    *("KpiGrid", "Chart", "DataTable"),
+    *("Text", "Row", "Column", "List", "Card", "Divider", "Icon", "Tabs"),
+)
 
 
 def _guide_composition(composants: dict[str, Any]) -> str:
     """Le guide de composition du sous-agent, lu dans le catalogue : chaque composant de présentation, ses propriétés
     (requises marquées) et leurs valeurs admises ; quelques centaines de jetons au lieu du schéma complet."""
-    lignes = ["## Composants disponibles (catalogue de base A2UI v0.9)"]
+    lignes = ["## Composants disponibles (catalogue de base A2UI v0.9 et composants de l'ERP)"]
     for nom in _COMPOSANTS_SURFACE:
         schema: dict[str, Any] = composants[nom]
         proprietes: dict[str, Any] = {}
@@ -132,9 +142,14 @@ def _guide_composition(composants: dict[str, Any]) -> str:
             if cle == "component":
                 continue
             valeurs = cast(list[str], definition.get("enum", [])) if isinstance(definition, dict) else []
+            articles = cast(dict[str, Any], definition.get("items", {})) if isinstance(definition, dict) else {}
+            elements = cast(dict[str, Any], articles.get("properties", {}))
             libelle = f"{cle} (requis)" if cle in requises else cle
+            if elements:
+                libelle = f"{libelle} [{', '.join(elements)}]"
             details.append(f"{libelle} : {', '.join(valeurs)}" if valeurs else libelle)
-        lignes.append(f"- {nom} : {' ; '.join(details)}")
+        description = f" — {schema['description']}" if "description" in schema else ""
+        lignes.append(f"- {nom}{description} : {' ; '.join(details)}")
     return "\n".join(lignes)
 
 
@@ -203,8 +218,10 @@ def creer_agent(
     appels_outils: int = 8,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question."""
+    outils = avec_surfaces(outils)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
+        PresentationResultats(),
         ContexteErp(outils),
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
@@ -212,7 +229,7 @@ def creer_agent(
         VerificateurChiffres(),
     ]
     if selecteur is not None:
-        intergiciels.insert(1, LLMToolSelectorMiddleware(model=selecteur, max_tools=6, always_include=["write_todos"]))
+        intergiciels.insert(2, LLMToolSelectorMiddleware(model=selecteur, max_tools=6, always_include=["write_todos"]))
     return create_agent(
         model=modele,
         tools=list(outils),
@@ -238,7 +255,7 @@ def _tour(messages: Sequence[AnyMessage]) -> tuple[str, list[Any], str]:
         if message.name == OUTIL_A2UI:
             surface = surface or valeurs_surface(message.text)
             continue
-        sources.append(message.content)
+        sources.append(resultat_sans_surface(message.content))
         if message.artifact is not None:
             sources.append(message.artifact)
     return question, sources, surface
