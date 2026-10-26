@@ -22,7 +22,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   modèles au démarrage. Pool épuisé : échec explicite, jamais un modèle plus faible ; LiteLLM le
   signale par « Not allowed to access model due to tags configuration ».
 - Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash et NVIDIA
-  NIM (prototypage : admis jusqu'à J2, données synthétiques). Les modèles sont sondés (outils + JSON)
+  NIM (offre de prototypage). Les modèles sont sondés (outils + JSON)
   avant d'entrer dans un pool.
 - Pool d'évaluation (preview Groq, Step 5) : tags `eval…` seulement. La clé
   d'ERP-RH porte `metadata.tags: ["!eval"]` et ne peut jamais les atteindre.
@@ -31,7 +31,8 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   journaux de dépense (30 jours).
 - Réponses JSON validées contre le schéma demandé ; une réponse non conforme bascule sur un autre
   modèle. Cache désactivé.
-- Les clés actuelles sont des **paliers gratuits** : données publiques ou synthétiques uniquement.
+- Les clés actuelles sont des **paliers gratuits**, qui peuvent utiliser les requêtes pour entraîner
+  leurs modèles ; les données réelles y sont admises par décision du propriétaire (docs/ia.md, § 2).
 
 Pour une application, suivre les règles de [`conventions/agents-ia.md`](../conventions/agents-ia.md),
 section « Passerelle de modèles ».
