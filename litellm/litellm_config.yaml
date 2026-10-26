@@ -237,6 +237,71 @@ model_list:
       max_parallel_requests: 1
       tags: [simple, medium, ocr, default, "id:openrouter-gemma-4-31b-free"]
 
+  # ---------------------------------------------------------------- LLM7 (llm7.io, jeton gratuit par e-mail)
+  # Environ 120 requêtes/min avec le jeton. Seuls quelques modèles du catalogue sont gratuits (les autres répondent 402
+  # « Insufficient balance ») : sondés le 2026-10-26 avec outils, gpt-oss:20b et codestral-latest répondent en 0,5 à 4 s.
+  # nemotron-3-nano:30b et minimax-m2.7 ne sont pas retenus (outil non appelé à travers LiteLLM / 5 s).
+  - model_name: ai-gateway
+    model_info: { id: llm7-gpt-oss-20b }
+    litellm_params:
+      model: openai/gpt-oss:20b
+      api_base: https://api.llm7.io/v1
+      api_key: os.environ/LLM7_API_KEY
+      weight: 2
+      rpm: 60
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [simple, "id:llm7-gpt-oss-20b"]
+
+  - model_name: ai-gateway
+    model_info: { id: llm7-codestral }
+    litellm_params:
+      model: openai/codestral-latest
+      api_base: https://api.llm7.io/v1
+      api_key: os.environ/LLM7_API_KEY
+      weight: 2
+      rpm: 60
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [code, "id:llm7-codestral"]
+
+  # ---------------------------------------------------------------- Cohere (clé d'essai)
+  # Clé d'essai : 20 requêtes/min au total et 1 000 appels par mois, usage non commercial (docs.cohere.com/docs/rate-limits).
+  # Les trois modèles se partagent ce quota : rpm 8 + 8 + 4. Command A répond en 1 à 1,4 s en direct mais a mis 25 s à
+  # travers LiteLLM lors d'une sonde, et Command A+ n'a pas appelé l'outil : ils restent en évaluation (opt-in).
+  - model_name: ai-gateway
+    model_info: { id: cohere-command-r7b }
+    litellm_params:
+      model: cohere_chat/command-r7b-12-2024
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 4
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, "id:cohere-command-r7b"]
+
+  - model_name: ai-gateway
+    model_info: { id: cohere-command-a }
+    litellm_params:
+      model: cohere_chat/command-a-03-2025
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
+
+  - model_name: ai-gateway
+    model_info: { id: cohere-command-a-plus }
+    litellm_params:
+      model: cohere_chat/command-a-plus-05-2026
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a-plus"]
+
   # ================================================================ Pool d'évaluation (opt-in)
   # Jamais choisi par les seuls tags de capacité. Utiliser ["eval"], ["eval-<capacité>"],
   # ["<capacité>", "eval-<capacité>"] ou ["id:<déploiement>"].

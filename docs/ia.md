@@ -153,6 +153,38 @@ pris en charge ; chaque surface a un repli texte.
 | J8 — Autres départements et A2A | Catalogue MCP, périmètres et jeu de référence par module ; A2A entre applications | Mêmes portes que J1–J3 par module | ⬜ |
 | J9 — Terrain et voix | Mobile chef de chantier, voix FR/darija, mascotte parlante ; avec le domaine Pointage | Parcours mobile vérifié, transcription corrigible | ⬜ |
 
+### Vision courte et vision longue
+
+Proposition du 2026-10-26, à amender par le propriétaire. La vision courte mène à la démonstration J1 ; la vision longue
+suit les jalons J2 à J9 ci-dessus et ne change aucune décision du § 2.
+
+**Vision courte (avant la démonstration J1)**
+
+| Ordre | Sujet | Pourquoi | Mesure de réussite |
+|---|---|---|---|
+| 1 | **Latence des réponses** : une réponse avec surface A2UI est passée de 6 min à 76 s (4 appels de modèle) en retirant le schéma A2UI de chaque appel et en limitant le raisonnement. Reste à tenir sous 30 s | Les offres gratuites répondent de 0,5 à 55 s par appel et l'agent en enchaîne 4 à 10 | p50 et p95 par type de question dans le jeu de référence (§ 4.4) ; routage par latence de LiteLLM validé avec `test_providers.py` avant adoption |
+| 2 | **T18 Observabilité** | Impossible d'optimiser la latence sans voir le temps de chaque appel de modèle et d'outil | Une question se suit du clic à la base, appels de modèle et d'outils chronométrés |
+| 3 | **T17 Passerelle native** | Garde-fous (injection de prompt, masquage), budgets et limites par utilisateur | Tests négatifs verts, budget par utilisateur appliqué |
+| 4 | **T19 Conversations durables** | Reprise de fil et mémoire ; les surfaces A2UI et les réponses survivent à un rechargement | Fil repris après redémarrage du service |
+| 5 | **Surface A2UI vérifiée avant affichage** | Aujourd'hui la surface se peint pendant le flux, avant la vérification des chiffres | La surface n'apparaît qu'une fois `verification = verifiee` ; abstention sans surface |
+| 6 | **Pool de modèles** | LLM7 (`gpt-oss:20b`, `codestral-latest`) et Cohere (essai, en évaluation) ajoutés le 2026-10-26 ; SambaNova n'est plus gratuit. Aucun modèle local possible avec le matériel disponible | Un modèle rapide et fiable en outils pour le tag `complex`, validé par le jeu de référence |
+| 7 | **Clôture des modules Équipe, Fonction, Chantier** | README et skills détaillés par couche ; points à valider listés dans chaque README | Réponses du propriétaire consignées, points classés |
+| 8 | **T20 Démonstration J1** | Images reconstruites, banc réel, flux réels | Démonstration présentée |
+
+**Vision longue**
+
+| Horizon | Sujet | Détail |
+|---|---|---|
+| J2 | **Périmètres par fiche de poste** | Aujourd'hui toute permission donne accès à toutes les données du domaine ; le périmètre (chantiers, équipes, département) est appliqué dans Spring pour REST et MCP |
+| J3 | **Pilote réel et modèle hébergé ou local** | Matériel limité : modèles ouverts servis par un fournisseur hébergé ; un abonnement payant minimal sera à arbitrer si les offres gratuites ne tiennent pas la charge ; accord CNDP déjà obtenu |
+| J4 | **Espace IA immersif** | Plein écran, surfaces A2UI avec composants métier Staport (`createAngularCatalog`) : indicateurs, graphiques, tableaux ; mascotte Rive seulement si le propriétaire la confirme (la mascotte maison est retirée) |
+| J5 à J7 | **Agents de domaine** | Passage à Deep Agents (`create_deep_agent`) quand le jeu de référence le justifie : contrôle de la paie, documents RH, assistant réglementaire. **Skills pour l'agent**, distincts des skills de développement : `ia/skills/<domaine>/SKILL.md` courts, dans la voix de l'agent, reprenant les définitions des README (une seule source) et chargés à la demande |
+| J6 | **Premières écritures** | Diff, approbation humaine, idempotence, checkpoints durables ; jamais d'écriture sans confirmation |
+| J7 | **Assistant réglementaire** | Corpus versionné (Code du travail, CNSS/AMO, barème IR), plein texte puis hybride pgvector, citations vérifiées |
+| J8 | **Autres départements et A2A** | Mêmes portes que J1 à J3 par module ; SSO par Spring Authorization Server comme fournisseur d'identité si l'entreprise l'exige |
+| J9 | **Terrain et voix** | Mobile chef de chantier, voix FR et darija |
+| Transverse | **Qualité de la documentation** | Contrôle doc ↔ code en CI (`scripts/check-docs-domaines.mjs`) : chaque permission et chaque outil MCP figure dans la documentation de son domaine |
+
 ### Tâches de J1
 
 | Tâche | Contenu | Critère de sortie | État |
@@ -255,6 +287,7 @@ aux utilisateurs visible.
 | 2026-10-26 | **T16 construite.** Décisions du propriétaire : runtime CopilotKit officiel en Node (service `copilot-runtime`, image `erp-rh-copilot-runtime`, réseaux `assistant-net`/`runtime-net`, relais nginx `/ia/copilotkit/`) pour le middleware A2UI que CopilotKit place côté serveur (`@ag-ui/a2ui-middleware` importe `crypto` de Node, impossible dans le navigateur) ; ouverture automatique des vues retirée (A2UI suffit) ; composants CopilotKit d'origine à la place des rendus maison (raisonnement, plan, outils). Règles « frameworks d'abord » et « un seul `compose pull` + `up` » inscrites dans `AGENTS.md`. Le vérificateur contrôle les chiffres de la dernière surface ; elle n'est jamais une source. Vérifié : Python 47 tests, Angular 903, e2e 3 (surface A2UI simulée rendue par le rendu officiel, axe), image du runtime construite, `/info` du runtime local (A2UI actif, télémétrie coupée). Reste : voir au navigateur la surface produite par un vrai modèle. |
 | 2026-10-26 | **T16 terminée.** Échec « Couldn't generate the UI » constaté par le propriétaire : le sous-agent composait des composants absents du catalogue de base (`Title`, `Metric`, `Table`) et le service IA ne validait rien. Correction par les paramètres officiels de `CopilotKitMiddleware` (`a2ui_params`) : catalogue de base A2UI v0.9 de la spécification (fichier de `@a2ui/web_core` 0.10.4, `catalogue_a2ui_base.json`) pour valider chaque surface et la faire reprendre par le sous-agent, consignes de l'ERP (français, valeurs reprises des outils sans calcul, MAD). Vérifié avec un vrai modèle : par le runtime, surface de `Column`/`Row`/`Text`/`Divider`, réponse `verifiee` ; au navigateur, tableau Période · Masse salariale · Effectif affiché dans la discussion. Interface : panneau flottant au-dessus de l'écran (mode `overlay` de CopilotKit, voile neutralisé, la vue garde sa place), en-tête de marque (emplacement `headerComponent`), finitions de la saisie, des puces et des bulles, consultations d'outils non affichées en brut. Connu : avec les offres gratuites, une réponse avec surface prend plusieurs minutes ; le libellé du raisonnement reste en anglais (composant d'origine). |
 | 2026-10-26 | **Latence des surfaces A2UI.** Constat du propriétaire : environ 6 minutes pour un tableau. Mesure dans les journaux LiteLLM : une dizaine d'appels de modèle en série, de 2 à 55 s chacun sur les offres gratuites NVIDIA, 10 000 à 20 000 jetons en entrée, dont environ 7 000 de schéma A2UI envoyés à chaque appel. Corrections par options officielles : `a2ui.includeSchema: false` (le schéma ne part plus à chaque question ; le sous-agent reçoit un guide de composition compact lu dans le catalogue, via `a2ui_params`) et `reasoning_effort: low` pour le modèle principal. Même question, vrai modèle, par le runtime : **76 s**, 4 appels de modèle, surface valide, réponse vérifiée. Piste non retenue sans validation : routage par latence de LiteLLM (`latency-based-routing`), à tester avec `test_providers.py` avant tout changement de la passerelle. |
+| 2026-10-26 | **Documentation par couches et pool de modèles.** README et skills des huit domaines décrivent les couches Application, Analytique et IA (Équipe, Fonction et Chantier en détail, avec points à valider ; Employé et Paie avec leurs outils MCP ; Audit, Paramètres et Auth pour leurs outils d'administration) ; `scripts/check-docs-domaines.mjs`, lancé par la CI du backend, vérifie que chaque permission de contrôleur et chaque outil MCP figure dans la documentation de son domaine. Fournisseurs : sondes directes avec les clés du propriétaire : LLM7 ne rend gratuits que `gpt-oss:20b` et `codestral-latest` (les autres répondent 402), Cohere répond en 1 à 1,4 s mais sa clé d'essai est limitée à 20 requêtes/min, 1 000 appels/mois et à un usage non commercial ; à travers LiteLLM, Command A a mis 25 s et Command A+ n'a pas appelé l'outil. Entrées en pool : `llm7-gpt-oss-20b` (simple), `llm7-codestral` (code), `cohere-command-r7b` (simple) ; en évaluation seulement : `cohere-command-a`, `cohere-command-a-plus`. SambaNova n'est plus gratuit : écarté. Le routage par latence de LiteLLM reste à valider. Section « Vision courte et vision longue » ajoutée au § 7. |
 
 ## 8. État technique
 

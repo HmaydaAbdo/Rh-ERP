@@ -99,3 +99,14 @@ sans effacer les saisies des autres paramètres. Le champ reçoit le focus quand
 
 Les durées et seuils sont ceux du catalogue présenté ci-dessus. Leur adaptation métier se fait par
 l'écran ; ajouter une nouvelle clé demande sa définition, sa valeur initiale et ses usages documentés.
+
+## Couche IA
+
+L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de lecture (Spring AI), réservé à ceux qui voient l'écran Paramètres ; il ne les modifie jamais.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `parametres_lire` | Clé, libellé, description, valeur, unité et bornes de chaque paramètre (durées de session, planification de la synchronisation des chantiers, etc.) | `PARAMETRE_READ` | `MCP_PARAMETRES_LIRE` |
+
+- **Usage.** « Quelle est la durée de session ? », « À quelle heure se synchronisent les chantiers ? ».
+- **Limites.** Lecture seule : changer un paramètre reste une action de l'écran Paramètres, auditée comme aujourd'hui.

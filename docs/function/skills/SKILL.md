@@ -21,6 +21,18 @@ La collection utilise la coque, le Tabulaire, les Cartes et l'Analytique partag�
 `Fonction → Chantier → Équipe`, utilise uniquement la Paie dans les deux vues de synthèse, fixe la période au dernier mois enregistré et trie les cartes par masse puis effectif.
 Dans Cartes, le mois, le résumé du périmètre et son export PDF sont réunis dans l'en-tête du niveau.
 
+## Couches et points de contrôle
+
+Le détail de chaque couche est dans le [README Fonction](../README.md#les-couches-du-domaine). Avant de modifier le domaine,
+repérer la couche touchée et vérifier ses points de contrôle.
+
+| Couche | Ce qu'elle contient | À vérifier quand on la modifie |
+|---|---|---|
+| **Application** | `FunctionController`, `FunctionImportController`, `FunctionService` / `IFunctionService`, `FunctionSpecification`, import atomique à une colonne, audit (`FONCTION_*`, `PerimetreImportFunction`), migrations `V23`, `V27`, `V31` ; côté Angular `portail/function/` | Unicité du libellé sans casse (service **et** base) ; suppression refusée si un employé ou un bulletin la référence ; création implicite par l'import Paie avec les mêmes règles ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture |
+| **Analytique** | `function-module.ts` (dimension `FONCTION`, parcours Fonction → Chantier → Équipe, source `PAIE`, tri masse puis effectif), `POST /paie/analytique` (`parFonction`, `evolution`, `qualite`) | Fonction lue sur le **bulletin** du mois, pas sur la fiche Employé ; dernier mois de paie fixe ; mois sans bulletin = zéros et message ; comparaison indisponible plutôt que zéro ; sans `PAIE_READ` aucun appel |
+| **IA** | Outils MCP `fonction_rechercher`, `fonction_fiche`, `paie_repartition` (`FONCTION`), filtres `fonctionIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/functions` | Lecture seule ; permission `FUNCTION_READ` / `PAIE_READ` par outil ; description d'outil à jour ; chaque nombre vérifié contre les outils ; salaire réservé à `PAIE_READ` ; pas de périmètre par fiche de poste avant J2 |
+
+
 ## Garde-fous
 
 - Le README métier et les migrations Flyway sont les sources des règles et du schéma : ne pas

@@ -20,6 +20,18 @@ Cartes descend Chantier → Équipe → Fonction. Cartes et Analytique prennent 
 du dernier mois de paie enregistré pour les indicateurs. L'Analytique répartit les quatre indicateurs
 par chantier et suit leur évolution mensuelle pour un chantier, avec filtres Fonction et Équipe.
 
+## Couches et points de contrôle
+
+Le détail de chaque couche est dans le [README Chantier](../README.md#les-couches-du-domaine). Avant de modifier le domaine,
+repérer la couche touchée et vérifier ses points de contrôle.
+
+| Couche | Ce qu'elle contient | À vérifier quand on la modifie |
+|---|---|---|
+| **Application** | `ChantierController`, `ChantierSyncController`, `ChantierService` / `IChantierService`, `ChantierSpecification`, synchronisation ERP (`sync/` : client, service, une transaction par ligne, planificateur de 23 h, métriques `rh.chantier.sync.*`), audit (`CHANTIER_*`, `PerimetreSynchronisationChantier`), migrations `V5`, `V24`, `V27`, `V28`, `V31`, `V35` ; côté Angular `portail/chantier/` (liste, formulaire, détail, actions, filtres, assistant d'import Paie « Rouvrir le chantier ») | Unicité du code sans casse ; statut `actif` modifié seulement à la main (jamais par la synchronisation) ; suppression refusée si référencé ; synchronisation qui n'**ajoute** que les chantiers manquants ; `CHANTIER_SYNC` pour le déclenchement manuel ; version optimiste ; entrée d'audit pour chaque écriture et chaque synchronisation |
+| **Analytique** | `chantier-module.ts` (dimension `CHANTIER`, parcours Chantier → Équipe → Fonction, source `PAIE`, tri masse puis effectif, pastille de statut), `POST /paie/analytique` (`parChantier`, `evolution`, `qualite`), carte géographique `/carte` (`CARTE_READ`, fond seul pour l'instant) | Chantier lu sur le **bulletin** du mois ; dernier mois de paie fixe ; un chantier clôturé garde sa carte ; état « Clôturé » pris sur la fiche, pas déduit de la paie ; comparaison indisponible plutôt que zéro ; sans `PAIE_READ` aucun appel |
+| **IA** | Outils MCP `chantier_rechercher` (filtre de statut), `chantier_fiche`, `paie_repartition` (`CHANTIER`), `paie_indicateurs` (`principauxChantiers`), filtres `chantierIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/chantiers` | Lecture seule (jamais de synchronisation ni de clôture par l'assistant) ; permission `CHANTIER_READ` / `PAIE_READ` par outil ; description d'outil à jour ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
+
+
 ## Garde-fous
 
 - Respecter la règle documentée de synchronisation : ajouter les chantiers manquants sans écraser

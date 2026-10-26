@@ -363,3 +363,16 @@ Tous sur une vraie base PostgreSQL (`AuditIntegrationTestBase`) sauf l'architect
 Les specs du journal et de l'historique couvrent aussi la remise à zéro du paginateur, les réponses tardives,
 les erreurs de lecture et le réessai de la page en échec. Les événements de sécurité ne déclenchent pas une
 lecture inutile de différences Envers.
+
+## Couche IA
+
+L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture (Spring AI), en plus de `IA_UTILISER` ; il n'écrit rien dans le journal et ne peut ni le purger ni le corriger. Chaque lecture de l'assistant est elle-même auditée (catégorie `ACCES`, action `MCP_*`).
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `audit_rechercher` | Cherche dans le journal, des entrées les plus récentes aux plus anciennes : horodatage, catégorie, action, résultat, utilisateur, entité, nombre d'éléments, motif ; tous les filtres facultatifs et combinables (20 entrées au plus, avec le total) | `AUDIT_READ` | `MCP_AUDIT_RECHERCHER` |
+| `audit_historique` | Versions d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle, paramètre) avec auteur, opération et champs modifiés (avant/après) ; 10 versions au plus | `AUDIT_READ` | `MCP_AUDIT_HISTORIQUE` |
+
+- **Usage.** « Qui a fait quoi », « quels accès refusés cette semaine », « qui a modifié X et quand ». Sur `/audit`, l'assistant propose « Accès refusés ».
+- **Refus.** Un refus de permission d'un outil est journalisé comme tout accès refusé (`ACCES_REFUSE`, périmètre de la route `/mcp`).
+- **Limites.** Aucun outil d'écriture ; la chaîne de hachage du journal n'est pas exposée ; pas de périmètre par fiche de poste avant le jalon J2 de [ia.md](../ia.md).

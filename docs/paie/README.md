@@ -45,6 +45,101 @@ paie/
 
 ---
 
+## Les couches du domaine
+
+Paie est la **source de vérité des chiffres** : tout effectif payé, toute masse salariale et tout solde de tout compte
+(STC) viennent de ses bulletins. Chaque couche est décrite ici pour pouvoir être relue et commentée séparément ; les
+règles détaillées suivent dans les sections suivantes.
+
+| Couche | Rôle pour Paie | Où lire |
+|---|---|---|
+| **Application** | Saisir, importer (assistant), corriger, supprimer, restaurer, exporter les bulletins ; produire l'export Excel et le rapport PDF | [Couche application](#couche-application) |
+| **Analytique** | Fournir à toutes les vues Cartes et Analytique les indicateurs du mois, l'évolution, les mouvements d'effectif et la qualité | [Couche analytique](#couche-analytique) |
+| **IA** | Laisser l'assistant lire les indicateurs, la répartition, l'évolution, les mouvements, la qualité et les bulletins, en lecture seule | [Couche IA](#couche-ia) |
+
+### Couche application
+
+| Fonction | Routes | Permission | Audit |
+|---|---|---|---|
+| Saisie d'un bulletin | `POST /paie`, `PUT /paie/{id}` | `PAIE_WRITE` **et** `EMPLOYEE_WRITE` (le choix d'équipe met aussi à jour la fiche) | `PAIE_CREATION`, `PAIE_MODIFICATION` |
+| Lecture, recherche, options | `GET /paie/{id}`, `POST /paie/search`, `/paie/options/chantiers`, `/paie/options/equipes`, `/paie/periodes`, `/paie/periodes/search`, `/paie/chantiers`, `/paie/chantiers/search`, `/paie/materiel` | `PAIE_READ` | — |
+| Suppression | `DELETE /paie/{id}` ; groupée `POST /paie/suppression` | `PAIE_DELETE` ; `PAIE_PURGE` | `PAIE_SUPPRESSION`, `PAIE_SUPPRESSION_GROUPE` |
+| Restauration | `POST /paie/restauration/{idEntreeAudit}` | `PAIE_RESTORE` | `PAIE_RESTAURATION_GROUPE` |
+| Assistant d'import | `POST /paie/import/analyse`, `/paie/import/corrections`, `/paie/import` ; `GET /paie/import/modele` | `PAIE_IMPORT` (+ `PAIE_READ` pour l'analyse, + `EMPLOYEE_WRITE` pour les corrections des fiches) | `PAIE_IMPORT`, `PAIE_IMPORT_CORRECTION` |
+| Export Excel | `POST /paie/export` | `PAIE_EXPORT` | `PAIE_EXPORT_EXCEL` |
+| Rapport PDF | `POST /paie/report/pdf` | `PAIE_EXPORT` | `PAIE_RAPPORT_PDF` |
+| Parcours d'un employé | `GET /paie/employes/{id}/parcours` | `PAIE_READ` | — |
+
+- **Un bulletin par employé et par mois** (`uk_paie_employee_periode`) ; il garde l'affectation de **son** mois (chantier,
+  équipe, fonction) : une mutation ultérieure ne réécrit pas l'historique.
+- **Import.** L'assistant analyse le fichier, signale les problèmes (chantiers clôturés avec « Rouvrir le chantier »,
+  fonctions inconnues créées, fiches à corriger, départs à confirmer), applique les corrections des fiches puis importe.
+  C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/README.md)).
+- **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
+  d'export, formulaire de bulletin, parcours d'un employé.
+
+### Couche analytique
+
+Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonction, Employé) lisent leurs chiffres ici.
+
+| Service | Route | Ce qu'il rend |
+|---|---|---|
+| Analytique du mois | `POST /paie/analytique` | `PaieAnalytiqueDto` : `kpis` (masse, effectif, coût moyen, nombre de chantiers, STC, montant STC), `moisPrecedent`, `parChantier`, `parEquipe`, `parFonction` (toutes les catégories, sans plafond), `tranches` de salaire total, `evolution` (tout l'historique du périmètre), `qualite` (`sansEquipe`, `sansObservation`) |
+| Tendances d'effectifs | `POST /paie/effectifs` | Par mois : effectif, `entrees`, `sorties`, `mutations` (`EffectifMoisDto`, ADR 0010) |
+| Mois disponibles | `GET /paie/periodes`, `POST /paie/periodes/search` | Mois avec bulletins, nombre de bulletins et de chantiers, masse, STC |
+
+**Définitions** (identiques dans l'interface, le rapport PDF et l'assistant ; ne jamais les recalculer ailleurs)
+
+| Indicateur | Définition |
+|---|---|
+| Effectif payé | Nombre de bulletins du mois (un par employé) |
+| Masse salariale | Somme des salaires totaux du mois, en DH |
+| Coût moyen | Masse ÷ effectif ; indisponible sans bulletin |
+| STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (`ObservationStc.estStcOuSortie`, règle du rapport) et leur montant |
+| Entrées | Payés ce mois-ci et absents de la paie du mois précédent |
+| Plus payés | Payés le mois précédent et absents ce mois-ci |
+| Variation nette | Effectif − effectif du mois précédent ; entrées − plus payés = variation |
+| Sorties | Départs enregistrés sur la fiche Employé dans le mois, pris dans le périmètre (payé ce mois-ci ou le mois d'avant) ; **différent** des « plus payés » |
+| Mutations | Changements de chantier d'un mois à l'autre |
+
+- **Mois de référence.** Les vues et l'assistant prennent par défaut le **dernier mois de paie importé**.
+- **Comparaison.** Elle porte sur le mois calendaire précédent ; sans bulletin ce mois-là elle est « indisponible », jamais zéro.
+- **Orphelins.** Les bulletins sans équipe sont comptés (`qualite.sansEquipe`) et filtrables par `equipeIds = 0`.
+
+### Couche IA
+
+L'assistant RH lit la paie par **huit outils MCP de lecture** (Spring AI), tous soumis à `PAIE_READ` (et `IA_UTILISER`) ;
+il n'écrit, n'importe, ne supprime et ne restaure rien, et n'exécute aucun SQL.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `paie_indicateurs` | Chiffres clés d'un mois (masse, effectif payé, coût moyen, chantiers, STC), le mois précédent et les 5 principaux chantiers | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
+| `paie_periodes` | Mois de paie importés (36 au plus) avec bulletins, chantiers, masse, STC ; sert à connaître le dernier mois | `PAIE_READ` | `MCP_PAIE_PERIODES` |
+| `paie_repartition` | Masse, effectif et STC par `CHANTIER`, `EQUIPE` ou `FONCTION` (50 groupes au plus, du plus gros au plus petit) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_evolution` | Série mensuelle (36 mois au plus) : masse, effectif, STC, montant STC | `PAIE_READ` | `MCP_PAIE_EVOLUTION` |
+| `paie_mouvements` | Par mois : effectif, variation, entrées, plus payés, sorties, mutations, avec le champ `definitions` à citer | `PAIE_READ` | `MCP_PAIE_MOUVEMENTS` |
+| `paie_qualite` | Bulletins sans équipe, sans observation, tranches de salaire total | `PAIE_READ` | `MCP_PAIE_QUALITE` |
+| `paie_bulletins_rechercher` | Bulletins d'un mois par nom, CIN ou périmètre (20 au plus, avec total) : jours, primes, salaire total, observation | `PAIE_READ` | `MCP_PAIE_BULLETINS_RECHERCHER` |
+| `rapport_preparer` | Prépare le rapport PDF : vérifie chantiers, effectif et masse puis propose d'ouvrir l'assistant d'export réglé ; **ne génère aucun fichier** | `PAIE_EXPORT` **et** `PAIE_READ` | `MCP_RAPPORT_PREPARER` |
+
+- **Filtres communs.** Mois (`aaaa-MM`, défaut : dernier mois importé), `chantierIds`, `equipeIds` (`0` = sans équipe),
+  `fonctionIds` ; 50 identifiants au plus par liste. L'agent résout d'abord un nom en identifiant avec
+  `chantier_rechercher`, `equipe_rechercher` ou `fonction_rechercher`.
+- **Choix de l'outil.** Un chiffre global : `paie_indicateurs` ; « quel chantier coûte le plus » :
+  `paie_repartition` ; une tendance : `paie_evolution` ; arrivées et départs : `paie_mouvements` (citer ses
+  `definitions` et donner `variation` à côté des entrées) ; la paie d'une personne : `paie_bulletins_rechercher`.
+- **Interface composée.** Pour un tableau ou une liste, l'agent peut composer une surface A2UI à partir de ces
+  résultats ; le vérificateur contrôle ses chiffres comme ceux du texte (voir [ia.md](../ia.md)).
+- **Exactitude.** Chaque nombre de la réponse doit venir d'un résultat d'outil du même tour ; sinon réécriture, puis
+  abstention. Le modèle ne calcule rien (ni somme, ni écart, ni pourcentage).
+- **Sur l'écran.** Sur `/paie`, l'assistant propose « Masse salariale », « Arrivées et départs » et « Chantier le plus
+  coûteux ».
+- **Limites actuelles.** Les montants et salaires sont visibles de tout détenteur de `PAIE_READ`, sans périmètre par fiche
+  de poste (jalon J2). Le rapport PDF et l'export Excel restent des actions de l'utilisateur.
+
+
+---
+
 ## Modèle de données
 
 Table `paie` :
