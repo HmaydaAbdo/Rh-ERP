@@ -173,8 +173,10 @@ ils ne peuvent pas modifier les permissions, les instructions de sécurité ou l
 Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. ERP-RH conserve son
 monolithe modulaire Spring Boot, ses services, transactions, API REST, permissions et audits. Le
 backend expose seulement des capacités métier ciblées par des adaptateurs MCP ; il n'héberge pas
-les appels de modèles ni les graphes d'agents. Ne pas introduire Spring AI, LangChain4j ou
-LangGraph4j dans ERP-RH pour cette intégration.
+les appels de modèles ni les graphes d'agents. Dans ERP-RH (décision du 2026-10-26), le serveur MCP
+du backend utilise le module serveur MCP de **Spring AI** (outils déclarés par annotations) et le
+jeton agent est émis par **Spring Authorization Server** (échange de jetons OAuth2, RFC 8693) ; aucun
+client de modèle, ni LangChain4j, ni LangGraph4j n'entre dans le monolithe.
 
 L'orientation ERP-RH est un **service IA Python** distinct, avec **LangGraph** pour les workflows à
 état explicite et un point d'entrée **AG-UI** pour l'interface. Python est retenu parce que
@@ -235,8 +237,14 @@ propriétaire avant d'écrire quoi que ce soit.
 | Masquage d'identifiants | `PIIMiddleware` |
 | Mémoire compactée | `SummarizationMiddleware` ; persistance par un checkpointer LangGraph |
 | Confirmation humaine | `HumanInTheLoopMiddleware` et les interruptions LangGraph |
-| Modèles via la passerelle | Modèle de chat LangChain compatible OpenAI pointé sur LiteLLM |
-| Outils MCP | `langchain-mcp-adapters` |
+| Modèles via la passerelle | Modèle de chat LangChain qui transmet le raisonnement (`ChatLiteLLM` de `langchain-litellm`) pointé sur LiteLLM |
+| Outils MCP côté agent | MCP intégré à LangChain (`langchain.mcp`, client FastMCP) ; `langchain-mcp-adapters` n'est plus maintenu |
+| Serveur MCP côté Spring | Module serveur MCP de Spring AI, outils déclarés par annotations |
+| Jeton délégué de l'agent | Spring Authorization Server, échange de jetons OAuth2 (RFC 8693) |
+| Garde-fous, budgets et limites par utilisateur | Fonctions natives de LiteLLM (détection d'injection, masquage par Presidio, budgets par utilisateur et par équipe) |
+| Conversations et mémoire durables | Checkpointer LangGraph PostgreSQL et `Store` LangGraph |
+| Traces, coûts, retours, versions de prompts | OpenTelemetry et Langfuse auto-hébergé |
+| Tests sans réseau (modèles, MCP, flux AG-UI) | CopilotKit `aimock` et le faux modèle de LangChain |
 | Flux vers l'interface (texte, raisonnement, outils, état) | `ag-ui-langgraph`, point d'entrée officiel |
 | Interface composée par l'agent | Outil A2UI de `ag-ui-langgraph` (`get_a2ui_tools`) et rendu A2UI officiel côté client |
 | Client Angular | Client AG-UI officiel et composants CopilotKit Angular |
@@ -244,8 +252,9 @@ propriétaire avant d'écrire quoi que ce soit.
 | Sous-agents, tâches longues, fichiers de travail | Deep Agents (`create_deep_agent`) |
 
 Restent du code à nous, et seulement cela : les règles métier de l'ERP placées dans les points
-d'extension officiels (un middleware pour une règle de réponse, par exemple), la délégation
-d'identité vers Spring et les adaptateurs MCP du backend. Chaque morceau de code propre est
+d'extension officiels (un middleware pour une règle de réponse, comme le vérificateur de chiffres),
+l'appel d'échange de jeton vers Spring et le corps métier des outils MCP du backend (leur
+déclaration passe par Spring AI). Chaque morceau de code propre est
 justifié dans le document de référence de l'application par l'absence d'un composant officiel.
 
 **Mode de réponse décidé par l'agent.** Comme les assistants de référence, l'agent choisit lui-même
