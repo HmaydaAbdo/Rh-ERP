@@ -16,4 +16,4 @@ USER node
 EXPOSE 4100
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:4100/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
-ENTRYPOINT ["node", "src/serveur.mjs"]
+ENTRYPOINT ["node", "--import", "./src/traces.mjs", "src/serveur.mjs"]

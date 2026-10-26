@@ -15,6 +15,7 @@ const runtime = new CopilotRuntime({
   agents: ({ request }) => ({
     default: new HttpAgent({
       url: urlAgent,
+      // Le jeton de l'utilisateur suit la requête ; le contexte de trace (traceparent) est ajouté par l'instrumentation officielle.
       headers: { Authorization: request.headers.get('authorization') ?? '' }
     })
   }),
