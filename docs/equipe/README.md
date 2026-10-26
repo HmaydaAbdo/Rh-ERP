@@ -11,6 +11,127 @@ associée à son mois. Une modification ultérieure de l'équipe de l'employé n
 antérieurs. Le bulletin référence le référentiel : modifier le libellé ou le code d'une équipe change la
 valeur affichée pour les bulletins qui référencent cette même équipe.
 
+## Les couches du domaine
+
+Équipe est un référentiel court (code, libellé) mais il traverse trois couches. Chaque couche est décrite ici de bout
+en bout pour pouvoir être relue et commentée séparément.
+
+| Couche | Rôle pour Équipe | Où lire |
+|---|---|---|
+| **Application** | Créer, modifier, rechercher, importer et supprimer les équipes ; fournir le référentiel aux formulaires et filtres Employé et Paie | [Couche application](#couche-application) |
+| **Analytique** | Lire la paie du dernier mois **par équipe** (Cartes, Analytique) ; mesurer la qualité du rattachement (bulletins sans équipe) | [Couche analytique](#couche-analytique) |
+| **IA** | Laisser l'assistant retrouver une équipe et interroger la paie ou les effectifs par équipe, en lecture seule | [Couche IA](#couche-ia) |
+
+### Couche application
+
+**Backend** (`backend/src/main/java/staport/rh/equipe/`)
+
+- **Contrôleurs.** `EquipeController` (`/equipes`) et `EquipeImportController` (`/equipes/import`). Chaque route porte
+  `@PreAuthorize` sur sa permission (voir [Permissions](#permissions)) ; l'interface n'est jamais la seule barrière.
+- **Service.** `EquipeService`, exposé aux autres domaines par la façade `IEquipeService` (ils n'accèdent pas au
+  repository). À la création et à la modification il : retire les espaces extérieurs du libellé, normalise le code
+  (`strip` puis majuscules, `Locale.ROOT`), contrôle l'unicité du code **puis** du libellé sans casse
+  (`findByCodeIgnoreCase`, `findByLibelleIgnoreCase`, en excluant l'équipe courante lors d'une modification) et, à la
+  modification, compare la version reçue à la version stockée (`VersionOptimiste.verifier`).
+- **Recherche.** `EquipeSpecification` : filtres `code` et `libelle` en « contient » sans casse, avec échappement des
+  caractères spéciaux du motif (`MotifRecherche`) ; `recherche` cherche dans l'un **ou** l'autre champ ; les filtres se
+  combinent par ET ; le tri et la pagination viennent du `Pageable`.
+- **Suppression.** Le service ne vérifie pas lui-même les références : la clé étrangère `fk_paie_equipe` et celle de la
+  fiche Employé refusent la suppression, et `EquipeExceptionHandler` traduit cette `DataIntegrityViolationException`
+  en `409` avec « Cette équipe est utilisée par au moins un bulletin de paie ou un employé et ne peut pas être
+  supprimée ».
+- **Erreurs.** `404` équipe inconnue ; `409` code ou libellé déjà pris (message distinct pour chacun) ou contrainte
+  d'intégrité ; `400` fichier d'import illisible ou colonnes inattendues.
+- **Audit.** L'entité est `@Audited` (historique Envers) et les écritures portent `@AuditableAction` :
+  `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` ; l'import est audité par `PerimetreImportEquipe`
+  (nombre de lignes, résultat). Les lectures de l'assistant ont leurs propres entrées (`MCP_EQUIPE_*`).
+- **Import.** `EquipeImportService` lit un classeur `.xlsx` (colonnes « Code » puis « Libellé », dans cet ordre), valide
+  **tout** avant d'écrire, puis crée en une fois. Motifs de rejet exacts : « Code obligatoire », « Libellé
+  obligatoire », « Code trop long (max 50 caractères) », « Libellé trop long (max 100 caractères) », « Colonnes
+  supplémentaires non prises en charge », « Code déjà présent dans le fichier », « Libellé déjà présent dans le
+  fichier », « Code d'équipe déjà existant », « Libellé d'équipe déjà existant ».
+- **Base de données.** `V7` crée la table et sème les 17 équipes d'origine (`CH`, `OP`, `AT`, `EE`, `TER`, `GA`, `TOPO`,
+  `ADMIN`, `ENROCHEMENT`, `R CONT`, `GABION`, `PHS`, `EB`, `A`, `LABO`, `ASPHALET`, `8`) ; `V8` remplace le texte libre
+  du bulletin par la clé étrangère `paie.equipe_id` (la migration échoue plutôt que de perdre une valeur non
+  rapprochée) ; `V9` et `V32` créent les permissions ; `V25` impose l'unicité sur `UPPER(BTRIM(code))` et
+  `UPPER(BTRIM(libelle))` ; `V34` fusionne l'équipe temporaire `CH+OP`.
+
+**Frontend** (`frontend/src/app/portail/equipe/`)
+
+- **Routes** (chargement à la demande, `permissionGuard`) : `/equipes` (liste), `/equipes/cartes`, `/equipes/analytique`
+  (lecture : `EQUIPE_READ`), `/equipes/new` et `/equipes/:id/edit` (`EQUIPE_WRITE`), `/equipes/:id` (`EQUIPE_READ`).
+- **Composants.** `equipe-vues` (coque partagée, onglets Tabulaire/Cartes/Analytique), `equipe-list`, `equipe-form`,
+  `equipe-detail`, `equipe-actions` (Nouvelle équipe, Importer, modèle Excel), `equipe-filtres` (filtres code et
+  libellé conservés dans l'URL), `equipe-cartes` et `equipe-analytique` (hôtes minces des vues partagées).
+- **Service.** `equipe.service.ts` appelle l'API ; `shared/reference-data/` expose le référentiel aux sélecteurs
+  génériques des formulaires et filtres Employé et Paie (recherche, chargement au défilement, « Tout sélectionner »).
+- **Garde-fous d'interface.** Boutons et routes sont masqués sans la permission correspondante ; le serveur reste la
+  référence.
+
+### Couche analytique
+
+Les vues Cartes et Analytique ne sont pas propres à Équipe : ce sont des composants partagés (`portail/perimetre/`,
+[référence technique](../frontend/vues-perimetre.md)) que le module configure dans `equipe-module.ts`.
+
+| Réglage du module | Valeur pour Équipe | Effet |
+|---|---|---|
+| Dimension | `EQUIPE` | L'unité de regroupement est l'équipe |
+| Parcours des Cartes | Équipe → Chantier → Fonction | Descente fixe, non modifiable par l'utilisateur |
+| Sources | `PAIE` seule | Aucun chiffre ne vient des fiches Employé |
+| Période | Dernier mois de paie enregistré, non modifiable | Pas de sélecteur de période |
+| Orphelins | Affichés dans l'Analytique, absents des Cartes | Le groupe « sans équipe » n'est pas une carte du référentiel |
+| Qualité | Section dédiée de l'Analytique | Anneau des bulletins sans équipe, si leur nombre est supérieur à zéro |
+
+**Source unique des chiffres.** `POST /paie/analytique` (permission `PAIE_READ`) renvoie `PaieAnalytiqueDto` :
+`kpis` du mois, `moisPrecedent`, `parChantier`, `parEquipe`, `parFonction`, `tranches`, `evolution` (tout l'historique du
+périmètre) et `qualite` (`sansEquipe`, `sansObservation`). `parEquipe` liste **toutes** les équipes du mois, sans plafond.
+
+**Définitions des indicateurs** (identiques dans l'interface, le rapport PDF et l'assistant)
+
+| Indicateur | Définition |
+|---|---|
+| Effectif | Nombre de personnes payées dans le mois (un bulletin par employé et par mois) |
+| Masse salariale | Somme des salaires totaux des bulletins du mois, en dirhams (DH) |
+| STC (personnes) | Bulletins en solde de tout compte ou sortie ce mois-là (même règle que le rapport de paie) |
+| STC (DH) | Montant de ces bulletins |
+| Variation | Écart en personnes (effectif, STC) et en pourcentage (montants) par rapport au **mois calendaire précédent** ; sans bulletin ce mois-là, la comparaison est « indisponible », jamais un zéro trompeur |
+
+**Règles de lecture à connaître**
+
+- Une équipe absente du mois précédent est comparée à zéro ; sans aucune paie au mois précédent la comparaison est
+  indisponible.
+- « Orphelins » est une valeur de filtre (`equipeIds = 0`) : elle sert à filtrer et à suivre l'historique des
+  bulletins sans équipe, mais elle n'est **jamais** enregistrée (un formulaire écrit `null`).
+- Le graphique de répartition masque les équipes dont l'indicateur sélectionné vaut zéro ; le tableau « Voir les
+  données » les garde toutes.
+- Les graphiques et les cartes s'exportent séparément en PDF, avec tous les groupes même repliés.
+- Sans `PAIE_READ`, aucune donnée de paie n'est demandée ni affichée.
+
+### Couche IA
+
+L'assistant RH n'accède à Équipe que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il n'écrit
+rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté peut voir.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `equipe_rechercher` | Trouve des équipes par texte partiel du code ou du libellé (1 à 20 résultats, 10 par défaut, total rendu) | `EQUIPE_READ` | `MCP_EQUIPE_RECHERCHER` |
+| `equipe_fiche` | Lit code et libellé d'une équipe par identifiant | `EQUIPE_READ` | `MCP_EQUIPE_FICHE` |
+| `paie_repartition` (`dimension = EQUIPE`) | Masse, effectif et STC par équipe pour un mois (50 groupes au plus, du plus gros au plus petit) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_indicateurs`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `equipeIds` ; l'identifiant `0` désigne les employés ou bulletins sans équipe | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
+
+- **Résolution par nom.** Quand la question cite une équipe, l'agent appelle d'abord `equipe_rechercher`, puis réutilise
+  l'identifiant comme filtre ; il ne devine jamais un identifiant.
+- **Exactitude.** Chaque nombre de la réponse (et de la surface A2UI éventuelle) doit venir d'un résultat d'outil du même
+  tour ; sinon la réponse est réécrite une fois, puis remplacée par une abstention.
+- **Sur l'écran.** Sur `/equipes`, l'assistant reçoit le domaine et les filtres de l'écran et propose « Équipes les plus
+  grandes » et « Sans équipe ».
+- **Limites actuelles.** Les données exposées sont celles que la permission autorise, sans périmètre par fiche de
+  poste (prévu au jalon J2 de [ia.md](../ia.md)) ; l'ouverture automatique de l'écran correspondant est retirée.
+  Les outils d'écriture (créer, renommer, importer) n'existent pas.
+
+
+---
+
 ## Analyse fonctionnelle et règles métier
 
 - Le **libellé** est le nom sémantique utilisé pour présenter, sélectionner et regrouper les équipes dans
@@ -195,6 +316,20 @@ reste un modèle d'import, pas un export.
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
 
 Les commandes et prérequis des suites sont décrits dans [la documentation des tests](../testing.md).
+
+## Points à valider avec le propriétaire
+
+Constats issus de la relecture du code pour clôturer le domaine. Chacun est un comportement **actuel**, pas une anomalie
+à corriger d'office : à confirmer, à ajuster ou à classer.
+
+| # | Constat | Question |
+|---|---|---|
+| 1 | La suppression est refusée par la clé étrangère ; le message dit « bulletin de paie ou employé » sans dire lequel ni combien | Préciser le message (nombre d'employés et de bulletins) ? |
+| 2 | Quatre équipes d'origine (`A`, `LABO`, `ASPHALET`, `8`) ont été créées avec **libellé = code** en attendant le vrai libellé de la RH | Les libellés réels sont-ils renseignés ? |
+| 3 | L'import ne fait que **créer** : aucun moyen de corriger des équipes en masse | Un import de mise à jour est-il utile ? |
+| 4 | L'équipe est facultative sur la fiche et le bulletin (le [PV N°1](../handoff/pv-n1-erp-rh.md) propose de la rendre obligatoire) | Décision métier sur le caractère obligatoire ? |
+| 5 | Aucun état actif/inactif : une équipe qui n'existe plus ne peut qu'être supprimée si rien ne la référence | Faut-il pouvoir « archiver » une équipe ? |
+| 6 | L'assistant lit les équipes et la paie par équipe, sans périmètre par fiche de poste | Qui doit voir quelles équipes (jalon J2) ? |
 
 ## Documents liés
 

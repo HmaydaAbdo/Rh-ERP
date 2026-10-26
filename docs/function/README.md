@@ -42,6 +42,120 @@ de nommage habituelle.
 
 ---
 
+## Les couches du domaine
+
+Fonction est un référentiel d'un seul champ (le libellé du métier) qui traverse trois couches. Chaque couche est
+décrite ici de bout en bout pour pouvoir être relue et commentée séparément.
+
+| Couche | Rôle pour Fonction | Où lire |
+|---|---|---|
+| **Application** | Créer, renommer, rechercher, importer et supprimer les fonctions ; fournir le référentiel aux fiches Employé et aux bulletins | [Couche application](#couche-application) |
+| **Analytique** | Lire la paie du dernier mois **par fonction** (Cartes, Analytique) | [Couche analytique](#couche-analytique) |
+| **IA** | Laisser l'assistant retrouver un métier et interroger la paie ou les effectifs par fonction, en lecture seule | [Couche IA](#couche-ia) |
+
+### Couche application
+
+**Backend** (`backend/src/main/java/staport/rh/function/`)
+
+- **Contrôleurs.** `FunctionController` (`/functions`) et `FunctionImportController` (`/functions/import`). Chaque
+  route porte `@PreAuthorize` sur sa permission (`FUNCTION_READ`, `FUNCTION_WRITE`, `FUNCTION_DELETE`,
+  `FUNCTION_IMPORT`).
+- **Service.** `FunctionService`, exposé aux autres domaines par la façade `IFunctionService` (Employé et Paie y
+  passent pour valider ou créer une fonction ; aucun ne lit son repository). Le libellé est nettoyé de ses espaces
+  extérieurs, son unicité est contrôlée sans casse (en excluant la fonction courante à la modification) et la version
+  optimiste est vérifiée à la modification.
+- **Recherche.** `FunctionSpecification` : le filtre `libelle` est un « contient » sans casse avec échappement des
+  caractères spéciaux ; tri et pagination viennent du `Pageable`.
+- **Suppression.** Elle est refusée (`409`) tant qu'un employé (`employe.fonction_id`) ou un bulletin
+  (`paie.fonction_id`) référence la fonction ; la clé étrangère est la protection finale. Il n'existe ni fusion, ni
+  archivage, ni statut : une fonction existe ou n'existe pas.
+- **Audit.** L'entité est `@Audited` (Envers) ; les écritures portent `@AuditableAction` (`FONCTION_CREATION`,
+  `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`) et l'import est audité par `PerimetreImportFunction`. Les lectures
+  de l'assistant ont leurs propres entrées (`MCP_FONCTION_*`).
+- **Import.** `FunctionImportService` : un `.xlsx` à **une colonne** (libellé, en-tête en ligne 1 ignorée), validé en
+  entier avant écriture. Rejets : « Libellé trop long (max 100 caractères) » et « Fonction déjà existante » (en base
+  ou en doublon dans le fichier) ; un fichier illisible donne `400`. La réponse a la même forme qu'il soit accepté
+  (`200`) ou rejeté (`400`).
+- **Création implicite.** L'import Excel de la paie crée une fonction encore inconnue avec les mêmes règles de
+  libellé, sans exiger de permission `FUNCTION_*` (voir [Paie](../paie/README.md)).
+- **Base de données.** `V2` crée la table `fonction` ; `V23` puis `V27` imposent l'unicité du libellé après retrait des
+  espaces extérieurs et sans casse ; `V31` a supprimé une seule fois les fonctions portées par aucun bulletin (décision
+  du 2026-10-19) ; `V30` a fait reprendre à chaque fiche Employé la fonction de son dernier bulletin.
+
+**Frontend** (`frontend/src/app/portail/function/`)
+
+- **Routes** (chargement à la demande, `permissionGuard`) : `/functions`, `/functions/cartes`,
+  `/functions/analytique` et `/functions/:id` (`FUNCTION_READ`) ; `/functions/new` et `/functions/:id/edit`
+  (`FUNCTION_WRITE`).
+- **Composants.** `function-vues` (coque partagée), `function-list`, `function-form`, `function-detail`,
+  `function-actions` (Nouvelle fonction, Importer, modèle Excel), `function-filtres` (filtre libellé conservé dans
+  l'URL), `function-cartes` et `function-analytique` (hôtes minces des vues partagées).
+- **Service.** `function.service.ts` appelle l'API ; `shared/reference-data/function-reference.service.ts` alimente les
+  sélecteurs génériques (affectation simple, filtre multiple) sans charger tout le référentiel.
+- **Export.** Le PDF du Tabulaire contient toutes les fonctions filtrées, pas seulement la page courante.
+
+### Couche analytique
+
+Les vues Cartes et Analytique ne sont pas propres à Fonction : ce sont des composants partagés (`portail/perimetre/`,
+[référence technique](../frontend/vues-perimetre.md)) que le module configure dans `function-module.ts`.
+
+| Réglage du module | Valeur pour Fonction | Effet |
+|---|---|---|
+| Dimension | `FONCTION` | L'unité de regroupement est le métier |
+| Parcours des Cartes | Fonction → Chantier → Équipe | Descente fixe |
+| Sources | `PAIE` seule | Aucun chiffre ne vient des fiches Employé |
+| Période | Dernier mois de paie enregistré, non modifiable | Pas de sélecteur de période |
+| Tri des cartes | Masse salariale décroissante, puis effectif ; ex æquo départagés par le libellé | Les métiers les plus coûteux d'abord |
+| Orphelins / qualité | Section qualité de l'Analytique | Anneau des bulletins **sans équipe**, filtres Chantier et Fonction |
+
+**Source unique des chiffres.** `POST /paie/analytique` (`PAIE_READ`) renvoie `PaieAnalytiqueDto`, dont `parFonction`
+(`id`, `libelle`, `masse`, `effectif`, `stc`, `stcMontant`) liste **toutes** les fonctions du mois, sans plafond ; `evolution`
+couvre tout l'historique du périmètre ; `moisPrecedent` sert à la comparaison.
+
+**Définitions des indicateurs**
+
+| Indicateur | Définition |
+|---|---|
+| Effectif | Personnes payées dans le mois (un bulletin par employé et par mois) |
+| Masse salariale | Somme des salaires totaux des bulletins du mois, en DH |
+| STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (règle du rapport de paie) et leur montant |
+| Variation | Écart en personnes et en pourcentage par rapport au mois calendaire précédent ; indisponible sans paie ce mois-là |
+
+**Règles de lecture à connaître**
+
+- La fonction analysée est celle **du bulletin du mois**, pas celle de la fiche Employé : changer la fonction d'un
+  employé ne réécrit pas les mois passés ; renommer une fonction change son libellé partout.
+- Un mois sans bulletin pour la fonction choisie affiche des indicateurs à zéro avec un message explicite et garde
+  l'historique des autres mois.
+- Le graphique de répartition masque les fonctions à valeur nulle ; le tableau « Voir les données » les garde toutes.
+- Les fiches Employé ne sont jamais interrogées pour composer les cartes ni l'Analytique. Sans `PAIE_READ`, rien n'est
+  demandé ni affiché ; avec `EMPLOYEE_READ`, une icône ouvre la liste Employé au même périmètre.
+
+### Couche IA
+
+L'assistant RH n'accède à Fonction que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il
+n'écrit rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté peut voir.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `fonction_rechercher` | Trouve des fonctions (métiers) par texte partiel du libellé (1 à 20 résultats, 10 par défaut, total rendu) | `FUNCTION_READ` | `MCP_FONCTION_RECHERCHER` |
+| `fonction_fiche` | Lit le libellé d'une fonction par identifiant | `FUNCTION_READ` | `MCP_FONCTION_FICHE` |
+| `paie_repartition` (`dimension = FONCTION`) | Masse, effectif et STC par fonction pour un mois (50 groupes au plus) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_indicateurs`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `fonctionIds` | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
+
+- **Résolution par nom.** Quand la question cite un métier, l'agent appelle d'abord `fonction_rechercher`, puis
+  réutilise l'identifiant ; il ne devine jamais un identifiant.
+- **Exactitude.** Chaque nombre de la réponse (et de la surface A2UI éventuelle) doit venir d'un résultat d'outil du même
+  tour ; sinon la réponse est réécrite une fois, puis remplacée par une abstention.
+- **Sur l'écran.** Sur `/functions`, l'assistant reçoit le domaine et les filtres de l'écran et propose « Effectif par
+  métier ».
+- **Limites actuelles.** Les données exposées sont celles que la permission autorise, sans périmètre par fiche de
+  poste (prévu au jalon J2 de [ia.md](../ia.md)) ; l'ouverture automatique de l'écran correspondant est retirée. Le
+  salaire reste réservé à `PAIE_READ`. Aucun outil d'écriture n'existe.
+
+
+---
+
 ## Modèle de données
 
 Table `fonction` :
@@ -205,6 +319,20 @@ Une option Fonction affiche son libellé seul; les filtres multiples proposent l
 la remise à zéro sans charger tout le référentiel dans le navigateur.
 
 ---
+
+## Points à valider avec le propriétaire
+
+Constats issus de la relecture du code pour clôturer le domaine. Chacun est un comportement **actuel**, pas une anomalie
+à corriger d'office : à confirmer, à ajuster ou à classer.
+
+| # | Constat | Question |
+|---|---|---|
+| 1 | Une fonction n'a **qu'un libellé** (pas de code) : l'import, l'unicité et les sélecteurs reposent uniquement dessus | Un code de fonction est-il nécessaire (échanges, import Paie) ? |
+| 2 | Pas de fusion ni d'archivage ; les quasi-doublons de libellés sont seulement suivis dans « Qualité des données » du [TODO](../../TODO.md) | Faut-il une fusion guidée de fonctions ? |
+| 3 | L'import Excel de la paie **crée** une fonction inconnue sans permission `FUNCTION_*` | Ce droit implicite est-il voulu, ou doit-il demander une validation ? |
+| 4 | Renommer une fonction change le libellé dans tous les bulletins historiques | Faut-il conserver le libellé d'époque dans le bulletin ? |
+| 5 | Les vues analysent la fonction du **bulletin** ; la fonction de la fiche Employé peut différer | Quelle fonction fait foi pour les rapports ? |
+| 6 | L'assistant lit les fonctions et la paie par fonction, sans périmètre par fiche de poste | Qui doit voir quels métiers (jalon J2) ? |
 
 ## Scénarios couverts
 
