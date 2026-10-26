@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
     # Choix des outils utiles par un petit modèle (LLMToolSelectorMiddleware) : un appel de modèle de plus par tour.
     selection_outils: bool = False
+    # Base PostgreSQL des conversations (service ia-db) ; absente, les conversations restent en mémoire du processus.
+    database_url: SecretStr | None = None
+    # Une conversation inactive depuis ce nombre de jours est supprimée.
+    conversation_jours: int = Field(default=30, ge=1, le=365)
     # Racine du backend Spring (jeton agent et route /mcp), par exemple http://backend:8080.
     erp_api_url: AnyHttpUrl
 

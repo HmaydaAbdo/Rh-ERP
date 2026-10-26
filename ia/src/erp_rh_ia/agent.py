@@ -31,6 +31,7 @@ from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ModelRequest,
     ModelResponse,
+    SummarizationMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
 )
@@ -213,11 +214,13 @@ def creer_agent(
     outils: Sequence[BaseTool],
     *,
     selecteur: BaseChatModel | None = None,
+    resumeur: BaseChatModel | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
     appels_modele: int = 8,
     appels_outils: int = 8,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
-    """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question."""
+    """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question et
+    ``resumeur`` résume le début d'une conversation devenue longue (``SummarizationMiddleware``)."""
     outils = avec_surfaces(outils)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
@@ -228,6 +231,11 @@ def creer_agent(
         ToolCallLimitMiddleware(run_limit=appels_outils),
         VerificateurChiffres(),
     ]
+    if resumeur is not None:
+        # Conversation durable : au-delà de 12 000 jetons, le début est résumé, les 8 derniers messages restent intacts.
+        intergiciels.insert(
+            2, SummarizationMiddleware(model=resumeur, trigger=("tokens", 12_000), keep=("messages", 8))
+        )
     if selecteur is not None:
         intergiciels.insert(2, LLMToolSelectorMiddleware(model=selecteur, max_tools=6, always_include=["write_todos"]))
     return create_agent(

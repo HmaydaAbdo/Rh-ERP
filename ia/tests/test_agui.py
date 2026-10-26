@@ -11,7 +11,7 @@ from doubles import INDICATEURS, ModeleScripte, appel, modele, outil
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool, StructuredTool
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from erp_rh_ia.agent import SYSTEME, creer_agent
 from erp_rh_ia.agui import ERREUR_PUBLIQUE, FabriqueAgent
@@ -44,7 +44,7 @@ class AccesSimule:
 
 
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
-    def fabriquer(outils: Sequence[BaseTool], checkpointer: InMemorySaver) -> Any:
+    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any]) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer)
 
     return fabriquer

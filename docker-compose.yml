@@ -241,6 +241,25 @@ services:
       timeout: 5s
       retries: 10
 
+  ia-db:
+    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, docs/ia.md T19) : instance et volume
+    # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ia
+      POSTGRES_USER: ia
+      POSTGRES_PASSWORD: ${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}
+    volumes:
+      - ia_db_data:/var/lib/postgresql
+    networks:
+      - memoire-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ia -d ia"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   litellm:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -301,7 +320,12 @@ services:
     depends_on:
       litellm-cles:
         condition: service_completed_successfully
+      ia-db:
+        condition: service_healthy
     environment:
+      # Conversations durables : base dédiée (ia-db) ; une conversation inactive est supprimée après ce nombre de jours.
+      IA_DATABASE_URL: postgresql://ia:${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}@ia-db:5432/ia
+      IA_CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
@@ -323,6 +347,7 @@ services:
       - ia-net
       - runtime-net
       - trace-net
+      - memoire-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -380,6 +405,7 @@ services:
 volumes:
   postgres_data_v18:
   litellm_db_data:
+  ia_db_data:
   phoenix_data:
 
 networks:
@@ -390,6 +416,8 @@ networks:
   web-net:
   # litellm et sa base, isolés du reste.
   ia-db-net:
+  # service IA et sa base de conversations, seuls.
+  memoire-net:
   # ia, litellm et le backend (route /mcp).
   ia-net:
   # frontend (nginx) et runtime CopilotKit seulement : le navigateur atteint l'assistant, jamais le service IA ni LiteLLM.
