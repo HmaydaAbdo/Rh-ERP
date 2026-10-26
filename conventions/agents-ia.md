@@ -200,11 +200,11 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
 * Chaque graphe déclare son état typé, ses transitions, ses outils, ses politiques de reprise, ses
   limites, ses interruptions et ses sorties. Un enchaînement simple reste simple ; un graphe n'est
   pas un motif pour multiplier les agents.
-* Dans ERP-RH, ne pas remplacer ce graphe explicite par un framework d'agents autonome opaque,
-  notamment Deep Agents. Le contrôle des transitions est explicite ; les appels de modèles restent
-  probabilistes. Valider les arguments et sorties par schéma côté service IA (Pydantic), puis
-  refaire les validations métier côté Spring. Une erreur retournée au graphe est structurée et
-  minimisée ; elle n'expose ni stacktrace ni données interdites.
+* L'agent est construit avec les composants officiels (voir « Frameworks d'abord ») : boucle d'agent
+  `create_agent` de LangChain sur LangGraph, ses middlewares, et Deep Agents lorsqu'un besoin le
+  justifie. Les appels de modèles restent probabilistes : valider les arguments et sorties par
+  schéma côté service IA, puis refaire les validations métier côté Spring. Une erreur retournée à
+  l'agent est structurée et minimisée ; elle n'expose ni stacktrace ni données interdites.
 * Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
   et Spring Boot réellement déclarés par le projet, sans ajouter de framework LLM au monolithe.
 * Tout composant supplémentaire, notamment un second runtime IA, une file de messages ou un moteur
@@ -216,6 +216,43 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
   plusieurs tours : il suit les règles de « Mémoire des agents » (rattachement à l'utilisateur,
   bornes, rétention, suppression), qu'il soit stocké par le checkpointer du runtime ou dans une table
   dédiée. L'historique fourni par le client n'est jamais repris tel quel comme contexte de confiance.
+
+### Frameworks d'abord
+
+Dans ERP-RH (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
+LangChain, LangGraph, Deep Agents, l'intégration AG-UI et leurs paquets : aucune implémentation
+maison d'une capacité qu'un de ces frameworks fournit. Avant d'écrire du code IA, chercher le
+composant officiel dans les paquets installés et leur documentation ; s'il manque, le signaler au
+propriétaire avant d'écrire quoi que ce soit.
+
+| Besoin | Composant officiel |
+|---|---|
+| Boucle d'agent, appels d'outils | `create_agent` (LangChain), exécuté par LangGraph |
+| Choix des outils utiles parmi le catalogue | `LLMToolSelectorMiddleware` |
+| Plan visible et suivi pour une tâche à plusieurs étapes | `TodoListMiddleware` (ou Deep Agents) |
+| Plafonds par run | `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` |
+| Nouvel essai, repli de modèle | `ModelRetryMiddleware`, `ToolRetryMiddleware`, `ModelFallbackMiddleware`, et la passerelle |
+| Masquage d'identifiants | `PIIMiddleware` |
+| Mémoire compactée | `SummarizationMiddleware` ; persistance par un checkpointer LangGraph |
+| Confirmation humaine | `HumanInTheLoopMiddleware` et les interruptions LangGraph |
+| Modèles via la passerelle | Modèle de chat LangChain compatible OpenAI pointé sur LiteLLM |
+| Outils MCP | `langchain-mcp-adapters` |
+| Flux vers l'interface (texte, raisonnement, outils, état) | `ag-ui-langgraph`, point d'entrée officiel |
+| Interface composée par l'agent | Outil A2UI de `ag-ui-langgraph` (`get_a2ui_tools`) et rendu A2UI officiel côté client |
+| Client Angular | Client AG-UI officiel et composants CopilotKit Angular |
+| Évaluation | `openevals` et `agentevals` sur le jeu de référence versionné |
+| Sous-agents, tâches longues, fichiers de travail | Deep Agents (`create_deep_agent`) |
+
+Restent du code à nous, et seulement cela : les règles métier de l'ERP placées dans les points
+d'extension officiels (un middleware pour une règle de réponse, par exemple), la délégation
+d'identité vers Spring et les adaptateurs MCP du backend. Chaque morceau de code propre est
+justifié dans le document de référence de l'application par l'absence d'un composant officiel.
+
+**Mode de réponse décidé par l'agent.** Comme les assistants de référence, l'agent choisit lui-même
+la forme de sa réponse : une réponse directe en un seul appel pour un message simple ; un
+raisonnement puis des appels d'outils pour une question de données ; un plan visible, mis à jour
+étape par étape (`TodoListMiddleware`), pour une demande à plusieurs étapes. Aucun tri par mots-clés
+ni graphe figé ne remplace cette décision du modèle ; les plafonds et les middlewares la bornent.
 
 ### Reprise durable et effets métier
 

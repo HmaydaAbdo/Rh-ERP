@@ -91,16 +91,18 @@ serveur.
    SSE isolé comme une connexion bidirectionnelle.
 6. Les événements personnalisés AG-UI sont namespacés, versionnés et validés par schéma. Le client
    ignore proprement une extension inconnue sans perdre le traitement des événements standards.
-7. Ne jamais exposer au navigateur les prompts système, secrets, raisonnements internes ou données
-   qui ne sont pas destinées à l'utilisateur. Masquer les données personnelles dans les traces.
+7. Ne jamais exposer au navigateur les prompts système, secrets ou données qui ne sont pas destinées
+   à l'utilisateur. Masquer les données personnelles dans les traces. Le raisonnement du modèle peut
+   être affiché (décision ERP-RH du 2026-10-26), par les événements `REASONING_*` officiels, dans un
+   bloc distinct et repliable, présenté comme une réflexion et non comme un résultat vérifié.
 
 AG-UI et A2UI ne sont pas interchangeables. AG-UI peut porter du texte, des états et des cartes
 client prédéfinies sans renderer A2UI. Les mises à jour d'état provenant du serveur restent des
 données non fiables pour toute action ; aucun patch d'état ne modifie les droits de l'utilisateur.
 
 Le flux affiche des étapes publiques utiles (« Recherche des sources », « Lecture terminée »),
-des résultats et des demandes de confirmation. Il ne publie pas de chaîne de pensée, de prompts
-internes ni d'exceptions Java brutes. Les erreurs présentées indiquent une correction possible sans
+des résultats et des demandes de confirmation. Il ne publie ni prompts internes ni exceptions Java
+brutes ; le raisonnement du modèle suit la règle 7 ci-dessus. Les erreurs présentées indiquent une correction possible sans
 révéler de contenu sensible.
 
 Pour ERP-RH, confirmer par un prototype qu'un client Angular (CopilotKit Angular ou client AG-UI
@@ -254,9 +256,10 @@ Ces principes s'appliquent à tout mode, du panneau à l'espace immersif :
 * **Retours.** Chaque réponse peut être signalée comme utile, fausse ou incomplète, avec un motif
   court ; le signalement d'une réponse fausse indique la suite donnée.
 * **Latence perçue.** Un premier signe de progression apparaît en moins d'une seconde après l'envoi ;
-  les étapes réelles remplacent un indicateur vide. Un message sans demande de donnée (salutation,
-  remerciement, demande d'aide) est reconnu de façon déterministe et reçoit sa réponse aussitôt, sans
-  appel de modèle ni étape de recherche ; seul un message de pure politesse emprunte ce chemin. Les objectifs chiffrés de latence sont fixés par
+  le raisonnement ou le plan en cours remplacent un indicateur vide. Un message simple (salutation,
+  remerciement, demande d'aide) reçoit une réponse directe en un seul appel de modèle, diffusée au fil
+  de l'eau, sans recherche ni plan : c'est le modèle qui en décide (voir « Mode de réponse décidé par
+  l'agent » dans [`agents-ia.md`](agents-ia.md)). Les objectifs chiffrés de latence sont fixés par
   mesure et validés (voir « Objectifs de service » dans [`agents-ia.md`](agents-ia.md)).
 * **Langues.** Les questions peuvent arriver en français, en arabe ou en darija. L'interface gère la
   saisie et l'affichage de droite à gauche lorsque l'arabe est pris en charge ; la langue de réponse
