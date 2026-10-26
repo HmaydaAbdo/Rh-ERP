@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # Alias unique exposé par la passerelle ; la tâche est choisie par tag, pas par nom de modèle.
     litellm_model: str = Field(default="ai-gateway", min_length=1)
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
+    # Choix des outils utiles par un petit modèle (LLMToolSelectorMiddleware) : un appel de modèle de plus par tour.
+    selection_outils: bool = False
     # Racine du backend Spring (jeton agent et route /mcp), par exemple http://backend:8080.
     erp_api_url: AnyHttpUrl
 
