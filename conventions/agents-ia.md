@@ -246,8 +246,9 @@ propriétaire avant d'écrire quoi que ce soit.
 | Traces, coûts, retours, versions de prompts | OpenTelemetry et Langfuse auto-hébergé |
 | Tests sans réseau (modèles, MCP, flux AG-UI) | CopilotKit `aimock` et le faux modèle de LangChain |
 | Flux vers l'interface (texte, raisonnement, outils, état) | `ag-ui-langgraph`, point d'entrée officiel |
-| Interface composée par l'agent | Outil A2UI de `ag-ui-langgraph` (`get_a2ui_tools`) et rendu A2UI officiel côté client |
-| Client Angular | Client AG-UI officiel et composants CopilotKit Angular |
+| Interface composée par l'agent | Outil `generate_a2ui` injecté par `CopilotKitMiddleware`, middleware A2UI du runtime CopilotKit et rendu A2UI officiel de CopilotKit Angular (catalogue de base, étendu par `createAngularCatalog` au besoin) |
+| Passerelle entre l'interface et l'agent | Runtime CopilotKit officiel (`@copilotkit/runtime`, service Node) : relais AG-UI, middlewares A2UI, en-têtes par requête |
+| Client Angular | Composants CopilotKit Angular tels quels (discussion, raisonnement, rendu des outils, surfaces), configurés par leurs options documentées |
 | Évaluation | `openevals` et `agentevals` sur le jeu de référence versionné |
 | Sous-agents, tâches longues, fichiers de travail | Deep Agents (`create_deep_agent`) |
 

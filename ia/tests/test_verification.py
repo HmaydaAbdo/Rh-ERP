@@ -1,6 +1,7 @@
+import json
 from decimal import Decimal
 
-from erp_rh_ia.verification import extraire_nombres, nombres_autorises, verifier
+from erp_rh_ia.verification import extraire_nombres, nombres_autorises, valeurs_surface, verifier
 
 RESULTAT = {
     "periode": "2026-09",
@@ -46,3 +47,24 @@ def test_les_booleens_ne_sont_pas_des_nombres() -> None:
 def test_les_periodes_et_codes_apportent_leurs_nombres() -> None:
     autorises = nombres_autorises([RESULTAT])
     assert {Decimal(2026), Decimal(9), Decimal(17)} <= autorises
+
+
+def test_les_valeurs_d_une_surface_a2ui_excluent_version_et_identifiants() -> None:
+    enveloppe = json.dumps(
+        {
+            "a2ui_operations": [
+                {"version": "v0.9", "createSurface": {"surfaceId": "s-2026", "catalogId": "basic"}},
+                {
+                    "version": "v0.9",
+                    "updateComponents": {
+                        "surfaceId": "s-2026",
+                        "components": [{"id": "ligne-3", "component": "Text", "text": "Effectif : 412"}],
+                    },
+                },
+                {"version": "v0.9", "updateDataModel": {"surfaceId": "s-2026", "value": {"masse": 1250.5}}},
+            ]
+        }
+    )
+
+    assert valeurs_surface(enveloppe).splitlines() == ["Effectif : 412", "1250.5"]
+    assert valeurs_surface("pas du JSON") == ""

@@ -20,9 +20,11 @@ Tâches T1 à T8 de J1 faites : passerelle
 LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
 `MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
 (évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
-Angular qui ouvre lui-même la vue filtrée de sa réponse. L'assistant n'apparaît qu'avec `IA_UTILISER` et
-`IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un seul document : [ia.md](../ia.md). Prochaine
-action : J2 (périmètres par fiche de poste), après la démonstration J1 au propriétaire.
+Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
+CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est
+retirée. L'assistant n'apparaît qu'avec `IA_UTILISER` et `IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un
+seul document : [ia.md](../ia.md). Prochaine action : voir au navigateur une surface A2UI d'un vrai modèle (fin de
+T16), puis T17 à T20.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

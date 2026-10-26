@@ -120,6 +120,9 @@ laisser croire que des événements perdus ont été rejoués si le serveur ne l
 
 ## Pilotage des vues existantes
 
+> **ERP-RH :** pilotage retiré le 2026-10-26 (décision du propriétaire) au profit des surfaces A2UI composées
+> dans la discussion. Les règles ci-dessous restent la référence si le pilotage des vues est un jour réintroduit.
+
 Le mode contrôlé de référence ne génère pas d'écran : l'agent propose une **description de vue**
 (domaine, vue Tabulaire/Cartes/Analytique, filtres, période, niveau de parcours) produite par un
 outil du domaine, validée par un schéma versionné commun au service IA et au client. Le client la

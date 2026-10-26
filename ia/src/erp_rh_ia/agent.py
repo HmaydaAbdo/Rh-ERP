@@ -6,16 +6,18 @@
 Rien n'est orchestré à la main : le modèle choisit lui-même la forme de sa réponse — directe pour un message simple,
 avec outils pour une question de données, avec un plan suivi (``write_todos``) pour une demande à plusieurs étapes.
 Les middlewares officiels bornent la boucle (appels de modèle et d'outils), choisissent les outils utiles et
-injectent les outils déclarés par le navigateur (``CopilotKitMiddleware`` : ouverture de vue, A2UI).
+injectent l'outil d'interface composée ``generate_a2ui`` quand le runtime CopilotKit l'active
+(``CopilotKitMiddleware``).
 
 Seule règle à nous, parce qu'aucun framework ne la fournit : le **vérificateur de chiffres** de l'ERP, placé dans le
-point d'extension officiel ``after_model``. Le texte part en flux vers l'interface ; si un nombre ne vient pas des
-outils du run, la réponse est retirée et réécrite une fois, puis remplacée par une abstention. L'état ``verification``
+point d'extension officiel ``after_model``. Le texte et la surface A2UI partent en flux vers l'interface ; si un nombre
+de la réponse ou de la dernière surface ne vient pas des outils de l'ERP du run, la réponse est retirée et réécrite une
+fois, puis remplacée par une abstention. L'état ``verification``
 (``en_cours`` puis ``verifiee`` ou ``abstention``) est partagé avec l'interface.
 """
 
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Annotated, Any, Literal, NotRequired, cast
+from typing import Annotated, Any, Literal, NotRequired
 
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
@@ -37,7 +39,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 
-from erp_rh_ia.verification import verifier
+from erp_rh_ia.verification import valeurs_surface, verifier
 
 SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc. Tu réponds en français.
 Choisis la forme de ta réponse :
@@ -59,13 +61,17 @@ Règles impératives :
 7. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
    emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
-8. L'écran correspondant à ta réponse s'ouvre tout seul, filtres appliqués, une fois la réponse vérifiée : ne dis pas
-   comment l'ouvrir et ne cite aucun lien.
+8. Quand une réponse chiffrée se lit mieux en tableau, en liste ou en indicateurs, appelle `generate_a2ui` après avoir
+   obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des valeurs des outils.
 9. Les montants sont en dirhams (MAD)."""
 
 ABSTENTION = (
-    "Je ne peux pas répondre de façon fiable avec les données disponibles. Ouvrez l'écran correspondant pour vérifier."
+    "Je ne peux pas répondre de façon fiable avec les données disponibles : ne vous fiez pas aux chiffres affichés "
+    "ci-dessus. Ouvrez l'écran correspondant de l'ERP pour vérifier."
 )
+#: Outil d'interface composée injecté par ``CopilotKitMiddleware`` : son résultat est une surface à vérifier, jamais
+#: une source de chiffres.
+OUTIL_A2UI = "generate_a2ui"
 REECRITURE = (
     "Ta réponse précédente contenait des nombres absents des résultats des outils : {inconnus}. Réécris-la en ne "
     "reprenant que des valeurs des outils, sans aucun calcul."
@@ -78,9 +84,6 @@ class EtatVerification(AgentState[Any]):
     """État du vérificateur : ``verification`` est partagé avec l'interface, le reste est privé au serveur."""
 
     verification: NotRequired[Verification]
-    # Vue de l'ERP (module, vue, paramètres) que l'outil le plus récent propose ; posée seulement une fois la réponse
-    # vérifiée, c'est elle que l'interface ouvre. Rendue par Spring, jamais choisie par le modèle.
-    vue: NotRequired[dict[str, Any] | None]
     chiffres_inconnus: NotRequired[Annotated[list[str], PrivateStateAttr]]
     reecritures: NotRequired[Annotated[int, PrivateStateAttr]]
 
@@ -95,7 +98,7 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         self._reecritures = reecritures
 
     async def abefore_agent(self, state: EtatVerification, runtime: Runtime[Any]) -> dict[str, Any] | None:
-        return {"verification": "en_cours", "vue": None, "chiffres_inconnus": [], "reecritures": 0}
+        return {"verification": "en_cours", "chiffres_inconnus": [], "reecritures": 0}
 
     async def awrap_model_call(
         self,
@@ -114,10 +117,10 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         reponse = state["messages"][-1]
         if not isinstance(reponse, AIMessage) or reponse.tool_calls:
             return None  # pas encore la réponse finale
-        question, sources = _tour(state["messages"])
-        verification = verifier(reponse.text, sources, question)
+        question, sources, surface = _tour(state["messages"])
+        verification = verifier(f"{reponse.text}\n{surface}", sources, question)
         if verification.conforme:
-            return {"verification": "verifiee", "vue": _derniere_vue(state["messages"]), "chiffres_inconnus": []}
+            return {"verification": "verifiee", "chiffres_inconnus": []}
         if state.get("reecritures", 0) < self._reecritures:
             return {
                 "messages": [RemoveMessage(id=reponse.id or "")],
@@ -128,7 +131,6 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         return {
             "messages": [AIMessage(id=reponse.id, content=ABSTENTION)],
             "verification": "abstention",
-            "vue": None,
             "chiffres_inconnus": [],
         }
 
@@ -162,29 +164,22 @@ def creer_agent(
     )
 
 
-def _derniere_vue(messages: Sequence[AnyMessage]) -> dict[str, Any] | None:
-    """La vue proposée par l'outil le plus récent du tour (contenu structuré du résultat MCP), s'il en propose une."""
-    for message in reversed(messages):
-        if isinstance(message, HumanMessage):
-            break
-        if isinstance(message, ToolMessage) and isinstance(message.artifact, dict):
-            structure = cast(dict[str, Any], message.artifact).get("structured_content")
-            vue = cast(dict[str, Any], structure).get("vue") if isinstance(structure, dict) else None
-            if isinstance(vue, dict):
-                return cast(dict[str, Any], vue)
-    return None
-
-
-def _tour(messages: Sequence[AnyMessage]) -> tuple[str, list[Any]]:
-    """La dernière question et les résultats d'outils reçus depuis : seules sources admises pour les nombres."""
+def _tour(messages: Sequence[AnyMessage]) -> tuple[str, list[Any], str]:
+    """La dernière question, les résultats des outils de l'ERP reçus depuis (seules sources admises pour les nombres) et
+    la dernière surface A2UI du tour, à vérifier comme la réponse."""
     question = ""
     sources: list[Any] = []
+    surface = ""
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
             question = message.text
             break
-        if isinstance(message, ToolMessage):
-            sources.append(message.content)
-            if message.artifact is not None:
-                sources.append(message.artifact)
-    return question, sources
+        if not isinstance(message, ToolMessage):
+            continue
+        if message.name == OUTIL_A2UI:
+            surface = surface or valeurs_surface(message.text)
+            continue
+        sources.append(message.content)
+        if message.artifact is not None:
+            sources.append(message.artifact)
+    return question, sources, surface
