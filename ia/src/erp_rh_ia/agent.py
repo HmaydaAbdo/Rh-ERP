@@ -16,9 +16,12 @@ fois, puis remplacée par une abstention. L'état ``verification``
 (``en_cours`` puis ``verifiee`` ou ``abstention``) est partagé avec l'interface.
 """
 
+import json
 from collections.abc import Awaitable, Callable, Sequence
+from importlib import resources
 from typing import Annotated, Any, Literal, NotRequired
 
+from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -77,7 +80,29 @@ REECRITURE = (
     "reprenant que des valeurs des outils, sans aucun calcul."
 )
 
+#: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
+CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
+- Tous les textes sont en français.
+- Chaque valeur affichée (montant, effectif, nombre, période) est reprise telle quelle d'un résultat d'outil de la
+  conversation, avec son unité : MAD pour les montants. Ne calcule rien : ni total, ni moyenne, ni écart, ni
+  pourcentage. Une valeur absente des outils n'apparaît pas.
+- Utilise uniquement les composants du catalogue fourni (Text, Row, Column, List, Card, Divider…) ; un tableau se
+  compose avec des Row et des Column, des titres avec Text et sa variante.
+- Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
+
 Verification = Literal["en_cours", "verifiee", "abstention"]
+
+
+def _parametres_a2ui() -> dict[str, Any]:
+    """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
+    copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) pour valider chaque surface et la faire
+    reprendre par le sous-agent tant qu'elle n'est pas conforme, et les consignes de l'ERP."""
+    fichier = resources.files("erp_rh_ia").joinpath("catalogue_a2ui_base.json")
+    catalogue = json.loads(fichier.read_text(encoding="utf-8"))
+    return {
+        "catalog": {"components": catalogue["components"]},
+        "guidelines": {"design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}"},
+    }
 
 
 class EtatVerification(AgentState[Any]):
@@ -146,7 +171,7 @@ def creer_agent(
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question."""
     intergiciels: list[AgentMiddleware[Any, Any]] = [
-        CopilotKitMiddleware(),
+        CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
         ToolCallLimitMiddleware(run_limit=appels_outils),

@@ -37,30 +37,57 @@
   font-family: var(--font-sans);
 }
 
-// La barre latérale de CopilotKit fixe ses couleurs dans ses propres styles : on les ramène aux jetons (sélecteurs plus
-// spécifiques, car ses styles de composant sont injectés après les nôtres).
-.copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
-  background: var(--color-surface);
+// Panneau de l'assistant : une carte flottante au-dessus de l'écran, à droite. Elle ne déplace ni ne réduit les vues ; le
+// voile de la bibliothèque (mode modal) est neutralisé pour que l'écran reste utilisable pendant la discussion. La
+// bibliothèque fixe ses couleurs dans ses propres styles : on les ramène aux jetons (sélecteurs plus spécifiques, car ses
+// styles de composant sont injectés après les nôtres).
+html .copilot-sidebar-host .copilot-sidebar-backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+
+html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
+  top: var(--space-sm-md);
+  right: var(--space-sm-md);
+  bottom: var(--space-sm-md);
+  left: auto;
+  width: min(var(--copilot-sidebar-width, 27.5rem), calc(100vw - 2 * var(--space-sm-md)));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
   color: var(--color-text);
-  box-shadow: var(--shadow-lg, 0 0 42px rgb(0 0 0 / 0.25));
-
-  &[data-position='right'] {
-    border-left-color: var(--color-border);
-  }
-
-  &[data-position='left'] {
-    border-right-color: var(--color-border);
-  }
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28), 0 2px 8px rgb(0 0 0 / 0.12);
+  backdrop-filter: blur(18px) saturate(1.2);
 
   .copilot-sidebar-header {
-    border-bottom-color: var(--color-border);
-    background: var(--color-surface);
+    min-height: 4rem;
+    padding: var(--space-sm) var(--space-sm-md);
+    border-bottom: 1px solid var(--color-border);
+    background: transparent;
 
-    h2 {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      letter-spacing: 0.01em;
+    button {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: var(--radius-pill);
+      color: var(--color-text-muted);
+      font-size: 1.25rem;
+      line-height: 1;
+      transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+
+      &:hover {
+        background: var(--color-surface-alt);
+        color: var(--color-text);
+      }
     }
+  }
+
+  @media (max-width: 47.999rem) {
+    inset: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
   }
 }
 
@@ -94,4 +121,90 @@
 // Ouverte, la barre a sa propre croix dans l'en-tête : le lanceur flottant ne recouvre pas la saisie.
 .copilot-sidebar-host .copilot-sidebar-toggle[aria-expanded='true'] {
   display: none;
+}
+
+// --- Finitions de la discussion (classes stables des composants CopilotKit) ---
+html .copilot-sidebar-host .copilot-sidebar-window {
+  // Accueil : une invitation sobre, pas un titre d'affiche.
+  h1 {
+    max-width: 22rem;
+    margin-inline: auto;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+  }
+
+  // Zone de saisie : une carte calme, soulignée par l'accent de l'IA au focus.
+  .copilotKitInput {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+    transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+
+    &:focus-within {
+      border-color: color-mix(in srgb, var(--assistant-accent) 70%, var(--color-border));
+      box-shadow: 0 0 0 3px var(--assistant-accent-soft);
+    }
+
+    textarea {
+      font-size: 0.9375rem;
+      color: var(--color-text);
+
+      &::placeholder {
+        color: var(--color-text-muted);
+      }
+    }
+
+    button[type='submit'],
+    button[aria-label='Send message'] {
+      background: var(--assistant-accent);
+      color: var(--assistant-accent-contrast);
+    }
+  }
+
+  // Questions proposées : des puces nettes, l'accent au survol.
+  copilot-chat-suggestion-pill button {
+    padding: var(--space-2xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+
+    &:hover:not(:disabled) {
+      border-color: var(--assistant-accent);
+      background: var(--assistant-accent-soft);
+    }
+  }
+
+  // Message de l'utilisateur : une bulle discrète à la teinte de l'accent.
+  .copilotKitUserMessage copilot-chat-user-message-renderer {
+    border-radius: var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl);
+    background: var(--assistant-accent-soft);
+    color: var(--color-text);
+  }
+
+  // Réponse : lecture confortable.
+  .copilotKitAssistantMessage {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--assistant-accent);
+    outline-offset: 2px;
+  }
+
+  // La carte de saisie porte déjà l'état de focus.
+  textarea:focus-visible {
+    outline: none;
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
