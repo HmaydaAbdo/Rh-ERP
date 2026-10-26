@@ -48,8 +48,9 @@ export class AssistantRacineComponent {
       headers: async () => ({ Authorization: `Bearer ${await jetonValide(this.auth)}` }),
       // Interface composée (T16) : surfaces A2UI rendues avec le catalogue de base officiel, aux couleurs Staport.
       a2ui: { catalog: basicCatalog },
-      // Consultations d'outils affichées par le rendu intégré de la bibliothèque.
-      defaultToolRendering: true,
+      // Pas de consultations d'outils en brut (nom technique, statut en anglais) : le raisonnement replié dit déjà ce que
+      // fait l'agent (comportement par défaut de la bibliothèque).
+      defaultToolRendering: false,
       // L'inspecteur de développement de la bibliothèque est un outil distant et promotionnel : jamais chargé.
       enableInspector: false
     };
