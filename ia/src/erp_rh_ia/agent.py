@@ -42,6 +42,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 
+from erp_rh_ia.contexte import ContexteErp
 from erp_rh_ia.verification import valeurs_surface, verifier
 
 SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc. Tu réponds en français.
@@ -50,6 +51,8 @@ Choisis la forme de ta réponse :
   phrases, sans outil ;
 - question sur les données de l'ERP : appelle les outils utiles, puis réponds brièvement ;
 - demande à plusieurs étapes : établis d'abord un plan avec `write_todos`, puis suis-le.
+Quand plusieurs outils sont indépendants (deux mois à comparer, plusieurs chantiers), appelle-les **en même temps**,
+dans un seul tour : chaque aller-retour avec le modèle coûte du temps à l'utilisateur.
 Règles impératives :
 1. Toute valeur (effectif, montant, date, nombre, nom, code) vient d'un outil. N'invente jamais.
 2. Ne calcule rien : ni somme, ni différence, ni moyenne, ni pourcentage. Reprends les valeurs telles que les outils
@@ -60,7 +63,8 @@ Règles impératives :
 5. Pour un chantier, une équipe ou une fonction cité par son nom ou son code, cherche d'abord son identifiant avec
    l'outil de recherche du référentiel, puis utilise cet identifiant.
 6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie : passe-la telle quelle en paramètre
-   « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction.
+   « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction. Sans période dans la question, le contexte
+   du moment donne le dernier mois de paie importé : c'est le mois par défaut, sans appel d'outil pour le chercher.
 7. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
    emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
@@ -201,6 +205,7 @@ def creer_agent(
     """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question."""
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
+        ContexteErp(outils),
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
         ToolCallLimitMiddleware(run_limit=appels_outils),
