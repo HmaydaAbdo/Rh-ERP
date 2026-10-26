@@ -23,9 +23,11 @@ from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
+from erp_rh_ia.memoire import espace_conversation, sujet
 from erp_rh_ia.outils import jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
-FabriqueAgent = Callable[[Sequence[BaseTool], InMemorySaver], CompiledStateGraph[Any, Any, Any, Any]]
+FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any]], CompiledStateGraph[Any, Any, Any, Any]]
 
 
 class _SansDetail(logging.Filter):
@@ -77,14 +79,21 @@ def verifier_question(entree: RunAgentInput) -> None:
 
 
 async def evenements(
-    entree: RunAgentInput, fabrique: FabriqueAgent, outils: Sequence[BaseTool]
+    entree: RunAgentInput,
+    fabrique: FabriqueAgent,
+    outils: Sequence[BaseTool],
+    memoire: BaseCheckpointSaver[Any] | None = None,
+    thread_id: str | None = None,
 ) -> AsyncGenerator[BaseEvent]:
-    """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail."""
+    """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail.
+
+    ``entree`` porte le fil propre à l'utilisateur ; les événements rendent au navigateur l'identifiant qu'il a
+    envoyé (``thread_id``)."""
     demarre = False
     try:
         officiel = LangGraphAGUIAgent(
             name="erp-rh",
-            graph=fabrique(outils, InMemorySaver()),  # conversation du run seulement (mémoire durable : T3.2)
+            graph=fabrique(outils, memoire or InMemorySaver()),  # mémoire durable (memoire.py) ou celle du run
             # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
             # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
             config={"recursion_limit": 200},
@@ -96,6 +105,8 @@ async def evenements(
             if evenement.type == EventType.RAW:
                 continue
             demarre = demarre or evenement.type == EventType.RUN_STARTED
+            if thread_id is not None and hasattr(evenement, "thread_id"):
+                evenement = evenement.model_copy(update={"thread_id": thread_id})
             yield evenement.model_copy(update={"raw_event": None}) if evenement.raw_event is not None else evenement
     except Exception as panne:  # le détail reste côté serveur, sans contenu RH
         journal.warning("Run %s en échec : %s", entree.run_id, type(panne).__name__)
@@ -119,7 +130,10 @@ class AccesSpring:
 
 
 def routeur_agui(
-    fabrique: Callable[[], FabriqueAgent], acces: Callable[[], AccesErp], actif: Callable[[], bool]
+    fabrique: Callable[[], FabriqueAgent],
+    acces: Callable[[], AccesErp],
+    actif: Callable[[], bool],
+    memoire: Callable[[], BaseCheckpointSaver[Any]] | None = None,
 ) -> APIRouter:
     routeur = APIRouter()
 
@@ -137,10 +151,14 @@ def routeur_agui(
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
         # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
         # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
-        entree_serveur = entree.model_copy(update={"state": {}})
+        # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
+        fil = espace_conversation(sujet(jeton), entree.thread_id)
+        entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
 
         async def flux() -> AsyncIterator[str]:
-            async for evenement in evenements(entree_serveur, fabrique(), outils):
+            async for evenement in evenements(
+                entree_serveur, fabrique(), outils, memoire() if memoire else None, entree.thread_id
+            ):
                 yield encodeur.encode(evenement)
 
         return StreamingResponse(
