@@ -60,9 +60,10 @@ commun.
 
 * Dans ERP-RH, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
   Choisir le SDK Java maintenu et son mode d'intégration seulement après vérification avec les
-  versions réelles du JDK et de Spring Boot. L'intégration ne doit pas ajouter Spring AI,
-  LangChain4j ou un autre framework LLM au monolithe. Le SDK retenu, ses versions et la révision
-  négociée sont consignés dans [`docs/ia.md`](../docs/ia.md).
+  versions réelles du JDK et de Spring Boot. Pour ERP-RH, c'est le serveur MCP de Spring AI, outils
+  déclarés par annotations ; l'intégration n'ajoute au monolithe aucun client de modèle ni
+  LangChain4j. Le SDK retenu, ses versions et la révision négociée sont consignés dans
+  [`docs/ia.md`](../docs/ia.md).
 * Pour un serveur réseau, retenir le transport **Streamable HTTP** et enregistrer la révision MCP
   exacte, les SDK client/serveur et les capacités négociées. Le transport historique HTTP+SSE ne
   devient pas la référence par défaut ; stdio reste réservé aux intégrations locales adaptées.
