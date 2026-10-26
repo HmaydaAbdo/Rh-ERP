@@ -332,3 +332,16 @@ permissions, les erreurs et réessais, les réponses tardives, les enregistremen
 - **Essais de connexion** : nginx inner limite les tentatives à 20 par minute et par adresse client (`429` au-delà) ; le compte est aussi temporairement bloqué après cinq mots de passe incorrects en quinze minutes. Le blocage dure quinze minutes ; une connexion réussie ou quinze minutes sans nouvel échec remet le compteur à zéro. Un compte bloqué reçoit le même refus générique qu'un compte avec des identifiants invalides. Les événements d'échec et de blocage sont inscrits dans le journal `SECURITE`.
 - La connexion fait toujours le même travail de hachage (identifiant inconnu, compte inactif, mot de passe faux) : la durée de la réponse ne révèle pas si un compte existe. Le courriel de réinitialisation part en tâche asynchrone (`@Async`) : la demande répond aussi vite que l'adresse corresponde ou non à un compte, et un échec d'envoi est journalisé sans jamais être renvoyé à l'appelant.
 - Les connexions, refus d'accès, changements de droits et de mots de passe sont journalisés (voir [../audit/README.md](../audit/README.md)).
+
+## Couche IA
+
+L'assistant RH agit **pour l'utilisateur connecté**, avec un jeton court RS256 émis par le backend (audience `mcp`, cinq minutes) : chaque appel d'outil revalide l'émetteur, l'audience, l'expiration et les permissions. Deux outils MCP de lecture exposent l'identité et les rôles.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `systeme_identite` | Identité de l'utilisateur pour qui l'assistant agit et liste complète de ses droits (permissions et rôles) ; sert à comprendre un refus « Access Denied » | `IA_UTILISER` (route `/mcp`) | aucune entrée propre : l'outil ne lit que l'identité de l'appelant |
+| `roles_lister` | Rôles et permissions que chacun accorde (jamais les comptes), filtre facultatif sur le nom ; 20 rôles au plus, avec le total | `ROLE_MANAGE` | `MCP_ROLES_LISTER` |
+
+- **Usage.** « Qui peut voir la paie ? », « Que permet le rôle X ? », « Pourquoi ai-je un refus ? ».
+- **Refus.** Un outil sans la permission requise répond « Access Denied » ; l'agent doit l'expliquer sans contourner ni réessayer, et l'événement est journalisé (`ACCES_REFUSE`).
+- **Limites.** Aucun outil ne crée ni ne modifie un compte, un rôle ou une permission ; le `JWT_SECRET` n'est jamais partagé avec le service IA ; le jeton de l'agent a l'audience `mcp` et ne vaut que pour cette route.

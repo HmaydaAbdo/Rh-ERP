@@ -19,6 +19,17 @@ Fiche d'identité et situation actuelle de l'employé. Ce domaine consomme Fonct
 parcours restent détenus par Paie. Cartes et Analytique utilisent les composants partagés configurés
 par `employee-module.ts`, sans dupliquer leurs règles.
 
+## Couches et points de contrôle
+
+Le détail de chaque couche est dans le [README Employé](../README.md#les-couches-du-domaine). Avant de modifier le domaine,
+repérer la couche touchée et vérifier ses points de contrôle.
+
+| Couche | Ce qu'elle contient | À vérifier quand on la modifie |
+|---|---|---|
+| **Application** | `EmployeeController`, import d'ajout, `EmployeeService` / `IEmployeeService`, `ProjectionPaieEmployee` (salaire masqué sans `PAIE_READ`, partagée REST et MCP), audit `EMPLOYE_*`, migrations `V22`, `V27`, `V29` à `V33` ; côté Angular `portail/employee/` | CIN normalisé et unique (service **et** base) ; une fiche sortie n'a ni chantier ni équipe ; références résolues par les façades ; version optimiste ; salaire conservé à l'écriture sans droit ; entrée d'audit pour chaque écriture |
+| **Analytique** | `POST /employees/analytique` et `/employees/regroupements` (fiches courantes, sans salaire), croisés avec `POST /paie/analytique` (bulletins) | Ne pas confondre état courant des fiches et historique des bulletins ; mêmes définitions âge, ancienneté, tranches ; groupes `0` = sans rattachement ; douze plus grands groupes dans les graphiques seulement |
+| **IA** | `employes_rechercher`, `employe_fiche`, `employes_compter`, `employes_regrouper`, `employes_sorties` (`EMPLOYEE_READ`), `employe_parcours` (`PAIE_READ`) | Lecture seule ; salaire omis sans `PAIE_READ` ; vocabulaire `EN_POSTE` / `SORTI` ; descriptions d'outils à jour ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
+
 ## Garde-fous
 
 - CIN, champs obligatoires, statut, import d'ajout et restrictions de suppression suivent le README.

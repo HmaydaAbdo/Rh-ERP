@@ -21,9 +21,10 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   **du même tag**, jusqu'à 4 modèles. Pas de bascule sur 400 ni 401 : une clé vide désactive donc ses
   modèles au démarrage. Pool épuisé : échec explicite, jamais un modèle plus faible ; LiteLLM le
   signale par « Not allowed to access model due to tags configuration ».
-- Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash et NVIDIA
-  NIM (offre de prototypage). Les modèles sont sondés (outils + JSON)
-  avant d'entrer dans un pool.
+- Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA
+  NIM (offre de prototypage), LLM7 (jeton gratuit par e-mail ; seuls `gpt-oss:20b` et `codestral-latest` sont gratuits) et
+  Cohere (clé d'essai : 20 requêtes/min, 1 000 appels/mois, non commerciale ; en évaluation seulement, sauf `command-r7b`).
+  SambaNova n'est plus gratuit : écarté. Les modèles sont sondés (outils + JSON) avant d'entrer dans un pool.
 - Pool d'évaluation (preview Groq, Step 5) : tags `eval…` seulement. La clé
   d'ERP-RH porte `metadata.tags: ["!eval"]` et ne peut jamais les atteindre.
 - Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée

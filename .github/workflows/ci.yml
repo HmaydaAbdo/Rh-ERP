@@ -121,6 +121,10 @@ jobs:
           ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/runtime-dependencies.txt
           node -e 'const fs = require("node:fs"); const admis = /org\.springframework\.ai:(spring-ai-(starter-mcp-server-webmvc|autoconfigure-mcp-server-(webmvc|common)|mcp|mcp-annotations|model|commons|template-st)|mcp-spring-webmvc):/; const interdits = fs.readFileSync("target/runtime-dependencies.txt", "utf8").split("\n").filter((l) => /org\.springframework\.ai:|dev\.langchain4j:|langgraph4j/.test(l) && !admis.test(l)); if (interdits.length) throw new Error("LLM framework in production runtime: " + interdits.join(" | "));'
 
+      # Chaque permission d'un contrôleur et chaque outil MCP figure dans la documentation de son domaine (README, RBAC).
+      - name: Verify domain documentation covers permissions and MCP tools
+        run: node scripts/check-docs-domaines.mjs .
+
       - name: Install and validate MCP test client
         working-directory: scripts/ia/mcp-compatibility
         run: |

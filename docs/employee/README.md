@@ -5,6 +5,83 @@ situations de chaque mois; ils constituent l’historique, sans être confondus 
 Les fiches sont créées par saisie ou import Excel d’ajout. Toute modification d’une fiche existante
 passe par l’application.
 
+## Les couches du domaine
+
+Employé est le domaine le plus consulté : il porte la fiche courante de chaque personne et alimente les effectifs.
+Chaque couche est décrite ici pour pouvoir être relue et commentée séparément ; les règles détaillées suivent dans les
+sections suivantes.
+
+| Couche | Rôle pour Employé | Où lire |
+|---|---|---|
+| **Application** | Créer, modifier, rechercher, importer, sortir et supprimer les fiches ; projeter le salaire selon les droits | [Couche application](#couche-application) |
+| **Analytique** | Compter et répartir les effectifs (fiches courantes) ; croiser avec la paie des mois | [Couche analytique](#couche-analytique) |
+| **IA** | Laisser l'assistant rechercher, compter, répartir et suivre le parcours des employés, en lecture seule | [Couche IA](#couche-ia) |
+
+### Couche application
+
+- **Backend** (`backend/src/main/java/staport/rh/employee/`) : `EmployeeController` (`/employees`), import Excel d'ajout
+  (`/employees/import`), `EmployeeService` / `IEmployeeService` (façade lue par Paie, Chantier, Équipe et l'assistant),
+  `ProjectionPaieEmployee` (masque salaire et type sans `PAIE_READ`, **partagée** par l'API REST et les outils MCP).
+- **Écritures auditées** (`@AuditableAction`) : `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`,
+  `EMPLOYE_SORTIE` ; l'entité `Employee` et `EmployeeSortie` sont `@Audited` (Envers) avec verrou optimiste.
+- **Références.** Fonction, chantier et équipe sont résolus par les façades des domaines propriétaires
+  (`IFunctionService`, `IChantierService`, `IEquipeService`) ; une référence inconnue est refusée. Une fiche sortie n'a ni
+  chantier ni équipe courants (contrainte de base, `V33`).
+- **Suppression.** Refusée (`409`) pour un employé lié à un bulletin ou à un compte ; la sortie (`INACTIF`) conserve
+  l'historique.
+- **Origine des mises à jour.** Hors saisie et import d'ajout, la fiche suit la dernière paie importée (`V29`, `V30`) :
+  l'assistant d'import de la paie remet en poste un employé présent, enregistre un départ confirmé (période et motif).
+- **Frontend** (`frontend/src/app/portail/employee/`) : coque et trois vues (`/employees`, `/employees/cartes`,
+  `/employees/analytique`), fiche `/employees/:id`, formulaire `/employees/new` et `/:id/edit`, import avec résumé des
+  erreurs par numéro de ligne Excel ; filtres nom, CIN, fonctions, chantiers, équipes et statut conservés dans l'URL.
+
+### Couche analytique
+
+Employé a **deux** sources de chiffres, à ne pas confondre :
+
+| Source | Contenu | Où |
+|---|---|---|
+| **Fiches courantes** | Effectif, en poste, sortis, âge et ancienneté moyens, embauches des douze derniers mois, tranches d'âge et d'ancienneté ; groupes par chantier, équipe ou fonction ; **aucun salaire** | \`POST /employees/analytique\` et \`POST /employees/regroupements\` (\`EMPLOYEE_READ\`) |
+| **Bulletins du mois** | Effectif payé, masse, STC, mouvements (entrées, plus payés, sorties) | \`POST /paie/analytique\` et le domaine Paie (\`PAIE_READ\`) |
+
+- **Cartes** : chantier → équipe → fonction → employés ; l'effectif et la part en poste viennent des fiches, les
+  indicateurs de paie sont identifiés par leur période.
+- **Analytique** : chiffres et tranches Employé d'abord, puis données de paie autorisées ; les graphiques limitent les
+  groupes aux douze plus grands, le tableau de données les garde tous.
+- **Définitions.** Âge et ancienneté moyens : moyenne des durées en jours ÷ 365,2425, arrondie à une décimale (jamais
+  négative). Embauches des douze mois : \`aujourd'hui − 1 an < embauche ≤ aujourd'hui\` ; les dates futures sont exclues.
+  Tranches d'âge \`<25\`, \`25–34\`, \`35–44\`, \`45–54\`, \`55+\` ; d'ancienneté \`<1\`, \`[1,3[\`, \`[3,5[\`, \`[5,10[\`, \`10+\` ans.
+- **Attention.** L'effectif des fiches est l'état **courant** (issu du dernier mois de paie importé), pas un historique :
+  pour l'évolution d'un mois à l'autre, il faut les bulletins (mouvements de la paie).
+
+### Couche IA
+
+L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Spring AI), en plus de la permission
+`IA_UTILISER` ; il n'écrit rien et n'exécute aucun SQL. Le salaire et le type de salaire sont omis sans `PAIE_READ`
+(même projection que l'API REST).
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `employes_rechercher` | Trouve des employés par nom ou CIN partiels et par chantier, équipe, fonction, statut (au moins un critère ; 20 fiches au plus avec le total) | `EMPLOYEE_READ` | `MCP_EMPLOYES_RECHERCHER` |
+| `employe_fiche` | Fiche complète : CIN, dates, fonction, chantier, équipe, statut, départs enregistrés | `EMPLOYEE_READ` | `MCP_EMPLOYE_FICHE` |
+| `employes_compter` | Effectif, en poste, sortis, âge et ancienneté moyens, embauches 12 mois, tranches (mêmes chiffres que l'Analytique, sans salaire) | `EMPLOYEE_READ` | `MCP_EMPLOYES_COMPTER` |
+| `employes_regrouper` | Effectif par chantier, équipe ou fonction (50 groupes au plus) | `EMPLOYEE_READ` | `MCP_EMPLOYES_REGROUPER` |
+| `employes_sorties` | Départs constatés par la paie d'un mois : total, par motif, 20 premiers employés | `EMPLOYEE_READ` | `MCP_EMPLOYES_SORTIES` |
+| `employe_parcours` | Parcours depuis les bulletins : indicateurs, 36 derniers mois, événements (entrée, mutation, salaire, départ, retour) | `PAIE_READ` | `MCP_EMPLOYE_PARCOURS` |
+
+- **Vocabulaire.** L'API parle de `ACTIF` / `INACTIF` ; les outils et l'assistant disent « en poste » (`EN_POSTE`) et
+  « sorti » (`SORTI`).
+- **Choix de l'outil.** Compter ou répartir : `employes_compter` / `employes_regrouper` ; liste nominative :
+  `employes_rechercher` ; évolution mois par mois : les outils de la [paie](../paie/README.md#couche-ia) ; un départ
+  confirmé par la paie : `employes_sorties`, à ne pas confondre avec les « plus payés » de `paie_mouvements`.
+- **Données personnelles.** Les outils rendent les mêmes champs que les écrans (CIN et dates de naissance compris) ; seul
+  le salaire dépend de `PAIE_READ`. Aucun périmètre par fiche de poste avant le jalon J2 de [ia.md](../ia.md).
+- **Exactitude.** Chaque nombre de la réponse doit venir d'un résultat d'outil du même tour ; sinon réécriture, puis abstention.
+- **Sur l'écran.** Sur `/employees`, l'assistant propose « Effectif en poste », « Effectif par chantier » et « Départs du mois ».
+
+
+---
+
 ## Règles
 
 - Le CIN est obligatoire, limité à 30 caractères et unique sans distinction de casse après retrait
