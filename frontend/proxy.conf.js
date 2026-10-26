@@ -8,9 +8,10 @@
 // Le proxy de production est nginx.conf et utilise le réseau Docker interne : il ne lit pas ce fichier.
 const target = process.env.BACKEND_URL || 'http://localhost:5001';
 
-// Assistant RH : /ia/* vers le service IA (port hôte publié par Compose, IA_PORT, 5003 par défaut). Même chemin qu'en production
-// (nginx.conf) : le navigateur parle à sa propre origine, sans CORS. Flux SSE relayé tel quel.
-const cibleIa = process.env.IA_URL || `http://localhost:${process.env.IA_PORT || lireDansEnv('IA_PORT') || '5003'}`;
+// Assistant RH : /ia/copilotkit/* vers le runtime CopilotKit (port hôte publié par Compose, COPILOT_RUNTIME_PORT, 5004 par
+// défaut). Même chemin qu'en production (nginx.conf) : le navigateur parle à sa propre origine, sans CORS. Flux SSE relayé tel quel.
+const cibleAssistant =
+  process.env.COPILOT_RUNTIME_URL || `http://localhost:${process.env.COPILOT_RUNTIME_PORT || lireDansEnv('COPILOT_RUNTIME_PORT') || '5004'}`;
 
 const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/parametres', '/auth', '/users', '/roles', '/permissions', '/logs'];
 
@@ -55,8 +56,8 @@ function relaisSatellite(relais, origine, chemin, jeton) {
 
 module.exports = [
   {
-    context: ['/ia/'],
-    target: cibleIa,
+    context: ['/ia/copilotkit/'],
+    target: cibleAssistant,
     changeOrigin: true,
     rewrite: (url) => url.replace(/^\/ia/, '')
   },

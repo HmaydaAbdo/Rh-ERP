@@ -112,12 +112,14 @@ jobs:
           name: sbom-backend
           path: backend/target/bom.json
 
-      # Le SDK MCP Java fait partie du livrable (route /mcp) ; aucun framework LLM n'entre dans le monolithe.
+      # Le serveur MCP de Spring AI fait partie du livrable (route /mcp, décision du 2026-10-26). Aucun client de modèle ni
+      # framework d'agent n'entre dans le monolithe : seuls les artefacts MCP et les abstractions communes de Spring AI
+      # sont admis, tout autre artefact Spring AI (client OpenAI, Anthropic, Ollama…) ou LangChain4j fait échouer le contrôle.
       - name: Verify runtime excludes LLM frameworks
         working-directory: backend
         run: |
           ./mvnw -B -ntp dependency:tree -Dscope=runtime -DoutputFile=target/runtime-dependencies.txt
-          node -e 'const fs = require("node:fs"); const tree = fs.readFileSync("target/runtime-dependencies.txt", "utf8"); if (/org\.springframework\.ai:|dev\.langchain4j:|langgraph4j/.test(tree)) throw new Error("LLM framework in production runtime");'
+          node -e 'const fs = require("node:fs"); const admis = /org\.springframework\.ai:(spring-ai-(starter-mcp-server-webmvc|autoconfigure-mcp-server-(webmvc|common)|mcp|mcp-annotations|model|commons|template-st)|mcp-spring-webmvc):/; const interdits = fs.readFileSync("target/runtime-dependencies.txt", "utf8").split("\n").filter((l) => /org\.springframework\.ai:|dev\.langchain4j:|langgraph4j/.test(l) && !admis.test(l)); if (interdits.length) throw new Error("LLM framework in production runtime: " + interdits.join(" | "));'
 
       - name: Install and validate MCP test client
         working-directory: scripts/ia/mcp-compatibility
@@ -179,6 +181,7 @@ jobs:
           set -euo pipefail
           docker build --tag erp-rh-litellm:ci litellm
           docker build --tag erp-rh-ia:ci ia
+          docker build --tag erp-rh-copilot-runtime:ci copilot-runtime
 
   performance-profile:
     runs-on: ubuntu-latest
@@ -415,11 +418,12 @@ jobs:
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-ia:$GITHUB_SHA" ia
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-copilot-runtime:$GITHUB_SHA" copilot-runtime
 
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia; do
+          for image in postgres backend frontend backup litellm ia copilot-runtime; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -440,7 +444,7 @@ jobs:
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia; do
+          for image in postgres backend frontend backup litellm ia copilot-runtime; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then

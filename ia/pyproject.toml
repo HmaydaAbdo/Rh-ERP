@@ -14,6 +14,9 @@ dependencies = [
     "langgraph",
     "ag-ui-protocol==1.0.0",
     "ag-ui-langgraph==0.0.47",
+    "langchain[mcp]>=1.4.7",
+    "langchain-litellm>=0.11.2",
+    "copilotkit>=0.1.96",
 ]
 
 [dependency-groups]
@@ -21,6 +24,9 @@ dev = [
     "pytest",
     "ruff",
     "pyright",
+    "openevals>=0.2.2",
+    "agentevals>=0.0.9",
+    "aimock-pytest>=0.7.0",
 ]
 
 [build-system]

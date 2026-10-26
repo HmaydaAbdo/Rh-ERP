@@ -34,74 +34,106 @@ function routes() {
   };
 }
 
-/** Flux AG-UI tel que le service IA l'émet (ag-ui-langgraph), en SSE. */
+/** Flux AG-UI tel que le runtime CopilotKit le relaie, en SSE : raisonnement, outil, surface A2UI, réponse vérifiée. */
 function flux(): string {
+  const surface = {
+    a2ui_operations: [
+      { version: 'v0.9', createSurface: { surfaceId: 's1', catalogId: 'https://a2ui.org/specification/v0_9/basic_catalog.json' } },
+      {
+        version: 'v0.9',
+        updateComponents: { surfaceId: 's1', components: [{ id: 'root', component: 'Text', text: 'Masse salariale 2026-08 : 4 800 MAD' }] }
+      }
+    ]
+  };
   const evenements = [
     { type: 'RUN_STARTED', threadId: 't', runId: 'r' },
-    { type: 'CUSTOM', name: 'com.staport.mascot.state.v1', value: { sequence: 1, mood: 'thinking', action: 'idle' } },
-    { type: 'STEP_STARTED', stepName: 'preparer' },
-    { type: 'STEP_FINISHED', stepName: 'preparer' },
-    { type: 'STEP_STARTED', stepName: 'executer' },
+    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'en_cours' } },
+    { type: 'REASONING_START', messageId: 'p1' },
+    { type: 'REASONING_MESSAGE_START', messageId: 'p1', role: 'reasoning' },
+    { type: 'REASONING_MESSAGE_CONTENT', messageId: 'p1', delta: 'Je consulte les indicateurs de paie.' },
+    { type: 'REASONING_MESSAGE_END', messageId: 'p1' },
+    { type: 'REASONING_END', messageId: 'p1' },
     { type: 'TOOL_CALL_START', toolCallId: 'a1', toolCallName: 'paie_indicateurs', parentMessageId: 'a1' },
     { type: 'TOOL_CALL_ARGS', toolCallId: 'a1', delta: '{"periode":"2026-08"}' },
     { type: 'TOOL_CALL_END', toolCallId: 'a1' },
-    { type: 'STEP_FINISHED', stepName: 'executer' },
-    { type: 'STEP_STARTED', stepName: 'conclure' },
+    { type: 'TOOL_CALL_RESULT', messageId: 'r1', toolCallId: 'a1', role: 'tool', content: '{"masse":4800}' },
+    { type: 'ACTIVITY_SNAPSHOT', messageId: 'a2ui-surface-a2', activityType: 'a2ui-surface', content: surface, replace: true },
     { type: 'TEXT_MESSAGE_START', messageId: 'm1', role: 'assistant' },
     { type: 'TEXT_MESSAGE_CONTENT', messageId: 'm1', delta: 'La masse salariale de 2026-08 est de 4 800 MAD.' },
     { type: 'TEXT_MESSAGE_END', messageId: 'm1' },
-    {
-      type: 'CUSTOM',
-      name: 'com.staport.answer.v1',
-      value: { abstention: false, motif: null, vue: { module: 'paie', vue: 'analytique', parametres: { periode: '2026-08' } } }
-    },
-    { type: 'CUSTOM', name: 'com.staport.mascot.state.v1', value: { sequence: 2, mood: 'neutral', action: 'idle' } },
-    { type: 'STEP_FINISHED', stepName: 'conclure' },
+    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'verifiee' } },
     { type: 'RUN_FINISHED', threadId: 't', runId: 'r' }
   ];
   return evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('');
 }
 
-async function simulerAgent(page: Page): Promise<{ autorisations: string[] }> {
+/** Le runtime CopilotKit simulé : sa description (`/info`, A2UI actif) et le run de l'agent ; le reste répond vide. */
+async function simulerRuntime(page: Page): Promise<{ autorisations: string[] }> {
   const vu = { autorisations: [] as string[] };
-  await page.route('**/ia/agui', async (route) => {
-    vu.autorisations.push(route.request().headers()['authorization'] ?? '');
-    await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: flux() });
+  await page.route('**/ia/copilotkit/**', async (route) => {
+    const url = route.request().url();
+    if (url.endsWith('/info')) {
+      await route.fulfill({
+        json: { version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', a2uiEnabled: true, a2ui: { enabled: true } }
+      });
+    } else if (url.endsWith('/agent/default/run')) {
+      vu.autorisations.push(route.request().headers()['authorization'] ?? '');
+      await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: flux() });
+    } else {
+      await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: '' });
+    }
   });
   return vu;
 }
 
 test.describe('Assistant RH', () => {
-  test('répond, ouvre la vue filtrée, surligne la valeur citée et permet de revenir', async ({ page }) => {
+  test('répond avec raisonnement, consultation et surface A2UI composée', async ({ page }) => {
     await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
-    const agent = await simulerAgent(page);
+    const runtime = await simulerRuntime(page);
     await page.goto('/paie');
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
 
-    const question = page.getByLabel('Question pour l’assistant');
+    await page.keyboard.press('Control+k');
+    const assistant = page.locator('aside.copilot-sidebar-window');
+    await expect(assistant.getByText('Que voulez-vous savoir')).toBeVisible();
+    // Questions proposées selon l'écran ouvert (la paie).
+    await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
+
+    const question = assistant.getByPlaceholder('Posez votre question…');
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
 
-    await expect(page).toHaveURL(/\/paie\/analytique\?periode=2026-08$/);
-    const assistant = page.getByRole('region', { name: 'Assistant RH' });
-    await expect(assistant.getByText('Chiffres vérifiés sur les données de l’ERP')).toBeVisible();
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
-    await expect(assistant.getByText('Paie · Analytique')).toBeVisible();
-    await expect(assistant.getByRole('button', { name: /étapes · 1 outil/ })).toHaveAttribute('aria-expanded', 'false');
-    await expect(page.locator('#contenu .assistant-cite').first()).toBeVisible();
-    expect(agent.autorisations).toEqual(['Bearer jeton-test']);
+    await expect(assistant.getByText('Masse salariale 2026-08 : 4 800 MAD')).toBeVisible();
+    await expect(assistant.getByText('paie_indicateurs')).toBeVisible();
+    expect(runtime.autorisations).toEqual(['Bearer jeton-test']);
 
     const resultats = await new AxeBuilder({ page }).include('app-assistant').analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+  });
 
-    await assistant.getByRole('button', { name: 'Revenir à l’écran précédent' }).click();
-    await expect(page).toHaveURL(/\/paie$/);
+  test('occupe tout l’écran sur téléphone, sans défilement horizontal', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+
+    await page.keyboard.press('Control+k');
+    // Sur téléphone la barre devient une fenêtre modale.
+    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
+    await expect(assistant.getByPlaceholder('Posez votre question…')).toBeVisible();
+    const largeur = await assistant.evaluate((e) => e.getBoundingClientRect().width);
+    expect(largeur).toBe(390);
+    const debordement = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(debordement).toBeLessThanOrEqual(0);
   });
 
   test('n’apparaît pas sans le droit IA_UTILISER', async ({ page }) => {
     await mockApi(page, { username: 'paie', permissions: ['PAIE_READ'] }, routes());
     await page.goto('/paie');
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Assistant RH' })).toHaveCount(0);
+    await page.keyboard.press('Control+k');
+    await expect(page.locator('app-assistant')).toHaveCount(0);
   });
 });

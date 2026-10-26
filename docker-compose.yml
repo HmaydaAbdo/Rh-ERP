@@ -193,7 +193,7 @@ services:
         condition: service_healthy
     networks:
       - web-net
-      # Relais /ia/agui vers le service IA (nginx.conf).
+      # Relais /ia/copilotkit/ vers le runtime CopilotKit (nginx.conf).
       - assistant-net
     environment:
       # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
@@ -308,9 +308,32 @@ services:
       - /tmp
     networks:
       - ia-net
-      - assistant-net
+      - runtime-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
+
+  # Runtime CopilotKit officiel (docs/ia.md, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
+  # nginx). Il applique le middleware A2UI et relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur.
+  copilot-runtime:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      ia:
+        condition: service_healthy
+    environment:
+      IA_AGUI_URL: http://ia:8000/agui
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - runtime-net
+      - assistant-net
+    # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
+    ports:
+      - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
 
 volumes:
   postgres_data_v18:
@@ -326,5 +349,7 @@ networks:
   ia-db-net:
   # ia, litellm et le backend (route /mcp).
   ia-net:
-  # frontend (nginx) et service IA seulement : le navigateur atteint l'assistant, jamais la passerelle LiteLLM.
+  # frontend (nginx) et runtime CopilotKit seulement : le navigateur atteint l'assistant, jamais le service IA ni LiteLLM.
   assistant-net:
+  # runtime CopilotKit et service IA.
+  runtime-net:

@@ -3,8 +3,7 @@
 <div
   class="app-shell"
   [class.app-shell--auth]="!navigationVisible()"
-  [class.app-shell--menu-ouvert]="menuOuvert()"
-  [class.app-shell--assistant]="assistantVisible()"
+  [class.app-shell--menu-ouvert]="menuOuvert()"
   (keydown.escape)="fermerMenu()"
 >
   @if (navigationVisible()) {

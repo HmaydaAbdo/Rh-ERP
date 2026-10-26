@@ -1,9 +1,27 @@
 package staport.rh.mcp.outils;
 
-import staport.rh.audit.services.interfaces.IAuditOutilsAgent;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
+import staport.rh.audit.annotations.AuditableAction;
+import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
+import staport.rh.employee.dtos.response.EmployeeAnalytiqueDto;
 import staport.rh.employee.dtos.response.EmployeeRegroupementDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
+import staport.rh.employee.dtos.response.EmployeeSortieDto;
 import staport.rh.employee.entities.DimensionEmployes;
 import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.projection.ProjectionPaieEmployee;
@@ -13,120 +31,311 @@ import staport.rh.mcp.dtos.VueProposeeDto;
 import staport.rh.paie.parcours.ParcoursEmployeDto;
 import staport.rh.paie.services.interfaces.IPaieParcoursService;
 
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
-import static staport.rh.mcp.outils.OutilDefini.enumeration;
-import static staport.rh.mcp.outils.OutilDefini.identifiant;
-import static staport.rh.mcp.outils.OutilDefini.limite;
-import static staport.rh.mcp.outils.OutilDefini.liste;
-import static staport.rh.mcp.outils.OutilDefini.nombre;
-import static staport.rh.mcp.outils.OutilDefini.objetLibre;
-import static staport.rh.mcp.outils.OutilDefini.outil;
+/**
+ * Outils Employé : recherche, fiche, comptage, regroupement, départs et parcours. Mêmes champs que l'écran (CIN et
+ * dates compris, décision du 2026-10-25) ; le salaire et son type seulement avec {@code PAIE_READ}, selon la règle de
+ * l'API ({@link ProjectionPaieEmployee}). Mécanique portée par les frameworks, comme {@link OutilsReferentiels}.
+ */
+@Component
+@Validated
+@ConditionalOnBooleanProperty("security.mcp.enabled")
+public class OutilsEmploye {
 
-/** Outils Employé en plus de la recherche, du comptage et des départs : fiche, regroupement et parcours. */
-public final class OutilsEmploye {
-
+    private static final int LIMITE_FICHES = 20;
+    private static final int NOMS_RENDUS = 20;
     private static final int GROUPES = 50;
     private static final int MOIS_DE_PARCOURS = 36;
 
-    private OutilsEmploye() {
+    private final IEmployeeService employes;
+    private final IEmployeeAnalytiqueService analytique;
+    private final IPaieParcoursService parcours;
+    private final PeriodePaie periodes;
+
+    OutilsEmploye(IEmployeeService employes, IEmployeeAnalytiqueService analytique, IPaieParcoursService parcours,
+                  PeriodePaie periodes) {
+        this.employes = employes;
+        this.analytique = analytique;
+        this.parcours = parcours;
+        this.periodes = periodes;
     }
 
-    public static List<OutilLecture> catalogue(IEmployeeService employes, IEmployeeAnalytiqueService analytique,
-                                               IPaieParcoursService parcours, IAuditOutilsAgent audit) {
-        return List.of(
-                outil("employe_fiche")
-                        .description("Fiche complète d'un employé par son identifiant (CIN, dates de naissance et "
-                                + "d'embauche, fonction, chantier, équipe, statut) et ses départs ; salaire avec le droit paie.")
-                        .permissions("EMPLOYEE_READ")
-                        .entree(Map.of("id", identifiant("Identifiant de l'employé")))
-                        .sortie(Map.of("employe", objetLibre(), "departs", liste(), "vue", OutilLecture.vueProposee()),
-                                "employe", "departs", "vue")
-                        .execution((lecteur, arguments) -> {
-                            long id = OutilsReferentiels.obligatoire(arguments);
-                            boolean voitLaPaie = ProjectionPaieEmployee.voitLaPaie(lecteur);
-                            EmployeeResponseDto employe = ProjectionPaieEmployee.pourLeLecteur(employes.findById(id), voitLaPaie);
-                            List<Map<String, Object>> departs = employes.listerSorties(id).stream()
-                                    .map(s -> Map.<String, Object>of("periode", s.periode().toString(),
-                                            "motif", s.motif() == null ? "NON_PRECISE" : s.motif()))
-                                    .toList();
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("employe", OutilEmployesRechercher.fiche(employe, voitLaPaie));
-                            donnees.put("departs", departs);
-                            donnees.put("vue", new VueProposeeDto("employees", "fiche", Map.of("id", String.valueOf(id))).enJson());
-                            return new OutilLecture.Resultat(donnees, employe.nomPrenom() + ", "
-                                    + Statuts.libelle(employe.statut()) + ".", 1, Map.of("id", id));
-                        })
-                        .construire(audit),
-                outil("employes_regrouper")
-                        .description("Effectif des employés regroupé par chantier, équipe ou fonction (total et en poste), "
-                                + "du plus grand groupe au plus petit, sur un périmètre ; " + GROUPES + " groupes au plus.")
-                        .permissions("EMPLOYEE_READ")
-                        .entree(Map.of(
-                                "dimension", enumeration("Regroupement", "CHANTIER", "EQUIPE", "FONCTION"),
-                                "chantierIds", OutilLecture.identifiants("Chantiers ; absent = tous"),
-                                "equipeIds", OutilLecture.identifiants("Équipes ; 0 = sans équipe ; absent = toutes"),
-                                "fonctionIds", OutilLecture.identifiants("Fonctions ; absent = toutes"),
-                                "statut", Statuts.schema(),
-                                "limite", limite(GROUPES, GROUPES)))
-                        .sortie(Map.of("dimension", Map.of("type", "string"), "nombreGroupes", nombre(), "groupes", liste(),
-                                "vue", OutilLecture.vueProposee()), "dimension", "nombreGroupes", "groupes", "vue")
-                        .execution((lecteur, arguments) -> {
-                            DimensionEmployes dimension = DimensionEmployes.valueOf(arguments.texte("dimension")
-                                    .orElseThrow(() -> OutilLecture.invalide("« dimension » est obligatoire.")));
-                            List<Long> chantiers = arguments.identifiants("chantierIds");
-                            List<Long> equipes = arguments.identifiants("equipeIds");
-                            List<Long> fonctions = arguments.identifiants("fonctionIds");
-                            EmployeeStatut statut = Statuts.lire(arguments);
-                            List<EmployeeRegroupementDto> groupes = analytique.regrouper(
-                                    new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statut), dimension);
-                            int limite = arguments.entier("limite", GROUPES, 1, GROUPES);
-                            List<Map<String, Object>> rendus = groupes.stream().limit(limite).map(g -> {
-                                Map<String, Object> groupe = new LinkedHashMap<>();
-                                groupe.put("id", g.id());
-                                groupe.put("code", g.code());
-                                groupe.put("libelle", g.libelle());
-                                groupe.put("effectif", g.effectif());
-                                groupe.put("enPoste", g.actifs());
-                                return groupe;
-                            }).toList();
-                            Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
-                            Statuts.versUrl(statut, parametres);
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("dimension", dimension.name());
-                            donnees.put("nombreGroupes", groupes.size());
-                            donnees.put("groupes", rendus);
-                            donnees.put("vue", new VueProposeeDto("employees", "cartes", parametres).enJson());
-                            Map<String, Object> perimetre = Perimetres.de(null, chantiers, equipes, fonctions);
-                            perimetre.put("dimension", dimension.name());
-                            return new OutilLecture.Resultat(donnees, groupes.size() + " groupe(s) par " + dimension.name()
-                                    .toLowerCase() + ".", rendus.size(), perimetre);
-                        })
-                        .construire(audit),
-                outil("employe_parcours")
-                        .description("Parcours d'un employé reconstitué depuis ses bulletins : indicateurs (mois payés, total "
-                                + "perçu, jours travaillés), " + MOIS_DE_PARCOURS + " derniers mois (chantier, équipe, fonction, "
-                                + "jours, salaires) et événements (entrée, mutations, changement de salaire, départ, retour).")
-                        .permissions("PAIE_READ")
-                        .entree(Map.of("id", identifiant("Identifiant de l'employé")))
-                        .sortie(Map.of("indicateurs", objetLibre(), "mois", liste(), "evenements", liste(),
-                                "vue", OutilLecture.vueProposee()), "indicateurs", "mois", "evenements", "vue")
-                        .execution((lecteur, arguments) -> {
-                            long id = OutilsReferentiels.obligatoire(arguments);
-                            ParcoursEmployeDto resultat = parcours.parcours(id);
-                            Map<String, Object> donnees = new LinkedHashMap<>();
-                            donnees.put("indicateurs", indicateurs(resultat.indicateurs()));
-                            List<ParcoursEmployeDto.MoisDto> mois = resultat.mois();
-                            donnees.put("mois", mois.subList(Math.max(0, mois.size() - MOIS_DE_PARCOURS), mois.size())
-                                    .stream().map(OutilsEmploye::mois).toList());
-                            donnees.put("evenements", resultat.evenements().stream().map(OutilsEmploye::evenement).toList());
-                            donnees.put("vue", new VueProposeeDto("employees", "fiche", Map.of("id", String.valueOf(id))).enJson());
-                            return new OutilLecture.Resultat(donnees, resultat.indicateurs().moisPayes() + " mois payés, "
-                                    + resultat.evenements().size() + " événement(s).", mois.size(), Map.of("id", id));
-                        })
-                        .construire(audit));
+    /** Regroupement des effectifs. */
+    public enum Dimension { CHANTIER, EQUIPE, FONCTION }
+
+    @McpTool(name = "employes_rechercher", title = "Rechercher des employés", generateOutputSchema = true,
+            description = """
+                    Trouve des employés par nom (partiel), CIN (partiel) et/ou par chantier, équipe, fonction ou statut ; au moins \
+                    un critère est obligatoire. Rend, pour chaque employé : id, nom et prénom, CIN, dates de naissance et \
+                    d'embauche, statut (EN_POSTE ou SORTI), fonction, chantier et équipe actuels, et le salaire seulement si \
+                    l'utilisateur a le droit de voir la paie (`salaireVisible`). 20 fiches au plus avec le nombre total. Pour \
+                    seulement compter ou répartir des employés, préférer `employes_compter` ou `employes_regrouper`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYES_RECHERCHER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employesRechercher(
+            @McpToolParam(required = false, description = "Nom et/ou prénom, partiel (2 caractères au moins).")
+            @Size(min = 2, max = 150) String nom,
+            @McpToolParam(required = false, description = "CIN (carte d'identité nationale), partiel (2 caractères au moins).")
+            @Size(min = 2, max = 30) String cin,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut,
+            @McpToolParam(required = false, description = "Nombre de fiches rendues, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(LIMITE_FICHES) Integer limite) {
+        String nomRecherche = texte(nom);
+        String cinRecherche = texte(cin);
+        List<Long> chantiers = ids(chantierIds);
+        List<Long> equipes = ids(equipeIds);
+        List<Long> fonctions = ids(fonctionIds);
+        EmployeeStatut statutApi = StatutEmploye.versApi(statut);
+        if (nomRecherche == null && cinRecherche == null && chantiers == null && equipes == null && fonctions == null
+                && statutApi == null) {
+            throw new IllegalArgumentException("Préciser un nom, un CIN ou un périmètre (chantier, équipe, fonction, statut).");
+        }
+        boolean voitLaPaie = ProjectionPaieEmployee.voitLaPaie(SecurityContextHolder.getContext().getAuthentication());
+        Page<EmployeeResponseDto> page = employes.search(
+                new EmployeeSearchCriteria(nomRecherche, cinRecherche, fonctions, chantiers, equipes, statutApi),
+                PageRequest.of(0, limite == null ? 10 : limite, Sort.by("nomPrenom")));
+        List<Map<String, Object>> fiches = page.getContent().stream()
+                .map(employe -> fiche(ProjectionPaieEmployee.pourLeLecteur(employe, voitLaPaie), voitLaPaie))
+                .toList();
+        Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
+        if (nomRecherche != null) {
+            parametres.put("nom", nomRecherche);
+        }
+        if (cinRecherche != null) {
+            parametres.put("cin", cinRecherche);
+        }
+        StatutEmploye.versUrl(statutApi, parametres);
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("total", page.getTotalElements());
+        donnees.put("rendus", fiches.size());
+        donnees.put("employes", fiches);
+        donnees.put("salaireVisible", voitLaPaie);
+        donnees.put("vue", new VueProposeeDto("employees", "tabulaire", parametres).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "employe_fiche", title = "Fiche d'un employé", generateOutputSchema = true,
+            description = """
+                    Lit la fiche complète d'un employé à partir de son identifiant : CIN, dates de naissance et d'embauche, \
+                    fonction, chantier, équipe, statut, et la liste de ses départs enregistrés (période et motif) ; le salaire \
+                    seulement avec le droit de voir la paie. Identifiant inconnu : le chercher d'abord avec \
+                    `employes_rechercher`. Pour l'historique mois par mois, utiliser `employe_parcours`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYE_FICHE", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employeFiche(
+            @McpToolParam(description = "Identifiant de l'employé (entier positif), rendu par `employes_rechercher`.")
+            @Positive Long id) {
+        boolean voitLaPaie = ProjectionPaieEmployee.voitLaPaie(SecurityContextHolder.getContext().getAuthentication());
+        EmployeeResponseDto employe = ProjectionPaieEmployee.pourLeLecteur(employes.findById(id), voitLaPaie);
+        List<Map<String, Object>> departs = employes.listerSorties(id).stream()
+                .map(s -> Map.<String, Object>of("periode", s.periode().toString(),
+                        "motif", s.motif() == null ? "NON_PRECISE" : s.motif()))
+                .toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("employe", fiche(employe, voitLaPaie));
+        donnees.put("departs", departs);
+        donnees.put("vue", new VueProposeeDto("employees", "fiche", Map.of("id", String.valueOf(id))).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "employes_compter", title = "Effectif et statistiques des employés", generateOutputSchema = true,
+            description = """
+                    Compte les employés d'un périmètre (chantiers, équipes, fonctions, statut) : effectif total, en poste, \
+                    sortis, âge moyen et ancienneté moyenne en années, embauches des 12 derniers mois et répartition par \
+                    tranches d'âge et d'ancienneté. Mêmes chiffres que la vue Analytique des employés ; aucun salaire. État \
+                    courant des fiches (issu du dernier mois de paie importé), pas un historique : pour l'évolution d'un mois à \
+                    l'autre, utiliser `paie_mouvements`. Pour les chiffres d'un seul groupe, filtrer par identifiants.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYES_COMPTER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employesCompter(
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut) {
+        List<Long> chantiers = ids(chantierIds);
+        List<Long> equipes = ids(equipeIds);
+        List<Long> fonctions = ids(fonctionIds);
+        EmployeeStatut statutApi = StatutEmploye.versApi(statut);
+        EmployeeAnalytiqueDto resultat = analytique.analyser(
+                new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statutApi));
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("effectif", resultat.effectif());
+        donnees.put("enPoste", resultat.actifs());
+        donnees.put("sortis", resultat.inactifs());
+        donnees.put("ageMoyen", resultat.ageMoyen());
+        donnees.put("ancienneteMoyenne", resultat.ancienneteMoyenne());
+        donnees.put("embauchesDouzeMois", resultat.embauchesDouzeMois());
+        donnees.put("parAge", tranches(resultat.parAge()));
+        donnees.put("parAnciennete", tranches(resultat.parAnciennete()));
+        Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
+        StatutEmploye.versUrl(statutApi, parametres);
+        donnees.put("vue", new VueProposeeDto("employees", "analytique", parametres).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "employes_regrouper", title = "Effectif par chantier, équipe ou fonction", generateOutputSchema = true,
+            description = """
+                    Répartit l'effectif des employés par chantier, par équipe ou par fonction (total et en poste), du plus grand \
+                    groupe au plus petit, sur un périmètre. À utiliser pour « quels chantiers ont le plus d'employés », « combien \
+                    par équipe ». Chaque groupe rend id, code, libellé, effectif et nombre en poste ; 50 groupes au plus. Les \
+                    montants de paie par groupe sont dans `paie_repartition`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYES_REGROUPER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employesRegrouper(
+            @McpToolParam(description = "Regroupement : CHANTIER, EQUIPE ou FONCTION.") Dimension dimension,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut,
+            @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
+            @Min(1) @Max(GROUPES) Integer limite) {
+        List<Long> chantiers = ids(chantierIds);
+        List<Long> equipes = ids(equipeIds);
+        List<Long> fonctions = ids(fonctionIds);
+        EmployeeStatut statutApi = StatutEmploye.versApi(statut);
+        List<EmployeeRegroupementDto> groupes = analytique.regrouper(
+                new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statutApi),
+                DimensionEmployes.valueOf(dimension.name()));
+        List<Map<String, Object>> rendus = groupes.stream().limit(limite == null ? GROUPES : limite).map(g -> {
+            Map<String, Object> groupe = new LinkedHashMap<>();
+            groupe.put("id", g.id());
+            groupe.put("code", g.code());
+            groupe.put("libelle", g.libelle());
+            groupe.put("effectif", g.effectif());
+            groupe.put("enPoste", g.actifs());
+            return groupe;
+        }).toList();
+        Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
+        StatutEmploye.versUrl(statutApi, parametres);
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("dimension", dimension.name());
+        donnees.put("nombreGroupes", groupes.size());
+        donnees.put("groupes", rendus);
+        donnees.put("vue", new VueProposeeDto("employees", "cartes", parametres).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "employes_sorties", title = "Départs d'un mois", generateOutputSchema = true,
+            description = """
+                    Liste les départs de l'entreprise constatés par la paie d'un mois (soldes de tout compte et absences \
+                    confirmées) : nombre total, nombre par motif et, pour les 20 premiers, l'employé concerné. Un départ \
+                    ancien sans motif est compté « NON_PRECISE ». À ne pas confondre avec les « plus payés » de \
+                    `paie_mouvements`, qui comptent aussi les absences non confirmées.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYES_SORTIES", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employesSorties(
+            @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode) {
+        YearMonth mois = periodes.ou(periode);
+        List<EmployeeSortieDto> sorties = employes.listerToutesLesSorties().stream()
+                .filter(sortie -> mois.equals(sortie.periode()))
+                .toList();
+        Map<String, Long> parMotif = sorties.stream()
+                .collect(Collectors.groupingBy(OutilsEmploye::motif, TreeMap::new, Collectors.counting()));
+        List<Map<String, Object>> personnes = sorties.stream().limit(NOMS_RENDUS)
+                .map(sortie -> Map.<String, Object>of("id", sortie.employeId(),
+                        "nomPrenom", employes.findById(sortie.employeId()).nomPrenom(), "motif", motif(sortie)))
+                .toList();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", mois.toString());
+        donnees.put("nombre", sorties.size());
+        donnees.put("parMotif", parMotif);
+        donnees.put("employes", personnes);
+        donnees.put("vue", vue(mois).enJson());
+        return donnees;
+    }
+
+    @McpTool(name = "employe_parcours", title = "Parcours d'un employé", generateOutputSchema = true,
+            description = """
+                    Reconstitue le parcours d'un employé depuis ses bulletins de paie : indicateurs (mois payés, total perçu en \
+                    dirhams, jours travaillés, premier et dernier mois), ses 36 derniers mois (chantier, équipe, fonction, \
+                    jours, salaires, observation) et ses événements (entrée, mutation, changement de salaire, départ, retour). \
+                    Réservé aux utilisateurs qui voient la paie. Identifiant inconnu : le chercher d'abord avec \
+                    `employes_rechercher`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_EMPLOYE_PARCOURS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> employeParcours(
+            @McpToolParam(description = "Identifiant de l'employé (entier positif), rendu par `employes_rechercher`.")
+            @Positive Long id) {
+        ParcoursEmployeDto resultat = parcours.parcours(id);
+        List<ParcoursEmployeDto.MoisDto> mois = resultat.mois();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("indicateurs", indicateurs(resultat.indicateurs()));
+        donnees.put("mois", mois.subList(Math.max(0, mois.size() - MOIS_DE_PARCOURS), mois.size())
+                .stream().map(OutilsEmploye::mois).toList());
+        donnees.put("evenements", resultat.evenements().stream().map(OutilsEmploye::evenement).toList());
+        donnees.put("vue", new VueProposeeDto("employees", "fiche", Map.of("id", String.valueOf(id))).enJson());
+        return donnees;
+    }
+
+    /**
+     * Les mouvements du mois (Employés › Analytique, avec {@code PAIE_READ}) ; sans ce droit, la liste des employés sortis
+     * (décision du 2026-10-25 : aucun nouvel écran).
+     */
+    private static VueProposeeDto vue(YearMonth periode) {
+        if (ProjectionPaieEmployee.voitLaPaie(SecurityContextHolder.getContext().getAuthentication())) {
+            return new VueProposeeDto("employees", "analytique", Map.of("periode", periode.toString()));
+        }
+        Map<String, String> parametres = new LinkedHashMap<>();
+        StatutEmploye.versUrl(EmployeeStatut.INACTIF, parametres);
+        return new VueProposeeDto("employees", "tabulaire", parametres);
+    }
+
+    /** Un départ ancien sans motif reste compté. */
+    private static String motif(EmployeeSortieDto sortie) {
+        return sortie.motif() == null || sortie.motif().isBlank() ? "NON_PRECISE" : sortie.motif();
+    }
+
+    /** Une fiche Employé pour l'assistant. */
+    static Map<String, Object> fiche(EmployeeResponseDto employe, boolean voitLaPaie) {
+        Map<String, Object> fiche = new LinkedHashMap<>();
+        fiche.put("id", employe.id());
+        fiche.put("nomPrenom", employe.nomPrenom());
+        fiche.put("cin", employe.cin());
+        fiche.put("dateNaissance", employe.dateNaissance() == null ? null : employe.dateNaissance().toString());
+        fiche.put("dateEmbauche", employe.dateEmbauche() == null ? null : employe.dateEmbauche().toString());
+        fiche.put("statut", StatutEmploye.libelle(employe.statut()));
+        fiche.put("fonction", employe.fonction() == null ? null
+                : Map.of("id", employe.fonction().id(), "libelle", employe.fonction().libelle()));
+        fiche.put("chantier", employe.chantier() == null ? null
+                : Map.of("id", employe.chantier().id(), "code", employe.chantier().code()));
+        fiche.put("equipe", employe.equipe() == null ? null
+                : Map.of("id", employe.equipe().id(), "code", employe.equipe().code()));
+        if (voitLaPaie) {
+            fiche.put("salaire", employe.salaire());
+            fiche.put("typeSalaire", employe.typeSalaire() == null ? null : employe.typeSalaire().name());
+        }
+        return fiche;
+    }
+
+    private static List<Map<String, Object>> tranches(List<EmployeeAnalytiqueDto.TrancheDto> tranches) {
+        return tranches.stream().map(t -> {
+            Map<String, Object> tranche = new LinkedHashMap<>();
+            tranche.put("min", t.min());
+            tranche.put("max", t.max());
+            tranche.put("effectif", t.effectif());
+            return tranche;
+        }).toList();
     }
 
     private static Map<String, Object> indicateurs(ParcoursEmployeDto.Indicateurs i) {
@@ -161,5 +370,14 @@ public final class OutilsEmploye {
         valeurs.put("apres", e.apres());
         valeurs.put("motif", e.motif());
         return valeurs;
+    }
+
+    private static String texte(String valeur) {
+        return valeur == null || valeur.isBlank() ? null : valeur.trim();
+    }
+
+    /** Identifiants d'une dimension ; {@code null} quand l'argument est absent ou vide (pas de filtre). */
+    static List<Long> ids(List<Long> valeurs) {
+        return valeurs == null || valeurs.isEmpty() ? null : valeurs.stream().distinct().toList();
     }
 }
