@@ -22,14 +22,21 @@ class Tache(StrEnum):
     OCR = "ocr"
 
 
-def modele(settings: Settings, tache: Tache, *, max_tokens: int = 1500) -> ChatLiteLLM:
-    """Un modèle de chat pour la tâche ; la passerelle bascule déjà entre fournisseurs, sans nouvel essai ici."""
+def modele(settings: Settings, tache: Tache, *, max_tokens: int = 1500, raisonnement: str | None = None) -> ChatLiteLLM:
+    """Un modèle de chat pour la tâche ; la passerelle bascule déjà entre fournisseurs, sans nouvel essai ici.
+
+    ``raisonnement`` (``low``, ``medium``, ``high``) est le paramètre standard ``reasoning_effort`` : un raisonnement
+    court accélère chaque appel ; la passerelle l'ignore pour un fournisseur qui ne le prend pas (``drop_params``).
+    """
     return ChatLiteLLM(
         model=f"litellm_proxy/{settings.litellm_model}",
         api_base=str(settings.litellm_base_url),
         api_key=settings.litellm_api_key.get_secret_value(),
         # Corps additionnel transmis tel quel à la passerelle : le tag route la requête vers le pool de la tâche.
-        model_kwargs={"extra_body": {"metadata": {"tags": [tache.value]}}},
+        model_kwargs={
+            "extra_body": {"metadata": {"tags": [tache.value]}},
+            **({"reasoning_effort": raisonnement} if raisonnement else {}),
+        },
         max_tokens=max_tokens,
         request_timeout=settings.llm_timeout_seconds,
         max_retries=0,
