@@ -1,12 +1,13 @@
 package staport.rh.mcp.outils;
 
-import io.modelcontextprotocol.common.McpTransportContext;
-import io.modelcontextprotocol.server.McpStatelessServerFeatures;
-import io.modelcontextprotocol.spec.McpSchema;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import staport.rh.mcp.config.McpServeurConfig;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,38 +15,26 @@ import java.util.Map;
  * Outil {@code systeme_identite} : l'identité et les autorités que Spring a reconstruites pour cet appel, depuis le
  * jeton agent puis la base. Il n'a aucun argument : l'identité ne vient jamais d'une valeur fournie par le modèle.
  */
+@Component
+@ConditionalOnBooleanProperty("security.mcp.enabled")
 public class OutilIdentite {
 
-    static final String NOM = "systeme_identite";
-
-    public McpStatelessServerFeatures.SyncToolSpecification specification() {
-        Map<String, Object> entree = Map.of("type", "object", "properties", Map.of(), "additionalProperties", false);
-        Map<String, Object> sortie = Map.of("type", "object",
-                "properties", Map.of(
-                        "utilisateur", Map.of("type", "string"),
-                        "autorites", Map.of("type", "array", "items", Map.of("type", "string"))),
-                "required", List.of("utilisateur", "autorites"),
-                "additionalProperties", false);
-        McpSchema.Tool outil = McpSchema.Tool.builder(NOM, entree)
-                .description("Identité et droits effectifs de l'utilisateur pour qui l'assistant agit")
-                .outputSchema(sortie)
-                .annotations(new McpSchema.ToolAnnotations(null, true, false, true, false, null))
-                .build();
-        return new McpStatelessServerFeatures.SyncToolSpecification(outil, (contexte, requete) -> appeler(contexte));
-    }
-
-    private static McpSchema.CallToolResult appeler(McpTransportContext contexte) {
-        if (!(contexte.get(McpServeurConfig.CONTEXTE_AUTHENTIFICATION) instanceof Authentication authentification)) {
-            return McpSchema.CallToolResult.builder().isError(true).addTextContent("Identité indisponible").build();
-        }
+    @McpTool(name = "systeme_identite", title = "Identité et droits de l'utilisateur", generateOutputSchema = true,
+            description = """
+                    Rend l'identité de l'utilisateur pour qui tu agis et la liste complète de ses droits (permissions et rôles). \
+                    À appeler quand la question porte sur ce que l'utilisateur peut faire ou voir, ou pour comprendre un refus \
+                    « Access Denied » : il indique alors quelle permission manque.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    public Map<String, Object> identite() {
+        Authentication authentification = SecurityContextHolder.getContext().getAuthentication();
         List<String> autorites = authentification.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .sorted()
                 .toList();
-        return McpSchema.CallToolResult.builder()
-                .isError(false)
-                .structuredContent(Map.of("utilisateur", authentification.getName(), "autorites", autorites))
-                .addTextContent("Utilisateur : " + authentification.getName())
-                .build();
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("utilisateur", authentification.getName());
+        donnees.put("autorites", autorites);
+        return donnees;
     }
 }

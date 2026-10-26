@@ -15,7 +15,7 @@ outils du run, la réponse est retirée et réécrite une fois, puis remplacée 
 """
 
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Annotated, Any, Literal, NotRequired
+from typing import Annotated, Any, Literal, NotRequired, cast
 
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
@@ -50,7 +50,8 @@ Règles impératives :
 2. Ne calcule rien : ni somme, ni différence, ni moyenne, ni pourcentage. Reprends les valeurs telles que les outils
    les donnent, avec leur période.
 3. Si les outils ne donnent pas l'information, dis-le simplement.
-4. Si un outil répond « Accès refusé », dis à l'utilisateur qu'il n'a pas ce droit ; ne contourne pas le refus.
+4. Si un outil répond « Access Denied » ou « Accès refusé », dis à l'utilisateur qu'il n'a pas ce droit ; ne contourne
+   pas le refus et ne le retente pas. L'outil `systeme_identite` indique les droits de l'utilisateur.
 5. Pour un chantier, une équipe ou une fonction cité par son nom ou son code, cherche d'abord son identifiant avec
    l'outil de recherche du référentiel, puis utilise cet identifiant.
 6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie : passe-la telle quelle en paramètre
@@ -58,8 +59,8 @@ Règles impératives :
 7. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
    emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
-8. Quand un outil propose une vue (champ « vue »), appelle `ouvrir_vue` avec ce module, cette vue et ces paramètres
-   pour la proposer à l'utilisateur.
+8. L'écran correspondant à ta réponse s'ouvre tout seul, filtres appliqués, une fois la réponse vérifiée : ne dis pas
+   comment l'ouvrir et ne cite aucun lien.
 9. Les montants sont en dirhams (MAD)."""
 
 ABSTENTION = (
@@ -77,6 +78,9 @@ class EtatVerification(AgentState[Any]):
     """État du vérificateur : ``verification`` est partagé avec l'interface, le reste est privé au serveur."""
 
     verification: NotRequired[Verification]
+    # Vue de l'ERP (module, vue, paramètres) que l'outil le plus récent propose ; posée seulement une fois la réponse
+    # vérifiée, c'est elle que l'interface ouvre. Rendue par Spring, jamais choisie par le modèle.
+    vue: NotRequired[dict[str, Any] | None]
     chiffres_inconnus: NotRequired[Annotated[list[str], PrivateStateAttr]]
     reecritures: NotRequired[Annotated[int, PrivateStateAttr]]
 
@@ -91,7 +95,7 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         self._reecritures = reecritures
 
     async def abefore_agent(self, state: EtatVerification, runtime: Runtime[Any]) -> dict[str, Any] | None:
-        return {"verification": "en_cours", "chiffres_inconnus": [], "reecritures": 0}
+        return {"verification": "en_cours", "vue": None, "chiffres_inconnus": [], "reecritures": 0}
 
     async def awrap_model_call(
         self,
@@ -113,7 +117,7 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         question, sources = _tour(state["messages"])
         verification = verifier(reponse.text, sources, question)
         if verification.conforme:
-            return {"verification": "verifiee", "chiffres_inconnus": []}
+            return {"verification": "verifiee", "vue": _derniere_vue(state["messages"]), "chiffres_inconnus": []}
         if state.get("reecritures", 0) < self._reecritures:
             return {
                 "messages": [RemoveMessage(id=reponse.id or "")],
@@ -124,6 +128,7 @@ class VerificateurChiffres(AgentMiddleware[EtatVerification, Any]):
         return {
             "messages": [AIMessage(id=reponse.id, content=ABSTENTION)],
             "verification": "abstention",
+            "vue": None,
             "chiffres_inconnus": [],
         }
 
@@ -155,6 +160,19 @@ def creer_agent(
         checkpointer=checkpointer,
         name="erp-rh",
     )
+
+
+def _derniere_vue(messages: Sequence[AnyMessage]) -> dict[str, Any] | None:
+    """La vue proposée par l'outil le plus récent du tour (contenu structuré du résultat MCP), s'il en propose une."""
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            break
+        if isinstance(message, ToolMessage) and isinstance(message.artifact, dict):
+            structure = cast(dict[str, Any], message.artifact).get("structured_content")
+            vue = cast(dict[str, Any], structure).get("vue") if isinstance(structure, dict) else None
+            if isinstance(vue, dict):
+                return cast(dict[str, Any], vue)
+    return None
 
 
 def _tour(messages: Sequence[AnyMessage]) -> tuple[str, list[Any]]:
