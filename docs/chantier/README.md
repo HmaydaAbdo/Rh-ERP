@@ -46,6 +46,137 @@ chantier/
 
 ---
 
+## Les couches du domaine
+
+Chantier est à la fois un référentiel géré à la main, un référentiel **alimenté par l'ERP source** et le futur support
+de la carte géographique. Il traverse trois couches, décrites ici de bout en bout pour pouvoir être relues et
+commentées séparément.
+
+| Couche | Rôle pour Chantier | Où lire |
+|---|---|---|
+| **Application** | Créer, modifier, clôturer, rouvrir, rechercher et supprimer les chantiers ; les synchroniser depuis l'ERP ; fournir le référentiel aux fiches Employé et aux bulletins | [Couche application](#couche-application) |
+| **Analytique** | Lire la paie du dernier mois **par chantier** (Cartes, Analytique) ; la carte géographique prépare le placement des chantiers | [Couche analytique](#couche-analytique) |
+| **IA** | Laisser l'assistant retrouver un chantier et interroger la paie ou les effectifs par chantier, en lecture seule | [Couche IA](#couche-ia) |
+
+### Couche application
+
+**Backend** (`backend/src/main/java/staport/rh/chantier/`)
+
+- **Contrôleurs.** `ChantierController` (`/chantiers`) et `ChantierSyncController` (`POST /chantiers/sync`). Chaque route
+  porte `@PreAuthorize` sur sa permission : `CHANTIER_READ` (lecture, recherche), `CHANTIER_WRITE` (création,
+  modification, clôture, réouverture), `CHANTIER_DELETE`, `CHANTIER_SYNC`.
+- **Service.** `ChantierService`, exposé aux autres domaines par la façade `IChantierService` (`findById`, `search`,
+  `existsById`). À la création et à la modification il retire les espaces extérieurs du code, refuse un code déjà
+  pris sans tenir compte de la casse (`ChantierAlreadyExistsException`, en excluant le chantier courant) et compare la
+  version reçue à la version stockée à la modification.
+- **Statut.** L'interface dit « En cours » / « Clôturé » ; l'API et la base portent le booléen `actif`. Clôturer et
+  rouvrir sont des modifications de `actif` (droit `CHANTIER_WRITE`) ; un chantier clôturé reste consultable et
+  référencé par l'historique.
+- **Recherche.** `ChantierSpecification` : `code` et `designation` en « contient » sans casse (échappement des
+  caractères spéciaux), `actif` en égalité, `recherche` dans le code, le nom **ou** la désignation ; les filtres se
+  combinent par ET.
+- **Suppression.** Refusée (`409`) tant qu'un employé (`employe.chantier_id`) ou un bulletin (`paie.chantier_id`)
+  référence le chantier ; l'alternative est la clôture.
+- **Audit.** L'entité est `@Audited` (Envers) ; les écritures portent `@AuditableAction` (`CHANTIER_CREATION`,
+  `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`) ; chaque synchronisation est auditée par
+  `PerimetreSynchronisationChantier` (une entrée pour l'ensemble, une révision par chantier créé), la planifiée étant
+  attribuée à « Système » (origine `TACHE_PLANIFIEE`). Les lectures de l'assistant ont leurs propres entrées
+  (`MCP_CHANTIER_*`).
+- **Synchronisation ERP** (`sync/`). `ChantierSyncClient` (délais 5 s de connexion, 30 s de lecture, sans nouvel essai),
+  `ChantierSyncService` (orchestration, journaux, métriques), `ChantierSyncTransactionalOperations` (une transaction par
+  ligne, pour qu'une violation d'intégrité reste isolée), `ChantierSyncScheduler` (tous les jours à 23 h),
+  `ChantierSyncMetrics` (`rh.chantier.sync.*`). Elle **ajoute seulement** les chantiers manquants ; elle ne modifie, ne
+  désactive et ne supprime jamais rien (détail dans [Synchronisation ERP](#synchronisation-erp)).
+- **Base de données.** `V2` crée la table ; `V5` ajoute `nom` et `V6` le sème ; `V24` puis `V27` imposent l'unicité du
+  code sans casse et sans espaces extérieurs ; `V28` crée la permission `CARTE_READ` ; `V31` (2026-10-19) puis `V35`
+  (2026-10-24) ont clôturé, une seule fois, les chantiers absents des bulletins puis ceux absents de la **dernière paie**
+  (sans paie en base, `V35` ne change rien).
+
+**Frontend** (`frontend/src/app/portail/chantier/`)
+
+- **Routes** (chargement à la demande, `permissionGuard`) : `/chantiers`, `/chantiers/cartes`, `/chantiers/analytique` et
+  `/chantiers/:id` (`CHANTIER_READ`) ; `/chantiers/new` et `/chantiers/:id/edit` (`CHANTIER_WRITE`) ; la carte
+  géographique `/carte` est une route de premier niveau protégée par `CARTE_READ`.
+- **Composants.** `chantier-vues` (coque partagée), `chantier-list` (tableau, clôture/réouverture, suppression),
+  `chantier-form`, `chantier-detail`, `chantier-actions` (Synchroniser maintenant, Nouveau chantier),
+  `chantier-filtres` (code, désignation, statut conservés dans l'URL), `chantier-cartes` et `chantier-analytique`
+  (hôtes minces des vues partagées), `carte/` (écran cartographique, voir [carte.md](carte.md)).
+- **Service.** `chantier.service.ts` appelle l'API ; `shared/reference-data/chantier-reference.service.ts` alimente les
+  sélecteurs génériques (affichage « code · nom », désignation en repli si le nom manque).
+- **Assistant d'import Paie.** Il signale un chantier **clôturé** cité par un fichier et propose « Rouvrir le
+  chantier » (`CHANTIER_READ` et `CHANTIER_WRITE`) avant de réanalyser ; l'import Excel des employés n'accepte que des
+  chantiers en cours.
+
+### Couche analytique
+
+Les vues Cartes et Analytique ne sont pas propres à Chantier : ce sont des composants partagés (`portail/perimetre/`,
+[référence technique](../frontend/vues-perimetre.md)) que le module configure dans `chantier-module.ts`. La carte
+géographique est un écran distinct.
+
+| Réglage du module | Valeur pour Chantier | Effet |
+|---|---|---|
+| Dimension | `CHANTIER` | L'unité de regroupement est le chantier |
+| Parcours des Cartes | Chantier → Équipe → Fonction | Descente fixe |
+| Sources | `PAIE` seule | Aucun chiffre ne vient des fiches Employé |
+| Période | Dernier mois de paie enregistré, non modifiable | Pas de sélecteur de période |
+| Tri des cartes | Masse salariale décroissante, puis effectif | Les chantiers les plus coûteux d'abord |
+| Statut | Pastille « En cours » / « Clôturé » sur chaque carte | Un chantier clôturé garde sa carte |
+| Qualité | Section dédiée de l'Analytique | Anneau des bulletins sans équipe ; filtres Fonction et Équipe (dont « Orphelins ») |
+
+**Source unique des chiffres.** `POST /paie/analytique` (`PAIE_READ`) renvoie `PaieAnalytiqueDto`, dont `parChantier`
+(`id`, `code`, `libelle`, `masse`, `effectif`, `stc`, `stcMontant`) liste **tous** les chantiers du mois, sans plafond ; `evolution`
+couvre tout l'historique du périmètre ; `moisPrecedent` sert à la comparaison ; `kpis.nombreChantiers` compte les
+chantiers présents dans la paie du mois.
+
+**Définitions des indicateurs**
+
+| Indicateur | Définition |
+|---|---|
+| Effectif | Personnes payées dans le mois (un bulletin par employé et par mois) |
+| Masse salariale | Somme des salaires totaux des bulletins du mois, en DH |
+| STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (règle du rapport de paie) et leur montant |
+| Variation | Écart en personnes et en pourcentage par rapport au mois calendaire précédent ; indisponible sans paie ce mois-là |
+
+**Règles de lecture à connaître**
+
+- Le chantier analysé est celui **du bulletin du mois**, pas celui de la fiche Employé : l'affectation actuelle d'un
+  employé ne réécrit pas les mois passés.
+- Un chantier sans bulletin dans le mois récent garde sa carte, avec des indicateurs à zéro et son historique.
+- L'état « Clôturé » vient de la fiche Chantier ; il n'est **pas** déduit de la paie (sauf par la reprise unique `V35`).
+- Le libellé affiché est le nom s'il existe, sinon la désignation, avec le code en repère.
+- Les graphiques et les cartes s'exportent séparément en PDF ; sans `PAIE_READ`, aucune donnée de paie n'est demandée.
+
+**Carte géographique** (`/carte`, `CARTE_READ`, [carte.md](carte.md)) : écran à part. Aujourd'hui elle affiche le fond de
+carte seul (monde entier, relief, satellite, vue 3D) et **aucune donnée de chantier** ; le contrat de données, les marqueurs
+et les indicateurs sont les étapes 3 à 5, à faire.
+
+### Couche IA
+
+L'assistant RH n'accède à Chantier que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il n'écrit
+rien (ni création, ni clôture, ni synchronisation), n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté
+peut voir.
+
+| Outil | Ce qu'il fait | Permission | Audit |
+|---|---|---|---|
+| `chantier_rechercher` | Trouve des chantiers par texte partiel du code, du nom ou de la désignation, filtrés par statut `EN_COURS` ou `CLOTURE` (1 à 20 résultats, 10 par défaut, total rendu) | `CHANTIER_READ` | `MCP_CHANTIER_RECHERCHER` |
+| `chantier_fiche` | Lit code, désignation, nom, origine ERP et statut d'un chantier par identifiant | `CHANTIER_READ` | `MCP_CHANTIER_FICHE` |
+| `paie_repartition` (`dimension = CHANTIER`) | Masse, effectif et STC par chantier pour un mois (50 groupes au plus) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_indicateurs` | Indicateurs du mois et `principauxChantiers` | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
+| `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `chantierIds` | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
+
+- **Résolution par nom.** Quand la question cite un chantier par son nom ou son code, l'agent appelle d'abord
+  `chantier_rechercher`, puis réutilise l'identifiant comme filtre ; il ne devine jamais un identifiant.
+- **Exactitude.** Chaque nombre de la réponse (et de la surface A2UI éventuelle) doit venir d'un résultat d'outil du même
+  tour ; sinon la réponse est réécrite une fois, puis remplacée par une abstention.
+- **Sur l'écran.** Sur `/chantiers`, l'assistant reçoit le domaine et les filtres de l'écran et propose « Chantiers en
+  cours » et « Chantiers les plus gros ».
+- **Limites actuelles.** Les données exposées sont celles que la permission autorise, sans périmètre par fiche de
+  poste (prévu au jalon J2 de [ia.md](../ia.md)) ; l'ouverture automatique de l'écran correspondant est retirée. La
+  synchronisation ERP ne peut être déclenchée que par un utilisateur (`CHANTIER_SYNC`), jamais par l'assistant.
+
+
+---
+
 ## Modèle de données
 
 Table `chantier` :
@@ -252,6 +383,22 @@ textes. Dans un filtre multiple, « Tout sélectionner » retire la restriction 
 chargées; « Ne rien sélectionner » vide le filtre.
 
 ---
+
+## Points à valider avec le propriétaire
+
+Constats issus de la relecture du code pour clôturer le domaine. Chacun est un comportement **actuel**, pas une anomalie
+à corriger d'office : à confirmer, à ajuster ou à classer.
+
+| # | Constat | Question |
+|---|---|---|
+| 1 | La synchronisation **n'ajoute que les chantiers manquants** : un changement de désignation dans l'ERP n'arrive jamais ici (décision du 2026-10-03) | Faut-il une mise à jour contrôlée des désignations ? |
+| 2 | `V35` a clôturé une fois les chantiers absents de la dernière paie ; **aucune règle continue** ne clôture ensuite | Faut-il une clôture périodique (ou une alerte) pour les chantiers sans paie récente ? |
+| 3 | La ligne ERP `CodeErreur` est ignorée : seule l'absence de code écarte une ligne | Une ligne en erreur côté ERP doit-elle être écartée ? |
+| 4 | La synchronisation n'a pas de nouvel essai : une panne ERP attend la prochaine exécution (23 h) ou un clic manuel | Faut-il alerter quand la synchronisation échoue ? |
+| 5 | `designation` et `nom` sont facultatifs en base (la désignation est obligatoire à la saisie) | Rendre la désignation obligatoire en base ? |
+| 6 | Modifier le `code` le change partout, historique compris (décision du 2026-10-23) | Confirmer, ou figer le code d'époque dans le bulletin ? |
+| 7 | La carte géographique n'affiche encore **aucun chantier** (étapes 3 à 5 à faire) | Priorité du placement des chantiers (coordonnées, source) ? |
+| 8 | L'assistant lit les chantiers et la paie par chantier, sans périmètre par fiche de poste | Qui doit voir quels chantiers (jalon J2) ? |
 
 ## Limites connues
 

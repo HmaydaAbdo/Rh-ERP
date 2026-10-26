@@ -60,6 +60,18 @@ explicite, période, périmètre et date d'édition; leurs tableaux complets son
 Les filtres sont conservés entre les vues; les onglets
 remplacent les liens d'accès directs vers la liste et les employés.
 
+## Couches et points de contrôle
+
+Le détail de chaque couche est dans le [README Équipe](../README.md#les-couches-du-domaine). Avant de modifier le domaine,
+repérer la couche touchée et vérifier ses points de contrôle.
+
+| Couche | Ce qu'elle contient | À vérifier quand on la modifie |
+|---|---|---|
+| **Application** | `EquipeController`, `EquipeImportController`, `EquipeService` / `IEquipeService`, `EquipeSpecification`, import atomique, audit (`EQUIPE_*`, `PerimetreImportEquipe`), migrations `V7`, `V8`, `V25`, `V32`, `V34` ; côté Angular `portail/equipe/` (routes gardées, liste, formulaire, détail, actions, filtres) | Normalisation du code et unicité (service **et** index `UPPER(BTRIM)`) ; `409` à la suppression par la clé étrangère ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture ; migration testée sur base vide |
+| **Analytique** | `equipe-module.ts` (dimension `EQUIPE`, parcours Équipe → Chantier → Fonction, source `PAIE`), `POST /paie/analytique` (`parEquipe`, `evolution`, `qualite`), orphelins `equipeIds = 0` | Dernier mois de paie fixe ; effectif, masse et STC d'une seule source (les bulletins) ; comparaison indisponible plutôt que zéro ; « Orphelins » jamais enregistré ; sans `PAIE_READ` aucun appel ; mêmes définitions que le rapport PDF et l'assistant |
+| **IA** | Outils MCP `equipe_rechercher`, `equipe_fiche`, `paie_repartition` (`EQUIPE`), filtres `equipeIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/equipes` | Lecture seule ; permission `EQUIPE_READ` / `PAIE_READ` par outil ; description d'outil à jour (l'agent y lit comment filtrer) ; identifiant `0` = sans équipe ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
+
+
 ## Garde-fous
 
 - Utiliser le libellé comme clé sémantique pour les sélections et regroupements présentés aux utilisateurs. Le code sert aux échanges et imports; les relations persistées restent fondées sur l'identifiant interne.
