@@ -138,7 +138,7 @@ test.describe('Formulaires (Signal Forms)', () => {
       'POST /employees/search': () => pageDe([])
     });
     await page.goto('/admin/users/new');
-    await page.getByLabel('Username').fill('nouveau');
+    await page.getByLabel('Identifiant').fill('nouveau');
     await page.getByLabel('Email').fill('nouveau@staport.ma');
     await page.locator('input#motDePasse').fill('court');
 
@@ -164,7 +164,7 @@ test.describe('Formulaires (Signal Forms)', () => {
     });
     await page.goto('/admin/users/new');
 
-    await page.getByLabel('Username').fill('nouveau');
+    await page.getByLabel('Identifiant').fill('nouveau');
     await page.getByLabel('Email').fill('nouveau@staport.ma');
     await page.locator('input#motDePasse').fill('MotDePasse2026');
     const rolesField = page.getByRole('combobox', { name: 'Rôles' });
