@@ -22,7 +22,7 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
-import { AssistantComponent } from './core/assistant/assistant.component';
+import { AssistantRacineComponent } from './core/assistant/assistant-racine.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { SIDEBAR_ITEMS } from './core/navigation/nav-items';
 import { ThemeService } from './core/theme/theme.service';
@@ -40,7 +40,7 @@ function estRouteAuthentification(url: string): boolean {
       RouterLink,
       RouterLinkActive,
       FeedbackViewportComponent,
-      AssistantComponent,
+      AssistantRacineComponent,
       LucideBriefcase,
       LucideBuilding,
       LucideChevronDown,

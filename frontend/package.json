@@ -55,6 +55,9 @@
   },
   "overrides": {
     "vite": "8.3.4",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@ag-ui/client": "$@ag-ui/client",
+    "@ag-ui/core": "1.0.3",
+    "@ag-ui/a2ui-middleware": "0.0.13"
   }
 }

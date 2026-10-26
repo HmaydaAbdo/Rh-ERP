@@ -44,6 +44,7 @@
               "@fontsource/ibm-plex-mono/latin-500.css",
               "node_modules/@angular/cdk/overlay-prebuilt.css",
               "src/styles/tailwind.css",
+              "node_modules/@copilotkit/angular/dist/styles.css",
               "src/styles.scss"
             ],
             "scripts": [],

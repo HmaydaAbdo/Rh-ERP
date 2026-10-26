@@ -34,29 +34,25 @@ function routes() {
   };
 }
 
-/** Flux AG-UI tel que le service IA l'émet (ag-ui-langgraph), en SSE. */
+/** Flux AG-UI tel que le service IA l'émet (ag-ui-langgraph / CopilotKit), en SSE : raisonnement, outil, réponse, état vérifié. */
 function flux(): string {
+  const vue = { module: 'paie', vue: 'analytique', parametres: { periode: '2026-08' } };
   const evenements = [
     { type: 'RUN_STARTED', threadId: 't', runId: 'r' },
-    { type: 'CUSTOM', name: 'com.staport.mascot.state.v1', value: { sequence: 1, mood: 'thinking', action: 'idle' } },
-    { type: 'STEP_STARTED', stepName: 'preparer' },
-    { type: 'STEP_FINISHED', stepName: 'preparer' },
-    { type: 'STEP_STARTED', stepName: 'executer' },
+    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'en_cours', vue: null } },
+    { type: 'REASONING_START', messageId: 'p1' },
+    { type: 'REASONING_MESSAGE_START', messageId: 'p1', role: 'reasoning' },
+    { type: 'REASONING_MESSAGE_CONTENT', messageId: 'p1', delta: 'Je consulte les indicateurs de paie.' },
+    { type: 'REASONING_MESSAGE_END', messageId: 'p1' },
+    { type: 'REASONING_END', messageId: 'p1' },
     { type: 'TOOL_CALL_START', toolCallId: 'a1', toolCallName: 'paie_indicateurs', parentMessageId: 'a1' },
     { type: 'TOOL_CALL_ARGS', toolCallId: 'a1', delta: '{"periode":"2026-08"}' },
     { type: 'TOOL_CALL_END', toolCallId: 'a1' },
-    { type: 'STEP_FINISHED', stepName: 'executer' },
-    { type: 'STEP_STARTED', stepName: 'conclure' },
+    { type: 'TOOL_CALL_RESULT', messageId: 'r1', toolCallId: 'a1', role: 'tool', content: '{"masse":4800}' },
     { type: 'TEXT_MESSAGE_START', messageId: 'm1', role: 'assistant' },
     { type: 'TEXT_MESSAGE_CONTENT', messageId: 'm1', delta: 'La masse salariale de 2026-08 est de 4 800 MAD.' },
     { type: 'TEXT_MESSAGE_END', messageId: 'm1' },
-    {
-      type: 'CUSTOM',
-      name: 'com.staport.answer.v1',
-      value: { abstention: false, motif: null, vue: { module: 'paie', vue: 'analytique', parametres: { periode: '2026-08' } } }
-    },
-    { type: 'CUSTOM', name: 'com.staport.mascot.state.v1', value: { sequence: 2, mood: 'neutral', action: 'idle' } },
-    { type: 'STEP_FINISHED', stepName: 'conclure' },
+    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'verifiee', vue } },
     { type: 'RUN_FINISHED', threadId: 't', runId: 'r' }
   ];
   return evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('');
@@ -78,23 +74,27 @@ test.describe('Assistant RH', () => {
     await page.goto('/paie');
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
 
-    const question = page.getByLabel('Question pour l’assistant');
+    await page.keyboard.press('Control+k');
+    const assistant = page.locator('aside.copilot-sidebar-window');
+    await expect(assistant.getByText('Que voulez-vous savoir')).toBeVisible();
+    // Questions proposées selon l'écran ouvert (la paie).
+    await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
+
+    const question = assistant.getByPlaceholder('Posez votre question…');
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
 
-    await expect(page).toHaveURL(/\/paie\/analytique\?periode=2026-08$/);
-    const assistant = page.getByRole('region', { name: 'Assistant RH' });
-    await expect(assistant.getByText('Chiffres vérifiés sur les données de l’ERP')).toBeVisible();
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
+    await expect(assistant.getByText('Paie · indicateurs consulté')).toBeVisible();
+    await expect(page).toHaveURL(/\/paie\/analytique\?periode=2026-08$/);
     await expect(assistant.getByText('Paie · Analytique')).toBeVisible();
-    await expect(assistant.getByRole('button', { name: /étapes · 1 outil/ })).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('#contenu .assistant-cite').first()).toBeVisible();
     expect(agent.autorisations).toEqual(['Bearer jeton-test']);
 
     const resultats = await new AxeBuilder({ page }).include('app-assistant').analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
-    await assistant.getByRole('button', { name: 'Revenir à l’écran précédent' }).click();
+    await assistant.getByRole('button', { name: 'Revenir' }).click();
     await expect(page).toHaveURL(/\/paie$/);
   });
 
@@ -102,6 +102,7 @@ test.describe('Assistant RH', () => {
     await mockApi(page, { username: 'paie', permissions: ['PAIE_READ'] }, routes());
     await page.goto('/paie');
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Assistant RH' })).toHaveCount(0);
+    await page.keyboard.press('Control+k');
+    await expect(page.locator('app-assistant')).toHaveCount(0);
   });
 });
