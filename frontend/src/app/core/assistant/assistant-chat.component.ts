@@ -1,13 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
 
-import { IDENTIFIANT_AGENT } from './assistant-agent';
-import { AssistantRaisonnementComponent } from './assistant-raisonnement.component';
-import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component';
 
 /**
- * Le contenu de l'assistant : la discussion de CopilotKit (messages, raisonnement repliable, plan, consultations,
- * suggestions, pouces, copie, régénération, saisie) avec, sous les messages, la vue ouverte et son retour.
+ * Le contenu de l'assistant : la discussion de CopilotKit telle quelle (messages, raisonnement repliable, consultations,
+ * surfaces A2UI, suggestions, pouces, copie, régénération, saisie), avec ses libellés en français.
  */
 @Component({
   selector: 'app-assistant-chat',
@@ -34,7 +31,7 @@ import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component'
       welcomeMessageText: 'Que voulez-vous savoir sur vos équipes, vos chantiers ou la paie ?'
     })
   ],
-  template: `<copilot-chat [agentId]="agent" [messageViewChildrenComponent]="vueOuverte" [reasoningMessageComponent]="raisonnement" />`,
+  template: `<copilot-chat />`,
   styles: `
     :host {
       display: flex;
@@ -44,8 +41,4 @@ import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component'
     }
   `
 })
-export class AssistantChatComponent {
-  protected readonly agent = IDENTIFIANT_AGENT;
-  protected readonly vueOuverte = AssistantVueOuverteComponent;
-  protected readonly raisonnement = AssistantRaisonnementComponent;
-}
+export class AssistantChatComponent {}

@@ -9,7 +9,7 @@ import pytest
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage
 
-from erp_rh_ia.agent import ABSTENTION, creer_agent
+from erp_rh_ia.agent import ABSTENTION, OUTIL_A2UI, creer_agent
 
 
 @pytest.fixture
@@ -20,9 +20,32 @@ def anyio_backend() -> str:
 pytestmark = pytest.mark.anyio
 
 
-async def _repondre(agent_modele: object, question: str, appels: list[str] | None = None) -> dict[str, Any]:
-    agent = creer_agent(agent_modele, [outil("paie_indicateurs", INDICATEURS, appels)])  # pyright: ignore[reportArgumentType]
+async def _repondre(
+    agent_modele: object, question: str, appels: list[str] | None = None, surface: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    outils = [outil("paie_indicateurs", INDICATEURS, appels)]
+    if surface is not None:
+        # L'outil d'interface composée, tel que CopilotKitMiddleware l'injecte : il rend une enveloppe A2UI.
+        outils.append(outil(OUTIL_A2UI, surface))
+    agent = creer_agent(agent_modele, outils)  # pyright: ignore[reportArgumentType]
     return await agent.ainvoke({"messages": [HumanMessage(content=question)]})
+
+
+def _surface(masse: float) -> dict[str, Any]:
+    """Une enveloppe A2UI v0.9 : une étiquette liée à la masse du modèle de données."""
+    return {
+        "a2ui_operations": [
+            {"version": "v0.9", "createSurface": {"surfaceId": "s1", "catalogId": "basic"}},
+            {
+                "version": "v0.9",
+                "updateComponents": {
+                    "surfaceId": "s1",
+                    "components": [{"id": "t1", "component": "Text", "text": {"path": "/masse"}}],
+                },
+            },
+            {"version": "v0.9", "updateDataModel": {"surfaceId": "s1", "path": "/", "value": {"masse": masse}}},
+        ]
+    }
 
 
 async def test_un_message_simple_recoit_une_reponse_directe_sans_outil() -> None:
@@ -34,7 +57,6 @@ async def test_un_message_simple_recoit_une_reponse_directe_sans_outil() -> None
     assert etat["messages"][-1].content == "Bonjour ! Je réponds à vos questions RH."  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
     assert etat["verification"] == "verifiee"
     assert appels == [] and len(faux.vus) == 1  # un seul appel de modèle
-    assert etat["vue"] is None
 
 
 async def test_une_reponse_fondee_sur_les_outils_est_verifiee() -> None:
@@ -47,7 +69,6 @@ async def test_une_reponse_fondee_sur_les_outils_est_verifiee() -> None:
 
     assert appels == ["paie_indicateurs"]
     assert etat["verification"] == "verifiee"
-    assert etat["vue"] == INDICATEURS["vue"]  # la vue de l'outil, posée une fois la réponse vérifiée
     assert etat["messages"][-1].content == "En 2026-09 : masse 1 250 000,50 MAD."  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
 
 
@@ -74,7 +95,6 @@ async def test_des_chiffres_toujours_inventes_donnent_une_abstention() -> None:
 
     etat = await _repondre(faux, "Évolution de la masse ?")
 
-    assert etat["vue"] is None  # jamais de vue ouverte sur une abstention
     assert etat["messages"][-1].content == ABSTENTION  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
     assert etat["verification"] == "abstention"
 
@@ -93,3 +113,26 @@ async def test_le_plan_et_les_outils_metier_sont_proposes_au_modele() -> None:
     await _repondre(faux, "Bonjour")
 
     assert {"write_todos", "paie_indicateurs"} <= set(faux.outils_lies[-1])
+
+
+async def test_une_surface_a2ui_fondee_sur_les_outils_est_verifiee() -> None:
+    faux = modele(appel("paie_indicateurs"), appel(OUTIL_A2UI), AIMessage(content="Voici la masse de 2026-09."))
+
+    etat = await _repondre(faux, "Montre la masse", surface=_surface(1250000.5))
+
+    assert etat["verification"] == "verifiee"
+
+
+async def test_un_chiffre_invente_dans_la_surface_donne_une_abstention() -> None:
+    # La surface n'est jamais une source : reprendre son chiffre inventé dans le texte ne le rend pas valable.
+    faux = modele(
+        appel("paie_indicateurs"),
+        appel(OUTIL_A2UI),
+        AIMessage(content="La masse est de 999 MAD."),
+        AIMessage(content="Voici le tableau."),
+    )
+
+    etat = await _repondre(faux, "Montre la masse", surface=_surface(999))
+
+    assert etat["verification"] == "abstention"
+    assert etat["messages"][-1].content == ABSTENTION  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]

@@ -1,20 +1,3 @@
-// Valeurs citées par l'assistant RH dans la vue qu'il vient d'ouvrir (voir core/assistant/chiffres.ts). Classe globale : elle
-// est posée sur des éléments d'autres composants, le temps d'attirer l'œil, puis retirée.
-.assistant-cite {
-  border-radius: var(--radius-sm);
-  background: var(--assistant-accent-soft);
-  outline: 2px solid var(--assistant-accent);
-  outline-offset: 2px;
-  animation: assistant-cite var(--duration-slower) var(--ease-out) both;
-}
-
-@keyframes assistant-cite {
-  from {
-    outline-color: transparent;
-    background: transparent;
-  }
-}
-
 // Thème de CopilotKit aux couleurs Staport : ses variables pointent vers les jetons sémantiques, donc suivent le thème
 // clair ou sombre sans second jeu de couleurs. Posé sur `[data-copilotkit]`, donc limité à l'interface de l'assistant.
 :root [data-copilotkit] {

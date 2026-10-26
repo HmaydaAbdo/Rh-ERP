@@ -46,6 +46,7 @@ frontend/.angular/
 frontend/coverage/
 scripts/ia/mcp-compatibility/node_modules/
 scripts/ia/agui-client/node_modules/
+copilot-runtime/node_modules/
 npm-debug.log*
 yarn-error.log*
 

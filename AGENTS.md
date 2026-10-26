@@ -28,6 +28,19 @@ Après toute modification :
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 
+Deux règles imposées par le propriétaire, sans exception :
+
+- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, LangChain,
+  LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
+  réécrire ce qu'un framework fournit déjà, même partiellement, ni copier le comportement d'un de ses composants.
+  Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
+  branché sur un point d'extension officiel. Si un besoin semble exiger du code maison, présenter d'abord au
+  propriétaire l'option framework, ou l'absence d'option, avant d'écrire quoi que ce soit.
+- **Un seul `docker compose pull` puis `docker compose up -d` suffit à tout lancer.** Toute nouvelle brique (service,
+  image, réseau, migration, clé générée) est intégrée à `docker-compose.yml` et aux images publiées par la CI ; aucune
+  étape manuelle, aucun script à lancer à part, aucun profil à activer pour le fonctionnement normal. Les variables
+  obligatoires sont documentées dans `.env.example`.
+
 La [routine de travail et de livraison](conventions/workflow.md) s'applique à chaque tâche : reprise du
 contexte et de l'état Git, exécution du périmètre approuvé, vérifications, documentation, puis livraison
 et revue. L'appliquer sans attendre que le propriétaire répète ces consignes. Les décisions et

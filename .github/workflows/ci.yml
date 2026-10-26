@@ -179,6 +179,7 @@ jobs:
           set -euo pipefail
           docker build --tag erp-rh-litellm:ci litellm
           docker build --tag erp-rh-ia:ci ia
+          docker build --tag erp-rh-copilot-runtime:ci copilot-runtime
 
   performance-profile:
     runs-on: ubuntu-latest
@@ -415,11 +416,12 @@ jobs:
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-ia:$GITHUB_SHA" ia
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-copilot-runtime:$GITHUB_SHA" copilot-runtime
 
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia; do
+          for image in postgres backend frontend backup litellm ia copilot-runtime; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -440,7 +442,7 @@ jobs:
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia; do
+          for image in postgres backend frontend backup litellm ia copilot-runtime; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then

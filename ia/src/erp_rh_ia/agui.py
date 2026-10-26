@@ -135,8 +135,8 @@ def routeur_agui(
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
-        # L'état envoyé par le navigateur n'est pas une source de confiance ; ses outils déclarés (ouverture de vue,
-        # A2UI) sont exécutés par le navigateur lui-même, jamais par le serveur.
+        # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
+        # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
         entree_serveur = entree.model_copy(update={"state": {}})
 
         async def flux() -> AsyncIterator[str]:
