@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from erp_rh_ia.app import creer_app
 from erp_rh_ia.config import Settings
-from erp_rh_ia.llm import Tache, options_tache, passerelle_prete, url_disponibilite
+from erp_rh_ia.modeles import Tache, modele
 
 
 def _settings(enabled: bool = True, base_url: str = "http://litellm:4000/v1") -> Settings:
@@ -28,12 +28,12 @@ def test_cle_jamais_affichee() -> None:
     assert "sk-test-cle" not in repr(_settings())
 
 
-def test_tag_de_tache() -> None:
-    assert options_tache(Tache.COMPLEX) == {"metadata": {"tags": ["complex"]}}
-
-
-def test_url_disponibilite_hors_v1() -> None:
-    assert url_disponibilite(_settings()) == "http://litellm:4000/health/readiness"
+def test_le_modele_route_par_tag_vers_la_passerelle() -> None:
+    chat = modele(_settings(), Tache.COMPLEX)
+    assert chat.model == "litellm_proxy/ai-gateway"
+    assert chat.api_base == "http://litellm:4000/v1"
+    assert chat.model_kwargs == {"extra_body": {"metadata": {"tags": ["complex"]}}}
+    assert chat.streaming and chat.max_retries == 0
 
 
 def test_sante_ne_depend_de_rien() -> None:
@@ -58,16 +58,12 @@ def test_pas_pret_sans_passerelle() -> None:
     assert reponse.json() == {"status": "DOWN", "ia": "ACTIVE", "passerelle": "INDISPONIBLE"}
 
 
-@pytest.mark.anyio
-async def test_passerelle_prete_si_200() -> None:
+def test_pret_quand_la_passerelle_repond() -> None:
     def repondre(requete: httpx.Request) -> httpx.Response:
         return httpx.Response(200 if requete.url.path == "/health/readiness" else 404)
 
-    transport = httpx.MockTransport(repondre)
-    async with httpx.AsyncClient(transport=transport) as client:
-        assert await passerelle_prete(_settings(), client)
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
+    app = creer_app(_settings())
+    with TestClient(app) as client:
+        app.state.http = httpx.AsyncClient(transport=httpx.MockTransport(repondre))
+        reponse = client.get("/health/ready")
+    assert reponse.json() == {"status": "UP", "ia": "ACTIVE", "passerelle": "PRETE"}
