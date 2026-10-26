@@ -19,7 +19,7 @@ fois, puis remplacée par une abstention. L'état ``verification``
 import json
 from collections.abc import Awaitable, Callable, Sequence
 from importlib import resources
-from typing import Annotated, Any, Literal, NotRequired
+from typing import Annotated, Any, Literal, NotRequired, cast
 
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
@@ -101,8 +101,37 @@ def _parametres_a2ui() -> dict[str, Any]:
     catalogue = json.loads(fichier.read_text(encoding="utf-8"))
     return {
         "catalog": {"components": catalogue["components"]},
-        "guidelines": {"design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}"},
+        "guidelines": {
+            "design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}",
+            "composition_guide": _guide_composition(catalogue["components"]),
+        },
     }
+
+
+#: Composants de présentation proposés au sous-agent : les surfaces de l'ERP sont en lecture seule.
+_COMPOSANTS_SURFACE = ("Text", "Row", "Column", "List", "Card", "Divider", "Icon", "Tabs")
+
+
+def _guide_composition(composants: dict[str, Any]) -> str:
+    """Le guide de composition du sous-agent, lu dans le catalogue : chaque composant de présentation, ses propriétés
+    (requises marquées) et leurs valeurs admises ; quelques centaines de jetons au lieu du schéma complet."""
+    lignes = ["## Composants disponibles (catalogue de base A2UI v0.9)"]
+    for nom in _COMPOSANTS_SURFACE:
+        schema: dict[str, Any] = composants[nom]
+        proprietes: dict[str, Any] = {}
+        requises: set[str] = set()
+        for partie in [schema, *schema.get("allOf", [])]:
+            proprietes.update(partie.get("properties", {}))
+            requises.update(partie.get("required", []))
+        details: list[str] = []
+        for cle, definition in proprietes.items():
+            if cle == "component":
+                continue
+            valeurs = cast(list[str], definition.get("enum", [])) if isinstance(definition, dict) else []
+            libelle = f"{cle} (requis)" if cle in requises else cle
+            details.append(f"{libelle} : {', '.join(valeurs)}" if valeurs else libelle)
+        lignes.append(f"- {nom} : {' ; '.join(details)}")
+    return "\n".join(lignes)
 
 
 class EtatVerification(AgentState[Any]):
