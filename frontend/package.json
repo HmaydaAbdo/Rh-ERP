@@ -27,6 +27,7 @@
     "@angular/forms": "^22.2.3",
     "@angular/platform-browser": "^22.2.3",
     "@angular/router": "^22.2.3",
+    "@copilotkit/angular": "^0.6.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@lucide/angular": "^1.57.0",
