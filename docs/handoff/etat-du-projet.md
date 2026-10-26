@@ -23,8 +23,9 @@ LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256
 Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
 CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est
 retirée. L'assistant n'apparaît qu'avec `IA_UTILISER` et `IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un
-seul document : [ia.md](../ia.md). Prochaine action : voir au navigateur une surface A2UI d'un vrai modèle (fin de
-T16), puis T17 à T20.
+seul document : [ia.md](../ia.md). T16 est faite (surface A2UI vue au navigateur avec un vrai modèle, réponse en 76 s). Prochaine action : la « Vision courte » du § 7 de [ia.md](../ia.md) — latence sous 30 s,
+T18 observabilité, T17 passerelle native, T19 conversations durables, T20 démonstration J1. README et skills des huit domaines décrivent
+leurs couches Application, Analytique et IA ; la CI vérifie que permissions et outils MCP y figurent.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

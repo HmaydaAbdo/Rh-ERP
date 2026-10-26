@@ -256,6 +256,8 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ZAI_API_KEY: ${ZAI_API_KEY:-}
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      LLM7_API_KEY: ${LLM7_API_KEY:-}
+      COHERE_API_KEY: ${COHERE_API_KEY:-}
     security_opt:
       - no-new-privileges:true
     networks:

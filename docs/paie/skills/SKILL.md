@@ -19,6 +19,17 @@ description: Use when changing payroll records, imports, exports, analytics, or 
 Bulletins mensuels, import, recherche et export. Le calcul automatique de paie n'est pas une règle
 implicite : appliquer uniquement ce qui est spécifié dans le README métier.
 
+## Couches et points de contrôle
+
+Le détail de chaque couche est dans le [README Paie](../README.md#les-couches-du-domaine). Avant de modifier le domaine,
+repérer la couche touchée et vérifier ses points de contrôle.
+
+| Couche | Ce qu'elle contient | À vérifier quand on la modifie |
+|---|---|---|
+| **Application** | `PaieController` et ses services (saisie, suppression, restauration), assistant d'import (`/paie/import/*`), export Excel, rapport PDF, parcours d'un employé ; audit `PAIE_*` ; côté Angular `portail/paie/` | Un bulletin par employé et par mois ; l'affectation du mois reste dans le bulletin ; `PAIE_WRITE` **et** `EMPLOYEE_WRITE` pour la saisie ; import atomique et corrections des fiches ; suppression et restauration auditées |
+| **Analytique** | `POST /paie/analytique` (`PaieAnalytiqueDto`), `POST /paie/effectifs`, `/paie/periodes` : source unique des vues Cartes et Analytique de tous les domaines | Ne jamais recalculer une définition ailleurs (effectif, masse, STC, entrées, plus payés, sorties) ; comparaison indisponible plutôt que zéro ; dernier mois importé par défaut ; mêmes définitions que le rapport PDF et l'assistant |
+| **IA** | `paie_indicateurs`, `paie_periodes`, `paie_repartition`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` (`PAIE_READ`), `rapport_preparer` (`PAIE_EXPORT` + `PAIE_READ`, ne génère aucun fichier) | Lecture seule ; `definitions` de `paie_mouvements` citées ; filtres `chantierIds` / `equipeIds` (`0` = sans équipe) / `fonctionIds` ; descriptions d'outils à jour ; chaque nombre vérifié contre les outils ; le modèle ne calcule rien |
+
 ## Garde-fous
 
 - Respecter l'unicité employé × période, l'immutabilité des identifiants historiques et les
