@@ -94,7 +94,8 @@ test.describe('Assistant RH', () => {
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
 
     await page.keyboard.press('Control+k');
-    const assistant = page.locator('aside.copilot-sidebar-window');
+    // Panneau flottant au-dessus de l'écran (mode overlay de CopilotKit) : une fenêtre de dialogue, la vue garde sa place.
+    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
     await expect(assistant.getByText('Que voulez-vous savoir')).toBeVisible();
     // Questions proposées selon l'écran ouvert (la paie).
     await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
@@ -105,7 +106,8 @@ test.describe('Assistant RH', () => {
 
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
     await expect(assistant.getByText('Masse salariale 2026-08 : 4 800 MAD')).toBeVisible();
-    await expect(assistant.getByText('paie_indicateurs')).toBeVisible();
+    // Pas de consultation d'outil en brut (nom technique) dans la discussion.
+    await expect(assistant.getByText('paie_indicateurs')).toHaveCount(0);
     expect(runtime.autorisations).toEqual(['Bearer jeton-test']);
 
     const resultats = await new AxeBuilder({ page }).include('app-assistant').analyze();
