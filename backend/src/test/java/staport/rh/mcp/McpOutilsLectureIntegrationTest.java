@@ -172,6 +172,31 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     }
 
     @Test
+    void paie_mouvements_rend_l_ecart_net_les_plus_payes_et_leurs_definitions() throws Exception {
+        // A payé les deux mois, B seulement le mois d'avant, C et D seulement ce mois-ci.
+        YearMonth avant = periode.minusMonths(1);
+        donnees.creerBulletin(ref, avant);
+        DonneesDeTest.Referentiel parti = donnees.creerReferentiel();
+        donnees.creerBulletin(parti, avant);
+        DonneesDeTest.Referentiel arrive = donnees.creerReferentiel();
+        donnees.creerBulletin(arrive, periode);
+        DonneesDeTest.Referentiel arriveAussi = donnees.creerReferentiel();
+        donnees.creerBulletin(arriveAussi, periode);
+
+        JsonNode mouvements = appeler("paie_mouvements", Map.of("periode", periode.toString(), "chantierIds",
+                List.of(ref.chantierId(), parti.chantierId(), arrive.chantierId(), arriveAussi.chantierId())));
+
+        JsonNode mois = mouvements.get("mois").get(0);
+        assertThat(mois.get("effectif").asLong()).isEqualTo(3);
+        assertThat(mois.get("effectifMoisPrecedent").asLong()).isEqualTo(2);
+        assertThat(mois.get("variation").asLong()).isEqualTo(1);
+        assertThat(mois.get("entrees").asLong()).isEqualTo(2);
+        assertThat(mois.get("plusPayes").asLong()).isEqualTo(1);
+        assertThat(mouvements.get("definitions").get("entrees").asString()).contains("absents de la paie du mois précédent");
+        assertThat(mouvements.get("definitions").get("variation").asString()).contains("écart net");
+    }
+
+    @Test
     void paie_bulletins_rechercher_rend_le_bulletin_complet_cin_compris() throws Exception {
         JsonNode resultat = appeler("paie_bulletins_rechercher", Map.of("periode", periode.toString(), "nom", "Nom " + ref.suffixe()));
         JsonNode bulletin = resultat.get("bulletins").get(0);

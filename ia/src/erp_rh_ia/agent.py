@@ -1,11 +1,13 @@
 # LangGraph ne publie pas de stubs et laisse des génériques inconnus (CachePolicy) dans ses signatures :
 # seules ces deux règles sont levées, et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Graphe de l'agent (docs/ia.md, T6) : préparer → cibler les domaines → choisir des outils ⇄ les exécuter → rédiger →
-vérifier les chiffres → conclure.
+"""Graphe de l'agent (docs/ia.md, T6) : trier → préparer → cibler les domaines → choisir des outils ⇄ les exécuter →
+rédiger → vérifier les chiffres → conclure.
 
-Le ciblage (petit modèle, tag ``simple``) ne transmet au modèle que les outils des domaines utiles, aucun d'office ;
-s'il échoue, tout le catalogue part (masquer n'est pas un contrôle d'accès : Spring revérifie chaque appel).
+Le tri répond aussitôt, sans modèle, à un message sans donnée (salutation, merci, aide) ; un ciblage qui ne retient
+aucun domaine passe directement à la rédaction. Le ciblage (petit modèle, tag ``simple``) ne transmet au modèle que
+les outils des domaines utiles, aucun d'office ; s'il échoue, tout le catalogue part (masquer n'est pas un contrôle
+d'accès : Spring revérifie chaque appel).
 Explicite et borné : nombre de tours d'outils, d'appels et de rédactions plafonnés ; un refus d'autorisation n'est
 jamais retenté ; une réponse dont un nombre ne vient pas des outils est réécrite une fois puis remplacée par une
 abstention. Le graphe n'a pas de mémoire durable : chaque question est un run indépendant.
@@ -35,6 +37,7 @@ from pydantic import BaseModel
 from erp_rh_ia.domaines import domaines_du_catalogue, restreindre
 from erp_rh_ia.modele import AppelOutil, Brouillon, Modele
 from erp_rh_ia.outils import OutilDecrit, Outils, ResultatOutil
+from erp_rh_ia.tri import REPONSES, trier
 from erp_rh_ia.verification import verifier
 
 SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc.
@@ -48,7 +51,10 @@ Règles impératives :
    l'outil de recherche du référentiel, puis utilise cet identifiant.
 6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie, quelle que soit l'année : passe-la
    telle quelle en paramètre « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction.
-7. Réponds en français, brièvement. Les montants sont en dirhams (MAD)."""
+7. Réponds en français, brièvement. Les montants sont en dirhams (MAD).
+8. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
+   emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
+   l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées."""
 
 CONSIGNE_REDACTION = """Rédige maintenant la réponse finale, en JSON uniquement :
 - "reponse" : le texte pour l'utilisateur ;
@@ -135,6 +141,7 @@ class Agent:
         self._modele = modele
         self._limites = limites or Limites()
         graphe = StateGraph(Etat, input_schema=Entree, output_schema=Entree, context_schema=Contexte)
+        graphe.add_node("trier", self._trier)
         graphe.add_node("preparer", self._preparer)
         graphe.add_node("cibler", self._cibler)
         graphe.add_node("choisir", self._choisir)
@@ -142,9 +149,10 @@ class Agent:
         graphe.add_node("rediger", self._rediger)
         graphe.add_node("verifier", self._verifier)
         graphe.add_node("conclure", self._conclure)
-        graphe.add_edge(START, "preparer")
+        graphe.add_edge(START, "trier")
+        graphe.add_conditional_edges("trier", self._apres_tri, ["preparer", "conclure"])
         graphe.add_edge("preparer", "cibler")
-        graphe.add_edge("cibler", "choisir")
+        graphe.add_conditional_edges("cibler", self._apres_ciblage, ["choisir", "rediger"])
         graphe.add_conditional_edges("choisir", self._apres_choix, ["executer", "rediger"])
         graphe.add_conditional_edges("executer", self._apres_execution, ["choisir", "rediger"])
         graphe.add_edge("rediger", "verifier")
@@ -174,6 +182,13 @@ class Agent:
         return reponse.model_copy(update={"domaines": etat.get("domaines")})
 
     # --- nœuds ---
+
+    async def _trier(self, state: Entree) -> Maj:
+        """Un message sans donnée (salutation, merci, aide) reçoit sa réponse aussitôt, sans modèle ni outil."""
+        sorte = trier(_derniere_question(state["messages"]))
+        if sorte is None:
+            return {}
+        return {"reponse": ReponseAgent(texte=REPONSES[sorte], abstention=False, outils=[]), "domaines": []}
 
     async def _preparer(self, state: Entree, runtime: Runtime[Contexte]) -> Maj:
         await _mascotte("thinking")
@@ -327,6 +342,15 @@ class Agent:
         return {"messages": [AIMessage(id=identifiant, content=reponse.texte)]}
 
     # --- routage ---
+
+    @staticmethod
+    def _apres_tri(etat: Etat) -> str:
+        return "conclure" if "reponse" in etat else "preparer"
+
+    @staticmethod
+    def _apres_ciblage(etat: Etat) -> str:
+        # Aucun domaine utile : aucun outil à choisir, la rédaction répond directement (un appel de modèle en moins).
+        return "rediger" if etat["domaines"] == [] else "choisir"
 
     @staticmethod
     def _apres_choix(etat: Etat) -> str:

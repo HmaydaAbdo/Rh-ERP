@@ -88,6 +88,20 @@ def _poster(
         return client.post("/agui", json=corps, headers=entetes)
 
 
+def test_une_salutation_repond_sans_etape_de_recherche() -> None:
+    outils = OutilsSimules({"paie_indicateurs": ok("paie_indicateurs", INDICATEURS)})
+
+    reponse = _poster(Agent(ModeleScripte([], [])), AccesSimule(outils), _corps("Bonjour"))
+
+    evenements_recus = _lire(reponse.text)
+    etapes = [e["stepName"] for e in evenements_recus if e["type"] == "STEP_STARTED"]
+    assert etapes == ["trier", "conclure"]
+    assert not any(e["type"].startswith("TOOL_CALL") for e in evenements_recus)
+    texte = "".join(e.get("delta", "") for e in evenements_recus if e["type"] == "TEXT_MESSAGE_CONTENT")
+    assert texte.startswith("Bonjour !")
+    assert outils.appels == []
+
+
 def test_un_run_complet_suit_le_contrat_ag_ui() -> None:
     outils = OutilsSimules({"paie_indicateurs": ok("paie_indicateurs", INDICATEURS)})
     acces = AccesSimule(outils)
@@ -106,9 +120,10 @@ def test_un_run_complet_suit_le_contrat_ag_ui() -> None:
     assert outil == ["TOOL_CALL_START", "TOOL_CALL_ARGS", "TOOL_CALL_END"]
     debut = next(e for e in evenements_recus if e["type"] == "TOOL_CALL_START")
     assert debut["toolCallName"] == "paie_indicateurs"
-    # Étapes : un nœud du graphe à la fois, de « preparer » à « conclure », chacune ouverte puis fermée.
+    # Étapes : un nœud du graphe à la fois, de « trier » à « conclure », chacune ouverte puis fermée.
     etapes = [(e["type"], e["stepName"]) for e in evenements_recus if e["type"].startswith("STEP_")]
-    assert etapes[0] == ("STEP_STARTED", "preparer")
+    assert etapes[0] == ("STEP_STARTED", "trier")
+    assert ("STEP_STARTED", "preparer") in etapes
     assert etapes[-1] == ("STEP_FINISHED", "conclure")
     assert sum(t == "STEP_STARTED" for t, _ in etapes) == sum(t == "STEP_FINISHED" for t, _ in etapes)
     assert ("STEP_STARTED", "verifier") in etapes

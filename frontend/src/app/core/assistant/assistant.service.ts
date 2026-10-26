@@ -68,6 +68,7 @@ export const FABRIQUE_AGENT_IA = new InjectionToken<FabriqueAgentIa>('FABRIQUE_A
 });
 
 const LIBELLES_ETAPES: Readonly<Record<string, string>> = {
+  trier: 'Lire le message',
   preparer: 'Comprendre la question',
   cibler: 'Choisir les domaines',
   choisir: 'Choisir les données',
