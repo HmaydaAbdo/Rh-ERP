@@ -34,6 +34,7 @@ async def test_un_message_simple_recoit_une_reponse_directe_sans_outil() -> None
     assert etat["messages"][-1].content == "Bonjour ! Je réponds à vos questions RH."  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
     assert etat["verification"] == "verifiee"
     assert appels == [] and len(faux.vus) == 1  # un seul appel de modèle
+    assert etat["vue"] is None
 
 
 async def test_une_reponse_fondee_sur_les_outils_est_verifiee() -> None:
@@ -46,6 +47,7 @@ async def test_une_reponse_fondee_sur_les_outils_est_verifiee() -> None:
 
     assert appels == ["paie_indicateurs"]
     assert etat["verification"] == "verifiee"
+    assert etat["vue"] == INDICATEURS["vue"]  # la vue de l'outil, posée une fois la réponse vérifiée
     assert etat["messages"][-1].content == "En 2026-09 : masse 1 250 000,50 MAD."  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
 
 
@@ -72,6 +74,7 @@ async def test_des_chiffres_toujours_inventes_donnent_une_abstention() -> None:
 
     etat = await _repondre(faux, "Évolution de la masse ?")
 
+    assert etat["vue"] is None  # jamais de vue ouverte sur une abstention
     assert etat["messages"][-1].content == ABSTENTION  # pyright: ignore[reportIndexIssue,reportAttributeAccessIssue]
     assert etat["verification"] == "abstention"
 

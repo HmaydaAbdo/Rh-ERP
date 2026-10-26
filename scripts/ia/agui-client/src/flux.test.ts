@@ -41,8 +41,12 @@ test("une question suit le cycle AG-UI jusqu'à la réponse vérifiée", { timeo
   assert.ok(assistant && String(assistant.content).replaceAll(/\s/g, "").includes(attendu), String(assistant?.content));
   // Texte diffusé en flux, puis état partagé du vérificateur de chiffres : réponse vérifiée.
   assert.ok(types.includes("TEXT_MESSAGE_CONTENT"), "texte diffusé en flux");
-  const etats = recus.filter((e) => e.type === "STATE_SNAPSHOT").map((e) => e.snapshot as { verification?: string });
+  const etats = recus
+    .filter((e) => e.type === "STATE_SNAPSHOT")
+    .map((e) => e.snapshot as { verification?: string; vue?: { module?: string } | null });
   assert.equal(etats.at(-1)?.verification, "verifiee");
+  // La vue que Spring propose pour cette réponse, posée une fois la réponse vérifiée : c'est elle que l'interface ouvre.
+  assert.ok(etats.at(-1)?.vue?.module, "vue proposée dans l'état partagé");
   // Raisonnement : selon le modèle servi, des événements officiels REASONING_* ; jamais d'événement maison.
   assert.ok(!recus.some((e) => e.type === "CUSTOM" && String(e.name).startsWith("com.staport.")));
 });

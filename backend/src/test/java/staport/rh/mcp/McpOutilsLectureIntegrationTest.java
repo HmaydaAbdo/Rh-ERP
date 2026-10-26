@@ -88,13 +88,43 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     }
 
     @Test
+    void les_schemas_generes_par_spring_ai_portent_les_bornes_les_enumerations_et_les_descriptions() throws Exception {
+        JsonNode outils = rpc(toutVoir, "tools/list", Map.of()).get("tools");
+        JsonNode chantier = null;
+        JsonNode mouvements = null;
+        for (JsonNode outil : outils) {
+            assertThat(outil.get("description").asString()).as(outil.get("name").asString()).hasSizeGreaterThan(60);
+            assertThat(outil.get("outputSchema").get("type").asString()).as(outil.get("name").asString()).isEqualTo("object");
+            switch (outil.get("name").asString()) {
+                case "chantier_rechercher" -> chantier = outil.get("inputSchema").get("properties");
+                case "paie_mouvements" -> mouvements = outil.get("inputSchema").get("properties");
+                default -> { }
+            }
+        }
+        // Spring AI génère types, énumérations et descriptions ; les bornes sont dites dans la description et appliquées
+        // à l'appel par Bean Validation (le générateur de schéma ne les reprend pas).
+        assertThat(chantier).isNotNull();
+        assertThat(chantier.get("statut").get("enum")).hasSize(2);
+        assertThat(chantier.get("limite").get("description").asString()).contains("de 1 à 20");
+        assertThat(chantier.get("recherche").get("description").asString()).contains("C-1042");
+        assertThat(mouvements.get("periode").get("description").asString()).contains("aaaa-MM");
+        assertThat(mouvements.get("chantierIds").get("description").asString()).contains("chantier_rechercher");
+
+        JsonNode depasse = rpc(toutVoir, "tools/call",
+                Map.of("name", "chantier_rechercher", "arguments", Map.of("limite", 21)));
+        assertThat(depasse.get("isError").asBoolean()).isTrue();
+        assertThat(depasse.has("structuredContent")).isFalse();
+    }
+
+    @Test
     void chaque_outil_refuse_sans_la_permission_de_son_domaine_et_le_refus_est_journalise() throws Exception {
         String sansDroitsMetier = jeton(Set.of("IA_UTILISER"));
         long refusAvant = refusJournalises();
         for (var appel : appelsTypes().entrySet()) {
             JsonNode resultat = rpc(sansDroitsMetier, "tools/call", Map.of("name", appel.getKey(), "arguments", appel.getValue()));
             assertThat(resultat.get("isError").asBoolean()).as(appel.getKey()).isTrue();
-            assertThat(resultat.get("content").get(0).get("text").asString()).as(appel.getKey()).startsWith("Accès refusé : permission");
+            // Refus de Spring Security (@PreAuthorize) : son message, relayé tel quel par Spring AI.
+            assertThat(resultat.get("content").get(0).get("text").asString()).as(appel.getKey()).contains("Access Denied");
             assertThat(resultat.has("structuredContent")).isFalse();
         }
         assertThat(refusJournalises() - refusAvant).isEqualTo(appelsTypes().size());
@@ -112,7 +142,8 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     void un_identifiant_inconnu_est_signale_introuvable() throws Exception {
         JsonNode resultat = rpc(toutVoir, "tools/call", Map.of("name", "employe_fiche", "arguments", Map.of("id", Long.MAX_VALUE / 2)));
         assertThat(resultat.get("isError").asBoolean()).isTrue();
-        assertThat(resultat.get("content").get(0).get("text").asString()).startsWith("Élément introuvable");
+        // Message de l'exception du domaine, le même que celui de l'API REST, relayé par Spring AI.
+        assertThat(resultat.get("content").get(0).get("text").asString()).contains("introuvable");
     }
 
     @Test
@@ -295,9 +326,9 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         appeler("roles_lister", Map.of("nom", "SYSTEM_ADMIN")).get("roles").forEach(r -> roles.add(r.get("nom").asString()));
         assertThat(roles).contains("SYSTEM_ADMIN");
 
-        JsonNode journal = appeler("audit_rechercher", Map.of("action", "LECTURE_METIER", "limite", 5));
+        JsonNode journal = appeler("audit_rechercher", Map.of("action", "MCP_ROLES_LISTER", "limite", 5));
         assertThat(journal.get("entrees").size()).isPositive();
-        assertThat(journal.get("entrees").get(0).get("action").asString()).isEqualTo("LECTURE_METIER");
+        assertThat(journal.get("entrees").get(0).get("action").asString()).isEqualTo("MCP_ROLES_LISTER");
 
         JsonNode historique = appeler("audit_historique", Map.of("entite", "Employee", "id", ref.employeId()));
         assertThat(historique.get("total").asLong()).isPositive();
@@ -376,9 +407,10 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     }
 
     private long refusJournalises() {
+        // Les refus de @PreAuthorize sont audités par l'écouteur d'événements de sécurité, comme ceux de l'API REST.
         return jdbc.queryForObject("""
-                SELECT count(*) FROM audit_journal WHERE action = 'LECTURE_METIER' AND resultat = 'ECHEC'
-                AND motif = 'PERMISSION_MANQUANTE' AND perimetre ->> 'canal' = 'MCP'""", Long.class);
+                SELECT count(*) FROM audit_journal WHERE action = 'ACCES_REFUSE' AND perimetre ->> 'route' = '/mcp'""",
+                Long.class);
     }
 
     private String jeton(Set<String> codes) {

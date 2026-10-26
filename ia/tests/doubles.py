@@ -66,17 +66,19 @@ def appel(nom: str, identifiant: str = "a1", **arguments: Any) -> AIMessage:
 def outil(nom: str, donnees: dict[str, Any] | Callable[..., Any], appels: list[str] | None = None) -> BaseTool:
     """Un outil LangChain qui rend ``donnees`` en JSON, comme un outil MCP de Spring ; ``appels`` note chaque appel."""
 
-    def executer(**arguments: Any) -> str:
+    def executer(**arguments: Any) -> tuple[str, dict[str, Any]]:
         if appels is not None:
             appels.append(nom)
         valeur = donnees(**arguments) if callable(donnees) else donnees
-        return json.dumps(valeur, ensure_ascii=False)
+        # Comme langchain.mcp : le JSON en texte pour le modèle, le contenu structuré en artefact.
+        return json.dumps(valeur, ensure_ascii=False), {"structured_content": valeur}
 
     return StructuredTool.from_function(
         func=executer,
         name=nom,
         description=f"Outil de test {nom}",
         args_schema={"type": "object", "properties": {"periode": {"type": "string"}}},
+        response_format="content_and_artifact",
     )
 
 
