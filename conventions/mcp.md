@@ -17,6 +17,19 @@ de sortie typé et documenté, et des limites de taille et de résultats. Les re
 définissent leurs limites et leur ordre. Séparer les outils de lecture des outils d'écriture, et ne
 pas exposer indistinctement toutes les routes CRUD de l'application.
 
+**Descriptions et réponses faites pour un modèle** (pratiques d'Anthropic, d'OpenAI et de Google pour les outils d'agents) :
+
+* Le nom et la description disent à quoi sert l'outil, **quand le choisir et quand préférer son voisin**, comme on briefe
+  un nouveau collègue : vocabulaire du métier, abréviations expliquées (STC, entrée, sortie), unité et période par défaut.
+* Chaque paramètre dit son sens, son format, ses bornes et un exemple ; les valeurs possibles sont des énumérations.
+* La réponse renvoie ce qui permet de continuer sans deuxième appel inutile : noms lisibles à côté des identifiants,
+  la période et le périmètre appliqués, la définition de chaque chiffre, l'outil suivant utile (identifiant de fiche pour
+  `*_fiche`), et pour une liste le total, la limite et s'il en reste.
+* Une réponse est compacte (jetons) : champs utiles seulement, listes bornées, pas de doublon entre texte et données.
+* Une erreur dit au modèle quoi corriger (« periode attend aaaa-MM », « identifiant introuvable : chercher d'abord avec
+  `chantier_rechercher` ») sans recopier la valeur saisie ni exposer d'interne.
+* Les descriptions sont évaluées comme du code : le jeu de référence mesure le bon choix d'outil et d'arguments.
+
 Pour un catalogue important, l'agent peut rechercher les outils pertinents à la demande (Tool
 Search) et ne charger ensuite que leurs descriptions et schémas. La recherche doit rester bornée au
 catalogue publié et configuré. Elle ne change pas les permissions : le serveur contrôle chaque appel
