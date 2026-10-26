@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
 
 import { IDENTIFIANT_AGENT } from './assistant-agent';
+import { AssistantRaisonnementComponent } from './assistant-raisonnement.component';
 import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component';
 
 /**
@@ -33,7 +34,7 @@ import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component'
       welcomeMessageText: 'Que voulez-vous savoir sur vos équipes, vos chantiers ou la paie ?'
     })
   ],
-  template: `<copilot-chat [agentId]="agent" [messageViewChildrenComponent]="vueOuverte" />`,
+  template: `<copilot-chat [agentId]="agent" [messageViewChildrenComponent]="vueOuverte" [reasoningMessageComponent]="raisonnement" />`,
   styles: `
     :host {
       display: flex;
@@ -46,4 +47,5 @@ import { AssistantVueOuverteComponent } from './assistant-vue-ouverte.component'
 export class AssistantChatComponent {
   protected readonly agent = IDENTIFIANT_AGENT;
   protected readonly vueOuverte = AssistantVueOuverteComponent;
+  protected readonly raisonnement = AssistantRaisonnementComponent;
 }
