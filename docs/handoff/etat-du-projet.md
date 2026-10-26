@@ -138,4 +138,4 @@ Le détail transversal est dans `TODO.md`; les tâches propres à un domaine son
 - **Carte** : recherche de lieux reportée ; la clé ArcGIS (`ARCGIS_API_KEY`) expire au plus tard un an après sa création.
 - **Domaines à venir** : Pointage, puis paie calculée depuis le Pointage (section « Évolutions prochaines »).
 - **IA** : J2 (périmètres par fiche de poste, projection du salaire, budgets par poste) avant tout utilisateur non
-  administrateur ; aucune donnée réelle vers un modèle avant J3. Détail et journal dans [ia.md](../ia.md).
+  administrateur. Détail et journal dans [ia.md](../ia.md).

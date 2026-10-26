@@ -24,13 +24,13 @@ prend aucune décision sur une personne : elle explique et prépare, une personn
 | Outils métier | **MCP** (Streamable HTTP) entre le service IA et Spring. Le service IA n'a ni accès aux tables ni client REST métier. |
 | Interface ↔ agent | **AG-UI** entre Angular et le service IA : messages en streaming, états d'outils, interruptions, confirmations, événements de la mascotte. Angular dialogue directement avec l'agent Python, sans runtime intermédiaire. Flux produit par l'**intégration LangGraph officielle** `ag-ui-langgraph` 0.0.47 (version figée, [ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)) ; le service n'y ajoute que l'identité, la session MCP et une frontière de sécurité sur les événements. Client : `@ag-ui/client` 1.0.3. Seule la réponse vérifiée est diffusée, jamais les jetons du brouillon. |
 | Modèles | **LiteLLM** : un alias unique `ai-gateway`, la tâche indiquée par tag (`simple`, `medium`, `complex`, `code`, `ocr`), bascule entre fournisseurs du même niveau, budgets par clé virtuelle. Un modèle est retenu sur le jeu de référence (§ 4). |
-| Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Tests sur données fictives. Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
+| Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Les données réelles peuvent être envoyées aux modèles configurés, offres gratuites comprises : la règle « aucune donnée réelle vers un modèle » est retirée, risque accepté par le propriétaire (décision du 2026-10-26). Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
 | Sécurité | Périmètres de données par **département et fiche de poste**, appliqués dans Spring pour REST et MCP ; jeton délégué court RS256 ; audit de chaque appel d'outil (§ 5). |
 | Premier usage | **Questions/réponses + vues pilotées** : l'agent répond avec des chiffres Spring et ouvre la vue partagée (Tabulaire, Cartes, Analytique) déjà filtrée (§ 6). |
 | Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
 | Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
 | Orchestration | **Un agent, catalogue ciblé par domaine** : un petit modèle (tag `simple`) choisit les domaines de la question, seuls leurs outils partent vers le modèle `complex`. Les agents de domaine (sous-graphes sous un superviseur) viennent avec J8, quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, modèle ou budget ([conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine)). |
-| Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (prototypage) est dans les pools tant que les données sont synthétiques (jusqu'à J2) ; les préversions à sortie instable restent sous tags `eval`. |
+| Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (offre de prototypage) est dans les pools ; les préversions à sortie instable restent sous tags `eval`. |
 | Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
 | Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les [conventions](../conventions/agents-ia.md#gouvernance-et-usage-responsable) ; l'écart avec l'existant est suivi au § 10. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
@@ -82,8 +82,7 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
   publique JWKS), audience `mcp`, scopes réduits ; le `JWT_SECRET` n'est jamais partagé. Chaque appel
   MCP revalide émetteur, audience, expiration, permissions et périmètre.
 - **Champs rendus.** Les mêmes que les écrans pour un utilisateur donné (CIN, dates et montants compris) ; seules
-  les permissions filtrent. Avant tout envoi de données réelles à un fournisseur externe, revoir cette règle avec
-  le choix du modèle (cible : modèle local).
+  les permissions filtrent, quel que soit le fournisseur (cible : modèle local).
 - **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé d'ERP-RH porte
   `metadata.tags: ["!eval"]` (aucun modèle d'évaluation), une limite de débit et un budget. Port lié
   à `127.0.0.1` ou au seul réseau Docker interne. Cache de réponses désactivé.
@@ -141,8 +140,8 @@ pris en charge ; chaque surface a un repli texte.
 |---|---|---|---|
 | J0 — Socle | Preuve MCP Java ↔ client TypeScript ; décisions ; ce document | Fait | ✅ |
 | J1 — Tranche verticale | Tâches T1 à T9 ci-dessous, données synthétiques | Démonstration de bout en bout ; exactitude mesurée ; refus serveur testés | 🟦 |
-| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets et quotas, jeu adversarial, vérificateur étendu, garde technique de classe de données (tâches ci-dessous) | Tests négatifs et adversariaux verts ; porte avant tout utilisateur non administrateur | ⬜ |
-| J3 — Pilote réel | Modèle local open source (ou fournisseur admis pour la classe, par ADR) ; conversations multi-tours ; observabilité et objectifs de service ; conformité et transparence ; retours 👍/👎 revus avant le jeu de référence ; RH/paie puis direction (tâches ci-dessous) | Porte de mise en service franchie ; seuils validés et atteints sur le pilote | ⬜ |
+| J2 — Sécurité par fiche de poste | Périmètres Spring REST + MCP, projection salaire, catalogue filtré, budgets et quotas, jeu adversarial, vérificateur étendu (tâches ci-dessous) | Tests négatifs et adversariaux verts ; porte avant tout utilisateur non administrateur | ⬜ |
+| J3 — Pilote réel | Modèle local open source (les offres gratuites restent possibles en attendant) ; conversations multi-tours ; observabilité et objectifs de service ; conformité et transparence ; retours 👍/👎 revus avant le jeu de référence ; RH/paie puis direction (tâches ci-dessous) | Porte de mise en service franchie ; seuils validés et atteints sur le pilote | ⬜ |
 | J4 — Expérience immersive | Espace IA, catalogue A2UI Staport, mascotte Rive complète | Parcours réel vérifié au navigateur, accessibilité et mouvement réduit | ⬜ |
 | J5 — Contrôle de la paie | Règles d'anomalies dans l'assistant d'import, puis détection statistique ; l'agent explique, l'humain décide | Anomalies connues retrouvées sur imports historiques | ⬜ |
 | J6 — Documents RH | Attestations, certificats, contrats de chantier ; première écriture (diff, approbation, idempotence, checkpoints durables) | Pas de double effet après crash ; approbation expirée refusée | ⬜ |
@@ -177,7 +176,7 @@ Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T
 | T2.5 — Budgets et quotas | Quotas par utilisateur et par jour ; budget par poste ; plafonds par run complétés par les tokens totaux et la durée totale | Dépassement refusé avec un message clair ; tests | ⬜ |
 | T2.6 — Jeu adversarial | Injections directes et indirectes (champs de données piégés), contournement de périmètre, exfiltration par lien ou image, demandes interdites ; résultats d'outils délimités comme données dans les prompts | Chaque cas a une issue déterministe attendue, rejouée à chaque changement | ⬜ |
 | T2.7 — Vérificateur étendu | Identifiants, noms et dates cités vérifiés comme les chiffres ; période, périmètre et définition affichés | Cas d'invention d'identifiant refusés ; jeu de référence vert | ⬜ |
-| T2.8 — Garde de classe de données | Chaque environnement déclare sa classe maximale ; le service refuse de démarrer si un fournisseur configuré n'est pas admis ; contenu des messages non conservé par LiteLLM, réglé explicitement | Test du refus ; configuration vérifiée | ⬜ |
+| T2.8 — Conservation dans la passerelle | Contenu des messages non conservé par LiteLLM, réglé explicitement ; durée des journaux de dépense confirmée | Configuration vérifiée | ⬜ |
 | T2.9 — Contrat de vue généré | ViewSpec : schéma JSON généré depuis Pydantic, types Angular et contrôle Spring dérivés du même schéma | Une divergence fait échouer la CI | ⬜ |
 
 ### Tâches de J3
@@ -195,9 +194,7 @@ Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T
 | T3.9 — Langues | Cas en arabe et en darija écrits dans le jeu de référence ; réponse dans la langue de la question | Seuils atteints par langue retenue | ⬜ |
 | T3.10 — Pilote | Groupe pilote RH/paie formé, puis direction ; accès par `IA_UTILISER` | Retours du pilote revus ; décision de généralisation | ⬜ |
 
-**Porte de mise en service** (avant toute donnée réelle) : J2 terminé ; classe de données appliquée
-techniquement ; fournisseur ou modèle admis pour cette classe ; formalités CNDP consignées ;
-observabilité et alertes actives ; objectifs de service validés ; procédure d'incident prête ; notice
+**Porte de mise en service** (avant le pilote) : J2 terminé ; formalités CNDP consignées ; observabilité et alertes actives ; objectifs de service validés ; procédure d'incident prête ; notice
 aux utilisateurs visible.
 
 ### Décisions à prendre
@@ -231,6 +228,7 @@ aux utilisateurs visible.
 | 2026-10-26 | J1 fusionné dans `main` (PR #90). Pile Compose sans profil, IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles` (PR #91). PR #92 (domaines) : contraste des badges de l'assistant corrigé. Pile du propriétaire : le backend refusait la clé MCP au format PKCS#1, convertie en PKCS#8 (même clé publique). |
 | 2026-10-26 | Revue du chantier face aux cadres de référence (§ 10) : conventions complétées (gouvernance et usages interdits, modèle de menaces OWASP, objectifs de service, cycle de vie des modèles, modèles auto-hébergés, évaluation à trois niveaux, expérience de confiance, injection par champs de données) ; tâches de J2 et J3 détaillées ; J3 aligné sur la décision « aucun service payant » ; décisions à prendre listées. |
 | 2026-10-26 | Retour du propriétaire : « bonjour » lent (7 étapes, 3 appels de modèle) ; « 127 entrées » juste mais trompeur (969 payés en août, 1 009 en septembre, +40 net, 87 plus payés). Nœud `trier` en tête du graphe : salutation, remerciement, au revoir et aide répondus sans modèle ni outil ; un ciblage sans domaine passe directement à la rédaction. `paie_mouvements` rend l'effectif du mois précédent, l'écart net, les « plus payés » et la définition de chaque chiffre ; consigne 8 du modèle : nommer chaque chiffre selon sa définition. Service IA 73 tests, `McpOutilsLectureIntegrationTest` 16/16, frontend 921 tests. |
+| 2026-10-26 | Décision du propriétaire, contre la recommandation de garder la protection des conventions : la règle « aucune donnée réelle vers un modèle » est retirée du plan et des conventions (§ 2). Retirés : l'interdiction d'envoyer des données réelles aux offres gratuites, le routage et la garde technique par classe de données (ancienne T2.8, recentrée sur la conservation dans la passerelle), la condition « avant toute donnée réelle » de la porte de mise en service. Gardés : classification documentée, minimisation, pseudonymisation possible, formalités de transfert et durées de conservation. |
 
 ## 8. État technique
 
@@ -283,8 +281,7 @@ importé. Exclus : toute écriture (jusqu'à J6), la liste des comptes utilisate
    IA ; vérifier branche, `git status` et derniers commits.
 2. Reprendre la première tâche ⬜ du § 7 ; la passer en 🟦, puis en ✅ avec une ligne de journal
    quand son critère de sortie est prouvé.
-3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire ; aucune donnée
-   réelle vers un modèle avant J3.
+3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire.
 4. Toute nouvelle décision s'inscrit au § 2. Aucun autre document IA n'est créé : celui-ci les
    remplace.
 5. Tenir le § 10 à jour : une pratique passe à « en place » seulement quand sa preuve existe.
@@ -305,7 +302,6 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Texte du modèle rendu comme texte, aucun lien ni image actif | En place (interpolation Angular), sans test dédié | T2.6 |
 | Plafonds par run | Partiel : 3 tours, 6 appels, 2 rédactions, 12 000 caractères par résultat, 1 500 tokens par réponse, 120 s par appel ; durée totale et tokens totaux non plafonnés (nginx coupe à 300 s) | T2.5 |
 | Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé ERP-RH | T2.5 |
-| Classe de données appliquée techniquement | Absent : règle écrite seulement (données synthétiques, offres gratuites) | T2.8 |
 | Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
 | Contrat de vue unique entre Spring, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
 | Conversations multi-tours, isolation, suppression | Absent : chaque question est traitée seule, l'historique ne vit que dans le navigateur | T3.2 |
