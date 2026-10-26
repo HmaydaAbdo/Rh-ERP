@@ -4,10 +4,11 @@ Dernière mise à jour : 2026-10-25 (routine commune à Claude et Codex ; CI sur
 
 **Relais Claude / Codex** : `CLAUDE.md` renvoie à `AGENTS.md` et à la
 [routine commune](../../conventions/workflow.md). Le lot de continuité entre assistants et la règle
-CI sont définis dans les conventions. Le propriétaire a demandé la revue locale des trois domaines
-Équipe, Fonction et Chantier, puis leur livraison dans `main` par PR après validation.
-Le lot harmonise les sélecteurs, la navigation et les synthèses Chantier sur la paie récente.
-Les README et skills de chaque domaine décrivent les règles courantes.
+CI sont définis dans les conventions. Après Équipe, Fonction et Chantier, la revue technique couvre
+Employé, Paie, Rapport, Auth, Paramètres et Audit. Les validations des imports et formulaires,
+les lectures autorisées des rôles, les reprises après erreur, les sources analytiques et les exports
+individuels sont alignés sur leurs contrats documentés. Les README et skills de chaque domaine
+décrivent les règles courantes; le PV global garde les accords métier à recueillir avant diffusion.
 
 **Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la branche `claude/compose-tout-par-defaut`,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
@@ -129,8 +130,8 @@ Le détail transversal est dans `TODO.md`; les tâches propres à un domaine son
 - **Assistant d'import** : premier usage réel sur le fichier d'octobre 2026, à suivre.
 - **Stabilisation** : revue propriétaire des domaines dans l'ordre indiqué, puis consignation des remarques dans le PV global avant diffusion; les quasi-doublons de fonctions restent dans « Qualité des données ».
 - **Qualité des données** (« Prochaine tâche ») : tous les champs obligatoires et aucun doublon, dans tous les domaines.
-- **Conformité backend** (`docs/conformite/README.md`) : G3 (paramètres métier administrables), G5, G6, G10 en attente de
-  décision ; la migration **PostgreSQL 17 → 18 en production** est à faire en tout dernier, avec sauvegarde et répétition.
+- **Exploitation** : les décisions et contrôles restant à réaliser sont regroupés dans le TODO global;
+  la migration **PostgreSQL 17 → 18 en production** suit la procédure de déploiement, avec sauvegarde et répétition.
 - **Carte** : recherche de lieux reportée ; la clé ArcGIS (`ARCGIS_API_KEY`) expire au plus tard un an après sa création.
 - **Domaines à venir** : Pointage, puis paie calculée depuis le Pointage (section « Évolutions prochaines »).
 - **IA** : J2 (périmètres par fiche de poste, projection du salaire, budgets par poste) avant tout utilisateur non

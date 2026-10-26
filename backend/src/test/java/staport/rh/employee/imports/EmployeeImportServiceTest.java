@@ -7,6 +7,8 @@ import org.apache.poi.ss.util.CellUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -27,14 +29,13 @@ import staport.rh.function.services.interfaces.IFunctionService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
@@ -148,6 +149,44 @@ class EmployeeImportServiceTest {
         verify(repository, never()).save(any(Employee.class));
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void importer_refuseUneNaissanceAujourdhuiOuDansLeFuturSansCreerLaLigneValide(int decalage) throws IOException {
+        stubReferentiels();
+        LocalDate naissance = LocalDate.now().plusDays(decalage);
+        MockMultipartFile file = buildExcelFile(
+                new Object[]{"Date", "Nom", "CIN", "Fonction", "Chantier", "naissance"},
+                new Object[]{toSerial(2018, 7, 14), "PERSONNE VALIDE", "TEST-1", "OPERATEUR", "C059", toSerial(1984, 5, 1)},
+                new Object[]{toSerial(2018, 7, 14), "NAISSANCE INVALIDE", "TEST-2", "OPERATEUR", "C059",
+                        toSerial(naissance.getYear(), naissance.getMonthValue(), naissance.getDayOfMonth())}
+        );
+
+        EmployeeImportResultDto result = importService.importer(file);
+
+        assertThat(result.totalLignes()).isEqualTo(2);
+        assertThat(result.crees()).isZero();
+        assertThat(result.lignesIgnorees()).singleElement().satisfies(ligne -> {
+            assertThat(ligne.numeroLigne()).isEqualTo(3);
+            assertThat(ligne.raison()).isEqualTo("La date de naissance doit être antérieure à aujourd’hui");
+        });
+        verify(repository, never()).save(any(Employee.class));
+    }
+
+    @Test
+    void importer_conserveLeNumeroExcelApresUneLigneAbsente() throws IOException {
+        stubReferentiels();
+        MockMultipartFile file = buildExcelFile(
+                new Object[]{"Date", "Nom", "CIN", "Fonction", "Chantier", "naissance"},
+                null,
+                new Object[]{toSerial(2018, 7, 14), "SANS FONCTION", "TEST-3", "", "C059", toSerial(1984, 5, 1)}
+        );
+
+        EmployeeImportResultDto result = importService.importer(file);
+
+        assertThat(result.lignesIgnorees()).singleElement().satisfies(ligne -> assertThat(ligne.numeroLigne()).isEqualTo(3));
+        verify(repository, never()).save(any(Employee.class));
+    }
+
     @Test
     void importer_devraitIgnorerUneFonctionIntrouvable() throws IOException {
         stubReferentiels();
@@ -224,6 +263,9 @@ class EmployeeImportServiceTest {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet();
             for (int r = 0; r < lignes.length; r++) {
+                if (lignes[r] == null) {
+                    continue;
+                }
                 Row row = sheet.createRow(r);
                 Object[] valeurs = lignes[r];
                 for (int c = 0; c < valeurs.length; c++) {

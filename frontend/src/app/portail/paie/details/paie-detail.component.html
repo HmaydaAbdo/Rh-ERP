@@ -36,7 +36,7 @@
       </div>
       <div>
         <dt>Jours récup. ouvrable / dimanche</dt>
-        <dd>{{ paie.joursRecuperationOuvrable ?? 0 }} / {{ paie.joursRecuperationDimanche ?? 0 }}</dd>
+        <dd>{{ paie.joursRecuperationOuvrable ?? 0 | number:'1.0-2' }} / {{ paie.joursRecuperationDimanche ?? 0 | number:'1.0-2' }}</dd>
       </div>
       <div>
         <dt>Salaire mensuel</dt>
@@ -55,6 +55,17 @@
         <dd>{{ paie.observation || '—' }}</dd>
       </div>
     </dl>
+  </div>
+} @else {
+  <div class="app-page app-page--wide">
+    <a routerLink="/paie" class="app-back"><stp-icon name="arrow-left" /> Paie</a>
+    @if (loading()) {
+      <stp-message text="Chargement du bulletin…" />
+    } @else if (erreur()) {
+      <stp-message severity="error" text="Impossible de charger le bulletin. Vérifiez la connexion ou revenez à la liste.">
+        <button stp-button variant="text" type="button" (click)="charger()">Réessayer</button>
+      </stp-message>
+    }
   </div>
 }
 

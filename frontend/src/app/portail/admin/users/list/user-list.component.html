@@ -2,7 +2,8 @@
   @if (resetDialogUser(); as user) {
     <form [formRoot]="resetForm" class="user-list__reset-form">
       <p>Nouveau mot de passe pour <strong>{{ user.username }}</strong> :</p>
-      <stp-password-input [formField]="resetForm.nouveauMotDePasse" />
+      <label for="nouveau-mot-de-passe">Nouveau mot de passe</label>
+      <stp-password-input inputId="nouveau-mot-de-passe" autocomplete="new-password" [formField]="resetForm.nouveauMotDePasse" />
       <stp-field-error [field]="resetForm.nouveauMotDePasse" />
       <button stp-button type="submit" [loading]="resetForm().submitting()">Réinitialiser</button>
     </form>
@@ -26,7 +27,7 @@
 
   <div class="app-table-bar">
     <p class="app-table-bar__total" role="status">
-      @if (!loading()) {
+      @if (!loading() && !erreur()) {
         {{ totalRecords() }} utilisateur{{ totalRecords() > 1 ? 's' : '' }}
       }
     </p>
@@ -35,9 +36,16 @@
     </div>
   </div>
 
+  @if (erreur()) {
+    <div role="alert">
+      <p>Impossible de charger les utilisateurs.</p>
+      <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
+    </div>
+  }
+
   <stp-table
     label="Liste : Utilisateurs"
-    emptyMessage="Aucun utilisateur ne correspond à ces critères."
+    [emptyMessage]="erreur() ? 'La liste des utilisateurs n’est pas disponible.' : 'Aucun utilisateur ne correspond à ces critères.'"
     [lazy]="true"
     [value]="users()"
     [totalRecords]="totalRecords()"

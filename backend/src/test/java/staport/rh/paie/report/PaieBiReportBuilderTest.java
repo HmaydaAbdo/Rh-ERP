@@ -7,6 +7,8 @@ import staport.rh.equipe.entities.Equipe;
 import staport.rh.function.entities.Function;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.exceptions.AucunePaiePeriodeException;
+import staport.rh.paie.repositories.FiltresPaie;
+import staport.rh.paie.repositories.PaieRepository;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -22,6 +24,31 @@ class PaieBiReportBuilderTest {
 
     private static final PaieReportPdfRequestDto REQUETE_SANS_FILTRE =
             new PaieReportPdfRequestDto("2026-09", null, null, null, null, null, null);
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void applique_aux_tendances_les_filtres_du_detail_et_des_indicateurs() {
+        PaieRepository repository = org.mockito.Mockito.mock(PaieRepository.class);
+        Paie ligne = paie("Ali", "AB1", "MACON", "C059", "EQUIPE A", "1000");
+        ligne.getFonction().setId(10L);
+        ligne.getChantier().setId(20L);
+        org.mockito.Mockito.when(repository.findAll(org.mockito.ArgumentMatchers.any(org.springframework.data.jpa.domain.Specification.class)))
+                .thenReturn(List.of(ligne), List.of());
+        org.mockito.Mockito.when(repository.sommerParChantierEquipePeriode(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        var capture = org.mockito.ArgumentCaptor.forClass(FiltresPaie.class);
+
+        new PaieBiReportBuilder(repository).construire(YearMonth.of(2026, 9),
+                new PaieReportPdfRequestDto("2026-09", "Ali", "AB1", 10L, 20L, null, null));
+
+        org.mockito.Mockito.verify(repository).sommerParChantierEquipePeriode(
+                org.mockito.ArgumentMatchers.eq(YearMonth.of(2025, 10)),
+                org.mockito.ArgumentMatchers.eq(YearMonth.of(2026, 9)), capture.capture());
+        assertThat(capture.getValue().getMotifNom()).isEqualTo("%ali%");
+        assertThat(capture.getValue().getMotifCin()).isEqualTo("%ab1%");
+        assertThat(capture.getValue().getFonctionIds()).containsExactly(10L);
+        assertThat(capture.getValue().getChantierIds()).containsExactly(20L);
+    }
 
     @Test
     void construireDepuis_devraitOrdonnerLesChantiersParMasseDecroissante() {

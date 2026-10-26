@@ -2,6 +2,7 @@ package staport.rh.auth.dtos.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.util.Set;
@@ -9,6 +10,9 @@ import java.util.Set;
 public record RoleCreateRequestDto(
         @NotBlank @Size(min = 2, max = 50) String nom,
         @Size(max = 255) String description,
-        @NotNull Set<Long> permissionIds
+        @NotNull Set<@NotNull @Positive Long> permissionIds
 ) {
+    public RoleCreateRequestDto {
+        nom = nom == null ? null : nom.strip();
+    }
 }

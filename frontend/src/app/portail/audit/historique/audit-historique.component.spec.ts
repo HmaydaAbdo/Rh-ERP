@@ -1,6 +1,6 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
 import { AuditVersion } from '../models/audit.model';
@@ -73,5 +73,35 @@ describe('AuditHistoriqueComponent', () => {
         fixture.detectChanges();
 
         expect(fixture.nativeElement.textContent).toContain('Aucune version enregistrée');
+    });
+
+    it('reprend la page en échec sans sauter de versions ni effacer celles déjà affichées', () => {
+        service.historique.mockReturnValueOnce(of(page([version(9, 'MODIFICATION')], 2, 0)))
+            .mockReturnValueOnce(throwError(() => new Error('page indisponible')))
+            .mockReturnValueOnce(of(page([version(3, 'AJOUT')], 2, 1)));
+        fixture.detectChanges();
+        fixture.componentInstance['plus']();
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance['versions']()).toHaveLength(1);
+        expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger');
+
+        fixture.componentInstance['reessayer']();
+        fixture.detectChanges();
+
+        expect(service.historique).toHaveBeenLastCalledWith('Paie', 42, { page: 1, size: 10 });
+        expect(fixture.componentInstance['versions']().map((v) => v.revision)).toEqual([9, 3]);
+    });
+
+    it('recharge l’historique lorsque l’enregistrement consulté change', () => {
+        service.historique.mockReturnValue(of(page([version(9, 'MODIFICATION')], 1, 0)));
+        fixture.detectChanges();
+
+        service.historique.mockReturnValue(of(page([version(2, 'AJOUT')], 1, 0)));
+        fixture.componentRef.setInput('id', 43);
+        fixture.detectChanges();
+
+        expect(service.historique).toHaveBeenLastCalledWith('Paie', 43, { page: 0, size: 10 });
+        expect(fixture.componentInstance['versions']().map((v) => v.revision)).toEqual([2]);
     });
 });

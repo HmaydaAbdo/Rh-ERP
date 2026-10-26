@@ -34,9 +34,9 @@ describe('RoleFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string, role: Role = ROLE): Promise<void> {
+  async function afficher(id?: string, role: Role = ROLE, erreurInitiale = false): Promise<void> {
     service = {
-      findAllPermissions: vi.fn().mockReturnValue(of(PERMISSIONS)),
+      findAllPermissions: vi.fn().mockReturnValue(erreurInitiale ? throwError(() => new Error('catalogue indisponible')) : of(PERMISSIONS)),
       findById: vi.fn().mockReturnValue(of(role)),
       create: vi.fn().mockReturnValue(of({ id: 20 })),
       update: vi.fn().mockReturnValue(of({ id: 6 }))
@@ -59,6 +59,32 @@ describe('RoleFormComponent', () => {
   }
 
   describe('création', () => {
+    it('bloque la saisie si le catalogue n’a pas été chargé et permet de réessayer', async () => {
+      await afficher(undefined, ROLE, true);
+
+      expect(racine().querySelector('form')).toBeNull();
+      expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger');
+
+      service.findAllPermissions.mockReturnValue(of(PERMISSIONS));
+      (racine().querySelector('button') as HTMLButtonElement).click();
+      await stabiliser();
+
+      expect(racine().querySelector('form')).not.toBeNull();
+      expect(racine().querySelectorAll('.role-form__code')).toHaveLength(4);
+    });
+
+    it('applique les mêmes bornes que l’API pour le nom et la description', async () => {
+      await afficher();
+      saisir(racine(), '#nom', '  A  ');
+      saisir(racine(), '#description', 'D'.repeat(256));
+
+      await envoyer();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(racine().textContent).toContain('au moins 2 caractères');
+      expect(racine().textContent).toContain('ne dépasse pas 255 caractères');
+    });
+
     it('regroupe les permissions par domaine, dans l’ordre alphabétique, toutes décochées', async () => {
       await afficher();
 
@@ -90,6 +116,7 @@ describe('RoleFormComponent', () => {
       await cocher(case_('PAIE_READ'), true);
       expect(case_('PAIE_READ').checked).toBe(true);
       expect(groupe('PAIE').checked).toBe(false);
+      expect(groupe('PAIE').indeterminate).toBe(true);
 
       await cocher(groupe('PAIE'), true);
       expect(case_('PAIE_WRITE').checked).toBe(true);

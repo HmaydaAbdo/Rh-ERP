@@ -12,6 +12,14 @@ class HoteGraphiqueExportComponent {
   document = { titre: 'Effectif', colonnes: ['Équipe', 'Effectif'], lignes: [['Chauffeurs', 12]] };
 }
 
+@Component({
+  imports: [PdfExportButtonComponent],
+  template: '<section class="perimetre-analytique__section"><canvas aria-label="Effectif payé"></canvas><canvas aria-label="Masse salariale"></canvas><app-pdf-export-button [document]="document" [inclureGraphique]="true" /></section>'
+})
+class HoteGraphiquesExportComponent {
+  document = { titre: 'Situation', colonnes: ['Effectif', 'Masse'], lignes: [[12, 4500]] };
+}
+
 describe('PdfExportButtonComponent', () => {
   let fixture: ComponentFixture<PdfExportButtonComponent>;
   let impression: { ouvrir: ReturnType<typeof vi.fn>; imprimer: ReturnType<typeof vi.fn> };
@@ -74,6 +82,21 @@ describe('PdfExportButtonComponent', () => {
     expect(canvasToDataUrl).toHaveBeenCalledWith('image/png');
     expect(impression.imprimer).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       graphiqueDataUrl: 'data:image/png;base64,AAAA', graphiqueAlt: 'Exporter le graphique'
+    }));
+  });
+
+  it('conserve chaque graphique et son nom quand le composant présente plusieurs indicateurs', () => {
+    const hote = TestBed.createComponent(HoteGraphiquesExportComponent);
+    hote.detectChanges();
+    for (const canvas of (hote.nativeElement as HTMLElement).querySelectorAll('canvas')) {
+      Object.defineProperty(canvas, 'toDataURL', { value: () => 'data:image/png;base64,AAAA' });
+    }
+    (hote.nativeElement as HTMLElement).querySelector('button')!.click();
+    expect(impression.imprimer).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      graphiques: [
+        { dataUrl: 'data:image/png;base64,AAAA', description: 'Effectif payé', fond: expect.any(String) },
+        { dataUrl: 'data:image/png;base64,AAAA', description: 'Masse salariale', fond: expect.any(String) }
+      ], lignes: [[12, 4500]]
     }));
   });
 });

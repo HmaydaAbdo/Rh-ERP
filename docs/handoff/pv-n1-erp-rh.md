@@ -2,7 +2,8 @@
 
 **Date de préparation :** 22 octobre 2026  
 **Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
-**Blocs examinés :** Équipe (premier), Fonction (deuxième), Chantier (troisième)  
+**Domaines décrits :** Équipe, Fonction, Chantier, Employé, Paie, Rapport, Auth, Paramètres et Audit
+
 **Version stable visée :** `1.0.0` pour le frontend et le backend  
 **État du document :** projet interne à valider par le propriétaire avant toute transmission aux intervenants. Il ne constate pas encore un accord collectif.
 
@@ -12,7 +13,9 @@
 
 Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
 
-Le travail couvrira progressivement toute l’application, domaine par domaine. **Le présent PV ouvre le premier bloc, consacré au domaine Équipe, puis un deuxième, consacré au domaine Fonction, et un troisième, consacré au domaine Chantier.** Les autres domaines seront ajoutés dans des blocs ultérieurs, après examen de leurs règles, de leurs liens avec les autres domaines, de leurs écrans, de leurs accès et de leurs preuves de contrôle. Leur accord n’est donc pas présumé par ce document.
+Le présent PV décrit les domaines Équipe, Fonction, Chantier, Employé, Paie, Rapport, Auth, Paramètres et Audit.
+Chaque bloc expose leurs règles, liens, écrans, accès et preuves de contrôle. Leur présence dans le document ne
+présume pas un accord métier : les accords, réserves et rejets restent à recueillir selon les tableaux de chaque bloc.
 
 La version stable `1.0.0` sera annoncée lorsque les blocs prévus auront été examinés, que les décisions requises auront été enregistrées et que les contrôles de livraison applicables auront réussi.
 
@@ -209,7 +212,276 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 
 Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
-## 11. Blocs suivants
+## 11. Domaine Employé
+
+### 11.1. Rôle et liens
+
+La fiche Employé conserve l’identité et la situation courante de la personne : fonction, chantier, équipe, statut et,
+pour les lecteurs autorisés, salaire et type de salaire. Elle représente le dernier état de paie enregistré. Les
+bulletins gardent leurs propres affectations mensuelles; les changements de fiche ne réécrivent pas les mois passés.
+Les règles, contrats et scénarios détaillés sont centralisés dans le [dossier Employé](../employee/README.md).
+
+### 11.2. Parcours et indicateurs
+
+| Parcours | Contenu et périmètre |
+|---|---|
+| Tabulaire | Recherche par nom et CIN, filtres multiples fonction/chantier/équipe et statut; tri, colonnes configurables, pagination et accès à la fiche. |
+| Cartes | Descente chantier → équipe → fonction → employés, avec fil de navigation et accès à la liste sur le même périmètre. Les effectifs courants proviennent des fiches. |
+| Analytique | Effectif des fiches, en poste/sortis, âge et ancienneté moyens, embauches des douze derniers mois, tranches et répartitions. La paie et ses mouvements historiques restent identifiés comme des données mensuelles distinctes. |
+| Fiche et saisie | Identité, affectations et statut; salaire et parcours avec `PAIE_READ`. Les chargements et erreurs de lecture sont annoncés et permettent un réessai avant toute saisie. |
+| Import | Ajout atomique des CIN inédits; toute ligne invalide rejette le fichier. Le détail indique le numéro réel de la ligne Excel. |
+
+Les trois vues partagent les critères des fiches. Le nom, le CIN et les dimensions s’appliquent aussi aux données Paie;
+le statut courant ne filtre pas les mouvements historiques. Les embauches récentes sont comprises entre la date du jour
+excluant la borne d’un an auparavant et incluant aujourd’hui; une embauche future n’est pas une embauche des douze derniers mois.
+
+### 11.3. Règles et accès
+
+- CIN obligatoire, unique après retrait des espaces extérieurs et sans distinction de casse; nom, dates et fonction obligatoires.
+- Date de naissance strictement antérieure à aujourd’hui, en saisie comme en import.
+- Un employé « En poste » possède un chantier et peut avoir une équipe; un employé « Sorti » ne garde aucune affectation courante.
+- Salaire et type se renseignent ensemble; la paie reste masquée sans `PAIE_READ`.
+- Un employé lié à un bulletin ou à un compte utilisateur ne peut pas être supprimé. La sortie conserve son historique.
+- Lecture, écriture, suppression et import suivent respectivement `EMPLOYEE_READ`, `EMPLOYEE_WRITE`, `EMPLOYEE_DELETE` et `EMPLOYEE_IMPORT`.
+  Les sélecteurs du formulaire demandent les droits de lecture des référentiels; l’historique exige `AUDIT_READ`.
+
+### 11.4. Vérifications et décisions attendues
+
+| Règle ou parcours | Preuve de contrôle | Accord métier |
+|---|---|---|
+| CIN, références, version et suppression protégée | `EmployeeServiceTest`, `EmployeeSuppressionTest`, `EmployeeControllerTest` | À recueillir |
+| Import atomique, date de naissance et numéros Excel | `EmployeeImportServiceTest` | À recueillir |
+| Agrégats et bornes des embauches sur douze mois | `EmployeeAnalytiqueServiceTest` sur PostgreSQL | À recueillir |
+| Formulaire, fiche, filtres, erreur et réessai | Specs du domaine Employé et parcours navigateur | À recueillir |
+| Historique distinct de l’état courant | Contrats Employé/Paie et scénarios de parcours | À recueillir |
+
+Les résultats techniques de livraison sont consignés dans les rapports de contrôle. Ils ne valent pas un accord des
+intervenants sur les règles ou le rendu. Le propriétaire relit ce bloc et le document complet avant diffusion;
+accords, réserves, rejets et signatures suivent le modèle de la section 8.
+
+## 12. Cinquième bloc — domaine Paie
+
+### 12.1 Rôle et liens avec l’application
+
+La Paie conserve les bulletins mensuels : un employé possède au plus un bulletin par mois. Les affectations
+Fonction, Chantier et Équipe sont celles du bulletin de ce mois. La fiche Employé décrit le dernier état importé;
+elle ne remplace pas ces affectations historiques. Les montants sont saisis ou importés, sans recalcul du total.
+
+### 12.2 Parcours, indicateurs et accès
+
+| Parcours | Fonctionnement actuel |
+|---|---|
+| Tabulaire | Recherche par nom, CIN, période et rattachements multiples; tri, colonnes configurables et pagination. Une erreur de chargement se distingue d'une liste vide et propose une reprise. |
+| Cartes | Mois → chantier → équipe → fonction → employés; les filtres de l'URL sont conservés. Les cartes comparent le même groupe au mois civil précédent. Les bulletins sans équipe restent visibles. |
+| Analytique | Masse et STC en DH, effectifs et STC en personnes, évolutions, répartitions et qualité des rattachements. Les tendances d'effectifs appliquent aussi les recherches nom/CIN et les rattachements choisis. |
+| Création et modification | Employé et période immuables après création; l'équipe choisie est également inscrite sur la fiche d'un employé en poste. Les états d'attente et d'erreur empêchent de modifier un bulletin qui n'a pas été chargé. |
+| Import | Contrôle du fichier, résolution des écarts, confirmation des départs puis import atomique; seul le mois suivant le dernier est accepté, sauf première importation. |
+| Suppression | Unitaire avec `PAIE_DELETE`; en groupe avec `PAIE_PURGE`, période obligatoire et nombre de bulletins confirmé; restauration auditée distincte avec `PAIE_RESTORE`. |
+
+La lecture exige `PAIE_READ`. La saisie exige `PAIE_WRITE` et `EMPLOYEE_WRITE`; les références nécessitent leurs droits
+de lecture. L'analyse d'import exige `PAIE_IMPORT` et `PAIE_READ`; les corrections de fiches demandent aussi
+`EMPLOYEE_WRITE`. Les exports demandent `PAIE_EXPORT`. Le catalogue des routes est dans le dossier Paie.
+
+### 12.3 Règles appliquées et limites
+
+- Un même employé et un même mois ne peuvent pas apparaître deux fois, y compris lors de créations concurrentes.
+- Les nombres sont positifs ou nuls, avec deux décimales au plus : jours jusqu'à 999,99, montants jusqu'à
+  99 999 999,99. Le contrôle du fichier applique les mêmes bornes; un salaire nul dans le fichier reste une erreur.
+- L'observation est facultative et limitée à 255 caractères; l'équipe, les récupérations et primes restent facultatives.
+- Les cellules numériques invalides sont refusées, même facultatives; les numéros annoncés correspondent aux lignes Excel.
+- Les indicateurs mensuels, les tendances et le détail utilisent leurs filtres de périmètre; un mois vide ne supprime
+  pas l'historique disponible. La comparaison porte toujours sur le mois civil précédent.
+- Aucun statut provisoire/validé ni calcul depuis le Pointage n'est actuellement appliqué.
+
+### 12.4 Preuves et accords à recueillir
+
+| Sujet | Preuve technique | Accord métier |
+|---|---|---|
+| Unicité, version et références | Tests PaieService, VersionOptimiste et sécurité des endpoints | À recueillir |
+| Import, bornes et numéros de ligne | Tests LecteurFichierPaie, PaieImportService et PaieRequestValidation | À recueillir |
+| Même périmètre pour les tendances | Tests PostgreSQL PaieRechercheJokers et PaieEffectifsService | À recueillir |
+| Recherche et reprise après erreur | Specs Liste, Formulaire et Détail; parcours navigateur | À recueillir |
+
+Les résultats de compilation, de tests, de navigateur et de livraison restent dans leurs rapports techniques;
+ils ne remplacent pas l'accord des intervenants. Les règles détaillées, contrats et scénarios sont centralisés dans
+[le dossier Paie](../paie/README.md).
+
+## 13. Sixième bloc — domaine Rapport
+
+### 13.1 Rôle et sources
+
+Le domaine produit un rapport PDF partageable et un classeur Excel à partir des bulletins, sans les modifier.
+Le PDF présente les indicateurs, graphiques et listes complètes; l'Excel fournit les feuilles opérationnelles.
+La masse est la somme de `salaireTotal`, l'effectif est le nombre de bulletins du mois et les STC sont les lignes
+dont l'observation est « STC » ou « sortie », sans tenir compte de la casse et des espaces autour.
+
+### 13.2 Parcours et règles de restitution
+
+L'assistant guide le choix du mois, du format, des marchés PDF, des équipes détaillées et des quantités de matériel,
+puis présente un récapitulatif. Les équipes sont choisies explicitement par leur libellé. Un échec de chargement
+demande une reprise avant la génération; changer de mois abandonne la recherche des marchés du mois précédent.
+
+Le PDF porte la période et, s'il est filtré, des pages de périmètre complètes. Les KPI, listes, comparaisons et
+évolutions utilisent les mêmes filtres de nom, CIN, fonction et marchés. La vue d'ensemble est optionnelle;
+les chapitres chantier et le détail des employés restent présents. Chaque employé apparaît une seule fois dans le PDF,
+dans son équipe détaillée ou dans le reste du chantier. Les pages et les grands tableaux sont découpés avant le rendu.
+
+L'Excel conserve une feuille globale, les feuilles chantier et les feuilles d'équipes sélectionnées. Une exclusion
+d'équipe dans une feuille chantier n'enlève ni sa feuille propre ni ses données de la feuille globale.
+Les exports individuels des composants restent disponibles depuis les vues qui les proposent.
+
+### 13.3 Accès, preuves et limites
+
+`PAIE_EXPORT` autorise les deux documents et leur génération est auditée. L'assistant a aussi besoin de `PAIE_READ`
+pour lire les mois, marchés et tableaux de matériel. Aucune donnée n'est exportée sur la base d'une pagination d'écran.
+
+| Sujet | Preuve technique | Accord métier |
+|---|---|---|
+| Agrégats, STC et comparaisons | Tests PaieBiReportBuilder et PaieRechercheJokers | À recueillir |
+| Détail complet, pagination et périmètre | Tests RapportPageModelBuilder et PaieReportHtmlPdfService, texte et rendu des graphiques | À recueillir |
+| Feuilles et exclusions Excel | Tests PaieExportService | À recueillir |
+| Parcours d'assistant, chargement et erreurs | Specs de l'assistant et de ses étapes; revue navigateur | À recueillir |
+
+Le PDF et l'Excel gardent chacun leur contrat de sélection documenté. Les exports de graphique ou tableau isolé
+complètent ces documents. Les règles, DTO et scénarios sont centralisés dans [le dossier Rapport](../report/README.md).
+Le propriétaire relit ce bloc avant diffusion; les accords, réserves et signatures suivent la section 8.
+
+## 14. Domaine Auth — comptes, rôles et sessions
+
+### 14.1 Rôle et liens
+
+Auth gère les identités de connexion, leurs sessions et leurs droits. Un compte peut être lié à un employé,
+mais ce lien reste facultatif : gérer un compte n'est pas créer une fiche Employé. Les règles, le modèle,
+les DTO et les scénarios sont centralisés dans [le dossier Auth](../auth/README.md).
+
+### 14.2 Parcours et règles appliquées
+
+| Parcours | Contenu et résultat attendu |
+|---|---|
+| Connexion et session | Mot de passe contrôlé sans révéler l'existence d'un compte ; jeton d'accès gardé en mémoire, session par cookie protégé, rotation à usage unique et déconnexion. |
+| Récupération | Réponse générique à la demande de lien ; lien limité dans le temps, à usage unique ; mot de passe conforme avant consommation du lien et révocation des sessions. |
+| Utilisateurs | Liste paginée et filtrable ; création, modification, activation/désactivation, lien Employé facultatif et réinitialisation du mot de passe. |
+| Rôles et refus | Attribution de rôles ; permissions effectives égales à l'union des rôles moins les refus individuels. Une sélection partielle d'un domaine est visible dans le formulaire de rôle. |
+| Erreurs de lecture et de sauvegarde | Réessai d'une lecture avant toute saisie incomplète ; une sauvegarde des refus échouée après celle du compte est annoncée et peut être terminée sans perdre la version courante. |
+
+L'identifiant contient de 3 à 50 caractères et le nom d'un rôle de 2 à 50, après retrait des espaces extérieurs.
+Identifiant, email et nom de rôle sont uniques sans casse. L'email ne dépasse pas 255 caractères ; la description
+d'un rôle est facultative et limitée à 255 caractères. Les collections de rôles et de permissions contiennent
+des identifiants positifs, non nuls et existants. Une version périmée refuse la modification.
+
+Un compte se désactive, il ne se supprime pas. Un rôle attribué ne se supprime pas ; le rôle d'administration
+conserve son nom et ses permissions. Un compte désactivé perd ses sessions de rafraîchissement. Le jeton d'accès
+déjà émis reste valable jusqu'à son expiration, comme documenté dans le dossier Auth.
+
+### 14.3 Autorisations et protections
+
+`USER_MANAGE` permet d'administrer les comptes et de consulter les rôles et le catalogue nécessaires à leur
+attribution. Créer, modifier ou supprimer un rôle demande `ROLE_MANAGE`. Le lien Employé se sélectionne avec
+`EMPLOYEE_READ` ; sans cette lecture, le lien courant reste visible et conservé en lecture seule.
+
+Les mots de passe et jetons ne figurent pas dans les réponses d'administration ni dans l'historique. Les refus
+et actions de sécurité sont audités. Les règles de verrouillage temporaire et de durée des sessions sont celles
+du dossier Auth ; aucune authentification multifacteur n'est actuellement proposée. Il n'existe pas d'import,
+d'export ni d'indicateur Analytique propres aux comptes et rôles.
+
+### 14.4 Preuves et accords à recueillir
+
+| Sujet | Preuve technique | Accord métier |
+|---|---|---|
+| Droits par action et alternatives de lecture des rôles | `EndpointSecurityTest`, `JwtSecurityChainTest` | À recueillir |
+| Types, tailles, normalisation et références invalides | `AuthRequestValidationTest` | À recueillir |
+| Rotation, révocation, verrouillage et récupération | `AuthServiceTest`, `VerrouillageConnexionIntegrationTest` | À recueillir |
+| Formulaires, erreurs/réessais et sauvegarde partielle | Specs Utilisateurs/Rôles et revue navigateur | À recueillir |
+
+Les preuves techniques ne remplacent pas la validation du besoin d'accès par les responsables. Les accords,
+réserves, rejets et signatures suivent le modèle de la section 8.
+
+## 15. Domaine Paramètres
+
+### 15.1 Rôle et liens
+
+Paramètres gère les valeurs de fonctionnement que les personnes autorisées peuvent ajuster depuis le portail.
+Le catalogue des clés, types et bornes est fixe ; seules les valeurs courantes se modifient. Les consommateurs
+sont l'authentification, l'analytique Paie et la synchronisation des chantiers. Le
+[dossier Paramètres](../parametre/README.md) centralise le catalogue, le modèle, les DTO et les scénarios.
+
+### 15.2 Parcours et règles appliquées
+
+| Parcours | Contenu et résultat attendu |
+|---|---|
+| Consultation | Catalogue, libellé, description, unité, valeur courante et bornes de saisie. |
+| Modification | Sauvegarde indépendante de chaque ligne avec sa version ; les saisies des autres paramètres sont conservées. |
+| Validation | Entier décimal dans les bornes inclusives, valeur non blanche et au plus 255 caractères ; expression cron validée par Spring. |
+| Chargement et erreur | Chargement annoncé ; résultat vide distinct d'une lecture échouée ; réessai disponible. |
+
+Il n'existe aucune création, suppression ni clé libre dans l'écran. Une clé obligatoire absente de la base
+est une installation incomplète ; aucune valeur de repli ne masque le défaut. Une version périmée refuse la
+modification. La valeur normalisée et son historique sont enregistrés ensemble ; les valeurs mémorisées par
+le backend sont invalidées après validation de la transaction.
+
+### 15.3 Autorisations, preuves et accords
+
+`PARAMETRE_READ` ouvre la consultation et `PARAMETRE_WRITE` autorise la saisie et l'enregistrement. La politique
+de mot de passe nécessaire aux écrans publics est exposée séparément, sans ouvrir le catalogue administratif.
+Ce domaine ne possède ni import, export, Cartes ni Analytique propres.
+
+| Sujet | Preuve technique | Accord métier |
+|---|---|---|
+| Types, bornes et normalisation | `CleParametreTest`, specs de saisie Paramètres | À recueillir |
+| Valeur modifiée, lecture et trace d'audit | `ParametreServiceTest` | À recueillir |
+| Lecture seule, chargement, erreur et réessai | Specs des paramètres et revue navigateur | À recueillir |
+| Accès lecture/écriture distincts | `EndpointSecurityTest` | À recueillir |
+
+Les valeurs de fonctionnement et leurs limites restent celles du catalogue documenté. Les accords, réserves,
+rejets et signatures suivent le modèle de la section 8.
+
+## 16. Domaine Audit
+
+### 16.1 Rôle et sources
+
+Audit permet d'établir qui a fait quoi, quand, depuis quelle origine, avec quel résultat et sur quel périmètre.
+Il distingue les instantanés de données, le journal d'actions et les garde-fous d'intégrité. Le
+[dossier Audit](../audit/README.md) centralise leurs règles, modèle, contrats de consultation et scénarios.
+
+### 16.2 Parcours et règles appliquées
+
+| Parcours | Contenu et résultat attendu |
+|---|---|
+| Journal | Liste paginée, triée et filtrable par dates, utilisateur, catégories, actions, résultat, types d'entités et identifiant de requête. Un changement de filtre revient à la première page. |
+| Entrée | Contexte et périmètre de l'action ; les différences d'une opération réussie se chargent à la demande, par pages. Une réponse tardive ne remplace pas l'entrée choisie ensuite. |
+| Historique | Versions d'un enregistrement, de la plus récente à la plus ancienne ; avant/après des valeurs et ajouts/retraits de droits. |
+| Erreur de consultation | Chargement et erreur annoncés ; réessai de la page en échec sans sauter de versions ni effacer celles déjà lues. |
+
+Les horodatages sont conservés en UTC et affichés à l'heure de Casablanca. Les identités des acteurs restent
+figées dans les traces. Aucun mot de passe ni jeton n'est conservé. Le journal et les versions restent immuables
+pour l'application ; aucune route ne permet leur modification ou suppression. Les règles de conservation
+déjà documentées sont conservées : journal et instantanés à vie, journaux SQL selon leur politique distincte.
+
+### 16.3 Accès et liens avec Paie
+
+Toutes les consultations demandent `AUDIT_READ`, distinct des permissions des écrans métier. Les traces peuvent
+contenir des données personnelles et des montants ; cette permission est nécessaire même si la personne dispose
+d'un autre droit de lecture. Le journal ne propose ni import, export ni vue Analytique.
+
+Le bouton de restauration d'un groupe supprimé appelle le domaine Paie avec `PAIE_RESTORE`. Il ne réécrit pas
+la trace source ; Paie vérifie les références et les conflits, puis recrée les bulletins atomiquement avec de
+nouveaux identifiants et une nouvelle trace. La chaîne locale d'empreintes n'est pas une preuve indépendante
+d'un superutilisateur de la base ; les limites d'exploitation restent explicites dans le dossier Audit.
+
+### 16.4 Preuves et accords à recueillir
+
+| Sujet | Preuve technique | Accord métier |
+|---|---|---|
+| Auteur, origine, commit/rollback et événements de sécurité | Tests AuditRevision, AuditOperation et AuditSecurityEvents | À recueillir |
+| Consultation, pagination, données historiques et droits SQL | Tests AuditConsultation et AuditIntegrite | À recueillir |
+| Journal, filtres, réponses tardives et réessais | Specs Journal et AuditHistorique ; revue navigateur | À recueillir |
+| Restauration distincte et atomique | Tests de restauration Paie et permissions d'accès | À recueillir |
+
+Une preuve locale ou un contrôle automatisé ne confirme pas l'activation des protections sur le serveur de
+production. Les accords, réserves, rejets et signatures suivent le modèle de la section 8 ; le propriétaire
+valide le document complet avant diffusion.
+
+## 17. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
 

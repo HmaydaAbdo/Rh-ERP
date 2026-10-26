@@ -5,6 +5,8 @@ export interface PdfImpressionDocument {
   contexte?: string;
   graphiqueDataUrl?: string;
   graphiqueAlt?: string;
+  graphiqueFond?: string;
+  graphiques?: { dataUrl: string; description: string; fond?: string }[];
   colonnes: string[];
   lignes: (string | number)[][];
 }
@@ -23,9 +25,16 @@ export class PdfImpressionService {
     const entetes = document.colonnes.map((colonne) => `<th scope="col">${echapper(colonne)}</th>`).join('');
     const lignes = document.lignes.map((ligne) => `<tr>${document.colonnes.map((_, index) => `<td>${echapper(String(ligne[index] ?? ''))}</td>`).join('')}</tr>`).join('');
     const contexte = document.contexte ? `<p class="contexte">${echapper(document.contexte)}</p>` : '';
-    const graphique = document.graphiqueDataUrl?.startsWith('data:image/png;base64,')
-      ? `<figure><img src="${document.graphiqueDataUrl}" alt="${echapper(document.graphiqueAlt ?? 'Graphique exporté avec ses données')}" /></figure>`
-      : '';
+    const graphiques = document.graphiques ?? (document.graphiqueDataUrl
+      ? [{ dataUrl: document.graphiqueDataUrl, description: document.graphiqueAlt ?? 'Graphique exporté avec ses données', fond: document.graphiqueFond }]
+      : []);
+    const graphique = graphiques
+      .filter(({ dataUrl }) => /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(dataUrl))
+      .map(({ dataUrl, description, fond }) => {
+        const couleur = fond && /^(#[\da-f]{3,8}|rgba?\([\d.,%\s]+\))$/i.test(fond) ? fond : '#ffffff';
+        return `<figure><div class="graphique" style="background-color:${couleur}"><img src="${dataUrl}" alt="${echapper(description)}" /></div><figcaption>${echapper(description)}</figcaption></figure>`;
+      })
+      .join('');
     fenetre.document.open();
     fenetre.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${echapper(document.titre)}</title>
       <style>
@@ -38,10 +47,13 @@ export class PdfImpressionService {
         .contexte { color: #344054; font-size: 10pt; line-height: 1.5; margin: 8px 0 0; }
         .meta { color: #667085; font-size: 8pt; margin: 8px 0 0; }
         figure { margin: 0 0 16px; page-break-inside: avoid; text-align: center; }
+        .graphique { padding: 12px; border-radius: 6px; }
         figure img { max-height: 115mm; max-width: 100%; object-fit: contain; }
+        figcaption { color: #344054; font-size: 9pt; margin-top: 6px; }
         table { border-collapse: collapse; width: 100%; }
         th { background: #e9eff7; color: #172033; font-weight: 700; text-align: left; }
-        th, td { border: 1px solid #c8d0dc; padding: 7px 9px; vertical-align: top; }
+        th, td { border: 1px solid #c8d0dc; padding: 7px 9px; vertical-align: top; overflow-wrap: anywhere; }
+        thead { display: table-header-group; }
         tr { break-inside: avoid; }
         tbody tr:nth-child(even) { background: #f5f7fa; }
         footer { border-top: 1px solid #c8d0dc; color: #667085; font-size: 8pt; margin-top: 16px; padding-top: 7px; }

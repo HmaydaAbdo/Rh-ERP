@@ -11,6 +11,11 @@ import java.util.List;
 public record EffectifsCriteria(
         @Size(max = 500) List<Long> chantierIds,
         @Size(max = 500) List<Long> fonctionIds,
-        @Size(max = 500) List<Long> equipeIds
+        @Size(max = 500) List<Long> equipeIds,
+        @Size(max = 150) String nomPrenom,
+        @Size(max = 30) String cin
 ) {
+    public EffectifsCriteria(List<Long> chantierIds, List<Long> fonctionIds, List<Long> equipeIds) {
+        this(chantierIds, fonctionIds, equipeIds, null, null);
+    }
 }

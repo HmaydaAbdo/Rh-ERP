@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
 import { saisir } from '../../../../shared/testing/formulaire';
@@ -143,5 +143,31 @@ describe('RoleListComponent', () => {
     TestBed.inject(ConfirmDialogService).request()!.reject?.();
 
     expect(service.delete).not.toHaveBeenCalled();
+  });
+
+  it('signale une erreur de lecture et permet de relancer la recherche', async () => {
+    await afficher();
+    service.search.mockReturnValueOnce(throwError(() => new Error('lecture impossible')));
+    fixture.componentInstance['onSearch']();
+    await fixture.whenStable();
+
+    expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les rôles');
+    expect(racine().textContent).not.toContain('Aucun rôle ne correspond');
+
+    fixture.componentInstance['reessayer']();
+    await fixture.whenStable();
+    expect(noms()).toEqual(['SYSTEM_ADMIN', 'RH', 'Comptable']);
+  });
+
+  it('revient à la page précédente après la suppression du dernier rôle de la page', async () => {
+    await afficher();
+    fixture.componentInstance['onLazyLoad']({ first: 10, rows: 10, sortField: null, sortOrder: 1 });
+    fixture.componentInstance['roles'].set([ROLES[1]]);
+
+    fixture.componentInstance['onDelete'](ROLES[1]);
+    TestBed.inject(ConfirmDialogService).request()!.accept!();
+
+    expect(service.search).toHaveBeenLastCalledWith({}, { page: 0, size: 10, sort: 'nom,asc' });
+    expect(fixture.componentInstance['first']()).toBe(0);
   });
 });

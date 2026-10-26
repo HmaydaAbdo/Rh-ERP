@@ -39,8 +39,10 @@ comme ceux d'un bulletin.
 
 ## Note — sélecteurs du formulaire
 
-Le formulaire d'un employé interroge `/functions/search` et `/chantiers/search` : saisir un employé demande
-donc aussi `FUNCTION_READ` et `CHANTIER_READ`, et `/equipes/search` pour l'équipe (`EQUIPE_READ`) (voir [README.md](README.md), « Dépendances entre permissions »).
+Le formulaire d'un employé interroge `/functions/search`, `/chantiers/search` et `/equipes/search` :
+saisir un employé demande donc aussi `FUNCTION_READ`, `CHANTIER_READ` et `EQUIPE_READ`.
+Charger une fiche à modifier demande également `EMPLOYEE_READ` (voir le
+[README du domaine](../employee/README.md#api-et-permissions)).
 L'import Excel résout fonctions et chantiers côté serveur (appels de service) : seul `EMPLOYEE_IMPORT` est requis.
 
 ## Rôles disposant de ces permissions (seed initial)

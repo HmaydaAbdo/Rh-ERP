@@ -2,7 +2,7 @@ import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, contentChild, DestroyRef, inject, input, signal, TemplateRef } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
-import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { catchError, distinctUntilChanged, finalize, forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
@@ -11,6 +11,7 @@ import { FunctionReferenceService } from '../../../shared/reference-data/functio
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
@@ -28,6 +29,7 @@ import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesPaie, no
 import { chargerToutLeReferentiel, ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 
 const TAILLE_PAGE = 24;
+type SourceCarte = 'FICHES' | 'PAIE' | 'COMPARAISON';
 
 /** Le contexte d'une carte, donné au gabarit `#actionsCarte` d'un module qui veut y ajouter ses propres boutons (ex. la suppression en groupe de la paie). */
 export interface ContexteCarte {
@@ -44,6 +46,8 @@ interface Chargement {
   employes: Employee[];
   totalEmployes: number;
   portee: Portee;
+  erreur: string | null;
+  erreursSources: SourceCarte[];
 }
 
 /**
@@ -55,7 +59,7 @@ interface Chargement {
  */
 @Component({
   selector: 'app-cartes-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, SelectComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, MessageComponent, SelectComponent, PdfExportButtonComponent],
   templateUrl: './cartes-perimetre.component.html',
   styleUrl: './cartes-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -104,6 +108,8 @@ export class CartesPerimetreComponent {
 
   /** Mois de paie du module, du plus récent au plus ancien (avec `PAIE_READ`). */
   protected readonly mois = signal<string[]>([]);
+  protected readonly chargementPeriodes = signal(false);
+  protected readonly erreurPeriodes = signal(false);
   protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   /** Le mois affiché : celui de l'URL, à défaut le plus récent (sauf module Paie, où « aucun mois » est la liste des mois). */
   protected readonly periode = computed(() => {
@@ -134,12 +140,21 @@ export class CartesPerimetreComponent {
       .map((dimension) => ({ dimension, id: etapeChoisie(this.perimetre(), dimension)! }))
   );
 
-  protected readonly resultat = signal<Chargement>({ groupes: null, employes: [], totalEmployes: 0, portee: {} });
+  protected readonly resultat = signal<Chargement>({ groupes: null, employes: [], totalEmployes: 0, portee: {}, erreur: null, erreursSources: [] });
+  protected readonly avertissementSources = computed(() => this.resultat().erreursSources.map((source) => ({
+    FICHES: 'Les fiches Employé sont indisponibles.',
+    PAIE: 'La paie du mois est indisponible.',
+    COMPARAISON: 'La comparaison avec le mois précédent est indisponible.'
+  })[source]).join(' '));
   /** Incrémentée pour recharger le niveau affiché sans changer d'URL (après une suppression, par exemple). */
   private readonly version = signal(0);
   protected readonly chargement = signal(false);
+  protected readonly chargementPlus = signal(false);
+  protected readonly erreurPlus = signal(false);
   protected readonly visibles = signal(TAILLE_PAGE);
   private page = 0;
+  private requeteEmployes?: Subscription;
+  private contexteEmployes = 0;
 
   /** Libellés des étapes du fil (« C168 », « Équipe OP »…), chargés une fois par valeur. */
   protected readonly noms = signal<Record<string, string>>({});
@@ -243,17 +258,26 @@ export class CartesPerimetreComponent {
 
   constructor() {
     if (this.voitPaie()) {
-      this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((periodes) => this.mois.set(periodes.map((p) => p.periode)));
+      this.chargerPeriodes();
     }
     const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), periodes: this.mois(), module: this.module(), version: this.version() }));
     toObservable(requete)
       .pipe(
         distinctUntilChanged((a, b) => a.module === b.module && a.niveau === b.niveau && a.periode === b.periode && a.periodes === b.periodes && a.version === b.version && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
         switchMap((r) => {
+          this.requeteEmployes?.unsubscribe();
+          this.contexteEmployes++;
+          this.page = 0;
+          this.chargementPlus.set(false);
+          this.erreurPlus.set(false);
           this.chargement.set(true);
+          this.resultat.set({ groupes: null, employes: [], totalEmployes: 0, portee: this.porteeCourante(), erreur: null, erreursSources: [] });
           this.visibles.set(TAILLE_PAGE);
           this.nommerEtapes();
-          return this.charger(r.niveau, r.periode).pipe(catchError(() => of<Chargement>({ groupes: [], employes: [], totalEmployes: 0, portee: {} })));
+          return this.charger(r.niveau, r.periode).pipe(catchError(() => of<Chargement>({
+            groupes: null, employes: [], totalEmployes: 0, portee: this.porteeCourante(), erreursSources: [],
+            erreur: 'Impossible de charger ce niveau. Vérifiez la connexion puis réessayez.'
+          })));
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -265,7 +289,22 @@ export class CartesPerimetreComponent {
 
   /** Recharge le niveau affiché sans changer d'URL (le module Paie s'en sert après une suppression en groupe). */
   recharger(): void {
+    if (this.erreurPeriodes()) {
+      this.chargerPeriodes();
+    }
     this.version.update((n) => n + 1);
+  }
+
+  private chargerPeriodes(): void {
+    if (this.chargementPeriodes()) {
+      return;
+    }
+    this.erreurPeriodes.set(false);
+    this.chargementPeriodes.set(true);
+    this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chargementPeriodes.set(false))).subscribe({
+      next: (periodes) => this.mois.set(periodes.map((p) => p.periode)),
+      error: () => this.erreurPeriodes.set(true)
+    });
   }
 
   /** Ouvrir un groupe : il devient une étape du fil, et l'on descend à la dimension suivante. Ouvrir un mois le choisit. */
@@ -323,12 +362,37 @@ export class CartesPerimetreComponent {
   }
 
   protected afficherPlusEmployes(): void {
-    this.page++;
+    if (this.chargement() || this.chargementPlus() || this.niveau() !== 'EMPLOYES'
+      || this.resultat().employes.length >= this.resultat().totalEmployes) {
+      return;
+    }
+    const pageSuivante = this.page + 1;
+    const contexte = this.contexteEmployes;
+    const params = this.params();
     const portee = this.porteeCourante();
-    this.employeeService
-      .search(this.module().critereEmployes(this.params(), portee), { page: this.page, size: TAILLE_PAGE, sort: 'nomPrenom,asc' })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((page) => this.resultat.update((r) => ({ ...r, employes: [...r.employes, ...page.content] })));
+    this.chargementPlus.set(true);
+    this.erreurPlus.set(false);
+    this.requeteEmployes = this.employeeService
+      .search(this.module().critereEmployes(params, portee), { page: pageSuivante, size: TAILLE_PAGE, sort: 'nomPrenom,asc' })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+        if (contexte === this.contexteEmployes) {
+          this.chargementPlus.set(false);
+        }
+      }))
+      .subscribe({
+        next: (page) => {
+          if (contexte !== this.contexteEmployes || params !== this.params()) {
+            return;
+          }
+          this.page = pageSuivante;
+          this.resultat.update((r) => ({ ...r, employes: [...r.employes, ...page.content], totalEmployes: page.page.totalElements }));
+        },
+        error: () => {
+          if (contexte === this.contexteEmployes && params === this.params()) {
+            this.erreurPlus.set(true);
+          }
+        }
+      });
   }
 
   protected initiales(employe: Employee): string {
@@ -344,7 +408,7 @@ export class CartesPerimetreComponent {
     const module = this.module();
     const params = this.params();
     const perimetre = this.perimetre();
-    const vide: Chargement = { groupes: null, employes: [], totalEmployes: 0, portee: porteeDe(perimetre) };
+    const vide: Chargement = { groupes: null, employes: [], totalEmployes: 0, portee: porteeDe(perimetre), erreur: null, erreursSources: [] };
 
     if (niveau === 'EMPLOYES') {
       this.page = 0;
@@ -374,15 +438,26 @@ export class CartesPerimetreComponent {
           return of<Chargement>({ ...vide, portee, groupes: [] });
         }
         // Une source en panne n'efface pas les autres : ses chiffres manquent simplement sur les cartes.
-        const fiches$ = this.fichesDansCartes() ? this.employeeService.regrouper(module.critereEmployes(params, portee), dimension).pipe(catchError(() => of(null))) : of(null);
-        const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null))) : of(null);
+        const erreursSources: SourceCarte[] = [];
+        const fiches$ = this.fichesDansCartes() ? this.employeeService.regrouper(module.critereEmployes(params, portee), dimension).pipe(catchError(() => {
+          erreursSources.push('FICHES');
+          return of(null);
+        })) : of(null);
+        const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => {
+          erreursSources.push('PAIE');
+          return of(null);
+        })) : of(null);
         const moisPrecedent = periode ? periodePrecedente(periode) : null;
         const precedente$ = this.voitPaie() && moisPrecedent && this.mois().includes(moisPrecedent)
-          ? this.paieService.analyser(module.criterePaie(params, portee, moisPrecedent)).pipe(catchError(() => of(null)))
+          ? this.paieService.analyser(module.criterePaie(params, portee, moisPrecedent)).pipe(catchError(() => {
+            erreursSources.push('COMPARAISON');
+            return of(null);
+          }))
           : of(null);
         return forkJoin([fiches$, paie$, precedente$]).pipe(
           map(([fiches, paie, precedente]) => ({
             ...vide,
+            erreursSources,
             portee,
             groupes: fusionnerGroupes(dimension, {
               catalogue: items,

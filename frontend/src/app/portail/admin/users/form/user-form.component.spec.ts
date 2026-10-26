@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { AuthService } from '../../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../../shared/feedback/feedback.service';
 import { fournirSignalForms } from '../../../../shared/forms/signal-forms.config';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
@@ -41,6 +42,7 @@ describe('UserFormComponent', () => {
   let fixture: ComponentFixture<UserFormComponent>;
   let users: { findById: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; updateDeniedPermissions: ReturnType<typeof vi.fn> };
   let navigation: ReturnType<typeof vi.spyOn>;
+  let autoriseEmployes = signal(true);
   const racine = () => fixture.nativeElement as HTMLElement;
   const erreurs = () => Array.from(racine().querySelectorAll('[role="alert"]')).map((e) => e.textContent);
   const formulaire = () => fixture.componentInstance['form'];
@@ -52,9 +54,10 @@ describe('UserFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string): Promise<void> {
+  async function afficher(id?: string, erreurInitiale = false, droitsEmploye = true): Promise<void> {
+    autoriseEmployes = signal(droitsEmploye);
     users = {
-      findById: vi.fn().mockReturnValue(of(UTILISATEUR)),
+      findById: vi.fn().mockReturnValue(erreurInitiale ? throwError(() => new Error('lecture impossible')) : of(UTILISATEUR)),
       create: vi.fn().mockReturnValue(of({ id: 30 })),
       update: vi.fn().mockReturnValue(of({ id: 4, version: 1 })),
       updateDeniedPermissions: vi.fn().mockReturnValue(of({ id: 4 }))
@@ -71,6 +74,7 @@ describe('UserFormComponent', () => {
         fournirSignalForms(),
         fournirRoute(id ? { id } : {}),
         { provide: UserService, useValue: users },
+        { provide: AuthService, useValue: { hasPermission: (permission: string) => permission === 'EMPLOYEE_READ' && autoriseEmployes() } },
         { provide: PolitiqueMotDePasseService, useValue: { longueurMinimale: () => 10, regle: () => '10 caractères minimum, différent de l’identifiant.' } },
         { provide: EmployeeReferenceService, useValue: EMPLOYES }
       ]
@@ -133,6 +137,17 @@ describe('UserFormComponent', () => {
       expect(racine().querySelector('#username')?.getAttribute('maxlength')).toBe('50');
     });
 
+    it('compte les caractères utiles de l’identifiant après retrait des espaces extérieurs', async () => {
+      await afficher();
+      await remplirCreation();
+      saisir(racine(), '#username', '  a  ');
+
+      await envoyer();
+
+      expect(users.create).not.toHaveBeenCalled();
+      expect(erreurs()).toContain('3 à 50 caractères.');
+    });
+
     it('crée l’utilisateur avec ses rôles et annonce le succès', async () => {
       await afficher();
       await remplirCreation();
@@ -169,6 +184,21 @@ describe('UserFormComponent', () => {
   });
 
   describe('modification', () => {
+    it('n’affiche aucun formulaire incomplet après un échec de lecture et permet de réessayer', async () => {
+      await afficher('4', true);
+
+      expect(racine().querySelector('form')).toBeNull();
+      expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger');
+      expect(users.update).not.toHaveBeenCalled();
+
+      users.findById.mockReturnValue(of(UTILISATEUR));
+      (racine().querySelector('button') as HTMLButtonElement).click();
+      await stabiliser();
+
+      expect((racine().querySelector('#email') as HTMLInputElement).value).toBe(UTILISATEUR.email);
+      expect(racine().querySelector('[role="alert"]')).toBeNull();
+    });
+
     it('charge l’utilisateur ; l’identifiant n’est pas modifiable et le mot de passe n’est pas demandé', async () => {
       await afficher('4');
 
@@ -224,6 +254,25 @@ describe('UserFormComponent', () => {
       expect(navigation).toHaveBeenCalledWith(['/admin/users']);
     });
 
+    it('conserve la version du compte déjà enregistré si la sauvegarde de ses refus échoue, puis termine au réessai', async () => {
+      await afficher('4');
+      saisir(racine(), '#email', 'fatima.zahra@staport.ma');
+      users.update.mockReturnValueOnce(of({ id: 4, version: 1 })).mockReturnValueOnce(of({ id: 4, version: 2 }));
+      users.updateDeniedPermissions.mockReturnValueOnce(throwError(() => new Error('refus non enregistrés'))).mockReturnValueOnce(of({ id: 4, version: 3 }));
+
+      await envoyer();
+
+      expect(navigation).not.toHaveBeenCalled();
+      expect(racine().querySelector('[role="alert"]')?.textContent).toContain('refus de permissions restent à enregistrer');
+      expect(formulaire()().dirty()).toBe(true);
+
+      await envoyer();
+
+      expect(users.update).toHaveBeenLastCalledWith(4, expect.objectContaining({ version: 1 }));
+      expect(users.updateDeniedPermissions).toHaveBeenLastCalledWith(4, { version: 2, permissionIds: [2] });
+      expect(navigation).toHaveBeenCalledWith(['/admin/users']);
+    });
+
     it('marque le formulaire modifié quand on change un refus de permission', async () => {
       await afficher('4');
       expect(formulaire()().dirty()).toBe(false);
@@ -242,6 +291,16 @@ describe('UserFormComponent', () => {
 
       expect(users.update).toHaveBeenCalledTimes(1);
       expect(erreurs()).toEqual([]);
+    });
+
+    it('conserve le lien employé sans interroger le référentiel si la lecture Employé manque', async () => {
+      await afficher('4', false, false);
+      await stabiliser();
+
+      expect(racine().querySelector('app-lazy-select[inputId="employeeId"]')).toBeNull();
+      expect(racine().textContent).toContain('Fatima Zahra — AB1');
+      await envoyer();
+      expect(users.update).toHaveBeenCalledWith(4, expect.objectContaining({ employeeId: 9 }));
     });
   });
 });

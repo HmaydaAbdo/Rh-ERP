@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { NotificationService } from '../../../shared/feedback/feedback.service';
 import { fournirSignalForms } from '../../../shared/forms/signal-forms.config';
@@ -55,9 +55,9 @@ describe('EmployeeFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string, permissions: string[] = ['EMPLOYEE_WRITE']): Promise<void> {
+  async function afficher(id?: string, permissions: string[] = ['EMPLOYEE_WRITE'], reponse = of(EMPLOYE)): Promise<void> {
     service = {
-      getById: vi.fn().mockReturnValue(of(EMPLOYE)),
+      getById: vi.fn().mockReturnValue(reponse),
       create: vi.fn().mockReturnValue(of({ id: 15 })),
       update: vi.fn().mockReturnValue(of({ id: 9 }))
     };
@@ -134,6 +134,33 @@ describe('EmployeeFormComponent', () => {
 
       expect(racine().querySelector('#nomPrenom')?.getAttribute('maxlength')).toBe('150');
       expect(racine().querySelector('#cin')?.getAttribute('maxlength')).toBe('30');
+    });
+
+    it('refuse un nom ou un CIN composé uniquement d’espaces comme l’API', async () => {
+      await afficher();
+      await remplir();
+      saisir(racine(), '#nomPrenom', '   ');
+      saisir(racine(), '#cin', '   ');
+
+      await envoyer();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(erreurs()).toContain('Le nom et prénom sont obligatoires.');
+      expect(erreurs()).toContain('Le CIN est obligatoire.');
+    });
+
+    it('refuse une date de naissance aujourd’hui ou future comme l’API', async () => {
+      await afficher();
+      await remplir();
+      for (const decalage of [0, 1]) {
+        const naissance = new Date();
+        naissance.setDate(naissance.getDate() + decalage);
+        formulaire().dateNaissance().value.set(naissance);
+        await envoyer();
+
+        expect(service.create).not.toHaveBeenCalled();
+        expect(erreurs()).toContain('La date de naissance doit être antérieure à aujourd’hui.');
+      }
     });
 
     it('envoie le focus au premier champ composé invalide (date) quand les textes sont remplis', async () => {
@@ -227,6 +254,34 @@ describe('EmployeeFormComponent', () => {
   });
 
   describe('modification', () => {
+    it('attend la fiche avant de proposer le formulaire de modification', async () => {
+      const reponse = new Subject<Employee>();
+      await afficher('9', ['EMPLOYEE_WRITE'], reponse);
+      expect(racine().querySelector('form')).toBeNull();
+      expect(racine().querySelector('[role="status"]')?.textContent).toContain('Chargement');
+
+      reponse.next(EMPLOYE);
+      reponse.complete();
+      await stabiliser();
+
+      expect((racine().querySelector('#cin') as HTMLInputElement).value).toBe('AB123');
+      expect(service.update).not.toHaveBeenCalled();
+    });
+
+    it('annonce l’échec de lecture, interdit une saisie vide et permet de réessayer', async () => {
+      await afficher('9', ['EMPLOYEE_WRITE'], throwError(() => new Error('indisponible')));
+      expect(racine().querySelector('form')).toBeNull();
+      expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger l’employé');
+
+      service.getById.mockReturnValue(of(EMPLOYE));
+      (racine().querySelector('stp-message button') as HTMLButtonElement).click();
+      await stabiliser();
+
+      expect(service.getById).toHaveBeenCalledTimes(2);
+      expect(racine().querySelector('form')).not.toBeNull();
+      expect(service.update).not.toHaveBeenCalled();
+    });
+
     it('charge l’employé de l’adresse dans tous les champs, y compris le statut', async () => {
       await afficher('9');
 

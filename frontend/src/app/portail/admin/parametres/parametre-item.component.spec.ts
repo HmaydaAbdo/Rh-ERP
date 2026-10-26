@@ -7,6 +7,7 @@ import { ParametreItemComponent } from './parametre-item.component';
 
 const PARAMETRE = {
   id: 5,
+  version: 0,
   cle: 'paie.analytique.pas-tranche',
   libelle: 'Pas des tranches de l’analytique de paie',
   description: 'Largeur des tranches.',
@@ -67,7 +68,7 @@ describe('ParametreItemComponent', () => {
     soumettre(racine());
     await fixture.whenStable();
 
-    expect(service.update).toHaveBeenCalledWith(5, { valeur: '1200' });
+    expect(service.update).toHaveBeenCalledWith(5, { version: 0, valeur: '1200' });
     expect(saved).toHaveBeenCalledWith({ ...PARAMETRE, valeur: '1200' });
   });
 
@@ -76,5 +77,15 @@ describe('ParametreItemComponent', () => {
 
     expect(valeur().disabled).toBe(true);
     expect(racine().querySelector('button')).toBeNull();
+  });
+
+  it.each(['1e2', '0x10', '   '])('refuse la saisie %s que le serveur ne considère pas comme un entier', async (saisie) => {
+    await afficher();
+    await saisirValeur(saisie);
+    soumettre(racine());
+    await fixture.whenStable();
+
+    expect(service.update).not.toHaveBeenCalled();
+    expect(racine().querySelector('[role="alert"]')).not.toBeNull();
   });
 });

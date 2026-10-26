@@ -6,6 +6,10 @@
 > [../rbac/README.md](../rbac/README.md), et les principes de conception dans
 > `conventions/security.md`.
 
+Le [modèle et les contrats DTO](contrats.md) précisent les types, bornes, champs facultatifs et réponses
+utilisés par les écrans de ce domaine. Les paramètres de fonctionnement ont leur
+[dossier propre](../parametre/README.md).
+
 ---
 
 ## Vue d'ensemble
@@ -15,7 +19,7 @@
 | Backend | `backend/src/main/java/staport/rh/auth/` |
 | Frontend | `frontend/src/app/core/auth/` (connexion, session, guards) et `frontend/src/app/portail/admin/` (écrans Utilisateurs et Rôles) |
 | Tables | `utilisateur`, `role`, `permission`, `role_permission`, `utilisateur_role`, `utilisateur_permission_refusee`, `refresh_token`, `reset_password_token` |
-| Endpoints | `/auth/*`, `/users`, `/roles`, `/permissions`, `/parametres` |
+| Endpoints | `/auth/*`, `/users`, `/roles`, `/permissions` |
 
 ```text
 auth/
@@ -107,7 +111,7 @@ et le voleur doivent alors se reconnecter. Les sessions ouvertes sur d'autres ap
 La révocation reste enregistrée même si la requête échoue (`noRollbackFor`). Un jeton expiré est simplement
 refusé.
 
-Un jeton présenté par un **compte désactivé** est refusé (`401`) et consommé, avec un événement `CONNEXION_ECHOUEE`
+Un jeton présenté par un **compte désactivé** est refusé (`401`) et consommé, avec un événement `SESSION_RENOUVELLEMENT_REFUSE`
 (motif `COMPTE_INACTIF`) : une session ne survit pas à la désactivation, même faite hors de l'application (par SQL).
 
 ### Mot de passe oublié
@@ -203,6 +207,17 @@ Liste (tableau standard, voir [../frontend/README.md](../frontend/README.md)), f
 modification : username, email, mot de passe (création), compte actif, employé lié (sélecteur à chargement
 différé), rôles, et — en modification seulement — les permissions refusées.
 
+L'édition charge le compte, le catalogue des permissions et les rôles sélectionnés avant d'ouvrir la saisie.
+Une erreur de lecture est annoncée avec un réessai ; aucun formulaire incomplet n'est enregistrable.
+Le lien vers un employé se sélectionne avec `EMPLOYEE_READ`. Sans cette lecture, le lien courant reste
+visible et conservé, sans interroger le référentiel Employé. Les rôles et leurs permissions sont consultables
+avec `USER_MANAGE` pour administrer les comptes, sans autoriser l'écriture d'un rôle.
+
+L'enregistrement des informations du compte puis des refus individuels utilise deux opérations distinctes.
+Si la seconde échoue, l'écran indique que les informations sont déjà enregistrées, conserve les refus saisis
+et permet de terminer avec la version courante. Un changement de filtre ou de page annule une recherche
+précédente encore en cours afin qu'une réponse tardive ne remplace pas la liste demandée.
+
 ## Rôles
 
 | Champ | Règle |
@@ -212,6 +227,11 @@ différé), rôles, et — en modification seulement — les permissions refusé
 | `permissionIds` | Zéro ou plusieurs permissions du catalogue ; un identifiant inconnu est refusé (`400`) |
 
 `GET /permissions` renvoie le catalogue pour alimenter l'écran **Rôles** (`/admin/roles`).
+
+Le formulaire applique les mêmes bornes que l'API : nom de 2 à 50 caractères après retrait des espaces
+extérieurs et description de 255 caractères au plus. Une sélection partielle de permissions est signalée
+sur la case du domaine. L'échec du chargement du rôle ou du catalogue empêche toute sauvegarde et propose
+un réessai. Après suppression du dernier rôle d'une page, la liste revient à la page précédente.
 
 **Suppression** : refusée (`409`) si le rôle est encore attribué à des comptes — le message donne leur nombre — et toujours
 refusée pour `SYSTEM_ADMIN` ; les liaisons sont en `ON DELETE RESTRICT`, la base confirme la règle. Un rôle supprimé retire
@@ -243,17 +263,18 @@ Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `
 | `PUT` | `/users/{id}` | Modifier (email, actif, employé lié, rôles) | `USER_MANAGE` |
 | `PUT` | `/users/{id}/permissions-refusees` | Remplacer les refus individuels | `USER_MANAGE` |
 | `POST` | `/users/{id}/reset-password` | Réinitialiser le mot de passe | `USER_MANAGE` |
-| `POST` | `/roles/search` | Rechercher avec filtres et pagination serveur | `ROLE_MANAGE` |
-| `GET` | `/roles/{id}` | Consulter | `ROLE_MANAGE` |
+| `POST` | `/roles/search` | Rechercher avec filtres et pagination serveur | `ROLE_MANAGE` ou `USER_MANAGE` |
+| `GET` | `/roles/{id}` | Consulter | `ROLE_MANAGE` ou `USER_MANAGE` |
 | `POST` | `/roles` | Créer | `ROLE_MANAGE` |
 | `PUT` | `/roles/{id}` | Modifier | `ROLE_MANAGE` |
 | `DELETE` | `/roles/{id}` | Supprimer | `ROLE_MANAGE` |
-| `GET` | `/permissions` | Catalogue des permissions | `ROLE_MANAGE` |
-| `GET` | `/parametres` | Lire les valeurs de fonctionnement | `PARAMETRE_READ` |
-| `PUT` | `/parametres/{id}` | Modifier une valeur de fonctionnement | `PARAMETRE_WRITE` |
+| `GET` | `/permissions` | Catalogue des permissions | `ROLE_MANAGE` ou `USER_MANAGE` |
 
 Codes d'erreur : `401` identifiants ou jeton invalides, `400` validation / jeton de réinitialisation invalide /
 référence inconnue, `404` utilisateur ou rôle inexistant, `409` username, email ou nom de rôle déjà pris.
+Une modification renvoie aussi `409` quand la version fournie est périmée ; les identifiants de rôles et
+permissions sont positifs, non nuls et existants. Il n'existe aucun import, export ni vue analytique propre
+aux comptes ou aux rôles.
 
 ---
 
@@ -296,6 +317,10 @@ JWT complète (signature HS256, `iss`, `aud`, dates et claims requis) ; `JwtSign
 secret. `AuthServiceTest` et `VerrouillageConnexionIntegrationTest` couvrent la connexion, le blocage après échecs,
 la rotation, le vol de jeton, la révocation et la réinitialisation. Voir
 [../testing.md](../testing.md) et [../rbac/auth.md](../rbac/auth.md).
+
+`AuthRequestValidationTest` couvre les tailles, la normalisation avant validation et les identifiants de
+collections invalides. Les specs des listes et formulaires Utilisateurs/Rôles couvrent la saisie, les
+permissions, les erreurs et réessais, les réponses tardives, les enregistrements partiels et la pagination.
 
 ---
 

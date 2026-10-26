@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
-import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, finalize, forkJoin, map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ThemeService } from '../../../core/theme/theme.service';
@@ -18,6 +18,7 @@ import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.c
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
@@ -87,7 +88,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, MessageComponent, PdfExportButtonComponent],
   templateUrl: './analytique-perimetre.component.html',
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -139,6 +140,12 @@ export class AnalytiquePerimetreComponent {
 
   protected readonly donnees = signal<Donnees>({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
   protected readonly chargement = signal(false);
+  protected readonly erreurMois = signal<string | null>(null);
+  protected readonly erreursChargement = signal<string[]>([]);
+  protected readonly erreurRepartition = signal(false);
+  protected readonly chargementRepartition = signal(false);
+  protected readonly erreurQualite = signal(false);
+  private readonly relance = signal(0);
   protected readonly repartitionFiches = signal<EmployeeRegroupement[]>([]);
 
   /** Les dimensions qu'on peut encore utiliser pour répartir : celles qui ne sont pas déjà une étape. */
@@ -411,8 +418,8 @@ export class AnalytiquePerimetreComponent {
     const evolution = this.paie()?.evolution ?? [];
     const mesure = this.mesureEvolution();
     return this.documentPdf(`Évolution mensuelle · ${libelleEvolutionMesure(mesure)}`,
-      ['Mois', libelleEvolutionMesure(mesure)],
-      evolution.map((ligne) => [libellePeriode(ligne.periode), ligne[mesure]]));
+      ['Mois', 'Masse (DH)', 'Effectif payé', 'STC (personnes)', 'STC (DH)'],
+      evolution.map((ligne) => [libellePeriode(ligne.periode), formaterMontant(ligne.masse), ligne.effectif, ligne.stc, formaterMontant(ligne.stcMontant)]));
   }
 
   protected documentRepartitionPaie(): PdfImpressionDocument {
@@ -486,8 +493,25 @@ export class AnalytiquePerimetreComponent {
   }
 
   private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {
+    return { titre, contexte: contexte ?? this.contextePerimetre(), colonnes, lignes };
+  }
+
+  private contextePerimetre(): string {
+    const contexte = [`Domaine : ${this.module().libellePluriel}`];
     const periode = this.periode();
-    return { titre, contexte: contexte ?? `${this.module().libellePluriel}${periode ? ` · ${libellePeriode(periode)}` : ''}`, colonnes, lignes };
+    if (periode) contexte.push(`Période de référence : ${libellePeriode(periode)}`);
+    for (const dimension of DIMENSIONS) {
+      const ids = this.perimetre()[cleIds(dimension)];
+      if (ids.length) contexte.push(`${this.libelles[dimension]} : ${ids.map((id) => this.nom(dimension, id)).join(', ')}`);
+    }
+    const filtres = this.params();
+    for (const [cle, libelle] of [['nom', 'Nom'], ['cin', 'CIN'], ['code', 'Code'], ['libelle', 'Libellé'], ['designation', 'Désignation']] as const) {
+      const valeur = filtres.get(cle)?.trim();
+      if (valeur) contexte.push(`${libelle} : ${valeur}`);
+    }
+    const statut = filtres.get('statut');
+    if (statut === 'ACTIF' || statut === 'INACTIF') contexte.push(`Statut des fiches : ${statut === 'ACTIF' ? 'En poste' : 'Sorti'} (ne filtre pas la paie)`);
+    return contexte.join(' · ');
   }
 
   private contexteEquipe(avecPeriode: boolean): string {
@@ -508,14 +532,7 @@ export class AnalytiquePerimetreComponent {
   }
 
   constructor() {
-    if (this.authService.hasPermission('PAIE_READ')) {
-      this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((periodes) => {
-        this.mois.set(periodes.map((p) => p.periode));
-        this.moisCharges.set(true);
-      });
-    } else {
-      this.moisCharges.set(true);
-    }
+    this.chargerMois();
 
     // Module dont la barre exige un mois (Paie) : le plus récent est ouvert et inscrit dans la barre.
     effect(() => {
@@ -526,18 +543,22 @@ export class AnalytiquePerimetreComponent {
     });
 
     const requete = computed(() => ({
-      params: this.params(), periode: this.periode(), module: this.module(), pret: this.moisCharges(), equipeId: this.equipeEvolutionId()
+      params: this.params(), periode: this.periode(), module: this.module(), pret: this.moisCharges(), equipeId: this.equipeEvolutionId(), relance: this.relance()
     }));
     toObservable(requete)
       .pipe(
-        distinctUntilChanged((a, b) => a.module === b.module && a.pret === b.pret && a.periode === b.periode && a.equipeId === b.equipeId && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
+        distinctUntilChanged((a, b) => a.relance === b.relance && a.module === b.module && a.pret === b.pret && a.periode === b.periode && a.equipeId === b.equipeId && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
         switchMap((r) => {
           if (!r.pret) {
             return of(null);
           }
           this.chargement.set(true);
+          this.erreursChargement.set([]);
           this.nommerEtapes();
-          return this.charger(r.periode, r.equipeId).pipe(catchError(() => of(null)));
+          return this.charger(r.periode, r.equipeId).pipe(catchError(() => {
+            this.erreursChargement.update((erreurs) => [...erreurs, 'Le périmètre analysé n’a pas pu être chargé.']);
+            return of(null);
+          }));
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -546,21 +567,61 @@ export class AnalytiquePerimetreComponent {
         if (resultat) {
           this.portee.set(resultat.portee);
           this.donnees.set(resultat.donnees);
+        } else if (this.erreursChargement().length) {
+          this.donnees.set({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
         }
       });
 
     // La répartition des fiches suit la dimension choisie sans relancer le reste.
-    combineLatest([toObservable(this.portee), toObservable(this.dimension)])
+    combineLatest([toObservable(this.portee), toObservable(this.dimension), toObservable(this.relance)])
       .pipe(
         switchMap(([portee, dimension]) => {
+          this.erreurRepartition.set(false);
+          this.repartitionFiches.set([]);
           if (!this.voitEmployes() || porteeVide(portee)) {
             return of<EmployeeRegroupement[]>([]);
           }
-          return this.employeeService.regrouper(this.module().critereEmployes(this.params(), portee), dimension).pipe(catchError(() => of<EmployeeRegroupement[]>([])));
+          this.chargementRepartition.set(true);
+          return this.employeeService.regrouper(this.module().critereEmployes(this.params(), portee), dimension).pipe(catchError(() => {
+            this.erreurRepartition.set(true);
+            return of<EmployeeRegroupement[]>([]);
+          }), finalize(() => this.chargementRepartition.set(false)));
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((groupes) => this.repartitionFiches.set(groupes));
+  }
+
+  protected recharger(): void {
+    this.chargerMois();
+    this.relance.update((valeur) => valeur + 1);
+  }
+
+  private chargerMois(): void {
+    this.erreurMois.set(null);
+    if (!this.authService.hasPermission('PAIE_READ')) {
+      this.moisCharges.set(true);
+      return;
+    }
+    this.moisCharges.set(false);
+    this.paieService.listerPeriodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (periodes) => {
+        this.mois.set(periodes.map((p) => p.periode));
+        this.moisCharges.set(true);
+      },
+      error: () => {
+        this.mois.set([]);
+        this.erreurMois.set('Les périodes de paie n’ont pas pu être chargées.');
+        this.moisCharges.set(true);
+      }
+    });
+  }
+
+  private suivreSource<T>(source: Observable<T>, message: string, repli: T): Observable<T> {
+    return source.pipe(catchError(() => {
+      this.erreursChargement.update((erreurs) => [...new Set([...erreurs, message])]);
+      return of(repli);
+    }));
   }
 
   protected choisirDimension(dimension: Dimension): void {
@@ -661,6 +722,7 @@ export class AnalytiquePerimetreComponent {
   }
 
   private analyserQualitePaie(params: ParamMap, portee: Portee, periode: string): Observable<PaieAnalytique | null> {
+    this.erreurQualite.set(false);
     if (!this.module().afficherQualiteOrphelins) return of(null);
     const criteres = this.module().criterePaie(params, portee, periode);
     const chantiers = this.qualiteChantierIds();
@@ -669,7 +731,8 @@ export class AnalytiquePerimetreComponent {
     const fonctionIds = this.intersectionQualite(criteres.fonctionIds, fonctions);
     if ((chantiers.length > 0 && chantierIds?.length === 0) || (fonctions.length > 0 && fonctionIds?.length === 0)) return of(null);
     const filtre: PaieSearchCriteria = { ...criteres, chantierIds, fonctionIds };
-    return this.paieService.analyser(filtre).pipe(catchError(() => of(null)));
+    return this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(filtre), 'La qualité des rattachements n’a pas pu être chargée.', null)
+      .pipe(map((analyse) => { this.erreurQualite.set(analyse === null); return analyse; }));
   }
 
   private intersectionQualite(base: number[] | undefined, selection: number[]): number[] | undefined {
@@ -713,22 +776,22 @@ export class AnalytiquePerimetreComponent {
           if (!this.voitPaie() || !periode) {
             return of({ portee, donnees: avecCatalogue });
           }
-          const paie$ = this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null)));
+          const paie$ = this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(module.criterePaie(params, portee, periode)), 'Les indicateurs de paie n’ont pas pu être chargés.', null);
           const qualitePaie$ = this.analyserQualitePaie(params, portee, periode);
           const evolution$ = equipeEvolutionId === null
             ? of<PaieAnalytique | null>(null)
-            : this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)).pipe(catchError(() => of(null)));
+            : this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(module.criterePaie(params, { ...portee, [cleIds(dimension ?? 'EQUIPE')]: [equipeEvolutionId] }, periode)), 'L’évolution mensuelle n’a pas pu être chargée.', null);
           const chantiers$ = dimension === 'CHANTIER' ? of<PaieAnalytique | null>(null)
-            : this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)).pipe(catchError(() => of(null)));
+            : this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(module.criterePaie(params, { ...portee, chantierIds: undefined }, periode)), 'La liste des chantiers de l’analyse n’a pas pu être chargée.', null);
           return forkJoin([paie$, evolution$, chantiers$, qualitePaie$]).pipe(map(([paie, evolution, catalogueChantiers, qualitePaie]) => ({
             portee,
             donnees: { ...avecCatalogue, paie, qualitePaie, evolutionEquipe: evolution?.evolution ?? [], chantiersCatalogue: catalogueChantiers?.parChantier ?? [] }
           })));
         }
         // Une source en panne n'efface pas les autres : son bloc reste simplement vide.
-        const paie$ = this.voitPaie() && periode ? this.paieService.analyser(module.criterePaie(params, portee, periode)).pipe(catchError(() => of(null))) : of(null);
-        const fiches$ = this.voitEmployes() ? this.employeeService.analyser(module.critereEmployes(params, portee)).pipe(catchError(() => of(null))) : of(null);
-        const mouvements$ = this.voitPaie() ? this.paieService.effectifs(portee).pipe(catchError(() => of<PaieEffectifMois[]>([]))) : of<PaieEffectifMois[]>([]);
+        const paie$ = this.voitPaie() && periode ? this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(module.criterePaie(params, portee, periode)), 'Les indicateurs de paie n’ont pas pu être chargés.', null) : of(null);
+        const fiches$ = this.voitEmployes() ? this.suivreSource<EmployeeAnalytique | null>(this.employeeService.analyser(module.critereEmployes(params, portee)), 'Les indicateurs des fiches Employé n’ont pas pu être chargés.', null) : of(null);
+        const mouvements$ = this.voitPaie() ? this.suivreSource(this.paieService.effectifs(module.criterePaie(params, portee, null)), 'Les mouvements mensuels n’ont pas pu être chargés.', [] as PaieEffectifMois[]) : of<PaieEffectifMois[]>([]);
         return forkJoin([paie$, fiches$, mouvements$]).pipe(map(([paie, fiches, mouvements]) => ({ portee, donnees: { ...vide, paie, fiches, mouvements } })));
       })
     );

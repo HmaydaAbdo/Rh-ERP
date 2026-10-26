@@ -89,19 +89,21 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   Paie (STC compris), sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ` vérifiés séparément. La carte géographique reste séparée.
   Décision du propriétaire (2026-10-23) : la modification du code d'un chantier (code changé partout, historique compris) est conservée.
   Tests unitaires frontend et E2E mockés verts localement. Voir le
-  [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) (section 10) et le [README Chantier](docs/chantier/README.md).
+  [PV de stabilisation ERP-RH](docs/handoff/pv-n1-erp-rh.md) (section 10) et le [README Chantier](docs/chantier/README.md).
   **Fonctions (implémenté, 2026-10-23)** : mêmes trois vues que Équipes (Tabulaire, Cartes, Analytique) sous une coque commune
   (`FunctionVuesComponent`), import Excel et création déplacés dans l'en-tête; filtre libellé dans l'URL, appliqué de la même façon aux trois vues; la répartition par fonction de `POST /paie/analytique` porte désormais les STC (`stc`, `stcMontant`); Cartes et Analytique relient la fonction
   aux effectifs Employé (dernier état importé) et aux indicateurs/historiques Paie, sans nouvel endpoint, sous `EMPLOYEE_READ` et `PAIE_READ`
   vérifiés séparément. Tests frontend et E2E mockés verts localement.
   Décisions du propriétaire (2026-10-23) : le renommage actuel (libellé modifié partout, historique compris) et le refus de supprimer une
-  fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-stabilisation-erp-rh-2026-10-22.md) et le [README Fonction](docs/function/README.md).
+  fonction utilisée sont conservés. Les quasi-doublons de libellés (9 paires) restent suivis dans « Qualité des données », hors de ce lot. Voir le [PV de stabilisation ERP-RH](docs/handoff/pv-n1-erp-rh.md) et le [README Fonction](docs/function/README.md).
   Le PV couvre toute l'application et sera complété domaine par domaine. Avant toute transmission aux intervenants, le propriétaire doit valider le document complet; les règles doivent avoir une preuve traçable et toute exception reste visible et soumise à approbation.
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 
-Tous les cinq domaines sont configurés avec les vues, la coque et le Tabulaire partagés. Prochaine étape : revue propriétaire
-dans l'ordre Équipe, Fonction, Chantier, Employé, Paie.
+Les cinq domaines de collection utilisent les vues, la coque et le Tabulaire partagés. La revue technique des
+domaines Employé, Paie, Rapport, Auth, Paramètres et Audit complète celle des trois référentiels. Les dossiers de domaine
+centralisent leurs règles, contrats et scénarios; les accords métier du [PV global](docs/handoff/pv-n1-erp-rh.md)
+restent à recueillir avant diffusion. Le premier import réel et les décisions de qualité des données restent suivis ci-dessous.
 
 - [ ] **Équipe — support de formation** : préparer ultérieurement une présentation et une vidéo de démonstration du domaine. Ce travail n'est pas planifié pour le moment.
 
