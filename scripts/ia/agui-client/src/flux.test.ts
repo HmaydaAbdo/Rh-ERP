@@ -39,13 +39,12 @@ test("une question suit le cycle AG-UI jusqu'à la réponse vérifiée", { timeo
   // Le client reconstruit lui-même le message assistant à partir des événements.
   const assistant = newMessages.filter((m) => m.role === "assistant" && typeof m.content === "string").at(-1);
   assert.ok(assistant && String(assistant.content).replaceAll(/\s/g, "").includes(attendu), String(assistant?.content));
-  const reponse = recus.find((e) => e.type === "CUSTOM" && e.name === "com.staport.answer.v1");
-  assert.equal((reponse?.value as { abstention: boolean }).abstention, false);
-  const sequences = recus
-    .filter((e) => e.type === "CUSTOM" && e.name === "com.staport.mascot.state.v1")
-    .map((e) => (e.value as { sequence: number }).sequence);
-  assert.ok(sequences.length >= 2);
-  assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
+  // Texte diffusé en flux, puis état partagé du vérificateur de chiffres : réponse vérifiée.
+  assert.ok(types.includes("TEXT_MESSAGE_CONTENT"), "texte diffusé en flux");
+  const etats = recus.filter((e) => e.type === "STATE_SNAPSHOT").map((e) => e.snapshot as { verification?: string });
+  assert.equal(etats.at(-1)?.verification, "verifiee");
+  // Raisonnement : selon le modèle servi, des événements officiels REASONING_* ; jamais d'événement maison.
+  assert.ok(!recus.some((e) => e.type === "CUSTOM" && String(e.name).startsWith("com.staport.")));
 });
 
 test("l'arrêt par le client coupe le run sans événement tardif", { timeout: 120_000 }, async () => {

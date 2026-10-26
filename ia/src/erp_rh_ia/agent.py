@@ -1,3 +1,6 @@
+# LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
+# et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
 """Agent de l'assistant RH (docs/ia.md, T10) : la boucle officielle ``create_agent`` de LangChain et ses middlewares.
 
 Rien n'est orchestré à la main : le modèle choisit lui-même la forme de sa réponse — directe pour un message simple,
@@ -14,7 +17,7 @@ outils du run, la réponse est retirée et réécrite une fois, puis remplacée 
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal, NotRequired
 
-from copilotkit import CopilotKitMiddleware, CopilotKitState
+from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -149,7 +152,6 @@ def creer_agent(
         tools=list(outils),
         system_prompt=SYSTEME,
         middleware=intergiciels,
-        state_schema=CopilotKitState,
         checkpointer=checkpointer,
         name="erp-rh",
     )

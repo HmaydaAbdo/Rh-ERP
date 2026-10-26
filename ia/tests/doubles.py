@@ -1,13 +1,17 @@
-"""Doubles partagés des tests : le faux modèle de chat officiel de LangChain et de vrais outils LangChain, sans réseau."""
+# LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
+# et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
+"""Doubles partagés des tests : le faux modèle de chat de LangChain et de vrais outils LangChain, sans réseau."""
 
 import json
 from collections.abc import AsyncIterator, Callable, Sequence
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
+from pydantic import Field
 
 INDICATEURS = {
     "periode": "2026-09",
@@ -19,8 +23,8 @@ INDICATEURS = {
 class ModeleScripte(FakeMessagesListChatModel):
     """Rejoue des réponses dans l'ordre ; ``bind_tools`` (exigé par ``create_agent``) garde la trace des outils liés."""
 
-    vus: list[list[BaseMessage]] = []
-    outils_lies: list[list[str]] = []
+    vus: list[list[BaseMessage]] = Field(default_factory=lambda: list[list[BaseMessage]]())
+    outils_lies: list[list[str]] = Field(default_factory=lambda: list[list[str]]())
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> "ModeleScripte":
         self.outils_lies.append([_nom(t) for t in tools])
@@ -30,7 +34,9 @@ class ModeleScripte(FakeMessagesListChatModel):
         self.vus.append(list(messages))
         return super()._generate(messages, *args, **kwargs)
 
-    async def _astream(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> AsyncIterator[ChatGenerationChunk]:
+    async def _astream(
+        self, messages: list[BaseMessage], *args: Any, **kwargs: Any
+    ) -> AsyncIterator[ChatGenerationChunk]:
         """Comme un vrai modèle en flux (ChatLiteLLM) : texte, raisonnement et appels d'outils en morceaux."""
         resultat = self._generate(messages, *args, **kwargs)
         message = resultat.generations[0].message
@@ -50,7 +56,7 @@ class ModeleScripte(FakeMessagesListChatModel):
 
 
 def modele(*reponses: BaseMessage) -> ModeleScripte:
-    return ModeleScripte(responses=list(reponses), vus=[], outils_lies=[])
+    return ModeleScripte(responses=list(reponses))
 
 
 def appel(nom: str, identifiant: str = "a1", **arguments: Any) -> AIMessage:
@@ -76,5 +82,7 @@ def outil(nom: str, donnees: dict[str, Any] | Callable[..., Any], appels: list[s
 
 def _nom(outil_lie: Any) -> str:
     if isinstance(outil_lie, dict):
-        return str(outil_lie.get("name") or outil_lie.get("function", {}).get("name"))
+        definition = cast(dict[str, Any], outil_lie)
+        fonction = cast(dict[str, Any], definition.get("function") or {})
+        return str(definition.get("name") or fonction.get("name"))
     return str(getattr(outil_lie, "name", outil_lie))

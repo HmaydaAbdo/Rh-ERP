@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import staport.rh.audit.services.interfaces.IAuditOutilsAgent;
 import staport.rh.mcp.config.McpServeurConfig;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,6 +67,8 @@ public abstract class OutilLecture {
         return new McpStatelessServerFeatures.SyncToolSpecification(outil, (contexte, requete) -> appeler(contexte, requete));
     }
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     private McpSchema.CallToolResult appeler(McpTransportContext contexte, McpSchema.CallToolRequest requete) {
         if (!(contexte.get(McpServeurConfig.CONTEXTE_AUTHENTIFICATION) instanceof Authentication lecteur)) {
             return erreur("Identité indisponible.");
@@ -93,10 +96,13 @@ public abstract class OutilLecture {
             return erreur("L'outil " + nom() + " n'a pas pu répondre.");
         }
         audit.lectureServie(nom(), resultat.nombreElements(), resultat.perimetreAudit());
+        // Spécification MCP : un outil qui renvoie du contenu structuré renvoie aussi son JSON sérialisé dans un bloc texte.
+        // Les clients standard (LangChain, CopilotKit…) ne donnent au modèle que les blocs texte.
         return McpSchema.CallToolResult.builder()
                 .isError(false)
                 .structuredContent(resultat.donnees())
                 .addTextContent(resultat.synthese())
+                .addTextContent(JSON.writeValueAsString(resultat.donnees()))
                 .build();
     }
 
