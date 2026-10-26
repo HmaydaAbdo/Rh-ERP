@@ -6,10 +6,11 @@ import { filter, map } from 'rxjs';
 
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
+import { AssistantEnteteComponent } from './assistant-entete.component';
 import { contexteEcran, suggestionsPour } from './ecran-assistant';
 
 /**
- * Assistant RH : la barre latérale de CopilotKit, ancrée à droite, ouverte par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
+ * Assistant RH : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
  * L'écran ouvert (domaine et filtres) part avec chaque question et les questions proposées s'adaptent à cet écran.
  */
 @Component({
@@ -21,10 +22,11 @@ import { contexteEcran, suggestionsPour } from './ecran-assistant';
   template: `
     <copilot-sidebar
       [(open)]="ouvert"
-      mode="docked"
+      mode="overlay"
       position="right"
       title="Assistant RH"
       [chatComponent]="chat"
+      [headerComponent]="entete"
     />
   `
 })
@@ -34,6 +36,7 @@ export class AssistantComponent {
   protected readonly theme = inject(ThemeService);
 
   protected readonly chat = AssistantChatComponent;
+  protected readonly entete = AssistantEnteteComponent;
   readonly ouvert = signal(false);
 
   private readonly url = toSignal(

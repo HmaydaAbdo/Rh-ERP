@@ -28,7 +28,8 @@ class Sante(BaseModel):
 
 def fabrique_reelle(config: Settings) -> FabriqueAgent:
     """L'agent servi : modèle ``complex`` pour répondre, ``simple`` pour choisir les outils utiles."""
-    principal = modele(config, Tache.COMPLEX)
+    # Raisonnement court : chaque appel de l'agent est plus rapide, le raisonnement reste affiché.
+    principal = modele(config, Tache.COMPLEX, raisonnement="low")
     selecteur = modele(config, Tache.SIMPLE, max_tokens=300) if config.selection_outils else None
 
     def fabriquer(outils: Sequence[BaseTool], checkpointer: InMemorySaver) -> CompiledStateGraph[Any, Any, Any, Any]:

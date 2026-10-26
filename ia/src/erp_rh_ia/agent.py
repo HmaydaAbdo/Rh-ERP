@@ -16,9 +16,12 @@ fois, puis remplacée par une abstention. L'état ``verification``
 (``en_cours`` puis ``verifiee`` ou ``abstention``) est partagé avec l'interface.
 """
 
+import json
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Annotated, Any, Literal, NotRequired
+from importlib import resources
+from typing import Annotated, Any, Literal, NotRequired, cast
 
+from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -77,7 +80,58 @@ REECRITURE = (
     "reprenant que des valeurs des outils, sans aucun calcul."
 )
 
+#: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
+CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
+- Tous les textes sont en français.
+- Chaque valeur affichée (montant, effectif, nombre, période) est reprise telle quelle d'un résultat d'outil de la
+  conversation, avec son unité : MAD pour les montants. Ne calcule rien : ni total, ni moyenne, ni écart, ni
+  pourcentage. Une valeur absente des outils n'apparaît pas.
+- Utilise uniquement les composants du catalogue fourni (Text, Row, Column, List, Card, Divider…) ; un tableau se
+  compose avec des Row et des Column, des titres avec Text et sa variante.
+- Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
+
 Verification = Literal["en_cours", "verifiee", "abstention"]
+
+
+def _parametres_a2ui() -> dict[str, Any]:
+    """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
+    copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) pour valider chaque surface et la faire
+    reprendre par le sous-agent tant qu'elle n'est pas conforme, et les consignes de l'ERP."""
+    fichier = resources.files("erp_rh_ia").joinpath("catalogue_a2ui_base.json")
+    catalogue = json.loads(fichier.read_text(encoding="utf-8"))
+    return {
+        "catalog": {"components": catalogue["components"]},
+        "guidelines": {
+            "design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}",
+            "composition_guide": _guide_composition(catalogue["components"]),
+        },
+    }
+
+
+#: Composants de présentation proposés au sous-agent : les surfaces de l'ERP sont en lecture seule.
+_COMPOSANTS_SURFACE = ("Text", "Row", "Column", "List", "Card", "Divider", "Icon", "Tabs")
+
+
+def _guide_composition(composants: dict[str, Any]) -> str:
+    """Le guide de composition du sous-agent, lu dans le catalogue : chaque composant de présentation, ses propriétés
+    (requises marquées) et leurs valeurs admises ; quelques centaines de jetons au lieu du schéma complet."""
+    lignes = ["## Composants disponibles (catalogue de base A2UI v0.9)"]
+    for nom in _COMPOSANTS_SURFACE:
+        schema: dict[str, Any] = composants[nom]
+        proprietes: dict[str, Any] = {}
+        requises: set[str] = set()
+        for partie in [schema, *schema.get("allOf", [])]:
+            proprietes.update(partie.get("properties", {}))
+            requises.update(partie.get("required", []))
+        details: list[str] = []
+        for cle, definition in proprietes.items():
+            if cle == "component":
+                continue
+            valeurs = cast(list[str], definition.get("enum", [])) if isinstance(definition, dict) else []
+            libelle = f"{cle} (requis)" if cle in requises else cle
+            details.append(f"{libelle} : {', '.join(valeurs)}" if valeurs else libelle)
+        lignes.append(f"- {nom} : {' ; '.join(details)}")
+    return "\n".join(lignes)
 
 
 class EtatVerification(AgentState[Any]):
@@ -146,7 +200,7 @@ def creer_agent(
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question."""
     intergiciels: list[AgentMiddleware[Any, Any]] = [
-        CopilotKitMiddleware(),
+        CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
         ToolCallLimitMiddleware(run_limit=appels_outils),
