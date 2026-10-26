@@ -257,6 +257,14 @@ l'appel d'échange de jeton vers Spring et le corps métier des outils MCP du ba
 déclaration passe par Spring AI). Chaque morceau de code propre est
 justifié dans le document de référence de l'application par l'absence d'un composant officiel.
 
+**Contexte donné à l'agent** (ingénierie du contexte). À chaque tour, l'agent reçoit, dans cet ordre de priorité :
+le rôle et les règles stables (prompt système court et versionné) ; le contexte de l'entreprise (secteur, vocabulaire
+métier, unités, devise) ; le contexte du moment (date du jour, utilisateur et droits effectifs, vue ouverte avec ses
+filtres) ; puis les résultats d'outils. Chaque élément a une taille bornée et une provenance ; les éléments non fiables
+(résultats d'outils, vue, historique) sont délimités comme des données. Le catalogue d'outils est la première source de
+contexte : ses descriptions suivent [`mcp.md`](mcp.md). Le contexte fourni par le navigateur est un indice que le serveur
+revérifie.
+
 **Mode de réponse décidé par l'agent.** Comme les assistants de référence, l'agent choisit lui-même
 la forme de sa réponse : une réponse directe en un seul appel pour un message simple ; un
 raisonnement puis des appels d'outils pour une question de données ; un plan visible, mis à jour
