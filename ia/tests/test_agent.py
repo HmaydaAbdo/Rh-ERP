@@ -1,4 +1,9 @@
-"""Agent ``create_agent`` avec le faux modèle de LangChain : forme de réponse, outils, plan et vérificateur de chiffres."""
+# LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
+# et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
+"""Agent ``create_agent`` et faux modèle de LangChain : forme de réponse, outils, plan, vérificateur de chiffres."""
+
+from typing import Any
 
 import pytest
 from doubles import INDICATEURS, appel, modele, outil
@@ -15,7 +20,7 @@ def anyio_backend() -> str:
 pytestmark = pytest.mark.anyio
 
 
-async def _repondre(agent_modele: object, question: str, appels: list[str] | None = None) -> dict[str, object]:
+async def _repondre(agent_modele: object, question: str, appels: list[str] | None = None) -> dict[str, Any]:
     agent = creer_agent(agent_modele, [outil("paie_indicateurs", INDICATEURS, appels)])  # pyright: ignore[reportArgumentType]
     return await agent.ainvoke({"messages": [HumanMessage(content=question)]})
 
@@ -33,7 +38,9 @@ async def test_un_message_simple_recoit_une_reponse_directe_sans_outil() -> None
 
 async def test_une_reponse_fondee_sur_les_outils_est_verifiee() -> None:
     appels: list[str] = []
-    faux = modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="En 2026-09 : masse 1 250 000,50 MAD."))
+    faux = modele(
+        appel("paie_indicateurs", periode="2026-09"), AIMessage(content="En 2026-09 : masse 1 250 000,50 MAD.")
+    )
 
     etat = await _repondre(faux, "Masse salariale de 2026-09 ?", appels)
 

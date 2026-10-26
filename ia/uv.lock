@@ -58,6 +58,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aimock-pytest"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/85/7c/8745f5444a86fb7a9000a05329be6c8d03be705fa85d2605713b05890027/aimock_pytest-0.7.0.tar.gz", hash = "sha256:a1f2e0a5da0292937883e0eecadcda19fe735db5375b6b6d8f9f3ce8868d3c7a", size = 38128, upload-time = "2026-10-10T15:46:29.975Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/94/5a4ac0e1629f9967a35995812ac68f3c846df2bb35bb6fca64b0b1f3bba2/aimock_pytest-0.7.0-py3-none-any.whl", hash = "sha256:23b0b1d622e89ee86779e3b3208e99fa89d633f9f365e24e79630057a44cc951", size = 18065, upload-time = "2026-10-10T15:46:28.452Z" },
+]
+
+[[package]]
 name = "aiofile"
 version = "3.12.3"
 source = { registry = "https://pypi.org/simple" }
@@ -490,6 +502,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "agentevals" },
+    { name = "aimock-pytest" },
     { name = "openevals" },
     { name = "pyright" },
     { name = "pytest" },
@@ -516,6 +529,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "agentevals", specifier = ">=0.0.9" },
+    { name = "aimock-pytest", specifier = ">=0.7.0" },
     { name = "openevals", specifier = ">=0.2.2" },
     { name = "pyright" },
     { name = "pytest" },

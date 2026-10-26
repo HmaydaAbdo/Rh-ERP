@@ -1,7 +1,10 @@
+# LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
+# et seulement pour ce fichier.
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 import json
+from typing import Any, cast
 
-from erp_rh_ia.agent import ReponseAgent
-from erp_rh_ia.evaluation import JEU, cite, extraire, juger, remplir, synthese
+from erp_rh_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, synthese
 
 
 def test_le_jeu_de_reference_est_complet_et_coherent() -> None:
@@ -39,10 +42,11 @@ def test_une_valeur_est_citee_quel_que_soit_son_format() -> None:
 
 
 def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
-    reponse = ReponseAgent(texte="Masse : 3 000 MAD.", abstention=False, outils=["paie_indicateurs"])
+    reponse = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_indicateurs"], outil_attendu_appele=True)
     assert juger("reponse", "paie_indicateurs", [("nombre", 3000)], reponse) == (True, "conforme")
-    # Valeur juste par un autre outil : réussite signalée ; valeur fausse : échec.
-    succes, raison = juger("reponse", "employes_compter", [("nombre", 3000)], reponse)
+    # Valeur juste par un autre outil (trajectoire agentevals non conforme) : réussite signalée ; valeur fausse : échec.
+    autre = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_indicateurs"], outil_attendu_appele=False)
+    succes, raison = juger("reponse", "employes_compter", [("nombre", 3000)], autre)
     assert succes and "sans employes_compter" in raison
     assert not juger("reponse", "paie_indicateurs", [("nombre", 3100)], reponse)[0]
     assert not juger("abstention", None, [], reponse)[0]
@@ -51,8 +55,11 @@ def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
         False,
         "vérité absente des données synthétiques",
     )
-    refus = ReponseAgent(
-        texte="Vous n'avez pas le droit de voir la paie.", abstention=False, outils=["paie_indicateurs"]
+    refus = Reponse(
+        "Vous n'avez pas le droit de voir la paie.",
+        abstention=False,
+        outils=["paie_indicateurs"],
+        outil_attendu_appele=True,
     )
     assert juger("refus", None, [], refus)[0]
 
@@ -65,3 +72,27 @@ def test_la_synthese_calcule_exactitude_et_latences() -> None:
     assert bilan["latence_p50"] == 3.0
     assert bilan["latence_p95"] == 4.0
     assert bilan["par_type"] == {"reponse": "1/2"}
+
+
+def test_la_trajectoire_attendue_est_controlee_par_agentevals() -> None:
+    import asyncio
+
+    from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+    from erp_rh_ia.evaluation import _TRAJECTOIRE  # pyright: ignore[reportPrivateUsage]
+
+    messages = [
+        HumanMessage(content="Masse ?"),
+        AIMessage(content="", tool_calls=[{"id": "a1", "name": "paie_indicateurs", "args": {"periode": "2026-09"}}]),
+        ToolMessage(content="{}", tool_call_id="a1"),
+        AIMessage(content="Masse : 3 000 MAD."),
+    ]
+    attendu = [AIMessage(content="", tool_calls=[{"id": "r", "name": "paie_indicateurs", "args": {}}])]
+    autre = [AIMessage(content="", tool_calls=[{"id": "r", "name": "employes_compter", "args": {}}])]
+
+    def score(reference: list[AIMessage]) -> bool:
+        resultat = asyncio.run(_TRAJECTOIRE(outputs=messages, reference_outputs=reference))
+        return bool(cast(dict[str, Any], resultat)["score"])
+
+    assert score(attendu)
+    assert not score(autre)

@@ -76,7 +76,9 @@ def verifier_question(entree: RunAgentInput) -> None:
         )
 
 
-async def evenements(entree: RunAgentInput, fabrique: FabriqueAgent, outils: Sequence[BaseTool]) -> AsyncGenerator[BaseEvent]:
+async def evenements(
+    entree: RunAgentInput, fabrique: FabriqueAgent, outils: Sequence[BaseTool]
+) -> AsyncGenerator[BaseEvent]:
     """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail."""
     demarre = False
     try:
@@ -116,7 +118,9 @@ class AccesSpring:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
 
 
-def routeur_agui(fabrique: Callable[[], FabriqueAgent], acces: Callable[[], AccesErp], actif: Callable[[], bool]) -> APIRouter:
+def routeur_agui(
+    fabrique: Callable[[], FabriqueAgent], acces: Callable[[], AccesErp], actif: Callable[[], bool]
+) -> APIRouter:
     routeur = APIRouter()
 
     @routeur.post("/agui")

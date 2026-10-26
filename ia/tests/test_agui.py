@@ -68,7 +68,9 @@ def _lire(flux: str) -> list[dict[str, Any]]:
     return [json.loads(ligne[6:]) for ligne in flux.splitlines() if ligne.startswith("data: ")]
 
 
-def _poster(faux: ModeleScripte, acces: AccesSimule, corps: dict[str, Any], enabled: bool = True, jeton: str | None = "c"):
+def _poster(
+    faux: ModeleScripte, acces: AccesSimule, corps: dict[str, Any], enabled: bool = True, jeton: str | None = "c"
+):
     entetes = {"Accept": "text/event-stream"} | ({"Authorization": f"Bearer {jeton}"} if jeton else {})
     with TestClient(creer_app(_settings(enabled), fabrique=_fabrique(faux), acces=acces)) as client:
         return client.post("/agui", json=corps, headers=entetes)
@@ -77,8 +79,11 @@ def _poster(faux: ModeleScripte, acces: AccesSimule, corps: dict[str, Any], enab
 def _masse() -> ModeleScripte:
     raisonnement = {"reasoning_content": "L'utilisateur demande la masse de 2026-09 : je lis les indicateurs."}
     return modele(
-        AIMessage(content="", additional_kwargs=raisonnement, tool_calls=[{"id": "a1", "name": "paie_indicateurs",
-                                                                         "args": {"periode": "2026-09"}}]),
+        AIMessage(
+            content="",
+            additional_kwargs=raisonnement,
+            tool_calls=[{"id": "a1", "name": "paie_indicateurs", "args": {"periode": "2026-09"}}],
+        ),
         AIMessage(content=REPONSE),
     )
 

@@ -26,6 +26,7 @@ dev = [
     "pyright",
     "openevals>=0.2.2",
     "agentevals>=0.0.9",
+    "aimock-pytest>=0.7.0",
 ]
 
 [build-system]
