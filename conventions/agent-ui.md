@@ -227,6 +227,39 @@ sous-titres. Toute future sortie vocale sera pilotée par le client, révocable 
 par l'utilisateur et accompagnée d'une transcription. Les paramètres vocaux ne sont pas ajoutés au
 contrat de mascotte avant décision et revue spécifiques.
 
+## Expérience de confiance
+
+Ces principes s'appliquent à tout mode, du panneau à l'espace immersif :
+
+* **Identifier l'IA.** L'utilisateur voit qu'il échange avec une IA, ce qu'elle sait faire, ce qu'elle
+  ne fait pas, quelles données elle consulte et combien de temps ses échanges sont conservés. Un
+  premier usage présente ces limites en quelques lignes, avec des exemples de questions utiles.
+* **Montrer d'où vient la réponse.** Chaque chiffre principal porte sa période, son périmètre et la
+  définition de l'indicateur ; les outils consultés restent visibles dans les étapes. L'hypothèse
+  retenue pour une question imprécise est affichée et modifiable.
+* **Dire l'incertitude.** Une abstention explique ce qui manque et propose l'écran classique ; une
+  réponse partielle dit ce qu'elle ne couvre pas. Pas de ton assuré sur une réponse non vérifiée.
+* **Rendu sûr.** Le texte du modèle est affiché comme du texte. Aucun HTML, markdown actif, lien,
+  image ou URL issu du modèle n'est interprété : ce serait un canal d'exfiltration de données. Les liens
+  utiles sont construits par le client depuis des routes connues.
+* **Garder la main.** Arrêter, reformuler, relancer, copier une réponse et revenir à l'écran
+  précédent sont toujours possibles. Une demande de précision de l'agent se répond en un clic quand
+  les choix sont connus.
+* **Contexte d'écran.** Le client peut transmettre la vue courante (module, filtres, sélection) pour
+  résoudre « ce chantier » ou « ce mois ». Ce contexte est un indice non fiable : il ne donne aucun
+  droit, et le serveur revérifie chaque identifiant reçu.
+* **Conversations.** L'utilisateur retrouve ses conversations récentes, peut en commencer une
+  nouvelle et les supprimer ; la durée de conservation est indiquée. Une conversation d'un autre
+  utilisateur n'est jamais accessible.
+* **Retours.** Chaque réponse peut être signalée comme utile, fausse ou incomplète, avec un motif
+  court ; le signalement d'une réponse fausse indique la suite donnée.
+* **Latence perçue.** Un premier signe de progression apparaît en moins d'une seconde après l'envoi ;
+  les étapes réelles remplacent un indicateur vide. Les objectifs chiffrés de latence sont fixés par
+  mesure et validés (voir « Objectifs de service » dans [`agents-ia.md`](agents-ia.md)).
+* **Langues.** Les questions peuvent arriver en français, en arabe ou en darija. L'interface gère la
+  saisie et l'affichage de droite à gauche lorsque l'arabe est pris en charge ; la langue de réponse
+  suit celle de la question ou la préférence de l'utilisateur.
+
 ## UX de référence et interruption
 
 L'expérience proposée pour ERP-RH est un accès discret à un panneau contextuel latéral, adapté au
@@ -304,6 +337,9 @@ La convention `testing.md` s'applique. Chaque implémentation ajoute au minimum 
   erreur et reprise ;
 * tests renderer des composants autorisés, composants refusés, limites et fallback ;
 * tests clavier, focus, lecteur d'écran, responsive, mouvement réduit et expérience sans mascotte ;
+* tests de rendu sûr : une réponse contenant HTML, markdown, lien ou image est affichée comme texte ;
+* tests de conversation : reprise, suppression, isolation entre utilisateurs et contexte d'écran
+  refusé lorsqu'il désigne un élément hors périmètre ;
 * contrôles de performance (temps premier rendu, débit/taille des événements, mémoire, fréquence de
   rendu et poids réel des assets/runtime) sur les appareils cibles ;
 * évaluation déterministe de sécurité/schéma séparée de l'évaluation probabiliste de qualité.
