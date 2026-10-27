@@ -292,6 +292,7 @@ Autres points non terminés, gardés ouverts :
 | Évaluation de l'agent étendue (cas complexes, tri, questions à l'utilisateur) | ⬜ |
 | Historique SQLite du runtime : pas d'expiration | ⬜ |
 | Lint : dette d'accessibilité du frontend (23 avertissements plafonnés), lint Java et runtime Node | ⬜ |
+| Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) à isoler | ⬜ |
 
 ### Journal
