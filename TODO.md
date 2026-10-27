@@ -105,9 +105,8 @@ restent à recueillir avant diffusion. Le premier import réel et les décisions
 **Heures supplémentaires (2026-10-27, branche locale `codex/heures-supp`)** : le domaine ajoute l'import mensuel par chantier,
 les grandeurs figées, les forfaits, les règles STC, les permissions V39/V40 et les outils MCP en lecture seule. Ses vues Cartes
 et Analytique étendent les composants partagés par agrégats filtrés. Compilation backend et build frontend production réussis
-localement ; aucune suite de tests n'a été lancée. Avant une PR : revoir le wizard et ses filtres, corriger la ligne HS vide
-(ligne Excel 986) du classeur reçu et finaliser la preuve/audit de migration. Ne pas pousser ni déclencher la CI sans demande
-explicite du propriétaire.
+  localement ; la couverture métier, RBAC, OpenAPI, MCP et UI accompagne le domaine. Le classeur d'exemple doit avoir sa ligne HS 986
+  complétée ou supprimée avant un import réel.
 
 - [ ] **Équipe — support de formation** : préparer ultérieurement une présentation et une vidéo de démonstration du domaine. Ce travail n'est pas planifié pour le moment.
 

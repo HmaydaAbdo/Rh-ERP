@@ -7,7 +7,7 @@ public record HeuresSuppImportResultDto(
         YearMonth periode,
         Long chantierId,
         int lignesHeures,
-        int lignesZeroIgnorees,
+        int lignesZero,
         int forfaitsSeuls,
         int remplacements,
         BigDecimal heuresTotales,

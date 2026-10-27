@@ -6,6 +6,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { finalize } from 'rxjs';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
@@ -34,7 +35,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
       @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
       @if (resultat(); as bilan) {
         <section class="hs-import__success" role="status">
-          <p class="hs-import__eyebrow">IMPORT TERMINÉ</p><h2>{{ bilan.lignesHeures }} lignes · {{ bilan.lignesZeroIgnorees }} ligne(s) à zéro ignorée(s)</h2>
+          <p class="hs-import__eyebrow">IMPORT TERMINÉ</p><h2>{{ bilan.lignesHeures }} lignes importées · {{ bilan.lignesZero }} à 0</h2>
           <p>{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.2-2' }} DH</p>
           <a stp-button variant="primary" routerLink="/heures-supp">Voir les heures supplémentaires</a>
         </section>
@@ -42,15 +43,16 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
         <section class="hs-import__panel" aria-labelledby="hs-context-title">
           <p class="hs-import__eyebrow">ÉTAPE 1 / 3</p><h2 id="hs-context-title">Choisir le mois et le chantier</h2>
           <div class="hs-import__grid">
-            <label>Mois de la paie <stp-month-input ariaLabel="Mois à importer" [value]="mois()" (valueChange)="mois.set($event)" /></label>
-            <label>Chantier <app-lazy-select ariaLabel="Chantier à importer" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierId()" (valueChange)="choisirChantier($event)" /></label>
+            <label for="hs-import-periode">Mois de la paie <stp-month-input inputId="hs-import-periode" ariaLabel="Mois à importer" [value]="mois()" (valueChange)="mois.set($event)" /></label>
+            <label for="hs-import-chantier">Chantier <app-lazy-select inputId="hs-import-chantier" ariaLabel="Chantier à importer" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierId()" (valueChange)="choisirChantier($event)" /></label>
           </div>
           <div class="hs-import__actions"><button stp-button variant="primary" type="button" [loading]="chargement()" [disabled]="!mois() || !chantierId()" (click)="verifierContexte()">Vérifier la paie et continuer</button></div>
         </section>
       } @else if (etape() === 2) {
         <section class="hs-import__panel" aria-labelledby="hs-file-title">
           <p class="hs-import__eyebrow">ÉTAPE 2 / 3 · {{ periode() }} · {{ chantierLibelle() }}</p><h2 id="hs-file-title">Déposer le pointage et saisir les forfaits</h2>
-          <p>Excel attendu : <strong>Nom, Prenom, CIN, Funct, HS</strong>. Les lignes HS à zéro sont ignorées. Le fichier reste contrôlé par CIN et les valeurs de l’Employé et de la Paie.</p>
+          <p>Excel attendu : <strong>Nom, Prenom, CIN, Funct, HS</strong>. HS peut être égal à zéro ; ces lignes sont conservées avec un montant nul. Le fichier reste contrôlé par CIN et les valeurs de l’Employé et de la Paie.</p>
+          <div class="hs-import__template"><button stp-button variant="secondary" icon="file-spreadsheet" type="button" [loading]="telechargementModele()" (click)="telechargerModele()">Télécharger le modèle Excel</button><small>Commencez avec ce fichier pour respecter les colonnes et le format attendus.</small></div>
           <label class="hs-import__file">Fichier Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="choisirFichier($event)" /></label>
           <label class="hs-import__forfaits">Forfaits supplémentaires — une ligne par employé, format <code>CIN;montant</code>
             <textarea rows="4" [value]="texteForfaits()" (input)="texteForfaits.set(inputValue($event))" placeholder="AB12345;500"></textarea>
@@ -61,7 +63,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
       } @else if (analyse(); as a) {
         <section class="hs-import__panel" aria-labelledby="hs-review-title">
           <p class="hs-import__eyebrow">ÉTAPE 3 / 3 · {{ a.periode }} · {{ chantierLibelle() }}</p><h2 id="hs-review-title">Contrôler avant import</h2>
-          <div class="hs-import__totals"><span>{{ a.totalLignes }} lignes lues</span><span>{{ a.lignesZeroIgnorees }} lignes HS = 0 ignorées</span><span>{{ a.lignes.length }} employés / forfaits</span><strong>Import {{ a.pret ? 'prêt' : 'bloqué' }}</strong></div>
+          <div class="hs-import__totals"><span>{{ a.totalLignes }} lignes lues</span><span>{{ a.lignesZero }} lignes HS = 0 conservées</span><span>{{ a.lignes.length }} employés / forfaits</span><strong>Import {{ a.pret ? 'prêt' : 'bloqué' }}</strong></div>
           @if (a.erreurs.length) { <stp-message severity="error"><p>Corrigez les éléments suivants avant l’import :</p><ul>@for (message of a.erreurs; track $index) { <li>{{ message }}</li> }</ul></stp-message> }
           @for (ligne of a.lignes; track ligne.cin) {
             @if (ligne.employeId === null) {
@@ -98,7 +100,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
     :host{display:block;padding:clamp(1rem,3vw,2.5rem);color:var(--color-text)}
     .hs-import{max-width:1100px;margin:auto}.hs-import__header{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem}.hs-import__header h1{margin:.15rem 0;font-size:clamp(1.5rem,3vw,2.25rem)}.hs-import__header p{margin:.4rem 0;color:var(--color-text-muted)}
     .hs-import__eyebrow{font-size:.72rem;letter-spacing:.12em;color:var(--color-primary);font-weight:700}.hs-import__steps{display:flex;gap:.5rem;list-style:none;padding:0;margin:1rem 0 1.5rem}.hs-import__steps li{flex:1;padding:.85rem 1rem;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);color:var(--color-text-muted)}.hs-import__steps li.active{border-color:var(--color-primary);color:var(--color-text);box-shadow:0 0 0 1px color-mix(in srgb,var(--color-primary) 25%,transparent)}.hs-import__steps span{color:var(--color-primary);font-weight:700;margin-right:.5rem}
-    .hs-import__panel,.hs-import__success{border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:clamp(1rem,3vw,2rem);background:var(--color-surface-alt);box-shadow:var(--shadow-md)}.hs-import__panel h2,.hs-import__success h2{margin:.2rem 0 1rem}.hs-import__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}.hs-import label{display:grid;gap:.45rem;font-weight:600}.hs-import input:not([type=checkbox]),.hs-import select,.hs-import textarea{width:100%;min-height:2.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.6rem .75rem;background:var(--color-surface);color:var(--color-text)}.hs-import textarea{min-height:auto}.hs-import__file,.hs-import__forfaits{margin:1.2rem 0}.hs-import__actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;margin-top:1.5rem}.hs-import__totals{display:flex;gap:.75rem;flex-wrap:wrap;padding:1rem;border-radius:var(--radius-lg);background:var(--color-surface);margin:1rem 0}.hs-import__totals>*{padding:.25rem .65rem;border:1px solid var(--color-border);border-radius:99px}.hs-import__correction{padding:1rem;margin:1rem 0;border:1px solid var(--color-warning);border-radius:var(--radius-lg);background:var(--color-surface)}.hs-import__correction span,.hs-import__correction small,.hs-import__table small{display:block;color:var(--color-text-muted)}.hs-import__aligner{display:flex!important;align-items:center;padding:1rem;border:1px solid var(--color-warning);border-radius:var(--radius-lg);margin:.75rem 0}.hs-import__table{margin-top:1rem}.hs-import__overflow{overflow:auto}.hs-import__success{text-align:center;margin-top:2rem}
+    .hs-import__panel,.hs-import__success{border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:clamp(1rem,3vw,2rem);background:var(--color-surface-alt);box-shadow:var(--shadow-md)}.hs-import__panel h2,.hs-import__success h2{margin:.2rem 0 1rem}.hs-import__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}.hs-import label{display:grid;gap:.45rem;font-weight:600}.hs-import input:not([type=checkbox]),.hs-import select,.hs-import textarea{width:100%;min-height:2.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.6rem .75rem;background:var(--color-surface);color:var(--color-text)}.hs-import textarea{min-height:auto}.hs-import__file,.hs-import__forfaits{margin:1.2rem 0}.hs-import__template{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0}.hs-import__template small{color:var(--color-text-muted)}.hs-import__actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;margin-top:1.5rem}.hs-import__totals{display:flex;gap:.75rem;flex-wrap:wrap;padding:1rem;border-radius:var(--radius-lg);background:var(--color-surface);margin:1rem 0}.hs-import__totals>*{padding:.25rem .65rem;border:1px solid var(--color-border);border-radius:99px}.hs-import__correction{padding:1rem;margin:1rem 0;border:1px solid var(--color-warning);border-radius:var(--radius-lg);background:var(--color-surface)}.hs-import__correction span,.hs-import__correction small,.hs-import__table small{display:block;color:var(--color-text-muted)}.hs-import__aligner{display:flex!important;align-items:center;padding:1rem;border:1px solid var(--color-warning);border-radius:var(--radius-lg);margin:.75rem 0}.hs-import__table{margin-top:1rem}.hs-import__overflow{overflow:auto}.hs-import__success{text-align:center;margin-top:2rem}
     @media(max-width:650px){.hs-import__steps{display:grid}.hs-import__header{flex-wrap:wrap}}
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -115,6 +117,7 @@ export class HeuresSuppImportComponent {
   protected readonly resultat = signal<HeuresSuppImportResult | null>(null);
   protected readonly erreur = signal<string | null>(null);
   protected readonly chargement = signal(false);
+  protected readonly telechargementModele = signal(false);
   protected readonly peutRemplacer = computed(() => {
     const erreurs = this.analyse()?.erreurs ?? [];
     return erreurs.length > 0 && erreurs.every((message) => message.includes('existe déjà'));
@@ -126,6 +129,21 @@ export class HeuresSuppImportComponent {
   protected readonly periode = computed(() => { const d = this.mois(); return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : ''; });
 
   protected choisirChantier(value: unknown): void { this.chantierId.set(typeof value === 'number' ? value : null); }
+  protected telechargerModele(): void {
+    if (this.telechargementModele()) return;
+    this.telechargementModele.set(true);
+    this.service.telechargerModele().pipe(finalize(() => this.telechargementModele.set(false))).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const lien = document.createElement('a');
+        lien.href = url;
+        lien.download = 'Modele_Heures_Supplementaires.xlsx';
+        lien.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.erreur.set('Le modèle Excel n’a pas pu être téléchargé. Réessayez.')
+    });
+  }
   protected inputValue(event: Event): string { return (event.target as HTMLInputElement).value; }
   protected nombreValue(event: Event): number { return Number(this.inputValue(event)); }
   protected choisirFichier(event: Event): void { this.fichier.set((event.target as HTMLInputElement).files?.[0] ?? null); this.analyse.set(null); }

@@ -9,7 +9,7 @@ public record HeuresSuppImportAnalyseDto(
         YearMonth periode,
         Long chantierId,
         int totalLignes,
-        int lignesZeroIgnorees,
+        int lignesZero,
         List<Ligne> lignes,
         List<String> erreurs,
         boolean pret

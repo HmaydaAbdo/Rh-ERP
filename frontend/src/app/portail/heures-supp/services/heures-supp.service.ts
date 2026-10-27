@@ -25,6 +25,10 @@ export class HeuresSuppService {
     return this.http.get<HeuresSuppImportPrerequis>(`${this.baseUrl}/import/prerequis`, { params: { periode, chantierId } });
   }
 
+  telechargerModele(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/import/modele`, { responseType: 'blob' });
+  }
+
   analyserImport(file: File, periode: string, chantierId: number, forfaits: HeuresSuppImportForfait[] = []): Observable<HeuresSuppImportAnalyse> {
     const data = this.importForm(file, forfaits);
     return this.http.post<HeuresSuppImportAnalyse>(`${this.baseUrl}/import/analyse`, data, { params: { periode, chantierId } });

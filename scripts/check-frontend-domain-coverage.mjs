@@ -15,7 +15,7 @@ const domains = [
       || (path.startsWith('src/app/portail/admin/') && !path.startsWith('src/app/portail/admin/parametres/'))
   },
   // Cartes et Analytique partagées par les cinq modules (ADR 0011) : un domaine à part entière, avec les mêmes seuils.
-  ...['employee', 'function', 'chantier', 'equipe', 'paie', 'audit', 'perimetre'].map((domain) => ({
+  ...['employee', 'function', 'chantier', 'equipe', 'paie', 'heures-supp', 'audit', 'perimetre'].map((domain) => ({
     name: domain,
     matches: (path) => path.startsWith(`src/app/portail/${domain}/`)
   })),

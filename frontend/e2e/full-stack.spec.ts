@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
 
 const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8080';
@@ -71,6 +73,42 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisCourant = `${maintenant.getUTCFullYear()}-${String(maintenant.getUTCMonth() + 1).padStart(2, '0')}`;
   const moisPrecedentDate = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - 1, 1));
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  // Heures supplémentaires : la paie du mois est créée avant le wizard, puis le vrai classeur traverse l'API et les vues.
+  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: 'Conductrice HS' });
+  const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
+    nomPrenom: 'Alaoui Salma', cin: 'HSFULLSTACK', dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
+    fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id, salaire: 4000, typeSalaire: 'MENSUEL'
+  });
+  await api(page, adminToken, 'POST', '/paie', {
+    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id,
+    nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null,
+    salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000,
+    observation: `Présence Heures supplémentaires ${suffixe}`
+  });
+  const prerequisHs = await api<{ pret: boolean }>(page, adminToken, 'GET',
+    `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantier.id}`);
+  expect(prerequisHs.pret).toBe(true);
+  const fichierHs = readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx'));
+  const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantier.id}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    multipart: { file: { name: 'heures-supp-full-stack.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: fichierHs } }
+  });
+  expect(importHs.ok(), `POST /heures-supp/import: ${await importHs.text()}`).toBeTruthy();
+  const bilanHs = await importHs.json() as { lignesHeures: number; heuresTotales: number; montantTotalDh: number; netTotalDh: number };
+  expect(bilanHs).toMatchObject({ lignesHeures: 1, heuresTotales: 2, montantTotalDh: 30.77, netTotalDh: 30.77 });
+  const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
+    page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantier.id] }
+  );
+  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: 'HSFULLSTACK', montantDh: 30.77, salaireHoraireDh: 15.3846153846 })]);
+  const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
+    page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantier.id] }
+  );
+  expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30.77 });
+  await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantier.id}`);
+  await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
+  await expect(page.getByText('HSFULLSTACK')).toBeVisible();
+
   await api(page, adminToken, 'POST', '/paie', {
     employeeId: employe.id,
     periode: moisPrecedent,

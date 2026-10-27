@@ -213,14 +213,14 @@ public class HeuresSuppImportService {
         }
         repository.saveAll(enregistrements);
         repository.flush();
-        return new HeuresSuppImportResultDto(periode, chantierId, lignes.size(), classeur.lignesZeroIgnorees(), forfaitsSeuls, remplacements,
+        return new HeuresSuppImportResultDto(periode, chantierId, lignes.size(), classeur.lignesZero(), forfaitsSeuls, remplacements,
                 totalHeures, totalMontant, totalStc, totalForfait, totalNet);
     }
 
     private HeuresSuppImportAnalyseDto analyser(FichierHeuresSupp classeur, YearMonth periode, Long chantierId,
                                                  Map<String, BigDecimal> forfaits, boolean remplacement) {
         return analyser(classeur.lignes(), periode, chantierId, forfaits, remplacement,
-                classeur.lignesZeroIgnorees(), classeur.totalLignes());
+                classeur.lignesZero(), classeur.totalLignes());
     }
 
     private HeuresSuppImportAnalyseDto analyser(List<LigneFichierHeuresSupp> lignes, YearMonth periode, Long chantierId,
@@ -230,7 +230,7 @@ public class HeuresSuppImportService {
 
     private HeuresSuppImportAnalyseDto analyser(List<LigneFichierHeuresSupp> lignes, YearMonth periode, Long chantierId,
                                                  Map<String, BigDecimal> forfaits, boolean remplacement,
-                                                 int lignesZeroIgnorees, int totalLignes) {
+                                                 int lignesZero, int totalLignes) {
         verifierPrerequisOuEchec(periode, chantierId);
         Map<String, DossierLigne> dossiers = constituerDossiers(lignes, periode, chantierId, forfaits, remplacement);
         List<String> erreurs = new ArrayList<>();
@@ -254,7 +254,7 @@ public class HeuresSuppImportService {
                     dossier.heures == null, dossier.heures, dossier.salaireHoraire, montant, dossier.stcOuSortie,
                     stc, forfait, net, erreursLigne));
         }
-        return new HeuresSuppImportAnalyseDto(periode, chantierId, totalLignes, lignesZeroIgnorees, resultats, erreurs, erreurs.isEmpty());
+        return new HeuresSuppImportAnalyseDto(periode, chantierId, totalLignes, lignesZero, resultats, erreurs, erreurs.isEmpty());
     }
 
     private Map<String, DossierLigne> constituerDossiers(List<LigneFichierHeuresSupp> lignes, YearMonth periode,
