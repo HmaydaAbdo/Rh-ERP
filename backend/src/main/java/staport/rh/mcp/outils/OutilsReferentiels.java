@@ -9,7 +9,6 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -59,13 +58,21 @@ public class OutilsReferentiels {
     /** Statut d'un chantier dans le vocabulaire de l'interface. */
     public enum StatutChantier { EN_COURS, CLOTURE }
 
+    /** Critère de tri des chantiers. */
+    public enum TriChantier { CODE, NOM, DESIGNATION }
+
+    /** Critère de tri des équipes. */
+    public enum TriEquipe { CODE, LIBELLE }
+
     @McpTool(name = "chantier_rechercher", title = "Rechercher des chantiers", generateOutputSchema = true,
             description = """
                     Trouve des chantiers (sites de construction) par leur code, nom ou désignation, éventuellement filtrés par statut. \
                     À utiliser en premier dès que la question cite un chantier par son nom ou son code : l'identifiant rendu (`id`) \
                     sert ensuite de filtre `chantierIds` aux outils Paie et Employé, ou de paramètre de `chantier_fiche`. \
                     Rend, pour chaque chantier : id, code, désignation, nom, origine ERP et statut (EN_COURS ou CLOTURE), plus le \
-                    nombre total trouvé. 20 résultats au plus ; si `total` dépasse ce qui est rendu, affiner la recherche.""",
+                    nombre total trouvé. 20 résultats au plus par page ; si `total` dépasse ce qui est rendu, affiner la \
+                    recherche ou parcourir les pages (`page`). Triable : `tri` CODE (défaut), NOM ou DESIGNATION, `sens` ASC \
+                    ou DESC.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('CHANTIER_READ')")
@@ -75,20 +82,25 @@ public class OutilsReferentiels {
                     + "« C-1042 » ou « Casablanca ». Absent = tous les chantiers.") @Size(max = 100) String recherche,
             @McpToolParam(required = false, description = "EN_COURS (chantier actif) ou CLOTURE. Absent = les deux.")
             StatutChantier statut,
-            @McpToolParam(required = false, description = "Nombre de chantiers rendus, de 1 à 20, 10 par défaut.")
-            @Min(1) @Max(LIMITE) Integer limite) {
+            @McpToolParam(required = false, description = "Nombre de chantiers rendus par page, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(LIMITE) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri : CODE (défaut), NOM ou DESIGNATION.")
+            TriChantier tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
         String texte = texte(recherche);
         Boolean actif = statut == null ? null : statut == StatutChantier.EN_COURS;
-        Page<ChantierResponseDto> page = chantiers.search(new ChantierSearchCriteria(null, null, texte, actif),
-                page(limite, "code"));
+        String critere = (tri == null ? TriChantier.CODE : tri).name().toLowerCase(java.util.Locale.ROOT);
+        Page<ChantierResponseDto> resultats = chantiers.search(new ChantierSearchCriteria(null, null, texte, actif),
+                page(limite, page, critere, sens));
         Map<String, String> parametres = new LinkedHashMap<>();
-        if (page.getNumberOfElements() == 1) {
-            parametres.put("code", page.getContent().getFirst().code());
+        if (resultats.getNumberOfElements() == 1) {
+            parametres.put("code", resultats.getContent().getFirst().code());
         }
         if (actif != null) {
             parametres.put("actif", actif.toString());
         }
-        return liste("chantiers", page, OutilsReferentiels::chantier, new VueProposeeDto("chantiers", "tabulaire", parametres));
+        return liste("chantiers", resultats, OutilsReferentiels::chantier, new VueProposeeDto("chantiers", "tabulaire", parametres));
     }
 
     @McpTool(name = "chantier_fiche", title = "Fiche d'un chantier", generateOutputSchema = true,
@@ -110,7 +122,8 @@ public class OutilsReferentiels {
             description = """
                     Trouve des équipes (groupes d'ouvriers) par code ou libellé. À utiliser quand la question cite une équipe : \
                     l'identifiant rendu sert de filtre `equipeIds` aux outils Paie et Employé (l'identifiant 0 y désigne les \
-                    employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au plus.""",
+                    employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au plus par page \
+                    (`page`). Triable : `tri` CODE (défaut) ou LIBELLE, `sens` ASC ou DESC.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
@@ -118,15 +131,18 @@ public class OutilsReferentiels {
     public Map<String, Object> equipeRechercher(
             @McpToolParam(required = false, description = "Texte partiel du code ou du libellé. Absent = toutes les équipes.")
             @Size(max = 100) String recherche,
-            @McpToolParam(required = false, description = "Nombre d'équipes rendues, de 1 à 20, 10 par défaut.")
-            @Min(1) @Max(LIMITE) Integer limite) {
-        Page<EquipeResponseDto> page = equipes.search(new EquipeSearchCriteria(null, null, texte(recherche)),
-                page(limite, "code"));
+            @McpToolParam(required = false, description = "Nombre d'équipes rendues par page, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(LIMITE) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri : CODE (défaut) ou LIBELLE.") TriEquipe tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+        Page<EquipeResponseDto> resultats = equipes.search(new EquipeSearchCriteria(null, null, texte(recherche)),
+                page(limite, page, (tri == null ? TriEquipe.CODE : tri).name().toLowerCase(java.util.Locale.ROOT), sens));
         Map<String, String> parametres = new LinkedHashMap<>();
         if (texte(recherche) != null) {
             parametres.put("code", texte(recherche));
         }
-        return liste("equipes", page, OutilsReferentiels::equipe, new VueProposeeDto("equipes", "tabulaire", parametres));
+        return liste("equipes", resultats, OutilsReferentiels::equipe, new VueProposeeDto("equipes", "tabulaire", parametres));
     }
 
     @McpTool(name = "equipe_fiche", title = "Fiche d'une équipe", generateOutputSchema = true,
@@ -147,7 +163,8 @@ public class OutilsReferentiels {
             description = """
                     Trouve des fonctions (métiers : maçon, électricien, chef de chantier…) par libellé. À utiliser quand la \
                     question cite un métier : l'identifiant rendu sert de filtre `fonctionIds` aux outils Paie et Employé. \
-                    Rend id et libellé, plus le nombre total ; 20 résultats au plus.""",
+                    Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`), triés par libellé \
+                    (`sens` ASC ou DESC).""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('FUNCTION_READ')")
@@ -155,15 +172,17 @@ public class OutilsReferentiels {
     public Map<String, Object> fonctionRechercher(
             @McpToolParam(required = false, description = "Texte partiel du libellé du métier. Absent = toutes les fonctions.")
             @Size(max = 100) String recherche,
-            @McpToolParam(required = false, description = "Nombre de fonctions rendues, de 1 à 20, 10 par défaut.")
-            @Min(1) @Max(LIMITE) Integer limite) {
-        Page<FunctionResponseDto> page = fonctions.search(new FunctionSearchCriteria(texte(recherche)),
-                page(limite, "libelle"));
+            @McpToolParam(required = false, description = "Nombre de fonctions rendues par page, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(LIMITE) Integer limite,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+        Page<FunctionResponseDto> resultats = fonctions.search(new FunctionSearchCriteria(texte(recherche)),
+                page(limite, page, "libelle", sens));
         Map<String, String> parametres = new LinkedHashMap<>();
         if (texte(recherche) != null) {
             parametres.put("libelle", texte(recherche));
         }
-        return liste("fonctions", page, OutilsReferentiels::fonction, new VueProposeeDto("functions", "tabulaire", parametres));
+        return liste("fonctions", resultats, OutilsReferentiels::fonction, new VueProposeeDto("functions", "tabulaire", parametres));
     }
 
     @McpTool(name = "fonction_fiche", title = "Fiche d'une fonction", generateOutputSchema = true,
@@ -186,6 +205,7 @@ public class OutilsReferentiels {
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("total", page.getTotalElements());
         donnees.put("rendus", elements.size());
+        donnees.put("page", page.getNumber());
         donnees.put(cle, elements);
         donnees.put("vue", vue.enJson());
         return donnees;
@@ -202,8 +222,10 @@ public class OutilsReferentiels {
         return valeur == null || valeur.isBlank() ? null : valeur.trim();
     }
 
-    static PageRequest page(Integer limite, String tri) {
-        return PageRequest.of(0, limite == null ? 10 : limite, Sort.by(tri));
+    /** Une page triée : défaut croissant sur le critère, départagé par l'identifiant pour un ordre stable. */
+    static PageRequest page(Integer limite, Integer page, String tri, SensTri sens) {
+        return PageRequest.of(page == null ? 0 : page, limite == null ? 10 : limite,
+                SensTri.ou(sens, SensTri.ASC).sur(tri, "id"));
     }
 
     static Map<String, Object> chantier(ChantierResponseDto c) {

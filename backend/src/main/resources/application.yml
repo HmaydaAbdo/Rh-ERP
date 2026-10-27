@@ -147,6 +147,22 @@ management:
     # panne SMTP temporaire n'a aucune raison de sortir tout le backend de la rotation.
     mail:
       enabled: false
+  # Traces OpenTelemetry (docs/ia.md, T18) : coupées par défaut (tests, ng serve) ; Compose les active
+  # (MANAGEMENT_TRACING_ENABLED, MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT) vers Phoenix. Toutes les requêtes
+  # sont tracées : le volume reste celui d'une application interne. Métriques et journaux restent sur Prometheus et la sortie
+  # standard : aucun export OTLP pour eux.
+  tracing:
+    enabled: false
+    sampling:
+      probability: 1.0
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
 
 chantier:
   sync:

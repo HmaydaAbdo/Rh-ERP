@@ -211,7 +211,7 @@ export class ChartComponent<T extends ChartType = ChartType> {
     }
 
     const position = courant ? points.findIndex((point) => point.index === courant.index && point.datasetIndex === courant.datasetIndex) : -1;
-    let suivante: number | null = null;
+    let suivante: number;
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown':

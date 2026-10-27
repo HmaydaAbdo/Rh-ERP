@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { getWorkerUrl, Map as CarteMapLibre } from 'maplibre-gl';
 
-import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT, FondDeCarte } from './carte.config';
+import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT } from './carte.config';
 import empriseMaroc from './emprise-maroc.json';
 import frontiere from './maroc.frontiere.json';
 import {

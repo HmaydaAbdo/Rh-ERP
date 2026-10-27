@@ -40,6 +40,12 @@ seul document : [ia.md](../ia.md). T16 est faite (surface A2UI vue au navigateur
 T18 observabilité, T17 passerelle native, T19 conversations durables, T20 démonstration J1. README et skills des huit domaines décrivent
 leurs couches Application, Analytique et IA ; la CI vérifie que permissions et outils MCP y figurent.
 
+**Chantier IA (2026-10-27)** : T17 à T19 et le harnais sont faits (observabilité Phoenix, passerelle durcie, conversations
+durables, outils triables, questions à l'utilisateur, surfaces déterministes, lint du frontend). **Règle du propriétaire :
+tout est gratuit et le code IA fait maison est une dette suivie jusqu'à zéro** ; l'inventaire et les tâches T21 à T31 laissées
+ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : T21 (liste titrée des
+conversations, gratuite) puis le remplacement pièce par pièce du code maison.
+
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
 

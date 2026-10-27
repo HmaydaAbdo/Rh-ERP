@@ -22,7 +22,7 @@ export function valeursSurPoints(formater: (valeur: number) => string = (valeur)
       contexte.textBaseline = 'bottom';
       chart.data.datasets.forEach((dataset, datasetIndex) => {
         const elements = chart.getDatasetMeta(datasetIndex).data;
-        (dataset.data as unknown as Array<number | null>).forEach((valeur, index) => {
+        (dataset.data as unknown as (number | null)[]).forEach((valeur, index) => {
           const element = elements[index] as unknown as { x: number; y: number } | undefined;
           if (element && typeof valeur === 'number' && Number.isFinite(valeur)) {
             contexte.fillText(formater(valeur), element.x, element.y - 8);

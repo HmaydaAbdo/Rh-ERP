@@ -72,6 +72,22 @@ public class DonneesDeTest {
         });
     }
 
+    /** Comme {@link #creerBulletin(Referentiel, YearMonth)}, avec ce salaire total (et mensuel). */
+    public long creerBulletin(Referentiel ref, YearMonth periode, BigDecimal salaire) {
+        return transaction.execute(statut -> {
+            Paie paie = nouveauBulletin(ref, periode);
+            paie.setSalaireMensuel(salaire);
+            paie.setSalaireTotal(salaire);
+            entityManager.persist(paie);
+            return paie.getId();
+        });
+    }
+
+    /** Fixe la date d'embauche de l'employé du référentiel. */
+    public void fixerEmbauche(Referentiel ref, LocalDate date) {
+        transaction.executeWithoutResult(statut -> entityManager.find(Employee.class, ref.employeId()).setDateEmbauche(date));
+    }
+
     /**
      * Donne à l'employé le salaire de ses bulletins (3 000 MAD, mensuel), comme le ferait l'import de paie : l'employé
      * porte l'état de son dernier mois (ADR 0010), que {@link #creerBulletin} n'applique pas.

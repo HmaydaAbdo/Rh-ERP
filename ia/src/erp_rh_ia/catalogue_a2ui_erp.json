@@ -1,0 +1,76 @@
+{
+  "title": "Composants A2UI d'ERP-RH",
+  "description": "Composants de présentation propres à l'ERP, ajoutés au catalogue de base A2UI v0.9 (createAngularCatalog avec includeBasicCatalog côté Angular). Même nom et mêmes propriétés que les définitions zod de frontend/src/app/core/assistant/catalogue/catalogue-erp.ts.",
+  "catalogId": "erp-rh://a2ui/catalogue-erp",
+  "components": {
+    "DataTable": {
+      "type": "object",
+      "description": "Tableau de données : tri par colonne, recherche, export CSV et plein écran. Pour toute liste de plus de trois lignes.",
+      "properties": {
+        "component": { "const": "DataTable" },
+        "title": { "type": "string", "description": "Titre court du tableau." },
+        "caption": { "type": "string", "description": "Source ou période des données, affichée sous le titre." },
+        "columns": {
+          "type": "array",
+          "description": "Colonnes, dans l'ordre d'affichage.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": { "type": "string", "description": "Clé de la valeur dans chaque ligne." },
+              "label": { "type": "string" },
+              "format": { "type": "string", "enum": ["texte", "nombre", "montant", "periode"] },
+              "bar": { "type": "boolean", "description": "Barre proportionnelle derrière un nombre." }
+            },
+            "required": ["key", "label"]
+          }
+        },
+        "rows": { "description": "Lignes : tableau d'objets, ou { \"path\": \"/lignes\" } vers le modèle de données." }
+      },
+      "required": ["component", "columns", "rows"]
+    },
+    "KpiGrid": {
+      "type": "object",
+      "description": "Grille d'indicateurs clés : un libellé, une valeur déjà formatée et un détail facultatif.",
+      "properties": {
+        "component": { "const": "KpiGrid" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "type": "string", "description": "Valeur reprise d'un outil, avec son unité (MAD)." },
+              "detail": { "type": "string", "description": "Période ou valeur voisine reprise d'un outil." },
+              "tone": { "type": "string", "enum": ["neutre", "positif", "negatif"] }
+            },
+            "required": ["label", "value"]
+          }
+        }
+      },
+      "required": ["component", "items"]
+    },
+    "Chart": {
+      "type": "object",
+      "description": "Graphique : barres, courbe ou anneau. Plusieurs séries se choisissent par des onglets.",
+      "properties": {
+        "component": { "const": "Chart" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["bar", "line", "doughnut"] },
+        "labels": { "type": "array", "items": { "type": "string" } },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "values": { "type": "array", "items": { "type": "number" } },
+              "format": { "type": "string", "enum": ["nombre", "montant"] }
+            },
+            "required": ["name", "values"]
+          }
+        }
+      },
+      "required": ["component", "type", "labels", "series"]
+    }
+  }
+}
