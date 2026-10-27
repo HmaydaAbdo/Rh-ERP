@@ -10,7 +10,6 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -32,6 +31,7 @@ import staport.rh.paie.parcours.ParcoursEmployeDto;
 import staport.rh.paie.services.interfaces.IPaieParcoursService;
 
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,13 +69,30 @@ public class OutilsEmploye {
     /** Regroupement des effectifs. */
     public enum Dimension { CHANTIER, EQUIPE, FONCTION }
 
+    /** Critère de tri d'une recherche d'employés ; SALAIRE n'est permis qu'avec le droit de voir la paie. */
+    public enum TriEmploye {
+        NOM("nomPrenom"), CIN("cin"), DATE_EMBAUCHE("dateEmbauche"), DATE_NAISSANCE("dateNaissance"), SALAIRE("salaire");
+
+        private final String propriete;
+
+        TriEmploye(String propriete) {
+            this.propriete = propriete;
+        }
+    }
+
+    /** Critère de tri des groupes d'effectif. */
+    public enum TriGroupeEmploye { EFFECTIF, EN_POSTE, LIBELLE, CODE }
+
     @McpTool(name = "employes_rechercher", title = "Rechercher des employés", generateOutputSchema = true,
             description = """
                     Trouve des employés par nom (partiel), CIN (partiel) et/ou par chantier, équipe, fonction ou statut ; au moins \
                     un critère est obligatoire. Rend, pour chaque employé : id, nom et prénom, CIN, dates de naissance et \
                     d'embauche, statut (EN_POSTE ou SORTI), fonction, chantier et équipe actuels, et le salaire seulement si \
-                    l'utilisateur a le droit de voir la paie (`salaireVisible`). 20 fiches au plus avec le nombre total. Pour \
-                    seulement compter ou répartir des employés, préférer `employes_compter` ou `employes_regrouper`.""",
+                    l'utilisateur a le droit de voir la paie (`salaireVisible`). 20 fiches au plus par page, avec le nombre \
+                    total. Triable (`tri` : NOM par défaut, CIN, DATE_EMBAUCHE, DATE_NAISSANCE, SALAIRE si la paie est \
+                    visible ; `sens` ASC ou DESC) et paginable (`page`) : « les cinq derniers embauchés » se demande avec \
+                    tri DATE_EMBAUCHE, sens DESC, limite 5. Pour seulement compter ou répartir des employés, préférer \
+                    `employes_compter` ou `employes_regrouper`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -89,8 +106,12 @@ public class OutilsEmploye {
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
             @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut,
-            @McpToolParam(required = false, description = "Nombre de fiches rendues, de 1 à 20, 10 par défaut.")
-            @Min(1) @Max(LIMITE_FICHES) Integer limite) {
+            @McpToolParam(required = false, description = "Nombre de fiches rendues par page, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(LIMITE_FICHES) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri : NOM (défaut), CIN, DATE_EMBAUCHE, "
+                    + "DATE_NAISSANCE ou SALAIRE (réservé aux utilisateurs qui voient la paie).") TriEmploye tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
         String nomRecherche = texte(nom);
         String cinRecherche = texte(cin);
         List<Long> chantiers = ids(chantierIds);
@@ -102,10 +123,16 @@ public class OutilsEmploye {
             throw new IllegalArgumentException("Préciser un nom, un CIN ou un périmètre (chantier, équipe, fonction, statut).");
         }
         boolean voitLaPaie = ProjectionPaieEmployee.voitLaPaie(SecurityContextHolder.getContext().getAuthentication());
-        Page<EmployeeResponseDto> page = employes.search(
+        if (tri == TriEmploye.SALAIRE && !voitLaPaie) {
+            throw new IllegalArgumentException("Le tri par salaire est réservé aux utilisateurs qui voient la paie.");
+        }
+        TriEmploye critere = tri == null ? TriEmploye.NOM : tri;
+        SensTri ordre = SensTri.ou(sens, critere == TriEmploye.NOM || critere == TriEmploye.CIN ? SensTri.ASC : SensTri.DESC);
+        Page<EmployeeResponseDto> resultats = employes.search(
                 new EmployeeSearchCriteria(nomRecherche, cinRecherche, fonctions, chantiers, equipes, statutApi),
-                PageRequest.of(0, limite == null ? 10 : limite, Sort.by("nomPrenom")));
-        List<Map<String, Object>> fiches = page.getContent().stream()
+                PageRequest.of(page == null ? 0 : page, limite == null ? 10 : limite,
+                        ordre.sur(critere.propriete, "nomPrenom")));
+        List<Map<String, Object>> fiches = resultats.getContent().stream()
                 .map(employe -> fiche(ProjectionPaieEmployee.pourLeLecteur(employe, voitLaPaie), voitLaPaie))
                 .toList();
         Map<String, String> parametres = new LinkedHashMap<>(Perimetres.parametresUrl(chantiers, equipes, fonctions));
@@ -117,8 +144,9 @@ public class OutilsEmploye {
         }
         StatutEmploye.versUrl(statutApi, parametres);
         Map<String, Object> donnees = new LinkedHashMap<>();
-        donnees.put("total", page.getTotalElements());
+        donnees.put("total", resultats.getTotalElements());
         donnees.put("rendus", fiches.size());
+        donnees.put("page", resultats.getNumber());
         donnees.put("employes", fiches);
         donnees.put("salaireVisible", voitLaPaie);
         donnees.put("vue", new VueProposeeDto("employees", "tabulaire", parametres).enJson());
@@ -190,10 +218,11 @@ public class OutilsEmploye {
 
     @McpTool(name = "employes_regrouper", title = "Effectif par chantier, équipe ou fonction", generateOutputSchema = true,
             description = """
-                    Répartit l'effectif des employés par chantier, par équipe ou par fonction (total et en poste), du plus grand \
-                    groupe au plus petit, sur un périmètre. À utiliser pour « quels chantiers ont le plus d'employés », « combien \
-                    par équipe ». Chaque groupe rend id, code, libellé, effectif et nombre en poste ; 50 groupes au plus. Les \
-                    montants de paie par groupe sont dans `paie_repartition`.""",
+                    Répartit l'effectif des employés par chantier, par équipe ou par fonction (total et en poste) sur un \
+                    périmètre. Du plus grand groupe au plus petit par défaut ; `tri` (EFFECTIF, EN_POSTE, LIBELLE, CODE) et \
+                    `sens` (ASC ou DESC) donnent « les équipes les plus petites » ou l'ordre alphabétique. À utiliser pour « quels \
+                    chantiers ont le plus d'employés », « combien par équipe ». Chaque groupe rend id, code, libellé, effectif \
+                    et nombre en poste ; 50 groupes au plus. Les montants de paie par groupe sont dans `paie_repartition`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -205,7 +234,10 @@ public class OutilsEmploye {
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
             @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut,
             @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
-            @Min(1) @Max(GROUPES) Integer limite) {
+            @Min(1) @Max(GROUPES) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri des groupes : EFFECTIF (défaut), EN_POSTE, "
+                    + "LIBELLE ou CODE.") TriGroupeEmploye tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens) {
         List<Long> chantiers = ids(chantierIds);
         List<Long> equipes = ids(equipeIds);
         List<Long> fonctions = ids(fonctionIds);
@@ -213,7 +245,18 @@ public class OutilsEmploye {
         List<EmployeeRegroupementDto> groupes = analytique.regrouper(
                 new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statutApi),
                 DimensionEmployes.valueOf(dimension.name()));
-        List<Map<String, Object>> rendus = groupes.stream().limit(limite == null ? GROUPES : limite).map(g -> {
+        TriGroupeEmploye critere = tri == null ? TriGroupeEmploye.EFFECTIF : tri;
+        SensTri ordre = SensTri.ou(sens, critere == TriGroupeEmploye.EFFECTIF || critere == TriGroupeEmploye.EN_POSTE
+                ? SensTri.DESC : SensTri.ASC);
+        Comparator<EmployeeRegroupementDto> comparateur = switch (critere) {
+            case EFFECTIF -> Comparator.comparingLong(EmployeeRegroupementDto::effectif);
+            case EN_POSTE -> Comparator.comparingLong(EmployeeRegroupementDto::actifs);
+            case LIBELLE -> Comparator.comparing(g -> String.valueOf(g.libelle()), String.CASE_INSENSITIVE_ORDER);
+            case CODE -> Comparator.comparing(g -> String.valueOf(g.code()), String.CASE_INSENSITIVE_ORDER);
+        };
+        List<EmployeeRegroupementDto> ordonnes = groupes.stream()
+                .sorted(ordre == SensTri.ASC ? comparateur : comparateur.reversed()).toList();
+        List<Map<String, Object>> rendus = ordonnes.stream().limit(limite == null ? GROUPES : limite).map(g -> {
             Map<String, Object> groupe = new LinkedHashMap<>();
             groupe.put("id", g.id());
             groupe.put("code", g.code());

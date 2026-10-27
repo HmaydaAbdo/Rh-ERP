@@ -221,6 +221,11 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
 
 ### Frameworks d'abord
 
+**Objectif permanent (2026-10-27) : zéro code IA fait maison et zéro service payant.** Toute pièce maison est inscrite
+dans l'inventaire du § 7 de [ia.md](../docs/ia.md) (« Objectif : aucun code IA fait maison ») avec sa piste gratuite ;
+elle y reste ouverte jusqu'à son remplacement testé. Une fonction payante d'un framework (CopilotKit Intelligence, par
+exemple) se remplace par une alternative gratuite, jamais par un achat.
+
 Dans ERP-RH (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
 LangChain, LangGraph, Deep Agents, l'intégration AG-UI et leurs paquets : aucune implémentation
 maison d'une capacité qu'un de ces frameworks fournit. Avant d'écrire du code IA, chercher le
