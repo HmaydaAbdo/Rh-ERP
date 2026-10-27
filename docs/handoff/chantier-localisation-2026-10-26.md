@@ -23,7 +23,7 @@ La migration `V37__chantier_nature_et_localisation.sql` ajoute les champs et con
 ## Livraison et vérifications locales
 
 - Branche isolée : `codex/chantier-localisation`.
-- Le lot est local et non commité ; aucune CI, poussée, PR ou migration de production n’a été déclenchée.
+- Le lot est commité sur la branche isolée. Le propriétaire a demandé sa livraison par PR vers `main` le 2026-10-27 ; le suivi de la PR et de ses contrôles sur GitHub fait foi pour la livraison distante. Aucune migration de production n’a été appliquée.
 - Thème global (2026-10-27) : surfaces sombres en bleu nuit/noir, actions bleues, focus cyan ; les statuts métier gardent leurs couleurs sémantiques et le thème clair reste séparé. La feuille de conventions et le README frontend sont synchronisés. La popover du filtre carte suit elle aussi le thème de la carte, sans modifier les autres sélecteurs.
 - V37 et V38 ont été jouées sur une copie jetable de la base de développement. Comparaison des 212 codes : aucun statut modifié ; les versions augmentent uniquement pour les lignes reprises. Audit V38 à 27 éléments et rejeu sans doublon vérifiés.
 - Aucun champ métier ni aucune donnée de localisation n’a été écrit dans la base source.
@@ -35,4 +35,4 @@ La migration `V37__chantier_nature_et_localisation.sql` ajoute les champs et con
 
 ## Suite
 
-Revoir le diff, puis intégrer par la PR exigée vers `main`. Après revue et demande explicite, exécuter la CI. La migration de production nécessite la sauvegarde et la procédure de déploiement documentées ; aucune migration réelle n’a été appliquée.
+Suivre les contrôles de la PR ciblant `main`, puis la revue propriétaire. La migration de production nécessite la sauvegarde et la procédure de déploiement documentées ; aucune migration réelle n’a été appliquée.
