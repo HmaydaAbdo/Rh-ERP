@@ -37,6 +37,12 @@ class CalculHeuresSuppTest {
     }
 
     @Test
+    void montant_absent_vaut_zero() {
+        assertThat(CalculHeuresSupp.montant(null, BigDecimal.ONE)).isEqualByComparingTo("0.00");
+        assertThat(CalculHeuresSupp.montant(BigDecimal.ONE, null)).isEqualByComparingTo("0.00");
+    }
+
+    @Test
     void stc_et_net_separent_le_forfait_du_montant() {
         BigDecimal montant = new BigDecimal("150.00");
         assertThat(CalculHeuresSupp.stcDh(montant, true)).isEqualByComparingTo("150");
