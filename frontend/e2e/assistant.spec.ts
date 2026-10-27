@@ -96,8 +96,8 @@ test.describe('Assistant RH', () => {
     await page.keyboard.press('Control+k');
     // Panneau flottant au-dessus de l'écran (mode overlay de CopilotKit) : une fenêtre de dialogue, la vue garde sa place.
     const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
-    await expect(assistant.getByText('Que voulez-vous savoir')).toBeVisible();
-    // Questions proposées selon l'écran ouvert (la paie).
+    // Le fil de l'utilisateur est fourni par l'application (repris au rechargement) : CopilotKit n'affiche alors pas son écran
+    // d'accueil, mais les questions proposées selon l'écran ouvert (la paie).
     await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
 
     const question = assistant.getByPlaceholder('Posez votre question…');
