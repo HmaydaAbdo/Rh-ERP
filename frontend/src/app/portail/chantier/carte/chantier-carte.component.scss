@@ -1,19 +1,14 @@
+// L'élément racine appartient à MapLibre : il le place en `position: absolute` et le déplace par `transform` à chaque image.
+// Ne jamais y toucher (ni position, ni transform, ni transition) : le marqueur glisserait hors de son site au zoom.
+// L'aspect et l'animation sont portés par l'épingle qu'il contient.
 .chantier-carte__marqueur {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem; // = HAUTEUR_EPINGLE_PX
   padding: 0;
-  border: 1px solid var(--map-marker-ring);
-  border-radius: 999px;
-  background: var(--map-marker-halo);
-  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--map-marker-core) 12%, transparent);
+  border: 0;
+  background: none;
   cursor: pointer;
-  transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
-
-  &:hover,
-  &:focus-visible { box-shadow: var(--map-marker-hover-glow); transform: scale(1.08); }
 
   &::after {
     position: absolute;
@@ -41,14 +36,30 @@
   &:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
 }
 
-.chantier-carte__point {
-  width: 0.8rem;
-  height: 0.8rem;
-  border: 2px solid var(--map-marker-ring);
-  border-radius: 50%;
-  background: var(--map-marker-core);
-  box-shadow: 0 0 0.85rem var(--map-marker-core);
+.chantier-carte__epingle {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0.15rem 0.35rem rgba(0, 5, 13, 0.55));
+  // Grossit depuis sa pointe : le site désigné ne bouge pas.
+  transform-origin: 50% 92%;
+  transition: transform var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+
+  .chantier-carte__marqueur:hover &,
+  .chantier-carte__marqueur:focus-visible & {
+    filter: drop-shadow(0 0 0.6rem var(--map-marker-core));
+    transform: scale(1.15);
+  }
 }
+
+.chantier-carte__epingle-corps {
+  fill: var(--map-marker-core);
+  stroke: var(--map-marker-ring);
+  stroke-width: 1.5;
+}
+
+.chantier-carte__epingle-centre { fill: var(--map-ui-canvas); }
 
 .chantier-carte__marqueur:focus-visible {
   outline: 3px solid var(--color-focus);

@@ -44,7 +44,10 @@ describe('ChantierCarteComponent', () => {
     expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(1);
     const marqueur = element.querySelector<HTMLButtonElement>('.chantier-carte__marqueur')!;
     expect(marqueur.textContent).toBe('');
-    expect(marqueur.querySelector('.chantier-carte__point')).not.toBeNull();
+    expect(marqueur.querySelector('svg.chantier-carte__epingle')).not.toBeNull();
+    // MapLibre seul positionne la racine du marqueur, ancrée sur la pointe de l'épingle.
+    expect(marqueur.classList).toContain('maplibregl-marker');
+    expect(marqueur.classList).toContain('maplibregl-marker-anchor-bottom');
     expect(marqueur.getAttribute('data-tooltip')).toContain('GEO1 · Site A');
     expect(marqueur.getAttribute('data-tooltip')).toContain('AO');
     expect(marqueur.getAttribute('data-tooltip')).toContain('GEO2 · Site B');
