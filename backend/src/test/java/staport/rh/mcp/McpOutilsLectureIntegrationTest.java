@@ -154,6 +154,110 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         assertThat(resultat.has("structuredContent")).isFalse();
     }
 
+    // --- Tri et pagination : l'agent compose lui-même son classement ---
+
+    @Test
+    void les_bulletins_se_trient_par_salaire_dans_les_deux_sens_et_se_paginent() throws Exception {
+        var a = donnees.creerReferentiel();
+        var b = donnees.creerReferentiel();
+        var c = donnees.creerReferentiel();
+        donnees.creerBulletin(a, periode, new BigDecimal("1000.00"));
+        donnees.creerBulletin(b, periode, new BigDecimal("5000.00"));
+        donnees.creerBulletin(c, periode, new BigDecimal("3000.00"));
+        Map<String, Object> base = Map.of("periode", periode.toString(),
+                "chantierIds", List.of(a.chantierId(), b.chantierId(), c.chantierId()), "tri", "SALAIRE_TOTAL");
+
+        assertThat(salaires(appeler("paie_bulletins_rechercher", base))).containsExactly("5000.00", "3000.00", "1000.00");
+        assertThat(salaires(appeler("paie_bulletins_rechercher", avec(base, "sens", "ASC"))))
+                .containsExactly("1000.00", "3000.00", "5000.00");
+        JsonNode deuxieme = appeler("paie_bulletins_rechercher", avec(avec(base, "limite", 1), "page", 1));
+        assertThat(salaires(deuxieme)).containsExactly("3000.00");
+        assertThat(deuxieme.get("page").asInt()).isEqualTo(1);
+        assertThat(deuxieme.get("total").asLong()).isEqualTo(3);
+    }
+
+    @Test
+    void les_employes_se_trient_par_date_d_embauche_et_le_tri_par_salaire_exige_le_droit_de_paie() throws Exception {
+        var a = donnees.creerReferentiel();
+        var b = donnees.creerReferentiel();
+        var c = donnees.creerReferentiel();
+        donnees.fixerEmbauche(a, java.time.LocalDate.of(2021, 5, 1));
+        donnees.fixerEmbauche(b, java.time.LocalDate.of(2023, 5, 1));
+        donnees.fixerEmbauche(c, java.time.LocalDate.of(2022, 5, 1));
+        Map<String, Object> base = Map.of("chantierIds", List.of(a.chantierId(), b.chantierId(), c.chantierId()),
+                "tri", "DATE_EMBAUCHE");
+
+        JsonNode recents = appeler("employes_rechercher", base);
+        assertThat(identifiants(recents, "employes")).containsExactly(b.employeId(), c.employeId(), a.employeId());
+        JsonNode anciens = appeler("employes_rechercher", avec(base, "sens", "ASC"));
+        assertThat(identifiants(anciens, "employes")).containsExactly(a.employeId(), c.employeId(), b.employeId());
+
+        String sansPaie = jeton(Set.of("IA_UTILISER", "EMPLOYEE_READ"));
+        JsonNode refuse = rpc(sansPaie, "tools/call", Map.of("name", "employes_rechercher",
+                "arguments", avec(base, "tri", "SALAIRE")));
+        assertThat(refuse.get("isError").asBoolean()).isTrue();
+        assertThat(refuse.get("content").get(0).get("text").asString()).contains("salaire");
+        assertThat(rpc(sansPaie, "tools/call", Map.of("name", "employes_rechercher", "arguments", base))
+                .get("isError").asBoolean()).isFalse();
+    }
+
+    @Test
+    void les_groupes_se_trient_par_le_critere_demande() throws Exception {
+        var a = donnees.creerReferentiel();
+        var b = donnees.creerReferentiel();
+        var c = donnees.creerReferentiel();
+        donnees.creerBulletin(a, periode, new BigDecimal("1000.00"));
+        donnees.creerBulletin(b, periode, new BigDecimal("5000.00"));
+        donnees.creerBulletin(c, periode, new BigDecimal("3000.00"));
+        List<Long> chantiers = List.of(a.chantierId(), b.chantierId(), c.chantierId());
+
+        JsonNode defaut = appeler("paie_repartition", Map.of("periode", periode.toString(), "dimension", "CHANTIER",
+                "chantierIds", chantiers));
+        assertThat(identifiants(defaut, "groupes")).containsExactly(b.chantierId(), c.chantierId(), a.chantierId());
+        JsonNode croissante = appeler("paie_repartition", Map.of("periode", periode.toString(), "dimension", "CHANTIER",
+                "chantierIds", chantiers, "sens", "ASC"));
+        assertThat(identifiants(croissante, "groupes")).containsExactly(a.chantierId(), c.chantierId(), b.chantierId());
+
+        JsonNode parCode = appeler("employes_regrouper", Map.of("dimension", "CHANTIER", "chantierIds", chantiers,
+                "tri", "CODE", "sens", "ASC"));
+        List<String> codes = new ArrayList<>();
+        parCode.get("groupes").forEach(g -> codes.add(g.get("code").asString()));
+        assertThat(codes).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER).hasSize(3);
+    }
+
+    @Test
+    void les_referentiels_se_trient_et_se_paginent() throws Exception {
+        donnees.creerReferentiel();
+        donnees.creerReferentiel();
+        JsonNode croissant = appeler("chantier_rechercher", Map.of("limite", 20, "tri", "CODE", "sens", "ASC"));
+        JsonNode decroissant = appeler("chantier_rechercher", Map.of("limite", 20, "tri", "CODE", "sens", "DESC"));
+        List<String> asc = new ArrayList<>();
+        croissant.get("chantiers").forEach(ch -> asc.add(ch.get("code").asString()));
+        List<String> desc = new ArrayList<>();
+        decroissant.get("chantiers").forEach(ch -> desc.add(ch.get("code").asString()));
+        assertThat(asc).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER);
+        assertThat(desc).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER.reversed());
+        assertThat(appeler("equipe_rechercher", Map.of("limite", 1, "page", 1)).get("page").asInt()).isEqualTo(1);
+    }
+
+    private static List<String> salaires(JsonNode resultat) {
+        List<String> valeurs = new ArrayList<>();
+        resultat.get("bulletins").forEach(b -> valeurs.add(b.get("salaireTotal").decimalValue().setScale(2).toPlainString()));
+        return valeurs;
+    }
+
+    private static List<Long> identifiants(JsonNode resultat, String liste) {
+        List<Long> ids = new ArrayList<>();
+        resultat.get(liste).forEach(e -> ids.add(e.get("id").asLong()));
+        return ids;
+    }
+
+    private static Map<String, Object> avec(Map<String, Object> base, String cle, Object valeur) {
+        Map<String, Object> copie = new LinkedHashMap<>(base);
+        copie.put(cle, valeur);
+        return copie;
+    }
+
     // --- Paie : chiffres du domaine ---
 
     @Test

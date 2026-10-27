@@ -257,6 +257,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # ESLint (angular-eslint, typescript-eslint) : toute erreur échoue ; les avertissements de dette sont plafonnés.
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
       # Vitest (runner Angular) dans un vrai Chromium : le navigateur est installé par Playwright.
       - name: Install Chromium for tests
         working-directory: frontend
