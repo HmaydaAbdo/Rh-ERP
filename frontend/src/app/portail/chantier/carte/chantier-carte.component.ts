@@ -52,6 +52,11 @@ const COUCHES_NOMMEES = ['pois', 'places_locality', 'places_subplace', 'places_r
 /** Inclinaison au-delà de laquelle la vue est considérée en 3D (les gestes laissent souvent quelques degrés). */
 const SEUIL_VUE_3D = 5;
 
+const SVG = 'http://www.w3.org/2000/svg';
+
+/** Hauteur de l'épingle (voir `.chantier-carte__epingle`) : la fiche s'ouvre au-dessus de sa tête, pas sur sa pointe. */
+const HAUTEUR_EPINGLE_PX = 40;
+
 /** Message affiché pour chaque source indisponible, du plus grave au moins grave. */
 const MESSAGES_SOURCE: Readonly<Record<string, string>> = {
   [SOURCE_DU_FOND]: "Le fond de carte n'est pas disponible pour le moment. Prévenez l'administrateur de l'application.",
@@ -221,10 +226,7 @@ export class ChantierCarteComponent {
       const detailSites = site.map((chantier) => `${chantier.code} · ${chantier.nom || chantier.designation}\n${NATURE_CHANTIER_LIBELLES[chantier.nature]}`).join('\n\n');
       bouton.setAttribute('aria-label', `Afficher ${detailSites.replaceAll('\n', ', ')}`);
       bouton.setAttribute('data-tooltip', detailSites);
-      const icone = this.document.createElement('span');
-      icone.className = 'chantier-carte__point';
-      icone.setAttribute('aria-hidden', 'true');
-      bouton.append(icone);
+      bouton.append(this.creerEpingle());
       const fiche = this.document.createElement('div');
       site.forEach((chantier) => {
         const code = this.document.createElement('strong');
@@ -241,12 +243,31 @@ export class ChantierCarteComponent {
         article.append(code, nom, nature);
         fiche.append(article);
       });
-      const marqueur = new Marker({ element: bouton })
+      // La pointe de l'épingle (bas de l'élément) désigne le site, quel que soit le zoom.
+      const marqueur = new Marker({ element: bouton, anchor: 'bottom' })
         .setLngLat([site[0].longitude, site[0].latitude])
-        .setPopup(new Popup({ closeButton: true }).setDOMContent(fiche))
+        .setPopup(new Popup({ closeButton: true, offset: HAUTEUR_EPINGLE_PX }).setDOMContent(fiche))
         .addTo(this.carte!);
       return marqueur;
     });
+  }
+
+  /** Épingle de localisation (tracé de l'icône Lucide `map-pin`, pleine), construite en SVG sans HTML injecté. */
+  private creerEpingle(): SVGSVGElement {
+    const svg = this.document.createElementNS(SVG, 'svg');
+    svg.setAttribute('class', 'chantier-carte__epingle');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    const contour = this.document.createElementNS(SVG, 'path');
+    contour.setAttribute('class', 'chantier-carte__epingle-corps');
+    contour.setAttribute('d', 'M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0');
+    const centre = this.document.createElementNS(SVG, 'circle');
+    centre.setAttribute('class', 'chantier-carte__epingle-centre');
+    centre.setAttribute('cx', '12');
+    centre.setAttribute('cy', '10');
+    centre.setAttribute('r', '3');
+    svg.append(contour, centre);
+    return svg;
   }
 
   private oublier(source: string): void {
