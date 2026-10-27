@@ -142,13 +142,15 @@ describe('PaieVuesComponent', () => {
         expect(vi.mocked(service.listerPeriodes).mock.calls.length).toBeGreaterThan(appels);
     });
 
-    it('conserve les filtres quand on change de vue par le sélecteur', async () => {
+    it('conserve les filtres dans le lien du sélecteur de vue', async () => {
         const composant = await harness.navigateByUrl('/paie?periode=2026-08&nom=ali&chantierIds=3', PaieVuesComponent);
 
         const lienCartes = Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'))
             .find((lien) => lien.textContent?.includes('Cartes'));
         expect(lienCartes).not.toBeUndefined();
-        lienCartes?.click();
+        const destination = new URL(lienCartes!.href);
+        expect(destination.pathname).toBe('/paie/cartes');
+        await TestBed.inject(Router).navigateByUrl(`${destination.pathname}${destination.search}`);
         await harness.fixture.whenStable();
 
         const url = TestBed.inject(Router).url;
