@@ -105,6 +105,11 @@ CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
 
 Verification = Literal["en_cours", "verifiee", "abstention"]
 
+# Un résultat d'outil est plafonné à 12 000 caractères (environ 4 000 jetons) et un run enchaîne jusqu'à 6 appels : sous
+# ce seuil, un run de plusieurs outils ne déclenche jamais le résumé. Mesuré le 2026-10-27 : à 12 000 jetons, le résumé
+# remplaçait en cours de réponse les chiffres tout juste lus par un texte tronqué, puis l'agent devinait des montants.
+SEUIL_RESUME_JETONS = 40_000
+
 
 def _parametres_a2ui() -> dict[str, Any]:
     """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
@@ -235,9 +240,10 @@ def creer_agent(
         VerificateurChiffres(),
     ]
     if resumeur is not None:
-        # Conversation durable : au-delà de 12 000 jetons, le début est résumé, les 8 derniers messages restent intacts.
+        # Conversation durable : au-delà de SEUIL_RESUME_JETONS, le début est résumé ; les 12 derniers messages restent.
         intergiciels.insert(
-            2, SummarizationMiddleware(model=resumeur, trigger=("tokens", 12_000), keep=("messages", 8))
+            2,
+            SummarizationMiddleware(model=resumeur, trigger=("tokens", SEUIL_RESUME_JETONS), keep=("messages", 12)),
         )
     if selecteur is not None:
         intergiciels.insert(2, LLMToolSelectorMiddleware(model=selecteur, max_tools=6, always_include=["write_todos"]))

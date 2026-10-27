@@ -31,8 +31,9 @@ def fabrique_reelle(config: Settings) -> FabriqueAgent:
     """L'agent servi : modèle ``complex`` pour répondre, ``simple`` pour choisir les outils utiles."""
     # Raisonnement court : chaque appel de l'agent est plus rapide, le raisonnement reste affiché.
     principal = modele(config, Tache.COMPLEX, raisonnement="low")
-    selecteur = modele(config, Tache.SIMPLE, max_tokens=300) if config.selection_outils else None
-    resumeur = modele(config, Tache.SIMPLE, max_tokens=500)  # résume le début d'une conversation devenue longue
+    selecteur = modele(config, Tache.SIMPLE, max_tokens=300, interne=True) if config.selection_outils else None
+    # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
+    resumeur = modele(config, Tache.SIMPLE, max_tokens=1500, interne=True)
 
     def fabriquer(
         outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any]

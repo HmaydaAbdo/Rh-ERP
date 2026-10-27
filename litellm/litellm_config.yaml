@@ -410,6 +410,10 @@ guardrails:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  # Aucun proxy devant LiteLLM : ses clients (service IA, enregistrement des clés, poste local) s'y connectent directement.
+  # Liste vide = l'adresse du pair est la source ; les échecs de connexion à l'interface d'administration sont alors aussi
+  # limités par adresse.
+  trusted_proxy_ranges: []
   database_url: os.environ/DATABASE_URL
   store_model_in_db: false
   maximum_spend_logs_retention_period: "30d"

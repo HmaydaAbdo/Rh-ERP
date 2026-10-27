@@ -52,8 +52,14 @@ mois précédent), réponse exacte en une minute environ. Deux pannes trouvées 
 `detect_prompt_injection` (comparaison floue caractère par caractère) saturait le processeur sur les longs prompts et rejetait des
 requêtes légitimes, remplacé par le garde-fou officiel `litellm_content_filter` (mots-clés anglais + expressions françaises) ; le
 volume `/data` du runtime appartenait à root (le runner SQLite ne pouvait pas créer sa base), `/data` est maintenant créé dans l'image
-au nom de `node`. **Reste ouvert** : le résumé de conversation (`SummarizationMiddleware`, déclenché à 12 000 jetons) s'affiche brut
-dans le fil (« SESSION INTENT / SUMMARY ») au lieu de rester interne.
+au nom de `node`. Corrigés ensuite (même jour) : le résumé de conversation (`SummarizationMiddleware`) n'est plus affiché dans le fil
+(modèles internes sans flux et marqués `emit-messages: false`) et ne se déclenche plus à 12 000 jetons mais à 40 000, car il
+remplaçait en plein run les chiffres tout juste lus par un texte tronqué ; le contrôle de santé du service `ia` couvre le
+premier démarrage à froid (110 s) ; Phoenix a un contrôle de santé et le backend, `ia` et le runtime l'attendent (facultatif) ;
+LiteLLM déclare `trusted_proxy_ranges: []`. **Reste ouvert** : la comparaison mois sur mois par chantier n'est pas fiable (la
+question « top 3 puis plus forte hausse » a donné une réponse exacte une fois, une conclusion fausse deux fois : le modèle
+compare les tops de chaque mois au lieu de suivre les mêmes chantiers). Piste : un outil déterministe de comparaison de deux
+périodes par chantier, plutôt que de laisser le modèle recombiner.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

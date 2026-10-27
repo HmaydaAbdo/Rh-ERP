@@ -20,6 +20,9 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 USER 10001:10001
 EXPOSE 8000
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+# Premier démarrage d'une image neuve : l'import du SDK litellm (via langchain-litellm) et des dépendances LangChain lit
+# des milliers de fichiers ; mesuré à 110 s à froid sur Docker Desktop (27 s ensuite). La fenêtre couvre ce cas sans
+# ralentir les autres démarrages : un essai toutes les 3 s, sain dès la première réponse.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=180s --start-interval=3s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
 ENTRYPOINT ["opentelemetry-instrument", "python", "-m", "erp_rh_ia"]

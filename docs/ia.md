@@ -307,7 +307,7 @@ suffit ; une PR par vague, CI sur demande.
 | Vague | Tâche | Contenu | Modèle | Pourquoi ce modèle |
 |---|---|---|---|---|
 | 1 | V1a — Lint | ✅ Fait (PR #98) : frontend à 0 avertissement, Checkstyle Java et ESLint du runtime Node dans la CI | — | — |
-| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit ; **résumé de conversation affiché brut dans le fil** (`SummarizationMiddleware`, 12 000 jetons : « SESSION INTENT / SUMMARY » et raisonnement du modèle de résumé, à rendre internes) | Sonnet | Enquête au navigateur et petits changements |
+| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit ; ✅ résumé de conversation rendu interne et déclenché à 40 000 jetons ; **à faire** : outil déterministe de comparaison de deux périodes par chantier (la question « top 3 puis plus forte hausse » donne des conclusions variables) | Sonnet | Enquête au navigateur et petits changements |
 | 1 | V1c — Mesure | Évaluation étendue (tri, questions, cas complexes), latence sous 30 s, démonstration T20 sur la nouvelle base | Sonnet | Exécution et mesure, peu de conception |
 | 2 | T21 — Conversations | Liste titrée des anciennes conversations, gratuite (voir pistes du tableau ci-dessus) | Sonnet, Opus si aucune piste officielle ne tient | Recherche encadrée par le tableau ; Opus seulement pour trancher entre contribution au runner officiel et code temporaire |
 | 2 | J4a — Espace IA | Espace plein écran et mémoire longue par le `Store` LangGraph | Sonnet | Conception d'interface guidée par les composants existants |
