@@ -32,7 +32,7 @@ prend aucune décision sur une personne : elle explique et prépare, une personn
 | Orchestration | **Un agent `create_agent`** (LangChain sur LangGraph) avec tous les outils, groupés par domaine dans leurs descriptions ; `LLMToolSelectorMiddleware` ne transmet que les outils utiles quand le catalogue ou les quotas l'exigent. **Deep Agents** (`create_deep_agent`, mêmes middlewares plus sous-agents par domaine) est adopté quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, outils ou budget, ou qu'une tâche est longue : contrôle de la paie (J5), assistant réglementaire (J7), documents RH (J6). Pas avant : chaque sous-agent ajoute des appels de modèle, donc de la latence et des quotas (les offres gratuites répondent déjà 429 parfois). Détail : [conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine). |
 | Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (offre de prototypage) est dans les pools ; les préversions à sortie instable restent sous tags `eval`. |
 | Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
-| Frameworks d'abord | Décision du 2026-10-26 : tout le code IA s'appuie sur LangChain (`create_agent` et ses middlewares), LangGraph, Deep Agents si besoin, le MCP intégré à LangChain (`langchain.mcp`), `ag-ui-langgraph` et CopilotKit (raisonnement, texte, A2UI, interface Angular), LiteLLM pour la passerelle et ses garde-fous ; côté Java, le serveur MCP de **Spring AI** et l'échange de jetons OAuth2 de **Spring Authorization Server** ; tout code maison qui duplique un composant officiel est retiré ([règle et correspondances](../conventions/agents-ia.md#frameworks-dabord)). L'agent décide lui-même de sa forme de réponse : directe, raisonnée avec outils, ou planifiée et suivie étape par étape, comme Claude, ChatGPT, Gemini et Grok. Remplace, une fois T10 à T20 faites, le graphe explicite de T6 et le ciblage maison. |
+| Frameworks d'abord | Décision du 2026-10-26 : tout le code IA s'appuie sur LangChain (`create_agent` et ses middlewares), LangGraph, Deep Agents si besoin, le MCP intégré à LangChain (`langchain.mcp`), `ag-ui-langgraph` et CopilotKit (raisonnement, texte, A2UI, interface Angular), LiteLLM pour la passerelle et ses garde-fous ; côté Java, le serveur MCP de **Spring AI** et l'échange de jetons OAuth2 de **Spring Authorization Server** ; tout code maison qui duplique un composant officiel est retiré, et **le code maison restant est une dette suivie jusqu'à zéro, sans service payant** (§ 7, « Objectif : aucun code IA fait maison ») ([règle et correspondances](../conventions/agents-ia.md#frameworks-dabord)). L'agent décide lui-même de sa forme de réponse : directe, raisonnée avec outils, ou planifiée et suivie étape par étape, comme Claude, ChatGPT, Gemini et Grok. Remplace, une fois T10 à T20 faites, le graphe explicite de T6 et le ciblage maison. |
 | Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les [conventions](../conventions/agents-ia.md#gouvernance-et-usage-responsable) ; l'écart avec l'existant est suivi au § 10. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
@@ -258,6 +258,41 @@ aux utilisateurs visible.
 | Raisonnement affiché (T11) | **Décidé le 2026-10-26** : raisonnement brut du modèle, dans un bloc « Réflexion » replié | — |
 | Dépendances du client (T12, T13) | **Décidé le 2026-10-26** : dernières versions des frameworks adoptées même préliminaires (CopilotKit Angular, A2UI) ; `zod` forcé en version 4 contre la faille GHSA-mrhx-c7xc-m3w5, compatibilité vérifiée | — |
 | Langues (T3.9) | Français seul ; français, arabe et darija écrits | Mesurer la demande au pilote ; arabe écrit en priorité si les utilisateurs l'emploient |
+
+### Objectif : aucun code IA fait maison, aucun service payant
+
+Décisions du propriétaire (2026-10-27) : **tout est gratuit** (aucun abonnement, y compris CopilotKit Intelligence : une
+fonction payante se remplace par une alternative gratuite, jamais par un achat) et **le code IA fait maison est une dette
+suivie jusqu'à zéro** : chaque pièce ci-dessous reste une tâche ouverte tant qu'un framework officiel et gratuit n'a pas
+pris sa place. Une pièce n'est retirée de la liste qu'une fois remplacée et testée ; l'inventaire se relit à chaque
+changement du chantier IA. Les points non terminés ne sont jamais effacés : ils restent ⬜ ou 🟦 pour que le travail
+reprenne là où il s'est arrêté.
+
+| Tâche | Pièce maison actuelle | Piste gratuite à instruire | État |
+|---|---|---|---|
+| T21 — Liste titrée des anciennes conversations | Aucune : fonction absente. Le fil est rejoué, mais l'utilisateur ne peut pas revenir à un ancien fil | `injectThreads` et `CopilotThreadsDrawer` de CopilotKit sur les routes locales de fils du runtime (`LocalThreadEndpointRunner`) ; contribuer ou étendre le runner SQLite officiel ; titre tiré de la première question ; sinon petit code **temporaire** avec date de retrait | ⬜ |
+| T22 — Vérificateur de chiffres | `verification.py` et `VerificateurChiffres` : extraction des nombres et rapprochement avec les résultats d'outils | Aucun framework ne fournit cette règle (page Guardrails de LangChain : filtres de contenu et approbation humaine ; NeMo Guardrails : rails à base de modèle). **Seule exception acceptée par le propriétaire**, à rouvrir si un validateur déterministe gratuit apparaît (Guardrails AI, `openevals`) | 🟦 exception |
+| T23 — Surfaces déterministes | `surfaces.py` : liste d'outil vers `DataTable`/`Chart`, enveloppe A2UI | Motif officiel à schéma fixe (`copilotkit.a2ui`) déjà utilisé ; évaluer MCP Apps (`@copilotkit/mcp-apps-renderer`, `@copilotkit/angular/mcp-apps`) pour que l'interface d'un outil vienne de son serveur MCP | ⬜ |
+| T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
+| T25 — Mémoire des conversations | `memoire.py` : préfixe de fil par utilisateur, purge des conversations inactives | Isolation par espaces de noms du `Store` LangGraph ; expiration par une tâche `pg_cron` (extension PostgreSQL gratuite) ou par le TTL du `Store` PostgreSQL | ⬜ |
+| T26 — Échange de jeton | `outils.py` : `jeton_agent` appelle `/auth/jetons/agent` ; côté Java, émission par l'encodeur JWT | Échange de jetons OAuth2 (RFC 8693) de Spring Authorization Server et client OAuth2 Authlib | ⬜ |
+| T27 — Enveloppe du service IA | `agui.py` : authentification, validation de la question, flux SSE, erreurs sans détail | `add_langgraph_fastapi_endpoint` avec dépendances FastAPI ; outils par requête via les crochets dynamiques de LangChain | ⬜ |
+| T28 — Banc d'évaluation | `evaluation.py` : rejoueur et notation | `agentevals` et `openevals` sous pytest, sans LangSmith ; supprimer le rejoueur | ⬜ |
+| T29 — Scripts de la passerelle | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` | `include` de fichiers de configuration LiteLLM par fournisseur ; contrôles de santé et sondes natifs ; clés virtuelles par l'API gérée en base | ⬜ |
+| T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
+| T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
+
+Autres points non terminés, gardés ouverts :
+
+| Point | État |
+|---|---|
+| T20 — Démonstration J1 sur la nouvelle base (images reconstruites, banc réel, flux réels) | ⬜ |
+| Espace IA plein écran (J4) et mémoire longue par le `Store` LangGraph | ⬜ |
+| Latence d'une réponse sous 30 s à tenir sur le jeu de référence | ⬜ |
+| Évaluation de l'agent étendue (cas complexes, tri, questions à l'utilisateur) | ⬜ |
+| Historique SQLite du runtime : pas d'expiration | ⬜ |
+| Lint : dette d'accessibilité du frontend (23 avertissements plafonnés), lint Java et runtime Node | ⬜ |
+| Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) à isoler | ⬜ |
 
 ### Journal
 
