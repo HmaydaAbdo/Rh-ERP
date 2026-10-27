@@ -61,9 +61,16 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
 
 ## 4. Exactitude
 
-1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils Spring.
-2. Un vérificateur déterministe contrôle que chaque nombre et chaque période de la réponse figure
-   dans les résultats d'outils du run ; sinon une seule régénération, puis abstention explicite.
+1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils Spring. **Priorité du
+   propriétaire (2026-10-27) : faire disparaître le besoin de calcul** : tout total, écart, variation, pourcentage,
+   moyenne, rang ou effectif qu'une question peut demander est renvoyé tel quel par un outil déterministe (V1d), de sorte
+   que le modèle n'ait jamais qu'à reprendre des valeurs.
+2. **Décision du propriétaire (2026-10-27) : le vérificateur de chiffres est supprimé** (T22, V1f). Une liste
+   exhaustive de faux positifs est impossible à établir ; l'exactitude repose sur les outils qui calculent, sur les
+   middlewares officiels de LangChain et LangGraph (voir « Middlewares officiels ») et sur le jeu de référence. Tant que
+   V1d n'est pas livré, le vérificateur reste actif : une seule régénération, puis abstention explicite.
+   Conversation : l'agent s'appuie sur les tours précédents (valeurs déjà lues, choix de l'utilisateur), les analyse,
+   **pose une question** quand c'est ambigu et **relit l'ERP pour confirmer** quand une valeur peut avoir changé.
 3. Sans outil ni source adaptés, l'agent s'abstient et propose l'écran classique.
 4. Un jeu de référence versionné (`ia/evaluation/jeu_reference.json`, 24 cas au départ, à porter vers
    ≈ 100 ; réponses calculées en appelant l'outil attendu sur la base synthétique) est rejoué à chaque
@@ -71,9 +78,9 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
    modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
 5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
    `enable_json_schema_validation` côté LiteLLM.
-6. À venir (T2.7) : le vérificateur couvre aussi les identifiants, noms et dates cités, et chaque
-   chiffre principal affiche sa période, son périmètre et la définition de l'indicateur. Aujourd'hui,
-   seuls les nombres et les périodes sont vérifiés.
+6. Annulé (T2.7, 2026-10-27) : l'extension du vérificateur aux identifiants, noms et dates n'a plus lieu d'être, le
+   vérificateur étant supprimé. Reste à faire, sans vérificateur : chaque chiffre principal affiche sa période, son
+   périmètre et la définition de l'indicateur (champs fournis par l'outil).
 
 ## 5. Sécurité
 
@@ -222,7 +229,7 @@ Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T
 | T2.4 — Catalogue filtré | Seuls les outils permis par les droits sont proposés au modèle (confort, pas sécurité) | Le serveur refuse toujours un outil interdit appelé directement | ⬜ |
 | T2.5 — Budgets et quotas | Quotas par utilisateur et par jour ; budget par poste ; plafonds par run complétés par les tokens totaux et la durée totale | Dépassement refusé avec un message clair ; tests | ⬜ |
 | T2.6 — Jeu adversarial | Injections directes et indirectes (champs de données piégés), contournement de périmètre, exfiltration par lien ou image, demandes interdites ; résultats d'outils délimités comme données dans les prompts | Chaque cas a une issue déterministe attendue, rejouée à chaque changement | ⬜ |
-| T2.7 — Vérificateur étendu | Identifiants, noms et dates cités vérifiés comme les chiffres ; période, périmètre et définition affichés | Cas d'invention d'identifiant refusés ; jeu de référence vert | ⬜ |
+| T2.7 — Vérificateur étendu | ~~Identifiants, noms et dates cités vérifiés comme les chiffres~~ **Annulée le 2026-10-27** (vérificateur supprimé, voir T22) ; reste : période, périmètre et définition affichés avec chaque chiffre | Cas d'invention d'identifiant refusés par un outil de recherche et non par un vérificateur ; jeu de référence vert | ❌ annulée / ⬜ affichage |
 | T2.8 — Conservation dans la passerelle | Contenu des messages non conservé par LiteLLM, réglé explicitement ; durée des journaux de dépense confirmée | Configuration vérifiée | ⬜ |
 | T2.9 — Contrat de vue généré | ViewSpec : schéma JSON généré depuis Pydantic, types Angular et contrôle Spring dérivés du même schéma | Une divergence fait échouer la CI | ⬜ |
 
@@ -253,8 +260,8 @@ aux utilisateurs visible.
 | Outil d'observabilité (T3.4) | Langfuse (riche, mais plusieurs conteneurs : PostgreSQL, ClickHouse, Redis, stockage objet) ; Arize Phoenix (un conteneur et PostgreSQL) | Instrumenter en OpenTelemetry d'abord, puis choisir sur l'empreinte mesurée sur le serveur |
 | Modèle local (T3.1) | Matériel acheté, loué ou mutualisé | Décision du propriétaire sur le dimensionnement mesuré |
 | Pseudonymisation (T3.1) | Remplacer CIN et noms par des jetons avant un modèle externe, les rétablir dans la réponse | Oui tant qu'un modèle hors de l'entreprise reçoit des données réelles ; inutile avec le seul modèle local |
-| Vérificateur de chiffres (T10) | **Décidé le 2026-10-26** : gardé, en middleware officiel (`after_model`), qui fait réécrire puis abstenir | — |
-| Texte en flux et vérification (T11) | **Décidé le 2026-10-26** : texte diffusé au fil de l'eau avec « vérification en cours », remplacé si la vérification échoue | — |
+| Vérificateur de chiffres (T10) | ~~Décidé le 2026-10-26 : gardé, en middleware officiel (`after_model`)~~ **Remplacé le 2026-10-27** : suppression complète (T22, V1f), après V1d ; le vérificateur reste actif d'ici là | — |
+| Texte en flux et vérification (T11) | Décidé le 2026-10-26 : texte diffusé au fil de l'eau avec « vérification en cours », remplacé si la vérification échoue. **Modifié le 2026-10-27** : sans vérificateur, le texte reste diffusé tel quel ; l'état partagé `verification` et la mention « vérification en cours » disparaissent de l'interface avec V1f | — |
 | Raisonnement affiché (T11) | **Décidé le 2026-10-26** : raisonnement brut du modèle, dans un bloc « Réflexion » replié | — |
 | Dépendances du client (T12, T13) | **Décidé le 2026-10-26** : dernières versions des frameworks adoptées même préliminaires (CopilotKit Angular, A2UI) ; `zod` forcé en version 4 contre la faille GHSA-mrhx-c7xc-m3w5, compatibilité vérifiée | — |
 | Langues (T3.9) | Français seul ; français, arabe et darija écrits | Mesurer la demande au pilote ; arabe écrit en priorité si les utilisateurs l'emploient |
@@ -271,7 +278,7 @@ reprenne là où il s'est arrêté.
 | Tâche | Pièce maison actuelle | Piste gratuite à instruire | État |
 |---|---|---|---|
 | T21 — Liste titrée des anciennes conversations | Aucune : fonction absente. Le fil est rejoué, mais l'utilisateur ne peut pas revenir à un ancien fil | `injectThreads` et `CopilotThreadsDrawer` de CopilotKit sur les routes locales de fils du runtime (`LocalThreadEndpointRunner`) ; contribuer ou étendre le runner SQLite officiel ; titre tiré de la première question ; sinon petit code **temporaire** avec date de retrait | ⬜ |
-| T22 — Vérificateur de chiffres | `verification.py` et `VerificateurChiffres` : extraction des nombres et rapprochement avec les résultats d'outils | Aucun framework ne fournit cette règle (page Guardrails de LangChain : filtres de contenu et approbation humaine ; NeMo Guardrails : rails à base de modèle). **Seule exception acceptée par le propriétaire**, à rouvrir si un validateur déterministe gratuit apparaît (Guardrails AI, `openevals`) | 🟦 exception |
+| T22 — Vérificateur de chiffres | `verification.py` et `VerificateurChiffres` : extraction des nombres et rapprochement avec les résultats d'outils | **Décision du propriétaire (2026-10-27) : suppression complète**, sans remplaçant maison. Aucun framework ne fournit cette règle (page Guardrails de LangChain : filtres de contenu et approbation humaine ; NeMo Guardrails : rails à base de modèle) et une liste exhaustive de faux positifs est impossible. Condition : V1d livré. À retirer : `verification.py`, `VerificateurChiffres`, `_tour`, l'état `verification`, la mention « vérification en cours » et la surface vérifiée de l'interface, les tests, et les passages de `conventions/agents-ia.md` (garde-fous : « résultats d'outils du même run ») et de ce document (§ 3, § 4, § 6) | ⬜ à faire (V1f) |
 | T23 — Surfaces déterministes | `surfaces.py` : liste d'outil vers `DataTable`/`Chart`, enveloppe A2UI | Motif officiel à schéma fixe (`copilotkit.a2ui`) déjà utilisé ; évaluer MCP Apps (`@copilotkit/mcp-apps-renderer`, `@copilotkit/angular/mcp-apps`) pour que l'interface d'un outil vienne de son serveur MCP | ⬜ |
 | T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
 | T25 — Mémoire des conversations | `memoire.py` : préfixe de fil par utilisateur, purge des conversations inactives | Isolation par espaces de noms du `Store` LangGraph ; expiration par une tâche `pg_cron` (extension PostgreSQL gratuite) ou par le TTL du `Store` PostgreSQL | ⬜ |
@@ -281,6 +288,31 @@ reprenne là où il s'est arrêté.
 | T29 — Scripts de la passerelle | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` | `include` de fichiers de configuration LiteLLM par fournisseur ; contrôles de santé et sondes natifs ; clés virtuelles par l'API gérée en base | ⬜ |
 | T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
 | T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
+
+### Middlewares officiels de LangChain et LangGraph : tous adoptés, sans exception
+
+Décision du propriétaire (2026-10-27) : **tous les middlewares officiels de LangChain** (1.4.7, liste de
+`langchain.agents.middleware`) et les fonctions de LangGraph sont mis en œuvre, chacun avec un test ; ils prennent la
+place de tout code maison équivalent. « Sans exception » veut dire qu'aucun n'est écarté sans décision écrite du
+propriétaire : un middleware à risque (exécution de commandes) s'adopte avec ses garde-fous, pas autrement.
+
+| Élément officiel | État | Tâche |
+|---|---|---|
+| `TodoListMiddleware` | ✅ en place | — |
+| `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ✅ en place | — |
+| `SummarizationMiddleware` | ✅ en place (40 000 jetons, résumé interne) | — |
+| `LLMToolSelectorMiddleware` | ✅ en place (réglage `selection_outils`) | — |
+| `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
+| `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
+| `ToolErrorMiddleware`, `ToolRetryMiddleware`, `ModelRetryMiddleware` | ⬜ | M1 |
+| `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`), `configure_trace_policy`, `omit_payload` | ⬜ | M2 |
+| `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
+| `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
+| `FilesystemFileSearchMiddleware` | ⬜ | M5 |
+| `ShellToolMiddleware` (`DockerExecutionPolicy`) | ⬜, décision de sécurité | M6 |
+| Crochets `before_agent`, `after_agent`, `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, `dynamic_prompt` | utilisés par les middlewares ci-dessus ; `dynamic_prompt` remplace `contexte.py` | T24 |
+| LangGraph : checkpointer PostgreSQL | ✅ en place | — |
+| LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ⬜ | T25, J4 |
 
 Autres points non terminés, gardés ouverts :
 
@@ -307,9 +339,10 @@ suffit ; une PR par vague, CI sur demande.
 | Vague | Tâche | Contenu | Modèle | Pourquoi ce modèle |
 |---|---|---|---|---|
 | 1 | V1a — Lint | ✅ Fait (PR #98) : frontend à 0 avertissement, Checkstyle Java et ESLint du runtime Node dans la CI | — | — |
-| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit ; ✅ résumé de conversation rendu interne et déclenché à 40 000 jetons ; **à faire** : outil déterministe de comparaison de deux périodes par chantier (la question « top 3 puis plus forte hausse » donne des conclusions variables) | Sonnet | Enquête au navigateur et petits changements |
+| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit ; ✅ résumé de conversation rendu interne et déclenché à 40 000 jetons | Sonnet | Enquête au navigateur et petits changements |
 | 1 | V1d — Fiabilité des comparaisons | **Priorité, à résoudre** : outil déterministe de comparaison de deux périodes par chantier (masse, effectif, variation absolue et en pourcentage, fonction dominante), fourni par le backend MCP ; l'agent n'a plus à recombiner les tops de chaque mois. Cas de test : « top 3 puis plus forte hausse » (réponse attendue : C206, +81 828,47 MAD, +24,0 %, septembre contre août 2026), rejoué plusieurs fois, y compris avec des questions voisines (baisse, effectif, une seule fonction) | Sonnet | Java et Python, périmètre petit et testable ; vérité de référence dans la base |
 | 1 | V1e — CPU au démarrage du service `ia` | **À réduire** : l'import de `erp_rh_ia.app` coûte 14 s de calcul (36 s mesurés dans le conteneur), dont 7 s pour `litellm` (via `langchain-litellm`), 3 s pour `fastmcp.client`, puis l'instrumentation OpenTelemetry ; premier démarrage à froid de 110 s, 27 s ensuite. Pistes à mesurer : `LITELLM_LOCAL_MODEL_COST_MAP=True` (pas de téléchargement du barème au chargement), import différé des modules lourds, remplacement de `ChatLiteLLM` par un client plus léger si `reasoning_content` reste transmis (la raison du choix actuel, voir `modeles.py`) | Sonnet | Mesure avant et après, un changement à la fois ; pas de régression sur le raisonnement affiché |
+| 1 | V1f — Retrait du vérificateur | **Après V1d.** Suppression complète du vérificateur (voir T22 pour la liste de ce qui disparaît) ; consignes de l'agent mises à jour : les valeurs de la conversation peuvent être reprises, et l'agent relit l'ERP pour confirmer quand elles ont pu changer ; `poser_question` pour lever une ambiguïté ; conventions et ce document alignés ; le jeu de référence (et non un contrôle en ligne) mesure désormais l'exactitude | Sonnet | Suppression guidée par la liste de T22 ; non-régression par le jeu de référence |
 | 1 | V1c — Mesure | Évaluation étendue (tri, questions, cas complexes), latence sous 30 s, démonstration T20 sur la nouvelle base | Sonnet | Exécution et mesure, peu de conception |
 | 2 | T21 — Conversations | Liste titrée des anciennes conversations, gratuite (voir pistes du tableau ci-dessus) | Sonnet, Opus si aucune piste officielle ne tient | Recherche encadrée par le tableau ; Opus seulement pour trancher entre contribution au runner officiel et code temporaire |
 | 2 | J4a — Espace IA | Espace plein écran et mémoire longue par le `Store` LangGraph | Sonnet | Conception d'interface guidée par les composants existants |
@@ -322,7 +355,13 @@ suffit ; une PR par vague, CI sur demande.
 | 4 | T31 — Accès du runtime | Équivalent gratuit de `identifyUser`, ou proxy d'authentification standard | Sonnet | Essai court |
 | 5 | T27 — Enveloppe du service IA | `add_langgraph_fastapi_endpoint`, dépendances FastAPI, outils par requête | **Opus** | Refonte du cœur du service : concurrence, jeton par requête, flux |
 | 5 | T26 — Échange de jeton | RFC 8693 par Spring Authorization Server et client OAuth2 ; `jeton_agent` et l'encodeur JWT supprimés | **Opus** | Sécurité critique, Java et Python à la fois |
-| 5 | T22 — Vérificateur | Réexaminer chaque trimestre ; remplacer seulement par un validateur déterministe gratuit | **Opus** pour la recherche | Garantie d'exactitude de la promesse du produit |
+| 5 | T22 — Vérificateur | Remplacé par V1f (vague 1) : suppression complète | — | — |
+| 2 | M1 — Contexte et erreurs | `ContextEditingMiddleware` (`ClearToolUsesEdit` : efface les anciens résultats d'outils, ce qui retarde le résumé), `ToolErrorMiddleware` (erreur d'outil renvoyée proprement au modèle), `ToolRetryMiddleware` et `ModelRetryMiddleware` (erreurs transitoires du serveur MCP et de la passerelle) | Sonnet | Configuration officielle, un test par middleware |
+| 2 | M2 — Données personnelles | `PIIMiddleware` (CIN, IBAN, téléphone, courriel masqués avant tout modèle externe : les paliers gratuits servent à améliorer les produits des fournisseurs) et `configure_trace_policy` / `omit_payload` (mêmes données retirées des traces Phoenix) ; tenir compte de la loi 09-08 | **Opus** | Sécurité et conformité, difficile à défaire |
+| 2 | M3 — Bascule et outils | `ModelFallbackMiddleware` (second filet sur un autre tag, en plus de la bascule de LiteLLM), `ProviderToolSearchMiddleware` (catalogue d'outils MCP qui grossit, avec le sélecteur actuel), `LLMToolEmulator` (outils simulés dans le banc d'évaluation, au lieu des doubles de test maison) | Sonnet | Configuration et tests ; mesure de la latence avant et après |
+| 2 | M4 — Approbation humaine | `HumanInTheLoopMiddleware` et interruptions LangGraph (`interrupt`, `Command`) : confirmation avant toute écriture dans l'ERP (J3) ; rapprocher de `poser_question` et des interruptions natives de CopilotKit (T30) | Sonnet | Motif officiel, test de reprise |
+| 3 | M5 — Recherche de fichiers | `FilesystemFileSearchMiddleware` : recherche dans des documents RH locaux, racine en lecture seule, sans accès aux secrets | Sonnet | Périmètre étroit |
+| 3 | M6 — Exécution de code | `ShellToolMiddleware` avec `DockerExecutionPolicy` (jamais `HostExecutionPolicy`) : conteneur jetable **sans réseau, sans secret, sans accès à l'ERP**, pour que le calcul ou l'analyse ponctuels passent par un outil et non par le modèle (voie des grands fournisseurs) ; `CodexSandboxExecutionPolicy` écartée tant qu'elle n'est pas gratuite et locale. **Décision de sécurité à valider avec le propriétaire avant adoption** | **Opus** | Exécution de code : isolation, quotas et journalisation |
 | Fin | Revue | `code-review` de chaque PR, niveau moyen, sur Sonnet ; pas de revue cloud facturée | Sonnet | Revue ciblée sur le diff |
 
 Ordre : les vagues 1 et 2 clôturent les points ouverts, les vagues 3 à 5 rapprochent le code maison de zéro, des
@@ -365,6 +404,7 @@ remplacements les plus sûrs vers les plus risqués. Chaque tâche est close qua
 | 2026-10-27 | **Outils flexibles, questions à l'utilisateur, lint.** Les outils MCP de recherche et de répartition exposent leur tri : `tri` (critère propre à l'outil), `sens` (ASC ou DESC) et `page` (avec `limite`) sur `employes_rechercher`, `paie_bulletins_rechercher`, `chantier_rechercher`, `equipe_rechercher`, `fonction_rechercher`, et `tri`/`sens` sur `employes_regrouper` et `paie_repartition` ; l'agent compose « les cinq plus gros salaires » ou « le chantier le moins cher » lui-même, et le tri par salaire exige le droit de paie (aucune fuite par l'ordre). 4 tests d'intégration. L'agent interroge l'utilisateur avec `poser_question` (outil déclaré par le navigateur, human-in-the-loop de CopilotKit : options à choisir ou réponse libre, le run reprend avec la réponse). ESLint (`angular-eslint`, `typescript-eslint`) : `npm run lint`, étape de CI, 0 erreur, 23 avertissements de dette d'accessibilité plafonnés. Surfaces déterministes : le crochet officiel `wrap_tool_call` remplace le contournement de la coroutine des outils. |
 | 2026-10-27 | **Inventaire du code IA maison et passerelle.** Décision du propriétaire : tout passe par les frameworks, sans exception. Pièces examinées une à une : le rejoueur d'évaluation reste un banc de développement qui s'appuie sur `agentevals` pour la trajectoire ; `ContexteErp`, `SurfacesResultats` et le vérificateur sont des middlewares officiels (`AgentMiddleware`, crochets `before_agent`, `wrap_model_call`, `wrap_tool_call`, `after_model`) ; la surface suit le motif officiel de schéma fixe de CopilotKit (`copilotkit.a2ui`) ; le checkpointer et la purge utilisent `AsyncPostgresSaver` et `adelete_thread` (aucune expiration native hors Agent Server : [forum LangChain](https://forum.langchain.com/t/production-use-of-postgressaver-service-owned-migrations-and-checkpoint-retention-in-node-js/4481)). **Vérificateur de chiffres** : aucun framework ne vérifie qu'un nombre vient des outils (la page [Guardrails de LangChain](https://docs.langchain.com/oss/python/langchain/guardrails) ne propose que des filtres de contenu et l'approbation humaine, NeMo Guardrails des rails à base de modèle) ; le remplacer par un juge `openevals` troquerait une garantie déterministe contre une garantie probabiliste sur des modèles gratuits : **décision du propriétaire attendue**. **Passerelle** : alternatives comparées (Bifrost, Portkey, Kong, Cloudflare ; TensorZero archivé en juin 2026 et Helicone en maintenance selon les comparatifs). Bifrost gagne en surcoût (microsecondes) mais ce surcoût est sans effet ici (les secondes viennent des modèles gratuits) et son catalogue de fournisseurs est plus petit ; LiteLLM reste : bascule par tag avec cooldown, clés virtuelles, détection d'injection. À rouvrir si le volume ou un fournisseur payant l'impose. |
 | 2026-10-27 | **Conversations reprises dans l'interface, runtime durci.** Le fil de l'utilisateur (`u<id>-<uuid>`, mémorisé par navigateur) est rejoué au rechargement par le `connect` officiel de CopilotKit, et « Nouvelle conversation » en ouvre un autre. L'historique du runtime est gardé par le **runner SQLite officiel** (`@copilotkit/sqlite-runner`, volume `runtime_data`) : il survit au redémarrage du runtime (prouvé). Sans CopilotKit Intelligence, le runtime exposait les fils de tous les utilisateurs ; les crochets officiels `onBeforeHandler` authentifient chaque requête auprès de Spring (`/auth/me`, droit `IA_UTILISER`), ne servent que `info`, `agent/run`, `agent/connect` et `agent/stop` et réservent un fil à son propriétaire (403 sinon) ; sa liste (`/threads`) répond 404. Correctif trouvé au banc : la reprise après `poser_question` envoie le résultat de l'outil comme dernier message, que le service IA refusait (422) ; accepté, avec la même limite de taille. Image du runtime : le chargeur ESM d'OpenTelemetry était absent de l'`ENTRYPOINT`. Vérifié dans le navigateur : question de l'agent, réponse (option ou texte libre), reprise de l'agent. **Limites** : pas de liste ni de titres des anciennes conversations (la liste des fils et leurs titres automatiques sont des fonctions de CopilotKit Intelligence, payant ; le runner SQLite n'en offre pas) ; pas d'expiration de l'historique SQLite. |
+| 2026-10-27 | **Décisions du propriétaire sur l'exactitude et les middlewares.** (1) Faire disparaître le besoin de calcul est prioritaire (V1d). (2) Le vérificateur de chiffres est **supprimé** (T22, V1f) : une liste exhaustive de faux positifs est impossible ; cas réels observés : date d'embauche d'un tour précédent refusée, marqueur de liste « 1. » refusé, deux abstentions sur une réponse exacte. (3) En conversation, l'agent s'appuie sur les tours précédents, pose une question et relit l'ERP pour confirmer. (4) Tous les middlewares officiels de LangChain et de LangGraph sont mis en œuvre sans exception (M1 à M6). (5) Tout code maison est supprimé au profit des frameworks. Rien n'est codé à cette date : plan seulement. |
 
 ## 8. État technique
 
