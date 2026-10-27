@@ -1,5 +1,5 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, contentChild, DestroyRef, inject, input, signal, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, contentChild, DestroyRef, EnvironmentInjector, inject, input, OnInit, runInInjectionContext, signal, TemplateRef } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, finalize, forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
@@ -65,7 +65,7 @@ interface Chargement {
   styleUrl: './cartes-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CartesPerimetreComponent {
+export class CartesPerimetreComponent implements OnInit {
   readonly module = input.required<ModulePerimetre>();
   /** Boutons propres au module, ajoutés au pied de chaque carte. */
   protected readonly actionsCarte = contentChild<TemplateRef<ContexteCarte>>('actionsCarte');
@@ -80,6 +80,7 @@ export class CartesPerimetreComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   protected readonly dimensions = DIMENSIONS;
   protected readonly libelles = LIBELLES_DIMENSIONS;
@@ -262,13 +263,13 @@ export class CartesPerimetreComponent {
     return ids;
   });
 
-  constructor() {
+  ngOnInit(): void {
     if (this.voitPaie()) {
       this.chargerPeriodes();
     }
     if (this.voitHeuresSupp()) this.heuresSuppService.periodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (mois) => this.moisHeuresSupp.set(mois) });
     const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), periodes: this.mois(), module: this.module(), version: this.version() }));
-    toObservable(requete)
+    runInInjectionContext(this.environmentInjector, () => toObservable(requete)
       .pipe(
         distinctUntilChanged((a, b) => a.module === b.module && a.niveau === b.niveau && a.periode === b.periode && a.periodes === b.periodes && a.version === b.version && a.params.keys.length === b.params.keys.length && a.params.keys.every((k) => a.params.get(k) === b.params.get(k))),
         switchMap((r) => {
@@ -291,7 +292,7 @@ export class CartesPerimetreComponent {
       .subscribe((resultat) => {
         this.chargement.set(false);
         this.resultat.set(resultat);
-      });
+      }));
   }
 
   /** Recharge le niveau affiché sans changer d'URL (le module Paie s'en sert après une suppression en groupe). */

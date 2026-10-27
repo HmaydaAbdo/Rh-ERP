@@ -40,7 +40,7 @@ IA complétées, tâches de J2 et J3 détaillées, écarts suivis au § 10 de [i
 listées au § 7.
 Tâches T1 à T8 de J1 faites : passerelle
 LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
-`MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
+`MCP_ENABLED=false`), 28 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
 (évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
 Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
 CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est
