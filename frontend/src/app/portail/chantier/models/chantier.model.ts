@@ -1,3 +1,28 @@
+export type NatureChantier = 'AO' | 'DEPOT' | 'EMULSION' | 'CONCASSAGE' | 'POSTE_ENROBE' | 'CENTRALE_A_BETON';
+
+export const NATURE_CHANTIER_LIBELLES: Record<NatureChantier, string> = {
+  AO: 'AO', DEPOT: 'Dépôt', EMULSION: 'Émulsion', CONCASSAGE: 'Concassage',
+  POSTE_ENROBE: 'Poste d’enrobé', CENTRALE_A_BETON: 'Centrale à béton'
+};
+
+export const NATURE_CHANTIER_OPTIONS = (Object.entries(NATURE_CHANTIER_LIBELLES) as [NatureChantier, string][])
+  .map(([value, label]) => ({ value, label }));
+
+export function libelleNatureChantier(nature: NatureChantier | null): string {
+  return nature ? NATURE_CHANTIER_LIBELLES[nature] : 'À qualifier';
+}
+
+export interface ChantierCarte {
+  id: number;
+  code: string;
+  designation: string;
+  nom: string | null;
+  nature: NatureChantier;
+  localisation: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface Chantier {
   id: number;
   code: string;
@@ -9,12 +34,22 @@ export interface Chantier {
   sourceErp: boolean;
   actif: boolean;
   version: number;
+  nature: NatureChantier | null;
+  localisation: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  afficherSurCarte: boolean;
 }
 
 export interface ChantierCreateRequest {
   code: string;
   designation: string;
   nom?: string | null;
+  nature: NatureChantier;
+  localisation?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  afficherSurCarte: boolean;
 }
 
 export interface ChantierUpdateRequest extends ChantierCreateRequest {

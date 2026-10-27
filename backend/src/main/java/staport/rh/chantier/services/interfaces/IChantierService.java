@@ -6,6 +6,9 @@ import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
+import staport.rh.chantier.dtos.request.ChantierStatutRequestDto;
+import staport.rh.chantier.dtos.response.ChantierCarteDto;
+import java.util.List;
 
 /**
  * Façade publique du module Chantier — seule cette interface peut être injectée
@@ -18,6 +21,10 @@ public interface IChantierService {
     ChantierResponseDto update(Long id, ChantierUpdateRequestDto dto);
 
     ChantierResponseDto findById(Long id);
+
+    ChantierResponseDto changerStatut(Long id, ChantierStatutRequestDto dto);
+
+    List<ChantierCarteDto> carte();
 
     Page<ChantierResponseDto> search(ChantierSearchCriteria criteria, Pageable pageable);
 

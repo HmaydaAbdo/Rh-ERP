@@ -48,7 +48,7 @@ describe('PaieImportStore', () => {
   it('rouvre un chantier clôturé puis réanalyse le même fichier', () => {
     const cloture = { chantierId: 8, code: 'C059', designation: 'Voirie', lignes: [4, 5] };
     service.analyserImport.mockReturnValueOnce(of({ ...PRETE, chantiersClotures: [cloture], pret: false })).mockReturnValueOnce(of(PRETE));
-    const chantier = { id: 8, version: 3, code: 'C059', designation: 'Voirie', nom: null, sourceErp: true, actif: false };
+    const chantier = { id: 8, version: 3, code: 'C059', designation: 'Voirie', nom: null, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: false };
     chantiers.getById.mockReturnValue(of(chantier));
     chantiers.changerStatut.mockReturnValue(of({ ...chantier, actif: true }));
     store.ouvrir(['2026-09']);

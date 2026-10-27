@@ -1,3 +1,60 @@
+.chantier-carte__marqueur {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--map-marker-ring);
+  border-radius: 999px;
+  background: var(--map-marker-halo);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--map-marker-core) 12%, transparent);
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+
+  &:hover,
+  &:focus-visible { box-shadow: var(--map-marker-hover-glow); transform: scale(1.08); }
+
+  &::after {
+    position: absolute;
+    z-index: 2;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    width: max-content;
+    max-width: min(18rem, 62vw);
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--map-tooltip-border);
+    border-radius: var(--radius-md);
+    background: var(--map-tooltip-surface);
+    box-shadow: var(--map-marker-tooltip-shadow);
+    color: var(--map-tooltip-text);
+    content: attr(data-tooltip);
+    font: 600 var(--text-sm)/1.55 var(--font-sans, sans-serif);
+    white-space: pre-line;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-0.25rem, -50%);
+    transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  }
+
+  &:hover::after,
+  &:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+}
+
+.chantier-carte__point {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid var(--map-marker-ring);
+  border-radius: 50%;
+  background: var(--map-marker-core);
+  box-shadow: 0 0 0.85rem var(--map-marker-core);
+}
+
+.chantier-carte__marqueur:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
 // La carte remplit l'espace que lui laisse la page ; le conteneur MapLibre est positionné dedans (pas de hauteur en pourcentage).
 app-chantier-carte {
   display: block;
@@ -9,22 +66,24 @@ app-chantier-carte {
 .chantier-carte {
   // L'univers cartographique et ses contrôles restent nocturnes, même si l'application est en thème clair.
   color-scheme: dark;
-  --neutral-0: #111f30;
-  --neutral-50: #091521;
-  --neutral-100: #152639;
-  --neutral-200: #26394d;
-  --neutral-300: #34495f;
-  --neutral-400: #6f86a0;
-  --neutral-500: #93a7be;
-  --neutral-600: #b4c4d6;
-  --neutral-700: #e6eef8;
-  --neutral-800: #f1f6fb;
-  --color-surface: #111f30;
-  --color-surface-alt: #091521;
-  --color-border: #26394d;
-  --color-text: #f1f6fb;
-  --color-text-muted: #93a7be;
-  --color-primary: #5b9be0;
+  --neutral-0: var(--map-ui-surface);
+  --neutral-50: var(--map-ui-canvas);
+  --neutral-100: var(--map-ui-surface);
+  --neutral-200: var(--map-ui-border);
+  --neutral-300: var(--map-ui-border);
+  --neutral-400: var(--map-ui-text-muted);
+  --neutral-500: var(--map-ui-text-muted);
+  --neutral-600: var(--map-ui-text);
+  --neutral-700: var(--map-ui-text);
+  --neutral-800: var(--map-ui-text);
+  --color-surface: var(--map-ui-surface);
+  --color-surface-alt: var(--map-ui-canvas);
+  --color-border: var(--map-ui-border);
+  --color-text: var(--map-ui-text);
+  --color-text-muted: var(--map-ui-text-muted);
+  --color-primary: var(--map-ui-primary);
+  --color-focus: var(--map-ui-focus);
+  --color-focus-soft: var(--map-ui-focus-soft);
   --map-icon-filter: invert(1);
   position: relative;
   width: 100%;
@@ -104,34 +163,35 @@ app-chantier-carte {
   width: 3.25rem;
   height: 3.25rem;
   border-radius: var(--radius-md);
-  color: #ffffff;
+  color: var(--map-preview-text);
   font-size: 1.25rem;
   transition: box-shadow var(--duration-fast) var(--ease-out);
 
   .chantier-carte__calque--plan & {
     background:
-      linear-gradient(115deg, transparent 46%, #f5c76b 46% 52%, transparent 52%),
-      linear-gradient(20deg, transparent 60%, #ffffff 60% 64%, transparent 64%),
-      linear-gradient(160deg, #a8d5a2 0 35%, #eef0e6 35% 72%, #9fd3ea 72%);
-    color: #2d4a5a;
+      linear-gradient(115deg, transparent 46%, var(--map-preview-plan-road) 46% 52%, transparent 52%),
+      linear-gradient(20deg, transparent 60%, var(--map-preview-plan-line) 60% 64%, transparent 64%),
+      linear-gradient(160deg, var(--map-preview-plan-land) 0 35%, var(--map-preview-plan-built) 35% 72%, var(--map-preview-plan-water) 72%);
+    color: var(--map-ui-text);
   }
 
   .chantier-carte__calque--satellite & {
     background:
-      radial-gradient(circle at 30% 30%, #6f8a4a 0 22%, transparent 23%),
-      radial-gradient(circle at 75% 70%, #3d5a3a 0 26%, transparent 27%),
-      linear-gradient(150deg, #8b7b5a, #5c6e45 55%, #1f3f5c);
+      radial-gradient(circle at 30% 30%, var(--map-preview-satellite-forest) 0 22%, transparent 23%),
+      radial-gradient(circle at 75% 70%, var(--map-preview-satellite-shadow) 0 26%, transparent 27%),
+      linear-gradient(150deg, var(--map-preview-satellite-highland), var(--map-preview-satellite-lowland) 55%, var(--map-preview-satellite-sea));
   }
 
   .chantier-carte__calque--relief & {
-    background: linear-gradient(160deg, #d9cfb8 0 30%, #a89a7c 30% 55%, #6b6150 55% 70%, #e9e3d4 70%);
-    color: #3b3428;
+    background: linear-gradient(160deg, var(--map-preview-relief-high) 0 30%, var(--map-preview-relief-mid) 30% 55%, var(--map-preview-relief-low) 55% 70%, var(--map-preview-plan-built) 70%);
+    color: var(--map-preview-relief-text);
   }
 }
 
 // ---- Fiche d'un lieu ----
 .chantier-carte .maplibregl-popup-content {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-sm-md) var(--space-md);
+  border: 1px solid var(--map-ui-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
@@ -147,6 +207,30 @@ app-chantier-carte {
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.chantier-carte__fiche-chantier {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-sm);
+  min-width: 13rem;
+
+  & + & { margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--map-ui-border); }
+}
+
+.chantier-carte__fiche-code { color: var(--map-ui-focus); font-weight: 700; }
+.chantier-carte__fiche-nom { color: var(--map-ui-text); font-weight: 650; }
+.chantier-carte__fiche-nature {
+  grid-column: 2;
+  justify-self: start;
+  margin: 0;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-pill);
+  background: var(--map-ui-canvas);
+  color: var(--map-ui-text-muted);
+  font-size: var(--text-xs);
 }
 
 // ---- Contrôles, échelle et mention légale de MapLibre, aux couleurs sombres de la carte ----

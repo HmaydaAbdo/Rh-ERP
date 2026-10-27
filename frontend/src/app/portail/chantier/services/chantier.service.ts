@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import {
   Chantier,
+  ChantierCarte,
   ChantierCreateRequest,
   ChantierSearchCriteria,
   ChantierSyncResult,
@@ -45,7 +46,11 @@ export class ChantierService {
 
   /** Clôture un chantier en cours, ou rouvre un chantier clôturé : la mise à jour garde tous ses autres champs. */
   changerStatut(chantier: Chantier, actif: boolean): Observable<Chantier> {
-    return this.update(chantier.id, { code: chantier.code, designation: chantier.designation, nom: chantier.nom, actif, version: chantier.version });
+    return this.http.put<Chantier>(`${this.baseUrl}/${chantier.id}/statut`, { actif, version: chantier.version });
+  }
+
+  carte(): Observable<ChantierCarte[]> {
+    return this.http.get<ChantierCarte[]>(`${this.baseUrl}/carte`);
   }
 
   delete(id: number): Observable<void> {

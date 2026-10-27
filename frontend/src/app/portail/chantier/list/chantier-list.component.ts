@@ -11,7 +11,7 @@ import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
 import { ChantierFiltres, lireFiltresChantier, memesFiltresChantier, versCriteresChantier } from '../filtres/chantier-filtres';
-import { Chantier } from '../models/chantier.model';
+import { Chantier, libelleNatureChantier } from '../models/chantier.model';
 import { confirmationStatutChantier, libelleStatutChantier } from '../models/chantier-statut';
 import { ChantierService } from '../services/chantier.service';
 
@@ -34,6 +34,8 @@ export class ChantierListComponent {
     { field: 'code', header: 'Code' },
     { field: 'nom', header: 'Nom' },
     { field: 'designation', header: 'Désignation', cellClass: 'text-truncate' },
+    { field: 'nature', header: 'Nature' },
+    { field: 'afficherSurCarte', header: 'Sur la carte' },
     { field: 'sourceErp', header: 'Source' },
     { field: 'actif', header: 'Statut' }
   ]);
@@ -57,6 +59,7 @@ export class ChantierListComponent {
   protected readonly statutEnCoursId = signal<number | null>(null);
 
   protected readonly libelleStatut = libelleStatutChantier;
+  protected readonly libelleNature = libelleNatureChantier;
 
   private filtres: ChantierFiltres = lireFiltresChantier(this.route.snapshot.queryParamMap);
 

@@ -222,7 +222,7 @@ test.describe('Paie', () => {
       ...routes(),
       'POST /paie/import/analyse': () => analyse(),
       'GET /chantiers/3': () => ({ id: 3, version: 2, code: 'C168', designation: 'Nador', nom: null, sourceErp: true, actif: rouvert }),
-      'PUT /chantiers/3': () => {
+      'PUT /chantiers/3/statut': () => {
         rouvert = true;
         return { id: 3, version: 3, code: 'C168', designation: 'Nador', nom: null, sourceErp: true, actif: true };
       }
@@ -240,6 +240,6 @@ test.describe('Paie', () => {
     await dialogue.getByRole('button', { name: 'Rouvrir le chantier C168' }).click();
 
     await expect(dialogue.getByText('Aucun problème')).toBeVisible();
-    expect(mock.bodies['PUT /chantiers/3']?.[0]).toMatchObject({ actif: true, version: 2 });
+    expect(mock.bodies['PUT /chantiers/3/statut']?.[0]).toMatchObject({ actif: true, version: 2 });
   });
 });
