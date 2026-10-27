@@ -17,7 +17,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from typing import Any, Protocol, cast
 
 import httpx
-from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, UserMessage
+from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, ToolMessage, UserMessage
 from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
@@ -64,9 +64,10 @@ class AccesErp(Protocol):
 
 
 def verifier_question(entree: RunAgentInput) -> None:
-    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide ou trop long."""
+    """422 si le dernier message n'est ni une question de l'utilisateur ni sa réponse à l'agent (résultat de l'outil
+    ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long."""
     dernier = entree.messages[-1] if entree.messages else None
-    if not isinstance(dernier, UserMessage):
+    if not isinstance(dernier, UserMessage | ToolMessage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Le dernier message doit venir de l'utilisateur.")
     if isinstance(dernier.content, str):
         texte = dernier.content

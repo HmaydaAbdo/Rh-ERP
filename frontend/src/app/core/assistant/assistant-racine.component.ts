@@ -11,6 +11,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../auth/services/auth.service';
 import { AssistantComponent } from './assistant.component';
+import { FilAssistant } from './fil-assistant.service';
 import { catalogueErp } from './catalogue/catalogue-erp';
 
 /** Point d'entrée du runtime CopilotKit, relayé par nginx en production et par `proxy.conf.js` en développement. */
@@ -36,7 +37,8 @@ export class AssistantRacineComponent {
       { provide: COPILOT_KIT_CONFIG, useValue: this.configuration() },
       CopilotKit,
       CopilotkitAgentFactory,
-      CopilotkitThreadsFactory
+      CopilotkitThreadsFactory,
+      FilAssistant
     ],
     inject(EnvironmentInjector)
   );

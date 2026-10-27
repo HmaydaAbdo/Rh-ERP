@@ -166,6 +166,24 @@ def test_une_question_absente_vide_ou_trop_longue_est_refusee(question: str | No
     assert _poster(_masse(), AccesSimule([]), _corps(question)).status_code == 422
 
 
+def test_la_reponse_de_l_utilisateur_a_une_question_de_l_agent_reprend_le_run() -> None:
+    """Après ``poser_question`` (outil du navigateur), le run reprend avec le résultat de l'outil en dernier message."""
+    corps = _corps()
+    corps["messages"] = [
+        {"id": "m1", "role": "user", "content": QUESTION},
+        {
+            "id": "a1",
+            "role": "assistant",
+            "toolCalls": [{"id": "c1", "type": "function", "function": {"name": "poser_question", "arguments": "{}"}}],
+        },
+        {"id": "t1", "role": "tool", "toolCallId": "c1", "content": "Par masse salariale"},
+    ]
+
+    assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 200
+    corps["messages"][-1]["content"] = "x" * 2001
+    assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 422
+
+
 def test_une_panne_devient_un_run_error_sans_detail() -> None:
     def panne(**_: Any) -> str:
         raise RuntimeError("détail interne : CIN AB123456")
