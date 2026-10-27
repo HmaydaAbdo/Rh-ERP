@@ -108,7 +108,8 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
     page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantier.id] }
   );
-  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.77, salaireHoraireDh: 15.3846153846 })]);
+  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.77 })]);
+  expect(lignesHs.content[0]?.salaireHoraireDh).toBeCloseTo(4000 / 260, 12);
   const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
     page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantier.id] }
   );
