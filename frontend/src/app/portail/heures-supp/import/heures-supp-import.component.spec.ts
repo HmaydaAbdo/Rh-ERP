@@ -33,6 +33,7 @@ interface ImportApi {
   erreur: WritableSignal<string | null>;
   chargement: WritableSignal<boolean>;
   telechargementModele: WritableSignal<boolean>;
+  peutRemplacer(): boolean;
   creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
   alignements: WritableSignal<number[]>;
   choisirChantier(value: unknown): void;
@@ -88,6 +89,26 @@ describe('HeuresSuppImportComponent', () => {
   it('commence à l’étape de choix du mois et du chantier', () => {
     expect(api.etape()).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('Choisir le mois et le chantier');
+  });
+
+  it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {
+    api.verifierContexte();
+    api.analyser();
+    api.corriger();
+    api.importer();
+
+    expect(service['verifierPrerequis']).not.toHaveBeenCalled();
+    expect(service['analyserImport']).not.toHaveBeenCalled();
+    expect(service['corrigerImport']).not.toHaveBeenCalled();
+    expect(service['importer']).not.toHaveBeenCalled();
+  });
+
+  it('autorise le remplacement uniquement pour les doublons d’import', () => {
+    expect(api.peutRemplacer()).toBe(false);
+    api.analyse.set({ ...ANALYSE, erreurs: ['Une ligne existe déjà pour ce mois.'] });
+    expect(api.peutRemplacer()).toBe(true);
+    api.analyse.set({ ...ANALYSE, erreurs: ['Le salaire est invalide.'] });
+    expect(api.peutRemplacer()).toBe(false);
   });
 
   it('bloque l’étape suivante si la paie mensuelle manque', () => {
