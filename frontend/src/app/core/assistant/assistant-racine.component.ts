@@ -7,11 +7,12 @@ import {
   CopilotkitThreadsFactory,
   type CopilotKitConfig
 } from '@copilotkit/angular';
-import { basicCatalog } from '@copilotkit/angular/a2ui';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../auth/services/auth.service';
 import { AssistantComponent } from './assistant.component';
+import { FilAssistant } from './fil-assistant.service';
+import { catalogueErp } from './catalogue/catalogue-erp';
 
 /** Point d'entrée du runtime CopilotKit, relayé par nginx en production et par `proxy.conf.js` en développement. */
 export const URL_RUNTIME = '/ia/copilotkit';
@@ -36,7 +37,8 @@ export class AssistantRacineComponent {
       { provide: COPILOT_KIT_CONFIG, useValue: this.configuration() },
       CopilotKit,
       CopilotkitAgentFactory,
-      CopilotkitThreadsFactory
+      CopilotkitThreadsFactory,
+      FilAssistant
     ],
     inject(EnvironmentInjector)
   );
@@ -46,10 +48,11 @@ export class AssistantRacineComponent {
       runtimeUrl: URL_RUNTIME,
       // Évalué à chaque requête (option documentée) : le jeton courant, rafraîchi d'abord s'il a expiré.
       headers: async () => ({ Authorization: `Bearer ${await jetonValide(this.auth)}` }),
-      // Interface composée (T16) : surfaces A2UI rendues avec le catalogue de base officiel, aux couleurs Staport.
+      // Interface composée (T16) : surfaces A2UI rendues avec le catalogue de base officiel complété des composants de l'ERP
+      // (tableau, indicateurs, graphique), aux couleurs Staport.
       // `includeSchema: false` : le schéma du catalogue et les consignes A2UI ne partent pas à chaque question (près de
       // 7 000 jetons par appel de modèle) ; le service IA les donne au seul sous-agent qui compose les surfaces.
-      a2ui: { catalog: basicCatalog, includeSchema: false },
+      a2ui: { catalog: catalogueErp, includeSchema: false },
       // Pas de consultations d'outils en brut (nom technique, statut en anglais) : le raisonnement replié dit déjà ce que
       // fait l'agent (comportement par défaut de la bibliothèque).
       defaultToolRendering: false,

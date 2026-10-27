@@ -158,6 +158,11 @@ services:
       MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:?MCP_JWT_KEY_ID est obligatoire}
       MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
       MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
+      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18) : requêtes HTTP, outils MCP et requêtes SQL, même trace que le
+      # service IA (en-tête W3C traceparent).
+      MANAGEMENT_TRACING_ENABLED: "true"
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://phoenix:6006/v1/traces
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_HEADERS_AUTHORIZATION: Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
       # Journaux JSON sur la console et dans des archives journalières (30 jours, UTC).
       LOGGING_FORMAT: json
       LOGGING_FILE_PATH: /app/logs
@@ -170,8 +175,10 @@ services:
     networks:
       - db-net
       - web-net
+      - runtime-auth-net
       # Le service IA atteint /mcp par ce réseau interne ; nginx ne relaie jamais /mcp.
       - ia-net
+      - trace-net
     ports:
       # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif réel n'y passe pas — nginx
       # inner atteint le backend via le réseau Docker interne (web-net, nom de service "backend"),
@@ -231,6 +238,25 @@ services:
       - ia-db-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ia-db:
+    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, docs/ia.md T19) : instance et volume
+    # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ia
+      POSTGRES_USER: ia
+      POSTGRES_PASSWORD: ${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}
+    volumes:
+      - ia_db_data:/var/lib/postgresql
+    networks:
+      - memoire-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ia -d ia"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -295,13 +321,23 @@ services:
     depends_on:
       litellm-cles:
         condition: service_completed_successfully
+      ia-db:
+        condition: service_healthy
     environment:
+      # Conversations durables : base dédiée (ia-db) ; une conversation inactive est supprimée après ce nombre de jours.
+      IA_DATABASE_URL: postgresql://ia:${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}@ia-db:5432/ia
+      IA_CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire (clé virtuelle LiteLLM, litellm/README.md)}
       # Jeton agent et route /mcp du backend, par le réseau ia-net.
       IA_ERP_API_URL: http://backend:8080
+      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      OTEL_SDK_DISABLED: "false"
+      OTEL_SERVICE_NAME: erp-rh-ia
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
+      OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -311,6 +347,8 @@ services:
     networks:
       - ia-net
       - runtime-net
+      - trace-net
+      - memoire-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -324,6 +362,15 @@ services:
         condition: service_healthy
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.
+      ERP_API_URL: http://backend:8080
+      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      OTEL_SDK_DISABLED: "false"
+      OTEL_SERVICE_NAME: erp-rh-copilot-runtime
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
+      OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
+    volumes:
+      - runtime_data:/data
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -333,13 +380,40 @@ services:
     networks:
       - runtime-net
       - assistant-net
+      - trace-net
+      - runtime-auth-net
     # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
 
+  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, base
+  # SQLite dans le volume, conservation 30 jours ; interface sur 127.0.0.1 seulement, connexion obligatoire.
+  phoenix:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      PHOENIX_SECRET: ${PHOENIX_SECRET:?PHOENIX_SECRET est obligatoire (voir .env.example)}
+      PHOENIX_ADMIN_SECRET: ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
+      PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${PHOENIX_ADMIN_PASSWORD:?PHOENIX_ADMIN_PASSWORD est obligatoire (voir .env.example)}
+    volumes:
+      - phoenix_data:/data
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - trace-net
+    ports:
+      - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
+
 volumes:
   postgres_data_v18:
   litellm_db_data:
+  ia_db_data:
+  runtime_data:
+  phoenix_data:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -349,9 +423,15 @@ networks:
   web-net:
   # litellm et sa base, isolés du reste.
   ia-db-net:
+  # service IA et sa base de conversations, seuls.
+  memoire-net:
   # ia, litellm et le backend (route /mcp).
   ia-net:
   # frontend (nginx) et runtime CopilotKit seulement : le navigateur atteint l'assistant, jamais le service IA ni LiteLLM.
   assistant-net:
   # runtime CopilotKit et service IA.
   runtime-net:
+  # Runtime CopilotKit et backend seuls : le runtime y authentifie chaque requête de l'assistant (/auth/me).
+  runtime-auth-net:
+  # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
+  trace-net:

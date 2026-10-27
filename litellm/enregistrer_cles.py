@@ -3,7 +3,8 @@
 
   python litellm/enregistrer_cles.py
 
-- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : alias ai-gateway seulement, metadata.tags ["!eval"], 60 requêtes/min.
+- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : alias ai-gateway seulement, metadata.tags ["!eval"], 60 requêtes/min,
+  8 simultanées, 300 000 jetons/min.
 - LITELLM_TEST_API_KEY -> clé « smoke-tests » : ai-gateway et ai-gateway-selftest (test_providers.py).
 
 Idempotent : une clé déjà enregistrée est laissée telle quelle. Utilise LITELLM_MASTER_KEY, sans jamais afficher de
@@ -20,6 +21,8 @@ ENV = os.path.join(os.path.dirname(ICI), ".env")
 
 CLES = [
     ("IA_LITELLM_API_KEY", {"key_alias": "erp-rh-ia", "models": ["ai-gateway"], "rpm_limit": 60,
+                            # Anti-emballement : au plus 8 requêtes simultanées et 300 000 jetons par minute.
+                            "max_parallel_requests": 8, "tpm_limit": 300000,
                             "metadata": {"tags": ["!eval"]}}),
     ("LITELLM_TEST_API_KEY", {"key_alias": "smoke-tests", "models": ["ai-gateway", "ai-gateway-selftest"]}),
 ]

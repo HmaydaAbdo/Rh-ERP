@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { CopilotKit, CopilotSidebar, connectAgentContext } from '@copilotkit/angular';
+import { CopilotKit, CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
 
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
 import { contexteEcran, suggestionsPour } from './ecran-assistant';
+import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtilisateurComponent } from './question-utilisateur.component';
 
 /**
  * Assistant RH : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
@@ -45,6 +46,14 @@ export class AssistantComponent {
   );
 
   constructor() {
+    // L'agent interroge l'utilisateur quand la demande est ambiguë (outil du navigateur, comme AskUserQuestion de Claude).
+    registerHumanInTheLoop({
+      name: OUTIL_QUESTION,
+      description: DESCRIPTION_QUESTION,
+      parameters: PARAMETRES_QUESTION,
+      component: QuestionUtilisateurComponent
+    });
+
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.
     connectAgentContext(() => ({
       description: 'Écran ouvert par l’utilisateur dans ERP-RH : son domaine et ses filtres (JSON).',

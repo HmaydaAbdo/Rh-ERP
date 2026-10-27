@@ -237,6 +237,19 @@
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-registry-prometheus</artifactId>
 		</dependency>
+		<!-- Traces OpenTelemetry (docs/ia.md, T18) : starter officiel de Spring Boot 4 (Micrometer Tracing, pont OTel,
+		     exportateur OTLP). Les requêtes HTTP, les appels d'outils MCP et les requêtes SQL forment une seule trace avec le
+		     service IA (en-tête W3C traceparent). Désactivé par défaut, activé par Compose. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-opentelemetry</artifactId>
+		</dependency>
+		<!-- Spans des requêtes SQL (observation Micrometer de JDBC, projet jdbc-observations). -->
+		<dependency>
+			<groupId>net.ttddyy.observation</groupId>
+			<artifactId>datasource-micrometer-spring-boot</artifactId>
+			<version>2.3.0</version>
+		</dependency>
 		<!-- Journaux en JSON, asynchrones, en production (conventions/logging.md, « Production »). -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>

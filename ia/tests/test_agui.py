@@ -11,7 +11,7 @@ from doubles import INDICATEURS, ModeleScripte, appel, modele, outil
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool, StructuredTool
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from erp_rh_ia.agent import SYSTEME, creer_agent
 from erp_rh_ia.agui import ERREUR_PUBLIQUE, FabriqueAgent
@@ -44,7 +44,7 @@ class AccesSimule:
 
 
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
-    def fabriquer(outils: Sequence[BaseTool], checkpointer: InMemorySaver) -> Any:
+    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any]) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer)
 
     return fabriquer
@@ -164,6 +164,24 @@ def test_les_refus_sont_des_erreurs_http_avant_tout_flux(
 @pytest.mark.parametrize("question", [None, "   ", "x" * 2001])
 def test_une_question_absente_vide_ou_trop_longue_est_refusee(question: str | None) -> None:
     assert _poster(_masse(), AccesSimule([]), _corps(question)).status_code == 422
+
+
+def test_la_reponse_de_l_utilisateur_a_une_question_de_l_agent_reprend_le_run() -> None:
+    """Après ``poser_question`` (outil du navigateur), le run reprend avec le résultat de l'outil en dernier message."""
+    corps = _corps()
+    corps["messages"] = [
+        {"id": "m1", "role": "user", "content": QUESTION},
+        {
+            "id": "a1",
+            "role": "assistant",
+            "toolCalls": [{"id": "c1", "type": "function", "function": {"name": "poser_question", "arguments": "{}"}}],
+        },
+        {"id": "t1", "role": "tool", "toolCallId": "c1", "content": "Par masse salariale"},
+    ]
+
+    assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 200
+    corps["messages"][-1]["content"] = "x" * 2001
+    assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 422
 
 
 def test_une_panne_devient_un_run_error_sans_detail() -> None:
