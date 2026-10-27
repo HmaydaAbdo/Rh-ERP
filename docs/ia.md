@@ -306,14 +306,14 @@ suffit ; une PR par vague, CI sur demande.
 
 | Vague | Tâche | Contenu | Modèle | Pourquoi ce modèle |
 |---|---|---|---|---|
-| 1 | V1a — Lint | Dette d'accessibilité du frontend (23 avertissements à 0, plafond à 0), lint Java (Checkstyle ou équivalent gratuit) et lint du runtime Node dans la CI | Sonnet | Corrections d'accessibilité à jugement léger ; Haiku pour les seuls `!=` en `!==` après vérification |
-| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit | Sonnet | Enquête au navigateur et petits changements |
+| 1 | V1a — Lint | ✅ Fait (PR #98) : frontend à 0 avertissement, Checkstyle Java et ESLint du runtime Node dans la CI | — | — |
+| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit ; **résumé de conversation affiché brut dans le fil** (`SummarizationMiddleware`, 12 000 jetons : « SESSION INTENT / SUMMARY » et raisonnement du modèle de résumé, à rendre internes) | Sonnet | Enquête au navigateur et petits changements |
 | 1 | V1c — Mesure | Évaluation étendue (tri, questions, cas complexes), latence sous 30 s, démonstration T20 sur la nouvelle base | Sonnet | Exécution et mesure, peu de conception |
 | 2 | T21 — Conversations | Liste titrée des anciennes conversations, gratuite (voir pistes du tableau ci-dessus) | Sonnet, Opus si aucune piste officielle ne tient | Recherche encadrée par le tableau ; Opus seulement pour trancher entre contribution au runner officiel et code temporaire |
 | 2 | J4a — Espace IA | Espace plein écran et mémoire longue par le `Store` LangGraph | Sonnet | Conception d'interface guidée par les composants existants |
 | 3 | T28 — Évaluation | `agentevals` et `openevals` sous pytest, rejoueur supprimé | Haiku ou Sonnet | Remplacement mécanique d'un banc de développement |
 | 3 | T24 — Contexte ERP | Invite MCP de Spring AI et `dynamic_prompt`, `contexte.py` supprimé | Sonnet | Java et Python, périmètre petit et testable |
-| 3 | T29 — Passerelle | Fichiers `include` par fournisseur, sondes natives ; scripts LiteLLM supprimés | Sonnet | Configuration, vérifiable sur une passerelle jetable |
+| 3 | T29 — Passerelle | Fichiers `include` par fournisseur, sondes natives ; scripts LiteLLM supprimés (le rappel `detect_prompt_injection` est déjà remplacé par le garde-fou officiel `litellm_content_filter`, PR #100) | Sonnet | Configuration, vérifiable sur une passerelle jetable |
 | 3 | T30 — Composants | AG Grid Community ou TanStack Table, `ng2-charts`, interruptions natives ; composants maison supprimés | Sonnet | Migration d'interface avec tests existants |
 | 4 | T25 — Mémoire | Espaces de noms du `Store`, expiration `pg_cron` ; `memoire.py` réduit | Sonnet | Isolation déjà testée, à conserver |
 | 4 | T23 — Surfaces | Évaluer MCP Apps ; décider avant de migrer | Sonnet pour l'essai, **Opus** pour la décision | Choix structurant, difficile à défaire |
