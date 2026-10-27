@@ -44,7 +44,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 
 from erp_rh_ia.contexte import ContexteErp
-from erp_rh_ia.surfaces import PresentationResultats, avec_surfaces, resultat_sans_surface
+from erp_rh_ia.surfaces import OUTIL_A2UI, SurfacesResultats, resultat_sans_surface
 from erp_rh_ia.verification import valeurs_surface, verifier
 
 SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc. Tu réponds en français.
@@ -88,9 +88,6 @@ ABSTENTION = (
     "Je ne peux pas répondre de façon fiable avec les données disponibles : ne vous fiez pas aux chiffres affichés "
     "ci-dessus. Ouvrez l'écran correspondant de l'ERP pour vérifier."
 )
-#: Outil d'interface composée injecté par ``CopilotKitMiddleware`` : son résultat est une surface à vérifier, jamais
-#: une source de chiffres.
-OUTIL_A2UI = "generate_a2ui"
 REECRITURE = (
     "Ta réponse précédente contenait des nombres absents des résultats des outils : {inconnus}. Réécris-la en ne "
     "reprenant que des valeurs des outils, sans aucun calcul."
@@ -228,10 +225,9 @@ def creer_agent(
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run ; ``selecteur`` (petit modèle) ne transmet au modèle que les outils utiles à la question et
     ``resumeur`` résume le début d'une conversation devenue longue (``SummarizationMiddleware``)."""
-    outils = avec_surfaces(outils)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
-        PresentationResultats(),
+        SurfacesResultats(),
         ContexteErp(outils),
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
