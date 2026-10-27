@@ -44,7 +44,7 @@ leurs couches Application, Analytique et IA ; la CI vérifie que permissions et 
 **Chantier IA (2026-10-27)** : T17 à T19 et le harnais sont faits (observabilité Phoenix, passerelle durcie, conversations
 durables, outils triables, questions à l'utilisateur, surfaces déterministes, lint du frontend). **Règle du propriétaire :
 tout est gratuit et le code IA fait maison est une dette suivie jusqu'à zéro** ; l'inventaire et les tâches T21 à T31 laissées
-ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : vague 1 du « Plan de clôture » de [ia.md](../ia.md) (lint, interface et runtime, mesure), puis T21 ; une session
+ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : vague 1 du « Plan de clôture » de [ia.md](../ia.md) (V1a lint déjà faite ; reste interface et runtime, mesure), puis T21 ; une session
 neuve par tâche, Sonnet par défaut, Opus seulement où le plan le marque.
 
 **Correctifs de l'assistant (2026-10-27)** : essai réel d'une question complexe (top 3 des chantiers par masse salariale, comparaison au
