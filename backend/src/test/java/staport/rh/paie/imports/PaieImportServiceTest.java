@@ -93,8 +93,8 @@ class PaieImportServiceTest {
         lenient().when(functionService.search(isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(new FunctionResponseDto(10L, 0L, "OPERATEUR"))));
         lenient().when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(
-                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, true),
-                new ChantierResponseDto(21L, 0L, "C168", "Nador", null, false, true))));
+                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, true, null, null, null, null, false),
+                new ChantierResponseDto(21L, 0L, "C168", "Nador", null, false, true, null, null, null, null, false))));
         lenient().when(equipeService.search(isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(new EquipeResponseDto(30L, 0L, "EQUIPE A", "Equipe A"))));
         lenient().when(entityManager.getReference(eq(Employee.class), any())).thenReturn(new Employee());
@@ -196,7 +196,7 @@ class PaieImportServiceTest {
     @Test
     void signale_a_part_un_chantier_cloture_a_rouvrir_sans_toucher_au_fichier() throws IOException {
         when(chantierService.search(isNull(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(
-                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, false))));
+                new ChantierResponseDto(20L, 0L, "C059", "Travaux de voirie", null, false, false, null, null, null, null, false))));
         Object[] autre = ligne("CD456");
 
         PaieImportAnalyseDto analyse = importService.analyser(fichier(ligne("PB85747"), autre), SEPTEMBRE);

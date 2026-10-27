@@ -8,7 +8,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import org.hibernate.envers.Audited;
+
+import java.math.BigDecimal;
 
 @Entity
 @Table(
@@ -43,6 +47,22 @@ public class Chantier {
      */
     @Column(name = "nom", length = 255)
     private String nom;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "nature", length = 30)
+    private NatureChantier nature;
+
+    @Column(name = "localisation", length = 2048)
+    private String localisation;
+
+    @Column(name = "latitude", precision = 11, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
+
+    @Column(name = "afficher_sur_carte", nullable = false)
+    private boolean afficherSurCarte;
 
     /**
      * Vrai si ce chantier est géré par la synchronisation ERP (webServiceBS/getChantiers).
@@ -98,6 +118,17 @@ public class Chantier {
     public boolean isSourceErp() {
         return sourceErp;
     }
+
+    public NatureChantier getNature() { return nature; }
+    public void setNature(NatureChantier nature) { this.nature = nature; }
+    public String getLocalisation() { return localisation; }
+    public void setLocalisation(String localisation) { this.localisation = localisation; }
+    public BigDecimal getLatitude() { return latitude; }
+    public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
+    public BigDecimal getLongitude() { return longitude; }
+    public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
+    public boolean isAfficherSurCarte() { return afficherSurCarte; }
+    public void setAfficherSurCarte(boolean afficherSurCarte) { this.afficherSurCarte = afficherSurCarte; }
 
     public void setSourceErp(boolean sourceErp) {
         this.sourceErp = sourceErp;

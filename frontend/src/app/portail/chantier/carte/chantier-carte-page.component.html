@@ -1,3 +1,36 @@
 <div class="carte-page app-page">
-  <app-chantier-carte class="carte-page__carte" />
+  <app-chantier-carte class="carte-page__carte" [chantiers]="chantiersFiltres()" />
+
+  <div class="carte-page__filtre" role="group" aria-label="Filtrer la carte des chantiers">
+    <div class="carte-page__identite">
+      <h1>Chantiers</h1>
+      <p class="carte-page__total" role="status">
+        @if (chargement()) { Chargement… }
+        @else if (erreur()) { Carte indisponible }
+        @else { {{ chantiersFiltres().length }} {{ chantiersFiltres().length === 1 ? 'site' : 'sites' }} }
+      </p>
+    </div>
+
+    <div class="carte-page__nature">
+      <label for="filtreNatureChantier">Nature</label>
+      <stp-select
+        inputId="filtreNatureChantier"
+        ariaLabel="Filtrer les chantiers par nature"
+        [options]="natures"
+        [multiple]="true"
+        [value]="naturesChoisies()"
+        placeholder="Toutes les natures"
+        [summaryLabel]="'{0} natures'"
+        [summaryFrom]="2"
+        (valueChange)="choisirNatures($event)"
+      />
+    </div>
+
+    @if (erreur()) {
+      <button stp-button class="carte-page__reessayer" type="button" (click)="charger()">Réessayer</button>
+    }
+    @if (!chargement() && !erreur() && chantiersFiltres().length === 0) {
+      <p class="carte-page__vide" role="status">Aucun chantier ne correspond à cette nature.</p>
+    }
+  </div>
 </div>

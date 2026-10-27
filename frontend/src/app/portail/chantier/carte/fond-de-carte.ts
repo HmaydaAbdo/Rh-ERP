@@ -132,7 +132,59 @@ export function preparerMapLibre(config: CarteConfig, base: string): void {
 }
 
 /** Style complet : la carte reste sombre quel que soit le thème de l'application ; `base` est `document.baseURI`. */
-export function creerStyle(config: CarteConfig, base: string, affichage: Affichage = AFFICHAGE_PAR_DEFAUT): StyleSpecification {
+/** Lit la palette du Plan depuis les mêmes tokens CSS que le reste de l'interface. */
+export function lirePalettePlan(element: HTMLElement): Flavor {
+  const base = namedFlavor('dark');
+  const style = getComputedStyle(element);
+  const couleur = (jeton: string, secours: string): string => style.getPropertyValue(jeton).trim() || secours;
+  const landcover = base.landcover ?? {
+    grassland: '', barren: '', urban_area: '', farmland: '', glacier: '', scrub: '', forest: ''
+  };
+
+  return {
+    ...base,
+    background: couleur('--map-plan-background', base.background),
+    earth: couleur('--map-plan-earth', base.earth),
+    water: couleur('--map-plan-water', base.water),
+    boundaries: couleur('--map-plan-boundary', base.boundaries),
+    other: couleur('--map-plan-road-other', base.other),
+    minor_service: couleur('--map-plan-road-minor', base.minor_service),
+    minor_a: couleur('--map-plan-road-minor', base.minor_a),
+    minor_b: couleur('--map-plan-road-minor', base.minor_b),
+    link: couleur('--map-plan-road-link', base.link),
+    major: couleur('--map-plan-road-major', base.major),
+    highway: couleur('--map-plan-road-highway', base.highway),
+    roads_label_minor: couleur('--map-plan-label-muted', base.roads_label_minor),
+    roads_label_minor_halo: couleur('--map-plan-label-halo', base.roads_label_minor_halo),
+    roads_label_major: couleur('--map-plan-label', base.roads_label_major),
+    roads_label_major_halo: couleur('--map-plan-label-halo', base.roads_label_major_halo),
+    ocean_label: couleur('--map-plan-ocean-label', base.ocean_label),
+    subplace_label: couleur('--map-plan-label-muted', base.subplace_label),
+    subplace_label_halo: couleur('--map-plan-label-halo', base.subplace_label_halo),
+    city_label: couleur('--map-plan-label', base.city_label),
+    city_label_halo: couleur('--map-plan-label-halo', base.city_label_halo),
+    state_label: couleur('--map-plan-label-muted', base.state_label),
+    state_label_halo: couleur('--map-plan-label-halo', base.state_label_halo),
+    country_label: couleur('--map-plan-label', base.country_label),
+    landcover: {
+      ...landcover,
+      grassland: couleur('--map-plan-landcover-grass', landcover.grassland),
+      barren: couleur('--map-plan-landcover-barren', landcover.barren),
+      urban_area: couleur('--map-plan-landcover-urban', landcover.urban_area),
+      farmland: couleur('--map-plan-landcover-farmland', landcover.farmland),
+      glacier: couleur('--map-plan-landcover-glacier', landcover.glacier),
+      scrub: couleur('--map-plan-landcover-scrub', landcover.scrub),
+      forest: couleur('--map-plan-landcover-forest', landcover.forest)
+    }
+  };
+}
+
+export function creerStyle(
+  config: CarteConfig,
+  base: string,
+  affichage: Affichage = AFFICHAGE_PAR_DEFAUT,
+  palettePlan: Flavor = namedFlavor('dark')
+): StyleSpecification {
   const sources: Record<string, SourceSpecification> = {
     [SOURCE_DU_FOND]: {
       type: 'vector',
@@ -168,7 +220,7 @@ export function creerStyle(config: CarteConfig, base: string, affichage: Afficha
     // Les libellés et icônes restent contrastés sur le fond sombre comme sur l'imagerie satellite.
     sprite: `${urlAbsolue(config.fond.icones, base)}/dark`,
     sources,
-    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, 'dark', affichage),
+    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, 'dark', affichage, palettePlan),
     // Globe vu de loin, à plat en approchant (MapLibre passe de l'un à l'autre au fil du zoom).
     projection: { type: 'globe' },
     sky: ciel('dark'),
@@ -177,8 +229,8 @@ export function creerStyle(config: CarteConfig, base: string, affichage: Afficha
 }
 
 /** Plan vectoriel Protomaps : ombrage du relief sous l'eau et les routes, bâtiments en volume. */
-function couchesPlan(config: CarteConfig, variante: 'light' | 'dark', affichage: Affichage): LayerSpecification[] {
-  const flavor = namedFlavor(variante);
+function couchesPlan(config: CarteConfig, variante: 'light' | 'dark', affichage: Affichage, palette: Flavor): LayerSpecification[] {
+  const flavor = variante === 'dark' ? palette : namedFlavor(variante);
   const couches = layers(SOURCE_DU_FOND, flavor, { lang: config.langue }).map((couche) =>
     couche.id === 'buildings' ? batiments3d(flavor) : couche
   );
@@ -186,6 +238,21 @@ function couchesPlan(config: CarteConfig, variante: 'light' | 'dark', affichage:
   const coucheFond = couches.find((couche) => couche.id === 'background');
   if (coucheFond?.type === 'background') {
     coucheFond.paint = { ...coucheFond.paint, 'background-color': flavor.water };
+  }
+  const indexFrontierePays = couches.findIndex((couche) => couche.id === 'boundaries_country');
+  const frontierePays = couches[indexFrontierePays];
+  if (indexFrontierePays >= 0 && frontierePays?.type === 'line') {
+    couches.splice(indexFrontierePays, 0, {
+      ...frontierePays,
+      id: 'boundaries_country_halo',
+      paint: {
+        ...frontierePays.paint,
+        'line-color': flavor.boundaries,
+        'line-opacity': 0.42,
+        'line-blur': 1.4,
+        'line-width': 2.6
+      }
+    });
   }
   if (affichage.relief) {
     couches.splice(

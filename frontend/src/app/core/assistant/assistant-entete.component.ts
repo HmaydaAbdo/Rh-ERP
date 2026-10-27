@@ -36,9 +36,9 @@ import { FilAssistant } from './fil-assistant.service';
       width: 2.25rem;
       height: 2.25rem;
       border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, var(--assistant-accent), color-mix(in srgb, var(--assistant-accent) 60%, var(--color-primary)));
+      background: var(--assistant-accent);
       color: var(--assistant-accent-contrast);
-      box-shadow: 0 4px 14px color-mix(in srgb, var(--assistant-accent) 35%, transparent);
+      box-shadow: var(--shadow-sm);
 
       svg {
         width: 1.125rem;
@@ -82,7 +82,7 @@ import { FilAssistant } from './fil-assistant.service';
       }
 
       &:focus-visible {
-        outline: 2px solid var(--color-primary);
+        outline: 2px solid var(--color-focus);
         outline-offset: 1px;
       }
     }

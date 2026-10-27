@@ -112,10 +112,11 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `GET /functions/{id}` · `POST /functions/search` | `FUNCTION_READ` |
 | | `DELETE /functions/{id}` | `FUNCTION_DELETE` |
 | | `POST /functions/import` · `GET /functions/import/modele` | `FUNCTION_IMPORT` |
-| Chantier | `POST /chantiers` · `PUT /chantiers/{id}` | `CHANTIER_WRITE` |
+| Chantier | `POST /chantiers` · `PUT /chantiers/{id}` · `PUT /chantiers/{id}/statut` | `CHANTIER_WRITE` |
 | | `GET /chantiers/{id}` · `POST /chantiers/search` | `CHANTIER_READ` |
 | | `DELETE /chantiers/{id}` | `CHANTIER_DELETE` |
 | | `POST /chantiers/sync` | `CHANTIER_SYNC` |
+| Carte | `GET /chantiers/carte` | `CARTE_READ` |
 | Équipe | `POST /equipes/import` · `GET /equipes/import/modele` | `EQUIPE_IMPORT` |
 | | Voir les autres routes dans le [dossier Équipe](../equipe/README.md#autorisations-et-dépendances-de-droits) | `EQUIPE_READ` · `EQUIPE_WRITE` · `EQUIPE_DELETE` |
 | Employé | `POST /employees` · `PUT /employees/{id}` | `EMPLOYEE_WRITE` |

@@ -45,13 +45,10 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
    (provinces du Sud comprises) par la direction.
 2 bis. **Fait (2026-10-18)** : permission `CARTE_READ` et rôle `DIRECTION` (migration V28) ; `PAIE_MANAGER` ne l'a pas —
    voir [docs/rbac/carte.md](docs/rbac/carte.md).
-3. Contrat de données `ChantierCarte` (position et tracé optionnels), interface `ChantierCarteSource` et source de
-   démonstration clairement marquée. Les champs métier absents de la base (type, montant, santé…) ne sont pas affichés
-   tant qu'ils ne sont pas gérés.
-4. Composant carte « bête » (marqueurs, regroupement, sélection, redimensionnement, destruction, rendu des noms arabes à confirmer à
-   l'écran, état d'erreur si le fond manque) et panneau « À localiser ».
-5. Page complète (indicateurs, légende, filtres).
-5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant carte sans donnée.
+3. **Fait localement** : source réelle `GET /chantiers/carte`, qualification manuelle (nature, localisation, coordonnées, affichage) et migrations de schéma/reprise auditée. Voir [README Chantier](docs/chantier/README.md).
+4. **Fait localement** : marqueurs MapLibre accessibles, fiche des sites partagés, signalement du chargement/vide/erreur. Restent le panneau « À localiser » et la confirmation à l'écran des noms arabes.
+5. **Fait localement** : barre compacte bleu nuit avec filtre multi-sélection Nature, compteur court et carte immersive Chantier sans liste latérale ni renvoi vers Google Maps ; le filtre préserve Plan/Satellite/Relief.
+5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant cartographique ; points réels raccordés par la source protégée.
 5 ter. **Fait (2026-10-18)** : carte « niveau Google Maps » — le monde entier en globe (Maroc détaillé jusqu'au bâtiment),
    zoom 19, bâtiments 3D, relief Mapterhorn auto-hébergé (ombrage et terrain 3D), calques Plan / Satellite / Relief,
    imagerie Esri relayée par nginx avec la clé ArcGIS côté serveur, vue 3D, boussole, position, plein écran, échelle, fiche

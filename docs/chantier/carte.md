@@ -14,19 +14,31 @@
 | Page minimale `/carte` : fond, zoom, état d'erreur, menu « Carte » | Fait |
 | Monde entier (globe), zoom rue (19), bâtiments 3D, relief (ombrage et terrain 3D), satellite, vue 3D, boussole, position, plein écran, échelle, fiche d'un lieu | Fait |
 | Recherche de lieux | Reportée |
-| 3. Contrat de données `ChantierCarte` et source | À faire |
-| 4. Composant carte, marqueurs, panneau « À localiser » | À faire |
-| 5. Page complète (indicateurs, légende, filtres) | À faire |
+| 3. Contrat `ChantierCarte` et source `GET /chantiers/carte` | Fait |
+| 4. Marqueurs MapLibre, fiches et sites partagés | Fait ; panneau « À localiser » reporté |
+| 5. Page Chantier immersive : filtre compact par nature et marqueurs sur la carte | Fait localement |
 
-La page `/carte` affiche le fond et rien d'autre (aucune donnée de chantier). Elle est protégée par `CARTE_READ`
-(migration V28, voir [../rbac/carte.md](../rbac/carte.md)) et proposée dans le menu sous « Carte ».
+La page `/carte` est une expérience immersive limitée au référentiel Chantier : la carte remplit l’écran. La barre HUD
+en haut à gauche reprend **Atlas nocturne Staport** : « Chantiers », un total en pastille et un filtre multi-sélection
+compact pour les six natures. Aucune nature sélectionnée signifie « toutes » ; plusieurs natures peuvent être combinées.
+Le filtre agit directement sur les marqueurs, sans liste latérale ni recherche séparée. Les sites sont des repères cyan,
+sans code imprimé sur la carte ; le nom, le code et la nature apparaissent dans l’infobulle au survol/focus et dans la
+fiche au clic. Le Plan vectoriel suit la palette globale bleu nuit avec relief, frontières et routes bleutées. Le filtre
+ne réinitialise pas le fond ni les contrôles Plan/Satellite/Relief. Sur petit écran, la barre se replie sur deux lignes.
+
+La source `GET /chantiers/carte` exige `CARTE_READ` et renvoie la projection `ChantierCarteDto`, sans paie ni données
+d’un autre domaine. L’affichage signale chargement, erreur et résultat vide avec possibilité de réessayer. Une fiche
+regroupe les chantiers partageant exactement une position ; leurs fiches restent dans l’application, sans lien sortant
+Google Maps. Les marqueurs restent
+présents en changeant de fond. La route est protégée par `CARTE_READ` (migration V28, voir
+[../rbac/carte.md](../rbac/carte.md)) et proposée dans le menu sous « Carte ».
 
 ## Composants
 
 | Composant | Rôle |
 |---|---|
-| `ChantierCartePageComponent` (`/carte`) | Page : carte plein écran dans la zone de contenu, sans titre |
-| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre et ses contrôles, garde un style sombre indépendant du thème de l'application, redessine au changement de calque, suit la taille de son conteneur, détruit la carte. Région nommée « Carte des chantiers », aide au clavier (flèches, + et −, Maj et flèches pour pivoter et incliner) |
+| `ChantierCartePageComponent` (`/carte`) | Carte plein écran, filtre Nature compact, compteur et état d’erreur |
+| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre et ses contrôles, lit le flavor Plan dans les tokens CSS Atlas nocturne, garde un chrome cartographique nocturne, dessine des repères cyan avec infobulles, redessine au changement de calque, suit la taille de son conteneur et détruit la carte. Région nommée « Carte des chantiers », aide au clavier (flèches, + et −, Maj et flèches pour pivoter et incliner) |
 
 ### Ce que la carte propose
 

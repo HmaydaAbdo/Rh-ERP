@@ -9,7 +9,7 @@ import { fournirPermissions, fournirRoute } from '../../../shared/testing/ecrans
 import { ChantierService } from '../services/chantier.service';
 import { ChantierDetailComponent } from './chantier-detail.component';
 
-const CHANTIER: Chantier = { id: 3, version: 0, code: 'C196', designation: 'Autoroute Marrakech', nom: null, sourceErp: false, actif: true };
+const CHANTIER: Chantier = { id: 3, version: 0, code: 'C196', designation: 'Autoroute Marrakech', nom: null, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: false, actif: true };
 
 describe('ChantierDetailComponent', () => {
   const service = { getById: vi.fn(), changerStatut: vi.fn() };
@@ -32,7 +32,7 @@ describe('ChantierDetailComponent', () => {
 
     expect(service.getById).toHaveBeenCalledWith(3);
     expect(page.querySelector('h1')?.textContent).toBe('C196');
-    expect(valeurs(page)).toEqual(['Autoroute Marrakech', '-', 'En cours', 'Manuel']);
+    expect(valeurs(page)).toEqual(['Autoroute Marrakech', '-', 'À qualifier', 'Non', 'Non renseignée', 'Non renseignée', 'Non renseignée', 'En cours', 'Manuel']);
   });
 
   it('clôture le chantier après confirmation et affiche son nouveau statut', () => {
@@ -50,9 +50,9 @@ describe('ChantierDetailComponent', () => {
   });
 
   it('montre le nom quand il est renseigné, un chantier clôturé et une source ERP', () => {
-    const page = afficher(['CHANTIER_READ'], { ...CHANTIER, nom: 'Nord', actif: false, sourceErp: true });
+    const page = afficher(['CHANTIER_READ'], { ...CHANTIER, nom: 'Nord', actif: false, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true });
 
-    expect(valeurs(page)).toEqual(['Autoroute Marrakech', 'Nord', 'Clôturé', 'ERP']);
+    expect(valeurs(page)).toEqual(['Autoroute Marrakech', 'Nord', 'À qualifier', 'Non', 'Non renseignée', 'Non renseignée', 'Non renseignée', 'Clôturé', 'ERP']);
     expect(page.querySelector('stp-badge.stp-badge--neutral')).not.toBeNull();
     expect(page.querySelector('stp-badge.stp-badge--info')).not.toBeNull();
   });

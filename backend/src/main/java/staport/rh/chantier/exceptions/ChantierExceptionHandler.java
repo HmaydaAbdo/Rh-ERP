@@ -44,4 +44,9 @@ public class ChantierExceptionHandler {
         );
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(ChantierLocalisationException.class)
+    public ResponseEntity<ErrorResponseDto> handleLocalisation(ChantierLocalisationException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
 }
