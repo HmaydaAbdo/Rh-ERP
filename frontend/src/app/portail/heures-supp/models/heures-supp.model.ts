@@ -88,7 +88,7 @@ export interface HeuresSuppImportAnalyse {
   periode: string;
   chantierId: number;
   totalLignes: number;
-  lignesZeroIgnorees: number;
+  lignesZero: number;
   lignes: HeuresSuppImportLigne[];
   erreurs: string[];
   pret: boolean;
@@ -98,7 +98,7 @@ export interface HeuresSuppImportResult {
   periode: string;
   chantierId: number;
   lignesHeures: number;
-  lignesZeroIgnorees: number;
+  lignesZero: number;
   forfaitsSeuls: number;
   remplacements: number;
   heuresTotales: number;

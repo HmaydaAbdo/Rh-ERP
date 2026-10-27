@@ -130,11 +130,17 @@ class OpenApiContractTest {
         assertFileUpload(specification, "/paie/import");
         assertFileUpload(specification, "/paie/import/analyse");
         assertFileUpload(specification, "/paie/import/corrections");
+        assertFileUpload(specification, "/heures-supp/import/analyse");
+        assertFileUpload(specification, "/heures-supp/import/corrections");
+        assertFileUpload(specification, "/heures-supp/import");
+        assertFileUpload(specification, "/heures-supp/import/remplacement");
         assertBinaryResponse(specification, "/employees/import/modele", "get", "200",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         assertBinaryResponse(specification, "/functions/import/modele", "get", "200",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         assertBinaryResponse(specification, "/paie/import/modele", "get", "200",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        assertBinaryResponse(specification, "/heures-supp/import/modele", "get", "200",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
         assertBinaryResponse(specification, "/paie/export", "post", "200",
@@ -150,6 +156,10 @@ class OpenApiContractTest {
                 .contains("FunctionImportResultDto");
         assertErrorResponse(specification, "/paie/import/analyse", "post", "400");
         assertErrorResponse(specification, "/paie/import/corrections", "post", "400");
+        assertErrorResponse(specification, "/heures-supp/import/analyse", "post", "400");
+        assertErrorResponse(specification, "/heures-supp/import/corrections", "post", "400");
+        assertErrorResponse(specification, "/heures-supp/import", "post", "400");
+        assertErrorResponse(specification, "/heures-supp/import/remplacement", "post", "400");
         assertErrorResponse(specification, "/paie/export", "post", "400");
         assertErrorResponse(specification, "/paie/report/pdf", "post", "400");
         assertErrorResponseSchemas(specification);

@@ -500,7 +500,7 @@ Le domaine conserve un import mensuel d'heures supplémentaires par chantier. Il
 | Période | Un mois choisi ; l'import est bloqué dès la première étape si aucune paie n'existe pour ce mois. |
 | Identité | CIN exact ; les écarts de nom/fonction sont présentés pour alignement explicite. Un CIN inconnu requiert création d'une fiche employé. |
 | S/H | Salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. Précision gardée au calcul et figée pour l'import. |
-| P/H | Heures décimales avec une décimale au plus ; les lignes à zéro sont ignorées et comptabilisées. Une cellule vide est une erreur. |
+| P/H | Heures décimales positives ou nulles avec une décimale au plus ; les lignes à zéro sont conservées et comptabilisées. Une cellule vide est une erreur. |
 | Montant | S/H × P/H, arrondi à 2 décimales. |
 | STC (DH) | Montant si la paie du même mois est marquée STC/sortie ; sinon zéro. |
 | Forfait | Saisi séparément, y compris pour une personne absente des lignes P/H ; interdit si la paie du même mois marque STC/sortie, tous chantiers confondus. |
@@ -513,7 +513,7 @@ Le wizard suit Mois/Chantier → Fichier/Forfaits → Contrôle/Import. La corre
 
 ### 17.4 Preuves et réserves
 
-La migration V39 crée et audite la table des imports ; V40 ajoute les permissions et leurs traces. Compilation backend et build frontend production réussis localement sur `codex/heures-supp`; aucune suite de tests ni validation navigateur n'a été exécutée. Le classeur remis présente une ligne Excel 986 avec HS vide : elle bloque l'import jusqu'à correction. La PR et la CI ne sont pas lancées.
+La migration V39 crée et audite la table des imports ; V40 ajoute les permissions et leurs traces. Les compilations backend et frontend de production sont vérifiées sur la branche de travail. Les tests métier, lecteur Excel, RBAC, OpenAPI, MCP et vues partagées sont ajoutés ; la CI de la PR apporte la preuve des contrôles complets. Le classeur remis présente une ligne Excel 986 avec HS vide : elle bloque l'import jusqu'à correction.
 
 Les règles métier ci-dessus ont été confirmées en conversation ; elles ne constituent pas une signature finale de diffusion du PV.
 

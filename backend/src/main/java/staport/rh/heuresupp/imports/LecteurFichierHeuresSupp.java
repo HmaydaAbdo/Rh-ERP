@@ -111,7 +111,7 @@ public class LecteurFichierHeuresSupp {
         List<LigneFichierHeuresSupp> lignes = new ArrayList<>();
         Set<String> cins = new HashSet<>();
         int totalLignes = 0;
-        int lignesZeroIgnorees = 0;
+        int lignesZero = 0;
         for (int index = ligneEntete + 1; index <= feuille.getLastRowNum(); index++) {
             Row ligne = feuille.getRow(index);
             if (estVide(ligne)) {
@@ -125,8 +125,7 @@ public class LecteurFichierHeuresSupp {
                 throw new HeuresSuppImportException("Ligne " + (index + 1) + " : " + e.getMessage());
             }
             if (heures != null && heures.signum() == 0) {
-                lignesZeroIgnorees++;
-                continue;
+                lignesZero++;
             }
             String nom = texte(ligne.getCell(colonneNom));
             String prenom = texte(ligne.getCell(colonnePrenom));
@@ -146,14 +145,14 @@ public class LecteurFichierHeuresSupp {
                 throw new HeuresSuppImportException("Ligne " + (index + 1) + " : CIN dupliqué dans le fichier (" + cin + "). Corrigez ou regroupez les heures sur une seule ligne.");
             }
             if (heures.signum() < 0 || heures.scale() > 1 || heures.precision() - heures.scale() > 7) {
-                throw new HeuresSuppImportException("Ligne " + (index + 1) + " : HS doit être positif et comporter au plus une décimale.");
+                throw new HeuresSuppImportException("Ligne " + (index + 1) + " : HS doit être positif ou nul et comporter au plus une décimale.");
             }
             lignes.add(new LigneFichierHeuresSupp(index + 1, nom, prenom, cin, fonction, heures));
         }
         if (lignes.isEmpty()) {
             throw new HeuresSuppImportException("Le fichier ne contient aucune ligne d'heures supplémentaires.");
         }
-        return new FichierHeuresSupp(lignes, lignesZeroIgnorees, totalLignes);
+        return new FichierHeuresSupp(lignes, lignesZero, totalLignes);
     }
 
     private static String normaliser(String valeur) {

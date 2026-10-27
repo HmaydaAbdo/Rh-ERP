@@ -85,7 +85,7 @@ export interface SourcesGroupes {
   lien: ((id: number) => unknown[]) | null;
 }
 
-export interface LigneHeuresSupp extends HeuresSuppGroupe {}
+export type LigneHeuresSupp = HeuresSuppGroupe;
 
 export function lignesHeuresSupp(dimension: Dimension, analyse: HeuresSuppAnalytique | null): LigneHeuresSupp[] {
   if (!analyse) return [];

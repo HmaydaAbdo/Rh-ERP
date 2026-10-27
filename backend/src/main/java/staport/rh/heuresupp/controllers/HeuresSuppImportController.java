@@ -1,6 +1,11 @@
 package staport.rh.heuresupp.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -29,6 +34,7 @@ import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping("/heures-supp/import")
+@Tag(name = "Heures supplémentaires — import", description = "Assistant d'import mensuel par chantier")
 public class HeuresSuppImportController {
 
     private static final String TYPE_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -49,7 +55,7 @@ public class HeuresSuppImportController {
     @Operation(summary = "Analyser un classeur sans écriture et calculer les grandeurs du mois")
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_READ')")
     public HeuresSuppImportAnalyseDto analyser(
-            @RequestParam("file") MultipartFile fichier,
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile fichier,
             @RequestParam String periode,
             @RequestParam Long chantierId,
             @Valid @RequestPart(value = "forfaits", required = false) HeuresSuppImportForfaitsDto forfaits) {
@@ -60,7 +66,7 @@ public class HeuresSuppImportController {
     @Operation(summary = "Créer dans l'assistant les fiches manquantes, puis renvoyer l'analyse")
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_WRITE')")
     public HeuresSuppImportAnalyseDto corriger(
-            @RequestParam("file") MultipartFile fichier,
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile fichier,
             @RequestParam String periode,
             @RequestParam Long chantierId,
             @Valid @RequestPart("corrections") HeuresSuppImportCorrectionsDto corrections,
@@ -72,7 +78,7 @@ public class HeuresSuppImportController {
     @Operation(summary = "Importer atomiquement un lot analysé, pour un seul mois et un seul chantier")
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_READ')")
     public HeuresSuppImportResultDto importer(
-            @RequestParam("file") MultipartFile fichier,
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile fichier,
             @RequestParam String periode,
             @RequestParam Long chantierId,
             @Valid @RequestPart(value = "forfaits", required = false) HeuresSuppImportForfaitsDto forfaits) {
@@ -83,7 +89,7 @@ public class HeuresSuppImportController {
     @Operation(summary = "Remplacer explicitement les lignes existantes du lot pour ce mois et ce chantier")
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_READ')")
     public HeuresSuppImportResultDto remplacer(
-            @RequestParam("file") MultipartFile fichier,
+            @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile fichier,
             @RequestParam String periode,
             @RequestParam Long chantierId,
             @Valid @RequestPart(value = "forfaits", required = false) HeuresSuppImportForfaitsDto forfaits) {
@@ -92,6 +98,8 @@ public class HeuresSuppImportController {
 
     @GetMapping("/modele")
     @Operation(summary = "Télécharger le modèle Excel CIN et P/H")
+    @ApiResponse(responseCode = "200", description = "Modèle XLSX à compléter",
+            content = @Content(mediaType = TYPE_XLSX, schema = @Schema(type = "string", format = "binary")))
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ')")
     public ResponseEntity<Resource> telechargerModele() {
         ByteArrayInputStream flux = service.genererModele();

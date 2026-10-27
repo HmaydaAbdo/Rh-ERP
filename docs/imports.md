@@ -9,7 +9,7 @@
 | Fonctions | `POST /functions/import` | `FUNCTION_IMPORT` | [function/README.md](function/README.md) |
 | Employés | `POST /employees/import` | `EMPLOYEE_IMPORT` | [employee/README.md](employee/README.md) |
 | Paie | assistant : `POST /paie/import/analyse`, `/paie/import/corrections`, `/paie/import` (`?periode=aaaa-MM`) | `PAIE_IMPORT` (+ `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE`) | [paie/README.md](paie/README.md), « Import Excel (assistant) » |
-| Heures supplémentaires | assistant par mois et chantier : `/heures-supp/import/*` | `HEURES_SUP_IMPORT` + `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE` | Classeur `Nom`, `Prenom`, `CIN`, `Funct`, `HS`; lignes HS=0 ignorées et comptées; valeur HS vide bloquante. [README](heures-supp/README.md) |
+| Heures supplémentaires | assistant par mois et chantier : `/heures-supp/import/*` | `HEURES_SUP_IMPORT` + `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE` | Classeur `Nom`, `Prenom`, `CIN`, `Funct`, `HS`; lignes HS=0 conservées et comptées; valeur HS vide bloquante. [README](heures-supp/README.md) |
 
 Il n'existe pas d'import pour les chantiers (alimentés par la [synchronisation ERP](chantier/README.md)).
 
