@@ -378,13 +378,35 @@ litellm_settings:
   overwrite_user_with_key_hash: true
   # Jamais de réponse partagée entre clés ou utilisateurs.
   cache: false
-  # Détection d'injection de prompt (rappel officiel de LiteLLM, sans modèle ni service en plus) : un message
-  # utilisateur qui tente de faire ignorer ses consignes à l'assistant est refusé (400) avant d'atteindre un modèle.
-  callbacks: ["detect_prompt_injection"]
-  prompt_injection_params:
-    heuristics_check: true
-    similarity_check: false
-    llm_api_check: false
+
+# Détection d'injection de prompt : garde-fou officiel `litellm_content_filter` (mots-clés, sans modèle ni service en plus),
+# appliqué à chaque requête (default_on) avant d'atteindre un modèle ; une tentative évidente est refusée (400).
+# Ne pas utiliser le rappel `detect_prompt_injection` : sa comparaison floue (difflib) parcourt chaque caractère du prompt pour
+# chaque mot-clé ; sur le long prompt de l'assistant (consignes et schémas d'outils) il occupe le processeur pendant des minutes,
+# bloque la passerelle et rejette des requêtes légitimes. Les listes de mots-clés sont en anglais : elles complètent, sans la
+# remplacer, la protection par les permissions revérifiées à chaque appel (conventions/agents-ia.md, « Injection »).
+guardrails:
+  - guardrail_name: injection-de-prompt
+    litellm_params:
+      guardrail: litellm_content_filter
+      mode: pre_call
+      default_on: true
+      # Expressions françaises d'abandon des consignes (les listes officielles ci-dessous sont en anglais).
+      blocked_words:
+        - { keyword: "ignore tes règles", action: BLOCK }
+        - { keyword: "ignore tes consignes", action: BLOCK }
+        - { keyword: "ignore tes instructions", action: BLOCK }
+        - { keyword: "ignore les instructions précédentes", action: BLOCK }
+        - { keyword: "oublie tes instructions", action: BLOCK }
+        - { keyword: "oublie tes règles", action: BLOCK }
+        - { keyword: "montre ton prompt système", action: BLOCK }
+        - { keyword: "affiche ton prompt système", action: BLOCK }
+        - { keyword: "sans aucune restriction", action: BLOCK }
+      categories:
+        - category: prompt_injection_jailbreak
+          enabled: true
+          action: BLOCK
+          severity_threshold: medium
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

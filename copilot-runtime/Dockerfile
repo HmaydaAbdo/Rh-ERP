@@ -15,6 +15,9 @@ COPY --chown=root:root src ./src
 ENV NODE_ENV=production PORT=4100 COPILOTKIT_TELEMETRY_DISABLED=true DO_NOT_TRACK=1 SCARF_ANALYTICS=false
 # Historique des conversations du runner SQLite officiel : volume Compose, seul endroit inscriptible.
 ENV THREADS_DB_PATH=/data/threads.db
+# Le dossier doit exister dans l'image, propriété de `node` : Docker en recopie le propriétaire dans un volume nommé neuf
+# (sinon il appartient à root, le runner SQLite ne peut pas créer sa base et le conteneur redémarre en boucle).
+RUN mkdir /data && chown node:node /data
 USER node
 EXPOSE 4100
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
