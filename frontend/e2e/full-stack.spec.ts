@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 
 const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8080';
 
@@ -75,8 +76,9 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
 
   // Heures supplémentaires : la paie du mois est créée avant le wizard, puis le vrai classeur traverse l'API et les vues.
-  const cinHs = 'HSFULLSTACK';
-  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Conductrice HS ${suffixe}` });
+  const cinHs = `HS${suffixe}`;
+  const fonctionLibelleHs = `Conductrice HS ${suffixe}`;
+  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: fonctionLibelleHs });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
     fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id, salaire: 4000, typeSalaire: 'MENSUEL'
@@ -90,7 +92,12 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const prerequisHs = await api<{ pret: boolean }>(page, adminToken, 'GET',
     `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantier.id}`);
   expect(prerequisHs.pret).toBe(true);
-  const fichierHs = readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx'));
+  const classeurHs = unzipSync(readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx')));
+  const feuilleHs = strFromU8(classeurHs['xl/worksheets/sheet1.xml']);
+  classeurHs['xl/worksheets/sheet1.xml'] = strToU8(feuilleHs
+    .replace('HSFULLSTACK', cinHs)
+    .replace('Conductrice HS', fonctionLibelleHs));
+  const fichierHs = Buffer.from(zipSync(classeurHs));
   const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantier.id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     multipart: { file: { name: 'heures-supp-full-stack.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: fichierHs } }
