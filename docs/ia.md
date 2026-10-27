@@ -295,6 +295,37 @@ Autres points non terminés, gardés ouverts :
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) à isoler | ⬜ |
 
+### Plan de clôture et ordre d'exécution
+
+Ajusté le 2026-10-27 : on **clôt d'abord les points ouverts**, puis on retire le code maison pièce par pièce. Règles de
+travail pour dépenser peu de jetons : une **session neuve par tâche** avec un court énoncé (l'historique d'une longue
+session se repaie à chaque tour), **Sonnet par défaut**, **Haiku** pour le mécanique (recherches, renommages, corrections
+sans jugement), **Opus seulement** là où le tableau le marque (choix d'architecture ou de sécurité difficile à défaire) ; un
+test ciblé par tâche, la suite complète et la CI une seule fois par vague ; pas de capture d'écran quand le texte de la page
+suffit ; une PR par vague, CI sur demande.
+
+| Vague | Tâche | Contenu | Modèle | Pourquoi ce modèle |
+|---|---|---|---|---|
+| 1 | V1a — Lint | Dette d'accessibilité du frontend (23 avertissements à 0, plafond à 0), lint Java (Checkstyle ou équivalent gratuit) et lint du runtime Node dans la CI | Sonnet | Corrections d'accessibilité à jugement léger ; Haiku pour les seuls `!=` en `!==` après vérification |
+| 1 | V1b — Interface et runtime | Écran d'accueil propre à l'application, lenteur d'affichage à isoler, expiration de l'historique SQLite par un moyen gratuit | Sonnet | Enquête au navigateur et petits changements |
+| 1 | V1c — Mesure | Évaluation étendue (tri, questions, cas complexes), latence sous 30 s, démonstration T20 sur la nouvelle base | Sonnet | Exécution et mesure, peu de conception |
+| 2 | T21 — Conversations | Liste titrée des anciennes conversations, gratuite (voir pistes du tableau ci-dessus) | Sonnet, Opus si aucune piste officielle ne tient | Recherche encadrée par le tableau ; Opus seulement pour trancher entre contribution au runner officiel et code temporaire |
+| 2 | J4a — Espace IA | Espace plein écran et mémoire longue par le `Store` LangGraph | Sonnet | Conception d'interface guidée par les composants existants |
+| 3 | T28 — Évaluation | `agentevals` et `openevals` sous pytest, rejoueur supprimé | Haiku ou Sonnet | Remplacement mécanique d'un banc de développement |
+| 3 | T24 — Contexte ERP | Invite MCP de Spring AI et `dynamic_prompt`, `contexte.py` supprimé | Sonnet | Java et Python, périmètre petit et testable |
+| 3 | T29 — Passerelle | Fichiers `include` par fournisseur, sondes natives ; scripts LiteLLM supprimés | Sonnet | Configuration, vérifiable sur une passerelle jetable |
+| 3 | T30 — Composants | AG Grid Community ou TanStack Table, `ng2-charts`, interruptions natives ; composants maison supprimés | Sonnet | Migration d'interface avec tests existants |
+| 4 | T25 — Mémoire | Espaces de noms du `Store`, expiration `pg_cron` ; `memoire.py` réduit | Sonnet | Isolation déjà testée, à conserver |
+| 4 | T23 — Surfaces | Évaluer MCP Apps ; décider avant de migrer | Sonnet pour l'essai, **Opus** pour la décision | Choix structurant, difficile à défaire |
+| 4 | T31 — Accès du runtime | Équivalent gratuit de `identifyUser`, ou proxy d'authentification standard | Sonnet | Essai court |
+| 5 | T27 — Enveloppe du service IA | `add_langgraph_fastapi_endpoint`, dépendances FastAPI, outils par requête | **Opus** | Refonte du cœur du service : concurrence, jeton par requête, flux |
+| 5 | T26 — Échange de jeton | RFC 8693 par Spring Authorization Server et client OAuth2 ; `jeton_agent` et l'encodeur JWT supprimés | **Opus** | Sécurité critique, Java et Python à la fois |
+| 5 | T22 — Vérificateur | Réexaminer chaque trimestre ; remplacer seulement par un validateur déterministe gratuit | **Opus** pour la recherche | Garantie d'exactitude de la promesse du produit |
+| Fin | Revue | `code-review` de chaque PR, niveau moyen, sur Sonnet ; pas de revue cloud facturée | Sonnet | Revue ciblée sur le diff |
+
+Ordre : les vagues 1 et 2 clôturent les points ouverts, les vagues 3 à 5 rapprochent le code maison de zéro, des
+remplacements les plus sûrs vers les plus risqués. Chaque tâche est close quand sa ligne de l'inventaire passe à ✅ avec son test.
+
 ### Journal
 
 | Date | Fait |
