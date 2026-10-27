@@ -6,6 +6,7 @@ import empriseMaroc from './emprise-maroc.json';
 import frontiere from './maroc.frontiere.json';
 import {
   creerStyle,
+  lirePalettePlan,
   optionsDeVue,
   preparerMapLibre,
   SOURCE_DU_FOND,
@@ -68,6 +69,23 @@ describe('fond de carte', () => {
       const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE);
       const fond = style.layers.find((couche) => couche.id === 'background');
       expect(fond).toMatchObject({ type: 'background', paint: { 'background-color': '#31353f' } });
+    });
+
+    it('applique les tokens du design system au plan et ajoute le halo des frontières', () => {
+      const racine = document.createElement('div');
+      racine.style.setProperty('--map-plan-background', '#06172a');
+      racine.style.setProperty('--map-plan-water', '#04162a');
+      racine.style.setProperty('--map-plan-boundary', '#347ea5');
+      document.body.append(racine);
+      const palette = lirePalettePlan(racine);
+      racine.remove();
+      const style = creerStyle(CARTE_CONFIG_PAR_DEFAUT, BASE, { fond: 'plan', relief: false }, palette);
+
+      expect(style.layers.find((couche) => couche.id === 'background')).toMatchObject({ paint: { 'background-color': '#04162a' } });
+      expect(style.layers.find((couche) => couche.id === 'boundaries_country_halo')).toMatchObject({
+        type: 'line',
+        paint: { 'line-color': '#347ea5', 'line-blur': 1.4 }
+      });
     });
 
     it('construit toutes les couches du plan sans relief sur la source du fond', () => {

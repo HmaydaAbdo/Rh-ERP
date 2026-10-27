@@ -20,6 +20,14 @@
         <dt>Nom</dt>
         <dd>{{ chantier.nom || '-' }}</dd>
       </div>
+      <div><dt>Nature</dt><dd>{{ chantier.nature ? natures[chantier.nature] : 'À qualifier' }}</dd></div>
+      <div><dt>Affichage sur la carte</dt><dd>{{ chantier.afficherSurCarte ? 'Oui' : 'Non' }}</dd></div>
+      <div>
+        <dt>Localisation</dt>
+        <dd>@if (chantier.localisation) { <a [href]="chantier.localisation" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps</a> } @else { Non renseignée }</dd>
+      </div>
+      <div><dt>Latitude</dt><dd>{{ chantier.latitude ?? 'Non renseignée' }}</dd></div>
+      <div><dt>Longitude</dt><dd>{{ chantier.longitude ?? 'Non renseignée' }}</dd></div>
       <div>
         <dt>Statut</dt>
         <dd>

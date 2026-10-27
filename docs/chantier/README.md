@@ -48,7 +48,7 @@ chantier/
 
 ## Les couches du domaine
 
-Chantier est à la fois un référentiel géré à la main, un référentiel **alimenté par l'ERP source** et le futur support
+Chantier est à la fois un référentiel géré à la main, un référentiel **alimenté par l'ERP source** et la source des points
 de la carte géographique. Il traverse trois couches, décrites ici de bout en bout pour pouvoir être relues et
 commentées séparément.
 
@@ -146,9 +146,13 @@ chantiers présents dans la paie du mois.
 - Le libellé affiché est le nom s'il existe, sinon la désignation, avec le code en repère.
 - Les graphiques et les cartes s'exportent séparément en PDF ; sans `PAIE_READ`, aucune donnée de paie n'est demandée.
 
-**Carte géographique** (`/carte`, `CARTE_READ`, [carte.md](carte.md)) : écran à part. Aujourd'hui elle affiche le fond de
-carte seul (monde entier, relief, satellite, vue 3D) et **aucune donnée de chantier** ; le contrat de données, les marqueurs
-et les indicateurs sont les étapes 3 à 5, à faire.
+**Carte géographique** (`/carte`, `CARTE_READ`, [carte.md](carte.md)) : écran à part. Elle affiche le fond de carte et
+les chantiers autorisés par `afficherSurCarte`. `GET /chantiers/carte` ne renvoie que leur identité, leur nature et leur
+position, sans paie ni données de gestion. Les chantiers partageant exactement un point figurent dans une même fiche.
+La carte propose une barre compacte dédiée à Chantier : compteur et filtre multi-sélection Nature. Sans sélection, toutes
+les natures sont affichées ; plusieurs natures peuvent être combinées. Le filtre agit directement sur les marqueurs et
+ne change pas le fond sélectionné (Plan, Satellite ou Relief). Elle ne présente pas de liste séparée ni de lien sortant
+vers Google Maps ; aucune donnée Employé, Paie ou autre domaine n’est affichée sur cet écran.
 
 ### Couche IA
 
@@ -187,6 +191,11 @@ Table `chantier` :
 | `code` | `VARCHAR(100)` | `NOT NULL`, **unique** | Clé métier du chantier (ex. `C079`) |
 | `designation` | `VARCHAR(500)` | nullable | Libellé descriptif — repris de l'ERP à la **création** du chantier, jamais réécrit ensuite |
 | `nom` | `VARCHAR(255)` | nullable | Nom optionnel, distinct de `designation` — **jamais exposé ni modifié par la synchronisation ERP** (ajouté le 2026-09-29, migration `V5__add_chantier_nom.sql`), uniquement saisi/modifié manuellement via le formulaire. Affiché par le rapport PDF/l'export Excel de la paie sous la forme `"CHANTIER : <nom> (<code>)"` quand renseigné, `"CHANTIER : <code>"` sinon (voir `docs/report/README.md`, « Identifiant chantier ») |
+| `nature` | `VARCHAR(30)` | nullable avant qualification ; requise en saisie manuelle | Enum `AO`, `DEPOT`, `EMULSION`, `CONCASSAGE`, `POSTE_ENROBE`, `CENTRALE_A_BETON` |
+| `localisation` | `VARCHAR(2048)` | nullable ; requise si affichage autorisé | Lien Google Maps standard déduit du point validé |
+| `latitude` | `NUMERIC(11,8)` | nullable, entre -90 et 90 | Coordonnée WGS 84, huit décimales maximum |
+| `longitude` | `NUMERIC(11,8)` | nullable, entre -180 et 180 | Coordonnée WGS 84, renseignée avec la latitude |
+| `afficher_sur_carte` | `BOOLEAN` | non nul, défaut `false` | Choix explicite, indépendant de `actif` |
 | `source_erp` | `BOOLEAN` | `NOT NULL`, défaut `false` | Vrai si le chantier a été **créé** par la synchronisation ERP (information d'origine, sans effet sur la suite) |
 | `actif` | `BOOLEAN` | `NOT NULL`, défaut `true` | Faux = désactivé — jamais modifié par la synchronisation (voir « Règles métier ») |
 
@@ -202,6 +211,22 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
   existantes font échouer V27 pour être résolues explicitement, sans fusion implicite.
 - À la création manuelle, `code` et `designation` sont obligatoires (`designation` : 500 caractères au plus) ;
   `nom` est facultatif (255 caractères au plus). Voir « Qualité des données » dans [TODO.md](../../TODO.md).
+- **Qualification.** Toute création ou modification complète manuelle exige `nature` et `afficherSurCarte` (oui ou non).
+  Les six natures sont AO, Dépôt, Émulsion, Concassage, Poste d'enrobé et Centrale à béton. Les anciens chantiers et
+  les nouveaux chantiers ERP restent sans nature et hors carte jusqu'à leur qualification ; la synchronisation
+  n'invente et n'écrase jamais ces données.
+- **Position.** Saisir soit un lien `google.com/maps?q=latitude,longitude` (HTTPS ajouté s'il manque), ou
+  `https://www.google.com/maps/search/?api=1&query=latitude,longitude`, soit les deux coordonnées. Spring lit les
+  paramètres de l'URI sans appel réseau. Le backend valide les bornes, conserve jusqu'à huit décimales et produit
+  le lien Google Maps standard. Zéro est valide. Une paire incomplète, un lien sans point explicite ou des
+  coordonnées en contradiction avec le lien sont refusés (`400`). Avec un lien court ou une adresse seule, saisir
+  la paire de coordonnées à la place : aucun géocodage ni résolution de redirection n'est effectué.
+- **Affichage.** `afficherSurCarte = true` exige nature, lien et paire de coordonnées validés. Le backend et les
+  contraintes SQL protègent cet invariant. Désactiver l'affichage conserve la position. Un chantier clôturé peut
+  être affiché si le choix est conservé ; ni la paie ni le statut ne déterminent ce choix.
+- **Changement de statut.** `PUT /chantiers/{id}/statut` modifie seulement `actif`, avec version optimiste et audit.
+  Cette action conserve tous les autres champs, même pour un ancien chantier pas encore qualifié. Le formulaire
+  de modification complète reste soumis à la nature obligatoire.
 - La synchronisation **ajoute uniquement les chantiers manquants** (décision du 2026-10-03 : toute
   modification d'un chantier se fait depuis l'UI) :
   - un `code` absent de la base (comparaison insensible à la casse) crée un chantier actif
@@ -243,6 +268,8 @@ conception du RBAC.
 |---|---|---|---|
 | `POST` | `/chantiers` | Créer un chantier manuellement | 201, 400, 409 |
 | `PUT` | `/chantiers/{id}` | Modifier un chantier | 200, 400, 404, 409 |
+| `PUT` | `/chantiers/{id}/statut` | Clôturer ou rouvrir en conservant la qualification | 200, 400, 404, 409 |
+| `GET` | `/chantiers/carte` | Projection des chantiers autorisés à l'affichage (`CARTE_READ`) | 200, 401, 403 |
 | `GET` | `/chantiers/{id}` | Consulter un chantier | 200, 404 |
 | `POST` | `/chantiers/search` | Rechercher (paginé, triable) — body `ChantierSearchCriteria` (`code`, `designation`, `actif`) | 200 |
 | `DELETE` | `/chantiers/{id}` | Supprimer (bloqué si référencé par un employé) | 204, 404, 409 |
@@ -252,10 +279,12 @@ conception du RBAC.
 
 | Contrat | Champs (type) | Contraintes et sens |
 |---|---|---|
-| `ChantierCreateRequestDto` | `code: String`, `designation: String`, `nom: String?` | Code requis (100 caractères maximum), désignation requise (500 maximum), nom facultatif (255 maximum) |
-| `ChantierUpdateRequestDto` | `version: Long`, `code: String`, `designation: String`, `nom: String?`, `actif: Boolean` | Version et statut requis; mêmes contraintes de texte que la création. La version empêche d'écraser une modification concurrente |
+| `ChantierCreateRequestDto` | `code: String`, `designation: String`, `nom: String?`, `nature: NatureChantier`, `afficherSurCarte: Boolean`, `localisation: String?`, `latitude: BigDecimal?`, `longitude: BigDecimal?` | Code requis (100), désignation requise (500), nom facultatif (255), nature et choix d'affichage requis ; lien (2048) ou paire de coordonnées ; bornes et huit décimales validées |
+| `ChantierUpdateRequestDto` | Champs de création + `version: Long`, `actif: Boolean` | Version et statut requis ; mêmes validations géographiques ; version périmée refusée (`409`) |
 | `ChantierSearchCriteria` | `code: String?`, `designation: String?`, `recherche: String?`, `actif: Boolean?` | Filtres facultatifs; 100 caractères maximum pour le code, 500 pour les deux textes. `code` et `designation` se combinent; `recherche` cherche dans code, nom ou désignation |
-| `ChantierResponseDto` | `id: Long`, `version: Long`, `code: String`, `designation: String?`, `nom: String?`, `sourceErp: boolean`, `actif: boolean` | Identité, version, libellés, origine et statut renvoyés à la consultation et à la recherche |
+| `ChantierResponseDto` | `id: Long`, `version: Long`, `code: String`, `designation: String?`, `nom: String?`, `sourceErp: boolean`, `actif: boolean`, `nature: NatureChantier?`, `localisation: String?`, `latitude: BigDecimal?`, `longitude: BigDecimal?`, `afficherSurCarte: boolean` | La nature peut être absente avant qualification manuelle ; la position n'est jamais inventée |
+| `ChantierStatutRequestDto` | `version: Long`, `actif: Boolean` | Deux champs requis ; aucune modification de qualification |
+| `ChantierCarteDto` | `id: Long`, `code: String`, `designation: String?`, `nom: String?`, `nature: NatureChantier`, `localisation: String`, `latitude: BigDecimal`, `longitude: BigDecimal` | Uniquement les chantiers autorisés à l'affichage ; aucune donnée de paie |
 | `PaieChantierOptionDto` | `id: Long`, `code: String`, `nom: String?`, `designation: String?`, `actif: boolean` | Option des filtres Paie du mois choisi : code et nom visibles, désignation en repli quand le nom manque |
 
 ### Permissions
@@ -349,8 +378,8 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 | `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes hiérarchiques** : chantier → équipe → fonction, avec les indicateurs de la dernière paie disponible |
 | `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : répartition par chantier et évolution mensuelle de l'effectif payé, de la masse salariale et des STC ; qualité des rattachements |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
-| `/chantiers/:id` | `ChantierDetailComponent` | Consultation (code, désignation, nom, statut, source) |
-| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (code, désignation, nom, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
+| `/chantiers/:id` | `ChantierDetailComponent` | Consultation (identité, nature, localisation, coordonnées, choix d'affichage, statut, source) |
+| `/chantiers/:id/edit` | `ChantierFormComponent` | Modification (identité, nature, position, choix d'affichage, statut) — un chantier issu de l'ERP se modifie exactement comme un autre : la synchronisation ne le touche plus |
 
 Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` et `app-collection-table` pour leur structure commune, puis suivent le [pattern frontend des trois vues](../../conventions/frontend.md), comme
 [Équipe](../equipe/README.md) et [Fonction](../function/README.md). Les filtres code, désignation et statut restent dans l'URL et
@@ -413,3 +442,17 @@ Voir [TODO.md](../../TODO.md) pour le détail :
   est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.
 - Les métriques de synchronisation (`rh.chantier.sync.*`) sont exposées par `/actuator/prometheus` (voir
   [../architecture.md](../architecture.md)).
+
+
+### Scénarios de qualification géographique
+
+| Règle | Vérification exécutable |
+|---|---|
+| Nature et choix d'affichage requis ; anciens chantiers sans nature hors carte | `ChantierLocalisationIntegrationTest`, `chantier-form.component.spec.ts` |
+| Lien avec ou sans HTTPS, paire seule, zéro, bornes et huit décimales | `LocalisationChantierServiceTest` |
+| Refus d'adresse seule, lien ambigu, mauvais hôte, paire incomplète ou contradictoire | `LocalisationChantierServiceTest`, contrat HTTP et formulaire |
+| Source cartographique sans paie et seulement avec `CARTE_READ` | `EndpointSecurityTest`, `ChantierLocalisationIntegrationTest` |
+| Retrait de la carte sans effacer la position ; statut sans perdre la qualification | `ChantierLocalisationIntegrationTest`, `chantier.service.spec.ts` |
+| Reprise auditée, sans changement de statut, rejouable sans réécriture et préservant une qualification manuelle | `ChantierLocalisationIntegrationTest` |
+| Marqueur au clavier, sites partagés, chargement vide/en erreur et nouvelle tentative | Specs de la carte et `chantier-localisation-full-stack.spec.ts` |
+| Création réelle, extraction, affichage, retrait ; téléphone/grand écran, clair/sombre, accessibilité | `e2e/chantier-localisation-full-stack.spec.ts` |

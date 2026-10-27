@@ -25,26 +25,26 @@ describe('ChantierService', () => {
     expect(r.request.params.get('sort')).toBe('code,asc');
   });
 
-  it('clôture ou rouvre un chantier en renvoyant tous ses autres champs', () => {
-    const chantier = { id: 3, version: 4, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: true, actif: true };
+  it('clôture ou rouvre un chantier par la route de statut, sans toucher à sa qualification', () => {
+    const chantier = { id: 3, version: 4, code: 'C196', designation: 'Marrakech', nom: 'Nord', nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: true };
 
     service.changerStatut(chantier, false).subscribe();
 
-    const r = requete(http, 'PUT', 'chantiers/3');
+    const r = requete(http, 'PUT', 'chantiers/3/statut');
     r.flush({ id: 3 });
-    expect(r.request.body).toEqual({ code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false, version: 4 });
+    expect(r.request.body).toEqual({ actif: false, version: 4 });
   });
 
   it('lit, crée, modifie et supprime un chantier', () => {
     service.getById(2).subscribe();
     requete(http, 'GET', 'chantiers/2').flush({ id: 2 });
 
-    service.create({ code: 'C196', designation: 'Marrakech', nom: null }).subscribe();
+    service.create({ code: 'C196', designation: 'Marrakech', nom: null, nature: 'AO', afficherSurCarte: false }).subscribe();
     const creation = requete(http, 'POST', 'chantiers');
     creation.flush({ id: 3 });
-    expect(creation.request.body).toEqual({ code: 'C196', designation: 'Marrakech', nom: null });
+    expect(creation.request.body).toEqual({ code: 'C196', designation: 'Marrakech', nom: null, nature: 'AO', afficherSurCarte: false });
 
-    service.update(3, { version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false }).subscribe();
+    service.update(3, { version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', actif: false, nature: 'AO', afficherSurCarte: false }).subscribe();
     const modification = requete(http, 'PUT', 'chantiers/3');
     modification.flush({ id: 3 });
     expect(modification.request.body).toMatchObject({ actif: false });
@@ -62,5 +62,10 @@ describe('ChantierService', () => {
     r.flush({ totalRecus: 12, crees: 3, dejaPresents: 9, ignores: 0 });
     expect(r.request.body).toEqual({});
     expect(resultat).toEqual({ totalRecus: 12, crees: 3, dejaPresents: 9, ignores: 0 });
+  });
+
+  it('lit uniquement la projection destinée à la carte', () => {
+    service.carte().subscribe();
+    requete(http, 'GET', 'chantiers/carte').flush([]);
   });
 });

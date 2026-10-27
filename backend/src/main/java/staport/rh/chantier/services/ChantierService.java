@@ -12,6 +12,9 @@ import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
+import staport.rh.chantier.dtos.request.ChantierStatutRequestDto;
+import staport.rh.chantier.dtos.response.ChantierCarteDto;
+import java.util.List;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.chantier.exceptions.ChantierAlreadyExistsException;
 import staport.rh.chantier.exceptions.ChantierNotFoundException;
@@ -25,10 +28,12 @@ public class ChantierService implements IChantierService {
 
     private final ChantierRepository repository;
     private final ChantierMapper mapper;
+    private final LocalisationChantierService localisation;
 
-    public ChantierService(ChantierRepository repository, ChantierMapper mapper) {
+    public ChantierService(ChantierRepository repository, ChantierMapper mapper, LocalisationChantierService localisation) {
         this.repository = repository;
         this.mapper = mapper;
+        this.localisation = localisation;
     }
 
     @Override
@@ -42,6 +47,7 @@ public class ChantierService implements IChantierService {
 
         Chantier entity = mapper.toEntity(dto);
         entity.setCode(code);
+        localisation.appliquer(entity, dto.localisation(), dto.latitude(), dto.longitude(), dto.afficherSurCarte());
         Chantier saved = repository.save(entity);
         return mapper.toDto(saved);
     }
@@ -62,6 +68,7 @@ public class ChantierService implements IChantierService {
 
         mapper.updateEntityFromDto(dto, entity);
         entity.setCode(code);
+        localisation.appliquer(entity, dto.localisation(), dto.latitude(), dto.longitude(), dto.afficherSurCarte());
         Chantier updated = repository.saveAndFlush(entity);
         return mapper.toDto(updated);
     }
@@ -70,6 +77,22 @@ public class ChantierService implements IChantierService {
     @Transactional(readOnly = true)
     public ChantierResponseDto findById(Long id) {
         return mapper.toDto(getEntityById(id));
+    }
+
+    @Override
+    @Transactional
+    @AuditableAction(action = "CHANTIER_MODIFICATION", type = TypeOperation.UPDATE, entite = Chantier.class)
+    public ChantierResponseDto changerStatut(Long id, ChantierStatutRequestDto dto) {
+        Chantier entity = getEntityById(id);
+        VersionOptimiste.verifier(dto.version(), entity.getVersion());
+        entity.setActif(dto.actif());
+        return mapper.toDto(repository.saveAndFlush(entity));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChantierCarteDto> carte() {
+        return repository.findByAfficherSurCarteTrueOrderByCodeAsc().stream().map(mapper::toCarteDto).toList();
     }
 
     @Override

@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
+import staport.rh.chantier.entities.NatureChantier;
 import org.mockito.junit.jupiter.MockitoExtension;
 import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
@@ -32,6 +34,9 @@ class ChantierServiceTest {
     @Mock
     private ChantierMapper mapper;
 
+    @Spy
+    private LocalisationChantierService localisation = new LocalisationChantierService();
+
     @InjectMocks
     private ChantierService chantierService;
 
@@ -47,11 +52,11 @@ class ChantierServiceTest {
 
     @Test
     void create_devraitEnregistrerQuandLeCodeEstUnique() {
-        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null);
+        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null, NatureChantier.AO, null, null, null, false);
         when(repository.existsByCodeIgnoreCase("C059")).thenReturn(false);
         when(mapper.toEntity(dto)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, 0L, "C059", "Travaux de voirie", null, false, true));
+        when(mapper.toDto(entity)).thenReturn(new ChantierResponseDto(1L, 0L, "C059", "Travaux de voirie", null, false, true, NatureChantier.AO, null, null, null, false));
 
         ChantierResponseDto result = chantierService.create(dto);
 
@@ -61,7 +66,7 @@ class ChantierServiceTest {
 
     @Test
     void create_devraitEchouerQuandLeCodeExisteDeja() {
-        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null);
+        ChantierCreateRequestDto dto = new ChantierCreateRequestDto("C059", "Travaux de voirie", null, NatureChantier.AO, null, null, null, false);
         when(repository.existsByCodeIgnoreCase("C059")).thenReturn(true);
 
         assertThatThrownBy(() -> chantierService.create(dto))

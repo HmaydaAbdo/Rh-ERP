@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import staport.rh.chantier.entities.Chantier;
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface ChantierRepository extends JpaRepository<Chantier, Long>, JpaSpecificationExecutor<Chantier> {
@@ -13,4 +14,6 @@ public interface ChantierRepository extends JpaRepository<Chantier, Long>, JpaSp
     Optional<Chantier> findByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCase(String code);
+
+    List<Chantier> findByAfficherSurCarteTrueOrderByCodeAsc();
 }

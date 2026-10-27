@@ -26,6 +26,47 @@
       <stp-field-error [field]="form.nom" />
     </div>
 
+    <div class="field">
+      <label for="nature">Nature du chantier <span class="field__req" aria-hidden="true">*</span></label>
+      <stp-select inputId="nature" ariaLabel="Nature du chantier" [formField]="form.nature" [options]="natureOptions" [clearable]="false" />
+      <small>Obligatoire · choisissez la nature réelle du chantier.</small>
+      <stp-field-error [field]="form.nature" />
+    </div>
+
+    <div class="field">
+      <label for="afficherSurCarte">Afficher sur la carte <span class="field__req" aria-hidden="true">*</span></label>
+      <stp-select inputId="afficherSurCarte" ariaLabel="Afficher sur la carte" [formField]="form.afficherSurCarte" [options]="affichageOptions" [clearable]="false" />
+      <small>Obligatoire · Non par défaut. Oui exige une localisation complète.</small>
+    </div>
+
+    <fieldset class="field">
+      <legend>Localisation</legend>
+      <div class="field">
+        <label for="modeLocalisation">Renseigner la localisation par</label>
+        <stp-select inputId="modeLocalisation" ariaLabel="Renseigner la localisation par" [formField]="form.modeLocalisation" [options]="localisationOptions" [clearable]="false" />
+      </div>
+      @if (!form.localisation().hidden()) {
+        <div class="field">
+          <label for="localisation">Lien Google Maps @if (form.afficherSurCarte().value()) { <span class="field__req" aria-hidden="true">*</span> }</label>
+          <input class="stp-input" id="localisation" type="text" inputmode="url" autocomplete="off" aria-describedby="localisation-aide" [formField]="form.localisation" />
+          <small id="localisation-aide">Exemple : google.com/maps?q=31.7243258,-8.1033938. Les coordonnées sont extraites à l’enregistrement. Les liens courts et les adresses seules ne sont pas acceptés.</small>
+          <stp-field-error [field]="form.localisation" />
+        </div>
+      } @else {
+        <div class="field">
+          <label for="latitude">Latitude @if (form.afficherSurCarte().value()) { <span class="field__req" aria-hidden="true">*</span> }</label>
+          <input class="stp-input" id="latitude" type="text" inputmode="decimal" autocomplete="off" aria-describedby="coordonnees-aide" [formField]="form.latitude" />
+          <stp-field-error [field]="form.latitude" />
+        </div>
+        <div class="field">
+          <label for="longitude">Longitude @if (form.afficherSurCarte().value()) { <span class="field__req" aria-hidden="true">*</span> }</label>
+          <input class="stp-input" id="longitude" type="text" inputmode="decimal" autocomplete="off" aria-describedby="coordonnees-aide" [formField]="form.longitude" />
+          <small id="coordonnees-aide">Renseignez les deux coordonnées, avec un point décimal et 8 décimales maximum. Latitude de -90 à 90, longitude de -180 à 180. Le lien Google Maps sera créé automatiquement.</small>
+          <stp-field-error [field]="form.longitude" />
+        </div>
+      }
+    </fieldset>
+
     @if (isEditMode()) {
       <div class="field">
         <label for="actif">Statut <span class="field__req" aria-hidden="true">*</span></label>

@@ -51,7 +51,9 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const chantier = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
     code: `T${suffixe}`,
     designation: `Chantier e2e ${suffixe}`,
-    nom: `Chantier e2e ${suffixe}`
+    nom: `Chantier e2e ${suffixe}`,
+    nature: 'AO',
+    afficherSurCarte: false
   });
   const employe = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: `Employé e2e ${suffixe}`,

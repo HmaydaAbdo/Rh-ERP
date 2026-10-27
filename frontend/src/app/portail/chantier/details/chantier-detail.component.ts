@@ -7,7 +7,7 @@ import { ConfirmDialogService, NotificationService } from '../../../shared/feedb
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
-import { Chantier } from '../models/chantier.model';
+import { Chantier, NATURE_CHANTIER_LIBELLES } from '../models/chantier.model';
 import { confirmationStatutChantier, libelleStatutChantier } from '../models/chantier-statut';
 import { ChantierService } from '../services/chantier.service';
 
@@ -30,6 +30,7 @@ export class ChantierDetailComponent {
   protected readonly chantier = signal<Chantier | null>(null);
   protected readonly changement = signal(false);
   protected readonly libelleStatut = libelleStatutChantier;
+  protected readonly natures = NATURE_CHANTIER_LIBELLES;
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));

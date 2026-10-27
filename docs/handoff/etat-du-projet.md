@@ -1,6 +1,6 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-25 (routine commune à Claude et Codex ; CI sur demande explicite).
+Dernière mise à jour : 2026-10-27 (routine commune à Claude et Codex ; CI sur demande explicite).
 
 **Relais Claude / Codex** : `CLAUDE.md` renvoie à `AGENTS.md` et à la
 [routine commune](../../conventions/workflow.md). Le lot de continuité entre assistants et la règle
@@ -9,6 +9,19 @@ Employé, Paie, Rapport, Auth, Paramètres et Audit. Les validations des imports
 les lectures autorisées des rôles, les reprises après erreur, les sources analytiques et les exports
 individuels sont alignés sur leurs contrats documentés. Les README et skills de chaque domaine
 décrivent les règles courantes; le PV global garde les accords métier à recueillir avant diffusion.
+
+**Qualification Chantier (2026-10-26)** : lot local isolé `codex/chantier-localisation`, migrations V37/V38, six natures et
+source cartographique réelle. La reprise du classeur conserve huit exclusions d'affichage. Contrat dans le
+[README](../chantier/README.md) ; preuves et statut de livraison dans le
+[relais technique](chantier-localisation-2026-10-26.md). CI et déploiement restent à autoriser.
+
+**Thème sombre (2026-10-27)** : le thème sombre adopte Atlas nocturne Staport dans toute l’application, avec encre marine,
+surfaces bleu nuit, actions bleu électrique, cyan balise et texte glacier ; les statuts et graphiques gardent leur sémantique.
+La carte Chantier reprend la maquette : barre compacte avec total en pastille, Plan bleu profond, marqueurs cyan iconiques
+et infobulles. Le build production et les E2E de carte desktop/mobile passent. Les contrôles globaux clair/sombre sont à
+vérifiés au catalogue, à l'authentification et sur mobile (18 E2E). La carte passe 2 E2E desktop/mobile. Les tests unitaires
+ciblés du style et des marqueurs passent (37 tests). Le build production signale seulement les avertissements CommonJS
+CopilotKit `semver` et `partial-json`.
 
 **Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
