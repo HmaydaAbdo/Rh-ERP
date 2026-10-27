@@ -13,7 +13,7 @@ décrivent les règles courantes; le PV global garde les accords métier à recu
 **Qualification Chantier (2026-10-26)** : lot local isolé `codex/chantier-localisation`, migrations V37/V38, six natures et
 source cartographique réelle. La reprise du classeur conserve huit exclusions d'affichage. Contrat dans le
 [README](../chantier/README.md) ; preuves et statut de livraison dans le
-[relais technique](chantier-localisation-2026-10-26.md). CI et déploiement restent à autoriser.
+[relais technique](chantier-localisation-2026-10-26.md). Livraison par PR vers `main` demandée le 2026-10-27 ; le déploiement reste distinct.
 
 **Thème sombre (2026-10-27)** : le thème sombre adopte Atlas nocturne Staport dans toute l’application, avec encre marine,
 surfaces bleu nuit, actions bleu électrique, cyan balise et texte glacier ; les statuts et graphiques gardent leur sémantique.
