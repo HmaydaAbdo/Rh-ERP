@@ -47,6 +47,14 @@ tout est gratuit et le code IA fait maison est une dette suivie jusqu'à zéro**
 ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : T21 (liste titrée des
 conversations, gratuite) puis le remplacement pièce par pièce du code maison.
 
+**Correctifs de l'assistant (2026-10-27)** : essai réel d'une question complexe (top 3 des chantiers par masse salariale, comparaison au
+mois précédent), réponse exacte en une minute environ. Deux pannes trouvées avec Phoenix et corrigées : le rappel LiteLLM
+`detect_prompt_injection` (comparaison floue caractère par caractère) saturait le processeur sur les longs prompts et rejetait des
+requêtes légitimes, remplacé par le garde-fou officiel `litellm_content_filter` (mots-clés anglais + expressions françaises) ; le
+volume `/data` du runtime appartenait à root (le runner SQLite ne pouvait pas créer sa base), `/data` est maintenant créé dans l'image
+au nom de `node`. **Reste ouvert** : le résumé de conversation (`SummarizationMiddleware`, déclenché à 12 000 jetons) s'affiche brut
+dans le fil (« SESSION INTENT / SUMMARY ») au lieu de rester interne.
+
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
 
