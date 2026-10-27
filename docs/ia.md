@@ -291,7 +291,7 @@ Autres points non terminés, gardés ouverts :
 | Latence d'une réponse sous 30 s à tenir sur le jeu de référence | ⬜ |
 | Évaluation de l'agent étendue (cas complexes, tri, questions à l'utilisateur) | ⬜ |
 | Historique SQLite du runtime : pas d'expiration | ⬜ |
-| Lint : dette d'accessibilité du frontend (23 avertissements plafonnés), lint Java et runtime Node | ⬜ |
+| Lint : frontend à 0 avertissement (règles en `error`), Checkstyle Java et ESLint du runtime Node, branchés dans la CI | ✅ |
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) à isoler | ⬜ |
 

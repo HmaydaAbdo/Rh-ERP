@@ -45,6 +45,13 @@ jobs:
       - name: Install uv for the Python MCP client
         run: pipx install uv==0.12.2
 
+      # Lint Java (Checkstyle, règles minimales dans backend/config/checkstyle.xml) : toute violation fait échouer le job.
+      - name: Lint backend (Checkstyle)
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp checkstyle:check
+
       - name: Run backend tests
         working-directory: backend
         # mvnw doit être exécutable — le bit d'exécution a été perdu une première fois lors d'un
@@ -176,6 +183,13 @@ jobs:
           uv run ruff format --check .
           uv run pyright
           uv run pytest -q
+
+      # Lint du runtime CopilotKit (ESLint, configuration dans copilot-runtime/eslint.config.js).
+      - name: Lint CopilotKit runtime
+        working-directory: copilot-runtime
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run lint
 
       - name: Read LiteLLM pools without calling any provider
         run: python3 litellm/test_providers.py --list

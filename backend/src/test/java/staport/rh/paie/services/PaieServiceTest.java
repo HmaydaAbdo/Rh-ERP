@@ -17,7 +17,6 @@ import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.dtos.response.ChantierSummaryDto;
 import staport.rh.employee.dtos.response.FunctionSummaryDto;
-import staport.rh.employee.entities.TypeSalaire;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.equipe.entities.Equipe;
 import staport.rh.equipe.services.interfaces.IEquipeService;

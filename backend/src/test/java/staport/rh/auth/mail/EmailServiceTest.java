@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.Async;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;

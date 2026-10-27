@@ -30,12 +30,11 @@ module.exports = tseslint.config(
     files: ['src/**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
     rules: {
-      // Dette d'accessibilité et de rigueur existante, relevée à l'introduction du lint : en avertissement, sans droit
-      // d'en ajouter (`--max-warnings` dans package.json). À résorber écran par écran, puis repasser en `error`.
-      '@angular-eslint/template/label-has-associated-control': 'warn',
-      '@angular-eslint/template/eqeqeq': 'warn',
-      '@angular-eslint/template/interactive-supports-focus': 'warn',
-      '@angular-eslint/template/click-events-have-key-events': 'warn'
+      // Les composants de saisie maison sont des contrôles de formulaire : un `<label>` qui les enveloppe est bien associé.
+      '@angular-eslint/template/label-has-associated-control': ['error', { controlComponents: ['stp-select', 'stp-date-input', 'app-lazy-select'] }],
+      '@angular-eslint/template/eqeqeq': 'error',
+      '@angular-eslint/template/interactive-supports-focus': 'error',
+      '@angular-eslint/template/click-events-have-key-events': 'error'
     }
   }
 );

@@ -10,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import staport.rh.auth.dtos.request.UserSearchCriteria;
 
-import java.util.List;
 
 public interface IUserService {
 
