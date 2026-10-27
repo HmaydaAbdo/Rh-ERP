@@ -7,3 +7,7 @@ ENV PHOENIX_TELEMETRY_ENABLED=false \
     PHOENIX_DEFAULT_RETENTION_POLICY_DAYS=30 \
     PHOENIX_ENABLE_AUTH=true \
     PHOENIX_DISABLE_AGENT_ASSISTANT=true
+# Sain quand le serveur répond : les services qui envoient des traces attendent ce signal (docker-compose.yml) au lieu de
+# perdre leurs premiers lots. L'image n'a pas de shell : le contrôle passe par son Python.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --start-interval=3s --retries=3 \
+  CMD ["/usr/bin/python3.13", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6006/healthz', timeout=4)"]

@@ -34,6 +34,23 @@ def test_le_modele_route_par_tag_vers_la_passerelle() -> None:
     assert chat.api_base == "http://litellm:4000/v1"
     assert chat.model_kwargs == {"extra_body": {"metadata": {"tags": ["complex"]}}}
     assert chat.streaming and chat.max_retries == 0
+    assert not any(cle.startswith("emit-") for cle in chat.metadata or {})
+
+
+def test_un_modele_interne_ne_diffuse_rien_dans_le_fil() -> None:
+    """Résumé et choix des outils : sans flux et retenus hors du fil (ag-ui-langgraph et CopilotKit)."""
+    chat = modele(_settings(), Tache.SIMPLE, interne=True)
+    assert not chat.streaming
+    assert chat.metadata is not None
+    assert (
+        chat.metadata.items()
+        >= {
+            "emit-messages": False,
+            "emit-tool-calls": False,
+            "copilotkit:emit-messages": False,
+            "copilotkit:emit-tool-calls": False,
+        }.items()
+    )
 
 
 def test_sante_ne_depend_de_rien() -> None:
