@@ -36,7 +36,10 @@ interface ImportApi {
   peutRemplacer(): boolean;
   creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
   alignements: WritableSignal<number[]>;
+  valeurSalaire(numero: number): string;
+  estAligne(id: number): boolean;
   choisirChantier(value: unknown): void;
+  choisirFichier(event: Event): void;
   telechargerModele(): void;
   verifierContexte(): void;
   analyser(): void;
@@ -109,6 +112,21 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.peutRemplacer()).toBe(true);
     api.analyse.set({ ...ANALYSE, erreurs: ['Le salaire est invalide.'] });
     expect(api.peutRemplacer()).toBe(false);
+  });
+
+  it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
+    expect(api.valeurSalaire(2)).toBe('');
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' } });
+    expect(api.valeurSalaire(2)).toBe('4000');
+    expect(api.estAligne(7)).toBe(false);
+    api.basculerAlignement(7);
+    expect(api.estAligne(7)).toBe(true);
+
+    api.analyse.set(ANALYSE);
+    const fichier = new File(['nouveau'], 'nouveau.xlsx');
+    api.choisirFichier({ target: { files: [fichier] } } as unknown as Event);
+    expect(api.fichier()).toBe(fichier);
+    expect(api.analyse()).toBeNull();
   });
 
   it('bloque l’étape suivante si la paie mensuelle manque', () => {
