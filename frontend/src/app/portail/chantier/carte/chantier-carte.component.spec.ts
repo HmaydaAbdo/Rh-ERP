@@ -33,6 +33,32 @@ describe('ChantierCarteComponent', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
+  it('présente ensemble les chantiers du même point et retire les marqueurs lors du retrait des données', async () => {
+    const fixture = TestBed.createComponent(ChantierCarteComponent);
+    fixture.componentRef.setInput('chantiers', [
+      { id: 1, code: 'GEO1', nom: 'Site A', designation: 'Test', nature: 'AO', localisation: 'https://www.google.com/maps?q=10,20', latitude: 10, longitude: 20 },
+      { id: 2, code: 'GEO2', nom: 'Site B', designation: 'Test', nature: 'CONCASSAGE', localisation: 'https://www.google.com/maps?q=10,20', latitude: 10, longitude: 20 }
+    ]);
+    await fixture.whenStable();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(1);
+    const marqueur = element.querySelector<HTMLButtonElement>('.chantier-carte__marqueur')!;
+    expect(marqueur.textContent).toBe('');
+    expect(marqueur.querySelector('.chantier-carte__point')).not.toBeNull();
+    expect(marqueur.getAttribute('data-tooltip')).toContain('GEO1 · Site A');
+    expect(marqueur.getAttribute('data-tooltip')).toContain('AO');
+    expect(marqueur.getAttribute('data-tooltip')).toContain('GEO2 · Site B');
+    expect(marqueur.getAttribute('aria-label')).toContain('GEO1 · Site A');
+    marqueur.click();
+    await fixture.whenStable();
+    expect(element.querySelector('.maplibregl-popup')?.textContent).toContain('Site A');
+    expect(element.querySelector('.maplibregl-popup')?.textContent).toContain('Site B');
+    expect(element.querySelector('.maplibregl-popup')?.textContent).not.toContain('Google Maps');
+    fixture.componentRef.setInput('chantiers', []);
+    await fixture.whenStable();
+    expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(0);
+  });
+
   it('dessine une carte MapLibre dans une région nommée, décrite pour le clavier', async () => {
     const fixture = TestBed.createComponent(ChantierCarteComponent);
     await fixture.whenStable();

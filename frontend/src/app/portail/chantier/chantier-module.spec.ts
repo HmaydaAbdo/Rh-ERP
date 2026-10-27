@@ -6,8 +6,8 @@ import { Chantier } from './models/chantier.model';
 
 const params = (valeurs: Record<string, string>) => convertToParamMap(valeurs);
 const CHANTIERS: Chantier[] = [
-  { id: 1, version: 0, code: 'C168', designation: 'Route de Nador', nom: null, sourceErp: true, actif: true },
-  { id: 2, version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: false, actif: false }
+  { id: 1, version: 0, code: 'C168', designation: 'Route de Nador', nom: null, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: true },
+  { id: 2, version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: false, actif: false }
 ];
 
 describe('moduleChantier', () => {

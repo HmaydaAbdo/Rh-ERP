@@ -26,6 +26,12 @@
             <stp-badge value="Manuel" severity="neutral"></stp-badge>
           }
         }
+        @case ('nature') {
+          {{ libelleNature(chantier.nature) }}
+        }
+        @case ('afficherSurCarte') {
+          {{ chantier.afficherSurCarte ? 'Oui' : 'Non' }}
+        }
         @case ('actif') {
           <stp-badge [value]="libelleStatut(chantier.actif)" [severity]="chantier.actif ? 'success' : 'neutral'"></stp-badge>
         }

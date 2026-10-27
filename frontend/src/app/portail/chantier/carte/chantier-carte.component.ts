@@ -9,6 +9,7 @@ import {
   computed,
   effect,
   inject,
+  input,
   signal,
   viewChild
 } from '@angular/core';
@@ -20,10 +21,12 @@ import {
   GeolocateControl,
   NavigationControl,
   Popup,
+  Marker,
   ScaleControl,
   type IControl,
   type MapLayerMouseEvent
 } from 'maplibre-gl';
+import { ChantierCarte, NATURE_CHANTIER_LIBELLES } from '../models/chantier.model';
 
 import { CARTE_CONFIG } from './carte.config';
 import {
@@ -33,6 +36,7 @@ import {
   SOURCE_SATELLITE,
   TUILE_ABSENTE,
   creerStyle,
+  lirePalettePlan,
   optionsDeVue,
   preparerMapLibre,
   territoire,
@@ -69,7 +73,7 @@ class ControleDuGabarit implements IControl {
 }
 
 /**
- * Carte du monde, ouverte sur le Maroc : le fond seulement, sans donnée de chantier pour l'instant. Composant « bête » : il ne connaît ni la page,
+ * Carte du monde, ouverte sur le Maroc, avec les points qualifiés reçus en entrée. Composant « bête » : il ne connaît ni la page,
  * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, conserve son style sombre malgré
  * le thème applicatif, la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
  * détruit la carte à sa destruction.
@@ -85,6 +89,8 @@ class ControleDuGabarit implements IControl {
   styleUrl: './chantier-carte.component.scss'
 })
 export class ChantierCarteComponent {
+  readonly chantiers = input<readonly ChantierCarte[]>([]);
+  private marqueurs: Marker[] = [];
   private readonly config = inject(CARTE_CONFIG);
   private readonly document = inject(DOCUMENT);
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -118,14 +124,16 @@ export class ChantierCarteComponent {
       const affichage = this.affichage();
       if (this.carte && affichage !== this.styleAffiche) {
         this.styleAffiche = affichage;
-        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage));
+        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement)));
       }
     });
 
     inject(DestroyRef).onDestroy(() => {
+      this.marqueurs.forEach((marqueur) => marqueur.remove());
       this.observateur?.disconnect();
       this.carte?.remove();
     });
+    effect(() => this.afficherChantiers(this.chantiers()));
   }
 
   protected choisirFond(fond: TypeDeFond): void {
@@ -158,7 +166,7 @@ export class ChantierCarteComponent {
     this.styleAffiche = this.affichage();
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
-      style: creerStyle(this.config, base, this.styleAffiche),
+      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement)),
       attributionControl: { compact: true },
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.
       fadeDuration: 0,
@@ -194,6 +202,51 @@ export class ChantierCarteComponent {
     this.observateur = new ResizeObserver(() => carte.resize());
     this.observateur.observe(this.conteneur().nativeElement);
     this.carte = carte;
+    this.afficherChantiers(this.chantiers());
+  }
+
+  private afficherChantiers(chantiers: readonly ChantierCarte[]): void {
+    if (!this.carte) { return; }
+    this.marqueurs.forEach((marqueur) => marqueur.remove());
+    // Plusieurs chantiers peuvent partager exactement le même site : une fiche les présente tous.
+    const sites = new Map<string, ChantierCarte[]>();
+    chantiers.forEach((chantier) => {
+      const cle = `${chantier.longitude},${chantier.latitude}`;
+      sites.set(cle, [...(sites.get(cle) ?? []), chantier]);
+    });
+    this.marqueurs = [...sites.values()].map((site) => {
+      const bouton = this.document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = 'chantier-carte__marqueur';
+      const detailSites = site.map((chantier) => `${chantier.code} · ${chantier.nom || chantier.designation}\n${NATURE_CHANTIER_LIBELLES[chantier.nature]}`).join('\n\n');
+      bouton.setAttribute('aria-label', `Afficher ${detailSites.replaceAll('\n', ', ')}`);
+      bouton.setAttribute('data-tooltip', detailSites);
+      const icone = this.document.createElement('span');
+      icone.className = 'chantier-carte__point';
+      icone.setAttribute('aria-hidden', 'true');
+      bouton.append(icone);
+      const fiche = this.document.createElement('div');
+      site.forEach((chantier) => {
+        const code = this.document.createElement('strong');
+        code.className = 'chantier-carte__fiche-code';
+        code.textContent = chantier.code;
+        const nom = this.document.createElement('span');
+        nom.className = 'chantier-carte__fiche-nom';
+        nom.textContent = chantier.nom || chantier.designation;
+        const nature = this.document.createElement('p');
+        nature.className = 'chantier-carte__fiche-nature';
+        nature.textContent = NATURE_CHANTIER_LIBELLES[chantier.nature];
+        const article = this.document.createElement('article');
+        article.className = 'chantier-carte__fiche-chantier';
+        article.append(code, nom, nature);
+        fiche.append(article);
+      });
+      const marqueur = new Marker({ element: bouton })
+        .setLngLat([site[0].longitude, site[0].latitude])
+        .setPopup(new Popup({ closeButton: true }).setDOMContent(fiche))
+        .addTo(this.carte!);
+      return marqueur;
+    });
   }
 
   private oublier(source: string): void {

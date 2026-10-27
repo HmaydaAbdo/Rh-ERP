@@ -21,6 +21,9 @@ import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierSearchCriteria;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
+import staport.rh.chantier.dtos.request.ChantierStatutRequestDto;
+import staport.rh.chantier.dtos.response.ChantierCarteDto;
+import java.util.List;
 import staport.rh.chantier.services.interfaces.IChantierService;
 
 @RestController
@@ -63,6 +66,20 @@ public class ChantierController {
     @PreAuthorize("hasAuthority('CHANTIER_READ')")
     public ResponseEntity<ChantierResponseDto> lireParId(@PathVariable Long id) {
         return ResponseEntity.ok(chantierService.findById(id));
+    }
+
+    @PutMapping("/{id}/statut")
+    @Operation(summary = "Clôturer ou rouvrir un chantier sans modifier sa qualification")
+    @PreAuthorize("hasAuthority('CHANTIER_WRITE')")
+    public ResponseEntity<ChantierResponseDto> changerStatut(@PathVariable Long id, @Valid @RequestBody ChantierStatutRequestDto dto) {
+        return ResponseEntity.ok(chantierService.changerStatut(id, dto));
+    }
+
+    @GetMapping("/carte")
+    @Operation(summary = "Lire les chantiers qualifiés dont l'affichage sur la carte est autorisé")
+    @PreAuthorize("hasAuthority('CARTE_READ')")
+    public ResponseEntity<List<ChantierCarteDto>> carte() {
+        return ResponseEntity.ok(chantierService.carte());
     }
 
     @PostMapping("/search")
