@@ -446,7 +446,7 @@ describe('CartesPerimetreComponent', () => {
   });
 
   it('change le mois de paie dans l’URL', async () => {
-    const page = await ouvrir();
+    await ouvrir();
     await choisirValeur('Période de paie', '2026-07');
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-07');

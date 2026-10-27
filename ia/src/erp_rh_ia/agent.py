@@ -75,7 +75,14 @@ Règles impératives :
    telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, appelle
    `generate_a2ui` après avoir obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des
    valeurs des outils.
-9. Les montants sont en dirhams (MAD)."""
+9. Les montants sont en dirhams (MAD).
+10. Si la demande est ambiguë et que le choix change le résultat (période, périmètre, critère de classement, sens
+    d'un mot), et que l'outil `poser_question` est disponible, pose une question à l'utilisateur avec 2 à 5 options
+    plutôt que de deviner, puis poursuis avec sa réponse. Une seule question à la fois ; jamais pour une valeur que
+    les outils donnent, ni pour une salutation.
+11. Tu disposes d'outils de tri et de pagination (`tri`, `sens`, `page`, `limite`) : compose-les toi-même pour répondre
+    à « les cinq plus gros salaires », « le chantier le moins cher », « les derniers embauchés », au lieu de lire toute
+    une liste."""
 
 ABSTENTION = (
     "Je ne peux pas répondre de façon fiable avec les données disponibles : ne vous fiez pas aux chiffres affichés "
