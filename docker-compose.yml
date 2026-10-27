@@ -175,6 +175,7 @@ services:
     networks:
       - db-net
       - web-net
+      - runtime-auth-net
       # Le service IA atteint /mcp par ce réseau interne ; nginx ne relaie jamais /mcp.
       - ia-net
       - trace-net
@@ -361,11 +362,15 @@ services:
         condition: service_healthy
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.
+      ERP_API_URL: http://backend:8080
       # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-copilot-runtime
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
+    volumes:
+      - runtime_data:/data
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -376,6 +381,7 @@ services:
       - runtime-net
       - assistant-net
       - trace-net
+      - runtime-auth-net
     # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
@@ -406,6 +412,7 @@ volumes:
   postgres_data_v18:
   litellm_db_data:
   ia_db_data:
+  runtime_data:
   phoenix_data:
 
 networks:
@@ -424,5 +431,7 @@ networks:
   assistant-net:
   # runtime CopilotKit et service IA.
   runtime-net:
+  # Runtime CopilotKit et backend seuls : le runtime y authentifie chaque requête de l'assistant (/auth/me).
+  runtime-auth-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
   trace-net:

@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { LucideSparkles } from '@lucide/angular';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { LucideSquarePen, LucideSparkles } from '@lucide/angular';
+
+import { FilAssistant } from './fil-assistant.service';
 
 /**
  * En-tête de l'assistant (emplacement `headerComponent` de la barre CopilotKit, qui garde sa croix et son titre
@@ -7,7 +9,7 @@ import { LucideSparkles } from '@lucide/angular';
  */
 @Component({
   selector: 'app-assistant-entete',
-  imports: [LucideSparkles],
+  imports: [LucideSparkles, LucideSquarePen],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span class="marque" aria-hidden="true"><svg lucideSparkles></svg></span>
@@ -15,6 +17,9 @@ import { LucideSparkles } from '@lucide/angular';
       <h2 class="titre">Assistant RH</h2>
       <p class="sous-titre">Réponses vérifiées sur vos données</p>
     </div>
+    <button type="button" class="nouvelle" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
+      <svg lucideSquarePen aria-hidden="true"></svg>
+    </button>
   `,
   styles: `
     :host {
@@ -49,6 +54,39 @@ import { LucideSparkles } from '@lucide/angular';
       color: var(--color-text);
     }
 
+    .titres {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .nouvelle {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border: 0;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+
+      svg {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      &:hover {
+        background: var(--color-surface-alt);
+        color: var(--color-text);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 1px;
+      }
+    }
+
     .sous-titre {
       margin: 0;
       font-size: 0.75rem;
@@ -56,4 +94,6 @@ import { LucideSparkles } from '@lucide/angular';
     }
   `
 })
-export class AssistantEnteteComponent {}
+export class AssistantEnteteComponent {
+  protected readonly fil = inject(FilAssistant);
+}

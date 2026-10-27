@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
+
+import { FilAssistant } from './fil-assistant.service';
 
 
 /**
  * Le contenu de l'assistant : la discussion de CopilotKit telle quelle (messages, raisonnement repliable, consultations,
- * surfaces A2UI, suggestions, pouces, copie, régénération, saisie), avec ses libellés en français.
+ * surfaces A2UI, suggestions, pouces, copie, régénération, saisie), avec ses libellés en français, sur le fil de
+ * l'utilisateur (repris après un rechargement).
  */
 @Component({
   selector: 'app-assistant-chat',
@@ -27,11 +30,12 @@ import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
       assistantMessageToolbarRegenerateLabel: 'Régénérer',
       userMessageToolbarCopyMessageLabel: 'Copier',
       userMessageToolbarEditMessageLabel: 'Modifier',
-      chatDisclaimerText: 'L’assistant peut se tromper : les chiffres cités sont vérifiés, pas les interprétations.',
+      // Pas d'avertissement permanent sous la saisie : la vérification des chiffres se voit dans la réponse.
+      chatDisclaimerText: '',
       welcomeMessageText: 'Que voulez-vous savoir sur vos équipes, vos chantiers ou la paie ?'
     })
   ],
-  template: `<copilot-chat />`,
+  template: `<copilot-chat [threadId]="fil.fil()" />`,
   styles: `
     :host {
       display: flex;
@@ -41,4 +45,6 @@ import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
     }
   `
 })
-export class AssistantChatComponent {}
+export class AssistantChatComponent {
+  protected readonly fil = inject(FilAssistant);
+}
