@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "lint": "eslint . --max-warnings 23",
+    "lint": "eslint . --max-warnings 0",
     "test": "ng test --watch=false --browsers=ChromiumHeadless",
     "test:coverage": "ng test --watch=false --browsers=ChromiumHeadless --coverage",
     "test:watch": "ng test",

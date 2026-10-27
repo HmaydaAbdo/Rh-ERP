@@ -25,7 +25,6 @@ import staport.rh.auth.dtos.request.UserUpdateRequestDto;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.services.interfaces.IUserService;
 
-import java.util.List;
 
 /** Gestion des comptes utilisateurs — réservé à USER_MANAGE (voir conventions/security.md). */
 @RestController

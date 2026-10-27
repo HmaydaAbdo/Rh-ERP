@@ -12,7 +12,7 @@
 </section>
 
 @if (confirmation.request(); as request) {
-  <div class="feedback-dialog-backdrop" (click)="$event.stopPropagation()">
+  <div class="feedback-dialog-backdrop" role="presentation" (click)="$event.stopPropagation()">
     <section class="feedback-dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-dialog-title"
       aria-describedby="feedback-dialog-message" cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
       (keydown.escape)="handleEscape($event)">
