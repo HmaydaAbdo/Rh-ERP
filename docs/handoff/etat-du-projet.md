@@ -24,6 +24,14 @@ ciblés du style et des marqueurs passent (37 tests). Après intégration du `ma
 (23 avertissements de lint au seuil existant) ; le build signale un bundle initial de 810,59 Ko pour un budget
 d'avertissement de 800 Ko et les avertissements CommonJS CopilotKit `semver` et `partial-json`.
 
+**Heures supplémentaires (2026-10-27, en cours)** : branche locale `codex/heures-supp`, rebasée sur le `main` distant courant. Le propriétaire demande une PR vers `main` puis la fusion. Les règles métier,
+le modèle V39/V40, les façades Employé/Paie, l'audit, MCP, le wizard Excel et les vues Tabulaire/Cartes/Analytique sont décrits
+dans [`docs/heures-supp/README.md`](../heures-supp/README.md). Cartes et Analytique utilisent les vues partagées et des agrégats
+filtrables par chantier, équipe et fonction. Compilation backend et build frontend production réussis localement ; aucun test
+n'a été lancé. Le classeur reçu comprend 864 lignes à zéro ignorées, 120 positives et une ligne HS vide à la ligne 986, qui
+bloque l'import jusqu'à sa correction. Les changements restent locaux pendant la préparation ; la CI ne doit être déclenchée
+que sur demande explicite du propriétaire.
+
 **Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
 IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.

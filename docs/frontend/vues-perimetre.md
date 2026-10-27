@@ -1,6 +1,6 @@
 # Vues Cartes et Analytique partagées (`portail/perimetre/`)
 
-> Les vues **Cartes** et **Analytique** de tous les modules — Paie, Employés, Équipes, Fonctions, Chantiers — sont les deux
+> Les vues **Cartes** et **Analytique** de tous les modules — Paie, Employés, Équipes, Fonctions, Chantiers et Heures supplémentaires — sont les deux
 > mêmes composants. Ce document est la référence technique ; la règle est dans
 > [`conventions/frontend.md`](../../conventions/frontend.md) (« Cartes par niveaux et Analytique graphique ») et les décisions
 > dans l'[ADR 0011](../adr/0011-vues-cartes-analytique-par-perimetre.md) et l'[ADR 0014](../adr/0014-vues-partagees-parcours-metier-configurables.md).
@@ -12,14 +12,14 @@
 | Fichier | Rôle |
 |---|---|
 | `perimetre.ts` | Types et fonctions pures sur l'URL : `lirePerimetre`, `etapeChoisie`, `niveauAffiche`, `porteeDe`, `porteeVide`, `versParametresPerimetre`, `critereEmployesDe`, `criterePaieDe` |
-| `perimetre-module.ts` | `ModulePerimetre` (ce qui distingue un module), `CatalogueModule`, `ItemCatalogue`, `chargerToutLeReferentiel` |
-| `perimetre-groupes.ts` | `GroupeCarte`, `fusionnerGroupes` (référentiel + fiches + paie), `lignesPaie`, `nomGroupe`, `variations` |
+| `perimetre-module.ts` | `ModulePerimetre` (ce qui distingue un module), `CatalogueModule`, `ItemCatalogue`, critères Employé/Paie/Heures supplémentaires, `chargerToutLeReferentiel` |
+| `perimetre-groupes.ts` | `GroupeCarte`, `fusionnerGroupes` (référentiel + fiches + paie + heures supplémentaires), agrégats métier, `nomGroupe`, `variations` |
 | `cartes/cartes-perimetre.component.*` | `CartesPerimetreComponent` (`app-cartes-perimetre`) |
 | `analytique/analytique-perimetre.component.*` | `AnalytiquePerimetreComponent` (`app-analytique-perimetre`) |
 | `analytique/graphiques-perimetre.ts` | Options des graphiques, `libelleTranche`, `libelleTrancheTotal`, `hauteurPourLignes` |
 
 Chaque module écrit `<module>-module.ts` (`moduleChantier(service)`, `moduleEquipe(service)`, `moduleFunction(service)`,
-`MODULE_EMPLOYE`, `MODULE_PAIE`) et deux hôtes minces (`<module>-cartes.component.ts`, `<module>-analytique.component.ts`).
+`MODULE_EMPLOYE`, `MODULE_PAIE`, `moduleHeuresSupp()`) et deux hôtes minces (`<module>-cartes.component.ts`, `<module>-analytique.component.ts`).
 
 ## Le périmètre dans l'URL
 
@@ -124,6 +124,7 @@ affiche des indicateurs à zéro. Le module à niveau « mois » (Paie) ouvre le
 | Fonctions | `FONCTION` | fonction → chantier → équipe → employés | Employé puis Paie | libellé | filtre libellé |
 | Employés | aucune | chantier → équipe → fonction → employés | Employé puis Paie | aucun | nom, CIN, statut sur les fiches (nom et CIN aussi sur la paie) ; pas de lien « Voir les employés » |
 | Paie | aucune | mois → chantier → équipe → fonction → employés | Paie puis Employé | aucun | suppression en groupe par carte (`PAIE_PURGE`) |
+| Heures supplémentaires | aucune | chantier → équipe → fonction | Heures supplémentaires | aucun | agrégats filtrés par les mêmes identifiants du périmètre; cartes sans listes Employé ni chiffres Paie; période conservée dans l'URL |
 
 ## Tests
 

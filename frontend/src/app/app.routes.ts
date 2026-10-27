@@ -76,6 +76,12 @@ export const routes: Routes = [
     loadChildren: () => import('./portail/paie/paie.routes').then((m) => m.PAIE_ROUTES)
   },
   {
+    path: 'heures-supp',
+    title: 'Heures supplémentaires',
+    canActivate: [authGuard],
+    loadChildren: () => import('./portail/heures-supp/heures-supp.routes').then((m) => m.HEURES_SUPP_ROUTES)
+  },
+  {
     path: 'audit',
     title: "Journal d’audit",
     canActivate: [authGuard],

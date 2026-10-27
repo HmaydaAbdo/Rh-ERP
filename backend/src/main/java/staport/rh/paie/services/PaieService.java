@@ -187,6 +187,12 @@ public class PaieService implements IPaieService {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Optional<PaieResponseDto> findByEmployeeIdAndPeriode(Long employeeId, YearMonth periode) {
+        return repository.findByEmployee_IdAndPeriode(employeeId, periode).map(mapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<PaieResponseDto> search(PaieSearchCriteria criteria, Pageable pageable) {
         Specification<Paie> spec = PaieSpecification.searchByCriteria(criteria);
         return repository.findAll(spec, pageable).map(mapper::toDto);

@@ -21,15 +21,16 @@ import { EmployeeService } from '../../employee/services/employee.service';
 import { PaiePeriodeResume } from '../../paie/models/paie.model';
 import { formaterMontant, libellePeriode, periodePrecedente } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
+import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
 import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
   Portee, porteeDe, porteeVide, versParametresPerimetre
 } from '../perimetre';
-import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
+import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
 import { chargerToutLeReferentiel, ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 
 const TAILLE_PAGE = 24;
-type SourceCarte = 'FICHES' | 'PAIE' | 'COMPARAISON';
+type SourceCarte = 'FICHES' | 'PAIE' | 'COMPARAISON' | 'HEURES_SUP';
 
 /** Le contexte d'une carte, donné au gabarit `#actionsCarte` d'un module qui veut y ajouter ses propres boutons (ex. la suppression en groupe de la paie). */
 export interface ContexteCarte {
@@ -71,6 +72,7 @@ export class CartesPerimetreComponent {
 
   private readonly employeeService = inject(EmployeeService);
   private readonly paieService = inject(PaieService);
+  private readonly heuresSuppService = inject(HeuresSuppService);
   private readonly authService = inject(AuthService);
   private readonly chantiers = inject(ChantierReferenceService);
   private readonly equipes = inject(EquipeReferenceService);
@@ -99,8 +101,9 @@ export class CartesPerimetreComponent {
     return `${valeur}${contexte}`;
   }
 
-  protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ'));
-  protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
+  protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ') && !this.module().cartesHeuresSuppSeules);
+  protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && !this.module().cartesHeuresSuppSeules);
+  protected readonly voitHeuresSupp = computed(() => this.authService.hasPermission('HEURES_SUP_READ') && !!this.module().critereHeuresSupp);
   private readonly fichesDansCartes = computed(() => this.voitEmployes() && !this.module().sansEffectifFichesDansCartes);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
@@ -108,14 +111,16 @@ export class CartesPerimetreComponent {
 
   /** Mois de paie du module, du plus récent au plus ancien (avec `PAIE_READ`). */
   protected readonly mois = signal<string[]>([]);
+  protected readonly moisHeuresSupp = signal<string[]>([]);
   protected readonly chargementPeriodes = signal(false);
   protected readonly erreurPeriodes = signal(false);
   protected readonly optionsPeriodes = computed<SelectOption<string>[]>(() => this.mois().map((periode) => ({ value: periode, label: libellePeriode(periode) })));
   /** Le mois affiché : celui de l'URL, à défaut le plus récent (sauf module Paie, où « aucun mois » est la liste des mois). */
   protected readonly periode = computed(() => {
-    if (!this.voitPaie()) {
+    if (!this.voitPaie() && !this.voitHeuresSupp()) {
       return null;
     }
+    if (this.voitHeuresSupp()) return this.perimetre().periode ?? this.moisHeuresSupp()[0] ?? null;
     if (this.module().periodePaieRecenteFixe) {
       return this.mois()[0] ?? null;
     }
@@ -144,7 +149,8 @@ export class CartesPerimetreComponent {
   protected readonly avertissementSources = computed(() => this.resultat().erreursSources.map((source) => ({
     FICHES: 'Les fiches Employé sont indisponibles.',
     PAIE: 'La paie du mois est indisponible.',
-    COMPARAISON: 'La comparaison avec le mois précédent est indisponible.'
+    COMPARAISON: 'La comparaison avec le mois précédent est indisponible.',
+    HEURES_SUP: 'Les heures supplémentaires sont indisponibles.'
   })[source]).join(' '));
   /** Incrémentée pour recharger le niveau affiché sans changer d'URL (après une suppression, par exemple). */
   private readonly version = signal(0);
@@ -260,6 +266,7 @@ export class CartesPerimetreComponent {
     if (this.voitPaie()) {
       this.chargerPeriodes();
     }
+    if (this.voitHeuresSupp()) this.heuresSuppService.periodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (mois) => this.moisHeuresSupp.set(mois) });
     const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), periodes: this.mois(), module: this.module(), version: this.version() }));
     toObservable(requete)
       .pipe(
@@ -447,6 +454,10 @@ export class CartesPerimetreComponent {
           erreursSources.push('PAIE');
           return of(null);
         })) : of(null);
+        const heuresSupp$ = this.voitHeuresSupp() && periode && module.critereHeuresSupp
+          ? this.heuresSuppService.analyser(module.critereHeuresSupp(params, portee, periode)).pipe(catchError(() => {
+            erreursSources.push('HEURES_SUP'); return of(null);
+          })) : of(null);
         const moisPrecedent = periode ? periodePrecedente(periode) : null;
         const precedente$ = this.voitPaie() && moisPrecedent && this.mois().includes(moisPrecedent)
           ? this.paieService.analyser(module.criterePaie(params, portee, moisPrecedent)).pipe(catchError(() => {
@@ -454,8 +465,8 @@ export class CartesPerimetreComponent {
             return of(null);
           }))
           : of(null);
-        return forkJoin([fiches$, paie$, precedente$]).pipe(
-          map(([fiches, paie, precedente]) => ({
+        return forkJoin([fiches$, paie$, precedente$, heuresSupp$]).pipe(
+          map(([fiches, paie, precedente, heuresSupp]) => ({
             ...vide,
             erreursSources,
             portee,
@@ -465,6 +476,7 @@ export class CartesPerimetreComponent {
               fiches,
               paie: paie ? lignesPaie(dimension, paie) : null,
               paiePrecedente: precedente ? lignesPaie(dimension, precedente) : null,
+              heuresSupp: heuresSupp ? lignesHeuresSupp(dimension, heuresSupp) : null,
               lien: catalogue && module.dimension === dimension ? (id: number) => catalogue.lien(id) : null
             })
           }))
