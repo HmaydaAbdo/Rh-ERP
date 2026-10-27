@@ -44,7 +44,7 @@ leurs couches Application, Analytique et IA ; la CI vérifie que permissions et 
 **Chantier IA (2026-10-27)** : T17 à T19 et le harnais sont faits (observabilité Phoenix, passerelle durcie, conversations
 durables, outils triables, questions à l'utilisateur, surfaces déterministes, lint du frontend). **Règle du propriétaire :
 tout est gratuit et le code IA fait maison est une dette suivie jusqu'à zéro** ; l'inventaire et les tâches T21 à T31 laissées
-ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : vague 1 du « Plan de clôture » de [ia.md](../ia.md) (V1a lint déjà faite ; reste interface et runtime, mesure), puis T21 ; une session
+ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : vague 1 du « Plan de clôture » de [ia.md](../ia.md) (V1a lint déjà faite ; **d'abord V1d, comparaisons fiables, et V1e, CPU au démarrage du service `ia`**, voulus par le propriétaire ; puis interface et runtime, mesure), puis T21 ; une session
 neuve par tâche, Sonnet par défaut, Opus seulement où le plan le marque.
 
 **Correctifs de l'assistant (2026-10-27)** : essai réel d'une question complexe (top 3 des chantiers par masse salariale, comparaison au
@@ -58,8 +58,9 @@ remplaçait en plein run les chiffres tout juste lus par un texte tronqué ; le 
 premier démarrage à froid (110 s) ; Phoenix a un contrôle de santé et le backend, `ia` et le runtime l'attendent (facultatif) ;
 LiteLLM déclare `trusted_proxy_ranges: []`. **Reste ouvert** : la comparaison mois sur mois par chantier n'est pas fiable (la
 question « top 3 puis plus forte hausse » a donné une réponse exacte une fois, une conclusion fausse deux fois : le modèle
-compare les tops de chaque mois au lieu de suivre les mêmes chantiers). Piste : un outil déterministe de comparaison de deux
-périodes par chantier, plutôt que de laisser le modèle recombiner.
+compare les tops de chaque mois au lieu de suivre les mêmes chantiers). À résoudre (V1d du plan de clôture) : un outil déterministe de
+comparaison de deux périodes par chantier, plutôt que de laisser le modèle recombiner. Autre demande du propriétaire (V1e) : réduire
+le CPU au démarrage du service `ia` (import de `litellm` surtout, 7 s sur 14 s).
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
