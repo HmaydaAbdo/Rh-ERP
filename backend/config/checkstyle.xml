@@ -8,9 +8,6 @@
   <module name="TreeWalker">
     <module name="UnusedImports"/>
     <module name="RedundantImport"/>
-    <module name="AvoidStarImport">
-      <property name="allowStaticMemberImports" value="true"/>
-    </module>
     <module name="EmptyStatement"/>
     <module name="EmptyCatchBlock">
       <property name="exceptionVariableName" value="^(ignore|ignored|expected)$"/>
