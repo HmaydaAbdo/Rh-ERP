@@ -75,9 +75,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
 
   // Heures supplémentaires : la paie du mois est créée avant le wizard, puis le vrai classeur traverse l'API et les vues.
-  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: 'Conductrice HS' });
+  const cinHs = `HS${suffixe}`;
+  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Conductrice HS ${suffixe}` });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
-    nomPrenom: 'Alaoui Salma', cin: 'HSFULLSTACK', dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
+    nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
     fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id, salaire: 4000, typeSalaire: 'MENSUEL'
   });
   await api(page, adminToken, 'POST', '/paie', {
@@ -100,14 +101,14 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
     page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantier.id] }
   );
-  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: 'HSFULLSTACK', montantDh: 30.77, salaireHoraireDh: 15.3846153846 })]);
+  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.77, salaireHoraireDh: 15.3846153846 })]);
   const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
     page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantier.id] }
   );
   expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30.77 });
   await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantier.id}`);
   await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
-  await expect(page.getByText('HSFULLSTACK')).toBeVisible();
+  await expect(page.getByText(cinHs)).toBeVisible();
 
   await api(page, adminToken, 'POST', '/paie', {
     employeeId: employe.id,
