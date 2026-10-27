@@ -4,6 +4,7 @@ import { EMPTY, expand, Observable, reduce } from 'rxjs';
 import { Page } from '../../shared/models/page.model';
 import { EmployeeSearchCriteria } from '../employee/models/employee.model';
 import { PaieSearchCriteria } from '../paie/models/paie.model';
+import { HeuresSuppSearchCriteria } from '../heures-supp/models/heures-supp.model';
 import { Dimension, Portee } from './perimetre';
 
 /** Un élément du référentiel d'un module (un chantier, une équipe, une fonction), tel que les Cartes l'affichent. */
@@ -45,9 +46,13 @@ export interface ModulePerimetre {
   /** Hiérarchie de navigation des Cartes, propre au domaine et suivie automatiquement. */
   ordre: readonly Dimension[];
   /** Ordre des sources dans Analytique ; permet de faire commencer chaque domaine par sa question métier principale. */
-  ordreAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
+  ordreAnalytique?: readonly ('EMPLOYEE' | 'PAIE' | 'HEURES_SUP')[];
   /** Sources métier visibles dans l'Analytique. Par défaut, les deux projections protégées sont disponibles. */
-  sourcesAnalytique?: readonly ('EMPLOYEE' | 'PAIE')[];
+  sourcesAnalytique?: readonly ('EMPLOYEE' | 'PAIE' | 'HEURES_SUP')[];
+  /** Heures supplémentaires du dernier mois disponible quand le module ne propose pas de mois. */
+  periodeHeuresSuppRecenteFixe?: boolean;
+  /** Les Cartes restent limitées aux agrégats du domaine Heures supplémentaires. */
+  cartesHeuresSuppSeules?: boolean;
   /** Active le panneau générique d'effectifs par dimension et l'historique du groupe sélectionné. */
   vueEffectifParDimension?: boolean;
   /** Présente la qualité des rattachements Paie uniquement dans la section dédiée d'Analytique. */
@@ -70,6 +75,8 @@ export interface ModulePerimetre {
   critereEmployes(params: ParamMap, portee: Portee): EmployeeSearchCriteria;
   /** Critères Paie : le périmètre et le mois (`null` = tous les mois), plus les filtres propres au module qui s'appliquent aux bulletins (nom, CIN…). */
   criterePaie(params: ParamMap, portee: Portee, periode: string | null): PaieSearchCriteria;
+  /** Critères Heures supplémentaires : les trois dimensions et les filtres de domaine sont évalués côté Spring. */
+  critereHeuresSupp?(params: ParamMap, portee: Portee, periode: string | null): HeuresSuppSearchCriteria;
   catalogue?: CatalogueModule;
   /** Phrase affichée sous les mouvements de la paie quand des filtres propres au module ne s'y appliquent pas (nom, CIN, statut). */
   noteMouvements?(params: ParamMap): string | null;

@@ -8,9 +8,9 @@
       @if (voitPaie() && module().periodePaieRecenteFixe && periode()) {
         <span class="perimetre-analytique__periode-fixe">Paie · {{ libellePeriode(periode()!) }}</span>
       }
-      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
-        <label class="perimetre-analytique__periode">Période Paie
-          <stp-select ariaLabel="Période de paie" placeholder="Période de paie" [options]="optionsPeriodes()" [value]="periode()" (valueChange)="changerPeriode($event)" />
+      @if ((voitPaie() || voitHeuresSupp()) && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
+        <label class="perimetre-analytique__periode">Période
+          <stp-select ariaLabel="Période" placeholder="Période" [options]="optionsPeriodes()" [value]="periode()" (valueChange)="changerPeriode($event)" />
         </label>
       }
       @if (!module().sansRaccourciCartes) {
@@ -163,8 +163,10 @@
       @for (source of ordreSources(); track source) {
         @if (source === 'PAIE') {
           <ng-container [ngTemplateOutlet]="blocPaie" />
-        } @else {
+        } @else if (source === 'EMPLOYEE') {
           <ng-container [ngTemplateOutlet]="blocEmployes" />
+        } @else {
+          <ng-container [ngTemplateOutlet]="blocHeuresSupp" />
         }
       }
     }
@@ -217,6 +219,39 @@
       </section>
     }
   }
+
+  <ng-template #blocHeuresSupp>
+    @if (!voitHeuresSupp()) {
+      <p class="perimetre-analytique__note">La lecture des heures supplémentaires n’est pas autorisée pour votre compte.</p>
+    } @else if (heuresSupp(); as analyse) {
+      <section class="perimetre-analytique__bande perimetre-analytique__bande--prioritaire" aria-labelledby="hs-analyse-titre">
+        <div class="perimetre-analytique__entete-section">
+          <div><h3 id="hs-analyse-titre" class="perimetre-analytique__titre">Heures supplémentaires · {{ libellePeriode(analyse.periode) }}</h3><p>Valeurs issues des imports figés du mois, selon le périmètre sélectionné.</p></div>
+        </div>
+        <section class="perimetre-analytique__tuiles" aria-label="Indicateurs des heures supplémentaires">
+          <div class="perimetre-analytique__tuile"><span>Employés</span><strong>{{ analyse.indicateurs.employes }}</strong></div>
+          <div class="perimetre-analytique__tuile"><span>Heures</span><strong>{{ analyse.indicateurs.heures | number: '1.0-1' }} h</strong></div>
+          <div class="perimetre-analytique__tuile"><span>Montant</span><strong>{{ formaterMontant(analyse.indicateurs.montantDh) }} DH</strong></div>
+          <div class="perimetre-analytique__tuile"><span>STC</span><strong>{{ formaterMontant(analyse.indicateurs.stcDh) }} DH</strong></div>
+          <div class="perimetre-analytique__tuile"><span>Forfaits</span><strong>{{ formaterMontant(analyse.indicateurs.forfaitDh) }} DH</strong></div>
+          <div class="perimetre-analytique__tuile"><span>Net à payer</span><strong>{{ formaterMontant(analyse.indicateurs.netAPayerDh) }} DH</strong></div>
+        </section>
+        <section class="perimetre-analytique__section" aria-labelledby="hs-repartition-titre">
+          <h4 id="hs-repartition-titre">Répartition par {{ libelleDimensionVue() }}</h4>
+          <table class="app-static-table">
+            <thead><tr><th scope="col">{{ libelleDimensionVueMaj() }}</th><th scope="col">Effectif</th><th scope="col">Heures</th><th scope="col">Montant (DH)</th><th scope="col">STC (DH)</th><th scope="col">Forfait (DH)</th><th scope="col">Net (DH)</th></tr></thead>
+            <tbody>
+              @for (groupe of groupesHeuresSupp(); track groupe.id) {
+                <tr><th scope="row">{{ groupe.libelle }}</th><td>{{ groupe.effectif }}</td><td>{{ groupe.heures | number: '1.0-1' }}</td><td>{{ formaterMontant(groupe.montantDh) }}</td><td>{{ formaterMontant(groupe.stcDh) }}</td><td>{{ formaterMontant(groupe.forfaitDh) }}</td><td>{{ formaterMontant(groupe.netAPayerDh) }}</td></tr>
+              } @empty { <tr><td colspan="7">Aucune donnée sur ce périmètre.</td></tr> }
+            </tbody>
+          </table>
+        </section>
+      </section>
+    } @else if (!chargement()) {
+      <p class="perimetre-analytique__note">Aucun import d’heures supplémentaires pour ce mois et ce périmètre.</p>
+    }
+  </ng-template>
 
   <ng-template #blocPaie>
     <!-- Paie -->

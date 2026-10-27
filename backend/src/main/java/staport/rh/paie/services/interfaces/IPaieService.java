@@ -16,6 +16,7 @@ import staport.rh.paie.dtos.response.PaieEquipeOptionDto;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Façade publique du module Paie — seule cette interface peut être injectée
@@ -28,6 +29,9 @@ public interface IPaieService {
     PaieResponseDto update(Long id, PaieUpdateRequestDto dto);
 
     PaieResponseDto findById(Long id);
+
+    /** Bulletin exact d'un employé pour un mois, destiné aux domaines qui valident une paie mensuelle. */
+    Optional<PaieResponseDto> findByEmployeeIdAndPeriode(Long employeeId, YearMonth periode);
 
     Page<PaieResponseDto> search(PaieSearchCriteria criteria, Pageable pageable);
 

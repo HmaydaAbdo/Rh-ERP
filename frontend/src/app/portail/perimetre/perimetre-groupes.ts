@@ -1,5 +1,6 @@
 import { EmployeeRegroupement } from '../employee/models/employee.model';
 import { PaieAnalytique } from '../paie/models/paie.model';
+import { HeuresSuppAnalytique, HeuresSuppGroupe } from '../heures-supp/models/heures-supp.model';
 import { formaterVariation } from '../paie/paie-format';
 import { ItemCatalogue } from './perimetre-module';
 import { Dimension } from './perimetre';
@@ -12,6 +13,15 @@ export interface ChiffresPaie {
   masse: number;
   stc: number;
   stcMontant: number;
+}
+
+export interface ChiffresHeuresSupp {
+  effectif: number;
+  heures: number;
+  montantDh: number;
+  stcDh: number;
+  forfaitDh: number;
+  netAPayerDh: number;
 }
 
 /** Une carte des vues Cartes : un groupe d'une dimension (un chantier, une équipe, une fonction) avec ses fiches et sa paie. */
@@ -28,6 +38,7 @@ export interface GroupeCarte {
   paie: ChiffresPaie | null;
   /** Chiffres du mois contigu pour le même groupe ; `null` = pas de comparaison (jamais comparé à un mois plus ancien). */
   precedent: ChiffresPaie | null;
+  heuresSupp?: ChiffresHeuresSupp | null;
 }
 
 /** Une ligne de répartition de la paie, quelle que soit la dimension. */
@@ -70,7 +81,17 @@ export interface SourcesGroupes {
   paie: LignePaie[] | null;
   /** Lignes de paie du mois contigu. */
   paiePrecedente: LignePaie[] | null;
+  heuresSupp?: LigneHeuresSupp[] | null;
   lien: ((id: number) => unknown[]) | null;
+}
+
+export interface LigneHeuresSupp extends HeuresSuppGroupe {}
+
+export function lignesHeuresSupp(dimension: Dimension, analyse: HeuresSuppAnalytique | null): LigneHeuresSupp[] {
+  if (!analyse) return [];
+  if (dimension === 'CHANTIER') return analyse.parChantier;
+  if (dimension === 'EQUIPE') return analyse.parEquipe;
+  return analyse.parFonction;
 }
 
 /**
@@ -83,7 +104,7 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
   const carte = (id: number, code: string | null, libelle: string): GroupeCarte => {
     let groupe = parId.get(id);
     if (!groupe) {
-      groupe = { id, code, libelle, detail: null, statut: null, lien: null, fiches: null, paie: null, precedent: null };
+      groupe = { id, code, libelle, detail: null, statut: null, lien: null, fiches: null, paie: null, precedent: null, heuresSupp: null };
       parId.set(id, groupe);
     }
     return groupe;
@@ -104,6 +125,12 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
     // « Orphelins » est un groupe Paie valide, même si le catalogue des équipes est exhaustif.
     if (!exhaustif || parId.has(ligne.id) || (dimension === 'EQUIPE' && ligne.id === 0)) {
       carte(ligne.id, ligne.code, ligne.libelle).paie = { effectif: ligne.effectif, masse: ligne.masse, stc: ligne.stc, stcMontant: ligne.stcMontant };
+    }
+  }
+  for (const ligne of sources.heuresSupp ?? []) {
+    if (!exhaustif || parId.has(ligne.id) || (dimension === 'EQUIPE' && ligne.id === 0)) {
+      const groupe = carte(ligne.id, ligne.code, ligne.libelle);
+      groupe.heuresSupp = { effectif: ligne.effectif, heures: ligne.heures, montantDh: ligne.montantDh, stcDh: ligne.stcDh, forfaitDh: ligne.forfaitDh, netAPayerDh: ligne.netAPayerDh };
     }
   }
   for (const element of sources.catalogue ?? []) {

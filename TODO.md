@@ -97,10 +97,17 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
   Les anciens composants vides (« disponible prochainement »), sans route ni onglet, ont été retirés pendant la revue de
   conformité ; aucun parcours utilisateur n'y était relié.
 
-Les cinq domaines de collection utilisent les vues, la coque et le Tabulaire partagés. La revue technique des
+Les domaines de collection utilisent les vues, la coque et le Tabulaire partagés. La revue technique des
 domaines Employé, Paie, Rapport, Auth, Paramètres et Audit complète celle des trois référentiels. Les dossiers de domaine
 centralisent leurs règles, contrats et scénarios; les accords métier du [PV global](docs/handoff/pv-n1-erp-rh.md)
 restent à recueillir avant diffusion. Le premier import réel et les décisions de qualité des données restent suivis ci-dessous.
+
+**Heures supplémentaires (2026-10-27, branche locale `codex/heures-supp`)** : le domaine ajoute l'import mensuel par chantier,
+les grandeurs figées, les forfaits, les règles STC, les permissions V39/V40 et les outils MCP en lecture seule. Ses vues Cartes
+et Analytique étendent les composants partagés par agrégats filtrés. Compilation backend et build frontend production réussis
+localement ; aucune suite de tests n'a été lancée. Avant une PR : revoir le wizard et ses filtres, corriger la ligne HS vide
+(ligne Excel 986) du classeur reçu et finaliser la preuve/audit de migration. Ne pas pousser ni déclencher la CI sans demande
+explicite du propriétaire.
 
 - [ ] **Équipe — support de formation** : préparer ultérieurement une présentation et une vidéo de démonstration du domaine. Ce travail n'est pas planifié pour le moment.
 

@@ -487,7 +487,37 @@ Une preuve locale ou un contrôle automatisé ne confirme pas l'activation des p
 production. Les accords, réserves, rejets et signatures suivent le modèle de la section 8 ; le propriétaire
 valide le document complet avant diffusion.
 
-## 17. Blocs suivants
+## 17. Domaine Heures supplémentaires
+
+### 17.1 Rôle et sources
+
+Le domaine conserve un import mensuel d'heures supplémentaires par chantier. Il s'appuie sur Employé pour la fiche et le salaire courant, sur Paie pour le bulletin du même mois et le marqueur STC/sortie, et sur Chantier pour le périmètre. Les valeurs calculées sont des instantanés ; le domaine ne modifie pas les bulletins.
+
+### 17.2 Grandeurs et règles confirmées
+
+| Grandeur / contrôle | Règle |
+|---|---|
+| Période | Un mois choisi ; l'import est bloqué dès la première étape si aucune paie n'existe pour ce mois. |
+| Identité | CIN exact ; les écarts de nom/fonction sont présentés pour alignement explicite. Un CIN inconnu requiert création d'une fiche employé. |
+| S/H | Salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. Précision gardée au calcul et figée pour l'import. |
+| P/H | Heures décimales avec une décimale au plus ; les lignes à zéro sont ignorées et comptabilisées. Une cellule vide est une erreur. |
+| Montant | S/H × P/H, arrondi à 2 décimales. |
+| STC (DH) | Montant si la paie du même mois est marquée STC/sortie ; sinon zéro. |
+| Forfait | Saisi séparément, y compris pour une personne absente des lignes P/H ; interdit si la paie du même mois marque STC/sortie, tous chantiers confondus. |
+| Net à payer | Montant − STC (DH) + Forfait. |
+| Doublon | Employé + mois + chantier refusé ; remplacement explicite et audité. |
+
+### 17.3 Parcours, vues et accès
+
+Le wizard suit Mois/Chantier → Fichier/Forfaits → Contrôle/Import. La correction des fiches suit le mécanisme de l'import Paie. Le domaine expose Tabulaire, Cartes et Analytique ; les deux dernières étendent les vues partagées avec les agrégats filtrés par chantier, équipe et fonction. Les capacités MCP en lecture décrivent les sources et unités ; Spring reste l'autorité des calculs et du RBAC.
+
+### 17.4 Preuves et réserves
+
+La migration V39 crée et audite la table des imports ; V40 ajoute les permissions et leurs traces. Compilation backend et build frontend production réussis localement sur `codex/heures-supp`; aucune suite de tests ni validation navigateur n'a été exécutée. Le classeur remis présente une ligne Excel 986 avec HS vide : elle bloque l'import jusqu'à correction. La PR et la CI ne sont pas lancées.
+
+Les règles métier ci-dessus ont été confirmées en conversation ; elles ne constituent pas une signature finale de diffusion du PV.
+
+## 18. Blocs suivants
 
 Les domaines et sujets restants seront ajoutés après le bloc Équipe, selon le même format : description compréhensible, règles, liens entre domaines, accès, vérifications, exceptions, décisions attendues et signatures. Le présent PV ne préjuge ni du contenu ni de l’accord de ces blocs.
 

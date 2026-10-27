@@ -1,6 +1,6 @@
 # Imports Excel
 
-> Quatre imports existent : **Équipes**, **Fonctions**, **Employés** et **Paie**. Ce document donne les règles qu'ils
+> Cinq imports existent : **Équipes**, **Fonctions**, **Employés**, **Paie** et **Heures supplémentaires**. Ce document donne les règles qu'ils
 > partagent ; le format exact des colonnes de chacun est dans le README de son domaine.
 
 | Import | Endpoint | Permission | Format et détail |
@@ -9,6 +9,7 @@
 | Fonctions | `POST /functions/import` | `FUNCTION_IMPORT` | [function/README.md](function/README.md) |
 | Employés | `POST /employees/import` | `EMPLOYEE_IMPORT` | [employee/README.md](employee/README.md) |
 | Paie | assistant : `POST /paie/import/analyse`, `/paie/import/corrections`, `/paie/import` (`?periode=aaaa-MM`) | `PAIE_IMPORT` (+ `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE`) | [paie/README.md](paie/README.md), « Import Excel (assistant) » |
+| Heures supplémentaires | assistant par mois et chantier : `/heures-supp/import/*` | `HEURES_SUP_IMPORT` + `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE` | Classeur `Nom`, `Prenom`, `CIN`, `Funct`, `HS`; lignes HS=0 ignorées et comptées; valeur HS vide bloquante. [README](heures-supp/README.md) |
 
 Il n'existe pas d'import pour les chantiers (alimentés par la [synchronisation ERP](chantier/README.md)).
 
@@ -33,6 +34,9 @@ Pour **ré-importer un mois de paie**, supprimer d'abord les bulletins concerné
 **Exception — la Paie et les fiches employés** (décision du 2026-10-18, ADR 0010) : l'import de la paie ne crée ni ne
 modifie un bulletin existant, mais son assistant **met à jour les fiches employés** que l'utilisateur choisit d'aligner
 sur le fichier (et crée les CIN inconnus). Ces écritures sont des choix explicites de l'utilisateur, faites avant l'import.
+
+**Exception — Heures supplémentaires** : un doublon employé + mois + chantier bloque l'import par défaut. Le remplacement
+de données déjà importées n'est possible qu'après une action explicite de l'utilisateur dans l'assistant et reste audité.
 
 ### 2. Tout ou rien (atomique)
 

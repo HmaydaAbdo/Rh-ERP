@@ -7,6 +7,10 @@ passe par l’application.
 
 ## Les couches du domaine
 
+La façade inter-domaines `IEmployeeService.findByCin` résout un CIN exact pour les imports métier ; elle ne remplace pas une
+recherche partielle paginée. Le salaire et son type sont fournis aux services consommateurs afin qu'ils figent leurs propres
+calculs au moment de l'import.
+
 Employé est le domaine le plus consulté : il porte la fiche courante de chaque personne et alimente les effectifs.
 Chaque couche est décrite ici pour pouvoir être relue et commentée séparément ; les règles détaillées suivent dans les
 sections suivantes.

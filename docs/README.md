@@ -51,6 +51,7 @@ limites connues. Sa skill renvoie à ces sources ; son TODO ne contient que le t
 | **Équipe** | Référentiel des équipes de travail | [Dossier du domaine](equipe/README.md) · [skill IA](equipe/skills/SKILL.md) | [Autorisations](equipe/README.md#autorisations-et-dépendances-de-droits) |
 | **Employé** | Fiche d'identité, affectation fonction/chantier | [README](employee/README.md) · [skill IA](employee/skills/SKILL.md) | [rbac/employee.md](rbac/employee.md) |
 | **Paie** | Bulletins mensuels (saisie, import, export) | [README](paie/README.md) · [skill IA](paie/skills/SKILL.md) | [rbac/paie.md](rbac/paie.md) |
+| **Heures supplémentaires** | Import mensuel par chantier, heures, montants, STC et forfaits | [README](heures-supp/README.md) · [skill IA](heures-supp/skills/SKILL.md) | [rbac/heures-supp.md](rbac/heures-supp.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
 | **Auth** | Comptes, rôles, permissions, sessions | [README](auth/README.md) · [skill IA](auth/skills/SKILL.md) | [rbac/auth.md](rbac/auth.md) |
 | **Paramètres** | Valeurs de fonctionnement administrables | [README](parametre/README.md) | [rbac/parametre.md](rbac/parametre.md) |
