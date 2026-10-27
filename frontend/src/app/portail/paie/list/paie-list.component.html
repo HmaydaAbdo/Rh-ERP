@@ -32,16 +32,16 @@
           {{ paie.joursRecuperationDimanche === null ? '-' : (paie.joursRecuperationDimanche | number:'1.0-2') }}
         }
         @case ('salaireMensuel') {
-          {{ paie.salaireMensuel != null ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
+          {{ paie.salaireMensuel !== null && paie.salaireMensuel !== undefined ? (paie.salaireMensuel | number: '1.2-2') : '-' }}
         }
         @case ('primeRoulageOrdinaire') {
-          {{ paie.primeRoulageOrdinaire != null ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}
+          {{ paie.primeRoulageOrdinaire !== null && paie.primeRoulageOrdinaire !== undefined ? (paie.primeRoulageOrdinaire | number: '1.2-2') : '-' }}
         }
         @case ('primeRoulageDimanche') {
-          {{ paie.primeRoulageDimanche != null ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}
+          {{ paie.primeRoulageDimanche !== null && paie.primeRoulageDimanche !== undefined ? (paie.primeRoulageDimanche | number: '1.2-2') : '-' }}
         }
         @case ('salaireTotal') {
-          {{ paie.salaireTotal != null ? (paie.salaireTotal | number: '1.2-2') : '-' }}
+          {{ paie.salaireTotal !== null && paie.salaireTotal !== undefined ? (paie.salaireTotal | number: '1.2-2') : '-' }}
         }
         @case ('observation') {
           {{ paie.observation || '-' }}

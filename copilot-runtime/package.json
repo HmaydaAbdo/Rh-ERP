@@ -14,6 +14,12 @@
     "better-sqlite3": "12.11.1"
   },
   "scripts": {
-    "start": "node --import ./src/hook.mjs --import ./src/traces.mjs src/serveur.mjs"
+    "start": "node --import ./src/hook.mjs --import ./src/traces.mjs src/serveur.mjs",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "globals": "17.13.0"
   }
 }

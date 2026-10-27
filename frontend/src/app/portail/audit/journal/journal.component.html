@@ -161,7 +161,7 @@
           <dd>{{ cible(e) }}</dd>
         </div>
       }
-      @if (e.nombreElements != null) {
+      @if (e.nombreElements !== null && e.nombreElements !== undefined) {
         <div>
           <dt>Éléments concernés</dt>
           <dd>{{ e.nombreElements }}</dd>
