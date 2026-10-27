@@ -74,16 +74,12 @@
             </div>
             <div class="perimetre-analytique__filtres-equipe" role="group" [attr.aria-label]="'Filtres de la répartition par ' + libelleDimensionVue()">
               @if (module().dimension === 'CHANTIER') {
-                @if (sourcesFiltresFonctions.length > 0) { <label class="perimetre-analytique__selection">Fonction
-                  @for (source of sourcesFiltresFonctions; track source) {
-                    <app-lazy-select ariaLabel="Fonctions de la répartition" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="filtresFonctionIds()" (valueChange)="choisirFiltresFonctions($event)" />
-                  }
-                </label> }
-                @if (sourcesFiltresEquipes.length > 0) { <label class="perimetre-analytique__selection">Équipe
-                  @for (source of sourcesFiltresEquipes; track source) {
-                    <app-lazy-select ariaLabel="Équipes de la répartition" placeholder="Toutes les équipes" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} équipes" [source]="source" [value]="filtresEquipeIds()" (valueChange)="choisirFiltresEquipes($event)" />
-                  }
-                </label> }
+                @if (sourcesFiltresFonctions.length > 0) { @for (source of sourcesFiltresFonctions; track source) {
+                    <label class="perimetre-analytique__selection">Fonction <app-lazy-select ariaLabel="Fonctions de la répartition" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="filtresFonctionIds()" (valueChange)="choisirFiltresFonctions($event)" /></label>
+                  } }
+                @if (sourcesFiltresEquipes.length > 0) { @for (source of sourcesFiltresEquipes; track source) {
+                    <label class="perimetre-analytique__selection">Équipe <app-lazy-select ariaLabel="Équipes de la répartition" placeholder="Toutes les équipes" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} équipes" [source]="source" [value]="filtresEquipeIds()" (valueChange)="choisirFiltresEquipes($event)" /></label>
+                  } }
               } @else {
                 <label class="perimetre-analytique__selection">Chantier
                   <stp-select ariaLabel="Chantier" placeholder="Tous les chantiers" [options]="optionsChantiersEquipe()" [value]="chantierSelectionne()" (valueChange)="choisirChantierEquipe($event)" />
@@ -120,27 +116,23 @@
             </div>
             <div class="perimetre-analytique__filtres-equipe" role="group" [attr.aria-label]="'Filtres de l’évolution mensuelle par ' + libelleDimensionVue()">
               @if (module().dimension === 'CHANTIER') {
-                @if (sourcesFiltresFonctions.length > 0) { <label class="perimetre-analytique__selection">Fonction
-                  @for (source of sourcesFiltresFonctions; track source) {
-                    <app-lazy-select ariaLabel="Fonctions de l’évolution" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="filtresFonctionIds()" (valueChange)="choisirFiltresFonctions($event)" />
-                  }
-                </label> }
-                @if (sourcesFiltresEquipes.length > 0) { <label class="perimetre-analytique__selection">Équipe
-                  @for (source of sourcesFiltresEquipes; track source) {
-                    <app-lazy-select ariaLabel="Équipes de l’évolution" placeholder="Toutes les équipes" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} équipes" [source]="source" [value]="filtresEquipeIds()" (valueChange)="choisirFiltresEquipes($event)" />
-                  }
-                </label> }
+                @if (sourcesFiltresFonctions.length > 0) { @for (source of sourcesFiltresFonctions; track source) {
+                    <label class="perimetre-analytique__selection">Fonction <app-lazy-select ariaLabel="Fonctions de l’évolution" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="filtresFonctionIds()" (valueChange)="choisirFiltresFonctions($event)" /></label>
+                  } }
+                @if (sourcesFiltresEquipes.length > 0) { @for (source of sourcesFiltresEquipes; track source) {
+                    <label class="perimetre-analytique__selection">Équipe <app-lazy-select ariaLabel="Équipes de l’évolution" placeholder="Toutes les équipes" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} équipes" [source]="source" [value]="filtresEquipeIds()" (valueChange)="choisirFiltresEquipes($event)" /></label>
+                  } }
               } @else {
                 <label class="perimetre-analytique__selection">Chantier
                   <stp-select ariaLabel="Chantier" placeholder="Tous les chantiers" [options]="optionsChantiersEquipe()" [value]="chantierSelectionne()" (valueChange)="choisirChantierEquipe($event)" />
                 </label>
               }
               @if (optionsEquipesEvolution().length > 0) {
-                <label class="perimetre-analytique__selection">{{ libelleDimensionVueMaj() }}
-                  @for (source of sourcesEquipesEvolution(); track $index) {
+                @for (source of sourcesEquipesEvolution(); track $index) {
+                  <label class="perimetre-analytique__selection">{{ libelleDimensionVueMaj() }}
                     <app-lazy-select [ariaLabel]="libelleDimensionVueMaj()" [placeholder]="libelleDimensionVueMaj()" optionLabel="label" dataKey="value" [source]="source" [value]="equipeEvolutionId()" (valueChange)="choisirEquipeEvolution($event)" />
-                  }
-                </label>
+                  </label>
+                }
               }
               <stp-select class="perimetre-analytique__indicateurs" [ariaLabel]="'Indicateurs de l’évolution mensuelle par ' + libelleDimensionVue()" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" bulkMode="loaded" [options]="optionsMesuresEquipe" [value]="mesureEvolutionEquipe()" (valueChange)="modifierMesureEvolutionEquipe($event)" />
             </div>
@@ -188,16 +180,12 @@
           </div>
         </div>
         <div class="perimetre-analytique__filtres-equipe" role="group" aria-label="Filtres de qualité des rattachements Paie">
-          @if (sourcesQualiteChantiers.length > 0) { <label class="perimetre-analytique__selection">Chantier
-            @for (source of sourcesQualiteChantiers; track source) {
-              <app-lazy-select ariaLabel="Chantier du graphique de qualité" placeholder="Tous les chantiers" optionLabel="code" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} chantiers" [source]="source" [value]="qualiteChantierIds()" (valueChange)="choisirFiltresQualiteChantier($event)" />
-            }
-          </label> }
-          @if (sourcesQualiteFonctions.length > 0) { <label class="perimetre-analytique__selection">Fonction
-            @for (source of sourcesQualiteFonctions; track source) {
-              <app-lazy-select ariaLabel="Fonction du graphique de qualité" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="qualiteFonctionIds()" (valueChange)="choisirFiltresQualiteFonction($event)" />
-            }
-          </label> }
+          @if (sourcesQualiteChantiers.length > 0) { @for (source of sourcesQualiteChantiers; track source) {
+              <label class="perimetre-analytique__selection">Chantier <app-lazy-select ariaLabel="Chantier du graphique de qualité" placeholder="Tous les chantiers" optionLabel="code" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} chantiers" [source]="source" [value]="qualiteChantierIds()" (valueChange)="choisirFiltresQualiteChantier($event)" /></label>
+            } }
+          @if (sourcesQualiteFonctions.length > 0) { @for (source of sourcesQualiteFonctions; track source) {
+              <label class="perimetre-analytique__selection">Fonction <app-lazy-select ariaLabel="Fonction du graphique de qualité" placeholder="Toutes les fonctions" optionLabel="libelle" dataKey="id" [multiple]="true" [bulkFilterActions]="true" summaryLabel="{0} fonctions" [source]="source" [value]="qualiteFonctionIds()" (valueChange)="choisirFiltresQualiteFonction($event)" /></label>
+            } }
         </div>
         @if (qualitePaie(); as analyseQualite) {
           @if (analyseQualite.qualite.sansEquipe > 0) {
