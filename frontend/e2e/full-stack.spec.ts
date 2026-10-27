@@ -75,7 +75,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
 
   // Heures supplémentaires : la paie du mois est créée avant le wizard, puis le vrai classeur traverse l'API et les vues.
-  const cinHs = `HS${suffixe}`;
+  const cinHs = 'HSFULLSTACK';
   const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Conductrice HS ${suffixe}` });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
