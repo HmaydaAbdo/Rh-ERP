@@ -125,6 +125,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Traces : attendre que Phoenix réponde évite de perdre les premiers lots ; facultatif (required: false), l'ERP
+      # démarre même si l'observabilité est en panne.
+      phoenix:
+        condition: service_healthy
+        required: false
     environment:
       PGAUDIT_ENABLED: "true"
       DB_HOST: postgres
@@ -323,6 +328,11 @@ services:
         condition: service_completed_successfully
       ia-db:
         condition: service_healthy
+      # Traces : attendre que Phoenix réponde évite de perdre les premiers lots ; facultatif (required: false), l'ERP
+      # démarre même si l'observabilité est en panne.
+      phoenix:
+        condition: service_healthy
+        required: false
     environment:
       # Conversations durables : base dédiée (ia-db) ; une conversation inactive est supprimée après ce nombre de jours.
       IA_DATABASE_URL: postgresql://ia:${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}@ia-db:5432/ia
@@ -360,6 +370,11 @@ services:
     depends_on:
       ia:
         condition: service_healthy
+      # Traces : attendre que Phoenix réponde évite de perdre les premiers lots ; facultatif (required: false), l'ERP
+      # démarre même si l'observabilité est en panne.
+      phoenix:
+        condition: service_healthy
+        required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
       # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.

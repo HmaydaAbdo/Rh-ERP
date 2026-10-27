@@ -22,11 +22,31 @@ class Tache(StrEnum):
     OCR = "ocr"
 
 
-def modele(settings: Settings, tache: Tache, *, max_tokens: int = 1500, raisonnement: str | None = None) -> ChatLiteLLM:
+# Métadonnées officielles qui retiennent un appel de modèle hors du fil de discussion : ``emit-*`` est lu par
+# ``ag-ui-langgraph``, ``copilotkit:emit-*`` par ``LangGraphAGUIAgent`` de CopilotKit.
+INTERNE = {
+    "emit-messages": False,
+    "emit-tool-calls": False,
+    "copilotkit:emit-messages": False,
+    "copilotkit:emit-tool-calls": False,
+}
+
+
+def modele(
+    settings: Settings,
+    tache: Tache,
+    *,
+    max_tokens: int = 1500,
+    raisonnement: str | None = None,
+    interne: bool = False,
+) -> ChatLiteLLM:
     """Un modèle de chat pour la tâche ; la passerelle bascule déjà entre fournisseurs, sans nouvel essai ici.
 
     ``raisonnement`` (``low``, ``medium``, ``high``) est le paramètre standard ``reasoning_effort`` : un raisonnement
     court accélère chaque appel ; la passerelle l'ignore pour un fournisseur qui ne le prend pas (``drop_params``).
+
+    ``interne`` : modèle d'un intergiciel (résumé, choix des outils), jamais montré à l'utilisateur. Il répond sans
+    flux, donc sans morceau de texte ni de raisonnement diffusé, et ses métadonnées le retiennent hors du fil.
     """
     return ChatLiteLLM(
         model=f"litellm_proxy/{settings.litellm_model}",
@@ -40,5 +60,6 @@ def modele(settings: Settings, tache: Tache, *, max_tokens: int = 1500, raisonne
         max_tokens=max_tokens,
         request_timeout=settings.llm_timeout_seconds,
         max_retries=0,
-        streaming=True,
+        streaming=not interne,
+        metadata=INTERNE if interne else None,
     )
