@@ -8,23 +8,28 @@ d'erreur de recopie. Ici, c'est le code qui présente : quand un outil MCP de l'
 ``SEUIL_LIGNES`` objets, son résultat porte aussi des opérations A2UI (motif officiel de CopilotKit,
 ``copilotkit.a2ui.render``) : un ``DataTable`` des lignes, précédé d'un ``Chart`` pour une série mensuelle. Le runtime
 CopilotKit détecte ces opérations dans le résultat d'outil et affiche la surface ; le modèle, lui, ne voit que le
-résultat d'origine (middleware ``PresentationResultats``) et se contente de commenter.
+résultat d'origine et se contente de commenter. Tout passe par les deux crochets officiels des middlewares de
+LangChain : ``wrap_tool_call`` (le résultat d'un outil devient résultat + surface) et ``wrap_model_call`` (le modèle ne
+voit que le résultat d'origine).
 """
 
 import json
 import re
 import uuid
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from copilotkit import a2ui
 from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
+from langchain.agents.middleware.types import ToolCallRequest
 from langchain_core.messages import AnyMessage, ToolMessage
-from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.types import Command
 
 #: Identifiant du catalogue de l'ERP (catalogue de base A2UI + composants ERP), le même que côté Angular.
 CATALOGUE_ERP = "erp-rh://a2ui/catalogue-erp"
 SEUIL_LIGNES = 4
+#: Outil d'interface composée de CopilotKit : sa surface est composée par le modèle, jamais présentée deux fois.
+OUTIL_A2UI = "generate_a2ui"
 
 #: Titres des outils (champ ``title`` MCP, que l'adaptateur LangChain ne conserve pas).
 TITRES: dict[str, str] = {
@@ -63,26 +68,6 @@ _MONTANT = re.compile(r"masse|montant|salaire|net|brut|cout|coût", re.IGNORECAS
 _MASQUEES = {"id", "vue"}
 
 
-def avec_surfaces(outils: Sequence[BaseTool]) -> list[BaseTool]:
-    """Les mêmes outils ; ceux de l'adaptateur MCP (``StructuredTool`` à coroutine) présentent leurs listes."""
-    return [_presentant(outil) if isinstance(outil, StructuredTool) and outil.coroutine else outil for outil in outils]
-
-
-def _presentant(outil: StructuredTool) -> StructuredTool:
-    appeler = cast(Callable[..., Awaitable[tuple[Any, Any]]], outil.coroutine)
-
-    async def appeler_et_presenter(**arguments: Any) -> tuple[Any, Any]:
-        contenu, artefact = await appeler(**arguments)
-        donnees = (artefact or {}).get("structured_content") if isinstance(artefact, dict) else None
-        operations = operations_pour(outil.name, donnees)
-        if not operations:
-            return contenu, artefact
-        resultat = _texte(contenu)
-        return json.dumps({a2ui.A2UI_OPERATIONS_KEY: operations, "resultat": resultat}, ensure_ascii=False), artefact
-
-    return outil.model_copy(update={"coroutine": appeler_et_presenter})
-
-
 def operations_pour(nom_outil: str, donnees: Any) -> list[dict[str, Any]] | None:
     """Les opérations A2UI d'un résultat d'outil, ou ``None`` s'il n'a pas de liste assez longue à présenter."""
     if not isinstance(donnees, dict):
@@ -118,8 +103,24 @@ def operations_pour(nom_outil: str, donnees: Any) -> list[dict[str, Any]] | None
     ]
 
 
-class PresentationResultats(AgentMiddleware[Any, Any]):
-    """Le modèle voit le résultat d'origine d'un outil, pas les opérations A2UI que le code a ajoutées pour l'écran."""
+class SurfacesResultats(AgentMiddleware[Any, Any]):
+    """Surface déterministe des listes rendues par les outils ; le modèle ne voit que le résultat d'origine."""
+
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
+    ) -> ToolMessage | Command[Any]:
+        resultat = await handler(request)
+        if not isinstance(resultat, ToolMessage) or resultat.name == OUTIL_A2UI:
+            return resultat
+        artefact = resultat.artifact
+        donnees = cast(dict[str, Any], artefact).get("structured_content") if isinstance(artefact, dict) else None
+        operations = operations_pour(str(request.tool_call["name"]), donnees)
+        if not operations:
+            return resultat
+        enveloppe = {a2ui.A2UI_OPERATIONS_KEY: operations, "resultat": _texte(resultat.content)}
+        return resultat.model_copy(update={"content": json.dumps(enveloppe, ensure_ascii=False)})
 
     async def awrap_model_call(
         self,
