@@ -23,9 +23,20 @@ body {
   font-family: var(--font-sans);
 }
 
-// Anneau de focus clavier unique, aux couleurs de la marque
+:root {
+  accent-color: var(--color-primary);
+  caret-color: var(--color-primary);
+  scrollbar-color: var(--color-border-strong) var(--color-canvas);
+}
+
+::selection {
+  background: var(--color-focus);
+  color: var(--color-primary-contrast);
+}
+
+// Anneau de focus clavier unique, bleu en thème clair et cyan électrique en thème sombre.
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
 
@@ -63,6 +74,68 @@ html {
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+// La popover du filtre carte est rendue hors du composant par le Select partagé.
+body:has(.carte-page__nature) .stp-select__popup {
+  min-width: min(var(--map-filter-width), calc(100vw - 1rem));
+  border-color: var(--map-ui-border);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text);
+}
+
+@include bp.phone {
+  body:has(.carte-page__nature) .stp-select__popup {
+    min-width: min(calc(100vw - 2 * var(--space-sm)), 22rem);
+  }
+}
+
+body:has(.carte-page__nature) .stp-select__input {
+  border-color: var(--map-ui-border);
+  background: var(--map-ui-canvas);
+  color: var(--map-ui-text);
+
+  &::placeholder { color: var(--map-ui-text-muted); }
+
+  &:hover,
+  &:focus-visible { border-color: var(--map-ui-focus); }
+}
+
+body:has(.carte-page__nature) .stp-select__icon,
+body:has(.carte-page__nature) .stp-select__clear {
+  color: var(--map-ui-text-muted);
+}
+
+body:has(.carte-page__nature) .stp-select__clear:hover {
+  background: var(--map-ui-focus-soft);
+  color: var(--map-ui-text);
+}
+
+body:has(.carte-page__nature) .stp-select__bulk {
+  border-color: var(--map-ui-border);
+  background: var(--map-ui-canvas);
+}
+
+body:has(.carte-page__nature) .stp-select__option {
+  color: var(--map-ui-text);
+
+  &:hover,
+  &[data-active='true'],
+  &[aria-selected='true'] {
+    background: var(--map-ui-focus-soft);
+    color: var(--map-ui-text);
+  }
+}
+
+body:has(.carte-page__nature) .stp-select__bulk-action {
+  color: var(--map-ui-text);
+
+  &:hover,
+  &[aria-pressed='true'] {
+    border-color: var(--map-ui-border);
+    background: var(--map-ui-focus-soft);
+    color: var(--map-ui-text);
+  }
 }
 
 // Écran tactile ou téléphone : cibles d'au moins 44 px, texte de champ d'au moins 16 px (sinon iOS zoome à la saisie)

@@ -37,7 +37,7 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 | Table | Clé métier (unique) | Colonnes | Clés étrangères |
 |---|---|---|---|
 | `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
-| `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
+| `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `nature` (30, nullable avant qualification), `localisation` (2048), `latitude`/`longitude` (`NUMERIC(11,8)`, paire nullable), `afficher_sur_carte` (booléen non nul, faux), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
 | `equipe` | Voir le [modèle du domaine Équipe](equipe/README.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
 | `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC » ou saisi), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
@@ -177,6 +177,8 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V34` | Supprime l'équipe `CH+OP` après reclassement de ses bulletins selon leur fonction (`CH.`/`COURSIER` → `CH`, `OP.` → `OP`, `CHEF DE POSTE` → `EE`) et des fiches actives selon la même règle. Une fonction non classée fait échouer la migration. La suppression et les mises à jour sont auditées. |
 | `V35` | Reprise auditée des chantiers actifs absents de la dernière période de paie enregistrée : ils sont clôturés même s'ils ont des bulletins historiques; sans paie en base, aucune donnée ne change. |
 | `V36` | Permission auditée `IA_UTILISER` (assistant IA), attribuée à `SYSTEM_ADMIN` seulement. |
+| `V37` | Nature, localisation, coordonnées et affichage cartographique de Chantier et Envers ; contraintes de nature, bornes, paire et qualification requise pour affichage. |
+| `V38` | Reprise auditée de la qualification du référentiel par code ; conserve les statuts et toute qualification manuelle déjà présente. |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration

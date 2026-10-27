@@ -18,7 +18,7 @@ describe('ChantierFormComponent', () => {
 
   async function afficher(id?: string, nom: string | null = 'Nord'): Promise<void> {
     service = {
-      getById: vi.fn().mockReturnValue(of({ id: 3, code: 'C196', designation: 'Marrakech', nom, sourceErp: true, actif: true })),
+      getById: vi.fn().mockReturnValue(of({ id: 3, version: 4, code: 'C196', designation: 'Marrakech', nom, nature: 'AO', localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: true })),
       create: vi.fn().mockReturnValue(of({ id: 8 })),
       update: vi.fn().mockReturnValue(of({ id: 3 }))
     };
@@ -68,7 +68,7 @@ describe('ChantierFormComponent', () => {
       await envoyer();
 
       expect(service.create).not.toHaveBeenCalled();
-      expect(erreurs()).toEqual(['Le code est obligatoire.', 'La désignation est obligatoire.']);
+      expect(erreurs()).toEqual(['Le code est obligatoire.', 'La désignation est obligatoire.', 'La nature du chantier est obligatoire.']);
       expect(document.activeElement?.id).toBe('code');
     });
 
@@ -82,10 +82,11 @@ describe('ChantierFormComponent', () => {
       await afficher();
       saisir(racine(), '#code', 'C300');
       saisir(racine(), '#designation', 'Barrage');
+      fixture.componentInstance['form'].nature().value.set('AO');
 
       await envoyer();
 
-      expect(service.create).toHaveBeenCalledWith({ code: 'C300', designation: 'Barrage', nom: null });
+      expect(service.create).toHaveBeenCalledWith({ nature: 'AO', afficherSurCarte: false, localisation: null, latitude: null, longitude: null, code: 'C300', designation: 'Barrage', nom: null });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Chantier créé');
       expect(navigation).toHaveBeenCalledWith(['/chantiers', 8]);
       expect(fixture.componentInstance['form']().dirty()).toBe(false);
@@ -95,11 +96,12 @@ describe('ChantierFormComponent', () => {
       await afficher();
       saisir(racine(), '#code', 'C300');
       saisir(racine(), '#designation', 'Barrage');
+      fixture.componentInstance['form'].nature().value.set('AO');
       saisir(racine(), '#nom', 'Souss');
 
       await envoyer();
 
-      expect(service.create).toHaveBeenCalledWith({ code: 'C300', designation: 'Barrage', nom: 'Souss' });
+      expect(service.create).toHaveBeenCalledWith({ nature: 'AO', afficherSurCarte: false, localisation: null, latitude: null, longitude: null, code: 'C300', designation: 'Barrage', nom: 'Souss' });
     });
 
     it('reste sur le formulaire quand le serveur refuse (code déjà utilisé)', async () => {
@@ -107,6 +109,7 @@ describe('ChantierFormComponent', () => {
       service.create.mockReturnValue(throwError(() => new Error('409')));
       saisir(racine(), '#code', 'C196');
       saisir(racine(), '#designation', 'Doublon');
+      fixture.componentInstance['form'].nature().value.set('AO');
 
       await envoyer();
 
@@ -128,9 +131,10 @@ describe('ChantierFormComponent', () => {
 
       fixture.componentInstance['form'].actif().value.set(false);
       saisir(racine(), '#designation', 'Marrakech centre');
+      fixture.componentInstance['form'].nature().value.set('AO');
       await envoyer();
 
-      expect(service.update).toHaveBeenCalledWith(3, { code: 'C196', designation: 'Marrakech centre', nom: 'Nord', actif: false });
+      expect(service.update).toHaveBeenCalledWith(3, { version: 4, nature: 'AO', afficherSurCarte: false, localisation: null, latitude: null, longitude: null, code: 'C196', designation: 'Marrakech centre', nom: 'Nord', actif: false });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Chantier modifié');
       expect(navigation).toHaveBeenCalledWith(['/chantiers', 3]);
     });
@@ -141,7 +145,41 @@ describe('ChantierFormComponent', () => {
 
       await envoyer();
 
-      expect(service.update).toHaveBeenCalledWith(3, { code: 'C196', designation: 'Marrakech', nom: null, actif: true });
+      expect(service.update).toHaveBeenCalledWith(3, { version: 4, nature: 'AO', afficherSurCarte: false, localisation: null, latitude: null, longitude: null, code: 'C196', designation: 'Marrakech', nom: null, actif: true });
     });
+  });
+
+  it('exige une position pour afficher le chantier et transmet le lien au serveur pour extraction', async () => {
+    await afficher();
+    saisir(racine(), '#code', 'GEO');
+    saisir(racine(), '#designation', 'Site synthétique');
+      fixture.componentInstance['form'].nature().value.set('AO');
+    fixture.componentInstance['form'].nature().value.set('AO');
+    fixture.componentInstance['form'].afficherSurCarte().value.set(true);
+    await envoyer();
+    expect(service.create).not.toHaveBeenCalled();
+    expect(erreurs()).toContain('La localisation est obligatoire pour afficher le chantier sur la carte.');
+    saisir(racine(), '#localisation', 'google.com/maps?q=10.12345678,-20.12345678');
+    await envoyer();
+    expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ nature: 'AO', afficherSurCarte: true,
+      localisation: 'google.com/maps?q=10.12345678,-20.12345678', latitude: null, longitude: null }));
+  });
+
+  it('envoie une paire de coordonnées seule et refuse une paire incomplète', async () => {
+    await afficher();
+    saisir(racine(), '#code', 'GEO');
+    saisir(racine(), '#designation', 'Site synthétique');
+      fixture.componentInstance['form'].nature().value.set('AO');
+    fixture.componentInstance['form'].nature().value.set('AO');
+    fixture.componentInstance['form'].modeLocalisation().value.set('COORDONNEES');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    saisir(racine(), '#latitude', '10.12345678');
+    await envoyer();
+    expect(service.create).not.toHaveBeenCalled();
+    expect(erreurs()).toContain('La longitude est obligatoire.');
+    saisir(racine(), '#longitude', '-20.12345678');
+    await envoyer();
+    expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ latitude: 10.12345678, longitude: -20.12345678, localisation: null }));
   });
 });

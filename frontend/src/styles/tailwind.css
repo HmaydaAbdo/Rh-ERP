@@ -14,6 +14,8 @@
   --color-primary: var(--color-primary);
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-contrast: var(--color-primary-contrast);
+  --color-focus: var(--color-focus);
+  --color-focus-soft: var(--color-focus-soft);
   --color-surface: var(--color-surface);
   --color-surface-alt: var(--color-surface-alt);
   --color-canvas: var(--color-canvas);

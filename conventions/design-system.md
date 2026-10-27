@@ -35,14 +35,16 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 
 L'interface traduit l'identité Staport en une expérience **précise, accueillante et premium**, adaptée à des outils de
 travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
-alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface ; un accent minéral chaud peut
-compléter les repères de navigation et les détails de marque sans remplacer le bleu d'action.
+alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface. Le thème clair conserve ses
+surfaces minérales et son accent cuivre ; le thème sombre adopte **Atlas nocturne Staport**, une gamme marine d'encre,
+de bleu électrique et de cyan balise qui porte une atmosphère cartographique immersive dans toute l'application.
 
 Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
 à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Un écran d'accès peut installer
-une atmosphère marine propre à Staport ; les écrans métier gardent des surfaces calmes. Les accents lumineux sont
-réservés aux actions, sélections et informations qui méritent l'attention. Éviter le néon généralisé, le glassmorphism
-systématique, les dégradés décoratifs et les effets qui éloignent l'interface de l'identité Staport.
+une atmosphère marine propre à Staport ; les écrans métier la reprennent dans leurs surfaces, actions, navigation,
+formulaires et états actifs. Le cyan balise les sélections, les anneaux de focus, les icônes et les repères importants ;
+les fonds restent bleu-noir pour garder les données lisibles. Les variations de lumière servent la hiérarchie et la lecture.
+Éviter le néon uniforme, le glassmorphism systématique et les dégradés décoratifs.
 Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
 le logo ne garantit pas à lui seul un contraste suffisant pour les usages d'interface.
 
@@ -100,6 +102,27 @@ troisième palette de marque qui dupliquerait les thèmes.
 * Un élément monochrome sombre (le logo) passe en blanc en thème sombre par un filtre CSS
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
 * Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
+
+## Atlas nocturne Staport — thème sombre
+
+| Rôle | Couleur | Jeton principal |
+|---|---|---|
+| Encre marine (canevas) | `#030B16` | `--color-canvas` |
+| Bleu nuit (surface) | `#07192A` | `--color-surface` |
+| Bleu ardoise (séparation) | `#153752` | `--color-border-strong` |
+| Bleu électrique (action) | `#168DFF` | `--color-primary` |
+| Cyan balise (focus et repère) | `#35D6FF` | `--color-focus` |
+| Texte glacier | `#EEF7FF` | `--color-text` |
+
+Le système sombre garde la même atmosphère dans la navigation, les écrans métier, les formulaires, l'assistant et la
+cartographie. Les tokens sémantiques pilotent les composants ; les surfaces montent du noir marin vers le bleu nuit,
+les actions restent bleues, et le cyan rend les interactions importantes visibles. Les boutons gardent leur contraste via
+`--color-primary-contrast`. L'accent cuivre reste propre au thème clair.
+
+La carte prolonge Atlas nocturne avec un Plan vectoriel bleu profond, des frontières et routes lisibles, une texture de
+relief bleutée, des marqueurs cyan et des infobulles bleu nuit. Les vues Satellite et Relief gardent leur matière propre,
+avec un chrome nocturne constant. Les couleurs de succès, avertissement, erreur et catégories de graphiques préservent
+leur signification métier dans tous les thèmes.
 
 ---
 
