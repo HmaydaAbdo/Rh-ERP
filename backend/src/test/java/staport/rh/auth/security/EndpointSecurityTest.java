@@ -61,6 +61,8 @@ class EndpointSecurityTest {
             Map.entry("AuditController.details", "AUDIT_READ"),
             Map.entry("AuditController.historique", "AUDIT_READ"),
             Map.entry("ChantierController.creer", "CHANTIER_WRITE"),
+            Map.entry("ChantierController.changerStatut", "CHANTIER_WRITE"),
+            Map.entry("ChantierController.carte", "CARTE_READ"),
             Map.entry("ChantierController.modifier", "CHANTIER_WRITE"),
             Map.entry("ChantierController.lireParId", "CHANTIER_READ"),
             Map.entry("ChantierController.rechercher", "CHANTIER_READ"),

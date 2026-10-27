@@ -6,6 +6,7 @@ import org.mapstruct.MappingTarget;
 import staport.rh.chantier.dtos.request.ChantierCreateRequestDto;
 import staport.rh.chantier.dtos.request.ChantierUpdateRequestDto;
 import staport.rh.chantier.dtos.response.ChantierResponseDto;
+import staport.rh.chantier.dtos.response.ChantierCarteDto;
 import staport.rh.chantier.entities.Chantier;
 
 @Mapper(componentModel = "spring")
@@ -17,4 +18,6 @@ public interface ChantierMapper {
     void updateEntityFromDto(ChantierUpdateRequestDto dto, @MappingTarget Chantier entity);
 
     ChantierResponseDto toDto(Chantier entity);
+
+    ChantierCarteDto toCarteDto(Chantier entity);
 }

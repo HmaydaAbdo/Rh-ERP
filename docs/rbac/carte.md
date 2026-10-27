@@ -14,9 +14,11 @@ peut voir la carte sans pouvoir consulter ni modifier le référentiel, et inver
 
 ## Endpoints backend
 
-Aucun pour l'instant : la carte n'affiche pas encore de donnée de chantier (l'écran ne fait aucun appel à l'API). Quand une source de données sera branchée
-(voir [../chantier/carte.md](../chantier/carte.md)), chaque endpoint portera un `@PreAuthorize` et sera ajouté à la
-matrice de [README.md](README.md) et à `EndpointSecurityTest`.
+| Endpoint | Permission | Contenu |
+|---|---|---|
+| `GET /chantiers/carte` | `CARTE_READ` | Identité, nature et position des seuls chantiers autorisés à l'affichage ; sans paie |
+
+La gestion des champs reste sous `CHANTIER_WRITE`. Voir le [contrat du domaine](../chantier/README.md#api) et `EndpointSecurityTest`.
 
 ## Frontend
 

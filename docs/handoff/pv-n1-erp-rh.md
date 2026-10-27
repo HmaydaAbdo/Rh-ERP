@@ -131,7 +131,7 @@ Faits vérifiés dans la version actuelle :
 - le référentiel ne comporte pas de statut actif ou inactif;
 - l’import Excel est atomique : une ligne invalide rejette tout le fichier.
 
-**Aucune règle nouvelle n’est introduite par ce bloc.** Décisions du propriétaire du 23 octobre 2026, à présenter aux intervenants pour avis :
+Les règles de qualification ci-dessus sont confirmées par le propriétaire ; les avis des intervenants restent à recueillir selon le présent PV. Décisions du propriétaire du 23 octobre 2026, à présenter aux intervenants pour avis :
 
 - **Renommage :** le comportement actuel est conservé. Le nouveau libellé s’applique partout, historique de paie compris; c’est le moyen de corriger une faute de frappe.
 - **Suppression :** le refus actuel est conservé. Une fonction référencée par une fiche Employé ou un bulletin ne peut pas être supprimée.
@@ -184,6 +184,12 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 
 ### 10.3 Règles déjà appliquées et constats
 
+La qualification géographique ajoute les règles confirmées : six natures distinctes, nature et choix d'affichage
+obligatoires en saisie manuelle, lien ou paire de coordonnées explicites, affichage conditionné à une qualification
+complète. Les chantiers ERP et les anciens chantiers non qualifiés restent hors carte. La position est conservée
+lorsque l'affichage est désactivé. Le détail du contrat et des scénarios figure dans le
+[README Chantier](../chantier/README.md#règles-métier) ; la carte utilise son droit `CARTE_READ`, sans accès à la paie.
+
 - le code et la désignation sont obligatoires à la création manuelle; le code est unique sans tenir compte de la casse ni des espaces extérieurs;
 - la synchronisation avec l’ERP n’ajoute que les chantiers manquants : elle ne modifie, ne clôture ni ne supprime jamais un chantier existant;
 - clôturer un chantier ne le supprime pas : il reste consultable et référencé par l’historique, mais n’est plus accepté par l’import des employés et l’assistant d’import de la paie propose de le rouvrir (décision du propriétaire du 19 octobre 2026);
@@ -191,7 +197,7 @@ Les indicateurs sont ceux de la section 3.3 (pour un chantier sélectionné, le 
 - supprimer un chantier référencé par une fiche Employé ou un bulletin est refusé; la clôture est l’alternative;
 - modifier le code d’un chantier le change pour tous les bulletins et fiches qui le référencent, historique compris : **décision du propriétaire du 23 octobre 2026, ce comportement est conservé**, c’est le moyen de corriger une faute de saisie.
 
-**Aucune règle nouvelle n’est introduite par ce bloc.** Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans le [TODO](../../TODO.md).
+Les règles de qualification ci-dessus sont confirmées par le propriétaire ; les avis des intervenants restent à recueillir selon le présent PV. Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans le [TODO](../../TODO.md).
 
 ### 10.4 Preuves et accords à recueillir
 

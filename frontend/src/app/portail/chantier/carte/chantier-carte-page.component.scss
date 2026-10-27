@@ -1,8 +1,8 @@
 @use 'breakpoints' as bp;
 
-// La carte est la surface de travail de la page : elle déborde du padding de `.app-content`
-// pour utiliser toute la zone disponible, sans titre ni marge décorative.
+// La carte est la surface de travail : aucun panneau métier ni liste latérale.
 .carte-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: calc(100% + 2 * var(--space-xl));
@@ -10,12 +10,79 @@
   margin: calc(-1 * var(--space-xl));
 }
 
-.carte-page__carte {
-  flex: 1 1 auto;
-  min-height: 0;
+.carte-page__carte { flex: 1 1 auto; min-height: 0; }
+
+.carte-page__filtre {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-md);
+  left: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: max-content;
+  max-width: min(34rem, calc(100% - 2 * var(--space-md)));
+  min-height: 4.25rem;
+  padding: var(--space-sm-md) var(--space-lg);
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--map-ui-surface) 90%, transparent);
+  color: var(--map-ui-text);
+  box-shadow: var(--map-ui-shadow);
+  backdrop-filter: blur(1rem);
 }
 
-// Navigation compacte : la barre du haut est fixe et le contenu commence sous elle.
+.carte-page__identite {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-sm-md);
+  padding-right: var(--space-lg);
+  border-right: 1px solid var(--map-ui-border);
+
+  h1 { margin: 0; color: var(--map-ui-text); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.035em; }
+}
+
+.carte-page__total {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--map-ui-primary) 64%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--map-ui-primary) 16%, var(--map-ui-canvas));
+  color: var(--map-ui-highlight);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: var(--map-ui-primary-glow);
+}
+
+.carte-page__nature {
+  display: grid;
+  flex: 0 0 var(--map-filter-width);
+  min-width: var(--map-filter-width);
+  gap: var(--space-2xs);
+
+  label { color: var(--map-ui-text-muted); font-size: var(--text-sm); font-weight: 600; }
+
+  .stp-select__input {
+    min-height: 2.5rem;
+    border: 1px solid var(--map-ui-border);
+    border-radius: var(--radius-md);
+    background: var(--map-ui-canvas);
+    color: var(--map-ui-text);
+
+    &:hover { border-color: var(--map-ui-focus); }
+    &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: var(--focus-offset); }
+  }
+}
+
+.carte-page__reessayer { flex: 0 0 auto; }
+.carte-page__vide { margin: 0; color: var(--map-ui-text-muted); font-size: var(--text-xs); }
+
 @include bp.compact-nav {
   .carte-page {
     width: calc(100% + 2 * var(--space-xl));
@@ -30,4 +97,21 @@
     height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
     margin: calc(-1 * var(--space-md));
   }
+
+  .carte-page__filtre {
+    top: var(--space-sm);
+    left: var(--space-sm);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    width: calc(100% - 2 * var(--space-sm));
+    max-width: calc(100% - 2 * var(--space-sm));
+    padding: var(--space-sm-md);
+  }
+
+  .carte-page__identite { gap: var(--space-xs); padding-right: var(--space-sm); }
+  .carte-page__nature { flex: 1 1 100%; min-width: 10rem; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .carte-page__filtre { background: var(--map-ui-surface); backdrop-filter: none; }
 }

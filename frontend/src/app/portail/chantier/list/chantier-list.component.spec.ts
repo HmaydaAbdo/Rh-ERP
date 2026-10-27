@@ -9,8 +9,8 @@ import { ChantierService } from '../services/chantier.service';
 import { ChantierListComponent } from './chantier-list.component';
 
 const CHANTIERS: Chantier[] = [
-  { id: 1, version: 0, code: 'C168', designation: 'Nador', nom: null, sourceErp: true, actif: true },
-  { id: 2, version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', sourceErp: false, actif: false }
+  { id: 1, version: 0, code: 'C168', designation: 'Nador', nom: null, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: true },
+  { id: 2, version: 0, code: 'C196', designation: 'Marrakech', nom: 'Nord', nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: false, actif: false }
 ];
 
 const page = (content: Chantier[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });
@@ -51,8 +51,8 @@ describe('ChantierListComponent', () => {
 
     expect(pagination()).toEqual({ page: 0, size: 10, sort: 'code,asc' });
     const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).map((td) => td.textContent?.trim());
-    expect(ligne(0).slice(0, 5)).toEqual(['C168', '-', 'Nador', 'ERP', 'En cours']);
-    expect(ligne(1).slice(0, 5)).toEqual(['C196', 'Nord', 'Marrakech', 'Manuel', 'Clôturé']);
+    expect(ligne(0).slice(0, 7)).toEqual(['C168', '-', 'Nador', 'À qualifier', 'Non', 'ERP', 'En cours']);
+    expect(ligne(1).slice(0, 7)).toEqual(['C196', 'Nord', 'Marrakech', 'À qualifier', 'Non', 'Manuel', 'Clôturé']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 chantiers');
     expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
   });

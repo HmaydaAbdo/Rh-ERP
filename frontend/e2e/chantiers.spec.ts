@@ -87,7 +87,7 @@ test.describe('Chantiers', () => {
   test('filtre par statut dans le tableau et clôture un chantier après confirmation', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: DROITS }, {
       'POST /chantiers/search': () => pageDe([NADOR]),
-      'PUT /chantiers/1': () => ({ ...NADOR, actif: false, version: 1 })
+      'PUT /chantiers/1/statut': () => ({ ...NADOR, actif: false, version: 1 })
     });
     await page.goto('/chantiers?actif=true');
     await expect(page.getByRole('cell', { name: 'C168', exact: true })).toBeVisible();
@@ -98,7 +98,7 @@ test.describe('Chantiers', () => {
     await expect(dialogue).toContainText('C168');
     await dialogue.getByRole('button', { name: 'Clôturer' }).click();
 
-    await expect.poll(() => (mock.bodies['PUT /chantiers/1'] ?? []).at(-1)).toMatchObject({ actif: false });
+    await expect.poll(() => (mock.bodies['PUT /chantiers/1/statut'] ?? []).at(-1)).toMatchObject({ actif: false });
   });
 
   test('synchronise depuis l’en-tête commun aux trois vues', async ({ page }) => {
