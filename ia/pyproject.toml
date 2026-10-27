@@ -17,6 +17,13 @@ dependencies = [
     "langchain[mcp]>=1.4.7",
     "langchain-litellm>=0.11.2",
     "copilotkit>=0.1.96",
+    "opentelemetry-distro==0.66b1",
+    "opentelemetry-exporter-otlp-proto-http==1.45.1",
+    "opentelemetry-instrumentation-fastapi==0.66b1",
+    "opentelemetry-instrumentation-httpx==0.66b1",
+    "openinference-instrumentation-langchain==0.1.80",
+    "langgraph-checkpoint-postgres>=3.2.0",
+    "psycopg[binary,pool]>=3.3.6",
 ]
 
 [dependency-groups]

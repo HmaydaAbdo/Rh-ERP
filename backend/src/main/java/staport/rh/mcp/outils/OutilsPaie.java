@@ -9,7 +9,6 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -28,6 +27,7 @@ import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +48,29 @@ public class OutilsPaie {
     private static final int CHANTIERS_RENDUS = 5;
     private static final int MOIS = 36;
     private static final int GROUPES = 50;
+
+    /** Critère de tri des groupes d'une répartition de paie (clé de la valeur dans chaque groupe). */
+    public enum TriGroupePaie {
+        MASSE("masse"), EFFECTIF("effectif"), STC("stc"), STC_MONTANT("stcMontant"), LIBELLE("libelle"), CODE("code");
+
+        private final String cle;
+
+        TriGroupePaie(String cle) {
+            this.cle = cle;
+        }
+    }
+
+    /** Critère de tri d'une recherche de bulletins. */
+    public enum TriBulletin {
+        NOM("employee.nomPrenom"), SALAIRE_TOTAL("salaireTotal"), SALAIRE_MENSUEL("salaireMensuel"),
+        JOURS_TRAVAILLES("nombreJoursTravailles");
+
+        private final String propriete;
+
+        TriBulletin(String propriete) {
+            this.propriete = propriete;
+        }
+    }
     private static final int BULLETINS = 20;
 
     /** Sens de chaque chiffre de {@code paie_mouvements}, rendu avec lui pour que la réponse le cite. */
@@ -144,9 +167,11 @@ public class OutilsPaie {
     @McpTool(name = "paie_repartition", title = "Paie par chantier, équipe ou fonction", generateOutputSchema = true,
             description = """
                     Répartit la paie d'un mois par chantier, par équipe ou par fonction : masse salariale en dirhams, effectif \
-                    payé et soldes de tout compte (STC) de chaque groupe, de la plus grosse masse à la plus petite ; 50 groupes \
-                    au plus. À utiliser pour « quel chantier coûte le plus », « masse par équipe ». Pour les effectifs sans \
-                    montants, `employes_regrouper` ; pour un seul chiffre global, `paie_indicateurs`.""",
+                    payé et soldes de tout compte (STC) de chaque groupe ; 50 groupes au plus. De la plus grosse masse à la \
+                    plus petite par défaut ; `tri` (MASSE, EFFECTIF, STC, STC_MONTANT, LIBELLE, CODE) et `sens` (ASC ou DESC) \
+                    donnent « le chantier le moins cher », « les équipes avec le plus de STC ». À utiliser pour « quel chantier \
+                    coûte le plus », « masse par équipe ». Pour les effectifs sans montants, `employes_regrouper` ; pour un \
+                    seul chiffre global, `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -158,7 +183,10 @@ public class OutilsPaie {
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
             @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
-            @Min(1) @Max(GROUPES) Integer limite) {
+            @Min(1) @Max(GROUPES) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri des groupes : MASSE (défaut), EFFECTIF, STC, "
+                    + "STC_MONTANT, LIBELLE ou CODE.") TriGroupePaie tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth mois = periodes.ou(periode);
         PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
@@ -170,7 +198,15 @@ public class OutilsPaie {
             case FONCTION -> resultat.parFonction().stream()
                     .map(f -> groupe(f.id(), null, f.libelle(), f.masse(), f.effectif(), f.stc(), f.stcMontant())).toList();
         };
-        List<Map<String, Object>> rendus = groupes.stream().limit(limite == null ? GROUPES : limite).toList();
+        TriGroupePaie critere = tri == null ? TriGroupePaie.MASSE : tri;
+        boolean texte = critere == TriGroupePaie.LIBELLE || critere == TriGroupePaie.CODE;
+        Comparator<Map<String, Object>> comparateur = texte
+                ? Comparator.comparing(g -> String.valueOf(g.get(critere.cle)), String.CASE_INSENSITIVE_ORDER)
+                : Comparator.comparing(g -> new java.math.BigDecimal(String.valueOf(g.get(critere.cle))));
+        SensTri ordre = SensTri.ou(sens, texte ? SensTri.ASC : SensTri.DESC);
+        List<Map<String, Object>> rendus = groupes.stream()
+                .sorted(ordre == SensTri.ASC ? comparateur : comparateur.reversed())
+                .limit(limite == null ? GROUPES : limite).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", mois.toString());
         donnees.put("dimension", dimension.name());
@@ -309,8 +345,10 @@ public class OutilsPaie {
             description = """
                     Trouve les bulletins de paie d'un mois par nom, CIN et/ou périmètre. Chaque bulletin rend : employé (id, nom, \
                     CIN), fonction, chantier, équipe, jours travaillés, jours de récupération, salaire mensuel, primes, salaire \
-                    total en dirhams et observation. 20 bulletins au plus, avec le nombre total. À utiliser pour la paie d'une \
-                    personne précise ; pour des totaux, préférer `paie_indicateurs`.""",
+                    total en dirhams et observation. 20 bulletins au plus par page, avec le nombre total. Triable (`tri` : NOM \
+                    par défaut, SALAIRE_TOTAL, SALAIRE_MENSUEL, JOURS_TRAVAILLES ; `sens` ASC ou DESC) et paginable (`page`) : \
+                    « les dix plus gros salaires du mois » se demande avec tri SALAIRE_TOTAL, sens DESC, limite 10. À utiliser \
+                    pour la paie d'une personne ou un classement ; pour des totaux, préférer `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -322,16 +360,23 @@ public class OutilsPaie {
             @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
-            @McpToolParam(required = false, description = "Nombre de bulletins rendus, de 1 à 20, 10 par défaut.")
-            @Min(1) @Max(BULLETINS) Integer limite) {
+            @McpToolParam(required = false, description = "Nombre de bulletins rendus par page, de 1 à 20, 10 par défaut.")
+            @Min(1) @Max(BULLETINS) Integer limite,
+            @McpToolParam(required = false, description = "Critère de tri : NOM (défaut), SALAIRE_TOTAL, SALAIRE_MENSUEL "
+                    + "ou JOURS_TRAVAILLES.") TriBulletin tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth mois = periodes.ou(periode);
         String nomRecherche = texte(nom);
         String cinRecherche = texte(cin);
-        Page<PaieResponseDto> page = paie.search(
+        TriBulletin critere = tri == null ? TriBulletin.NOM : tri;
+        SensTri ordre = SensTri.ou(sens, critere == TriBulletin.NOM ? SensTri.ASC : SensTri.DESC);
+        Page<PaieResponseDto> resultats = paie.search(
                 new PaieSearchCriteria(cinRecherche, nomRecherche, mois, filtre.fonctions(), filtre.chantiers(), filtre.equipes()),
-                PageRequest.of(0, limite == null ? 10 : limite, Sort.by("employee.nomPrenom")));
-        List<Map<String, Object>> bulletins = page.getContent().stream().map(OutilsPaie::bulletin).toList();
+                PageRequest.of(page == null ? 0 : page, limite == null ? 10 : limite,
+                        ordre.sur(critere.propriete, "employee.nomPrenom")));
+        List<Map<String, Object>> bulletins = resultats.getContent().stream().map(OutilsPaie::bulletin).toList();
         Map<String, String> parametres = filtre.parametres(mois);
         if (nomRecherche != null) {
             parametres.put("nom", nomRecherche);
@@ -341,7 +386,8 @@ public class OutilsPaie {
         }
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", mois.toString());
-        donnees.put("total", page.getTotalElements());
+        donnees.put("total", resultats.getTotalElements());
+        donnees.put("page", resultats.getNumber());
         donnees.put("bulletins", bulletins);
         donnees.put("vue", new VueProposeeDto("paie", "tabulaire", parametres).enJson());
         return donnees;

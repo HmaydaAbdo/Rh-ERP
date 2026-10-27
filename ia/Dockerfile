@@ -15,8 +15,11 @@ FROM python:3.13-slim@sha256:d98cc29d3266e535dd9da1099688d9cb3ca4753813571e07176
 RUN groupadd --system --gid 10001 ia && useradd --system --uid 10001 --gid ia --no-create-home ia
 COPY --from=build --chown=root:root /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+# Traces OpenTelemetry (docs/ia.md, T18) : lancées par l'auto-instrumentation officielle (FastAPI, httpx, LangChain par
+# OpenInference), coupées tant que Compose ne les active pas (OTEL_SDK_DISABLED=false et l'adresse de Phoenix).
+ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 USER 10001:10001
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
-ENTRYPOINT ["python", "-m", "erp_rh_ia"]
+ENTRYPOINT ["opentelemetry-instrument", "python", "-m", "erp_rh_ia"]

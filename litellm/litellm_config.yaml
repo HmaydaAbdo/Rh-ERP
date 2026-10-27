@@ -378,6 +378,13 @@ litellm_settings:
   overwrite_user_with_key_hash: true
   # Jamais de réponse partagée entre clés ou utilisateurs.
   cache: false
+  # Détection d'injection de prompt (rappel officiel de LiteLLM, sans modèle ni service en plus) : un message
+  # utilisateur qui tente de faire ignorer ses consignes à l'assistant est refusé (400) avant d'atteindre un modèle.
+  callbacks: ["detect_prompt_injection"]
+  prompt_injection_params:
+    heuristics_check: true
+    similarity_check: false
+    llm_api_check: false
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

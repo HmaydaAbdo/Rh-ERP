@@ -35,7 +35,7 @@ import { LIBELLE_EQUIPE_ORPHELINE, lignesPaie, LignePaie, nomGroupe } from '../p
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
 
-type Graphique<T extends ChartType> = { data: ChartData<T>; options: ChartOptions<T> };
+interface Graphique<T extends ChartType> { data: ChartData<T>; options: ChartOptions<T> }
 type MesureRepartition = 'masse' | 'effectif';
 type OptionEquipeEvolution = SelectOption<number>;
 
@@ -281,7 +281,7 @@ export class AnalytiquePerimetreComponent {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
     return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
   });
-  protected readonly graphiquesRepartitionEquipe = computed<Array<Graphique<'bar'> & { mesure: MesureEvolution }>>(() => {
+  protected readonly graphiquesRepartitionEquipe = computed<(Graphique<'bar'> & { mesure: MesureEvolution })[]>(() => {
     this.theme.theme();
     return this.mesureRepartitionEquipe().map((mesure) => {
       const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0).sort((a, b) => b[mesure] - a[mesure] || a.libelle.localeCompare(b.libelle, 'fr'));
@@ -292,7 +292,7 @@ export class AnalytiquePerimetreComponent {
       };
     });
   });
-  protected readonly graphiquesEvolutionEquipe = computed<Array<Graphique<'line'> & { mesure: MesureEvolution }>>(() => {
+  protected readonly graphiquesEvolutionEquipe = computed<(Graphique<'line'> & { mesure: MesureEvolution })[]>(() => {
     this.theme.theme();
     const evolution = this.evolutionEquipe();
     return this.mesureEvolutionEquipe().map((mesure) => {
