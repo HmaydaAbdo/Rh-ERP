@@ -62,6 +62,17 @@ compare les tops de chaque mois au lieu de suivre les mêmes chantiers). À rés
 comparaison de deux périodes par chantier, plutôt que de laisser le modèle recombiner. Autre demande du propriétaire (V1e) : réduire
 le CPU au démarrage du service `ia` (import de `litellm` surtout, 7 s sur 14 s).
 
+**Décisions du propriétaire (2026-10-27), plan seulement, rien n'est codé** (détail dans le plan de clôture et le journal de [ia.md](../ia.md)) :
+1. **Faire disparaître le besoin de calcul** est prioritaire (V1d) : l'outil renvoie lui-même variations, pourcentages, moyennes,
+   rangs et effectifs.
+2. **Le vérificateur de chiffres est supprimé** (T22, V1f, après V1d) : une liste exhaustive de faux positifs est impossible
+   (cas vus : date d'un tour précédent, marqueur « 1. », abstention sur une réponse exacte). Il reste actif d'ici là.
+   En conversation, l'agent s'appuie sur les tours précédents, pose une question et relit l'ERP pour confirmer.
+3. **Tous les middlewares officiels de LangChain et LangGraph sont mis en œuvre, sans exception** (M1 à M6) ; celui qui exécute des
+   commandes (`ShellToolMiddleware`) exige une décision de sécurité (conteneur jetable sans réseau ni secret) avant adoption.
+4. **Tout code IA maison est supprimé** au profit des frameworks (inventaire T21 à T31).
+Ordre : V1d, V1f, V1e, V1b, V1c, puis M1 à M6, puis T21 et les remplacements.
+
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
 
