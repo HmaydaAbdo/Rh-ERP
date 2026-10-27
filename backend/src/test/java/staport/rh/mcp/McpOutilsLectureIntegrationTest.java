@@ -235,8 +235,10 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         croissant.get("chantiers").forEach(ch -> asc.add(ch.get("code").asString()));
         List<String> desc = new ArrayList<>();
         decroissant.get("chantiers").forEach(ch -> desc.add(ch.get("code").asString()));
-        assertThat(asc).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER);
-        assertThat(desc).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER.reversed());
+        // L'ordre est celui de la collation de PostgreSQL (la ponctuation des codes y est ignorée) : on vérifie que le sens
+        // descendant est l'exact inverse du sens ascendant, sans supposer l'ordre de comparaison de Java.
+        assertThat(asc).hasSizeGreaterThan(1);
+        assertThat(desc).containsExactlyElementsOf(asc.reversed());
         assertThat(appeler("equipe_rechercher", Map.of("limite", 1, "page", 1)).get("page").asInt()).isEqualTo(1);
     }
 
