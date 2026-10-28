@@ -78,6 +78,13 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     nature: 'AO',
     afficherSurCarte: false
   });
+  const chantierHeuresSupp = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
+    code: `S${suffixe}`,
+    designation: `Chantier Heures supp e2e ${suffixe}`,
+    nom: `Chantier Heures supp e2e ${suffixe}`,
+    nature: 'AO',
+    afficherSurCarte: false
+  });
   const employe = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: `Employé e2e ${suffixe}`,
     cin: `E2E${suffixe}`,
@@ -101,16 +108,16 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: fonctionLibelleHs });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
-    fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipeHeuresSupp.id, salaire: 4000, typeSalaire: 'MENSUEL'
+    fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id, salaire: 4000, typeSalaire: 'MENSUEL'
   });
   await api(page, adminToken, 'POST', '/paie', {
-    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipeHeuresSupp.id,
+    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id,
     nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null,
     salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000,
     observation: `Présence Heures supplémentaires ${suffixe}`
   });
   const prerequisHs = await api<{ pret: boolean }>(page, adminToken, 'GET',
-    `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantier.id}`);
+    `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`);
   expect(prerequisHs.pret).toBe(true);
   const classeurHs = unzipSync(readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx')));
   const feuilleHs = strFromU8(classeurHs['xl/worksheets/sheet1.xml']);
@@ -118,7 +125,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     .replace('HSFULLSTACK', cinHs)
     .replace('Conductrice HS', fonctionLibelleHs));
   const fichierHs = Buffer.from(zipSync(classeurHs));
-  const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantier.id}`, {
+  const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     multipart: { file: { name: 'heures-supp-full-stack.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: fichierHs } }
   });
@@ -126,15 +133,15 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const bilanHs = await importHs.json() as { lignesHeures: number; heuresTotales: number; montantTotalDh: number; netTotalDh: number };
   expect(bilanHs).toMatchObject({ lignesHeures: 1, heuresTotales: 2, montantTotalDh: 30.77, netTotalDh: 30.77 });
   const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
-    page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantier.id] }
+    page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
   );
   expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.77 })]);
   expect(lignesHs.content[0]?.salaireHoraireDh).toBeCloseTo(4000 / 260, 12);
   const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
-    page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantier.id] }
+    page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
   );
   expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30.77 });
-  await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantier.id}`);
+  await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantierHeuresSupp.id}`);
   await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
   await expect(page.getByText(cinHs)).toBeVisible();
 
