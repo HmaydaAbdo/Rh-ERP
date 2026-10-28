@@ -44,7 +44,7 @@ class AccesSimule:
 
 
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
-    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any]) -> Any:
+    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer)
 
     return fabriquer
