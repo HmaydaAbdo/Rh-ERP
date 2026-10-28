@@ -1,7 +1,7 @@
 """Retire de la configuration LiteLLM les déploiements dont la clé n'est pas renseignée.
 
 Une clé vide donne une 401, et LiteLLM v1.104.2 ne bascule pas sur une erreur d'authentification : la question
-échoue au lieu de passer au modèle suivant du même tag (mesuré par l'évaluation T6). Seuls les identifiants des
+échoue au lieu de passer au modèle suivant du même groupe (mesuré par l'évaluation T6). Seuls les identifiants des
 déploiements retirés sont affichés, jamais une valeur.
 
   python3 filtrer_config.py <source.yaml> <cible.yaml>

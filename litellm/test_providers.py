@@ -2,14 +2,14 @@
 """Smoke tests for the running AI gateway. Uses only Python's standard library.
 
   python test_providers.py                    # full suite (10 requests)
-  python test_providers.py --tag ocr          # one capability: simple|medium|complex|code|ocr|default
+  python test_providers.py --tag ocr          # one capability: simple|medium|complex|code|ocr
   python test_providers.py --providers        # one request per deployment: key, model name, vision
   python test_providers.py --providers nvidia-kimi-k3 groq-gpt-oss-120b
   python test_providers.py --list             # pools read from litellm_config.yaml, no request sent
   python test_providers.py --production-key sk-...   # a production key must be denied eval models
 
 Set LITELLM_GATEWAY_URL and LITELLM_TEST_API_KEY in the repository root .env (the single .env shared by
-all services), or pass --key with a virtual key allowed to call ai-gateway and ai-gateway-selftest.
+all services), or pass --key with a virtual key allowed to call the capability, test and selftest groups.
 The admin master key is deliberately not used.
 """
 import argparse
@@ -53,7 +53,7 @@ def load_deployments():
         dep_id = re.search(r"model_info:\s*\{\s*id:\s*([^,}\s]+)", block)
         tags = re.search(r"tags:\s*\[([^\]]*)\]", block)
         weight = re.search(r"weight:\s*(\d+)", block)
-        if dep_id:
+        if dep_id and "model_name: ai-gateway-test-" in "model_name:" + block:
             tag_list = [t.strip().strip("\"'") for t in tags.group(1).split(",")] if tags else []
             deployments[dep_id.group(1)] = (tag_list, int(weight.group(1)) if weight else 1)
     return deployments
@@ -64,14 +64,13 @@ URL = os.getenv("LITELLM_GATEWAY_URL", "http://127.0.0.1:4000/v1/chat/completion
 BASE = URL.split("/v1/", 1)[0]
 KEY = os.getenv("LITELLM_TEST_API_KEY", "")
 DEPLOYMENTS = load_deployments()
-CAPABILITIES = ["simple", "medium", "complex", "code", "ocr", "default"]
+CAPABILITIES = ["simple", "medium", "complex", "code", "ocr"]
 PROMPTS = {
     "simple": "Donne trois avantages du travail hybride, une phrase chacun.",
     "medium": "Rédige une courte description de poste pour un contrôleur de gestion (5 lignes).",
     "complex": "Explique quelles données sont nécessaires pour analyser un écart de trésorerie mensuel, "
     "et dans quel ordre les vérifier.",
     "code": "Écris une requête SQL qui compte les salariés par département, triée par effectif décroissant.",
-    "default": "Résume en deux phrases ce qu'est un budget prévisionnel.",
 }
 
 # Same grounding template as the README: answer only from the context, or abstain explicitly.
@@ -174,6 +173,9 @@ def request_json(url, key, payload=None, timeout=300):
 def chat(key, tags, messages, max_tokens=1000, response_format=None, model="ai-gateway"):
     """One request through the gateway. Reasoning models spend part of max_tokens before answering."""
     global SENT
+    if model == "ai-gateway":
+        tag = (tags or ["medium"])[0]
+        model = "ai-gateway-" + ("test-" + tag[3:] if tag.startswith("id:") else tag)
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens}
     if tags:
         payload["metadata"] = {"tags": tags}
@@ -225,7 +227,7 @@ def report(level, name, reply, detail):
 def verdict(name, reply, expected, ok=True, detail=""):
     if reply["error"]:
         report("FAIL", name, reply, reply["error"])
-    elif reply["deployment"] not in expected:
+    elif reply["deployment"].split("--", 1)[0] not in expected:
         report("FAIL", name, reply, f"modèle hors du pool attendu : {', '.join(sorted(expected))}")
     elif not ok:
         report("FAIL", name, reply, detail)
@@ -251,8 +253,8 @@ def check_ocr(key, name, tags, expected):
 def check_capability(key, tag):
     if tag == "ocr":
         return check_ocr(key, "ocr (image réelle)", ["ocr"], pool("ocr"))
-    reply = chat(key, None if tag == "default" else [tag], [{"role": "user", "content": PROMPTS[tag]}])
-    verdict("sans tag (default)" if tag == "default" else tag, reply, pool(tag))
+    reply = chat(key, [tag], [{"role": "user", "content": PROMPTS[tag]}])
+    verdict(tag, reply, pool(tag))
 
 
 def check_structured_output(key):
@@ -294,15 +296,16 @@ def check_failover(key):
 
 
 def check_production_key(key):
-    """A production key (metadata tags ["!eval"], models ["ai-gateway"]) must be refused before any
+    """A production key (only the five capability model groups) must be refused before any
     provider call: no quota is consumed when the policy is correct."""
     ping = [{"role": "user", "content": "Réponds uniquement par : OK"}]
     for name, tags, model, reason in (
-        ("prod : pool eval refusé", ["eval"], "ai-gateway", "un modèle d'évaluation a répondu : ajoute !eval à la clé"),
+        ("prod : pool eval refusé", ["eval-complex"], "ai-gateway-eval-complex", "la clé applicative accède au groupe évaluation"),
+        ("prod : déploiement direct refusé", None, "ai-gateway-test-groq-gpt-oss-20b", "la clé accède au groupe de test"),
         ("prod : alias selftest refusé", None, "ai-gateway-selftest", "la clé accède à l'alias interne de test"),
     ):
         reply = chat(key, tags, ping, max_tokens=300, model=model)
-        if reply["error"].startswith("HTTP 4"):
+        if reply["error"].startswith(("HTTP 401:", "HTTP 403:")):
             report("OK", name, reply, preview(reply["error"], 90))
         else:
             report("FAIL", name, reply, reason if not reply["error"] else reply["error"])
@@ -323,7 +326,7 @@ def check_providers(key, only):
 
 
 def print_pools():
-    tags = sorted({t for tag_list, _ in DEPLOYMENTS.values() for t in tag_list if not t.startswith("id:")},
+    tags = sorted({t for tag_list, _ in DEPLOYMENTS.values() for t in tag_list if not t.startswith("id:") and t not in {"default", "eval"}},
                   key=lambda t: (t.startswith("eval"), t))
     for tag in tags:
         members = [(dep, weight) for dep, (tag_list, weight) in DEPLOYMENTS.items() if tag in tag_list]
@@ -333,7 +336,7 @@ def print_pools():
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description="Smoke tests for the ai-gateway routing")
+    parser = argparse.ArgumentParser(description="Smoke tests for the official LiteLLM capability groups")
     parser.add_argument("--tag", choices=CAPABILITIES, help="test only one capability")
     parser.add_argument("--providers", nargs="*", metavar="ID",
                         help="one request per deployment (all, or the given ids)")

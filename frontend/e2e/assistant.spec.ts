@@ -34,7 +34,7 @@ function routes() {
   };
 }
 
-/** Flux AG-UI tel que le runtime CopilotKit le relaie, en SSE : raisonnement, outil, surface A2UI, réponse vérifiée. */
+/** Flux AG-UI tel que le runtime CopilotKit le relaie, en SSE : raisonnement, outil, surface A2UI et réponse. */
 function flux(): string {
   const surface = {
     a2ui_operations: [
@@ -47,7 +47,6 @@ function flux(): string {
   };
   const evenements = [
     { type: 'RUN_STARTED', threadId: 't', runId: 'r' },
-    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'en_cours' } },
     { type: 'REASONING_START', messageId: 'p1' },
     { type: 'REASONING_MESSAGE_START', messageId: 'p1', role: 'reasoning' },
     { type: 'REASONING_MESSAGE_CONTENT', messageId: 'p1', delta: 'Je consulte les indicateurs de paie.' },
@@ -61,7 +60,6 @@ function flux(): string {
     { type: 'TEXT_MESSAGE_START', messageId: 'm1', role: 'assistant' },
     { type: 'TEXT_MESSAGE_CONTENT', messageId: 'm1', delta: 'La masse salariale de 2026-08 est de 4 800 MAD.' },
     { type: 'TEXT_MESSAGE_END', messageId: 'm1' },
-    { type: 'STATE_SNAPSHOT', snapshot: { verification: 'verifiee' } },
     { type: 'RUN_FINISHED', threadId: 't', runId: 'r' }
   ];
   return evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('');

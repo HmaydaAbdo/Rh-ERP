@@ -21,7 +21,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,8 +52,8 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         assumeTrue(System.getenv("IA_LITELLM_BASE_URL") != null && System.getenv("IA_LITELLM_API_KEY") != null,
                 "IA_LITELLM_BASE_URL et IA_LITELLM_API_KEY requis");
 
-        // Deux mois contigus isolés des autres tests (leurs mois s'arrêtent avant 2900).
-        YearMonth moisA = YearMonth.of(3000 + ThreadLocalRandom.current().nextInt(500), 1 + ThreadLocalRandom.current().nextInt(11));
+        // Deux mois récents et contigus : les années 3000+ étaient prises pour un code de période par les modèles.
+        YearMonth moisA = YearMonth.now().minusMonths(2);
         YearMonth moisB = moisA.plusMonths(1);
         DonneesDeTest.Referentiel a = donnees.creerReferentiel();
         DonneesDeTest.Referentiel b = donnees.creerReferentiel();
@@ -75,6 +74,7 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         marqueurs.put("equipe_a_code", "E" + a.suffixe());
         marqueurs.put("employe_a_id", a.employeId());
         marqueurs.put("employe_a_nom", "Nom " + a.suffixe());
+        marqueurs.put("employe_a_cin", "CIN" + a.suffixe());
 
         Path serviceIa = Path.of("..", "ia").toAbsolutePath().normalize();
         Path rapport = Path.of("target", "evaluation-ia.json").toAbsolutePath();
@@ -92,6 +92,7 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
                 .redirectErrorStream(true)
                 .redirectOutput(journal.toFile());
         processus.environment().put("EVAL_API_URL", "http://127.0.0.1:" + port);
+        processus.environment().put("LITELLM_LOCAL_MODEL_COST_MAP", "True");
         processus.environment().put("EVAL_JETON_COMPLET", connexion(creerUtilisateur(TOUT, true), TOUT));
         Set<String> restreint = Set.of("IA_UTILISER", "EMPLOYEE_READ");
         processus.environment().put("EVAL_JETON_RESTREINT", connexion(creerUtilisateur(restreint, true), restreint));

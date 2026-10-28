@@ -69,9 +69,9 @@ public class OutilsHeuresSupp {
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", resultat.periode());
         donnees.put("indicateurs", resultat.indicateurs());
-        donnees.put("parChantier", resultat.parChantier().stream().limit(LIGNES).toList());
-        donnees.put("parFonction", resultat.parFonction().stream().limit(LIGNES).toList());
-        donnees.put("parEquipe", resultat.parEquipe().stream().limit(LIGNES).toList());
+        donnees.put("parChantier", resultat.parChantier());
+        donnees.put("parFonction", resultat.parFonction());
+        donnees.put("parEquipe", resultat.parEquipe());
         donnees.put("definitions", resultat.definitions());
         return enveloppe("/heures-supp/analytique", Map.of("periode", mois.toString()), donnees);
     }

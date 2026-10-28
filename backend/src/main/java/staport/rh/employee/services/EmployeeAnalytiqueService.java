@@ -14,6 +14,7 @@ import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.response.EmployeeAnalytiqueDto;
 import staport.rh.employee.dtos.response.EmployeeAnalytiqueDto.TrancheDto;
 import staport.rh.employee.dtos.response.EmployeeRegroupementDto;
+import staport.rh.employee.dtos.response.EmployeeRegroupementsDto;
 import staport.rh.employee.entities.DimensionEmployes;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.entities.EmployeeStatut;
@@ -25,6 +26,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -80,6 +82,24 @@ public class EmployeeAnalytiqueService implements IEmployeeAnalytiqueService {
                                     nombreActifs.longValue());
                 })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeRegroupementsDto regrouper(EmployeeSearchCriteria criteria, DimensionEmployes dimension,
+                                               TriRegroupement tri, boolean ascendant) {
+        List<EmployeeRegroupementDto> groupes = regrouper(criteria, dimension);
+        Comparator<EmployeeRegroupementDto> comparateur = switch (tri) {
+            case EFFECTIF -> Comparator.comparingLong(EmployeeRegroupementDto::effectif);
+            case EN_POSTE -> Comparator.comparingLong(EmployeeRegroupementDto::actifs);
+            case LIBELLE -> Comparator.comparing(g -> String.valueOf(g.libelle()), String.CASE_INSENSITIVE_ORDER);
+            case CODE -> Comparator.comparing(g -> String.valueOf(g.code()), String.CASE_INSENSITIVE_ORDER);
+        };
+        Comparator<EmployeeRegroupementDto> ordre = (ascendant ? comparateur : comparateur.reversed())
+                .thenComparing(EmployeeRegroupementDto::code, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                .thenComparingLong(EmployeeRegroupementDto::id);
+        List<EmployeeRegroupementDto> tries = groupes.stream().sorted(ordre).toList();
+        return new EmployeeRegroupementsDto(tries.size(), tries);
     }
 
     @Override

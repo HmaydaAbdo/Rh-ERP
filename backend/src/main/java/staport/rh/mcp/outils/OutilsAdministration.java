@@ -85,18 +85,19 @@ public class OutilsAdministration {
             description = """
                     Liste les rôles et les permissions que chacun accorde (jamais les comptes utilisateurs), avec un filtre \
                     facultatif sur le nom. À utiliser pour « qui peut voir la paie », « que permet le rôle X ». Réservé aux \
-                    utilisateurs qui gèrent les rôles ; 20 rôles au plus, avec le nombre total.""",
+                    utilisateurs qui gèrent les rôles ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('ROLE_MANAGE')")
     @AuditableAction(action = "MCP_ROLES_LISTER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
     public Map<String, Object> rolesLister(
             @McpToolParam(required = false, description = "Nom du rôle, partiel. Absent = tous les rôles.") @Size(max = 50) String nom,
-            @McpToolParam(required = false, description = "Nombre de rôles rendus, de 1 à 20, 20 par défaut.")
-            @Min(1) @Max(LIGNES) Integer limite) {
-        Page<RoleResponseDto> page = roles.search(new RoleSearchCriteria(texte(nom), null),
-                PageRequest.of(0, limite == null ? LIGNES : limite, Sort.by("nom")));
-        List<Map<String, Object>> rendus = page.getContent().stream().map(r -> {
+            @McpToolParam(required = false, description = "Nombre de rôles rendus par page, de 1 à 20, 20 par défaut.")
+            @Min(1) @Max(LIGNES) Integer limite,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
+        Page<RoleResponseDto> resultats = roles.search(new RoleSearchCriteria(texte(nom), null),
+                PageRequest.of(page == null ? 0 : page, limite == null ? LIGNES : limite, Sort.by("nom")));
+        List<Map<String, Object>> rendus = resultats.getContent().stream().map(r -> {
             Map<String, Object> role = new LinkedHashMap<>();
             role.put("id", r.id());
             role.put("nom", r.nom());
@@ -106,7 +107,8 @@ public class OutilsAdministration {
             return role;
         }).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
-        donnees.put("total", page.getTotalElements());
+        donnees.put("total", resultats.getTotalElements());
+        donnees.put("page", resultats.getNumber());
         donnees.put("roles", rendus);
         donnees.put("vue", new VueProposeeDto("admin/roles", "tabulaire", Map.of()).enJson());
         return donnees;
@@ -117,8 +119,8 @@ public class OutilsAdministration {
                     Cherche dans le journal d'audit, des entrées les plus récentes aux plus anciennes : horodatage, catégorie, \
                     action, résultat, utilisateur, entité, nombre d'éléments, motif. Tous les filtres sont facultatifs et se \
                     combinent. À utiliser pour « qui a fait quoi », « quels accès refusés cette semaine ». Pour l'historique \
-                    d'un enregistrement précis, `audit_historique`. Réservé aux utilisateurs qui voient le journal ; 20 entrées \
-                    au plus, avec le nombre total.""",
+                    d'un enregistrement précis, `audit_historique`. Réservé aux utilisateurs qui voient le journal ; résultats \
+                    paginés avec le nombre total. Parcourir les pages jusqu'au total.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('AUDIT_READ')")
@@ -137,16 +139,19 @@ public class OutilsAdministration {
             @McpToolParam(required = false, description = "Type de l'enregistrement concerné.") Entite entite,
             @McpToolParam(required = false, description = "Identifiant de l'enregistrement concerné (entier positif).")
             @Positive Long entiteId,
-            @McpToolParam(required = false, description = "Nombre d'entrées rendues, de 1 à 20, 20 par défaut.")
-            @Min(1) @Max(LIGNES) Integer limite) {
+            @McpToolParam(required = false, description = "Nombre d'entrées rendues par page, de 1 à 20, 20 par défaut.")
+            @Min(1) @Max(LIGNES) Integer limite,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         AuditSearchCriteria criteres = new AuditSearchCriteria(
                 date(depuis, "depuis", false), date(jusqua, "jusqua", true), texte(utilisateur), categorie, texte(action),
                 resultat, entite == null ? null : entite.name(), entiteId, null, null, null, null);
-        Page<AuditJournalLigneDto> page = journal.search(criteres,
-                PageRequest.of(0, limite == null ? LIGNES : limite, Sort.by(Sort.Direction.DESC, "horodatage")));
-        List<Map<String, Object>> entrees = page.getContent().stream().map(OutilsAdministration::ligne).toList();
+        Page<AuditJournalLigneDto> resultats = journal.search(criteres,
+                PageRequest.of(page == null ? 0 : page, limite == null ? LIGNES : limite,
+                        Sort.by(Sort.Direction.DESC, "horodatage")));
+        List<Map<String, Object>> entrees = resultats.getContent().stream().map(OutilsAdministration::ligne).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
-        donnees.put("total", page.getTotalElements());
+        donnees.put("total", resultats.getTotalElements());
+        donnees.put("page", resultats.getNumber());
         donnees.put("entrees", entrees);
         donnees.put("vue", new VueProposeeDto("audit", "tabulaire", Map.of()).enJson());
         return donnees;
@@ -157,7 +162,7 @@ public class OutilsAdministration {
                     Historique d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle ou paramètre) : ses \
                     versions de la plus récente à la plus ancienne, avec l'auteur, l'opération et les champs modifiés \
                     (valeur avant et après). À utiliser pour « qui a modifié X et quand ». Réservé aux utilisateurs qui voient \
-                    le journal ; 10 versions au plus.""",
+                    le journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('AUDIT_READ')")
@@ -166,13 +171,15 @@ public class OutilsAdministration {
             @McpToolParam(description = "Type de l'enregistrement.") Entite entite,
             @McpToolParam(description = "Identifiant de l'enregistrement (entier positif), obtenu avec l'outil de recherche du "
                     + "domaine concerné.") @Positive Long id,
-            @McpToolParam(required = false, description = "Nombre de versions rendues, de 1 à 10, 10 par défaut.")
-            @Min(1) @Max(VERSIONS) Integer limite) {
-        Page<AuditVersionDto> page = journal.historique(entite.name(), id,
-                PageRequest.of(0, limite == null ? VERSIONS : limite));
-        List<Map<String, Object>> versions = page.getContent().stream().map(OutilsAdministration::version).toList();
+            @McpToolParam(required = false, description = "Nombre de versions rendues par page, de 1 à 10, 10 par défaut.")
+            @Min(1) @Max(VERSIONS) Integer limite,
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
+        Page<AuditVersionDto> resultats = journal.historique(entite.name(), id,
+                PageRequest.of(page == null ? 0 : page, limite == null ? VERSIONS : limite));
+        List<Map<String, Object>> versions = resultats.getContent().stream().map(OutilsAdministration::version).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
-        donnees.put("total", page.getTotalElements());
+        donnees.put("total", resultats.getTotalElements());
+        donnees.put("page", resultats.getNumber());
         donnees.put("versions", versions);
         return donnees;
     }

@@ -111,6 +111,9 @@ Les vues Cartes et Analytique ne sont pas propres à Fonction : ce sont des comp
 **Source unique des chiffres.** `POST /paie/analytique` (`PAIE_READ`) renvoie `PaieAnalytiqueDto`, dont `parFonction`
 (`id`, `libelle`, `masse`, `effectif`, `stc`, `stcMontant`) liste **toutes** les fonctions du mois, sans plafond ; `evolution`
 couvre tout l'historique du périmètre ; `moisPrecedent` sert à la comparaison.
+Ces indicateurs décrivent les bulletins, donc l'API Paie en est propriétaire. Les effectifs non financiers relèvent des
+regroupements publics de l'API Employés. L'API Fonction reste propriétaire du référentiel et de ses fiches ; aucun calcul
+MCP ne duplique ces agrégats.
 
 **Définitions des indicateurs**
 
@@ -140,7 +143,7 @@ n'écrit rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connect�
 |---|---|---|---|
 | `fonction_rechercher` | Trouve des fonctions (métiers) par texte partiel du libellé (1 à 20 résultats, 10 par défaut, total rendu) | `FUNCTION_READ` | `MCP_FONCTION_RECHERCHER` |
 | `fonction_fiche` | Lit le libellé d'une fonction par identifiant | `FUNCTION_READ` | `MCP_FONCTION_FICHE` |
-| `paie_repartition` (`dimension = FONCTION`) | Masse, effectif et STC par fonction pour un mois (50 groupes au plus) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_repartition` (`dimension = FONCTION`) | Masse, effectif et STC par toutes les fonctions pour un mois | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
 | `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_indicateurs`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `fonctionIds` | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
 
 - **Résolution par nom.** Quand la question cite un métier, l'agent appelle d'abord `fonction_rechercher`, puis

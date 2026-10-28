@@ -13,9 +13,34 @@ réalisation sont tenus dans [`docs/ia.md`](../docs/ia.md).
 ## Contrat des outils
 
 Chaque outil possède un nom et un objectif explicites, un propriétaire métier, un schéma d'entrée et
-de sortie typé et documenté, et des limites de taille et de résultats. Les recherches paginées
-définissent leurs limites et leur ordre. Séparer les outils de lecture des outils d'écriture, et ne
-pas exposer indistinctement toutes les routes CRUD de l'application.
+de sortie typé et documenté. Séparer les outils de lecture des outils d'écriture, et ne pas exposer
+indistinctement toutes les routes CRUD de l'application.
+
+### Propriété des règles et calculs métier
+
+Les calculs, agrégations, indicateurs, comparaisons, classements et règles de sélection qui expriment
+le métier sont définis par l'API publique du domaine propriétaire, dans ses services et contrats.
+Cette règle s'applique aux API REST et aux outils MCP : un adaptateur MCP appelle la capacité publique
+du domaine et transmet ses résultats. Il ne recalcule pas un KPI, ne combine pas plusieurs réponses
+pour fabriquer un indicateur métier et ne redéfinit pas une règle d'arrondi ou de classement.
+
+L'adaptateur MCP reste responsable de son contrat de transport : validation et bornes des arguments,
+autorisation, audit, choix de la capacité publique à appeler, et adaptation de présentation strictement
+nécessaire au protocole ou à l'interface (par exemple, une route de vue proposée). Les règles de
+calcul, leurs arrondis, les valeurs indisponibles et les départages restent testés par le domaine qui
+les possède. Les outils nouveaux et les corrections de calcul suivent cette frontière ; les calculs
+existants hors de leur domaine sont repris au fil des tâches concernées, sans migration générale
+implicite.
+
+### Complétude des données accessibles à l'agent
+
+Un outil de lecture ne tronque pas les résultats par un plafond interne, un nombre de pages maximal
+ou une fenêtre par défaut : l'agent doit pouvoir consulter l'ensemble du périmètre autorisé. Les
+recherches paginées conservent leur taille de page, mais chaque page reste accessible sans plafond
+de numéro et l'agent parcourt les pages jusqu'au total annoncé lorsqu'une réponse complète est
+requise. Ne pas ajouter de paramètre limitant le nombre total de résultats rendus à l'agent. Les
+règles d'autorisation, de périmètre, de validation des entrées et de protection contre les abus
+restent applicables : elles ne doivent pas servir à masquer une partie des données autorisées.
 
 **Descriptions et réponses faites pour un modèle** (pratiques d'Anthropic, d'OpenAI et de Google pour les outils d'agents) :
 
@@ -24,8 +49,9 @@ pas exposer indistinctement toutes les routes CRUD de l'application.
 * Chaque paramètre dit son sens, son format, ses bornes et un exemple ; les valeurs possibles sont des énumérations.
 * La réponse renvoie ce qui permet de continuer sans deuxième appel inutile : noms lisibles à côté des identifiants,
   la période et le périmètre appliqués, la définition de chaque chiffre, l'outil suivant utile (identifiant de fiche pour
-  `*_fiche`), et pour une liste le total, la limite et s'il en reste.
-* Une réponse est compacte (jetons) : champs utiles seulement, listes bornées, pas de doublon entre texte et données.
+  `*_fiche`), et pour une liste le total ainsi que les informations de pagination.
+* Une réponse évite les champs inutiles et les doublons entre texte et données ; la compacité ne doit pas tronquer les
+  résultats autorisés ni cacher des pages à l'agent.
 * Une erreur dit au modèle quoi corriger (« periode attend aaaa-MM », « identifiant introuvable : chercher d'abord avec
   `chantier_rechercher` ») sans recopier la valeur saisie ni exposer d'interne.
 * Les descriptions sont évaluées comme du code : le jeu de référence mesure le bon choix d'outil et d'arguments.
@@ -170,6 +196,11 @@ l'idempotence et l'expérience de confirmation/refus. Les tests de contrat et d'
 couvrir les entrées valides et invalides, l'identité, les permissions, la pagination, les limites,
 les répétitions, les délais, les injections et la corrélation. Voir [`testing.md`](testing.md) pour
 la stratégie de test complète.
+
+Pour un outil paginé, vérifier que le total est stable entre les pages, que les pages suivantes
+rendent bien les éléments restants et que l'agent peut atteindre le dernier résultat sans plafond de
+page. Pour un outil non paginé, vérifier que le résultat par défaut contient l'ensemble du périmètre
+autorisé.
 
 Ajouter les refus de mauvaise audience, de token passthrough, d'origine non admise et de session
 appartenant à une autre identité ; tester la révocation avant reprise, les résultats trop larges et

@@ -17,6 +17,9 @@ import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.mcp.dtos.VueProposeeDto;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
+import staport.rh.paie.dtos.response.PaieComparaisonDto;
+import staport.rh.paie.dtos.response.PaieRepartitionDto;
+import staport.rh.paie.dtos.response.PaieRepartitionDto.Groupe;
 import staport.rh.paie.dtos.response.PaieChantierPeriodeDto;
 import staport.rh.paie.dtos.response.PaiePeriodeResumeDto;
 import staport.rh.paie.dtos.response.PaieResponseDto;
@@ -27,8 +30,6 @@ import staport.rh.paie.services.interfaces.IPaieEffectifsService;
 import staport.rh.paie.services.interfaces.IPaieService;
 
 import java.time.YearMonth;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,19 +46,10 @@ import static staport.rh.mcp.outils.OutilsEmploye.ids;
 @ConditionalOnBooleanProperty("security.mcp.enabled")
 public class OutilsPaie {
 
-    private static final int CHANTIERS_RENDUS = 5;
-    private static final int MOIS = 36;
-    private static final int GROUPES = 50;
 
     /** Critère de tri des groupes d'une répartition de paie (clé de la valeur dans chaque groupe). */
     public enum TriGroupePaie {
-        MASSE("masse"), EFFECTIF("effectif"), STC("stc"), STC_MONTANT("stcMontant"), LIBELLE("libelle"), CODE("code");
-
-        private final String cle;
-
-        TriGroupePaie(String cle) {
-            this.cle = cle;
-        }
+        MASSE, EFFECTIF, STC, STC_MONTANT, LIBELLE, CODE
     }
 
     /** Critère de tri d'une recherche de bulletins. */
@@ -72,6 +64,9 @@ public class OutilsPaie {
         }
     }
     private static final int BULLETINS = 20;
+
+    /** Critère de tri des groupes d'une comparaison de deux mois ; une valeur absente (groupe d'un seul mois) est rendue en dernier. */
+    public enum TriComparaison { MASSE, VARIATION_MASSE, VARIATION_POURCENTAGE, EFFECTIF, VARIATION_EFFECTIF, LIBELLE }
 
     /** Sens de chaque chiffre de {@code paie_mouvements}, rendu avec lui pour que la réponse le cite. */
     private static final Map<String, String> DEFINITIONS_MOUVEMENTS = Map.of(
@@ -102,8 +97,8 @@ public class OutilsPaie {
             description = """
                     Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale en \
                     dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de tout \
-                    compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et les 5 \
-                    principaux chantiers par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». \
+                    compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et tous les \
+                    chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». \
                     Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, \
                     `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
@@ -118,7 +113,7 @@ public class OutilsPaie {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth mois = periodes.ou(periode);
         PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
-        List<Map<String, Object>> principaux = resultat.parChantier().stream().limit(CHANTIERS_RENDUS)
+        List<Map<String, Object>> chantiers = resultat.parChantier().stream()
                 .map(c -> {
                     Map<String, Object> chantier = new LinkedHashMap<>();
                     chantier.put("id", c.id());
@@ -133,7 +128,7 @@ public class OutilsPaie {
         donnees.put("periode", mois.toString());
         donnees.put("indicateurs", kpi(resultat.kpis()));
         donnees.put("moisPrecedent", resultat.moisPrecedent() == null ? null : kpi(resultat.moisPrecedent()));
-        donnees.put("principauxChantiers", principaux);
+        donnees.put("chantiers", chantiers);
         donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(mois)).enJson());
         return donnees;
     }
@@ -142,7 +137,7 @@ public class OutilsPaie {
             description = """
                     Liste les mois de paie importés, du plus récent au plus ancien, avec pour chacun le nombre de bulletins, le \
                     nombre de chantiers, la masse salariale en dirhams et les soldes de tout compte (STC), sur un périmètre. \
-                    À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; 36 mois au plus.""",
+                    À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; tous les mois importés sont rendus.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -150,13 +145,10 @@ public class OutilsPaie {
     public Map<String, Object> paiePeriodes(
             @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
-            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
-            @McpToolParam(required = false, description = "Nombre de mois rendus, de 1 à 36, 12 par défaut.")
-            @Min(1) @Max(MOIS) Integer limite) {
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         List<PaiePeriodeResumeDto> toutes = paie.findPeriodes(filtre.criteres(null));
-        List<Map<String, Object>> rendues = toutes.stream().limit(limite == null ? 12 : limite)
-                .map(OutilsPaie::periode).toList();
+        List<Map<String, Object>> rendues = toutes.stream().map(OutilsPaie::periode).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("nombreMois", toutes.size());
         donnees.put("periodes", rendues);
@@ -167,7 +159,7 @@ public class OutilsPaie {
     @McpTool(name = "paie_repartition", title = "Paie par chantier, équipe ou fonction", generateOutputSchema = true,
             description = """
                     Répartit la paie d'un mois par chantier, par équipe ou par fonction : masse salariale en dirhams, effectif \
-                    payé et soldes de tout compte (STC) de chaque groupe ; 50 groupes au plus. De la plus grosse masse à la \
+                    payé et soldes de tout compte (STC) de chaque groupe. Tous les groupes sont rendus. De la plus grosse masse à la \
                     plus petite par défaut ; `tri` (MASSE, EFFECTIF, STC, STC_MONTANT, LIBELLE, CODE) et `sens` (ASC ou DESC) \
                     donnent « le chantier le moins cher », « les équipes avec le plus de STC ». À utiliser pour « quel chantier \
                     coûte le plus », « masse par équipe ». Pour les effectifs sans montants, `employes_regrouper` ; pour un \
@@ -182,35 +174,20 @@ public class OutilsPaie {
             @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
-            @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
-            @Min(1) @Max(GROUPES) Integer limite,
             @McpToolParam(required = false, description = "Critère de tri des groupes : MASSE (défaut), EFFECTIF, STC, "
                     + "STC_MONTANT, LIBELLE ou CODE.") TriGroupePaie tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth mois = periodes.ou(periode);
-        PaieAnalytiqueDto resultat = analytique.analyser(filtre.criteres(mois));
-        List<Map<String, Object>> groupes = switch (dimension) {
-            case CHANTIER -> resultat.parChantier().stream()
-                    .map(c -> groupe(c.id(), c.code(), c.libelle(), c.masse(), c.effectif(), c.stc(), c.stcMontant())).toList();
-            case EQUIPE -> resultat.parEquipe().stream()
-                    .map(e -> groupe(e.id(), e.code(), e.libelle(), e.masse(), e.effectif(), e.stc(), e.stcMontant())).toList();
-            case FONCTION -> resultat.parFonction().stream()
-                    .map(f -> groupe(f.id(), null, f.libelle(), f.masse(), f.effectif(), f.stc(), f.stcMontant())).toList();
-        };
-        TriGroupePaie critere = tri == null ? TriGroupePaie.MASSE : tri;
-        boolean texte = critere == TriGroupePaie.LIBELLE || critere == TriGroupePaie.CODE;
-        Comparator<Map<String, Object>> comparateur = texte
-                ? Comparator.comparing(g -> String.valueOf(g.get(critere.cle)), String.CASE_INSENSITIVE_ORDER)
-                : Comparator.comparing(g -> new java.math.BigDecimal(String.valueOf(g.get(critere.cle))));
-        SensTri ordre = SensTri.ou(sens, texte ? SensTri.ASC : SensTri.DESC);
-        List<Map<String, Object>> rendus = groupes.stream()
-                .sorted(ordre == SensTri.ASC ? comparateur : comparateur.reversed())
-                .limit(limite == null ? GROUPES : limite).toList();
+        PaieRepartitionDto repartition = analytique.repartir(filtre.criteres(mois),
+                PaieRepartitionDto.Dimension.valueOf(dimension.name()),
+                tri == null ? null : PaieRepartitionDto.Tri.valueOf(tri.name()),
+                sens == null ? null : sens == SensTri.ASC);
+        List<Map<String, Object>> rendus = repartition.groupes().stream().map(OutilsPaie::groupe).toList();
         Map<String, Object> donnees = new LinkedHashMap<>();
-        donnees.put("periode", mois.toString());
+        donnees.put("periode", repartition.periode());
         donnees.put("dimension", dimension.name());
-        donnees.put("nombreGroupes", groupes.size());
+        donnees.put("nombreGroupes", repartition.nombreGroupes());
         donnees.put("groupes", rendus);
         donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(mois)).enJson());
         return donnees;
@@ -221,7 +198,7 @@ public class OutilsPaie {
                     Série mensuelle de la paie d'un périmètre, du mois le plus ancien au plus récent, jusqu'au mois donné : masse \
                     salariale en dirhams, effectif payé, soldes de tout compte (STC) et leur montant. À utiliser pour les \
                     tendances (« la masse augmente-t-elle ? »). Pour comparer seulement deux mois, `paie_indicateurs` rend déjà \
-                    le mois précédent ; 36 mois au plus.""",
+                    le mois précédent ; toute la série historique est rendue.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -231,16 +208,12 @@ public class OutilsPaie {
                     + "mois de paie importé.") @Pattern(regexp = Formats.PERIODE) String periode,
             @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
-            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
-            @McpToolParam(required = false, description = "Nombre de mois rendus, de 1 à 36, 12 par défaut.")
-            @Min(1) @Max(MOIS) Integer limite) {
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth derniere = periodes.ou(periode);
         // L'évolution couvre tout l'historique du périmètre : on la borne au mois demandé (aaaa-MM se compare en texte).
-        List<PaieAnalytiqueDto.Evolution> evolution = analytique.analyser(filtre.criteres(derniere)).evolution().stream()
-                .filter(e -> e.periode().compareTo(derniere.toString()) <= 0).toList();
-        int nombre = limite == null ? 12 : limite;
-        List<Map<String, Object>> mois = evolution.subList(Math.max(0, evolution.size() - nombre), evolution.size())
+        List<PaieAnalytiqueDto.Evolution> evolution = analytique.evolutionJusqua(filtre.criteres(derniere));
+        List<Map<String, Object>> mois = evolution
                 .stream().map(e -> {
                     Map<String, Object> valeurs = new LinkedHashMap<>();
                     valeurs.put("periode", e.periode());
@@ -256,6 +229,59 @@ public class OutilsPaie {
         return donnees;
     }
 
+    @McpTool(name = "paie_comparer", title = "Comparer la paie de deux mois", generateOutputSchema = true,
+            description = """
+                    Compare la paie de deux mois, groupe par groupe (par chantier, équipe ou fonction) : masse salariale, \
+                    effectif et coût moyen de chaque mois, variation de la masse en dirhams et en pourcentage, variation de \
+                    l'effectif, et la fonction la plus représentée de chaque chantier ou équipe. Tous les calculs sont faits \
+                    ici : ne calcule jamais toi-même un écart, un pourcentage ou une moyenne, cite les valeurs rendues. \
+                    `periode` est le mois récent (absent = dernier mois de paie) et `periodeReference` le mois de comparaison \
+                    (absent = le mois précédent). `tri` et `sens` classent les groupes (MASSE du mois récent par défaut, \
+                    VARIATION_MASSE, VARIATION_POURCENTAGE, EFFECTIF, VARIATION_EFFECTIF, LIBELLE). Tous les groupes sont \
+                    rendus ; `plusForteHausse` et `plusForteBaisse` sont calculées sur tout le périmètre, comme les \
+                    mêmes sur tout le périmètre (`...DuPerimetre`) et le total des deux mois. À utiliser pour « les 3 \
+                    chantiers les plus chers puis lequel a le plus augmenté », « qu'est-ce qui a changé depuis le mois \
+                    dernier ». Pour une série sur plusieurs mois, `paie_evolution`.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
+                    openWorldHint = false))
+    @PreAuthorize("hasAuthority('PAIE_READ')")
+    @AuditableAction(action = "MCP_PAIE_COMPARER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> paieComparer(
+            @McpToolParam(description = "Regroupement : CHANTIER, EQUIPE ou FONCTION.") Dimension dimension,
+            @McpToolParam(required = false, description = "Mois récent, au format aaaa-MM. Absent = le dernier mois de "
+                    + "paie importé.") @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = "Mois de comparaison, au format aaaa-MM. Absent = le mois "
+                    + "précédent `periode`.") @Pattern(regexp = Formats.PERIODE) String periodeReference,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
+            @McpToolParam(required = false, description = "Critère de tri des groupes : MASSE (défaut, mois récent), "
+                    + "VARIATION_MASSE, VARIATION_POURCENTAGE, EFFECTIF, VARIATION_EFFECTIF ou LIBELLE.") TriComparaison tri,
+            @McpToolParam(required = false, description = SensTri.DOC) SensTri sens) {
+        Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
+        YearMonth recent = periodes.ou(periode);
+        YearMonth reference = PeriodePaie.demande(periodeReference);
+        PaieComparaisonDto resultat = analytique.comparer(filtre.criteres(recent),
+                reference == null ? null : filtre.criteres(reference),
+                PaieComparaisonDto.Dimension.valueOf(dimension.name()),
+                tri == null ? PaieComparaisonDto.Tri.MASSE : PaieComparaisonDto.Tri.valueOf(tri.name()),
+                SensTri.ou(sens, tri == null || tri != TriComparaison.LIBELLE ? SensTri.DESC : SensTri.ASC) == SensTri.ASC);
+        Map<String, Object> donnees = new LinkedHashMap<>();
+        donnees.put("periode", resultat.periode());
+        donnees.put("periodeReference", resultat.periodeReference());
+        donnees.put("dimension", resultat.dimension());
+        donnees.put("nombreGroupes", resultat.nombreGroupes());
+        donnees.put("total", resultat.total());
+        donnees.put("plusForteHausse", resultat.plusForteHausse());
+        donnees.put("plusForteBaisse", resultat.plusForteBaisse());
+        donnees.put("plusForteHausseDuPerimetre", resultat.plusForteHausseDuPerimetre());
+        donnees.put("plusForteBaisseDuPerimetre", resultat.plusForteBaisseDuPerimetre());
+        donnees.put("groupes", resultat.groupes());
+        donnees.put("definitions", resultat.definitions());
+        donnees.put("vue", new VueProposeeDto("paie", "analytique", filtre.parametres(recent)).enJson());
+        return donnees;
+    }
+
     @McpTool(name = "paie_mouvements", title = "Arrivées, départs et mutations par mois", generateOutputSchema = true,
             description = """
                     Mouvements d'effectif mois par mois selon la paie, sur un périmètre. Pour chaque mois : employés payés \
@@ -263,39 +289,29 @@ public class OutilsPaie {
                     de la paie du mois précédent), `plusPayes` (payés le mois précédent, absents ce mois-ci), `sorties` (départs \
                     enregistrés sur la fiche employé) et `mutations` (changements de chantier). Chaque chiffre est défini dans \
                     `definitions` : citer ces définitions, et donner `variation` à côté des entrées, car « entrées » n'est pas \
-                    l'écart net (entrées − plus payés = variation). Un mois précis ou les derniers mois ; 36 au plus.""",
+                    l'écart net (entrées − plus payés = variation). Un mois précis ou tous les mois disponibles.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
     @AuditableAction(action = "MCP_PAIE_MOUVEMENTS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
     public Map<String, Object> paieMouvements(
-            @McpToolParam(required = false, description = "Un mois précis au format aaaa-MM. Absent = les derniers mois "
-                    + "(selon `limite`).") @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = "Un mois précis au format aaaa-MM. Absent = tous les mois disponibles.")
+            @Pattern(regexp = Formats.PERIODE) String periode,
             @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(0) Long> chantierIds,
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
-            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
-            @McpToolParam(required = false, description = "Nombre de mois rendus quand `periode` est absente, de 1 à 36, 12 par "
-                    + "défaut.") @Min(1) @Max(MOIS) Integer limite) {
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
-        List<EffectifMoisDto> tendances = effectifs.tendances(
-                new EffectifsCriteria(filtre.chantiers(), filtre.fonctions(), filtre.equipes()));
         YearMonth demande = PeriodePaie.demande(periode);
-        List<EffectifMoisDto> retenus = demande != null
-                ? tendances.stream().filter(m -> m.periode().equals(demande)).toList()
-                : tendances.subList(Math.max(0, tendances.size() - (limite == null ? 12 : limite)), tendances.size());
-        // Effectif payé de chaque mois, pour donner au modèle l'écart net sans qu'il le calcule.
-        Map<YearMonth, Long> payesParMois = new HashMap<>();
-        tendances.forEach(m -> payesParMois.put(m.periode(), m.effectif()));
+        List<EffectifMoisDto> retenus = effectifs.tendances(
+                new EffectifsCriteria(filtre.chantiers(), filtre.fonctions(), filtre.equipes()), demande);
         List<Map<String, Object>> mois = retenus.stream().map(m -> {
-            Long precedent = payesParMois.get(m.periode().minusMonths(1));
             Map<String, Object> valeurs = new LinkedHashMap<>();
             valeurs.put("periode", m.periode().toString());
             valeurs.put("effectif", m.effectif());
-            valeurs.put("effectifMoisPrecedent", precedent);
-            valeurs.put("variation", precedent == null ? null : m.effectif() - precedent);
+            valeurs.put("effectifMoisPrecedent", m.effectifMoisPrecedent());
+            valeurs.put("variation", m.variation());
             valeurs.put("entrees", m.entrees());
-            // Payés le mois précédent, absents de ce mois : précédent + entrées − effectif.
-            valeurs.put("plusPayes", precedent == null || m.entrees() == null ? null : precedent + m.entrees() - m.effectif());
+            valeurs.put("plusPayes", m.plusPayes());
             valeurs.put("sorties", m.sorties());
             valeurs.put("mutations", m.mutations());
             return valeurs;
@@ -345,7 +361,8 @@ public class OutilsPaie {
             description = """
                     Trouve les bulletins de paie d'un mois par nom, CIN et/ou périmètre. Chaque bulletin rend : employé (id, nom, \
                     CIN), fonction, chantier, équipe, jours travaillés, jours de récupération, salaire mensuel, primes, salaire \
-                    total en dirhams et observation. 20 bulletins au plus par page, avec le nombre total. Triable (`tri` : NOM \
+                    total en dirhams et observation. Les résultats sont paginés avec le nombre total ; parcourir toutes les pages \
+                    pour une réponse complète. Triable (`tri` : NOM \
                     par défaut, SALAIRE_TOTAL, SALAIRE_MENSUEL, JOURS_TRAVAILLES ; `sens` ASC ou DESC) et paginable (`page`) : \
                     « les dix plus gros salaires du mois » se demande avec tri SALAIRE_TOTAL, sens DESC, limite 10. À utiliser \
                     pour la paie d'une personne ou un classement ; pour des totaux, préférer `paie_indicateurs`.""",
@@ -365,7 +382,7 @@ public class OutilsPaie {
             @McpToolParam(required = false, description = "Critère de tri : NOM (défaut), SALAIRE_TOTAL, SALAIRE_MENSUEL "
                     + "ou JOURS_TRAVAILLES.") TriBulletin tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
-            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         Filtre filtre = new Filtre(ids(chantierIds), ids(equipeIds), ids(fonctionIds));
         YearMonth mois = periodes.ou(periode);
         String nomRecherche = texte(nom);
@@ -410,7 +427,7 @@ public class OutilsPaie {
         List<Long> chantiers = ids(chantierIds);
         List<PaieChantierPeriodeDto> concernes = paie.findChantiersDeLaPeriode(mois,
                 chantiers == null ? null : new PaieSearchCriteria(null, null, mois, null, chantiers, null));
-        List<Map<String, Object>> rendus = concernes.stream().limit(GROUPES).map(c -> {
+        List<Map<String, Object>> rendus = concernes.stream().map(c -> {
             Map<String, Object> chantier = new LinkedHashMap<>();
             chantier.put("id", c.id());
             chantier.put("code", c.code());
@@ -452,16 +469,15 @@ public class OutilsPaie {
         return valeurs;
     }
 
-    private static Map<String, Object> groupe(Long id, String code, String libelle, Object masse, long effectif, long stc,
-                                              Object stcMontant) {
+    private static Map<String, Object> groupe(Groupe groupe) {
         Map<String, Object> valeurs = new LinkedHashMap<>();
-        valeurs.put("id", id);
-        valeurs.put("code", code);
-        valeurs.put("libelle", libelle);
-        valeurs.put("masse", masse);
-        valeurs.put("effectif", effectif);
-        valeurs.put("stc", stc);
-        valeurs.put("stcMontant", stcMontant);
+        valeurs.put("id", groupe.id());
+        valeurs.put("code", groupe.code());
+        valeurs.put("libelle", groupe.libelle());
+        valeurs.put("masse", groupe.masse());
+        valeurs.put("effectif", groupe.effectif());
+        valeurs.put("stc", groupe.stc());
+        valeurs.put("stcMontant", groupe.stcMontant());
         return valeurs;
     }
 

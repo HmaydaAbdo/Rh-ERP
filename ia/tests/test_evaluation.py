@@ -4,7 +4,14 @@
 import json
 from typing import Any, cast
 
+import pytest
+
 from erp_rh_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, synthese
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
 
 
 def test_le_jeu_de_reference_est_complet_et_coherent() -> None:
@@ -38,6 +45,7 @@ def test_une_valeur_est_citee_quel_que_soit_son_format() -> None:
     assert cite("statut", "CLOTURE", "Le chantier est clôturé.")
     assert cite("statut", "EN_COURS", "Le chantier est EN_COURS.")
     assert cite("nombre", 0, "La paie ne constate aucune entrée.")
+    assert cite("nombre", 2, "Deux mois de paie ont été importés.")
     assert not cite("nombre", 2, "La paie ne constate aucune entrée.")
 
 
@@ -64,6 +72,18 @@ def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
     assert juger("refus", None, [], refus)[0]
 
 
+def test_une_limite_expliquee_est_reconnue_comme_abstention() -> None:
+    from erp_rh_ia.evaluation import _ABSTENTION, _sans_accents  # pyright: ignore[reportPrivateUsage]
+
+    reponses = (
+        "Je ne peux donc pas vous donner cette valeur.",
+        "L'ERP ne fournit pas de fonctionnalité de prévision.",
+        "Les outils ne permettent pas d'accéder à cette donnée.",
+        "L'ERP ne fournit pas de prévision; nous ne pouvons donc pas donner cette information.",
+    )
+    assert all(any(motif in _sans_accents(texte) for motif in _ABSTENTION) for texte in reponses)
+
+
 def test_la_synthese_calcule_exactitude_et_latences() -> None:
     from erp_rh_ia.evaluation import ResultatCas
 
@@ -72,6 +92,42 @@ def test_la_synthese_calcule_exactitude_et_latences() -> None:
     assert bilan["latence_p50"] == 3.0
     assert bilan["latence_p95"] == 4.0
     assert bilan["par_type"] == {"reponse": "1/2"}
+
+
+@pytest.mark.anyio
+async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) -> None:
+    from langchain_core.messages import AIMessage
+
+    from erp_rh_ia import evaluation
+    from erp_rh_ia.config import Settings
+
+    config = Settings(
+        enabled=True,
+        litellm_base_url="http://litellm:4000/v1",  # pyright: ignore[reportArgumentType]
+        litellm_api_key="sk-test-cle",  # pyright: ignore[reportArgumentType]
+        erp_api_url="http://backend:8080",  # pyright: ignore[reportArgumentType]
+    )
+    construit: list[tuple[object, object, object]] = []
+
+    class AgentFactice:
+        async def ainvoke(self, entree: object, options: object) -> dict[str, list[AIMessage]]:
+            return {"messages": [AIMessage(content="Réponse de test.")]}
+
+    def fabrique_factice(settings: Settings) -> Any:
+        assert settings is config
+
+        def construire(outils: object, checkpointer: object) -> AgentFactice:
+            construit.append((settings, outils, checkpointer))
+            return AgentFactice()
+
+        return construire
+
+    monkeypatch.setattr(evaluation, "fabrique_reelle", fabrique_factice)
+
+    reponse = await evaluation.repondre(config, [], "Question de test", None)
+
+    assert reponse.texte == "Réponse de test."
+    assert construit == [(config, [], None)]
 
 
 def test_la_trajectoire_attendue_est_controlee_par_agentevals() -> None:

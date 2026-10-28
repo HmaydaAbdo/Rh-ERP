@@ -14,21 +14,23 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
 - **AG-UI** — `agui.py`, `POST /agui` (SSE) : `LangGraphAGUIAgent` (CopilotKit, sur `ag-ui-langgraph`).
   Entrée : `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton
   agent ; refus HTTP avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, `REASONING_*` (raisonnement
-  du modèle), `TEXT_MESSAGE_*` (texte en flux), `TOOL_CALL_*`, `STATE_SNAPSHOT` (état partagé `verification`),
+  du modèle), `TEXT_MESSAGE_*` (texte en flux), `TOOL_CALL_*`, `STATE_SNAPSHOT` (état partagé du run),
   `MESSAGES_SNAPSHOT`, `RUN_FINISHED`. Ne reste à nous que : l'identité (jeton) et une frontière de sécurité (ni
   `RAW` ni `rawEvent`, `RUN_ERROR` générique, journal sans trace d'exception). Une déconnexion du client annule le run.
   Seule la conversation du run existe (mémoire durable : T19).
-- **Modèles** — `modeles.py` : `ChatLiteLLM` (le seul connecteur qui transmet le raisonnement) sur l'alias
-  `ai-gateway`, tag de tâche LiteLLM par appel, aucune nouvelle tentative côté service (la passerelle bascule).
+- **Modèles** — `modeles.py` : `ChatLiteLLM` (le seul connecteur qui transmet le raisonnement) sur les groupes
+  `ai-gateway-{simple,medium,complex,code,ocr}`, choisis par capacité, aucune nouvelle tentative côté service (la passerelle bascule).
+  Aucun plafond applicatif `max_tokens` : réponse, sélection d'outils et résumé utilisent les limites natives du modèle.
+  Compose et le banc réel activent `LITELLM_LOCAL_MODEL_COST_MAP=True` : catalogue fourni par le SDK,
+  sans téléchargement GitHub au démarrage ou pendant une requête ; la passerelle conserve la comptabilité des coûts.
 - **Agent (T10)** — `agent.py` : `create_agent` (LangChain sur LangGraph). Le modèle choisit seul sa forme de
   réponse : directe pour un message simple, avec outils pour une question de données, avec un plan (`write_todos`,
   `TodoListMiddleware`) pour une demande à plusieurs étapes. Middlewares officiels : `CopilotKitMiddleware` (outils du
   navigateur), `TodoListMiddleware`, `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` (8 par run),
-  `LLMToolSelectorMiddleware` (facultatif, `IA_SELECTION_OUTILS`).
-- **Vérificateur de chiffres** — la seule règle à nous, en middleware `after_model` (`agent.py`) avec
-  `verification.py` : chaque nombre de la réponse finale doit figurer dans les résultats d'outils du tour ou la
-  question ; sinon la réponse est retirée et réécrite une fois, puis remplacée par une abstention. L'état partagé
-  `verification` (`en_cours`, `verifiee`, `abstention`) est lu par l'interface.
+  `LLMToolSelectorMiddleware` (modèle interne de tâche `simple`, toujours actif).
+- **Exactitude** — aucun vérificateur de réponse maison : les outils métier renvoient leurs calculs et l'agent reprend
+  leurs valeurs, s'appuie sur les faits déjà établis dans la conversation, relit l'ERP si une valeur a pu changer et
+  pose une question si l'ambiguïté peut changer le résultat. Le jeu de référence mesure l'exactitude.
 - **Outils** — `outils.py` : le MCP intégré à LangChain (`langchain.mcp`, FastMCP) charge les outils de Spring avec le
   jeton agent de l'utilisateur ; l'échange de jeton est le seul code à nous.
 - **Évaluation** — `evaluation.py` (`openevals`, `agentevals`) sur le vrai agent ; `tests/test_passerelle_simulee.py`
@@ -106,4 +108,4 @@ avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS`
 - Service Compose `ia` démarré par défaut (sans profil) après la tâche `litellm-cles`, système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
 - Variables dans le `.env` racine unique : `IA_ENABLED`, `IA_LITELLM_API_KEY` (clé virtuelle
-  ERP-RH, `metadata.tags: ["!eval"]`) ; les URL de la passerelle et du backend sont fixées par Compose.
+  ERP-RH, cinq groupes de production uniquement) ; les URL de la passerelle et du backend sont fixées par Compose.
