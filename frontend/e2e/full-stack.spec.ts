@@ -66,6 +66,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     code: `H${suffixe}`,
     libelle: `Équipe historique e2e ${suffixe}`
   });
+  const equipeHeuresSupp = await api<{ id: number }>(page, adminToken, 'POST', '/equipes', {
+    code: `S${suffixe}`,
+    libelle: `Équipe Heures supp e2e ${suffixe}`
+  });
   const fonction = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Fonction e2e ${suffixe}` });
   const chantier = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
     code: `T${suffixe}`,
@@ -97,10 +101,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: fonctionLibelleHs });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
-    fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id, salaire: 4000, typeSalaire: 'MENSUEL'
+    fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipeHeuresSupp.id, salaire: 4000, typeSalaire: 'MENSUEL'
   });
   await api(page, adminToken, 'POST', '/paie', {
-    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipe.id,
+    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantier.id, equipeId: equipeHeuresSupp.id,
     nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null,
     salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000,
     observation: `Présence Heures supplémentaires ${suffixe}`
