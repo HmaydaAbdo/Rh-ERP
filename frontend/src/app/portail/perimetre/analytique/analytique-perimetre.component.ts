@@ -1,5 +1,5 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
@@ -96,7 +96,7 @@ interface Donnees {
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AnalytiquePerimetreComponent {
+export class AnalytiquePerimetreComponent implements OnInit {
   readonly module = input.required<ModulePerimetre>();
 
   private readonly employeeService = inject(EmployeeService);
@@ -539,8 +539,6 @@ export class AnalytiquePerimetreComponent {
   }
 
   constructor() {
-    this.chargerMois();
-
     // Module dont la barre exige un mois (Paie) : le plus récent est ouvert et inscrit dans la barre.
     effect(() => {
       const plusRecent = this.mois()[0];
@@ -597,6 +595,11 @@ export class AnalytiquePerimetreComponent {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((groupes) => this.repartitionFiches.set(groupes));
+  }
+
+  ngOnInit(): void {
+    // Ce chargement dépend des permissions et du module fourni en input ; attendre sa liaison Angular avant de le lire.
+    this.chargerMois();
   }
 
   protected recharger(): void {
