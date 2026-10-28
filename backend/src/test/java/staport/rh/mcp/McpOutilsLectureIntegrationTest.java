@@ -47,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
-    private static final Set<String> TOUT = Set.of("IA_UTILISER", "HEURES_SUP_READ", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
+    private static final Set<String> TOUT = Set.of("IA_UTILISER", "HEURES_SUP_READ", "HEURES_SUP_IMPORT", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
             "CHANTIER_READ", "EQUIPE_READ", "FUNCTION_READ", "PARAMETRE_READ", "ROLE_MANAGE", "AUDIT_READ");
 
     @Autowired
@@ -80,7 +80,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     // --- catalogue et refus ---
 
     @Test
-    void le_catalogue_publie_vingt_neuf_outils_en_lecture_seule() throws Exception {
+    void le_catalogue_publie_trente_outils_en_lecture_seule() throws Exception {
         List<String> noms = new ArrayList<>();
         rpc(toutVoir, "tools/list", Map.of()).get("tools").forEach(outil -> {
             noms.add(outil.get("name").asString());
@@ -88,7 +88,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         });
         assertThat(noms).containsExactlyInAnyOrderElementsOf(appelsTypes().keySet().stream()
                 .collect(java.util.stream.Collectors.toCollection(() -> new ArrayList<>(List.of("systeme_identite")))));
-        assertThat(noms).hasSize(29);
+        assertThat(noms).hasSize(30);
     }
 
     @Test
@@ -148,6 +148,17 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         assertThat(resultat.get("isError").asBoolean()).isTrue();
         // Message de l'exception du domaine, le même que celui de l'API REST, relayé par Spring AI.
         assertThat(resultat.get("content").get(0).get("text").asString()).contains("introuvable");
+    }
+
+    @Test
+    void heures_supp_import_prerequis_reutilise_le_controle_metier_et_propose_l_import() throws Exception {
+        JsonNode resultat = appeler("heures_supp_import_prerequis",
+                Map.of("periode", periode.toString(), "chantierId", ref.chantierId()));
+
+        assertThat(resultat.get("resultats").get("prerequis").get("periode").asString()).isEqualTo(periode.toString());
+        assertThat(resultat.get("resultats").get("prerequis").get("bulletinsDisponibles").asInt()).isEqualTo(1);
+        assertThat(resultat.get("resultats").get("prerequis").get("pret").asBoolean()).isTrue();
+        assertThat(resultat.get("vue").get("route").asString()).isEqualTo("/heures-supp/import");
     }
 
     @Test
@@ -586,6 +597,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         appels.put("paie_bulletins_rechercher", Map.of("periode", periode.toString()));
         appels.put("rapport_preparer", Map.of("periode", periode.toString()));
         appels.put("heures_supp_periodes", Map.of());
+        appels.put("heures_supp_import_prerequis", Map.of("periode", periode.toString(), "chantierId", ref.chantierId()));
         appels.put("heures_supp_indicateurs", Map.of("periode", periode.toString()));
         appels.put("heures_supp_rechercher", Map.of("periode", periode.toString()));
         appels.put("parametres_lire", Map.of());

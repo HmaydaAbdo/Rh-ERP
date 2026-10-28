@@ -31,15 +31,18 @@ ciblés du style et des marqueurs passent (37 tests). Après intégration du `ma
 d'avertissement de 800 Ko et les avertissements CommonJS CopilotKit `semver` et `partial-json`.
 
 **Heures supplémentaires (2026-10-28)** : PR #102 est fusionnée dans `main`. Le domaine inclut les façades métier,
-les migrations V39/V40, l'import, les vues et trois outils MCP officiels Spring AI (`heures_supp_periodes`,
-`heures_supp_indicateurs`, `heures_supp_rechercher`). Cette reprise vérifie leur complétude MCP ; les indicateurs
-doivent restituer tous les groupes autorisés sans troncature. Les règles métier sont dans
+les migrations V39/V40, l'import, les vues et ses outils MCP officiels Spring AI (`heures_supp_periodes`,
+`heures_supp_import_prerequis`, `heures_supp_indicateurs`, `heures_supp_rechercher`). Cette reprise complète la couverture
+par le précontrôle sans écriture et les filtres d'indicateurs ; les répartitions rendent tous les groupes autorisés sans troncature.
+Les règles métier sont dans
 [`docs/heures-supp/README.md`](../heures-supp/README.md).
 
 **Chantier IA** : PR #98 et PR #104 sont fusionnées dans `main`. La PR #105 porte V1d/V1f et la reprise V1c sur
-`claude/ia-v1d-v1f-comparer-sans-verificateur`. Elle est en cours de rebase sur le `main` qui inclut PR #102 ;
+`claude/ia-v1d-v1f-comparer-sans-verificateur`. Elle est rebasée localement sur le `main` qui inclut PR #102 ;
 les conflits du test du catalogue MCP, de ce relais et de [`ia.md`](../ia.md) sont résolus en conservant les
-changements des deux côtés. Le sélecteur et les outils restent ceux des frameworks officiels.
+changements des deux côtés. La suite backend locale après les compléments MCP Heures supplémentaires est verte :
+`mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 5 ignorés. Le rebase est prêt à être poussé sur la branche de la PR #105 ;
+le propriétaire suit ensuite les contrôles distants. Le sélecteur et les outils restent ceux des frameworks officiels.
 
 **V1d clôturée localement** : la comparaison et ses contrats sont déplacés vers la façade analytique publique de Paie ; l'adaptateur
 MCP conserve validation des paramètres, RBAC, audit et présentation de la vue. La convention MCP fixe désormais cette
@@ -52,7 +55,8 @@ le parcours complet est rendu par l'API Paie. Les recherches paginées restent a
 **Équipe, Fonction et Chantier audités** : leurs chiffres Cartes/Analytique sont des indicateurs de bulletin, déjà calculés
 par Paie ; les regroupements de fiches relèvent de l'API Employés. Les API de ces trois domaines portent les référentiels
 et fiches, sans agrégat métier distinct à déplacer ni outil MCP à dupliquer. Le code et la documentation sont terminés ;
-la validation locale finale passe : `mvnw -B -o test`, 561 tests, 0 échec, 0 erreur, 5 ignorés. Voir [ia.md](../ia.md).
+la validation avant compléments Heures supplémentaires était à 561 tests. La validation complète actuelle après rebase et
+compléments MCP passe : `mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 5 ignorés. Voir [ia.md](../ia.md).
 Le `LLMToolSelectorMiddleware` officiel est maintenant construit systématiquement par l'application ; l'option
 `IA_SELECTION_OUTILS` est supprimée.
 

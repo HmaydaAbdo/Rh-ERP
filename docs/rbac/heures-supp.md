@@ -9,7 +9,8 @@
 | `GET /heures-supp/import/modele` | `HEURES_SUP_IMPORT` **et** `PAIE_READ` |
 | `POST /heures-supp/import/analyse`, `POST /heures-supp/import`, `POST /heures-supp/import/remplacement` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `EMPLOYEE_READ` |
 | `POST /heures-supp/import/corrections` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE` |
-| Outils MCP du domaine | `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ` |
+| `heures_supp_periodes`, `heures_supp_indicateurs`, `heures_supp_rechercher` | `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ` |
+| `heures_supp_import_prerequis` | `IA_UTILISER`, `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ` |
 
 La lecture exige `PAIE_READ`, car les réponses exposent un taux horaire dérivé du salaire et des montants dus.
 Le serveur revérifie chaque permission ; masquer un bouton Angular ne constitue pas un contrôle d'accès.

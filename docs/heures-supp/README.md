@@ -103,10 +103,12 @@ L'assistant IA accède aux capacités publiées du domaine par MCP, derrière le
 du domaine. Les outils décrivent chaque champ avec sa source, sa période, son unité et sa définition. Ils renvoient
 les montants calculés par Spring ; aucun outil ne donne accès aux repositories ou à du SQL générique.
 
-Outils publiés : `heures_supp_periodes`, `heures_supp_indicateurs` et `heures_supp_rechercher`. Les données
-autorisées sont les périodes importées, les agrégats du périmètre autorisé et les lignes correspondant aux filtres
-de recherche, sous `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ`. Le détail des cas d'usage et de la gouvernance
-est dans [docs/ia.md](../ia.md).
+Outils publiés : `heures_supp_periodes` (mois importés), `heures_supp_import_prerequis` (contrôle sans écriture du mois et du chantier),
+`heures_supp_indicateurs` (indicateurs et répartitions filtrables par chantier, équipe, fonction, CIN ou nom) et
+`heures_supp_rechercher` (lignes détaillées, pages accessibles sans plafond). Les montants viennent de Spring ; les répartitions
+ne sont pas tronquées. Les trois outils de consultation exigent `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ` ; le précontrôle
+d'import exige `IA_UTILISER`, `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ`. Aucun outil MCP ne lit un classeur ni n'effectue
+une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia.md](../ia.md).
 
 ## Scénarios couverts par les tests
 
