@@ -20,6 +20,21 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   test.setTimeout(180_000);
   const erreursNavigateur: string[] = [];
   page.on('pageerror', (erreur) => erreursNavigateur.push(erreur.stack ?? erreur.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().includes('/copilotkit/info')) {
+      erreursNavigateur.push(`console: ${message.text()}`);
+    }
+  });
+  page.on('requestfailed', (requete) => {
+    if (/\/(equipes|auth\/refresh)(\/|\?|$)|\.m?js(?:\?|$)/.test(requete.url())) {
+      erreursNavigateur.push(`requête: ${requete.url()} · ${requete.failure()?.errorText ?? 'échec sans détail'}`);
+    }
+  });
+  page.on('response', (reponse) => {
+    if (reponse.status() >= 400 && /\/(equipes|auth\/refresh)(\/|\?|$)|\.m?js(?:\?|$)/.test(reponse.url())) {
+      erreursNavigateur.push(`HTTP ${reponse.status()}: ${reponse.url()}`);
+    }
+  });
   await page.goto('/login');
   await page.getByLabel(/Nom d.utilisateur/).fill(process.env['ADMIN_USERNAME'] ?? 'ci-admin');
   await page.getByLabel('Mot de passe', { exact: true }).fill(process.env['ADMIN_PASSWORD'] ?? 'ci-admin-password');
