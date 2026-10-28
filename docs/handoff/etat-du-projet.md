@@ -58,7 +58,7 @@ le parcours complet est rendu par l'API Paie. Les recherches paginées restent a
 par Paie ; les regroupements de fiches relèvent de l'API Employés. Les API de ces trois domaines portent les référentiels
 et fiches, sans agrégat métier distinct à déplacer ni outil MCP à dupliquer. Le code et la documentation sont terminés ;
 la validation avant compléments Heures supplémentaires était à 561 tests. La validation complète actuelle après rebase et
-compléments MCP passe : `mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 5 ignorés. Voir [ia.md](../ia.md).
+compléments MCP passe : `mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 4 ignorés. Voir [ia.md](../ia.md).
 Le `LLMToolSelectorMiddleware` officiel est maintenant construit systématiquement par l'application ; l'option
 `IA_SELECTION_OUTILS` est supprimée.
 
@@ -83,6 +83,14 @@ révélé que le pool demandé n'est pas respecté (`complex` → OpenRouter, en
 Le filtre officiel appelé directement avec le même tag choisit bien Gemini. Le garde-fou LiteLLM officiel en `pre_call`
 crée un compartiment `litellm_metadata` distinct de `metadata`, ce qui masque les tags au routeur ; le défaut correspond
 à [LiteLLM #45543](https://github.com/BerriAI/litellm/issues/45543), correctif proposé dans [#45585](https://github.com/BerriAI/litellm/pull/45585), encore ouvert. Le propriétaire a validé les groupes officiels par capacité le 2026-10-28 : configuration, client IA et permissions des clés ont été adaptés localement. `litellm-cles` synchronise désormais les groupes des clés existantes ; les cinq groupes de production excluent eval/test. Le garde-fou reste actif. LiteLLM 1.104.2 reste épinglé ; les versions officielles 1.106.5 et 1.109.0-dev.1 ne contiennent pas encore le correctif upstream, mais le choix du groupe par `model` évite le défaut de tags. Validation locale du 2026-10-28 : 11 tests IA ciblés réussis ; les cinq groupes répondent dans leur pool, OCR réel compris. Un ciblage individuel Groq20 réussit ; trois refus 403 confirment l'exclusion eval/test/selftest de la clé applicative. Une injection est bloquée en 400 ; la sonde de bascule et une bascule réelle du groupe complex réussissent. Un appel autorisé avec la clé applicative réussit. La resynchronisation des clés est idempotente. Ruff ciblé, compilation Python des scripts et validation Compose passent. V1c reste ouverte pour les évaluations métier, p95 et T20. Prochaine tâche : reprendre V1c ciblée, complète et T20. Le lot V1c reste distinct de la reprise de complétude MCP des outils Heures supplémentaires.
+
+**Correctif OSV backend (2026-10-28)** : la dernière CI sur l'ancien head (`40773260886`) échouait au scan de dépendances,
+qui trouvait `opentelemetry-api` 1.62.0 (GHSA-ccrj-gw8r-854m). Le POM importe désormais la BOM officielle OpenTelemetry
+1.67.0 pour aligner tous ses artefacts sur la version corrigée. Reproduction locale du même OSV-Scanner v2.6.0 : aucun
+problème sur le SBOM de production (235 composants) ; l'exception Guava demeure active et filtrée sur le SBOM MCP de test
+(315 composants). Vérifications backend locales : Checkstyle, 588 tests (0 échec, 4 ignorés), couverture par domaine,
+contrôle des dépendances runtime, documentation des permissions/outils MCP, client TypeScript (`typecheck` et audit npm),
+interopérabilité MCP Java/TypeScript/Python et scan OSV des deux SBOM passent. Aucun run CI distant n'a été relancé.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.
