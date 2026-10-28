@@ -38,11 +38,13 @@ Les règles métier sont dans
 [`docs/heures-supp/README.md`](../heures-supp/README.md).
 
 **Chantier IA** : PR #98 et PR #104 sont fusionnées dans `main`. La PR #105 porte V1d/V1f et la reprise V1c sur
-`claude/ia-v1d-v1f-comparer-sans-verificateur`. Elle est rebasée localement sur le `main` qui inclut PR #102 ;
+`claude/ia-v1d-v1f-comparer-sans-verificateur`. Elle est rebasée sur le `main` qui inclut PR #102 ;
 les conflits du test du catalogue MCP, de ce relais et de [`ia.md`](../ia.md) sont résolus en conservant les
-changements des deux côtés. La suite backend locale après les compléments MCP Heures supplémentaires est verte :
-`mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 5 ignorés. Le rebase est prêt à être poussé sur la branche de la PR #105 ;
-le propriétaire suit ensuite les contrôles distants. Le sélecteur et les outils restent ceux des frameworks officiels.
+changements des deux côtés. Le run CI 40769132424 sur le commit 2073190 a identifié deux régressions de test : le client
+MCP Python attendait 28 outils au lieu de 30, et Ruff demandait le formatage de `evaluation.py`. Le job full-stack a été
+sauté car il dépend du backend en échec. Le contrat de catalogue, le formatage et le type optionnel du test AG-UI sont
+corrigés localement ; Ruff, formatage, Pyright et le test Java qui lance le vrai client MCP Python passent. Nouvelle CI
+à vérifier sur le prochain commit poussé. Le sélecteur et les outils restent ceux des frameworks officiels.
 
 **V1d clôturée localement** : la comparaison et ses contrats sont déplacés vers la façade analytique publique de Paie ; l'adaptateur
 MCP conserve validation des paramètres, RBAC, audit et présentation de la vue. La convention MCP fixe désormais cette

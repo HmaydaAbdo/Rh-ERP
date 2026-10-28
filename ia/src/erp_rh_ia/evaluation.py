@@ -146,9 +146,7 @@ def extraire_nombres(texte: str) -> list[Decimal]:
             continue
         nombres.append(valeur.normalize() if valeur != 0 else Decimal(0))
     normalise = _sans_accents(texte)
-    nombres.extend(
-        valeur for mot, valeur in _NOMBRES_EN_LETTRES.items() if re.search(rf"\b{mot}\b", normalise)
-    )
+    nombres.extend(valeur for mot, valeur in _NOMBRES_EN_LETTRES.items() if re.search(rf"\b{mot}\b", normalise))
     return nombres
 
 
@@ -314,8 +312,13 @@ async def principal(filtre: set[str] | None = None) -> dict[str, Any]:
             try:
                 resultat = await evaluer_cas(cas, config, client, api, jetons, donnees)
             except Exception as panne:  # un cas en panne est un échec mesuré, pas un arrêt
-                resultat = ResultatCas(cas["id"], str(cas.get("type", "reponse")), False,
-                                      f"panne : {cause(panne)}", round(time.monotonic() - debut_cas, 2))
+                resultat = ResultatCas(
+                    cas["id"],
+                    str(cas.get("type", "reponse")),
+                    False,
+                    f"panne : {cause(panne)}",
+                    round(time.monotonic() - debut_cas, 2),
+                )
             resultats.append(resultat)
             print(
                 f"[{'OK' if resultat.succes else 'KO'}] {resultat.id:28s} {resultat.latence_secondes:6.1f}s  "
