@@ -15,6 +15,10 @@
 | Table | `paie` |
 | Endpoints | `/paie`, `/paie/search`, `/paie/periodes`, `/paie/chantiers`, `/paie/materiel`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
+La façade `IPaieService.findByEmployeeIdAndPeriode` fournit aux domaines consommateurs le bulletin exact d'un employé pour un
+mois. Heures supplémentaires l'utilise pour vérifier l'existence de la paie et lire l'observation STC/sortie ; le marqueur et
+les montants sont ensuite conservés dans son propre instantané.
+
 ```text
 paie/
 ├── controller/PaieController.java

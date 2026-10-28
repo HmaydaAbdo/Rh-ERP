@@ -41,6 +41,11 @@ Deux règles imposées par le propriétaire, sans exception :
   étape manuelle, aucun script à lancer à part, aucun profil à activer pour le fonctionnement normal. Les variables
   obligatoires sont documentées dans `.env.example`.
 
+- **Tout nouveau domaine est intégré à l'IA ERP-RH.** Dès sa conception, documenter ses cas d'usage IA et ses
+  données autorisées dans `docs/ia.md`, puis exposer par MCP les capacités métier pertinentes à travers les façades
+  publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
+  pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
+
 La [routine de travail et de livraison](conventions/workflow.md) s'applique à chaque tâche : reprise du
 contexte et de l'état Git, exécution du périmètre approuvé, vérifications, documentation, puis livraison
 et revue. L'appliquer sans attendre que le propriétaire répète ces consignes. Les décisions et

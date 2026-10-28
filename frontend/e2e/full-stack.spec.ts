@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 
 const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8080';
 
@@ -15,6 +18,21 @@ async function api<T>(page: Page, token: string, method: string, path: string, d
 test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans accès Paie', async ({ page, browser }) => {
   // Neuf domaines, écritures réelles, historique et second compte : budget d'un parcours intégré complet.
   test.setTimeout(180_000);
+  const erreursNavigateur: string[] = [];
+  page.on('pageerror', (erreur) => erreursNavigateur.push(erreur.stack ?? erreur.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().includes('/copilotkit/info')) {
+      erreursNavigateur.push(`console: ${message.text()}`);
+    }
+  });
+  page.on('requestfailed', (requete) => {
+    erreursNavigateur.push(`requête: ${requete.url()} · ${requete.failure()?.errorText ?? 'échec sans détail'}`);
+  });
+  page.on('response', (reponse) => {
+    if (reponse.status() >= 400) {
+      erreursNavigateur.push(`HTTP ${reponse.status()}: ${reponse.url()}`);
+    }
+  });
   await page.goto('/login');
   await page.getByLabel(/Nom d.utilisateur/).fill(process.env['ADMIN_USERNAME'] ?? 'ci-admin');
   await page.getByLabel('Mot de passe', { exact: true }).fill(process.env['ADMIN_PASSWORD'] ?? 'ci-admin-password');
@@ -43,15 +61,27 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     code: `T${suffixe}`,
     libelle: `Équipe e2e ${suffixe}`
   });
+  expect(equipe.id, 'POST /equipes doit renvoyer l’identifiant de l’équipe créée').toBeGreaterThan(0);
   const equipeHistorique = await api<{ id: number }>(page, adminToken, 'POST', '/equipes', {
     code: `H${suffixe}`,
     libelle: `Équipe historique e2e ${suffixe}`
+  });
+  const equipeHeuresSupp = await api<{ id: number }>(page, adminToken, 'POST', '/equipes', {
+    code: `S${suffixe}`,
+    libelle: `Équipe Heures supp e2e ${suffixe}`
   });
   const fonction = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: `Fonction e2e ${suffixe}` });
   const chantier = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
     code: `T${suffixe}`,
     designation: `Chantier e2e ${suffixe}`,
     nom: `Chantier e2e ${suffixe}`,
+    nature: 'AO',
+    afficherSurCarte: false
+  });
+  const chantierHeuresSupp = await api<{ id: number }>(page, adminToken, 'POST', '/chantiers', {
+    code: `S${suffixe}`,
+    designation: `Chantier Heures supp e2e ${suffixe}`,
+    nom: `Chantier Heures supp e2e ${suffixe}`,
     nature: 'AO',
     afficherSurCarte: false
   });
@@ -71,6 +101,50 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const moisCourant = `${maintenant.getUTCFullYear()}-${String(maintenant.getUTCMonth() + 1).padStart(2, '0')}`;
   const moisPrecedentDate = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - 1, 1));
   const moisPrecedent = `${moisPrecedentDate.getUTCFullYear()}-${String(moisPrecedentDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  // Heures supplémentaires : la paie du mois est créée avant le wizard, puis le vrai classeur traverse l'API et les vues.
+  const cinHs = `HS${suffixe}`;
+  const fonctionLibelleHs = `Conductrice HS ${suffixe}`;
+  const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: fonctionLibelleHs });
+  const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
+    nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
+    fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id, salaire: 4000, typeSalaire: 'MENSUEL'
+  });
+  await api(page, adminToken, 'POST', '/paie', {
+    employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id,
+    nombreJoursTravailles: 26, joursRecuperationOuvrable: null, joursRecuperationDimanche: null,
+    salaireMensuel: 4000, primeRoulageOrdinaire: null, primeRoulageDimanche: null, salaireTotal: 4000,
+    observation: `Présence Heures supplémentaires ${suffixe}`
+  });
+  const prerequisHs = await api<{ pret: boolean }>(page, adminToken, 'GET',
+    `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`);
+  expect(prerequisHs.pret).toBe(true);
+  const classeurHs = unzipSync(readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx')));
+  const feuilleHs = strFromU8(classeurHs['xl/worksheets/sheet1.xml']);
+  classeurHs['xl/worksheets/sheet1.xml'] = strToU8(feuilleHs
+    .replace('HSFULLSTACK', cinHs)
+    .replace('Conductrice HS', fonctionLibelleHs));
+  const fichierHs = Buffer.from(zipSync(classeurHs));
+  const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    multipart: { file: { name: 'heures-supp-full-stack.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: fichierHs } }
+  });
+  expect(importHs.ok(), `POST /heures-supp/import: ${await importHs.text()}`).toBeTruthy();
+  const bilanHs = await importHs.json() as { lignesHeures: number; heuresTotales: number; montantTotalDh: number; netTotalDh: number };
+  expect(bilanHs).toMatchObject({ lignesHeures: 1, heuresTotales: 2, montantTotalDh: 30.77, netTotalDh: 30.77 });
+  const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
+    page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
+  );
+  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.77 })]);
+  expect(lignesHs.content[0]?.salaireHoraireDh).toBeCloseTo(4000 / 260, 12);
+  const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
+    page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
+  );
+  expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30.77 });
+  await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantierHeuresSupp.id}`);
+  await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
+  await expect(page.getByText(cinHs)).toBeVisible();
+
   await api(page, adminToken, 'POST', '/paie', {
     employeeId: employe.id,
     periode: moisPrecedent,
@@ -132,8 +206,27 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteEquipe.locator('.perimetre-carte__mesures .perimetre-carte__indicateur')).toHaveCount(4);
   await expect(carteEquipe).toContainText('Masse');
 
-  await page.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
-  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe e2e ${suffixe}`);
+  // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
+  erreursNavigateur.length = 0;
+  await page.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
+  const etapeEquipe = page.locator('.perimetre-analytique__etape');
+  try {
+    await expect(etapeEquipe).toContainText(`Équipe e2e ${suffixe}`);
+  } catch (erreur) {
+    const etatRoute = await page.evaluate(() => {
+      const contenu = document.querySelector('#contenu');
+      return {
+        texte: contenu?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 1_000) ?? null,
+        enfants: [...(contenu?.children ?? [])].map((element) => `${element.tagName.toLowerCase()}.${String(element.className)}`),
+        html: contenu?.innerHTML.slice(0, 2_000) ?? null
+      };
+    });
+    throw new Error(
+      `État après navigation analytique Équipe : URL=${page.url()} · DOM=${JSON.stringify(etatRoute)} · ` +
+      `erreurs navigateur=${erreursNavigateur.slice(-10).join(' | ') || 'aucune'}`,
+      { cause: erreur }
+    );
+  }
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
   const synthesePaie = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
@@ -154,7 +247,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   );
   expect(syntheseHistorique.kpis).toMatchObject({ effectif: 0, masse: 0 });
   expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
-  await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}&periode=${moisCourant}`);
+  await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe historique e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: /Répartition de la paie par équipe/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
@@ -248,7 +341,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteLimitee).not.toContainText('Payés');
     await expect(carteLimitee).not.toContainText('Masse');
 
-    await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
+    await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
     await expect(pageLimitee.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     await pageLimitee.goto(`/chantiers/cartes?${filtreChantier}`);

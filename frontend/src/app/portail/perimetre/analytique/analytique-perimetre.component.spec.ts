@@ -604,7 +604,7 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('met à jour le mois dans l’URL et retire une étape', async () => {
     const page = await ouvrir('/chantiers/analytique?chantierIds=1&periode=2026-08');
-    await choisirValeur(page, 'Période de paie', '2026-07');
+    await choisirValeur(page, 'Période', '2026-07');
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toContain('periode=2026-07');
 

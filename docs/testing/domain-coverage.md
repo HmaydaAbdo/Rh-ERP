@@ -13,6 +13,7 @@ classé bloque la porte pour éviter qu'un nouveau domaine échappe au contrôle
 | Chantier | 70 % | 25 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.chantier.** test` | liste Chantiers |
 | Équipe | 70 % | 25 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.equipe.** test` | liste Équipes |
 | Paie | 70 % | 70 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.paie.** test` | liste Paie |
+| Heures supplémentaires | 70 % | 50 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.heuresupp.** test` | assistant mensuel par chantier, récapitulatif et vues partagées |
 | Paramètres | 70 % | 70 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.parametre.** test` | `/admin/parametres` |
 | Audit | 70 % | 60 % | 70 % | 50 % | `./mvnw -Dtest=staport.rh.audit.** test` | `/audit` |
 | Composants partagés | — | — | 70 % | 50 % | — | Parcours consommateurs concernés |

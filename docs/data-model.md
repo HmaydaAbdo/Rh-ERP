@@ -13,6 +13,10 @@ erDiagram
   FONCTION ||--o{ EMPLOYE : "occupe"
   CHANTIER ||--o{ EMPLOYE : "affecté à"
   EMPLOYE  ||--o{ PAIE : "reçoit"
+  EMPLOYE  ||--o{ HEURES_SUP : "réalise ou reçoit un forfait"
+  PAIE     ||--o{ HEURES_SUP : "qualifie le mois et le STC"
+  CHANTIER ||--o{ HEURES_SUP : "périmètre de l'import"
+  FONCTION ||--o{ HEURES_SUP : "fonction du mois"
   FONCTION ||--o{ PAIE : "snapshot"
   CHANTIER ||--o{ PAIE : "snapshot"
   EQUIPE   |o--o{ PAIE : "snapshot"
@@ -42,9 +46,11 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 | `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC » ou saisi), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
+| `heures_supp` | `(employee_id, periode, chantier_id)` | `periode` (`aaaaMM`), `salaire_reference`, `type_salaire_reference`, `s_h` (instantanés, nuls pour un forfait seul), `p_h` (heures, 1 décimale au plus), `montant`, `est_stc_ou_sortie`, `stc_dh`, `forfait`, `net_a_payer`, `version` | `employee_id`, `paie_id`, `fonction_id`, `chantier_id` (non nuls) |
 
 Détail et règles métier : [function](function/README.md), [chantier](chantier/README.md),
-[equipe](equipe/README.md), [employee](employee/README.md), [paie](paie/README.md).
+[equipe](equipe/README.md), [employee](employee/README.md), [paie](paie/README.md),
+[heures supplémentaires](heures-supp/README.md).
 
 ## Tables d'authentification
 
@@ -77,7 +83,7 @@ Détail : [auth/README.md](auth/README.md).
 |---|---|
 | `audit_revision` | Une ligne par transaction qui modifie des données auditées : `horodatage` (`TIMESTAMPTZ`), `utilisateur_id` (**sans clé étrangère** : l'historique survit au compte), `utilisateur_nom` (figé), `origine` (`API`, `TACHE_PLANIFIEE`, `DEMARRAGE`, `MIGRATION`, `INCONNUE`), `request_id`, `adresse_ip` |
 | `audit_revision_entite` | Types d'entités modifiés par chaque révision (clé `(revision_id, entite)`) |
-| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `employe_sortie_aud`, `paie_aud`, `parametre_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
+| `<table>_aud` | Une par entité auditée — `fonction_aud`, `chantier_aud`, `equipe_aud`, `employe_aud`, `employe_sortie_aud`, `paie_aud`, `heures_supp_aud`, `parametre_aud`, `permission_aud`, `role_aud`, `utilisateur_aud` — et une par liaison (`role_permission_aud`, `utilisateur_role_aud`, `utilisateur_permission_refusee_aud`). Colonnes : `id`, `rev` (→ `audit_revision`), `revtype` (`0` ajout, `1` modification, `2` suppression, avec tout le contenu de la ligne), puis les colonnes de l'entité, **toutes nullables** ; clé `(id, rev)` ; **aucune clé étrangère vers une table métier**. `utilisateur_aud` n'a pas de colonne de mot de passe |
 | `audit_journal` | Le journal unique : `categorie` (`OPERATION`, `SECURITE`, `ACCES`), `action`, `type_operation`, `resultat` (`SUCCES`, `ECHEC`), identité et contexte, cible (`entite_type`, `entite_id`), `nombre_elements`, `perimetre` (`JSONB`), `motif`, `revision_id` (→ `audit_revision`), `hash_precedent` et `hash_entree` (chaîne SHA-256 locale). Index sur l'horodatage, l'utilisateur, la catégorie et l'action, la cible, l'identifiant de requête et la révision |
 
 Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMigrate.sql` ci-dessous et
@@ -179,6 +185,8 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V36` | Permission auditée `IA_UTILISER` (assistant IA), attribuée à `SYSTEM_ADMIN` seulement. |
 | `V37` | Nature, localisation, coordonnées et affichage cartographique de Chantier et Envers ; contraintes de nature, bornes, paire et qualification requise pour affichage. |
 | `V38` | Reprise auditée de la qualification du référentiel par code ; conserve les statuts et toute qualification manuelle déjà présente. |
+| `V39` | Table `heures_supp`, contraintes d'unicité/intégrité et instantanés audités `heures_supp_aud`. |
+| `V40` | Permissions `HEURES_SUP_READ` et `HEURES_SUP_IMPORT`, attribuées et auditées pour `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration

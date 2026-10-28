@@ -51,6 +51,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "angular-eslint": "^22.6.0",
     "eslint": "^10.13.0",
+    "fflate": "^0.8.3",
     "license-checker-rseidelsohn": "^5.0.1",
     "playwright": "^1.64.0",
     "tailwindcss": "^4.3.3",

@@ -70,15 +70,20 @@ describe('AppComponent', () => {
 
     it("offre un lien d'évitement qui met le focus sur le contenu principal", () => {
       const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-      const compiled = fixture.nativeElement as HTMLElement;
+      const host = fixture.nativeElement as HTMLElement;
+      document.body.append(host);
+      try {
+        fixture.detectChanges();
+        const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
+        lien?.click();
 
-      const lien = compiled.querySelector<HTMLAnchorElement>('.app-skip');
-      lien?.click();
-
-      expect(lien?.textContent).toContain('Aller au contenu');
-      expect(compiled.querySelector('main#contenu')).not.toBeNull();
-      expect(document.activeElement?.id).toBe('contenu');
+        expect(lien?.textContent).toContain('Aller au contenu');
+        expect(host.querySelector('main#contenu')).not.toBeNull();
+        expect(document.activeElement?.id).toBe('contenu');
+      } finally {
+        fixture.destroy();
+        host.remove();
+      }
     });
 
     it('keeps the navigation focused on destinations without a redundant brand header', () => {

@@ -1,5 +1,5 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
@@ -28,10 +28,12 @@ import { PaieAnalytique, PaieEffectifMois, PaieSearchCriteria } from '../../paie
 import { couleurEvolution, libelleEvolutionMesure, MesureEvolution } from '../../paie/analytique/paie-chart-theme';
 import { formaterMontant, formaterVariation, libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
+import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
+import { HeuresSuppAnalytique } from '../../heures-supp/models/heures-supp.model';
 import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, lirePerimetre, Portee, porteeDe, porteeVide
 } from '../perimetre';
-import { LIBELLE_EQUIPE_ORPHELINE, lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
+import { LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
 
@@ -75,6 +77,7 @@ interface Donnees {
   equipesCatalogue: ItemCatalogue[];
   evolutionEquipe: PaieAnalytique['evolution'];
   chantiersCatalogue: PaieAnalytique['parChantier'];
+  heuresSupp: HeuresSuppAnalytique | null;
 }
 
 /**
@@ -93,11 +96,12 @@ interface Donnees {
   styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AnalytiquePerimetreComponent {
+export class AnalytiquePerimetreComponent implements OnInit {
   readonly module = input.required<ModulePerimetre>();
 
   private readonly employeeService = inject(EmployeeService);
   private readonly paieService = inject(PaieService);
+  private readonly heuresSuppService = inject(HeuresSuppService);
   private readonly authService = inject(AuthService);
   private readonly theme = inject(ThemeService);
   private readonly chantiers = inject(ChantierReferenceService);
@@ -120,6 +124,7 @@ export class AnalytiquePerimetreComponent {
 
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && (this.module().sourcesAnalytique?.includes('PAIE') ?? true));
   protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ') && (this.module().sourcesAnalytique?.includes('EMPLOYEE') ?? true));
+  protected readonly voitHeuresSupp = computed(() => this.authService.hasPermission('HEURES_SUP_READ') && !!this.module().critereHeuresSupp && (this.module().sourcesAnalytique?.includes('HEURES_SUP') ?? false));
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
@@ -127,7 +132,7 @@ export class AnalytiquePerimetreComponent {
   protected readonly mois = signal<string[]>([]);
   protected readonly moisCharges = signal(false);
   /** Le mois courant : toujours le plus récent pour un module à période fixe, sinon celui de l'URL ou le plus récent. */
-  protected readonly periode = computed(() => (this.voitPaie()
+  protected readonly periode = computed(() => ((this.voitPaie() || this.voitHeuresSupp())
     ? (this.module().periodePaieRecenteFixe ? this.mois()[0] ?? null : this.perimetre().periode ?? this.mois()[0] ?? null)
     : null));
 
@@ -138,7 +143,7 @@ export class AnalytiquePerimetreComponent {
   );
   protected readonly noms = signal<Record<string, string>>({});
 
-  protected readonly donnees = signal<Donnees>({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
+  protected readonly donnees = signal<Donnees>({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [], heuresSupp: null });
   protected readonly chargement = signal(false);
   protected readonly erreurMois = signal<string | null>(null);
   protected readonly erreursChargement = signal<string[]>([]);
@@ -162,6 +167,8 @@ export class AnalytiquePerimetreComponent {
   private readonly portee = signal<Portee>({});
 
   protected readonly paie = computed(() => this.donnees().paie);
+  protected readonly heuresSupp = computed(() => this.donnees().heuresSupp);
+  protected readonly groupesHeuresSupp = computed(() => lignesHeuresSupp(this.dimension(), this.heuresSupp()));
   protected readonly aucunePaie = computed(() => this.paie()?.kpis.effectif === 0);
   protected readonly perimetreVide = computed(() => this.donnees().catalogueVide);
 
@@ -532,8 +539,6 @@ export class AnalytiquePerimetreComponent {
   }
 
   constructor() {
-    this.chargerMois();
-
     // Module dont la barre exige un mois (Paie) : le plus récent est ouvert et inscrit dans la barre.
     effect(() => {
       const plusRecent = this.mois()[0];
@@ -568,7 +573,7 @@ export class AnalytiquePerimetreComponent {
           this.portee.set(resultat.portee);
           this.donnees.set(resultat.donnees);
         } else if (this.erreursChargement().length) {
-          this.donnees.set({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] });
+          this.donnees.set({ paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [], heuresSupp: null });
         }
       });
 
@@ -592,6 +597,11 @@ export class AnalytiquePerimetreComponent {
       .subscribe((groupes) => this.repartitionFiches.set(groupes));
   }
 
+  ngOnInit(): void {
+    // Ce chargement dépend des permissions et du module fourni en input ; attendre sa liaison Angular avant de le lire.
+    this.chargerMois();
+  }
+
   protected recharger(): void {
     this.chargerMois();
     this.relance.update((valeur) => valeur + 1);
@@ -599,6 +609,14 @@ export class AnalytiquePerimetreComponent {
 
   private chargerMois(): void {
     this.erreurMois.set(null);
+    if (this.voitHeuresSupp() && !this.voitPaie()) {
+      this.moisCharges.set(false);
+      this.heuresSuppService.periodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (periodes) => { this.mois.set(periodes); this.moisCharges.set(true); },
+        error: () => { this.mois.set([]); this.erreurMois.set('Les périodes d’heures supplémentaires n’ont pas pu être chargées.'); this.moisCharges.set(true); }
+      });
+      return;
+    }
     if (!this.authService.hasPermission('PAIE_READ')) {
       this.moisCharges.set(true);
       return;
@@ -766,7 +784,7 @@ export class AnalytiquePerimetreComponent {
         if (dimension && items && perimetre[cleIds(dimension)].length === 0) {
           portee[cleIds(dimension)] = dimension === 'EQUIPE' ? [0, ...items.map((item) => item.id)] : items.map((item) => item.id);
         }
-        const vide: Donnees = { paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [] };
+        const vide: Donnees = { paie: null, qualitePaie: null, fiches: null, mouvements: [], catalogueVide: false, equipesCatalogue: [], evolutionEquipe: [], chantiersCatalogue: [], heuresSupp: null };
         if (porteeVide(portee)) {
           return of({ portee, donnees: { ...vide, catalogueVide: true } });
         }
@@ -792,7 +810,10 @@ export class AnalytiquePerimetreComponent {
         const paie$ = this.voitPaie() && periode ? this.suivreSource<PaieAnalytique | null>(this.paieService.analyser(module.criterePaie(params, portee, periode)), 'Les indicateurs de paie n’ont pas pu être chargés.', null) : of(null);
         const fiches$ = this.voitEmployes() ? this.suivreSource<EmployeeAnalytique | null>(this.employeeService.analyser(module.critereEmployes(params, portee)), 'Les indicateurs des fiches Employé n’ont pas pu être chargés.', null) : of(null);
         const mouvements$ = this.voitPaie() ? this.suivreSource(this.paieService.effectifs(module.criterePaie(params, portee, null)), 'Les mouvements mensuels n’ont pas pu être chargés.', [] as PaieEffectifMois[]) : of<PaieEffectifMois[]>([]);
-        return forkJoin([paie$, fiches$, mouvements$]).pipe(map(([paie, fiches, mouvements]) => ({ portee, donnees: { ...vide, paie, fiches, mouvements } })));
+        const heuresSupp$ = this.voitHeuresSupp() && periode && module.critereHeuresSupp
+          ? this.suivreSource(this.heuresSuppService.analyser(module.critereHeuresSupp(params, portee, periode)), 'Les indicateurs Heures supplémentaires n’ont pas pu être chargés.', null)
+          : of<HeuresSuppAnalytique | null>(null);
+        return forkJoin([paie$, fiches$, mouvements$, heuresSupp$]).pipe(map(([paie, fiches, mouvements, heuresSupp]) => ({ portee, donnees: { ...vide, paie, fiches, mouvements, heuresSupp } })));
       })
     );
   }
