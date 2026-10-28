@@ -179,7 +179,8 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteEquipe.locator('.perimetre-carte__mesures .perimetre-carte__indicateur')).toHaveCount(4);
   await expect(carteEquipe).toContainText('Masse');
 
-  await page.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
+  // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
+  await page.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
@@ -201,7 +202,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   );
   expect(syntheseHistorique.kpis).toMatchObject({ effectif: 0, masse: 0 });
   expect(syntheseHistorique.evolution.map((ligne) => ligne.periode)).toEqual([moisPrecedent]);
-  await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}&periode=${moisCourant}`);
+  await page.goto(`/equipes/analytique?equipeIds=${equipeHistorique.id}`);
   await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe historique e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: /Répartition de la paie par équipe/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
@@ -295,7 +296,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteLimitee).not.toContainText('Payés');
     await expect(carteLimitee).not.toContainText('Masse');
 
-    await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}&periode=${moisCourant}`);
+    await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
     await expect(pageLimitee.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
     await pageLimitee.goto(`/chantiers/cartes?${filtreChantier}`);
