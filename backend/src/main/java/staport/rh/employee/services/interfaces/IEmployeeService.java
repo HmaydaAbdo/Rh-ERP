@@ -7,6 +7,7 @@ import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.dtos.response.EmployeeSortieDto;
+import staport.rh.employee.dtos.response.EmployeeSortiesMoisDto;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -45,4 +46,7 @@ public interface IEmployeeService {
 
     /** Tous les départs enregistrés, du plus ancien au plus récent (tendances mois par mois de l'Analytique). */
     List<EmployeeSortieDto> listerToutesLesSorties();
+
+    /** Départs confirmés d'un mois, agrégés par motif ; l'adaptateur borne la liste nominative rendue. */
+    EmployeeSortiesMoisDto sortiesDuMois(YearMonth periode);
 }

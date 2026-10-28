@@ -54,8 +54,16 @@ class PaieEffectifsServiceTest {
         donnees();
 
         assertThat(service.tendances(null)).containsExactly(
-                new EffectifMoisDto(AOUT, 3, null, 0, null),
-                new EffectifMoisDto(SEPTEMBRE, 3, 1L, 1, 1L));
+                new EffectifMoisDto(AOUT, 3, null, null, null, null, 0, null),
+                new EffectifMoisDto(SEPTEMBRE, 3, 3L, 0L, 1L, 1L, 1, 1L));
+    }
+
+    @Test
+    void retourne_un_mois_demande_avec_sa_comparaison_metier() {
+        donnees();
+
+        assertThat(service.tendances(null, SEPTEMBRE)).containsExactly(
+                new EffectifMoisDto(SEPTEMBRE, 3, 3L, 0L, 1L, 1L, 1, 1L));
     }
 
     @Test
@@ -68,9 +76,9 @@ class PaieEffectifsServiceTest {
 
         List<EffectifMoisDto> chantier10 = service.tendances(new EffectifsCriteria(List.of(10L), null, null));
         assertThat(chantier10).containsExactly(
-                new EffectifMoisDto(AOUT, 3, null, 0, null),
+                new EffectifMoisDto(AOUT, 3, null, null, null, null, 0, null),
                 // 2 a quitté le chantier 10 : il n'y est plus payé (pas une mutation dans ce périmètre) ; 4 y entre ; 3 part
-                new EffectifMoisDto(SEPTEMBRE, 2, 1L, 1, 0L));
+                new EffectifMoisDto(SEPTEMBRE, 2, 3L, -1L, 1L, 2L, 1, 0L));
 
         when(repository.listerEffectifs(any())).thenReturn(List.of(bulletin(2, AOUT, 10, null), bulletin(2, SEPTEMBRE, 20, null)));
         assertThat(service.tendances(new EffectifsCriteria(null, null, List.of(0L))))

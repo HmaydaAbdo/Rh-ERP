@@ -4,9 +4,13 @@ import staport.rh.paie.effectifs.EffectifMoisDto;
 import staport.rh.paie.effectifs.EffectifsCriteria;
 
 import java.util.List;
+import java.time.YearMonth;
 
-/** Mouvements d'effectif mois par mois (employés payés, entrées, sorties, mutations) — façade publique de la Paie. */
+/** Mouvements et indicateurs d'effectif mensuels — façade publique de la Paie. */
 public interface IPaieEffectifsService {
 
     List<EffectifMoisDto> tendances(EffectifsCriteria criteres);
+
+    /** Tendances complètes, ou un mois précis si fourni (comparaison calculée avec son mois précédent). */
+    List<EffectifMoisDto> tendances(EffectifsCriteria criteres, YearMonth periode);
 }

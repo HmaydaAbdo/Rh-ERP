@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -35,6 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 class AuditRevisionTest {
+
+    @Value("${security.admin.username}")
+    private String adminUsername;
 
     @Autowired
     private PlatformTransactionManager gestionnaireTransactions;
@@ -242,7 +246,7 @@ class AuditRevisionTest {
         Map<String, Object> revision = jdbc.queryForMap("""
                 SELECT r.utilisateur_nom, r.origine, r.request_id
                 FROM utilisateur_aud a JOIN audit_revision r ON r.id = a.rev
-                WHERE a.username = 'ci-admin' AND a.revtype = 0""");
+                WHERE a.username = ? AND a.revtype = 0""", adminUsername);
 
         assertThat(revision.get("utilisateur_nom")).isEqualTo("Système");
         assertThat(revision.get("origine")).isEqualTo("DEMARRAGE");

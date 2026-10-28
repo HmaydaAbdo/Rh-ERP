@@ -370,8 +370,8 @@ L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture
 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
-| `audit_rechercher` | Cherche dans le journal, des entrées les plus récentes aux plus anciennes : horodatage, catégorie, action, résultat, utilisateur, entité, nombre d'éléments, motif ; tous les filtres facultatifs et combinables (20 entrées au plus, avec le total) | `AUDIT_READ` | `MCP_AUDIT_RECHERCHER` |
-| `audit_historique` | Versions d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle, paramètre) avec auteur, opération et champs modifiés (avant/après) ; 10 versions au plus | `AUDIT_READ` | `MCP_AUDIT_HISTORIQUE` |
+| `audit_rechercher` | Cherche dans le journal, des entrées les plus récentes aux plus anciennes : horodatage, catégorie, action, résultat, utilisateur, entité, nombre d'éléments, motif ; tous les filtres facultatifs et combinables (pages de 20, total et pages suivantes accessibles) | `AUDIT_READ` | `MCP_AUDIT_RECHERCHER` |
+| `audit_historique` | Toutes les versions d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle, paramètre) avec auteur, opération et champs modifiés (pages de 10 accessibles) | `AUDIT_READ` | `MCP_AUDIT_HISTORIQUE` |
 
 - **Usage.** « Qui a fait quoi », « quels accès refusés cette semaine », « qui a modifié X et quand ». Sur `/audit`, l'assistant propose « Accès refusés ».
 - **Refus.** Un refus de permission d'un outil est journalisé comme tout accès refusé (`ACCES_REFUSE`, périmètre de la route `/mcp`).

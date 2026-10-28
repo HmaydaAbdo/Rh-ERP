@@ -340,7 +340,7 @@ L'assistant RH agit **pour l'utilisateur connecté**, avec un jeton court RS256 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
 | `systeme_identite` | Identité de l'utilisateur pour qui l'assistant agit et liste complète de ses droits (permissions et rôles) ; sert à comprendre un refus « Access Denied » | `IA_UTILISER` (route `/mcp`) | aucune entrée propre : l'outil ne lit que l'identité de l'appelant |
-| `roles_lister` | Rôles et permissions que chacun accorde (jamais les comptes), filtre facultatif sur le nom ; 20 rôles au plus, avec le total | `ROLE_MANAGE` | `MCP_ROLES_LISTER` |
+| `roles_lister` | Rôles et permissions que chacun accorde (jamais les comptes), filtre facultatif sur le nom ; pages de 20, total et pages suivantes accessibles | `ROLE_MANAGE` | `MCP_ROLES_LISTER` |
 
 - **Usage.** « Qui peut voir la paie ? », « Que permet le rôle X ? », « Pourquoi ai-je un refus ? ».
 - **Refus.** Un outil sans la permission requise répond « Access Denied » ; l'agent doit l'expliquer sans contourner ni réessayer, et l'événement est journalisé (`ACCES_REFUSE`).

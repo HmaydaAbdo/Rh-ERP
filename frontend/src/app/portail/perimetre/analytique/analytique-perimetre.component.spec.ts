@@ -190,8 +190,8 @@ describe('AnalytiquePerimetreComponent', () => {
       ])),
       analyser: vi.fn().mockReturnValue(of(ANALYSE)),
       effectifs: vi.fn().mockReturnValue(of([
-        { periode: '2026-07', effectif: 1, entrees: null, sorties: 0, mutations: null },
-        { periode: '2026-08', effectif: 2, entrees: 1, sorties: 0, mutations: 0 }
+        { periode: '2026-07', effectif: 1, effectifMoisPrecedent: null, variation: null, entrees: null, plusPayes: null, sorties: 0, mutations: null },
+        { periode: '2026-08', effectif: 2, effectifMoisPrecedent: 1, variation: 1, entrees: 1, plusPayes: 0, sorties: 0, mutations: 0 }
       ]))
     } as unknown as MockedObject<PaieService>;
     TestBed.configureTestingModule({

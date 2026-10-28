@@ -76,7 +76,8 @@ Les collections de mois et de marchés utilisent les résumés suivants :
 | `Evolution` | `periode:string`, `masse:number`, `effectif:integer`, `stc:integer`, `stcMontant:number` | Tous les mois disponibles du périmètre, du plus ancien au plus récent. |
 | `Qualite` | `sansEquipe:integer`, `sansObservation:integer` | Bulletins du mois auxquels manque une information facultative. |
 | `EffectifsCriteria` | `chantierIds`, `fonctionIds`, `equipeIds:integer[]|null` ≤ 500; `nomPrenom:string|null` ≤ 150; `cin:string|null` ≤ 30 | Même périmètre textuel et de rattachements que la recherche Paie. Aucun filtre de mois : tendance historique. |
-| `EffectifMoisDto` | `periode:string`, `effectif:integer`, `entrees:integer|null`, `sorties:integer`, `mutations:integer|null` | Mouvements mensuels en personnes. Entrées et mutations inconnues au premier mois disponible. |
+| `EffectifMoisDto` | `periode:string`, `effectif:integer`, `effectifMoisPrecedent:integer|null`, `variation:integer|null`, `entrees:integer|null`, `plusPayes:integer|null`, `sorties:integer`, `mutations:integer|null` | Indicateurs mensuels en personnes. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` lorsque le mois calendaire précédent est absent du périmètre. |
+| `PaieRepartitionDto` | `periode:string`, `dimension:CHANTIER\|EQUIPE\|FONCTION`, `nombreGroupes:integer`, `groupes:Groupe[]` | Répartition triée par l'API publique selon masse (défaut, décroissant), effectif, STC, montant STC, libellé ou code ; l'adaptateur MCP applique la limite de transport. |
 
 Sans bulletin sur le mois choisi : KPI à zéro, coût moyen absent et répartitions vides; l'historique
 `evolution` du périmètre reste disponible. Le mois précédent est `null` s'il ne contient aucun
