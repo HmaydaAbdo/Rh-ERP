@@ -66,12 +66,12 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Sp
 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
-| `employes_rechercher` | Trouve des employés par nom ou CIN partiels et par chantier, équipe, fonction, statut (au moins un critère ; 20 fiches au plus avec le total) | `EMPLOYEE_READ` | `MCP_EMPLOYES_RECHERCHER` |
+| `employes_rechercher` | Trouve des employés par nom ou CIN partiels et par chantier, équipe, fonction, statut (au moins un critère ; pages de 20 fiches, total et pages suivantes accessibles) | `EMPLOYEE_READ` | `MCP_EMPLOYES_RECHERCHER` |
 | `employe_fiche` | Fiche complète : CIN, dates, fonction, chantier, équipe, statut, départs enregistrés | `EMPLOYEE_READ` | `MCP_EMPLOYE_FICHE` |
 | `employes_compter` | Effectif, en poste, sortis, âge et ancienneté moyens, embauches 12 mois, tranches (mêmes chiffres que l'Analytique, sans salaire) | `EMPLOYEE_READ` | `MCP_EMPLOYES_COMPTER` |
-| `employes_regrouper` | Effectif par chantier, équipe ou fonction (50 groupes au plus) | `EMPLOYEE_READ` | `MCP_EMPLOYES_REGROUPER` |
-| `employes_sorties` | Départs constatés par la paie d'un mois : total, par motif, 20 premiers employés | `EMPLOYEE_READ` | `MCP_EMPLOYES_SORTIES` |
-| `employe_parcours` | Parcours depuis les bulletins : indicateurs, 36 derniers mois, événements (entrée, mutation, salaire, départ, retour) | `PAIE_READ` | `MCP_EMPLOYE_PARCOURS` |
+| `employes_regrouper` | Tous les groupes par chantier, équipe ou fonction, triés par le critère demandé | `EMPLOYEE_READ` | `MCP_EMPLOYES_REGROUPER` |
+| `employes_sorties` | Tous les départs constatés par la paie d'un mois : total, par motif et employés concernés | `EMPLOYEE_READ` | `MCP_EMPLOYES_SORTIES` |
+| `employe_parcours` | Parcours complet depuis les bulletins : indicateurs, tous les mois et événements (entrée, mutation, salaire, départ, retour) | `PAIE_READ` | `MCP_EMPLOYE_PARCOURS` |
 
 - **Vocabulaire.** L'API parle de `ACTIF` / `INACTIF` ; les outils et l'assistant disent « en poste » (`EN_POSTE`) et
   « sorti » (`SORTI`).

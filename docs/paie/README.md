@@ -89,7 +89,7 @@ Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonct
 | Service | Route | Ce qu'il rend |
 |---|---|---|
 | Analytique du mois | `POST /paie/analytique` | `PaieAnalytiqueDto` : `kpis` (masse, effectif, coût moyen, nombre de chantiers, STC, montant STC), `moisPrecedent`, `parChantier`, `parEquipe`, `parFonction` (toutes les catégories, sans plafond), `tranches` de salaire total, `evolution` (tout l'historique du périmètre), `qualite` (`sansEquipe`, `sansObservation`) |
-| Tendances d'effectifs | `POST /paie/effectifs` | Par mois : effectif, `entrees`, `sorties`, `mutations` (`EffectifMoisDto`, ADR 0010) |
+| Tendances d'effectifs | `POST /paie/effectifs` | Par mois : effectif, effectif précédent, écart net, entrées, plus payés, sorties et mutations (`EffectifMoisDto`, ADR 0010) |
 | Mois disponibles | `GET /paie/periodes`, `POST /paie/periodes/search` | Mois avec bulletins, nombre de bulletins et de chantiers, masse, STC |
 
 **Définitions** (identiques dans l'interface, le rapport PDF et l'assistant ; ne jamais les recalculer ailleurs)
@@ -108,22 +108,24 @@ Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonct
 
 - **Mois de référence.** Les vues et l'assistant prennent par défaut le **dernier mois de paie importé**.
 - **Comparaison.** Elle porte sur le mois calendaire précédent ; sans bulletin ce mois-là elle est « indisponible », jamais zéro.
+- **Comparaison de deux mois (`paie_comparer`).** La façade analytique de la Paie renvoie les montants et effectifs des deux périodes, leurs écarts, les coûts moyens, les hausses et baisses parmi les groupes rendus et sur tout le périmètre. « Lequel a le plus augmenté parmi les trois premiers » utilise l'extrême des groupes rendus ; un groupe nouveau ou disparu n'a pas de variation. Une fonction dominante est celle qui a le plus d'employés payés ; à égalité, le libellé alphabétique vient en premier.
 - **Orphelins.** Les bulletins sans équipe sont comptés (`qualite.sansEquipe`) et filtrables par `equipeIds = 0`.
 
 ### Couche IA
 
-L'assistant RH lit la paie par **huit outils MCP de lecture** (Spring AI), tous soumis à `PAIE_READ` (et `IA_UTILISER`) ;
+L'assistant RH lit la paie par **neuf outils MCP de lecture** (Spring AI), tous soumis à `PAIE_READ` (et `IA_UTILISER`) ;
 il n'écrit, n'importe, ne supprime et ne restaure rien, et n'exécute aucun SQL.
 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
-| `paie_indicateurs` | Chiffres clés d'un mois (masse, effectif payé, coût moyen, chantiers, STC), le mois précédent et les 5 principaux chantiers | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
-| `paie_periodes` | Mois de paie importés (36 au plus) avec bulletins, chantiers, masse, STC ; sert à connaître le dernier mois | `PAIE_READ` | `MCP_PAIE_PERIODES` |
-| `paie_repartition` | Masse, effectif et STC par `CHANTIER`, `EQUIPE` ou `FONCTION` (50 groupes au plus, du plus gros au plus petit) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
-| `paie_evolution` | Série mensuelle (36 mois au plus) : masse, effectif, STC, montant STC | `PAIE_READ` | `MCP_PAIE_EVOLUTION` |
-| `paie_mouvements` | Par mois : effectif, variation, entrées, plus payés, sorties, mutations, avec le champ `definitions` à citer | `PAIE_READ` | `MCP_PAIE_MOUVEMENTS` |
+| `paie_indicateurs` | Chiffres clés d'un mois (masse, effectif payé, coût moyen, chantiers, STC), le mois précédent et tous les chantiers du périmètre | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
+| `paie_periodes` | Tous les mois de paie importés avec bulletins, chantiers, masse, STC ; sert à connaître le dernier mois | `PAIE_READ` | `MCP_PAIE_PERIODES` |
+| `paie_repartition` | Masse, effectif et STC par tous les groupes `CHANTIER`, `EQUIPE` ou `FONCTION`, du plus gros au plus petit | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_evolution` | Série historique complète : masse, effectif, STC, montant STC | `PAIE_READ` | `MCP_PAIE_EVOLUTION` |
+| `paie_comparer` | Compare deux mois par chantier, équipe ou fonction ; masses, effectifs, variations, coûts moyens, hausses et baisses rendues par la façade analytique de la Paie pour tous les groupes | `PAIE_READ` | `MCP_PAIE_COMPARER` |
+| `paie_mouvements` | Tous les mois : effectif, variation, entrées, plus payés, sorties, mutations, avec le champ `definitions` à citer | `PAIE_READ` | `MCP_PAIE_MOUVEMENTS` |
 | `paie_qualite` | Bulletins sans équipe, sans observation, tranches de salaire total | `PAIE_READ` | `MCP_PAIE_QUALITE` |
-| `paie_bulletins_rechercher` | Bulletins d'un mois par nom, CIN ou périmètre (20 au plus, avec total) : jours, primes, salaire total, observation | `PAIE_READ` | `MCP_PAIE_BULLETINS_RECHERCHER` |
+| `paie_bulletins_rechercher` | Bulletins d'un mois par nom, CIN ou périmètre (pages de 20 avec total et pages suivantes accessibles) : jours, primes, salaire total, observation | `PAIE_READ` | `MCP_PAIE_BULLETINS_RECHERCHER` |
 | `rapport_preparer` | Prépare le rapport PDF : vérifie chantiers, effectif et masse puis propose d'ouvrir l'assistant d'export réglé ; **ne génère aucun fichier** | `PAIE_EXPORT` **et** `PAIE_READ` | `MCP_RAPPORT_PREPARER` |
 
 - **Filtres communs.** Mois (`aaaa-MM`, défaut : dernier mois importé), `chantierIds`, `equipeIds` (`0` = sans équipe),
@@ -133,9 +135,12 @@ il n'écrit, n'importe, ne supprime et ne restaure rien, et n'exécute aucun SQL
   `paie_repartition` ; une tendance : `paie_evolution` ; arrivées et départs : `paie_mouvements` (citer ses
   `definitions` et donner `variation` à côté des entrées) ; la paie d'une personne : `paie_bulletins_rechercher`.
 - **Interface composée.** Pour un tableau ou une liste, l'agent peut composer une surface A2UI à partir de ces
-  résultats ; le vérificateur contrôle ses chiffres comme ceux du texte (voir [ia.md](../ia.md)).
-- **Exactitude.** Chaque nombre de la réponse doit venir d'un résultat d'outil du même tour ; sinon réécriture, puis
-  abstention. Le modèle ne calcule rien (ni somme, ni écart, ni pourcentage).
+  résultats (voir [ia.md](../ia.md)).
+- **Exactitude.** Les indicateurs et comparaisons sont calculés par l'API publique de Paie ; MCP transmet les valeurs et
+  le modèle les reprend sans calcul (ni somme, ni écart, ni pourcentage). L'agent relit l'ERP si une valeur peut avoir
+  changé et demande une précision si l'ambiguïté affecte le résultat.
+- **Périodes.** La façade Paie choisit le mois civil précédent si la comparaison n'en précise pas un, borne l'évolution au
+  mois demandé et sélectionne le mois demandé dans les mouvements. L'adaptateur MCP ne filtre pas les séries ni les périodes.
 - **Sur l'écran.** Sur `/paie`, l'assistant propose « Masse salariale », « Arrivées et départs » et « Chantier le plus
   coûteux ».
 - **Limites actuelles.** Les montants et salaires sont visibles de tout détenteur de `PAIE_READ`, sans périmètre par fiche
@@ -231,7 +236,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
-| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `nomPrenom`, `cin`, `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Mouvements mois par mois sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : employés payés, entrées (payés ce mois-ci mais pas le précédent), sorties (départs enregistrés du mois, pour qui était payé dans le périmètre ce mois-ci ou le précédent), mutations (payés les deux mois, autre chantier) ; entrées et mutations `null` le premier mois. Les filtres sont appliqués en base avant le calcul des mouvements | 200, 400 |
+| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `nomPrenom`, `cin`, `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Indicateurs mensuels sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : effectif payé, effectif du mois calendaire précédent, écart net (`variation`), entrées, plus payés, sorties enregistrées et mutations de chantier. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` si le mois calendaire précédent n'a pas de paie dans le périmètre. Les filtres sont appliqués en base avant le calcul | 200, 400 |
 | `GET` | `/paie/employes/{id}/parcours` | Parcours d'un employé (voir « Parcours d'un employé ») | 200, 404 |
 | `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
 | `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |

@@ -13,10 +13,12 @@ import staport.rh.employee.services.interfaces.IEmployeeAnalytiqueService;
 import staport.rh.employee.services.interfaces.IEmployeeService;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
+import staport.rh.paie.dtos.response.PaieRepartitionDto;
 import staport.rh.paie.effectifs.EffectifMoisDto;
 import staport.rh.paie.effectifs.EffectifsCriteria;
 import staport.rh.paie.services.interfaces.IPaieAnalytiqueService;
 import staport.rh.paie.services.interfaces.IPaieEffectifsService;
+import staport.rh.paie.services.interfaces.IPaieParcoursService;
 import staport.rh.support.McpIntegrationTestBase;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -58,6 +60,8 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     private IEmployeeAnalytiqueService employesAnalytique;
     @Autowired
     private IEmployeeService employes;
+    @Autowired
+    private IPaieParcoursService parcoursEmploye;
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private DonneesDeTest.Referentiel ref;
@@ -76,7 +80,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     // --- catalogue et refus ---
 
     @Test
-    void le_catalogue_publie_vingt_huit_outils_en_lecture_seule() throws Exception {
+    void le_catalogue_publie_vingt_neuf_outils_en_lecture_seule() throws Exception {
         List<String> noms = new ArrayList<>();
         rpc(toutVoir, "tools/list", Map.of()).get("tools").forEach(outil -> {
             noms.add(outil.get("name").asString());
@@ -84,7 +88,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         });
         assertThat(noms).containsExactlyInAnyOrderElementsOf(appelsTypes().keySet().stream()
                 .collect(java.util.stream.Collectors.toCollection(() -> new ArrayList<>(List.of("systeme_identite")))));
-        assertThat(noms).hasSize(28);
+        assertThat(noms).hasSize(29);
     }
 
     @Test
@@ -214,15 +218,30 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         JsonNode defaut = appeler("paie_repartition", Map.of("periode", periode.toString(), "dimension", "CHANTIER",
                 "chantierIds", chantiers));
         assertThat(identifiants(defaut, "groupes")).containsExactly(b.chantierId(), c.chantierId(), a.chantierId());
+        var apiDefaut = paieAnalytique.repartir(new PaieSearchCriteria(null, null, periode, null, chantiers, null),
+                PaieRepartitionDto.Dimension.CHANTIER, null, null);
+        assertThat(apiDefaut.nombreGroupes()).isEqualTo(3);
+        assertThat(apiDefaut.groupes()).extracting(PaieRepartitionDto.Groupe::id)
+                .containsExactly(b.chantierId(), c.chantierId(), a.chantierId());
         JsonNode croissante = appeler("paie_repartition", Map.of("periode", periode.toString(), "dimension", "CHANTIER",
                 "chantierIds", chantiers, "sens", "ASC"));
         assertThat(identifiants(croissante, "groupes")).containsExactly(a.chantierId(), c.chantierId(), b.chantierId());
+        var apiCroissante = paieAnalytique.repartir(new PaieSearchCriteria(null, null, periode, null, chantiers, null),
+                PaieRepartitionDto.Dimension.CHANTIER, PaieRepartitionDto.Tri.MASSE, true);
+        assertThat(apiCroissante.groupes()).extracting(PaieRepartitionDto.Groupe::id)
+                .containsExactly(a.chantierId(), c.chantierId(), b.chantierId());
 
         JsonNode parCode = appeler("employes_regrouper", Map.of("dimension", "CHANTIER", "chantierIds", chantiers,
                 "tri", "CODE", "sens", "ASC"));
         List<String> codes = new ArrayList<>();
         parCode.get("groupes").forEach(g -> codes.add(g.get("code").asString()));
         assertThat(codes).isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER).hasSize(3);
+        var apiParCode = employesAnalytique.regrouper(
+                new EmployeeSearchCriteria(null, null, null, chantiers, null, null), DimensionEmployes.CHANTIER,
+                IEmployeeAnalytiqueService.TriRegroupement.CODE, true);
+        assertThat(apiParCode.nombreGroupes()).isEqualTo(3);
+        assertThat(apiParCode.groupes()).extracting(g -> g.code().toLowerCase())
+                .isSortedAccordingTo(String.CASE_INSENSITIVE_ORDER);
     }
 
     @Test
@@ -272,7 +291,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         JsonNode kpi = resultat.get("indicateurs");
         assertThat(kpi.get("masse").decimalValue()).isEqualByComparingTo(attendu.kpis().masse()).isEqualByComparingTo("3000.00");
         assertThat(kpi.get("effectif").asLong()).isEqualTo(attendu.kpis().effectif()).isEqualTo(1);
-        assertThat(resultat.get("principauxChantiers").get(0).get("id").asLong()).isEqualTo(ref.chantierId());
+        assertThat(resultat.get("chantiers").get(0).get("id").asLong()).isEqualTo(ref.chantierId());
         assertVue(resultat, "paie", "analytique",
                 Map.of("periode", periode.toString(), "chantierIds", String.valueOf(ref.chantierId())));
     }
@@ -311,6 +330,83 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     }
 
     @Test
+    void paie_comparer_rend_variations_pourcentages_et_extremes_sans_que_le_modele_calcule() throws Exception {
+        YearMonth avant = periode.minusMonths(1);
+        // A (setUp : 3 000 ce mois) valait 1 500 : +1 500, +100,0 %. B passe de 6 000 à 3 000 : −3 000, −50,0 %.
+        donnees.creerBulletin(ref, avant, new BigDecimal("1500.00"));
+        DonneesDeTest.Referentiel b = donnees.creerReferentiel();
+        donnees.creerBulletin(b, avant, new BigDecimal("6000.00"));
+        donnees.creerBulletin(b, periode);
+        // C n'est payé que ce mois-ci (nouveau) ; D seulement le mois d'avant (disparu).
+        DonneesDeTest.Referentiel nouveau = donnees.creerReferentiel();
+        donnees.creerBulletin(nouveau, periode);
+        DonneesDeTest.Referentiel disparu = donnees.creerReferentiel();
+        donnees.creerBulletin(disparu, avant);
+        List<Long> perimetre = List.of(ref.chantierId(), b.chantierId(), nouveau.chantierId(), disparu.chantierId());
+        Map<String, Object> base = Map.of("dimension", "CHANTIER", "periode", periode.toString(),
+                "periodeReference", avant.toString(), "chantierIds", perimetre);
+
+        JsonNode resultat = appeler("paie_comparer", avec(base, "tri", "VARIATION_MASSE"));
+
+        assertThat(resultat.get("periodeReference").asString()).isEqualTo(avant.toString());
+        assertThat(resultat.get("nombreGroupes").asInt()).isEqualTo(4);
+        JsonNode groupes = resultat.get("groupes");
+        JsonNode a = groupes.get(0);
+        assertThat(a.get("id").asLong()).isEqualTo(ref.chantierId());
+        assertThat(a.get("statut").asString()).isEqualTo("COMPARABLE");
+        assertThat(a.get("masse").decimalValue()).isEqualByComparingTo("3000.00");
+        assertThat(a.get("masseReference").decimalValue()).isEqualByComparingTo("1500.00");
+        assertThat(a.get("variationMasse").decimalValue()).isEqualByComparingTo("1500.00");
+        assertThat(a.get("variationPourcentage").decimalValue()).isEqualByComparingTo("100.0");
+        assertThat(a.get("variationEffectif").asLong()).isZero();
+        assertThat(a.get("coutMoyen").decimalValue()).isEqualByComparingTo("3000.00");
+        assertThat(a.get("fonctionPrincipale").get("libelle").asString()).isEqualTo("F-" + ref.suffixe());
+        assertThat(a.get("fonctionPrincipale").get("effectif").asLong()).isEqualTo(1);
+        JsonNode baisse = groupes.get(1);
+        assertThat(baisse.get("id").asLong()).isEqualTo(b.chantierId());
+        assertThat(baisse.get("variationMasse").decimalValue()).isEqualByComparingTo("-3000.00");
+        assertThat(baisse.get("variationPourcentage").decimalValue()).isEqualByComparingTo("-50.0");
+        // Les groupes d'un seul des deux mois sont en dernier, sans variation inventée.
+        List<String> statuts = List.of(groupes.get(2).get("statut").asString(), groupes.get(3).get("statut").asString());
+        assertThat(statuts).containsExactlyInAnyOrder("NOUVEAU", "DISPARU");
+        assertThat(groupes.get(2).get("variationMasse").isNull()).isTrue();
+        assertThat(groupes.get(2).get("variationPourcentage").isNull()).isTrue();
+
+        assertThat(resultat.get("plusForteHausse").get("id").asLong()).isEqualTo(ref.chantierId());
+        assertThat(resultat.get("plusForteBaisse").get("id").asLong()).isEqualTo(b.chantierId());
+        assertThat(resultat.get("plusForteHausseDuPerimetre").get("id").asLong()).isEqualTo(ref.chantierId());
+        // Masse : 3 000 + 3 000 + 3 000 contre 1 500 + 6 000 + 3 000 ; effectif : 3 contre 3.
+        JsonNode total = resultat.get("total");
+        assertThat(total.get("masse").decimalValue()).isEqualByComparingTo("9000.00");
+        assertThat(total.get("masseReference").decimalValue()).isEqualByComparingTo("10500.00");
+        assertThat(total.get("variationMasse").decimalValue()).isEqualByComparingTo("-1500.00");
+        assertThat(total.get("variationPourcentage").decimalValue()).isEqualByComparingTo("-14.3");
+        assertThat(total.get("variationEffectif").asLong()).isZero();
+        assertThat(resultat.get("definitions").get("variationPourcentage").asString()).contains("pourcentage");
+        assertVue(resultat, "paie", "analytique", Map.of("periode", periode.toString()));
+
+        JsonNode croissant = appeler("paie_comparer", avec(avec(base, "tri", "VARIATION_MASSE"), "sens", "ASC"));
+        assertThat(croissant.get("groupes")).hasSize(4);
+        assertThat(croissant.get("groupes").get(0).get("id").asLong()).isEqualTo(b.chantierId());
+        assertThat(croissant.get("plusForteHausseDuPerimetre").get("id").asLong()).isEqualTo(ref.chantierId());
+    }
+
+    @Test
+    void paie_comparer_compare_le_mois_precedent_par_defaut_et_refuse_un_mois_mal_forme() throws Exception {
+        donnees.creerBulletin(ref, periode.minusMonths(1), new BigDecimal("1500.00"));
+        JsonNode resultat = appeler("paie_comparer", Map.of("dimension", "FONCTION", "periode", periode.toString(),
+                "chantierIds", List.of(ref.chantierId())));
+        assertThat(resultat.get("periodeReference").asString()).isEqualTo(periode.minusMonths(1).toString());
+        JsonNode fonction = resultat.get("groupes").get(0);
+        assertThat(fonction.get("variationMasse").decimalValue()).isEqualByComparingTo("1500.00");
+        assertThat(fonction.get("fonctionPrincipale").isNull()).isTrue();
+
+        JsonNode refus = rpc(toutVoir, "tools/call", Map.of("name", "paie_comparer",
+                "arguments", Map.of("dimension", "CHANTIER", "periodeReference", "septembre 2026")));
+        assertThat(refus.get("isError").asBoolean()).isTrue();
+    }
+
+    @Test
     void paie_mouvements_rend_l_ecart_net_les_plus_payes_et_leurs_definitions() throws Exception {
         // A payé les deux mois, B seulement le mois d'avant, C et D seulement ce mois-ci.
         YearMonth avant = periode.minusMonths(1);
@@ -326,11 +422,14 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
                 List.of(ref.chantierId(), parti.chantierId(), arrive.chantierId(), arriveAussi.chantierId())));
 
         JsonNode mois = mouvements.get("mois").get(0);
+        EffectifMoisDto attendu = effectifs.tendances(new EffectifsCriteria(
+                List.of(ref.chantierId(), parti.chantierId(), arrive.chantierId(), arriveAussi.chantierId()), null, null))
+                .stream().filter(m -> m.periode().equals(periode)).findFirst().orElseThrow();
         assertThat(mois.get("effectif").asLong()).isEqualTo(3);
-        assertThat(mois.get("effectifMoisPrecedent").asLong()).isEqualTo(2);
-        assertThat(mois.get("variation").asLong()).isEqualTo(1);
-        assertThat(mois.get("entrees").asLong()).isEqualTo(2);
-        assertThat(mois.get("plusPayes").asLong()).isEqualTo(1);
+        assertThat(mois.get("effectifMoisPrecedent").asLong()).isEqualTo(attendu.effectifMoisPrecedent()).isEqualTo(2);
+        assertThat(mois.get("variation").asLong()).isEqualTo(attendu.variation()).isEqualTo(1);
+        assertThat(mois.get("entrees").asLong()).isEqualTo(attendu.entrees()).isEqualTo(2);
+        assertThat(mois.get("plusPayes").asLong()).isEqualTo(attendu.plusPayes()).isEqualTo(1);
         assertThat(mouvements.get("definitions").get("entrees").asString()).contains("absents de la paie du mois précédent");
         assertThat(mouvements.get("definitions").get("variation").asString()).contains("écart net");
     }
@@ -400,12 +499,18 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         assertVue(fiche, "employees", "fiche", Map.of("id", String.valueOf(ref.employeId())));
 
         JsonNode parcours = appeler("employe_parcours", Map.of("id", ref.employeId()));
+        var parcoursApi = parcoursEmploye.parcours(ref.employeId());
         assertThat(parcours.get("indicateurs").get("moisPayes").asInt()).isEqualTo(1);
+        assertThat(parcours.get("indicateurs").get("moisPayes").asInt()).isEqualTo(parcoursApi.indicateurs().moisPayes());
         assertThat(parcours.get("mois").get(0).get("salaireTotal").decimalValue()).isEqualByComparingTo("3000.00");
+        assertThat(parcours.get("mois")).hasSize(parcoursApi.mois().size());
 
         JsonNode sorties = appeler("employes_sorties", Map.of("periode", periode.toString()));
+        var sortiesApi = employes.sortiesDuMois(periode);
         assertThat(sorties.get("nombre").asLong()).isEqualTo(1);
+        assertThat(sorties.get("nombre").asLong()).isEqualTo(sortiesApi.nombre());
         assertThat(sorties.get("parMotif").get("STC").asLong()).isEqualTo(1);
+        assertThat(sortiesApi.parMotif()).containsEntry("STC", 1L);
         assertVue(sorties, "employees", "analytique", Map.of("periode", periode.toString()));
     }
 
@@ -433,13 +538,24 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         List<String> roles = new ArrayList<>();
         appeler("roles_lister", Map.of("nom", "SYSTEM_ADMIN")).get("roles").forEach(r -> roles.add(r.get("nom").asString()));
         assertThat(roles).contains("SYSTEM_ADMIN");
+        JsonNode premierePageRoles = appeler("roles_lister", Map.of("limite", 1, "page", 0));
+        assertThat(premierePageRoles.get("roles")).hasSize(1);
+        assertThat(premierePageRoles.get("page").asInt()).isZero();
+        if (premierePageRoles.get("total").asLong() > 1) {
+            JsonNode pageSuivanteRoles = appeler("roles_lister", Map.of("limite", 1, "page", 1));
+            assertThat(pageSuivanteRoles.get("roles")).hasSize(1);
+            assertThat(pageSuivanteRoles.get("page").asInt()).isEqualTo(1);
+            assertThat(pageSuivanteRoles.get("total").asLong()).isEqualTo(premierePageRoles.get("total").asLong());
+        }
 
         JsonNode journal = appeler("audit_rechercher", Map.of("action", "MCP_ROLES_LISTER", "limite", 5));
         assertThat(journal.get("entrees").size()).isPositive();
+        assertThat(journal.get("page").asInt()).isZero();
         assertThat(journal.get("entrees").get(0).get("action").asString()).isEqualTo("MCP_ROLES_LISTER");
 
         JsonNode historique = appeler("audit_historique", Map.of("entite", "Employee", "id", ref.employeId()));
         assertThat(historique.get("total").asLong()).isPositive();
+        assertThat(historique.get("page").asInt()).isZero();
         assertThat(historique.get("versions").get(0).get("operation").asString()).isNotBlank();
     }
 
@@ -464,6 +580,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         appels.put("paie_periodes", Map.of());
         appels.put("paie_repartition", Map.of("periode", periode.toString(), "dimension", "CHANTIER"));
         appels.put("paie_evolution", Map.of("periode", periode.toString()));
+        appels.put("paie_comparer", Map.of("periode", periode.toString(), "dimension", "CHANTIER"));
         appels.put("paie_mouvements", Map.of("periode", periode.toString()));
         appels.put("paie_qualite", Map.of("periode", periode.toString()));
         appels.put("paie_bulletins_rechercher", Map.of("periode", periode.toString()));

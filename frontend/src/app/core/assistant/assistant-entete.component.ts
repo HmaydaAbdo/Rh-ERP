@@ -15,7 +15,7 @@ import { FilAssistant } from './fil-assistant.service';
     <span class="marque" aria-hidden="true"><svg lucideSparkles></svg></span>
     <div class="titres">
       <h2 class="titre">Assistant RH</h2>
-      <p class="sous-titre">Réponses vérifiées sur vos données</p>
+      <p class="sous-titre">Des réponses fondées sur vos données</p>
     </div>
     <button type="button" class="nouvelle" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
       <svg lucideSquarePen aria-hidden="true"></svg>

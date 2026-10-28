@@ -355,11 +355,14 @@ export interface PaieParcours {
   evenements: { periode: string; type: PaieParcoursEvenementType; avant: string | null; apres: string | null; motif: string | null }[];
 }
 
-/** Mouvements d'un mois de paie (POST /paie/effectifs) ; entrées et mutations null le premier mois connu. */
+/** Indicateurs de mouvements mensuels (POST /paie/effectifs) ; comparaisons null si le mois précédent manque. */
 export interface PaieEffectifMois {
   periode: string;
   effectif: number;
+  effectifMoisPrecedent: number | null;
+  variation: number | null;
   entrees: number | null;
+  plusPayes: number | null;
   sorties: number;
   mutations: number | null;
 }

@@ -2,7 +2,7 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 """Point d'entrée AG-UI (docs/ia.md, T11) : ``LangGraphAGUIAgent`` de CopilotKit, sur l'intégration officielle
 ``ag-ui-langgraph``, diffuse le run de l'agent — raisonnement (``REASONING_*``), texte en flux, appels d'outils,
-plan, état partagé (``verification``) et outils déclarés par le navigateur.
+plan, état partagé et outils déclarés par le navigateur.
 
 Ne restent ici que deux protections qu'aucun framework ne fournit :
 
@@ -36,7 +36,7 @@ TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
-FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any]], CompiledStateGraph[Any, Any, Any, Any]]
+FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any] | None], CompiledStateGraph[Any, Any, Any, Any]]
 
 
 class _SansDetail(logging.Filter):

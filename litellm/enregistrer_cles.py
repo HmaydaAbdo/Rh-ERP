@@ -3,15 +3,17 @@
 
   python litellm/enregistrer_cles.py
 
-- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : alias ai-gateway seulement, metadata.tags ["!eval"], 60 requêtes/min,
+- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : cinq groupes de production uniquement, 60 requêtes/min,
   8 simultanées, 300 000 jetons/min.
-- LITELLM_TEST_API_KEY -> clé « smoke-tests » : ai-gateway et ai-gateway-selftest (test_providers.py).
+- LITELLM_TEST_API_KEY -> clé « smoke-tests » : groupes de production, évaluation et tests (test_providers.py).
 
-Idempotent : une clé déjà enregistrée est laissée telle quelle. Utilise LITELLM_MASTER_KEY, sans jamais afficher de
+Idempotent : les groupes autorisés des clés existantes sont synchronisés. Utilise LITELLM_MASTER_KEY, sans jamais afficher de
 clé. Bibliothèque standard Python uniquement.
 """
 import json
 import os
+import re
+from pathlib import Path
 import sys
 import urllib.error
 import urllib.request
@@ -19,12 +21,15 @@ import urllib.request
 ICI = os.path.dirname(os.path.abspath(__file__))
 ENV = os.path.join(os.path.dirname(ICI), ".env")
 
+CONFIG = Path(__file__).with_name("litellm_config.yaml")
+if not CONFIG.exists():
+    CONFIG = Path("/app/config.yaml")
+GROUPES = sorted(set(re.findall(r"^  - model_name: (\S+)", CONFIG.read_text(encoding="utf-8"), re.M)))
+PRODUCTION = ["ai-gateway-" + c for c in ("simple", "medium", "complex", "code", "ocr")]
 CLES = [
-    ("IA_LITELLM_API_KEY", {"key_alias": "erp-rh-ia", "models": ["ai-gateway"], "rpm_limit": 60,
-                            # Anti-emballement : au plus 8 requêtes simultanées et 300 000 jetons par minute.
-                            "max_parallel_requests": 8, "tpm_limit": 300000,
-                            "metadata": {"tags": ["!eval"]}}),
-    ("LITELLM_TEST_API_KEY", {"key_alias": "smoke-tests", "models": ["ai-gateway", "ai-gateway-selftest"]}),
+    ("IA_LITELLM_API_KEY", {"key_alias": "erp-rh-ia", "models": PRODUCTION, "rpm_limit": 60,
+                            "max_parallel_requests": 8, "tpm_limit": 300000}),
+    ("LITELLM_TEST_API_KEY", {"key_alias": "smoke-tests", "models": GROUPES}),
 ]
 
 
@@ -67,9 +72,17 @@ def main():
         if not cle.startswith("sk-"):
             print(f"[IGNORÉE] {variable} vide dans le .env")
             continue
-        statut, _ = appeler(base, maitre, "/key/info?key=" + urllib.request.quote(cle))
+        statut, info = appeler(base, maitre, "/key/info?key=" + urllib.request.quote(cle))
         if statut == 200:
-            print(f"[DÉJÀ]    {definition['key_alias']} ({variable})")
+            if sorted(info.get("info", {}).get("models", [])) == sorted(definition["models"]):
+                print(f"[DÉJÀ]    {definition['key_alias']} ({variable})")
+                continue
+            statut, reponse = appeler(base, maitre, "/key/update", {"key": cle, "models": definition["models"]})
+            if statut == 200:
+                print(f"[SYNCHRO] {definition['key_alias']} : groupes autorisés actualisés")
+            else:
+                echec = True
+                print(f"[ÉCHEC]   {definition['key_alias']} : HTTP {statut}")
             continue
         statut, reponse = appeler(base, maitre, "/key/generate", {**definition, "key": cle})
         if statut == 200:

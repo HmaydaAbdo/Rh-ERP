@@ -14,7 +14,7 @@ public enum SensTri {
 
     static final String DOC = "Sens du tri : ASC (croissant) ou DESC (décroissant). Absent = le sens par défaut du critère "
             + "(décroissant pour un montant ou un effectif, croissant pour un nom ou un code).";
-    static final String PAGE_DOC = "Numéro de la page de résultats, à partir de 0 (0 par défaut). Avec `limite` comme taille "
+    static final String PAGE_DOC = "Numéro de la page de résultats, à partir de 0 (0 par défaut). Toutes les pages restent accessibles. Avec `limite` comme taille "
             + "de page, permet de parcourir tous les résultats quand `total` dépasse ce qui est rendu.";
 
     /** Le sens demandé, sinon {@code defaut}. */

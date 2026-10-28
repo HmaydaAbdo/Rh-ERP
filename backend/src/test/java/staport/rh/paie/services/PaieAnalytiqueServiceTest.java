@@ -11,6 +11,7 @@ import staport.rh.parametre.services.interfaces.IParametreService;
 import staport.rh.paie.dtos.request.PaieSearchCriteria;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto;
 import staport.rh.paie.dtos.response.PaieAnalytiqueDto.Tranche;
+import staport.rh.paie.dtos.response.PaieComparaisonDto;
 import staport.rh.paie.repositories.ChantierMasseProjection;
 import staport.rh.paie.repositories.EvolutionMasseProjection;
 import staport.rh.paie.repositories.EquipeMasseProjection;
@@ -66,6 +67,29 @@ class PaieAnalytiqueServiceTest {
         assertThat(resultat.tranches()).isEmpty();
         assertThat(resultat.evolution()).extracting(PaieAnalytiqueDto.Evolution::periode).containsExactly("2026-07");
         verify(repository, never()).sommerParChantier(any(), any());
+    }
+
+    @Test
+    void evolutionJusqua_retourne_toutes_les_periodes_jusquau_mois_inclus() {
+        when(repository.sommerParPeriode(any())).thenReturn(List.of(
+                evolution(JUILLET, "900", 5), evolution(AOUT, "1000", 6),
+                evolution(YearMonth.of(2026, 9), "1100", 7)));
+
+        var resultat = service.evolutionJusqua(criteres(AOUT, null, null, null));
+
+        assertThat(resultat).extracting(PaieAnalytiqueDto.Evolution::periode)
+                .containsExactly("2026-07", "2026-08");
+    }
+
+    @Test
+    void comparer_choisit_le_mois_civil_precedent_quand_la_reference_est_absente() {
+        when(repository.resumerKpi(any(), any())).thenReturn(kpi(0, "0", 0, 0, 0, 0));
+
+        service.comparer(criteres(AOUT, null, null, null), null, PaieComparaisonDto.Dimension.EQUIPE,
+                null, false);
+
+        verify(repository).resumerKpi(eq(AOUT), any());
+        verify(repository).resumerKpi(eq(JUILLET), any());
     }
 
     @Test

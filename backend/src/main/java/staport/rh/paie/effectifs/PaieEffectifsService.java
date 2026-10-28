@@ -35,6 +35,16 @@ public class PaieEffectifsService implements IPaieEffectifsService {
     @Transactional(readOnly = true)
     @Override
     public List<EffectifMoisDto> tendances(EffectifsCriteria criteres) {
+        return calculerTendances(criteres, null);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<EffectifMoisDto> tendances(EffectifsCriteria criteres, YearMonth periode) {
+        return calculerTendances(criteres, periode);
+    }
+
+    private List<EffectifMoisDto> calculerTendances(EffectifsCriteria criteres, YearMonth periodeDemandee) {
         // Mois -> employé -> chantier du mois, pour les seuls bulletins du périmètre.
         Map<YearMonth, Map<Long, Long>> parMois = new TreeMap<>();
         FiltresPaie filtres = criteres == null ? FiltresPaie.AUCUN
@@ -65,10 +75,17 @@ public class PaieEffectifsService implements IPaieEffectifsService {
                         .filter(e -> avant.containsKey(e.getKey()) && !avant.get(e.getKey()).equals(e.getValue()))
                         .count();
             }
-            tendances.add(new EffectifMoisDto(mois.getKey(), courant.size(), entrees, sorties, mutations));
+            Long effectifPrecedent = moisAvant == null ? null : (long) moisAvant.size();
+            Long variation = effectifPrecedent == null ? null : courant.size() - effectifPrecedent;
+            Long plusPayes = effectifPrecedent == null || entrees == null
+                    ? null
+                    : effectifPrecedent + entrees - courant.size();
+            tendances.add(new EffectifMoisDto(mois.getKey(), courant.size(), effectifPrecedent, variation,
+                    entrees, plusPayes, sorties, mutations));
             precedent = courant;
         }
-        return tendances;
+        return periodeDemandee == null ? tendances
+                : tendances.stream().filter(mois -> mois.periode().equals(periodeDemandee)).toList();
     }
 
 }

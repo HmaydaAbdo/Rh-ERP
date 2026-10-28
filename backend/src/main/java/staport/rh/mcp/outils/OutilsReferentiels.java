@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Outils des référentiels Chantier, Équipe et Fonction : rechercher (20 au plus) et lire une fiche. Les identifiants
+ * Outils des référentiels Chantier, Équipe et Fonction : rechercher par pages de 20 et lire une fiche. Les identifiants
  * rendus servent à filtrer les outils Paie et Employé. Vocabulaire chantier : {@code EN_COURS} / {@code CLOTURE}.
  *
  * <p>Tout est porté par les frameworks : le catalogue et ses schémas par Spring AI ({@code @McpTool}), la permission par
@@ -70,8 +70,8 @@ public class OutilsReferentiels {
                     À utiliser en premier dès que la question cite un chantier par son nom ou son code : l'identifiant rendu (`id`) \
                     sert ensuite de filtre `chantierIds` aux outils Paie et Employé, ou de paramètre de `chantier_fiche`. \
                     Rend, pour chaque chantier : id, code, désignation, nom, origine ERP et statut (EN_COURS ou CLOTURE), plus le \
-                    nombre total trouvé. 20 résultats au plus par page ; si `total` dépasse ce qui est rendu, affiner la \
-                    recherche ou parcourir les pages (`page`). Triable : `tri` CODE (défaut), NOM ou DESIGNATION, `sens` ASC \
+                    nombre total trouvé. 20 résultats au plus par page ; si `total` dépasse ce qui est rendu, parcourir toutes \
+                    les pages (`page`) jusqu'au total pour une réponse complète. Triable : `tri` CODE (défaut), NOM ou DESIGNATION, `sens` ASC \
                     ou DESC.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
@@ -87,7 +87,7 @@ public class OutilsReferentiels {
             @McpToolParam(required = false, description = "Critère de tri : CODE (défaut), NOM ou DESIGNATION.")
             TriChantier tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
-            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         String texte = texte(recherche);
         Boolean actif = statut == null ? null : statut == StatutChantier.EN_COURS;
         String critere = (tri == null ? TriChantier.CODE : tri).name().toLowerCase(java.util.Locale.ROOT);
@@ -123,7 +123,8 @@ public class OutilsReferentiels {
                     Trouve des équipes (groupes d'ouvriers) par code ou libellé. À utiliser quand la question cite une équipe : \
                     l'identifiant rendu sert de filtre `equipeIds` aux outils Paie et Employé (l'identifiant 0 y désigne les \
                     employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au plus par page \
-                    (`page`). Triable : `tri` CODE (défaut) ou LIBELLE, `sens` ASC ou DESC.""",
+                    (`page`). Parcourir toutes les pages jusqu'au total pour une réponse complète. Triable : `tri` CODE \
+                    (défaut) ou LIBELLE, `sens` ASC ou DESC.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
@@ -135,7 +136,7 @@ public class OutilsReferentiels {
             @Min(1) @Max(LIMITE) Integer limite,
             @McpToolParam(required = false, description = "Critère de tri : CODE (défaut) ou LIBELLE.") TriEquipe tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
-            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         Page<EquipeResponseDto> resultats = equipes.search(new EquipeSearchCriteria(null, null, texte(recherche)),
                 page(limite, page, (tri == null ? TriEquipe.CODE : tri).name().toLowerCase(java.util.Locale.ROOT), sens));
         Map<String, String> parametres = new LinkedHashMap<>();
@@ -163,8 +164,8 @@ public class OutilsReferentiels {
             description = """
                     Trouve des fonctions (métiers : maçon, électricien, chef de chantier…) par libellé. À utiliser quand la \
                     question cite un métier : l'identifiant rendu sert de filtre `fonctionIds` aux outils Paie et Employé. \
-                    Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`), triés par libellé \
-                    (`sens` ASC ou DESC).""",
+                    Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`). Parcourir toutes les \
+                    pages jusqu'au total pour une réponse complète ; triés par libellé (`sens` ASC ou DESC).""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('FUNCTION_READ')")
@@ -175,7 +176,7 @@ public class OutilsReferentiels {
             @McpToolParam(required = false, description = "Nombre de fonctions rendues par page, de 1 à 20, 10 par défaut.")
             @Min(1) @Max(LIMITE) Integer limite,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
-            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         Page<FunctionResponseDto> resultats = fonctions.search(new FunctionSearchCriteria(texte(recherche)),
                 page(limite, page, "libelle", sens));
         Map<String, String> parametres = new LinkedHashMap<>();

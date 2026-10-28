@@ -2,7 +2,7 @@
 
 ``ChatLiteLLM`` (``langchain-litellm``) plutôt que ``ChatOpenAI`` : c'est le seul des deux qui transmet le raisonnement
 renvoyé par la passerelle (``reasoning_content``), que ``ag-ui-langgraph`` diffuse en événements ``REASONING_*``
-(mesuré le 2026-10-26). La tâche est choisie par tag LiteLLM, jamais par nom de modèle.
+(mesuré le 2026-10-26). La capacité sélectionne un groupe officiel LiteLLM, jamais un fournisseur individuel.
 """
 
 from enum import StrEnum
@@ -13,7 +13,7 @@ from erp_rh_ia.config import Settings
 
 
 class Tache(StrEnum):
-    """Tag de capacité LiteLLM (litellm/litellm_config.yaml)."""
+    """Capacité du groupe LiteLLM (litellm/litellm_config.yaml)."""
 
     SIMPLE = "simple"
     MEDIUM = "medium"
@@ -36,28 +36,21 @@ def modele(
     settings: Settings,
     tache: Tache,
     *,
-    max_tokens: int = 1500,
-    raisonnement: str | None = None,
     interne: bool = False,
 ) -> ChatLiteLLM:
     """Un modèle de chat pour la tâche ; la passerelle bascule déjà entre fournisseurs, sans nouvel essai ici.
-
-    ``raisonnement`` (``low``, ``medium``, ``high``) est le paramètre standard ``reasoning_effort`` : un raisonnement
-    court accélère chaque appel ; la passerelle l'ignore pour un fournisseur qui ne le prend pas (``drop_params``).
 
     ``interne`` : modèle d'un intergiciel (résumé, choix des outils), jamais montré à l'utilisateur. Il répond sans
     flux, donc sans morceau de texte ni de raisonnement diffusé, et ses métadonnées le retiennent hors du fil.
     """
     return ChatLiteLLM(
-        model=f"litellm_proxy/{settings.litellm_model}",
+        model=f"litellm_proxy/{settings.litellm_model}-{tache.value}",
         api_base=str(settings.litellm_base_url),
         api_key=settings.litellm_api_key.get_secret_value(),
-        # Corps additionnel transmis tel quel à la passerelle : le tag route la requête vers le pool de la tâche.
+        # Corps transmis à la passerelle : le tag décrit la tâche ; le champ model sélectionne le groupe.
         model_kwargs={
             "extra_body": {"metadata": {"tags": [tache.value]}},
-            **({"reasoning_effort": raisonnement} if raisonnement else {}),
         },
-        max_tokens=max_tokens,
         request_timeout=settings.llm_timeout_seconds,
         max_retries=0,
         streaming=not interne,

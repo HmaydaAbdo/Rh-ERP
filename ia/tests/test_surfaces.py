@@ -105,4 +105,3 @@ async def test_l_agent_affiche_le_tableau_et_le_modele_ne_voit_que_les_donnees()
     assert composants[0]["component"] == "DataTable"
     vu = next(m for m in faux.vus[1] if isinstance(m, ToolMessage))
     assert json.loads(vu.text) == GROUPES
-    assert etat["verification"] == "verifiee"
