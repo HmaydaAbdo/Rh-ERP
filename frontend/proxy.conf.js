@@ -13,7 +13,7 @@ const target = process.env.BACKEND_URL || 'http://localhost:5001';
 const cibleAssistant =
   process.env.COPILOT_RUNTIME_URL || `http://localhost:${process.env.COPILOT_RUNTIME_PORT || lireDansEnv('COPILOT_RUNTIME_PORT') || '5004'}`;
 
-const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/parametres', '/auth', '/users', '/roles', '/permissions', '/logs'];
+const apiPaths = ['/employees', '/functions', '/chantiers', '/equipes', '/paie', '/heures-supp', '/parametres', '/auth', '/users', '/roles', '/permissions', '/logs'];
 
 // Imagerie satellite de la carte : même relais que nginx.conf (carte-satellite.conf.template). La clé ArcGIS est ajoutée
 // ici et n'arrive jamais au navigateur. Elle vient de l'environnement de `ng serve`, sinon du `.env` de docker-compose.yml
