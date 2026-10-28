@@ -1,7 +1,7 @@
 package staport.rh.mcp.outils;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -18,9 +18,8 @@ import staport.rh.audit.annotations.AuditableAction;
 import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.response.EmployeeAnalytiqueDto;
-import staport.rh.employee.dtos.response.EmployeeRegroupementDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
-import staport.rh.employee.dtos.response.EmployeeSortieDto;
+import staport.rh.employee.dtos.response.EmployeeSortiesMoisDto;
 import staport.rh.employee.entities.DimensionEmployes;
 import staport.rh.employee.entities.EmployeeStatut;
 import staport.rh.employee.projection.ProjectionPaieEmployee;
@@ -31,12 +30,9 @@ import staport.rh.paie.parcours.ParcoursEmployeDto;
 import staport.rh.paie.services.interfaces.IPaieParcoursService;
 
 import java.time.YearMonth;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /**
  * Outils Employé : recherche, fiche, comptage, regroupement, départs et parcours. Mêmes champs que l'écran (CIN et
@@ -49,9 +45,6 @@ import java.util.stream.Collectors;
 public class OutilsEmploye {
 
     private static final int LIMITE_FICHES = 20;
-    private static final int NOMS_RENDUS = 20;
-    private static final int GROUPES = 50;
-    private static final int MOIS_DE_PARCOURS = 36;
 
     private final IEmployeeService employes;
     private final IEmployeeAnalytiqueService analytique;
@@ -88,8 +81,9 @@ public class OutilsEmploye {
                     Trouve des employés par nom (partiel), CIN (partiel) et/ou par chantier, équipe, fonction ou statut ; au moins \
                     un critère est obligatoire. Rend, pour chaque employé : id, nom et prénom, CIN, dates de naissance et \
                     d'embauche, statut (EN_POSTE ou SORTI), fonction, chantier et équipe actuels, et le salaire seulement si \
-                    l'utilisateur a le droit de voir la paie (`salaireVisible`). 20 fiches au plus par page, avec le nombre \
-                    total. Triable (`tri` : NOM par défaut, CIN, DATE_EMBAUCHE, DATE_NAISSANCE, SALAIRE si la paie est \
+                    l'utilisateur a le droit de voir la paie (`salaireVisible`). Résultats paginés avec le nombre total ; \
+                    parcourir toutes les pages pour une réponse complète. Triable (`tri` : NOM par défaut, CIN, DATE_EMBAUCHE, \
+                    DATE_NAISSANCE, SALAIRE si la paie est \
                     visible ; `sens` ASC ou DESC) et paginable (`page`) : « les cinq derniers embauchés » se demande avec \
                     tri DATE_EMBAUCHE, sens DESC, limite 5. Pour seulement compter ou répartir des employés, préférer \
                     `employes_compter` ou `employes_regrouper`.""",
@@ -111,7 +105,7 @@ public class OutilsEmploye {
             @McpToolParam(required = false, description = "Critère de tri : NOM (défaut), CIN, DATE_EMBAUCHE, "
                     + "DATE_NAISSANCE ou SALAIRE (réservé aux utilisateurs qui voient la paie).") TriEmploye tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens,
-            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) @Max(1000) Integer page) {
+            @McpToolParam(required = false, description = SensTri.PAGE_DOC) @Min(0) Integer page) {
         String nomRecherche = texte(nom);
         String cinRecherche = texte(cin);
         List<Long> chantiers = ids(chantierIds);
@@ -219,10 +213,11 @@ public class OutilsEmploye {
     @McpTool(name = "employes_regrouper", title = "Effectif par chantier, équipe ou fonction", generateOutputSchema = true,
             description = """
                     Répartit l'effectif des employés par chantier, par équipe ou par fonction (total et en poste) sur un \
-                    périmètre. Du plus grand groupe au plus petit par défaut ; `tri` (EFFECTIF, EN_POSTE, LIBELLE, CODE) et \
-                    `sens` (ASC ou DESC) donnent « les équipes les plus petites » ou l'ordre alphabétique. À utiliser pour « quels \
+                    périmètre. Tous les groupes sont rendus, triés du plus grand au plus petit par défaut ; `tri` (EFFECTIF, EN_POSTE, \
+                    LIBELLE, CODE) et `sens` (ASC ou DESC) donnent « les équipes les plus petites » ou l'ordre alphabétique. À utiliser pour « quels \
                     chantiers ont le plus d'employés », « combien par équipe ». Chaque groupe rend id, code, libellé, effectif \
-                    et nombre en poste ; 50 groupes au plus. Les montants de paie par groupe sont dans `paie_repartition`.""",
+                    et nombre en poste. \
+                    Les montants de paie par groupe sont dans `paie_repartition`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -233,8 +228,6 @@ public class OutilsEmploye {
             @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
             @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(0) Long> fonctionIds,
             @McpToolParam(required = false, description = Formats.STATUT_EMPLOYE_DOC) StatutEmploye statut,
-            @McpToolParam(required = false, description = "Nombre de groupes rendus, de 1 à 50, 50 par défaut.")
-            @Min(1) @Max(GROUPES) Integer limite,
             @McpToolParam(required = false, description = "Critère de tri des groupes : EFFECTIF (défaut), EN_POSTE, "
                     + "LIBELLE ou CODE.") TriGroupeEmploye tri,
             @McpToolParam(required = false, description = SensTri.DOC) SensTri sens) {
@@ -242,21 +235,13 @@ public class OutilsEmploye {
         List<Long> equipes = ids(equipeIds);
         List<Long> fonctions = ids(fonctionIds);
         EmployeeStatut statutApi = StatutEmploye.versApi(statut);
-        List<EmployeeRegroupementDto> groupes = analytique.regrouper(
-                new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statutApi),
-                DimensionEmployes.valueOf(dimension.name()));
         TriGroupeEmploye critere = tri == null ? TriGroupeEmploye.EFFECTIF : tri;
         SensTri ordre = SensTri.ou(sens, critere == TriGroupeEmploye.EFFECTIF || critere == TriGroupeEmploye.EN_POSTE
                 ? SensTri.DESC : SensTri.ASC);
-        Comparator<EmployeeRegroupementDto> comparateur = switch (critere) {
-            case EFFECTIF -> Comparator.comparingLong(EmployeeRegroupementDto::effectif);
-            case EN_POSTE -> Comparator.comparingLong(EmployeeRegroupementDto::actifs);
-            case LIBELLE -> Comparator.comparing(g -> String.valueOf(g.libelle()), String.CASE_INSENSITIVE_ORDER);
-            case CODE -> Comparator.comparing(g -> String.valueOf(g.code()), String.CASE_INSENSITIVE_ORDER);
-        };
-        List<EmployeeRegroupementDto> ordonnes = groupes.stream()
-                .sorted(ordre == SensTri.ASC ? comparateur : comparateur.reversed()).toList();
-        List<Map<String, Object>> rendus = ordonnes.stream().limit(limite == null ? GROUPES : limite).map(g -> {
+        IEmployeeAnalytiqueService.TriRegroupement triApi = IEmployeeAnalytiqueService.TriRegroupement.valueOf(critere.name());
+        var resultat = analytique.regrouper(new EmployeeSearchCriteria(null, null, fonctions, chantiers, equipes, statutApi),
+                DimensionEmployes.valueOf(dimension.name()), triApi, ordre == SensTri.ASC);
+        List<Map<String, Object>> rendus = resultat.groupes().stream().map(g -> {
             Map<String, Object> groupe = new LinkedHashMap<>();
             groupe.put("id", g.id());
             groupe.put("code", g.code());
@@ -269,7 +254,7 @@ public class OutilsEmploye {
         StatutEmploye.versUrl(statutApi, parametres);
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("dimension", dimension.name());
-        donnees.put("nombreGroupes", groupes.size());
+        donnees.put("nombreGroupes", resultat.nombreGroupes());
         donnees.put("groupes", rendus);
         donnees.put("vue", new VueProposeeDto("employees", "cartes", parametres).enJson());
         return donnees;
@@ -278,7 +263,7 @@ public class OutilsEmploye {
     @McpTool(name = "employes_sorties", title = "Départs d'un mois", generateOutputSchema = true,
             description = """
                     Liste les départs de l'entreprise constatés par la paie d'un mois (soldes de tout compte et absences \
-                    confirmées) : nombre total, nombre par motif et, pour les 20 premiers, l'employé concerné. Un départ \
+                    confirmées) : nombre total, nombre par motif et la liste complète des employés concernés. Un départ \
                     ancien sans motif est compté « NON_PRECISE ». À ne pas confondre avec les « plus payés » de \
                     `paie_mouvements`, qui comptent aussi les absences non confirmées.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
@@ -288,28 +273,23 @@ public class OutilsEmploye {
     public Map<String, Object> employesSorties(
             @McpToolParam(required = false, description = Formats.PERIODE_DOC) @Pattern(regexp = Formats.PERIODE) String periode) {
         YearMonth mois = periodes.ou(periode);
-        List<EmployeeSortieDto> sorties = employes.listerToutesLesSorties().stream()
-                .filter(sortie -> mois.equals(sortie.periode()))
-                .toList();
-        Map<String, Long> parMotif = sorties.stream()
-                .collect(Collectors.groupingBy(OutilsEmploye::motif, TreeMap::new, Collectors.counting()));
-        List<Map<String, Object>> personnes = sorties.stream().limit(NOMS_RENDUS)
-                .map(sortie -> Map.<String, Object>of("id", sortie.employeId(),
-                        "nomPrenom", employes.findById(sortie.employeId()).nomPrenom(), "motif", motif(sortie)))
-                .toList();
+        EmployeeSortiesMoisDto resultat = employes.sortiesDuMois(mois);
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", mois.toString());
-        donnees.put("nombre", sorties.size());
-        donnees.put("parMotif", parMotif);
-        donnees.put("employes", personnes);
+        donnees.put("nombre", resultat.nombre());
+        donnees.put("parMotif", resultat.parMotif());
+        donnees.put("employes", resultat.sorties().stream()
+                .map(sortie -> Map.<String, Object>of("id", sortie.employeId(),
+                        "nomPrenom", employes.findById(sortie.employeId()).nomPrenom(), "motif", sortie.motif()))
+                .toList());
         donnees.put("vue", vue(mois).enJson());
         return donnees;
     }
 
     @McpTool(name = "employe_parcours", title = "Parcours d'un employé", generateOutputSchema = true,
             description = """
-                    Reconstitue le parcours d'un employé depuis ses bulletins de paie : indicateurs (mois payés, total perçu en \
-                    dirhams, jours travaillés, premier et dernier mois), ses 36 derniers mois (chantier, équipe, fonction, \
+                    Reconstitue le parcours complet d'un employé depuis ses bulletins de paie : indicateurs (mois payés, total perçu en \
+                    dirhams, jours travaillés, premier et dernier mois), tous ses mois (chantier, équipe, fonction, \
                     jours, salaires, observation) et ses événements (entrée, mutation, changement de salaire, départ, retour). \
                     Réservé aux utilisateurs qui voient la paie. Identifiant inconnu : le chercher d'abord avec \
                     `employes_rechercher`.""",
@@ -321,11 +301,9 @@ public class OutilsEmploye {
             @McpToolParam(description = "Identifiant de l'employé (entier positif), rendu par `employes_rechercher`.")
             @Positive Long id) {
         ParcoursEmployeDto resultat = parcours.parcours(id);
-        List<ParcoursEmployeDto.MoisDto> mois = resultat.mois();
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("indicateurs", indicateurs(resultat.indicateurs()));
-        donnees.put("mois", mois.subList(Math.max(0, mois.size() - MOIS_DE_PARCOURS), mois.size())
-                .stream().map(OutilsEmploye::mois).toList());
+        donnees.put("mois", resultat.mois().stream().map(OutilsEmploye::mois).toList());
         donnees.put("evenements", resultat.evenements().stream().map(OutilsEmploye::evenement).toList());
         donnees.put("vue", new VueProposeeDto("employees", "fiche", Map.of("id", String.valueOf(id))).enJson());
         return donnees;
@@ -342,11 +320,6 @@ public class OutilsEmploye {
         Map<String, String> parametres = new LinkedHashMap<>();
         StatutEmploye.versUrl(EmployeeStatut.INACTIF, parametres);
         return new VueProposeeDto("employees", "tabulaire", parametres);
-    }
-
-    /** Un départ ancien sans motif reste compté. */
-    private static String motif(EmployeeSortieDto sortie) {
-        return sortie.motif() == null || sortie.motif().isBlank() ? "NON_PRECISE" : sortie.motif();
     }
 
     /** Une fiche Employé pour l'assistant. */

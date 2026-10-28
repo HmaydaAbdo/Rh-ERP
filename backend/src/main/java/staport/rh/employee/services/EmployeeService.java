@@ -16,6 +16,7 @@ import staport.rh.employee.dtos.request.EmployeeSearchCriteria;
 import staport.rh.employee.dtos.request.EmployeeUpdateRequestDto;
 import staport.rh.employee.dtos.response.EmployeeResponseDto;
 import staport.rh.employee.dtos.response.EmployeeSortieDto;
+import staport.rh.employee.dtos.response.EmployeeSortiesMoisDto;
 import staport.rh.employee.entities.Employee;
 import staport.rh.employee.entities.EmployeeSortie;
 import staport.rh.employee.entities.EmployeeStatut;
@@ -33,6 +34,9 @@ import staport.rh.function.entities.Function;
 import staport.rh.function.services.interfaces.IFunctionService;
 
 import java.time.YearMonth;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 
@@ -180,6 +184,22 @@ public class EmployeeService implements IEmployeeService {
     @Transactional(readOnly = true)
     public List<EmployeeSortieDto> listerToutesLesSorties() {
         return sortieRepository.findAllByOrderByPeriodeAsc().stream().map(EmployeeService::sortieDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeSortiesMoisDto sortiesDuMois(YearMonth periode) {
+        List<EmployeeSortieDto> sorties = sortieRepository.findByPeriodeOrderByEmployee_IdAsc(periode).stream()
+                .map(EmployeeService::sortieDto)
+                .map(sortie -> new EmployeeSortieDto(sortie.employeId(), sortie.periode(), motif(sortie.motif())))
+                .toList();
+        Map<String, Long> parMotif = sorties.stream().collect(Collectors.groupingBy(
+                sortie -> motif(sortie.motif()), TreeMap::new, Collectors.counting()));
+        return new EmployeeSortiesMoisDto(periode, sorties.size(), parMotif, sorties);
+    }
+
+    private static String motif(String motif) {
+        return motif == null || motif.isBlank() ? "NON_PRECISE" : motif;
     }
 
     private static EmployeeSortieDto sortieDto(EmployeeSortie sortie) {

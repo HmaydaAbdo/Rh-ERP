@@ -2,6 +2,7 @@ package staport.rh.mcp.outils;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -18,6 +19,8 @@ import staport.rh.audit.entities.CategorieAudit;
 import staport.rh.heuresupp.dtos.request.HeuresSuppSearchCriteria;
 import staport.rh.heuresupp.dtos.response.HeureSuppResponseDto;
 import staport.rh.heuresupp.dtos.response.HeuresSuppAnalytiqueDto;
+import staport.rh.heuresupp.imports.HeuresSuppImportService;
+import staport.rh.heuresupp.imports.HeuresSuppImportPrerequisDto;
 import staport.rh.heuresupp.services.HeuresSuppAnalytiqueService;
 import staport.rh.heuresupp.services.interfaces.IHeuresSuppService;
 
@@ -35,10 +38,13 @@ public class OutilsHeuresSupp {
     private static final int LIGNES = 20;
     private final IHeuresSuppService heuresSupp;
     private final HeuresSuppAnalytiqueService analytique;
+    private final HeuresSuppImportService importService;
 
-    OutilsHeuresSupp(IHeuresSuppService heuresSupp, HeuresSuppAnalytiqueService analytique) {
+    OutilsHeuresSupp(IHeuresSuppService heuresSupp, HeuresSuppAnalytiqueService analytique,
+                     HeuresSuppImportService importService) {
         this.heuresSupp = heuresSupp;
         this.analytique = analytique;
+        this.importService = importService;
     }
 
     @McpTool(name = "heures_supp_periodes", title = "Mois des heures supplémentaires", generateOutputSchema = true,
@@ -51,29 +57,58 @@ public class OutilsHeuresSupp {
         return enveloppe("/heures-supp/analytique", Map.of(), Map.of("periodes", analytique.periodes()));
     }
 
+    @McpTool(name = "heures_supp_import_prerequis", title = "Vérifier les prérequis d'import des heures supplémentaires",
+            generateOutputSchema = true,
+            description = "Vérifie si un mois et un chantier permettent de démarrer l'import Excel des heures supplémentaires. "
+                    + "Confirme l'existence de bulletins pour le mois et du chantier ; ne lit aucun fichier et ne modifie aucune donnée. "
+                    + "À utiliser avant un import, avec une période aaaa-MM et l'identifiant rendu par chantier_rechercher.",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
+    @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('CHANTIER_READ')")
+    @AuditableAction(action = "MCP_HEURES_SUP_IMPORT_PREREQUIS", categorie = CategorieAudit.ACCES,
+            perimetre = PerimetreLectureMcp.class)
+    public Map<String, Object> verifierPrerequisImport(
+            @McpToolParam(required = true, description = "Mois au format aaaa-MM, par exemple 2026-10.")
+            @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = true, description = "Identifiant du chantier, rendu par chantier_rechercher.")
+            @NotNull @Min(1) Long chantierId) {
+        YearMonth mois = YearMonth.parse(periode);
+        HeuresSuppImportPrerequisDto resultat = importService.verifierPrerequis(mois, chantierId);
+        return enveloppe("/heures-supp/import", Map.of("periode", mois.toString(), "chantierId", chantierId),
+                Map.of("prerequis", resultat));
+    }
+
     @McpTool(name = "heures_supp_indicateurs", title = "Indicateurs d'heures supplémentaires", generateOutputSchema = true,
-            description = "Rend pour un mois les effectifs, heures décimales, Montant, STC (DH), Forfaits et Net à payer, "
-                    + "avec les répartitions par chantier, équipe et fonction. Les définitions sont incluses dans la réponse. "
+            description = "Rend pour un mois et un périmètre les effectifs, heures décimales, Montant, STC (DH), Forfaits et Net à payer, "
+                    + "avec toutes les répartitions par chantier, équipe et fonction. Accepte les filtres chantier, équipe, fonction, CIN et nom. "
+                    + "Les définitions sont incluses dans la réponse. "
                     + "Montant, STC et Net sont calculés par Spring ; ne les recalculez pas.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
     @AuditableAction(action = "MCP_HEURES_SUP_INDICATEURS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
     public Map<String, Object> indicateurs(
             @McpToolParam(required = false, description = "Mois au format aaaa-MM. Absent = dernier mois des heures supplémentaires importées.")
-            @Pattern(regexp = Formats.PERIODE) String periode) {
+            @Pattern(regexp = Formats.PERIODE) String periode,
+            @McpToolParam(required = false, description = Formats.CHANTIERS_DOC) @Size(max = 50) List<@Min(1) Long> chantierIds,
+            @McpToolParam(required = false, description = Formats.EQUIPES_DOC) @Size(max = 50) List<@Min(0) Long> equipeIds,
+            @McpToolParam(required = false, description = Formats.FONCTIONS_DOC) @Size(max = 50) List<@Min(1) Long> fonctionIds,
+            @McpToolParam(required = false, description = "CIN partiel pour limiter l'analyse à une personne.") @Size(max = 30) String cin,
+            @McpToolParam(required = false, description = "Nom et prénom partiels pour limiter l'analyse à une personne.")
+            @Size(max = 150) String nomPrenom) {
         YearMonth mois = periode == null ? analytique.periodes().stream().findFirst().orElse(null) : YearMonth.parse(periode);
         if (mois == null) {
             return enveloppe("/heures-supp/analytique", Map.of(), Map.of("message", "Aucun mois d'heures supplémentaires n'a encore été importé."));
         }
-        HeuresSuppAnalytiqueDto resultat = analytique.analyser(new HeuresSuppSearchCriteria(mois, null, null, null, null, null));
+        HeuresSuppSearchCriteria criteres = new HeuresSuppSearchCriteria(mois, ids(chantierIds), ids(equipeIds),
+                ids(fonctionIds), texte(cin), texte(nomPrenom));
+        HeuresSuppAnalytiqueDto resultat = analytique.analyser(criteres);
         Map<String, Object> donnees = new LinkedHashMap<>();
         donnees.put("periode", resultat.periode());
         donnees.put("indicateurs", resultat.indicateurs());
-        donnees.put("parChantier", resultat.parChantier().stream().limit(LIGNES).toList());
-        donnees.put("parFonction", resultat.parFonction().stream().limit(LIGNES).toList());
-        donnees.put("parEquipe", resultat.parEquipe().stream().limit(LIGNES).toList());
+        donnees.put("parChantier", resultat.parChantier());
+        donnees.put("parFonction", resultat.parFonction());
+        donnees.put("parEquipe", resultat.parEquipe());
         donnees.put("definitions", resultat.definitions());
-        return enveloppe("/heures-supp/analytique", Map.of("periode", mois.toString()), donnees);
+        return enveloppe("/heures-supp/analytique", parametres(criteres), donnees);
     }
 
     @McpTool(name = "heures_supp_rechercher", title = "Rechercher des lignes d'heures supplémentaires", generateOutputSchema = true,
@@ -98,20 +133,30 @@ public class OutilsHeuresSupp {
         }
         YearMonth mois = periode == null ? null : YearMonth.parse(periode);
         HeuresSuppSearchCriteria criteres = new HeuresSuppSearchCriteria(mois,
-                chantierIds == null ? null : chantierIds.stream().distinct().toList(),
-                equipeIds == null ? null : equipeIds.stream().distinct().toList(),
-                fonctionIds == null ? null : fonctionIds.stream().distinct().toList(), cin, nomPrenom);
+                ids(chantierIds), ids(equipeIds), ids(fonctionIds), texte(cin), texte(nomPrenom));
         Page<HeureSuppResponseDto> resultat = heuresSupp.rechercher(criteres,
                 PageRequest.of(page == null ? 0 : page, limite == null ? LIGNES : limite, Sort.by(Sort.Direction.DESC, "periode")));
         Map<String, Object> donnees = Map.of("content", resultat.getContent(), "page", resultat.getNumber(), "limite", resultat.getSize(), "total", resultat.getTotalElements());
+        return enveloppe("/heures-supp", parametres(criteres), donnees);
+    }
+
+    private static List<Long> ids(List<Long> valeurs) {
+        return valeurs == null ? null : valeurs.stream().distinct().toList();
+    }
+
+    private static String texte(String valeur) {
+        return valeur == null || valeur.isBlank() ? null : valeur.strip();
+    }
+
+    private static Map<String, Object> parametres(HeuresSuppSearchCriteria criteres) {
         Map<String, Object> parametres = new LinkedHashMap<>();
-        if (periode != null) parametres.put("periode", periode);
-        if (chantierIds != null) parametres.put("chantierIds", chantierIds);
-        if (equipeIds != null) parametres.put("equipeIds", equipeIds);
-        if (fonctionIds != null) parametres.put("fonctionIds", fonctionIds);
-        if (cin != null) parametres.put("cin", cin);
-        if (nomPrenom != null) parametres.put("nomPrenom", nomPrenom);
-        return enveloppe("/heures-supp", parametres, donnees);
+        if (criteres.periode() != null) parametres.put("periode", criteres.periode().toString());
+        if (criteres.chantierIds() != null) parametres.put("chantierIds", criteres.chantierIds());
+        if (criteres.equipeIds() != null) parametres.put("equipeIds", criteres.equipeIds());
+        if (criteres.fonctionIds() != null) parametres.put("fonctionIds", criteres.fonctionIds());
+        if (criteres.cin() != null) parametres.put("cin", criteres.cin());
+        if (criteres.nomPrenom() != null) parametres.put("nomPrenom", criteres.nomPrenom());
+        return parametres;
     }
 
     private static Map<String, Object> enveloppe(String route, Map<String, Object> parametres, Map<String, Object> resultat) {

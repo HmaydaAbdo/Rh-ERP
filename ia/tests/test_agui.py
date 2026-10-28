@@ -44,7 +44,7 @@ class AccesSimule:
 
 
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
-    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any]) -> Any:
+    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer)
 
     return fabriquer
@@ -107,12 +107,10 @@ def test_un_run_complet_suit_le_contrat_ag_ui() -> None:
     assert "je lis les indicateurs" in raisonnement
     debut = next(e for e in recus if e["type"] == "TOOL_CALL_START")
     assert debut["toolCallName"] == "paie_indicateurs"
-    # Réponse diffusée en texte, puis état partagé : vérifiée.
+    # Réponse diffusée en texte, puis état partagé.
     texte = "".join(e["delta"] for e in recus if e["type"] == "TEXT_MESSAGE_CONTENT")
     assert texte == REPONSE
-    etat = [e for e in recus if e["type"] == "STATE_SNAPSHOT"][-1]["snapshot"]
-    assert etat["verification"] == "verifiee"
-    # Rien d'interne : ni événement brut, ni consignes, ni état privé du vérificateur.
+    # Rien d'interne : ni événement brut, ni consignes.
     assert "rawEvent" not in reponse.text and '"type":"RAW"' not in reponse.text
     assert SYSTEME[:40] not in reponse.text
     assert "chiffres_inconnus" not in reponse.text and "reecritures" not in reponse.text

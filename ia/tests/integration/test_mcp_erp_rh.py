@@ -58,9 +58,16 @@ async def test_le_jeton_agent_ouvre_le_catalogue_et_l_identite_vient_du_serveur(
         assert session.protocol_version == "2025-11-25"
         outils = [outil.name for outil in (await session.list_tools()).tools]
         resultat = await session.call_tool("systeme_identite", {})
-    # Catalogue complet : identité + 27 outils de lecture (docs/ia.md, § 8).
-    assert len(outils) == 28
-    attendus = {"systeme_identite", "paie_indicateurs", "employes_rechercher", "chantier_rechercher"}
+    # Catalogue complet : identité + 29 outils de lecture (docs/ia.md, catalogue MCP).
+    assert len(outils) == 30
+    attendus = {
+        "systeme_identite",
+        "paie_indicateurs",
+        "employes_rechercher",
+        "chantier_rechercher",
+        "heures_supp_indicateurs",
+        "heures_supp_import_prerequis",
+    }
     assert attendus <= set(outils)
     assert isinstance(resultat, CallToolResult)
     assert resultat.is_error is False

@@ -1,6 +1,12 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-27 (routine commune à Claude et Codex ; CI sur demande explicite).
+Dernière mise à jour : 2026-10-28 (routine commune à Claude et Codex ; CI sur demande explicite).
+
+**V1c en diagnostic (2026-10-28)** : dernier jeu complet conservé dans
+`backend/target/evaluation-ia-avant-correctifs.json` : 13/24, dix pannes JSON et une réponse vide.
+Une reproduction avec trace localise la panne JSON dans le sélecteur officiel LangChain, au parsing de sa sortie.
+Les plafonds applicatifs de génération de 300 et 1 500 tokens sont retirés sur demande du propriétaire ;
+les limites natives des modèles restent applicables. Validation réelle après retrait et clôture V1c encore attendues.
 
 **Relais Claude / Codex** : `CLAUDE.md` renvoie à `AGENTS.md` et à la
 [routine commune](../../conventions/workflow.md). Le lot de continuité entre assistants et la règle
@@ -24,62 +30,67 @@ ciblés du style et des marqueurs passent (37 tests). Après intégration du `ma
 (23 avertissements de lint au seuil existant) ; le build signale un bundle initial de 810,59 Ko pour un budget
 d'avertissement de 800 Ko et les avertissements CommonJS CopilotKit `semver` et `partial-json`.
 
-**Heures supplémentaires (2026-10-27, en cours)** : branche locale `codex/heures-supp`, rebasée sur le `main` distant courant. Le propriétaire demande une PR vers `main` puis la fusion. Les règles métier,
-le modèle V39/V40, les façades Employé/Paie, l'audit, MCP, le wizard Excel et les vues Tabulaire/Cartes/Analytique sont décrits
-dans [`docs/heures-supp/README.md`](../heures-supp/README.md). Cartes et Analytique utilisent les vues partagées et des agrégats
-filtrables par chantier, équipe et fonction. Les tests métier, lecteur Excel, RBAC, OpenAPI, MCP et vues partagées accompagnent
-le domaine ; les compilations backend et frontend de production passent localement. Le classeur reçu comprend 864 lignes à zéro
-conservées, 120 positives et une ligne HS vide à la ligne 986, qui bloque l'import jusqu'à sa correction. Le propriétaire a
-autorisé la PR, le push, la CI et la fusion lorsque les contrôles requis passent.
+**Heures supplémentaires (2026-10-28)** : PR #102 est fusionnée dans `main`. Le domaine inclut les façades métier,
+les migrations V39/V40, l'import, les vues et ses outils MCP officiels Spring AI (`heures_supp_periodes`,
+`heures_supp_import_prerequis`, `heures_supp_indicateurs`, `heures_supp_rechercher`). Cette reprise complète la couverture
+par le précontrôle sans écriture et les filtres d'indicateurs ; les répartitions rendent tous les groupes autorisés sans troncature.
+Les règles métier sont dans
+[`docs/heures-supp/README.md`](../heures-supp/README.md).
 
-**Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
-`docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
-IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.
-Revue face aux cadres de référence (NIST AI RMF, ISO/IEC 42001, OWASP LLM et agents, loi 09-08) : conventions
-IA complétées, tâches de J2 et J3 détaillées, écarts suivis au § 10 de [ia.md](../ia.md), décisions à prendre
-listées au § 7.
-Tâches T1 à T8 de J1 faites : passerelle
-LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
-`MCP_ENABLED=false`), 28 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
-(évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
-Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
-CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est
-retirée. L'assistant n'apparaît qu'avec `IA_UTILISER` et `IA_ENABLED=true` (défaut). Tout le chantier est suivi dans un
-seul document : [ia.md](../ia.md). T16 est faite (surface A2UI vue au navigateur avec un vrai modèle, réponse en 76 s). Prochaine action : la « Vision courte » du § 7 de [ia.md](../ia.md) — latence sous 30 s,
-T18 observabilité, T17 passerelle native, T19 conversations durables, T20 démonstration J1. README et skills des huit domaines décrivent
-leurs couches Application, Analytique et IA ; la CI vérifie que permissions et outils MCP y figurent.
+**Chantier IA** : PR #98 et PR #104 sont fusionnées dans `main`. La PR #105 porte V1d/V1f et la reprise V1c sur
+`claude/ia-v1d-v1f-comparer-sans-verificateur`. Elle est rebasée sur le `main` qui inclut PR #102 ;
+les conflits du test du catalogue MCP, de ce relais et de [`ia.md`](../ia.md) sont résolus en conservant les
+changements des deux côtés. Le run CI 40769132424 sur le commit 2073190 a identifié deux régressions de test : le client
+MCP Python attendait 28 outils au lieu de 30, et Ruff demandait le formatage de `evaluation.py`. Le job full-stack a été
+sauté car il dépend du backend en échec. Le contrat de catalogue, le formatage et le type optionnel du test AG-UI sont
+corrigés localement ; Ruff, formatage, Pyright et le test Java qui lance le vrai client MCP Python passent. Nouvelle CI
+à vérifier sur le prochain commit poussé. Le sélecteur et les outils restent ceux des frameworks officiels.
 
-**Chantier IA (2026-10-27)** : T17 à T19 et le harnais sont faits (observabilité Phoenix, passerelle durcie, conversations
-durables, outils triables, questions à l'utilisateur, surfaces déterministes, lint du frontend). **Règle du propriétaire :
-tout est gratuit et le code IA fait maison est une dette suivie jusqu'à zéro** ; l'inventaire et les tâches T21 à T31 laissées
-ouvertes sont au § 7 de [ia.md](../ia.md) (« Objectif : aucun code IA fait maison »). Prochaine action : vague 1 du « Plan de clôture » de [ia.md](../ia.md) (V1a lint déjà faite ; **d'abord V1d, comparaisons fiables, et V1e, CPU au démarrage du service `ia`**, voulus par le propriétaire ; puis interface et runtime, mesure), puis T21 ; une session
-neuve par tâche, Sonnet par défaut, Opus seulement où le plan le marque.
+**V1d clôturée localement** : la comparaison et ses contrats sont déplacés vers la façade analytique publique de Paie ; l'adaptateur
+MCP conserve validation des paramètres, RBAC, audit et présentation de la vue. La convention MCP fixe désormais cette
+frontière pour tous les domaines : indicateurs et calculs métier relèvent de l'API publique du domaine propriétaire.
+**Paie complétée localement** : `paie_mouvements` prend écart net et plus payés dans `IPaieEffectifsService` ;
+`paie_repartition` délègue projection et tri à `IPaieAnalytiqueService` ; la sélection du mois dans les mouvements et la borne
+de fin de l'évolution sont également portées par les façades Paie. Aucun plafond de résultats ou de pages MCP n'est appliqué.
+**Employés complétés localement** : le tri métier des groupes et l'agrégation mensuelle des départs sont dans l'API Employés ;
+le parcours complet est rendu par l'API Paie. Les recherches paginées restent accessibles jusqu'à leur total.
+**Équipe, Fonction et Chantier audités** : leurs chiffres Cartes/Analytique sont des indicateurs de bulletin, déjà calculés
+par Paie ; les regroupements de fiches relèvent de l'API Employés. Les API de ces trois domaines portent les référentiels
+et fiches, sans agrégat métier distinct à déplacer ni outil MCP à dupliquer. Le code et la documentation sont terminés ;
+la validation avant compléments Heures supplémentaires était à 561 tests. La validation complète actuelle après rebase et
+compléments MCP passe : `mvnw -B -o test`, 588 tests, 0 échec, 0 erreur, 4 ignorés. Voir [ia.md](../ia.md).
+Le `LLMToolSelectorMiddleware` officiel est maintenant construit systématiquement par l'application ; l'option
+`IA_SELECTION_OUTILS` est supprimée.
 
-**Correctifs de l'assistant (2026-10-27)** : essai réel d'une question complexe (top 3 des chantiers par masse salariale, comparaison au
-mois précédent), réponse exacte en une minute environ. Deux pannes trouvées avec Phoenix et corrigées : le rappel LiteLLM
-`detect_prompt_injection` (comparaison floue caractère par caractère) saturait le processeur sur les longs prompts et rejetait des
-requêtes légitimes, remplacé par le garde-fou officiel `litellm_content_filter` (mots-clés anglais + expressions françaises) ; le
-volume `/data` du runtime appartenait à root (le runner SQLite ne pouvait pas créer sa base), `/data` est maintenant créé dans l'image
-au nom de `node`. Corrigés ensuite (même jour) : le résumé de conversation (`SummarizationMiddleware`) n'est plus affiché dans le fil
-(modèles internes sans flux et marqués `emit-messages: false`) et ne se déclenche plus à 12 000 jetons mais à 40 000, car il
-remplaçait en plein run les chiffres tout juste lus par un texte tronqué ; le contrôle de santé du service `ia` couvre le
-premier démarrage à froid (110 s) ; Phoenix a un contrôle de santé et le backend, `ia` et le runtime l'attendent (facultatif) ;
-LiteLLM déclare `trusted_proxy_ranges: []`. **Reste ouvert** : la comparaison mois sur mois par chantier n'est pas fiable (la
-question « top 3 puis plus forte hausse » a donné une réponse exacte une fois, une conclusion fausse deux fois : le modèle
-compare les tops de chaque mois au lieu de suivre les mêmes chantiers). À résoudre (V1d du plan de clôture) : un outil déterministe de
-comparaison de deux périodes par chantier, plutôt que de laisser le modèle recombiner. Autre demande du propriétaire (V1e) : réduire
-le CPU au démarrage du service `ia` (import de `litellm` surtout, 7 s sur 14 s).
+V1d : `paie_comparer` compile et ses deux tests d'intégration passent (`McpOutilsLectureIntegrationTest#paie_comparer*`)
+sur une base PostgreSQL 18.6 éphémère créée par Testcontainers, avec migrations Flyway V1–V38. Le JDK 21 utilisé est
+`C:\Program Files\Java\jdk-21` ; l'avertissement JaCoCo de mismatch des classes est préexistant et n'empêche pas le succès.
+V1f : le vérificateur, son état de flux et les textes associés sont retirés. La suite IA passe (50 tests, 13 ignorés selon
+leurs conditions d'exécution) ; Ruff et formatage passent, Pyright rapporte 0 erreur ; les 3 E2E ciblés de l'assistant passent.
+La première exécution Python bloquait dans le sandbox sur la socket locale d'asyncio ; elle passe hors sandbox avec la
+carte locale LiteLLM, sans réseau. Relecture SQL en transaction read-only
+de la base ERP locale : C206, août 2026 = 340 405,38 MAD (76 bulletins), septembre = 422 233,85 MAD (91 bulletins),
+écart +81 828,47 MAD et +24,0 % arrondi ; l'exemple de référence est confirmé. Le sélecteur officiel est activé
+systématiquement et `IA_SELECTION_OUTILS` n'est plus une option. Le commit initial `0f25c80b` a été poussé sur la PR #105 ;
+la branche est rebasée sur le `main` incluant Heures supplémentaires et sera repoussée après les vérifications locales.
+Aucun contrôle CI n'a été lancé manuellement. V1d et V1f sont clôturées dans ce lot, sous réserve de la CI et de la revue PR. Les audits Employés, Paie, Équipe, Fonction et Chantier sont terminés ;
+la suite backend complète passe localement. **V1c est reprise** : le banc d'évaluation passe par la même fabrique que le
+service en production (sélecteur et résumeur officiels) ; la suite IA complète passe à 50 tests, 13 ignorés. Ruff et
+Pyright ciblés passent. Le run réel précédent avec trois KO précède cette correction et n'est pas une mesure valide ;
+évaluation réelle étendue, latence et démonstration T20 restent ouvertes. Un nouveau run fournisseur attend la vérification
+d'un quota réellement gratuit. Reprise du 2026-10-28 : LiteLLM 1.104.2 tourne localement ; deux smoke tests par tags ont
+révélé que le pool demandé n'est pas respecté (`complex` → OpenRouter, en 429 ; `id:gemini-3.8-flash` → Ministral).
+Le filtre officiel appelé directement avec le même tag choisit bien Gemini. Le garde-fou LiteLLM officiel en `pre_call`
+crée un compartiment `litellm_metadata` distinct de `metadata`, ce qui masque les tags au routeur ; le défaut correspond
+à [LiteLLM #45543](https://github.com/BerriAI/litellm/issues/45543), correctif proposé dans [#45585](https://github.com/BerriAI/litellm/pull/45585), encore ouvert. Le propriétaire a validé les groupes officiels par capacité le 2026-10-28 : configuration, client IA et permissions des clés ont été adaptés localement. `litellm-cles` synchronise désormais les groupes des clés existantes ; les cinq groupes de production excluent eval/test. Le garde-fou reste actif. LiteLLM 1.104.2 reste épinglé ; les versions officielles 1.106.5 et 1.109.0-dev.1 ne contiennent pas encore le correctif upstream, mais le choix du groupe par `model` évite le défaut de tags. Validation locale du 2026-10-28 : 11 tests IA ciblés réussis ; les cinq groupes répondent dans leur pool, OCR réel compris. Un ciblage individuel Groq20 réussit ; trois refus 403 confirment l'exclusion eval/test/selftest de la clé applicative. Une injection est bloquée en 400 ; la sonde de bascule et une bascule réelle du groupe complex réussissent. Un appel autorisé avec la clé applicative réussit. La resynchronisation des clés est idempotente. Ruff ciblé, compilation Python des scripts et validation Compose passent. V1c reste ouverte pour les évaluations métier, p95 et T20. Prochaine tâche : reprendre V1c ciblée, complète et T20. Le lot V1c reste distinct de la reprise de complétude MCP des outils Heures supplémentaires.
 
-**Décisions du propriétaire (2026-10-27), plan seulement, rien n'est codé** (détail dans le plan de clôture et le journal de [ia.md](../ia.md)) :
-1. **Faire disparaître le besoin de calcul** est prioritaire (V1d) : l'outil renvoie lui-même variations, pourcentages, moyennes,
-   rangs et effectifs.
-2. **Le vérificateur de chiffres est supprimé** (T22, V1f, après V1d) : une liste exhaustive de faux positifs est impossible
-   (cas vus : date d'un tour précédent, marqueur « 1. », abstention sur une réponse exacte). Il reste actif d'ici là.
-   En conversation, l'agent s'appuie sur les tours précédents, pose une question et relit l'ERP pour confirmer.
-3. **Tous les middlewares officiels de LangChain et LangGraph sont mis en œuvre, sans exception** (M1 à M6) ; celui qui exécute des
-   commandes (`ShellToolMiddleware`) exige une décision de sécurité (conteneur jetable sans réseau ni secret) avant adoption.
-4. **Tout code IA maison est supprimé** au profit des frameworks (inventaire T21 à T31).
-Ordre : V1d, V1f, V1e, V1b, V1c, puis M1 à M6, puis T21 et les remplacements.
+**Correctif OSV backend (2026-10-28)** : la dernière CI sur l'ancien head (`40773260886`) échouait au scan de dépendances,
+qui trouvait `opentelemetry-api` 1.62.0 (GHSA-ccrj-gw8r-854m). Le POM importe désormais la BOM officielle OpenTelemetry
+1.67.0 pour aligner tous ses artefacts sur la version corrigée. Reproduction locale du même OSV-Scanner v2.6.0 : aucun
+problème sur le SBOM de production (235 composants) ; l'exception Guava demeure active et filtrée sur le SBOM MCP de test
+(315 composants). Vérifications backend locales : Checkstyle, 588 tests (0 échec, 4 ignorés), couverture par domaine,
+contrôle des dépendances runtime, documentation des permissions/outils MCP, client TypeScript (`typecheck` et audit npm),
+interopérabilité MCP Java/TypeScript/Python et scan OSV des deux SBOM passent. Aucun run CI distant n'a été relancé.
 
 Ce document dit **où en est le projet, comment le propriétaire veut travailler et ce qui reste ouvert**. Il ne remplace ni
 `AGENTS.md`, ni `conventions/` (source de vérité), ni `TODO.md` (liste vivante des sujets) : il y renvoie.

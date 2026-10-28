@@ -1,33 +1,40 @@
-# Passerelle LiteLLM d'ERP-RH (image erp-rh-litellm). Aucun secret ici : uniquement des références
-# os.environ/… résolues depuis le .env racine unique (voir litellm/README.md et docs/ia.md).
-#
-# Un alias compatible OpenAI : `ai-gateway`. Le client envoie un tag de capacité dans metadata.tags :
-# simple | medium | complex | code | ocr (sans tag = `default`, même pool que medium).
-#
-# Règles de routage (vérifiées dans le code du routeur LiteLLM v1.104.2) :
-# - Un seul déploiement appelé à la fois (simple-shuffle pondéré). Jamais d'envoi parallèle.
-# - Sur erreur/429, enable_weighted_failover choisit un AUTRE déploiement portant le MÊME tag, jusqu'à
-#   max_fallbacks tentatives. Ne pas réintroduire de niveaux `order:` : avec plusieurs niveaux, LiteLLM
-#   saute directement au niveau suivant sans essayer les autres modèles du même niveau.
-# - Chaque pool ne contient que des modèles acceptables pour la tâche. Pool épuisé = échec explicite,
-#   jamais une réponse d'un modèle plus faible.
-# - Les modèles en préversion ou à sortie non fiable (preview Groq, Step 5) ne portent que des tags opt-in
-#   `eval`, `eval-<capacité>`. La clé d'ERP-RH porte metadata {"tags": ["!eval"]}. NVIDIA NIM (prototypage)
-#   est dans les pools tant que l'ERP ne traite que des données synthétiques (J1–J2), retiré avant J3.
-# - Pas de bascule sur 400 ni 401 : les déploiements sans clé sont retirés au démarrage (filtrer_config.py).
-# - Sans tag, si tout le pool `default` est en cooldown, LiteLLM se rabat sur n'importe quel
-#   déploiement sain du groupe : toujours envoyer un tag.
-# - Chaque déploiement porte aussi `id:<model_info.id>` pour cibler un modèle précis (tests, évaluations).
-#
-# Une seule instance, un seul worker : l'état du routeur (cooldowns, limites) reste en mémoire, sans Redis.
-# Quotas : `rpm` seulement là où le fournisseur le documente (appliqué par enable_pre_call_checks).
-#
-# Paliers gratuits : réservés aux données publiques ou synthétiques (docs/ia.md, § 2).
+# Passerelle LiteLLM : groupes officiels par capacité. Le champ model sélectionne le pool.
+# Les tags sont conservés pour observation ; ils ne déterminent plus les droits ni le routage.
+# Groupes eval et test réservés à la clé de test. Garde-fou pré-appel conservé.
+# Source : docs/ia-proposition-routage-litellm.md (adoptée par le propriétaire).
+
 model_list:
-  # ---------------------------------------------------------------- Google Gemini API (palier gratuit)
-  # Le contenu du palier gratuit sert à améliorer les produits Google. Limites par projet et par modèle,
-  # visibles dans AI Studio ; quota journalier remis à zéro à minuit, heure du Pacifique.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: gemini-3.8-flash--complex }
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 5
+      timeout: 60
+      max_parallel_requests: 3
+      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
+
+  - model_name: ai-gateway-code
+    model_info: { id: gemini-3.8-flash--code }
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 5
+      timeout: 60
+      max_parallel_requests: 3
+      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
+
+  - model_name: ai-gateway-ocr
+    model_info: { id: gemini-3.8-flash--ocr }
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 5
+      timeout: 60
+      max_parallel_requests: 3
+      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
+
+  - model_name: ai-gateway-test-gemini-3.8-flash
     model_info: { id: gemini-3.8-flash }
     litellm_params:
       model: gemini/gemini-3.8-flash
@@ -37,7 +44,29 @@ model_list:
       max_parallel_requests: 3
       tags: [complex, code, ocr, "id:gemini-3.8-flash"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: gemini-3.5-flash-lite--simple }
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 5
+      timeout: 30
+      max_parallel_requests: 3
+      tags: [simple, ocr, "id:gemini-3.5-flash-lite"]
+
+  # Gemma 4 sur l'API Gemini : gratuit, entrée image, quota distinct des modèles Gemini Flash.
+  - model_name: ai-gateway-ocr
+    model_info: { id: gemini-3.5-flash-lite--ocr }
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 5
+      timeout: 30
+      max_parallel_requests: 3
+      tags: [simple, ocr, "id:gemini-3.5-flash-lite"]
+
+  # Gemma 4 sur l'API Gemini : gratuit, entrée image, quota distinct des modèles Gemini Flash.
+  - model_name: ai-gateway-test-gemini-3.5-flash-lite
     model_info: { id: gemini-3.5-flash-lite }
     litellm_params:
       model: gemini/gemini-3.5-flash-lite
@@ -48,7 +77,27 @@ model_list:
       tags: [simple, ocr, "id:gemini-3.5-flash-lite"]
 
   # Gemma 4 sur l'API Gemini : gratuit, entrée image, quota distinct des modèles Gemini Flash.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-medium
+    model_info: { id: gemini-gemma-4-31b--medium }
+    litellm_params:
+      model: gemini/gemma-4-31b-it
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 4
+      timeout: 60
+      max_parallel_requests: 2
+      tags: [medium, ocr, default, "id:gemini-gemma-4-31b"]
+
+  - model_name: ai-gateway-ocr
+    model_info: { id: gemini-gemma-4-31b--ocr }
+    litellm_params:
+      model: gemini/gemma-4-31b-it
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 4
+      timeout: 60
+      max_parallel_requests: 2
+      tags: [medium, ocr, default, "id:gemini-gemma-4-31b"]
+
+  - model_name: ai-gateway-test-gemini-gemma-4-31b
     model_info: { id: gemini-gemma-4-31b }
     litellm_params:
       model: gemini/gemma-4-31b-it
@@ -58,7 +107,21 @@ model_list:
       max_parallel_requests: 2
       tags: [medium, ocr, default, "id:gemini-gemma-4-31b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: gemini-gemma-4-26b--simple }
+    litellm_params:
+      model: gemini/gemma-4-26b-a4b-it
+      api_key: os.environ/GEMINI_API_KEY
+      weight: 4
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [simple, "id:gemini-gemma-4-26b"]
+
+  # ---------------------------------------------------------------- Groq (Free plan)
+  # Limites documentées par modèle : 30 RPM, 1K RPD, 8K TPM, 200K TPD (au niveau de l'organisation).
+  # 8K TPM compte entrée + sortie (raisonnement inclus) : garder les prompts sous ~5K tokens.
+  # Hors pool `complex` : l'agent (catalogue MCP complet) dépasse 8K TPM dès la première question (T6).
+  - model_name: ai-gateway-test-gemini-gemma-4-26b
     model_info: { id: gemini-gemma-4-26b }
     litellm_params:
       model: gemini/gemma-4-26b-a4b-it
@@ -72,7 +135,29 @@ model_list:
   # Limites documentées par modèle : 30 RPM, 1K RPD, 8K TPM, 200K TPD (au niveau de l'organisation).
   # 8K TPM compte entrée + sortie (raisonnement inclus) : garder les prompts sous ~5K tokens.
   # Hors pool `complex` : l'agent (catalogue MCP complet) dépasse 8K TPM dès la première question (T6).
-  - model_name: ai-gateway
+  - model_name: ai-gateway-medium
+    model_info: { id: groq-gpt-oss-120b--medium, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 5
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 4
+      tags: [medium, code, default, "id:groq-gpt-oss-120b"]
+
+  - model_name: ai-gateway-code
+    model_info: { id: groq-gpt-oss-120b--code, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 5
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 4
+      tags: [medium, code, default, "id:groq-gpt-oss-120b"]
+
+  - model_name: ai-gateway-test-groq-gpt-oss-120b
     model_info: { id: groq-gpt-oss-120b, max_input_tokens: 5000 }
     litellm_params:
       model: groq/openai/gpt-oss-120b
@@ -83,7 +168,23 @@ model_list:
       max_parallel_requests: 4
       tags: [medium, code, default, "id:groq-gpt-oss-120b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: groq-gpt-oss-20b--simple, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 5
+      rpm: 30
+      timeout: 30
+      max_parallel_requests: 4
+      tags: [simple, "id:groq-gpt-oss-20b"]
+
+  # ---------------------------------------------------------------- Mistral (Experiment, gratuit)
+  # Limites par modèle dans Admin > Limits (environ 1 req/s pour l'espace de travail). Les requêtes
+  # gratuites peuvent servir à l'entraînement sauf désactivation dans Admin Console > Privacy.
+  # Sondé le 2026-10-25 : ministral-14b et codestral répondent (outils + JSON) ; medium renvoie 429
+  # sur ce compte (quota à vérifier) — un 429 bascule, il reste donc dans le pool.
+  - model_name: ai-gateway-test-groq-gpt-oss-20b
     model_info: { id: groq-gpt-oss-20b, max_input_tokens: 5000 }
     litellm_params:
       model: groq/openai/gpt-oss-20b
@@ -99,7 +200,18 @@ model_list:
   # gratuites peuvent servir à l'entraînement sauf désactivation dans Admin Console > Privacy.
   # Sondé le 2026-10-25 : ministral-14b et codestral répondent (outils + JSON) ; medium renvoie 429
   # sur ce compte (quota à vérifier) — un 429 bascule, il reste donc dans le pool.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: mistral-medium--complex }
+    litellm_params:
+      model: mistral/mistral-medium-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [complex, "id:mistral-medium"]
+
+  - model_name: ai-gateway-test-mistral-medium
     model_info: { id: mistral-medium }
     litellm_params:
       model: mistral/mistral-medium-latest
@@ -110,7 +222,29 @@ model_list:
       max_parallel_requests: 1
       tags: [complex, "id:mistral-medium"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: mistral-ministral-14b--simple }
+    litellm_params:
+      model: mistral/ministral-14b-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, medium, default, "id:mistral-ministral-14b"]
+
+  - model_name: ai-gateway-medium
+    model_info: { id: mistral-ministral-14b--medium }
+    litellm_params:
+      model: mistral/ministral-14b-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, medium, default, "id:mistral-ministral-14b"]
+
+  - model_name: ai-gateway-test-mistral-ministral-14b
     model_info: { id: mistral-ministral-14b }
     litellm_params:
       model: mistral/ministral-14b-latest
@@ -121,7 +255,22 @@ model_list:
       max_parallel_requests: 1
       tags: [simple, medium, default, "id:mistral-ministral-14b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-code
+    model_info: { id: mistral-codestral--code }
+    litellm_params:
+      model: mistral/codestral-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 3
+      rpm: 30
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [code, "id:mistral-codestral"]
+
+  # ---------------------------------------------------------------- Z.ai (modèles Flash gratuits)
+  # Seuls les modèles *-flash sont gratuits sur ce compte (les autres : « Insufficient balance »).
+  # glm-4.7-flash : outils OK, mais sortie json_schema invalide par la passerelle (sondage du
+  # 2026-10-25) : hors des pools simple (ciblage JSON) et complex.
+  - model_name: ai-gateway-test-mistral-codestral
     model_info: { id: mistral-codestral }
     litellm_params:
       model: mistral/codestral-latest
@@ -136,7 +285,22 @@ model_list:
   # Seuls les modèles *-flash sont gratuits sur ce compte (les autres : « Insufficient balance »).
   # glm-4.7-flash : outils OK, mais sortie json_schema invalide par la passerelle (sondage du
   # 2026-10-25) : hors des pools simple (ciblage JSON) et complex.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-medium
+    model_info: { id: zai-glm-47-flash--medium }
+    litellm_params:
+      model: zai/glm-4.7-flash
+      api_key: os.environ/ZAI_API_KEY
+      weight: 3
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [medium, default, "id:zai-glm-47-flash"]
+
+  # ---------------------------------------------------------------- NVIDIA NIM (build.nvidia.com)
+  # Offre de prototypage : admise tant que l'ERP ne traite que des données synthétiques (J1–J2),
+  # retirée des pools avant J3. Environ 40 RPM par compte (non publié) : rpm 10 par modèle.
+  # Sondé le 2026-10-25 (outils + JSON en 1 à 3 s) ; écartés : deepseek-v4.1-flash, glm-5.3, gemma-4-31b
+  # (délai dépassé), kimi-k2.6, nemotron-3-super, muse-glimmer (404 pour ce compte), glm-5.3-flash (90 s).
+  - model_name: ai-gateway-test-zai-glm-47-flash
     model_info: { id: zai-glm-47-flash }
     litellm_params:
       model: zai/glm-4.7-flash
@@ -151,7 +315,43 @@ model_list:
   # retirée des pools avant J3. Environ 40 RPM par compte (non publié) : rpm 10 par modèle.
   # Sondé le 2026-10-25 (outils + JSON en 1 à 3 s) ; écartés : deepseek-v4.1-flash, glm-5.3, gemma-4-31b
   # (délai dépassé), kimi-k2.6, nemotron-3-super, muse-glimmer (404 pour ce compte), glm-5.3-flash (90 s).
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: nvidia-minimax-m31-flash--complex }
+    litellm_params:
+      model: openai/minimaxai/minimax-m3.1-flash
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
+
+  - model_name: ai-gateway-code
+    model_info: { id: nvidia-minimax-m31-flash--code }
+    litellm_params:
+      model: openai/minimaxai/minimax-m3.1-flash
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
+
+  - model_name: ai-gateway-medium
+    model_info: { id: nvidia-minimax-m31-flash--medium }
+    litellm_params:
+      model: openai/minimaxai/minimax-m3.1-flash
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
+
+  - model_name: ai-gateway-test-nvidia-minimax-m31-flash
     model_info: { id: nvidia-minimax-m31-flash }
     litellm_params:
       model: openai/minimaxai/minimax-m3.1-flash
@@ -163,7 +363,31 @@ model_list:
       max_parallel_requests: 1
       tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: nvidia-nemotron-3-ultra-550b--complex }
+    litellm_params:
+      model: openai/nvidia/nemotron-3-ultra-550b-a55b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, "id:nvidia-nemotron-3-ultra-550b"]
+
+  - model_name: ai-gateway-code
+    model_info: { id: nvidia-nemotron-3-ultra-550b--code }
+    litellm_params:
+      model: openai/nvidia/nemotron-3-ultra-550b-a55b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, code, "id:nvidia-nemotron-3-ultra-550b"]
+
+  - model_name: ai-gateway-test-nvidia-nemotron-3-ultra-550b
     model_info: { id: nvidia-nemotron-3-ultra-550b }
     litellm_params:
       model: openai/nvidia/nemotron-3-ultra-550b-a55b
@@ -175,7 +399,31 @@ model_list:
       max_parallel_requests: 1
       tags: [complex, code, "id:nvidia-nemotron-3-ultra-550b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: nvidia-nemotron-35-super-vl-120b--complex }
+    litellm_params:
+      model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, medium, "id:nvidia-nemotron-35-super-vl-120b"]
+
+  - model_name: ai-gateway-medium
+    model_info: { id: nvidia-nemotron-35-super-vl-120b--medium }
+    litellm_params:
+      model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 4
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [complex, medium, "id:nvidia-nemotron-35-super-vl-120b"]
+
+  - model_name: ai-gateway-test-nvidia-nemotron-35-super-vl-120b
     model_info: { id: nvidia-nemotron-35-super-vl-120b }
     litellm_params:
       model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
@@ -187,7 +435,24 @@ model_list:
       max_parallel_requests: 1
       tags: [complex, medium, "id:nvidia-nemotron-35-super-vl-120b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: nvidia-gpt-oss-20b--simple }
+    litellm_params:
+      model: openai/openai/gpt-oss-20b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 3
+      rpm: 10
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, "id:nvidia-gpt-oss-20b"]
+
+  # ---------------------------------------------------------------- Cloudflare Workers AI
+  # 10 000 Neurons/jour partagés par TOUS les modèles du compte (remise à zéro 00:00 UTC). Rester en
+  # Workers Free pour 0 $. LiteLLM construit l'URL /ai/v1 depuis CLOUDFLARE_ACCOUNT_ID.
+  # Workers AI refuse `content: null` (400, sans bascule) : un message assistant porteur d'appels
+  # d'outils doit avoir un contenu chaîne, éventuellement vide (service IA, T6).
+  - model_name: ai-gateway-test-nvidia-gpt-oss-20b
     model_info: { id: nvidia-gpt-oss-20b }
     litellm_params:
       model: openai/openai/gpt-oss-20b
@@ -204,7 +469,27 @@ model_list:
   # Workers Free pour 0 $. LiteLLM construit l'URL /ai/v1 depuis CLOUDFLARE_ACCOUNT_ID.
   # Workers AI refuse `content: null` (400, sans bascule) : un message assistant porteur d'appels
   # d'outils doit avoir un contenu chaîne, éventuellement vide (service IA, T6).
-  - model_name: ai-gateway
+  - model_name: ai-gateway-complex
+    model_info: { id: cloudflare-gpt-oss-120b--complex, max_input_tokens: 16000 }
+    litellm_params:
+      model: cloudflare/@cf/openai/gpt-oss-120b
+      api_key: os.environ/CLOUDFLARE_API_KEY
+      weight: 2
+      timeout: 60
+      max_parallel_requests: 2
+      tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
+
+  - model_name: ai-gateway-code
+    model_info: { id: cloudflare-gpt-oss-120b--code, max_input_tokens: 16000 }
+    litellm_params:
+      model: cloudflare/@cf/openai/gpt-oss-120b
+      api_key: os.environ/CLOUDFLARE_API_KEY
+      weight: 2
+      timeout: 60
+      max_parallel_requests: 2
+      tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
+
+  - model_name: ai-gateway-test-cloudflare-gpt-oss-120b
     model_info: { id: cloudflare-gpt-oss-120b, max_input_tokens: 16000 }
     litellm_params:
       model: cloudflare/@cf/openai/gpt-oss-120b
@@ -214,7 +499,19 @@ model_list:
       max_parallel_requests: 2
       tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: cloudflare-glm-47-flash--simple, max_input_tokens: 16000 }
+    litellm_params:
+      model: cloudflare/@cf/zai-org/glm-4.7-flash
+      api_key: os.environ/CLOUDFLARE_API_KEY
+      weight: 2
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [simple, "id:cloudflare-glm-47-flash"]
+
+  # ---------------------------------------------------------------- OpenRouter (modèles :free uniquement)
+  # 20 RPM ; 50 requêtes/jour pour tout le compte tant que moins de 10 crédits ont été achetés.
+  - model_name: ai-gateway-test-cloudflare-glm-47-flash
     model_info: { id: cloudflare-glm-47-flash, max_input_tokens: 16000 }
     litellm_params:
       model: cloudflare/@cf/zai-org/glm-4.7-flash
@@ -226,7 +523,52 @@ model_list:
 
   # ---------------------------------------------------------------- OpenRouter (modèles :free uniquement)
   # 20 RPM ; 50 requêtes/jour pour tout le compte tant que moins de 10 crédits ont été achetés.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: openrouter-gemma-4-31b-free--simple }
+    litellm_params:
+      model: openrouter/google/gemma-4-31b-it:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      weight: 1
+      rpm: 20
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [simple, medium, ocr, default, "id:openrouter-gemma-4-31b-free"]
+
+  # ---------------------------------------------------------------- LLM7 (llm7.io, jeton gratuit par e-mail)
+  # Environ 120 requêtes/min avec le jeton. Seuls quelques modèles du catalogue sont gratuits (les autres répondent 402
+  # « Insufficient balance ») : sondés le 2026-10-26 avec outils, gpt-oss:20b et codestral-latest répondent en 0,5 à 4 s.
+  # nemotron-3-nano:30b et minimax-m2.7 ne sont pas retenus (outil non appelé à travers LiteLLM / 5 s).
+  - model_name: ai-gateway-medium
+    model_info: { id: openrouter-gemma-4-31b-free--medium }
+    litellm_params:
+      model: openrouter/google/gemma-4-31b-it:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      weight: 1
+      rpm: 20
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [simple, medium, ocr, default, "id:openrouter-gemma-4-31b-free"]
+
+  # ---------------------------------------------------------------- LLM7 (llm7.io, jeton gratuit par e-mail)
+  # Environ 120 requêtes/min avec le jeton. Seuls quelques modèles du catalogue sont gratuits (les autres répondent 402
+  # « Insufficient balance ») : sondés le 2026-10-26 avec outils, gpt-oss:20b et codestral-latest répondent en 0,5 à 4 s.
+  # nemotron-3-nano:30b et minimax-m2.7 ne sont pas retenus (outil non appelé à travers LiteLLM / 5 s).
+  - model_name: ai-gateway-ocr
+    model_info: { id: openrouter-gemma-4-31b-free--ocr }
+    litellm_params:
+      model: openrouter/google/gemma-4-31b-it:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      weight: 1
+      rpm: 20
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [simple, medium, ocr, default, "id:openrouter-gemma-4-31b-free"]
+
+  # ---------------------------------------------------------------- LLM7 (llm7.io, jeton gratuit par e-mail)
+  # Environ 120 requêtes/min avec le jeton. Seuls quelques modèles du catalogue sont gratuits (les autres répondent 402
+  # « Insufficient balance ») : sondés le 2026-10-26 avec outils, gpt-oss:20b et codestral-latest répondent en 0,5 à 4 s.
+  # nemotron-3-nano:30b et minimax-m2.7 ne sont pas retenus (outil non appelé à travers LiteLLM / 5 s).
+  - model_name: ai-gateway-test-openrouter-gemma-4-31b-free
     model_info: { id: openrouter-gemma-4-31b-free }
     litellm_params:
       model: openrouter/google/gemma-4-31b-it:free
@@ -241,7 +583,19 @@ model_list:
   # Environ 120 requêtes/min avec le jeton. Seuls quelques modèles du catalogue sont gratuits (les autres répondent 402
   # « Insufficient balance ») : sondés le 2026-10-26 avec outils, gpt-oss:20b et codestral-latest répondent en 0,5 à 4 s.
   # nemotron-3-nano:30b et minimax-m2.7 ne sont pas retenus (outil non appelé à travers LiteLLM / 5 s).
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: llm7-gpt-oss-20b--simple }
+    litellm_params:
+      model: openai/gpt-oss:20b
+      api_base: https://api.llm7.io/v1
+      api_key: os.environ/LLM7_API_KEY
+      weight: 2
+      rpm: 60
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [simple, "id:llm7-gpt-oss-20b"]
+
+  - model_name: ai-gateway-test-llm7-gpt-oss-20b
     model_info: { id: llm7-gpt-oss-20b }
     litellm_params:
       model: openai/gpt-oss:20b
@@ -253,7 +607,23 @@ model_list:
       max_parallel_requests: 2
       tags: [simple, "id:llm7-gpt-oss-20b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-code
+    model_info: { id: llm7-codestral--code }
+    litellm_params:
+      model: openai/codestral-latest
+      api_base: https://api.llm7.io/v1
+      api_key: os.environ/LLM7_API_KEY
+      weight: 2
+      rpm: 60
+      timeout: 30
+      max_parallel_requests: 2
+      tags: [code, "id:llm7-codestral"]
+
+  # ---------------------------------------------------------------- Cohere (clé d'essai)
+  # Clé d'essai : 20 requêtes/min au total et 1 000 appels par mois, usage non commercial (docs.cohere.com/docs/rate-limits).
+  # Les trois modèles se partagent ce quota : rpm 8 + 8 + 4. Command A répond en 1 à 1,4 s en direct mais a mis 25 s à
+  # travers LiteLLM lors d'une sonde, et Command A+ n'a pas appelé l'outil : ils restent en évaluation (opt-in).
+  - model_name: ai-gateway-test-llm7-codestral
     model_info: { id: llm7-codestral }
     litellm_params:
       model: openai/codestral-latest
@@ -269,7 +639,18 @@ model_list:
   # Clé d'essai : 20 requêtes/min au total et 1 000 appels par mois, usage non commercial (docs.cohere.com/docs/rate-limits).
   # Les trois modèles se partagent ce quota : rpm 8 + 8 + 4. Command A répond en 1 à 1,4 s en direct mais a mis 25 s à
   # travers LiteLLM lors d'une sonde, et Command A+ n'a pas appelé l'outil : ils restent en évaluation (opt-in).
-  - model_name: ai-gateway
+  - model_name: ai-gateway-simple
+    model_info: { id: cohere-command-r7b--simple }
+    litellm_params:
+      model: cohere_chat/command-r7b-12-2024
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 4
+      timeout: 30
+      max_parallel_requests: 1
+      tags: [simple, "id:cohere-command-r7b"]
+
+  - model_name: ai-gateway-test-cohere-command-r7b
     model_info: { id: cohere-command-r7b }
     litellm_params:
       model: cohere_chat/command-r7b-12-2024
@@ -280,7 +661,29 @@ model_list:
       max_parallel_requests: 1
       tags: [simple, "id:cohere-command-r7b"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-eval-complex
+    model_info: { id: cohere-command-a--eval-complex }
+    litellm_params:
+      model: cohere_chat/command-a-03-2025
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
+
+  - model_name: ai-gateway-eval-medium
+    model_info: { id: cohere-command-a--eval-medium }
+    litellm_params:
+      model: cohere_chat/command-a-03-2025
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
+
+  - model_name: ai-gateway-test-cohere-command-a
     model_info: { id: cohere-command-a }
     litellm_params:
       model: cohere_chat/command-a-03-2025
@@ -291,7 +694,39 @@ model_list:
       max_parallel_requests: 1
       tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
 
-  - model_name: ai-gateway
+  - model_name: ai-gateway-eval-complex
+    model_info: { id: cohere-command-a-plus--eval-complex }
+    litellm_params:
+      model: cohere_chat/command-a-plus-05-2026
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a-plus"]
+
+  # ================================================================ Pool d'évaluation (opt-in)
+  # Jamais choisi par les seuls tags de capacité. Utiliser ["eval"], ["eval-<capacité>"],
+  # ["<capacité>", "eval-<capacité>"] ou ["id:<déploiement>"].
+
+  # Modèle preview Groq : « à des fins d'évaluation uniquement », retirable à court préavis.
+  - model_name: ai-gateway-eval-medium
+    model_info: { id: cohere-command-a-plus--eval-medium }
+    litellm_params:
+      model: cohere_chat/command-a-plus-05-2026
+      api_key: os.environ/COHERE_API_KEY
+      weight: 1
+      rpm: 8
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [eval, eval-complex, eval-medium, "id:cohere-command-a-plus"]
+
+  # ================================================================ Pool d'évaluation (opt-in)
+  # Jamais choisi par les seuls tags de capacité. Utiliser ["eval"], ["eval-<capacité>"],
+  # ["<capacité>", "eval-<capacité>"] ou ["id:<déploiement>"].
+
+  # Modèle preview Groq : « à des fins d'évaluation uniquement », retirable à court préavis.
+  - model_name: ai-gateway-test-cohere-command-a-plus
     model_info: { id: cohere-command-a-plus }
     litellm_params:
       model: cohere_chat/command-a-plus-05-2026
@@ -307,7 +742,43 @@ model_list:
   # ["<capacité>", "eval-<capacité>"] ou ["id:<déploiement>"].
 
   # Modèle preview Groq : « à des fins d'évaluation uniquement », retirable à court préavis.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-eval-medium
+    model_info: { id: groq-qwen-38-27b--eval-medium, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 2
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 2
+      tags: [eval, eval-medium, eval-complex, eval-code, "id:groq-qwen-38-27b"]
+
+  # Step 5 Preview (NVIDIA) : outils OK mais JSON invalide au sondage du 2026-10-25 ; évaluation seulement.
+  - model_name: ai-gateway-eval-complex
+    model_info: { id: groq-qwen-38-27b--eval-complex, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 2
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 2
+      tags: [eval, eval-medium, eval-complex, eval-code, "id:groq-qwen-38-27b"]
+
+  # Step 5 Preview (NVIDIA) : outils OK mais JSON invalide au sondage du 2026-10-25 ; évaluation seulement.
+  - model_name: ai-gateway-eval-code
+    model_info: { id: groq-qwen-38-27b--eval-code, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 2
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 2
+      tags: [eval, eval-medium, eval-complex, eval-code, "id:groq-qwen-38-27b"]
+
+  # Step 5 Preview (NVIDIA) : outils OK mais JSON invalide au sondage du 2026-10-25 ; évaluation seulement.
+  - model_name: ai-gateway-test-groq-qwen-38-27b
     model_info: { id: groq-qwen-38-27b, max_input_tokens: 5000 }
     litellm_params:
       model: groq/qwen/qwen3.8-27b
@@ -319,7 +790,37 @@ model_list:
       tags: [eval, eval-medium, eval-complex, eval-code, "id:groq-qwen-38-27b"]
 
   # Step 5 Preview (NVIDIA) : outils OK mais JSON invalide au sondage du 2026-10-25 ; évaluation seulement.
-  - model_name: ai-gateway
+  - model_name: ai-gateway-eval-medium
+    model_info: { id: nvidia-step-5-preview--eval-medium }
+    litellm_params:
+      model: openai/stepfun-ai/step-5-preview
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 2
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [eval, eval-medium, eval-complex, "id:nvidia-step-5-preview"]
+
+  # ================================================================ Auto-test de bascule
+  # Alias interne utilisé seulement par test_providers.py ; ne jamais le donner aux clés applicatives.
+  # La sonde vise un port local fermé (aucun appel externe) : le routeur doit basculer sur la cible.
+  - model_name: ai-gateway-eval-complex
+    model_info: { id: nvidia-step-5-preview--eval-complex }
+    litellm_params:
+      model: openai/stepfun-ai/step-5-preview
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      weight: 2
+      rpm: 10
+      timeout: 90
+      max_parallel_requests: 1
+      tags: [eval, eval-medium, eval-complex, "id:nvidia-step-5-preview"]
+
+  # ================================================================ Auto-test de bascule
+  # Alias interne utilisé seulement par test_providers.py ; ne jamais le donner aux clés applicatives.
+  # La sonde vise un port local fermé (aucun appel externe) : le routeur doit basculer sur la cible.
+  - model_name: ai-gateway-test-nvidia-step-5-preview
     model_info: { id: nvidia-step-5-preview }
     litellm_params:
       model: openai/stepfun-ai/step-5-preview
@@ -354,11 +855,12 @@ model_list:
       timeout: 30
 
 router_settings:
+  # Bascule pondérée officielle entre déploiements du même groupe.
   routing_strategy: simple-shuffle
   enable_weighted_failover: true
-  # Jusqu'à 3 tentatives supplémentaires sur d'autres déploiements du même tag (4 modèles au plus).
+  # Jusqu'à 3 tentatives supplémentaires sur d'autres déploiements du même groupe (4 modèles au plus).
   max_fallbacks: 3
-  enable_tag_filtering: true
+  enable_tag_filtering: false
   tag_filtering_match_any: true
   enable_pre_call_checks: true
   # Ne jamais réessayer le même déploiement : ce serait dépenser deux fois le même quota.
@@ -370,7 +872,7 @@ router_settings:
 
 litellm_settings:
   drop_params: true
-  # Une réponse JSON non conforme au schéma est une erreur et bascule vers un autre modèle du même tag.
+  # Une réponse JSON non conforme au schéma est une erreur et bascule vers un autre modèle du même groupe.
   enable_json_schema_validation: true
   request_timeout: 120
   set_verbose: false

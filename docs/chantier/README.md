@@ -127,6 +127,9 @@ géographique est un écran distinct.
 (`id`, `code`, `libelle`, `masse`, `effectif`, `stc`, `stcMontant`) liste **tous** les chantiers du mois, sans plafond ; `evolution`
 couvre tout l'historique du périmètre ; `moisPrecedent` sert à la comparaison ; `kpis.nombreChantiers` compte les
 chantiers présents dans la paie du mois.
+Ces indicateurs décrivent les bulletins, donc l'API Paie en est propriétaire. Les effectifs non financiers relèvent des
+regroupements publics de l'API Employés. L'API Chantier reste propriétaire du référentiel, du statut et des fiches ; aucun
+calcul MCP ne duplique ces agrégats.
 
 **Définitions des indicateurs**
 
@@ -164,8 +167,8 @@ peut voir.
 |---|---|---|---|
 | `chantier_rechercher` | Trouve des chantiers par texte partiel du code, du nom ou de la désignation, filtrés par statut `EN_COURS` ou `CLOTURE` (1 à 20 résultats, 10 par défaut, total rendu) | `CHANTIER_READ` | `MCP_CHANTIER_RECHERCHER` |
 | `chantier_fiche` | Lit code, désignation, nom, origine ERP et statut d'un chantier par identifiant | `CHANTIER_READ` | `MCP_CHANTIER_FICHE` |
-| `paie_repartition` (`dimension = CHANTIER`) | Masse, effectif et STC par chantier pour un mois (50 groupes au plus) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
-| `paie_indicateurs` | Indicateurs du mois et `principauxChantiers` | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
+| `paie_repartition` (`dimension = CHANTIER`) | Masse, effectif et STC par tous les chantiers pour un mois | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_indicateurs` | Indicateurs du mois et liste complète `chantiers` | `PAIE_READ` | `MCP_PAIE_INDICATEURS` |
 | `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `chantierIds` | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
 
 - **Résolution par nom.** Quand la question cite un chantier par son nom ou son code, l'agent appelle d'abord

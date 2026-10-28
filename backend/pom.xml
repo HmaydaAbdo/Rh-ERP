@@ -32,6 +32,9 @@
 		<archunit.version>1.5.1</archunit.version>
 		<!-- Serveur MCP de Spring AI (route /mcp, docs/ia.md, T13) ; son SDK MCP Java vient avec lui. -->
 		<spring-ai.version>2.0.2</spring-ai.version>
+		<!-- Correctif officiel GHSA-ccrj-gw8r-854m (parsing W3C tracestate quadratique),
+		     la BOM Spring Boot 4.1.2 gère encore OpenTelemetry 1.62.0. -->
+		<opentelemetry.version>1.67.0</opentelemetry.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<cyclonedx.version>2.9.3</cyclonedx.version>
 		<!-- Correctifs de sécurité plus récents que ceux de la BOM de Spring Boot 4.1.1 (analyse OSV du 2026-10-11) :
@@ -48,6 +51,14 @@
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<!-- Aligne tous les modules OpenTelemetry sur la version corrigée officielle. -->
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-bom</artifactId>
+				<version>${opentelemetry.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>org.springframework.ai</groupId>
 				<artifactId>spring-ai-bom</artifactId>

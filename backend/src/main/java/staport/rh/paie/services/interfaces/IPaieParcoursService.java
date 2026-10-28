@@ -6,4 +6,5 @@ import staport.rh.paie.parcours.ParcoursEmployeDto;
 public interface IPaieParcoursService {
 
     ParcoursEmployeDto parcours(Long employeId);
+
 }

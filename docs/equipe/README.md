@@ -85,6 +85,9 @@ Les vues Cartes et Analytique ne sont pas propres à Équipe : ce sont des compo
 **Source unique des chiffres.** `POST /paie/analytique` (permission `PAIE_READ`) renvoie `PaieAnalytiqueDto` :
 `kpis` du mois, `moisPrecedent`, `parChantier`, `parEquipe`, `parFonction`, `tranches`, `evolution` (tout l'historique du
 périmètre) et `qualite` (`sansEquipe`, `sansObservation`). `parEquipe` liste **toutes** les équipes du mois, sans plafond.
+Les indicateurs de Cartes et d'Analytique sont des indicateurs de paie : ils restent donc dans l'API publique Paie. L'API
+Employés porte séparément les regroupements d'effectifs employés ; le MCP ne recalcule aucun chiffre. L'API Équipe reste
+propriétaire du référentiel et de ses fiches : il n'existe pas de second agrégat Équipe qui dupliquerait ces sources.
 
 **Définitions des indicateurs** (identiques dans l'interface, le rapport PDF et l'assistant)
 
@@ -116,7 +119,7 @@ rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté peut vo
 |---|---|---|---|
 | `equipe_rechercher` | Trouve des équipes par texte partiel du code ou du libellé (1 à 20 résultats, 10 par défaut, total rendu) | `EQUIPE_READ` | `MCP_EQUIPE_RECHERCHER` |
 | `equipe_fiche` | Lit code et libellé d'une équipe par identifiant | `EQUIPE_READ` | `MCP_EQUIPE_FICHE` |
-| `paie_repartition` (`dimension = EQUIPE`) | Masse, effectif et STC par équipe pour un mois (50 groupes au plus, du plus gros au plus petit) | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
+| `paie_repartition` (`dimension = EQUIPE`) | Masse, effectif et STC par toutes les équipes pour un mois, du plus gros au plus petit | `PAIE_READ` | `MCP_PAIE_REPARTITION` |
 | `employes_rechercher`, `employes_compter`, `employes_regrouper`, `paie_indicateurs`, `paie_periodes`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | Filtre `equipeIds` ; l'identifiant `0` désigne les employés ou bulletins sans équipe | permission de l'outil (`EMPLOYEE_READ` ou `PAIE_READ`) | `MCP_*` |
 
 - **Résolution par nom.** Quand la question cite une équipe, l'agent appelle d'abord `equipe_rechercher`, puis réutilise

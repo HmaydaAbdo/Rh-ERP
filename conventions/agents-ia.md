@@ -257,11 +257,17 @@ propriétaire avant d'écrire quoi que ce soit.
 | Évaluation | `openevals` et `agentevals` sur le jeu de référence versionné |
 | Sous-agents, tâches longues, fichiers de travail | Deep Agents (`create_deep_agent`) |
 
-Restent du code à nous, et seulement cela : les règles métier de l'ERP placées dans les points
-d'extension officiels (un middleware pour une règle de réponse, comme le vérificateur de chiffres),
-l'appel d'échange de jeton vers Spring et le corps métier des outils MCP du backend (leur
-déclaration passe par Spring AI). Chaque morceau de code propre est
-justifié dans le document de référence de l'application par l'absence d'un composant officiel.
+Le sélecteur officiel peut réduire le nombre d'outils transmis au modèle, mais ne doit pas être bridé par un plafond
+global arbitraire (`max_tools`) qui masquerait un outil métier autorisé ou pertinent. Sans plafond, le middleware
+applique sa sélection officielle. Les outils de recherche de référentiel nécessaires pour résoudre les noms et codes
+cités par l'utilisateur sont toujours proposés lorsqu'ils sont présents dans le catalogue autorisé ; les permissions
+restent vérifiées par les API métier à chaque appel.
+
+Restent du code à nous, et seulement cela : les règles métier de l'ERP dans les API publiques de leurs domaines,
+l'appel d'échange de jeton vers Spring et le corps métier des outils MCP du backend (leur déclaration passe par Spring AI).
+Le service IA n'ajoute pas de vérificateur de réponse maison : les outils métier fournissent leurs valeurs calculées,
+les middlewares officiels assurent l'orchestration, et le jeu de référence mesure l'exactitude. Chaque morceau de code
+propre est justifié dans le document de référence de l'application par l'absence d'un composant officiel.
 
 **Contexte donné à l'agent** (ingénierie du contexte). À chaque tour, l'agent reçoit, dans cet ordre de priorité :
 le rôle et les règles stables (prompt système court et versionné) ; le contexte de l'entreprise (secteur, vocabulaire
@@ -363,7 +369,7 @@ leur effet est consigné avec la décision.
 * **Pseudonymisation.** Lorsqu'un modèle hors de l'entreprise reçoit des données personnelles, les
   identifiants directs peuvent être remplacés par des jetons opaques avant l'appel puis rétablis côté
   serveur dans la réponse affichée ; la table de correspondance ne quitte pas le service IA et vit le
-  temps du run. Le vérificateur de réponse opère sur les valeurs rétablies.
+  temps du run.
 * **Transferts et résidence.** Un fournisseur qui traite les données hors du pays relève des règles de
   transfert de l'autorité de protection des données ; le pays de traitement, la durée de conservation
   chez le fournisseur et l'usage pour l'entraînement sont vérifiés dans ses conditions contractuelles
@@ -408,7 +414,7 @@ quand le jeu de référence montre au moins l'un des besoins suivants :
 * des questions multi-domaines fréquentes gagnent à traiter leurs sous-tâches en parallèle.
 
 Un agent de domaine ne transmet au superviseur que ses résultats d'outils et un état typé, jamais sa
-seule prose : le vérificateur de chiffres du run reste applicable à la réponse finale. Chaque appel de
+seule prose. Chaque appel de
 modèle supplémentaire se paie en latence et en quota ; le gain doit être mesuré sur le jeu de référence
 avant l'adoption.
 
@@ -519,7 +525,7 @@ LLM Applications 2025 et les menaces agentiques de l'OWASP :
 | Autonomie excessive (LLM06) | L'agent écrit, envoie ou supprime sans nécessité | Outils de lecture par défaut ; écriture avec confirmation liée à l'action ; plus petit catalogue utile |
 | Fuite des consignes (LLM07) | L'utilisateur obtient le prompt système | Aucun secret ni règle d'accès dans les prompts ; leur divulgation n'ouvre aucun droit |
 | Faiblesses vectorielles (LLM08) | Un passage d'un autre périmètre remonte par similarité | Filtres d'accès dans la recherche (`rag.md`) |
-| Information fausse (LLM09) | Chiffre, nom ou date inventés | Vérificateur déterministe (« Exactitude ») ; abstention ; provenance affichée |
+| Information fausse (LLM09) | Chiffre, nom ou date inventés | Valeurs métier calculées par l'API publique du domaine ; relecture des faits susceptibles de changer ; abstention et jeu de référence |
 | Consommation illimitée (LLM10) | Boucles, questions en rafale, coût qui explose | Plafonds par run (tours, appels, tokens, durée) ; quotas par utilisateur et par jour ; limite de débit au proxy |
 | Empoisonnement de mémoire (agentique) | Un fait faux s'installe en mémoire longue | Mémoire longue sourcée, tracée, corrigeable ; relue comme donnée non fiable |
 | Usurpation d'identité (agentique) | Un appel d'outil se fait avec un autre utilisateur | Jeton délégué court lié à l'utilisateur ; pas de compte technique plus puissant ; conversation liée à l'identité |
@@ -592,19 +598,20 @@ Un modèle ne garantit pas l'absence d'invention ; l'architecture la garantit po
 
 * Le modèle ne calcule pas une valeur métier. Effectifs, montants, taux, dates et périodes viennent
   des outils du domaine propriétaire et sont restitués avec leur période et leur définition.
-* Avant affichage, un vérificateur déterministe contrôle que chaque nombre, montant et période de la
-  réponse figure dans les résultats d'outils du même run. Une réponse non conforme est régénérée au
-  plus une fois, puis remplacée par une abstention explicite ; elle n'est jamais affichée telle quelle.
-* Le même contrôle couvre les **identifiants et noms** cités (code de chantier, matricule, CIN, nom
-  d'employé, d'équipe ou de fonction) et les dates : un identifiant absent des résultats d'outils est
-  une invention, au même titre qu'un chiffre.
+* Les API publiques des domaines propriétaires renvoient les calculs métier (sommes, écarts,
+  variations, pourcentages, moyennes, classements et effectifs) ; les adaptateurs MCP ne les recalculent pas.
+* Pour une question qui demande l'ensemble des données d'un périmètre, l'agent parcourt toutes les pages annoncées par
+  l'outil jusqu'au total. Aucun plafond de page ou de période ne doit rendre une partie des données autorisées inaccessible.
+  Une limite de résultats n'est utilisée que si la demande de l'utilisateur la précise.
+* L'agent reprend les valeurs fournies par les outils et les faits déjà établis dans la conversation.
+  Il relit l'ERP pour confirmer une valeur susceptible d'avoir changé et pose une question quand une
+  ambiguïté peut modifier le résultat.
 * La réponse affiche, pour chaque chiffre principal, sa période, son périmètre (filtres appliqués) et
-  la définition de l'indicateur fournie par le domaine ; l'hypothèse retenue pour une question
-  imprécise est visible.
+  la définition de l'indicateur fournie par le domaine ; l'hypothèse retenue pour une question imprécise est visible.
 * Sans outil ou source adaptés, l'agent s'abstient et propose le parcours classique correspondant.
-* Un jeu de référence versionné (questions, réponses attendues calculées sur des données de test,
-  cas d'abstention et cas interdits) est rejoué à chaque changement de modèle, de prompt, d'outil
-  ou de graphe ; une régression bloque la livraison.
+* Aucun vérificateur de chiffres après coup n'est ajouté au service IA. Un jeu de référence versionné
+  (questions, réponses attendues calculées sur des données de test, cas d'abstention et cas interdits)
+  est rejoué à chaque changement de modèle, de prompt, d'outil ou de graphe ; une régression bloque la livraison.
 
 ## Découverte des outils à la demande (Tool Search)
 
@@ -684,8 +691,8 @@ couvertes par des contrôles déterministes et des sources métier faisant autor
 L'évaluation se fait à trois niveaux :
 
 1. **Hors ligne, à chaque changement, en CI.** Le graphe est rejoué sur le jeu de référence avec des
-   réponses de modèle enregistrées (sans appel réseau ni quota) : toute régression du graphe, du
-   vérificateur, des outils ou du rendu échoue de façon déterministe. Les cas couvrent questions
+   réponses de modèle enregistrées (sans appel réseau ni quota) : toute régression du graphe, des
+   outils ou du rendu échoue de façon déterministe. Les cas couvrent questions
    simples, multi-domaines, suivis multi-tours, ambiguïtés, abstentions, refus, injections et
    formulations en français, arabe et darija lorsque ces langues sont attendues.
 2. **Avant un changement de modèle ou de prompt.** Le même jeu est joué contre les vrais modèles ;

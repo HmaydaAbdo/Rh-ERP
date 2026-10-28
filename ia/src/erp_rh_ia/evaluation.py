@@ -5,7 +5,7 @@
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
 le vrai agent (``create_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
-répond sans abstention et cite chaque valeur attendue — ou s'abstient (ou signale le refus) quand le cas l'exige. La
+répond sans s'abstenir et cite chaque valeur attendue — ou s'abstient (ou signale le refus) quand le cas l'exige. La
 trajectoire d'outils est comparée par ``agentevals`` (l'outil attendu doit figurer parmi les appels) et rapportée.
 
 Variables : ``EVAL_API_URL`` (racine de l'API ERP-RH), ``EVAL_JETON_COMPLET`` et ``EVAL_JETON_RESTREINT`` (jetons de
@@ -24,9 +24,10 @@ import re
 import statistics
 import sys
 import time
+import traceback
 import unicodedata
 from dataclasses import asdict, dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
 
@@ -35,15 +36,13 @@ from agentevals.trajectory.match import create_async_trajectory_match_evaluator
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
-from erp_rh_ia.agent import creer_agent
+from erp_rh_ia.app import fabrique_reelle
 from erp_rh_ia.config import Settings
-from erp_rh_ia.modeles import Tache, modele
 from erp_rh_ia.outils import jeton_agent, outils_erp
-from erp_rh_ia.verification import extraire_nombres
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
 _MARQUEUR = re.compile(r"\{(\w+)\}")
-# Formulations d'une abstention écrite par le modèle (sans chiffre, donc acceptée par le vérificateur).
+# Formulations d'une abstention écrite par le modèle.
 _ABSTENTION = (
     "ne peux pas",
     "pas de donnee",
@@ -55,6 +54,12 @@ _ABSTENTION = (
     "n'ai pas",
     "ne trouve pas",
     "fiable",
+    "ne peux donc pas",
+    "ne fournit pas de fonctionnalite",
+    "ne permettent pas d'acceder",
+    "ne fournit pas cette information",
+    "ne fournit pas de prevision",
+    "ne pouvons donc pas",
 )
 _TRAJECTOIRE = create_async_trajectory_match_evaluator(trajectory_match_mode="superset", tool_args_match_mode="ignore")
 
@@ -105,6 +110,44 @@ def extraire(objet: Any, chemin: str) -> Any:
         else:
             return None
     return courant
+
+
+# Nombre « à la française » ou « à l'anglaise » : 3 000,50 · 3000.50 · 3000 · 12,5 (séparateurs de milliers : espaces).
+_NOMBRE = re.compile(r"\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?")
+_NOMBRES_EN_LETTRES = {
+    "zero": Decimal(0),
+    "deux": Decimal(2),
+    "trois": Decimal(3),
+    "quatre": Decimal(4),
+    "cinq": Decimal(5),
+    "six": Decimal(6),
+    "sept": Decimal(7),
+    "huit": Decimal(8),
+    "neuf": Decimal(9),
+    "dix": Decimal(10),
+    "onze": Decimal(11),
+    "douze": Decimal(12),
+    "treize": Decimal(13),
+    "quatorze": Decimal(14),
+    "quinze": Decimal(15),
+    "seize": Decimal(16),
+    "vingt": Decimal(20),
+}
+
+
+def extraire_nombres(texte: str) -> list[Decimal]:
+    """Les nombres d'un texte, normalisés (3 000,0 et 3000 sont la même valeur)."""
+    nombres: list[Decimal] = []
+    for brut in _NOMBRE.findall(texte):
+        net = re.sub(r"[ \u00a0\u202f]", "", brut).replace(",", ".")
+        try:
+            valeur = Decimal(net)
+        except InvalidOperation:
+            continue
+        nombres.append(valeur.normalize() if valeur != 0 else Decimal(0))
+    normalise = _sans_accents(texte)
+    nombres.extend(valeur for mot, valeur in _NOMBRES_EN_LETTRES.items() if re.search(rf"\b{mot}\b", normalise))
+    return nombres
 
 
 def cite(type_attendu: str, attendu: Any, texte: str) -> bool:
@@ -160,12 +203,13 @@ async def verite(outils: list[BaseTool], nom: str, arguments: dict[str, Any]) ->
 
 
 async def repondre(config: Settings, outils: list[BaseTool], question: str, outil_attendu: Any) -> Reponse:
-    agent = creer_agent(modele(config, Tache.COMPLEX), outils)
+    # Mesurer le même agent que le service : modèle principal, sélecteur de tools et résumeur officiels.
+    agent = fabrique_reelle(config)(outils, None)
     etat = await agent.ainvoke({"messages": [HumanMessage(content=question)]}, {"recursion_limit": 200})
     messages: list[BaseMessage] = list(etat["messages"])
     texte = messages[-1].text if messages else ""
     appeles = [a["name"] for m in messages if isinstance(m, AIMessage) for a in m.tool_calls]
-    abstention = etat.get("verification") == "abstention" or any(m in _sans_accents(texte) for m in _ABSTENTION)
+    abstention = any(m in _sans_accents(texte) for m in _ABSTENTION)
     attendu = False
     if outil_attendu:
         reference = [AIMessage(content="", tool_calls=[{"id": "attendu", "name": str(outil_attendu), "args": {}}])]
@@ -226,6 +270,8 @@ def cause(panne: BaseException) -> str:
     while sous:
         origine = sous[0]
         sous = list(getattr(origine, "exceptions", ()))
+    # Trace sans variables locales ni contenu des requêtes : localise le composant en panne.
+    traceback.print_tb(origine.__traceback__)
     return f"{type(origine).__name__}: {str(origine)[:300]}"
 
 
@@ -262,10 +308,17 @@ async def principal(filtre: set[str] | None = None) -> dict[str, Any]:
     resultats: list[ResultatCas] = []
     async with httpx.AsyncClient(timeout=30) as client:
         for cas in [c for c in jeu["cas"] if not filtre or c["id"] in filtre]:
+            debut_cas = time.monotonic()
             try:
                 resultat = await evaluer_cas(cas, config, client, api, jetons, donnees)
             except Exception as panne:  # un cas en panne est un échec mesuré, pas un arrêt
-                resultat = ResultatCas(cas["id"], str(cas.get("type", "reponse")), False, f"panne : {cause(panne)}", 0)
+                resultat = ResultatCas(
+                    cas["id"],
+                    str(cas.get("type", "reponse")),
+                    False,
+                    f"panne : {cause(panne)}",
+                    round(time.monotonic() - debut_cas, 2),
+                )
             resultats.append(resultat)
             print(
                 f"[{'OK' if resultat.succes else 'KO'}] {resultat.id:28s} {resultat.latence_secondes:6.1f}s  "

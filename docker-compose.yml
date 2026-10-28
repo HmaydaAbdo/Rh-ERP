@@ -300,7 +300,7 @@ services:
 
   litellm-cles:
     # Tâche ponctuelle : enregistre les clés virtuelles du .env dans une base LiteLLM neuve (litellm/enregistrer_cles.py),
-    # puis s'arrête. Une clé déjà connue est laissée telle quelle ; `up -d` suffit, sans script à lancer à la main.
+    # puis s'arrête. Les groupes autorisés des clés connues sont synchronisés ; `up -d` suffit, sans script à lancer à la main.
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: "no"
     depends_on:
@@ -340,6 +340,8 @@ services:
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
+      # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
       IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire (clé virtuelle LiteLLM, litellm/README.md)}
       # Jeton agent et route /mcp du backend, par le réseau ia-net.
       IA_ERP_API_URL: http://backend:8080

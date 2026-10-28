@@ -9,6 +9,10 @@
 
 ## Évolutions IA et KPI
 
+- **V1c — correctifs en cours** : reproduire et résoudre les dix pannes de parsing du sélecteur et la réponse vide du jeu complet (13/24), puis vérifier refus, exactitude et latence. Plafonds applicatifs de génération retirés ; validation réelle à poursuivre. Voir [état de reprise](docs/handoff/etat-du-projet.md).
+
+- **2026-10-28 — LiteLLM** : adoption des groupes officiels par capacité ; client IA, configuration et permissions des clés synchronisés localement. Pools, OCR, permissions, garde-fou et bascule validés localement ; V1c reste ouverte pour évaluation et T20. Voir [décision](docs/ia-proposition-routage-litellm.md).
+
 Les conventions racine constituent le blueprint réutilisable ; l'ADR historique et les skills IA métier sont dans
 `docs/adr/0001-adoption-socle-staport.md` et `docs/<domaine>/skills/`. Java 21 est aligné dans Maven ;
 la migration PostgreSQL 18 est validée en local le 2026-10-10. **Frontend (2026-10-10)** : Angular 22.2.2, kit Staport sur
