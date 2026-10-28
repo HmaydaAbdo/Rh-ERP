@@ -46,6 +46,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     code: `T${suffixe}`,
     libelle: `Équipe e2e ${suffixe}`
   });
+  expect(equipe.id, 'POST /equipes doit renvoyer l’identifiant de l’équipe créée').toBeGreaterThan(0);
   const equipeHistorique = await api<{ id: number }>(page, adminToken, 'POST', '/equipes', {
     code: `H${suffixe}`,
     libelle: `Équipe historique e2e ${suffixe}`
@@ -181,7 +182,9 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
 
   // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
   await page.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
-  await expect(page.locator('.perimetre-analytique__etape')).toContainText(`Équipe e2e ${suffixe}`);
+  const etapeEquipe = page.locator('.perimetre-analytique__etape');
+  const contexteEchecEquipe = `URL=${page.url()} · contenu=${(await page.locator('body').innerText()).slice(0, 700)}`;
+  await expect(etapeEquipe, contexteEchecEquipe).toContainText(`Équipe e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
   const synthesePaie = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
