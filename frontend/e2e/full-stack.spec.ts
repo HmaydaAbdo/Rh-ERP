@@ -18,6 +18,8 @@ async function api<T>(page: Page, token: string, method: string, path: string, d
 test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans accès Paie', async ({ page, browser }) => {
   // Neuf domaines, écritures réelles, historique et second compte : budget d'un parcours intégré complet.
   test.setTimeout(180_000);
+  const erreursNavigateur: string[] = [];
+  page.on('pageerror', (erreur) => erreursNavigateur.push(erreur.stack ?? erreur.message));
   await page.goto('/login');
   await page.getByLabel(/Nom d.utilisateur/).fill(process.env['ADMIN_USERNAME'] ?? 'ci-admin');
   await page.getByLabel('Mot de passe', { exact: true }).fill(process.env['ADMIN_PASSWORD'] ?? 'ci-admin-password');
@@ -183,7 +185,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
   await page.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
   const etapeEquipe = page.locator('.perimetre-analytique__etape');
-  const contexteEchecEquipe = `URL=${page.url()} · contenu=${(await page.locator('body').innerText()).slice(0, 700)}`;
+  const contexteEchecEquipe = `URL=${page.url()} · contenu=${(await page.locator('body').innerText()).slice(0, 700)} · erreurs navigateur=${erreursNavigateur.slice(-5).join(' | ') || 'aucune'}`;
   await expect(etapeEquipe, contexteEchecEquipe).toContainText(`Équipe e2e ${suffixe}`);
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
