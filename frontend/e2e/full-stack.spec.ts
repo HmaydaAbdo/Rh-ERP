@@ -26,12 +26,10 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     }
   });
   page.on('requestfailed', (requete) => {
-    if (/\/(equipes|auth\/refresh)(\/|\?|$)|\.m?js(?:\?|$)/.test(requete.url())) {
-      erreursNavigateur.push(`requête: ${requete.url()} · ${requete.failure()?.errorText ?? 'échec sans détail'}`);
-    }
+    erreursNavigateur.push(`requête: ${requete.url()} · ${requete.failure()?.errorText ?? 'échec sans détail'}`);
   });
   page.on('response', (reponse) => {
-    if (reponse.status() >= 400 && /\/(equipes|auth\/refresh)(\/|\?|$)|\.m?js(?:\?|$)/.test(reponse.url())) {
+    if (reponse.status() >= 400) {
       erreursNavigateur.push(`HTTP ${reponse.status()}: ${reponse.url()}`);
     }
   });
@@ -198,10 +196,26 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteEquipe).toContainText('Masse');
 
   // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
+  erreursNavigateur.length = 0;
   await page.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
   const etapeEquipe = page.locator('.perimetre-analytique__etape');
-  const contexteEchecEquipe = `URL=${page.url()} · contenu=${(await page.locator('body').innerText()).slice(0, 700)} · erreurs navigateur=${erreursNavigateur.slice(-5).join(' | ') || 'aucune'}`;
-  await expect(etapeEquipe, contexteEchecEquipe).toContainText(`Équipe e2e ${suffixe}`);
+  try {
+    await expect(etapeEquipe).toContainText(`Équipe e2e ${suffixe}`);
+  } catch (erreur) {
+    const etatRoute = await page.evaluate(() => {
+      const contenu = document.querySelector('#contenu');
+      return {
+        texte: contenu?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 1_000) ?? null,
+        enfants: [...(contenu?.children ?? [])].map((element) => `${element.tagName.toLowerCase()}.${String(element.className)}`),
+        html: contenu?.innerHTML.slice(0, 2_000) ?? null
+      };
+    });
+    throw new Error(
+      `État après navigation analytique Équipe : URL=${page.url()} · DOM=${JSON.stringify(etatRoute)} · ` +
+      `erreurs navigateur=${erreursNavigateur.slice(-10).join(' | ') || 'aucune'}`,
+      { cause: erreur }
+    );
+  }
   await expect(page.getByRole('heading', { name: 'Évolution mensuelle par équipe' })).toBeVisible();
   await expect(page.getByText('Aucun bulletin sur ce périmètre')).toHaveCount(0);
   const synthesePaie = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
