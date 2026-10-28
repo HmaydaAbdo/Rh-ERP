@@ -15,6 +15,7 @@ const domaines = {
   chantier: 'chantier',
   employee: 'employee',
   paie: 'paie',
+  heuresupp: 'heures-supp',
   audit: 'audit',
   parametre: 'parametre',
   auth: 'auth'
@@ -27,6 +28,7 @@ const prefixesOutils = [
   ['fonction_', 'function'],
   ['employe', 'employee'],
   ['paie_', 'paie'],
+  ['heures_supp_', 'heures-supp'],
   ['rapport_', 'paie'],
   ['audit_', 'audit'],
   ['parametres_', 'parametre'],

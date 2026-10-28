@@ -24,6 +24,14 @@ ciblés du style et des marqueurs passent (37 tests). Après intégration du `ma
 (23 avertissements de lint au seuil existant) ; le build signale un bundle initial de 810,59 Ko pour un budget
 d'avertissement de 800 Ko et les avertissements CommonJS CopilotKit `semver` et `partial-json`.
 
+**Heures supplémentaires (2026-10-27, en cours)** : branche locale `codex/heures-supp`, rebasée sur le `main` distant courant. Le propriétaire demande une PR vers `main` puis la fusion. Les règles métier,
+le modèle V39/V40, les façades Employé/Paie, l'audit, MCP, le wizard Excel et les vues Tabulaire/Cartes/Analytique sont décrits
+dans [`docs/heures-supp/README.md`](../heures-supp/README.md). Cartes et Analytique utilisent les vues partagées et des agrégats
+filtrables par chantier, équipe et fonction. Les tests métier, lecteur Excel, RBAC, OpenAPI, MCP et vues partagées accompagnent
+le domaine ; les compilations backend et frontend de production passent localement. Le classeur reçu comprend 864 lignes à zéro
+conservées, 120 positives et une ligne HS vide à la ligne 986, qui bloque l'import jusqu'à sa correction. Le propriétaire a
+autorisé la PR, le push, la CI et la fusion lorsque les contrôles requis passent.
+
 **Chantier IA (2026-10-26)** : J1 fusionné dans `main` (PR #90). Depuis la PR #91,
 `docker compose pull && docker compose up -d` lance toute la pile sans profil (sauvegarde et IA comprises),
 IA et MCP actifs par défaut, clés virtuelles LiteLLM enregistrées par la tâche ponctuelle `litellm-cles`.
@@ -32,7 +40,7 @@ IA complétées, tâches de J2 et J3 détaillées, écarts suivis au § 10 de [i
 listées au § 7.
 Tâches T1 à T8 de J1 faites : passerelle
 LiteLLM multi-fournisseurs gratuits, service IA Python, MCP et jeton agent RS256 (route `/mcp`, coupée par
-`MCP_ENABLED=false`), 25 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
+`MCP_ENABLED=false`), 28 outils de lecture, graphe LangGraph avec ciblage par domaine et vérificateur de chiffres
 (évaluation réelle 23/24), AG-UI par l'intégration officielle `ag-ui-langgraph` (ADR 0015) et assistant immersif
 Angular. Depuis T10 à T16 (2026-10-26) : agent `create_agent` de LangChain, serveur MCP de Spring AI, interface
 CopilotKit Angular, runtime CopilotKit (`copilot-runtime`) et surfaces A2UI ; l'ouverture automatique des vues est

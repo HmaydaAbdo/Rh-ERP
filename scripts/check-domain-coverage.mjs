@@ -10,6 +10,7 @@ const domains = {
   chantier: { prefix: 'staport/rh/chantier/', line: 70, branch: 25 },
   equipe: { prefix: 'staport/rh/equipe/', line: 70, branch: 25 },
   paie: { prefix: 'staport/rh/paie/', line: 70, branch: 70 },
+  'heures-supp': { prefix: 'staport/rh/heuresupp/', line: 70, branch: 50 },
   parametre: { prefix: 'staport/rh/parametre/', line: 70, branch: 70 },
   audit: { prefix: 'staport/rh/audit/', line: 70, branch: 60 },
   mcp: { prefix: 'staport/rh/mcp/', line: 70, branch: 50 }

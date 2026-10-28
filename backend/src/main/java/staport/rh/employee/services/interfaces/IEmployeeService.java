@@ -10,6 +10,7 @@ import staport.rh.employee.dtos.response.EmployeeSortieDto;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Façade publique du module Employee — seule cette interface peut être injectée
@@ -23,6 +24,9 @@ public interface IEmployeeService {
     EmployeeResponseDto update(Long id, EmployeeUpdateRequestDto dto);
 
     EmployeeResponseDto findById(Long id);
+
+    /** Résolution exacte du CIN pour les imports métier ; ne pas remplacer par une recherche partielle paginée. */
+    Optional<EmployeeResponseDto> findByCin(String cin);
 
     Page<EmployeeResponseDto> search(EmployeeSearchCriteria criteria, Pageable pageable);
 

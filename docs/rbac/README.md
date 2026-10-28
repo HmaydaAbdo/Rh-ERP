@@ -38,7 +38,7 @@
 
 ---
 
-## Catalogue des 30 permissions
+## Catalogue des 32 permissions
 
 | Domaine | Permission | Action autorisée | Migration |
 |---|---|---|---|
@@ -61,6 +61,8 @@
 | | `PAIE_IMPORT` | Importer depuis Excel (et télécharger le modèle) | V4 |
 | | `PAIE_EXPORT` | Exporter en Excel et générer le rapport PDF | V4 |
 | | `PAIE_RESTORE` | Restaurer un groupe de bulletins depuis le journal d'audit | V17 |
+| Heures supplémentaires | `HEURES_SUP_READ` | Consulter les heures, montants, STC et forfaits (avec `PAIE_READ`) | V40 |
+| | `HEURES_SUP_IMPORT` | Importer les heures supplémentaires et saisir les forfaits | V40 |
 | Équipe | `EQUIPE_READ` | Consulter | V9 |
 | | `EQUIPE_WRITE` | Créer, modifier | V9 |
 | | `EQUIPE_DELETE` | Supprimer | V9 |
@@ -86,6 +88,7 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 | Associer un employé à un compte (`USER_MANAGE`) | `EMPLOYEE_READ` | Sélecteur d'employé |
 | Exporter (`PAIE_EXPORT`) | `PAIE_READ` | L'assistant d'export lit les mois, chantiers et tableaux matériel (`/paie/periodes`, `/paie/chantiers`, `/paie/materiel`) |
 | Importer (Paie, Employé) | Aucune | Les référentiels sont résolus par le serveur (appels de service, pas HTTP) |
+| Importer Heures supplémentaires (`HEURES_SUP_IMPORT`) | `PAIE_READ`, `EMPLOYEE_READ`, `CHANTIER_READ` ; pour corriger/créer une fiche : `EMPLOYEE_WRITE` | Le wizard lit le mois de paie, les employés et le chantier ; la fonction vient du fichier et suit la correction de l'import Paie |
 
 ---
 
@@ -93,8 +96,8 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 
 | Rôle | Permissions |
 |---|---|
-| `SYSTEM_ADMIN` | Les 30 |
-| `PAIE_MANAGER` | Les 22 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `IA_UTILISER`, `PAIE_RESTORE` et `PARAMETRE_*`) |
+| `SYSTEM_ADMIN` | Les 32 |
+| `PAIE_MANAGER` | Les 24 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `IA_UTILISER`, `PAIE_RESTORE` et `PARAMETRE_*`) |
 | `DIRECTION` (V28) | `CARTE_READ` seulement ; le Président et les directeurs |
 
 D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans toucher au code.

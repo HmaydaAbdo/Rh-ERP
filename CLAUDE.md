@@ -24,3 +24,6 @@ ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine
 
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
+
+Tout nouveau domaine doit aussi être intégré à l'IA ERP-RH selon la règle d'`AGENTS.md` : cas d'usage et données
+documentés dans `docs/ia.md`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.

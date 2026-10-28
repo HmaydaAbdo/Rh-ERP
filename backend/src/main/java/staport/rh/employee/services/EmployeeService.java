@@ -34,6 +34,7 @@ import staport.rh.function.services.interfaces.IFunctionService;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class EmployeeService implements IEmployeeService {
@@ -116,6 +117,15 @@ public class EmployeeService implements IEmployeeService {
         Employee entity = repository.findWithReferencesById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
         return mapper.toDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EmployeeResponseDto> findByCin(String cin) {
+        if (cin == null || cin.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findByCinIgnoreCase(cin.strip()).map(mapper::toDto);
     }
 
     @Override

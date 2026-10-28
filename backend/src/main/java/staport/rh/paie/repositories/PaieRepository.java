@@ -35,6 +35,9 @@ public interface PaieRepository extends JpaRepository<Paie, Long>, JpaSpecificat
     Optional<Paie> findWithReferencesById(Long id);
 
     @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
+    Optional<Paie> findByEmployee_IdAndPeriode(Long employeeId, YearMonth periode);
+
+    @EntityGraph(attributePaths = {"employee", "fonction", "chantier", "equipe"})
     @Override
     Page<Paie> findAll(org.springframework.data.jpa.domain.Specification<Paie> spec, Pageable pageable);
 

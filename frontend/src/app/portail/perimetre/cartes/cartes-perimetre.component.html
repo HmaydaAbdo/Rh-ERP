@@ -191,6 +191,12 @@
                           <div><dt>Paie</dt><dd class="perimetre-carte__indisponible">Aucun mois disponible</dd></div>
                         }
                       }
+                      @if (voitHeuresSupp() && groupe.heuresSupp; as heures) {
+                        <div class="perimetre-carte__indicateur"><dt>Heures supplémentaires</dt><dd><strong>{{ heures.heures | number: '1.0-1' }} h</strong><small>{{ heures.effectif }} employé(s)</small></dd></div>
+                        <div class="perimetre-carte__indicateur"><dt>Montant</dt><dd><strong>{{ heures.montantDh | number: '1.2-2' }} DH</strong><small>avant STC</small></dd></div>
+                        <div class="perimetre-carte__indicateur"><dt>Forfait</dt><dd><strong>{{ heures.forfaitDh | number: '1.2-2' }} DH</strong><small>séparé des heures</small></dd></div>
+                        <div class="perimetre-carte__indicateur"><dt>Net à payer</dt><dd><strong>{{ heures.netAPayerDh | number: '1.2-2' }} DH</strong><small>après STC</small></dd></div>
+                      }
                     </dl>
                   </button>
                   <div class="perimetre-carte__pied">

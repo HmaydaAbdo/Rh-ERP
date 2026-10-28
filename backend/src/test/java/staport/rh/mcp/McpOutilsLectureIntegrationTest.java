@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
-    private static final Set<String> TOUT = Set.of("IA_UTILISER", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
+    private static final Set<String> TOUT = Set.of("IA_UTILISER", "HEURES_SUP_READ", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
             "CHANTIER_READ", "EQUIPE_READ", "FUNCTION_READ", "PARAMETRE_READ", "ROLE_MANAGE", "AUDIT_READ");
 
     @Autowired
@@ -76,7 +76,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     // --- catalogue et refus ---
 
     @Test
-    void le_catalogue_publie_vingt_cinq_outils_en_lecture_seule() throws Exception {
+    void le_catalogue_publie_vingt_huit_outils_en_lecture_seule() throws Exception {
         List<String> noms = new ArrayList<>();
         rpc(toutVoir, "tools/list", Map.of()).get("tools").forEach(outil -> {
             noms.add(outil.get("name").asString());
@@ -84,7 +84,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         });
         assertThat(noms).containsExactlyInAnyOrderElementsOf(appelsTypes().keySet().stream()
                 .collect(java.util.stream.Collectors.toCollection(() -> new ArrayList<>(List.of("systeme_identite")))));
-        assertThat(noms).hasSize(25);
+        assertThat(noms).hasSize(28);
     }
 
     @Test
@@ -468,6 +468,9 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         appels.put("paie_qualite", Map.of("periode", periode.toString()));
         appels.put("paie_bulletins_rechercher", Map.of("periode", periode.toString()));
         appels.put("rapport_preparer", Map.of("periode", periode.toString()));
+        appels.put("heures_supp_periodes", Map.of());
+        appels.put("heures_supp_indicateurs", Map.of("periode", periode.toString()));
+        appels.put("heures_supp_rechercher", Map.of("periode", periode.toString()));
         appels.put("parametres_lire", Map.of());
         appels.put("roles_lister", Map.of());
         appels.put("audit_rechercher", Map.of("limite", 1));
