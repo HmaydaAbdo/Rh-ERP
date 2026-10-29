@@ -30,4 +30,6 @@ async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str)
 async def outils_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.0) -> list[BaseTool]:
     """Le catalogue MCP de Spring en outils LangChain ; le jeton agent n'est jamais journalisé ni conservé."""
     transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
-    return await MCPAdapter(Client(transport, timeout=delai_secondes)).list_tools()
+    # Spring AI 2.0.2 supporte la révision 2025-11-25, pas server/discover (2026-07-28).
+    # Choisir explicitement le mode MCP commun évite le probe moderne connu pour échouer avant le fallback.
+    return await MCPAdapter(Client(transport, timeout=delai_secondes, mode="legacy")).list_tools()
