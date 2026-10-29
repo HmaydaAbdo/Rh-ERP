@@ -87,6 +87,9 @@ location = /rh-erp {
 location /rh-erp/ {
     proxy_pass http://127.0.0.1:${FRONTEND_PORT}/;
     proxy_http_version 1.1;
+    # SSE CopilotKit : transmettre chaque événement sans tampon et conserver le délai du relais intérieur.
+    proxy_buffering off;
+    proxy_read_timeout 300s;
 
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
