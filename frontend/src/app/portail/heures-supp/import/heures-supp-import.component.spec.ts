@@ -34,7 +34,7 @@ interface ImportApi {
   chargement: WritableSignal<boolean>;
   telechargementModele: WritableSignal<boolean>;
   peutRemplacer(): boolean;
-  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
+  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
   alignements: WritableSignal<number[]>;
   valeurSalaire(numero: number): string;
   estAligne(id: number): boolean;
@@ -91,7 +91,7 @@ describe('HeuresSuppImportComponent', () => {
 
   it('commence à l’étape de choix du mois et du chantier', () => {
     expect(api.etape()).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Choisir le mois et le chantier');
+    expect(document.body.textContent).toContain('Choisir le mois et le chantier');
   });
 
   it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {
@@ -116,7 +116,7 @@ describe('HeuresSuppImportComponent', () => {
 
   it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
     expect(api.valeurSalaire(2)).toBe('');
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
     expect(api.valeurSalaire(2)).toBe('4000');
     expect(api.estAligne(7)).toBe(false);
     api.basculerAlignement(7);
@@ -155,7 +155,7 @@ describe('HeuresSuppImportComponent', () => {
   it('propose et télécharge le modèle Excel depuis l’étape fichier', () => {
     api.etape.set(2);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Télécharger le modèle Excel');
+    expect(document.body.textContent).toContain('Télécharger le modèle Excel');
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:modele');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
@@ -208,7 +208,7 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirChantier(4);
     api.texteForfaits.set('AB123;12,50');
     api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
     api.alignements.set([9]);
     service['corrigerImport'].mockReturnValue(of(ANALYSE));
 
@@ -216,7 +216,7 @@ describe('HeuresSuppImportComponent', () => {
 
     expect(service['corrigerImport']).toHaveBeenCalledWith(expect.any(File), '2026-10', 4, {
       aligner: [{ employeId: 9 }],
-      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' }]
+      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' }]
     }, [{ cin: 'AB123', montantDh: 12.5 }]);
   });
 

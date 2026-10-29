@@ -18,6 +18,11 @@ import java.time.Instant;
 @Order(0)
 public class HeuresSuppExceptionHandler {
 
+    @ExceptionHandler(HeuresSuppGroupeModifieException.class)
+    public ResponseEntity<ErrorResponseDto> handleGroupeModifie(HeuresSuppGroupeModifieException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(HeuresSuppImportException.class)
     public ResponseEntity<ErrorResponseDto> handleImport(HeuresSuppImportException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);

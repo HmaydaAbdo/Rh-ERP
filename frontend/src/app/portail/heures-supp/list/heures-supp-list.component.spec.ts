@@ -7,7 +7,7 @@ import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppListComponent } from './heures-supp-list.component';
 
 const LIGNE: HeuresSupp = {
-  id: 1, employeeId: 2, nomPrenom: 'Alaoui Salma', cin: 'AB123', fonction: 'Chauffeur', chantierId: 4,
+  id: 1, version: 0, employeeId: 2, nomPrenom: 'Alaoui Salma', cin: 'AB123', fonction: 'Chauffeur', chantierId: 4,
   codeChantier: 'C4', chantier: 'Site', periode: '2026-10', salaireHoraireDh: 10, heuresSupplementaires: 2,
   montantDh: 20, stcOuSortie: false, stcDh: 0, forfaitDh: null, netAPayerDh: 20
 };

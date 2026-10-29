@@ -109,7 +109,7 @@ class HeuresSuppImportServiceTest {
     @Test
     void conserve_une_ligne_zero_avec_un_montant_nul() {
         paiePresente();
-        var zero = new LigneFichierHeuresSupp(2, "Alaoui", "Salma", CIN, "Chauffeur", BigDecimal.ZERO);
+        var zero = new LigneFichierHeuresSupp(2, "Alaoui Salma", CIN, BigDecimal.ZERO);
         when(lecteur.lire(fichier)).thenReturn(new FichierHeuresSupp(List.of(zero), 1, 1));
         when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
         when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(Optional.of(bulletin("Présence")));
@@ -194,7 +194,7 @@ class HeuresSuppImportServiceTest {
     }
 
     private static FichierHeuresSupp classeur(String heures) {
-        return new FichierHeuresSupp(List.of(new LigneFichierHeuresSupp(2, "Alaoui", "Salma", CIN, "Chauffeur", new BigDecimal(heures))), 0, 1);
+        return new FichierHeuresSupp(List.of(new LigneFichierHeuresSupp(2, "Alaoui Salma", CIN, new BigDecimal(heures))), 0, 1);
     }
 
     private void paiePresente() {

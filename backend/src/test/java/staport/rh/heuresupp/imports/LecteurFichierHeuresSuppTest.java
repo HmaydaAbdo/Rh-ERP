@@ -18,9 +18,9 @@ class LecteurFichierHeuresSuppTest {
     @Test
     void lit_le_format_reel_conserve_et_compte_les_lignes_zero() throws Exception {
         FichierHeuresSupp fichier = lecteur.lire(classeur(new String[][]{
-                {"Nom", "Prenom", "CIN", "Funct", "HS"},
-                {"Alaoui", "Salma", "AB123", "Chauffeur", "0"},
-                {"Bennani", "Nora", "CD456", "Conductrice", "1,5"}
+                {"Nom et prénom", "CIN", "HS"},
+                {"Alaoui Salma", "AB123", "0"},
+                {"Bennani Nora", "CD456", "1,5"}
         }));
 
         assertThat(fichier.totalLignes()).isEqualTo(2);
@@ -41,8 +41,8 @@ class LecteurFichierHeuresSuppTest {
     @Test
     void accepte_les_entetes_fonction_et_ph_avec_accents() throws Exception {
         FichierHeuresSupp fichier = lecteur.lire(classeur(new String[][]{
-                {"Nom", "Prenom", "CIN", "Fonction", "P/H"},
-                {"Alaoui", "Salma", "AB123", "Chauffeur", "2"}
+                {"Nom Prenom", "CIN", "P/H"},
+                {"Alaoui Salma", "AB123", "2"}
         }));
         assertThat(fichier.lignes()).hasSize(1);
     }
@@ -50,17 +50,17 @@ class LecteurFichierHeuresSuppTest {
     @Test
     void signale_une_cellule_hs_vide_avec_son_numero_de_ligne() throws Exception {
         assertThatThrownBy(() -> lecteur.lire(classeur(new String[][]{
-                {"Nom", "Prenom", "CIN", "Funct", "HS"},
-                {"Alaoui", "Salma", "AB123", "Chauffeur", ""}
+                {"Nom et prénom", "CIN", "HS"},
+                {"Alaoui Salma", "AB123", ""}
         }))).isInstanceOf(HeuresSuppImportException.class).hasMessageContaining("Ligne 2").hasMessageContaining("HS manquant");
     }
 
     @Test
     void refuse_un_cin_duplique_sans_casse() throws Exception {
         assertThatThrownBy(() -> lecteur.lire(classeur(new String[][]{
-                {"Nom", "Prenom", "CIN", "Funct", "HS"},
-                {"Alaoui", "Salma", "ab123", "Chauffeur", "1"},
-                {"Alaoui", "Salma", "AB123", "Chauffeur", "2"}
+                {"Nom et prénom", "CIN", "HS"},
+                {"Alaoui Salma", "ab123", "1"},
+                {"Alaoui Salma", "AB123", "2"}
         }))).isInstanceOf(HeuresSuppImportException.class).hasMessageContaining("Ligne 3").hasMessageContaining("CIN dupliqué");
     }
 
@@ -68,8 +68,8 @@ class LecteurFichierHeuresSuppTest {
     void refuse_les_heures_negatives_et_plus_d_une_decimale() throws Exception {
         for (String heures : new String[]{"-1", "1.25"}) {
             assertThatThrownBy(() -> lecteur.lire(classeur(new String[][]{
-                    {"Nom", "Prenom", "CIN", "Funct", "HS"},
-                    {"Alaoui", "Salma", "AB123", "Chauffeur", heures}
+                    {"Nom et prénom", "CIN", "HS"},
+                    {"Alaoui Salma", "AB123", heures}
                 }))).isInstanceOf(HeuresSuppImportException.class).hasMessageContaining("Ligne 2");
         }
     }
@@ -87,11 +87,10 @@ class LecteurFichierHeuresSuppTest {
     void genere_un_modele_avec_les_cinq_entetes_attendus() throws Exception {
         try (XSSFWorkbook workbook = new XSSFWorkbook(lecteur.genererModele())) {
             Row header = workbook.getSheetAt(0).getRow(0);
-            assertThat(header.getCell(0).getStringCellValue()).isEqualTo("Nom");
-            assertThat(header.getCell(1).getStringCellValue()).isEqualTo("Prenom");
-            assertThat(header.getCell(2).getStringCellValue()).isEqualTo("CIN");
-            assertThat(header.getCell(3).getStringCellValue()).isEqualTo("Funct");
-            assertThat(header.getCell(4).getStringCellValue()).isEqualTo("HS");
+            assertThat(header.getLastCellNum()).isEqualTo((short) 3);
+            assertThat(header.getCell(0).getStringCellValue()).isEqualTo("Nom et prénom");
+            assertThat(header.getCell(1).getStringCellValue()).isEqualTo("CIN");
+            assertThat(header.getCell(2).getStringCellValue()).isEqualTo("HS");
         }
     }
 
@@ -103,7 +102,7 @@ class LecteurFichierHeuresSuppTest {
                 for (int c = 0; c < lignes[r].length; c++) {
                     String valeur = lignes[r][c];
                     if (valeur.isEmpty()) continue;
-                    if (r > 0 && c == 4) {
+                    if (r > 0 && c == 2) {
                         row.createCell(c).setCellValue(new BigDecimal(valeur.replace(',', '.')).doubleValue());
                     } else {
                         row.createCell(c).setCellValue(valeur);

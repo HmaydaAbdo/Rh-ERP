@@ -4,23 +4,26 @@ import { RouterLink } from '@angular/router';
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { finalize } from 'rxjs';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 
 type DonneeCreation = Omit<HeuresSuppCreationEmploye, 'numeroLigne'>;
 type BrouillonCreation = Omit<DonneeCreation, 'typeSalaire'> & { typeSalaire: '' | DonneeCreation['typeSalaire'] };
-const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: Number.NaN, typeSalaire: '' };
+const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionId: 0, salaire: Number.NaN, typeSalaire: '' };
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [DecimalPipe, ButtonComponent, MessageComponent, MonthInputComponent, LazySelectComponent, RouterLink],
+  imports: [DecimalPipe, ButtonComponent, MessageComponent, MonthInputComponent, LazySelectComponent, RouterLink, DialogComponent],
   template: `
+    <stp-dialog header="Importer les heures supplémentaires" width="860px" [open]="true">
     <main class="hs-import">
       <header class="hs-import__header">
         <a stp-button variant="text" icon="arrow-left" routerLink="/heures-supp">Retour</a>
@@ -51,7 +54,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
       } @else if (etape() === 2) {
         <section class="hs-import__panel" aria-labelledby="hs-file-title">
           <p class="hs-import__eyebrow">ÉTAPE 2 / 3 · {{ periode() }} · {{ chantierLibelle() }}</p><h2 id="hs-file-title">Déposer le pointage et saisir les forfaits</h2>
-          <p>Excel attendu : <strong>Nom, Prenom, CIN, Funct, HS</strong>. HS peut être égal à zéro ; ces lignes sont conservées avec un montant nul. Le fichier reste contrôlé par CIN et les valeurs de l’Employé et de la Paie.</p>
+          <p>Excel attendu : <strong>Nom et prénom, CIN, HS</strong>. Ces trois colonnes sont obligatoires. HS peut être égal à zéro ; la fonction, le salaire et les autres données sont repris de la fiche employé et de la paie du mois choisi.</p>
           <div class="hs-import__template"><button stp-button variant="secondary" icon="file-spreadsheet" type="button" [loading]="telechargementModele()" (click)="telechargerModele()">Télécharger le modèle Excel</button><small>Commencez avec ce fichier pour respecter les colonnes et le format attendus.</small></div>
           <label class="hs-import__file">Fichier Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="choisirFichier($event)" /></label>
           <label class="hs-import__forfaits">Forfaits supplémentaires — une ligne par employé, format <code>CIN;montant</code>
@@ -68,18 +71,19 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
           @for (ligne of a.lignes; track ligne.cin) {
             @if (ligne.employeId === null) {
               <article class="hs-import__correction">
-                <div><strong>{{ ligne.nomFichier }}</strong><span>{{ ligne.cin }} · {{ ligne.fonctionFichier }}</span></div>
-                <p>Aucune fiche Employé : renseignez les données absentes du fichier. Le bulletin de paie du mois reste obligatoire.</p>
+                <div><strong>{{ ligne.nomFichier }}</strong><span>{{ ligne.cin }}</span></div>
+                <p>Aucune fiche Employé ne correspond à ce CIN. Complétez les informations nécessaires à sa création.</p>
                 <div class="hs-import__grid">
                   <label>Date de naissance<input type="date" [value]="creation(ligne.numeroLigne).dateNaissance" (input)="modifierCreation(ligne.numeroLigne, 'dateNaissance', inputValue($event))" /></label>
                   <label>Date d’embauche<input type="date" [value]="creation(ligne.numeroLigne).dateEmbauche" (input)="modifierCreation(ligne.numeroLigne, 'dateEmbauche', inputValue($event))" /></label>
+                  <label for="hs-fonction-{{ ligne.numeroLigne }}">Fonction <app-lazy-select inputId="hs-fonction-{{ ligne.numeroLigne }}" ariaLabel="Fonction du nouvel employé" placeholder="Rechercher une fonction" optionLabel="libelle" dataKey="id" [source]="fonctions" [value]="creation(ligne.numeroLigne).fonctionId || null" (valueChange)="choisirFonction(ligne.numeroLigne, $event)" /></label>
                   <label>Salaire de référence (DH)<input type="number" min="0" step="0.01" [value]="valeurSalaire(ligne.numeroLigne)" (input)="modifierCreation(ligne.numeroLigne, 'salaire', nombreValue($event))" /></label>
                   <label>Type de salaire<select [value]="creation(ligne.numeroLigne).typeSalaire" (change)="modifierCreation(ligne.numeroLigne, 'typeSalaire', inputValue($event))"><option value="" disabled>Choisir un type</option><option value="JOURNALIER">Journalier</option><option value="MENSUEL">Mensuel</option></select></label>
                 </div>
               </article>
             } @else if (ligne.identiteEcart || ligne.fonctionEcart) {
               <label class="hs-import__aligner"><input type="checkbox" [checked]="estAligne(ligne.employeId)" (change)="basculerAlignement(ligne.employeId)" />
-                Aligner {{ ligne.cin }} depuis le fichier : {{ ligne.nomFichier }} · {{ ligne.fonctionFichier }}
+                Aligner {{ ligne.cin }} depuis le fichier : {{ ligne.nomFichier }}
               </label>
             }
           }
@@ -95,18 +99,14 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', salaire: 
         </section>
       }
     </main>
+    </stp-dialog>
   `,
-  styles: `
-    :host{display:block;padding:clamp(1rem,3vw,2.5rem);color:var(--color-text)}
-    .hs-import{max-width:1100px;margin:auto}.hs-import__header{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem}.hs-import__header h1{margin:.15rem 0;font-size:clamp(1.5rem,3vw,2.25rem)}.hs-import__header p{margin:.4rem 0;color:var(--color-text-muted)}
-    .hs-import__eyebrow{font-size:.72rem;letter-spacing:.12em;color:var(--color-primary);font-weight:700}.hs-import__steps{display:flex;gap:.5rem;list-style:none;padding:0;margin:1rem 0 1.5rem}.hs-import__steps li{flex:1;padding:.85rem 1rem;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);color:var(--color-text-muted)}.hs-import__steps li.active{border-color:var(--color-primary);color:var(--color-text);box-shadow:0 0 0 1px color-mix(in srgb,var(--color-primary) 25%,transparent)}.hs-import__steps span{color:var(--color-primary);font-weight:700;margin-right:.5rem}
-    .hs-import__panel,.hs-import__success{border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:clamp(1rem,3vw,2rem);background:var(--color-surface-alt);box-shadow:var(--shadow-md)}.hs-import__panel h2,.hs-import__success h2{margin:.2rem 0 1rem}.hs-import__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}.hs-import label{display:grid;gap:.45rem;font-weight:600}.hs-import input:not([type=checkbox]),.hs-import select,.hs-import textarea{width:100%;min-height:2.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.6rem .75rem;background:var(--color-surface);color:var(--color-text)}.hs-import textarea{min-height:auto}.hs-import__file,.hs-import__forfaits{margin:1.2rem 0}.hs-import__template{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0}.hs-import__template small{color:var(--color-text-muted)}.hs-import__actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;margin-top:1.5rem}.hs-import__totals{display:flex;gap:.75rem;flex-wrap:wrap;padding:1rem;border-radius:var(--radius-lg);background:var(--color-surface);margin:1rem 0}.hs-import__totals>*{padding:.25rem .65rem;border:1px solid var(--color-border);border-radius:99px}.hs-import__correction{padding:1rem;margin:1rem 0;border:1px solid var(--color-warning);border-radius:var(--radius-lg);background:var(--color-surface)}.hs-import__correction span,.hs-import__correction small,.hs-import__table small{display:block;color:var(--color-text-muted)}.hs-import__aligner{display:flex!important;align-items:center;padding:1rem;border:1px solid var(--color-warning);border-radius:var(--radius-lg);margin:.75rem 0}.hs-import__table{margin-top:1rem}.hs-import__overflow{overflow:auto}.hs-import__success{text-align:center;margin-top:2rem}
-    @media(max-width:650px){.hs-import__steps{display:grid}.hs-import__header{flex-wrap:wrap}}
-  `,
+  styleUrl: './heures-supp-import.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppImportComponent {
   protected readonly chantiers = inject(ChantierReferenceService);
+  protected readonly fonctions = inject(FunctionReferenceService);
   protected readonly etape = signal(1);
   protected readonly mois = signal<Date | null>(null);
   protected readonly chantierId = signal<number | null>(null);
@@ -129,6 +129,7 @@ export class HeuresSuppImportComponent {
   protected readonly periode = computed(() => { const d = this.mois(); return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : ''; });
 
   protected choisirChantier(value: unknown): void { this.chantierId.set(typeof value === 'number' ? value : null); }
+  protected choisirFonction(numero: number, value: unknown): void { this.modifierCreation(numero, 'fonctionId', typeof value === 'number' ? value : 0); }
   protected telechargerModele(): void {
     if (this.telechargementModele()) return;
     this.telechargementModele.set(true);
@@ -173,7 +174,7 @@ export class HeuresSuppImportComponent {
     const forfaits = this.lireForfaits(); if (!forfaits) return;
     for (const ligne of analyse.lignes.filter((l) => l.employeId === null)) {
       const c = this.creation(ligne.numeroLigne);
-      if (!c.dateNaissance || !c.dateEmbauche || !Number.isFinite(c.salaire) || c.salaire < 0 || !c.typeSalaire) { this.erreur.set('Complétez les dates, le salaire et le type de salaire de chaque nouvel employé.'); return; }
+      if (!c.dateNaissance || !c.dateEmbauche || !c.fonctionId || !Number.isFinite(c.salaire) || c.salaire < 0 || !c.typeSalaire) { this.erreur.set('Complétez les dates, la fonction, le salaire et le type de salaire de chaque nouvel employé.'); return; }
     }
     const creer: HeuresSuppCreationEmploye[] = analyse.lignes.filter((l) => l.employeId === null).map((l) => ({ numeroLigne: l.numeroLigne, ...this.creation(l.numeroLigne), typeSalaire: this.creation(l.numeroLigne).typeSalaire as DonneeCreation['typeSalaire'] }));
     const corrections = { aligner: this.alignements().map((employeId) => ({ employeId })), creer };

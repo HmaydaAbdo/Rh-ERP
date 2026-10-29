@@ -58,16 +58,12 @@ public class LecteurFichierHeuresSupp {
         try (Workbook classeur = new XSSFWorkbook(); ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             Sheet feuille = classeur.createSheet("Heures supplémentaires");
             Row entete = feuille.createRow(0);
-            entete.createCell(0).setCellValue("Nom");
-            entete.createCell(1).setCellValue("Prenom");
-            entete.createCell(2).setCellValue("CIN");
-            entete.createCell(3).setCellValue("Funct");
-            entete.createCell(4).setCellValue("HS");
-            feuille.setColumnWidth(0, 5200);
-            feuille.setColumnWidth(1, 5200);
-            feuille.setColumnWidth(2, 3600);
-            feuille.setColumnWidth(3, 5200);
-            feuille.setColumnWidth(4, 2600);
+            entete.createCell(0).setCellValue("Nom et prénom");
+            entete.createCell(1).setCellValue("CIN");
+            entete.createCell(2).setCellValue("HS");
+            feuille.setColumnWidth(0, 8000);
+            feuille.setColumnWidth(1, 3600);
+            feuille.setColumnWidth(2, 2600);
             classeur.write(sortie);
             return new ByteArrayInputStream(sortie.toByteArray());
         } catch (IOException e) {
@@ -78,34 +74,35 @@ public class LecteurFichierHeuresSupp {
     private FichierHeuresSupp lireFeuille(Sheet feuille) {
         int ligneEntete = -1;
         int colonneNom = -1;
-        int colonnePrenom = -1;
         int colonneCin = -1;
-        int colonneFonction = -1;
         int colonneHeures = -1;
         for (int index = 0; index <= Math.min(feuille.getLastRowNum(), 9); index++) {
             Row ligne = feuille.getRow(index);
             if (ligne == null) {
                 continue;
             }
+            int colonnesNonVides = 0;
             for (int colonne = Math.max(0, ligne.getFirstCellNum()); colonne < ligne.getLastCellNum(); colonne++) {
                 String valeur = normaliser(texte(ligne.getCell(colonne)));
-                if (valeur.equals("nom")) colonneNom = colonne;
-                if (valeur.equals("prenom")) colonnePrenom = colonne;
+                if (!valeur.isBlank()) colonnesNonVides++;
+                if (valeur.matches("nom et prenom|nom prenom|nomprenom")) colonneNom = colonne;
                 if (valeur.equals("cin")) {
                     colonneCin = colonne;
                 }
-                if (valeur.matches("funct|fonction")) colonneFonction = colonne;
                 if (valeur.matches("hs|p ?/ ?h|p h|heures? supplementaires?|nbre heures? supp")) {
                     colonneHeures = colonne;
                 }
             }
-            if (colonneNom >= 0 && colonnePrenom >= 0 && colonneCin >= 0 && colonneFonction >= 0 && colonneHeures >= 0) {
+            if (colonneNom >= 0 && colonneCin >= 0 && colonneHeures >= 0) {
+                if (colonnesNonVides != 3) {
+                    throw new HeuresSuppImportException("Le fichier doit contenir uniquement les trois colonnes Nom et prénom, CIN et HS.");
+                }
                 ligneEntete = index;
                 break;
             }
         }
         if (ligneEntete < 0) {
-            throw new HeuresSuppImportException("En-têtes introuvables : le fichier doit contenir Nom, Prenom, CIN, Funct et HS.");
+            throw new HeuresSuppImportException("En-têtes introuvables : le fichier doit contenir Nom et prénom, CIN et HS.");
         }
 
         List<LigneFichierHeuresSupp> lignes = new ArrayList<>();
@@ -127,12 +124,10 @@ public class LecteurFichierHeuresSupp {
             if (heures != null && heures.signum() == 0) {
                 lignesZero++;
             }
-            String nom = texte(ligne.getCell(colonneNom));
-            String prenom = texte(ligne.getCell(colonnePrenom));
+            String nomPrenom = texte(ligne.getCell(colonneNom));
             String cin = texte(ligne.getCell(colonneCin));
-            String fonction = texte(ligne.getCell(colonneFonction));
-            if (nom.isBlank() || prenom.isBlank() || cin.isBlank() || fonction.isBlank()) {
-                throw new HeuresSuppImportException("Ligne " + (index + 1) + " : Nom, Prenom, CIN et Funct sont requis.");
+            if (nomPrenom.isBlank() || cin.isBlank()) {
+                throw new HeuresSuppImportException("Ligne " + (index + 1) + " : Nom et prénom, CIN et HS sont requis.");
             }
             if (heures == null) {
                 throw new HeuresSuppImportException("Ligne " + (index + 1) + " : HS manquant.");
@@ -147,7 +142,7 @@ public class LecteurFichierHeuresSupp {
             if (heures.signum() < 0 || heures.scale() > 1 || heures.precision() - heures.scale() > 7) {
                 throw new HeuresSuppImportException("Ligne " + (index + 1) + " : HS doit être positif ou nul et comporter au plus une décimale.");
             }
-            lignes.add(new LigneFichierHeuresSupp(index + 1, nom, prenom, cin, fonction, heures));
+            lignes.add(new LigneFichierHeuresSupp(index + 1, nomPrenom, cin, heures));
         }
         if (lignes.isEmpty()) {
             throw new HeuresSuppImportException("Le fichier ne contient aucune ligne d'heures supplémentaires.");
