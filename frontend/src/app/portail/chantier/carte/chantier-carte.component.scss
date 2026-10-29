@@ -95,7 +95,7 @@ app-chantier-carte {
   --color-primary: var(--map-ui-primary);
   --color-focus: var(--map-ui-focus);
   --color-focus-soft: var(--map-ui-focus-soft);
-  --map-icon-filter: invert(1);
+  --map-icon-filter: none;
   position: relative;
   width: 100%;
   height: 100%;
@@ -111,93 +111,61 @@ app-chantier-carte {
 .chantier-carte__erreur {
   position: absolute;
   top: var(--space-md);
-  left: var(--space-md);
-  right: calc(var(--space-md) + 3rem); // laisse libre la colonne de contrôles
+  right: var(--space-md);
   z-index: 2;
+  width: min(28rem, calc(100% - 2 * var(--space-md)));
   box-shadow: var(--shadow-md);
   color: var(--color-text);
 }
 
-// ---- Calques : plan, satellite, relief ----
-.chantier-carte__calques {
+// Commandes sans panneau : une colonne légère, immédiatement sous la recherche de la page.
+.chantier-carte__commandes {
   position: absolute;
   left: var(--space-md);
-  bottom: var(--space-lg);
+  top: calc(var(--space-md) + 3.5rem);
   z-index: 2;
   display: flex;
-  gap: var(--space-xs);
-  padding: var(--space-xs);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-lg);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  max-height: calc(100% - 7rem);
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.chantier-carte__calque {
+.chantier-carte__modes { display: contents; }
+
+.chantier-carte__outil {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-2xs);
-  padding: var(--space-xs);
+  gap: var(--space-sm);
+  min-height: 2rem;
+  padding: 0.15rem 0.25rem;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--map-ui-text);
   font: inherit;
   font-size: var(--text-xs);
-  font-weight: 500;
+  font-weight: 600;
+  text-shadow: 0 1px 5px var(--map-ui-canvas);
   cursor: pointer;
   transition:
-    background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);
 
-  &:hover {
-    background: var(--color-surface-alt);
-    color: var(--color-text);
-  }
+  stp-icon { color: var(--map-ui-icon); font-size: 1rem; }
+  &:hover { color: var(--map-ui-highlight); }
+  &:hover stp-icon { color: var(--map-ui-highlight); }
 
-  &[aria-pressed='true'] {
-    color: var(--color-primary);
-
-    .chantier-carte__apercu {
-      box-shadow:
-        0 0 0 2px var(--color-surface),
-        0 0 0 4px var(--color-primary);
-    }
+  &[aria-pressed='true'] { color: var(--map-ui-highlight); }
+  &[aria-pressed='true'] stp-icon { color: var(--map-ui-highlight); }
+  &:focus-visible {
+    outline: 2px solid var(--map-ui-focus);
+    outline-offset: 2px;
   }
 }
 
-// Vignette de chaque calque : un aperçu de sa matière, l'icône dit ce qu'elle est.
-.chantier-carte__apercu {
-  display: grid;
-  place-items: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  border-radius: var(--radius-md);
-  color: var(--map-preview-text);
-  font-size: 1.25rem;
-  transition: box-shadow var(--duration-fast) var(--ease-out);
-
-  .chantier-carte__calque--plan & {
-    background:
-      linear-gradient(115deg, transparent 46%, var(--map-preview-plan-road) 46% 52%, transparent 52%),
-      linear-gradient(20deg, transparent 60%, var(--map-preview-plan-line) 60% 64%, transparent 64%),
-      linear-gradient(160deg, var(--map-preview-plan-land) 0 35%, var(--map-preview-plan-built) 35% 72%, var(--map-preview-plan-water) 72%);
-    color: var(--map-ui-text);
-  }
-
-  .chantier-carte__calque--satellite & {
-    background:
-      radial-gradient(circle at 30% 30%, var(--map-preview-satellite-forest) 0 22%, transparent 23%),
-      radial-gradient(circle at 75% 70%, var(--map-preview-satellite-shadow) 0 26%, transparent 27%),
-      linear-gradient(150deg, var(--map-preview-satellite-highland), var(--map-preview-satellite-lowland) 55%, var(--map-preview-satellite-sea));
-  }
-
-  .chantier-carte__calque--relief & {
-    background: linear-gradient(160deg, var(--map-preview-relief-high) 0 30%, var(--map-preview-relief-mid) 30% 55%, var(--map-preview-relief-low) 55% 70%, var(--map-preview-plan-built) 70%);
-    color: var(--map-preview-relief-text);
-  }
-}
+.chantier-carte__separateur { width: 1.6rem; height: 1px; margin: 0.25rem 0.4rem; background: color-mix(in srgb, var(--map-ui-icon) 54%, transparent); }
 
 // ---- Fiche d'un lieu ----
 .chantier-carte .maplibregl-popup-content {
@@ -244,57 +212,16 @@ app-chantier-carte {
   font-size: var(--text-xs);
 }
 
-// ---- Contrôles, échelle et mention légale de MapLibre, aux couleurs sombres de la carte ----
-.chantier-carte .maplibregl-ctrl-group {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
-}
-
-.chantier-carte .maplibregl-ctrl-group button {
-  width: 2.25rem;
-  height: 2.25rem;
-  background-color: var(--color-surface);
-}
-
-.chantier-carte .maplibregl-ctrl-group button:hover {
-  background-color: var(--color-surface-alt);
-}
-
-.chantier-carte .maplibregl-ctrl-group button + button {
-  border-top-color: var(--color-border);
-}
-
-.chantier-carte .maplibregl-ctrl-icon {
-  filter: var(--map-icon-filter);
-}
-
-.chantier-carte__outil {
-  display: grid;
-  place-items: center;
-  color: var(--color-text);
-  font-size: 1.125rem;
-
-  &[aria-pressed='true'] {
-    color: var(--color-primary);
-  }
-}
-
-.chantier-carte .maplibregl-ctrl-scale {
-  border-color: var(--color-text-muted);
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
-  color: var(--color-text);
-}
-
 .chantier-carte .maplibregl-ctrl-attrib.maplibregl-compact,
 .chantier-carte .maplibregl-ctrl-attrib {
-  background: var(--color-surface);
-  color: var(--color-text-muted);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text-muted);
 }
 
+.chantier-carte .maplibregl-ctrl-logo { display: none; }
+
 .chantier-carte .maplibregl-ctrl-attrib a {
-  color: var(--color-text);
+  color: var(--map-ui-text);
 }
 
 // En plein écran, l'hôte prend tout l'écran : la carte le remplit toujours.

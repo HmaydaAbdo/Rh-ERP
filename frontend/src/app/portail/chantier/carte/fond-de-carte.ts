@@ -42,6 +42,10 @@ export const AFFICHAGE_PAR_DEFAUT: Affichage = { fond: 'plan', relief: true };
 const HAUTEUR_BATIMENT_PAR_DEFAUT_M = 6;
 /** Zoom à partir duquel les bâtiments ont leur pleine hauteur ; ils s'élèvent progressivement depuis le zoom précédent. */
 const ZOOM_BATIMENTS_3D = 15;
+/** Afficher les noms de rues secondaires dès que le fond détaillé du Maroc est chargé. */
+const ZOOM_LIBELLES_RUES_SECONDAIRES = 14;
+/** Lieux commerciaux masqués par défaut : ils encombrent le fond sans aider au repérage BTP. */
+const POIS_COMMERCIAUX_MASQUES = ['restaurant', 'fast_food', 'cafe', 'bar', 'supermarket', 'convenience', 'books', 'beauty', 'electronics', 'clothes', 'pharmacy'] as const;
 
 /** Zoom auquel l'ombrage du relief a disparu. */
 const ZOOM_FIN_OMBRAGE = 15;
@@ -231,9 +235,10 @@ export function creerStyle(
 /** Plan vectoriel Protomaps : ombrage du relief sous l'eau et les routes, bâtiments en volume. */
 function couchesPlan(config: CarteConfig, variante: 'light' | 'dark', affichage: Affichage, palette: Flavor): LayerSpecification[] {
   const flavor = variante === 'dark' ? palette : namedFlavor(variante);
-  const couches = layers(SOURCE_DU_FOND, flavor, { lang: config.langue }).map((couche) =>
-    couche.id === 'buildings' ? batiments3d(flavor) : couche
-  );
+  const couches = layers(SOURCE_DU_FOND, flavor, { lang: config.langue }).map((couche) => {
+    if (couche.id === 'buildings') { return batiments3d(flavor); }
+    return ajusterCoucheBtp(couche);
+  });
   // Le fond n'apparaît qu'avant l'arrivée des tuiles : la couleur de l'eau évite un éclair gris au chargement.
   const coucheFond = couches.find((couche) => couche.id === 'background');
   if (coucheFond?.type === 'background') {
@@ -278,10 +283,29 @@ function couchesSatellite(config: CarteConfig, affichage: Affichage): LayerSpeci
     { id: 'satellite', type: 'raster', source: SOURCE_SATELLITE },
     ...(affichage.relief ? [ombrage(0.2, 'dark')] : []),
     ...traces,
-    ...layers(SOURCE_DU_FOND, flavor, { lang: config.langue, labelsOnly: true }).map((couche) =>
-      couche.type === 'symbol' ? { ...couche, paint: { ...couche.paint, ...LIBELLES_SUR_IMAGERIE } } : couche
-    )
+    ...layers(SOURCE_DU_FOND, flavor, { lang: config.langue, labelsOnly: true }).map((couche) => {
+      const libelle = ajusterCoucheBtp(couche);
+      return libelle.type === 'symbol' ? { ...libelle, paint: { ...libelle.paint, ...LIBELLES_SUR_IMAGERIE } } : libelle;
+    })
   ];
+}
+
+/** Affiche tôt les noms de rues secondaires au Maroc et retire les commerces sans usage chantier. */
+function ajusterCoucheBtp(couche: LayerSpecification): LayerSpecification {
+  if (couche.id === 'roads_labels_minor') {
+    return { ...couche, minzoom: ZOOM_LIBELLES_RUES_SECONDAIRES };
+  }
+  if (couche.id === 'pois' && couche.type === 'symbol' && couche.filter) {
+    return {
+      ...couche,
+      filter: [
+        'all',
+        couche.filter,
+        ['!', ['in', ['get', 'kind'], ['literal', [...POIS_COMMERCIAUX_MASQUES]]]]
+      ] as typeof couche.filter
+    };
+  }
+  return couche;
 }
 
 /** Bâtiments en volume, à leur hauteur OpenStreetMap ; ils s'élèvent progressivement en approchant du niveau de la rue. */
@@ -336,7 +360,7 @@ function ciel(variante: 'light' | 'dark'): SkySpecification {
     : { 'sky-color': '#7fb4e6', 'horizon-color': '#e6f0f8', 'fog-color': '#eef2f5', ...melange };
 }
 
-/** Le territoire entier, en boîte englobante MapLibre : vue initiale et retour à la vue d'ensemble. */
+/** Le territoire entier, en boîte englobante MapLibre : vue initiale tant qu'aucun chantier n'est chargé. */
 export function territoire(config: CarteConfig): LngLatBoundsLike {
   const [ouest, sud, est, nord] = config.territoire;
   return [

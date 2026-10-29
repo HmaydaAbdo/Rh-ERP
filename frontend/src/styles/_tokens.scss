@@ -12,18 +12,18 @@
 @mixin theme-dark {
   color-scheme: dark;
 
-  // Neutres du thème sombre : noir d'encre pour le canevas, bleu-noir pour les surfaces, contrastes progressifs.
-  --neutral-0: #0b1c2e;
-  --neutral-50: #030b16;
-  --neutral-100: #07192a;
-  --neutral-200: #0b2035;
-  --neutral-300: #153752;
-  --neutral-400: #496581;
-  --neutral-500: #8da8c3;
-  --neutral-600: #bfd1e3;
-  --neutral-700: #d9e9f6;
-  --neutral-800: #eef7ff;
-  --neutral-900: #f8fcff;
+  // Neutres du thème sombre : noir mat, graphite discret et texte net.
+  --neutral-0: #202020;
+  --neutral-50: #0d0d0d;
+  --neutral-100: #151515;
+  --neutral-200: #1e1e1e;
+  --neutral-300: #2b2b2b;
+  --neutral-400: #5d5d5d;
+  --neutral-500: #929292;
+  --neutral-600: #bdbdbd;
+  --neutral-700: #d6d6d6;
+  --neutral-800: #ededed;
+  --neutral-900: #f7f7f7;
   --neutral-950: #ffffff;
 
   // Le bleu reste l'action principale ; la gamme monte vers un bleu électrique lisible sur les surfaces sombres.
@@ -39,23 +39,23 @@
   --primary-900: #d2f0ff;
   --primary-950: #f1faff;
   --color-primary-contrast: #03121f;
-  --color-focus: #35d6ff;
+  --color-focus: #68aaff;
   --color-focus-soft: color-mix(in srgb, var(--color-focus) 14%, transparent);
 
   --color-canvas: var(--neutral-50);
-  --color-sidebar-bg: #020811;
-  --color-sidebar-bg-bottom: #071727;
+  --color-sidebar-bg: #090909;
+  --color-sidebar-bg-bottom: #111111;
   --color-sidebar-glow: color-mix(in srgb, var(--color-focus) 10%, transparent);
   --color-sidebar-text: var(--neutral-600);
   --color-sidebar-active-bg: color-mix(in srgb, var(--primary-500) 22%, transparent);
   --color-sidebar-active-text: var(--neutral-900);
   --color-sidebar-hover-bg: color-mix(in srgb, var(--neutral-950) 7%, transparent);
   --color-sidebar-border: color-mix(in srgb, var(--neutral-950) 10%, transparent);
-  --color-sidebar-accent: var(--color-focus);
-  --color-brand-accent: var(--color-focus);
-  --assistant-accent: var(--color-focus);
+  --color-sidebar-accent: var(--brand-copper-400);
+  --color-brand-accent: var(--brand-copper-400);
+  --assistant-accent: var(--brand-copper-400);
   --assistant-accent-soft: var(--color-focus-soft);
-  --assistant-accent-contrast: #03121f;
+  --assistant-accent-contrast: #21150d;
   --color-success: #3fb873;
   --color-warning: #f0a53a;
   --color-danger: #f2706b;
@@ -76,8 +76,26 @@
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.48);
   --shadow-sidebar: 0 12px 36px rgba(0, 0, 0, 0.16);
 
-  // Les icônes des contrôles de la carte sont des images noires : inversées pour rester lisibles sur la surface sombre
-  --map-icon-filter: invert(1);
+  --map-icon-filter: none;
+
+  // Même contraste graphite sur l'écran de connexion ; actions et focus restent Staport bleu.
+  --auth-canvas-deep: #090909;
+  --auth-canvas: #111111;
+  --auth-surface: rgba(23, 23, 23, 0.96);
+  --auth-border: rgba(255, 255, 255, 0.12);
+  --auth-border-hover: rgba(104, 170, 255, 0.55);
+  --auth-field: rgba(10, 10, 10, 0.9);
+  --auth-field-focus: #111111;
+  --auth-field-border: rgba(255, 255, 255, 0.18);
+  --auth-text: #f2f2f2;
+  --auth-muted: #b5b5b5;
+  --auth-accent: #c88e5c;
+  --auth-action: #168dff;
+  --auth-on-accent: #21150d;
+  --auth-button-shadow: 0 0.5rem 1.5rem rgba(22, 141, 255, 0.2);
+  --auth-button-shadow-hover: 0 0.75rem 2rem rgba(22, 141, 255, 0.28);
+  --auth-glow: rgba(22, 141, 255, 0.16);
+  --auth-warm-glow: rgba(200, 142, 92, 0.1);
 
 }
 
@@ -171,7 +189,7 @@
   --auth-orbit: rgba(213, 231, 244, 0.08);
   --auth-danger: #ffd4d1;
 
-  // Menu latéral : bleu très foncé dans les deux thèmes
+  // Menu latéral du thème clair : bleu très foncé ; le thème sombre est défini dans `theme-dark`.
   --color-sidebar-bg: var(--brand-900);
   --color-sidebar-bg-bottom: var(--brand-950);
   --color-sidebar-glow: rgba(217, 174, 130, 0.1);
@@ -232,6 +250,7 @@
   // ---- Mouvement ----
   --duration-fast: 150ms;
   --duration-base: 220ms;
+  --duration-stagger: 18ms;
   --duration-slow: 400ms;
   --duration-slower: 700ms;
   --duration-slowest: 1200ms;
@@ -267,71 +286,56 @@
   --table-row-alt-bg: var(--neutral-50);
   --table-row-hover-bg: var(--neutral-100);
 
-  // ---- Assistant RH (voir core/assistant) : accent cuivre en clair, cyan dans le thème sombre ----
+  // ---- Assistant RH (voir core/assistant) : accent cuivre discret dans les deux thèmes ----
   --assistant-accent: var(--brand-copper-400);
   --assistant-accent-soft: color-mix(in srgb, var(--brand-copper-400) 16%, transparent);
   --assistant-accent-contrast: #3a2207;
 
-  // Tokens du contrôle de carte : ce chrome reste nocturne quelle que soit la couche Plan/Satellite/Relief ou le thème app.
-  --map-ui-surface: #07192a;
-  --map-ui-canvas: #030b16;
-  --map-ui-border: #17446a;
-  --map-ui-text: #eef7ff;
-  --map-ui-text-muted: #9bb5cd;
+  // Tokens du contrôle cartographique : graphite fixe, icônes bleues, repères chantier cuivre.
+  --map-ui-surface: #171717;
+  --map-ui-canvas: #0d0d0d;
+  --map-ui-border: #363636;
+  --map-ui-text: #ededed;
+  --map-ui-text-muted: #b0b0b0;
+  --map-ui-icon: #73adff;
   --map-ui-primary: #168dff;
-  --map-ui-focus: #35d6ff;
+  --map-ui-focus: #73adff;
   --map-ui-focus-soft: color-mix(in srgb, var(--map-ui-focus) 14%, transparent);
-  --map-ui-highlight: #b9e2ff;
+  --map-ui-highlight: #a9ceff;
   --map-filter-width: 14rem;
-  --map-ui-shadow: 0 1.25rem 3rem rgba(0, 5, 13, 0.46), inset 0 1px 0 rgba(214, 237, 255, 0.05);
+  --map-ui-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.48);
   --map-ui-primary-glow: 0 0 1rem color-mix(in srgb, var(--map-ui-primary) 13%, transparent);
-  --map-marker-core: #35d6ff;
+  --map-marker-core: #c88e5c;
   --map-marker-halo: color-mix(in srgb, var(--map-marker-core) 34%, transparent);
   --map-marker-ring: color-mix(in srgb, var(--map-marker-core) 72%, white);
   --map-marker-hover-glow: 0 0 0 0.35rem var(--map-marker-halo), 0 0 1.35rem var(--map-marker-core);
   --map-marker-tooltip-shadow: 0 0.75rem 2rem rgba(0, 5, 13, 0.5);
-  --map-tooltip-surface: #06172a;
+  --map-tooltip-surface: #171717;
   --map-tooltip-border: #168dff;
-  --map-tooltip-text: #eef7ff;
-  --map-tooltip-muted: #a9bfd4;
+  --map-tooltip-text: #ededed;
+  --map-tooltip-muted: #b5b5b5;
 
-  // Palette du Plan vectoriel : mer en encre marine, relief ardoise, traits cyan et routes bleu glacier.
-  --map-plan-background: #06172a;
-  --map-plan-earth: #0a1c2d;
-  --map-plan-water: #04162a;
-  --map-plan-boundary: #347ea5;
-  --map-plan-road-other: #1a344b;
-  --map-plan-road-minor: #23445f;
-  --map-plan-road-link: #2b6487;
-  --map-plan-road-major: #367da2;
-  --map-plan-road-highway: #49a6cc;
-  --map-plan-label: #dcecff;
-  --map-plan-label-muted: #a8c5dc;
-  --map-plan-label-halo: #061523;
-  --map-plan-ocean-label: #54bfe4;
-  --map-plan-landcover-grass: rgba(16, 46, 55, 1);
-  --map-plan-landcover-barren: rgba(25, 42, 55, 1);
-  --map-plan-landcover-urban: rgba(17, 37, 55, 1);
-  --map-plan-landcover-farmland: rgba(15, 40, 52, 1);
-  --map-plan-landcover-glacier: rgba(46, 70, 88, 1);
-  --map-plan-landcover-scrub: rgba(18, 44, 55, 1);
-  --map-plan-landcover-forest: rgba(12, 43, 48, 1);
-
-  --map-preview-text: #ffffff;
-  --map-preview-plan-road: #49b8e8;
-  --map-preview-plan-line: #a6e9ff;
-  --map-preview-plan-land: #0b1c2e;
-  --map-preview-plan-built: #153752;
-  --map-preview-plan-water: #04162a;
-  --map-preview-satellite-forest: #6f8a4a;
-  --map-preview-satellite-shadow: #3d5a3a;
-  --map-preview-satellite-highland: #8b7b5a;
-  --map-preview-satellite-lowland: #5c6e45;
-  --map-preview-satellite-sea: #1f3f5c;
-  --map-preview-relief-high: #d9cfb8;
-  --map-preview-relief-mid: #a89a7c;
-  --map-preview-relief-low: #6b6150;
-  --map-preview-relief-text: #3b3428;
+  // Palette du Plan vectoriel : territoire noir graphite, routes ardoise, repères bleus lisibles.
+  --map-plan-background: #111111;
+  --map-plan-earth: #191919;
+  --map-plan-water: #0b0b0b;
+  --map-plan-boundary: #545454;
+  --map-plan-road-other: #292929;
+  --map-plan-road-minor: #363636;
+  --map-plan-road-link: #4b5f76;
+  --map-plan-road-major: #627f9f;
+  --map-plan-road-highway: #81a9d8;
+  --map-plan-label: #e5e5e5;
+  --map-plan-label-muted: #b4b4b4;
+  --map-plan-label-halo: #101010;
+  --map-plan-ocean-label: #8fb9ed;
+  --map-plan-landcover-grass: rgba(31, 34, 31, 1);
+  --map-plan-landcover-barren: rgba(35, 34, 31, 1);
+  --map-plan-landcover-urban: rgba(34, 34, 34, 1);
+  --map-plan-landcover-farmland: rgba(33, 34, 31, 1);
+  --map-plan-landcover-glacier: rgba(48, 48, 48, 1);
+  --map-plan-landcover-scrub: rgba(35, 34, 31, 1);
+  --map-plan-landcover-forest: rgba(28, 34, 30, 1);
 }
 
 :root[data-theme='dark'] {

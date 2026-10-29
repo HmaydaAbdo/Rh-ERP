@@ -15,6 +15,86 @@
   min-width: 0;
 }
 
+// Mode carte : le rail cède toute la largeur à la carte. Le hamburger ouvre un volet superposé;
+// il reste fixe afin de préserver un trajet continu du pointeur vers le menu.
+@include bp.desktop {
+  .app-shell.app-shell--carte .app-carte-menu {
+    position: fixed;
+    top: var(--space-md);
+    left: var(--space-md);
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid var(--map-ui-border);
+    border-radius: var(--radius-md);
+    background: var(--map-ui-surface);
+    color: var(--map-ui-icon);
+    box-shadow: var(--map-ui-shadow);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+
+    svg { width: 1.25rem; height: 1.25rem; }
+
+    &:hover { background: var(--map-ui-surface); border-color: var(--map-ui-icon); color: var(--map-ui-highlight); }
+    &:active { transform: scale(0.96); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+
+  .app-shell.app-shell--carte .app-content {
+    min-height: 100svh;
+    margin-left: 0;
+    padding: 0;
+  }
+
+  .app-shell.app-shell--carte .app-sidebar {
+    z-index: 100;
+    width: var(--sidebar-expanded-width);
+    transform: translate3d(calc(-100% - var(--space-sm)), 0, 0) scale(0.985);
+    transform-origin: left center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--duration-base) var(--ease-out), opacity var(--duration-fast) var(--ease-out),
+      visibility 0s linear var(--duration-base);
+
+    .app-sidebar__nav { padding-top: calc(var(--space-md) + 3.5rem); }
+
+    .app-sidebar__link {
+      justify-content: flex-start;
+      padding-inline: var(--space-md);
+    }
+
+    .app-sidebar__group-chevron { display: block; }
+
+    .app-sidebar__label { width: auto; opacity: 1; }
+    .app-sidebar__footer { flex-direction: row; padding: var(--space-sm); }
+    .app-sidebar__username { display: block; }
+  }
+
+  .app-shell.app-shell--carte.app-shell--carte-menu-ouvert .app-sidebar {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-shell--carte-menu-ouvert .app-sidebar__nav > *,
+  .app-shell--carte-menu-ouvert .app-sidebar__group-items > * {
+    animation: app-carte-sidebar-arrivee var(--duration-base) var(--ease-out) both;
+    animation-delay: calc(var(--nav-index, 0) * var(--duration-stagger));
+  }
+}
+
+@keyframes app-carte-sidebar-arrivee {
+  from { opacity: 0; transform: translate3d(calc(-1 * var(--space-sm-md)), 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
 // Formulaires et consultations ont une surface contenue; les listes gardent le canevas libre pour leurs données.
 .app-page--narrow,
 .app-page--wide {

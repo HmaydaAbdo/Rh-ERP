@@ -149,11 +149,11 @@ nouveau reprend ces règles dès sa création.
 
 | | |
 |---|---|
-| Couleur de marque | Le bleu marine du logo (`--brand-700` en thème clair), décliné en échelle `--brand-50` … `--brand-950`. Le thème sombre suit **Atlas nocturne Staport** : encre `#030B16`, surface `#07192A`, action `#168DFF`, cyan balise `#35D6FF`, texte glacier `#EEF7FF`. La palette traverse toutes les surfaces et interactions sombres ; le thème clair garde son accent cuivre et les statuts métier leurs couleurs sémantiques. |
+| Couleur de marque | Le bleu du logo (`--brand-700` en thème clair), décliné en échelle `--brand-50` … `--brand-950`. Le thème sombre suit **Graphite Staport** : canevas noir mat `#0D0D0D`, surface graphite `#151515`, action bleue `#168DFF`, focus bleu clair `#68AAFF`, texte net `#EDEDED`, accent cuivre rare `#C88E5C`. Le thème clair reste minéral avec son accent cuivre ; les statuts métier et graphiques gardent leurs couleurs sémantiques. |
 | Logo | Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon uniquement) — dessin provisoire, à remplacer par une version vectorielle du logo. Aucun logo dans l'authentification ou le menu latéral |
 | Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; `--text-page-title` pour les titres d'écran, `--text-display` réservé à l'accroche d'accueil |
-| Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage. Atlas nocturne et ses règles d'usage sont définis dans [design-system.md](../../conventions/design-system.md). |
-| Menu latéral | Bleu très foncé dans les deux thèmes (`--color-sidebar-*`), repère cuivre en clair et cyan sur fond encre en sombre pour l'écran actif. Sur grand écran, il reste réduit aux icônes (4,5 rem) ; les libellés sont accessibles en infobulle et au clavier, le panneau se déploie au survol ou au focus clavier puis se replie à la sortie. Sur **téléphone et tablette compacte**, il devient un **tiroir** ouvert par le bouton de la barre du haut (fond cliquable, `Échap` ou un choix le referme) |
+| Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage. Graphite Staport et ses règles d'usage sont définis dans [design-system.md](../../conventions/design-system.md). |
+| Menu latéral | Fond bleu très foncé en clair et graphite en sombre (`--color-sidebar-*`), repère cuivre discret. Chaque destination du menu a une icône dédiée, sans répétition. Sur grand écran, le menu reste iconique et compact ; Fonctions et Équipes sont deux entrées séparées. Sur `/carte`, le rail disparaît : un hamburger précède le filtre, et révèle par survol ou focus clavier un volet animé qui se replie à la sortie. L'animation est coupée avec `prefers-reduced-motion`. Sur **téléphone et tablette compacte**, le menu garde son tiroir piloté par la barre du haut. |
 | Authentification | Connexion, mot de passe oublié et réinitialisation partagent un formulaire centré sur tout le canevas, même si une session est active, posé sur la photographie locale `src/assets/auth/staport-login-atlas.png` générée pour Staport RH. Un voile sombre conserve le contraste ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
 
 Le shell de navigation s'affiche ou se masque selon la session et la route d'authentification, mais l'application conserve un seul
@@ -202,9 +202,10 @@ ce qui provoquerait une boucle de redirections pour un utilisateur sans droit su
 
 `core/navigation/nav-items.ts` contient les destinations et leurs permissions. `NAV_ITEMS` fixe la priorité
 de l'écran d'accueil; `SIDEBAR_ITEMS` place Carte en première position dans le menu sans changer cette priorité.
-Équipe et Fonction sont regroupées sous « Référentiel RH » ; Utilisateurs, Rôles, Paramètres et Journal sous
-« Administration système ». Chaque sous-entrée garde sa propre permission. Un groupe est absent quand aucune
-de ses pages n'est autorisée. **Un nouvel écran s'ajoute dans ce fichier.**
+Fonctions et Équipes sont affichées séparément avec leurs icônes dédiées. « Heures sup. » est le libellé compact du
+domaine Heures supplémentaires dans le menu ; le nom complet reste dans les pages et titres. Utilisateurs, Rôles,
+Paramètres et Journal restent regroupés sous « Administration système » ; chaque destination garde sa permission et son
+icône propre. **Un nouvel écran s'ajoute dans ce fichier.**
 
 ### Boutons d'action
 

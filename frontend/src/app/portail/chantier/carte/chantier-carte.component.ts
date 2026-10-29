@@ -17,14 +17,11 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { MessageComponent } from '@shared/ui/message/message.component';
 import {
   Map as CarteMapLibre,
-  FullscreenControl,
-  GeolocateControl,
-  NavigationControl,
+  LngLatBounds,
   Popup,
   Marker,
-  ScaleControl,
-  type IControl,
-  type MapLayerMouseEvent
+  type MapLayerMouseEvent,
+  type MapMouseEvent
 } from 'maplibre-gl';
 import { ChantierCarte, NATURE_CHANTIER_LIBELLES } from '../models/chantier.model';
 
@@ -39,7 +36,6 @@ import {
   lirePalettePlan,
   optionsDeVue,
   preparerMapLibre,
-  territoire,
   type Affichage,
   type TypeDeFond
 } from './fond-de-carte';
@@ -64,21 +60,8 @@ const MESSAGES_SOURCE: Readonly<Record<string, string>> = {
   [SOURCE_DU_RELIEF]: "Le relief n'est pas disponible pour le moment. Prévenez l'administrateur de l'application."
 };
 
-/** Contrôle MapLibre dont le contenu est un élément du gabarit Angular (ses liaisons restent actives une fois déplacé). */
-class ControleDuGabarit implements IControl {
-  constructor(private readonly element: HTMLElement) {}
-
-  onAdd(): HTMLElement {
-    return this.element;
-  }
-
-  onRemove(): void {
-    this.element.remove();
-  }
-}
-
 /**
- * Carte du monde, ouverte sur le Maroc, avec les points qualifiés reçus en entrée. Composant « bête » : il ne connaît ni la page,
+ * Carte du monde, initialisée sur le Maroc puis cadrée sur les points qualifiés reçus en entrée. Composant « bête » : il ne connaît ni la page,
  * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, conserve son style sombre malgré
  * le thème applicatif, la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
  * détruit la carte à sa destruction.
@@ -98,9 +81,8 @@ export class ChantierCarteComponent {
   private marqueurs: Marker[] = [];
   private readonly config = inject(CARTE_CONFIG);
   private readonly document = inject(DOCUMENT);
-  private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly conteneur = viewChild.required<ElementRef<HTMLElement>>('conteneur');
-  private readonly outils = viewChild.required<ElementRef<HTMLElement>>('outils');
+  private readonly commandes = viewChild.required<ElementRef<HTMLElement>>('commandes');
 
   private carte?: CarteMapLibre;
   private observateur?: ResizeObserver;
@@ -113,6 +95,7 @@ export class ChantierCarteComponent {
   readonly affichage = signal<Affichage>(AFFICHAGE_PAR_DEFAUT);
   /** Vrai quand la carte est inclinée. */
   readonly vue3d = signal(false);
+  readonly messageLocalisation = signal('');
   /** Sources introuvables ou illisibles ; la carte affiche le reste et le dit. */
   readonly sourcesIndisponibles = signal<ReadonlySet<string>>(new Set());
   /** Message de la source indisponible la plus grave, s'il y en a une. */
@@ -159,9 +142,32 @@ export class ChantierCarteComponent {
     }
   }
 
-  /** Revient au Maroc entier, à plat. */
+  /** Reprend le cadrage du filtre courant : les quatre extrêmes réels déterminent la fenêtre. */
   protected vueDEnsemble(): void {
-    this.carte?.fitBounds(territoire(this.config), { padding: this.config.margeDeVuePx, pitch: 0, bearing: 0 });
+    this.recentrerSurChantiers(this.chantiers());
+  }
+
+  protected zoomer(delta: number): void {
+    const carte = this.carte;
+    if (carte) { carte.zoomTo(Math.min(carte.getMaxZoom(), Math.max(carte.getMinZoom(), carte.getZoom() + delta))); }
+  }
+
+  protected orienterAuNord(): void {
+    this.carte?.easeTo({ bearing: 0, pitch: 0 });
+  }
+
+  protected localiser(): void {
+    this.messageLocalisation.set('');
+    const geolocalisation = this.document.defaultView?.navigator.geolocation;
+    if (!geolocalisation || !this.carte) {
+      this.messageLocalisation.set('La localisation est indisponible sur cet appareil.');
+      return;
+    }
+    geolocalisation.getCurrentPosition(
+      ({ coords }) => this.carte?.flyTo({ center: [coords.longitude, coords.latitude], zoom: 14, pitch: 0 }),
+      () => this.messageLocalisation.set('Autorisez la localisation pour centrer la carte sur votre position.'),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
   }
 
   private creerCarte(): void {
@@ -172,16 +178,12 @@ export class ChantierCarteComponent {
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
       style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement)),
-      attributionControl: { compact: true },
+      attributionControl: { compact: true, customAttribution: [] },
+      maplibreLogo: false,
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.
       fadeDuration: 0,
       ...optionsDeVue(this.config)
     });
-    carte.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
-    carte.addControl(new ControleDuGabarit(this.outils().nativeElement), 'top-right');
-    carte.addControl(new GeolocateControl({ positionOptions: { enableHighAccuracy: true }, fitBoundsOptions: { maxZoom: 16 } }), 'top-right');
-    carte.addControl(new FullscreenControl({ container: this.hote.nativeElement }), 'top-right');
-    carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
 
     carte.on('error', (evenement) => {
       const source = (evenement as { sourceId?: string }).sourceId;
@@ -202,6 +204,7 @@ export class ChantierCarteComponent {
       carte.on('mouseenter', couche, () => (carte.getCanvas().style.cursor = 'pointer'));
       carte.on('mouseleave', couche, () => (carte.getCanvas().style.cursor = ''));
     }
+    carte.on('click', (evenement) => this.ouvrirFicheVoie(carte, evenement));
 
     // MapLibre suit la fenêtre ; la page, elle, peut changer la taille du conteneur sans changer celle de la fenêtre (menu, panneau).
     this.observateur = new ResizeObserver(() => carte.resize());
@@ -250,6 +253,43 @@ export class ChantierCarteComponent {
         .addTo(this.carte!);
       return marqueur;
     });
+    this.recentrerSurChantiers(chantiers);
+  }
+
+  private recentrerSurChantiers(chantiers: readonly ChantierCarte[]): void {
+    const carte = this.carte;
+    if (!carte || chantiers.length === 0) { return; }
+    const emplacements = new Map<string, [number, number]>();
+    chantiers.forEach(({ longitude, latitude }) => emplacements.set(`${longitude},${latitude}`, [longitude, latitude]));
+    const points = [...emplacements.values()];
+    const padding = this.margeDesCommandes();
+    if (points.length === 1) {
+      carte.easeTo({
+        center: points[0], zoom: Math.min(14, Math.max(12, carte.getZoom())), bearing: 0, pitch: 0, padding,
+        duration: this.mouvementReduit() ? 0 : 600
+      });
+      return;
+    }
+    const limites = new LngLatBounds();
+    points.forEach((point) => limites.extend(point));
+    carte.fitBounds(limites, { padding, maxZoom: 14, bearing: 0, pitch: 0, duration: this.mouvementReduit() ? 0 : 600 });
+  }
+
+  private mouvementReduit(): boolean {
+    return this.document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches ?? false;
+  }
+
+  /** Réserve le départ de la colonne et sa largeur, sans coupler la carte au gabarit de la page. */
+  private margeDesCommandes(): { top: number; right: number; bottom: number; left: number } {
+    const cadre = this.conteneur().nativeElement.getBoundingClientRect();
+    const commandes = this.commandes().nativeElement.getBoundingClientRect();
+    const espace = 24;
+    return {
+      top: Math.max(this.config.margeDeVuePx, commandes.top - cadre.top + espace),
+      right: this.config.margeDeVuePx,
+      bottom: this.config.margeDeVuePx,
+      left: Math.max(this.config.margeDeVuePx, commandes.right - cadre.left + espace)
+    };
   }
 
   /** Épingle de localisation (tracé de l'icône Lucide `map-pin`, pleine), construite en SVG sans HTML injecté. */
@@ -290,6 +330,31 @@ export class ChantierCarteComponent {
     const fiche = this.document.createElement('p');
     fiche.className = 'chantier-carte__fiche';
     fiche.textContent = nom;
+    new Popup({ closeButton: false, maxWidth: '18rem', offset: 12 }).setLngLat(evenement.lngLat).setDOMContent(fiche).addTo(carte);
+  }
+
+  /** Les rues restent consultables même si MapLibre masque leur étiquette pour éviter les collisions. */
+  private ouvrirFicheVoie(carte: CarteMapLibre, evenement: MapMouseEvent): void {
+    const entites = carte.queryRenderedFeatures(evenement.point);
+    const lieuNomme = entites.some((entite) => {
+      if (!COUCHES_NOMMEES.includes(entite.layer.id)) { return false; }
+      const nom = entite.properties?.[`name:${this.config.langue}`] ?? entite.properties?.['name'];
+      return typeof nom === 'string';
+    });
+    if (lieuNomme) { return; }
+    const voie = entites.find((entite) => {
+      if (entite.layer.type !== 'line' || !entite.layer.id.startsWith('roads_')) { return false; }
+      const nom = entite.properties?.[`name:${this.config.langue}`] ?? entite.properties?.['name'];
+      const reference = entite.properties?.['ref'];
+      return typeof nom === 'string' || typeof reference === 'string';
+    });
+    if (!voie) { return; }
+    const nom = voie.properties[`name:${this.config.langue}`] ?? voie.properties['name'];
+    const reference = voie.properties['ref'];
+    const fiche = this.document.createElement('p');
+    fiche.className = 'chantier-carte__fiche';
+    fiche.textContent = [typeof nom === 'string' ? nom : undefined, typeof reference === 'string' ? reference : undefined]
+      .filter(Boolean).join(' · ');
     new Popup({ closeButton: false, maxWidth: '18rem', offset: 12 }).setLngLat(evenement.lngLat).setDOMContent(fiche).addTo(carte);
   }
 }

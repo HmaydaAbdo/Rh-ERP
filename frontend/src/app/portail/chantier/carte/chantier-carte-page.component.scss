@@ -1,6 +1,5 @@
 @use 'breakpoints' as bp;
 
-// La carte est la surface de travail : aucun panneau métier ni liste latérale.
 .carte-page {
   position: relative;
   display: flex;
@@ -19,69 +18,96 @@
   left: var(--space-md);
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  width: max-content;
-  max-width: min(34rem, calc(100% - 2 * var(--space-md)));
-  min-height: 4.25rem;
-  padding: var(--space-sm-md) var(--space-lg);
+  gap: var(--space-sm);
+  width: min(23rem, calc(100% - 2 * var(--space-md)));
+  min-height: 2.75rem;
+  padding: 0 var(--space-sm-md);
   border: 1px solid var(--map-ui-border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--map-ui-surface) 90%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--map-ui-surface);
   color: var(--map-ui-text);
   box-shadow: var(--map-ui-shadow);
-  backdrop-filter: blur(1rem);
 }
 
-.carte-page__identite {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: var(--space-sm-md);
-  padding-right: var(--space-lg);
-  border-right: 1px solid var(--map-ui-border);
+.carte-page__recherche-icone { flex: 0 0 auto; color: var(--map-ui-icon); }
 
-  h1 { margin: 0; color: var(--map-ui-text); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.035em; }
-}
-
-.carte-page__total {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  margin: 0;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--map-ui-primary) 64%, transparent);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--map-ui-primary) 16%, var(--map-ui-canvas));
-  color: var(--map-ui-highlight);
+.carte-page__recherche {
+  flex: 1 1 auto;
+  width: 5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--map-ui-text);
+  font: inherit;
   font-size: var(--text-sm);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  box-shadow: var(--map-ui-primary-glow);
+
+  &::placeholder { color: var(--map-ui-text-muted); opacity: 1; }
+  &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: 2px; border-radius: var(--radius-xs); }
 }
+
+.carte-page__separateur { align-self: stretch; width: 1px; margin-block: var(--space-xs); background: var(--map-ui-border); }
 
 .carte-page__nature {
-  display: grid;
-  flex: 0 0 var(--map-filter-width);
-  min-width: var(--map-filter-width);
-  gap: var(--space-2xs);
-
-  label { color: var(--map-ui-text-muted); font-size: var(--text-sm); font-weight: 600; }
+  flex: 0 0 8rem;
+  width: 8rem;
 
   .stp-select__input {
     min-height: 2.5rem;
-    border: 1px solid var(--map-ui-border);
-    border-radius: var(--radius-md);
-    background: var(--map-ui-canvas);
+    padding-inline: var(--space-xs) 2rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--map-ui-text);
+    font-size: var(--text-sm);
 
-    &:hover { border-color: var(--map-ui-focus); }
-    &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: var(--focus-offset); }
+    &:hover { background: color-mix(in srgb, var(--map-ui-icon) 9%, transparent); }
+    &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: -1px; }
   }
+
+  .stp-select__toggle { inset-inline-end: 0; color: var(--map-ui-icon); }
 }
 
-.carte-page__reessayer { flex: 0 0 auto; }
-.carte-page__vide { margin: 0; color: var(--map-ui-text-muted); font-size: var(--text-xs); }
+.carte-page__reessayer,
+.carte-page__vide {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--space-md) + 3.5rem);
+  left: var(--space-md);
+}
+
+.carte-page__vide {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text-muted);
+  font-size: var(--text-xs);
+}
+
+// En mode carte, le hamburger et la recherche partagent la ligne supérieure avec un espacement constant.
+@include bp.desktop {
+  .app-shell--carte .carte-page {
+    width: 100%;
+    height: max(26rem, 100svh);
+    margin: 0;
+    isolation: auto;
+  }
+
+  .app-shell--carte .carte-page__filtre,
+  .app-shell--carte .carte-page__reessayer,
+  .app-shell--carte .carte-page__vide {
+    left: calc(var(--space-md) + 3.25rem);
+  }
+
+  .app-shell--carte .carte-page__filtre { z-index: 110; width: min(23rem, calc(100% - 6rem)); }
+  .app-shell--carte .chantier-carte__commandes {
+    left: var(--space-md);
+    top: calc(var(--space-md) + 3.5rem);
+  }
+}
 
 @include bp.compact-nav {
   .carte-page {
@@ -101,17 +127,6 @@
   .carte-page__filtre {
     top: var(--space-sm);
     left: var(--space-sm);
-    flex-wrap: wrap;
-    gap: var(--space-sm);
     width: calc(100% - 2 * var(--space-sm));
-    max-width: calc(100% - 2 * var(--space-sm));
-    padding: var(--space-sm-md);
   }
-
-  .carte-page__identite { gap: var(--space-xs); padding-right: var(--space-sm); }
-  .carte-page__nature { flex: 1 1 100%; min-width: 10rem; }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .carte-page__filtre { background: var(--map-ui-surface); backdrop-filter: none; }
 }

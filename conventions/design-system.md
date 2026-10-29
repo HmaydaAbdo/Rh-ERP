@@ -36,14 +36,13 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 L'interface traduit l'identité Staport en une expérience **précise, accueillante et premium**, adaptée à des outils de
 travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
 alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface. Le thème clair conserve ses
-surfaces minérales et son accent cuivre ; le thème sombre adopte **Atlas nocturne Staport**, une gamme marine d'encre,
-de bleu électrique et de cyan balise qui porte une atmosphère cartographique immersive dans toute l'application.
+surfaces minérales et son accent cuivre ; le thème sombre adopte **Graphite Staport**, une gamme noire mate et graphite,
+avec actions et icônes bleues, texte net et accent cuivre réservé à quelques repères.
 
 Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
-à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Un écran d'accès peut installer
-une atmosphère marine propre à Staport ; les écrans métier la reprennent dans leurs surfaces, actions, navigation,
-formulaires et états actifs. Le cyan balise les sélections, les anneaux de focus, les icônes et les repères importants ;
-les fonds restent bleu-noir pour garder les données lisibles. Les variations de lumière servent la hiérarchie et la lecture.
+à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Le thème sombre traverse
+les surfaces, actions, navigation, formulaires et états actifs. Le bleu marque les actions, icônes et focus ; le cuivre
+reste rare et secondaire. Les fonds graphite gardent les données lisibles. Les variations de lumière servent la hiérarchie et la lecture.
 Éviter le néon uniforme, le glassmorphism systématique et les dégradés décoratifs.
 Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
 le logo ne garantit pas à lui seul un contraste suffisant pour les usages d'interface.
@@ -67,6 +66,12 @@ bordure du conteneur concerné, avec les jetons de couleur, d'ombre et de durée
 Préserver l'espace du bouton pour éviter les chevauchements et les déplacements de mise en page.
 L'action reste disponible au clavier et sur écran tactile ; sa découverte ne dépend pas du survol.
 Le mouvement reste discret et respecte `prefers-reduced-motion`.
+
+Sur `/carte` en grand écran, le rail latéral habituel s'efface au profit d'un hamburger fixe juste avant le filtre. Le
+survol ou le focus du bouton révèle le volet ; celui-ci reste visible pendant le survol ou le focus du bouton ou du volet,
+puis se replie à la sortie. Un court glissement et une révélation en cascade des liens indiquent l'entrée dans la navigation
+sans déplacer la carte ni ses contrôles. `prefers-reduced-motion` supprime ces effets. Téléphone et tablette gardent le
+tiroir piloté par la barre supérieure.
 
 Pour préparer ou contrôler une évolution visuelle, utiliser les skills de design et d'accessibilité
 pertinentes disponibles (par exemple Impeccable ou UI/UX Pro Max) et un outil de navigateur adapté
@@ -103,25 +108,26 @@ troisième palette de marque qui dupliquerait les thèmes.
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
 * Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
 
-## Atlas nocturne Staport — thème sombre
+## Graphite Staport — thème sombre
 
 | Rôle | Couleur | Jeton principal |
 |---|---|---|
-| Encre marine (canevas) | `#030B16` | `--color-canvas` |
-| Bleu nuit (surface) | `#07192A` | `--color-surface` |
-| Bleu ardoise (séparation) | `#153752` | `--color-border-strong` |
+| Noir mat (canevas) | `#0D0D0D` | `--color-canvas` |
+| Graphite (surface) | `#151515` | `--color-surface` |
+| Graphite clair (séparation) | `#2B2B2B` | `--color-border-strong` |
 | Bleu électrique (action) | `#168DFF` | `--color-primary` |
-| Cyan balise (focus et repère) | `#35D6FF` | `--color-focus` |
-| Texte glacier | `#EEF7FF` | `--color-text` |
+| Bleu clair (icône et focus) | `#68AAFF` | `--color-focus` |
+| Blanc net | `#EDEDED` | `--color-text` |
+| Cuivre (accent rare) | `#C88E5C` | `--color-brand-accent` |
 
 Le système sombre garde la même atmosphère dans la navigation, les écrans métier, les formulaires, l'assistant et la
-cartographie. Les tokens sémantiques pilotent les composants ; les surfaces montent du noir marin vers le bleu nuit,
-les actions restent bleues, et le cyan rend les interactions importantes visibles. Les boutons gardent leur contraste via
-`--color-primary-contrast`. L'accent cuivre reste propre au thème clair.
+cartographie. Les tokens sémantiques pilotent les composants ; les surfaces montent du noir mat au graphite, les actions,
+icônes et focus restent bleus. Les boutons gardent leur contraste via `--color-primary-contrast`. L'accent cuivre reste
+rare dans le thème sombre et ne remplace ni les actions bleues ni les couleurs métier.
 
-La carte prolonge Atlas nocturne avec un Plan vectoriel bleu profond, des frontières et routes lisibles, une texture de
-relief bleutée, des marqueurs cyan et des infobulles bleu nuit. Les vues Satellite et Relief gardent leur matière propre,
-avec un chrome nocturne constant. Les couleurs de succès, avertissement, erreur et catégories de graphiques préservent
+La carte prolonge Graphite Staport avec un Plan vectoriel noir et graphite, des routes ardoise lisibles, des marqueurs
+cuivre, des icônes de commande bleues et des infobulles graphite. Les vues Satellite et Relief gardent leur matière propre,
+avec un chrome sombre constant. Les couleurs de succès, avertissement, erreur et catégories de graphiques préservent
 leur signification métier dans tous les thèmes.
 
 ---
@@ -135,6 +141,9 @@ surface, panneau, focus, recherche et chargement des options au défilement, dan
 formulaires. La cardinalité change la sélection, pas le langage visuel. Fonction affiche son libellé;
 Équipe affiche code et libellé; Chantier affiche code et nom, avec la désignation si le nom est absent.
 Le code est un repère secondaire et participe à la recherche.
+
+Le chevron est un vrai bouton accessible : il ouvre ou referme la liste sans déplacer le focus du champ;
+la saisie, les flèches et Échap continuent de suivre Angular Aria.
 
 Les filtres multiples proposent « Tout sélectionner » et « Ne rien sélectionner ». Pour un catalogue
 paginé, tous signifie sans restriction, y compris les valeurs non chargées; vider retire le filtre.
@@ -200,7 +209,8 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
 | Menu en tiroir, panneaux, fenêtres | `--duration-base`, courbe `--ease-out`, jamais de rebond |
 | Un graphique | Tracé de 600 ms, supprimé si l'utilisateur demande moins de mouvement |
 
-* **Jetons** : `--duration-fast` (150 ms), `--duration-base` (220 ms), `--duration-slow` (400 ms, entrées en cascade),
+* **Jetons** : `--duration-fast` (150 ms), `--duration-base` (220 ms), `--duration-stagger` (18 ms entre éléments),
+  `--duration-slow` (400 ms, entrées en cascade),
   `--duration-slower` (700 ms, remplissage d'une jauge), `--duration-slowest` (1200 ms, mouvement indéterminé),
   `--duration-skeleton` (1400 ms), `--ease-out` (la courbe de toute entrée), `--ease-in-out` (un balayage continu).
   Un composant n'écrit jamais une durée ni une courbe en dur.
