@@ -21,57 +21,7 @@ const TABLE: CollectionTableConfig = { countLabel: (n) => `${n} ligne${n > 1 ? '
 @Component({
   selector: 'app-heures-supp-list',
   imports: [DecimalPipe, CollectionTableComponent, TableCellDirective, ButtonComponent, LazySelectComponent],
-  template: `
-    @if (canWrite()) {
-      <section class="heures-supp-ajout">
-        <h2>Ajouter une ligne</h2>
-        <label>Employé <app-lazy-select ariaLabel="Employé" inputId="hs-employe" [(value)]="nouvelEmploye" [source]="employeeReferences" optionLabel="displayLabel" placeholder="Rechercher par nom" /></label>
-        <label>Mois <input type="month" [value]="nouvellePeriode()" (input)="nouvellePeriode.set(inputText($event))" /></label>
-        <label>Chantier <app-lazy-select ariaLabel="Chantier" inputId="hs-chantier" [(value)]="nouveauChantier" [source]="chantierReferences" optionLabel="code" placeholder="Sélectionner un chantier" /></label>
-        <label>Heures <input type="number" min="0" step="0.1" [value]="nouvellesHeures()" (input)="nouvellesHeures.set(numberValue($event))" /></label>
-        <label>Forfait (DH) <input type="number" min="0" step="0.01" [value]="nouveauForfait()" (input)="nouveauForfait.set(numberValue($event))" /></label>
-        <button stp-button variant="primary" type="button" [disabled]="!nouvelleSaisieValide()" (click)="ajouter()">Ajouter</button>
-      </section>
-    }
-    @if (canPurge() && criteres.periode) {
-      <div class="heures-supp-actions-mois"><button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button></div>
-    }
-    @if (purgeNombre() !== null) {
-      <section class="heures-supp-purge" role="dialog" aria-modal="true" aria-labelledby="purge-titre">
-        <h2 id="purge-titre">Supprimer toutes les lignes du mois {{ criteres.periode }} ?</h2>
-        <p>La suppression concerne tous les chantiers et toutes les lignes de ce mois. Pour confirmer, retapez {{ purgeNombre() }}.</p>
-        <label>Nombre de lignes<input type="number" min="0" [value]="purgeSaisie()" (input)="purgeSaisie.set(inputText($event))" /></label>
-        <button stp-button variant="danger" type="button" [disabled]="!purgeConfirme()" (click)="purgerMois()">Confirmer la suppression</button>
-        <button stp-button variant="text" type="button" (click)="purgeNombre.set(null)">Annuler</button>
-      </section>
-    }
-    <app-collection-table [configuration]="table" [columnState]="columns" [value]="lignes()" [totalRecords]="total()" [loading]="chargement()" [erreur]="erreur()" (lazyLoad)="charger($event)" (reessayer)="charger({first: 0, rows: 20, sortField: 'periode', sortOrder: -1})">
-      <ng-template stpCell let-ligne let-col="col">
-        @switch (col.field) {
-          @case ('periode') { {{ ligne.periode }} }
-          @case ('chantier') { <strong>{{ ligne.codeChantier }}</strong><span class="heures-supp-secondaire">{{ ligne.chantier }}</span> }
-          @case ('employe') { <strong>{{ ligne.nomPrenom }}</strong><span class="heures-supp-secondaire">{{ ligne.cin }}</span> }
-          @case ('fonction') { {{ ligne.fonction }} }
-          @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? '—' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
-          @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} DH }
-          @case ('stcDh') { {{ ligne.stcDh | number:'1.2-2' }} DH }
-          @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') + ' DH' }} }
-          @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.2-2' }} DH</strong> }
-          @case ('actions') {
-            @if (editionId() === ligne.id) {
-              <input aria-label="Heures supplémentaires" type="number" min="0" step="0.1" [value]="heuresEdition()" (input)="heuresEdition.set(numberValue($event))" />
-              <input aria-label="Forfait en dirhams" type="number" min="0" step="0.01" [value]="forfaitEdition()" (input)="forfaitEdition.set(numberValue($event))" />
-              <button stp-button variant="primary" type="button" (click)="sauver(ligne)">Enregistrer</button>
-              <button stp-button variant="text" type="button" (click)="editionId.set(null)">Annuler</button>
-            } @else {
-              @if (canWrite()) { <button stp-button variant="text" type="button" (click)="editer(ligne)">Modifier</button> }
-              @if (canDelete()) { <button stp-button variant="text" type="button" (click)="supprimer(ligne)">Supprimer</button> }
-            }
-          }
-        }
-      </ng-template>
-    </app-collection-table>
-  `,
+  templateUrl: './heures-supp-list.component.html',
   styles: `.heures-supp-secondaire{display:block;color:var(--color-text-muted);font-size:.875em}.heures-supp-ajout{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;align-items:end;padding:1rem;margin-bottom:1rem;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface)}.heures-supp-ajout h2{grid-column:1/-1;margin:0}.heures-supp-ajout label{display:grid;gap:.4rem}.heures-supp-purge{position:fixed;inset:20% 10%;z-index:1000;padding:2rem;border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);box-shadow:var(--shadow-md)}.heures-supp-purge label{display:grid;gap:.5rem;margin:1rem 0}.heures-supp-actions-mois{display:flex;justify-content:flex-end;margin-bottom:1rem}`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })

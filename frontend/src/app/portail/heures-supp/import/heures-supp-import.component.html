@@ -1,0 +1,78 @@
+
+    <stp-dialog header="Importer les heures supplémentaires" width="860px" [open]="true">
+    <main class="hs-import">
+      <header class="hs-import__header">
+        <a stp-button variant="text" icon="arrow-left" routerLink="/heures-supp">Retour</a>
+        <div><p class="hs-import__eyebrow">ASSISTANT DE SAISIE</p><h1>Importer les heures supplémentaires</h1><p>Un chantier et un mois par import. La paie doit exister avant de poursuivre.</p></div>
+      </header>
+      <ol class="hs-import__steps" aria-label="Étapes de l’import">
+        <li [class.active]="etape() === 1" [attr.aria-current]="etape() === 1 ? 'step' : null"><span>01</span> Période & chantier</li>
+        <li [class.active]="etape() === 2" [attr.aria-current]="etape() === 2 ? 'step' : null"><span>02</span> Fichier & forfaits</li>
+        <li [class.active]="etape() === 3" [attr.aria-current]="etape() === 3 ? 'step' : null"><span>03</span> Contrôle & import</li>
+      </ol>
+
+      @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
+      @if (resultat(); as bilan) {
+        <section class="hs-import__success" role="status">
+          <p class="hs-import__eyebrow">IMPORT TERMINÉ</p><h2>{{ bilan.lignesHeures }} lignes importées · {{ bilan.lignesZero }} à 0</h2>
+          <p>{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.2-2' }} DH</p>
+          <a stp-button variant="primary" routerLink="/heures-supp">Voir les heures supplémentaires</a>
+        </section>
+      } @else if (etape() === 1) {
+        <section class="hs-import__panel" aria-labelledby="hs-context-title">
+          <p class="hs-import__eyebrow">ÉTAPE 1 / 3</p><h2 id="hs-context-title">Choisir le mois et le chantier</h2>
+          <div class="hs-import__grid">
+            <label for="hs-import-periode">Mois de la paie <stp-month-input inputId="hs-import-periode" ariaLabel="Mois à importer" [value]="mois()" (valueChange)="mois.set($event)" /></label>
+            <label for="hs-import-chantier">Chantier <app-lazy-select inputId="hs-import-chantier" ariaLabel="Chantier à importer" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierId()" (valueChange)="choisirChantier($event)" /></label>
+          </div>
+          <div class="hs-import__actions"><button stp-button variant="primary" type="button" [loading]="chargement()" [disabled]="!mois() || !chantierId()" (click)="verifierContexte()">Vérifier la paie et continuer</button></div>
+        </section>
+      } @else if (etape() === 2) {
+        <section class="hs-import__panel" aria-labelledby="hs-file-title">
+          <p class="hs-import__eyebrow">ÉTAPE 2 / 3 · {{ periode() }} · {{ chantierLibelle() }}</p><h2 id="hs-file-title">Déposer le pointage et saisir les forfaits</h2>
+          <p>Excel attendu : <strong>Nom et prénom, CIN, HS</strong>. Ces trois colonnes sont obligatoires. HS peut être égal à zéro ; la fonction, le salaire et les autres données sont repris de la fiche employé et de la paie du mois choisi.</p>
+          <div class="hs-import__template"><button stp-button variant="secondary" icon="file-spreadsheet" type="button" [loading]="telechargementModele()" (click)="telechargerModele()">Télécharger le modèle Excel</button><small>Commencez avec ce fichier pour respecter les colonnes et le format attendus.</small></div>
+          <label class="hs-import__file">Fichier Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="choisirFichier($event)" /></label>
+          <label class="hs-import__forfaits">Forfaits supplémentaires — une ligne par employé, format <code>CIN;montant</code>
+            <textarea rows="4" [value]="texteForfaits()" (input)="texteForfaits.set(inputValue($event))" placeholder="AB12345;500"></textarea>
+            <small>Un forfait peut être ajouté même si l’employé n’a aucune ligne HS. Un forfait est refusé si le bulletin du mois est STC/sortie.</small>
+          </label>
+          <div class="hs-import__actions"><button stp-button variant="secondary" type="button" (click)="etape.set(1)">Retour</button><button stp-button variant="primary" type="button" [disabled]="!fichier()" [loading]="chargement()" (click)="analyser()">Analyser le fichier</button></div>
+        </section>
+      } @else if (analyse(); as a) {
+        <section class="hs-import__panel" aria-labelledby="hs-review-title">
+          <p class="hs-import__eyebrow">ÉTAPE 3 / 3 · {{ a.periode }} · {{ chantierLibelle() }}</p><h2 id="hs-review-title">Contrôler avant import</h2>
+          <div class="hs-import__totals"><span>{{ a.totalLignes }} lignes lues</span><span>{{ a.lignesZero }} lignes HS = 0 conservées</span><span>{{ a.lignes.length }} employés / forfaits</span><strong>Import {{ a.pret ? 'prêt' : 'bloqué' }}</strong></div>
+          @if (a.erreurs.length) { <stp-message severity="error"><p>Corrigez les éléments suivants avant l’import :</p><ul>@for (message of a.erreurs; track $index) { <li>{{ message }}</li> }</ul></stp-message> }
+          @for (ligne of a.lignes; track ligne.cin) {
+            @if (ligne.employeId === null) {
+              <article class="hs-import__correction">
+                <div><strong>{{ ligne.nomFichier }}</strong><span>{{ ligne.cin }}</span></div>
+                <p>Aucune fiche Employé ne correspond à ce CIN. Complétez les informations nécessaires à sa création.</p>
+                <div class="hs-import__grid">
+                  <label>Date de naissance<input type="date" [value]="creation(ligne.numeroLigne).dateNaissance" (input)="modifierCreation(ligne.numeroLigne, 'dateNaissance', inputValue($event))" /></label>
+                  <label>Date d’embauche<input type="date" [value]="creation(ligne.numeroLigne).dateEmbauche" (input)="modifierCreation(ligne.numeroLigne, 'dateEmbauche', inputValue($event))" /></label>
+                  <label for="hs-fonction-{{ ligne.numeroLigne }}">Fonction <app-lazy-select inputId="hs-fonction-{{ ligne.numeroLigne }}" ariaLabel="Fonction du nouvel employé" placeholder="Rechercher une fonction" optionLabel="libelle" dataKey="id" [source]="fonctions" [value]="creation(ligne.numeroLigne).fonctionId || null" (valueChange)="choisirFonction(ligne.numeroLigne, $event)" /></label>
+                  <label>Salaire de référence (DH)<input type="number" min="0" step="0.01" [value]="valeurSalaire(ligne.numeroLigne)" (input)="modifierCreation(ligne.numeroLigne, 'salaire', nombreValue($event))" /></label>
+                  <label>Type de salaire<select [value]="creation(ligne.numeroLigne).typeSalaire" (change)="modifierCreation(ligne.numeroLigne, 'typeSalaire', inputValue($event))"><option value="" disabled>Choisir un type</option><option value="JOURNALIER">Journalier</option><option value="MENSUEL">Mensuel</option></select></label>
+                </div>
+              </article>
+            } @else if (ligne.identiteEcart || ligne.fonctionEcart) {
+              <label class="hs-import__aligner"><input type="checkbox" [checked]="estAligne(ligne.employeId)" (change)="basculerAlignement(ligne.employeId)" />
+                Aligner {{ ligne.cin }} depuis le fichier : {{ ligne.nomFichier }}
+              </label>
+            }
+          }
+          <details class="hs-import__table"><summary>Voir le récapitulatif détaillé</summary>
+            <div class="hs-import__overflow"><table class="app-static-table"><thead><tr><th>CIN</th><th>Employé</th><th>P/H</th><th>S/H (DH/h)</th><th>Montant</th><th>STC</th><th>Forfait</th><th>Net à payer</th></tr></thead><tbody>
+              @for (ligne of a.lignes; track ligne.cin) { <tr><td>{{ ligne.cin }}</td><td>{{ ligne.nomPrenom || ligne.nomFichier }}<small>{{ ligne.fonction || ligne.fonctionFichier }}</small></td><td>{{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }}</td><td>{{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-2') }}</td><td>{{ ligne.montantDh | number:'1.2-2' }}</td><td>{{ ligne.stcDh | number:'1.2-2' }}</td><td>{{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') }}</td><td><strong>{{ ligne.netAPayerDh | number:'1.2-2' }}</strong></td></tr> }
+            </tbody></table></div>
+          </details>
+          <div class="hs-import__actions"><button stp-button variant="secondary" type="button" (click)="etape.set(2)">Modifier le fichier / forfaits</button>
+            @if (!a.pret) { <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="corriger()">Enregistrer les corrections puis réanalyser</button> }
+            @if (peutRemplacer()) { <button stp-button variant="danger" type="button" [loading]="chargement()" (click)="demanderRemplacement()">Remplacer les lignes existantes</button> }
+            <button stp-button variant="primary" type="button" [disabled]="!a.pret" [loading]="chargement()" (click)="importer()">Confirmer l’import</button></div>
+        </section>
+      }
+    </main>
+    </stp-dialog>
