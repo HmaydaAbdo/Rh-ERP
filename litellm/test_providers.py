@@ -50,12 +50,15 @@ def load_deployments():
         text = "\n".join(line for line in config.read().splitlines() if not line.lstrip().startswith("#"))
     deployments = {}
     for block in re.split(r"\n\s*- model_name:", text)[1:]:
-        dep_id = re.search(r"model_info:\s*\{\s*id:\s*([^,}\s]+)", block)
+        dep_id = re.search(
+            r"model_info:\s*(?:\{\s*id:\s*([^,}\s]+)|\r?\n\s+id:\s*([^,\s]+))",
+            block,
+        )
         tags = re.search(r"tags:\s*\[([^\]]*)\]", block)
         weight = re.search(r"weight:\s*(\d+)", block)
         if dep_id and "model_name: ai-gateway-test-" in "model_name:" + block:
             tag_list = [t.strip().strip("\"'") for t in tags.group(1).split(",")] if tags else []
-            deployments[dep_id.group(1)] = (tag_list, int(weight.group(1)) if weight else 1)
+            deployments[dep_id.group(1) or dep_id.group(2)] = (tag_list, int(weight.group(1)) if weight else 1)
     return deployments
 
 
@@ -64,7 +67,7 @@ URL = os.getenv("LITELLM_GATEWAY_URL", "http://127.0.0.1:4000/v1/chat/completion
 BASE = URL.split("/v1/", 1)[0]
 KEY = os.getenv("LITELLM_TEST_API_KEY", "")
 DEPLOYMENTS = load_deployments()
-CAPABILITIES = ["simple", "medium", "complex", "code", "ocr"]
+CAPABILITIES = ["simple", "tool-selection", "medium", "complex", "code", "ocr"]
 PROMPTS = {
     "simple": "Donne trois avantages du travail hybride, une phrase chacun.",
     "medium": "Rédige une courte description de poste pour un contrôleur de gestion (5 lignes).",
@@ -112,6 +115,26 @@ INVOICE_FORMAT = {
             },
             "required": ["montant_ht", "montant_tva", "montant_ttc", "devise"],
         },
+    },
+}
+SELECTION_TOOLS = [
+    "audit_historique", "audit_rechercher", "chantier_fiche", "chantier_rechercher", "employe_fiche",
+    "employe_parcours", "employes_compter", "employes_rechercher", "employes_regrouper", "employes_sorties",
+    "equipe_fiche", "equipe_rechercher", "fonction_fiche", "fonction_rechercher", "paie_bulletins_rechercher",
+    "paie_comparer", "paie_evolution", "paie_indicateurs", "paie_mouvements", "paie_periodes", "paie_qualite",
+    "paie_repartition", "parametres_lire", "rapport_preparer", "roles_lister", "systeme_identite",
+]
+SELECTION_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "tool_selection",
+        "schema": {
+            "type": "object",
+            "properties": {"tools": {"type": "array", "items": {"type": "string", "enum": SELECTION_TOOLS}}},
+            "required": ["tools"],
+            "additionalProperties": False,
+        },
+        "strict": True,
     },
 }
 
@@ -175,7 +198,11 @@ def chat(key, tags, messages, max_tokens=1000, response_format=None, model="ai-g
     global SENT
     if model == "ai-gateway":
         tag = (tags or ["medium"])[0]
-        model = "ai-gateway-" + ("test-" + tag[3:] if tag.startswith("id:") else tag)
+        # Le smoke test du sélecteur qualifie le groupe de production exact ; les autres capacités utilisent
+        # leurs alias de test afin d'éviter d'exercer les groupes de production pendant les sondes.
+        model = "ai-gateway-tool-selection" if tag == "tool-selection" else "ai-gateway-" + (
+            "test-" + tag[3:] if tag.startswith("id:") else tag
+        )
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens}
     if tags:
         payload["metadata"] = {"tags": tags}
@@ -186,7 +213,7 @@ def chat(key, tags, messages, max_tokens=1000, response_format=None, model="ai-g
     SENT += 1
     try:
         status, headers, body = request_json(URL, key, payload)
-    except Exception as exc:  # network error or invalid JSON
+    except (OSError, ValueError) as exc:  # network error or invalid JSON
         reply.update(elapsed=time.monotonic() - started, error=f"{type(exc).__name__}: {exc}")
         return reply
     reply["elapsed"] = time.monotonic() - started
@@ -253,6 +280,8 @@ def check_ocr(key, name, tags, expected):
 def check_capability(key, tag):
     if tag == "ocr":
         return check_ocr(key, "ocr (image réelle)", ["ocr"], pool("ocr"))
+    if tag == "tool-selection":
+        return check_tool_selection(key, [tag], pool(tag))
     reply = chat(key, [tag], [{"role": "user", "content": PROMPTS[tag]}])
     verdict(tag, reply, pool(tag))
 
@@ -264,6 +293,26 @@ def check_structured_output(key):
     data = parse_json(reply["text"]) or {}
     values = (data.get("montant_ht"), data.get("montant_tva"), data.get("montant_ttc"))
     verdict("json_schema (facture)", reply, pool("medium"), values == (1250, 250, 1500), f"valeurs lues : {values}")
+
+
+def check_tool_selection(key, tags, expected):
+    """Même JSON Schema strict que LLMToolSelectorMiddleware, avec les noms MCP autorisés."""
+    messages = [
+        {
+            "role": "system",
+            "content": "Sélectionne tous les outils nécessaires pour répondre à la question. Pour toute question portant "
+            "sur les données ERP, sélectionne au moins un outil métier pertinent. Pour savoir quels mois sont "
+            "importés ou combien il y en a, choisis `paie_periodes`. En cas d'incertitude, sélectionne les candidats "
+            "pertinents au lieu de répondre qu'aucun outil n'est disponible.",
+        },
+        {"role": "user", "content": "Combien de mois de paie ont été importés ?"},
+    ]
+    reply = chat(key, tags, messages, max_tokens=500, response_format=SELECTION_FORMAT)
+    data = parse_json(reply["text"]) or {}
+    selected = data.get("tools", [])
+    correct = "paie_periodes" in selected
+    verdict("json_schema (sélecteur MCP)", reply, expected, correct,
+            f"outils : {','.join(selected) or 'aucun'}; attendu : paie_periodes")
 
 
 def check_grounding(key):
@@ -318,7 +367,9 @@ def check_providers(key, only):
         sys.exit(f"Déploiement(s) inconnu(s) : {', '.join(unknown)}. Voir --list.")
     for dep in only or targets:
         tags = DEPLOYMENTS[dep][0]
-        if "ocr" in tags or "eval-ocr" in tags:
+        if "tool-selection" in tags:
+            check_tool_selection(key, [f"id:{dep}"], {dep})
+        elif "ocr" in tags or "eval-ocr" in tags:
             check_ocr(key, dep, [f"id:{dep}"], {dep})
         else:
             reply = chat(key, [f"id:{dep}"], [{"role": "user", "content": "Réponds uniquement par le mot : prêt"}])
@@ -353,7 +404,7 @@ def main():
 
     try:
         status, _, _ = request_json(BASE + "/health/readiness", "", timeout=8)
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         sys.exit(f"Gateway indisponible ({BASE}) : {exc}")
     if status != 200:
         sys.exit(f"Gateway non prête : HTTP {status}")
