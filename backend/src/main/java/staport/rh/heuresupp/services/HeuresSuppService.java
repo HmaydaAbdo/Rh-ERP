@@ -23,7 +23,6 @@ import staport.rh.audit.entities.TypeOperation;
 import staport.rh.heuresupp.audit.PerimetreSuppressionGroupeHeuresSupp;
 import staport.rh.heuresupp.imports.HeuresSuppImportException;
 import staport.rh.heuresupp.exceptions.HeuresSuppGroupeModifieException;
-import staport.rh.heuresupp.services.CalculHeuresSupp;
 import staport.rh.heuresupp.mappers.HeuresSuppMapper;
 import staport.rh.heuresupp.repositories.HeuresSuppRepository;
 import staport.rh.heuresupp.services.interfaces.IHeuresSuppService;
