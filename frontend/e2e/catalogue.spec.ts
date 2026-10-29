@@ -85,7 +85,7 @@ test.describe('Catalogue des composants', () => {
   });
 
   test('le dialogue piège le focus, se ferme avec Échap et rend le focus à son déclencheur', async ({ page }) => {
-    const ouvrir = page.getByRole('button', { name: 'Ouvrir' });
+    const ouvrir = page.getByRole('button', { name: 'Ouvrir', exact: true });
     await ouvrir.focus();
     await page.keyboard.press('Enter');
 

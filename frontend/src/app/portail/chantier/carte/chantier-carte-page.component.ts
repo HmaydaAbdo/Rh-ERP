@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal, ViewEncapsulation } from '@angular/core';
+import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
+import { normaliser } from '@shared/text/recherche';
 import { ChantierService } from '../services/chantier.service';
 import { ChantierCarte, NATURE_CHANTIER_OPTIONS, NatureChantier } from '../models/chantier.model';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 
 import { ChantierCarteComponent } from './chantier-carte.component';
@@ -11,7 +14,7 @@ import { ChantierCarteComponent } from './chantier-carte.component';
 /** Page « Carte des chantiers » : la carte occupe toute la zone de contenu. Accès réservé à `CARTE_READ` (voir `chantier.routes.ts`). */
 @Component({
   selector: 'app-chantier-carte-page',
-  imports: [ChantierCarteComponent, ButtonComponent, SelectComponent],
+  imports: [ChantierCarteComponent, ButtonComponent, IconComponent, SelectComponent, FormField, FormRoot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   templateUrl: './chantier-carte-page.component.html',
@@ -23,9 +26,15 @@ export class ChantierCartePageComponent {
   protected readonly chantiers = signal<ChantierCarte[]>([]);
   protected readonly naturesChoisies = signal<NatureChantier[]>([]);
   protected readonly natures: SelectOption<NatureChantier>[] = NATURE_CHANTIER_OPTIONS;
+  private readonly recherche = signal({ texte: '' });
+  protected readonly formulaire = form(this.recherche, (chemin) => debounce(chemin.texte, 300));
   protected readonly chantiersFiltres = computed(() => {
     const natures = this.naturesChoisies();
-    return natures.length === 0 ? this.chantiers() : this.chantiers().filter((chantier) => natures.includes(chantier.nature));
+    const terme = normaliser(this.recherche().texte.trim());
+    return this.chantiers().filter((chantier) => {
+      const correspondAuTerme = terme === '' || normaliser(`${chantier.code} ${chantier.nom ?? ''} ${chantier.designation ?? ''}`).includes(terme);
+      return correspondAuTerme && (natures.length === 0 || natures.includes(chantier.nature));
+    });
   });
   protected readonly chargement = signal(true);
   protected readonly erreur = signal(false);

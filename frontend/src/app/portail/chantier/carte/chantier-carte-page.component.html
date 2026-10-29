@@ -1,36 +1,37 @@
 <div class="carte-page app-page">
   <app-chantier-carte class="carte-page__carte" [chantiers]="chantiersFiltres()" />
 
-  <div class="carte-page__filtre" role="group" aria-label="Filtrer la carte des chantiers">
-    <div class="carte-page__identite">
-      <h1>Chantiers</h1>
-      <p class="carte-page__total" role="status">
-        @if (chargement()) { Chargement… }
-        @else if (erreur()) { Carte indisponible }
-        @else { {{ chantiersFiltres().length }} {{ chantiersFiltres().length === 1 ? 'site' : 'sites' }} }
-      </p>
-    </div>
+  <form [formRoot]="formulaire" class="carte-page__filtre" aria-label="Recherche sur la carte">
+    <stp-icon class="carte-page__recherche-icone" name="search" aria-hidden="true" />
+    <input
+      class="carte-page__recherche"
+      type="search"
+      autocomplete="off"
+      [formField]="formulaire.texte"
+      aria-label="Rechercher par code ou nom de chantier"
+      placeholder="Code ou nom…"
+    />
+    <span class="carte-page__separateur" aria-hidden="true"></span>
+    <stp-select
+      class="carte-page__nature"
+      ariaLabel="Filtrer par nature"
+      [options]="natures"
+      [multiple]="true"
+      [value]="naturesChoisies()"
+      placeholder="Nature"
+      [summaryLabel]="'{0}'"
+      [summaryFrom]="2"
+      (valueChange)="choisirNatures($event)"
+    />
+  </form>
 
-    <div class="carte-page__nature">
-      <label for="filtreNatureChantier">Nature</label>
-      <stp-select
-        inputId="filtreNatureChantier"
-        ariaLabel="Filtrer les chantiers par nature"
-        [options]="natures"
-        [multiple]="true"
-        [value]="naturesChoisies()"
-        placeholder="Toutes les natures"
-        [summaryLabel]="'{0} natures'"
-        [summaryFrom]="2"
-        (valueChange)="choisirNatures($event)"
-      />
-    </div>
-
-    @if (erreur()) {
-      <button stp-button class="carte-page__reessayer" type="button" (click)="charger()">Réessayer</button>
-    }
-    @if (!chargement() && !erreur() && chantiersFiltres().length === 0) {
-      <p class="carte-page__vide" role="status">Aucun chantier ne correspond à cette nature.</p>
-    }
-  </div>
+  @if (erreur()) {
+    <button stp-button class="carte-page__reessayer" type="button" (click)="charger()">Réessayer</button>
+  }
+  @if (!chargement() && !erreur() && chantiersFiltres().length === 0) {
+    <p class="carte-page__vide" role="status">Aucun chantier ne correspond à cette recherche.</p>
+  }
+  @if (chargement()) {
+    <span class="app-lecteur" role="status">Chargement des chantiers…</span>
+  }
 </div>

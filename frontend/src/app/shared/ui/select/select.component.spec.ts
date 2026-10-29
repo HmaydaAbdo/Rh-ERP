@@ -132,6 +132,21 @@ describe('SelectComponent', () => {
       expect(libelles()).toEqual(['Chantier Marrakech', 'Chantier Casablanca', 'Autoroute Rabat–Fès', 'Barrage Souss']);
     });
 
+    it('le chevron ouvre puis referme la liste', async () => {
+      await afficher();
+      const chevron = () => fixture.nativeElement.querySelector('.stp-select__toggle') as HTMLButtonElement;
+
+      chevron().click();
+      await fixture.whenStable();
+      expect(champ().getAttribute('aria-expanded')).toBe('true');
+      expect(chevron().getAttribute('aria-label')).toBe('Fermer la liste');
+
+      chevron().click();
+      await fixture.whenStable();
+      expect(champ().getAttribute('aria-expanded')).toBe('false');
+      expect(chevron().getAttribute('aria-label')).toBe('Ouvrir la liste');
+    });
+
     it('active la recherche par défaut, même pour une courte liste locale', async () => {
       await afficher();
       await ouvrir();

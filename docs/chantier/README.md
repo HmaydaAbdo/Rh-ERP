@@ -152,10 +152,11 @@ calcul MCP ne duplique ces agrégats.
 **Carte géographique** (`/carte`, `CARTE_READ`, [carte.md](carte.md)) : écran à part. Elle affiche le fond de carte et
 les chantiers autorisés par `afficherSurCarte`. `GET /chantiers/carte` ne renvoie que leur identité, leur nature et leur
 position, sans paie ni données de gestion. Les chantiers partageant exactement un point figurent dans une même fiche.
-La carte propose une barre compacte dédiée à Chantier : compteur et filtre multi-sélection Nature. Sans sélection, toutes
-les natures sont affichées ; plusieurs natures peuvent être combinées. Le filtre agit directement sur les marqueurs et
-ne change pas le fond sélectionné (Plan, Satellite ou Relief). Elle ne présente pas de liste séparée ni de lien sortant
-vers Google Maps ; aucune donnée Employé, Paie ou autre domaine n’est affichée sur cet écran.
+La carte propose une barre compacte unique : recherche par code ou nom/désignation et filtre multi-sélection Nature. Sans
+sélection, toutes les natures sont affichées ; plusieurs natures peuvent être combinées. La recherche normalise la casse
+et les accents. Les filtres agissent sur les marqueurs puis recadrent la carte autour des coordonnées extrêmes des sites
+restants. Les styles et commandes sont listés sans panneau sous la barre. La carte ne présente pas de liste séparée ni de
+lien sortant vers Google Maps ; aucune donnée Employé, Paie ou autre domaine n’est affichée sur cet écran.
 
 ### Couche IA
 

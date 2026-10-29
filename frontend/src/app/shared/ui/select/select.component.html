@@ -14,13 +14,24 @@
     [(expanded)]="expanded"
     (keydown)="onComboboxKeydown()"
     (valueChange)="onType($event)"
-    (click)="toggle()"
+    (click)="ouvrir()"
     (blur)="onBlur()"
   />
   @if (loading()) {
     <stp-icon class="stp-select__icon stp-spin" name="loader-circle" />
   } @else {
-    <stp-icon class="stp-select__icon" name="chevron-down" />
+    <button
+      type="button"
+      class="stp-select__toggle"
+      [disabled]="disabled()"
+      [attr.aria-label]="expanded() ? 'Fermer la liste' : 'Ouvrir la liste'"
+      [attr.aria-expanded]="expanded()"
+      aria-haspopup="listbox"
+      (pointerdown)="$event.preventDefault()"
+      (click)="basculer()"
+    >
+      <stp-icon name="chevron-down" />
+    </button>
   }
   @if (canClear()) {
     <button type="button" class="stp-select__clear" aria-label="Effacer la sélection" (click)="clear($event)">

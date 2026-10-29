@@ -138,11 +138,20 @@ export class SelectComponent<V = unknown> implements FormValueControl<unknown> {
    * La liste est toujours recherchable : le clic ouvre la saisie et le panneau; Échap, le choix d'une option ou un clic
    * à l'extérieur ferment la liste.
    */
-  protected toggle(): void {
+  protected ouvrir(): void {
     if (this.disabled()) {
       return;
     }
     this.expanded.set(true);
+  }
+
+  /** La flèche commande explicitement l'ouverture et la fermeture sans voler le focus du combobox. */
+  protected basculer(): void {
+    if (this.disabled()) {
+      return;
+    }
+    this.expanded.update((ouvert) => !ouvert);
+    this.field()?.nativeElement.focus({ preventScroll: true });
   }
 
   protected onType(text: string): void {

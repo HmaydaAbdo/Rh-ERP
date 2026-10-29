@@ -49,7 +49,7 @@ export interface CarteConfig {
   readonly fond: FondDeCarte;
   readonly relief: ReliefDeCarte;
   readonly satellite: SatelliteDeCarte;
-  /** Boîte englobante du territoire : la vue initiale et la « Vue d'ensemble » s'y ajustent, quelle que soit la taille de l'écran. */
+  /** Boîte englobante du territoire : vue initiale si aucun chantier n'est chargé, quelle que soit la taille de l'écran. */
   readonly territoire: Emprise;
   /** Espace laissé autour du territoire à l'ouverture de la carte, en pixels. */
   readonly margeDeVuePx: number;
