@@ -13,37 +13,45 @@ test('la carte Chantier filtre ses marqueurs avec le menu compact', async ({ pag
     'GET /chantiers/carte': () => SITES
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(() => localStorage.setItem('staport-theme', 'dark'));
   await page.goto('/carte');
-  const basculeTheme = page.getByRole('button', { name: /Passer au thème (sombre|clair)/ });
-  if ((await basculeTheme.getAttribute('aria-label')) === 'Passer au thème sombre') await basculeTheme.click();
 
-  const filtre = page.getByRole('group', { name: 'Filtrer la carte des chantiers' });
-  await expect(filtre.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
-  await expect(filtre.getByRole('status')).toHaveText('2 sites');
+  const filtre = page.getByRole('form', { name: 'Recherche sur la carte' });
+  await expect(filtre).toBeVisible();
+  await expect(filtre.getByRole('searchbox', { name: 'Rechercher par code ou nom de chantier' })).toBeVisible();
+  await expect(filtre.getByRole('combobox', { name: 'Filtrer par nature' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chantiers' })).toHaveCount(0);
   await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Ajouter un chantier' })).toHaveCount(0);
   await expect(page.getByText('Paie', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Employés', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
   expect(mock.calls).toContain('GET /chantiers/carte');
 
-  const select = filtre.getByRole('combobox', { name: 'Filtrer les chantiers par nature' });
+  const select = filtre.getByRole('combobox', { name: 'Filtrer par nature' });
+  await filtre.getByRole('button', { name: 'Ouvrir la liste' }).click();
+  await expect(page.getByRole('listbox', { name: 'Filtrer par nature' })).toBeVisible();
+  await page.getByRole('button', { name: 'Fermer la liste' }).click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+
   await select.click();
   for (const nature of ['AO', 'Dépôt', 'Émulsion', 'Concassage', 'Poste d’enrobé', 'Centrale à béton']) {
     await expect(page.locator('.stp-select__option').filter({ hasText: nature }).first()).toBeVisible();
   }
   await page.locator('.stp-select__option').filter({ hasText: 'Dépôt' }).click();
-  await expect(filtre.getByRole('status')).toHaveText('1 site');
   await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(1);
   await page.locator('.stp-select__option').filter({ hasText: 'AO' }).click();
-  await expect(filtre.getByRole('status')).toHaveText('2 sites');
+  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
   await page.locator('.stp-select__option').filter({ hasText: 'Dépôt' }).click();
-  await expect(filtre.getByRole('status')).toHaveText('1 site');
+  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(1);
   await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
 
   expect((await new AxeBuilder({ page }).include('.carte-page__filtre').analyze()).violations.map((v) => v.id)).toEqual([]);
-  await select.click();
+  await page.getByRole('button', { name: 'Fermer la liste' }).click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Ouvrir la liste' }).click();
   await page.locator('.stp-select__option').filter({ hasText: 'AO' }).click();
-  await expect(filtre.getByRole('status')).toHaveText('2 sites');
+  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
   await page.locator('.chantier-carte__marqueur[data-tooltip*="Route de Nador"]').hover();
   await page.screenshot({ path: 'test-results/carte-chantiers-premium-desktop.png', fullPage: true });
 });
@@ -55,9 +63,10 @@ test('le filtre reste compact sur mobile et la carte reste la surface principale
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/carte');
 
-  const filtre = page.getByRole('group', { name: 'Filtrer la carte des chantiers' });
+  const filtre = page.getByRole('form', { name: 'Recherche sur la carte' });
   await expect(filtre).toBeVisible();
-  await expect(filtre.getByRole('combobox', { name: 'Filtrer les chantiers par nature' })).toBeVisible();
+  await expect(filtre.getByRole('searchbox', { name: 'Rechercher par code ou nom de chantier' })).toBeVisible();
+  await expect(filtre.getByRole('combobox', { name: 'Filtrer par nature' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
   await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
   await expect(page.locator('.chantier-carte__marqueur').first()).toHaveText('');

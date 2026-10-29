@@ -26,20 +26,19 @@ describe('ChantierCartePageComponent', () => {
     const fixture = TestBed.createComponent(ChantierCartePageComponent);
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
-    expect(element.querySelector('h1')?.textContent).toContain('Chantiers');
+    expect(element.querySelector('h1')).toBeNull();
     expect(element.querySelector('app-chantier-carte [role="region"]')).not.toBeNull();
     expect(element.querySelector('.carte-page__filtre')).not.toBeNull();
     expect(element.querySelectorAll('.carte-page__chantier')).toHaveLength(0);
-    expect(element.querySelector('input[aria-label="Filtrer les chantiers par nature"]')).not.toBeNull();
+    expect(element.querySelector('input[aria-label="Rechercher par code ou nom de chantier"]')).not.toBeNull();
     expect(element.textContent).not.toContain('Paie');
     expect(element.textContent).not.toContain('Employés');
-    expect(element.textContent).toContain('2 sites');
+    expect(element.textContent).not.toContain('2 sites');
 
     fixture.componentInstance['naturesChoisies'].set(['DEPOT']);
-    fixture.detectChanges();
+    await fixture.whenStable();
     const carte = fixture.debugElement.query(By.directive(ChantierCarteComponent)).componentInstance as ChantierCarteComponent;
     expect(carte.chantiers()).toEqual([sites[0]]);
-    expect(fixture.nativeElement.querySelector('.carte-page__filtre').textContent).toContain('1 site');
   });
 
   it('signale une erreur et permet de recharger la carte', async () => {
@@ -47,10 +46,10 @@ describe('ChantierCartePageComponent', () => {
     configurer({ carte });
     const fixture = TestBed.createComponent(ChantierCartePageComponent);
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Carte indisponible');
+    expect(fixture.nativeElement.querySelector('.carte-page__reessayer')?.textContent).toContain('Réessayer');
     fixture.nativeElement.querySelector('.carte-page__reessayer').click();
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Aucun chantier ne correspond à cette nature.');
+    expect(fixture.nativeElement.querySelector('.carte-page__vide')?.textContent).toContain('Aucun chantier ne correspond à cette recherche.');
     expect(carte).toHaveBeenCalledTimes(2);
   });
 });
