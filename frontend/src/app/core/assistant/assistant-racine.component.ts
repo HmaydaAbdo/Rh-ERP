@@ -1,5 +1,5 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EnvironmentInjector, createEnvironmentInjector, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DOCUMENT, EnvironmentInjector, createEnvironmentInjector, inject } from '@angular/core';
 import {
   COPILOT_KIT_CONFIG,
   CopilotKit,
@@ -14,9 +14,6 @@ import { AssistantComponent } from './assistant.component';
 import { FilAssistant } from './fil-assistant.service';
 import { catalogueErp } from './catalogue/catalogue-erp';
 
-/** Point d'entrée du runtime CopilotKit, relayé par nginx en production et par `proxy.conf.js` en développement. */
-export const URL_RUNTIME = '/ia/copilotkit';
-
 /**
  * Point d'entrée de l'assistant, chargé à la demande (`@defer` de la coque). CopilotKit y vit dans un injecteur
  * d'environnement enfant : sa configuration et ses services (fournis à la racine par la bibliothèque) sont créés ici,
@@ -30,6 +27,7 @@ export const URL_RUNTIME = '/ia/copilotkit';
 })
 export class AssistantRacineComponent {
   private readonly auth = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly assistant = AssistantComponent;
   protected readonly injecteur = createEnvironmentInjector(
@@ -45,7 +43,8 @@ export class AssistantRacineComponent {
 
   private configuration(): CopilotKitConfig {
     return {
-      runtimeUrl: URL_RUNTIME,
+      // CopilotKit utilise fetch : résoudre explicitement la base Angular pour les déploiements sous un sous-chemin.
+      runtimeUrl: new URL('ia/copilotkit', this.document.baseURI).href,
       // Évalué à chaque requête (option documentée) : le jeton courant, rafraîchi d'abord s'il a expiré.
       headers: async () => ({ Authorization: `Bearer ${await jetonValide(this.auth)}` }),
       // Interface composée (T16) : surfaces A2UI rendues avec le catalogue de base officiel complété des composants de l'ERP

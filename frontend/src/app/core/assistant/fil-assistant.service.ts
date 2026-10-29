@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { v4 as uuid } from 'uuid';
 
 import { AuthService } from '../auth/services/auth.service';
 
@@ -27,7 +28,7 @@ export class FilAssistant {
   nouveau(): void {
     const utilisateur = this.auth.user()?.id;
     if (utilisateur !== undefined) {
-      this.courant.set(this.enregistrer(utilisateur, `u${utilisateur}-${crypto.randomUUID()}`));
+      this.courant.set(this.enregistrer(utilisateur, `u${utilisateur}-${uuid()}`));
     }
   }
 
@@ -38,7 +39,7 @@ export class FilAssistant {
     } catch {
       // Stockage indisponible (navigation privée) : une conversation neuve à chaque chargement.
     }
-    return fil?.startsWith(`u${utilisateur}-`) ? fil : this.enregistrer(utilisateur, `u${utilisateur}-${crypto.randomUUID()}`);
+    return fil?.startsWith(`u${utilisateur}-`) ? fil : this.enregistrer(utilisateur, `u${utilisateur}-${uuid()}`);
   }
 
   private enregistrer(utilisateur: number, fil: string): string {

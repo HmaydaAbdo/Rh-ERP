@@ -66,8 +66,8 @@ function flux(): string {
 }
 
 /** Le runtime CopilotKit simulé : sa description (`/info`, A2UI actif) et le run de l'agent ; le reste répond vide. */
-async function simulerRuntime(page: Page): Promise<{ autorisations: string[] }> {
-  const vu = { autorisations: [] as string[] };
+async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[] }> {
+  const vu = { autorisations: [] as string[], fils: [] as string[] };
   await page.route('**/ia/copilotkit/**', async (route) => {
     const url = route.request().url();
     if (url.endsWith('/info')) {
@@ -76,6 +76,7 @@ async function simulerRuntime(page: Page): Promise<{ autorisations: string[] }> 
       });
     } else if (url.endsWith('/agent/default/run')) {
       vu.autorisations.push(route.request().headers()['authorization'] ?? '');
+      vu.fils.push((route.request().postDataJSON() as { threadId: string }).threadId);
       await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: flux() });
     } else {
       await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: '' });
@@ -85,6 +86,39 @@ async function simulerRuntime(page: Page): Promise<{ autorisations: string[] }> 
 }
 
 test.describe('Assistant RH', () => {
+  test('crée et remplace une conversation sans crypto.randomUUID, comme en HTTP public', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Crypto.prototype, 'randomUUID', { value: undefined, configurable: true });
+    });
+    const erreurs: string[] = [];
+    page.on('pageerror', (erreur) => erreurs.push(erreur.message));
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    const runtime = await simulerRuntime(page);
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+    expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
+
+    await page.keyboard.press('Control+k');
+    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
+    const question = assistant.getByPlaceholder('Posez votre question…');
+    await question.fill('Quelle est la masse salariale de 2026-08 ?');
+    await question.press('Enter');
+    await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
+
+    await assistant.getByRole('button', { name: 'Nouvelle conversation' }).click();
+    await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toHaveCount(0);
+    await question.fill('Quelle est la masse salariale de 2026-08 ?');
+    await question.press('Enter');
+    await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
+
+    expect(runtime.fils).toHaveLength(2);
+    expect(new Set(runtime.fils).size).toBe(2);
+    for (const fil of runtime.fils) {
+      expect(fil).toMatch(/^u1-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
+    expect(erreurs).toEqual([]);
+  });
+
   test('répond avec raisonnement, consultation et surface A2UI composée', async ({ page }) => {
     await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
     const runtime = await simulerRuntime(page);
