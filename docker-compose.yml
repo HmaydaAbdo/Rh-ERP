@@ -350,6 +350,9 @@ services:
       OTEL_SERVICE_NAME: erp-rh-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
+      # OpenInference conserve les spans et métadonnées, mais retire les contenus de conversation et les arguments/résultats d'outils.
+      OPENINFERENCE_HIDE_INPUTS: "true"
+      OPENINFERENCE_HIDE_OUTPUTS: "true"
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -384,6 +387,7 @@ services:
       # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-copilot-runtime
+      OTEL_METRICS_EXPORTER: none
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
     volumes:

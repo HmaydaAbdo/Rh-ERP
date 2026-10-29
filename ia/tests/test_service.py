@@ -74,7 +74,7 @@ def test_la_fabrique_active_toujours_le_selecteur_officiel(monkeypatch: pytest.M
 
     fabrique([], None)  # type: ignore[arg-type]
 
-    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SIMPLE, Tache.SIMPLE]
+    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SELECTEUR, Tache.SIMPLE]
     assert agents[0]["selecteur"] is modeles[1][1]
 
 

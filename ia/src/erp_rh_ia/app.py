@@ -28,11 +28,11 @@ class Sante(BaseModel):
 
 
 def fabrique_reelle(config: Settings) -> FabriqueAgent:
-    """L'agent servi : modèle ``complex`` pour répondre, ``simple`` pour choisir les outils utiles."""
+    """L'agent servi : ``complex`` pour répondre, groupe compatible JSON Schema pour choisir les outils."""
     # Laisser le fournisseur appliquer son comportement natif : `reasoning_effort` est incompatible avec certains
     # modèles Gemma 4 derrière LiteLLM et provoque une erreur 400 pendant le basculement.
     principal = modele(config, Tache.COMPLEX)
-    selecteur = modele(config, Tache.SIMPLE, interne=True)
+    selecteur = modele(config, Tache.SELECTEUR, interne=True)
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
 

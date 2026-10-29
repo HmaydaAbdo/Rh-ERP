@@ -130,7 +130,10 @@ export class AppComponent {
   /** Lien d'évitement : le focus passe au contenu (un `href="#…"` suivrait la balise `<base>` et rechargerait l'accueil). */
   allerAuContenu(evenement: Event): void {
     evenement.preventDefault();
-    document.getElementById('contenu')?.focus();
+    const lien = evenement.currentTarget;
+    if (lien instanceof HTMLElement) {
+      lien.closest('.app-shell')?.querySelector<HTMLElement>('main#contenu')?.focus();
+    }
   }
 
   fermerMenu(): void {

@@ -188,7 +188,10 @@ _MOIS = [
 
 
 def _sans_accents(texte: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
+    normalise = "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
+    return normalise.translate(
+        str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-"})
+    )
 
 
 async def verite(outils: list[BaseTool], nom: str, arguments: dict[str, Any]) -> dict[str, Any] | str:
@@ -202,7 +205,9 @@ async def verite(outils: list[BaseTool], nom: str, arguments: dict[str, Any]) ->
     return cast(dict[str, Any], structure) if structure else cast(dict[str, Any], json.loads(message.text))
 
 
-async def repondre(config: Settings, outils: list[BaseTool], question: str, outil_attendu: Any) -> Reponse:
+async def repondre(
+    config: Settings, outils: list[BaseTool], question: str, outils_attendus: list[str] | None
+) -> Reponse:
     # Mesurer le même agent que le service : modèle principal, sélecteur de tools et résumeur officiels.
     agent = fabrique_reelle(config)(outils, None)
     etat = await agent.ainvoke({"messages": [HumanMessage(content=question)]}, {"recursion_limit": 200})
@@ -211,10 +216,12 @@ async def repondre(config: Settings, outils: list[BaseTool], question: str, outi
     appeles = [a["name"] for m in messages if isinstance(m, AIMessage) for a in m.tool_calls]
     abstention = any(m in _sans_accents(texte) for m in _ABSTENTION)
     attendu = False
-    if outil_attendu:
-        reference = [AIMessage(content="", tool_calls=[{"id": "attendu", "name": str(outil_attendu), "args": {}}])]
+    for nom in outils_attendus or []:
+        reference = [AIMessage(content="", tool_calls=[{"id": "attendu", "name": nom, "args": {}}])]
         evaluation = await _TRAJECTOIRE(outputs=messages, reference_outputs=reference)
-        attendu = bool(cast(dict[str, Any], evaluation).get("score"))
+        if bool(cast(dict[str, Any], evaluation).get("score")):
+            attendu = True
+            break
     return Reponse(texte, abstention, appeles, attendu)
 
 
@@ -237,15 +244,16 @@ async def evaluer_cas(
             return ResultatCas(cas["id"], type_cas, False, f"vérité indisponible : {resultat}", 0)
         attendus = [(a["type"], extraire(resultat, a["chemin"])) for a in cas["attendus"]]
     debut = time.monotonic()
-    reponse = await repondre(config, outils, question, cas.get("outil"))
+    outils_attendus = cas.get("outils_acceptes", [cas["outil"]] if cas.get("outil") else None)
+    reponse = await repondre(config, outils, question, outils_attendus)
     latence = time.monotonic() - debut
-    succes, raison = juger(type_cas, cas.get("outil"), attendus, reponse)
+    succes, raison = juger(type_cas, outils_attendus, attendus, reponse)
     return ResultatCas(
         cas["id"], type_cas, succes, raison, round(latence, 2), reponse.outils, reponse.abstention, reponse.texte
     )
 
 
-def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: Reponse) -> tuple[bool, str]:
+def juger(type_cas: str, outils_attendus: Any, attendus: list[tuple[str, Any]], reponse: Reponse) -> tuple[bool, str]:
     if type_cas == "abstention":
         return (reponse.abstention, "abstention" if reponse.abstention else "a répondu au lieu de s'abstenir")
     if type_cas == "refus":
@@ -256,11 +264,14 @@ def juger(type_cas: str, outil: Any, attendus: list[tuple[str, Any]], reponse: R
         return False, "vérité absente des données synthétiques"
     manquants = [str(valeur) for type_attendu, valeur in attendus if not cite(type_attendu, valeur, reponse.texte)]
     appeles = ", ".join(reponse.outils) or "aucun"
+    if outils_attendus and not reponse.outil_attendu_appele:
+        noms = ", ".join([outils_attendus] if isinstance(outils_attendus, str) else outils_attendus)
+        return False, f"outil métier attendu non appelé ({noms}; outils : {appeles})"
     if manquants:
         motif = "abstention" if reponse.abstention else "valeur(s) absente(s)"
         return False, f"{motif} : {', '.join(manquants)} (outils : {appeles})"
     # Les valeurs citées sont celles de l'outil attendu : la réponse est juste, même trouvée par un autre chemin.
-    return True, "conforme" if reponse.outil_attendu_appele else f"conforme, sans {outil} (outils : {appeles})"
+    return True, "conforme" if reponse.outil_attendu_appele else f"conforme (outils : {appeles})"
 
 
 def cause(panne: BaseException) -> str:
