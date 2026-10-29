@@ -1,11 +1,13 @@
 
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   LucideBriefcase,
   LucideBuilding,
   LucideChevronDown,
+  LucideClock3,
   LucideHistory,
+  LucideLayers,
   LucideLogOut,
   LucideMapPinned,
   LucideMenu,
@@ -44,7 +46,9 @@ function estRouteAuthentification(url: string): boolean {
       LucideBriefcase,
       LucideBuilding,
       LucideChevronDown,
+      LucideClock3,
       LucideHistory,
+      LucideLayers,
       LucideLogOut,
       LucideMapPinned,
       LucideMenu,
@@ -65,10 +69,12 @@ function estRouteAuthentification(url: string): boolean {
 export class AppComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly theme = inject(ThemeService);
 
   /** Menu en tiroir (téléphone, tablette tactile) : ouvert par le bouton de la barre du haut, fermé par le fond, Échap ou un choix. */
   readonly menuOuvert = signal(false);
+  readonly menuCarteOuvert = signal(false);
 
   readonly user = this.authService.user;
   readonly isAuthenticated = this.authService.isAuthenticated;
@@ -91,24 +97,30 @@ export class AppComponent {
     ),
     { initialValue: this.router.url }
   );
+  readonly estCarte = computed(() => (this.routeCourante().split(/[?#]/, 1)[0] ?? '') === '/carte');
+  private fermetureMenuCarte?: number;
+  private readonly refermerMenuCarteHorsRoute = effect(() => {
+    if (!this.estCarte()) {
+      this.menuCarteOuvert.set(false);
+      const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
+      if (this.fermetureMenuCarte !== undefined) fenetre?.clearTimeout(this.fermetureMenuCarte);
+      this.fermetureMenuCarte = undefined;
+    }
+  });
 
   readonly navItems = computed(() =>
     SIDEBAR_ITEMS.filter((item) => this.authService.hasPermission(item.permission))
   );
-  readonly referentielItems = computed(() => this.navItems().filter((item) => item.group === 'referentiel-rh'));
   readonly administrationItems = computed(() => this.navItems().filter((item) => item.group === 'administration-systeme'));
-  readonly referentielOuvert = signal(false);
   readonly administrationOuverte = signal(false);
   private readonly ouvrirGroupeActif = effect(() => {
     const route = this.routeCourante();
-    if (route.startsWith('/functions') || route.startsWith('/equipes')) this.referentielOuvert.set(true);
     if (route.startsWith('/admin/') || route.startsWith('/audit')) this.administrationOuverte.set(true);
   });
 
-  changerGroupe(groupe: 'referentiel-rh' | 'administration-systeme', evenement: Event): void {
+  changerGroupe(groupe: 'administration-systeme', evenement: Event): void {
     const ouvert = (evenement.currentTarget as HTMLDetailsElement).open;
-    if (groupe === 'referentiel-rh') this.referentielOuvert.set(ouvert);
-    else this.administrationOuverte.set(ouvert);
+    if (groupe === 'administration-systeme') this.administrationOuverte.set(ouvert);
   }
 
   basculerMenu(): void {
@@ -123,6 +135,45 @@ export class AppComponent {
 
   fermerMenu(): void {
     this.menuOuvert.set(false);
+    this.menuCarteOuvert.set(false);
+  }
+
+  ouvrirMenuCarteAuSurvol(evenement: PointerEvent): void {
+    if (evenement.pointerType === 'mouse') this.ouvrirMenuCarte();
+  }
+
+  cliquerMenuCarte(): void {
+    const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
+    if (fenetre?.matchMedia('(hover: hover)').matches) this.ouvrirMenuCarte();
+    else this.menuCarteOuvert.update((ouvert) => !ouvert);
+  }
+
+  reporterFermetureMenuCarteAuPointeur(evenement: PointerEvent): void {
+    if (evenement.pointerType === 'mouse') this.reporterFermetureMenuCarte();
+  }
+
+  ouvrirMenuCarte(): void {
+    if (!this.estCarte()) return;
+    const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
+    if (this.fermetureMenuCarte !== undefined) fenetre?.clearTimeout(this.fermetureMenuCarte);
+    this.fermetureMenuCarte = undefined;
+    this.menuCarteOuvert.set(true);
+  }
+
+  reporterFermetureMenuCarte(): void {
+    if (!this.estCarte()) return;
+    const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
+    if (!fenetre) return;
+    if (this.fermetureMenuCarte !== undefined) fenetre.clearTimeout(this.fermetureMenuCarte);
+    this.fermetureMenuCarte = fenetre.setTimeout(() => {
+      const racine = this.hote.nativeElement;
+      const bouton = racine.querySelector('.app-carte-menu');
+      const sidebar = racine.querySelector('.app-sidebar');
+      const pointeurDansZone = bouton?.matches(':hover') || sidebar?.matches(':hover');
+      const focusDansZone = bouton?.matches(':focus-visible') || sidebar?.matches(':focus-within');
+      if (!pointeurDansZone && !focusDansZone) this.menuCarteOuvert.set(false);
+      this.fermetureMenuCarte = undefined;
+    }, 140);
   }
 
   onLogout(): void {

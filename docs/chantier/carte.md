@@ -12,19 +12,32 @@
 | 2. Configuration du fond auto-hébergé, du style sombre et de l'emprise | Fait |
 | Permission `CARTE_READ` et rôle `DIRECTION` | Fait — voir [../rbac/carte.md](../rbac/carte.md) |
 | Page minimale `/carte` : fond, zoom, état d'erreur, menu « Carte » | Fait |
-| Monde entier (globe), zoom rue (19), bâtiments 3D, relief (ombrage et terrain 3D), satellite, vue 3D, boussole, position, plein écran, échelle, fiche d'un lieu | Fait |
+| Monde entier (globe), zoom rue (19), bâtiments 3D, relief (ombrage et terrain 3D), satellite, vue 3D, orientation nord, position, fiche d'un lieu | Fait |
 | Recherche de lieux | Reportée |
 | 3. Contrat `ChantierCarte` et source `GET /chantiers/carte` | Fait |
 | 4. Marqueurs MapLibre, fiches et sites partagés | Fait ; panneau « À localiser » reporté |
 | 5. Page Chantier immersive : filtre compact par nature et marqueurs sur la carte | Fait localement |
 
-La page `/carte` est une expérience immersive limitée au référentiel Chantier : la carte remplit l’écran. La barre HUD
-en haut à gauche reprend **Atlas nocturne Staport** : « Chantiers », un total en pastille et un filtre multi-sélection
-compact pour les six natures. Aucune nature sélectionnée signifie « toutes » ; plusieurs natures peuvent être combinées.
-Le filtre agit directement sur les marqueurs, sans liste latérale ni recherche séparée. Les sites sont des repères cyan,
-sans code imprimé sur la carte ; le nom, le code et la nature apparaissent dans l’infobulle au survol/focus et dans la
-fiche au clic. Le Plan vectoriel suit la palette globale bleu nuit avec relief, frontières et routes bleutées. Le filtre
-ne réinitialise pas le fond ni les contrôles Plan/Satellite/Relief. Sur petit écran, la barre se replie sur deux lignes.
+La page `/carte` est une expérience immersive limitée au référentiel Chantier : la carte remplit l’écran. En haut à gauche,
+un seul champ recherche par code ou nom/désignation et filtre les six natures dans la même barre compacte. Aucune nature
+sélectionnée signifie « toutes » ; plusieurs natures peuvent être combinées. Les outils et styles Plan/Satellite/Relief/3D
+sont listés verticalement sous la barre, sans panneau de fond. Les icônes de commande sont bleues. Les sites sont des repères
+cuivre, sans code imprimé sur la carte ; le nom, le code et la nature apparaissent dans l’infobulle au survol/focus et dans
+la fiche au clic. Le Plan vectoriel suit la palette Graphite Staport. Le filtre ne réinitialise pas le fond ni les outils.
+Le sélecteur de nature peut être refermé par son chevron ou par Échap.
+
+Sur grand écran, le rail de navigation disparaît sur cette route et laisse un bouton hamburger à gauche du filtre, avec un
+espace constant entre les deux. La colonne d'outils de carte reste alignée sous le hamburger. Son survol ou son focus
+clavier révèle le volet latéral animé ; le volet reste ouvert tant que le pointeur ou le focus demeure sur le bouton ou
+dans le menu. Il se replie à la sortie. Le tiroir mobile conserve sa commande habituelle dans la barre supérieure.
+
+Au chargement des sites puis à chaque filtre validé, le cadrage inclut les coordonnées extrêmes ouest/est et sud/nord de
+tous les résultats, y compris les positions éloignées. Un point unique est centré avec un zoom plafonné. Un filtre sans
+résultat ne déplace pas la vue ; les déplacements manuels ne déclenchent pas de nouveau cadrage. La commande Recentrer
+applique le même calcul aux points filtrés. La marge de cadrage
+garde les sites sous la barre de recherche et à droite des outils sans réduire la hauteur utile de la carte. Il n'y a ni titre
+de page, ni compteur, ni échelle ou logo MapLibre ; les crédits requis des fournisseurs de données restent accessibles dans
+le contrôle d'attribution compact.
 
 La source `GET /chantiers/carte` exige `CARTE_READ` et renvoie la projection `ChantierCarteDto`, sans paie ni données
 d’un autre domaine. L’affichage signale chargement, erreur et résultat vide avec possibilité de réessayer. Une fiche
@@ -37,25 +50,25 @@ présents en changeant de fond. La route est protégée par `CARTE_READ` (migrat
 
 | Composant | Rôle |
 |---|---|
-| `ChantierCartePageComponent` (`/carte`) | Carte plein écran, filtre Nature compact, compteur et état d’erreur |
-| `ChantierCarteComponent` (`app-chantier-carte`) | Carte « bête » : crée la carte MapLibre et ses contrôles, lit le flavor Plan dans les tokens CSS Atlas nocturne, garde un chrome cartographique nocturne, dessine des repères cyan avec infobulles, redessine au changement de calque, suit la taille de son conteneur et détruit la carte. Région nommée « Carte des chantiers », aide au clavier (flèches, + et −, Maj et flèches pour pivoter et incliner) |
+| `ChantierCartePageComponent` (`/carte`) | Carte plein écran, recherche par code ou nom, filtre Nature compact, état de chargement, vide et erreur |
+| `ChantierCarteComponent` (`app-chantier-carte`) | Carte MapLibre, commandes verticales transparentes et cadrage des points filtrés ; repères cuivre, palette Graphite Staport, attribution des sources et aide clavier. Ne possède pas la logique des filtres métier. |
 
 ### Ce que la carte propose
 
 | Élément | Comportement |
 |---|---|
-| Ouverture | Le Maroc entier, provinces du Sud comprises, quelle que soit la taille de l'écran |
+| Ouverture | Cadrage sur les chantiers chargés ; emprise du Maroc, provinces du Sud comprises, si aucun chantier n'est affiché |
 | Monde | Toute la Terre : vue de loin, la carte est un **globe** entouré de son atmosphère ; elle repasse à plat en approchant |
-| Zoom | Du globe (1) au bâtiment (19). Le Maroc est détaillé jusqu'au bâtiment et au commerce ; le reste du monde jusqu'aux rues (zoom de préparation, 13 par défaut). Au-delà, MapLibre agrandit les tuiles vectorielles sans perte de netteté |
-| Boussole | Montre l'orientation et l'inclinaison ; un clic remet la carte au nord |
+| Zoom | Du globe (1) au bâtiment (19). L'archive est préparée avec le monde jusqu'au zoom 13 par défaut et le Maroc jusqu'au zoom 15 ; au-delà de la couverture, MapLibre agrandit les tuiles existantes sans ajouter de détails. Le zoom maximal d'une archive ne garantit pas la même densité de données partout |
+| Orientation | La commande Nord remet la carte à plat et orientée au nord |
 | **3D / 2D** | Incline la carte à 60° (relief et bâtiments en volume, ciel à l'horizon) ou la remet à plat, au nord. Le clic droit glissé (ou Ctrl + glisser) pivote et incline librement |
-| Vue d'ensemble | Revient au Maroc entier, à plat |
+| Vue d'ensemble | Recadre les chantiers actuellement filtrés ; les quatre extrêmes géographiques définissent la fenêtre |
 | Ma position | Centre la carte sur le poste (demande l'autorisation du navigateur ; HTTPS obligatoire) |
-| Plein écran | La carte seule occupe l'écran |
-| Échelle | En mètres ou kilomètres, en bas à droite |
-| Calques (en bas à gauche) | **Plan** (Protomaps) ou **Satellite** (imagerie Esri, avec frontières, grands axes et libellés blancs du plan par-dessus) ; **Relief** active ou retire l'ombrage et le terrain 3D (actif par défaut) |
-| Bâtiments | En volume à leur hauteur OpenStreetMap (6 m à défaut), à partir du zoom 15, en plan seulement (l'imagerie montre déjà les toits) |
-| Fiche d'un lieu | Un clic sur un lieu nommé (commerce, quartier, ville, lac…) affiche son nom en français, à défaut son nom local |
+| Outils et fonds | Une colonne compacte et transparente sous le menu : **Plan**, **Satellite**, **Relief**, **3D**, zoom, Nord, position et recadrage |
+| Bâtiments | En volume à leur hauteur OpenStreetMap (6 m à défaut), à partir du zoom 15, en plan seulement |
+| Fiche d'un lieu ou d'une voie | Un clic sur un lieu nommé affiche son nom en français, à défaut son nom local. Un clic sur une voie nommée affiche son nom et sa référence lorsqu'ils existent, y compris lorsque son étiquette n'est pas affichée pour éviter les collisions |
+
+Les noms de rues secondaires commencent à apparaître dès le zoom 14. À petite échelle, toutes les étiquettes ne peuvent pas tenir en même temps sans se chevaucher ; le clic sur une voie nommée permet de consulter son nom malgré cette sélection automatique. La recherche d'une adresse ou d'un lieu n'est pas encore disponible. Les commerces usuels (restaurants, cafés, pharmacies, magasins) sont masqués pour réduire le bruit visuel ; les données cartographiques sources ne sont pas modifiées.
 
 Une source introuvable est signalée sans bloquer le reste, de la plus grave à la moins grave : le fond (« Le fond de carte
 n'est pas disponible », la carte reste vide), l'imagerie (« Le plan reste utilisable ») puis le relief. Le message
@@ -83,8 +96,8 @@ Tout se règle dans `frontend/src/app/portail/chantier/carte/carte.config.ts`, j
 | `satellite.tuiles`, `satellite.zoomMaxSource` | Modèle d'URL XYZ de l'imagerie et son zoom maximal (au-delà, agrandie plutôt que d'afficher la tuile « données non disponibles » d'Esri) | `carte/satellite/{z}/{y}/{x}` (relais, voir « Imagerie satellite »), 18 |
 | `satellite.tuilesDeSecours` | Relais de secours (tuiles publiques, sans clé), demandé seulement si le principal ne renvoie pas une image | `carte/satellite-secours/{z}/{y}/{x}` |
 | `satellite.attribution` | Mention légale de l'imagerie (obligatoire) | Esri, Maxar, Earthstar Geographics |
-| `territoire` | `[ouest, sud, est, nord]` en degrés : boîte englobante exacte de la frontière du Maroc ; vue initiale et « Vue d'ensemble » | calculé, voir ci-dessous |
-| `margeDeVuePx`, `zoomMin`, `zoomMax` | Espace autour du territoire à l'ouverture (24 px), zooms minimal (1) et maximal (19) | |
+| `territoire` | `[ouest, sud, est, nord]` en degrés : boîte englobante exacte de la frontière du Maroc ; vue initiale si aucun chantier n'est affiché | calculé, voir ci-dessous |
+| `margeDeVuePx`, `zoomMin`, `zoomMax` | Marge initiale (24 px), zoom minimal (1) et maximal de navigation (19) | |
 | `inclinaison3d` | Inclinaison de la vue 3D, en degrés | 60 |
 | `langue` | Langue des libellés (à défaut, nom local) | `fr` |
 
@@ -96,9 +109,50 @@ sous-chemin de nginx outer. `fond-de-carte.ts` transforme la configuration pour 
 | `preparerMapLibre(base)` | Déclare le worker de MapLibre, le protocole `pmtiles://` et la feuille de style (une seule fois) |
 | `creerStyle(config, base, affichage)` | Style sombre complet : plan ou satellite, avec ou sans relief (`Affichage`), globe et atmosphère; indépendant du thème applicatif |
 | `optionsDeVue(config)` | Ajustement sur le territoire, zooms et inclinaison maximale (80°) ; la carte n'est pas bornée |
-| `territoire(config)` | Boîte englobante du territoire (vue initiale et « Vue d'ensemble ») |
+| `territoire(config)` | Boîte englobante du Maroc, utilisée au démarrage si aucun chantier n'est chargé |
 
 Le composant carte n'utilise que ces fonctions : il ne connaît ni Protomaps, ni Mapterhorn, ni Esri, ni l'emplacement des fichiers.
+
+## Noms de rues, détail BTP et points kilométriques
+
+Le fond Protomaps est une carte de contexte construite depuis un **sous-ensemble** OpenStreetMap : sa documentation précise
+qu'elle ne reprend pas tous les tags ni toutes les données OSM. Dans le style actuel, les libellés des axes principaux
+commencent au zoom 11 et ceux des rues secondaires au zoom 14. L'archive préparée couvre le monde jusqu'au zoom 13 par
+défaut en production, puis ajoute le Maroc jusqu'au zoom 15 ; le zoom caméra 19 n'ajoute donc pas de nouvelles données
+au-delà des tuiles disponibles. Les libellés de rues dépendent aussi de la présence du tag `name` dans OSM et de la place
+disponible à l'écran : MapLibre écarte des étiquettes qui se chevauchent. La carte ne peut donc pas afficher chaque nom
+simultanément à chaque échelle. Une inspection locale d'une tuile de Marrakech confirme que les rues résidentielles et de
+service nommées sont présentes dans les tuiles détaillées ; le style les rend maintenant visibles dès le zoom 14, sur le
+plan comme sur l'imagerie satellite.
+
+Le fichier `carte-fond/monde.pmtiles` inspecté porte un maximum global de 15 dans son en-tête (Maroc compris), mais les
+échantillons de tuiles hors du Maroc existent au zoom 11 et manquent au zoom 12 ; cette copie semble donc avoir été
+préparée avec le défaut de développement `ZOOM_MONDE=11`, pas le défaut de production 13. L'archive signale un état OSM
+au 17 octobre 2026. Cette différence devra être vérifiée sur l'archive montée dans Docker avant de conclure pour cette
+instance.
+
+Les attributs routiers de l'archive locale comprennent la classe (`kind_detail`), les noms, la référence (`ref`), le
+service, le sens unique, l'accès, les ponts et les tunnels. Elle ne fournit pas `surface`, `smoothness`, `tracktype`,
+`lanes`, ni de PK. Il faut donc une source routière plus riche pour représenter l'état ou la praticabilité des voies BTP,
+et une couche officielle séparée pour le chaînage kilométrique. La mise à jour OSM enregistrée dans les métadonnées de
+cette archive locale est datée du 17 octobre 2026. Les commerces de consommation courante (restaurants, cafés, magasins,
+dont pharmacies si elles apparaissent dans la source) sont masqués par défaut pour garder le fond utile au BTP.
+
+Marrakech n'est exclue ni par un filtre ni par une règle du style. À l'ouverture, la carte est initialisée sur l'emprise
+du Maroc, puis le chargement des chantiers recadre la vue sur l'étendue de leurs positions. Une ville située hors de cette
+étendue ne sera pas visible ; à petite échelle, son libellé peut aussi être écarté pour éviter un chevauchement. Si le fond
+ne charge pas, aucun nom ne peut apparaître. Il faut vérifier la vue et les tuiles de l'instance concernée pour départager
+ces cas.
+
+Le fond actuel ne fournit pas de couche PK/PR géolocalisée. Une piste officielle existe au CNER : son [portail applicatif]
+(https://www.cner.ma/portail-applicatif.html) décrit le SIR comme un outil de cartographie, d'inventaire et de référencement
+linéaire du réseau classé, et PR Tracker comme l'outil de localisation terrain des Points Repères. Le CNER indique que
+l'accès au SIR est d'abord réservé aux équipes du Ministère de l'Équipement et de l'Eau, avec une éventuelle ouverture
+ultérieure après validation. Il faut donc obtenir l'autorisation de partage, les formats/API d'export, la couverture et
+la fraîcheur des données ; la correspondance entre le référentiel actuel des PR et les anciens PK doit aussi être établie
+avant toute intégration. Pour les autoroutes, ADM publie des [tableaux de tronçons, échangeurs et PK](https://www.adm.co.ma/fr/nos-autoroutes),
+mais ceux-ci ne constituent pas une couche SIG avec un point géolocalisé par PK. Aucune géométrie, mesure ou coordonnée
+ne doit être inventée pour fabriquer ces repères.
 
 ## Emprise du Maroc
 

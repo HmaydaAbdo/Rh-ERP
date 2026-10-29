@@ -53,6 +53,27 @@
   pointer-events: none;
 }
 
+.stp-select__toggle {
+  position: absolute;
+  inset-inline-end: var(--space-xs);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  &:hover { color: var(--color-primary); }
+  &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+  &:disabled { cursor: not-allowed; }
+}
+
+.stp-select__input { padding-inline-end: 3rem; }
+
 .stp-select__clear {
   position: absolute;
   inset-inline-end: calc(var(--space-md) + 1.5rem);

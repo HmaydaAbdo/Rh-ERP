@@ -77,7 +77,7 @@ describe('ChantierCarteComponent', () => {
     expect(element.querySelector('.maplibregl-ctrl-compass')).not.toBeNull();
     expect(element.querySelector('.maplibregl-ctrl-geolocate')).not.toBeNull();
     expect(element.querySelector('.maplibregl-ctrl-fullscreen')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-scale')).not.toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-scale')).toBeNull();
   });
 
   it('passe du plan au satellite et retire le relief, en redessinant la carte', async () => {

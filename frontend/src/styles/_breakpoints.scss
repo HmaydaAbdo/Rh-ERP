@@ -3,6 +3,7 @@
 // (le dossier `src/styles` est un chemin d'inclusion Sass, voir angular.json). Mêmes valeurs que dans conventions/design-system.md.
 $phone-max: 767px;
 $tablet-max: 1023px;
+$desktop-min: $tablet-max + 1px;
 $form-compact-max: 48rem;
 $auth-short-height: 42rem;
 $auth-short-min-width: 48rem;
@@ -17,6 +18,13 @@ $auth-short-min-width: 48rem;
 /// Tablette et en dessous : jusqu'à 1023 px.
 @mixin tablet-down {
   @media (max-width: $tablet-max) {
+    @content;
+  }
+}
+
+/// Grand écran : rail de navigation de bureau et mode carte immersif.
+@mixin desktop {
+  @media (min-width: $desktop-min) {
     @content;
   }
 }

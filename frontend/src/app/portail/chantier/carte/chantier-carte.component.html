@@ -7,56 +7,51 @@
     [attr.aria-describedby]="idAide"
   ></div>
   <p [id]="idAide" class="app-lecteur">
-    Carte du monde, ouverte sur le Maroc. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer, Maj et flèches pour pivoter et
-    incliner.
+    Carte du monde. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer, Maj et flèches pour pivoter et incliner.
   </p>
 
-  <!-- Déplacé par MapLibre dans sa colonne de contrôles (ControleDuGabarit), sous les boutons de zoom. -->
-  <div #outils class="maplibregl-ctrl maplibregl-ctrl-group">
-    <button
-      type="button"
-      class="chantier-carte__outil"
-      [attr.aria-pressed]="vue3d()"
-      [attr.aria-label]="vue3d() ? 'Remettre la carte à plat' : 'Incliner la carte en 3D'"
-      [title]="vue3d() ? 'Vue à plat' : 'Vue 3D'"
-      (click)="basculerVue3d()"
-    >
-      <stp-icon [name]="vue3d() ? 'map' : 'box'" />
+  <div #commandes class="chantier-carte__commandes" role="group" aria-label="Outils de la carte">
+    <div class="chantier-carte__modes" role="group" aria-label="Style de carte">
+      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().fond === 'plan'" (click)="choisirFond('plan')">
+        <stp-icon name="map" aria-hidden="true" /><span>Plan</span>
+      </button>
+      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().fond === 'satellite'" (click)="choisirFond('satellite')">
+        <stp-icon name="satellite" aria-hidden="true" /><span>Satellite</span>
+      </button>
+      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().relief" (click)="basculerRelief()">
+        <stp-icon name="mountain" aria-hidden="true" /><span>Relief</span>
+      </button>
+      <button
+        type="button"
+        class="chantier-carte__outil"
+        [attr.aria-pressed]="vue3d()"
+        [attr.aria-label]="vue3d() ? 'Remettre la carte à plat' : 'Incliner la carte en 3D'"
+        (click)="basculerVue3d()"
+      >
+        <stp-icon [name]="vue3d() ? 'map' : 'box'" aria-hidden="true" /><span>3D</span>
+      </button>
+    </div>
+    <span class="chantier-carte__separateur" aria-hidden="true"></span>
+    <button type="button" class="chantier-carte__outil" aria-label="Zoom avant" title="Zoom avant" (click)="zoomer(1)">
+      <stp-icon name="plus" aria-hidden="true" /><span>Zoom +</span>
     </button>
-    <button type="button" class="chantier-carte__outil" aria-label="Revenir au Maroc entier" title="Vue d'ensemble" (click)="vueDEnsemble()">
-      <stp-icon name="scan" />
+    <button type="button" class="chantier-carte__outil" aria-label="Zoom arrière" title="Zoom arrière" (click)="zoomer(-1)">
+      <stp-icon name="minus" aria-hidden="true" /><span>Zoom −</span>
+    </button>
+    <button type="button" class="chantier-carte__outil" aria-label="Recentrer sur les chantiers affichés" title="Recentrer" (click)="vueDEnsemble()">
+      <stp-icon name="scan" aria-hidden="true" /><span>Recentrer</span>
+    </button>
+    <button type="button" class="chantier-carte__outil" aria-label="Orienter la carte au nord" title="Orienter au nord" (click)="orienterAuNord()">
+      <stp-icon name="map" aria-hidden="true" /><span>Nord</span>
+    </button>
+    <button type="button" class="chantier-carte__outil" aria-label="Centrer sur ma position" title="Ma position" (click)="localiser()">
+      <stp-icon name="locate-fixed" aria-hidden="true" /><span>Ma position</span>
     </button>
   </div>
 
-  <div class="chantier-carte__calques" role="group" aria-label="Calques de la carte">
-    <button
-      type="button"
-      class="chantier-carte__calque chantier-carte__calque--plan"
-      [attr.aria-pressed]="affichage().fond === 'plan'"
-      (click)="choisirFond('plan')"
-    >
-      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="map" /></span>
-      Plan
-    </button>
-    <button
-      type="button"
-      class="chantier-carte__calque chantier-carte__calque--satellite"
-      [attr.aria-pressed]="affichage().fond === 'satellite'"
-      (click)="choisirFond('satellite')"
-    >
-      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="satellite" /></span>
-      Satellite
-    </button>
-    <button
-      type="button"
-      class="chantier-carte__calque chantier-carte__calque--relief"
-      [attr.aria-pressed]="affichage().relief"
-      (click)="basculerRelief()"
-    >
-      <span class="chantier-carte__apercu" aria-hidden="true"><stp-icon name="mountain" /></span>
-      Relief
-    </button>
-  </div>
+  @if (messageLocalisation(); as message) {
+    <p class="chantier-carte__localisation" role="status">{{ message }}</p>
+  }
 
   @if (messageErreur(); as message) {
     <stp-message class="chantier-carte__erreur" severity="error" [text]="message" />
