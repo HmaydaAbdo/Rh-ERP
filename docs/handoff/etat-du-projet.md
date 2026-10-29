@@ -1,6 +1,6 @@
 # Handoff — état du projet ERP-RH
 
-Dernière mise à jour : 2026-10-28 (routine commune à Claude et Codex ; CI sur demande explicite).
+Dernière mise à jour : 2026-10-29 (routine commune à Claude et Codex ; CI sur demande explicite).
 
 **V1c en diagnostic (2026-10-28)** : dernier jeu complet conservé dans
 `backend/target/evaluation-ia-avant-correctifs.json` : 13/24, dix pannes JSON et une réponse vide.
@@ -21,14 +21,22 @@ source cartographique réelle. La reprise du classeur conserve huit exclusions d
 [README](../chantier/README.md) ; preuves et statut de livraison dans le
 [relais technique](chantier-localisation-2026-10-26.md). Livraison par PR vers `main` demandée le 2026-10-27 ; le déploiement reste distinct.
 
-**Thème sombre (2026-10-27)** : le thème sombre adopte Atlas nocturne Staport dans toute l’application, avec encre marine,
-surfaces bleu nuit, actions bleu électrique, cyan balise et texte glacier ; les statuts et graphiques gardent leur sémantique.
-La carte Chantier reprend la maquette : barre compacte avec total en pastille, Plan bleu profond, marqueurs cyan iconiques
-et infobulles. Le build production et les E2E de carte desktop/mobile passent. Les contrôles globaux clair/sombre sont
-vérifiés au catalogue, à l'authentification et sur mobile (18 E2E). La carte passe 2 E2E desktop/mobile. Les tests unitaires
-ciblés du style et des marqueurs passent (37 tests). Après intégration du `main` courant, build et lint réussissent
-(23 avertissements de lint au seuil existant) ; le build signale un bundle initial de 810,59 Ko pour un budget
-d'avertissement de 800 Ko et les avertissements CommonJS CopilotKit `semver` et `partial-json`.
+**Thème sombre et carte Chantier** : les tokens globaux utilisent Graphite Staport (noir mat, surfaces graphite, actions et focus
+bleus, accent cuivre rare) ; le thème clair, les statuts et les couleurs sémantiques des graphiques restent inchangés. La carte
+propose une barre unique de recherche code/nom et Nature, des commandes verticales transparentes, des icônes bleues et des
+marqueurs cuivre. Elle recadre les sites au chargement et après validation du filtre, garde la vue en l'absence de résultats,
+et ne réagit pas aux déplacements manuels. Le build Angular de production passe avec l'avertissement de budget du bundle
+initial et les deux avertissements CommonJS CopilotKit décrits dans le bilan local. La revue navigateur sur grand écran
+est confirmée ; le viewport mobile n'a pas pu être vérifié avec le Chrome connecté dans ce tour.
+
+**Navigation de la carte et menu latéral** : Fonctions et Équipes ont des entrées séparées ; les destinations du menu
+ont chacune une icône dédiée et « Heures sup. » est le libellé compact. Sur `/carte` en grand écran, le rail est remplacé
+par un hamburger à côté du filtre, avec les outils carte alignés dessous, et un volet animé au survol/focus, replié à la sortie. Téléphone et tablette conservent
+le tiroir standard. Le mouvement respecte `prefers-reduced-motion`.
+La revue navigateur sur grand écran confirme le menu replié/ouvert, le retour au sidebar standard hors carte et la barre
+filtre-outils ; le viewport mobile n'a pas pu être vérifié. `/carte` occupe déjà la page entière : aucun bouton de plein
+écran natif supplémentaire n'est nécessaire. Le cadrage Maroc est posé à la création puis remplacé au chargement par le
+cadrage des chantiers visibles. Une tuile de Marrakech contient des routes nommées ; les noms secondaires apparaissent dès z14 et les routes nommées restent consultables au clic lorsque leur étiquette est masquée pour éviter les chevauchements. Les commerces usuels sont masqués. Le script prépare le monde jusqu'à z13 par défaut et le Maroc jusqu'à z15 ; l'archive examinée présente des tuiles échantillonnées jusqu'à z11 hors du Maroc. Le zoom caméra maximal 19 n'ajoute pas de détails aux tuiles au-delà de leur couverture. Les données du conteneur étant celles de production, aucune donnée ni aucun volume n'a été modifié. La production a bien chargé `/carte` après connexion et affiche la version antérieure du menu et des filtres avec 19 sites ; ce n'est pas la branche courante. La prévisualisation de la branche n'a pas atteint l'état prêt (le démarrage en arrière-plan a arrêté le service esbuild et le démarrage au premier plan a été interrompu pendant le parcours de l'archive cartographique volumineuse). Le build Angular de production de la branche passe avec l'avertissement de budget initial (+22,63 Ko) et deux avertissements CommonJS CopilotKit. Les sources de données PK/PR du CNER et les limites d'accès sont décrites dans [carte.md](../chantier/carte.md).
 
 **Heures supplémentaires (2026-10-28)** : PR #102 est fusionnée dans `main`. Le domaine inclut les façades métier,
 les migrations V39/V40, l'import, les vues et ses outils MCP officiels Spring AI (`heures_supp_periodes`,

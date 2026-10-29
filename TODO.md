@@ -51,16 +51,17 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
    voir [docs/rbac/carte.md](docs/rbac/carte.md).
 3. **Fait localement** : source réelle `GET /chantiers/carte`, qualification manuelle (nature, localisation, coordonnées, affichage) et migrations de schéma/reprise auditée. Voir [README Chantier](docs/chantier/README.md).
 4. **Fait localement** : marqueurs MapLibre accessibles, fiche des sites partagés, signalement du chargement/vide/erreur. Restent le panneau « À localiser » et la confirmation à l'écran des noms arabes.
-5. **Fait localement** : barre compacte bleu nuit avec filtre multi-sélection Nature, compteur court et carte immersive Chantier sans liste latérale ni renvoi vers Google Maps ; le filtre préserve Plan/Satellite/Relief.
+5. **Fait localement** : barre unique recherche code/nom + Nature, outils verticaux transparents, thème Graphite Staport, chevron refermable, recadrage des sites filtrés, Fonctions et Équipes séparées dans le menu, volet de navigation animé sur `/carte`, bouton Plein écran retiré (la page occupe déjà la fenêtre), libellés des rues secondaires avancés au zoom 14 et commerces usuels masqués ; voir [carte.md](docs/chantier/carte.md). Build de production confirmé avec avertissements; revue mobile et aperçu Docker restent à reprendre.
 5 bis. **Fait (2026-10-18)** : page minimale `/carte` protégée par `CARTE_READ`, entrée de menu « Carte », composant cartographique ; points réels raccordés par la source protégée.
 5 ter. **Fait (2026-10-18)** : carte « niveau Google Maps » — le monde entier en globe (Maroc détaillé jusqu'au bâtiment),
    zoom 19, bâtiments 3D, relief Mapterhorn auto-hébergé (ombrage et terrain 3D), calques Plan / Satellite / Relief,
-   imagerie Esri relayée par nginx avec la clé ArcGIS côté serveur, vue 3D, boussole, position, plein écran, échelle, fiche
+   imagerie Esri relayée par nginx avec la clé ArcGIS côté serveur, vue 3D, orientation nord, position, fiche
    d'un lieu ([ADR 0009](docs/adr/0009-carte-satellite-relief-3d.md)). **En production** : créer la clé ArcGIS gratuite et la
    mettre dans `.env` (`ARCGIS_API_KEY`, pas à pas dans docs/chantier/carte.md) ; relancer
    `scripts/carte/preparer-fond-carte.sh` (environ 40 Go au zoom 13, prévoir le double pendant la préparation) ; déployer
    la nouvelle image du frontend. **Reste** : recherche de lieux (reportée) ; renouveler la clé ArcGIS avant son échéance.
    À vérifier en production : rendu du fond à l'écran (clair/sombre, téléphone), noms arabes.
+6. **À cadrer** : compléter le fond pour les chantiers BTP isolés (rues et pistes détaillées), les infrastructures et les points de repère routiers. Obtenir et valider l'accès autorisé aux données du SIR/PR Tracker du CNER (formats/API, couverture, fraîcheur et droits), établir le lien PR/PK, puis vérifier la portée SIG des données ADM. Aucun repère ni tracé ne doit être inventé ; choisir une couche ou une architecture seulement après validation des sources. Voir « Noms de rues, détail BTP et points kilométriques » dans [carte.md](docs/chantier/carte.md).
 
 ## Vues Cartes, Tabulaire et Analytique
 

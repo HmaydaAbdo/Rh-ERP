@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Map as CarteMapLibre } from 'maplibre-gl';
+import { LngLatBounds, Map as CarteMapLibre } from 'maplibre-gl';
 
 import { ThemeService } from '../../../core/theme/theme.service';
 import { CARTE_CONFIG, CARTE_CONFIG_PAR_DEFAUT } from './carte.config';
@@ -62,7 +62,7 @@ describe('ChantierCarteComponent', () => {
     expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(0);
   });
 
-  it('dessine une carte MapLibre dans une région nommée, décrite pour le clavier', async () => {
+  it('dessine une carte accessible et propose ses commandes sans chrome MapLibre redondant', async () => {
     const fixture = TestBed.createComponent(ChantierCarteComponent);
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
@@ -73,11 +73,20 @@ describe('ChantierCarteComponent', () => {
     const aide = element.querySelector(`#${region?.getAttribute('aria-describedby')}`);
     expect(aide?.textContent).toContain('Flèches du clavier');
     expect(aide?.textContent).toContain('pivoter et');
-    expect(element.querySelector('button.maplibregl-ctrl-zoom-in')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-compass')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-geolocate')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-fullscreen')).not.toBeNull();
-    expect(element.querySelector('.maplibregl-ctrl-scale')).not.toBeNull();
+    expect(element.querySelector('[role="group"][aria-label="Outils de la carte"]')).not.toBeNull();
+    for (const nom of [
+      'Zoom avant',
+      'Zoom arrière',
+      'Recentrer sur les chantiers affichés',
+      'Orienter la carte au nord',
+      'Centrer sur ma position',
+      'Incliner la carte en 3D'
+    ]) {
+      expect(element.querySelector(`button[aria-label="${nom}"]`)).not.toBeNull();
+    }
+    expect(element.querySelector('.maplibregl-ctrl-fullscreen')).toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-logo')).toBeNull();
+    expect(element.querySelector('.maplibregl-ctrl-scale')).toBeNull();
   });
 
   it('passe du plan au satellite et retire le relief, en redessinant la carte', async () => {
@@ -86,7 +95,7 @@ describe('ChantierCarteComponent', () => {
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
     const bouton = (nom: string) =>
-      [...element.querySelectorAll<HTMLButtonElement>('.chantier-carte__calques button')].find((b) => b.textContent?.trim() === nom)!;
+      [...element.querySelectorAll<HTMLButtonElement>('.chantier-carte__outil')].find((b) => b.textContent?.trim() === nom)!;
     expect(bouton('Plan').getAttribute('aria-pressed')).toBe('true');
     expect(bouton('Relief').getAttribute('aria-pressed')).toBe('true');
 
@@ -102,18 +111,31 @@ describe('ChantierCarteComponent', () => {
     expect((setStyle.mock.lastCall?.[0] as { terrain?: object }).terrain).toBeUndefined();
   });
 
-  it('incline la carte en 3D, puis revient au Maroc entier à plat', async () => {
+  it('incline la carte puis recentre les quatre extrêmes des chantiers à plat', async () => {
     const easeTo = vi.spyOn(CarteMapLibre.prototype, 'easeTo');
     const fitBounds = vi.spyOn(CarteMapLibre.prototype, 'fitBounds');
     const fixture = TestBed.createComponent(ChantierCarteComponent);
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
+    fixture.componentRef.setInput('chantiers', [
+      { id: 1, code: 'SUD-OUEST', designation: 'Sud-ouest', nom: 'Sud-ouest', nature: 'AO', localisation: '', latitude: 29, longitude: -10 },
+      { id: 2, code: 'NORD-OUEST', designation: 'Nord-ouest', nom: 'Nord-ouest', nature: 'AO', localisation: '', latitude: 37, longitude: -7 },
+      { id: 3, code: 'SUD-EST', designation: 'Sud-est', nom: 'Sud-est', nature: 'AO', localisation: '', latitude: 31, longitude: -1 },
+      { id: 4, code: 'NORD-EST', designation: 'Nord-est', nom: 'Nord-est', nature: 'AO', localisation: '', latitude: 36, longitude: -4 }
+    ]);
+    await fixture.whenStable();
+    fitBounds.mockClear();
 
     element.querySelector<HTMLButtonElement>('[aria-label="Incliner la carte en 3D"]')!.click();
     expect(easeTo).toHaveBeenCalledWith({ pitch: CONFIG_SANS_FOND.inclinaison3d });
 
-    element.querySelector<HTMLButtonElement>('[aria-label="Revenir au Maroc entier"]')!.click();
+    element.querySelector<HTMLButtonElement>('[aria-label="Recentrer sur les chantiers affichés"]')!.click();
     expect(fitBounds).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pitch: 0, bearing: 0 }));
+    const emprise = fitBounds.mock.lastCall?.[0] as LngLatBounds;
+    expect(emprise.getWest()).toBe(-10);
+    expect(emprise.getSouth()).toBe(29);
+    expect(emprise.getEast()).toBe(-1);
+    expect(emprise.getNorth()).toBe(37);
   });
 
   it("signale un fond de carte introuvable, puis l'efface quand il se charge", async () => {

@@ -4,11 +4,31 @@
   class="app-shell"
   role="presentation"
   [class.app-shell--auth]="!navigationVisible()"
-  [class.app-shell--menu-ouvert]="menuOuvert()"
+  [class.app-shell--menu-ouvert]="menuOuvert()"
+  [class.app-shell--carte]="navigationVisible() && estCarte()"
+  [class.app-shell--carte-menu-ouvert]="menuCarteOuvert()"
+
   (keydown.escape)="fermerMenu()"
 >
   @if (navigationVisible()) {
     <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
+    @if (estCarte()) {
+      <button
+        type="button"
+        class="app-carte-menu"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="menuCarteOuvert()"
+        [attr.aria-label]="menuCarteOuvert() ? 'Navigation ouverte' : 'Ouvrir la navigation'"
+        title="Navigation"
+        (pointerenter)="ouvrirMenuCarteAuSurvol($event)"
+        (pointerleave)="reporterFermetureMenuCarteAuPointeur($event)"
+        (focusin)="ouvrirMenuCarte()"
+        (focusout)="reporterFermetureMenuCarte()"
+        (click)="cliquerMenuCarte()"
+      >
+        <svg lucideMenu aria-hidden="true"></svg>
+      </button>
+    }
     <header class="app-topbar">
       <button
         type="button"
@@ -23,41 +43,28 @@
     </header>
     <div class="app-backdrop" (click)="fermerMenu()" aria-hidden="true"></div>
 
-    <aside id="menu-principal" class="app-sidebar">
+    <aside
+      id="menu-principal"
+      class="app-sidebar"
+      (focusin)="estCarte() && ouvrirMenuCarte()"
+      (focusout)="reporterFermetureMenuCarte()"
+      (pointerenter)="estCarte() && ouvrirMenuCarte()"
+      (pointerleave)="reporterFermetureMenuCarte()"
+    >
       <nav class="app-sidebar__nav" aria-label="Navigation principale">
-        @for (item of navItems(); track item.route) {
-          @if (item.group === 'referentiel-rh') {
-            @if (item.route === referentielItems()[0]?.route) {
-              <details class="app-sidebar__group" [open]="referentielOuvert()" (toggle)="changerGroupe('referentiel-rh', $event)">
-                <summary class="app-sidebar__link app-sidebar__group-title" title="Référentiel RH">
-                  <svg lucideUsers aria-hidden="true"></svg>
-                  <span class="app-sidebar__label">Référentiel RH</span>
-                  <svg lucideChevronDown class="app-sidebar__group-chevron" aria-hidden="true"></svg>
-                </summary>
-                <div class="app-sidebar__group-items">
-                  @for (reference of referentielItems(); track reference.route) {
-                    <a [routerLink]="reference.route" routerLinkActive="active" class="app-sidebar__link app-sidebar__link--child"
-                      (click)="fermerMenu()" [attr.title]="reference.label">
-                      @if (reference.icon === 'briefcase') { <svg lucideBriefcase aria-hidden="true"></svg> }
-                      @if (reference.icon === 'network') { <svg lucideNetwork aria-hidden="true"></svg> }
-                      <span class="app-sidebar__label">{{ reference.label }}</span>
-                    </a>
-                  }
-                </div>
-              </details>
-            }
-          } @else if (item.group === 'administration-systeme') {
+        @for (item of navItems(); track item.route; let index = $index) {
+          @if (item.group === 'administration-systeme') {
             @if (item.route === administrationItems()[0]?.route) {
-              <details class="app-sidebar__group" [open]="administrationOuverte()" (toggle)="changerGroupe('administration-systeme', $event)">
+              <details class="app-sidebar__group" [style.--nav-index]="index" [open]="administrationOuverte()" (toggle)="changerGroupe('administration-systeme', $event)">
                 <summary class="app-sidebar__link app-sidebar__group-title" title="Administration système">
-                  <svg lucideSettings aria-hidden="true"></svg>
+                  <svg lucideLayers aria-hidden="true"></svg>
                   <span class="app-sidebar__label">Administration système</span>
                   <svg lucideChevronDown class="app-sidebar__group-chevron" aria-hidden="true"></svg>
                 </summary>
                 <div class="app-sidebar__group-items">
-                  @for (administration of administrationItems(); track administration.route) {
+                  @for (administration of administrationItems(); track administration.route; let childIndex = $index) {
                     <a [routerLink]="administration.route" routerLinkActive="active" class="app-sidebar__link app-sidebar__link--child"
-                      (click)="fermerMenu()" [attr.title]="administration.label">
+                      [style.--nav-index]="childIndex" (click)="fermerMenu()" [attr.title]="administration.label">
                       @switch (administration.icon) {
                         @case ('user-cog') { <svg lucideUserCog aria-hidden="true"></svg> }
                         @case ('shield') { <svg lucideShield aria-hidden="true"></svg> }
@@ -75,6 +82,7 @@
             [routerLink]="item.route"
             routerLinkActive="active"
             class="app-sidebar__link"
+            [style.--nav-index]="index"
             (click)="fermerMenu()"
             [attr.title]="item.label"
           >
@@ -89,6 +97,7 @@
               @case ('shield') { <svg lucideShield aria-hidden="true"></svg> }
               @case ('settings') { <svg lucideSettings aria-hidden="true"></svg> }
               @case ('history') { <svg lucideHistory aria-hidden="true"></svg> }
+              @case ('clock-3') { <svg lucideClock3 aria-hidden="true"></svg> }
             }
             <span class="app-sidebar__label">{{ item.label }}</span>
           </a>
