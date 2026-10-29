@@ -59,6 +59,11 @@ Les services IA démarrent par défaut avec `docker compose up -d`, sans profil 
 ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dépend pas : `IA_ENABLED=false` ou
 `MCP_ENABLED=false` coupe l'assistant. Les checkpoints durables LangGraph arrivent avec les écritures (J6).
 
+L'interface résout l'URL du runtime avec la base du document Angular : sous `/erp-rh/`, les appels passent par
+`/erp-rh/ia/copilotkit`. Les fils utilisent UUID v4 (`uuid`), également disponible en HTTP via `crypto.getRandomValues`.
+Le Nginx extérieur et le relais intérieur transmettent les événements SSE sans buffering avec un délai de lecture de
+300 secondes entre deux événements ; configuration du proxy extérieur dans [deployment.md](deployment.md).
+
 ## 4. Exactitude
 
 1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils Spring. **Priorité du
