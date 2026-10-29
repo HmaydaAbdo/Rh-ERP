@@ -43,6 +43,8 @@ Choisis la forme de ta réponse :
 - message simple (salutation, remerciement, question sur ce que tu sais faire) : réponds directement, en une ou deux
   phrases, sans outil ;
 - question sur les données de l'ERP : appelle les outils utiles, puis réponds brièvement ;
+- demande d'une donnée absente des outils ERP, d'une prévision, de la météo ou d'un fait extérieur : ne réponds pas
+  depuis tes connaissances générales ; dis clairement que l'information n'est pas disponible par l'ERP ;
 - demande à plusieurs étapes : établis d'abord un plan avec `write_todos`, puis suis-le.
 Quand plusieurs outils sont indépendants (deux mois à comparer, plusieurs chantiers), appelle-les **en même temps**,
 dans un seul tour : chaque aller-retour avec le modèle coûte du temps à l'utilisateur.
@@ -58,6 +60,8 @@ Règles impératives :
    pas le refus et ne le retente pas. L'outil `systeme_identite` indique les droits de l'utilisateur.
 5. Pour un chantier, une équipe ou une fonction cité par son nom ou son code, cherche d'abord son identifiant avec
    l'outil de recherche du référentiel, puis utilise cet identifiant.
+5a. Respecte exactement le type JSON du schéma MCP : un identifiant déclaré entier reste un nombre JSON sans guillemets
+    (par exemple `123`), jamais une chaîne (`"123"`). Ne transforme pas un identifiant numérique reçu d'un outil.
 6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie : passe-la telle quelle en paramètre
    « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction. Sans période dans la question, le contexte
    du moment donne le dernier mois de paie importé : c'est le mois par défaut, sans appel d'outil pour le chercher.
@@ -100,6 +104,26 @@ SEUIL_RESUME_JETONS = 40_000
 # Elles restent disponibles au modèle quand le sélecteur officiel réduit le reste du catalogue ; l'intersection avec
 # les outils reçus respecte les permissions réellement exposées par Spring pour cet utilisateur.
 _RECHERCHES_REFERENTIEL = ("employes_rechercher", "chantier_rechercher", "equipe_rechercher", "fonction_rechercher")
+
+# Le middleware officiel reçoit les descriptions des outils dans son schéma dynamique. Les outils de
+# ``always_include`` sont retirés de ce schéma puis ajoutés à l'appel du modèle principal : ne jamais les nommer ici.
+_PROMPT_SELECTION_OUTILS = """Sélectionne tous les outils nécessaires pour répondre à la question.
+- Ne sélectionne que les noms présents dans le schéma structuré fourni : certains outils sont inclus automatiquement
+  dans l'appel du modèle principal et n'appartiennent donc pas à ta liste de sélection.
+- Pour toute question portant sur les données ERP, sélectionne un outil métier pertinent parmi ceux autorisés.
+  Ne choisis pas uniquement `systeme_identite`, sauf si l'utilisateur demande ses droits ou son identité.
+- Pour un parcours, un historique ou un nombre de mois payés, choisis `employe_parcours`. Les outils de résolution des
+  noms et codes de référentiel sont inclus automatiquement dans l'appel du modèle principal.
+- Pour savoir quels mois sont importés ou combien il y en a, choisis `paie_periodes`. Les outils métier d'agrégat paie
+  adaptés aux questions de masse, de bulletins, de STC et de mouvements sont déjà fournis au modèle principal.
+- Pour un classement ou une répartition entre groupes, choisis `paie_repartition`. Pour le détail des bulletins d'une
+  personne ou son salaire, choisis `paie_bulletins_rechercher`, jamais pour compter les bulletins d'un périmètre.
+- Pour les bulletins sans équipe ou sans observation, choisis `paie_qualite`.
+- Pour compter les employés ou les sortis, choisis `employes_compter`; pour les sorties d'un mois, `employes_sorties`.
+- En cas d'incertitude entre plusieurs outils ERP, sélectionne les candidats pertinents au lieu de répondre qu'aucun
+  outil n'est disponible. N'ajoute pas d'outil sans rapport avec la question.
+- Pour une salutation, une demande hors ERP ou une information future que les outils ne peuvent pas établir, une liste
+  vide est appropriée."""
 
 
 def _parametres_a2ui() -> dict[str, Any]:
@@ -185,8 +209,24 @@ def creer_agent(
         # des outils métier pourtant autorisés dans les domaines qui en ont le plus. Les recherches transversales
         # restent offertes pour résoudre les noms/codes cités par l'utilisateur avant une requête métier.
         disponibles = {outil.name for outil in outils}
-        toujours = ["write_todos", *(nom for nom in _RECHERCHES_REFERENTIEL if nom in disponibles)]
-        intergiciels.insert(2, LLMToolSelectorMiddleware(model=selecteur, always_include=toujours))
+        # Le middleware officiel exclut always_include de son schéma de sélection et les ajoute à la requête principale.
+        # Le prompt du sélecteur ne doit donc jamais leur demander de les retourner.
+        toujours = [
+            nom
+            for nom in ["write_todos", "paie_indicateurs", "paie_mouvements", *_RECHERCHES_REFERENTIEL]
+            if nom in disponibles
+        ]
+        intergiciels.insert(
+            2,
+            LLMToolSelectorMiddleware(
+                model=selecteur,
+                system_prompt=_PROMPT_SELECTION_OUTILS,
+                always_include=toujours,
+                # Comportement officiel du middleware : après l'essai de reprise, une réponse mal formée rend
+                # tous les outils disponibles à l'agent au lieu d'échouer avant l'appel métier.
+                on_parsing_failure="all",
+            ),
+        )
     return create_agent(
         model=modele,
         tools=list(outils),

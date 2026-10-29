@@ -92,6 +92,14 @@ Le filtre officiel appelé directement avec le même tag choisit bien Gemini. Le
 crée un compartiment `litellm_metadata` distinct de `metadata`, ce qui masque les tags au routeur ; le défaut correspond
 à [LiteLLM #45543](https://github.com/BerriAI/litellm/issues/45543), correctif proposé dans [#45585](https://github.com/BerriAI/litellm/pull/45585), encore ouvert. Le propriétaire a validé les groupes officiels par capacité le 2026-10-28 : configuration, client IA et permissions des clés ont été adaptés localement. `litellm-cles` synchronise désormais les groupes des clés existantes ; les cinq groupes de production excluent eval/test. Le garde-fou reste actif. LiteLLM 1.104.2 reste épinglé ; les versions officielles 1.106.5 et 1.109.0-dev.1 ne contiennent pas encore le correctif upstream, mais le choix du groupe par `model` évite le défaut de tags. Validation locale du 2026-10-28 : 11 tests IA ciblés réussis ; les cinq groupes répondent dans leur pool, OCR réel compris. Un ciblage individuel Groq20 réussit ; trois refus 403 confirment l'exclusion eval/test/selftest de la clé applicative. Une injection est bloquée en 400 ; la sonde de bascule et une bascule réelle du groupe complex réussissent. Un appel autorisé avec la clé applicative réussit. La resynchronisation des clés est idempotente. Ruff ciblé, compilation Python des scripts et validation Compose passent. V1c reste ouverte pour les évaluations métier, p95 et T20. Prochaine tâche : reprendre V1c ciblée, complète et T20. Le lot V1c reste distinct de la reprise de complétude MCP des outils Heures supplémentaires.
 
+**Reprise V1c après diagnostic fournisseur (2026-10-29)** : le middleware officiel `LLMToolSelectorMiddleware` réduit l'enum
+des outils sélectionnables avec `always_include`; le prompt a été corrigé pour ne demander que des noms présents dans cet enum.
+Un rejeu ciblé de 5 cas avec un pool incluant Nemotron réussit 5/5, mais p50 40,24 s et p95 245,03 s. Gemma a rencontré
+des erreurs 500 et timeouts Gemini. Groq gpt-oss-120b est configuré provisoirement pour `tool-selection`, sans requalification
+complète après la correction du prompt. V1c reste ouverte : après rotation des clés fournisseurs, reprendre par le smoke réel,
+les 5 cas, puis les 24 cas et T20. Aucun nouveau test ni CI avant le signal de reprise du propriétaire. Le sous-Compose
+`v1c-audit` n'a pas pu être arrêté car le moteur Docker Desktop est inaccessible ; le Compose principal n'a pas été touché.
+
 **Correctif OSV backend (2026-10-28)** : la dernière CI sur l'ancien head (`40773260886`) échouait au scan de dépendances,
 qui trouvait `opentelemetry-api` 1.62.0 (GHSA-ccrj-gw8r-854m). Le POM importe désormais la BOM officielle OpenTelemetry
 1.67.0 pour aligner tous ses artefacts sur la version corrigée. Reproduction locale du même OSV-Scanner v2.6.0 : aucun

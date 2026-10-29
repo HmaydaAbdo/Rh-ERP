@@ -14,23 +14,40 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 
 ## Fonctionnement
 
-- Cinq groupes officiels : `ai-gateway-simple`, `ai-gateway-medium`, `ai-gateway-complex`,
-  `ai-gateway-code`, `ai-gateway-ocr`. Le client sélectionne le groupe avec le champ OpenAI `model`.
+- Six groupes officiels : `ai-gateway-simple`, `ai-gateway-tool-selection`, `ai-gateway-medium`,
+  `ai-gateway-complex`, `ai-gateway-code`, `ai-gateway-ocr`. `tool-selection` ne contient que des fournisseurs
+  vérifiés avec le JSON Schema strict de `LLMToolSelectorMiddleware`; il est dédié à la sélection d'outils.
+  Le client sélectionne le groupe avec le champ OpenAI `model`.
+- Le groupe `tool-selection` utilise provisoirement Groq gpt-oss-120b pour la requalification locale après
+  correction du prompt `always_include`. Son smoke test enum strict réduit passe ; les erreurs antérieures sur
+  l'enum complet doivent être requalifiées avec ce prompt corrigé avant de clôturer V1c. Gemma 4 26B a réussi
+  plusieurs cas auparavant, mais a renvoyé des 500 et des timeouts du fournisseur lors du rejeu courant ; NVIDIA
+  Nemotron 3.5 a expiré après 90 s dans le vrai middleware. Ils restent hors du groupe local courant.
   Les tags restent des métadonnées d'observation ; `enable_tag_filtering` est désactivé.
-- `simple-shuffle` et `enable_weighted_failover` utilisent les composants officiels LiteLLM :
-  un fournisseur par tentative, jusqu'à trois bascules dans le même groupe. Pas de repli vers une autre capacité.
+- `simple-shuffle` et `enable_weighted_failover` utilisent les composants officiels LiteLLM pour les groupes ordinaires ;
+  le groupe `ai-gateway-complex` utilise le routage officiel par latence (`latency-based-routing`, TTL 1 h), car les
+  mesures V1c ont montré des écarts de 4 s à 133 s entre ses déploiements. Jusqu'à trois bascules restent possibles
+  dans le même groupe. Pas de repli vers une autre capacité.
   Les groupes `ai-gateway-eval-*` et `ai-gateway-test-*` sont réservés aux clés de test.
 - Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA
   NIM (offre de prototypage), LLM7 (jeton gratuit par e-mail ; seuls `gpt-oss:20b` et `codestral-latest` sont gratuits) et
   Cohere (clé d'essai : 20 requêtes/min, 1 000 appels/mois, non commerciale ; en évaluation seulement, sauf `command-r7b`).
   SambaNova n'est plus gratuit : écarté. Les modèles sont sondés (outils + JSON) avant d'entrer dans un pool.
-- La clé applicative est autorisée uniquement sur les cinq groupes de production. Les permissions
+- `ai-gateway-complex` ne garde actuellement que les deux déploiements NVIDIA NIM Nemotron qui ont répondu aux requêtes
+  avec outils. MiniMax a montré une latence de 58,6 à 133,4 s ; Gemini 3.8 Flash a épuisé son quota (429), Cloudflare
+  gpt-oss-120b a rejeté le corps multimessage LangChain (400) et Mistral Medium avait déjà renvoyé 429. Ces modèles
+  restent dans leurs autres capacités vérifiées lorsqu'elles existent, mais ne sont pas des replis complexes.
+- La clé applicative est autorisée uniquement sur les six groupes de production. Les permissions
   LiteLLM sur les modèles excluent les groupes d'évaluation, les sondes directes et `ai-gateway-selftest`.
 - Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée
   `litellm-db` (même image PostgreSQL que l'ERP, volume séparé) pour les clés virtuelles, budgets et
   journaux de dépense (30 jours).
 - Réponses JSON validées contre le schéma demandé ; une réponse non conforme bascule sur un autre
   modèle. Cache désactivé.
+- Un fournisseur n'entre dans un groupe qu'après vérification du routage LiteLLM, du schéma JSON strict et des outils.
+  Une réponse directe du fournisseur ne prouve pas que le proxy sait router le modèle. NVIDIA gpt-oss-20b a été retiré
+  des groupes après `ModelNotMappedError` dans l'image LiteLLM épinglée (v1.104.2) ; le remettre exige une entrée de
+  catalogue officielle compatible avec le nom exact `openai/gpt-oss-20b`.
 - Les clés actuelles sont des **paliers gratuits**, qui peuvent utiliser les requêtes pour entraîner
   leurs modèles ; les données réelles y sont admises par décision du propriétaire (docs/ia.md, § 2).
 
@@ -58,7 +75,7 @@ python litellm/enregistrer_cles.py
 
 | Variable | Clé | Droits |
 |---|---|---|
-| `IA_LITELLM_API_KEY` | `erp-rh-ia` | Cinq groupes de production uniquement, 60 requêtes/min |
+| `IA_LITELLM_API_KEY` | `erp-rh-ia` | Six groupes de production uniquement, 60 requêtes/min |
 | `LITELLM_TEST_API_KEY` | `smoke-tests` | Groupes de production, évaluation, sondes et selftest |
 
 Pour une nouvelle valeur, la générer (`python -c "import secrets;print('sk-'+secrets.token_hex(24))"`), la placer

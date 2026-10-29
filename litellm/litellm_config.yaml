@@ -4,16 +4,6 @@
 # Source : docs/ia-proposition-routage-litellm.md (adoptée par le propriétaire).
 
 model_list:
-  - model_name: ai-gateway-complex
-    model_info: { id: gemini-3.8-flash--complex }
-    litellm_params:
-      model: gemini/gemini-3.8-flash
-      api_key: os.environ/GEMINI_API_KEY
-      weight: 5
-      timeout: 60
-      max_parallel_requests: 3
-      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
-
   - model_name: ai-gateway-code
     model_info: { id: gemini-3.8-flash--code }
     litellm_params:
@@ -22,7 +12,7 @@ model_list:
       weight: 5
       timeout: 60
       max_parallel_requests: 3
-      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
+      tags: [code, ocr, "id:gemini-3.8-flash"]
 
   - model_name: ai-gateway-ocr
     model_info: { id: gemini-3.8-flash--ocr }
@@ -42,7 +32,7 @@ model_list:
       weight: 5
       timeout: 60
       max_parallel_requests: 3
-      tags: [complex, code, ocr, "id:gemini-3.8-flash"]
+      tags: [code, ocr, "id:gemini-3.8-flash"]
 
   - model_name: ai-gateway-simple
     model_info: { id: gemini-3.5-flash-lite--simple }
@@ -117,6 +107,19 @@ model_list:
       max_parallel_requests: 2
       tags: [simple, "id:gemini-gemma-4-26b"]
 
+  # gpt-oss-120b a passé le smoke enum strict et le prompt ne demande plus les outils
+  # always_include, exclus du schéma officiel de sélection.
+  - model_name: ai-gateway-tool-selection
+    model_info: { id: groq-gpt-oss-120b--tool-selection, max_input_tokens: 5000 }
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      weight: 4
+      rpm: 30
+      timeout: 45
+      max_parallel_requests: 4
+      tags: [tool-selection, "id:groq-gpt-oss-120b"]
+
   # ---------------------------------------------------------------- Groq (Free plan)
   # Limites documentées par modèle : 30 RPM, 1K RPD, 8K TPM, 200K TPD (au niveau de l'organisation).
   # 8K TPM compte entrée + sortie (raisonnement inclus) : garder les prompts sous ~5K tokens.
@@ -166,7 +169,7 @@ model_list:
       rpm: 30
       timeout: 45
       max_parallel_requests: 4
-      tags: [medium, code, default, "id:groq-gpt-oss-120b"]
+      tags: [medium, code, default, tool-selection, "id:groq-gpt-oss-120b"]
 
   - model_name: ai-gateway-simple
     model_info: { id: groq-gpt-oss-20b--simple, max_input_tokens: 5000 }
@@ -198,19 +201,7 @@ model_list:
   # ---------------------------------------------------------------- Mistral (Experiment, gratuit)
   # Limites par modèle dans Admin > Limits (environ 1 req/s pour l'espace de travail). Les requêtes
   # gratuites peuvent servir à l'entraînement sauf désactivation dans Admin Console > Privacy.
-  # Sondé le 2026-10-25 : ministral-14b et codestral répondent (outils + JSON) ; medium renvoie 429
-  # sur ce compte (quota à vérifier) — un 429 bascule, il reste donc dans le pool.
-  - model_name: ai-gateway-complex
-    model_info: { id: mistral-medium--complex }
-    litellm_params:
-      model: mistral/mistral-medium-latest
-      api_key: os.environ/MISTRAL_API_KEY
-      weight: 3
-      rpm: 30
-      timeout: 60
-      max_parallel_requests: 1
-      tags: [complex, "id:mistral-medium"]
-
+  # Mistral Medium reste hors du pool complexe : 429 de quota observé sur la clé du propriétaire.
   - model_name: ai-gateway-test-mistral-medium
     model_info: { id: mistral-medium }
     litellm_params:
@@ -220,7 +211,7 @@ model_list:
       rpm: 30
       timeout: 60
       max_parallel_requests: 1
-      tags: [complex, "id:mistral-medium"]
+      tags: ["id:mistral-medium"]
 
   - model_name: ai-gateway-simple
     model_info: { id: mistral-ministral-14b--simple }
@@ -315,18 +306,6 @@ model_list:
   # retirée des pools avant J3. Environ 40 RPM par compte (non publié) : rpm 10 par modèle.
   # Sondé le 2026-10-25 (outils + JSON en 1 à 3 s) ; écartés : deepseek-v4.1-flash, glm-5.3, gemma-4-31b
   # (délai dépassé), kimi-k2.6, nemotron-3-super, muse-glimmer (404 pour ce compte), glm-5.3-flash (90 s).
-  - model_name: ai-gateway-complex
-    model_info: { id: nvidia-minimax-m31-flash--complex }
-    litellm_params:
-      model: openai/minimaxai/minimax-m3.1-flash
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 4
-      rpm: 10
-      timeout: 90
-      max_parallel_requests: 1
-      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
-
   - model_name: ai-gateway-code
     model_info: { id: nvidia-minimax-m31-flash--code }
     litellm_params:
@@ -361,7 +340,7 @@ model_list:
       rpm: 10
       timeout: 90
       max_parallel_requests: 1
-      tags: [complex, code, medium, "id:nvidia-minimax-m31-flash"]
+      tags: [code, medium, "id:nvidia-minimax-m31-flash"]
 
   - model_name: ai-gateway-complex
     model_info: { id: nvidia-nemotron-3-ultra-550b--complex }
@@ -435,50 +414,16 @@ model_list:
       max_parallel_requests: 1
       tags: [complex, medium, "id:nvidia-nemotron-35-super-vl-120b"]
 
-  - model_name: ai-gateway-simple
-    model_info: { id: nvidia-gpt-oss-20b--simple }
-    litellm_params:
-      model: openai/openai/gpt-oss-20b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 3
-      rpm: 10
-      timeout: 30
-      max_parallel_requests: 1
-      tags: [simple, "id:nvidia-gpt-oss-20b"]
-
   # ---------------------------------------------------------------- Cloudflare Workers AI
   # 10 000 Neurons/jour partagés par TOUS les modèles du compte (remise à zéro 00:00 UTC). Rester en
   # Workers Free pour 0 $. LiteLLM construit l'URL /ai/v1 depuis CLOUDFLARE_ACCOUNT_ID.
   # Workers AI refuse `content: null` (400, sans bascule) : un message assistant porteur d'appels
   # d'outils doit avoir un contenu chaîne, éventuellement vide (service IA, T6).
-  - model_name: ai-gateway-test-nvidia-gpt-oss-20b
-    model_info: { id: nvidia-gpt-oss-20b }
-    litellm_params:
-      model: openai/openai/gpt-oss-20b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 3
-      rpm: 10
-      timeout: 30
-      max_parallel_requests: 1
-      tags: [simple, "id:nvidia-gpt-oss-20b"]
-
   # ---------------------------------------------------------------- Cloudflare Workers AI
   # 10 000 Neurons/jour partagés par TOUS les modèles du compte (remise à zéro 00:00 UTC). Rester en
   # Workers Free pour 0 $. LiteLLM construit l'URL /ai/v1 depuis CLOUDFLARE_ACCOUNT_ID.
   # Workers AI refuse `content: null` (400, sans bascule) : un message assistant porteur d'appels
-  # d'outils doit avoir un contenu chaîne, éventuellement vide (service IA, T6).
-  - model_name: ai-gateway-complex
-    model_info: { id: cloudflare-gpt-oss-120b--complex, max_input_tokens: 16000 }
-    litellm_params:
-      model: cloudflare/@cf/openai/gpt-oss-120b
-      api_key: os.environ/CLOUDFLARE_API_KEY
-      weight: 2
-      timeout: 60
-      max_parallel_requests: 2
-      tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
-
+  # Workers AI ne prend pas le corps multi-message observé avec l'agent LangChain ; gpt-oss-120b reste en code seulement.
   - model_name: ai-gateway-code
     model_info: { id: cloudflare-gpt-oss-120b--code, max_input_tokens: 16000 }
     litellm_params:
@@ -487,7 +432,7 @@ model_list:
       weight: 2
       timeout: 60
       max_parallel_requests: 2
-      tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
+      tags: [code, "id:cloudflare-gpt-oss-120b"]
 
   - model_name: ai-gateway-test-cloudflare-gpt-oss-120b
     model_info: { id: cloudflare-gpt-oss-120b, max_input_tokens: 16000 }
@@ -497,7 +442,7 @@ model_list:
       weight: 2
       timeout: 60
       max_parallel_requests: 2
-      tags: [complex, code, "id:cloudflare-gpt-oss-120b"]
+      tags: [code, "id:cloudflare-gpt-oss-120b"]
 
   - model_name: ai-gateway-simple
     model_info: { id: cloudflare-glm-47-flash--simple, max_input_tokens: 16000 }
@@ -855,8 +800,15 @@ model_list:
       timeout: 30
 
 router_settings:
-  # Bascule pondérée officielle entre déploiements du même groupe.
+  # Les capacités simples gardent la bascule pondérée ; les questions complexes suivent le déploiement
+  # le plus rapide observé via le routage officiel par latence (TTL documenté par LiteLLM).
   routing_strategy: simple-shuffle
+  routing_groups:
+    - group_name: complex-low-latency
+      models: [ai-gateway-complex]
+      routing_strategy: latency-based-routing
+      routing_strategy_args:
+        ttl: 3600
   enable_weighted_failover: true
   # Jusqu'à 3 tentatives supplémentaires sur d'autres déploiements du même groupe (4 modèles au plus).
   max_fallbacks: 3

@@ -71,6 +71,9 @@ describe('AppComponent', () => {
     it("offre un lien d'évitement qui met le focus sur le contenu principal", () => {
       const fixture = TestBed.createComponent(AppComponent);
       const host = fixture.nativeElement as HTMLElement;
+      const contenuConcurrent = document.createElement('p');
+      contenuConcurrent.id = 'contenu';
+      document.body.append(contenuConcurrent);
       document.body.append(host);
       try {
         fixture.detectChanges();
@@ -78,10 +81,12 @@ describe('AppComponent', () => {
         lien?.click();
 
         expect(lien?.textContent).toContain('Aller au contenu');
-        expect(host.querySelector('main#contenu')).not.toBeNull();
-        expect(document.activeElement?.id).toBe('contenu');
+        const contenu = host.querySelector<HTMLElement>('main#contenu');
+        expect(contenu).not.toBeNull();
+        expect(document.activeElement).toBe(contenu);
       } finally {
         fixture.destroy();
+        contenuConcurrent.remove();
         host.remove();
       }
     });
