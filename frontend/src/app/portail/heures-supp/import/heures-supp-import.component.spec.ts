@@ -4,6 +4,8 @@ import { Component, input, model, WritableSignal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
+import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
+import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
 import { HeuresSuppImportAnalyse, HeuresSuppImportResult } from '../models/heures-supp.model';
@@ -27,23 +29,31 @@ interface ImportApi {
   chantierId: WritableSignal<number | null>;
   chantierLibelle: WritableSignal<string>;
   fichier: WritableSignal<File | null>;
-  texteForfaits: WritableSignal<string>;
+  forfaits: WritableSignal<{ cin: string; nomPrenom: string; montantDh: number }[]>;
+  employeForfaitSelectionne: WritableSignal<number | null>;
+  forfaitEmploye: WritableSignal<{ id: number; nomPrenom: string; cin: string; displayLabel: string } | null>;
+  montantForfait: WritableSignal<number | null>;
+  forfaitDialogueOuvert: WritableSignal<boolean>;
   analyse: WritableSignal<HeuresSuppImportAnalyse | null>;
   resultat: WritableSignal<HeuresSuppImportResult | null>;
   erreur: WritableSignal<string | null>;
   chargement: WritableSignal<boolean>;
-  telechargementModele: WritableSignal<boolean>;
   peutRemplacer(): boolean;
   creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
   alignements: WritableSignal<number[]>;
-  valeurSalaire(numero: number): string;
+  valeurSalaire(numero: number): number | null;
+  dateCreation(numero: number, cle: 'dateNaissance' | 'dateEmbauche'): Date | null;
+  saisirDate(numero: number, cle: 'dateNaissance' | 'dateEmbauche', valeur: Date | null): void;
+  saisirSalaire(numero: number, valeur: number | null): void;
+  choisirTypeSalaire(numero: number, valeur: unknown): void;
   estAligne(id: number): boolean;
   choisirChantier(value: unknown): void;
   choisirFonction(numero: number, value: unknown): void;
   choisirFichier(event: Event): void;
-  inputValue(event: Event): string;
-  nombreValue(event: Event): number;
-  telechargerModele(): void;
+  choisirEmployeForfait(value: unknown): void;
+  enregistrerForfait(): void;
+  annulerForfait(): void;
+  retirerForfait(cin: string): void;
   verifierContexte(): void;
   analyser(): void;
   corriger(): void;
@@ -66,21 +76,25 @@ describe('HeuresSuppImportComponent', () => {
   let service: Record<string, ReturnType<typeof vi.fn>>;
   let confirmation: { confirm: ReturnType<typeof vi.fn> };
   let chantierReference: { fetchById: ReturnType<typeof vi.fn> };
+  let employeeReference: { fetchById: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     service = {
-      verifierPrerequis: vi.fn(), telechargerModele: vi.fn().mockReturnValue(of(new Blob(['modele']))),
+      verifierPrerequis: vi.fn(),
       analyserImport: vi.fn(), corrigerImport: vi.fn(), importer: vi.fn(), remplacer: vi.fn()
     };
     confirmation = { confirm: vi.fn() };
     chantierReference = { fetchById: vi.fn().mockReturnValue(of({ id: 4, code: 'C4', designation: 'Site', nom: null, actif: true })) };
+    employeeReference = { fetchById: vi.fn().mockReturnValue(of({ id: 7, nomPrenom: 'Salma Alaoui', cin: 'AB123', displayLabel: 'Salma Alaoui — AB123' })) };
     TestBed.configureTestingModule({
       imports: [HeuresSuppImportComponent],
       providers: [
         provideRouter([]),
         { provide: HeuresSuppService, useValue: service },
         { provide: ConfirmDialogService, useValue: confirmation },
-        { provide: ChantierReferenceService, useValue: chantierReference }
+        { provide: ChantierReferenceService, useValue: chantierReference },
+        { provide: EmployeeReferenceService, useValue: employeeReference },
+        { provide: FunctionReferenceService, useValue: {} }
       ]
     });
     TestBed.overrideComponent(HeuresSuppImportComponent, {
@@ -97,7 +111,7 @@ describe('HeuresSuppImportComponent', () => {
     expect(document.body.textContent).toContain('Choisir le mois et le chantier');
   });
 
-  it('parcourt les trois étapes par les boutons affichés', () => {
+  it('parcourt les quatre étapes par les boutons affichés', () => {
     api.mois.set(new Date(2026, 9, 1));
     api.choisirChantier(4);
     service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
@@ -110,10 +124,14 @@ describe('HeuresSuppImportComponent', () => {
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     service['analyserImport'].mockReturnValue(of(ANALYSE));
     fixture.detectChanges();
-    const boutonAnalyse = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Analyser le fichier')) as HTMLButtonElement;
-    boutonAnalyse.click();
+    const continuer = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Continuer')) as HTMLButtonElement;
+    continuer.click();
     fixture.detectChanges();
     expect(api.etape()).toBe(3);
+    const boutonAnalyse = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Analyser le pointage')) as HTMLButtonElement;
+    boutonAnalyse.click();
+    fixture.detectChanges();
+    expect(api.etape()).toBe(4);
 
     service['importer'].mockReturnValue(of({ periode: '2026-10', chantierId: 4, lignesHeures: 1, lignesZero: 0,
       forfaitsSeuls: 0, remplacements: 0, heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 }));
@@ -144,9 +162,16 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
-    expect(api.valeurSalaire(2)).toBe('');
+    expect(api.valeurSalaire(2)).toBeNull();
     api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
-    expect(api.valeurSalaire(2)).toBe('4000');
+    expect(api.valeurSalaire(2)).toBe(4000);
+    expect(api.dateCreation(2, 'dateNaissance')).toEqual(new Date(1990, 0, 1));
+    api.saisirDate(2, 'dateNaissance', new Date(1991, 2, 2));
+    expect(api.creations()[2].dateNaissance).toBe('1991-03-02');
+    api.saisirSalaire(2, null);
+    expect(api.valeurSalaire(2)).toBeNull();
+    api.saisirSalaire(2, 4500);
+    expect(api.valeurSalaire(2)).toBe(4500);
     expect(api.estAligne(7)).toBe(false);
     api.basculerAlignement(7);
     expect(api.estAligne(7)).toBe(true);
@@ -169,8 +194,10 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirFonction(3, 8);
     api.choisirFonction(4, '9');
     expect(api.creations()).toMatchObject({ 3: { fonctionId: 8 }, 4: { fonctionId: 0 } });
-    expect(api.inputValue({ target: { value: '12,5' } } as unknown as Event)).toBe('12,5');
-    expect(api.nombreValue({ target: { value: '12.5' } } as unknown as Event)).toBe(12.5);
+    api.choisirTypeSalaire(4, 'JOURNALIER');
+    api.choisirTypeSalaire(5, 'INCONNU');
+    expect(api.creations()[4].typeSalaire).toBe('JOURNALIER');
+    expect(api.creations()[5]).toBeUndefined();
   });
 
   it('bloque l’étape suivante si la paie mensuelle manque', () => {
@@ -210,50 +237,39 @@ describe('HeuresSuppImportComponent', () => {
     expect(chantierReference.fetchById).toHaveBeenCalledWith(4);
   });
 
-  it('propose et télécharge le modèle Excel depuis l’étape fichier', () => {
+  it('ne mentionne pas le modèle Excel dans les étapes du wizard', () => {
     api.etape.set(2);
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('Télécharger le modèle Excel');
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:modele');
-    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    api.telechargerModele();
-    expect(service['telechargerModele']).toHaveBeenCalledOnce();
-    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
-    expect(click).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:modele');
-  });
-
-  it('affiche l’erreur si le téléchargement du modèle échoue', () => {
-    service['telechargerModele'].mockReturnValue(throwError(() => new Error('offline')));
-    api.telechargerModele();
-    expect(api.erreur()).toContain('Le modèle Excel n’a pas pu être téléchargé');
-    expect(api.telechargementModele()).toBe(false);
+    expect(document.body.textContent).not.toContain('Télécharger le modèle Excel');
   });
 
   it('valide le format des forfaits puis analyse avec le montant décimal', () => {
     api.mois.set(new Date(2026, 9, 1));
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
-    api.texteForfaits.set('AB123;12,50\n');
+    api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 12.5 }]);
     service['analyserImport'].mockReturnValue(of(ANALYSE));
 
     api.analyser();
 
     expect(service['analyserImport']).toHaveBeenCalledWith(expect.any(File), '2026-10', 4, [{ cin: 'AB123', montantDh: 12.5 }]);
-    expect(api.etape()).toBe(3);
+    expect(api.etape()).toBe(4);
     expect(api.analyse()).toEqual(ANALYSE);
   });
 
-  it('affiche une erreur claire pour un forfait mal formé', () => {
-    api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
-    api.choisirChantier(4);
-    api.texteForfaits.set('AB123;pas-un-montant');
-
-    api.analyser();
-
-    expect(api.erreur()).toContain('Forfait invalide');
-    expect(service['analyserImport']).not.toHaveBeenCalled();
+  it('ajoute un forfait depuis un employé choisi et permet de le retirer', () => {
+    api.choisirEmployeForfait(7);
+    expect(employeeReference.fetchById).toHaveBeenCalledWith(7);
+    expect(api.forfaitDialogueOuvert()).toBe(true);
+    expect(api.forfaitEmploye()?.cin).toBe('AB123');
+    api.annulerForfait();
+    expect(api.employeForfaitSelectionne()).toBeNull();
+    api.choisirEmployeForfait(7);
+    api.montantForfait.set(500);
+    api.enregistrerForfait();
+    expect(api.forfaits()).toEqual([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 500 }]);
+    api.retirerForfait('AB123');
+    expect(api.forfaits()).toEqual([]);
   });
 
   it('exige les données de création de chaque nouvel employé avant d’envoyer les corrections', () => {
@@ -271,7 +287,7 @@ describe('HeuresSuppImportComponent', () => {
     api.mois.set(new Date(2026, 9, 1));
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
-    api.texteForfaits.set('AB123;12,50');
+    api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 12.5 }]);
     api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
     api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
     api.alignements.set([9]);
@@ -312,7 +328,7 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.erreur()).toContain('Complétez les dates');
     expect(service['corrigerImport']).not.toHaveBeenCalled();
 
-    api.texteForfaits.set('AB123;500');
+    api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 500 }]);
     service['analyserImport'].mockReturnValue(throwError(() => ({ message: 'Analyse refusée.' })));
     api.analyser();
     expect(api.erreur()).toBe('Analyse refusée.');
@@ -329,7 +345,7 @@ describe('HeuresSuppImportComponent', () => {
     api.mois.set(new Date(2026, 9, 1));
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
-    api.texteForfaits.set('AB123;500');
+    api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 500 }]);
     api.analyse.set({ ...ANALYSE, pret: false, erreurs: ['Une ligne existe déjà pour ce mois.'] });
     api.basculerAlignement(7);
     expect(api.alignements()).toEqual([7]);

@@ -1,0 +1,16 @@
+.hs-form__contexte {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+
+.hs-form__contexte div { display: grid; gap: var(--space-2xs); }
+.hs-form__contexte span { color: var(--color-text-muted); font-size: var(--text-sm); }
+.hs-form__contexte stp-message { grid-column: 1 / -1; }
+.hs-form__hint { grid-column: 1 / -1; margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.hs-form .app-form__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--space-sm); }

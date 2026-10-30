@@ -36,8 +36,15 @@ export interface VueOnglet {
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
+    :host {
+      display: block;
+      min-width: 0;
+    }
+
     .vue-switcher {
       display: flex;
+      min-width: 0;
+      width: 100%;
       gap: var(--space-xs);
     }
 
@@ -56,8 +63,13 @@ export interface VueOnglet {
     }
 
     @media (max-width: 767px) {
+      .vue-switcher {
+        flex-wrap: wrap;
+      }
+
       .vue-switcher__lien {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         justify-content: center;
         padding-inline: var(--space-sm);
         min-height: 2.75rem;

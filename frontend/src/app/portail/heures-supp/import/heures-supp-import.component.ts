@@ -5,11 +5,14 @@ import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
+import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
+import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { finalize } from 'rxjs';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
+import { EmployeeReferenceOption, EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
@@ -21,7 +24,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [DecimalPipe, ButtonComponent, MessageComponent, MonthInputComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
   templateUrl: './heures-supp-import.component.html',
   styleUrl: './heures-supp-import.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -29,17 +32,24 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 export class HeuresSuppImportComponent {
   protected readonly chantiers = inject(ChantierReferenceService);
   protected readonly fonctions = inject(FunctionReferenceService);
+  protected readonly employes = inject(EmployeeReferenceService);
   protected readonly etape = signal(1);
   protected readonly mois = signal<Date | null>(null);
   protected readonly chantierId = signal<number | null>(null);
   protected readonly chantierLibelle = signal('');
   protected readonly fichier = signal<File | null>(null);
-  protected readonly texteForfaits = signal('');
+  protected readonly employeForfaitSelectionne = signal<number | null>(null);
+  protected readonly forfaitDialogueOuvert = signal(false);
+  protected readonly forfaitEmploye = signal<EmployeeReferenceOption | null>(null);
+  protected readonly montantForfait = signal<number | null>(null);
+  protected readonly forfaits = signal<(HeuresSuppImportForfait & { nomPrenom: string })[]>([]);
   protected readonly analyse = signal<HeuresSuppImportAnalyse | null>(null);
   protected readonly resultat = signal<HeuresSuppImportResult | null>(null);
   protected readonly erreur = signal<string | null>(null);
   protected readonly chargement = signal(false);
-  protected readonly telechargementModele = signal(false);
+  protected readonly typesSalaire: SelectOption<BrouillonCreation['typeSalaire']>[] = [
+    { label: 'Journalier', value: 'JOURNALIER' }, { label: 'Mensuel', value: 'MENSUEL' }
+  ];
   protected readonly peutRemplacer = computed(() => {
     const erreurs = this.analyse()?.erreurs ?? [];
     return erreurs.length > 0 && erreurs.every((message) => message.includes('existe déjà'));
@@ -52,26 +62,47 @@ export class HeuresSuppImportComponent {
 
   protected choisirChantier(value: unknown): void { this.chantierId.set(typeof value === 'number' ? value : null); }
   protected choisirFonction(numero: number, value: unknown): void { this.modifierCreation(numero, 'fonctionId', typeof value === 'number' ? value : 0); }
-  protected telechargerModele(): void {
-    if (this.telechargementModele()) return;
-    this.telechargementModele.set(true);
-    this.service.telechargerModele().pipe(finalize(() => this.telechargementModele.set(false))).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = 'Modele_Heures_Supplementaires.xlsx';
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.erreur.set('Le modèle Excel n’a pas pu être téléchargé. Réessayez.')
-    });
+  protected choisirEmployeForfait(value: unknown): void {
+    if (typeof value !== 'number') return;
+    this.employeForfaitSelectionne.set(value);
+    this.employes.fetchById(value).subscribe({ next: (employe) => {
+      this.forfaitEmploye.set(employe);
+      this.montantForfait.set(null);
+      this.forfaitDialogueOuvert.set(true);
+    }, error: () => this.erreur.set('Les informations de l’employé n’ont pas pu être chargées.') });
   }
-  protected inputValue(event: Event): string { return (event.target as HTMLInputElement).value; }
-  protected nombreValue(event: Event): number { return Number(this.inputValue(event)); }
+  protected enregistrerForfait(): void {
+    const employe = this.forfaitEmploye(); const montant = this.montantForfait();
+    if (!employe || montant === null || !Number.isFinite(montant) || montant < 0) return;
+    this.forfaits.update((liste) => {
+      const autres = liste.filter((forfait) => forfait.cin !== employe.cin);
+      return [...autres, { cin: employe.cin, nomPrenom: employe.nomPrenom, montantDh: montant }];
+    });
+    this.forfaitDialogueOuvert.set(false);
+    this.forfaitEmploye.set(null);
+    this.employeForfaitSelectionne.set(null);
+  }
+  protected retirerForfait(cin: string): void { this.forfaits.update((liste) => liste.filter((forfait) => forfait.cin !== cin)); }
+  protected annulerForfait(): void {
+    this.forfaitDialogueOuvert.set(false);
+    this.forfaitEmploye.set(null);
+    this.employeForfaitSelectionne.set(null);
+    this.montantForfait.set(null);
+  }
+  protected dateCreation(numero: number, cle: 'dateNaissance' | 'dateEmbauche'): Date | null {
+    const valeur = this.creation(numero)[cle];
+    return valeur ? new Date(`${valeur}T00:00:00`) : null;
+  }
+  protected saisirDate(numero: number, cle: 'dateNaissance' | 'dateEmbauche', valeur: Date | null): void {
+    this.modifierCreation(numero, cle, valeur ? `${valeur.getFullYear()}-${String(valeur.getMonth() + 1).padStart(2, '0')}-${String(valeur.getDate()).padStart(2, '0')}` : '');
+  }
+  protected choisirTypeSalaire(numero: number, valeur: unknown): void {
+    if (valeur === 'JOURNALIER' || valeur === 'MENSUEL') this.modifierCreation(numero, 'typeSalaire', valeur);
+  }
   protected choisirFichier(event: Event): void { this.fichier.set((event.target as HTMLInputElement).files?.[0] ?? null); this.analyse.set(null); }
   protected creation(numero: number): BrouillonCreation { return this.creations()[numero] ?? VIDE; }
-  protected valeurSalaire(numero: number): string { const valeur = this.creation(numero).salaire; return Number.isFinite(valeur) ? String(valeur) : ''; }
+  protected valeurSalaire(numero: number): number | null { const valeur = this.creation(numero).salaire; return Number.isFinite(valeur) ? valeur : null; }
+  protected saisirSalaire(numero: number, valeur: number | null): void { this.modifierCreation(numero, 'salaire', valeur ?? Number.NaN); }
   protected modifierCreation<K extends keyof BrouillonCreation>(numero: number, cle: K, valeur: BrouillonCreation[K] | string): void {
     this.creations.update((actuel) => ({ ...actuel, [numero]: { ...(actuel[numero] ?? VIDE), [cle]: valeur } as BrouillonCreation }));
   }
@@ -88,12 +119,12 @@ export class HeuresSuppImportComponent {
   }
   protected analyser(): void {
     const file = this.fichier(); const id = this.chantierId(); if (!file || !id) return;
-    const forfaits = this.lireForfaits(); if (!forfaits) return;
-    this.lancer(this.service.analyserImport(file, this.periode(), id, forfaits), (analyse) => { this.analyse.set(analyse); this.etape.set(3); });
+    const forfaits = this.lireForfaits();
+    this.lancer(this.service.analyserImport(file, this.periode(), id, forfaits), (analyse) => { this.analyse.set(analyse); this.etape.set(4); });
   }
   protected corriger(): void {
     const file = this.fichier(); const id = this.chantierId(); const analyse = this.analyse(); if (!file || !id || !analyse) return;
-    const forfaits = this.lireForfaits(); if (!forfaits) return;
+    const forfaits = this.lireForfaits();
     for (const ligne of analyse.lignes.filter((l) => l.employeId === null)) {
       const c = this.creation(ligne.numeroLigne);
       if (!c.dateNaissance || !c.dateEmbauche || !c.fonctionId || !Number.isFinite(c.salaire) || c.salaire < 0 || !c.typeSalaire) { this.erreur.set('Complétez les dates, la fonction, le salaire et le type de salaire de chaque nouvel employé.'); return; }
@@ -104,7 +135,7 @@ export class HeuresSuppImportComponent {
   }
   protected importer(): void {
     const file = this.fichier(); const id = this.chantierId(); const analyse = this.analyse(); if (!file || !id || !analyse?.pret) return;
-    const forfaits = this.lireForfaits(); if (!forfaits) return;
+    const forfaits = this.lireForfaits();
     this.lancer(this.service.importer(file, this.periode(), id, forfaits), (resultat) => this.resultat.set(resultat));
   }
   protected demanderRemplacement(): void {
@@ -117,19 +148,11 @@ export class HeuresSuppImportComponent {
   private remplacer(): void {
     const file = this.fichier(); const id = this.chantierId();
     if (!file || !id) return;
-    const forfaits = this.lireForfaits(); if (!forfaits) return;
+    const forfaits = this.lireForfaits();
     this.lancer(this.service.remplacer(file, this.periode(), id, forfaits), (resultat) => this.resultat.set(resultat));
   }
 
-  private lireForfaits(): HeuresSuppImportForfait[] | null {
-    try {
-      return this.texteForfaits().split(/\r?\n/).map((ligne) => ligne.trim()).filter(Boolean).map((ligne) => {
-        const [cin, montant] = ligne.split(/[;\t]/).map((valeur) => valeur.trim());
-        if (!cin || montant === undefined || !Number.isFinite(Number(montant.replace(',', '.')))) throw new Error('Forfait invalide. Utilisez une ligne CIN;montant, par exemple CIN123;500.');
-        return { cin, montantDh: Number(montant.replace(',', '.')) };
-      });
-    } catch (e) { this.erreur.set(e instanceof Error ? e.message : 'Forfait invalide.'); return null; }
-  }
+  private lireForfaits(): HeuresSuppImportForfait[] { return this.forfaits().map(({ cin, montantDh }) => ({ cin, montantDh })); }
   private lancer<T>(source: import('rxjs').Observable<T>, succes: (valeur: T) => void): void {
     this.erreur.set(null); this.chargement.set(true);
     source.subscribe({ next: (valeur) => { this.chargement.set(false); succes(valeur); }, error: (e: { error?: { message?: string }; message?: string }) => { this.chargement.set(false); this.erreur.set(e.error?.message ?? e.message ?? 'L’opération a échoué. Réessayez.'); } });

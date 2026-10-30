@@ -7,7 +7,8 @@ Il s'appuie sur les domaines Employé, Paie et Chantier pour identifier les pers
 les STC. Il ne modifie pas les données de Paie.
 
 Les vues sont **Tabulaire**, **Cartes** et **Analytique**. Cartes et Analytique étendent le socle partagé du périmètre et leurs agrégats sont calculés côté Spring.
-L'import se fait par un assistant multistep, un chantier à la fois.
+La vue Tabulaire filtre par période, chantier, équipe, fonction, CIN et nom/prénom. Elle affiche les champs conservés pour le calcul et le suivi métier, dont CIN, S/H, P/H, Montant, statut STC/sortie, STC, Forfait et Net à payer. Le total Net à payer porte sur tout le résultat filtré, indépendamment de la pagination ; le PDF exporte les mêmes lignes et ce total.
+L'ajout et la modification utilisent des écrans dédiés, selon le parcours des domaines Paie et Équipe. L'import se fait par un assistant multistep, un chantier à la fois.
 Le bouton fractionné « Importer un chantier » de la collection donne aussi accès au modèle Excel avant l'ouverture du wizard.
 
 ## Modèle et instantanés
@@ -28,6 +29,7 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 | Route | Contrat |
 |---|---|
 | `POST /heures-supp/search` | Recherche paginée selon période, chantier, équipe, fonction, CIN et nom ; renvoie les lignes détaillées. |
+| `GET /heures-supp/{id}` | Renvoie une ligne pour son écran de modification. |
 | `POST /heures-supp/analytique` | Indicateurs et répartitions par chantier, fonction et équipe selon les critères. |
 | `PUT /heures-supp/{id}` | Modifie les heures et/ou le forfait d'une ligne, avec contrôle de version et recalcul des montants. |
 | `POST /heures-supp` | Ajoute une ligne manuellement à partir d'un employé, d'une paie mensuelle et d'un chantier. |
@@ -85,18 +87,16 @@ retenu est un instantané de la fiche Employé au moment de chaque nouvel import
 
 ## Assistant d'import
 
-Depuis le tableau, les utilisateurs autorisés peuvent également ajouter une ligne manuellement en sélectionnant un employé, un mois, un chantier et au moins une valeur (heures ou forfait). Le serveur exige le bulletin de paie de cet employé pour le mois, reprend la fonction et l'observation STC/sortie de ce bulletin et refuse tout doublon employé/mois/chantier.
+Depuis l'écran dédié, les utilisateurs autorisés peuvent ajouter une ligne manuellement en sélectionnant un employé, un mois, un chantier et au moins une valeur (heures ou forfait). La modification a aussi son écran dédié ; elle affiche les informations historiques conservées et permet de modifier les heures et/ou le forfait. Le serveur exige le bulletin de paie de cet employé pour le mois, reprend la fonction et l'observation STC/sortie de ce bulletin et refuse tout doublon employé/mois/chantier.
 
-1. **Mois et chantier** : si aucune paie n'existe pour le mois, bloquer dès cette étape avec une explication indiquant
-   d'importer d'abord la paie de ce mois.
-2. **Fichier** : le bouton « Télécharger le modèle Excel » fournit le classeur `.xlsx` avec trois colonnes obligatoires (`Nom et prénom`, `CIN`, `HS`). Le wizard permet aussi de saisir les forfaits `CIN;montant`, y compris pour un employé absent du fichier d'heures.
-3. **Analyse** : aucune écriture ; conserver les lignes HS à zéro avec P/H = 0 et Montant = 0, signaler une ligne HS vide par son numéro, rapprocher les employés par CIN, vérifier qu'un bulletin de
-   Paie existe pour chacun dans le même mois et calculer les valeurs présentées.
-4. **Corrections** : reprendre le mécanisme Paie : aligner explicitement la fiche existante sur le nom du fichier, ou créer la fiche d'un CIN inconnu en demandant ses dates, sa fonction, son salaire et son type. La sélection de fonction exige `FUNCTION_READ`. Toute ligne doit ensuite satisfaire l'exigence d'un bulletin du même mois.
-5. **Forfaits** : ajouter un employé et un montant même s'il n'est pas présent dans les lignes HS ; refuser le forfait
-   pour un employé marqué STC/sortie dans la paie du mois.
-6. **Récapitulatif** : présenter séparément heures, Montant, STC, Forfaits et Net à payer avant confirmation.
-7. **Import** : enregistrer le lot validé en une transaction et afficher un bilan final.
+1. **Mois et chantier** : si aucune paie n'existe pour le mois, bloquer dès cette étape et demander d'importer la paie.
+2. **Pointage** : déposer le classeur `.xlsx` avec trois colonnes obligatoires (`Nom et prénom`, `CIN`, `HS`). Le modèle Excel se télécharge depuis le menu d'import de la collection, en dehors du wizard.
+3. **Forfaits** : rechercher et choisir un employé, saisir son montant dans une fenêtre, puis vérifier la liste des forfaits. L'employé peut être absent du fichier de pointage.
+4. **Contrôle et import** : analyser sans écrire, conserver les lignes HS à zéro, signaler une cellule HS vide et rapprocher les employés par CIN. Après les corrections demandées (alignement explicite ou création de fiche), présenter heures, Montant, STC, Forfaits et Net à payer avant de confirmer l'import atomique. Le forfait d'un employé marqué STC/sortie est refusé.
+
+## Interface et composants partagés
+
+Les trois vues utilisent `app-collection-shell` pour leur titre, leurs onglets, leurs actions et leurs filtres, et `app-collection-table` pour la liste. La barre de filtres reprend la classe partagée `app-toolbar` déjà employée par Paie et Employés; le nom et le CIN se synchronisent après une courte pause de saisie. Les vues Cartes et Analytique réutilisent les composants communs de `portail/perimetre/`; leur configuration de domaine transporte aussi les filtres CIN et nom vers la liste du cockpit de recherche. Les contrôles disponibles dans le catalogue Staport (sélecteurs, nombres, dates, mois, dialogues, boutons, tableau et export PDF) sont réutilisés; seul le récapitulatif statique de l'étape de contrôle utilise le style partagé prévu pour les petits tableaux non interactifs.
 
 Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. La purge d'un mois requiert la permission dédiée, la saisie du nombre de lignes à supprimer et une confirmation serveur du même compte ; elle couvre tous les chantiers du mois et conserve les instantanés Envers. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
 

@@ -28,9 +28,12 @@ export interface CollectionTableConfig {
       }
       <div [hidden]="!!erreur()">
       <div class="app-table-bar">
+        <div class="app-table-bar__summary">
         <p class="app-table-bar__total" role="status">
           @if (!loading()) { {{ configuration().countLabel(totalRecords()) }} }
         </p>
+        <ng-content select="[table-summary]"></ng-content>
+        </div>
         <div class="app-table-bar__tools">
           <app-column-chooser class="en-ligne" [state]="columnState()"></app-column-chooser>
           <ng-content select="[table-export]"></ng-content>

@@ -176,6 +176,19 @@ class HeuresSuppServiceTest {
         verify(mapper).toDto(ligne);
     }
 
+    @Test
+    void rechercherParIdMappeLaLigneEtRefuseUnIdInconnu() {
+        var ligne = new HeureSupp();
+        when(repository.findById(12L)).thenReturn(Optional.of(ligne));
+        when(mapper.toDto(ligne)).thenReturn(DTO);
+
+        assertSame(DTO, service.rechercherParId(12L));
+        verify(repository).findById(12L);
+
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(HeuresSuppImportException.class, () -> service.rechercherParId(99L));
+    }
+
     private HeureSupp ligneExistante(long version, BigDecimal taux, boolean stc) {
         HeureSupp ligne = new HeureSupp();
         ReflectionTestUtils.setField(ligne, "version", version);

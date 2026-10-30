@@ -20,7 +20,7 @@
   label { display: grid; gap: var(--space-xs); font-weight: 500; }
   input:not([type=checkbox]), select, textarea { width: 100%; min-height: var(--control-height); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm); background: var(--color-surface); color: var(--color-text); }
   &__file, &__forfaits { margin: var(--space-md) 0; }
-  &__template, &__actions { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin: var(--space-md) 0; }
+  &__actions { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin: var(--space-md) 0; }
   &__actions { justify-content: flex-end; }
   &__totals { display: flex; gap: var(--space-sm); flex-wrap: wrap; padding: var(--space-md); background: var(--color-surface-alt); margin: var(--space-md) 0; }
   &__totals > * { padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-pill); }
@@ -30,6 +30,11 @@
   &__table { margin-top: var(--space-md); }
   &__overflow { overflow: auto; }
   &__success { text-align: center; }
+  &__empty { padding: var(--space-md); border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-text-muted); }
+  &__forfaits-liste { display: grid; gap: var(--space-sm); margin: var(--space-md) 0; }
+  &__forfait-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-md); padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-alt); }
+  &__forfait-ligne div { display: grid; gap: var(--space-2xs); }
+  &__forfait-ligne span { color: var(--color-text-muted); font-size: var(--text-sm); }
 }
 
 @include bp.phone {

@@ -15,7 +15,7 @@ describe('moduleHeuresSupp', () => {
   it('reprend les filtres d’URL pour la liste et les agrégats', () => {
     const module = moduleHeuresSupp();
     const params = convertToParamMap({ periode: '2026-10', chantierIds: '2', equipeIds: '0', fonctionIds: '8', cin: 'AB', nom: 'Salma' });
-    expect(module.parametresListe(params)).toEqual({ periode: '2026-10', chantierIds: '2', equipeIds: '0', fonctionIds: '8' });
+    expect(module.parametresListe(params)).toEqual({ periode: '2026-10', chantierIds: '2', equipeIds: '0', fonctionIds: '8', cin: 'AB', nom: 'Salma' });
     expect(module.critereHeuresSupp?.(params, { chantierIds: [2], equipeIds: [0], fonctionIds: [8] }, '2026-10'))
       .toEqual({ periode: '2026-10', chantierIds: [2], equipeIds: [0], fonctionIds: [8], cin: 'AB', nomPrenom: 'Salma' });
   });

@@ -56,6 +56,13 @@ public class HeuresSuppController {
         return analytique.periodes();
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Consulter une ligne d'heures supplémentaires")
+    @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
+    public HeureSuppResponseDto rechercherParId(@PathVariable Long id) {
+        return service.rechercherParId(id);
+    }
+
     @PostMapping("/analytique")
     @Operation(summary = "Lire les indicateurs mensuels et répartitions par chantier et fonction")
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
