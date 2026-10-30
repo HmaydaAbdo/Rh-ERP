@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Agent de l'assistant RH (docs/ia.md, T10) : la boucle officielle ``create_agent`` de LangChain et ses middlewares.
+"""Agent de Staport Intelligence dans ERP-RH : ``create_agent`` de LangChain et ses middlewares officiels.
 
 Rien n'est orchestré à la main : le modèle choisit lui-même la forme de sa réponse — directe pour un message simple,
 avec outils pour une question de données, avec un plan suivi (``write_todos``) pour une demande à plusieurs étapes.
@@ -29,6 +29,7 @@ from langchain.agents.middleware import (
     SummarizationMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
+    dynamic_prompt,
 )
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -38,33 +39,39 @@ from langgraph.graph.state import CompiledStateGraph
 from erp_rh_ia.contexte import ContexteErp
 from erp_rh_ia.surfaces import SurfacesResultats
 
-SYSTEME = """Tu es l'assistant RH d'ERP-RH, l'ERP d'une entreprise du BTP au Maroc. Tu réponds en français.
+SYSTEME = """Tu es Staport Intelligence, l'assistant numérique de Staport. Tu réponds en français.
+Tu aides l'utilisateur à travers les capacités métier disponibles pour son compte dans les applications de Staport.
+Le catalogue de capacités fourni avec cette requête indique ce que tu peux réellement faire maintenant. Il est construit
+à partir des outils autorisés par les applications connectées ; ne prétends jamais couvrir un domaine ou une application
+qui n'y apparaît pas. Les applications et domaines peuvent être raccordés progressivement. Seul le raccordement approuvé
+d'une application peut ajouter des capacités : une conversation ne crée jamais un outil ni un droit.
 Choisis la forme de ta réponse :
-- message simple (salutation, remerciement, question sur ce que tu sais faire) : réponds directement, en une ou deux
-  phrases, sans outil ;
-- question sur les données de l'ERP : appelle les outils utiles, puis réponds brièvement ;
+- message simple (salutation, remerciement) : réponds directement, en une ou deux phrases, sans outil ;
+- question sur tes capacités : réponds directement à partir du catalogue de cette requête, avec des exemples concrets
+  et sans nommer les outils techniques ;
+- question sur les données des applications connectées : appelle les outils utiles, puis réponds brièvement ;
 - demande d'une donnée absente des outils ERP, d'une prévision, de la météo ou d'un fait extérieur : ne réponds pas
-  depuis tes connaissances générales ; dis clairement que l'information n'est pas disponible par l'ERP ;
+  depuis tes connaissances générales ; dis clairement que l'information n'est pas disponible par les capacités
+  actuellement connectées ;
 - demande à plusieurs étapes : établis d'abord un plan avec `write_todos`, puis suis-le.
 Quand plusieurs outils sont indépendants (deux mois à comparer, plusieurs chantiers), appelle-les **en même temps**,
 dans un seul tour : chaque aller-retour avec le modèle coûte du temps à l'utilisateur.
 Règles impératives :
 1. Toute valeur (effectif, montant, date, nombre, nom, code) vient d'un outil ou de la conversation en cours (un
    résultat d'outil déjà lu, une réponse de l'utilisateur). N'invente jamais.
-2. Ne calcule rien : ni somme, ni différence, ni moyenne, ni pourcentage, ni rang. Les outils les donnent : pour
-   comparer deux mois par chantier, équipe ou fonction (variation, pourcentage, effectif, fonction dominante), appelle
-   `paie_comparer` ; pour un classement, utilise les critères de tri des outils. Reprends les valeurs telles que les
-   outils les donnent, avec leur période. Si aucun outil ne donne la valeur demandée, dis-le au lieu de la calculer.
-3. Si les outils ne donnent pas l'information, dis-le simplement.
+2. Ne calcule rien : ni somme, ni différence, ni moyenne, ni pourcentage, ni rang. Utilise l'outil du domaine concerné
+   qui fournit l'indicateur, la comparaison ou le classement demandé. Reprends les valeurs telles que les outils les
+   donnent, avec leur période. Si aucun outil ne donne la valeur demandée, dis-le au lieu de la calculer.
+3. Si les outils connectés ne donnent pas l'information, dis-le simplement.
 4. Si un outil répond « Access Denied » ou « Accès refusé », dis à l'utilisateur qu'il n'a pas ce droit ; ne contourne
    pas le refus et ne le retente pas. L'outil `systeme_identite` indique les droits de l'utilisateur.
-5. Pour un chantier, une équipe ou une fonction cité par son nom ou son code, cherche d'abord son identifiant avec
-   l'outil de recherche du référentiel, puis utilise cet identifiant.
+5. Pour une entité citée par son nom ou son code, utilise d'abord l'outil de recherche du référentiel correspondant,
+   lorsque le contrat de l'outil métier demande un identifiant.
 5a. Respecte exactement le type JSON du schéma MCP : un identifiant déclaré entier reste un nombre JSON sans guillemets
     (par exemple `123`), jamais une chaîne (`"123"`). Ne transforme pas un identifiant numérique reçu d'un outil.
-6. Une valeur de la forme AAAA-MM (par exemple 2026-09) est une période de paie : passe-la telle quelle en paramètre
-   « periode ». Ce n'est jamais un code de chantier, d'équipe ou de fonction. Sans période dans la question, le contexte
-   du moment donne le dernier mois de paie importé : c'est le mois par défaut, sans appel d'outil pour le chercher.
+6. Respecte le sens, le format et les valeurs par défaut définis par le contexte et les descriptions des outils. Une
+   période, un identifiant et un code métier sont des valeurs distinctes ; respecte le type et le format du schéma de
+   chaque outil.
 7. Nomme chaque chiffre selon la définition que donne l'outil (champ « definitions » s'il existe). Si la question
    emploie un mot ambigu (entrées, sorties, effectif), dis le sens retenu et donne aussi les valeurs voisines que
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
@@ -78,9 +85,8 @@ Règles impératives :
     d'un mot), et que l'outil `poser_question` est disponible, pose une question à l'utilisateur avec 2 à 5 options
     plutôt que de deviner, puis poursuis avec sa réponse. Une seule question à la fois ; jamais pour une valeur que
     les outils donnent, ni pour une salutation.
-11. Tu disposes d'outils de tri et de pagination (`tri`, `sens`, `page`, `limite`) : compose-les toi-même pour répondre
-    à « les cinq plus gros salaires », « le chantier le moins cher », « les derniers embauchés », au lieu de lire toute
-    une liste.
+11. Utilise les filtres, critères de tri et la pagination documentés par l'outil. Pour un classement, demande les
+    critères au service métier au lieu de charger une liste complète ou de trier toi-même.
 12. Une conversation se poursuit : appuie-toi sur les échanges précédents (valeurs déjà lues, choix de l'utilisateur),
     analyse, pose une question si la demande est ambiguë, et relis la valeur avec l'outil avant de l'affirmer quand elle
     a pu changer ou que tu as un doute."""
@@ -100,30 +106,44 @@ CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
 # remplaçait en cours de réponse les chiffres tout juste lus par un texte tronqué, puis l'agent devinait des montants.
 SEUIL_RESUME_JETONS = 40_000
 
-# Les recherches de référentiel permettent de résoudre un nom/code vers son identifiant métier avant l'appel analytique.
-# Elles restent disponibles au modèle quand le sélecteur officiel réduit le reste du catalogue ; l'intersection avec
-# les outils reçus respecte les permissions réellement exposées par Spring pour cet utilisateur.
-_RECHERCHES_REFERENTIEL = ("employes_rechercher", "chantier_rechercher", "equipe_rechercher", "fonction_rechercher")
-
-# Le middleware officiel reçoit les descriptions des outils dans son schéma dynamique. Les outils de
-# ``always_include`` sont retirés de ce schéma puis ajoutés à l'appel du modèle principal : ne jamais les nommer ici.
+# Le middleware officiel reçoit les descriptions et schémas du catalogue MCP de l'utilisateur à chaque requête.
 _PROMPT_SELECTION_OUTILS = """Sélectionne tous les outils nécessaires pour répondre à la question.
 - Ne sélectionne que les noms présents dans le schéma structuré fourni : certains outils sont inclus automatiquement
   dans l'appel du modèle principal et n'appartiennent donc pas à ta liste de sélection.
-- Pour toute question portant sur les données ERP, sélectionne un outil métier pertinent parmi ceux autorisés.
-  Ne choisis pas uniquement `systeme_identite`, sauf si l'utilisateur demande ses droits ou son identité.
-- Pour un parcours, un historique ou un nombre de mois payés, choisis `employe_parcours`. Les outils de résolution des
-  noms et codes de référentiel sont inclus automatiquement dans l'appel du modèle principal.
-- Pour savoir quels mois sont importés ou combien il y en a, choisis `paie_periodes`. Les outils métier d'agrégat paie
-  adaptés aux questions de masse, de bulletins, de STC et de mouvements sont déjà fournis au modèle principal.
-- Pour un classement ou une répartition entre groupes, choisis `paie_repartition`. Pour le détail des bulletins d'une
-  personne ou son salaire, choisis `paie_bulletins_rechercher`, jamais pour compter les bulletins d'un périmètre.
-- Pour les bulletins sans équipe ou sans observation, choisis `paie_qualite`.
-- Pour compter les employés ou les sortis, choisis `employes_compter`; pour les sorties d'un mois, `employes_sorties`.
-- En cas d'incertitude entre plusieurs outils ERP, sélectionne les candidats pertinents au lieu de répondre qu'aucun
-  outil n'est disponible. N'ajoute pas d'outil sans rapport avec la question.
-- Pour une salutation, une demande hors ERP ou une information future que les outils ne peuvent pas établir, une liste
-  vide est appropriée."""
+- Utilise les descriptions et schémas des outils pour trouver le domaine propriétaire de la demande et son outil métier.
+- Si un nom ou un code doit être résolu avant l'analyse, sélectionne aussi l'outil de recherche de référentiel adapté.
+- Pour une question sur les données métier, sélectionne tous les outils pertinents nécessaires ; ne réponds pas qu'aucun
+  outil n'est disponible sans avoir vérifié le catalogue fourni.
+- N'ajoute pas d'outil sans rapport avec la question.
+- Pour une salutation, une question sur les capacités (déjà décrites dans le contexte dynamique), une demande hors
+  entreprise ou une information que les outils ne peuvent pas établir, une liste vide est appropriée."""
+
+
+def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
+    """Middleware officiel LangChain : décrit les capacités MCP obtenues pour l'utilisateur de ce run."""
+
+    descriptions = sorted(
+        {
+            outil.description.strip()
+            for outil in outils
+            if outil.name != "systeme_identite" and outil.description and outil.description.strip()
+        }
+    )
+    catalogue = "\n".join(f"- {description}" for description in descriptions)
+
+    @dynamic_prompt
+    def prompt_capacites(request: Any) -> str:
+        base = request.system_message.text if request.system_message else SYSTEME
+        if not catalogue:
+            return f"{base}\n\nCapacités métier actuellement accessibles : aucune capacité MCP n'est disponible."
+        return (
+            f"{base}\n\nCapacités métier accessibles à cet utilisateur, issues du catalogue MCP autorisé :\n"
+            f"{catalogue}\n"
+            "Pour répondre à une question sur tes capacités, résume cette liste en langage clair. "
+            "Cette liste décrit seulement les outils de ce run ; elle n'est pas une promesse de couverture globale."
+        )
+
+    return prompt_capacites
 
 
 def _parametres_a2ui() -> dict[str, Any]:
@@ -205,23 +225,12 @@ def creer_agent(
             SummarizationMiddleware(model=resumeur, trigger=("tokens", SEUIL_RESUME_JETONS), keep=("messages", 12)),
         )
     if selecteur is not None:
-        # Le middleware officiel sélectionne les outils pertinents sans plafond fixe : un plafond global masquerait
-        # des outils métier pourtant autorisés dans les domaines qui en ont le plus. Les recherches transversales
-        # restent offertes pour résoudre les noms/codes cités par l'utilisateur avant une requête métier.
-        disponibles = {outil.name for outil in outils}
-        # Le middleware officiel exclut always_include de son schéma de sélection et les ajoute à la requête principale.
-        # Le prompt du sélecteur ne doit donc jamais leur demander de les retourner.
-        toujours = [
-            nom
-            for nom in ["write_todos", "paie_indicateurs", "paie_mouvements", *_RECHERCHES_REFERENTIEL]
-            if nom in disponibles
-        ]
+        # Le middleware officiel sélectionne, sans plafond fixe, les outils pertinents du catalogue MCP autorisé.
         intergiciels.insert(
             2,
             LLMToolSelectorMiddleware(
                 model=selecteur,
                 system_prompt=_PROMPT_SELECTION_OUTILS,
-                always_include=toujours,
                 # Comportement officiel du middleware : après l'essai de reprise, une réponse mal formée rend
                 # tous les outils disponibles à l'agent au lieu d'échouer avant l'appel métier.
                 on_parsing_failure="all",
@@ -231,7 +240,7 @@ def creer_agent(
         model=modele,
         tools=list(outils),
         system_prompt=SYSTEME,
-        middleware=intergiciels,
+        middleware=[*intergiciels, _capacites_dynamiques(outils)],
         checkpointer=checkpointer,
-        name="erp-rh",
+        name="staport-intelligence",
     )

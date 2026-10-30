@@ -47,6 +47,15 @@ export class AssistantRacineComponent {
       runtimeUrl: new URL('ia/copilotkit', this.document.baseURI).href,
       // Évalué à chaque requête (option documentée) : le jeton courant, rafraîchi d'abord s'il a expiré.
       headers: async () => ({ Authorization: `Bearer ${await jetonValide(this.auth)}` }),
+      // Suggestions générées par l'agent connecté, à partir du contexte et des capacités autorisées pour ce compte.
+      suggestionsConfig: [{
+        instructions: 'Propose des questions courtes et utiles que cette personne peut poser à Staport Intelligence. Base-les sur la demande ou les capacités disponibles pour son compte. Ne révèle aucune donnée personnelle et ne suppose jamais une permission absente.',
+        minSuggestions: 1,
+        maxSuggestions: 3,
+        available: 'before-first-message',
+        providerAgentId: 'default',
+        consumerAgentId: 'default'
+      }],
       // Interface composée (T16) : surfaces A2UI rendues avec le catalogue de base officiel complété des composants de l'ERP
       // (tableau, indicateurs, graphique), aux couleurs Staport.
       // `includeSchema: false` : le schéma du catalogue et les consignes A2UI ne partent pas à chaque question (près de

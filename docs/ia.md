@@ -1,6 +1,6 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-26.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+**Mis à jour : 2026-10-30.** Seule référence du chantier IA : décisions, architecture, plan, suivi
 et reprise. Les règles réutilisables sont dans les conventions
 ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
@@ -8,9 +8,12 @@ et reprise. Les règles réutilisables sont dans les conventions
 
 ## 1. Objectif
 
-L'IA sert **tous les utilisateurs** de l'entreprise (BTP, classe S, Maroc) : comprendre, retrouver,
-contrôler, préparer. Elle commence par la partie RH de l'ERP, puis couvre chaque département avec le
-même socle. Elle ne devient jamais la source des chiffres, des droits ou des décisions métier, et ne
+**Staport Intelligence — la plateforme d'IA de Staport** sert tous les utilisateurs de Staport
+(BTP, classe S, Maroc) : comprendre, retrouver, contrôler et préparer. L'assistant dans ERP-RH en
+est la première interface métier ; les applications des autres départements pourront la rejoindre.
+Le catalogue disponible est assemblé à chaque requête à partir des outils MCP autorisés pour
+l'utilisateur. Il ne devient jamais la source
+des chiffres, des droits ou des décisions métier, et ne
 prend aucune décision sur une personne : elle explique et prépare, une personne habilitée décide
 ([usage responsable](../conventions/agents-ia.md#gouvernance-et-usage-responsable)).
 
@@ -24,14 +27,17 @@ prend aucune décision sur une personne : elle explique et prépare, une personn
 | Outils métier | **MCP** (Streamable HTTP) entre le service IA et Spring. Le service IA n'a ni accès aux tables ni client REST métier. |
 | Interface ↔ agent | **AG-UI** entre Angular et le service IA, par le **runtime CopilotKit officiel** (service `copilot-runtime`, Node, `@copilotkit/runtime` 1.80) depuis T16 (décision du 2026-10-26) : il relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur et lui applique le middleware A2UI officiel, que l'architecture de CopilotKit place côté serveur. Flux produit par l'**intégration LangGraph officielle** `ag-ui-langgraph` 0.0.47 ([ADR 0015](adr/0015-ag-ui-integration-langgraph-officielle.md)) ; le service n'y ajoute que l'identité et la session MCP. Télémétrie de CopilotKit coupée. |
 | Modèles | **LiteLLM** : les groupes officiels `ai-gateway-{simple,tool-selection,medium,complex,code,ocr}`, sélectionnés par le champ `model`, bascule entre fournisseurs du même niveau, budgets par clé virtuelle. `tool-selection` est qualifié sur le JSON Schema strict utilisé par le middleware officiel. Un modèle est retenu sur le jeu de référence (§ 4). |
+| Identification des dialectes | **LIDstral Arabic est à évaluer, pas encore adopté.** Il peut identifier des dialectes arabes sur texte en alphabet arabe, mais ne couvre pas l'Arabizi selon les éléments publiés. Le jeu Darija doit tester les deux écritures ; l'intégration de LIDstral sera recommandée seulement si elle améliore effectivement le routage ou les réponses sans dégrader les messages Arabizi. |
+| Veille des modèles | Revue mensuelle par Claude ou Codex selon la routine du § 4.1. Candidat de départ pour le modèle conversationnel Darija : **Jais 3 32B** ; comparateurs spécialisés : **Atlas-Chat-27B** et **GemMaroc-27B**. Cette shortlist reste ouverte aux modèles et familles plus récents. Aucun modèle ni paramètre LiteLLM ne change sans confirmation humaine. |
 | Données exposées à l'IA | Les outils rendent les mêmes champs que les écrans, CIN, dates de naissance et montants compris (décision du 2026-10-25) ; seules les permissions RBAC filtrent, dont le salaire réservé à `PAIE_READ`. Les données réelles peuvent être envoyées aux modèles configurés, offres gratuites comprises : la règle « aucune donnée réelle vers un modèle » est retirée, risque accepté par le propriétaire (décision du 2026-10-26). Cible : **modèle local open source** servi derrière LiteLLM ; aucun outil, plugin ou service payant. Accord CNDP (loi 09-08) obtenu par le propriétaire. |
 | Sécurité | Périmètres de données par **département et fiche de poste**, appliqués dans Spring pour REST et MCP ; jeton délégué court RS256 ; audit de chaque appel d'outil (§ 5). |
 | Premier usage | **Questions/réponses + interface composée A2UI** : l'agent répond avec des chiffres Spring et, quand c'est plus lisible, compose dans la discussion une surface A2UI (tableau, liste, indicateurs). L'ouverture automatique des vues de l'ERP est retirée (décision du propriétaire du 2026-10-26 : A2UI suffit et supprime le code maison de pilotage des écrans). |
+| Identité et capacités | **Staport Intelligence** est le nom de la plateforme, présentée comme « la plateforme d'IA de Staport » ; l'assistant ERP-RH en est la première interface métier. Le middleware officiel `dynamic_prompt` de LangChain ajoute à chaque run les descriptions des outils MCP réellement accessibles à cet utilisateur ; l'assistant décrit ses capacités depuis cette liste, sans catalogue de domaines recopié dans son prompt. L'accueil reste générique ; CopilotKit génère des suggestions initiales depuis l'agent et son catalogue autorisé, avec le jeton du compte et sans conserver de fil de suggestion. Les règles de sécurité, de provenance et de calcul restent des instructions versionnées et revues. |
 | Interface immersive | **Espace IA** plein écran en plus du panneau latéral : conversation, surfaces **A2UI** composées depuis le catalogue Staport, vues pilotées et mascotte. Aucune génération de code d'interface. |
 | Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
 | Orchestration | **Un agent `create_agent`** (LangChain sur LangGraph) avec tous les outils, groupés par domaine dans leurs descriptions ; `LLMToolSelectorMiddleware` choisit systématiquement les outils pertinents avec le petit modèle interne. **Deep Agents** (`create_deep_agent`, mêmes middlewares plus sous-agents par domaine) est adopté quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, outils ou budget, ou qu'une tâche est longue : contrôle de la paie (J5), assistant réglementaire (J7), documents RH (J6). Pas avant : chaque sous-agent ajoute des appels de modèle, donc de la latence et des quotas (les offres gratuites répondent déjà 429 parfois). Détail : [conventions](../conventions/agents-ia.md#du-ciblage-par-domaine-aux-agents-de-domaine). |
 | Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (offre de prototypage) est dans les pools ; les préversions à sortie instable restent sous tags `eval`. |
-| Inter-applications | **A2A** relie l'agent ERP-RH aux agents des autres applications de l'entreprise (autres départements, application IA d'entreprise). À l'intérieur d'ERP-RH, pas d'A2A. |
+| Inter-applications | **A2A** relie les capacités des applications des autres départements à Staport Intelligence ; l'ERP-RH demeure une application métier raccordée, pas le nom de l'assistant d'entreprise. |
 | Frameworks d'abord | Décision du 2026-10-26 : tout le code IA s'appuie sur LangChain (`create_agent` et ses middlewares), LangGraph, Deep Agents si besoin, le MCP intégré à LangChain (`langchain.mcp`), `ag-ui-langgraph` et CopilotKit (raisonnement, texte, A2UI, interface Angular), LiteLLM pour la passerelle et ses garde-fous ; côté Java, le serveur MCP de **Spring AI** et l'échange de jetons OAuth2 de **Spring Authorization Server** ; tout code maison qui duplique un composant officiel est retiré, et **le code maison restant est une dette suivie jusqu'à zéro, sans service payant** (§ 7, « Objectif : aucun code IA fait maison ») ([règle et correspondances](../conventions/agents-ia.md#frameworks-dabord)). L'agent décide lui-même de sa forme de réponse : directe, raisonnée avec outils, ou planifiée et suivie étape par étape, comme Claude, ChatGPT, Gemini et Grok. Remplace, une fois T10 à T20 faites, le graphe explicite de T6 et le ciblage maison. |
 | Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les [conventions](../conventions/agents-ia.md#gouvernance-et-usage-responsable) ; l'écart avec l'existant est suivi au § 10. |
 | Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
@@ -88,6 +94,60 @@ Le Nginx extérieur et le relais intérieur transmettent les événements SSE sa
 6. Annulé (T2.7, 2026-10-27) : l'extension du vérificateur aux identifiants, noms et dates n'a plus lieu d'être.
    Chaque chiffre principal affiche sa période, son périmètre et la définition de l'indicateur (champs fournis par l'outil).
 
+### 4.1 Veille mensuelle et évolution des modèles
+
+Cette routine est commune à Claude et Codex : `CLAUDE.md` renvoie à `AGENTS.md`, qui renvoie à ce document. Elle
+est exécutée au moins une fois par mois, et à la demande du propriétaire lorsqu'une nouvelle version est signalée.
+La date de la dernière revue et ses conclusions sont consignées dans le journal de cette section. La veille ne se
+limite pas aux noms de modèles déjà inscrits ici, à une seule famille d'IA, ni aux fournisseurs actuellement configurés.
+
+À chaque revue, l'assistant :
+
+1. Cherche les versions récentes et annonces crédibles à partir des fiches de modèles, dépôts, notes de version,
+   publications, évaluations et licences des auteurs ou éditeurs. Il distingue les poids réellement publiés, les
+   annonces sans artefacts accessibles, les services API et les modèles seulement expérimentaux.
+2. Sépare les fonctions qui ne sont pas interchangeables : génération et agents conversationnels, reconnaissance
+   vocale/transcription (ASR), identification de langue ou de dialecte, synthèse vocale (TTS), OCR et traduction.
+   Une adaptation de Voxtral pour la darija est une piste ASR : elle transcrit la parole et ne remplace pas le modèle
+   conversationnel qui répond dans l'ERP.
+3. Vérifie pour chaque piste l'identifiant et la version exacte, la date, les capacités réellement documentées, les
+   scripts et langues couverts, les variantes régionales, les données et leur provenance, la licence, les conditions
+   d'usage commercial, les dépendances et risques de code de chargement, les exigences matérielles et les limites
+   publiées. Les scores d'un éditeur sont signalés comme tels ; des scores agrégés « arabe dialectal » ne sont pas
+   présentés comme des résultats Darija marocains.
+4. Élargit ou réduit la liste sans présumer que la décision actuelle est définitive. Il conserve les candidats
+   précédents et les raisons de les garder ou de les écarter, pour rendre les comparaisons mensuelles traçables.
+5. Quand un candidat est accessible et pertinent, le compare sur le même jeu de référence et avec les mêmes
+   consignes, paramètres et budgets que la version courante. Il analyse séparément la compréhension et la réponse en
+   darija écrite en alphabet arabe et en Arabizi, le mélange avec le français, les variantes régionales utilisées par
+   Staport, les cas métier, les appels d'outils, les erreurs critiques et la latence. L'évaluation vérifie aussi si
+   LIDstral améliore réellement les entrées en alphabet arabe par rapport au traitement direct et mesure explicitement
+   sa limite sur Arabizi. Il ne conclut pas à un gain en
+   comparant des scores issus de protocoles différents.
+6. Présente une recommandation exploitable : modèle et révision exacte, tâches concernées, gains et régressions
+   mesurés, licence/provenance, ressources et latence, risques connus, fournisseur ou mode de service, configuration
+   LiteLLM proposée et retour arrière. **La revue peut préparer cette proposition, mais l'adoption ou la modification
+   de la configuration attend la confirmation humaine du propriétaire.** Après confirmation, rejouer le jeu de
+   référence conformément au § 4 et à T3.7 avant de déclarer le changement réussi.
+
+#### Candidats et pistes suivis
+
+| Fonction | État au 2026-10-30 | Motif / prochaine vérification |
+|---|---|---|
+| Conversation Darija — [Jais 3 32B](https://ifm.ai/blog/jais3/) | Candidat initial retenu pour la comparaison, pas encore adopté en production | Modèle récent arabe et agentique ; mesurer spécifiquement la Darija marocaine. Le lien [`inception42/jais-30b-chat-v3`](https://huggingface.co/inception42/jais-30b-chat-v3) est une autre version, à ne pas confondre avec Jais 3 32B. |
+| Conversation Darija — [Atlas-Chat-27B](https://huggingface.co/MBZUAI-Paris/Atlas-Chat-27B) | Référence spécialisée à comparer | Évaluations dédiées à la Darija ; modèle basé sur Gemma 2, contexte d'entraînement annoncé jusqu'à 2 048 tokens, licence Gemma à examiner. |
+| Conversation Darija — [GemMaroc-27B](https://arxiv.org/abs/2505.17082) | Challenger spécialisé à comparer | Étude publiée rapporte des scores Darija proches d'Atlas-Chat et de meilleurs résultats sur Darija HellaSwag ; vérifier la licence et les droits de la base Gemma 3 et des données avant tout usage commercial. |
+| Conversation Darija — [Mtrini-SVL-1.1](https://huggingface.co/CompiwerAI/Mtrini-SVL-1.1-Merged) | Piste exploratoire | Modèle marocain déclaré expérimental ; sa fiche ne fournit pas encore de benchmark indépendant standardisé suffisant pour en faire le choix principal. |
+| Identification de dialecte — [LIDstral Arabic](https://huggingface.co/mistralai/LIDstral-Arabic) | À évaluer avant toute adoption | La fiche Mistral rapporte 88,67 % F1 sur son évaluation Darija en alphabet arabe. C'est un classificateur, pas un modèle conversationnel, et la fiche ne démontre pas la couverture Arabizi. Le garder uniquement si un essai comparatif prouve son utilité sans exclure ni dégrader les entrées Arabizi. |
+| Transcription vocale Darija — adaptation maroco-Mistral/Voxtral | À surveiller, pas encore disponible pour qualification | [Annonce officielle du 2026-09-29](https://www.mmsp.gov.ma/fr/actualites/le-minist%C3%A8re-de-la-transition-num%C3%A9rique-et-de-la-r%C3%A9forme-de-l%E2%80%99administration-du-royaume-du-maroc-et-mistral-ai-annoncent-les-premi%C3%A8res-briques-d%E2%80%99ia-d%C3%A9velopp%C3%A9es-dans-le-cadre-de-leur-partenariat) : classificateur de dialectes et ASR Voxtral Darija en préparation, avec alternance arabe/français/anglais. Réexaminer dès publication des poids, licence, données et résultats. |
+| Conversation Darija et langues marocaines — Sawalni | Veille exploratoire, pas dans la shortlist auto-hébergée | L'éditeur annonce une API et une couverture Darija/Amazigh multimodale ; demander/évaluer les poids, licence, prix, sécurité et résultats reproductibles avant de le comparer à une cible auto-hébergée. |
+
+#### Journal des revues
+
+| Date | Résultat | Suite |
+|---|---|---|
+| 2026-10-30 | Revue initiale : Jais 3 32B, Atlas-Chat-27B et GemMaroc-27B retenus pour la comparaison conversationnelle ; Mtrini-SVL en observation. Le jeu Darija doit couvrir l'alphabet arabe et l'Arabizi. LIDstral est à évaluer avant adoption, car sa couverture publiée porte sur le texte arabe et pas l'Arabizi. L'adaptation Voxtral annoncée par le ministère est une piste ASR non encore qualifiable. Sawalni reste une piste API à éclaircir. | Construire/compléter le jeu Darija de T3.9, comparer les modèles conversationnels et mesurer l'utilité de LIDstral sans retirer la prise en charge Arabizi. Revue suivante au plus tard en novembre 2026. |
+
 ## 5. Sécurité
 
 - **Périmètres.** Département → fiche de poste → rôles et permissions + périmètre de données
@@ -120,11 +180,17 @@ couleurs Staport. La surface reprend les valeurs des résultats d'outils, qui re
 Les outils Spring décrivent toujours la vue correspondante (`VueProposeeDto`), réutilisable si un lien est un jour
 proposé.
 
-**Assistant RH (T8).** Barre de commande translucide au repos (`Ctrl K`), discussion ancrée à droite
+**Staport Intelligence (T8).** L'en-tête présente le monogramme officiel de Staport, le nom de l'assistant et la mention
+« Votre assistant numérique » ; le premier message explique que les services proposés dépendent des accès du compte.
+Barre de commande translucide au repos (`Ctrl K`), discussion ancrée à droite
 dès la première question, comme un chat d'assistant : pour chaque réponse, un bloc repliable
 de raisonnement et d'outils, puis le texte et, si l'agent le demande, une surface A2UI composée à partir
-des résultats d'outils. Aucun écran ERP n'est ouvert automatiquement. Plein écran sur téléphone, thème clair et sombre, mouvement
-réduit respecté. Prototype de référence : [maquette-assistant.html](ia/maquette-assistant.html).
+des résultats d'outils. L'accueil ne promet pas une liste fixe de domaines ; la réponse sur les capacités vient du
+catalogue MCP autorisé pour l'utilisateur. Aucun écran ERP n'est ouvert automatiquement. Plein écran sur téléphone,
+thème clair et sombre, mouvement réduit respecté. CopilotKit produit des suggestions dynamiques uniquement avant le premier
+message : elles ne réexpédient pas un historique RH aux modèles. Le runtime les authentifie comme toute requête IA (`IA_UTILISER`)
+et l'agent n'écrit pas de checkpoint pour ce run temporaire. Une erreur de run ou de transport est affichée comme un retour
+accessible dans la discussion, sans exposer le détail fournisseur. Prototype de référence : [maquette-assistant.html](ia/maquette-assistant.html).
 
 **Espace IA immersif.** Plein écran, ouvert depuis le panneau : la conversation à gauche, à droite
 une scène composée par l'agent en **A2UI** — indicateurs, graphiques, tableaux, fiches et sources,
@@ -386,7 +452,16 @@ Aucune tâche ouverte ci-dessous n'est supprimée. Jusqu'à la clôture de V1c, 
    et demande l'abstention quand l'information est hors ERP ou future. Rejouer les cinq échecs du jeu 19/24.
 4. **V1c.4 — Vérification locale du lot** : formatage, analyse statique et suite IA ciblée ; puis le jeu réel complet
    des 24 cas. Exiger 24/24 et p95 `< 30 s` avant de demander la livraison. Les erreurs fournisseur relevées étaient
-   400 Cloudflare, 429 Gemini/Mistral et sorties Groq hors enum ; le groupe complexe garde deux Nemotron.
+   400 Cloudflare, 429 Gemini/Mistral et sorties Groq hors enum ; le groupe complexe garde deux Nemotron. Les traces du
+   2026-10-30 montrent deux erreurs `APIConnectionError` « Service temporarily overloaded » pendant le flux dans
+   `ai-gateway-complex` ; LiteLLM indique qu'aucun fallback n'a été tenté. Les deux déploiements complexes principaux
+   sont chez NVIDIA. Le fallback explicite LiteLLM vers Mistral est configuré localement. Qualification synthétique
+   dans LiteLLM v1.104.2 : le mapping du projet, avec ses deux déploiements primaires rendus injoignables, bascule
+   en flux vers Ministral 14B et conserve l'appel MCP `heures_supp_indicateurs` ainsi que `periode: "2026-09"` et
+   `chantierIds: [207]` ; une sonde directe non-streaming passe aussi. Cette preuve utilise `litellm.Router` dans
+   un processus éphémère et le fournisseur réel, sans modifier le proxy ni sa base ; elle ne prouve pas le chargement
+   de la nouvelle configuration par le proxy. L'image est épinglée en v1.104.2 : la continuation après émission
+   partielle de texte reste un autre cas à qualifier sur une version stable, pas un mécanisme maison.
 5. **V1c.5 / T20 — Preuve sur l'image publiée** : après contrôles locaux, livraison par PR et CI verte ; le propriétaire
    récupère ensuite les nouvelles images et relance le même parcours. Vérifier les spans MCP, la sélection des outils,
    le masquage des contenus Phoenix et la latence avant de clore V1c/T20. Le conteneur actuellement actif n'a pas reçu
@@ -452,7 +527,7 @@ et ses contrôles documentés.
 | Élément | État |
 |---|---|
 | Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 (J0, avant l'adoption de Spring AI en T13) ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
-| LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, démarrés par défaut avec la pile (clés virtuelles enregistrées par `litellm-cles`). Fournisseurs actifs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA NIM. Pool `complex` : Gemini 3.8 Flash, Mistral Medium, NVIDIA MiniMax M3.1 Flash, Nemotron 3 Ultra, Nemotron 3.5 Super VL, Cloudflare gpt-oss-120b. Candidats suivants (gratuits, renouvelables) : SambaNova (20 req/jour par modèle, sans carte), OVHcloud AI Endpoints anonyme (2 req/min), Cohere (1 000 appels/mois, évaluation), LLM7 (100 K tokens/jour). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (aucune inférence gratuite), DeepSeek (aucun palier gratuit), Alibaba Model Studio (quota unique de 90 jours), SiliconFlow international, Chutes, Kluster. Voir [`litellm/README.md`](../litellm/README.md). |
+| LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, démarrés par défaut avec la pile (clés virtuelles enregistrées par `litellm-cles`). Fournisseurs actifs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA NIM. Pool `complex` principal : deux Nemotron NVIDIA ; repli explicite par le routeur officiel LiteLLM vers Mistral Ministral 14B, qualifié sur un parcours synthétique à deux outils MCP (chantier puis heures supplémentaires), schéma réel des arguments, période ISO et réponse fondée sur le résultat. La qualification complète de l'agent (24 cas) et de la bascule sur l'image publiée reste à faire. Candidats suivants (gratuits, renouvelables) : SambaNova (20 req/jour par modèle, sans carte), OVHcloud AI Endpoints anonyme (2 req/min), Cohere (1 000 appels/mois, évaluation), LLM7 (100 K tokens/jour). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (aucune inférence gratuite), DeepSeek (aucun palier gratuit), Alibaba Model Studio (quota unique de 90 jours), SiliconFlow international, Chutes, Kluster. Voir [`litellm/README.md`](../litellm/README.md). |
 | Service IA | Image `erp-rh-ia` (Python 3.13), santé, client LiteLLM, agent LangGraph avec ciblage par domaine et évaluation (T6), point d'entrée AG-UI `POST /agui` (T7). Aucun vérificateur de chiffres après coup ; les calculs viennent des API métier. Voir [`ia/README.md`](../ia/README.md). |
 | Code IA dans l'application | Serveur MCP de **Spring AI 2.0.2** (SDK MCP Java 2.1.0, Spring Boot 4.1.2) : route `/mcp` sans état derrière `MCP_ENABLED`, outils déclarés par `@McpTool` (permission par `@PreAuthorize`, bornes par Bean Validation, trace par `@AuditableAction`), chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 30 outils en lecture (ci-dessous). Assistant Angular (`core/assistant`, T8). Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |

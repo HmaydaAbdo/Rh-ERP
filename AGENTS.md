@@ -46,6 +46,10 @@ Deux règles imposées par le propriétaire, sans exception :
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
+- **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
+  `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
+  recommandation. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
+
 La [routine de travail et de livraison](conventions/workflow.md) s'applique à chaque tâche : reprise du
 contexte et de l'état Git, exécution du périmètre approuvé, vérifications, documentation, puis livraison
 et revue. L'appliquer sans attendre que le propriétaire répète ces consignes. Les décisions et

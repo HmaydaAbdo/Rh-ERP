@@ -65,14 +65,28 @@ function flux(): string {
   return evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('');
 }
 
-/** Le runtime CopilotKit simulé : sa description (`/info`, A2UI actif) et le run de l'agent ; le reste répond vide. */
-async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[] }> {
-  const vu = { autorisations: [] as string[], fils: [] as string[] };
+/** Le runtime CopilotKit simulé : suggestions sans état et authentifiées, runs de l'agent, A2UI et autorisations. */
+async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[]; autorisationsSuggestions: string[] }> {
+  const vu = { autorisations: [] as string[], fils: [] as string[], autorisationsSuggestions: [] as string[] };
   await page.route('**/ia/copilotkit/**', async (route) => {
     const url = route.request().url();
     if (url.endsWith('/info')) {
       await route.fulfill({
-        json: { version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', a2uiEnabled: true, a2ui: { enabled: true } }
+        json: { version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', suggestions: true, a2uiEnabled: true, a2ui: { enabled: true } }
+      });
+    } else if (url.endsWith('/agent/default/suggest')) {
+      vu.autorisationsSuggestions.push(route.request().headers()['authorization'] ?? '');
+      const evenements = [
+        { type: 'RUN_STARTED', threadId: 'suggestion', runId: 'suggestion-run' },
+        { type: 'TOOL_CALL_START', toolCallId: 'suggestion-call', toolCallName: 'copilotkitSuggest', parentMessageId: 'suggestion-message' },
+        { type: 'TOOL_CALL_ARGS', toolCallId: 'suggestion-call', delta: JSON.stringify({ suggestions: [{ title: 'Masse salariale', message: 'Quelle est la masse salariale du dernier mois ?' }] }) },
+        { type: 'TOOL_CALL_END', toolCallId: 'suggestion-call' },
+        { type: 'RUN_FINISHED', threadId: 'suggestion', runId: 'suggestion-run' }
+      ];
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+        body: evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('')
       });
     } else if (url.endsWith('/agent/default/run')) {
       vu.autorisations.push(route.request().headers()['authorization'] ?? '');
@@ -85,7 +99,7 @@ async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fi
   return vu;
 }
 
-test.describe('Assistant RH', () => {
+test.describe('Staport Intelligence', () => {
   test('crée et remplace une conversation sans crypto.randomUUID, comme en HTTP public', async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(Crypto.prototype, 'randomUUID', { value: undefined, configurable: true });
@@ -99,7 +113,7 @@ test.describe('Assistant RH', () => {
     expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
 
     await page.keyboard.press('Control+k');
-    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
+    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
     const question = assistant.getByPlaceholder('Posez votre question…');
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
@@ -113,6 +127,8 @@ test.describe('Assistant RH', () => {
 
     expect(runtime.fils).toHaveLength(2);
     expect(new Set(runtime.fils).size).toBe(2);
+    expect(runtime.autorisationsSuggestions.length).toBeGreaterThan(0);
+    expect(runtime.autorisationsSuggestions.every((authorization) => authorization === 'Bearer jeton-test')).toBe(true);
     for (const fil of runtime.fils) {
       expect(fil).toMatch(/^u1-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     }
@@ -127,9 +143,9 @@ test.describe('Assistant RH', () => {
 
     await page.keyboard.press('Control+k');
     // Panneau flottant au-dessus de l'écran (mode overlay de CopilotKit) : une fenêtre de dialogue, la vue garde sa place.
-    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
-    // Le fil de l'utilisateur est fourni par l'application (repris au rechargement) : CopilotKit n'affiche alors pas son écran
-    // d'accueil, mais les questions proposées selon l'écran ouvert (la paie).
+    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    // Le fil de l'utilisateur est fourni par l'application (repris au rechargement) : CopilotKit propose des questions
+    // dynamiques à partir du contexte courant et des capacités accessibles.
     await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
 
     const question = assistant.getByPlaceholder('Posez votre question…');
@@ -155,7 +171,7 @@ test.describe('Assistant RH', () => {
 
     await page.keyboard.press('Control+k');
     // Sur téléphone la barre devient une fenêtre modale.
-    const assistant = page.getByRole('dialog', { name: 'Assistant RH' });
+    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
     await expect(assistant.getByPlaceholder('Posez votre question…')).toBeVisible();
     const largeur = await assistant.evaluate((e) => e.getBoundingClientRect().width);
     expect(largeur).toBe(390);

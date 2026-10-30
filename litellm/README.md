@@ -14,7 +14,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 
 ## Fonctionnement
 
-- Six groupes officiels : `ai-gateway-simple`, `ai-gateway-tool-selection`, `ai-gateway-medium`,
+- Six groupes de capacité : `ai-gateway-simple`, `ai-gateway-tool-selection`, `ai-gateway-medium`,
   `ai-gateway-complex`, `ai-gateway-code`, `ai-gateway-ocr`. `tool-selection` ne contient que des fournisseurs
   vérifiés avec le JSON Schema strict de `LLMToolSelectorMiddleware`; il est dédié à la sélection d'outils.
   Le client sélectionne le groupe avec le champ OpenAI `model`.
@@ -27,17 +27,21 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 - `simple-shuffle` et `enable_weighted_failover` utilisent les composants officiels LiteLLM pour les groupes ordinaires ;
   le groupe `ai-gateway-complex` utilise le routage officiel par latence (`latency-based-routing`, TTL 1 h), car les
   mesures V1c ont montré des écarts de 4 s à 133 s entre ses déploiements. Jusqu'à trois bascules restent possibles
-  dans le même groupe. Pas de repli vers une autre capacité.
+  dans le même groupe. Après épuisement de ces déploiements, la configuration officielle `fallbacks` dirige les erreurs
+  du groupe complexe vers `ai-gateway-complex-fallback`, fourni par Mistral. Ce groupe est inclus dans la clé de production
+  et réservé au repli : le modèle n'entre pas dans le routage normal par latence.
   Les groupes `ai-gateway-eval-*` et `ai-gateway-test-*` sont réservés aux clés de test.
 - Fournisseurs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA
   NIM (offre de prototypage), LLM7 (jeton gratuit par e-mail ; seuls `gpt-oss:20b` et `codestral-latest` sont gratuits) et
   Cohere (clé d'essai : 20 requêtes/min, 1 000 appels/mois, non commerciale ; en évaluation seulement, sauf `command-r7b`).
   SambaNova n'est plus gratuit : écarté. Les modèles sont sondés (outils + JSON) avant d'entrer dans un pool.
-- `ai-gateway-complex` ne garde actuellement que les deux déploiements NVIDIA NIM Nemotron qui ont répondu aux requêtes
+- `ai-gateway-complex` garde les deux déploiements NVIDIA NIM Nemotron qui ont répondu aux requêtes
   avec outils. MiniMax a montré une latence de 58,6 à 133,4 s ; Gemini 3.8 Flash a épuisé son quota (429), Cloudflare
   gpt-oss-120b a rejeté le corps multimessage LangChain (400) et Mistral Medium avait déjà renvoyé 429. Ces modèles
-  restent dans leurs autres capacités vérifiées lorsqu'elles existent, mais ne sont pas des replis complexes.
-- La clé applicative est autorisée uniquement sur les six groupes de production. Les permissions
+  restent dans leurs autres capacités vérifiées lorsqu'elles existent. Ministral 14B a été qualifié comme secours par
+  un scénario synthétique à deux outils (recherche chantier puis indicateurs heures supplémentaires), période `aaaa-MM`,
+  identifiant entier et réponse fondée sur le résultat. Cette sonde ne remplace pas le rejeu du jeu métier complet.
+- La clé applicative est autorisée sur les six groupes de capacité et le groupe de secours. Les permissions
   LiteLLM sur les modèles excluent les groupes d'évaluation, les sondes directes et `ai-gateway-selftest`.
 - Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée
   `litellm-db` (même image PostgreSQL que l'ERP, volume séparé) pour les clés virtuelles, budgets et
@@ -48,6 +52,9 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   Une réponse directe du fournisseur ne prouve pas que le proxy sait router le modèle. NVIDIA gpt-oss-20b a été retiré
   des groupes après `ModelNotMappedError` dans l'image LiteLLM épinglée (v1.104.2) ; le remettre exige une entrée de
   catalogue officielle compatible avec le nom exact `openai/gpt-oss-20b`.
+- Le groupe de secours traite les erreurs interceptées par le routeur avant qu'une réponse soit livrée. L'image reste
+  épinglée sur LiteLLM v1.104.2 ; la reprise officielle d'un flux après émission partielle est une capacité distincte
+  à valider avec une version stable et une sonde dédiée avant toute montée de version.
 - Les clés actuelles sont des **paliers gratuits**, qui peuvent utiliser les requêtes pour entraîner
   leurs modèles ; les données réelles y sont admises par décision du propriétaire (docs/ia.md, § 2).
 

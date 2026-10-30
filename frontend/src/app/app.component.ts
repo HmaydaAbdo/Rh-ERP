@@ -87,7 +87,7 @@ export class AppComponent {
     { initialValue: estRouteAuthentification(this.router.url) }
   );
   readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
-  /** Assistant RH (docs/ia.md, T8) : réservé au droit IA_UTILISER ; l'application reste entièrement utilisable sans lui. */
+  /** Staport Intelligence (docs/ia.md, T8) : réservé au droit IA_UTILISER ; l'application reste utilisable sans lui. */
   readonly assistantVisible = computed(() => this.navigationVisible() && this.authService.hasPermission('IA_UTILISER'));
   private readonly routeCourante = toSignal(
     this.router.events.pipe(

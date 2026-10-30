@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { CopilotChat, provideCopilotChatLabels } from '@copilotkit/angular';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { CopilotChat, injectAgentStore, provideCopilotChatLabels } from '@copilotkit/angular';
 
 import { FilAssistant } from './fil-assistant.service';
 
@@ -32,10 +32,15 @@ import { FilAssistant } from './fil-assistant.service';
       userMessageToolbarEditMessageLabel: 'Modifier',
       // Pas d'avertissement permanent sous la saisie : la vérification des chiffres se voit dans la réponse.
       chatDisclaimerText: '',
-      welcomeMessageText: 'Que voulez-vous savoir sur vos équipes, vos chantiers ou la paie ?'
+      welcomeMessageText: 'Bonjour, je suis Staport Intelligence, votre assistant numérique. Je peux vous aider avec les informations et services accessibles à votre compte.'
     })
   ],
-  template: `<copilot-chat [threadId]="fil.fil()" />`,
+  template: `
+    @if (erreur()) {
+      <p class="erreur" role="alert">Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant.</p>
+    }
+    <copilot-chat [threadId]="fil.fil()" />
+  `,
   styles: `
     :host {
       display: flex;
@@ -43,8 +48,33 @@ import { FilAssistant } from './fil-assistant.service';
       height: 100%;
       min-height: 0;
     }
+
+    .erreur {
+      margin: 0.75rem 1rem;
+      border: 1px solid var(--color-error, #b42318);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: var(--color-error, #b42318);
+      font-size: 0.875rem;
+    }
   `
 })
 export class AssistantChatComponent {
   protected readonly fil = inject(FilAssistant);
+  private readonly store = injectAgentStore('default');
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly erreur = signal(false);
+
+  constructor() {
+    const abonnement = this.store().agent.subscribe({
+      onRunStartedEvent: () => this.erreur.set(false),
+      onRunErrorEvent: () => this.erreur.set(true),
+      onRunFailed: ({ error }) => {
+        if (error.name !== 'AbortError') {
+          this.erreur.set(true);
+        }
+      }
+    });
+    this.destroyRef.onDestroy(() => abonnement.unsubscribe());
+  }
 }

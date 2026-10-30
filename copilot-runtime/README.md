@@ -1,7 +1,7 @@
 # Runtime CopilotKit (`erp-rh-copilot-runtime`)
 
 Le runtime CopilotKit officiel (`@copilotkit/runtime`), placé entre Angular et le service IA Python (docs/ia.md, T16).
-Il ne contient aucune logique à nous :
+Il ne contient aucune logique métier à nous :
 
 - il relaie l'agent AG-UI du service IA (`IA_AGUI_URL`) avec le jeton de l'utilisateur, recréé à chaque requête par
   la fabrique d'agents officielle ; le service IA fait valider ce jeton par Spring ;
@@ -9,8 +9,11 @@ Il ne contient aucune logique à nous :
   `generate_a2ui`, et le flux de cet outil devient une surface affichée par CopilotKit Angular ;
 - il refuse d'emblée une requête sans jeton `Bearer`.
 
-Routes, sous `/copilotkit` (relayées par nginx sous `/ia/copilotkit/`) : `GET /info`, `POST /agent/default/run`
-et les autres routes du runtime ; `GET /health` pour le contrôle de santé.
+Routes, sous `/copilotkit` (relayées par nginx sous `/ia/copilotkit/`) : `GET /info`, `POST /agent/default/run`,
+`POST /agent/default/suggest` (suggestions CopilotKit authentifiées, sans fil persistant), et les routes de connexion et
+d'arrêt ; les routes de fils, mémoires, inspecteur et transcription restent fermées. Chaque requête exige le jeton du compte
+et la permission `IA_UTILISER`. Les suggestions portent des identifiants temporaires : l'authentification est obligatoire,
+mais le contrôle de propriété des fils persistants ne s'applique pas à cette route sans état.
 
 ## Exploitation
 
