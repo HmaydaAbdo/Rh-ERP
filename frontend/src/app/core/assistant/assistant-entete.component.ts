@@ -5,17 +5,20 @@ import { FilAssistant } from './fil-assistant.service';
 
 /**
  * En-tête de l'assistant (emplacement `headerComponent` de la barre CopilotKit, qui garde sa croix et son titre
- * accessible) : la marque de l'IA aux couleurs Staport et la promesse de l'assistant.
+ * accessible) : le monogramme Staport identifie l'assistant numérique dans toutes les applications.
  */
 @Component({
   selector: 'app-assistant-entete',
   imports: [LucideSparkles, LucideSquarePen],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="marque" aria-hidden="true"><svg lucideSparkles></svg></span>
+    <span class="signature" aria-hidden="true">
+      <img class="monogramme" src="assets/brand/monogramme.svg" alt="" />
+      <span class="intelligence"><svg lucideSparkles></svg></span>
+    </span>
     <div class="titres">
-      <h2 class="titre">Assistant RH</h2>
-      <p class="sous-titre">Des réponses fondées sur vos données</p>
+      <h2 class="titre">Staport Intelligence</h2>
+      <p class="sous-titre">Votre assistant numérique</p>
     </div>
     <button type="button" class="nouvelle" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
       <svg lucideSquarePen aria-hidden="true"></svg>
@@ -29,26 +32,42 @@ import { FilAssistant } from './fil-assistant.service';
       min-width: 0;
     }
 
-    .marque {
-      display: grid;
+    .signature {
+      position: relative;
       flex: none;
+      width: var(--control-height);
+      aspect-ratio: 1;
+    }
+
+    .monogramme {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-md);
+    }
+
+    .intelligence {
+      position: absolute;
+      inset-block-end: 0;
+      inset-inline-end: 0;
+      display: grid;
       place-items: center;
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: var(--radius-lg);
+      width: var(--space-md);
+      aspect-ratio: 1;
+      border: 1px solid var(--color-surface);
+      border-radius: var(--radius-pill);
       background: var(--assistant-accent);
       color: var(--assistant-accent-contrast);
-      box-shadow: var(--shadow-sm);
 
       svg {
-        width: 1.125rem;
-        height: 1.125rem;
+        width: var(--space-sm-md);
+        height: var(--space-sm-md);
       }
     }
 
     .titre {
       margin: 0;
-      font-size: 0.9375rem;
+      font-size: var(--text-md);
       font-weight: 600;
       line-height: 1.2;
       color: var(--color-text);
@@ -89,7 +108,7 @@ import { FilAssistant } from './fil-assistant.service';
 
     .sous-titre {
       margin: 0;
-      font-size: 0.75rem;
+      font-size: var(--text-xs);
       color: var(--color-text-muted);
     }
   `

@@ -19,7 +19,7 @@ const urlApi = obligatoire('ERP_API_URL').replace(/\/$/, '');
 const cheminBase = process.env.THREADS_DB_PATH;
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, transcription, débogage) répondent 404. */
-const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/connect', 'agent/stop']);
+const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop']);
 
 const runtime = new CopilotRuntime({
   // Un agent par requête (fabrique officielle) : il porte le jeton de l'utilisateur jusqu'au service IA, qui le fait
@@ -28,7 +28,11 @@ const runtime = new CopilotRuntime({
     default: new HttpAgent({
       url: urlAgent,
       // Le jeton de l'utilisateur suit la requête ; le contexte de trace (traceparent) est ajouté par l'instrumentation officielle.
-      headers: { Authorization: request.headers.get('authorization') ?? '' }
+      headers: {
+        Authorization: request.headers.get('authorization') ?? '',
+        // Le runtime fixe ce marqueur selon la route officielle. Les suggestions n'ont pas de fil persistant.
+        'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false'
+      }
     })
   }),
   a2ui: { injectA2UITool: true },
@@ -48,9 +52,11 @@ const ecouteur = createCopilotNodeListener({
       if (route.method === 'info') {
         return;
       }
-      const fil = route.threadId ?? (await request.clone().json().catch(() => ({}))).threadId;
-      if (typeof fil !== 'string' || !fil.startsWith(`u${utilisateur}-`)) {
-        throw new Response(null, { status: 403 });
+      if (route.method !== 'agent/suggest') {
+        const fil = route.threadId ?? (await request.clone().json().catch(() => ({}))).threadId;
+        if (typeof fil !== 'string' || !fil.startsWith(`u${utilisateur}-`)) {
+          throw new Response(null, { status: 403 });
+        }
       }
     }
   }

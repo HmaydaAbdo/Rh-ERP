@@ -93,7 +93,7 @@ async def evenements(
     demarre = False
     try:
         officiel = LangGraphAGUIAgent(
-            name="erp-rh",
+            name="staport-intelligence",
             graph=fabrique(outils, memoire or InMemorySaver()),  # mémoire durable (memoire.py) ou celle du run
             # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
             # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
@@ -156,9 +156,15 @@ def routeur_agui(
         fil = espace_conversation(sujet(jeton), entree.thread_id)
         entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
 
+        suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
+
         async def flux() -> AsyncIterator[str]:
             async for evenement in evenements(
-                entree_serveur, fabrique(), outils, memoire() if memoire else None, entree.thread_id
+                entree_serveur,
+                fabrique(),
+                outils,
+                memoire() if memoire and not suggestion_sans_etat else None,
+                entree.thread_id,
             ):
                 yield encodeur.encode(evenement)
 

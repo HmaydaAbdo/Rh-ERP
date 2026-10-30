@@ -246,6 +246,19 @@ model_list:
       max_parallel_requests: 1
       tags: [simple, medium, default, "id:mistral-ministral-14b"]
 
+  # Repli de même capacité après qualification synthétique des outils MCP, de la période ISO et du JSON strict.
+  # Le pool principal complex reste préféré ; ce déploiement Mistral n'est appelé qu'en cas d'échec du groupe.
+  - model_name: ai-gateway-complex-fallback
+    model_info: { id: mistral-ministral-14b--complex-fallback }
+    litellm_params:
+      model: mistral/ministral-14b-latest
+      api_key: os.environ/MISTRAL_API_KEY
+      weight: 1
+      rpm: 30
+      timeout: 60
+      max_parallel_requests: 1
+      tags: [complex, "id:mistral-ministral-14b"]
+
   - model_name: ai-gateway-code
     model_info: { id: mistral-codestral--code }
     litellm_params:
@@ -812,6 +825,9 @@ router_settings:
   enable_weighted_failover: true
   # Jusqu'à 3 tentatives supplémentaires sur d'autres déploiements du même groupe (4 modèles au plus).
   max_fallbacks: 3
+  # Repli explicite de capacité complexe vers un fournisseur distinct, après épuisement des déploiements principaux.
+  fallbacks:
+    - ai-gateway-complex: [ai-gateway-complex-fallback]
   enable_tag_filtering: false
   tag_filtering_match_any: true
   enable_pre_call_checks: true

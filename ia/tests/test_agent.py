@@ -99,6 +99,7 @@ async def test_aucune_verification_apres_coup_la_reponse_du_modele_est_rendue_te
 
 
 def test_les_consignes_envoient_les_comparaisons_vers_l_outil_et_admettent_la_conversation() -> None:
-    assert "`paie_comparer`" in SYSTEME
+    assert "Staport Intelligence" in SYSTEME
+    assert "catalogue de capacités" in SYSTEME
     assert "Ne calcule rien" in SYSTEME
     assert "Une conversation se poursuit" in SYSTEME
