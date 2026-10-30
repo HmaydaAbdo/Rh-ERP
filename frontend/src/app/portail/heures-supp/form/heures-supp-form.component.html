@@ -1,0 +1,40 @@
+<div class="app-page app-page--wide hs-form">
+  <a routerLink="/heures-supp" class="app-back"><stp-icon name="arrow-left" /> Heures supplémentaires</a>
+  <div class="app-page__header"><h1>{{ edition() ? 'Modifier la ligne d’heures supplémentaires' : 'Ajouter une ligne d’heures supplémentaires' }}</h1></div>
+  @if (loading()) {
+    <stp-message text="Chargement de la ligne…" />
+  } @else if (erreur() && !ligne() && edition()) {
+    <stp-message severity="error" [text]="erreur()!" />
+  } @else {
+    @if (ligne(); as actuelle) {
+      <section class="hs-form__contexte" aria-label="Informations conservées de la ligne">
+        <div><span>Employé</span><strong>{{ actuelle.nomPrenom }}</strong></div><div><span>CIN</span><strong>{{ actuelle.cin }}</strong></div>
+        <div><span>Fonction</span><strong>{{ actuelle.fonction }}</strong></div><div><span>Chantier</span><strong>{{ actuelle.codeChantier }} · {{ actuelle.chantier }}</strong></div>
+        <div><span>Salaire de référence</span><strong>{{ actuelle.salaireReferenceDh === null ? '—' : (actuelle.salaireReferenceDh | number:'1.2-2') + ' DH' }}</strong></div>
+        <div><span>Type de salaire</span><strong>{{ actuelle.typeSalaireReference === 'JOURNALIER' ? 'Journalier' : actuelle.typeSalaireReference === 'MENSUEL' ? 'Mensuel' : '—' }}</strong></div>
+        <div><span>S/H</span><strong>{{ actuelle.salaireHoraireDh === null ? '—' : (actuelle.salaireHoraireDh | number:'1.2-4') + ' DH/h' }}</strong></div>
+        <div><span>P/H actuel</span><strong>{{ actuelle.heuresSupplementaires === null ? '—' : (actuelle.heuresSupplementaires | number:'1.0-1') + ' h' }}</strong></div>
+        <div><span>Montant actuel</span><strong>{{ actuelle.montantDh | number:'1.2-2' }} DH</strong></div>
+        <div><span>STC actuel</span><strong>{{ actuelle.stcDh | number:'1.2-2' }} DH</strong></div>
+        <div><span>Forfait actuel</span><strong>{{ actuelle.forfaitDh === null ? '—' : (actuelle.forfaitDh | number:'1.2-2') + ' DH' }}</strong></div>
+        <div><span>Net à payer actuel</span><strong>{{ actuelle.netAPayerDh | number:'1.2-2' }} DH</strong></div>
+        @if (actuelle.stcOuSortie) { <stp-message severity="warn" text="La paie du mois est marquée STC/sortie ; le forfait est interdit." /> }
+      </section>
+    }
+    @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
+    <form [formRoot]="form" class="app-form__grid app-form__grid--2">
+      @if (!edition()) {
+        <div class="app-form__section"><h2>Affectation</h2></div>
+        <div class="field"><label for="hs-employe">Employé <span class="field__req" aria-hidden="true">*</span></label><app-lazy-select ariaLabel="Employé" inputId="hs-employe" [formField]="form.employeeId" [source]="employes" optionLabel="displayLabel" placeholder="Rechercher par nom ou CIN" /><stp-field-error [field]="form.employeeId" /></div>
+        <div class="field"><label for="hs-periode">Mois <span class="field__req" aria-hidden="true">*</span></label><stp-month-input inputId="hs-periode" [formField]="form.periode" /><stp-field-error [field]="form.periode" /></div>
+        <div class="field"><label for="hs-chantier">Chantier <span class="field__req" aria-hidden="true">*</span></label><app-lazy-select ariaLabel="Chantier" inputId="hs-chantier" [formField]="form.chantierId" [source]="chantiers" optionLabel="code" placeholder="Sélectionner un chantier" /><stp-field-error [field]="form.chantierId" /></div>
+      } @else {
+        <div class="app-form__section"><h2>Valeurs à modifier</h2></div>
+      }
+      <div class="field"><label for="hs-heures">Heures supplémentaires (P/H)</label><stp-number-input inputId="hs-heures" ariaLabel="Heures supplémentaires (P/H)" [maxFractionDigits]="1" [formField]="form.heuresSupplementaires" /><stp-field-error [field]="form.heuresSupplementaires" /></div>
+      <div class="field"><label for="hs-forfait">Forfait (DH)</label><stp-number-input inputId="hs-forfait" ariaLabel="Forfait en dirhams" [minFractionDigits]="2" [maxFractionDigits]="2" [formField]="form.forfaitDh" /><stp-field-error [field]="form.forfaitDh" /></div>
+      <p class="hs-form__hint">Saisissez des heures supplémentaires, un forfait, ou les deux.</p>
+      <div class="app-form__actions"><a stp-button variant="secondary" routerLink="/heures-supp">Annuler</a><button stp-button variant="primary" type="button" [loading]="saving()" (click)="enregistrer()">{{ edition() ? 'Enregistrer' : 'Ajouter' }}</button></div>
+    </form>
+  }
+</div>

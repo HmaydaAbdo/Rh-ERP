@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permissionGuard } from '../../core/auth/guards/auth.guard';
+import { unsavedChangesGuard } from '../../shared/forms/unsaved-changes.guard';
 
 export const HEURES_SUPP_ROUTES: Routes = [
   {
@@ -12,6 +13,20 @@ export const HEURES_SUPP_ROUTES: Routes = [
       { path: 'cartes', data: { vue: 'cartes' }, loadComponent: () => import('./cartes/heures-supp-cartes.component').then((m) => m.HeuresSuppCartesComponent) },
       { path: 'analytique', data: { vue: 'analytique' }, loadComponent: () => import('./analytique/heures-supp-analytique.component').then((m) => m.HeuresSuppAnalytiqueComponent) }
     ]
+  },
+  {
+    path: 'new',
+    canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
+    data: { permission: 'HEURES_SUP_IMPORT', permissions: ['PAIE_READ', 'EMPLOYEE_READ', 'CHANTIER_READ'] },
+    loadComponent: () => import('./form/heures-supp-form.component').then((m) => m.HeuresSuppFormComponent)
+  },
+  {
+    path: ':id/edit',
+    canActivate: [permissionGuard],
+    canDeactivate: [unsavedChangesGuard],
+    data: { permission: 'HEURES_SUP_IMPORT', permissions: ['PAIE_READ'] },
+    loadComponent: () => import('./form/heures-supp-form.component').then((m) => m.HeuresSuppFormComponent)
   },
   {
     path: 'import',

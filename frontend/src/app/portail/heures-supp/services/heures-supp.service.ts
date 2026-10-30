@@ -15,6 +15,8 @@ export class HeuresSuppService {
     return this.http.post<Page<HeuresSupp>>(`${this.baseUrl}/search`, criteria, { params });
   }
 
+  get(id: number): Observable<HeuresSupp> { return this.http.get<HeuresSupp>(`${this.baseUrl}/${id}`); }
+
   modifier(id: number, modification: { version: number; heuresSupplementaires: number | null; forfaitDh: number | null }): Observable<HeuresSupp> {
     return this.http.put<HeuresSupp>(`${this.baseUrl}/${id}`, modification);
   }

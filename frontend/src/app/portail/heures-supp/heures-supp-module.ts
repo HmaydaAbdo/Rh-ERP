@@ -16,7 +16,7 @@ export function moduleHeuresSupp(): ModulePerimetre {
     route: '/heures-supp',
     permission: 'HEURES_SUP_READ',
     introAnalytique: 'Montants, heures et forfaits consolidés sur le mois sélectionné.',
-    parametresListe: (params: ParamMap) => ({ periode: params.get('periode'), chantierIds: params.get('chantierIds'), equipeIds: params.get('equipeIds'), fonctionIds: params.get('fonctionIds') }),
+    parametresListe: (params: ParamMap) => ({ periode: params.get('periode'), chantierIds: params.get('chantierIds'), equipeIds: params.get('equipeIds'), fonctionIds: params.get('fonctionIds'), cin: params.get('cin'), nom: params.get('nom') }),
     critereEmployes: () => ({}),
     criterePaie: () => ({}),
     critereHeuresSupp: (params: ParamMap, portee: Portee, periode: string | null) => ({

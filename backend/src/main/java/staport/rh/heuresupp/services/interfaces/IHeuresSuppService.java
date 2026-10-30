@@ -13,6 +13,8 @@ public interface IHeuresSuppService {
 
     Page<HeureSuppResponseDto> rechercher(HeuresSuppSearchCriteria criteres, Pageable pageable);
 
+    HeureSuppResponseDto rechercherParId(Long id);
+
     HeureSuppResponseDto modifier(Long id, HeuresSuppModificationDto requete);
     void supprimer(Long id);
     long supprimerMois(YearMonth periode, long nombreAttendu);

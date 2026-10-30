@@ -4,7 +4,7 @@
 
 | Endpoint | Permission |
 |---|---|
-| `POST /heures-supp/search`, `POST /heures-supp/analytique`, `GET /heures-supp/periodes` | `HEURES_SUP_READ` **et** `PAIE_READ` |
+| `POST /heures-supp/search`, `GET /heures-supp/{id}`, `POST /heures-supp/analytique`, `GET /heures-supp/periodes` | `HEURES_SUP_READ` **et** `PAIE_READ` |
 | `PUT /heures-supp/{id}` | `HEURES_SUP_IMPORT` et `PAIE_READ` |
 | `POST /heures-supp` | `HEURES_SUP_IMPORT`, `PAIE_READ`, `EMPLOYEE_READ` et `CHANTIER_READ` |
 | `DELETE /heures-supp/{id}` | `HEURES_SUP_DELETE` et `PAIE_READ` |
@@ -23,7 +23,7 @@ Le serveur revérifie chaque permission ; masquer un bouton Angular ne constitue
 
 - Le menu et les routes Tabulaire, Cartes et Analytique exigent `HEURES_SUP_READ` et `PAIE_READ`.
 - L'importateur et le modèle Excel exigent `HEURES_SUP_IMPORT` et `PAIE_READ`.
-- L'ajout depuis le tableau exige aussi `EMPLOYEE_READ` et `CHANTIER_READ` pour sélectionner les références.
+- L'ajout depuis son écran dédié exige aussi `EMPLOYEE_READ` et `CHANTIER_READ` pour sélectionner les références ; la modification charge la ligne avec la permission de lecture.
 - La création ou la correction d'une fiche employé depuis l'assistant exige aussi `EMPLOYEE_WRITE` et `FUNCTION_READ` pour choisir sa fonction.
 - Les corrections suivent le même parcours explicite que l'import Paie ; sans `EMPLOYEE_WRITE`, l'utilisateur doit corriger la fiche avant de relancer l'analyse.
 
