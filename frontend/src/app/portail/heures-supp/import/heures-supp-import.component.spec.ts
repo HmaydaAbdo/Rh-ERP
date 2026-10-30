@@ -34,12 +34,15 @@ interface ImportApi {
   chargement: WritableSignal<boolean>;
   telechargementModele: WritableSignal<boolean>;
   peutRemplacer(): boolean;
-  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
+  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
   alignements: WritableSignal<number[]>;
   valeurSalaire(numero: number): string;
   estAligne(id: number): boolean;
   choisirChantier(value: unknown): void;
+  choisirFonction(numero: number, value: unknown): void;
   choisirFichier(event: Event): void;
+  inputValue(event: Event): string;
+  nombreValue(event: Event): number;
   telechargerModele(): void;
   verifierContexte(): void;
   analyser(): void;
@@ -91,7 +94,33 @@ describe('HeuresSuppImportComponent', () => {
 
   it('commence à l’étape de choix du mois et du chantier', () => {
     expect(api.etape()).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Choisir le mois et le chantier');
+    expect(document.body.textContent).toContain('Choisir le mois et le chantier');
+  });
+
+  it('parcourt les trois étapes par les boutons affichés', () => {
+    api.mois.set(new Date(2026, 9, 1));
+    api.choisirChantier(4);
+    service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
+    fixture.detectChanges();
+    const boutonContexte = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Vérifier la paie')) as HTMLButtonElement;
+    boutonContexte.click();
+    fixture.detectChanges();
+    expect(api.etape()).toBe(2);
+
+    api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
+    service['analyserImport'].mockReturnValue(of(ANALYSE));
+    fixture.detectChanges();
+    const boutonAnalyse = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Analyser le fichier')) as HTMLButtonElement;
+    boutonAnalyse.click();
+    fixture.detectChanges();
+    expect(api.etape()).toBe(3);
+
+    service['importer'].mockReturnValue(of({ periode: '2026-10', chantierId: 4, lignesHeures: 1, lignesZero: 0,
+      forfaitsSeuls: 0, remplacements: 0, heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 }));
+    const boutonImporter = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Confirmer l’import')) as HTMLButtonElement;
+    boutonImporter.click();
+    fixture.detectChanges();
+    expect(document.body.textContent).toContain('IMPORT TERMINÉ');
   });
 
   it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {
@@ -116,7 +145,7 @@ describe('HeuresSuppImportComponent', () => {
 
   it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
     expect(api.valeurSalaire(2)).toBe('');
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
     expect(api.valeurSalaire(2)).toBe('4000');
     expect(api.estAligne(7)).toBe(false);
     api.basculerAlignement(7);
@@ -129,6 +158,21 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.analyse()).toBeNull();
   });
 
+  it('normalise les sélections, convertit les champs et accepte la suppression de fichier', () => {
+    api.choisirChantier('4');
+    expect(api.chantierId()).toBeNull();
+    api.choisirChantier(4);
+    api.analyse.set(ANALYSE);
+    api.choisirFichier({ target: { files: [] } } as unknown as Event);
+    expect(api.fichier()).toBeNull();
+    expect(api.analyse()).toBeNull();
+    api.choisirFonction(3, 8);
+    api.choisirFonction(4, '9');
+    expect(api.creations()).toMatchObject({ 3: { fonctionId: 8 }, 4: { fonctionId: 0 } });
+    expect(api.inputValue({ target: { value: '12,5' } } as unknown as Event)).toBe('12,5');
+    expect(api.nombreValue({ target: { value: '12.5' } } as unknown as Event)).toBe(12.5);
+  });
+
   it('bloque l’étape suivante si la paie mensuelle manque', () => {
     api.mois.set(new Date(2026, 9, 1));
     api.choisirChantier(4);
@@ -138,6 +182,20 @@ describe('HeuresSuppImportComponent', () => {
 
     expect(api.etape()).toBe(1);
     expect(api.erreur()).toBe('Importez d’abord la paie.');
+  });
+
+  it('ignore les actions incomplètes et affiche les erreurs de contrôle du contexte', () => {
+    api.mois.set(new Date(2026, 9, 1));
+    api.verifierContexte();
+    api.analyser();
+    api.corriger();
+    api.importer();
+    expect(service['verifierPrerequis']).not.toHaveBeenCalled();
+    api.choisirChantier(4);
+    service['verifierPrerequis'].mockReturnValue(throwError(() => ({ error: { message: 'Contexte indisponible.' } })));
+    api.verifierContexte();
+    expect(api.erreur()).toBe('Contexte indisponible.');
+    expect(api.chargement()).toBe(false);
   });
 
   it('ouvre l’étape fichier uniquement après le contrôle de paie', () => {
@@ -155,7 +213,7 @@ describe('HeuresSuppImportComponent', () => {
   it('propose et télécharge le modèle Excel depuis l’étape fichier', () => {
     api.etape.set(2);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Télécharger le modèle Excel');
+    expect(document.body.textContent).toContain('Télécharger le modèle Excel');
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:modele');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
@@ -164,6 +222,13 @@ describe('HeuresSuppImportComponent', () => {
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:modele');
+  });
+
+  it('affiche l’erreur si le téléchargement du modèle échoue', () => {
+    service['telechargerModele'].mockReturnValue(throwError(() => new Error('offline')));
+    api.telechargerModele();
+    expect(api.erreur()).toContain('Le modèle Excel n’a pas pu être téléchargé');
+    expect(api.telechargementModele()).toBe(false);
   });
 
   it('valide le format des forfaits puis analyse avec le montant décimal', () => {
@@ -208,7 +273,7 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirChantier(4);
     api.texteForfaits.set('AB123;12,50');
     api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
     api.alignements.set([9]);
     service['corrigerImport'].mockReturnValue(of(ANALYSE));
 
@@ -216,7 +281,7 @@ describe('HeuresSuppImportComponent', () => {
 
     expect(service['corrigerImport']).toHaveBeenCalledWith(expect.any(File), '2026-10', 4, {
       aligner: [{ employeId: 9 }],
-      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', salaire: 4000, typeSalaire: 'MENSUEL' }]
+      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' }]
     }, [{ cin: 'AB123', montantDh: 12.5 }]);
   });
 
@@ -235,6 +300,29 @@ describe('HeuresSuppImportComponent', () => {
     service['importer'].mockClear();
     api.importer();
     expect(service['importer']).not.toHaveBeenCalled();
+  });
+
+  it('valide les corrections de création et relaie les erreurs pendant analyse et import', () => {
+    const fichier = new File(['xlsx'], 'heures.xlsx');
+    api.fichier.set(fichier);
+    api.choisirChantier(4);
+    api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: -1, typeSalaire: 'MENSUEL' } });
+    api.corriger();
+    expect(api.erreur()).toContain('Complétez les dates');
+    expect(service['corrigerImport']).not.toHaveBeenCalled();
+
+    api.texteForfaits.set('AB123;500');
+    service['analyserImport'].mockReturnValue(throwError(() => ({ message: 'Analyse refusée.' })));
+    api.analyser();
+    expect(api.erreur()).toBe('Analyse refusée.');
+    expect(api.chargement()).toBe(false);
+
+    api.analyse.set(ANALYSE);
+    service['importer'].mockReturnValue(throwError(() => new Error('Import refusé.')));
+    api.importer();
+    expect(api.erreur()).toBe('Import refusé.');
+    expect(api.chargement()).toBe(false);
   });
 
   it('confirme un remplacement audité, peut basculer les alignements et relaie les erreurs serveur', () => {

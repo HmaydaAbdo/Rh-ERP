@@ -187,6 +187,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V38` | Reprise auditée de la qualification du référentiel par code ; conserve les statuts et toute qualification manuelle déjà présente. |
 | `V39` | Table `heures_supp`, contraintes d'unicité/intégrité et instantanés audités `heures_supp_aud`. |
 | `V40` | Permissions `HEURES_SUP_READ` et `HEURES_SUP_IMPORT`, attribuées et auditées pour `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
+| `V41` | Permissions auditées `HEURES_SUP_DELETE` et `HEURES_SUP_PURGE` pour la suppression unitaire et la purge mensuelle, attribuées à `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
 | `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
