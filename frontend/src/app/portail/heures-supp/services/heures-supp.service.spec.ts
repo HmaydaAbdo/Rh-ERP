@@ -26,6 +26,31 @@ describe('HeuresSuppService', () => {
     request.flush({ content: [], page: { totalElements: 0 } });
   });
 
+  it('crée, modifie et supprime les lignes avec leurs contrats dédiés', () => {
+    service.creer({ employeeId: 7, periode: '2026-10', chantierId: 4, heuresSupplementaires: 2, forfaitDh: null }).subscribe();
+    const creation = http.expectOne('heures-supp');
+    expect(creation.request.method).toBe('POST');
+    expect(creation.request.body).toEqual({ employeeId: 7, periode: '2026-10', chantierId: 4, heuresSupplementaires: 2, forfaitDh: null });
+    creation.flush({ id: 1 });
+
+    service.modifier(1, { version: 0, heuresSupplementaires: 3, forfaitDh: null }).subscribe();
+    const modification = http.expectOne('heures-supp/1');
+    expect(modification.request.method).toBe('PUT');
+    expect(modification.request.body).toEqual({ version: 0, heuresSupplementaires: 3, forfaitDh: null });
+    modification.flush({ id: 1 });
+
+    service.supprimer(1).subscribe();
+    const suppression = http.expectOne('heures-supp/1');
+    expect(suppression.request.method).toBe('DELETE');
+    suppression.flush(null);
+
+    service.supprimerMois('2026-10', 8).subscribe();
+    const purge = http.expectOne('heures-supp/suppression-mois');
+    expect(purge.request.method).toBe('POST');
+    expect(purge.request.body).toEqual({ periode: '2026-10', nombreAttendu: 8 });
+    purge.flush(8);
+  });
+
   it('charge les périodes et les agrégats analytiques', () => {
     service.periodes().subscribe();
     http.expectOne('heures-supp/periodes').flush(['2026-10']);

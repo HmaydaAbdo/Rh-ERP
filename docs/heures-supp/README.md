@@ -29,6 +29,10 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 |---|---|
 | `POST /heures-supp/search` | Recherche paginée selon période, chantier, équipe, fonction, CIN et nom ; renvoie les lignes détaillées. |
 | `POST /heures-supp/analytique` | Indicateurs et répartitions par chantier, fonction et équipe selon les critères. |
+| `PUT /heures-supp/{id}` | Modifie les heures et/ou le forfait d'une ligne, avec contrôle de version et recalcul des montants. |
+| `POST /heures-supp` | Ajoute une ligne manuellement à partir d'un employé, d'une paie mensuelle et d'un chantier. |
+| `DELETE /heures-supp/{id}` | Supprime une ligne avec audit. |
+| `POST /heures-supp/suppression-mois` | Supprime toutes les lignes d'un mois, tous chantiers confondus, si le nombre correspond à celui confirmé. |
 | `GET /heures-supp/periodes` | Mois ayant au moins un import. |
 | `GET /heures-supp/import/prerequis?periode=aaaa-MM&chantierId=…` | Confirme que le mois de paie et le chantier permettent d'ouvrir l'étape du fichier. |
 | `GET /heures-supp/import/modele` | Télécharge le modèle Excel `.xlsx`. |
@@ -55,7 +59,8 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | Mois | Choisi dans l'assistant. Le mois doit déjà avoir une paie importée avant de commencer l'import des heures supplémentaires. |
 | Chantier | Choisi dans l'assistant ; un seul chantier par import. Résolu par le domaine Chantier. |
 | CIN | Clé de rapprochement avec l'employé. Un CIN inconnu doit être résolu en créant la fiche Employé selon le parcours de correction de la Paie. |
-| Nom, prénom, fonction | Le fichier les fournit et le CIN identifie la fiche. Le wizard affiche les écarts et demande un alignement explicite du nom et de la fonction, comme l'import Paie. |
+| Nom et prénom | Colonne obligatoire, utilisée pour contrôler le nom de la fiche trouvée par CIN et demander un alignement explicite en cas d'écart. |
+| Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction. |
 | P/H | Nombre d'heures supplémentaires fourni, en heures décimales, avec au plus une décimale ; les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
 | S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. La valeur calculée est conservée avec l'import. |
@@ -80,18 +85,20 @@ retenu est un instantané de la fiche Employé au moment de chaque nouvel import
 
 ## Assistant d'import
 
+Depuis le tableau, les utilisateurs autorisés peuvent également ajouter une ligne manuellement en sélectionnant un employé, un mois, un chantier et au moins une valeur (heures ou forfait). Le serveur exige le bulletin de paie de cet employé pour le mois, reprend la fonction et l'observation STC/sortie de ce bulletin et refuse tout doublon employé/mois/chantier.
+
 1. **Mois et chantier** : si aucune paie n'existe pour le mois, bloquer dès cette étape avec une explication indiquant
    d'importer d'abord la paie de ce mois.
-2. **Fichier** : le bouton « Télécharger le modèle Excel » fournit le classeur `.xlsx` attendu (`Nom`, `Prenom`, `CIN`, `Funct`, `HS`), puis déposer le fichier complété. Le wizard permet aussi de saisir les forfaits `CIN;montant`, y compris pour un employé absent du fichier d'heures.
+2. **Fichier** : le bouton « Télécharger le modèle Excel » fournit le classeur `.xlsx` avec trois colonnes obligatoires (`Nom et prénom`, `CIN`, `HS`). Le wizard permet aussi de saisir les forfaits `CIN;montant`, y compris pour un employé absent du fichier d'heures.
 3. **Analyse** : aucune écriture ; conserver les lignes HS à zéro avec P/H = 0 et Montant = 0, signaler une ligne HS vide par son numéro, rapprocher les employés par CIN, vérifier qu'un bulletin de
    Paie existe pour chacun dans le même mois et calculer les valeurs présentées.
-4. **Corrections** : reprendre le mécanisme Paie : aligner explicitement une fiche existante sur le nom et la fonction du fichier, ou créer la fiche d'un CIN inconnu avec ses dates, son salaire et son type ; la fonction vient du fichier et peut être ajoutée au référentiel. Toute ligne doit ensuite satisfaire l'exigence d'un bulletin du même mois.
+4. **Corrections** : reprendre le mécanisme Paie : aligner explicitement la fiche existante sur le nom du fichier, ou créer la fiche d'un CIN inconnu en demandant ses dates, sa fonction, son salaire et son type. La sélection de fonction exige `FUNCTION_READ`. Toute ligne doit ensuite satisfaire l'exigence d'un bulletin du même mois.
 5. **Forfaits** : ajouter un employé et un montant même s'il n'est pas présent dans les lignes HS ; refuser le forfait
    pour un employé marqué STC/sortie dans la paie du mois.
 6. **Récapitulatif** : présenter séparément heures, Montant, STC, Forfaits et Net à payer avant confirmation.
 7. **Import** : enregistrer le lot validé en une transaction et afficher un bilan final.
 
-Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
+Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. La purge d'un mois requiert la permission dédiée, la saisie du nombre de lignes à supprimer et une confirmation serveur du même compte ; elle couvre tous les chantiers du mois et conserve les instantanés Envers. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
 
 ### Classeur reçu
 

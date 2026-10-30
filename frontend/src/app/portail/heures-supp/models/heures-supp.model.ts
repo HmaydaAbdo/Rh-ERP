@@ -1,5 +1,6 @@
 export interface HeuresSupp {
   id: number;
+  version: number;
   employeeId: number;
   nomPrenom: string;
   cin: string;
@@ -113,6 +114,7 @@ export interface HeuresSuppCreationEmploye {
   numeroLigne: number;
   dateNaissance: string;
   dateEmbauche: string;
+  fonctionId: number;
   salaire: number;
   typeSalaire: 'JOURNALIER' | 'MENSUEL';
 }

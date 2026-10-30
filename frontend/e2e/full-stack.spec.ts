@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
-import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { strToU8, unzipSync, zipSync } from 'fflate';
 
 const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8080';
 
@@ -120,10 +120,12 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     `/heures-supp/import/prerequis?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`);
   expect(prerequisHs.pret).toBe(true);
   const classeurHs = unzipSync(readFileSync(resolve(process.cwd(), 'e2e/fixtures/heures-supp-full-stack.xlsx')));
-  const feuilleHs = strFromU8(classeurHs['xl/worksheets/sheet1.xml']);
-  classeurHs['xl/worksheets/sheet1.xml'] = strToU8(feuilleHs
-    .replace('HSFULLSTACK', cinHs)
-    .replace('Conductrice HS', fonctionLibelleHs));
+  classeurHs['xl/worksheets/sheet1.xml'] = strToU8(
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:C2"/><sheetData>` +
+    `<row r="1"><c r="A1" t="inlineStr"><is><t>Nom et prénom</t></is></c><c r="B1" t="inlineStr"><is><t>CIN</t></is></c><c r="C1" t="inlineStr"><is><t>HS</t></is></c></row>` +
+    `<row r="2"><c r="A2" t="inlineStr"><is><t>Alaoui Salma</t></is></c><c r="B2" t="inlineStr"><is><t>${cinHs}</t></is></c><c r="C2" t="n"><v>2</v></c></row>` +
+    `</sheetData></worksheet>`
+  );
   const fichierHs = Buffer.from(zipSync(classeurHs));
   const importHs = await page.request.post(`${BACKEND_URL}/heures-supp/import?periode=${moisCourant}&chantierId=${chantierHeuresSupp.id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },

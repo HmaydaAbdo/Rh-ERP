@@ -15,6 +15,20 @@ export class HeuresSuppService {
     return this.http.post<Page<HeuresSupp>>(`${this.baseUrl}/search`, criteria, { params });
   }
 
+  modifier(id: number, modification: { version: number; heuresSupplementaires: number | null; forfaitDh: number | null }): Observable<HeuresSupp> {
+    return this.http.put<HeuresSupp>(`${this.baseUrl}/${id}`, modification);
+  }
+
+  creer(ligne: { employeeId: number; periode: string; chantierId: number; heuresSupplementaires: number | null; forfaitDh: number | null }): Observable<HeuresSupp> {
+    return this.http.post<HeuresSupp>(this.baseUrl, ligne);
+  }
+
+  supprimer(id: number): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/${id}`); }
+
+  supprimerMois(periode: string, nombreAttendu: number): Observable<number> {
+    return this.http.post<number>(`${this.baseUrl}/suppression-mois`, { periode, nombreAttendu });
+  }
+
   analyser(criteria: HeuresSuppSearchCriteria): Observable<HeuresSuppAnalytique> {
     return this.http.post<HeuresSuppAnalytique>(`${this.baseUrl}/analytique`, criteria);
   }

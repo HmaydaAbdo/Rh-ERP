@@ -16,7 +16,7 @@ export const HEURES_SUPP_ROUTES: Routes = [
   {
     path: 'import',
     canActivate: [permissionGuard],
-    data: { permission: 'HEURES_SUP_IMPORT', permissions: ['PAIE_READ', 'CHANTIER_READ', 'EMPLOYEE_READ'] },
+    data: { permission: 'HEURES_SUP_IMPORT', permissions: ['PAIE_READ', 'CHANTIER_READ', 'EMPLOYEE_READ', 'FUNCTION_READ'] },
     loadComponent: () => import('./import/heures-supp-import.component').then((m) => m.HeuresSuppImportComponent)
   }
 ];

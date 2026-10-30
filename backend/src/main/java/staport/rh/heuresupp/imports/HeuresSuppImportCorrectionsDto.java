@@ -29,6 +29,7 @@ public record HeuresSuppImportCorrectionsDto(
             @NotNull int numeroLigne,
             @NotNull @Past LocalDate dateNaissance,
             @NotNull LocalDate dateEmbauche,
+            @NotNull Long fonctionId,
             @NotNull @DecimalMin("0.00") @Digits(integer = 8, fraction = 2) BigDecimal salaire,
             @NotNull TypeSalaire typeSalaire
     ) {

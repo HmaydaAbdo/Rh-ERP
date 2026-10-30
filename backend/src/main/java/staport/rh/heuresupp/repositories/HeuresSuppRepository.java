@@ -19,6 +19,8 @@ public interface HeuresSuppRepository extends JpaRepository<HeureSupp, Long>, Jp
 
     List<HeureSupp> findByPeriodeAndChantier_IdOrderByEmployee_NomPrenomAsc(YearMonth periode, Long chantierId);
 
+    List<HeureSupp> findByPeriodeOrderByEmployee_NomPrenomAsc(YearMonth periode);
+
     List<YearMonth> findDistinctPeriodeByOrderByPeriodeDesc();
 
     @Query("""

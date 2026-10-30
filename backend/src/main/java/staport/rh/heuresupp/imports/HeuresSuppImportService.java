@@ -106,14 +106,12 @@ public class HeuresSuppImportService {
             EmployeeResponseDto employee = employes.findByCin(ligne.cin()).orElse(null);
             if (employee == null) {
                 inconnus.put(ligne.numeroLigne(), ligne);
-            } else if (ecart(employee.nomPrenom(), ligne.nomPrenom())
-                    || employee.fonction() == null || ecart(employee.fonction().libelle(), ligne.fonction())) {
+            } else if (ecart(employee.nomPrenom(), ligne.nomPrenom())) {
                 ecartsEmployes.add(employee.id());
                 employesAvecEcart.put(employee.id(), employee);
                 lignesAvecEcart.put(employee.id(), ligne);
             }
         }
-        Map<String, Long> fonctionsParLibelle = new HashMap<>();
         Set<Long> employesAlignes = new HashSet<>();
         for (HeuresSuppImportCorrectionsDto.Alignement alignement : corrections.aligner()) {
             if (!ecartsEmployes.contains(alignement.employeId())) {
@@ -124,9 +122,8 @@ public class HeuresSuppImportService {
             }
             EmployeeResponseDto employee = employesAvecEcart.get(alignement.employeId());
             LigneFichierHeuresSupp ligne = lignesAvecEcart.get(alignement.employeId());
-            Long fonctionId = fonctionId(ligne.fonction(), fonctionsParLibelle);
             employes.update(employee.id(), new EmployeeUpdateRequestDto(employee.version(), ligne.nomPrenom(), employee.cin(),
-                    employee.dateNaissance(), employee.dateEmbauche(), fonctionId,
+                    employee.dateNaissance(), employee.dateEmbauche(), employee.fonction() == null ? null : employee.fonction().id(),
                     employee.chantier() == null ? null : employee.chantier().id(),
                     employee.equipe() == null ? null : employee.equipe().id(), employee.salaire(), employee.typeSalaire(), employee.statut()));
         }
@@ -139,8 +136,11 @@ public class HeuresSuppImportService {
             if (!creationsTraitees.add(creation.numeroLigne())) {
                 throw new HeuresSuppImportException("La ligne " + creation.numeroLigne() + " est proposée plusieurs fois.");
             }
+            if (!fonctions.existsById(creation.fonctionId())) {
+                throw new HeuresSuppImportException("La fonction sélectionnée pour la ligne " + creation.numeroLigne() + " n'existe plus.");
+            }
             employes.create(new EmployeeCreateRequestDto(ligne.nomPrenom(), ligne.cin(), creation.dateNaissance(),
-                    creation.dateEmbauche(), fonctionId(ligne.fonction(), fonctionsParLibelle), chantierId, null,
+                    creation.dateEmbauche(), creation.fonctionId(), chantierId, null,
                     creation.salaire(), creation.typeSalaire()));
         }
         entityManager.flush();
@@ -248,9 +248,9 @@ public class HeuresSuppImportService {
                     dossier.employe == null || dossier.employe.fonction() == null ? null : dossier.employe.fonction().libelle(),
                     dossier.employe == null ? null : dossier.employe.id(),
                     dossier.source == null ? null : dossier.source.nomPrenom(),
-                    dossier.source == null ? null : dossier.source.fonction(),
+                    null,
                     dossier.source != null && dossier.employe != null && ecart(dossier.employe.nomPrenom(), dossier.source.nomPrenom()),
-                    dossier.source != null && dossier.employe != null && dossier.employe.fonction() != null && ecart(dossier.employe.fonction().libelle(), dossier.source.fonction()),
+                    false,
                     dossier.heures == null, dossier.heures, dossier.salaireHoraire, montant, dossier.stcOuSortie,
                     stc, forfait, net, erreursLigne));
         }
@@ -303,9 +303,8 @@ public class HeuresSuppImportService {
                     dossier.erreurs.add("salaire ou type de salaire manquant sur la fiche employé ; complétez la paie avant l'import.");
                 }
             }
-            if (dossier.source != null && (ecart(employe.nomPrenom(), dossier.source.nomPrenom())
-                    || employe.fonction() == null || ecart(employe.fonction().libelle(), dossier.source.fonction()))) {
-                dossier.erreurs.add("le nom ou la fonction du fichier diffère de la fiche ; confirmez l'alignement dans l'étape de correction.");
+            if (dossier.source != null && ecart(employe.nomPrenom(), dossier.source.nomPrenom())) {
+                dossier.erreurs.add("le nom du fichier diffère de la fiche ; confirmez l'alignement dans l'étape de correction.");
             }
             if (!remplacement && repository.existsByEmployee_IdAndPeriodeAndChantier_Id(employe.id(), periode, chantierId)) {
                 dossier.erreurs.add("une ligne existe déjà pour ce mois et ce chantier ; confirmez son remplacement explicite.");

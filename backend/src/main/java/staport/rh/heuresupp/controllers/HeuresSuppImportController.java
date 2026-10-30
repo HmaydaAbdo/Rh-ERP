@@ -64,7 +64,7 @@ public class HeuresSuppImportController {
 
     @PostMapping(value = "/corrections", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Créer dans l'assistant les fiches manquantes, puis renvoyer l'analyse")
-    @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_WRITE')")
+    @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('EMPLOYEE_WRITE') and hasAuthority('FUNCTION_READ')")
     public HeuresSuppImportAnalyseDto corriger(
             @Parameter(description = "Classeur Excel XLSX, maximum 20 Mo") @RequestParam("file") MultipartFile fichier,
             @RequestParam String periode,
