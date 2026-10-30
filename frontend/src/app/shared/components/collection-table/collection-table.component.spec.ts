@@ -23,6 +23,7 @@ import { CollectionTableComponent, CollectionTableConfig } from './collection-ta
       [(first)]="first"
       (lazyLoad)="loads.push($event)"
     >
+      <span table-summary>Net à payer 20 DH</span>
       <ng-template stpCell let-row let-col="col">{{ row.nom }}</ng-template>
     </app-collection-table>
   `
@@ -52,6 +53,7 @@ describe('CollectionTableComponent', () => {
     const page = harness.routeNativeElement as HTMLElement;
 
     expect(page.querySelector('[role="status"]')?.textContent?.trim()).toBe('2 collaborateurs');
+    expect(page.querySelector('.app-table-bar__summary')?.textContent).toContain('Net à payer 20 DH');
     expect(page.querySelector('app-column-chooser')).not.toBeNull();
     expect(page.querySelector('[role="region"]')?.getAttribute('aria-label')).toBe('Liste des collaborateurs');
     expect(Array.from(page.querySelectorAll('tbody td')).map((cell) => cell.textContent?.trim())).toEqual(['Ali', 'Zahra']);

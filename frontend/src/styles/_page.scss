@@ -244,6 +244,15 @@
   }
 }
 
+.app-table-bar__summary {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
 .app-table-bar__total {
   margin: 0;
   font-size: var(--text-sm);
@@ -387,6 +396,11 @@
 
   // Les actions à droite, au niveau du titre et des onglets, sans toucher au filet qui porte les onglets
   .app-vues__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-sm);
     margin-left: auto;
     align-self: center;
     padding-bottom: var(--space-xs);

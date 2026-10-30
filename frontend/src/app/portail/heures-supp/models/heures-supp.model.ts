@@ -9,6 +9,8 @@ export interface HeuresSupp {
   codeChantier: string;
   chantier: string;
   periode: string;
+  salaireReferenceDh: number | null;
+  typeSalaireReference: 'JOURNALIER' | 'MENSUEL' | null;
   salaireHoraireDh: number | null;
   heuresSupplementaires: number | null;
   montantDh: number;

@@ -90,6 +90,13 @@ public class HeuresSuppService implements IHeuresSuppService {
         return repository.findAll(HeuresSuppSpecification.rechercher(criteres), pageable).map(mapper::toDto);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public HeureSuppResponseDto rechercherParId(Long id) {
+        return repository.findById(id).map(mapper::toDto)
+                .orElseThrow(() -> new HeuresSuppImportException("La ligne d'heures supplémentaires demandée n'existe pas."));
+    }
+
     @Transactional
     @AuditableAction(action = "HEURES_SUP_MODIFICATION", type = TypeOperation.UPDATE, entite = HeureSupp.class)
     public HeureSuppResponseDto modifier(Long id, HeuresSuppModificationDto requete) {

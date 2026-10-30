@@ -90,6 +90,7 @@ class EndpointSecurityTest {
             Map.entry("FunctionImportController.importer", "FUNCTION_IMPORT"),
             Map.entry("FunctionImportController.telechargerModele", "FUNCTION_IMPORT"),
             Map.entry("HeuresSuppController.rechercher", "HEURES_SUP_READ&PAIE_READ"),
+            Map.entry("HeuresSuppController.rechercherParId", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.periodes", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.analyser", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.modifier", "HEURES_SUP_IMPORT&PAIE_READ"),
