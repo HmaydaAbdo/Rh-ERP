@@ -1,18 +1,18 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { CopilotKit, CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
+import { CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
 
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
-import { contexteEcran, suggestionsPour } from './ecran-assistant';
+import { contexteEcran } from './ecran-assistant';
 import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtilisateurComponent } from './question-utilisateur.component';
 
 /**
- * Assistant RH : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
- * L'écran ouvert (domaine et filtres) part avec chaque question et les questions proposées s'adaptent à cet écran.
+ * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
+ * L'écran ouvert (domaine et filtres) part avec chaque question comme indice de contexte.
  */
 @Component({
   selector: 'app-assistant-interne',
@@ -25,7 +25,7 @@ import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtil
       [(open)]="ouvert"
       mode="overlay"
       position="right"
-      title="Assistant RH"
+      title="Staport Intelligence"
       [chatComponent]="chat"
       [headerComponent]="entete"
     />
@@ -33,7 +33,6 @@ import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtil
 })
 export class AssistantComponent {
   private readonly router = inject(Router);
-  private readonly copilot = inject(CopilotKit);
   protected readonly theme = inject(ThemeService);
 
   protected readonly chat = AssistantChatComponent;
@@ -60,14 +59,6 @@ export class AssistantComponent {
       value: JSON.stringify(contexteEcran(this.url()))
     }));
 
-    // Questions proposées à l'ouverture d'une discussion vide, adaptées au domaine de l'écran.
-    effect((nettoyer) => {
-      const identifiant = this.copilot.core.addSuggestionsConfig({
-        suggestions: [...suggestionsPour(this.url())],
-        available: 'before-first-message'
-      });
-      nettoyer(() => this.copilot.core.removeSuggestionsConfig(identifiant));
-    });
   }
 
   /** `Ctrl K` (ou `⌘ K`) ouvre ou ferme l'assistant depuis n'importe quel écran. */

@@ -10,7 +10,7 @@ export const DESCRIPTION_QUESTION =
   'Pose une question à l\'utilisateur et attend sa réponse. À utiliser quand la demande est ambiguë ou qu\'un choix change ' +
   'le résultat (période, périmètre, critère de classement, sens du mot « entrées »…), plutôt que de deviner. Donne 2 à 5 ' +
   'options courtes et distinctes ; l\'utilisateur peut aussi répondre librement. Ne l\'utilise jamais pour une valeur ' +
-  'qu\'un outil de l\'ERP peut donner, ni pour une salutation.';
+  'qu\'une application connectée peut donner, ni pour une salutation.';
 
 export const PARAMETRES_QUESTION = z.object({
   question: z.string().describe('La question, en français, courte et précise.'),
