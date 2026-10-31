@@ -275,11 +275,11 @@ Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc comm
 Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
 son interprétation.
 
-* **Une mesure, un axe par défaut.** Ne jamais comparer les longueurs de séries qui utilisent des unités différentes.
-  Exception cadrée pour les évolutions temporelles de rapports explicitement validées : deux indicateurs peuvent partager
-  un graphique à deux axes Y quand leurs périodes correspondent et que les unités ne sont pas comparables. Chaque axe
-  porte son nom et son unité, ses graduations indépendantes restent visibles, et couleur, légende et valeurs relient sans
-  ambiguïté chaque série à son axe. Cette exception ne s'étend pas aux graphiques de distribution ni aux écrans interactifs.
+* **Un graphique par question, plusieurs indicateurs par graphique** (décision du propriétaire, 2026-11-01). Les indicateurs d'un même
+  sujet se groupent dans **un seul graphique à barres côte à côte**, et non en un graphique par grandeur. Les indicateurs de même unité
+  partagent l'axe Y principal ; une unité différente passe sur un **second axe Y à droite**. Chaque axe porte son nom et son unité, ses
+  graduations indépendantes restent visibles, et couleur, légende, infobulle et tableau de données relient sans ambiguïté chaque série à
+  son axe. Jamais plus de deux unités par graphique ; au-delà, on sépare. Les périodes des séries correspondent.
 * **La couleur suit l'entité, jamais son rang** : une mesure a la même couleur dans tous les graphiques, quel que soit le
   filtre. Palette catégorielle `--chart-1…8` validée avec le validateur de la méthode (écart de vision des couleurs ≥ 8,
   plancher de vision normale ≥ 15) en clair **et** en sombre, dans un ordre fixe ; au-delà de trois séries on regroupe ou on
