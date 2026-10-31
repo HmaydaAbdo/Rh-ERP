@@ -31,7 +31,6 @@ const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
   selector: 'app-paie-import-etape-controle',
   imports: [DecimalPipe, ButtonComponent, DateInputComponent, IconComponent, SelectComponent],
   templateUrl: './controle-etape.component.html',
-  styleUrl: './controle-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieImportEtapeControleComponent {

@@ -2,7 +2,7 @@ import { PaieExportEtapeFormatComponent } from './format-etape.component';
 import { monterEtape, stabiliser } from './etapes.testing';
 
 describe('PaieExportEtapeFormatComponent', () => {
-  const cartes = (racine: HTMLElement) => Array.from(racine.querySelectorAll<HTMLButtonElement>('.export-wizard__format'));
+  const cartes = (racine: HTMLElement) => Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__format'));
 
   it('propose le rapport PDF et le classeur Excel avec ce que chacun contient', async () => {
     const { racine } = await monterEtape(PaieExportEtapeFormatComponent);
@@ -15,8 +15,8 @@ describe('PaieExportEtapeFormatComponent', () => {
   it('présélectionne le PDF', async () => {
     const { racine } = await monterEtape(PaieExportEtapeFormatComponent);
 
-    expect(cartes(racine)[0].className).toContain('export-wizard__format--choisi');
-    expect(cartes(racine)[1].className).not.toContain('export-wizard__format--choisi');
+    expect(cartes(racine)[0].className).toContain('app-wizard__format--choisi');
+    expect(cartes(racine)[1].className).not.toContain('app-wizard__format--choisi');
   });
 
   it('choisir l’Excel le retient dans l’assistant et déplace la sélection', async () => {
@@ -26,8 +26,8 @@ describe('PaieExportEtapeFormatComponent', () => {
     await stabiliser(fixture);
 
     expect(store.format()).toBe('EXCEL');
-    expect(cartes(racine)[1].className).toContain('export-wizard__format--choisi');
-    expect(cartes(racine)[0].className).not.toContain('export-wizard__format--choisi');
+    expect(cartes(racine)[1].className).toContain('app-wizard__format--choisi');
+    expect(cartes(racine)[0].className).not.toContain('app-wizard__format--choisi');
   });
 
   it('revenir au PDF fonctionne aussi', async () => {

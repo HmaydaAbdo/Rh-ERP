@@ -27,14 +27,7 @@ const CONFIGURATION_TABLE_EMPLOYE: CollectionTableConfig = {
   selector: 'app-employee-list',
   imports: [CollectionTableComponent, ButtonComponent, BadgeComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
   templateUrl: './employee-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    // Unité du salaire (« / mois », « / jour ») : discrète à côté du montant
-    .employee-list__unite {
-      color: var(--color-text-muted);
-      font-size: var(--text-xs);
-    }
-  `
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeListComponent {
   protected readonly tableConfiguration = CONFIGURATION_TABLE_EMPLOYE;

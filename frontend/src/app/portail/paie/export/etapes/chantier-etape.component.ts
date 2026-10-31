@@ -8,7 +8,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-chantier',
   imports: [],
   templateUrl: './chantier-etape.component.html',
-  styleUrl: './chantier-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapeChantierComponent {

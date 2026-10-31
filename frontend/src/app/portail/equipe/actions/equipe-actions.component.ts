@@ -16,8 +16,7 @@ import { EquipeService } from '../services/equipe.service';
   selector: 'app-equipe-actions',
   imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './equipe-actions.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `.equipe-actions__fichier { display: none; }`
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquipeActionsComponent {
   readonly importe = output<void>();

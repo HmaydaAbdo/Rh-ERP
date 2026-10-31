@@ -2,9 +2,9 @@ import { PaieExportEtapeChantierComponent } from './chantier-etape.component';
 import { CHANTIERS, monterEtape, stabiliser } from './etapes.testing';
 
 describe('PaieExportEtapeChantierComponent', () => {
-  const choix = (racine: HTMLElement) => Array.from(racine.querySelectorAll<HTMLInputElement>('.export-wizard__choix-item input[type="checkbox"]'));
-  const libelles = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.export-wizard__choix-item .export-wizard__code')).map((c) => c.textContent?.trim());
-  const caseVueEnsemble = (racine: HTMLElement) => racine.querySelector('.export-wizard__option input[type="checkbox"]') as HTMLInputElement;
+  const choix = (racine: HTMLElement) => Array.from(racine.querySelectorAll<HTMLInputElement>('.app-wizard__choix-item input[type="checkbox"]'));
+  const libelles = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.app-wizard__choix-item .app-wizard__code')).map((c) => c.textContent?.trim());
+  const caseVueEnsemble = (racine: HTMLElement) => racine.querySelector('.app-wizard__option input[type="checkbox"]') as HTMLInputElement;
 
   async function monter() {
     const etape = await monterEtape(PaieExportEtapeChantierComponent);
@@ -24,7 +24,7 @@ describe('PaieExportEtapeChantierComponent', () => {
   it('décrit chaque chantier : libellé, effectif', async () => {
     const { racine } = await monter();
 
-    const metas = Array.from(racine.querySelectorAll('.export-wizard__choix-item .export-wizard__meta')).map((m) => m.textContent?.trim());
+    const metas = Array.from(racine.querySelectorAll('.app-wizard__choix-item .app-wizard__meta')).map((m) => m.textContent?.trim());
     expect(metas).toEqual(['Rapport complet : un chapitre par marché', 'Nador · 10 employés', '5 employés', 'Dépôt · 2 employés']);
   });
 

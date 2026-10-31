@@ -42,8 +42,7 @@ const DEBOUNCE_FILTRE_MS = 300;
     PasswordInputComponent
   ],
   templateUrl: './user-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './user-list.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListComponent {
   private readonly userService = inject(UserService);
