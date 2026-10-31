@@ -213,14 +213,11 @@ pris en charge ; chaque surface a un repli texte.
 
 ## 7. Plan et suivi
 
-L'inventaire des capacités officielles CopilotKit, LangChain, LangGraph et Deep Agents — avec l'état
-actuel, les pistes non implémentées et l'ordre d'évaluation — est maintenu dans le [plan Copilot Kit
-Future to Implement](ia/copilot-kit-future-to-implement.md). Ce plan complète les tâches ci-dessous :
-il ne remplace pas les décisions et validations métier déjà requises.
-
-La comparaison ciblée du backend Python avec les fonctions officielles LangChain, LangGraph et Deep Agents est
-documentée dans l'[analyse des écarts IA backend](ia/backend-gap-analysis.md). Elle décrit l'état réel du code et les
-priorités; elle n'implémente pas les capacités candidates.
+**Le plan de référence du travail IA restant est le [plan de travail IA](ia/plan-de-travail.md)** : épopées ordonnées,
+état de chaque épopée, questions ouvertes et traçabilité des anciens plans. L'inventaire des capacités officielles
+CopilotKit, LangChain, LangGraph et Deep Agents et l'analyse des écarts du backend y sont intégrés (les deux fichiers de
+Codex qui les portaient ont été supprimés le 2026-10-31 ; ils se relisent avec `git show 0b2fd0da:docs/ia/<fichier>`).
+Les tableaux de tâches ci-dessous gardent leur historique ; en cas de divergence, le plan de travail fait foi.
 
 États : ⬜ à faire · 🟦 en cours · ✅ fait · ⛔ bloqué.
 

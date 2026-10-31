@@ -25,5 +25,10 @@ ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 
+Pour tout travail IA : suivre [`docs/ia/plan-de-travail.md`](docs/ia/plan-de-travail.md), épopée par épopée, et mettre à
+jour son § 0 (états) avec le travail. Ne jamais supposer le comportement d'un framework : lire sa documentation officielle
+en entier avant de l'affirmer (règle d'`AGENTS.md`). Ne rien supprimer (fichier, branche, donnée) hors du périmètre de la
+tâche sans l'accord du propriétaire.
+
 Tout nouveau domaine doit aussi être intégré à l'IA ERP-RH selon la règle d'`AGENTS.md` : cas d'usage et données
 documentés dans `docs/ia.md`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.

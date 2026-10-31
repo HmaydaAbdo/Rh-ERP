@@ -9,8 +9,8 @@
 >
 > Ce que ce document ne remplace pas : `docs/ia.md` garde les décisions, l'architecture, l'état technique et le journal.
 > Il remplace en revanche son § 7 (tableaux de tâches), qui devient un renvoi ici, et les deux fichiers de Codex
-> `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md` (suppression après confirmation du propriétaire, fichier
-> par fichier).
+> `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md`, **supprimés le 2026-10-31** après vérification que
+> chacune de leurs informations figure ici (relisibles avec `git show 0b2fd0da:docs/ia/<fichier>`).
 
 ## 0. Suivi d'avancement (le seul endroit où l'on marque l'état)
 
@@ -31,7 +31,7 @@ Toute tâche est **Non touché** tant qu'elle ne figure pas dans la colonne « E
 
 | Épopée | État | Exceptions (tâches non « Non touché ») |
 |---|---|---|
-| E0 Socle de vérité | Partiel | E0.1 **Partiel** (2026-10-31 : verrous Python et npm alignés, voir § 3 ; reste le catalogue A2UI de base 0.14.0, `@ag-ui/a2ui-middleware` 0.0.14, `openai` bloqué par `litellm`) |
+| E0 Socle de vérité | Partiel | E0.1 **Partiel** (2026-10-31 : verrous Python et npm alignés, `@ag-ui/a2ui-middleware` 0.0.14 ; `@a2ui/web_core` 0.14.0 **testé et refusé** : le rendu de `@copilotkit/angular` 0.6.0 est écrit pour 0.10.4 et 3 tests du catalogue ERP échouent ; `openai` bloqué par `litellm`, E14) |
 | E1 Fiabilité de l'agent | Non touché | — |
 | E2 Confidentialité, traces, conformité | Non touché | — |
 | E3 Sécurité par fiche de poste | Non touché | — |
@@ -44,16 +44,20 @@ Toute tâche est **Non touché** tant qu'elle ne figure pas dans la colonne « E
 | E10 Pilote réel, exploitation | Non touché | — |
 | E11 Rôles, départements, hiérarchie, champs | Non touché | — |
 | E12 Migration Spring → Python FastAPI | Non touché | Bloquée par Q15 (ADR) |
-| E13 Services payants ou hébergés (dernière) | Non touché | Bloquée par Q3 |
+| E13 Services payants ou hébergés | Non touché | Bloquée par Q3 |
+| E14 IA interne : vLLM et sortie de LiteLLM (dernière) | Non touché | Bloquée par Q18 |
 
 ## 1. Principes
 
 Décisions du propriétaire, dont celle du **2026-10-31** (en gras) :
 
+0. **Aucune supposition sur un framework** (décision du 2026-10-31) : une affirmation sur le comportement, la version
+   ou la gratuité d'un framework ou d'une bibliothèque n'est écrite qu'après lecture **de la page officielle ou du code
+   source**, en entier ; une lecture tronquée est poursuivie (par exemple avec `curl` sur le fichier brut) ; ce qui n'a pas
+   pu être lu est noté « non vérifié ». Les connaissances de mémoire ne sont pas une source.
 1. **Utiliser toutes les fonctions que fournissent les frameworks** (CopilotKit, LangChain, LangGraph, Deep Agents) pour
    profiter de leur expérience éprouvée. Ce principe **remplace** la règle « ne pas adopter toutes les fonctions disponibles,
-   chaque adoption doit répondre à un parcours réel » des documents `copilot-kit-future-to-implement.md` et
-   `backend-gap-analysis.md`. Une fonction n'est écartée que par une décision écrite du propriétaire ou parce qu'elle
+   chaque adoption doit répondre à un parcours réel » des anciens documents de Codex. Une fonction n'est écartée que par une décision écrite du propriétaire ou parce qu'elle
    enfreint un garde-fou ci-dessous ; celles qui exigent un service payant ou hébergé sont **regroupées dans la dernière
    épopée (E13)**.
 2. **Dernières versions stables seulement**, alignées à chaque revue ; les préversions sont suivies à part. **Une version
@@ -98,11 +102,11 @@ Versions : `uv.lock` / `package-lock.json` contre PyPI et npm. Les écarts sont 
 |---|---|---|---|
 | `langchain`, `langgraph`, `langgraph-checkpoint-postgres`, `langchain-litellm`, `ag-ui-langgraph`, `ag-ui-protocol`, `copilotkit` (Py), `mcp`, `openevals`, `@copilotkit/angular`, `@copilotkit/runtime`, `@ag-ui/client` | à jour | identique | — |
 | `langchain-core`, `langgraph-sdk`, `litellm`, `openinference-instrumentation-langchain`, `pydantic`, `pydantic-settings` | **alignés le 2026-10-31** (1.7.3, 0.4.11, 1.106.6, 0.1.81, 2.14.2, 2.16.2), 51 tests passés | identique | `litellm` 1.109.0.dev2 existe : préversion, non adoptée |
-| `openai` | 2.54.0 | 3.42.0 | **bloqué par `litellm` 1.106.6, qui exige `openai<3.0.0`** (et `langchain-openai` 1.7.3 `>=2.45.0`) : la 3.x devient possible quand `litellm` lèvera sa borne ; à surveiller |
+| `openai` | 2.54.0 | 3.42.0 | **bloqué par `litellm` 1.106.6, qui exige `openai<3.0.0`** (et `langchain-openai` 1.7.3 `>=2.45.0`) : limite **consignée** ; la 3.x sera adoptée dans **E14**, quand LiteLLM sera abandonné (ou s'il lève sa borne avant) |
 | `agentevals` | 0.0.9 | 0.0.9 | **dernière publication le 2025-07-24** : bibliothèque dormante, conservée (décision du 2026-10-31), à surveiller |
 | `@copilotkit/core`, `@copilotkit/shared`, `web-inspector`, `web-components`, `mcp-apps-renderer` (frontend) | **1.83.0 le 2026-10-31** | 1.83.0 | **Cause de l'écart** : ce sont des dépendances **transitives** de `@copilotkit/angular` 0.6.0 (`^1.79.1`) ; le verrou n'avait jamais été relevé. Corrigé par `npm update`, build, lint et 965 tests passés |
-| `@a2ui/web_core` | 0.10.4 | 0.14.0 | le catalogue A2UI de base du service IA est copié de 0.10.4 |
-| `@ag-ui/a2ui-middleware` (surcharge) | 0.0.13 | 0.0.14 | |
+| `@a2ui/web_core` | 0.10.4 | 0.14.0 | **bloqué par le rendu** : `@copilotkit/angular` 0.6.0 (dernière stable) épingle 0.10.4 ; avec 0.14.0 forcé, 3 tests du catalogue ERP échouent (changements incompatibles du journal 0.11 à 0.14, dont le renommage des classes CSS). Le catalogue de base du service IA reste celui de 0.10.4. À relever avec la prochaine version de `@copilotkit/angular` qui épingle une version plus récente |
+| `@ag-ui/a2ui-middleware` (surcharge) | **0.0.14 le 2026-10-31** | 0.0.14 | build, lint et 965 tests passés |
 | `deepagents` | absent | 0.7.32 | non adopté |
 | CopilotKit `next` | — | 2.0.0-rc.7 | préversion : suivie, non adoptée |
 
@@ -117,15 +121,40 @@ génération de jetons** (l'ancien `max_tokens=1500` a été retiré) **ni de pl
 Ordre : on assoit d'abord ce qui rend tout le reste mesurable (versions, qualification), puis la fiabilité de l'agent, puis
 la confidentialité et la sécurité **avant** toute donnée réelle (E11 d'abord, car E3 en dépend), puis on résorbe le code
 maison, puis les conversations, puis l'interface complète, et seulement ensuite les écritures, le RAG, les agents
-spécialisés et l'exploitation. La migration du backend (E12) est un chantier de cadrage séparé et **E13 (services payants)
-est toujours la dernière**. Les dépendances sont indiquées par tâche ; l'ordre est à valider (Q2).
+spécialisés et l'exploitation. La migration du backend (E12) est un chantier de cadrage séparé ; E13 regroupe les services
+payants et **E14 (IA interne, vLLM) est la dernière épopée**. Le travail commence par l'agent (E1, dont E1.0 : Deep
+Agents). Les dépendances sont indiquées par tâche ; l'ordre est à valider (Q2).
+
+### 4.0 Relecture d'entrée de chaque épopée (décision du 2026-10-31)
+
+Avant la première tâche d'une épopée, lire **en entier** les pages officielles ci-dessous et le journal de modifications des
+paquets concernés, pour rattraper les nouveautés ; consigner dans le commit les versions, les nouveautés retenues et les
+pages lues. Une épopée ne passe pas à « Partiel » sans cette relecture.
+
+| Épopée | Documentation à relire (index officiel de chacun) |
+|---|---|
+| E0, E1 | LangChain : agents, middlewares (vue d'ensemble et préconstruits), sortie structurée, runtime, tests ; LangGraph : persistance, durabilité, streaming ; Deep Agents : vue d'ensemble, personnalisation ; journaux de `langchain`, `langgraph`, `deepagents` |
+| E2 | LangChain : garde-fous, middleware PII, politique de traces ; LangGraph : persistance (chiffrement) ; Phoenix / OpenInference |
+| E3, E11 | Spring Security et Spring AI (serveur MCP) ; LangChain : runtime et contexte |
+| E4 | CopilotKit : runtime, authentification, déploiement, `injectThreads` ; LangGraph : stores ; `ag-ui-langgraph` ; Spring Authorization Server |
+| E5 | LangGraph : persistance, mémoire, stores ; LangChain : mémoire à long terme, join/rejoin ; Deep Agents : mémoire ; CopilotKit : fils |
+| E6 | Toute la documentation CopilotKit Angular (guides, référence, exemples, production, dépannage) ; spécification AG-UI et A2UI |
+| E7 | LangChain : human-in-the-loop ; LangGraph : interruptions ; CopilotKit : interactions humaines |
+| E8 | pgvector, PostgreSQL (recherche plein texte), documentation du modèle d'embeddings choisi ; LangChain : retrieval |
+| E9 | Deep Agents : toutes les pages ; LangChain : multi-agents ; LangGraph : sous-graphes |
+| E10 | Documentation des fournisseurs de modèles de la passerelle ; ce qui a changé depuis la dernière relecture |
+| E12 | FastAPI, Pydantic, SQLAlchemy, SDK MCP Python |
+| E13 | Pages de prix et de licence de chaque éditeur, relues à la date de la décision |
+| E14 | vLLM (installation, serveur compatible OpenAI, quantification, parallélisme), LangChain (`langchain-openai`) |
+
+Chaque ligne est une tâche « E*n*.R » de son épopée.
 
 ### E0 — Socle de vérité : versions, qualification, démarrage
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E0.1 | Aligner toutes les dépendances IA sur la dernière stable (tableau du § 3), une montée à la fois ; **reste** : régénérer le catalogue A2UI de base depuis `@a2ui/web_core` 0.14.0, relever `@ag-ui/a2ui-middleware` à 0.0.14, adopter `openai` 3.x quand `litellm` lèvera sa borne (§ 3). Fait le 2026-10-31 : verrous Python et npm relevés (`core`/`shared` 1.83.0) | Verrous à jour, tests et CI verts, note de migration par montée de version majeure | Politique de versions du 2026-10-31 |
-| E0.2 | Veille de versions outillée : `.github/dependabot.yml` existe déjà ; l'étendre à `ia/` (uv), `copilot-runtime/` et `frontend/`, et ajouter un contrôle qui échoue si un composant IA a plus de N jours de retard (N : Q8) | PR de montée automatiques, contrôle en CI | Idem |
+| E0.1 | Aligner toutes les dépendances IA sur la dernière stable (tableau du § 3), une montée à la fois ; **reste** : `@a2ui/web_core` 0.14.0 (attend une version de `@copilotkit/angular` qui l'épingle), `openai` 3.x (E14). Fait le 2026-10-31 : verrous Python et npm relevés (`core`/`shared` 1.83.0, `a2ui-middleware` 0.0.14) | Verrous à jour, tests et CI verts, note de migration par montée de version majeure | Politique de versions du 2026-10-31 |
+| E0.2 | **Veille de versions**, quatre couches complémentaires et gratuites : (1) à l'**ouverture de chaque tâche IA** et au moins une fois par mois, un relevé « verrouillé / dernière stable / préversion » du service IA (PyPI) et de `frontend/` et `copilot-runtime/` (npm), rejoué par un script local du dépôt (modèle : le relevé du § 3) ; (2) **abonnement aux publications** (« Watch → Releases ») des dépôts `langchain-ai/langchain`, `langchain-ai/langgraph`, `langchain-ai/deepagents`, `CopilotKit/CopilotKit`, `ag-ui-protocol/ag-ui`, `a2ui-project/a2ui`, `BerriAI/litellm`, `Arize-ai/openinference`, ainsi que de leurs journaux de modifications ; (3) **Dependabot** : `.github/dependabot.yml` ne couvre que Maven, `frontend/` (npm), Docker et Actions, par trimestre ; y ajouter `ia/` (écosystème `uv`), `copilot-runtime/` (npm) et les images `ia/` et `copilot-runtime/`, mensuel pour les composants IA. **Attention** : une PR Dependabot déclenche la CI automatiquement, ce qui contredit la règle « CI seulement sur demande » (Q19) ; (4) **relecture complète de la documentation officielle à l'entrée de chaque épopée** (§ 4.0) | Script et relevé mensuel consigné au § 3 ; abonnements faits ; Q19 tranchée et appliquée | Politique de versions du 2026-10-31 |
 | E0.3 | **V1c — qualification** : jeu de référence 24 sur 24 (dernier relevé exploitable 19/24, p50 9,09 s, p95 39,5 s), puis porté à environ 100 cas avec cas complexes, tri, questions à l'utilisateur, abstentions, refus et comparaisons ; objectif de latence (Q8) | Rapport reproductible, seuils tenus, jeu versionné | V1c, § 4 de l'ancien `docs/ia.md` |
 | E0.4 | **V1e — CPU au démarrage** du service `ia` : l'import de `erp_rh_ia.app` coûte 14 s de calcul (dont 7 s `litellm`, 3 s `fastmcp.client`) ; premier démarrage à froid 110 s, puis 27 s. Pistes à lire dans la documentation de LiteLLM et de `langchain-litellm` : barème de coûts local (`LITELLM_LOCAL_MODEL_COST_MAP`), imports différés, client plus léger **à condition que `reasoning_content` reste transmis** | Mesure avant/après, une modification à la fois, raisonnement affiché inchangé | V1e |
 | E0.5 | Contrôle documentation ↔ code en CI (versions, seuils, listes d'outils) ; supprimer les mentions périmées (12 000 jetons de résumé, « vérificateur ») | Contrôle vert, plus d'écart connu | « Transverse » de la vision longue ; analyse P0 |
@@ -138,14 +167,15 @@ Source : [middlewares préconstruits](https://docs.langchain.com/oss/python/lang
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
+| E1.0 | **Passer l'agent sur `create_deep_agent` dès le début** (décision du 2026-10-31 : Deep Agents est un sur-ensemble de `create_agent`). Faits relevés dans la documentation officielle : il accepte `model`, `tools`, `system_prompt`, `middleware`, `subagents`, `skills`, `memory`, `permissions`, `backend`, `interrupt_on`, `response_format`, `state_schema`, `context_schema`, `checkpointer`, `store`, `cache`, `name` et **renvoie un `CompiledStateGraph`** ; il ajoute toujours `FilesystemMiddleware`, `SubAgentMiddleware` (sous-agent généraliste), `SummarizationMiddleware`, `PatchToolCallsMiddleware` et la mise en cache de prompts ; `TodoListMiddleware` reste opt-in (déjà présent chez nous). **Points à prouver avant de fusionner** : (a) aucun interrupteur général n'existe : les outils de fichiers et l'outil `task` sont exposés au modèle ; les restreindre en remplaçant `FilesystemMiddleware` par une instance de même nom avec une liste `tools` autorisée, son propre `backend` (`StateBackend`, jamais `FilesystemBackend`) et ses `permissions` (`deepagents>=0.7`) ; (b) notre `SummarizationMiddleware` (40 000 jetons) remplace celui par défaut s'il porte le même nom ; (c) compatibilité avec `CopilotKitMiddleware`, `ag-ui-langgraph` et `LLMToolSelectorMiddleware` (30 outils MCP + outils du harnais) ; (d) jeu de référence sans régression de justesse, de latence ni de coût. La documentation recommande `create_agent` quand on ne veut pas ces capacités : le gain est de disposer d'emblée des sous-agents, des fichiers virtuels, des compétences et de la mémoire sans seconde migration | Agent migré, jeu de référence ≥ ancien, outils exposés au modèle listés et restreints, tests AG-UI verts | Décision 2026-10-31, E9.0 |
 | E1.1 | `ToolErrorMiddleware` (`on_error`, `tools` ; exige `langchain>=1.3.14`) : une exception d'outil devient un message d'erreur **expurgé** que le modèle peut corriger ou qui arrête le run selon une matrice des erreurs métier | Matrice écrite, test : erreur métier, 403, délai, 500 | M1 |
 | E1.2 | `ToolRetryMiddleware` et `ModelRetryMiddleware` (`max_retries`, `retry_on`, `on_failure`, `backoff_factor`, `jitter` ; comportement par défaut modifié en `langchain>=1.3.16`) : une **seule** politique de reprise avec LiteLLM (`max_retries=0` côté client) et MCP ; lecture seule rejouable, jamais une écriture | Budget total borné, test sans cascade de reprises | M1 |
 | E1.3 | `ContextEditingMiddleware` + `ClearToolUsesEdit` (`trigger`, `keep`, `exclude_tools`, `placeholder`) : effacer les vieux résultats d'outils **sans toucher aux résultats du tour en cours** (cause de l'incident du résumé tronqué du 2026-10-27) | Jeu de référence sans régression, gain de jetons mesuré | M1 |
 | E1.4 | `ModelFallbackMiddleware` : second filet sur un autre groupe de modèles, **en plus** du routage LiteLLM (première frontière) | Panne simulée du modèle principal : réponse rendue par le repli | M3 |
 | E1.5 | `LLMToolEmulator` : outils simulés dans le banc d'évaluation, en remplacement des doubles de test maison ; modèles factices officiels (`GenericFakeChatModel`) et enregistrement de réponses (VCR) pour les tests sans réseau | Banc sans double maison | M3 |
 | E1.6 | `ProviderToolSearchMiddleware` : **non applicable aujourd'hui** (réservé à Anthropic Claude 4+ et OpenAI gpt-5.5+, erreur sinon) ; déplacée en **E13** | Décision en E13 | M3 |
-| E1.7 | Sortie structurée officielle : `response_format` avec `ToolStrategy` / `ProviderStrategy` pour le sélecteur d'outils, les surfaces et les réponses structurées ; revoir les pannes de format JSON observées par fournisseur | Cas de panne couvert, erreurs visibles, reprises bornées | T10, analyse « sortie structurée » |
-| E1.8 | Exécution durable LangGraph ([tolérance aux pannes](https://docs.langchain.com/oss/python/langgraph/fault-tolerance), [exécution durable](https://docs.langchain.com/oss/python/langgraph/durable-execution)) : mode de durabilité, `RetryPolicy` par nœud, `timeout` de nœud, gestionnaire d'erreur de nœud, arrêt en douceur d'un run (`RunControl` : terminer le super-pas en cours puis sauvegarder) pour les redémarrages du service, cache de nœuds | Reprise après arrêt du processus, test sur PostgreSQL réel | P2.4–P2.6, porte G2 |
+| E1.7 | Sortie structurée officielle : `response_format` avec `ToolStrategy` / `ProviderStrategy` pour le sélecteur d'outils, les surfaces et les réponses structurées ; revoir les pannes de format JSON observées par fournisseur ; revoir le mode de secours du sélecteur (en cas d'erreur d'analyse, tous les outils autorisés sont rendus : à garder seulement si aucune fuite de contexte ni régression n'est mesurée) | Cas de panne couvert, erreurs visibles, reprises bornées | T10, analyse « sortie structurée » |
+| E1.8 | Exécution durable LangGraph ([tolérance aux pannes](https://docs.langchain.com/oss/python/langgraph/fault-tolerance), [exécution durable](https://docs.langchain.com/oss/python/langgraph/durable-execution)) : mode de durabilité, `RetryPolicy` par nœud, `timeout` de nœud, gestionnaire d'erreur de nœud, arrêt en douceur d'un run (`RunControl` : terminer le super-pas en cours puis sauvegarder) pour les redémarrages du service, cache de nœuds ; supprimer le **repli sur une mémoire de processus** quand la base IA est absente (non durable, il masque une panne de production) | Reprise après arrêt du processus, test sur PostgreSQL réel | P2.4–P2.6, porte G2 |
 | E1.9 | **Relever les plafonds** du § 3 : rendre chacun configurable (variable d'environnement documentée), mesurer le coût en latence et en jetons, fixer les cibles (Q8) ; ajouter un plafond de **durée totale et de jetons par run**, absent aujourd'hui (`docs/ia.md`, T2.5) | Tableau avant/après, cibles tenues, aucune réponse tronquée | Principe 4 |
 | E1.10 | Flux d'événements de LangGraph : la documentation recommande la version 3 (`stream_events(version="v3")`, projections `messages`, `values`, `subgraphs`, `output`, introduite en 1.2) ; `ag-ui-langgraph` 0.0.47 appelle encore `astream_events` en version 2. Suivre ses mises à jour **sans réimplémenter le flux** ; flux personnalisé `get_stream_writer` pour l'avancement | Version de `ag-ui-langgraph` qui adopte la v3 identifiée, ou question posée à l'éditeur | Streaming (page lue) |
 | E1.11 | Retour dans le temps et reprise (`get_state_history`, `update_state`, [time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel)) comme **aide à l'analyse d'incident**, sur données synthétiques | Procédure d'incident testée | Analyse « time travel » |
@@ -154,7 +184,7 @@ Source : [middlewares préconstruits](https://docs.langchain.com/oss/python/lang
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E2.1 | **Masquage : décision du 2026-10-31, il est appliqué côté métier (Spring, projections par champ, E11)**, de sorte que ni le service IA ni le modèle ne reçoivent les champs interdits. Côté IA, il reste à décider si `PIIMiddleware` (`strategy` : `block`, `redact`, `mask`, `hash` ; `apply_to_input`, `apply_to_output`, `apply_to_tool_results`) sert de **second filet** pour la saisie libre de l'utilisateur et pour les traces ; types natifs `email`, `credit_card`, `ip`, `mac_address`, `url`, donc CIN, RIB/IBAN marocains et téléphones demandent un `detector` personnalisé (Q5) | Cas synthétiques CIN, RIB, téléphone, courriel : jamais vus du modèle ni des traces | M2 |
+| E2.1 | **Masquage : décision du 2026-10-31, il est appliqué côté métier (Spring, projections par champ, E11)**, de sorte que ni le service IA ni le modèle ne reçoivent les champs interdits. Côté IA, il reste à décider si `PIIMiddleware` (`strategy` : `block`, `redact`, `mask`, `hash` ; `apply_to_input`, `apply_to_output`, `apply_to_tool_results`) sert de **second filet** pour la saisie libre de l'utilisateur et pour les traces ; types natifs `email`, `credit_card`, `ip`, `mac_address`, `url`, donc CIN, RIB/IBAN marocains et téléphones demandent un `detector` personnalisé ; comparer avec le masquage par Presidio de la passerelle (écarté sur données réelles) et le masquage OpenInference des traces, et éviter les doubles transformations (Q5) | Cas synthétiques CIN, RIB, téléphone, courriel : jamais vus du modèle ni des traces | M2 |
 | E2.2 | Politique de traces LangChain (`configure_trace_policy`, `omit_payload`) + masquage OpenInference + **preuve sur une trace Phoenix réelle** qu'aucune donnée sensible n'apparaît ; rétention 30 jours, annotation | Trace synthétique inspectée de bout en bout | M2, T3.4, analyse P1 |
 | E2.3 | Observabilité complète (T3.4) : traces du clic à la base, alertes, corrélation `requestId`/`threadId`/`runId`/`toolCallId` dans l'audit (sans les mettre en étiquettes de métriques), évaluation des coûts par run | Tableau de bord et alertes, audit corrélé | T3.4, analyse « neuf piliers » |
 | E2.4 | Conformité (T3.6) : registre des systèmes, fiche du système, analyse d'impact, notice, durées de conservation (loi 09-08, NIST AI RMF, ISO/IEC 42001, OWASP LLM) | Documents approuvés | T3.6 |
@@ -184,7 +214,7 @@ Chaque ligne remplace une pièce maison par la fonction officielle ; la pièce m
 | E4.2 | `memoire.py` (préfixe de fil, purge) → espaces de noms du `Store` LangGraph (`AsyncPostgresStore`) ; **l'expiration (TTL) n'est pas documentée** pour le `Store` : tâche `pg_cron` ou équivalent gratuit | Isolation testée, expiration prouvée | T25 |
 | E4.3 | `jeton_agent` et encodeur JWT → échange de jetons RFC 8693 (Spring Authorization Server, client OAuth2) | Anciens chemins supprimés, audience et expiration testées | T26 |
 | E4.4 | `agui.py` (authentification, validation, flux SSE) → `add_langgraph_fastapi_endpoint` d'`ag-ui-langgraph` (présent en 0.0.47) avec dépendances FastAPI ; outils par requête par les crochets dynamiques | `agui.py` réduit aux dépendances | T27 |
-| E4.5 | `evaluation.py` (rejoueur) → `openevals` et `agentevals` sous pytest, sans LangSmith ; **risque** : `agentevals` est dormant (E0.1) | Rejoueur supprimé, jeu de référence rejoué par pytest | T28 |
+| E4.5 | `evaluation.py` (rejoueur) → `openevals` (évaluateurs de réponses : juge LLM, comparaison JSON, similarité, exactitude) et `agentevals` (trajectoires : `trajectory_match_mode` strict, unordered, subset, superset ; juge de trajectoire ; graphes LangGraph) en appels directs sous pytest. **Vérifié dans leurs README** : les deux évaluateurs fonctionnent sans LangSmith, qui n'est requis que pour leurs intégrations pytest/Vitest et `evaluate` (suivi d'expériences) ; les juges LLM utilisent par défaut `langchain_openai`. **Risque** : `agentevals` est dormant (E0.1) | Rejoueur supprimé, jeu de référence rejoué par pytest | T28 |
 | E4.6 | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` → `include` de fichiers de configuration LiteLLM par fournisseur, sondes natives, clés virtuelles par l'API gérée | Scripts supprimés | T29 |
 | E4.7 | Composants maison (`DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant`) → AG Grid Community ou TanStack Table, `ng2-charts`, interruptions natives CopilotKit (`registerHumanInTheLoop`, `injectInterrupt`) | Composants maison supprimés, accessibilité conservée | T30 |
 | E4.8 | `serveur.mjs` (authentification `/auth/me`, routes, propriété du fil) → gestionnaire officiel `createCopilotExpressHandler` (`@copilotkit/runtime/v2/express`) avec crochets `hooks.onRequest` (vérifier le jeton, répondre 401), `onBeforeHandler` (propriété du fil), `onError`, `cors`, `forwardHeaders`. **Règle officielle** : sans Intelligence, rien ne lie un fil à un utilisateur ; il faut une table de propriété (`thread_id`, `user_id`) vérifiée sur toute route portant un `threadId` et sur `agent/run` / `agent/connect` ; `threads/list` filtré côté serveur ; `SqliteAgentRunner` répond 422 sur les routes de lecture et n'offre aucune autorisation ; `identifyUser` est réservé à Intelligence | Fils réservés à leur propriétaire, testé (accès croisé refusé) | T31 |
@@ -197,7 +227,7 @@ Chaque ligne remplace une pièce maison par la fonction officielle ; la pièce m
 |---|---|---|---|
 | E5.1 | Conversations multi-tours (T3.2) : isolation, **suppression par l'utilisateur**, reprise après redémarrage, expiration de l'historique SQLite du runtime (aucune aujourd'hui) | Tests de suppression et d'expiration | T3.2, V1b |
 | E5.2 | Contexte d'écran (T3.3) : conserver `connectAgentContext` en lecture seule et **revalider côté serveur** ; ne jamais le présenter comme un état partagé | Test : filtre falsifié refusé | T3.3 |
-| E5.3 | Mémoire longue explicite (P4.6) : préférences uniquement, consultable, corrigeable, supprimable, avec expiration ; pas de faits personnels RH promus automatiquement ; mémoire du fichier `AGENTS.md` de Deep Agents (E9.5) à rapprocher | Politique écrite (Q5) puis tests d'oubli | P4.6, `backend-gap-analysis` |
+| E5.3 | Mémoire longue explicite (P4.6) : préférences uniquement, consultable, corrigeable, supprimable, avec expiration ; pas de faits personnels RH promus automatiquement ; mémoire du fichier `AGENTS.md` de Deep Agents (E9.5) à rapprocher | Politique écrite (Q5) puis tests d'oubli | P4.6, analyse des écarts de Codex |
 | E5.4 | Reconnexion du flux et rattrapage (P3.4) : `AG-UI Streams` est une fonction de **CopilotKit Intelligence** (E13) ; `join` / `rejoin` de LangChain suppose le serveur d'agent LangGraph (`langgraph dev` en local, sinon déploiement LangSmith, E13) et n'est pas documenté pour un service FastAPI maison ; voie gratuite à instruire (Q10) | Pas de double exécution au retour du réseau | P3.4 |
 | E5.5 | Séparation des trois mémoires : état de fil (checkpointer), mémoire inter-fils (`Store`), contexte immuable d'exécution ; documenter la frontière | Schéma d'état formalisé | Analyse LangGraph |
 
@@ -211,7 +241,7 @@ Source : [exemples Angular](https://docs.copilotkit.ai/angular/features) (41 ent
 | E6.2 | Raisonnement : composant de message de raisonnement personnalisé (`reasoning-custom`) aux couleurs Staport | Rendu et test | Copilot future |
 | E6.3 | Outils frontend : `registerFrontendTool` (synchrone et asynchrone) pour ouvrir une vue ou préparer un filtre, **réversibles** ; `registerComponent` (l'agent affiche un composant Angular précis) ; le serveur reste l'autorité | Parcours « ouvrir la vue filtrée » testé, droits revérifiés | P3.3, Copilot future |
 | E6.4 | État partagé agent ↔ interface : lecture seule, lecture-écriture, flux de deltas (`agent.setState`, `shared-state-*`) sur **un** parcours concret ; propriété et source d'autorité à fixer (Q6) | Conflit et validation testés | Copilot future |
-| E6.5 | Interface sans chat (« headless ») pour l'espace plein écran : `injectAgentStore`, `registerRenderToolCall`, messages et surfaces (J4, T8) ; `CopilotActivity` + `registerRenderActivityMessage` pour les cartes d'activité | Espace immersif livré | J4 |
+| E6.5 | Interface sans chat (« headless ») pour l'espace plein écran : `injectAgentStore`, `registerRenderToolCall`, messages et surfaces (J4, T8) ; `CopilotActivity` + `registerRenderActivityMessage` pour les cartes d'activité ; **parité** de rendu entre le panneau latéral et l'espace immersif ; les suggestions de départ ne divulguent aucune donnée RH et n'ouvrent aucun fil persistant | Espace immersif livré | J4 |
 | E6.6 | Interruptions : `injectInterrupt` (dans le chat et hors chat) et `registerHumanInTheLoop` (par outil) ; dépend de E7 | Voir E7 | Copilot future |
 | E6.7 | Pièces jointes : `[attachments]` de `<copilot-chat>` (`enabled`, `accept`, `maxSize`, `onUploadFailed`, `onUpload`) ; **par défaut les fichiers partent en base64** (inadapté aux gros fichiers sans `onUpload`) et le modèle comme le backend doivent accepter chaque type ; voix en temps réel (capture audio, navigateur seulement après hydratation) ; **cadrer consentement, types de fichiers, antivirus, données RH** (Q11) | Cadre écrit puis prototype | Copilot future, J9 |
 | E6.8 | MCP Apps (`provideMCPApps`) : prototype isolé (isolation iframe, droits, accessibilité, provenance) ; WebMCP (`webmcp` sur `registerFrontendTool`) : **expérimental**, exige Chrome 149 et le brouillon d'un groupe communautaire du W3C ; ses annotations ne sont pas des contrôles de sécurité | Décision écrite pour chacun (Q7) | T23, Copilot future |
@@ -266,7 +296,7 @@ mémoire `AGENTS.md`, résumé automatique. Le harnais s'obtient aussi en ajouta
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E9.0 | **Décision d'architecture** : ajouter les middlewares de Deep Agents (`SubAgentMiddleware`, `FilesystemMiddleware`, `RubricMiddleware`, importables dans `create_agent` d'après la page des middlewares) à l'agent actuel, ou passer à `create_deep_agent` (Q6) | Décision écrite | J5–J7 |
+| E9.0 | **Décidée le 2026-10-31 : `create_deep_agent`, réalisé en E1.0.** Reste ici d'activer, une à une, les fonctions du harnais déjà présent (sous-agents, fichiers, compétences, mémoire, rubrique) selon les tâches ci-dessous | Voir E1.0 | J5–J7 |
 | E9.1 | `SubAgentMiddleware` (outil `task`) : sous-agents par domaine (Paie, Employés, Chantiers, Heures supplémentaires, Audit) avec instructions, outils, modèle et budget propres ; **isolation du contexte** ; `tools` d'un sous-agent **remplace** ceux du parent (droits minimaux) ; `response_format` pour des résultats structurés ; mode `fork` (bêta, `deepagents>=0.7.13`) à part | Aucune élévation de droits, latence et coût mesurés | J5, P3 « conditionnel » |
 | E9.2 | Sous-agents asynchrones (lancer, vérifier, modifier, annuler) pour les analyses longues ; flux par sous-agent (`stream.subagents`) ; **exige un serveur « Agent Protocol »** : le service FastAPI actuel n'en est pas un, et la voie officielle documentée est le serveur LangGraph (`langgraph dev` en local ; déploiement géré = E13) ; voie gratuite à instruire (Q10) | Analyse longue en parallèle, annulable | Copilot future |
 | E9.3 | Fichiers virtuels pour délester le contexte : `FilesystemMiddleware`, `StateBackend`, `StoreBackend` (**fournir une fabrique d'espaces de noms par utilisateur** : par défaut l'espace est celui de l'assistant, donc partagé), `CompositeBackend` ; **jamais** `FilesystemBackend` ni `LocalShellBackend` sur un serveur ; règles `permissions` (première règle gagnante, non applicables aux bacs à sable) | Gros résultats délestés, isolation par utilisateur testée | Copilot future |
@@ -323,7 +353,7 @@ tâches suivantes sont des intitulés à instruire dans la documentation officie
 | E12.4 | Cible technique : FastAPI, accès aux données, migrations, authentification, serveur MCP (SDK MCP Python officiel au lieu de Spring AI), observabilité, CI | Prototype d'un domaine à faible risque | Idem |
 | E12.5 | Exécution domaine par domaine, retrait de chaque domaine Java après parité prouvée ; retrait final de Spring | Domaine servi par FastAPI, tests de parité verts | Idem |
 
-### E13 — Services payants ou hébergés (dernière épopée, rien n'est adopté sans décision de Q3)
+### E13 — Services payants ou hébergés (rien n'est adopté sans décision de Q3)
 
 Regroupe tout ce qui exige un abonnement ou un service hébergé par l'éditeur. **Offres relevées sur la page de prix de
 CopilotKit le 2026-10-31** : *Free* (usage **non productif** auto-hébergé avec licence renouvelable tous les 30 jours, **ou**
@@ -341,6 +371,22 @@ en production n'est donc pas gratuite.
 | E13.7 | **LangSmith** : Studio, observabilité hébergée, évaluations hébergées, déploiement géré (Agent Server), Fleet, Managed Deep Agents | Voie gratuite : Phoenix, pytest, `langgraph dev` local | Plans LangChain |
 | E13.8 | `ProviderToolSearchMiddleware` (Anthropic Claude 4+ ou OpenAI gpt-5.5+ : modèles payants) | Non applicable à la passerelle gratuite | E1.6 |
 | E13.9 | Fournisseurs de bacs à sable hébergés pour Deep Agents | Alternative gratuite : conteneur jetable (E9.7) | E9.7 |
+| E13.10 | Tâches proactives et apprentissage automatique des conversations (jamais activés par défaut : utilité, consentement, fuite de données, validation humaine) | Voir E13.4 | Copilot future |
+
+### E14 — IA interne : vLLM et sortie de LiteLLM (dernière épopée)
+
+Objectif du propriétaire (2026-10-31) : une IA **interne**, donc des modèles servis dans l'entreprise. **Limite consignée** :
+LiteLLM 1.106.6 exige `openai<3.0.0`, ce qui retient `openai` en 2.x (§ 3) ; la montée en 3.x se fait ici, une fois LiteLLM
+abandonné. Les exigences de `conventions/agents-ia.md` (« Modèles auto-hébergés ») s'appliquent : licence et provenance des
+poids, conteneur sans réseau sortant, ressources mesurées, achat de matériel = décision du propriétaire.
+
+| ID | Tâche | Preuve de terminé | Origine |
+|---|---|---|---|
+| E14.R | Relecture d'entrée (§ 4.0) | Pages lues consignées | Décision 2026-10-31 |
+| E14.1 | Choix et évaluation des modèles servis par vLLM sur le jeu de référence (justesse, outils, JSON, raisonnement, arabe et darija) ; matériel nécessaire chiffré (Q18) | Rapport comparatif signé | E10.2, T3.1 |
+| E14.2 | Service vLLM (serveur compatible OpenAI) dans `docker-compose.yml`, sans réseau sortant, ressources fixées | `docker compose up -d` suffit | Règle du `docker compose` unique |
+| E14.3 | Remplacer LiteLLM : ce qu'il apporte aujourd'hui (routage et repli entre fournisseurs gratuits, budgets par utilisateur, garde-fou de contenu, transmission de `reasoning_content`, journaux de dépense) est à rattacher à un composant officiel de remplacement ou à abandonner ; lire la documentation de `langchain-openai` / vLLM avant de choisir | Chaque fonction a un remplaçant ou une décision d'abandon écrite | E4.6, E3.4, E2.6 |
+| E14.4 | Passer `openai` en 3.x et retirer la borne de `litellm`, tests et jeu de référence verts | Verrous à jour | § 3 |
 
 ## 5. Traçabilité : où est passé chaque ancien élément
 
@@ -374,8 +420,8 @@ en production n'est donc pas gratuite.
 | V1a, V1d, V1f | plan de clôture | **Faits** |
 | V1b, V1c, V1e | idem | E0.6 + E5.1, E0.3, E0.4 |
 | M1 à M6 | idem | E1.1 à E1.5 et E1.3 (M1, M3), E2.1 (M2), E7.2 (M4), E9.8 (M5), E9.7 (M6) |
-| Fonctions de `copilot-kit-future-to-implement.md` | Codex, 2026-10-31 | E6 (CopilotKit), E1 et E5 (LangChain), E1, E5 et E7 (LangGraph), E9 (Deep Agents) |
-| Écarts de `backend-gap-analysis.md` | Codex, 2026-10-31 | E1.1 à E1.3, E2.1 à E2.2, E5.3, E7, E9 |
+| Fonctions de `copilot-kit-future-to-implement.md` (supprimé) | Codex, 2026-10-31 | E6 (CopilotKit), E1 et E5 (LangChain), E1, E5 et E7 (LangGraph), E9 (Deep Agents) |
+| Écarts de `backend-gap-analysis.md` (supprimé) | Codex, 2026-10-31 | E1.1 à E1.3, E1.7, E1.8, E2.1 à E2.2, E5.3, E7, E9 |
 | Fonctions exigeant un service payant ou hébergé | tous | E13 |
 | Demandes du 2026-10-31 (rôles, départements, hiérarchie, champs ; migration FastAPI) | propriétaire | E11, E12 |
 
@@ -387,7 +433,9 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
 
 - **Q1 — Sort des fichiers. Répondue le 2026-10-31 : oui**, ce plan est la référence et remplace le § 7 de `docs/ia.md`.
   Les suppressions de `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md` attendent la confirmation du
-  propriétaire, **fichier par fichier**. Le § 7 de `docs/ia.md` reste à transformer en renvoi.
+  propriétaire, **fichier par fichier**. *Mise à jour du 2026-10-31 : le propriétaire a autorisé la suppression si tout est
+  repris ici ; la vérification a été faite et les deux fichiers sont supprimés.* Les deux paragraphes de renvoi du § 7 de
+  `docs/ia.md` pointent désormais ici ; ses tableaux de tâches seront réduits en E0.5.
 - **Q2 — Ordre.** L'ordre E0 → E10 vous convient-il ? Le pilote réel (E10.6) dépend de E2 et E3 ; faut-il avancer E6
   (interface) avant E4 (code maison) ?
 - **Q3 — Services payants ou hébergés (E13).** Le « gratuit » d'Intelligence est *non productif* (licence de 30 jours
@@ -400,8 +448,8 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
 - **Q5 — Données et confidentialité. Réponse partielle du 2026-10-31** : le masquage est une règle métier côté Spring
   (E11). Reste : `PIIMiddleware` comme second filet sur la saisie libre et les traces (E2.1) ? Un modèle local (E10.2)
   est-il exigé pour les données réelles ? Quelle politique pour une mémoire longue ?
-- **Q6 — État partagé et architecture agent.** Quel parcours justifie un état modifiable par l'agent et par l'utilisateur
-  (E6.4) ? Ajoute-t-on les middlewares de Deep Agents à l'agent actuel (progressif) ou migre-t-on vers `create_deep_agent` (E9.0) ?
+- **Q6 — État partagé.** Quel parcours justifie un état modifiable par l'agent et par l'utilisateur (E6.4) ?
+  (L'architecture de l'agent est **décidée** : `create_deep_agent`, E1.0.)
 - **Q7 — Interface ouverte et exécution.** Autorisez-vous l'étude d'une interface générative ouverte (interdite par
   `conventions/agent-ui.md`), de MCP Apps, de WebMCP (expérimental) et d'un interpréteur ou d'un shell isolé (E9.7) ?
 - **Q8 — Objectifs chiffrés.** Cible de latence p95 (la vision courte parle de 30 s), taille du jeu de référence (≈ 100 ?),
@@ -419,6 +467,10 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
   l'ancienne décision demandait de les gérer par Flyway avec un compte sans droit de création. À confirmer ou à changer.
 - **Q15 — Migration vers FastAPI (E12).** Quel motif et quel périmètre (tout le backend, ou un domaine pilote d'abord) ?
   Acceptez-vous de remplacer la décision « Spring reste l'autorité » et le serveur MCP Spring AI par un ADR ?
+- **Q18 — IA interne (E14).** Matériel disponible (GPU, mémoire) ou budget d'achat ? Quand abandonner LiteLLM : dès que
+  le premier modèle interne tient le jeu de référence, ou seulement quand tous les fournisseurs gratuits sont retirés ?
+- **Q19 — Veille et CI (E0.2).** Autorisez-vous Dependabot pour les composants IA malgré le déclenchement automatique de la
+  CI par ses PR (la règle actuelle est « CI seulement sur demande »), ou préférez-vous la veille manuelle seule ?
 - **Q16 — Outillage des assistants de développement (E0.7).** Autorisez-vous l'ajout du serveur MCP de documentation de
   CopilotKit et de ses compétences à la configuration du projet ?
 - **Q17 — Hiérarchie et champs (E11).** Quelle règle de visibilité (un responsable voit-il toute sa descendance ?) et quels
