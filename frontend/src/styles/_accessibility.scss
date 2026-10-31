@@ -5,39 +5,6 @@
     outline-color: Highlight !important;
   }
 
-  .app-sidebar {
-    border-inline-end: 1px solid Canvas;
-    background: CanvasText;
-    background-image: none;
-    color: Canvas;
-    box-shadow: none;
-  }
-
-  .app-sidebar__brand,
-  .app-sidebar__footer {
-    border-color: Canvas;
-    color: Canvas;
-  }
-
-  .app-sidebar__eyebrow {
-    color: Canvas;
-  }
-
-  .app-sidebar__link {
-    color: Canvas;
-
-    &:hover,
-    &.active {
-      border: 1px solid Highlight;
-      background: Highlight;
-      color: HighlightText;
-    }
-
-    &.active::before {
-      background: HighlightText;
-    }
-  }
-
   .app-page,
   .paie-vues,
   .app-toolbar,
