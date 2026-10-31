@@ -276,6 +276,16 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      # Charte graphique : contraste de chaque couple de jetons dans les deux thèmes, aucun jeton de l'ancienne identité (E0.1).
+      - name: Check design token contrast
+        working-directory: frontend
+        run: npm run check:contraste
+
+      # Aucun composant visuel hors shared/ui/ : les infractions héritées ne peuvent que diminuer (E0.2).
+      - name: Check shared component rule
+        working-directory: frontend
+        run: npm run check:composants
+
       # Vitest (runner Angular) dans un vrai Chromium : le navigateur est installé par Playwright.
       - name: Install Chromium for tests
         working-directory: frontend
