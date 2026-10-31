@@ -31,7 +31,7 @@ Toute tâche est **Non touché** tant qu'elle ne figure pas dans la colonne « E
 
 | Épopée | État | Exceptions (tâches non « Non touché ») |
 |---|---|---|
-| E0 Refonte totale du frontend | Non touché | Charte retenue (« standard de la catégorie », 2026-10-31) ; skills de design installés ; PRODUCT.md écrit |
+| E0 Refonte totale du frontend | Partiel | E0.R **Partiel** (2026-10-31 : pages utiles à E0.1 lues en entier, journal au § 4 ; reste listé « non vérifié ») ; charte retenue (« standard de la catégorie », 2026-10-31) ; skills de design installés ; PRODUCT.md écrit |
 | E1 Socle de vérité | Partiel | E1.2 **Partiel** (couches 1, 3 et 4 faites le 2026-10-31 ; reste l'abonnement aux publications, à faire par le propriétaire) ; E1.9 **Terminé** ; E1.10 **Non touché** (prochaine tâche ; protocole v0.9 adopté, v1.0 quand il sera stable) ; zod reste en 4 (voir § 3) ; E1.8 texte prêt, envoi par le propriétaire ; E1.1 **Partiel** (2026-10-31 : verrous Python et npm alignés, `@ag-ui/a2ui-middleware` 0.0.14 ; `@a2ui/web_core` 0.14.0 **testé et refusé** : le rendu de `@copilotkit/angular` 0.6.0 est écrit pour 0.10.4 et 3 tests du catalogue ERP échouent ; `openai` bloqué par `litellm`, E14) |
 | E2 Fiabilité de l'agent | Non touché | — |
 | E3 Migration Spring → Python FastAPI | Non touché | Décision prise (Q15) : tout le backend, domaine par domaine ; ADR (E3.1) à écrire |
@@ -203,6 +203,30 @@ sert de référence visuelle.
 | E0.7 | **Déploiement domaine par domaine**, du moins au plus critique : `parametre`, `audit`, `function`, `equipe`, `chantier`, `employee`, `heuresupp`, `paie`, `auth`, carte des chantiers, assistant (surfaces A2UI comprises) ; à chaque domaine : composants partagés seulement, deux thèmes, téléphone, clavier, tests | Une validation visuelle et un audit par domaine | Décision 2026-10-31 |
 | E0.8 | **Préparer l'arabe de droite à gauche** : propriétés logiques partout, aucune position gauche/droite en dur ; l'arabe n'est pas livré | Contrôle automatisé des propriétés physiques, essai en `dir="rtl"` | PRODUCT.md |
 | E0.9 | **Clôture** : audit et critique Impeccable, relecture indépendante, `DESIGN.md` généré depuis l'application construite, mise à jour finale de `conventions/design-system.md` | Rapport d'audit sans problème bloquant, `DESIGN.md` écrit | Impeccable |
+
+#### Journal de la relecture E0.R (2026-10-31)
+
+Versions installées : Angular, CDK et Aria 22.2.3 ; Chart.js 4.5.1. **Non installés** : `ag-grid-community` / `ag-grid-angular`
+(dernière 36.2.0) et `ng2-charts` (dernière 11.0.0, compatible Angular 22, pair `chart.js` ^3.4 ou ^4, CDK ≥ 22) ; à ajouter en E0.4.
+
+Pages lues **en entier** (sources officielles : dépôt `angular/angular` `adev/src/content`, `angular/components`, ag-grid.com,
+chartjs/Chart.js, valor-software/ng2-charts, w3.org) :
+
+| Sujet | Pages | Retenu pour E0 |
+|---|---|---|
+| Signaux | vue d'ensemble, `linkedSignal`, `resource`, `effect`, `debounced` | `computed`/`linkedSignal` avant `effect` ; `effect` réservé aux API non réactives (canvas, stockage) ; `afterRenderEffect` pour un graphique ; `debounced` est expérimental |
+| Formulaires | Signal Forms : vue d'ensemble, comparaison, contrôles personnalisés | Stable en v22 ; un composant partagé de saisie implémente `FormValueControl` / `FormCheckboxControl`, émet `touch` au `blur`, reçoit `invalid`/`errors`/`disabled` et ne valide pas lui-même ; schéma de validation livré avec le contrôle |
+| Accessibilité | guide Angular « a11y », vue d'ensemble d'Angular Aria | Réutiliser `<button>`/`<a>` natifs ; Aria = directives sans style (accordéon, combobox, listbox, menu, onglets, barre d'outils, arbre, grille) ; `aria-current` sur le lien actif ; focus géré après navigation |
+| CDK a11y | page `a11y` | `cdkTrapFocus`, `LiveAnnouncer`, `FocusMonitor`, `a11y-visually-hidden`, mixin `high-contrast` (`forced-colors`) |
+| AG Grid 36.2.0 | thème (aperçu, couleurs et mode sombre, bordures) | `themeQuartz.withParams(...)` ; couleurs acceptent `var(--jeton)` et des références ; `backgroundColor` opaque ; `borderColor` par défaut = 15 % du texte sur le fond, à surcharger ; `rowBorder`, `columnBorder`, `headerRowBorder`, `wrapperBorder` ; schémas `colorSchemeDarkWarm` etc. ; modes via `data-ag-theme-mode` sur `<html>` |
+| ng2-charts / Chart.js | README ng2-charts ; Chart.js « Colors » et « Accessibility » | `provideCharts(...)` ; l'exemple `ThemeService` du README utilise la syntaxe de Chart.js 2 (`xAxes`, `fontColor`) et **ne s'applique pas** à Chart.js 4 : l'habillage reste `chart-theme.ts` lu dans les jetons ; un `canvas` n'est accessible que par `role="img"` + `aria-label` ou contenu de repli |
+| WCAG 2.2 | 1.4.1, 1.4.3, 1.4.6, 1.4.11, 2.4.7, 2.4.11, 2.4.13, 2.5.8 | Texte 4,5:1 (AA) et 7:1 (AAA) ; composants et graphiques 3:1 ; focus visible, non masqué, anneau ≥ 2 px et 3:1 ; cibles ≥ 24 px (le projet vise 44 px) ; jamais la couleur seule |
+| Impeccable | `operate`, `mode-operate`, `craft-floor` | Mode Operate : un seul vocabulaire, états complets, chiffres tabulaires, thématiser sélection de texte, curseur, barres de défilement ; bannis : bordure colorée > 1 px sur un côté, dégradé de texte, nids de cartes |
+
+**Non lu en entier (« non vérifié »), à lire à l'entrée de la tâche concernée** : Signal Forms (modèles, validation, état des champs,
+soumission, migration) → E0.2 ; pages Angular Aria par composant → E0.2/E0.3 ; AG Grid (colonnes, accessibilité ARIA, clavier,
+export, modules Community vs Enterprise, performance) et Chart.js (options, échelles, plugins) → E0.4 ; texte complet de WCAG 2.2
+(seuls les critères listés ci-dessus ont été lus) ; `colorize.md` et `typeset.md` d'Impeccable → E0.1/E0.5.
 
 ### E1 — Socle de vérité : versions, rendu A2UI, qualification, démarrage
 
