@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, model, output, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, output, untracked } from '@angular/core';
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { StepperComponent } from '../../../shared/ui/stepper/stepper.component';
+import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { PaieImportEtapeControleComponent } from './etapes/controle-etape.component';
@@ -15,10 +17,9 @@ import { fichierChoisi, PaieImportStore } from './paie-import.store';
  */
 @Component({
   selector: 'app-paie-import-wizard',
-  imports: [ButtonComponent, DialogComponent, IconComponent, MessageComponent, MonthInputComponent, PaieImportEtapeControleComponent],
+  imports: [StepperComponent, WizardStateComponent, ButtonComponent, DialogComponent, IconComponent, MessageComponent, MonthInputComponent, PaieImportEtapeControleComponent],
   providers: [PaieImportStore],
   templateUrl: './paie-import-wizard.component.html',
-  styleUrl: './paie-import-wizard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieImportWizardComponent {
@@ -29,6 +30,7 @@ export class PaieImportWizardComponent {
   readonly importe = output<void>();
 
   protected readonly store = inject(PaieImportStore);
+  protected readonly etapesStepper = computed(() => this.store.etapes.map((id) => ({ id, libelle: this.store.libelleEtapes[id] })));
 
   constructor() {
     effect(() => {

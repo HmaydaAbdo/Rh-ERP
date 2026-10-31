@@ -14,8 +14,7 @@ import { AuditChamp } from '../models/audit.model';
   selector: 'app-audit-champs',
   imports: [ColumnChooserComponent, TableComponent, TableCellDirective],
   templateUrl: './audit-champs.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './audit-champs.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditChampsComponent {
   readonly champs = input.required<AuditChamp[]>();

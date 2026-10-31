@@ -6,7 +6,7 @@
     <a stp-button icon="plus" routerLink="/equipes/new">Nouvelle équipe</a>
   }
 </div>
-<input #fileInput type="file" accept=".xlsx" class="equipe-actions__fichier" (change)="fichierSelectionne($event)" />
+<input #fileInput type="file" accept=".xlsx" class="hidden" (change)="fichierSelectionne($event)" />
 <stp-dialog header="Résultat de l'import" width="560px" [(open)]="resultOpen">
   @if (result(); as rapport) {
     <p><strong>{{ rapport.totalLignes }}</strong> ligne(s) traitée(s) — <strong>{{ rapport.crees }}</strong> créée(s), <strong>{{ rapport.ignores }}</strong> rejetée(s).</p>

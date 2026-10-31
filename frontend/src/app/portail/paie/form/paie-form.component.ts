@@ -63,8 +63,7 @@ interface PaieSaisie {
     MonthInputComponent
   ],
   templateUrl: './paie-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './paie-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieFormComponent {
   private readonly paieService = inject(PaieService);

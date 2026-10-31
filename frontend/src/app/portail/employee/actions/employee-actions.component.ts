@@ -21,12 +21,7 @@ import { EmployeeService } from '../services/employee.service';
   selector: 'app-employee-actions',
   imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './employee-actions.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    .employee-actions__fichier {
-      display: none;
-    }
-  `
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeActionsComponent {
   /** Des employés ont été importés : la vue affichée doit se recharger. */

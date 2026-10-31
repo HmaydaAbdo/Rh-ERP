@@ -7,7 +7,7 @@
   }
 </div>
 
-<input #fileInput type="file" accept=".xlsx" class="function-actions__fichier" (change)="onFileSelected($event)" />
+<input #fileInput type="file" accept=".xlsx" class="hidden" (change)="onFileSelected($event)" />
 
 <stp-dialog header="Résultat de l'import" width="520px" [(open)]="showImportResultDialog">
   @if (importResult(); as result) {

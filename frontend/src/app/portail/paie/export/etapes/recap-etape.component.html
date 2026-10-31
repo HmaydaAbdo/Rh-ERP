@@ -1,7 +1,7 @@
-<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
-  <p class="export-wizard__consigne">Vérifiez votre choix avant de générer.</p>
-  <div class="export-wizard__recap">
-    <div><stp-icon name="calendar" /><span>Période</span><strong class="export-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · {{ store.resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
+<section class="app-wizard__panneau" [class.app-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <p class="app-wizard__consigne">Vérifiez votre choix avant de générer.</p>
+  <div class="app-wizard__recap">
+    <div><stp-icon name="calendar" /><span>Période</span><strong class="app-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · {{ store.resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
     <div><stp-icon name="file" /><span>Format</span><strong>{{ store.format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="store.allerA('format')">Modifier</button></div>
       @if (store.format() === 'PDF') {
         <div><stp-icon name="building" /><span>Marchés</span><strong>{{ store.texteChantier() }}</strong><button type="button" (click)="store.allerA('chantier')">Modifier</button></div>
@@ -12,5 +12,5 @@
       <div><stp-icon name="truck" /><span>{{ t.titre }} ({{ t.chantierCode }})</span><strong>{{ store.texteMateriel(t) }}</strong><button type="button" (click)="store.allerA('materiel')">Modifier</button></div>
     }
   </div>
-  <p class="export-wizard__fichier"><stp-icon name="download" /> Nom du fichier : <code>{{ store.nomFichier() }}</code></p>
+  <p class="app-wizard__fichier"><stp-icon name="download" /> Nom du fichier : <code>{{ store.nomFichier() }}</code></p>
 </section>

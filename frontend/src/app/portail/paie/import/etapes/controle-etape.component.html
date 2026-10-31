@@ -1,13 +1,13 @@
 @if (store.analyse(); as analyse) {
-  <section class="controle">
-    <div class="controle__bilan">
-      <span class="controle__fichier"><stp-icon name="file-spreadsheet" /> {{ store.fichier()?.name }} — {{ analyse.totalLignes }} ligne(s)</span>
+  <section class="app-controle">
+    <div class="app-controle__bilan">
+      <span class="app-controle__fichier"><stp-icon name="file-spreadsheet" /> {{ store.fichier()?.name }} — {{ analyse.totalLignes }} ligne(s)</span>
       <button stp-button variant="secondary" icon="refresh-cw" type="button" [disabled]="store.occupe()" (click)="fichierCorrige.click()">Réimporter le fichier corrigé</button>
-      <input #fichierCorrige class="controle__cache" type="file" accept=".xlsx" tabindex="-1" aria-hidden="true" (change)="surFichier($event)" />
+      <input #fichierCorrige class="hidden" type="file" accept=".xlsx" tabindex="-1" aria-hidden="true" (change)="surFichier($event)" />
     </div>
 
     @if (analyse.pret) {
-      <div class="controle__ok" role="status">
+      <div class="app-controle__ok" role="status">
         <stp-icon name="circle-check" size="1.5rem" />
         <div>
           <strong>Aucun problème</strong>
@@ -15,7 +15,7 @@
         </div>
       </div>
     } @else {
-      <p class="import-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer.
+      <p class="app-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer.
         @if (!store.peutCorriger()) {
           Vous ne pouvez pas modifier les fiches des employés : corrigez le fichier, puis réimportez-le.
         }
@@ -23,7 +23,7 @@
     }
 
     @if (analyse.erreurs.length > 0) {
-      <h3 class="import-wizard__titre"><stp-icon name="file-x" /> À corriger dans le fichier <span class="import-wizard__nombre">{{ analyse.erreurs.length }}</span></h3>
+      <h3 class="app-wizard__titre"><stp-icon name="file-x" /> À corriger dans le fichier <span class="app-wizard__nombre">{{ analyse.erreurs.length }}</span></h3>
       <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Erreurs du fichier">
         <table class="app-static-table">
           <thead><tr><th scope="col">Ligne</th><th scope="col">CIN</th><th scope="col">Nom</th><th scope="col">Problème</th></tr></thead>
@@ -37,22 +37,22 @@
     }
 
     @if (analyse.chantiersClotures.length > 0) {
-      <h3 class="import-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="import-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
-      <p class="import-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.
+      <h3 class="app-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="app-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
+      <p class="app-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.
         @if (!store.peutRouvrir()) {
           Vous ne pouvez pas modifier les chantiers.
         }
       </p>
-      <ul class="controle__cartes">
+      <ul class="app-controle__cartes">
         @for (cloture of analyse.chantiersClotures; track cloture.chantierId) {
-          <li class="controle__carte">
-            <div class="controle__qui">
+          <li class="app-controle__carte">
+            <div class="app-controle__qui">
               <strong>{{ cloture.code }}</strong>
               <span>{{ cloture.designation }}</span>
               <span>{{ cloture.lignes.length }} ligne(s) : {{ cloture.lignes.join(', ') }}</span>
             </div>
             @if (store.peutRouvrir()) {
-              <div class="controle__saisie">
+              <div class="app-controle__saisie">
                 <button stp-button icon="archive-restore" type="button" [disabled]="store.occupe()" [attr.aria-label]="'Rouvrir le chantier ' + cloture.code" (click)="store.rouvrir(cloture.chantierId)">Rouvrir le chantier</button>
               </div>
             }
@@ -62,23 +62,23 @@
     }
 
     @if (analyse.cinInconnus.length > 0) {
-      <h3 class="import-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="import-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
-      <p class="import-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
-      <ul class="controle__cartes">
+      <h3 class="app-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="app-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
+      <p class="app-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
+      <ul class="app-controle__cartes">
         @for (inconnu of analyse.cinInconnus; track inconnu.numeroLigne) {
-          <li class="controle__carte">
-            <div class="controle__qui">
+          <li class="app-controle__carte">
+            <div class="app-controle__qui">
               <strong>{{ inconnu.nomPrenom ?? 'Sans nom' }}</strong>
               <span>CIN {{ inconnu.cin }} · ligne {{ inconnu.numeroLigne }}</span>
               <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.2-2' }}</span>
             </div>
             @if (store.peutCorriger()) {
-              <div class="controle__saisie">
-                <label class="controle__champ"><span>Date de naissance</span>
+              <div class="app-controle__saisie">
+                <label class="app-controle__champ"><span>Date de naissance</span>
                 <stp-date-input [ariaLabel]="'Date de naissance de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateNaissance ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateNaissance: $event })" /></label>
-                <label class="controle__champ"><span>Date d’embauche</span>
+                <label class="app-controle__champ"><span>Date d’embauche</span>
                 <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
-                <label class="controle__champ"><span>Type de salaire</span>
+                <label class="app-controle__champ"><span>Type de salaire</span>
                 <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
                 <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne) || store.occupe()" (click)="store.creer(inconnu.numeroLigne)">Créer l'employé</button>
               </div>
@@ -89,21 +89,21 @@
     }
 
     @if (analyse.ecarts.length > 0) {
-      <div class="controle__entete-section">
-        <h3 class="import-wizard__titre"><stp-icon name="git-compare" /> Fiches différentes du fichier <span class="import-wizard__nombre">{{ analyse.ecarts.length }}</span></h3>
+      <div class="app-controle__entete-section">
+        <h3 class="app-wizard__titre"><stp-icon name="git-compare" /> Fiches différentes du fichier <span class="app-wizard__nombre">{{ analyse.ecarts.length }}</span></h3>
         @if (store.peutCorriger() && analyse.ecarts.length > 1) {
           <button stp-button variant="secondary" icon="check-check" type="button" [disabled]="store.occupe()" (click)="store.alignerTout()">Tout mettre à jour</button>
         }
       </div>
-      <p class="import-wizard__legende">Mettez la fiche à jour avec les valeurs du fichier — ou corrigez le fichier si l'erreur vient de lui.</p>
-      <ul class="controle__cartes">
+      <p class="app-wizard__legende">Mettez la fiche à jour avec les valeurs du fichier — ou corrigez le fichier si l'erreur vient de lui.</p>
+      <ul class="app-controle__cartes">
         @for (ecart of analyse.ecarts; track ecart.employeId) {
-          <li class="controle__carte">
-            <div class="controle__qui">
+          <li class="app-controle__carte">
+            <div class="app-controle__qui">
               <strong>{{ ecart.nomPrenom }}</strong>
               <span>CIN {{ ecart.cin }} · ligne {{ ecart.numeroLigne }}</span>
             </div>
-            <dl class="controle__ecarts">
+            <dl class="app-controle__ecarts">
               @for (champ of ecart.champs; track champ.champ) {
                 <div>
                   <dt>{{ libellesChamps[champ.champ] }}</dt>
@@ -112,7 +112,7 @@
               }
             </dl>
             @if (store.peutCorriger()) {
-              <div class="controle__saisie">
+              <div class="app-controle__saisie">
                 @if (salaireChange(ecart.champs)) {
                   <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typesChoisis()[ecart.employeId] ?? ecart.typeSalaire" (valueChange)="store.choisirType(ecart.employeId, $any($event))" />
                 }

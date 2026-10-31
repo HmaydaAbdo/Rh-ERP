@@ -10,7 +10,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-periode',
   imports: [MonthPickerComponent, CountUpDirective, IconComponent],
   templateUrl: './periode-etape.component.html',
-  styleUrl: './periode-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapePeriodeComponent {

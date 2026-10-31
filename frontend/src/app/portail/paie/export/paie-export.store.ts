@@ -352,12 +352,12 @@ export class PaieExportStore {
   /** Entrée dans un champ de nombre : passe au champ suivant, puis au bouton « Continuer » après le dernier. */
   entreeSuivante(evenement: Event): void {
     evenement.preventDefault();
-    const champs = Array.from(document.querySelectorAll<HTMLInputElement>('.export-wizard__materiel-champ'));
+    const champs = Array.from(document.querySelectorAll<HTMLInputElement>('.app-wizard__materiel-champ'));
     const suivant = champs[champs.indexOf(evenement.target as HTMLInputElement) + 1];
     if (suivant) {
       suivant.focus();
     } else {
-      document.querySelector<HTMLButtonElement>('.export-wizard__pied button:last-child')?.focus();
+      document.querySelector<HTMLButtonElement>('.app-wizard__pied button:last-child')?.focus();
     }
   }
 

@@ -21,12 +21,7 @@ import { FunctionService } from '../services/function.service';
   selector: 'app-function-actions',
   imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './function-actions.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    .function-actions__fichier {
-      display: none;
-    }
-  `
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FunctionActionsComponent {
   /** Des fonctions ont été importées : la vue affichée doit se recharger. */

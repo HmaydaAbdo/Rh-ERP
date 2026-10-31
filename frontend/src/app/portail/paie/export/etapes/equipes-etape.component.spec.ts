@@ -2,11 +2,11 @@ import { PaieExportEtapeEquipesComponent } from './equipes-etape.component';
 import { CHANTIERS, monterEtape, stabiliser } from './etapes.testing';
 
 describe('PaieExportEtapeEquipesComponent', () => {
-  const codes = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.export-wizard__chantier-tete .export-wizard__code')).map((c) => c.textContent?.trim());
+  const codes = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.app-wizard__chantier-tete .app-wizard__code')).map((c) => c.textContent?.trim());
   const tete = (racine: HTMLElement, code: string) =>
-    Array.from(racine.querySelectorAll<HTMLButtonElement>('.export-wizard__chantier-tete')).find((b) => b.textContent?.includes(code))!;
+    Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__chantier-tete')).find((b) => b.textContent?.includes(code))!;
   const pastille = (racine: HTMLElement, libelle: string) =>
-    Array.from(racine.querySelectorAll<HTMLButtonElement>('.export-wizard__pastilles button[aria-pressed]')).find((b) => b.textContent?.includes(libelle))!;
+    Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__pastilles button[aria-pressed]')).find((b) => b.textContent?.includes(libelle))!;
 
   async function monter() {
     const etape = await monterEtape(PaieExportEtapeEquipesComponent);
@@ -19,18 +19,18 @@ describe('PaieExportEtapeEquipesComponent', () => {
     const { racine } = await monter();
 
     expect(codes(racine)).toEqual(['C168', 'C196', 'C057']);
-    const metas = Array.from(racine.querySelectorAll('.export-wizard__meta')).map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
+    const metas = Array.from(racine.querySelectorAll('.app-wizard__meta')).map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
     expect(metas).toEqual(['Nador · 10 employés · 2 équipes', '5 employés · 1 équipes', 'Dépôt · 2 employés · aucune équipe']);
   });
 
   it('adapte la consigne au format : PDF puis Excel', async () => {
     const { fixture, store, racine } = await monter();
-    expect(racine.querySelector('.export-wizard__consigne')?.textContent).toContain('graphique par équipe');
+    expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('graphique par équipe');
 
     store.choisirFormat('EXCEL');
     await stabiliser(fixture);
 
-    expect(racine.querySelector('.export-wizard__consigne')?.textContent).toContain('sa propre feuille');
+    expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('sa propre feuille');
   });
 
   it('un chantier sans équipe ne se déplie pas', async () => {
@@ -60,12 +60,12 @@ describe('PaieExportEtapeEquipesComponent', () => {
 
     expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs']);
     expect(pastille(racine, 'Chauffeurs').getAttribute('aria-pressed')).toBe('true');
-    expect(racine.querySelector('.export-wizard__badge')?.textContent).toBe('1 / 2 équipes');
+    expect(racine.querySelector('.app-wizard__badge')?.textContent).toBe('1 / 2 équipes');
   });
 
   it('« Toutes » puis « Aucune » cochent et décochent toutes les équipes du chantier', async () => {
     const { fixture, store, racine } = await monter();
-    const boutons = (nom: string) => Array.from(racine.querySelectorAll<HTMLButtonElement>('.export-wizard__equipes-tete button')).filter((b) => b.textContent === nom);
+    const boutons = (nom: string) => Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__equipes-tete button')).filter((b) => b.textContent === nom);
 
     boutons('Toutes')[0].click();
     await stabiliser(fixture);
@@ -80,11 +80,11 @@ describe('PaieExportEtapeEquipesComponent', () => {
     const { fixture, store, racine } = await monter();
     store.basculerEquipe('C168', 'Chauffeurs');
     await stabiliser(fixture);
-    expect(racine.querySelector('.export-wizard__retrait')).toBeNull();
+    expect(racine.querySelector('.app-wizard__retrait')).toBeNull();
 
     store.choisirFormat('EXCEL');
     await stabiliser(fixture);
-    const retrait = racine.querySelector('.export-wizard__retrait') as HTMLButtonElement;
+    const retrait = racine.querySelector('.app-wizard__retrait') as HTMLButtonElement;
     expect(retrait.getAttribute('aria-label')).toBe('Retirer Chauffeurs de la feuille du chantier');
     expect(retrait.getAttribute('aria-pressed')).toBe('false');
 

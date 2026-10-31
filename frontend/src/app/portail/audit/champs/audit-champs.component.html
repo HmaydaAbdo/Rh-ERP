@@ -1,5 +1,5 @@
 @if (champs().length === 0) {
-  <p class="audit-champs__vide">Aucun changement.</p>
+  <p class="m-0 text-muted">Aucun changement.</p>
 } @else {
   <app-column-chooser [state]="colonnes" />
   <stp-table label="Différences des champs" [value]="champs()" [columns]="colonnes.visible" [rowsPerPageOptions]="[10, 20, 50, 100]">
@@ -11,19 +11,19 @@
         @case ('avant') {
           @if (champ.ajoutes || champ.retires) {
             @for (element of champ.retires ?? []; track element) {
-              <span class="audit-champs__element audit-champs__retire">− {{ element }}</span>
+              <span class="audit-champs__retire block text-danger">− {{ element }}</span>
             }
           } @else {
-            <span class="audit-champs__retire">{{ champ.avant ?? '—' }}</span>
+            <span class="audit-champs__retire text-danger">{{ champ.avant ?? '—' }}</span>
           }
         }
         @case ('apres') {
           @if (champ.ajoutes || champ.retires) {
             @for (element of champ.ajoutes ?? []; track element) {
-              <span class="audit-champs__element audit-champs__ajoute">+ {{ element }}</span>
+              <span class="audit-champs__ajoute block text-success">+ {{ element }}</span>
             }
           } @else {
-            <span class="audit-champs__ajoute">{{ champ.apres ?? '—' }}</span>
+            <span class="audit-champs__ajoute text-success">{{ champ.apres ?? '—' }}</span>
           }
         }
       }
