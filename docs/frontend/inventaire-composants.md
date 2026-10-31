@@ -15,7 +15,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 
 | Zone | Composants | Avec styles propres | Lignes de style |
 |---|---|---|---|
-| `shared/ui/` | 17 | — (conforme par définition) | — |
+| `shared/ui/` | 16 | — (conforme par définition) | — |
 | `shared/components/` et `shared/feedback/` | 8 | 8 hors `shared/ui/` | — |
 | `core/` (coquille, authentification, assistant) | 12 | 10 | 1 392 |
 | `portail/` (domaines) | 70 | 33 | 3 420 |
