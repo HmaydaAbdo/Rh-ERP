@@ -1,0 +1,46 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Pisé</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{width:1440px;height:900px;overflow:hidden;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif}
+body{display:flex}
+.pane{width:720px;height:900px;overflow:hidden;display:flex;background:var(--sol);color:var(--txt)}
+.clair{--sol:#F3F4F1;--carte:#FFFFFF;--bord:#D9D6CF;--txt:#1E1A17;--mut:#4F4740;--rail:#2A2420;--railtxt:#E7E0D6;--railon:#F3F4F1;--railontxt:#1E1A17;--act:#2B3E8F;--acttxt:#FFFFFF;--r:10px;--okbg:#E1EBD2;--oktxt:#2F4A14;--atbg:#F6E3BC;--attxt:#6B4300;--kobg:#F4D5CC;--kotxt:#8A2410}
+.sombre{--sol:#171412;--carte:#221E1B;--bord:#40372F;--txt:#F4EFE8;--mut:#C2B8AB;--rail:#0F0D0B;--railtxt:#D8CFC3;--railon:#3A3029;--railontxt:#FFFFFF;--act:#A9B8FF;--acttxt:#10153A;--r:10px;--okbg:#2D3A1B;--oktxt:#C7E2A0;--atbg:#4A3512;--attxt:#F6D48A;--kobg:#552419;--kotxt:#FFC2B3}
+.rail{width:150px;background:var(--rail);color:var(--railtxt);padding:22px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:700;font-size:15px;margin-bottom:16px;letter-spacing:.01em}
+.nav{padding:9px 10px;border-radius:var(--r);font-size:14px;color:var(--railtxt)}
+.nav.on{background:var(--railon);font-weight:700;color:var(--railontxt)}
+.main{flex:1;padding:26px 26px 0;min-width:0}
+.titre{font-size:23px;font-weight:700;margin-bottom:4px}
+.sous{font-size:14px;color:var(--mut);margin-bottom:22px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--carte);border:1px solid var(--bord);border-radius:var(--r);padding:16px 16px 14px}
+.kpi small{font-size:13px;color:var(--mut);display:block;margin-bottom:6px}
+.kpi b{font-size:20px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700}
+.kpi i{font-style:normal;font-size:12px;color:var(--mut);display:block;margin-top:6px}
+table{width:100%;border-collapse:collapse;background:var(--carte);border:1px solid var(--bord);border-radius:var(--r);overflow:hidden;font-size:14px}
+th{text-align:left;font-weight:700;color:var(--mut);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--bord)}
+td{padding:15px 14px;border-bottom:1px solid var(--bord)}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700}
+.pill{white-space:nowrap;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.ok{background:var(--okbg);color:var(--oktxt)} .ct{background:var(--atbg);color:var(--attxt)} .ko{background:var(--kobg);color:var(--kotxt)}
+.btn{display:inline-block;background:var(--act);color:var(--acttxt);padding:10px 16px;border-radius:var(--r);font-weight:700;font-size:14px;float:right;margin-top:-52px}
+.strates{margin:-26px -26px 22px;}.strates span{display:block}.sombre .s1{filter:none}
+</style></head><body>
+<div class="pane clair"><div class="rail"><div class="logo">STAPORT</div>
+<div class="nav">Accueil</div><div class="nav on">Paie</div><div class="nav">Employés</div><div class="nav">Équipes</div><div class="nav">Chantiers</div><div class="nav">Heures supp.</div><div class="nav">Assistant</div></div>
+<div class="main"><div class='strates'><span style='display:block;height:4px;background:#C28A3A'></span><span style='display:block;height:3px;background:#A8512F'></span><span style='display:block;height:5px;background:#D8C3A0'></span><span style='display:block;height:3px;background:#6B635B'></span><span style='display:block;height:4px;background:#B9733A'></span></div><div class="titre">Paie d'octobre 2026</div><div class="sous">248 employés · thème clair</div>
+<div class="btn">Importer le mois</div>
+<div class="kpis"><div class="kpi"><small>Brut total</small><b>1 842 600 MAD</b><i>Réparti par chantier, une strate chacun</i><div style='margin-top:8px;border-radius:6px;overflow:hidden'><span style='display:block;height:5px;background:#C28A3A'></span><span style='display:block;height:5px;background:#A8512F'></span><span style='display:block;height:5px;background:#D8C3A0'></span><span style='display:block;height:5px;background:#6B635B'></span></div></div>
+<div class="kpi"><small>Heures supplémentaires</small><b>312 h</b><i>+18 h depuis septembre</i></div>
+<div class="kpi"><small>À contrôler</small><b>7 bulletins</b><i>dont 1 import rejeté</i></div></div>
+<table><tr><th>Employé</th><th>Chantier</th><th style="text-align:right">Net à payer</th><th>Statut</th></tr><tr><td><b>Hassan El Idrissi</b><br><span style='color:var(--mut);font-size:12px'>Maçon</span></td><td>Casablanca Marina</td><td class='n'>6 240 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Fatima Zahra Benali</b><br><span style='color:var(--mut);font-size:12px'>Cheffe d'équipe</span></td><td>Tanger Med</td><td class='n'>7 910 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Youssef Amrani</b><br><span style='color:var(--mut);font-size:12px'>Ferrailleur</span></td><td>Rabat Agdal</td><td class='n'>5 380 MAD</td><td><span class='pill ct'>À contrôler</span></td></tr><tr><td><b>Khadija Lahlou</b><br><span style='color:var(--mut);font-size:12px'>Conductrice d'engins</span></td><td>Casablanca Marina</td><td class='n'>6 870 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Omar Tazi</b><br><span style='color:var(--mut);font-size:12px'>Électricien</span></td><td>Tanger Med</td><td class='n'>5 120 MAD</td><td><span class='pill ko'>Import rejeté</span></td></tr></table><div style='margin-top:18px;font-size:13px;color:var(--mut)'>Les strates se lisent comme des couches de terre damée : un chantier par couche, du plus ancien au plus récent.</div></div></div><div class="pane sombre"><div class="rail"><div class="logo">STAPORT</div>
+<div class="nav">Accueil</div><div class="nav on">Paie</div><div class="nav">Employés</div><div class="nav">Équipes</div><div class="nav">Chantiers</div><div class="nav">Heures supp.</div><div class="nav">Assistant</div></div>
+<div class="main"><div class='strates'><span style='display:block;height:4px;background:#C28A3A'></span><span style='display:block;height:3px;background:#A8512F'></span><span style='display:block;height:5px;background:#D8C3A0'></span><span style='display:block;height:3px;background:#6B635B'></span><span style='display:block;height:4px;background:#B9733A'></span></div><div class="titre">Paie d'octobre 2026</div><div class="sous">248 employés · thème sombre</div>
+<div class="btn">Importer le mois</div>
+<div class="kpis"><div class="kpi"><small>Brut total</small><b>1 842 600 MAD</b><i>Réparti par chantier, une strate chacun</i><div style='margin-top:8px;border-radius:6px;overflow:hidden'><span style='display:block;height:5px;background:#C28A3A'></span><span style='display:block;height:5px;background:#A8512F'></span><span style='display:block;height:5px;background:#D8C3A0'></span><span style='display:block;height:5px;background:#6B635B'></span></div></div>
+<div class="kpi"><small>Heures supplémentaires</small><b>312 h</b><i>+18 h depuis septembre</i></div>
+<div class="kpi"><small>À contrôler</small><b>7 bulletins</b><i>dont 1 import rejeté</i></div></div>
+<table><tr><th>Employé</th><th>Chantier</th><th style="text-align:right">Net à payer</th><th>Statut</th></tr><tr><td><b>Hassan El Idrissi</b><br><span style='color:var(--mut);font-size:12px'>Maçon</span></td><td>Casablanca Marina</td><td class='n'>6 240 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Fatima Zahra Benali</b><br><span style='color:var(--mut);font-size:12px'>Cheffe d'équipe</span></td><td>Tanger Med</td><td class='n'>7 910 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Youssef Amrani</b><br><span style='color:var(--mut);font-size:12px'>Ferrailleur</span></td><td>Rabat Agdal</td><td class='n'>5 380 MAD</td><td><span class='pill ct'>À contrôler</span></td></tr><tr><td><b>Khadija Lahlou</b><br><span style='color:var(--mut);font-size:12px'>Conductrice d'engins</span></td><td>Casablanca Marina</td><td class='n'>6 870 MAD</td><td><span class='pill ok'>Validé</span></td></tr><tr><td><b>Omar Tazi</b><br><span style='color:var(--mut);font-size:12px'>Électricien</span></td><td>Tanger Med</td><td class='n'>5 120 MAD</td><td><span class='pill ko'>Import rejeté</span></td></tr></table><div style='margin-top:18px;font-size:13px;color:var(--mut)'>Les strates se lisent comme des couches de terre damée : un chantier par couche, du plus ancien au plus récent.</div></div></div>
+</body></html>
