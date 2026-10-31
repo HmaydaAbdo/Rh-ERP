@@ -321,3 +321,26 @@
     }
   }
 }
+
+// Formulaire d'une page d'authentification ou d'une carte : champs empilés, action principale en pleine largeur
+.app-form {
+  display: grid;
+  gap: var(--space-lg);
+
+  &__submit {
+    width: 100%;
+  }
+}
+
+// Lien dans un texte ou sous un formulaire : toujours souligné (la teinte seule ne le distingue pas du texte)
+.app-link {
+  justify-self: center;
+  color: var(--color-link);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+
+  &:hover {
+    color: var(--color-primary-hover);
+  }
+}

@@ -17,7 +17,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 |---|---|---|---|
 | `shared/ui/` | 16 | — (conforme par définition) | — |
 | `shared/components/` et `shared/feedback/` | 8 | 8 hors `shared/ui/` | — |
-| `core/` (coquille, authentification, assistant) | 12 | 10 | 1 392 |
+| `core/` (coquille, authentification, assistant) | 12 | 10 | 734 (le fichier d'authentification n'est compté qu'une fois) |
 | `portail/` (domaines) | 70 | 33 | 3 420 |
 | **Infractions** | **51** sur 106 composants | | |
 
@@ -26,7 +26,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 | Famille | Composants concernés | Lignes de style | Composant partagé à ajouter ou étendre |
 |---|---|---|---|
 | Rangement des dossiers partagés | `shared/components/*` (7), `shared/feedback` | — | Déplacement vers `shared/ui/` (mécanique) |
-| Authentification | `login`, `forgot-password`, `reset-password` (329 lignes **identiques** chacun), `access-denied` | 1 045 | `auth-card` / `auth-shell` |
+| Authentification | `login`, `forgot-password`, `reset-password` (un seul fichier de 329 lignes partagé par référence), `access-denied` (58) | 387 | `auth-card` — **fait** (E0.2, 2026-10-31) ; `access-denied` reste à traiter |
 | Coquille d'application | `app.component` (rail, barre du haut, tiroir) | 357 | `app-shell` |
 | Tableaux de bord | `perimetre/analytique`, `perimetre/cartes`, `paie/cartes`, `paie/parcours` | 1 035 | `stat-tile`, `chart-card`, `dashboard-section` |
 | Assistants d'import et d'export | `paie/export` (7 composants), `paie/import` (2), `heures-supp/import` | 980 | `stepper`, `file-drop`, `summary-list` |
@@ -37,7 +37,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 ## Ordre de résorption proposé
 
 1. Rangement des dossiers partagés (aucun changement visuel).
-2. Authentification (une seule source pour 987 lignes dupliquées).
+2. Authentification (`stp-auth-card` : fait ; reste `access-denied`).
 3. Coquille d'application.
 4. Tableaux de bord, assistants d'import et d'export, filtres et détails.
 5. Carte et assistant IA (avec E0.7 et E9).
