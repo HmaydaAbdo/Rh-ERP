@@ -23,11 +23,12 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Comprendre l'authentification, les comptes et les rôles | [auth/README.md](auth/README.md) |
 | Savoir qui a le droit de faire quoi (catalogue des permissions) | [rbac/README.md](rbac/README.md) |
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
+| Auditer les composants partagés et suivre l'harmonisation frontend | [Inventaire](frontend/audit-composants-partages.md) · [TODO frontend du samedi 31 octobre](frontend/TODO-2026-10-31-harmonisation.md) |
 | Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · [couverture par domaine](testing/domain-coverage.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
-| **Intégration IA** : décisions, architecture, feuille de route, état et reprise | [ia.md — document unique](ia.md) · conventions [agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md), [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md) |
+| **Intégration IA** : décisions, architecture, feuille de route, état et reprise | [ia.md — document unique](ia.md) · [Copilot Kit Future to Implement — inventaire CopilotKit, LangChain, LangGraph et Deep Agents](ia/copilot-kit-future-to-implement.md) · [Analyse des écarts IA backend](ia/backend-gap-analysis.md) · conventions [agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md), [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md) |
 | Choisir gRPC, MCP, A2A, AG-UI, UDP ou une autre solution selon le besoin | [Convention d’intégration](../conventions/integrations.md) |
 | **Reprendre le projet** : état, règles du propriétaire, déploiement en cours, sujets ouverts | [handoff/etat-du-projet.md](handoff/etat-du-projet.md) |
 | **Suivre le PV N°1** (cadrage global, avec Équipe comme premier domaine examiné) | [PV N°1 — ERP-RH, projet à valider avant diffusion](handoff/pv-n1-erp-rh.md) |
