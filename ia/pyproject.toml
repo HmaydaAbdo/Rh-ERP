@@ -11,7 +11,7 @@ dependencies = [
     "httpx",
     "openai",
     "mcp",
-    "langgraph",
+    "langgraph>=1.2.19",
     "ag-ui-protocol==1.0.0",
     "ag-ui-langgraph==0.0.47",
     "langchain[mcp]>=1.4.7",
