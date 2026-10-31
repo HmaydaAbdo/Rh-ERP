@@ -213,11 +213,12 @@ Domaines du backend actuel (nombre de fichiers Java relevé le 2026-10-31) : `co
 | ID | Tâche | Preuve de terminé | Origine |
 |---|---|---|---|
 | E2.1 | **ADR** : motif, cible (FastAPI, accès aux données, migrations Flyway ou Alembic, JWT RS256, audit), stratégie de bascule, règle « le backend qui sert un domaine fait autorité », conventions à remplacer, mise à jour des principes du § 1 | ADR approuvé | Demande 2026-10-31 |
+| E2.1b | **Mise à jour des ADR et des conventions au moment où la bascule est décidée** (décision du 2026-10-31) : les ADR de `docs/adr/` et les conventions de `conventions/` sont réécrits pour refléter FastAPI et Python, **en gardant la même architecture et les mêmes conventions de code** (couches, nommage, tests, sécurité, audit, documentation), traduites dans l'idiome Python ; chaque règle supprimée ou changée est listée dans l'ADR avec sa raison | ADR et conventions à jour, aucune convention Java restante une fois Spring retiré | Décision 2026-10-31 |
 | E2.2 | Inventaire exhaustif par domaine : endpoints, entités, règles de calcul (paie surtout), permissions, tâches planifiées, tests existants dont la couverture est à égaler | Inventaire versionné | Idem |
 | E2.3 | Stratégie de bascule : proxy qui route chaque domaine vers l'ancien ou le nouveau backend, même base PostgreSQL pendant la transition, **tests de contrat identiques des deux côtés**, critère de parité chiffré (notamment pour la paie), retour arrière | Plan de bascule approuvé | Idem |
 | E2.4 | Cible technique et prototype sur le premier domaine : FastAPI, accès aux données, migrations, authentification, observabilité, CI, image Docker (règle du `docker compose` unique) | Prototype du domaine `common` servi par FastAPI | Idem |
 | E2.5 | **Tranche transversale, dans cet ordre** : `common`, `auth` (sécurité, utilisateurs, rôles, permissions, jetons), `audit`, `parametre`, puis le serveur MCP (SDK MCP Python officiel au lieu de Spring AI ; les outils de chaque domaine le rejoignent avec leur domaine) | Chaque domaine servi par FastAPI, tests de parité verts, domaine Java retiré | Idem |
-| E2.6 | **Domaines métier, un par un** (ordre proposé, du moins risqué au plus critique, à valider) : `function`, `equipe`, `chantier`, `employee`, `heuresupp`, `paie` ; un domaine n'est basculé qu'après parité prouvée, et ses outils MCP migrent avec lui | Idem, par domaine | Idem |
+| E2.6 | **Domaines métier, un par un** (ordre **validé par le propriétaire le 2026-10-31**, du moins risqué au plus critique) : `function`, `equipe`, `chantier`, `employee`, `heuresupp`, `paie` ; un domaine n'est basculé qu'après parité prouvée, et ses outils MCP migrent avec lui | Idem, par domaine | Idem |
 | E2.7 | Retrait final de Spring (dépendances, image, CI, conventions Java) | Aucune trace de Spring dans le dépôt, CI verte | Idem |
 
 ### E3 — Rôles, départements, hiérarchie et sécurité par champ (demande du 2026-10-31)
@@ -530,8 +531,8 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
 - **Q14 — Migrations du checkpointer (ancien D6).** `AsyncPostgresSaver.setup()` crée les tables au démarrage du service ;
   l'ancienne décision demandait de les gérer par Flyway avec un compte sans droit de création. À confirmer ou à changer.
 - **Q15 — Migration vers FastAPI (E2). Répondue le 2026-10-31 : tout le backend, domaine par domaine, en commençant par
-  la sécurité, les utilisateurs et l'audit, puis les domaines métier un par un.** Reste : le motif à consigner dans l'ADR, et
-  l'ordre des domaines métier (E2.6, proposé).
+  la sécurité, les utilisateurs et l'audit, puis les domaines métier un par un.** Ordre des domaines métier validé. Reste : le motif à consigner
+  dans l'ADR.
 - **Q18 — IA interne (E14).** Matériel disponible (GPU, mémoire) ou budget d'achat ? Quand abandonner LiteLLM : dès que
   le premier modèle interne tient le jeu de référence, ou seulement quand tous les fournisseurs gratuits sont retirés ?
 - **Q19 — Veille et CI (E0.2). Répondue le 2026-10-31 : oui**, Dependabot est activé pour les composants IA, ses PR lancent la CI.
