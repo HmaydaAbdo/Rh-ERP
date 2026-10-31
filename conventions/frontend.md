@@ -60,8 +60,7 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 
 ## Priorité obligatoire aux composants partagés
 
-Avant de créer ou modifier un composant d'interface, rechercher le besoin dans `src/app/shared/ui/`,
-`src/app/shared/components/`, le catalogue `/catalogue` et les domaines qui consomment déjà le socle.
+Avant de créer ou modifier un composant d'interface, rechercher le besoin dans `src/app/shared/ui/`, le catalogue `/catalogue` et les domaines qui consomment déjà le socle.
 Si un composant partagé couvre le besoin, le domaine le réutilise par son API publique. Il ne crée
 pas une copie, une variante locale ni un composant équivalent.
 
@@ -349,7 +348,7 @@ Tout domaine métier qui présente une collection consultable propose trois vues
 sources de vérité ni trois règles métier.
 
 * La coque et l'assemblage Tabulaire utilisent les composants configurables partagés de
-  `shared/components/collection-shell/` et `shared/components/collection-table/` (ADR 0012). Le domaine reste
+  `shared/ui/collection-shell/` et `shared/ui/collection-table/` (ADR 0012). Le domaine reste
   propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
   une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
   par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.

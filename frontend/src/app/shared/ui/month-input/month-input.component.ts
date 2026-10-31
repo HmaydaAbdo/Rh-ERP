@@ -2,7 +2,7 @@ import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angul
 import { ChangeDetectionStrategy, Component, computed, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
 
-import { MonthPickerComponent } from '../../components/month-picker/month-picker.component';
+import { MonthPickerComponent } from '../month-picker/month-picker.component';
 import { IconComponent } from '../icon/icon.component';
 
 const POSITIONS: ConnectedPosition[] = [

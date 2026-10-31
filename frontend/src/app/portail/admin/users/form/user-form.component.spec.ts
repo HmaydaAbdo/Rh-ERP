@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/services/auth.service';
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { fournirSignalForms } from '../../../../shared/forms/signal-forms.config';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
 import { fournirRoute } from '../../../../shared/testing/ecrans';

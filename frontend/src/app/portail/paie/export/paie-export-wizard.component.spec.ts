@@ -1,6 +1,6 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NotificationService } from '@shared/feedback/feedback.service';
+import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of, Subject, throwError } from 'rxjs';
 
 import { PaieChantierPeriode, PaieMaterielTableau, PaiePeriodeResume } from '../models/paie.model';

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { ChantierService } from '../services/chantier.service';
 import { ChantierActionsComponent } from './chantier-actions.component';

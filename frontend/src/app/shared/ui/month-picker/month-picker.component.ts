@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 
-import { IconComponent } from '../../ui/icon/icon.component';
+import { IconComponent } from '../icon/icon.component';
 
 const LIBELLES_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const NB_ANNEES_SANS_LIMITE = 10;

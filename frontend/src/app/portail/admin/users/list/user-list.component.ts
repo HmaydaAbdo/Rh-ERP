@@ -4,8 +4,8 @@ import { debounce, form, FormField, FormRoot, required } from '@angular/forms/si
 import { Router, RouterLink } from '@angular/router';
 import { finalize, map, Subscription } from 'rxjs';
 
-import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ColumnChooserComponent } from '../../../../shared/ui/column-chooser/column-chooser.component';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { surChangementDesFiltres } from '../../../../shared/forms/filtres';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';

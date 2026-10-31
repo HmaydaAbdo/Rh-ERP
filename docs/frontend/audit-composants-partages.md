@@ -30,7 +30,7 @@ Ils doivent être ajoutés à `/catalogue` et au registre documentaire :
 | `app-pdf-export-button` | États prêt, chargement, indisponible et export déclenché | Document PDF de démonstration, sans donnée métier réelle |
 | `app-vue-switcher` | États actif/inactif et navigation conservant les paramètres | Routes de démonstration disponibles |
 
-Ces composants sont déjà dans `shared/components/` et ont des usages de production. Leur ajout au catalogue ne signifie pas
+Ces composants sont déjà dans `shared/ui/` et ont des usages de production. Leur ajout au catalogue ne signifie pas
 qu'il faut en créer des copies. Les vues configurables `app-cartes-perimetre` et `app-analytique-perimetre` sont également
 à référencer dans le catalogue et documenter comme motifs partagés ; leurs parcours avec données réelles restent validés
 par leurs tests d'intégration de vues, et la démo catalogue doit employer des données déterministes si leur API le permet.

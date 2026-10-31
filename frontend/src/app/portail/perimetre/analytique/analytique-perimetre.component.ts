@@ -12,14 +12,14 @@ import { ChantierReference } from '../../../shared/reference-data/chantier-refer
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { LazySelectPage, LazySelectSource } from '../../../shared/ui/lazy-select/lazy-select.model';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
+import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
 import { EmployeeAnalytique, EmployeeRegroupement } from '../../employee/models/employee.model';

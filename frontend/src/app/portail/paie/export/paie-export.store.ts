@@ -3,7 +3,7 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
 import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';

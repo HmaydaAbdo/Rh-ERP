@@ -1,6 +1,6 @@
 import { Observable, map, of } from 'rxjs';
 
-import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
+import { LazySelectPage, LazySelectSource } from '../../../shared/ui/lazy-select/lazy-select.model';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EQUIPE_ORPHELINE, EquipeReference, rechercheEquipeOrpheline } from '../../../shared/reference-data/equipe-reference.model';

@@ -431,7 +431,7 @@ Routes sous `/paie` (lazy loading, `paie.routes.ts`) :
 | `/paie` | `PaieListComponent` | **Vue tabulaire** : tableau standard (tri, colonnes, pagination) filtré par la barre commune, suppression. « Importer » ouvre `PaieImportWizardComponent`, l'**assistant d'import** (fichier, contrôle, départs, import — voir « Import Excel »), et son menu le modèle Excel. Un seul bouton « Exporter » ouvre `PaieExportWizardComponent`, l'**assistant d'export en étapes** (mois, format, équipes, matériel, génération) décrit dans `docs/report/README.md`, « Assistant d'export » |
 | `/paie/cartes` | `PaieCartesComponent` | Vue **Cartes** hiérarchique (mois → chantier → équipe → fonction → employés), voir « Vue Cartes » ci-dessous |
 | `/paie/analytique` | `PaieAnalytiqueComponent` | Vue **Analytique** : tableau de bord graphique, voir « Vue Analytique » ci-dessous |
-| `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/components/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
+| `/paie/new` | `PaieFormComponent` | Création — sélection de l'employé, de la fonction, du chantier et de l'équipe (facultative) via le sélecteur générique (`shared/ui/lazy-select`, voir `conventions/frontend.md` — recherche serveur + chargement différé) |
 | `/paie/:id` | `PaieDetailComponent` | Consultation |
 | `/paie/:id/edit` | `PaieFormComponent` | Modification — employé et période affichés en lecture seule avec un message explicite |
 

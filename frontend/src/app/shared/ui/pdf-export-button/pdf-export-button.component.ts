@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal } from '@angular/core';
 import { finalize, Observable } from 'rxjs';
-import { ButtonComponent } from '../../ui/button/button.directive';
+import { ButtonComponent } from '../button/button.directive';
 import { PdfImpressionDocument, PdfImpressionService } from '../../services/pdf-impression.service';
 
 @Component({

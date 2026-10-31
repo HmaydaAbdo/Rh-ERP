@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { ColumnState } from '../../table/table-columns';
-import { TableCellDirective, TableLazyLoadEvent } from '../../ui/table/table.component';
+import { TableCellDirective, TableLazyLoadEvent } from '../table/table.component';
 import { CollectionTableComponent, CollectionTableConfig } from './collection-table.component';
 
 @Component({

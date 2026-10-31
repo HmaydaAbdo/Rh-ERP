@@ -2,11 +2,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { LazySelectPage, LazySelectSource } from '../components/lazy-select/lazy-select.model';
+import { LazySelectPage, LazySelectSource } from '../ui/lazy-select/lazy-select.model';
 import { Page } from '../models/page.model';
 import { FunctionReference } from './function-reference.model';
 
-/** Source de données du sélecteur générique (voir `shared/components/lazy-select`) pour les
+/** Source de données du sélecteur générique (voir `shared/ui/lazy-select`) pour les
  * fonctions — remplace l'ancien `list()` qui chargeait toute la liste d'un coup (`size=200`). */
 @Injectable({ providedIn: 'root' })
 export class FunctionReferenceService implements LazySelectSource<FunctionReference> {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
+import { MonthPickerComponent } from '../../../../shared/ui/month-picker/month-picker.component';
 import { CountUpDirective } from '../../../../shared/directives/count-up.directive';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PaieExportStore } from '../paie-export.store';

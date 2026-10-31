@@ -4,8 +4,8 @@ import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
-import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
-import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ColumnChooserComponent } from '../../../../shared/ui/column-chooser/column-chooser.component';
+import { ConfirmDialogService, NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { surChangementDesFiltres } from '../../../../shared/forms/filtres';
 import { ColumnState } from '../../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../../shared/ui/badge/badge.component';

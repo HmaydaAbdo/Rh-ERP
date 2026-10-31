@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormValueControl } from '@angular/forms/signals';
 import { debounceTime, distinctUntilChanged, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 
-import { SelectComponent, SelectOption } from '../../ui/select/select.component';
+import { SelectComponent, SelectOption } from '../select/select.component';
 import { LazySelectSource } from './lazy-select.model';
 
 type Key = number | string;

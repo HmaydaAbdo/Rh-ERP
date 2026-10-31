@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, map, of, shareReplay, tap } from 'rxjs';
 
-import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
+import { LazySelectPage, LazySelectSource } from '../../../shared/ui/lazy-select/lazy-select.model';
 import { PermissionSummary, Role } from '../models/admin.model';
 import { RoleService } from './role.service';
 

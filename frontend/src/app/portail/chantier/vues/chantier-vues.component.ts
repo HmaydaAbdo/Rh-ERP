@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/components/collection-shell/collection-shell.component';
+import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { ChantierActionsComponent } from '../actions/chantier-actions.component';
 import { AUCUN_FILTRE_CHANTIER, ChantierFiltres, lireFiltresChantier, versParametresChantier } from '../filtres/chantier-filtres';
 import { ChantierFiltresComponent } from '../filtres/chantier-filtres.component';

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { fournirSignalForms } from '../../../../shared/forms/signal-forms.config';
 import { fournirRoute } from '../../../../shared/testing/ecrans';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';

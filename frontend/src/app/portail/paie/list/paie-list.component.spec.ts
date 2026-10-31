@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { NotificationService } from '@shared/feedback/feedback.service';
+import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of, Subject, throwError } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
