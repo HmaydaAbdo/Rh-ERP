@@ -17,27 +17,32 @@ export type MessageSeverity = 'info' | 'warn' | 'error';
       align-items: flex-start;
       gap: var(--space-sm);
       padding: var(--space-sm) var(--space-md);
-      border: 1px solid var(--color-border);
-      border-inline-start-width: 4px;
+      border: 1px solid var(--stp-message-color);
       border-radius: var(--radius-md);
-      background: var(--color-surface-alt);
+      background: var(--stp-message-bg);
+      color: var(--color-text);
       font-size: var(--text-sm);
+      line-height: var(--leading-body);
     }
 
     :host(.stp-message--info) {
-      border-inline-start-color: var(--color-primary);
+      --stp-message-color: var(--color-info);
+      --stp-message-bg: var(--color-info-bg);
     }
 
     :host(.stp-message--warn) {
-      border-inline-start-color: var(--color-warning);
+      --stp-message-color: var(--color-warning);
+      --stp-message-bg: var(--color-warning-bg);
     }
 
     :host(.stp-message--error) {
-      border-inline-start-color: var(--color-danger);
+      --stp-message-color: var(--color-danger);
+      --stp-message-bg: var(--color-danger-bg);
     }
 
     stp-icon {
       margin-top: 0.125rem;
+      color: var(--stp-message-color);
     }
   `
 })
