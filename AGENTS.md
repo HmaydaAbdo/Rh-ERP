@@ -54,7 +54,7 @@ Deux règles imposées par le propriétaire, sans exception :
   : on avance épopée par épopée dans l'ordre du plan, on relit en entier la documentation officielle concernée à l'entrée
   de chaque épopée (§ 4.0 du plan), on marque l'état (Terminé, Partiel, Incomplet, Non touché) dans le même commit que le
   travail, et on ne supprime ni fichier, ni branche, ni donnée en dehors du périmètre de la tâche en cours sans l'accord du
-  propriétaire. Les versions IA suivent la dernière stable (veille : E0.2) ; une limite de version causée par une
+  propriétaire. Les versions IA suivent la dernière stable (veille : E1.2) ; une limite de version causée par une
   dépendance (par exemple `openai` bloqué par LiteLLM) est consignée au § 3 du plan.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
   `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
