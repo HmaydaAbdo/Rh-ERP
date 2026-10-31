@@ -471,6 +471,8 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
   le premier modèle interne tient le jeu de référence, ou seulement quand tous les fournisseurs gratuits sont retirés ?
 - **Q19 — Veille et CI (E0.2).** Autorisez-vous Dependabot pour les composants IA malgré le déclenchement automatique de la
   CI par ses PR (la règle actuelle est « CI seulement sur demande »), ou préférez-vous la veille manuelle seule ?
+- **Q20 — Moteur de rendu A2UI (E0.1).** `@a2ui/web_core` 0.14.0 est bloqué par `@copilotkit/angular` 0.6.0 : attendre sa
+  prochaine version, ouvrir un ticket chez CopilotKit, ou passer au rendu officiel `@a2ui/angular` ?
 - **Q16 — Outillage des assistants de développement (E0.7).** Autorisez-vous l'ajout du serveur MCP de documentation de
   CopilotKit et de ses compétences à la configuration du projet ?
 - **Q17 — Hiérarchie et champs (E11).** Quelle règle de visibilité (un responsable voit-il toute sa descendance ?) et quels
