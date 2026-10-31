@@ -1,13 +1,50 @@
 # Plan de travail IA — document unique des tâches restantes
 
-> **Brouillon à valider par le propriétaire (2026-10-31).** Ce fichier regroupe, en un seul endroit, tout ce qui reste à
-> faire pour l'IA d'ERP-RH : l'historique complet des anciens plans (y compris les documents supprimés le 2026-10-24), le
-> plan actuel de `docs/ia.md`, l'inventaire des fonctions de CopilotKit, LangChain, LangGraph et Deep Agents, et l'analyse
-> des écarts du backend. Chaque tâche a été **comparée au code du dépôt** : ce qui est déjà fait n'y figure pas (voir § 2).
-> Les points que le code ne permet pas de trancher sont des **questions** (§ 6) : aucune n'est supposée résolue.
+> **Document de référence du travail IA (validé en principe par le propriétaire le 2026-10-31).** Ce fichier regroupe, en
+> un seul endroit, tout ce qui reste à faire pour l'IA d'ERP-RH : l'historique complet des anciens plans (y compris les
+> documents supprimés le 2026-10-24), le plan actuel de `docs/ia.md`, l'inventaire des fonctions de CopilotKit, LangChain,
+> LangGraph et Deep Agents, et l'analyse des écarts du backend. Chaque tâche a été **comparée au code du dépôt** : ce qui
+> est déjà fait n'y figure pas (voir § 2). Les points que le code ne permet pas de trancher sont des **questions**
+> (§ 6) : aucune n'est supposée résolue.
 >
 > Ce que ce document ne remplace pas : `docs/ia.md` garde les décisions, l'architecture, l'état technique et le journal.
-> Sort des autres fichiers : voir la question Q1.
+> Il remplace en revanche son § 7 (tableaux de tâches), qui devient un renvoi ici, et les deux fichiers de Codex
+> `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md` (suppression après confirmation du propriétaire, fichier
+> par fichier).
+
+## 0. Suivi d'avancement (le seul endroit où l'on marque l'état)
+
+**Règle de travail** : l'assistant avance épopée par épopée dans l'ordre du § 4, ne marque une tâche « Terminé » que si sa
+« preuve de terminé » est fournie, ne supprime ni fichier, ni branche, ni donnée hors du périmètre de la tâche en cours, et
+met à jour ce tableau dans le même commit que le travail.
+
+**Vocabulaire** (une tâche et une épopée n'ont qu'un état) :
+
+| État | Sens |
+|---|---|
+| **Terminé** | Toutes les preuves de terminé sont fournies et le code est dans `main` ou prêt sur `dev/suivi`. |
+| **Partiel** | Une partie est livrée et utilisable ; le reste est listé. |
+| **Incomplet** | Commencé mais non utilisable en l'état, ou bloqué par une décision ; la cause est notée. |
+| **Non touché** | Rien n'est commencé. |
+
+Toute tâche est **Non touché** tant qu'elle ne figure pas dans la colonne « Exceptions ».
+
+| Épopée | État | Exceptions (tâches non « Non touché ») |
+|---|---|---|
+| E0 Socle de vérité | Partiel | E0.1 **Partiel** (2026-10-31 : verrous Python et npm alignés, voir § 3 ; reste le catalogue A2UI de base 0.14.0, `@ag-ui/a2ui-middleware` 0.0.14, `openai` bloqué par `litellm`) |
+| E1 Fiabilité de l'agent | Non touché | — |
+| E2 Confidentialité, traces, conformité | Non touché | — |
+| E3 Sécurité par fiche de poste | Non touché | — |
+| E4 Résorption du code maison | Non touché | — |
+| E5 Conversations et mémoire | Non touché | — |
+| E6 Interface CopilotKit complète | Non touché | — |
+| E7 Écritures et approbation humaine | Non touché | Bloquée par Q4 |
+| E8 RAG et assistant réglementaire | Non touché | — |
+| E9 Agents spécialisés, Deep Agents | Non touché | — |
+| E10 Pilote réel, exploitation | Non touché | — |
+| E11 Rôles, départements, hiérarchie, champs | Non touché | — |
+| E12 Migration Spring → Python FastAPI | Non touché | Bloquée par Q15 (ADR) |
+| E13 Services payants ou hébergés (dernière) | Non touché | Bloquée par Q3 |
 
 ## 1. Principes
 
@@ -17,7 +54,8 @@ Décisions du propriétaire, dont celle du **2026-10-31** (en gras) :
    profiter de leur expérience éprouvée. Ce principe **remplace** la règle « ne pas adopter toutes les fonctions disponibles,
    chaque adoption doit répondre à un parcours réel » des documents `copilot-kit-future-to-implement.md` et
    `backend-gap-analysis.md`. Une fonction n'est écartée que par une décision écrite du propriétaire ou parce qu'elle
-   enfreint un garde-fou ci-dessous.
+   enfreint un garde-fou ci-dessous ; celles qui exigent un service payant ou hébergé sont **regroupées dans la dernière
+   épopée (E13)**.
 2. **Dernières versions stables seulement**, alignées à chaque revue ; les préversions sont suivies à part. **Une version
    publiée n'est pas réputée compatible sans vérification** (tests, migration documentée).
 3. **Documentation officielle seule** comme source de vérité ; pas de recopie du comportement d'un framework en code ERP-RH
@@ -28,7 +66,9 @@ Décisions du propriétaire, dont celle du **2026-10-31** (en gras) :
    - **gratuit** : aucun abonnement ni service payant (décision du 2026-10-27) ;
    - **Spring reste l'autorité** des données, droits, filtres et calculs ; les droits sont revérifiés à chaque appel ;
    - **données RH** : minimisation, audit, loi 09-08 ; aucune donnée réelle vers un modèle externe sans décision (Q5) ;
-   - **auto-hébergé** : les services hébergés par l'éditeur (CopilotKit Intelligence, LangSmith) sont exclus (Q3).
+     **le masquage des champs sensibles est une règle métier appliquée côté Spring** (décision du 2026-10-31, E11) ;
+   - **auto-hébergé** : les services hébergés par l'éditeur (CopilotKit Intelligence, LangSmith) sont exclus tant que
+     E13 n'est pas décidée (Q3).
 6. **Définition de « terminé »** pour toute tâche : test automatisé vert, droits testés (cas négatifs), preuve au navigateur
    ou dans une trace Phoenix pour ce qui se voit, documentation à jour.
 7. **Une seule branche de suivi** (`dev/suivi`), un commit thématique par tâche, une PR à la fois et seulement sur demande.
@@ -57,14 +97,10 @@ Versions : `uv.lock` / `package-lock.json` contre PyPI et npm. Les écarts sont 
 | Composant | Verrouillé | Dernière stable | Remarque |
 |---|---|---|---|
 | `langchain`, `langgraph`, `langgraph-checkpoint-postgres`, `langchain-litellm`, `ag-ui-langgraph`, `ag-ui-protocol`, `copilotkit` (Py), `mcp`, `openevals`, `@copilotkit/angular`, `@copilotkit/runtime`, `@ag-ui/client` | à jour | identique | — |
-| `langchain-core` | 1.7.0 | 1.7.3 | transitive |
-| `langgraph-sdk` | 0.4.9 | 0.4.11 | transitive |
-| `litellm` | 1.106.4 | 1.106.6 | 1.109.0.dev2 existe : préversion, non adoptée |
-| `openinference-instrumentation-langchain` | 0.1.80 | 0.1.81 | |
-| `pydantic`, `pydantic-settings` | 2.14.1, 2.16.1 | 2.14.2, 2.16.2 | |
-| `openai` | 2.54.0 | 3.42.0 | **changement de version majeure** : compatibilité avec `litellm` et `langchain-litellm` à prouver |
-| `agentevals` | 0.0.9 | 0.0.9 | **dernière publication le 2025-07-24** : bibliothèque dormante, à surveiller |
-| `@copilotkit/core`, `@copilotkit/shared` (frontend) | 1.80.0 | 1.83.0 | **écart avec le runtime 1.83.0** à expliquer |
+| `langchain-core`, `langgraph-sdk`, `litellm`, `openinference-instrumentation-langchain`, `pydantic`, `pydantic-settings` | **alignés le 2026-10-31** (1.7.3, 0.4.11, 1.106.6, 0.1.81, 2.14.2, 2.16.2), 51 tests passés | identique | `litellm` 1.109.0.dev2 existe : préversion, non adoptée |
+| `openai` | 2.54.0 | 3.42.0 | **bloqué par `litellm` 1.106.6, qui exige `openai<3.0.0`** (et `langchain-openai` 1.7.3 `>=2.45.0`) : la 3.x devient possible quand `litellm` lèvera sa borne ; à surveiller |
+| `agentevals` | 0.0.9 | 0.0.9 | **dernière publication le 2025-07-24** : bibliothèque dormante, conservée (décision du 2026-10-31), à surveiller |
+| `@copilotkit/core`, `@copilotkit/shared`, `web-inspector`, `web-components`, `mcp-apps-renderer` (frontend) | **1.83.0 le 2026-10-31** | 1.83.0 | **Cause de l'écart** : ce sont des dépendances **transitives** de `@copilotkit/angular` 0.6.0 (`^1.79.1`) ; le verrou n'avait jamais été relevé. Corrigé par `npm update`, build, lint et 965 tests passés |
 | `@a2ui/web_core` | 0.10.4 | 0.14.0 | le catalogue A2UI de base du service IA est copié de 0.10.4 |
 | `@ag-ui/a2ui-middleware` (surcharge) | 0.0.13 | 0.0.14 | |
 | `deepagents` | absent | 0.7.32 | non adopté |
@@ -79,20 +115,22 @@ génération de jetons** (l'ancien `max_tokens=1500` a été retiré) **ni de pl
 ## 4. Épopées, dans l'ordre proposé
 
 Ordre : on assoit d'abord ce qui rend tout le reste mesurable (versions, qualification), puis la fiabilité de l'agent, puis
-la confidentialité et la sécurité **avant** toute donnée réelle, puis on résorbe le code maison, puis les conversations, puis
-l'interface complète, et seulement ensuite les écritures, le RAG, les agents spécialisés et l'exploitation. Les
-dépendances sont indiquées par tâche ; l'ordre est à valider (Q2).
+la confidentialité et la sécurité **avant** toute donnée réelle (E11 d'abord, car E3 en dépend), puis on résorbe le code
+maison, puis les conversations, puis l'interface complète, et seulement ensuite les écritures, le RAG, les agents
+spécialisés et l'exploitation. La migration du backend (E12) est un chantier de cadrage séparé et **E13 (services payants)
+est toujours la dernière**. Les dépendances sont indiquées par tâche ; l'ordre est à valider (Q2).
 
 ### E0 — Socle de vérité : versions, qualification, démarrage
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E0.1 | Aligner toutes les dépendances IA sur la dernière stable (tableau du § 3), une montée à la fois ; expliquer pourquoi le frontend résout `@copilotkit/core` 1.80.0 ; régénérer le catalogue A2UI de base depuis `@a2ui/web_core` 0.14.0 ; prouver `openai` 3.x avec `litellm` avant de l'adopter | Verrous à jour, tests et CI verts, note de migration par montée de version majeure | Politique de versions du 2026-10-31 |
+| E0.1 | Aligner toutes les dépendances IA sur la dernière stable (tableau du § 3), une montée à la fois ; **reste** : régénérer le catalogue A2UI de base depuis `@a2ui/web_core` 0.14.0, relever `@ag-ui/a2ui-middleware` à 0.0.14, adopter `openai` 3.x quand `litellm` lèvera sa borne (§ 3). Fait le 2026-10-31 : verrous Python et npm relevés (`core`/`shared` 1.83.0) | Verrous à jour, tests et CI verts, note de migration par montée de version majeure | Politique de versions du 2026-10-31 |
 | E0.2 | Veille de versions outillée : `.github/dependabot.yml` existe déjà ; l'étendre à `ia/` (uv), `copilot-runtime/` et `frontend/`, et ajouter un contrôle qui échoue si un composant IA a plus de N jours de retard (N : Q8) | PR de montée automatiques, contrôle en CI | Idem |
 | E0.3 | **V1c — qualification** : jeu de référence 24 sur 24 (dernier relevé exploitable 19/24, p50 9,09 s, p95 39,5 s), puis porté à environ 100 cas avec cas complexes, tri, questions à l'utilisateur, abstentions, refus et comparaisons ; objectif de latence (Q8) | Rapport reproductible, seuils tenus, jeu versionné | V1c, § 4 de l'ancien `docs/ia.md` |
 | E0.4 | **V1e — CPU au démarrage** du service `ia` : l'import de `erp_rh_ia.app` coûte 14 s de calcul (dont 7 s `litellm`, 3 s `fastmcp.client`) ; premier démarrage à froid 110 s, puis 27 s. Pistes à lire dans la documentation de LiteLLM et de `langchain-litellm` : barème de coûts local (`LITELLM_LOCAL_MODEL_COST_MAP`), imports différés, client plus léger **à condition que `reasoning_content` reste transmis** | Mesure avant/après, une modification à la fois, raisonnement affiché inchangé | V1e |
 | E0.5 | Contrôle documentation ↔ code en CI (versions, seuils, listes d'outils) ; supprimer les mentions périmées (12 000 jetons de résumé, « vérificateur ») | Contrôle vert, plus d'écart connu | « Transverse » de la vision longue ; analyse P0 |
 | E0.6 | Écran d'accueil propre de l'assistant (CopilotKit masque l'accueil sur un fil fourni par l'application) ; lenteur ponctuelle à la reprise d'un fil (réponse arrivée côté serveur, affichée seulement au rechargement) | Accueil visible sur fil repris ; cause de la lenteur isolée et corrigée | V1b |
+| E0.7 | Outillage des assistants de développement, gratuit : compétences CopilotKit (`npx skills add CopilotKit/CopilotKit/skills`, dont `copilotkit-cli` et `copilotkit verify`) et **serveur MCP de documentation** `https://mcp.copilotkit.ai/mcp` (`claude mcp add --scope project`) pour que Claude lise la documentation à jour au lieu de se souvenir d'API périmées ; modifie la configuration du projet : à valider (Q16) | Serveur listé par `claude mcp list` | « Build with agents » (page lue) |
 
 ### E1 — Fiabilité de l'agent : middlewares LangChain et exécution LangGraph
 
@@ -104,24 +142,25 @@ Source : [middlewares préconstruits](https://docs.langchain.com/oss/python/lang
 | E1.2 | `ToolRetryMiddleware` et `ModelRetryMiddleware` (`max_retries`, `retry_on`, `on_failure`, `backoff_factor`, `jitter` ; comportement par défaut modifié en `langchain>=1.3.16`) : une **seule** politique de reprise avec LiteLLM (`max_retries=0` côté client) et MCP ; lecture seule rejouable, jamais une écriture | Budget total borné, test sans cascade de reprises | M1 |
 | E1.3 | `ContextEditingMiddleware` + `ClearToolUsesEdit` (`trigger`, `keep`, `exclude_tools`, `placeholder`) : effacer les vieux résultats d'outils **sans toucher aux résultats du tour en cours** (cause de l'incident du résumé tronqué du 2026-10-27) | Jeu de référence sans régression, gain de jetons mesuré | M1 |
 | E1.4 | `ModelFallbackMiddleware` : second filet sur un autre groupe de modèles, **en plus** du routage LiteLLM (première frontière) | Panne simulée du modèle principal : réponse rendue par le repli | M3 |
-| E1.5 | `LLMToolEmulator` : outils simulés dans le banc d'évaluation, en remplacement des doubles de test maison | Banc sans double maison | M3 |
-| E1.6 | `ProviderToolSearchMiddleware` : **non applicable aujourd'hui** (réservé à Anthropic Claude 4+ et OpenAI gpt-5.5+, erreur sinon) ; à réévaluer seulement si ces fournisseurs entrent dans la passerelle | Décision écrite (Q3) | M3 |
+| E1.5 | `LLMToolEmulator` : outils simulés dans le banc d'évaluation, en remplacement des doubles de test maison ; modèles factices officiels (`GenericFakeChatModel`) et enregistrement de réponses (VCR) pour les tests sans réseau | Banc sans double maison | M3 |
+| E1.6 | `ProviderToolSearchMiddleware` : **non applicable aujourd'hui** (réservé à Anthropic Claude 4+ et OpenAI gpt-5.5+, erreur sinon) ; déplacée en **E13** | Décision en E13 | M3 |
 | E1.7 | Sortie structurée officielle : `response_format` avec `ToolStrategy` / `ProviderStrategy` pour le sélecteur d'outils, les surfaces et les réponses structurées ; revoir les pannes de format JSON observées par fournisseur | Cas de panne couvert, erreurs visibles, reprises bornées | T10, analyse « sortie structurée » |
-| E1.8 | Exécution durable LangGraph : lire [tolérance aux pannes](https://docs.langchain.com/oss/python/langgraph/fault-tolerance) et [exécution durable](https://docs.langchain.com/oss/python/langgraph/durable-execution) (pages non lues), puis régler modes de durabilité, politiques de reprise par nœud et cache | Reprise après arrêt du processus, test sur PostgreSQL réel | P2.4–P2.6, porte G2 |
+| E1.8 | Exécution durable LangGraph ([tolérance aux pannes](https://docs.langchain.com/oss/python/langgraph/fault-tolerance), [exécution durable](https://docs.langchain.com/oss/python/langgraph/durable-execution)) : mode de durabilité, `RetryPolicy` par nœud, `timeout` de nœud, gestionnaire d'erreur de nœud, arrêt en douceur d'un run (`RunControl` : terminer le super-pas en cours puis sauvegarder) pour les redémarrages du service, cache de nœuds | Reprise après arrêt du processus, test sur PostgreSQL réel | P2.4–P2.6, porte G2 |
 | E1.9 | **Relever les plafonds** du § 3 : rendre chacun configurable (variable d'environnement documentée), mesurer le coût en latence et en jetons, fixer les cibles (Q8) ; ajouter un plafond de **durée totale et de jetons par run**, absent aujourd'hui (`docs/ia.md`, T2.5) | Tableau avant/après, cibles tenues, aucune réponse tronquée | Principe 4 |
 | E1.10 | Flux d'événements de LangGraph : la documentation recommande la version 3 (`stream_events(version="v3")`, projections `messages`, `values`, `subgraphs`, `output`, introduite en 1.2) ; `ag-ui-langgraph` 0.0.47 appelle encore `astream_events` en version 2. Suivre ses mises à jour **sans réimplémenter le flux** ; flux personnalisé `get_stream_writer` pour l'avancement | Version de `ag-ui-langgraph` qui adopte la v3 identifiée, ou question posée à l'éditeur | Streaming (page lue) |
-| E1.11 | Retour dans le temps et reprise (`get_state_history`, `update_state`, [time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel), page non lue) comme **aide à l'analyse d'incident**, sur données synthétiques | Procédure d'incident testée | Analyse « time travel » |
+| E1.11 | Retour dans le temps et reprise (`get_state_history`, `update_state`, [time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel)) comme **aide à l'analyse d'incident**, sur données synthétiques | Procédure d'incident testée | Analyse « time travel » |
 
 ### E2 — Confidentialité, traces et conformité (avant toute donnée réelle)
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E2.1 | `PIIMiddleware` (`strategy` : `block`, `redact`, `mask`, `hash` ; `apply_to_input`, `apply_to_output`, `apply_to_tool_results`) avec **détecteurs personnalisés** : les types natifs sont `email`, `credit_card`, `ip`, `mac_address`, `url`, donc CIN, RIB/IBAN marocains et téléphones demandent un `detector` (Q5) | Cas synthétiques CIN, RIB, téléphone, courriel masqués avant le modèle et dans les traces | M2 |
+| E2.1 | **Masquage : décision du 2026-10-31, il est appliqué côté métier (Spring, projections par champ, E11)**, de sorte que ni le service IA ni le modèle ne reçoivent les champs interdits. Côté IA, il reste à décider si `PIIMiddleware` (`strategy` : `block`, `redact`, `mask`, `hash` ; `apply_to_input`, `apply_to_output`, `apply_to_tool_results`) sert de **second filet** pour la saisie libre de l'utilisateur et pour les traces ; types natifs `email`, `credit_card`, `ip`, `mac_address`, `url`, donc CIN, RIB/IBAN marocains et téléphones demandent un `detector` personnalisé (Q5) | Cas synthétiques CIN, RIB, téléphone, courriel : jamais vus du modèle ni des traces | M2 |
 | E2.2 | Politique de traces LangChain (`configure_trace_policy`, `omit_payload`) + masquage OpenInference + **preuve sur une trace Phoenix réelle** qu'aucune donnée sensible n'apparaît ; rétention 30 jours, annotation | Trace synthétique inspectée de bout en bout | M2, T3.4, analyse P1 |
 | E2.3 | Observabilité complète (T3.4) : traces du clic à la base, alertes, corrélation `requestId`/`threadId`/`runId`/`toolCallId` dans l'audit (sans les mettre en étiquettes de métriques), évaluation des coûts par run | Tableau de bord et alertes, audit corrélé | T3.4, analyse « neuf piliers » |
 | E2.4 | Conformité (T3.6) : registre des systèmes, fiche du système, analyse d'impact, notice, durées de conservation (loi 09-08, NIST AI RMF, ISO/IEC 42001, OWASP LLM) | Documents approuvés | T3.6 |
 | E2.5 | Exploitation (T3.7) : procédure d'incident, changement de modèle, prompts versionnés, SBOM et analyse de vulnérabilités du service IA, interrupteur d'arrêt, sauvegarde et restauration des bases IA (`ia-db`, `litellm-db`, Phoenix, SQLite du runtime) | Exercice de restauration réussi | T3.7, analyse « exploitation » |
 | E2.6 | Conservation dans la passerelle (T2.8) : le contenu des messages n'est pas conservé par LiteLLM (vérifier journaux de dépense et rétention) | Contrôle automatisé | T2.8 |
+| E2.7 | Chiffrement des points de reprise : `EncryptedSerializer` (AES) du checkpointer LangGraph, clé hors dépôt, rotation documentée ; purge fine des anciens points avec `aprune` | Base `ia-db` illisible sans clé, purge testée | LangGraph persistance (page lue) |
 
 ### E3 — Sécurité par fiche de poste (jalon J2)
 
@@ -141,16 +180,16 @@ Chaque ligne remplace une pièce maison par la fonction officielle ; la pièce m
 
 | ID | Pièce maison → fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
-| E4.1 | `contexte.py` → `dynamic_prompt` + invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par l'adaptateur MCP ; contexte d'exécution immuable par `context_schema` / `ToolRuntime` (page [runtime](https://docs.langchain.com/oss/python/langchain/runtime), non lue) | `contexte.py` supprimé, droits non élargis | T24 |
+| E4.1 | `contexte.py` → `dynamic_prompt` + invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par l'adaptateur MCP ; contexte d'exécution immuable par `context_schema` / `ToolRuntime` (page [runtime](https://docs.langchain.com/oss/python/langchain/runtime)) | `contexte.py` supprimé, droits non élargis | T24 |
 | E4.2 | `memoire.py` (préfixe de fil, purge) → espaces de noms du `Store` LangGraph (`AsyncPostgresStore`) ; **l'expiration (TTL) n'est pas documentée** pour le `Store` : tâche `pg_cron` ou équivalent gratuit | Isolation testée, expiration prouvée | T25 |
 | E4.3 | `jeton_agent` et encodeur JWT → échange de jetons RFC 8693 (Spring Authorization Server, client OAuth2) | Anciens chemins supprimés, audience et expiration testées | T26 |
 | E4.4 | `agui.py` (authentification, validation, flux SSE) → `add_langgraph_fastapi_endpoint` d'`ag-ui-langgraph` (présent en 0.0.47) avec dépendances FastAPI ; outils par requête par les crochets dynamiques | `agui.py` réduit aux dépendances | T27 |
 | E4.5 | `evaluation.py` (rejoueur) → `openevals` et `agentevals` sous pytest, sans LangSmith ; **risque** : `agentevals` est dormant (E0.1) | Rejoueur supprimé, jeu de référence rejoué par pytest | T28 |
 | E4.6 | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` → `include` de fichiers de configuration LiteLLM par fournisseur, sondes natives, clés virtuelles par l'API gérée | Scripts supprimés | T29 |
 | E4.7 | Composants maison (`DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant`) → AG Grid Community ou TanStack Table, `ng2-charts`, interruptions natives CopilotKit (`registerHumanInTheLoop`, `injectInterrupt`) | Composants maison supprimés, accessibilité conservée | T30 |
-| E4.8 | `serveur.mjs` (authentification `/auth/me`, routes, propriété du fil) → crochets officiels `onBeforeHandler` ; `identifyUser` est réservé à Intelligence : équivalent gratuit ou proxy d'authentification standard | Fils réservés à leur propriétaire, testé | T31 |
+| E4.8 | `serveur.mjs` (authentification `/auth/me`, routes, propriété du fil) → gestionnaire officiel `createCopilotExpressHandler` (`@copilotkit/runtime/v2/express`) avec crochets `hooks.onRequest` (vérifier le jeton, répondre 401), `onBeforeHandler` (propriété du fil), `onError`, `cors`, `forwardHeaders`. **Règle officielle** : sans Intelligence, rien ne lie un fil à un utilisateur ; il faut une table de propriété (`thread_id`, `user_id`) vérifiée sur toute route portant un `threadId` et sur `agent/run` / `agent/connect` ; `threads/list` filtré côté serveur ; `SqliteAgentRunner` répond 422 sur les routes de lecture et n'offre aucune autorisation ; `identifyUser` est réservé à Intelligence | Fils réservés à leur propriétaire, testé (accès croisé refusé) | T31 |
 | E4.9 | `surfaces.py` (liste → tableau ou graphique) → motif A2UI à schéma fixe (`a2ui-fixed-schema`) ; évaluer MCP Apps (`provideMCPApps`, `@copilotkit/angular/mcp-apps`) pour que l'interface vienne du serveur MCP | Décision mesurée puis migration | T23 |
-| E4.10 | Liste titrée des anciennes conversations : `injectThreads` / tiroir de fils sur les routes locales du runtime ; **voie gratuite à instruire** (Q10) | Liste, titre, suppression, isolation par utilisateur | T21 |
+| E4.10 | Liste titrée des anciennes conversations : `injectThreads` (`threads`, `isLoading`, `listError`, `startNewThread`, renommer, archiver, supprimer) et `CopilotThreadsDrawer` **dépendent d'Intelligence** (le tiroir est verrouillé sans la fonction `threads` de la licence) ; voie gratuite à instruire : liste de fils tenue par ERP-RH (table de propriété de E4.8) (Q10) | Liste, titre, suppression, isolation par utilisateur | T21 |
 
 ### E5 — Conversations et mémoire
 
@@ -159,7 +198,7 @@ Chaque ligne remplace une pièce maison par la fonction officielle ; la pièce m
 | E5.1 | Conversations multi-tours (T3.2) : isolation, **suppression par l'utilisateur**, reprise après redémarrage, expiration de l'historique SQLite du runtime (aucune aujourd'hui) | Tests de suppression et d'expiration | T3.2, V1b |
 | E5.2 | Contexte d'écran (T3.3) : conserver `connectAgentContext` en lecture seule et **revalider côté serveur** ; ne jamais le présenter comme un état partagé | Test : filtre falsifié refusé | T3.3 |
 | E5.3 | Mémoire longue explicite (P4.6) : préférences uniquement, consultable, corrigeable, supprimable, avec expiration ; pas de faits personnels RH promus automatiquement ; mémoire du fichier `AGENTS.md` de Deep Agents (E9.5) à rapprocher | Politique écrite (Q5) puis tests d'oubli | P4.6, `backend-gap-analysis` |
-| E5.4 | Reconnexion du flux et rattrapage (P3.4) : `AG-UI Streams` est une fonction de **CopilotKit Intelligence** (exclue) ; `join` / `rejoin` de LangChain suppose le serveur d'agent LangGraph (`langgraph dev` en local, sinon déploiement LangSmith, exclu) et n'est pas documenté pour un service FastAPI maison ; voie gratuite à instruire (Q10) | Pas de double exécution au retour du réseau | P3.4 |
+| E5.4 | Reconnexion du flux et rattrapage (P3.4) : `AG-UI Streams` est une fonction de **CopilotKit Intelligence** (E13) ; `join` / `rejoin` de LangChain suppose le serveur d'agent LangGraph (`langgraph dev` en local, sinon déploiement LangSmith, E13) et n'est pas documenté pour un service FastAPI maison ; voie gratuite à instruire (Q10) | Pas de double exécution au retour du réseau | P3.4 |
 | E5.5 | Séparation des trois mémoires : état de fil (checkpointer), mémoire inter-fils (`Store`), contexte immuable d'exécution ; documenter la frontière | Schéma d'état formalisé | Analyse LangGraph |
 
 ### E6 — Interface CopilotKit complète (Angular)
@@ -174,12 +213,12 @@ Source : [exemples Angular](https://docs.copilotkit.ai/angular/features) (41 ent
 | E6.4 | État partagé agent ↔ interface : lecture seule, lecture-écriture, flux de deltas (`agent.setState`, `shared-state-*`) sur **un** parcours concret ; propriété et source d'autorité à fixer (Q6) | Conflit et validation testés | Copilot future |
 | E6.5 | Interface sans chat (« headless ») pour l'espace plein écran : `injectAgentStore`, `registerRenderToolCall`, messages et surfaces (J4, T8) ; `CopilotActivity` + `registerRenderActivityMessage` pour les cartes d'activité | Espace immersif livré | J4 |
 | E6.6 | Interruptions : `injectInterrupt` (dans le chat et hors chat) et `registerHumanInTheLoop` (par outil) ; dépend de E7 | Voir E7 | Copilot future |
-| E6.7 | Pièces jointes (multimodal) ; voix en temps réel ; **cadrer consentement, types de fichiers, antivirus, données RH** (Q11) | Cadre écrit puis prototype | Copilot future, J9 |
+| E6.7 | Pièces jointes : `[attachments]` de `<copilot-chat>` (`enabled`, `accept`, `maxSize`, `onUploadFailed`, `onUpload`) ; **par défaut les fichiers partent en base64** (inadapté aux gros fichiers sans `onUpload`) et le modèle comme le backend doivent accepter chaque type ; voix en temps réel (capture audio, navigateur seulement après hydratation) ; **cadrer consentement, types de fichiers, antivirus, données RH** (Q11) | Cadre écrit puis prototype | Copilot future, J9 |
 | E6.8 | MCP Apps (`provideMCPApps`) : prototype isolé (isolation iframe, droits, accessibilité, provenance) ; WebMCP (`webmcp` sur `registerFrontendTool`) : **expérimental**, exige Chrome 149 et le brouillon d'un groupe communautaire du W3C ; ses annotations ne sont pas des contrôles de sécurité | Décision écrite pour chacun (Q7) | T23, Copilot future |
 | E6.9 | Interface générative ouverte (HTML/CSS/JS agent-généré, iframe) : **interdite** par `conventions/agent-ui.md` ; toute étude exige un ADR et une évolution normative (Q7) | ADR ou refus écrit | M4, `progression-ui` |
 | E6.10 | Récupération des surfaces A2UI invalides (`a2ui-recovery` : boucle de validation et reprise avant repli) ; catalogue fermé versionné | Surface invalide : reprise puis repli, testé | T16 |
 | E6.11 | Capacités de la bibliothèque : `injectCapabilities`, `injectCopilotKitConfig`, directive `CopilotKitAgentContext`, `selfManagedAgents` ; contrat de production (zoneless, hydratation, SSR, nettoyage) de la page « production-lifecycle » ; budget de taille du paquet (peut dépasser 1 Mo) | Contrat appliqué, budget réglé | Copilot future |
-| E6.12 | Inspecteur CopilotKit : activé **en développement seulement** ; ses « Rich Threads » exigent Intelligence | Désactivé en production, vérifié | Copilot future |
+| E6.12 | Inspecteur CopilotKit : monté automatiquement par `@copilotkit/angular` ; `enableInspector: false` dans `provideCopilotKit` le coupe (import dynamique, absent des constructions de production d'après la documentation : à vérifier dans le paquet construit) ; ses « Rich Threads » exigent Intelligence (E13) ; débogage de la connexion : `GET {runtimeUrl}/info`, signal `runtimeConnectionStatus` | Désactivé en production, vérifié | Copilot future |
 | E6.13 | Accessibilité et appareils (P3.5) : clavier, focus, lecteur d'écran, mobile, thèmes, mouvement réduit, repli texte, IA indisponible ; parcours Playwright + axe | Rapports verts, revue visuelle | P3.5 |
 | E6.14 | Mascotte Rive (décision déjà prise, jamais livrée) : états abstraits liés à `threadId`/`runId`, masquable, remplaçable par un état statique | Adaptateur et tests ; poids mesuré | ADR 0002, J4 |
 | E6.15 | Déploiement des modes par domaine (matrice M0 à M3 de l'ancien `progression-ui.md`) : Chantier, Employé, Paie, Équipe, Fonction, Rapport, **Heures supplémentaires**, Administration, avec la porte d'activation à six preuves (utilité, droits, continuité, interface, robustesse et coût, revue) | Une revue par domaine et par mode | Progression UI |
@@ -218,24 +257,27 @@ métier ; le RAG ne sert que des documents publiés et autorisés.
 
 ### E9 — Agents spécialisés et fonctions de Deep Agents
 
-Sources lues : [vue d'ensemble](https://docs.langchain.com/oss/python/deepagents/overview), [sous-agents](https://docs.langchain.com/oss/python/deepagents/subagents)
-(sauf les 5 087 derniers caractères), [backends](https://docs.langchain.com/oss/python/deepagents/backends), [production](https://docs.langchain.com/oss/python/deepagents/going-to-production).
-Non lues : agents asynchrones, compétences, mémoire, interpréteurs, bacs à sable, profils, rubrique, ACP.
+Sources : toutes les pages Deep Agents de l'index officiel (voir § 7).
+
+**Agent ou agent profond ?** Un agent LangChain (`create_agent`, ce que le service fait aujourd'hui) est une boucle
+modèle ↔ outils avec des middlewares. Un agent profond (`create_deep_agent`) est le **même moteur** préconfiguré avec un
+« harnais » : liste de tâches, fichiers virtuels pour délester le contexte, sous-agents isolés (outil `task`), compétences,
+mémoire `AGENTS.md`, résumé automatique. Le harnais s'obtient aussi en ajoutant ses middlewares à `create_agent` (E9.0).
 
 | ID | Tâche et fonction officielle | Preuve de terminé | Origine |
 |---|---|---|---|
 | E9.0 | **Décision d'architecture** : ajouter les middlewares de Deep Agents (`SubAgentMiddleware`, `FilesystemMiddleware`, `RubricMiddleware`, importables dans `create_agent` d'après la page des middlewares) à l'agent actuel, ou passer à `create_deep_agent` (Q6) | Décision écrite | J5–J7 |
 | E9.1 | `SubAgentMiddleware` (outil `task`) : sous-agents par domaine (Paie, Employés, Chantiers, Heures supplémentaires, Audit) avec instructions, outils, modèle et budget propres ; **isolation du contexte** ; `tools` d'un sous-agent **remplace** ceux du parent (droits minimaux) ; `response_format` pour des résultats structurés ; mode `fork` (bêta, `deepagents>=0.7.13`) à part | Aucune élévation de droits, latence et coût mesurés | J5, P3 « conditionnel » |
-| E9.2 | Sous-agents asynchrones (lancer, vérifier, modifier, annuler) pour les analyses longues ; flux par sous-agent (`stream.subagents`) ; **page à lire avant** | Analyse longue en parallèle, annulable | Copilot future |
+| E9.2 | Sous-agents asynchrones (lancer, vérifier, modifier, annuler) pour les analyses longues ; flux par sous-agent (`stream.subagents`) ; **exige un serveur « Agent Protocol »** : le service FastAPI actuel n'en est pas un, et la voie officielle documentée est le serveur LangGraph (`langgraph dev` en local ; déploiement géré = E13) ; voie gratuite à instruire (Q10) | Analyse longue en parallèle, annulable | Copilot future |
 | E9.3 | Fichiers virtuels pour délester le contexte : `FilesystemMiddleware`, `StateBackend`, `StoreBackend` (**fournir une fabrique d'espaces de noms par utilisateur** : par défaut l'espace est celui de l'assistant, donc partagé), `CompositeBackend` ; **jamais** `FilesystemBackend` ni `LocalShellBackend` sur un serveur ; règles `permissions` (première règle gagnante, non applicables aux bacs à sable) | Gros résultats délestés, isolation par utilisateur testée | Copilot future |
 | E9.4 | Compétences chargées à la demande (`SKILL.md`, norme Agent Skills) : source, version, périmètre et revue par compétence ; ne remplacent ni RBAC ni politique système (Q13) | Compétence chargée progressivement, testée | Copilot future |
 | E9.5 | Mémoire `AGENTS.md` (toujours chargée, modifiable par l'agent) : **risque d'injection si partagée** ; limiter à l'espace utilisateur, écriture contrôlée | Politique écrite, test d'injection | Copilot future, production |
 | E9.6 | `RubricMiddleware` (bêta, `deepagents>=0.6.5`) : auto-évaluation par grille sur les rapports et analyses (J5) | Grille et seuil évalués sur le jeu | J5 |
-| E9.7 | Exécution : interpréteur `eval` (QuickJS, **sans shell, réseau ni fichiers**) en premier pour les calculs ponctuels ; `ShellToolMiddleware` avec `DockerExecutionPolicy` seulement dans un conteneur jetable **sans réseau, sans secret, sans accès à l'ERP** ; `HostExecutionPolicy` interdite ; fournisseurs de bacs à sable à vérifier (gratuité) | **Décision de sécurité préalable** (Q7) | M6 |
+| E9.7 | Exécution : interpréteur `eval` (QuickJS, **sans shell, réseau ni fichiers**) en premier pour les calculs ponctuels ; `ShellToolMiddleware` avec `DockerExecutionPolicy` seulement dans un conteneur jetable **sans réseau, sans secret, sans accès à l'ERP** ; `HostExecutionPolicy` interdite ; fournisseurs de bacs à sable hébergés → E13 | **Décision de sécurité préalable** (Q7) | M6 |
 | E9.8 | Recherche de fichiers : `FilesystemFileSearchMiddleware` (`root_path`, ripgrep) sur des documents RH locaux, racine en lecture seule, sans secrets | Périmètre étroit testé | M5 |
 | E9.9 | Contrôle de la paie (J5) : contrôles déterministes d'abord (règles approuvées), puis détection de données atypiques ; « atypique » n'est pas « erroné » ; aucun salaire modifié automatiquement | Règles approuvées, faux positifs mesurés | J5, innovations P2 |
 | E9.10 | Profils de harnais, page des modèles, protocole ACP, intégration AG-UI de Deep Agents (todos, état des sous-agents) | Décision par élément | Copilot future |
-| E9.11 | Autres motifs multi-agents de LangChain (transferts, routeur, flux personnalisé) : lire les pages et ne retenir que ce qui apporte un gain mesuré | Comparatif | Analyse « multi-agents » |
+| E9.11 | Autres motifs multi-agents de LangChain (sous-agents, transferts, compétences, routeur, flux personnalisé), mode de point de reprise des sous-graphes (hérité, par appel, par thread) et choix entre API de graphe et API fonctionnelle de LangGraph : ne retenir que ce qui apporte un gain mesuré | Comparatif | Analyse « multi-agents » |
 
 ### E10 — Pilote réel, exploitation et extensions
 
@@ -250,6 +292,55 @@ Non lues : agents asynchrones, compétences, mémoire, interpréteurs, bacs à s
 | E10.7 | Autres départements et A2A (J8) : mêmes portes que J1 à J3 par département ; A2A seulement pour une application tierce réelle | Un département pilote | J8 |
 | E10.8 | Terrain et voix (J9) : mobile chef de chantier, voix ; PWA hors ligne pour un futur Pointage (ADR métier d'abord) ; MQTT pour des capteurs ; QUIC/HTTP3 au niveau infrastructure ; **WebSocket** pour la voix continue ; chacune avec son déclencheur mesuré | ADR ou décision de non-adoption par élément | J9, innovations P3 |
 | E10.9 | Travailleurs distants OCR, inférence ou analytique par gRPC (comparé à HTTP) ; justificatifs scannés par OCR isolé | Besoin mesuré, comparatif | Innovations P2 |
+
+### E11 — Rôles, départements, hiérarchie et sécurité par champ (demande du 2026-10-31)
+
+**À exécuter avant E3** malgré son numéro : E3 (sécurité par fiche de poste) consomme le modèle qu'E11 établit, et le
+masquage est une règle métier côté Spring (principe 5). Le code actuel contient des rôles, des permissions et un résolveur de
+permissions effectives (`auth/`) avec refus de permissions ; aucune entité de département ni de hiérarchie n'a été trouvée
+par nom de fichier (à confirmer par E11.1).
+
+| ID | Tâche | Preuve de terminé | Origine |
+|---|---|---|---|
+| E11.1 | Inventaire du modèle actuel (rôles, permissions, `EffectivePermissionResolver`, rôles système) face au besoin ; liste des champs sensibles par entité (Q17) | Document d'écart signé | Demande 2026-10-31 |
+| E11.2 | Départements et hiérarchie (qui voit qui, chaîne de responsables, équipes) : modèle de données, migrations Flyway, requêtes récursives PostgreSQL | Migration sur base vierge et mise à niveau ; arbre testé | Idem |
+| E11.3 | Périmètre par rôle et par département dans les services Spring (liste, détail, agrégat, export) | Tests négatifs : un responsable ne voit pas un autre département | Idem, T2.1–T2.2 |
+| E11.4 | **Sécurité par champ** : déclaration, par rôle, de chaque champ (visible, masqué, écriture refusée), appliquée **dans les projections Spring** et donc à l'interface, aux exports et aux outils MCP ; le champ interdit est absent (jamais remplacé par une valeur factice qui tromperait un agent), y compris dans tri, filtre, agrégat et message d'erreur | Appel direct sans permission : aucune fuite, tri et agrégat compris | T2.3 |
+| E11.5 | Écran d'administration des rôles, départements et champs ; journal d'audit des changements et des accès aux champs sensibles | Parcours testé, audit lisible | Idem |
+| E11.6 | Raccordement de l'IA : E3.1 à E3.3 s'appuient sur ce modèle ; l'agent n'obtient que ce que l'utilisateur peut voir | Jeu adversarial E3.5 vert | E3 |
+
+### E12 — Migration du backend Java Spring vers Python FastAPI (demande du 2026-10-31)
+
+**Épopée de cadrage : aucune tâche d'exécution n'est lancée avant l'ADR (Q15).** Elle contredit trois décisions en vigueur
+(« Spring reste l'autorité » ; serveur MCP en Spring AI ; migrations Flyway) : l'ADR doit les remplacer explicitement. Les
+tâches suivantes sont des intitulés à instruire dans la documentation officielle de FastAPI, pas des choix.
+
+| ID | Tâche | Preuve de terminé | Origine |
+|---|---|---|---|
+| E12.1 | **ADR** : motif, périmètre (tout ou domaine par domaine), coût, risques, ce qui est conservé (Flyway ou Alembic, JWT RS256, audit) ; mise à jour des principes du § 1 | ADR approuvé (Q15) | Demande 2026-10-31 |
+| E12.2 | Inventaire exhaustif : endpoints, entités, règles de calcul de la paie, permissions, tâches planifiées, tests existants (couverture à égaler) | Inventaire versionné | Idem |
+| E12.3 | Stratégie de bascule progressive (domaine par domaine derrière le proxy, tests de contrat identiques des deux côtés) ; critère de parité chiffré, notamment pour la paie | Plan de bascule approuvé | Idem |
+| E12.4 | Cible technique : FastAPI, accès aux données, migrations, authentification, serveur MCP (SDK MCP Python officiel au lieu de Spring AI), observabilité, CI | Prototype d'un domaine à faible risque | Idem |
+| E12.5 | Exécution domaine par domaine, retrait de chaque domaine Java après parité prouvée ; retrait final de Spring | Domaine servi par FastAPI, tests de parité verts | Idem |
+
+### E13 — Services payants ou hébergés (dernière épopée, rien n'est adopté sans décision de Q3)
+
+Regroupe tout ce qui exige un abonnement ou un service hébergé par l'éditeur. **Offres relevées sur la page de prix de
+CopilotKit le 2026-10-31** : *Free* (usage **non productif** auto-hébergé avec licence renouvelable tous les 30 jours, **ou**
+hébergé jusqu'à 1 000 interactions par mois), *Pay-as-you-go* 49 $ par mois, *Annual* sur devis. Une instance auto-hébergée
+en production n'est donc pas gratuite.
+
+| ID | Fonction et exigence | Remarque | Origine |
+|---|---|---|---|
+| E13.1 | CopilotKit **AG-UI Streams** (reconnexion et rattrapage entre onglets et appareils) | Intelligence ; voie gratuite en E5.4 | Copilot future |
+| E13.2 | CopilotKit **mémoires utilisateur** (`injectMemories`, outils `save_memory` / `recall_memory` / `forget_memory`) | Licence « memory » (offre entreprise), pgvector, modèle d'embeddings 1024 dimensions ; voie gratuite : `Store` LangGraph (E4.2, E5.3) | Idem |
+| E13.3 | CopilotKit **fils enrichis** (`injectThreads`, `CopilotThreadsDrawer`, Rich Threads de l'inspecteur, `identifyUser`, `CopilotKitIntelligence`) | Voie gratuite en E4.8 et E4.10 | Idem |
+| E13.4 | **Apprentissage automatique**, **trajectoires** (accès anticipé), **analyses produit** (offre entreprise, TimescaleDB, 90 jours de conservation), **collecteur autonome** `@copilotkit/learning` (expérimental, auto-hébergeable) | Voie gratuite : Phoenix (E2.3) | Idem |
+| E13.5 | **Canaux** Slack et Teams (Intelligence hébergé), import d'historique | Hors besoin actuel | Idem |
+| E13.6 | `selfManagedAgents` en production (offre entreprise) ; runtimes Python, Go, Ruby, .NET de CopilotKit (exigent Intelligence) | Le runtime TypeScript actuel suffit | Idem |
+| E13.7 | **LangSmith** : Studio, observabilité hébergée, évaluations hébergées, déploiement géré (Agent Server), Fleet, Managed Deep Agents | Voie gratuite : Phoenix, pytest, `langgraph dev` local | Plans LangChain |
+| E13.8 | `ProviderToolSearchMiddleware` (Anthropic Claude 4+ ou OpenAI gpt-5.5+ : modèles payants) | Non applicable à la passerelle gratuite | E1.6 |
+| E13.9 | Fournisseurs de bacs à sable hébergés pour Deep Agents | Alternative gratuite : conteneur jetable (E9.7) | E9.7 |
 
 ## 5. Traçabilité : où est passé chaque ancien élément
 
@@ -285,6 +376,8 @@ Non lues : agents asynchrones, compétences, mémoire, interpréteurs, bacs à s
 | M1 à M6 | idem | E1.1 à E1.5 et E1.3 (M1, M3), E2.1 (M2), E7.2 (M4), E9.8 (M5), E9.7 (M6) |
 | Fonctions de `copilot-kit-future-to-implement.md` | Codex, 2026-10-31 | E6 (CopilotKit), E1 et E5 (LangChain), E1, E5 et E7 (LangGraph), E9 (Deep Agents) |
 | Écarts de `backend-gap-analysis.md` | Codex, 2026-10-31 | E1.1 à E1.3, E2.1 à E2.2, E5.3, E7, E9 |
+| Fonctions exigeant un service payant ou hébergé | tous | E13 |
+| Demandes du 2026-10-31 (rôles, départements, hiérarchie, champs ; migration FastAPI) | propriétaire | E11, E12 |
 
 Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exemple `docs/ia/plan-integration.md`,
 `docs/ia/rag.md`, `docs/ia/progression-ui.md`, `docs/ia/protocoles-et-innovations.md`,
@@ -292,19 +385,21 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
 
 ## 6. Questions pour le propriétaire (le code ne permet pas de répondre)
 
-- **Q1 — Sort des fichiers.** Ce plan remplace-t-il le § 7 de `docs/ia.md` (qui garderait décisions, architecture, état et
-  journal, avec un renvoi ici) et absorbe-t-il `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md`, qui
-  seraient alors supprimés ?
+- **Q1 — Sort des fichiers. Répondue le 2026-10-31 : oui**, ce plan est la référence et remplace le § 7 de `docs/ia.md`.
+  Les suppressions de `copilot-kit-future-to-implement.md` et `backend-gap-analysis.md` attendent la confirmation du
+  propriétaire, **fichier par fichier**. Le § 7 de `docs/ia.md` reste à transformer en renvoi.
 - **Q2 — Ordre.** L'ordre E0 → E10 vous convient-il ? Le pilote réel (E10.6) dépend de E2 et E3 ; faut-il avancer E6
   (interface) avant E4 (code maison) ?
-- **Q3 — Fonctions réservées à un service payant ou hébergé.** Confirmez-vous leur exclusion : CopilotKit Intelligence
-  (AG-UI Streams, mémoires utilisateur, trajectoires, analyses, canaux), LangSmith (Studio, observabilité, déploiement),
-  Managed Deep Agents, `ProviderToolSearchMiddleware` (Anthropic ou OpenAI seulement) et les fournisseurs de bacs à sable ?
-  L'offre gratuite d'Intelligence envoie les conversations chez l'éditeur : acceptable pour des données RH, ou non ?
-- **Q4 — Première écriture.** Quel parcours autoriseriez-vous en premier (et pour quels rôles) ? Sans réponse, E7 reste préparée.
-- **Q5 — Données et confidentialité.** Quels champs masquer avant un modèle externe (CIN, salaires, noms, RIB), dans la
-  question, dans les résultats d'outils et dans les traces ? Les résultats d'outils masqués empêchent de répondre : faut-il
-  un modèle local (E10.2) pour les données réelles ? Quelle politique pour une mémoire longue ?
+- **Q3 — Services payants ou hébergés (E13).** Le « gratuit » d'Intelligence est *non productif* (licence de 30 jours
+  renouvelable) ou *hébergé* (1 000 interactions par mois, conversations chez l'éditeur) : ni l'un ni l'autre ne convient à
+  une production RH auto-hébergée. Confirmez-vous que E13 reste entièrement exclue, à relire seulement si le besoin
+  apparaît ?
+- **Q4 — Première écriture.** Aujourd'hui l'assistant ne fait que lire. Une « écriture » est une action qui modifie des
+  données (créer un bulletin, valider une heure supplémentaire, changer un statut). Quelle action, parmi celles-là,
+  voulez-vous voir faire à l'assistant en premier, et pour quels rôles ? Sans réponse, E7 reste préparée et inactive.
+- **Q5 — Données et confidentialité. Réponse partielle du 2026-10-31** : le masquage est une règle métier côté Spring
+  (E11). Reste : `PIIMiddleware` comme second filet sur la saisie libre et les traces (E2.1) ? Un modèle local (E10.2)
+  est-il exigé pour les données réelles ? Quelle politique pour une mémoire longue ?
 - **Q6 — État partagé et architecture agent.** Quel parcours justifie un état modifiable par l'agent et par l'utilisateur
   (E6.4) ? Ajoute-t-on les middlewares de Deep Agents à l'agent actuel (progressif) ou migre-t-on vers `create_deep_agent` (E9.0) ?
 - **Q7 — Interface ouverte et exécution.** Autorisez-vous l'étude d'une interface générative ouverte (interdite par
@@ -322,6 +417,12 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
   développement : doivent-ils aussi devenir des compétences de l'agent en exécution, ou reste-t-on sur du contenu séparé ?
 - **Q14 — Migrations du checkpointer (ancien D6).** `AsyncPostgresSaver.setup()` crée les tables au démarrage du service ;
   l'ancienne décision demandait de les gérer par Flyway avec un compte sans droit de création. À confirmer ou à changer.
+- **Q15 — Migration vers FastAPI (E12).** Quel motif et quel périmètre (tout le backend, ou un domaine pilote d'abord) ?
+  Acceptez-vous de remplacer la décision « Spring reste l'autorité » et le serveur MCP Spring AI par un ADR ?
+- **Q16 — Outillage des assistants de développement (E0.7).** Autorisez-vous l'ajout du serveur MCP de documentation de
+  CopilotKit et de ses compétences à la configuration du projet ?
+- **Q17 — Hiérarchie et champs (E11).** Quelle règle de visibilité (un responsable voit-il toute sa descendance ?) et quels
+  champs sensibles par entité (salaire, CIN, RIB, adresse, téléphone, situation familiale…) ?
 
 ## 7. Sources officielles
 
@@ -338,15 +439,29 @@ Lues pour ce plan (2026-10-31) : LangChain [middlewares préconstruits](https://
 [WebMCP](https://docs.copilotkit.ai/angular/webmcp), [AG-UI Streams](https://docs.copilotkit.ai/AG-UI-Streams),
 [choix des primitives](https://docs.copilotkit.ai/concepts/which-hook) ; registres PyPI et npm pour les versions.
 
-**À lire avant d'implémenter la tâche concernée** (listées dans l'index officiel, non lues pour ce brouillon) : LangChain
-[runtime](https://docs.langchain.com/oss/python/langchain/runtime), [sortie structurée](https://docs.langchain.com/oss/python/langchain/structured-output),
-[garde-fous](https://docs.langchain.com/oss/python/langchain/guardrails), [mémoire à long terme](https://docs.langchain.com/oss/python/langchain/long-term-memory),
-[multi-agents](https://docs.langchain.com/oss/python/langchain/multi-agent/index) ; LangGraph [tolérance aux pannes](https://docs.langchain.com/oss/python/langgraph/fault-tolerance),
-[checkpointers](https://docs.langchain.com/oss/python/langgraph/checkpointers), [stores](https://docs.langchain.com/oss/python/langgraph/stores),
-[retour dans le temps](https://docs.langchain.com/oss/python/langgraph/use-time-travel), [sous-graphes](https://docs.langchain.com/oss/python/langgraph/use-subgraphs),
-[API fonctionnelle](https://docs.langchain.com/oss/python/langgraph/functional-api) ; Deep Agents
-[agents asynchrones](https://docs.langchain.com/oss/python/deepagents/async-subagents), [compétences](https://docs.langchain.com/oss/python/deepagents/skills),
-[mémoire](https://docs.langchain.com/oss/python/deepagents/memory), [interpréteurs](https://docs.langchain.com/oss/python/deepagents/interpreters),
-[bacs à sable](https://docs.langchain.com/oss/python/deepagents/sandboxes), [permissions](https://docs.langchain.com/oss/python/deepagents/permissions),
-[profils](https://docs.langchain.com/oss/python/deepagents/profiles), [grilles d'évaluation](https://docs.langchain.com/oss/python/deepagents/rubric) ;
-CopilotKit : pages de guide Angular (interruptions, état partagé, fils, pièces jointes, interface sans chat), [production et cycle de vie](https://docs.copilotkit.ai/reference/angular/production-lifecycle).
+**Lues pour la version du 2026-10-31 (suite)** : LangChain, LangGraph et Deep Agents, toutes les pages de l'index officiel
+(runtime, sortie structurée, garde-fous, mémoire à long terme, multi-agents, tolérance aux pannes, exécution durable,
+checkpointers, stores, retour dans le temps, sous-graphes, API fonctionnelle, agents asynchrones, compétences, mémoire,
+interpréteurs, bacs à sable, permissions, profils, grilles d'évaluation, ACP). CopilotKit :
+[outils frontend et interface générative](https://docs.copilotkit.ai/angular/guides/frontend-tools-generative-ui),
+[fils, mémoire, pièces jointes, interface sans chat](https://docs.copilotkit.ai/angular/guides/threads-memory-attachments-headless),
+[interactions humaines](https://docs.copilotkit.ai/angular/guides/human-in-the-loop), [état partagé](https://docs.copilotkit.ai/angular/guides/shared-state),
+[interface de chat](https://docs.copilotkit.ai/angular/guides/chat-ui), [dépannage](https://docs.copilotkit.ai/angular/guides/troubleshooting),
+[production et cycle de vie](https://docs.copilotkit.ai/reference/angular/production-lifecycle), [runtime](https://docs.copilotkit.ai/angular/backend/copilot-runtime),
+[déploiement du runtime](https://docs.copilotkit.ai/runtime-server-adapter), [authentification](https://docs.copilotkit.ai/auth),
+[agent AG-UI maison](https://docs.copilotkit.ai/backend/custom-ag-ui-agent), [agents autogérés](https://docs.copilotkit.ai/backend/self-managed-agents),
+[agent personnalisé](https://docs.copilotkit.ai/backend/custom-agent), [inspecteur](https://docs.copilotkit.ai/angular/inspector),
+[choix du modèle](https://docs.copilotkit.ai/angular/model-selection), [architecture](https://docs.copilotkit.ai/angular/concepts/architecture),
+[construire avec des agents](https://docs.copilotkit.ai/angular/build-with-agents), [AG-UI](https://docs.copilotkit.ai/agentic-protocols/ag-ui),
+[frameworks communautaires](https://docs.copilotkit.ai/angular/community-frameworks), Intelligence
+([vue d'ensemble](https://docs.copilotkit.ai/intelligence/overview), [démarrage](https://docs.copilotkit.ai/intelligence/quickstart),
+[mémoires](https://docs.copilotkit.ai/intelligence/memories), [analyses](https://docs.copilotkit.ai/intelligence/analytics),
+[canaux](https://docs.copilotkit.ai/intelligence/channels), [trajectoires](https://docs.copilotkit.ai/intelligence/trajectories),
+[collecteur autonome](https://docs.copilotkit.ai/intelligence/standalone-collector)) et la page des prix.
+
+**Adresses introuvables (HTTP 404) à la date de lecture, donc non lues** : `/angular/guides/authentication`,
+`/angular/multi-agent`, `/angular/sub-agents`, `/intelligence/learning`, ainsi que les anciens noms de guides
+(`guides/tools`, `guides/interrupts`, `guides/threads`, `guides/attachments`). Les index ne les listent pas ; leur contenu
+utile (authentification, apprentissage) est couvert par les pages ci-dessus. **Limites connues de la lecture** : la page
+AG-UI de CopilotKit ne détaille pas le catalogue d'événements (renvoi vers ag-ui.com, à lire avant E5.4 et E6.5) et les
+pages « Common Copilot issues », « Runtime debug mode » et « AG-UI Event Inspector » sont seulement citées par le dépannage.
