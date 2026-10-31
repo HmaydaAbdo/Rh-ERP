@@ -25,10 +25,20 @@ mêmes contrôles serveur. Les filtres, période et sélection pertinents sont v
 au passage entre modes et au retour aux écrans classiques, sans devenir une source de droits.
 Partager le socle d'interaction et de rendu ; les règles et données restent dans leur domaine.
 
-L'exploration d'une UI ouverte compare d'abord une composition plus riche dans le catalogue.
-La génération/exécution de HTML, CSS ou JavaScript arbitraire n'est pas autorisée par cette
-convention, même dans une iframe. Un besoin de code UI isolé exige un ADR et une évolution
-normative approuvés avant prototype exécutable, avec isolation et échanges de données prouvés.
+**Interface générative ouverte (décision du propriétaire du 2026-10-31).** L'agent peut produire de l'HTML, du CSS et du
+JavaScript lorsque le catalogue A2UI ne suffit pas. L'interdiction posée le 2026-10-23 (précaution, sans décision
+propriétaire consignée) est levée, aux conditions suivantes, qui viennent de la documentation officielle de CopilotKit :
+
+* Le rendu passe uniquement par le moteur officiel (`openGenerativeUI` de `provideCopilotKit`) : le code généré s'exécute
+  dans une iframe isolée, sans accès à l'origine de l'application. Aucun moteur d'exécution écrit par nous.
+* Le code généré ne peut appeler que des fonctions de l'hôte déclarées une à une (`sandboxFunctions` : nom, description,
+  paramètres, gestionnaire), étroites, qui revérifient identité, permission et périmètre côté serveur ; ces fonctions
+  n'exposent aucun secret ni jeton, et les arguments sont validés dans le gestionnaire.
+* Seules les données autorisées pour l'utilisateur et nécessaires à la vue entrent dans le code généré ; un secret n'est jamais
+  placé dans un en-tête, une propriété, un argument d'outil ou un contenu d'activité (tout cela est visible du navigateur).
+* Une vue bien formée n'est pas une vue exacte : les chiffres affichés restent ceux des outils métier, et la vue ouverte
+  reste accompagnée d'un repli sur le catalogue ou sur le texte.
+* Le catalogue A2UI, lui, reste fermé : le moteur A2UI n'interprète ni HTML, ni script, ni URL active (voir plus bas).
 
 ## Objectifs et frontières
 
