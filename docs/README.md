@@ -28,7 +28,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
 | Comprendre l'audit (journal, historique, événements de sécurité, garde-fous) | [audit/README.md](audit/README.md) |
-| **Intégration IA** : décisions, architecture, feuille de route, état et reprise | [ia.md — document unique](ia.md) · [Copilot Kit Future to Implement — inventaire CopilotKit, LangChain, LangGraph et Deep Agents](ia/copilot-kit-future-to-implement.md) · [Analyse des écarts IA backend](ia/backend-gap-analysis.md) · conventions [agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md), [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md) |
+| **Intégration IA** : décisions, architecture, feuille de route, état et reprise | [ia.md — document unique](ia.md) · [Plan de travail IA — épopées, état et questions ouvertes](ia/plan-de-travail.md) · conventions [agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md), [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md) |
 | Choisir gRPC, MCP, A2A, AG-UI, UDP ou une autre solution selon le besoin | [Convention d’intégration](../conventions/integrations.md) |
 | **Reprendre le projet** : état, règles du propriétaire, déploiement en cours, sujets ouverts | [handoff/etat-du-projet.md](handoff/etat-du-projet.md) |
 | **Suivre le PV N°1** (cadrage global, avec Équipe comme premier domaine examiné) | [PV N°1 — ERP-RH, projet à valider avant diffusion](handoff/pv-n1-erp-rh.md) |
