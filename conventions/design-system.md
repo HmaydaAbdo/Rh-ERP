@@ -71,7 +71,7 @@ jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais
 | Succès / avertissement / erreur | texte sur fond teinté, contraste ≥ 7:1 | idem |
 
 Le thème sombre est un **gris chaud neutre, sans bleu** (décision du propriétaire du 2026-10-31, après le tableau initial) ; son action est
-un blanc cassé, et les liens y restent soulignés puisque leur teinte ne se distingue pas du texte. Les contrastes de chaque couple
+un blanc cassé, et les liens y restent soulignés puisque leur teinte ne se distingue pas du texte (classe globale `app-link`, `styles/_forms.scss`). Les contrastes de chaque couple
 texte / surface et bordure / surface, dans les deux thèmes, sont mesurés par `npm run check:contraste` (script
 `scripts/check-contraste-jetons.mjs`) et consignés dans [`docs/frontend/contraste-jetons.md`](../docs/frontend/contraste-jetons.md) ; le
 contrôle échoue si un couple requis passe sous son seuil ou si un jeton de l'ancienne identité réapparaît. Une valeur sous les seuils

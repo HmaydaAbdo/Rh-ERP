@@ -5,14 +5,15 @@ import { catchError, lastValueFrom, map, of } from 'rxjs';
 
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
+import { AuthCardComponent } from '../../../shared/ui/auth-card/auth-card.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { PasswordRecoveryService } from '../services/password-recovery.service';
 
 @Component({
     selector: 'app-forgot-password',
-    imports: [FormField, FormRoot, RouterLink, FieldErrorComponent],
+    imports: [AuthCardComponent, ButtonComponent, FieldErrorComponent, FormField, FormRoot, RouterLink],
     templateUrl: './forgot-password.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrl: '../login/login.component.scss'
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ForgotPasswordComponent {
   private readonly passwordRecovery = inject(PasswordRecoveryService);

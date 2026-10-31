@@ -5,8 +5,6 @@ $phone-max: 767px;
 $tablet-max: 1023px;
 $desktop-min: $tablet-max + 1px;
 $form-compact-max: 48rem;
-$auth-short-height: 42rem;
-$auth-short-min-width: 48rem;
 
 /// Téléphone : jusqu'à 767 px.
 @mixin phone {
@@ -36,14 +34,7 @@ $auth-short-min-width: 48rem;
   }
 }
 
-/// Page d'accès sur écran large et bas.
-@mixin auth-short-wide {
-  @media (max-height: $auth-short-height) and (min-width: $auth-short-min-width) {
-    @content;
-  }
-}
-
-/// Navigation compacte (menu en tiroir) : téléphone, et tablette tactile où le survol du menu replié n'existe pas.
+//// Navigation compacte (menu en tiroir) : téléphone, et tablette tactile où le survol du menu replié n'existe pas.
 @mixin compact-nav {
   @media (max-width: $phone-max), (hover: none) and (max-width: $tablet-max) {
     @content;

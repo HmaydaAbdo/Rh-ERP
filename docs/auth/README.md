@@ -288,7 +288,7 @@ aux comptes ou aux rôles.
 | `authGuard` | Exige d'être connecté |
 | `permissionGuard` | Exige la permission déclarée dans `data: { permission }` (ou `permissions` : au moins une) ; un refus mène à `/acces-refuse` |
 | `homeGuard` | Route `/` : premier écran du menu autorisé, sinon `/acces-refuse` |
-| Écrans | `/login`, `/forgot-password`, `/reset-password`, `/acces-refuse` ; les écrans publics d'authentification partagent un formulaire centré sur la photographie locale `frontend/src/assets/auth/staport-login-atlas.png`, assombrie pour la lisibilité et adaptée aux petits écrans, sans logo ni présentation des fonctions du produit. Le refus d'accès présente une explication claire et un retour à l'accueil |
+| Écrans | `/login`, `/forgot-password`, `/reset-password`, `/acces-refuse` ; les écrans publics d'authentification partagent la carte `stp-auth-card` (`shared/ui/auth-card`), centrée sur le fond de page et qui suit le thème clair ou sombre de l'application, sans logo ni présentation des fonctions du produit. Le refus d'accès présente une explication claire et un retour à l'accueil |
 | Initialisation | `APP_INITIALIZER` tente la restauration de session **avant** les routes, pour qu'un F5 sur une page protégée ne renvoie pas à `/login` |
 
 Détail des guards et du menu : [../frontend/README.md](../frontend/README.md).
