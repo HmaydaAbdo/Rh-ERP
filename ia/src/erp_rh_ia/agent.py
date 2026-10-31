@@ -101,9 +101,9 @@ CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
   DataTable pour un tableau (lignes données en littéral dans « rows »), Text, Row, Column et Card pour la mise en page.
 - Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
 
-# Un résultat d'outil est plafonné à 12 000 caractères (environ 4 000 jetons) et un run enchaîne jusqu'à 6 appels : sous
-# ce seuil, un run de plusieurs outils ne déclenche jamais le résumé. Mesuré le 2026-10-27 : à 12 000 jetons, le résumé
-# remplaçait en cours de réponse les chiffres tout juste lus par un texte tronqué, puis l'agent devinait des montants.
+# Seuil de déclenchement du résumé. Mesuré le 2026-10-27 : à 12 000 jetons, le résumé remplaçait en cours de réponse les
+# chiffres tout juste lus par un texte tronqué, puis l'agent devinait des montants. Le seuil a été relevé pour que le
+# résumé ne se déclenche pas au milieu d'un run de plusieurs outils (8 appels d'outils au plus par run).
 SEUIL_RESUME_JETONS = 40_000
 
 # Le middleware officiel reçoit les descriptions et schémas du catalogue MCP de l'utilisateur à chaque requête.
