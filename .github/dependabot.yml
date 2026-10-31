@@ -27,6 +27,32 @@ updates:
     directory: /frontend
     schedule:
       interval: quarterly
+  # Composants IA (plan de travail IA, E0.2, couche 3) : un rythme mensuel, parce que ces bibliothèques publient souvent.
+  # Les PR Dependabot lancent la CI automatiquement : décision du propriétaire du 2026-10-31.
+  - package-ecosystem: uv
+    directory: /ia
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      ia-python:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /copilot-runtime
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      copilot-runtime:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /ia
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /copilot-runtime
+    schedule:
+      interval: monthly
   - package-ecosystem: docker
     directory: /backup
     schedule:
