@@ -77,16 +77,9 @@ app-chantier-carte {
 .chantier-carte {
   // L'univers cartographique et ses contrôles restent nocturnes, même si l'application est en thème clair.
   color-scheme: dark;
-  --neutral-0: var(--map-ui-surface);
-  --neutral-50: var(--map-ui-canvas);
-  --neutral-100: var(--map-ui-surface);
-  --neutral-200: var(--map-ui-border);
-  --neutral-300: var(--map-ui-border);
-  --neutral-400: var(--map-ui-text-muted);
-  --neutral-500: var(--map-ui-text-muted);
-  --neutral-600: var(--map-ui-text);
-  --neutral-700: var(--map-ui-text);
-  --neutral-800: var(--map-ui-text);
+  --color-surface-sunken: var(--map-ui-canvas);
+  --color-surface-hover: color-mix(in srgb, var(--map-ui-text) 10%, var(--map-ui-surface));
+  --color-border-strong: var(--map-ui-border);
   --color-surface: var(--map-ui-surface);
   --color-surface-alt: var(--map-ui-canvas);
   --color-border: var(--map-ui-border);

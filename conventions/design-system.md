@@ -17,11 +17,11 @@ Les jetons forment trois couches :
 
 | Couche | Rôle | Exemples |
 |---|---|---|
-| **Primitives** | L'échelle de couleurs de la marque ; identique dans les deux thèmes | `--brand-50` … `--brand-950` |
+| **Primitives** | Valeurs brutes réutilisées par plusieurs jetons (rayons, durées, échelle d'espacement) ; la couleur n'a pas d'échelle de marque | `--space-*`, `--radius-*`, `--duration-*` |
 | **Sémantiques** | Intention indépendante du composant ; adaptées au thème | surface, texte, action, statut, focus, graphiques |
 | **Composants** | Décisions répétées propres à un composant ou une famille cohérente | hauteur de contrôle, rayon de dialogue, élévation de menu |
 
-Un composant utilise les jetons sémantiques ou de composant, jamais une primitive de marque (`--brand-*`) : c'est ce qui
+Un composant utilise les jetons sémantiques ou de composant, jamais une valeur brute : c'est ce qui
 lui permet de suivre le thème et de changer d'identité sans réécriture. Les variables d'une bibliothèque sont générées
 ou mappées depuis les tokens Staport ; elles ne deviennent pas une source de vérité concurrente. La couleur d'action sert
 aux actions et à leur repérage ; les couleurs de statut restent distinctes de la marque.
@@ -35,7 +35,7 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 
 **Décision du propriétaire du 2026-10-31** : l'identité visuelle précédente (bleu de marque, cuivre, Graphite Staport) est
 remplacée. Seuls le nom et le logo Staport sont conservés. La charte retenue est le **standard de la catégorie, exécuté sans
-faute** : un ERP clair, net et rassurant, bleu d'action sur neutres ardoise, pensé pour que l'on s'y sente à l'aise des heures
+faute** : un ERP clair, net et rassurant, bleu d'action sur neutres ardoise en thème clair, gris chauds neutres en thème sombre, pensé pour que l'on s'y sente à l'aise des heures
 durant. Le niveau de finition à atteindre est celui de **Linear** (rythme, états, vitesse, clavier), de **Stripe Dashboard**
 (chiffres, tableaux et filtres d'une lisibilité exemplaire) et de **Notion** (confort de lecture et d'édition).
 
@@ -59,21 +59,23 @@ jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais
 
 | Rôle | Thème clair | Thème sombre |
 |---|---|---|
-| Fond de page (`--color-canvas`) | `#F3F4F6` | `#0F172A` |
-| Carte et tableau (`--color-surface`) | `#FFFFFF` | `#1E293B` |
-| Texte (`--color-text`) | `#111827` | `#F1F5F9` |
-| Texte secondaire (`--color-text-muted`) | `#4B5563` | `#B6C2D2` |
-| Action (`--color-primary`) | `#1D4ED8` | `#7AA7FF` |
-| Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#0B1220` |
-| Rail de navigation | `#111827` | `#020617` |
-| Bordure franche (`--color-border-strong`) | `#7F8796` | `#7283A0` |
-| Bordure de ligne (`--color-border`) | `#A9B0BC` | `#56688A` |
+| Fond de page (`--color-canvas`) | `#F3F4F6` | `#1F1E1D` |
+| Carte et tableau (`--color-surface`) | `#FFFFFF` | `#2B2A28` |
+| Texte (`--color-text`) | `#111827` | `#F5F4EF` |
+| Texte secondaire (`--color-text-muted`) | `#4B5563` | `#BDBAB1` |
+| Action (`--color-primary`) | `#1D4ED8` | `#ECEAE3` (blanc cassé) |
+| Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#1F1E1D` |
+| Rail de navigation | `#111827` | `#141413` |
+| Bordure franche (`--color-border-strong`) | `#7F8796` | `#8A877F` |
+| Bordure de ligne (`--color-border`) | `#A9B0BC` | `#6B6962` |
 | Succès / avertissement / erreur | texte sur fond teinté, contraste ≥ 7:1 | idem |
 
-Contrastes calculés le 2026-10-31 : texte sur carte 17,74:1 (clair) et 13,35:1 (sombre) ; texte secondaire 7,56:1 et 8,11:1 ;
-action sur blanc 6,70:1 ; bordure franche 3.62:1 sur la carte blanche et 3.29:1 sur le fond gris (clair), 3,81:1 sur la carte
-(sombre). Toute valeur est recalculée à l'implémentation ; une valeur qui passe sous ces seuils est corrigée avant d'être
-adoptée.
+Le thème sombre est un **gris chaud neutre, sans bleu** (décision du propriétaire du 2026-10-31, après le tableau initial) ; son action est
+un blanc cassé, et les liens y restent soulignés puisque leur teinte ne se distingue pas du texte. Les contrastes de chaque couple
+texte / surface et bordure / surface, dans les deux thèmes, sont mesurés par `npm run check:contraste` (script
+`scripts/check-contraste-jetons.mjs`) et consignés dans [`docs/frontend/contraste-jetons.md`](../docs/frontend/contraste-jetons.md) ; le
+contrôle échoue si un couple requis passe sous son seuil ou si un jeton de l'ancienne identité réapparaît. Une valeur sous les seuils
+est corrigée avant d'être adoptée.
 
 ## Bordures
 
@@ -163,30 +165,10 @@ troisième palette de marque qui dupliquerait les thèmes.
 
 ## Thème sombre
 
-Le thème sombre suit les valeurs du tableau « Palette » : fond ardoise très sombre, cartes un cran plus clair, texte presque
-blanc, action bleu clair. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une
-simple inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification
-métier dans les deux thèmes. La carte des chantiers adopte un chrome sombre constant ; ses vues Satellite et Relief gardent leur
-matière propre.
-
----|---|---|
-| Noir mat (canevas) | `#0D0D0D` | `--color-canvas` |
-| Graphite (surface) | `#151515` | `--color-surface` |
-| Graphite clair (séparation) | `#2B2B2B` | `--color-border-strong` |
-| Bleu électrique (action) | `#168DFF` | `--color-primary` |
-| Bleu clair (icône et focus) | `#68AAFF` | `--color-focus` |
-| Blanc net | `#EDEDED` | `--color-text` |
-| Cuivre (accent rare) | `#C88E5C` | `--color-brand-accent` |
-
-Le système sombre garde la même atmosphère dans la navigation, les écrans métier, les formulaires, l'assistant et la
-cartographie. Les tokens sémantiques pilotent les composants ; les surfaces montent du noir mat au graphite, les actions,
-icônes et focus restent bleus. Les boutons gardent leur contraste via `--color-primary-contrast`. L'accent cuivre reste
-rare dans le thème sombre et ne remplace ni les actions bleues ni les couleurs métier.
-
-La carte prolonge Graphite Staport avec un Plan vectoriel noir et graphite, des routes ardoise lisibles, des marqueurs
-cuivre, des icônes de commande bleues et des infobulles graphite. Les vues Satellite et Relief gardent leur matière propre,
-avec un chrome sombre constant. Les couleurs de succès, avertissement, erreur et catégories de graphiques préservent
-leur signification métier dans tous les thèmes.
+Le thème sombre suit les valeurs du tableau « Palette » : fond gris chaud très sombre, cartes un cran plus clair, texte blanc cassé,
+action blanc cassé. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une simple
+inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification métier dans
+les deux thèmes. La carte des chantiers adopte un chrome sombre constant ; ses vues Satellite et Relief gardent leur matière propre.
 
 ---
 
@@ -247,7 +229,7 @@ non contractuels et règles globales qui fuient dans les autres domaines.
 
 * **Une seule famille** de texte pour toute l'interface (`--font-sans`) et une famille à chasse fixe (`--font-mono`)
   réservée aux identifiants (codes, numéros de pièce, périodes) — classe utilitaire `.mono`.
-* Les polices sont **embarquées dans l'application** (paquets `@fontsource/*`, déclarés dans `angular.json`) : jamais de CDN
+* Les polices sont **embarquées dans l'application** (paquet `@fontsource-variable/inter`, déclaré dans `angular.json`) : jamais de CDN
   ni d'appel à un service externe, l'application doit fonctionner sans accès à Internet.
 * Les **chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sont obligatoires partout où l'on compare des montants
   (tableaux, tuiles de synthèse).

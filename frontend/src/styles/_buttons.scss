@@ -129,8 +129,8 @@
   white-space: nowrap;
 
   &--neutral {
-    background: var(--neutral-100);
-    color: var(--neutral-700);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
   }
 
   &--info {
