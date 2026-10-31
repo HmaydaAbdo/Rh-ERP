@@ -34,7 +34,7 @@ export function valeursSurPoints(formater: (valeur: number) => string = (valeur)
   };
 }
 
-/** Police de l'interface (IBM Plex Sans), lue dans les jetons : le texte d'un graphique ressemble au reste de l'écran. */
+/** Police de l'interface (Inter Variable), lue dans les jetons : le texte d'un graphique ressemble au reste de l'écran. */
 export function police(taille = 12): { family: string; size: number } {
   return { family: jeton('--font-sans'), size: taille };
 }

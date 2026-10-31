@@ -208,7 +208,7 @@
   height: 1.375rem;
   margin: 0;
   border-radius: var(--radius-pill);
-  background: var(--neutral-300);
+  background: var(--color-border-strong);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out);
 
@@ -220,7 +220,7 @@
     width: 1.125rem;
     height: 1.125rem;
     border-radius: 50%;
-    background: var(--neutral-0);
+    background: var(--color-surface);
     box-shadow: var(--shadow-sm);
     transition: transform var(--duration-fast) var(--ease-out);
   }
