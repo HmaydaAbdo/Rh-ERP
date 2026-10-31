@@ -204,8 +204,9 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
   pas un motif pour multiplier les agents.
 * L'agent est construit avec les composants officiels (voir « Frameworks d'abord ») : `create_deep_agent` de Deep
   Agents (décision du 2026-10-31 : sur-ensemble de `create_agent` de LangChain, qui renvoie un graphe LangGraph et
-  accepte middlewares, checkpointer, `Store`, contexte d'exécution et sortie structurée), avec ses middlewares. Les
-  outils de fichiers et de sous-agents ajoutés par défaut sont restreints à ce qu'un besoin justifie. Les appels de modèles restent probabilistes : valider les arguments et sorties par
+  accepte middlewares, checkpointer, `Store`, contexte d'exécution et sortie structurée), avec ses middlewares. On adopte le harnais
+  tel que Deep Agents le propose (fichiers virtuels sur `StateBackend`, sous-agents, résumé) ; `FilesystemBackend` et
+  `LocalShellBackend` ne sont jamais utilisés sur un serveur. Les appels de modèles restent probabilistes : valider les arguments et sorties par
   schéma côté service IA, puis refaire les validations métier côté Spring. Une erreur retournée à
   l'agent est structurée et minimisée ; elle n'expose ni stacktrace ni données interdites.
 * Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
